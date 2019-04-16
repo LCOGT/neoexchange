@@ -14,6 +14,8 @@ GNU General Public License for more details.
 """
 
 from subprocess import check_output
+from datetime import datetime
+
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.conf import settings
 from contextlib import contextmanager
@@ -23,7 +25,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.expected_conditions import staleness_of
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
-from core.models import Body, Proposal, Block, SuperBlock, SpectralInfo, PreviousSpectra
+from core.models import Body, Proposal, Block, SuperBlock, SpectralInfo, PreviousSpectra, StaticSource
 
 
 class FunctionalTest(StaticLiveServerTestCase):
@@ -61,11 +63,61 @@ class FunctionalTest(StaticLiveServerTestCase):
                     'discovery_date': '2015-05-10 12:00:00',
                     'update_time'   : '2015-05-18 05:00:00',
                     'num_obs'       : 17,
-                    'arc_length'    : 3.0,
-                    'not_seen'      : 0.42,
+                    'arc_length'    : 3.123456789,
+                    'not_seen'      : 0.423456789,
                     'updated'       : True,
                     }
         self.body, created = Body.objects.get_or_create(pk=1, **params)
+
+    def insert_test_calib(self):
+        params = {   'name'         : 'HD 30455',
+                     'ra'           : 72.1754166666667,
+                     'dec'          : 18.7094444444444,
+                     'pm_ra'        : 0.0,
+                     'pm_dec'       : 0.0,
+                     'parallax'     : 0.0,
+                     'vmag'         : 7.0,
+                     'spectral_type': 'G2V',
+                     'source_type'  : 4,
+                     'notes'        : '',
+                     'quality'      : 0,
+                     'reference'    : ''
+                     }
+        self.calib, created = StaticSource.objects.get_or_create(pk=1, **params)
+
+    def insert_test_comet(self):
+        params = { 
+                     'provisional_name': 'P10MsRM',
+                     'provisional_packed': None,
+                     'name': 'C/2006 F4',
+                     'origin': 'M',
+                     'source_type': 'C',
+                     'elements_type': 'MPC_COMET',
+                     'active': True,
+                     'fast_moving': False,
+                     'urgency': None,
+                     'epochofel': datetime(2019, 4, 3, 0, 0),
+                     'orbit_rms': 0.03,
+                     'orbinc': 3.76939,
+                     'longascnode': 195.84794,
+                     'argofperih': 241.31051,
+                     'eccentricity': 0.5418256,
+                     'meandist': 1.8391873,
+                     'meananom': None,
+                     'perihdist': 0.84266853766512,
+                     'epochofperih': datetime(2018, 12, 15, 8, 24, 15),
+                     'abs_mag': 19.4,
+                     'slope': 4.0,
+                     'score': 11,
+                     'discovery_date': datetime(2019, 4, 3, 7, 12),
+                     'num_obs': 4,
+                     'arc_length': 0.03,
+                     'not_seen': 0.372,
+                     'updated': False,
+                     'ingest': datetime(2019, 4, 3, 15, 20, 42),
+                     'update_time': datetime(2019, 4, 3, 14, 50, 28)
+                }
+        self.comet, created = Body.objects.get_or_create(pk=2, **params)
 
     def insert_test_taxonomy(self):
 
@@ -220,6 +272,7 @@ class FunctionalTest(StaticLiveServerTestCase):
             self.browser = webdriver.Firefox(capabilities=firefox_capabilities, firefox_profile=fp)
         self.browser.implicitly_wait(5)
         self.insert_test_body()
+        self.insert_test_calib()
         self.insert_test_proposals()
         self.insert_test_blocks()
         self.insert_test_taxonomy()

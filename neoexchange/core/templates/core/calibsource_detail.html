@@ -58,7 +58,7 @@
                             <ul class="block-status">
                                 {% for b in blocks %}
                                 <li class="{% cycle 'odd' 'even' %}">
-                                        <a href="{% url 'block-view' b.id %}">
+                                        <a href="{% url 'block-view' b.superblock.id %}">
                                         <span class="block-status-line">
                                             <span class="block-status-item">
                                             {% if b.reported and b.when_observed %}
@@ -75,6 +75,7 @@
                                             <span class="block-status-item"><i class="fa fa-long-arrow-right"></i></span>
                                             <span class="block-status-item">{{b.block_end|date:"c"}}</span>
                                             <span class="block-status-item">{{b.site|upper}}</span>
+                                            <span class="block-status-item">Req: {{b.tracking_number}}</span>
                                         </span>
                                         </a>
                                 </li>

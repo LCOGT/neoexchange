@@ -15,6 +15,7 @@ import os
 from glob import glob
 from datetime import datetime, timedelta, date
 from math import floor, ceil, degrees, radians, pi, acos
+from astropy import units as u
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -60,7 +61,8 @@ from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     get_visibility, determine_exp_count, determine_star_trails, calc_moon_sep, get_alt_from_airmass
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
-    fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs, validate_text
+    fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs, validate_text,\
+    read_mpcorbit_file
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
@@ -104,10 +106,10 @@ def user_proposals(user):
     return proposals
 
 
-def determine_active_proposals(proposal_code=None, filter_epo=True):
+def determine_active_proposals(proposal_code=None, filter_proposals=True):
     """Determine and return the active Proposals or verify the passed [proposal_code]
-    exists. If [filter_epo] is set to True (the default), proposals of the form
-    'xxxEPO20yy' are excluded from the returned proposal list.
+    exists. If [filter_proposals] is set to True (the default), proposals
+    with `proposal.download=False` are excluded from the returned proposal list.
 
     Returns a list of proposal codes.
     """
@@ -117,12 +119,12 @@ def determine_active_proposals(proposal_code=None, filter_epo=True):
             proposal = Proposal.objects.get(code=proposal_code.upper())
             proposals = [proposal.code,]
         except Proposal.DoesNotExist:
-            logger.warn("Proposal {} does not exist".format(proposal_code))
+            logger.warning("Proposal {} does not exist".format(proposal_code))
             proposals = []
     else:
         proposals = Proposal.objects.filter(active=True)
-        if filter_epo:
-            proposals = proposals.exclude(code__contains='EPO')
+        if filter_proposals is True:
+            proposals = proposals.filter(download=True)
         proposals = proposals.order_by('code').values_list('code', flat=True)
 
     return proposals
@@ -334,7 +336,7 @@ def export_measurements(body_id, output_path=''):
     except Body.DoesNotExist:
         logger.warning("Could not find Body with pk={}".format(body_id))
         return None, -1
-    measures = SourceMeasurement.objects.filter(body=body).exclude(frame__frametype=Frame.SATELLITE_FRAMETYPE).order_by('frame__midpoint')
+    measures = SourceMeasurement.objects.filter(body=body).exclude(frame__frametype=Frame.SATELLITE_FRAMETYPE).exclude(frame__midpoint__lt=datetime(1993, 1, 1, 0, 0, 0, 0)).order_by('frame__midpoint')
     data = { 'measures' : measures}
 
     filename = "{}.mpc".format(body.current_name().replace(' ', '').replace('/', '_'))
@@ -346,6 +348,35 @@ def export_measurements(body_id, output_path=''):
     output_fh.close()
 
     return filename, output.count('\n')-1
+
+
+def update_elements_with_findorb(source_dir, dest_dir, filename, site_code, start_time):
+    """Handle the refitting of a set of MPC1992 format observations in <filename>
+    located in <dest_dir> with original config files in <source_dir>. The ephemeris
+    is computed for <site_code> starting at <start_time>
+
+    Either a parsed dictionary of elements or a status code is returned.
+    """
+
+    elements_or_status = None
+
+    status = run_findorb(source_dir, dest_dir, filename, site_code, start_time)
+    if status != 0:
+        logger.error("Error running find_orb on the data")
+        elements_or_status = status
+    else:
+        orbit_file = os.path.join(os.getenv('HOME'), '.find_orb', 'mpc_fmt.txt')
+        try:
+            orbfile_fh = open(orbit_file, 'r')
+        except IOError:
+            logger.warning("File %s not found" % orbit_file)
+            return None
+
+        orblines = orbfile_fh.readlines()
+        orbfile_fh.close()
+        orblines[0] = orblines[0].replace('Find_Orb  ', 'NEOCPNomin')
+        elements_or_status = clean_NEOCP_object(orblines)
+    return elements_or_status
 
 
 def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_dir=None, remove=False):
@@ -367,37 +398,43 @@ def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_di
 
     source_dir = os.path.abspath(os.path.join(os.getenv('HOME'), '.find_orb'))
     dest_dir = dest_dir or tempfile.mkdtemp(prefix='tmp_neox_')
-    new_ephem = None
+    new_ephem = (None, None)
 
     filename, num_lines = export_measurements(body_id, dest_dir)
 
     if filename is not None:
         if num_lines > 0:
-            status = run_findorb(source_dir, dest_dir, filename, site_code, start_time)
-            if status != 0:
+            status_or_elements = update_elements_with_findorb(source_dir, dest_dir, filename, site_code, start_time)
+            if type(status_or_elements) != dict:
                 logger.error("Error running find_orb on the data")
             else:
-                orbit_file = os.path.join(os.getenv('HOME'), '.find_orb', 'mpc_fmt.txt')
-                try:
-                    orbfile_fh = open(orbit_file, 'r')
-                except IOError:
-                    logger.warning("File %s not found" % orbit_file)
-                    return None
-
-                orblines = orbfile_fh.readlines()
-                orbfile_fh.close()
-                orblines[0] = orblines[0].replace('Find_Orb  ', 'NEOCPNomin')
-                new_elements = clean_NEOCP_object(orblines)
-                # Reset some fields to avoid overwriting
+                new_elements = status_or_elements
                 body = Body.objects.get(pk=body_id)
-                new_elements['provisional_name'] = body.provisional_name
-                new_elements['origin'] = body.origin
-                new_elements['source_type'] = body.source_type
-                updated = save_and_make_revision(body, new_elements)
-                message = "Did not update"
-                if updated is True:
-                    message = "Updated"
-                logger.info("%s Body #%d (%s)" % (message, body.pk, body.current_name()))
+                logger.info("{}: FindOrb found an orbital rms of {} using {} observations.".format(body.current_name(), new_elements['orbit_rms'], new_elements['num_obs']))
+                if body.epochofel:
+                    time_to_current_epoch = abs(body.epochofel - start_time)
+                else:
+                    time_to_current_epoch = abs(datetime.min - start_time)
+                time_to_new_epoch = abs(new_elements['epochofel'] - start_time)
+                if time_to_new_epoch <= time_to_current_epoch and new_elements['orbit_rms'] < 1.0:
+                    # Reset some fields to avoid overwriting
+
+                    new_elements['provisional_name'] = body.provisional_name
+                    new_elements['origin'] = body.origin
+                    new_elements['source_type'] = body.source_type
+                    updated = save_and_make_revision(body, new_elements)
+                    message = "Did not update"
+                    if updated is True:
+                        message = "Updated"
+                else:
+                    # Fit was bad or for an old epoch
+                    message = ""
+                    if new_elements['epochofel'] < start_time:
+                        message = "Epoch of elements was too old"
+                    if new_elements['orbit_rms'] >= 1.0:
+                        message += " and rms was too high"
+                    message += ". Did not update"
+                logger.info("%s Body #%d (%s) with FIndOrb" % (message, body.pk, body.current_name()))
 
                 # Read in ephemeris file
                 ephem_file = os.path.join(dest_dir, 'new.ephem')
@@ -885,27 +922,32 @@ def schedule_check(data, body, ok_to_schedule=True):
 
     solar_analog_id = -1
     solar_analog_params = {}
+    solar_analog_exptime = 60
     if type(body) == Body:
         emp = compute_ephem(dark_midpoint, body_elements, data['site_code'],
             dbg=False, perturb=False, display=False)
-        if emp == []:
-            emp = [-99 for x in range(5)]
-        ra = emp[1]
-        dec = emp[2]
-        magnitude = emp[3]
-        speed = emp[4]
+        if emp == {}:
+            emp['date'] = dark_midpoint
+            emp['ra'] = -99
+            emp['dec'] = -99
+            emp['mag'] = -99
+            emp['sky_motion'] = -99
+        ra = emp['ra']
+        dec = emp['dec']
+        magnitude = emp['mag']
+        speed = emp['sky_motion']
         if spectroscopy and solar_analog:
             # Try and find a suitable solar analog "close" to RA, Dec midpoint
             # of block
-            close_solarstd, close_solarstd_params = find_best_solar_analog(ra, dec)
+            close_solarstd, close_solarstd_params = find_best_solar_analog(ra, dec, data['site_code'])
             if close_solarstd is not None:
                 solar_analog_id = close_solarstd.id
                 solar_analog_params = close_solarstd_params
     else:
         magnitude = body.vmag
         speed = 0.0
-        ra = body.ra
-        dec = body.dec
+        ra = radians(body.ra)
+        dec = radians(body.dec)
 
     # Determine filter pattern
     if data.get('filter_pattern'):
@@ -949,15 +991,35 @@ def schedule_check(data, body, ok_to_schedule=True):
         except MagRangeError:
             slot_length = 60
             ok_to_schedule = False
-    snr = None
 
+    # determine lunar position
+    moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(dark_midpoint, ra, dec, data['site_code'])
+    min_lunar_dist = data.get('min_lunar_dist', 30)
+    if moon_phase <= .25:
+        moon_phase_code = 'D'
+    elif moon_phase <= .75:
+        moon_phase_code = 'G'
+    else:
+        moon_phase_code = 'B'
+
+    # Calculate slot length, exposure time, SNR
+    snr = None
+    saturated = None
     if spectroscopy:
-        new_mag, new_passband, snr = calc_asteroid_snr(magnitude, 'V', data['exp_length'], instrument=data['instrument_code'])
+        snr_params = {'airmass': max_alt_airmass,
+                      'slit_width': float(filter_pattern[5:8])*u.arcsec,
+                      'moon_phase' : moon_phase_code
+                      }
+        new_mag, new_passband, snr, saturated = calc_asteroid_snr(magnitude, 'V', data['exp_length'], instrument=data['instrument_code'], params=snr_params)
         exp_count = data['exp_count']
         exp_length = data.get('exp_length', 1)
         slot_length = determine_spectro_slot_length(data['exp_length'], data['calibs'])
         slot_length /= 60.0
         slot_length = ceil(slot_length)
+        # If automatically finding Solar Analog, calculate exposure time.
+        # Currently assume bright enough that 180s is the maximum exposure time.
+        if solar_analog and solar_analog_params:
+            solar_analog_exptime = calc_asteroid_snr(solar_analog_params['vmag'], 'V', 180, instrument=data['instrument_code'], params=snr_params, optimize=True)
     else:
         # Determine exposure length and count
         if data.get('exp_length', None):
@@ -980,10 +1042,6 @@ def schedule_check(data, body, ok_to_schedule=True):
         typical_seeing = 3.0
     else:
         typical_seeing = 2.0
-
-    # determine lunar position
-    moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(dark_midpoint, ra, dec, data['site_code'])
-    min_lunar_dist = data.get('min_lunar_dist', 30)
 
     # get ipp value
     ipp_value = data.get('ipp_value', 1.00)
@@ -1061,6 +1119,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'period' : period,
         'jitter' : jitter,
         'snr' : snr,
+        'saturated' : saturated,
         'spectroscopy' : spectroscopy,
         'calibs' : data.get('calibs', ''),
         'instrument_code' : data['instrument_code'],
@@ -1072,7 +1131,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'vis_time' : dark_and_up_time,
         'moon_alt' : moon_alt,
         'moon_sep' : moon_obj_sep,
-        'moon_phase' : moon_phase,
+        'moon_phase' : moon_phase * 100,
         'min_lunar_dist' : min_lunar_dist,
         'max_airmass': max_airmass,
         'ipp_value': ipp_value,
@@ -1082,7 +1141,8 @@ def schedule_check(data, body, ok_to_schedule=True):
         'typical_seeing' : typical_seeing,
         'solar_analog' : solar_analog,
         'calibsource' : solar_analog_params,
-        'calibsource_id' : solar_analog_id
+        'calibsource_id' : solar_analog_id,
+        'calibsource_exptime' : solar_analog_exptime,
     }
 
     if period and jitter:
@@ -1095,9 +1155,9 @@ def schedule_check(data, body, ok_to_schedule=True):
 def compute_vmag_pa(body_elements, data):
     emp_line_base = compute_ephem(data['start_time'], body_elements, data['site_code'], dbg=False, perturb=False, display=False)
     # assign Magnitude and position angle
-    if emp_line_base[3] and emp_line_base[3] > 0:
-        body_elements['v_mag'] = emp_line_base[3]
-    body_elements['sky_pa'] = emp_line_base[7]
+    if emp_line_base['mag'] and emp_line_base['mag'] > 0:
+        body_elements['v_mag'] = emp_line_base['mag']
+    body_elements['sky_pa'] = emp_line_base['sky_motion_pa']
 
     return body_elements
 
@@ -1126,7 +1186,8 @@ def schedule_submit(data, body, username):
                                     'pm_dec'  : calibsource.pm_dec,
                                     'parallax': calibsource.parallax,
                                     'source_type' : calibsource.source_type,
-                                    'vmag' : calibsource.vmag
+                                    'vmag' : calibsource.vmag,
+                                    'calib_exptime': data.get('calibsource_exptime', 60)
                                  }
         except StaticSource.DoesNotExist:
             logger.error("Was passed a StaticSource id=%d, but it now can't be found" % data['calibsource_id'])
@@ -1281,7 +1342,7 @@ def feasibility_check(data, body):
         spectral_type = 'Mean'
     else:
         spectral_type = 'Solar'
-    data['new_mag'], data['new_passband'], data['snr'] = calc_asteroid_snr(data['magnitude'], ast_mag_bandpass, data['exp_length'], instrument=data['instrument_code'], params=snr_params, taxonomy=spectral_type)
+    data['new_mag'], data['new_passband'], data['snr'], data['saturated'] = calc_asteroid_snr(data['magnitude'], ast_mag_bandpass, data['exp_length'], instrument=data['instrument_code'], params=snr_params, taxonomy=spectral_type)
     calibs = data.get('calibs', 'both')
     slot_length = determine_spectro_slot_length(data['exp_length'], calibs)
     slot_length /= 60.0
@@ -1494,8 +1555,9 @@ def record_block(tracking_number, params, form_data, target):
         cadence = False
         if len(params.get('request_numbers', [])) > 1 and params.get('period', -1.0) > 0.0 and params.get('jitter', -1.0) > 0.0:
             cadence = True
+        proposal = Proposal.objects.get(code=form_data['proposal_code'])
         sblock_kwargs = {
-                         'proposal' : Proposal.objects.get(code=form_data['proposal_code']),
+                         'proposal' : proposal,
                          'groupid'  : form_data['group_id'],
                          'block_start' : form_data['start_time'],
                          'block_end'   : form_data['end_time'],
@@ -1511,6 +1573,9 @@ def record_block(tracking_number, params, form_data, target):
             sblock_kwargs['calibsource'] = target
         else:
             sblock_kwargs['body'] = target
+        # Check if this went to a rapid response proposal
+        if proposal.time_critical is True:
+            sblock_kwargs['rapid_response'] = True
         sblock_pk = SuperBlock.objects.create(**sblock_kwargs)
         i = 0
         for request, request_type in params.get('request_numbers', {}).items():
@@ -1750,7 +1815,8 @@ def clean_NEOCP_object(page_list):
                 'origin': 'M',
                 'update_time' : datetime.utcnow(),
                 'arc_length' : None,
-                'not_seen' : None
+                'not_seen' : None,
+                'orbit_rms' : float(current[15])
             }
             arc_length = None
             arc_units = current[14]
@@ -1763,7 +1829,7 @@ def clean_NEOCP_object(page_list):
             if arc_length:
                 params['arc_length'] = arc_length
 
-        elif len(current) >= 21 and len(current) <= 25:
+        elif 21 <= len(current) <= 25:
             # The first 20 characters can get very messy if there is a temporary
             # and permanent desigination as the absolute magntiude and slope gets
             # pushed up and partially overwritten. Sort this mess out and then the
@@ -1790,9 +1856,9 @@ def clean_NEOCP_object(page_list):
                 source_type = 'C'
 
             # See if this is a local discovery
-            provisional_name = line[0:7]
+            provisional_name = line[0:7].rstrip()
             origin = 'M'
-            if provisional_name[0:5] in ['CPTTL', 'LSCTL', 'ELPTL', 'COJTL', 'COJAT', 'LSCAT', 'LSCJM' ]:
+            if provisional_name[0:5] in ['CPTTL', 'LSCTL', 'ELPTL', 'COJTL', 'COJAT', 'LSCAT', 'LSCJM', 'LLZ00' ]:
                 origin = 'L'
             params = {
                 'abs_mag': abs_mag,
@@ -1810,6 +1876,7 @@ def clean_NEOCP_object(page_list):
                 'origin': origin,
                 'provisional_name' : provisional_name,
                 'num_obs' : int(line[117:122]),
+                'orbit_rms' : float(line[137:141]),
                 'update_time' : datetime.utcnow(),
                 'arc_length' : None,
                 'not_seen' : None
@@ -1872,7 +1939,8 @@ def update_crossids(astobj, dbg=False):
     # Find Bodies that have the 'provisional name' of <temp_id> OR (final)'name' of <desig>
     # but don't have a blank 'name'
     bodies = Body.objects.filter(Q(provisional_name=temp_id) | Q(name=desig) & ~Q(name=''))
-    if dbg: print("temp_id={},desig={},bodies={}".format(temp_id,desig,bodies))
+    if dbg:
+        print("temp_id={},desig={},bodies={}".format(temp_id, desig, bodies))
 
     if bodies.count() == 0:
         body = Body.objects.create(provisional_name=temp_id, name=desig)
@@ -2148,19 +2216,131 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
         origin = 'R'
     # Determine what type of new object it is and whether to keep it active
     kwargs = clean_mpcorbit(elements, dbg, origin)
+
     # Save, make revision, or do not update depending on the what has happened
     # to the object
-    if not body.epochofel or body.epochofel <= kwargs['epochofel']:
+    if body.epochofel:
+        time_to_current_epoch = abs(body.epochofel - datetime.now())
+        time_to_new_epoch = abs(kwargs['epochofel'] - datetime.now())
+    if not body.epochofel or time_to_new_epoch <= time_to_current_epoch:
         save_and_make_revision(body, kwargs)
         if not created:
-            logger.info("Updated elements for %s" % obj_id)
+            logger.info("Updated elements for %s from MPC" % obj_id)
         else:
-            logger.info("Added new orbit for %s" % obj_id)
+            logger.info("Added new orbit for %s from MPC" % obj_id)
     else:
         body.origin = origin
         body.save()
         logger.info("More recent elements already stored for %s" % obj_id)
     return True
+
+
+def ingest_new_object(orbit_file, obs_file=None, dbg=False):
+    """Ingests a new object or updates an existing one from the <orbit_file>
+    If the observation file, which defaults to <orbit_file> with the '.neocp'
+    extension replaced by '.dat' but which can be specified by [obs_file] is
+    also found, additional information such as discovery date will be created or
+    updated.
+    Returns the Body object that was created or retrieved, a boolean for whether
+    the Body was created or not, and a message. In the case of errors,
+    None, False, and the message are returned.
+    """
+
+    orblines = read_mpcorbit_file(orbit_file)
+
+    if orblines is None:
+        msg = "Could not read orbit file: " + orbit_file
+        return None, False, msg
+
+    if obs_file is None:
+        obs_file = orbit_file.replace('neocp', 'dat')
+
+    local_discovery = False
+    try:
+        obsfile_fh = open(obs_file, 'r')
+        obslines = obsfile_fh.readlines()
+        obsfile_fh.close()
+        for obsline in obslines:
+            obs_params = parse_mpcobs(obsline)
+            if obs_params.get('discovery', False) is True:
+                break
+        discovery_date = obs_params.get('obs_date', None)
+        local_discovery = obs_params.get('lco_discovery', False)
+    except IOError:
+        logger.warning("Unable to find matching observation file (%s)" % obs_file)
+        discovery_date = None
+
+    dbg_msg = orblines[0]
+    logger.debug(dbg_msg)
+    kwargs = clean_NEOCP_object(orblines)
+    if kwargs != {}:
+        obj_file = os.path.basename(orbit_file)
+        file_chunks = obj_file.split('.')
+        name = None
+        if len(file_chunks) == 2:
+            obj_id = file_chunks[0].strip()
+            if obj_id != kwargs['provisional_name']:
+                msg = "Mismatch between filename (%s) and provisional id (%s).\nAssuming provisional id is a final designation." % (obj_id, kwargs['provisional_name'])
+                logger.info(msg)
+                try:
+                    name = packed_to_normal(kwargs['provisional_name'])
+                except PackedError:
+                    name = None
+                kwargs['name'] = name
+                kwargs['provisional_packed'] = kwargs['provisional_name']
+                if name is not None and obj_id.strip() == name.replace(' ', '') and name.strip().count(' ') == 1:
+                    kwargs['provisional_name'] = None
+                    kwargs['origin'] = 'M'
+                else:
+                    kwargs['provisional_name'] = obj_id
+                # Determine perihelion distance and asteroid type
+                if kwargs.get('eccentricity', None) is not None and kwargs.get('eccentricity', 2.0) < 1.0\
+                    and kwargs.get('meandist', None) is not None:
+                    perihdist = kwargs['meandist'] * (1.0 - kwargs['eccentricity'])
+                    source_type = determine_asteroid_type(perihdist, kwargs['eccentricity'])
+                    if dbg: print("New source type", source_type)
+                    kwargs['source_type'] = source_type
+                if local_discovery:
+                    if dbg: print("Setting to local origin")
+                    kwargs['origin'] = 'L'
+                    kwargs['source_type'] = 'D'
+        else:
+            obj_id = kwargs['provisional_name']
+
+        # Add in discovery date from the observation file
+        kwargs['discovery_date'] = discovery_date
+        # Needs to be __exact (and the correct database collation set on Body)
+        # to perform case-sensitive lookup on the provisional name.
+        if dbg: print("Looking in the DB for ", obj_id)
+        query = Q(provisional_name__exact=obj_id)
+        if name is not None:
+            query = query | Q(name__exact=name)
+        bodies = Body.objects.filter(query)
+        if bodies.count() == 0:
+            body, created = Body.objects.get_or_create(provisional_name__exact=obj_id)
+        elif bodies.count() == 1:
+            body = bodies[0]
+            created = False
+        else:
+            msg = "Multiple bodies found, aborting"
+            logger.error(msg)
+            return None, False, msg
+        if not created:
+            # Find out if the details have changed, if they have, save a
+            # revision
+            check_body = Body.objects.filter(**kwargs)
+            if check_body.count() == 0:
+                kwargs['updated'] = True
+                if save_and_make_revision(body, kwargs):
+                    msg = "Updated %s" % obj_id
+                else:
+                    msg = "No changes saved for %s" % obj_id
+            else:
+                msg = "No changes needed for %s" % obj_id
+        else:
+            save_and_make_revision(body, kwargs)
+            msg = "Added new local target %s" % obj_id
+    return body, created, msg
 
 
 def update_MPC_obs(obj_id_or_page):
@@ -2195,7 +2375,7 @@ def count_useful_obs(obs_lines):
     """Function to determine max number of obs_lines will be read """
     i = 0
     for obs_line in obs_lines:
-        if len(obs_line) > 15 and obs_line[14] in ['C', 'S', 's']:
+        if len(obs_line) > 15 and obs_line[14] in ['C', 'S', 'A']:
             i += 1
     return i
 
@@ -2296,7 +2476,7 @@ def create_source_measurement(obs_lines, block=None):
                         frame = next((frm for frm in frame_list if frm.sitecode == params['site_code'] and
                                                                     params['obs_date'] == frm.midpoint and
                                                                     frm.frametype == Frame.SATELLITE_FRAMETYPE), None)
-                    if not frame_list and not frame:
+                    if not frame_list or not frame:
                         try:
                             prior_frame = Frame.objects.get(frametype=Frame.SATELLITE_FRAMETYPE,
                                                             midpoint=params['obs_date'],
@@ -2323,7 +2503,7 @@ def create_source_measurement(obs_lines, block=None):
                             frame = next((frm for frm in frame_list if frm.sitecode == params['site_code'] and
                                                                         params['obs_date'] == frm.midpoint and
                                                                         frm.frametype == Frame.SATELLITE_FRAMETYPE), None)
-                        if not frame_list and not frame:
+                        if not frame_list or not frame:
                             try:
                                 frame = Frame.objects.get(frametype=Frame.SATELLITE_FRAMETYPE,
                                                                 midpoint=params['obs_date'],
@@ -2350,7 +2530,8 @@ def create_source_measurement(obs_lines, block=None):
                                             'obs_ra'  : params['obs_ra'],
                                             'obs_dec' : params['obs_dec'],
                                             'obs_mag' : params['obs_mag'],
-                                            'flags'   : params['flags']
+                                            'flags'   : params['flags'],
+                                            'astrometric_catalog': params['astrometric_catalog'],
                                          }
                         if source_list and next((src for src in source_list if src.frame == measure_params['frame']), None):
                             measure_created = False
@@ -2880,47 +3061,44 @@ def make_solar_standards_plot(request):
     return HttpResponse(buffer.getvalue(), content_type="Image/png")
 
 
-def update_taxonomy(taxobj, dbg=False):
-    """Update the passed <taxobj> for a new taxonomy update.
-    <taxobj> is expected to be a list of:
-    designation/provisional designation, taxonomy, taxonomic scheme, reference, notes
-    normally produced by the fetch_taxonomy_page() method.
-    Will only add (never remove) taxonomy fields that are not already in Taxonomy database and match objects in DB."""
+def update_taxonomy(body, tax_table, dbg=False):
+    """Update taxonomy for given body based on passed taxonomy table.
+    tax_table should be a 5 element list and have the format of
+    [body_name, taxonomic_class, tax_scheme, tax_reference, tax_notes]
+    where:
+    body_name       := number or provisional designation
+    taxonomic_class := string <= 6 characters (X, Sq, etc.)
+    tax_scheme      := 2 character string (T, Ba, Td, H, S, B, 3T, 3B, BD)
+    tax_reference   := Source of taxonomic data
+    tax_notes       := other information/details
+    """
 
-    if len(taxobj) != 5:
-        return False
-
-    obj_id = taxobj[0].rstrip()
-    body_all = Body.objects.all()
-    try:
-        body = Body.objects.get(name=obj_id)
-    except:
-        try:
-            body = Body.objects.get(provisional_name=obj_id)
-        except:
-            if dbg is True:
-                logger.debug("No such Body as %s" % obj_id)
-                print("number of bodies: %i" % body_all.count())
-            return False
-    # Must be a better way to do this next bit, but I don't know what it is off the top of my head.
-    check_tax = SpectralInfo.objects.filter(body=body, taxonomic_class=taxobj[1], tax_scheme=taxobj[2],
-                                            tax_reference=taxobj[3], tax_notes=taxobj[4])
-    if check_tax.count() != 0:
+    name = [body.current_name(), body.name, body.provisional_name]
+    taxonomies = [tax for tax in tax_table if tax[0].rstrip() in name]
+    if not taxonomies:
         if dbg is True:
-            print("Data already in DB")
+            print("No taxonomy for %s" % body.current_name())
         return False
-    params = {  'body'          : body,
-                'taxonomic_class' : taxobj[1],
-                'tax_scheme'    : taxobj[2],
-                'tax_reference' : taxobj[3],
-                'tax_notes'     : taxobj[4],
-                }
-    tax, created = SpectralInfo.objects.get_or_create(**params)
-    if not created:
-        if dbg is True:
-            print("Did not write for some reason.")
-        return False
-    return True
+    else:
+        c = 0
+        for taxobj in taxonomies:
+            check_tax = SpectralInfo.objects.filter(body=body, taxonomic_class=taxobj[1], tax_scheme=taxobj[2], tax_reference=taxobj[3], tax_notes=taxobj[4])
+            if check_tax.count() == 0:
+                params = {  'body'          : body,
+                            'taxonomic_class' : taxobj[1],
+                            'tax_scheme'    : taxobj[2],
+                            'tax_reference' : taxobj[3],
+                            'tax_notes'     : taxobj[4],
+                            }
+                tax, created = SpectralInfo.objects.get_or_create(**params)
+                if not created:
+                    if dbg is True:
+                        print("Did not write for some reason.")
+                else:
+                    c += 1
+            elif dbg is True:
+                print("Data already in DB")
+        return c
 
 
 def update_previous_spectra(specobj, source='U', dbg=False):
@@ -3038,10 +3216,10 @@ def find_best_flux_standard(sitecode, utc_date=None, flux_standards=None, debug=
     return close_standard, close_params
 
 
-def find_best_solar_analog(ra_rad, dec_rad, min_sep=4.0*15.0, solar_standards=None, debug=False):
+def find_best_solar_analog(ra_rad, dec_rad, site, ha_sep=4.0, solar_standards=None, debug=False):
     """Finds the "best" solar analog (closest to the passed RA, Dec (in radians,
-    from e.g. compute_ephem)) within [min_sep] degrees (defaults to 60deg (=4 hours
-    of HA).
+    from e.g. compute_ephem)) within [ha_sep] hours (defaults to 4 hours
+    of HA) that can be seen from the appropriate site.
     If a match is found, the StaticSource object is returned along with a
     dictionary of parameters, including the additional 'seperation_deg' with the
     minimum separation found (in degrees)"""
@@ -3051,13 +3229,23 @@ def find_best_solar_analog(ra_rad, dec_rad, min_sep=4.0*15.0, solar_standards=No
     if solar_standards is None:
         solar_standards = StaticSource.objects.filter(source_type=StaticSource.SOLAR_STANDARD)
 
+    if site == 'E10':
+        dec_lim = [-90.0, 20.0]
+    elif site == 'F65':
+        dec_lim = [-20.0, 90.0]
+    else:
+        dec_lim = [-20.0, 20.0]
+
+    min_sep = None
     for standard in solar_standards:
+        ra_diff = abs(standard.ra - degrees(ra_rad)) / 15
         sep = degrees(S.sla_dsep(radians(standard.ra), radians(standard.dec), ra_rad, dec_rad))
         if debug:
-            print("%10s %1d %011.7f %+11.7f %7.3f %7.3f (%10s)" % (standard.name.replace("Landolt ", "") , standard.source_type, standard.ra, standard.dec, sep, min_sep, close_standard))
-        if sep < min_sep:
-            min_sep = sep
-            close_standard = standard
+            print("%10s %1d %011.7f %+11.7f %7.3f %7.3f (%10s)" % (standard.name.replace("Landolt ", "") , standard.source_type, standard.ra, standard.dec, sep, ha_sep, close_standard))
+        if ra_diff < ha_sep and (dec_lim[0] <= standard.dec <= dec_lim[1]):
+            if min_sep is None or sep < min_sep:
+                min_sep = sep
+                close_standard = standard
     if close_standard is not None:
         close_params = model_to_dict(close_standard)
         close_params['separation_deg'] = min_sep

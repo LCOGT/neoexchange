@@ -4,6 +4,34 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 2.8.0
+Improve Static Source Scheduling
+* Add features to Calib Scheduling Confirmation page to bring it up to date with standard version.
+* Add warning for potentially saturated targets.
+* Add Tests for Calib scheduling confirmation page
+* Add Solar Analog details to NEO scheduling confirmation page
+* Make exposure time calculator for Spectroscopic observations of Solar Analogs
+
+### 2.7.13
+Calculate frame midpoint based on UTSTOP rather than EXPTIME. Improve ingestion of new objects and record and output discovery asterisks.
+
+### 2.7.12
+Output of compute_ephem is now a dictionary.
+
+### 2.7.11
+Allow for automatic updating of targets.
+* Update observations from MPC daily.
+* Update orbits with FindOrb or from MPC daily.
+* Be smarter about when and how FindOrb updates an orbit.
+* Update taxonomy daily.
+* Update external spectroscopy weekly.
+
+### 2.7.10
+Several bug fixes
+* Allow Download for all Programs
+* Allow for no visible ephemeris for very close objects
+* Fix data pull from Arecibo page
+
 ### 2.7.9
 Improve Cadence scheduling
 * Default end-date is current date + 24 hours

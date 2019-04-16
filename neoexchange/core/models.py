@@ -102,12 +102,14 @@ TAX_SCHEME_CHOICES = (
                         ('B', 'Bus'),
                         ('3T', 'S3OS2_TH'),
                         ('3B', 'S3OS2_BB'),
-                        ('BD', 'Bus-DeMeo')
+                        ('BD', 'Bus-DeMeo'),
+                        ('Sd', 'SDSS')
                      )
 
 TAX_REFERENCE_CHOICES = (
-                        ('PDS6', 'Neese, Asteroid Taxonomy V6.0. (2010).'),
+                        ('PDS6', 'Neese, Asteroid Taxonomy V6.0, (2010).'),
                         ('BZ04', 'Binzel, et al. (2004).'),
+                        ('SDSS', 'Hasselmann, et al. Asteroid Taxonomy V1.1, (2012).')
                      )
 
 SPECTRAL_WAV_CHOICES = (
@@ -132,6 +134,8 @@ class Proposal(models.Model):
     pi = models.CharField("PI", max_length=50, default='', help_text='Principal Investigator (PI)')
     tag = models.CharField(max_length=10, default='LCOGT')
     active = models.BooleanField('Proposal active?', default=True)
+    time_critical = models.BooleanField('Time Critical/ToO proposal?', default=False)
+    download = models.BooleanField('Auto download data?', default=True)
 
     class Meta:
         db_table = 'ingest_proposal'
@@ -157,6 +161,7 @@ class Body(models.Model):
     fast_moving         = models.BooleanField('Is this object fast?', default=False)
     urgency             = models.IntegerField(help_text='how urgent is this?', blank=True, null=True)
     epochofel           = models.DateTimeField('Epoch of elements', blank=True, null=True)
+    orbit_rms           = models.FloatField('Orbit quality of fit', blank=True, null=True, default=99.0)
     orbinc              = models.FloatField('Orbital inclination in deg', blank=True, null=True)
     longascnode         = models.FloatField('Longitude of Ascending Node (deg)', blank=True, null=True)
     argofperih          = models.FloatField('Arg of perihelion (deg)', blank=True, null=True)
@@ -237,7 +242,7 @@ class Body(models.Model):
             sitecode = '500'
             emp_line = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
             # Return just numerical values
-            return emp_line[1], emp_line[2], emp_line[3], emp_line[6], emp_line[4], emp_line[7]
+            return emp_line['ra'], emp_line['dec'], emp_line['mag'], emp_line['southpole_sep'], emp_line['sky_motion'], emp_line['sky_motion_pa']
         else:
             # Catch the case where there is no Epoch
             return False
@@ -265,8 +270,10 @@ class Body(models.Model):
             # calculate the ephemeris for each step (delta_t) within the time span df.
             while i <= df / delta_t + 1:
 
-                emp_line, mag_dot, separation = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False, detailed=True)
-                vmag = emp_line[3]
+                ephem_out = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
+                mag_dot = ephem_out['mag_dot']
+                separation = ephem_out['sun_sep']
+                vmag = ephem_out['mag']
 
                 # Eliminate bad magnitudes
                 if vmag < 0:
@@ -411,34 +418,43 @@ class SpectralInfo(models.Model):
                     else:
                         text_out = text_out + ' %s color indices were used.\n' % (text[0])
                 if "G" in text:
-                    text_out = text_out + ' Used groundbased radiometric albedo.'
+                    text_out += ' Used groundbased radiometric albedo.'
                 if "I" in text:
-                    text_out = text_out + ' Used IRAS radiometric albedo.'
+                    text_out += ' Used IRAS radiometric albedo.'
                 if "A" in text:
-                    text_out = text_out + ' An Unspecified albedo was used to eliminate Taxonomic degeneracy.'
+                    text_out += ' An Unspecified albedo was used to eliminate Taxonomic degeneracy.'
                 if "S" in text:
-                    text_out = text_out + ' Used medium-resolution spectrum by Chapman and Gaffey (1979).'
+                    text_out += ' Used medium-resolution spectrum by Chapman and Gaffey (1979).'
                 if "s" in text:
-                    text_out = text_out + ' Used high-resolution spectrum by Xu et al (1995) or Bus and Binzel (2002).'
+                    text_out += ' Used high-resolution spectrum by Xu et al (1995) or Bus and Binzel (2002).'
             elif self.tax_scheme == "BD":
                 if "a" in text:
-                    text_out = text_out + ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b). NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b). NIR: DeMeo et al. (2009).'
                 if "b" in text:
-                    text_out = text_out + ' Visible: Xu (1994), Xu et al. (1995). NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible: Xu (1994), Xu et al. (1995). NIR: DeMeo et al. (2009).'
                 if "c" in text:
-                    text_out = text_out + ' Visible: Burbine (2000), Burbine and Binzel (2002). NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible: Burbine (2000), Burbine and Binzel (2002). NIR: DeMeo et al. (2009).'
                 if "d" in text:
-                    text_out = text_out + ' Visible: Binzel et al. (2004c). NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible: Binzel et al. (2004c). NIR: DeMeo et al. (2009).'
                 if "e" in text:
-                    text_out = text_out + ' Visible and NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible and NIR: DeMeo et al. (2009).'
                 if "f" in text:
-                    text_out = text_out + ' Visible: Binzel et al. (2004b).  NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible: Binzel et al. (2004b).  NIR: DeMeo et al. (2009).'
                 if "g" in text:
-                    text_out = text_out + ' Visible: Binzel et al. (2001).  NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible: Binzel et al. (2001).  NIR: DeMeo et al. (2009).'
                 if "h" in text:
-                    text_out = text_out + ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b).  NIR: Binzel et al. (2004a).'
+                    text_out += ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b).  NIR: Binzel et al. (2004a).'
                 if "i" in text:
-                    text_out = text_out + ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b).  NIR: Rivkin et al. (2005).'
+                    text_out += ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b).  NIR: Rivkin et al. (2005).'
+        elif self.tax_reference == 'SDSS':
+            chunks = text.split('|')
+            if int(chunks[1]) > 1:
+                plural = 's'
+            else:
+                plural = ''
+            text_out = 'Probability score of {} found using {} observation{}.'.format(chunks[0], chunks[1], plural)
+            if chunks[2] != '-' and chunks[2] != self.taxonomic_class:
+                text_out += ' | Other less likely taxonomies also found ({})'.format(chunks[2].replace(self.taxonomic_class, ''))
         text_out = text_out+end
         return text_out
 
@@ -957,6 +973,13 @@ class Frame(models.Model):
                 new_filter = 'G'
         return new_filter
 
+    def ALCDEF_filter_format(self):
+        """Formats current filter into acceptable name for printing in ALCDEF output."""
+        new_filt = self.filter
+        if len(new_filt) > 1 and new_filt[1] == 'p':
+            new_filt = 's'+new_filt[0]
+        return new_filt.upper()
+
     class Meta:
         verbose_name = _('Observed Frame')
         verbose_name_plural = _('Observed Frames')
@@ -1013,21 +1036,40 @@ class SourceMeasurement(models.Model):
         except TypeError:
             mag = "    "
 
-        obs_type = 'C'
         microday = True
+
+        if self.frame.extrainfo:
+            obs_type = self.frame.extrainfo
+            if obs_type == 'A':
+                microday = False
+        else:
+            obs_type = 'C'
+
         if self.frame.frametype == Frame.SATELLITE_FRAMETYPE:
             obs_type = 'S'
             microday = False
         flags = self.flags
-        if len(self.flags) == 1:
-            if self.flags == '*':
+        num_flags = flags.split(',')
+        if len(num_flags) == 1:
+            if num_flags[0] == '*':
                 # Discovery asterisk needs to go into column 13
                 flags = '* '
             else:
-                flags = ' ' + self.flags
-        elif len(self.flags) > 2:
+                flags = ' ' + num_flags[0]
+        elif len(num_flags) == 2:
+            if '*' in num_flags:
+                asterisk_index = num_flags.index('*')
+                flags = '*' + num_flags[1-asterisk_index]
+            else:
+                logger.warning("Flags longer than will fit into field - needs mapper")
+                flags = ' ' + num_flags[0]
+        else:
             logger.warning("Flags longer than will fit into field - needs mapper")
-            flags = self.flags[0:2]
+            if '*' in num_flags:
+                num_flags.remove('*')
+                flags = '*' + num_flags[0]
+            else:
+                flags = ' ' + num_flags[0]
 
         # Catalog code for column 72 (if desired)
         catalog_code = ' '
@@ -1140,13 +1182,14 @@ class CatalogSources(models.Model):
         """
 
         flag = ' '
-        if self.flags >= 1 and self.flags <=3:
+        if 1 <= self.flags <= 3:
             # Set 'Involved with star'
             flag = 'I'
         elif self.flags >= 8:
             # Set 'close to Edge'
             flag = 'E'
         return flag
+
 
 def detections_array_dtypes():
     """Declare the columns and types of the structured numpy array for holding
@@ -1200,7 +1243,7 @@ class Candidate(models.Model):
         try:
             elements = model_to_dict(body)
             emp_line = compute_ephem(time, elements, self.block.site, perturb=False)
-            separation = comp_sep(self.avg_ra, self.avg_dec, emp_line[1], emp_line[2])
+            separation = comp_sep(self.avg_ra, self.avg_dec, emp_line['ra'], emp_line['dec'])
         except AttributeError:
             separation = None
 
@@ -1247,6 +1290,7 @@ class PanoptesReport(models.Model):
 
     def __str__(self):
         return "Block {} Candidate {} is Subject {}".format(self.block.id, self.candidate.id, self.subject_id)
+
 
 @python_2_unicode_compatible
 class StaticSource(models.Model):

@@ -161,6 +161,39 @@ def frame_params_from_header(params, block):
                      'filename'  : params.get('ORIGNAME', None),
                      'exptime'   : params.get('EXPTIME', None),
                  }
+
+    # correct exptime to actual shutter open duration
+    shutter_open = params.get('DATE_OBS', None)
+    shutter_close = params.get('UTSTOP', None)
+    if shutter_open and shutter_close:
+        # start by assuming shutter closed on the same day it opened.
+        shutter_close = shutter_open.split('T')[0] + 'T' + shutter_close
+        # convert to datetime object
+        try:
+            shutter_open = datetime.strptime(shutter_open, "%Y-%m-%dT%H:%M:%S.%f")
+        except ValueError:
+            shutter_open = datetime.strptime(shutter_open, "%Y-%m-%dT%H:%M:%S")
+        try:
+            shutter_close = datetime.strptime(shutter_close, "%Y-%m-%dT%H:%M:%S.%f")
+        except ValueError:
+            shutter_close = datetime.strptime(shutter_close, "%Y-%m-%dT%H:%M:%S")
+        # Increment close-time by 1 day if close happened before open
+        if shutter_close < shutter_open:
+            shutter_close = shutter_close + timedelta(days=1)
+        # Calculate exposure time and save to frame.
+        exptime = shutter_close - shutter_open
+        exptime = exptime.total_seconds()
+        exp_diff = abs(exptime - float(frame_params['exptime']))
+        if exp_diff > 0.5 or exp_diff > exptime * 0.1:
+            # If FLOYDS data, subtract readtime from exposure time. Otherwise, label as problematic.
+            if params.get('OBSTYPE', 'EXPOSE').upper() in spectro_obstypes:
+                exptime = max(exptime - 21., 0)
+            else:
+                frame_params['quality'] = 'ABORTED'
+                logger.warning("Actual exposure time ({}s) differs significantly from requested exposure time ({}s) for {}.".format(exptime, frame_params['exptime'], frame_params['filename']))
+        frame_params['exptime'] = exptime
+
+    # Make adjustments for spectroscopy frames
     if params.get('OBSTYPE', 'EXPOSE').upper() in spectro_obstypes:
         aperture_type = params.get('APERTYPE', 'SLIT').rstrip()
         aperture_length = params.get('APERLEN', 'UNKNOWN')
@@ -239,7 +272,8 @@ def frame_params_from_log(params, block):
                      'sitecode' : sitecode,
                      'block'    : block,
                      'filter'   : params.get('filter', "B"),
-                     'frametype' : frame_type
+                     'frametype' : frame_type,
+                     'extrainfo' : params.get('obs_type', None)
                    }
     return frame_params
 

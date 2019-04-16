@@ -20,6 +20,7 @@ from core.models import StaticSource
 from astrometrics.sources_subs import fetch_flux_standards
 from core.views import create_calib_sources
 
+
 class Command(BaseCommand):
     help = "Ingest the list of ESO Spectrophotometric standards"
 
