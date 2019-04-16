@@ -1291,6 +1291,7 @@ class PanoptesReport(models.Model):
     def __str__(self):
         return "Block {} Candidate {} is Subject {}".format(self.block.id, self.candidate.id, self.subject_id)
 
+
 @python_2_unicode_compatible
 class StaticSource(models.Model):
     """

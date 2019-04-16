@@ -25,7 +25,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.expected_conditions import staleness_of
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
-from core.models import Body, Proposal, Block, SuperBlock, SpectralInfo, PreviousSpectra
+from core.models import Body, Proposal, Block, SuperBlock, SpectralInfo, PreviousSpectra, StaticSource
 
 
 class FunctionalTest(StaticLiveServerTestCase):
@@ -68,6 +68,22 @@ class FunctionalTest(StaticLiveServerTestCase):
                     'updated'       : True,
                     }
         self.body, created = Body.objects.get_or_create(pk=1, **params)
+
+    def insert_test_calib(self):
+        params = {   'name'         : 'HD 30455',
+                     'ra'           : 72.1754166666667,
+                     'dec'          : 18.7094444444444,
+                     'pm_ra'        : 0.0,
+                     'pm_dec'       : 0.0,
+                     'parallax'     : 0.0,
+                     'vmag'         : 7.0,
+                     'spectral_type': 'G2V',
+                     'source_type'  : 4,
+                     'notes'        : '',
+                     'quality'      : 0,
+                     'reference'    : ''
+                     }
+        self.calib, created = StaticSource.objects.get_or_create(pk=1, **params)
 
     def insert_test_comet(self):
         params = { 
@@ -256,6 +272,7 @@ class FunctionalTest(StaticLiveServerTestCase):
             self.browser = webdriver.Firefox(capabilities=firefox_capabilities, firefox_profile=fp)
         self.browser.implicitly_wait(5)
         self.insert_test_body()
+        self.insert_test_calib()
         self.insert_test_proposals()
         self.insert_test_blocks()
         self.insert_test_taxonomy()

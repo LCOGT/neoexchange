@@ -1178,7 +1178,7 @@ class TestSchedule_Check(TestCase):
                         'target_name': self.body_mp.current_name(),
                         'magnitude': 19.099441743160916,
                         'speed': 2.9012947050834836,
-                        'slot_length': 20,
+                        'slot_length': 20.0,
                         'filter_pattern': 'w',
                         'pattern_iterations': 14.0,
                         'available_filters': 'air, U, B, V, R, I, up, gp, rp, ip, zs, Y, w',
@@ -1197,12 +1197,14 @@ class TestSchedule_Check(TestCase):
                         'period' : None,
                         'jitter' : None,
                         'instrument_code' : '',
+                        'saturated': None,
                         'snr' : None,
                         'too_mode': False,
                         'calibs' : '',
                         'spectroscopy' : False,
                         'calibsource' : {},
                         'calibsource_id' : -1,
+                        'calibsource_exptime' : 60,
                         'solar_analog' : False,
                         'vis_time': 6.5,
                         'lco_enc': 'DOMA',
@@ -1210,7 +1212,7 @@ class TestSchedule_Check(TestCase):
                         'lco_tel': '1M0',
                         'max_alt': 67.75712514525094,
                         'moon_alt': -58.300710434796706,
-                        'moon_phase': 0.011439155504957221,
+                        'moon_phase': 1.1439155504957221,
                         'moon_sep': 170.66180769265674,
                         'trail_len': 2.41774558756957,
                         'typical_seeing': 2.0,
@@ -1265,12 +1267,14 @@ class TestSchedule_Check(TestCase):
                         'period' : None,
                         'jitter' : None,
                         'instrument_code' : 'E10-FLOYDS',
-                        'snr' : 3.2107142545718275,
+                        'saturated': False,
+                        'snr' : 4.95383317268971,
                         'calibs' : 'both',
                         'spectroscopy' : True,
                         'too_mode': False,
                         'calibsource' : {},
                         'calibsource_id' : -1,
+                        'calibsource_exptime' : 60,
                         'solar_analog' : False,
                         'vis_time': 7.5,
                         'lco_enc': 'CLMA',
@@ -1278,7 +1282,7 @@ class TestSchedule_Check(TestCase):
                         'lco_tel': '2M0',
                         'max_alt': 67.75685165409215,
                         'moon_alt': -58.30060609532361,
-                        'moon_phase': 0.011439162208279174,
+                        'moon_phase': 1.1439162208279174,
                         'moon_sep': 170.66180760224114,
                         'trail_len': 0.48354895802581555,
                         'typical_seeing': 2.0,
@@ -1333,12 +1337,14 @@ class TestSchedule_Check(TestCase):
                         'period' : None,
                         'jitter' : None,
                         'instrument_code' : 'E10-FLOYDS',
-                        'snr' : 3.2107142545718275,
+                        'saturated': False,
+                        'snr' : 4.95383317268971,
                         'calibs' : 'both',
                         'spectroscopy' : True,
                         'too_mode': False,
                         'calibsource' : {'separation_deg' : 11.551868532224177, **model_to_dict(self.solar_analog)},
                         'calibsource_id' : 1,
+                        'calibsource_exptime' : 180,
                         'solar_analog' : True,
                         'vis_time': 6.5,
                         'lco_enc': 'CLMA',
@@ -1346,7 +1352,7 @@ class TestSchedule_Check(TestCase):
                         'lco_tel': '2M0',
                         'max_alt': 67.75685165409215,
                         'moon_alt': -58.30060609532361,
-                        'moon_phase': 0.011439162208279174,
+                        'moon_phase': 1.1439162208279174,
                         'moon_sep': 170.66180760224114,
                         'trail_len': 0.48354895802581555,
                         'typical_seeing': 2.0,
@@ -1383,7 +1389,7 @@ class TestSchedule_Check(TestCase):
                         'target_name': self.body_mp.current_name(),
                         'magnitude': 19.111452844407932,
                         'speed': 2.8743096178906367,
-                        'slot_length': 20,
+                        'slot_length': 20.0,
                         'filter_pattern': 'w',
                         'pattern_iterations': 14.0,
                         'available_filters': 'air, U, B, V, R, I, up, gp, rp, ip, zs, Y, w',
@@ -1404,12 +1410,14 @@ class TestSchedule_Check(TestCase):
                         'num_times' : 3,
                         'total_time' : 1.0,
                         'instrument_code' : '',
+                        'saturated': None,
                         'snr' : None,
                         'too_mode': False,
                         'calibs' : '',
                         'spectroscopy' : False,
                         'calibsource' : {},
                         'calibsource_id' : -1,
+                        'calibsource_exptime' : 60,
                         'solar_analog' : False,
                         'vis_time': 6.5,
                         'lco_enc': 'DOMA',
@@ -1417,7 +1425,7 @@ class TestSchedule_Check(TestCase):
                         'lco_tel': '1M0',
                         'max_alt': 67.70515036289103,
                         'moon_alt': -43.42555786736966,
-                        'moon_phase': 0.00890997165773788,
+                        'moon_phase': 0.8909971657737881,
                         'moon_sep': 171.79313958425425,
                         'trail_len': 2.395258014908864,
                         'typical_seeing': 2.0,
@@ -1454,7 +1462,7 @@ class TestSchedule_Check(TestCase):
                         'target_name': self.body_mp.current_name(),
                         'magnitude': 19.111452844407932,
                         'speed': 2.8743096178906367,
-                        'slot_length': 20,
+                        'slot_length': 20.0,
                         'filter_pattern': 'w',
                         'pattern_iterations': 14.0,
                         'available_filters': 'air, U, B, V, R, I, up, gp, rp, ip, zs, Y, w',
@@ -1475,12 +1483,14 @@ class TestSchedule_Check(TestCase):
                         'num_times' : 3,
                         'total_time' : 1.0,
                         'instrument_code' : '',
+                        'saturated': None,
                         'snr' : None,
                         'too_mode': False,
                         'calibs' : '',
                         'spectroscopy' : False,
                         'calibsource' : {},
                         'calibsource_id' : -1,
+                        'calibsource_exptime' : 60,
                         'solar_analog' : False,
                         'vis_time': 6.5,
                         'lco_enc': 'DOMA',
@@ -1488,7 +1498,7 @@ class TestSchedule_Check(TestCase):
                         'lco_tel': '1M0',
                         'max_alt': 67.70515036289103,
                         'moon_alt': -43.42555786736966,
-                        'moon_phase': 0.00890997165773788,
+                        'moon_phase': 0.8909971657737881,
                         'moon_sep': 171.79313958425425,
                         'trail_len': 2.395258014908864,
                         'typical_seeing': 2.0,
@@ -1523,7 +1533,7 @@ class TestSchedule_Check(TestCase):
                         'target_name': self.body_mp.current_name(),
                         'magnitude': 19.111452844407932,
                         'speed': 2.8743096178906367,
-                        'slot_length': 20,
+                        'slot_length': 20.0,
                         'filter_pattern': 'w',
                         'pattern_iterations': 14.0,
                         'available_filters': 'air, U, B, V, R, I, up, gp, rp, ip, zs, Y, w',
@@ -1545,11 +1555,13 @@ class TestSchedule_Check(TestCase):
                         'total_time' : 1.0,
                         'instrument_code' : '',
                         'too_mode': False,
+                        'saturated': None,
                         'snr' : None,
                         'calibs' : '',
                         'spectroscopy' : False,
                         'calibsource' : {},
                         'calibsource_id' : -1,
+                        'calibsource_exptime' : 60,
                         'solar_analog' : False,
                         'vis_time': 6.5,
                         'lco_enc': 'DOMA',
@@ -1557,7 +1569,7 @@ class TestSchedule_Check(TestCase):
                         'lco_tel': '1M0',
                         'max_alt': 67.70515036289103,
                         'moon_alt': -43.42555786736966,
-                        'moon_phase': 0.00890997165773788,
+                        'moon_phase': 0.8909971657737881,
                         'moon_sep': 171.79313958425425,
                         'trail_len': 2.395258014908864,
                         'typical_seeing': 2.0,
@@ -5611,7 +5623,7 @@ class TestFindBestSolarAnalog(TestCase):
         emp = compute_ephem(utc_date, model_to_dict(self.test_body), 'F65', perturb=False)
         self.assertAlmostEqual(expected_ra, emp['ra'], self.precision)
         self.assertAlmostEqual(expected_dec, emp['dec'], self.precision)
-        close_standard, close_params = find_best_solar_analog(emp['ra'], emp['dec'])
+        close_standard, close_params = find_best_solar_analog(emp['ra'], emp['dec'], 'F65')
 
         self.assertEqual(expected_standard, close_standard)
         for key in expected_params:
@@ -5632,7 +5644,7 @@ class TestFindBestSolarAnalog(TestCase):
         emp = compute_ephem(utc_date, model_to_dict(self.test_body), 'E10', perturb=False)
         self.assertAlmostEqual(expected_ra, emp['ra'], self.precision)
         self.assertAlmostEqual(expected_dec, emp['dec'], self.precision)
-        close_standard, close_params = find_best_solar_analog(emp['ra'], emp['dec'])
+        close_standard, close_params = find_best_solar_analog(emp['ra'], emp['dec'], 'E10')
 
         self.assertEqual(expected_standard, close_standard)
         for key in expected_params:
@@ -5651,7 +5663,7 @@ class TestFindBestSolarAnalog(TestCase):
         emp = compute_ephem(utc_date, model_to_dict(self.test_body), 'E10', perturb=False)
         self.assertAlmostEqual(expected_ra, emp['ra'], self.precision)
         self.assertAlmostEqual(expected_dec, emp['dec'], self.precision)
-        close_standard, close_params = find_best_solar_analog(emp['ra'], emp['dec'], min_sep=5.0)
+        close_standard, close_params = find_best_solar_analog(emp['ra'], emp['dec'], 'E10', ha_sep=0.5)
 
         self.assertEqual(expected_standard, close_standard)
         self.assertEqual(expected_params, close_params)

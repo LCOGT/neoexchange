@@ -1091,7 +1091,7 @@ class TestSubmitBlockToScheduler(TestCase):
                     'start_time' :  utc_date + timedelta(hours=5),
                     'end_time'   :  utc_date + timedelta(hours=15),
                     'solar_analog' : True,
-                    'calibsource' : { 'name' : 'SA107-684', 'ra_deg' : 234.3254167, 'dec_deg' : -0.163889},
+                    'calibsource' : { 'name' : 'SA107-684', 'ra_deg' : 234.3254167, 'dec_deg' : -0.163889, 'calib_exptime': 60},
                   }
         expected_num_requests = 2
         expected_operator = 'MANY'

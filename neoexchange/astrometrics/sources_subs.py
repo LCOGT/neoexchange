@@ -1669,7 +1669,7 @@ def configure_defaults(params):
             params['binning'] = 1
             # params['ag_exp_time'] = 10
             if params.get('solar_analog', False) and len(params.get('calibsource', {})) > 0:
-                params['calibsrc_exptime'] = 60.0
+                params['calibsrc_exptime'] = params['calibsource']['calib_exptime']
             if params.get('filter', None):
                 del(params['filter'])
             params['spectra_slit'] = 'slit_6.0as'
@@ -2221,20 +2221,19 @@ def read_solar_standards(standards_file):
 
     standards = {}
 
-    data = ascii.read(standards_file, format='fixed_width_no_header', \
-        names=('Name', 'RA', 'Dec', 'Vmag'), col_starts=(4,25,37,49))
+    data = ascii.read(standards_file, format='fixed_width_no_header', names=('Name', 'RA', 'Dec', 'Vmag'), col_starts=(4, 25, 37, 49))
     for row in data:
         name = row['Name'].replace('Land', 'Landolt').replace('(SA) ', 'SA')
         nstart = 1
         nstart, ra, status = S.sla_dafin(row['RA'].replace(':', ' '), nstart)
         if status == 0:
-            ra = ra * 15.0
+            ra *= 15.0
         else:
             ra = None
         nstart = 1
         nstart, dec, status = S.sla_dafin(row['Dec'].replace(':', ' '), nstart)
         if status != 0:
             dec = None
-        Vmag = row['Vmag']
-        standards[name] = { 'ra_rad' : ra, 'dec_rad' : dec, 'mag' : Vmag, 'spectral_type' : 'G2V' }
+        v_mag = row['Vmag']
+        standards[name] = { 'ra_rad' : ra, 'dec_rad' : dec, 'mag' : v_mag, 'spectral_type' : 'G2V'}
     return standards
