@@ -15,6 +15,7 @@ import os
 from glob import glob
 from datetime import datetime, timedelta, date
 from math import floor, ceil, degrees, radians, pi, acos
+from astropy import units as u
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -105,10 +106,10 @@ def user_proposals(user):
     return proposals
 
 
-def determine_active_proposals(proposal_code=None, filter_epo=True):
+def determine_active_proposals(proposal_code=None, filter_proposals=True):
     """Determine and return the active Proposals or verify the passed [proposal_code]
-    exists. If [filter_epo] is set to True (the default), proposals of the form
-    'xxxEPO20yy' are excluded from the returned proposal list.
+    exists. If [filter_proposals] is set to True (the default), proposals
+    with `proposal.download=False` are excluded from the returned proposal list.
 
     Returns a list of proposal codes.
     """
@@ -122,8 +123,8 @@ def determine_active_proposals(proposal_code=None, filter_epo=True):
             proposals = []
     else:
         proposals = Proposal.objects.filter(active=True)
-        if filter_epo:
-            proposals = proposals.exclude(code__contains='EPO')
+        if filter_proposals is True:
+            proposals = proposals.filter(download=True)
         proposals = proposals.order_by('code').values_list('code', flat=True)
 
     return proposals
@@ -921,6 +922,7 @@ def schedule_check(data, body, ok_to_schedule=True):
 
     solar_analog_id = -1
     solar_analog_params = {}
+    solar_analog_exptime = 60
     if type(body) == Body:
         emp = compute_ephem(dark_midpoint, body_elements, data['site_code'],
             dbg=False, perturb=False, display=False)
@@ -937,15 +939,15 @@ def schedule_check(data, body, ok_to_schedule=True):
         if spectroscopy and solar_analog:
             # Try and find a suitable solar analog "close" to RA, Dec midpoint
             # of block
-            close_solarstd, close_solarstd_params = find_best_solar_analog(ra, dec)
+            close_solarstd, close_solarstd_params = find_best_solar_analog(ra, dec, data['site_code'])
             if close_solarstd is not None:
                 solar_analog_id = close_solarstd.id
                 solar_analog_params = close_solarstd_params
     else:
         magnitude = body.vmag
         speed = 0.0
-        ra = body.ra
-        dec = body.dec
+        ra = radians(body.ra)
+        dec = radians(body.dec)
 
     # Determine filter pattern
     if data.get('filter_pattern'):
@@ -989,15 +991,35 @@ def schedule_check(data, body, ok_to_schedule=True):
         except MagRangeError:
             slot_length = 60
             ok_to_schedule = False
-    snr = None
 
+    # determine lunar position
+    moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(dark_midpoint, ra, dec, data['site_code'])
+    min_lunar_dist = data.get('min_lunar_dist', 30)
+    if moon_phase <= .25:
+        moon_phase_code = 'D'
+    elif moon_phase <= .75:
+        moon_phase_code = 'G'
+    else:
+        moon_phase_code = 'B'
+
+    # Calculate slot length, exposure time, SNR
+    snr = None
+    saturated = None
     if spectroscopy:
-        new_mag, new_passband, snr = calc_asteroid_snr(magnitude, 'V', data['exp_length'], instrument=data['instrument_code'])
+        snr_params = {'airmass': max_alt_airmass,
+                      'slit_width': float(filter_pattern[5:8])*u.arcsec,
+                      'moon_phase' : moon_phase_code
+                      }
+        new_mag, new_passband, snr, saturated = calc_asteroid_snr(magnitude, 'V', data['exp_length'], instrument=data['instrument_code'], params=snr_params)
         exp_count = data['exp_count']
         exp_length = data.get('exp_length', 1)
         slot_length = determine_spectro_slot_length(data['exp_length'], data['calibs'])
         slot_length /= 60.0
         slot_length = ceil(slot_length)
+        # If automatically finding Solar Analog, calculate exposure time.
+        # Currently assume bright enough that 180s is the maximum exposure time.
+        if solar_analog and solar_analog_params:
+            solar_analog_exptime = calc_asteroid_snr(solar_analog_params['vmag'], 'V', 180, instrument=data['instrument_code'], params=snr_params, optimize=True)
     else:
         # Determine exposure length and count
         if data.get('exp_length', None):
@@ -1020,10 +1042,6 @@ def schedule_check(data, body, ok_to_schedule=True):
         typical_seeing = 3.0
     else:
         typical_seeing = 2.0
-
-    # determine lunar position
-    moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(dark_midpoint, ra, dec, data['site_code'])
-    min_lunar_dist = data.get('min_lunar_dist', 30)
 
     # get ipp value
     ipp_value = data.get('ipp_value', 1.00)
@@ -1101,6 +1119,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'period' : period,
         'jitter' : jitter,
         'snr' : snr,
+        'saturated' : saturated,
         'spectroscopy' : spectroscopy,
         'calibs' : data.get('calibs', ''),
         'instrument_code' : data['instrument_code'],
@@ -1112,7 +1131,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'vis_time' : dark_and_up_time,
         'moon_alt' : moon_alt,
         'moon_sep' : moon_obj_sep,
-        'moon_phase' : moon_phase,
+        'moon_phase' : moon_phase * 100,
         'min_lunar_dist' : min_lunar_dist,
         'max_airmass': max_airmass,
         'ipp_value': ipp_value,
@@ -1122,7 +1141,8 @@ def schedule_check(data, body, ok_to_schedule=True):
         'typical_seeing' : typical_seeing,
         'solar_analog' : solar_analog,
         'calibsource' : solar_analog_params,
-        'calibsource_id' : solar_analog_id
+        'calibsource_id' : solar_analog_id,
+        'calibsource_exptime' : solar_analog_exptime,
     }
 
     if period and jitter:
@@ -1166,7 +1186,8 @@ def schedule_submit(data, body, username):
                                     'pm_dec'  : calibsource.pm_dec,
                                     'parallax': calibsource.parallax,
                                     'source_type' : calibsource.source_type,
-                                    'vmag' : calibsource.vmag
+                                    'vmag' : calibsource.vmag,
+                                    'calib_exptime': data.get('calibsource_exptime', 60)
                                  }
         except StaticSource.DoesNotExist:
             logger.error("Was passed a StaticSource id=%d, but it now can't be found" % data['calibsource_id'])
@@ -1321,7 +1342,7 @@ def feasibility_check(data, body):
         spectral_type = 'Mean'
     else:
         spectral_type = 'Solar'
-    data['new_mag'], data['new_passband'], data['snr'] = calc_asteroid_snr(data['magnitude'], ast_mag_bandpass, data['exp_length'], instrument=data['instrument_code'], params=snr_params, taxonomy=spectral_type)
+    data['new_mag'], data['new_passband'], data['snr'], data['saturated'] = calc_asteroid_snr(data['magnitude'], ast_mag_bandpass, data['exp_length'], instrument=data['instrument_code'], params=snr_params, taxonomy=spectral_type)
     calibs = data.get('calibs', 'both')
     slot_length = determine_spectro_slot_length(data['exp_length'], calibs)
     slot_length /= 60.0
@@ -1534,8 +1555,9 @@ def record_block(tracking_number, params, form_data, target):
         cadence = False
         if len(params.get('request_numbers', [])) > 1 and params.get('period', -1.0) > 0.0 and params.get('jitter', -1.0) > 0.0:
             cadence = True
+        proposal = Proposal.objects.get(code=form_data['proposal_code'])
         sblock_kwargs = {
-                         'proposal' : Proposal.objects.get(code=form_data['proposal_code']),
+                         'proposal' : proposal,
                          'groupid'  : form_data['group_id'],
                          'block_start' : form_data['start_time'],
                          'block_end'   : form_data['end_time'],
@@ -1551,6 +1573,9 @@ def record_block(tracking_number, params, form_data, target):
             sblock_kwargs['calibsource'] = target
         else:
             sblock_kwargs['body'] = target
+        # Check if this went to a rapid response proposal
+        if proposal.time_critical is True:
+            sblock_kwargs['rapid_response'] = True
         sblock_pk = SuperBlock.objects.create(**sblock_kwargs)
         i = 0
         for request, request_type in params.get('request_numbers', {}).items():
@@ -1833,7 +1858,7 @@ def clean_NEOCP_object(page_list):
             # See if this is a local discovery
             provisional_name = line[0:7].rstrip()
             origin = 'M'
-            if provisional_name[0:5] in ['CPTTL', 'LSCTL', 'ELPTL', 'COJTL', 'COJAT', 'LSCAT', 'LSCJM' ]:
+            if provisional_name[0:5] in ['CPTTL', 'LSCTL', 'ELPTL', 'COJTL', 'COJAT', 'LSCAT', 'LSCJM', 'LLZ00' ]:
                 origin = 'L'
             params = {
                 'abs_mag': abs_mag,
@@ -3191,10 +3216,10 @@ def find_best_flux_standard(sitecode, utc_date=None, flux_standards=None, debug=
     return close_standard, close_params
 
 
-def find_best_solar_analog(ra_rad, dec_rad, min_sep=4.0*15.0, solar_standards=None, debug=False):
+def find_best_solar_analog(ra_rad, dec_rad, site, ha_sep=4.0, solar_standards=None, debug=False):
     """Finds the "best" solar analog (closest to the passed RA, Dec (in radians,
-    from e.g. compute_ephem)) within [min_sep] degrees (defaults to 60deg (=4 hours
-    of HA).
+    from e.g. compute_ephem)) within [ha_sep] hours (defaults to 4 hours
+    of HA) that can be seen from the appropriate site.
     If a match is found, the StaticSource object is returned along with a
     dictionary of parameters, including the additional 'seperation_deg' with the
     minimum separation found (in degrees)"""
@@ -3204,13 +3229,23 @@ def find_best_solar_analog(ra_rad, dec_rad, min_sep=4.0*15.0, solar_standards=No
     if solar_standards is None:
         solar_standards = StaticSource.objects.filter(source_type=StaticSource.SOLAR_STANDARD)
 
+    if site == 'E10':
+        dec_lim = [-90.0, 20.0]
+    elif site == 'F65':
+        dec_lim = [-20.0, 90.0]
+    else:
+        dec_lim = [-20.0, 20.0]
+
+    min_sep = None
     for standard in solar_standards:
+        ra_diff = abs(standard.ra - degrees(ra_rad)) / 15
         sep = degrees(S.sla_dsep(radians(standard.ra), radians(standard.dec), ra_rad, dec_rad))
         if debug:
-            print("%10s %1d %011.7f %+11.7f %7.3f %7.3f (%10s)" % (standard.name.replace("Landolt ", "") , standard.source_type, standard.ra, standard.dec, sep, min_sep, close_standard))
-        if sep < min_sep:
-            min_sep = sep
-            close_standard = standard
+            print("%10s %1d %011.7f %+11.7f %7.3f %7.3f (%10s)" % (standard.name.replace("Landolt ", "") , standard.source_type, standard.ra, standard.dec, sep, ha_sep, close_standard))
+        if ra_diff < ha_sep and (dec_lim[0] <= standard.dec <= dec_lim[1]):
+            if min_sep is None or sep < min_sep:
+                min_sep = sep
+                close_standard = standard
     if close_standard is not None:
         close_params = model_to_dict(close_standard)
         close_params['separation_deg'] = min_sep

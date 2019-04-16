@@ -36,18 +36,6 @@ from core.models import Proposal, StaticSource
 class TestCalibrationSources(FunctionalTest):
 
     def setUp(self):
-        test_fh = open(os.path.join('astrometrics', 'tests', 'flux_standards_lis.html'), 'r')
-        test_flux_page = BeautifulSoup(test_fh, "html.parser")
-        test_fh.close()
-        self.flux_standards = fetch_flux_standards(test_flux_page)
-        num_created = create_calib_sources(self.flux_standards)
-        solar_standards = { 'Landolt SA98-978' : { 'ra_rad' : radians(102.8916666666666),
-                                                   'dec_rad' : radians(-0.1925),
-                                                   'mag' : 10.5,
-                                                   'spectral_type' : 'G2V'},
-                          }
-        num_created = create_calib_sources(solar_standards, StaticSource.SOLAR_STANDARD)
-
         # Create a user to test login
         self.insert_test_proposals()
         self.username = 'bart'
@@ -62,6 +50,19 @@ class TestCalibrationSources(FunctionalTest):
         update_proposal_permissions(self.bart, [{'code': self.neo_proposal.code}])
 
         super(TestCalibrationSources, self).setUp()
+
+    def add_new_calib_sources(self):
+        test_fh = open(os.path.join('astrometrics', 'tests', 'flux_standards_lis.html'), 'r')
+        test_flux_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+        self.flux_standards = fetch_flux_standards(test_flux_page)
+        num_created = create_calib_sources(self.flux_standards)
+        solar_standards = {'Landolt SA98-978': {'ra_rad': radians(102.8916666666666),
+                                                'dec_rad': radians(-0.1925),
+                                                'mag': 10.5,
+                                                'spectral_type': 'G2V'},
+                           }
+        num_created = create_calib_sources(solar_standards, StaticSource.SOLAR_STANDARD)
 
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def login(self):
@@ -90,6 +91,7 @@ class TestCalibrationSources(FunctionalTest):
 
     @patch('core.views.datetime', MockDateTime)
     def test_can_view_calibsources(self):
+        self.add_new_calib_sources()
         MockDateTime.change_datetime(2018, 5, 22, 5, 0, 0)
 
         # A new user, Daniel, goes to a hidden calibration page on the site
@@ -129,6 +131,7 @@ class TestCalibrationSources(FunctionalTest):
     @patch('core.forms.datetime', MockDateTime)
     @patch('core.views.submit_block_to_scheduler', mock_submit_to_scheduler)
     def test_can_schedule_calibsource(self):
+        self.add_new_calib_sources()
         self.test_login()
         MockDateTime.change_datetime(2018, 5, 22, 5, 0, 0)
 
@@ -194,6 +197,7 @@ class TestCalibrationSources(FunctionalTest):
     @patch('core.forms.datetime', MockDateTime)
     @patch('core.views.submit_block_to_scheduler', mock_submit_to_scheduler)
     def test_can_schedule_calibsource_fts(self):
+        self.add_new_calib_sources()
         self.test_login()
         MockDateTime.change_datetime(2018, 5, 22, 5, 0, 0)
 
@@ -260,6 +264,7 @@ class TestCalibrationSources(FunctionalTest):
     @patch('core.forms.datetime', MockDateTime)
     @patch('core.views.submit_block_to_scheduler', mock_submit_to_scheduler)
     def test_can_schedule_specific_calibsource(self):
+        self.add_new_calib_sources()
         self.test_login()
         MockDateTime.change_datetime(2018, 5, 22, 5, 0, 0)
 

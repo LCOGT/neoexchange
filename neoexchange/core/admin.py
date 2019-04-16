@@ -147,7 +147,7 @@ class PreviousSpectraAdmin(VersionAdmin):
 
 
 class ProposalAdmin(admin.ModelAdmin):
-    list_display = ('code', 'title', 'pi', 'tag', 'active')
+    list_display = ('code', 'title', 'pi', 'tag', 'active', 'time_critical', 'download')
 
 
 class SourceMeasurementAdmin(admin.ModelAdmin):

@@ -134,6 +134,8 @@ class Proposal(models.Model):
     pi = models.CharField("PI", max_length=50, default='', help_text='Principal Investigator (PI)')
     tag = models.CharField(max_length=10, default='LCOGT')
     active = models.BooleanField('Proposal active?', default=True)
+    time_critical = models.BooleanField('Time Critical/ToO proposal?', default=False)
+    download = models.BooleanField('Auto download data?', default=True)
 
     class Meta:
         db_table = 'ingest_proposal'
@@ -1288,6 +1290,7 @@ class PanoptesReport(models.Model):
 
     def __str__(self):
         return "Block {} Candidate {} is Subject {}".format(self.block.id, self.candidate.id, self.subject_id)
+
 
 @python_2_unicode_compatible
 class StaticSource(models.Model):
