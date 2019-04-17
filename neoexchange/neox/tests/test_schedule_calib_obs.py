@@ -26,6 +26,10 @@ from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 from core.models import Body, Proposal
 import time
+import os
+from bs4 import BeautifulSoup
+from astrometrics.sources_subs import fetch_flux_standards
+from core.views import create_calib_sources
 
 from neox.auth_backend import update_proposal_permissions
 
@@ -76,6 +80,12 @@ class ScheduleObservations(FunctionalTest):
         # Wait until response is recieved
         self.wait_for_element_with_id('page')
 
+    def add_new_calib_sources(self):
+        test_fh = open(os.path.join('astrometrics', 'tests', 'flux_standards_lis.html'), 'r')
+        test_flux_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+        self.flux_standards = fetch_flux_standards(test_flux_page)
+        num_created = create_calib_sources(self.flux_standards)
 
 # Monkey patch the datetime used by forms otherwise it fails with 'window in the past'
 # TAL: Need to patch the datetime in views also otherwise we will get the wrong
@@ -350,8 +360,35 @@ class ScheduleObservations(FunctionalTest):
     @patch('core.forms.datetime', MockDateTime)
     @patch('core.views.datetime', MockDateTime)
     def test_schedule_spectroscopy_missing_telescope(self):
+        self.add_new_calib_sources()
         MockDateTime.change_date(2015, 4, 20)
         self.test_login()
+
+        # Bart has heard about a new website for NEOs. He goes to the
+        # page for a calib source, but the best case telescope is missing
+        start_url = reverse('calibsource', kwargs={'pk': 2})
+        self.browser.get(self.live_server_url + start_url)
+
+        # He sees a Schedule Observations button
+        link = self.browser.find_element_by_id('schedule-spectro-obs')
+        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-calib-spectra',
+                                                                   kwargs={'instrument_code': 'E10-FLOYDS', 'pk': 2}))
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
+
+        # He clicks the link to go to the Schedule Observations page
+        with self.wait_for_page_load(timeout=10):
+            link.click()
+        self.browser.implicitly_wait(10)
+        new_url = self.browser.current_url
+        self.assertEqual(str(new_url), target_url)
+
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id('verify-scheduling').click()
+
+        # The page refreshes and an error appears.
+        error_msg = self.browser.find_element_by_class_name('errorlist').text
+        self.assertIn('This Site/Instrument combination is not currently available.', error_msg)
 
         # Bart has heard about a new website for NEOs. He goes to the
         # page of the first target
