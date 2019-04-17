@@ -297,6 +297,13 @@ class ScheduleSpectraForm(forms.Form):
             raise forms.ValidationError("Window cannot start in the past")
         return start
 
+    def clean(self):
+        cleaned_data = super(ScheduleSpectraForm, self).clean()
+        site = self.cleaned_data['instrument_code']
+        spectra = self.cleaned_data['spectroscopy']
+        if not fetch_filter_list(site[0:3], spectra):
+            raise forms.ValidationError("This Site/Instrument combination is not currently available.")
+
     def __init__(self, *args, **kwargs):
         self.proposal_code = kwargs.pop('proposal_code', None)
         super(ScheduleSpectraForm, self).__init__(*args, **kwargs)

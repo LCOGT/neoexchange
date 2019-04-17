@@ -523,7 +523,7 @@ class ScheduleObservations(FunctionalTest):
 
         # The page refreshes and an error appears.
         error_msg = self.browser.find_element_by_class_name('errorlist').text
-        self.assertIn('This Site/Telescope combination is not currently available.', error_msg)
+        self.assertIn('This Site/Instrument combination is not currently available.', error_msg)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
