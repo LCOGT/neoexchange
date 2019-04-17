@@ -815,6 +815,12 @@ def mock_fetch_filter_list(site, spec):
     return fetch_filter_list(site, spec, test_filter_map)
 
 
+def mock_fetch_filter_list_no2m(site, spec):
+    test_filter_map = os.path.join('astrometrics', 'tests', 'test_no2m_camera_mapping.dat')
+
+    return fetch_filter_list(site, spec, test_filter_map)
+
+
 def mock_expand_cadence(user_request):
 
     cadence = {
