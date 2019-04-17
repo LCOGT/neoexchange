@@ -399,6 +399,7 @@ def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_di
     source_dir = os.path.abspath(os.path.join(os.getenv('HOME'), '.find_orb'))
     dest_dir = dest_dir or tempfile.mkdtemp(prefix='tmp_neox_')
     new_ephem = (None, None)
+    comp_time = start_time + timedelta(days=1)
 
     filename, num_lines = export_measurements(body_id, dest_dir)
 
@@ -412,10 +413,10 @@ def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_di
                 body = Body.objects.get(pk=body_id)
                 logger.info("{}: FindOrb found an orbital rms of {} using {} observations.".format(body.current_name(), new_elements['orbit_rms'], new_elements['num_obs']))
                 if body.epochofel:
-                    time_to_current_epoch = abs(body.epochofel - start_time)
+                    time_to_current_epoch = abs(body.epochofel - comp_time)
                 else:
-                    time_to_current_epoch = abs(datetime.min - start_time)
-                time_to_new_epoch = abs(new_elements['epochofel'] - start_time)
+                    time_to_current_epoch = abs(datetime.min - comp_time)
+                time_to_new_epoch = abs(new_elements['epochofel'] - comp_time)
                 if time_to_new_epoch <= time_to_current_epoch and new_elements['orbit_rms'] < 1.0:
                     # Reset some fields to avoid overwriting
 
@@ -434,7 +435,7 @@ def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_di
                     if new_elements['orbit_rms'] >= 1.0:
                         message += " and rms was too high"
                     message += ". Did not update"
-                logger.info("%s Body #%d (%s) with FIndOrb" % (message, body.pk, body.current_name()))
+                logger.info("%s Body #%d (%s) with FindOrb" % (message, body.pk, body.current_name()))
 
                 # Read in ephemeris file
                 ephem_file = os.path.join(dest_dir, 'new.ephem')
