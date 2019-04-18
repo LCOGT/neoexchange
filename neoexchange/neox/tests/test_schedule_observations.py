@@ -281,7 +281,7 @@ class ScheduleObservations(FunctionalTest):
 
         # The page refreshes and we get correct slot length and the Schedule button again
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
-        self.assertIn('25.', slot_length)
+        self.assertIn('25', slot_length)
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
         self.assertIn('Schedule this Object', submit)
 
@@ -655,7 +655,8 @@ class ScheduleObservations(FunctionalTest):
         slot_length_box = self.browser.find_element_by_id('id_slot_length')
         slot_length_box.clear()
         slot_length_box.send_keys('1')
-        self.browser.find_element_by_id("id_edit_button").click()
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
 
         # The page refreshes and we get correct slot length
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
@@ -669,7 +670,8 @@ class ScheduleObservations(FunctionalTest):
         moon_box = self.browser.find_element_by_id('id_min_lunar_dist')
         moon_box.clear()
         moon_box.send_keys('160')
-        self.browser.find_element_by_id("id_edit_button").click()
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
 
         # The page refreshes and we get correct hours visible and a warning on moon dist
         vis = self.browser.find_element_by_id('id_visibility_row').find_element_by_class_name('kv-value').text
@@ -682,7 +684,8 @@ class ScheduleObservations(FunctionalTest):
         airmass_box = self.browser.find_element_by_id('id_max_airmass')
         airmass_box.clear()
         airmass_box.send_keys('1.1')
-        self.browser.find_element_by_id("id_edit_button").click()
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
         vis = self.browser.find_element_by_id('id_visibility_row').find_element_by_class_name('warning').text
         self.assertIn('Target Not Visible', vis)
 
@@ -691,14 +694,16 @@ class ScheduleObservations(FunctionalTest):
         group_id_box.clear()
         bs_string = 'ຢູ່ໃກ້Γη小惑星‽'
         group_id_box.send_keys(bs_string)
-        self.browser.find_element_by_id("id_edit_button").click()
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
         group_id = self.browser.find_element_by_id('id_group_id').get_attribute('value')
         self.assertEqual('N999r0q_V37-20150421', group_id)
         group_id_box = self.browser.find_element_by_name("group_id")
         group_id_box.clear()
         bs_string = 'rcoivny3q5r@@yciht8ycv9njcrnc87vy b0y98uxm9cyh8ycvn0fh 80hfcubfuh87yc 0nhfhxmhf7g 70h'
         group_id_box.send_keys(bs_string)
-        self.browser.find_element_by_id("id_edit_button").click()
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
         group_id = self.browser.find_element_by_id('id_group_id').get_attribute('value')
         self.assertEqual(bs_string[:50], group_id)
 
@@ -773,7 +778,8 @@ class ScheduleObservations(FunctionalTest):
         slot_length_box = self.browser.find_element_by_id('id_slot_length')
         slot_length_box.clear()
         slot_length_box.send_keys('1')
-        self.browser.find_element_by_id("id_edit_button").click()
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
 
         # The page refreshes and we get correct slot length
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
@@ -784,7 +790,8 @@ class ScheduleObservations(FunctionalTest):
         moon_box = self.browser.find_element_by_id('id_min_lunar_dist')
         moon_box.clear()
         moon_box.send_keys('160')
-        self.browser.find_element_by_id("id_edit_button").click()
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
 
         # The page refreshes and we get correct hours visible and a warning on moon dist
         moon_warn = self.browser.find_element_by_id('id_moon_row').find_element_by_class_name('warning').text
@@ -949,7 +956,8 @@ class ScheduleObservations(FunctionalTest):
         slot_length_box = self.browser.find_element_by_id('id_slot_length')
         slot_length_box.clear()
         slot_length_box.send_keys('1')
-        self.browser.find_element_by_id("id_edit_button").click()
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
 
         # The page refreshes and we get correct slot length
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
@@ -960,7 +968,8 @@ class ScheduleObservations(FunctionalTest):
         moon_box = self.browser.find_element_by_id('id_min_lunar_dist')
         moon_box.clear()
         moon_box.send_keys('160')
-        self.browser.find_element_by_id("id_edit_button").click()
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
 
         # The page refreshes and we get correct hours visible and a warning on moon dist
         moon_warn = self.browser.find_element_by_id('id_moon_row').find_element_by_class_name('warning').text
