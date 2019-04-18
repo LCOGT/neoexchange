@@ -1091,6 +1091,47 @@ class SourceMeasurement(models.Model):
             mpc_line = mpc_line + '\n' + extrainfo
         return mpc_line
 
+    def format_psv_line(self):
+        psv_line = ""
+        tbl_fmt = '%7s|%-11s|%8s|%4s|%-4s|%4s|%-23s|%12s|%12s|%8s|%5s|%6s|%8s|%-5s|%-s'
+        rms_tbl_fmt = '%7s|%-11s|%8s|%4s|%-4s|%4s|%-23s|%13s|%13s|%5s|%6s|%8s|%5s|%6s|%4s|%8s|%6s|%6s|%6s|%-5s|%-s'
+
+        rms_available = False
+        if self.err_obs_ra and self.err_obs_dec and self.err_obs_mag:
+            rms_available = True
+
+        if self.body.name:
+            body_name = self.body.name
+            provisional_name = ''
+        else:
+            provisional_name = self.body.provisional_name
+            body_name = ''
+        obs_type = 'CCD'
+        prog = ''
+        remarks = ''
+
+        obsTime = self.frame.midpoint
+        obsTime = obsTime.strftime("%Y-%m-%dT%H:%M:%S")
+        frac_time = "{:.2f}Z".format(self.frame.midpoint.microsecond / 1e6)
+        obsTime = obsTime + frac_time[1:]
+        catalog_code = translate_catalog_code(self.astrometric_catalog, ades_code=True)
+
+        fmt_ra = "{:.5f}".format(self.obs_ra)
+        fmt_dec = "{:.5f}".format(self.obs_dec)
+        fmt_mag = "{:.1f} ".format(float(self.obs_mag))
+
+        if rms_available:
+            psv_line = rms_tbl_fmt % (body_name, body_name, provisional_name, obs_type, self.frame.sitecode, \
+                prog, obsTime, self.obs_ra, self.obs_dec, self.rmsRA, self.rmsDec,\
+                catalog_code, self.obs_mag, self.err_obs_mag, self.frame.map_filter(), \
+                catalog_code, self.photAp, self.logSNR, self.seeing, \
+                self.flags, remarks)
+        else:
+            psv_line = tbl_fmt % (body_name, body_name, provisional_name, obs_type, self.frame.sitecode, \
+                prog, obsTime, fmt_ra, fmt_dec, catalog_code,\
+                fmt_mag, self.frame.map_filter(), catalog_code, self.flags, remarks)
+        return psv_line
+
     class Meta:
         verbose_name = _('Source Measurement')
         verbose_name_plural = _('Source Measurements')

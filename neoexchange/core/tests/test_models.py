@@ -1114,7 +1114,7 @@ class TestSourceMeasurement(TestCase):
                             'obs_mag' : 21.5,
                             'astrometric_catalog' : "UCAC-4",
                          }
-                                 
+
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '     N999r0q  C2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 Rq     K93'
         mpc_line = measure.format_mpc_line(include_catcode=True)
@@ -1128,7 +1128,7 @@ class TestSourceMeasurement(TestCase):
                             'obs_mag' : 21.5,
                             'astrometric_catalog' : "UCAC-4",
                          }
-                                 
+
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '     N999r0q  C2015 07 13.88184000 30 00.00 -00 30 00.0          21.5 Rq     K93'
         mpc_line = measure.format_mpc_line(include_catcode=True)
@@ -1371,6 +1371,62 @@ class TestSourceMeasurement(TestCase):
         expected_mpcline = '     N999r0q*KC2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 Rq     K93'
         mpc_line = measure.format_mpc_line(include_catcode=True)
         self.assertEqual(expected_mpcline, mpc_line)
+
+    def test_psv_1(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 157.5,
+                            'obs_dec' : -32.75,
+                            'obs_mag' : 21.5,
+                            'astrometric_catalog' : "UCAC-4",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_psvline = '       |           | N999r0q| CCD|K93 |    |2015-07-13T21:09:51.00Z|   157.50000|   -32.75000|   UCAC4|21.5 |     R|   UCAC4|     |'
+        psv_line = measure.format_psv_line()
+        self.assertEqual(expected_psvline, psv_line)
+
+    def test_psv_2(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 7.5,
+                            'obs_dec' : -00.5,
+                            'obs_mag' : 21.5,
+                            'astrometric_catalog' : "UCAC-4",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_psvline = '       |           | N999r0q| CCD|K93 |    |2015-07-13T21:09:51.00Z|     7.50000|    -0.50000|   UCAC4|21.5 |     R|   UCAC4|     |'
+        psv_line = measure.format_psv_line()
+        self.assertEqual(expected_psvline, psv_line)
+
+    def test_psv_3(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 7.5,
+                            'obs_dec' : -00.5,
+                            'obs_mag' : 21.5,
+                            'astrometric_catalog' : "GAIA-DR1",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_psvline = '       |           | N999r0q| CCD|K93 |    |2015-07-13T21:09:51.00Z|     7.50000|    -0.50000|   Gaia1|21.5 |     R|   Gaia1|     |'
+        psv_line = measure.format_psv_line()
+        self.assertEqual(expected_psvline, psv_line)
+
+    def test_psv_4(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 7.5,
+                            'obs_dec' : -00.5,
+                            'obs_mag' : 21.5,
+                            'astrometric_catalog' : "GAIA-DR2",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_psvline = '       |           | N999r0q| CCD|K93 |    |2015-07-13T21:09:51.00Z|     7.50000|    -0.50000|   Gaia2|21.5 |     R|   Gaia2|     |'
+        psv_line = measure.format_psv_line()
+        self.assertEqual(expected_psvline, psv_line)
 
 
 class TestCatalogSources(TestCase):

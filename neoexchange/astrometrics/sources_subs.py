@@ -521,7 +521,7 @@ def fetch_mpcobs(asteroid, debug=False):
     return None
 
 
-def translate_catalog_code(code_or_name):
+def translate_catalog_code(code_or_name, ades_code=False):
     """Mapping between the single character in column 72 of MPC records
     and the astrometric reference catalog used.
     Documentation at: https://www.minorplanetcenter.net/iau/info/CatalogueCodes.html"""
@@ -576,15 +576,32 @@ def translate_catalog_code(code_or_name):
                   "V" : "GAIA-DR2",
                   "W" : "UCAC5",
                   }
+    # https://www.minorplanetcenter.net/iau/info/ADESFieldValues.html
+    catalog_mapping = {'USNO-SA2.0'  : 'USNOSA2',  # Can't test, don't have CDs
+                       'USNO-A2.0'   : 'USNOA2',   # Can't test, don't have CDs
+                       'USNO-B1.0'   : 'USNOB1',
+                       'UCAC-3'      : 'UCAC3',
+                       'UCAC-4'      : 'UCAC4',
+                       'URAT-1'      : 'URAT1',    # Failed in Astrometrica, couldn't test
+                       'NOMAD'       : 'NOMAD',
+                       'CMC-14'      : 'CMC14',    # Failed in Astrometrica, couldn't test
+                       'CMC-15'      : 'CMC15',
+                       'PPMXL'       : 'PPMXL',
+                       'GAIA-DR1'    : 'Gaia1',
+                       'GAIA-DR2'    : 'Gaia2',
+                      }
     catalog_or_code = ''
     if len(code_or_name.strip()) == 1:
         catalog_or_code = catalog_codes.get(code_or_name, '')
         if not catalog_or_code:
             logger.warning("{} is not in our accepted list of astrometric catalog codes.".format(code_or_name))
     else:
-        for code, catalog in catalog_codes.items():
-            if code_or_name == catalog:
-                catalog_or_code = code
+        if ades_code is True:
+            catalog_or_code = catalog_mapping.get(code_or_name.upper(),'')
+        else:
+            for code, catalog in catalog_codes.items():
+                if code_or_name == catalog:
+                    catalog_or_code = code
 
     return catalog_or_code
 
