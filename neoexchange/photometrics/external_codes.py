@@ -212,7 +212,7 @@ def determine_scamp_options(fits_catalog, external_cat_name='GAIA-DR2.cat', dist
     Reference: https://fits.gsfc.nasa.gov/registry/tpvwcs/tpv.html
     """
     options = "-ASTREF_CATALOG FILE -ASTREFCAT_NAME {}".format(os.path.basename(external_cat_name))
-    if '1m0' in fits_catalog or distort_degrees is not None:
+    if ('1m0' in fits_catalog and ('-fl' in fits_catalog or '-fa' in fits_catalog)) or distort_degrees is not None:
         if distort_degrees is None:
             distort_degrees = 3
     else:
