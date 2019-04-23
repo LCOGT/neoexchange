@@ -1385,7 +1385,7 @@ class TestSourceMeasurement(TestCase):
                          }
 
         measure = SourceMeasurement.objects.create(**measure_params)
-        expected_psvline = '       |           | N999r0q| CCD|K93 |    |2015-07-13T21:09:51.00Z|   157.50000|   -32.75000|   UCAC4|21.5 |     R|   UCAC4|     |'
+        expected_psvline = '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|157.500000 |-32.750000 | UCAC4|21.5 |   R| UCAC4|     |'
         psv_line = measure.format_psv_line()
         self.assertEqual(expected_psvline, psv_line)
 
@@ -1399,7 +1399,7 @@ class TestSourceMeasurement(TestCase):
                          }
 
         measure = SourceMeasurement.objects.create(**measure_params)
-        expected_psvline = '       |           | N999r0q| CCD|K93 |    |2015-07-13T21:09:51.00Z|     7.50000|    -0.50000|   UCAC4|21.5 |     R|   UCAC4|     |'
+        expected_psvline = '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|  7.500000 | -0.500000 | UCAC4|21.5 |   R| UCAC4|     |'
         psv_line = measure.format_psv_line()
         self.assertEqual(expected_psvline, psv_line)
 
@@ -1413,7 +1413,7 @@ class TestSourceMeasurement(TestCase):
                          }
 
         measure = SourceMeasurement.objects.create(**measure_params)
-        expected_psvline = '       |           | N999r0q| CCD|K93 |    |2015-07-13T21:09:51.00Z|     7.50000|    -0.50000|   Gaia1|21.5 |     R|   Gaia1|     |'
+        expected_psvline = '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|  7.500000 | -0.500000 | Gaia1|21.5 |   R| Gaia1|     |'
         psv_line = measure.format_psv_line()
         self.assertEqual(expected_psvline, psv_line)
 
@@ -1427,7 +1427,7 @@ class TestSourceMeasurement(TestCase):
                          }
 
         measure = SourceMeasurement.objects.create(**measure_params)
-        expected_psvline = '       |           | N999r0q| CCD|K93 |    |2015-07-13T21:09:51.00Z|     7.50000|    -0.50000|   Gaia2|21.5 |     R|   Gaia2|     |'
+        expected_psvline = '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|  7.500000 | -0.500000 | Gaia2|21.5 |   R| Gaia2|     |'
         psv_line = measure.format_psv_line()
         self.assertEqual(expected_psvline, psv_line)
 
@@ -1446,10 +1446,10 @@ class TestSourceMeasurement(TestCase):
 
         measure = SourceMeasurement.objects.create(**measure_params)
         """
-                                   |           | N999r0q| CCD|K93 |    |2015-07-13T21:09:51.00Z|     7.50000|    -0.50000|   Gaia2|21.5 |     R|   Gaia2|     |'
-                                   |2019 GC6   |        | CCD|K91 |    |2019-04-17T17:20:52.34Z|  174.304775|  -44.161550| 0.14|  0.16|   Gaia2|13.9 |  0.01|   G|   Gaia2|  1.56|1.3945|1.0000|     |
+                                   |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|     7.50000|    -0.50000|   Gaia2|21.5 |     R|   Gaia2|     |'
+                                   |2019 GC6   |        | CCD|K91 |2019-04-17T17:20:52.34Z|  174.304775|  -44.161550| 0.14|  0.16|   Gaia2|13.9 |  0.01|   G|   Gaia2|  1.56|1.3945|1.0000|     |
         """
-        expected_psvline = '       |           | N999r0q| CCD|K93 |    |2015-07-13T21:09:51.00Z|     7.50000|    -0.50000| 0.14|  0.16|   Gaia2|21.5 |  0.12|   R|   Gaia2|      |      |1.0000|     |'
+        expected_psvline = '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|  7.500000 | -0.500000 | 0.14|  0.16| Gaia2|21.5 |0.12  |   R| Gaia2|      |      |1.0000|     |'
         psv_line = measure.format_psv_line()
         self.assertEqual(expected_psvline, psv_line)
 
@@ -1473,7 +1473,7 @@ class TestSourceMeasurement(TestCase):
                                    |           | N999r0q| CCD|K93 |    |2015-07-13T21:09:51.00Z|     7.50000|    -0.50000|   Gaia2|21.5 |     R|   Gaia2|     |'
                                    |2019 GC6   |        | CCD|K91 |    |2019-04-17T17:20:52.34Z|  174.304775|  -44.161550| 0.14|  0.16|   Gaia2|13.9 |  0.01|   G|   Gaia2|  1.56|1.3945|1.0000|     |
         """
-        expected_psvline = '       |           | N999r0q| CCD|K93 |    |2015-07-13T21:09:51.00Z|     7.50000|    -0.50000| 0.14|  0.16|   Gaia2|21.5 |  0.12|   R|   Gaia2|  1.56|1.3945|1.0000|     |'
+        expected_psvline = '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|  7.500000 | -0.500000 | 0.14|  0.16| Gaia2|21.5 |0.12  |   R| Gaia2|  1.56|1.3945|1.0000|     |'
         psv_line = measure.format_psv_line()
         self.assertEqual(expected_psvline, psv_line)
 
