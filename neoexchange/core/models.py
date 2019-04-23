@@ -12,7 +12,7 @@ GNU General Public License for more details.
 """
 from __future__ import unicode_literals
 from datetime import datetime, timedelta, date
-from math import pi, log10, sqrt, cos, degrees
+from math import pi, log10, sqrt, cos, degrees, ceil
 from collections import Counter, OrderedDict
 import reversion
 import logging
@@ -1091,10 +1091,18 @@ class SourceMeasurement(models.Model):
             mpc_line = mpc_line + '\n' + extrainfo
         return mpc_line
 
+    def _numdp(self, value):
+        """Calculate number of d.p. following prescription in Figure 1 of
+        ADES description (https://github.com/IAU-ADES/ADES-Master/blob/master/ADES_Description.pdf)
+        """
+
+        num_dp = 1
+        if value is not None and value > 0:
+            num_dp = ceil(1-log10(value))
+        return num_dp
+
     def format_psv_line(self):
         psv_line = ""
-        tbl_fmt = '%7s|%-11s|%8s|%4s|%-4s|%4s|%-23s|%12s|%12s|%8s|%5s|%6s|%8s|%-5s|%-s'
-        rms_tbl_fmt = '%7s|%-11s|%8s|%4s|%-4s|%4s|%-23s|%13s|%13s|%5s|%6s|%8s|%5s|%6s|%4s|%8s|%6s|%6s|%6s|%-5s|%-s'
 
         rms_available = False
         if self.err_obs_ra and self.err_obs_dec and self.err_obs_mag:
@@ -1118,14 +1126,28 @@ class SourceMeasurement(models.Model):
 
         fmt_ra = "{:.5f}".format(self.obs_ra)
         fmt_dec = "{:.5f}".format(self.obs_dec)
-        fmt_mag = "{:.1f} ".format(float(self.obs_mag))
+        fmt_mag = "{:4.1f} ".format(float(self.obs_mag))
 
+        tbl_fmt = '%7s|%-11s|%8s|%4s|%-4s|%4s|%-23s|%12s|%12s|%8s|%-5s|%6s|%8s|%-5s|%-s'
+        rms_tbl_fmt = '%7s|%-11s|%8s|%4s|%-4s|%4s|%-23s|%12s|%12s|%5s|%6s|%8s|%-5s|%6s|%4s|%8s|%6s|%6s|%6s|%-5s|%-s'
         if rms_available:
+            rms_ra = "{value:.{prec}f}".format(prec=self._numdp(self.err_obs_ra * 3600.0), value=self.err_obs_ra * 3600.0)
+            rms_dec = "{value:.{prec}f}".format(prec=self._numdp(self.err_obs_dec * 3600.0), value=self.err_obs_dec * 3600.0)
+            rms_mag = "{value:.{prec}f}".format(prec=self._numdp(self.err_obs_mag), value=self.err_obs_mag)
+            phot_ap = " "*6
+            if self.aperture_size:
+                phot_ap = "{:6.2f}".format(self.aperture_size)
+            log_snr = " "*6
+            if self.snr and self.snr > 0:
+                log_snr = "{:6.4f}".format(log10(self.snr))
+            fwhm = " "*6
+            if self.frame.fwhm:
+                fwhm = "{:6.4f}".format(self.frame.fwhm)
+
             psv_line = rms_tbl_fmt % (body_name, body_name, provisional_name, obs_type, self.frame.sitecode, \
-                prog, obsTime, self.obs_ra, self.obs_dec, self.rmsRA, self.rmsDec,\
-                catalog_code, self.obs_mag, self.err_obs_mag, self.frame.map_filter(), \
-                catalog_code, self.photAp, self.logSNR, self.seeing, \
-                self.flags, remarks)
+                prog, obsTime, fmt_ra, fmt_dec, rms_ra, rms_dec,\
+                catalog_code, self.obs_mag, rms_mag, self.frame.map_filter(), \
+                catalog_code, phot_ap, log_snr, fwhm, self.flags, remarks)
         else:
             psv_line = tbl_fmt % (body_name, body_name, provisional_name, obs_type, self.frame.sitecode, \
                 prog, obsTime, fmt_ra, fmt_dec, catalog_code,\
