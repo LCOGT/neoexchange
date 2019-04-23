@@ -37,7 +37,7 @@ from base64 import b64decode, b64encode
 
 from astrometrics.ast_subs import normal_to_packed
 from astrometrics.ephem_subs import compute_ephem, comp_FOM, get_sitecam_params, comp_sep
-from astrometrics.sources_subs import translate_catalog_code
+from astrometrics.sources_subs import translate_catalog_code, psv_padding
 from astrometrics.time_subs import dttodecimalday, degreestohms, degreestodms
 from astrometrics.albedo import asteroid_albedo, asteroid_diameter
 from core.archive_subs import check_for_archive_images
@@ -1121,6 +1121,22 @@ class SourceMeasurement(models.Model):
             num_dp = ceil(1-log10(value))
         return num_dp
 
+    def format_psv_header(self):
+
+        tbl_hdr = ""
+        rms_available = False
+        if self.err_obs_ra and self.err_obs_dec and self.err_obs_mag:
+            rms_available = True
+            rms_tbl_fmt = '%7s|%-11s|%8s|%4s|%-4s|%-23s|%11s|%11s|%5s|%6s|%6s|%-5s|%6s|%4s|%8s|%6s|%6s|%6s|%-5s|%-s'
+            tbl_hdr = rms_tbl_fmt % ('permID ', 'provID', 'trkSub  ', 'mode', 'stn', 'obsTime', \
+                'ra', 'dec', 'rmsRA', 'rmsDec', 'astCat', 'mag', 'rmsMag', 'band', 'photCat', \
+                'photAp', 'logSNR', 'seeing', 'notes', 'remarks')
+        else:
+            tbl_fmt = '%7s|%-11s|%8s|%4s|%-4s|%-23s|%11s|%11s|%6s|%-5s|%4s|%6s|%-5s|%-s'
+            tbl_hdr = tbl_fmt % ('permID ', 'provID', 'trkSub  ', 'mode', 'stn', 'obsTime', \
+                'ra'.ljust(11), 'dec'.ljust(11), 'astCat', 'mag', 'band', 'photCat', 'notes', 'remarks')
+        return tbl_hdr
+
     def format_psv_line(self):
         psv_line = ""
 
@@ -1135,7 +1151,6 @@ class SourceMeasurement(models.Model):
             provisional_name = self.body.provisional_name
             body_name = ''
         obs_type = 'CCD'
-        prog = ''
         remarks = ''
 
         obsTime = self.frame.midpoint
@@ -1144,12 +1159,20 @@ class SourceMeasurement(models.Model):
         obsTime = obsTime + frac_time[1:]
         catalog_code = translate_catalog_code(self.astrometric_catalog, ades_code=True)
 
-        fmt_ra = "{:.5f}".format(self.obs_ra)
-        fmt_dec = "{:.5f}".format(self.obs_dec)
+        prec = 6
+        if self.err_obs_ra:
+            prec = self._numdp(self.err_obs_ra * 3600.0)
+        fmt_ra = "{ra:.{prec}f}".format(prec=prec, ra=self.obs_ra)
+        fmt_ra, width, dpos = psv_padding(fmt_ra, 11, 'D', 4)
+        prec = 6
+        if self.err_obs_dec:
+            prec = self._numdp(self.err_obs_dec * 3600.0)
+        fmt_dec = "{dec:.{prec}f}".format(prec=prec, dec=self.obs_dec)
+        fmt_dec, width, dpos = psv_padding(fmt_dec, 11, 'D', 4)
         fmt_mag = "{:4.1f} ".format(float(self.obs_mag))
 
-        tbl_fmt = '%7s|%-11s|%8s|%4s|%-4s|%4s|%-23s|%12s|%12s|%8s|%-5s|%6s|%8s|%-5s|%-s'
-        rms_tbl_fmt = '%7s|%-11s|%8s|%4s|%-4s|%4s|%-23s|%12s|%12s|%5s|%6s|%8s|%-5s|%6s|%4s|%8s|%6s|%6s|%6s|%-5s|%-s'
+        tbl_fmt     = '%7s|%-11s|%8s|%4s|%-4s|%-23s|%11s|%11s|%6s|%-5s|%4s|%6s|%-5s|%-s'
+        rms_tbl_fmt = '%7s|%-11s|%8s|%4s|%-4s|%-23s|%11s|%11s|%5s|%6s|%8s|%-5s|%4s|%4s|%8s|%6s|%6s|%6s|%-5s|%-s'
         if rms_available:
             rms_ra = "{value:.{prec}f}".format(prec=self._numdp(self.err_obs_ra * 3600.0), value=self.err_obs_ra * 3600.0)
             rms_dec = "{value:.{prec}f}".format(prec=self._numdp(self.err_obs_dec * 3600.0), value=self.err_obs_dec * 3600.0)
@@ -1165,12 +1188,12 @@ class SourceMeasurement(models.Model):
                 fwhm = "{:6.4f}".format(self.frame.fwhm)
 
             psv_line = rms_tbl_fmt % (body_name, body_name, provisional_name, obs_type, self.frame.sitecode, \
-                prog, obsTime, fmt_ra, fmt_dec, rms_ra, rms_dec,\
+                obsTime, fmt_ra, fmt_dec, rms_ra, rms_dec,\
                 catalog_code, self.obs_mag, rms_mag, self.frame.map_filter(), \
                 catalog_code, phot_ap, log_snr, fwhm, self.flags, remarks)
         else:
             psv_line = tbl_fmt % (body_name, body_name, provisional_name, obs_type, self.frame.sitecode, \
-                prog, obsTime, fmt_ra, fmt_dec, catalog_code,\
+                obsTime, fmt_ra, fmt_dec, catalog_code,\
                 fmt_mag, self.frame.map_filter(), catalog_code, self.flags, remarks)
         return psv_line
 
