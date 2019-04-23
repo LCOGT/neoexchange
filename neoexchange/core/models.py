@@ -931,34 +931,54 @@ class Frame(models.Model):
 
     def return_tel_string(self):
 
-        point4m_string = '0.4-m f/8 Schmidt-Cassegrain + CCD'
-        onem_string = '1.0-m f/8 Ritchey-Chretien + CCD'
-        twom_string = '2.0-m f/10 Ritchey-Chretien + CCD'
+        detector = 'CCD'
+        point4m_aperture = 0.4
+        point4m_fRatio = 8.0
+        point4m_design = 'Schmidt-Cassegrain'
+        point4m_string = '{:.1f}-m f/{:1d} {} + {}'.format(point4m_aperture, int(point4m_fRatio), point4m_design, detector)
+        point4m_dict = {'full' : point4m_string, 'design' : point4m_design,
+                     'aperture' : point4m_aperture, 'fRatio' : point4m_fRatio, 'detector' : detector }
+
+        onem_aperture = 1.0
+        onem_fRatio = 8.0
+        onem_design = 'Ritchey-Chretien'
+        onem_string = '{:.1f}-m f/{:1d} {} + {}'.format(onem_aperture, int(onem_fRatio), onem_design, detector)
+        onem_dict = {'full' : onem_string, 'design' : onem_design,
+                     'aperture' : onem_aperture, 'fRatio' : onem_fRatio, 'detector' : detector }
+
+        twom_aperture = 2.0
+        twom_fRatio = 10.0
+        twom_design = 'Ritchey-Chretien'
+        twom_string = '{:.1f}-m f/{:2d} {} + {}'.format(twom_aperture, int(twom_fRatio), twom_design, detector)
+        twom_dict = {'full' : twom_string, 'design' : twom_design,
+                     'aperture' : twom_aperture, 'fRatio' : twom_fRatio, 'detector' : detector }
 
         tels_strings = {
-                        'K91' : onem_string,
-                        'K92' : onem_string,
-                        'K93' : onem_string,
-                        'W85' : onem_string,
-                        'W86' : onem_string,
-                        'W87' : onem_string,
-                        'V37' : onem_string,
-                        'Z21' : point4m_string,
-                        'Z17' : point4m_string,
-                        'Q58' : point4m_string,
-                        'Q59' : point4m_string,
-                        'Q63' : onem_string,
-                        'Q64' : onem_string,
-                        'E10' : twom_string,
-                        'F65' : twom_string,
-                        'T04' : point4m_string,
-                        'T03' : point4m_string,
-                        'W89' : point4m_string,
-                        'W79' : point4m_string,
-                        'V38' : point4m_string,
-                        'L09' : point4m_string,
+                        'K91' : onem_dict,
+                        'K92' : onem_dict,
+                        'K93' : onem_dict,
+                        'W85' : onem_dict,
+                        'W86' : onem_dict,
+                        'W87' : onem_dict,
+                        'V37' : onem_dict,
+                        'Z21' : point4m_dict,
+                        'Z17' : point4m_dict,
+                        'Q58' : point4m_dict,
+                        'Q59' : point4m_dict,
+                        'Q63' : onem_dict,
+                        'Q64' : onem_dict,
+                        'E10' : twom_dict,
+                        'F65' : twom_dict,
+                        'T04' : point4m_dict,
+                        'T03' : point4m_dict,
+                        'W89' : point4m_dict,
+                        'W79' : point4m_dict,
+                        'V38' : point4m_dict,
+                        'L09' : point4m_dict,
                         }
-        return tels_strings.get(self.sitecode, 'Unknown LCO telescope')
+        tel_string = tels_strings.get(self.sitecode, {'full:' : 'Unknown LCO telescope'})
+
+        return tel_string
 
     def map_filter(self):
         """Maps somewhat odd observed filters (e.g. 'solar') into the filter
