@@ -895,7 +895,7 @@ class Test_Generate_ADES_PSV_Message(TestCase):
             self.assertEqual(expected_lines[i], message_lines[i])
             i += 1
 
-        self.assertEqual(expected_message, message)
+        self.assertEqual(exp_msg, message)
 
     def test_W86(self):
         exp_msg = ( '# version=2017\n'
@@ -929,7 +929,7 @@ class Test_Generate_ADES_PSV_Message(TestCase):
             self.assertEqual(expected_lines[i], message_lines[i])
             i += 1
 
-        self.assertEqual(expected_message, message)
+        self.assertEqual(exp_msg, message)
 
     def test_Z21(self):
         exp_msg = ( '# version=2017\n'
@@ -963,7 +963,7 @@ class Test_Generate_ADES_PSV_Message(TestCase):
             self.assertEqual(expected_lines[i], message_lines[i])
             i += 1
 
-        self.assertEqual(expected_message, message)
+        self.assertEqual(exp_msg, message)
 
     def test_W89(self):
 
@@ -1004,7 +1004,7 @@ class Test_Generate_ADES_PSV_Message(TestCase):
             self.assertEqual(expected_lines[i], message_lines[i])
             i += 1
 
-        self.assertEqual(expected_message, message)
+        self.assertEqual(exp_msg, message)
 
     def test_W79(self):
 
@@ -1045,7 +1045,7 @@ class Test_Generate_ADES_PSV_Message(TestCase):
             self.assertEqual(expected_lines[i], message_lines[i])
             i += 1
 
-        self.assertEqual(expected_message, message)
+        self.assertEqual(exp_msg, message)
 
     def test_V38(self):
 
@@ -1086,7 +1086,7 @@ class Test_Generate_ADES_PSV_Message(TestCase):
             self.assertEqual(expected_lines[i], message_lines[i])
             i += 1
 
-        self.assertEqual(expected_message, message)
+        self.assertEqual(exp_msg, message)
 
     def test_L09(self):
 
@@ -1127,7 +1127,7 @@ class Test_Generate_ADES_PSV_Message(TestCase):
             self.assertEqual(expected_lines[i], message_lines[i])
             i += 1
 
-        self.assertEqual(expected_message, message)
+        self.assertEqual(exp_msg, message)
 
     def test_F65(self):
 
@@ -1162,7 +1162,7 @@ class Test_Generate_ADES_PSV_Message(TestCase):
             self.assertEqual(expected_lines[i], message_lines[i])
             i += 1
 
-        self.assertEqual(expected_message, message)
+        self.assertEqual(exp_msg, message)
 
     def test_K93_gaia(self):
 
@@ -1197,7 +1197,7 @@ class Test_Generate_ADES_PSV_Message(TestCase):
             self.assertEqual(expected_lines[i], message_lines[i])
             i += 1
 
-        self.assertEqual(expected_message, message)
+        self.assertEqual(exp_msg, message)
 
     def test_W86_QL(self):
 
@@ -1232,7 +1232,7 @@ class Test_Generate_ADES_PSV_Message(TestCase):
             self.assertEqual(expected_lines[i], message_lines[i])
             i += 1
 
-        self.assertEqual(expected_message, message)
+        self.assertEqual(exp_msg, message)
 
     def test_K93_discovery(self):
 
@@ -1272,39 +1272,39 @@ class Test_Generate_ADES_PSV_Message(TestCase):
             self.assertEqual(expected_lines[i], message_lines[i])
             i += 1
 
-        self.assertEqual(expected_message, message)
+        self.assertEqual(exp_msg, message)
 
     def test_K93_gaiadr2(self):
 
-        expected_message = ( '# version=2017\n'
-                             '# observatory\n'
-                             '! mpcCode K93\n'
-                             '# submitter\n'
-                             '! name T. Lister\n'
-                             '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
-                             '# observers\n'
-                             '! name T. Lister\n'
-                             '! name E. Gomez\n'
-                             '! name J. Chatelain\n'
-                             '! name S. Greenstreet\n'
-                             '# measurers\n'
-                             '! name T. Lister\n'
-                             '# telescope\n'
-                             '! name LCO CPT Node 1m0 Dome C at Sutherland, South Africa\n'
-                             '! design Ritchey-Chretien\n'
-                             '! aperture 1.0\n'
-                             '! detector CCD\n'
-                             '! fRatio 8.0\n'
-                             'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat|mag  |band|photCat|notes|remarks\n'
-                             '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z| 15.500000 | -3.750000 | Gaia2|21.6 |   G| Gaia2|     |\n')
+        exp_msg = ( '# version=2017\n'
+                    '# observatory\n'
+                    '! mpcCode K93\n'
+                    '# submitter\n'
+                    '! name T. Lister\n'
+                    '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
+                    '# observers\n'
+                    '! name T. Lister\n'
+                    '! name E. Gomez\n'
+                    '! name J. Chatelain\n'
+                    '! name S. Greenstreet\n'
+                    '# measurers\n'
+                    '! name T. Lister\n'
+                    '# telescope\n'
+                    '! name LCO CPT Node 1m0 Dome C at Sutherland, South Africa\n'
+                    '! design Ritchey-Chretien\n'
+                    '! aperture 1.0\n'
+                    '! detector CCD\n'
+                    '! fRatio 8.0\n'
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat|mag  |band|photCat|notes|remarks\n'
+                    '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z| 15.500000 | -3.750000 | Gaia2|21.6 |   G| Gaia2|     |\n')
 
         message = generate_ades_psv_message(self.test_block_gaiadr2.id, self.test_block_gaiadr2.body.id)
 
         i = 0
-        expected_lines = expected_message.split('\n')
+        expected_lines = exp_msg.split('\n')
         message_lines = message.split('\n')
         while i < len(expected_lines):
             self.assertEqual(expected_lines[i], message_lines[i])
             i += 1
 
-        self.assertEqual(expected_message, message)
+        self.assertEqual(exp_msg, message)

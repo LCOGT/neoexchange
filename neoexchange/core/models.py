@@ -1145,10 +1145,16 @@ class SourceMeasurement(models.Model):
             rms_available = True
 
         if self.body.name:
-            body_name = self.body.name
-            provisional_name = ''
+            if len(self.body.name) > 4 and self.body.name[0:4].isdigit():
+                provisional_name = self.body.name
+                body_name = ''
+            else:
+                body_name = self.body.name
+                provisional_name = ''
+            tracklet_name = ''
         else:
-            provisional_name = self.body.provisional_name
+            tracklet_name = self.body.provisional_name
+            provisional_name = ''
             body_name = ''
         obs_type = 'CCD'
         remarks = ''
@@ -1157,7 +1163,7 @@ class SourceMeasurement(models.Model):
         obsTime = obsTime.strftime("%Y-%m-%dT%H:%M:%S")
         frac_time = "{:.2f}Z".format(self.frame.midpoint.microsecond / 1e6)
         obsTime = obsTime + frac_time[1:]
-        catalog_code = translate_catalog_code(self.astrometric_catalog, ades_code=True)
+        catalog_code = translate_catalog_code(self.frame.astrometric_catalog, ades_code=True)
 
         prec = 6
         if self.err_obs_ra:
@@ -1189,12 +1195,12 @@ class SourceMeasurement(models.Model):
             if self.frame.fwhm:
                 fwhm = "{:6.4f}".format(self.frame.fwhm)
 
-            psv_line = rms_tbl_fmt % (body_name, body_name, provisional_name, obs_type, self.frame.sitecode, \
+            psv_line = rms_tbl_fmt % (body_name, provisional_name, tracklet_name, obs_type, self.frame.sitecode, \
                 obsTime, fmt_ra, fmt_dec, rms_ra, rms_dec,\
                 catalog_code, self.obs_mag, rms_mag, self.frame.map_filter(), \
                 catalog_code, phot_ap, log_snr, fwhm, self.flags, remarks)
         else:
-            psv_line = tbl_fmt % (body_name, body_name, provisional_name, obs_type, self.frame.sitecode, \
+            psv_line = tbl_fmt % (body_name, provisional_name, tracklet_name, obs_type, self.frame.sitecode, \
                 obsTime, fmt_ra, fmt_dec, catalog_code,\
                 fmt_mag, self.frame.map_filter(), catalog_code, self.flags, remarks)
         return psv_line
