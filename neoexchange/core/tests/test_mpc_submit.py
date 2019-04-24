@@ -862,6 +862,418 @@ class Test_Generate_ADES_PSV_Message(TestCase):
 
         self.maxDiff = None
 
+    def test_K93(self):
+
+        exp_msg = ( '# version=2017\n'
+                    '# observatory\n'
+                    '! mpcCode K93\n'
+                    '# submitter\n'
+                    '! name T. Lister\n'
+                    '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
+                    '# observers\n'
+                    '! name T. Lister\n'
+                    '! name E. Gomez\n'
+                    '! name J. Chatelain\n'
+                    '! name S. Greenstreet\n'
+                    '# measurers\n'
+                    '! name T. Lister\n'
+                    '# telescope\n'
+                    '! name LCO CPT Node 1m0 Dome C at Sutherland, South Africa\n'
+                    '! design Ritchey-Chretien\n'
+                    '! aperture 1.0\n'
+                    '! detector CCD\n'
+                    '! fRatio 8.0\n'
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat|mag  |band|photCat|notes|remarks\n'
+                    '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|157.500000 |-32.750000 | UCAC4|21.5 |   R| UCAC4|     |\n')
+
+        message = generate_ades_psv_message(self.test_block.id, self.test_block.body.id)
+
+        i = 0
+        expected_lines = exp_msg.split('\n')
+        message_lines = message.split('\n')
+        while i < len(expected_lines):
+            self.assertEqual(expected_lines[i], message_lines[i])
+            i += 1
+
+        self.assertEqual(expected_message, message)
+
+    def test_W86(self):
+        exp_msg = ( '# version=2017\n'
+                    '# observatory\n'
+                    '! mpcCode W86\n'
+                    '# submitter\n'
+                    '! name T. Lister\n'
+                    '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
+                    '# observers\n'
+                    '! name T. Lister\n'
+                    '! name E. Gomez\n'
+                    '! name J. Chatelain\n'
+                    '! name S. Greenstreet\n'
+                    '# measurers\n'
+                    '! name T. Lister\n'
+                    '# telescope\n'
+                    '! name LCO LSC Node 1m0 Dome B at Cerro Tololo, Chile\n'
+                    '! design Ritchey-Chretien\n'
+                    '! aperture 1.0\n'
+                    '! detector CCD\n'
+                    '! fRatio 8.0\n'
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat|mag  |band|photCat|notes|remarks\n'
+                    '       |2015 XS54  |        | CCD|W86 |2015-12-05T01:10:49.90Z|157.500000 |  0.660000 | 2MASS|21.5 |   R| 2MASS|K    |\n')
+
+        message = generate_ades_psv_message(self.test_block2.id, self.test_block2.body.id)
+
+        i = 0
+        expected_lines = exp_msg.split('\n')
+        message_lines = message.split('\n')
+        while i < len(expected_lines):
+            self.assertEqual(expected_lines[i], message_lines[i])
+            i += 1
+
+        self.assertEqual(expected_message, message)
+
+    def test_Z21(self):
+        exp_msg = ( '# version=2017\n'
+                    '# observatory\n'
+                    '! mpcCode Z21\n'
+                    '# submitter\n'
+                    '! name T. Lister\n'
+                    '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
+                    '# observers\n'
+                    '! name T. Lister\n'
+                    '! name E. Gomez\n'
+                    '! name J. Chatelain\n'
+                    '! name S. Greenstreet\n'
+                    '# measurers\n'
+                    '! name T. Lister\n'
+                    '# telescope\n'
+                    '! name LCO TFN Node Aqawan A 0m4a at Tenerife, Spain\n'
+                    '! design Schmidt-Cassegrain\n'
+                    '! aperture 0.4\n'
+                    '! detector CCD\n'
+                    '! fRatio 8.0\n'
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat|mag  |band|photCat|notes|remarks\n'
+                    '       |2015 XS54  |        | CCD|Z21 |2015-12-05T01:10:49.90Z|  7.600000 | 32.755000 | 2MASS|20.5 |   R| 2MASS|     |\n')
+
+        message = generate_ades_psv_message(self.test_block3.id, self.test_block3.body.id)
+
+        i = 0
+        expected_lines = exp_msg.split('\n')
+        message_lines = message.split('\n')
+        while i < len(expected_lines):
+            self.assertEqual(expected_lines[i], message_lines[i])
+            i += 1
+
+        self.assertEqual(expected_message, message)
+
+    def test_W89(self):
+
+        self.test_block3.site = 'lsc'
+        self.test_block3.save()
+
+        self.test_frame_point4m.sitecode = 'W89'
+        self.test_frame_point4m.instrument = 'kb93'
+        self.test_frame_point4m.save()
+        exp_msg = ( '# version=2017\n'
+                    '# observatory\n'
+                    '! mpcCode W89\n'
+                    '# submitter\n'
+                    '! name T. Lister\n'
+                    '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
+                    '# observers\n'
+                    '! name T. Lister\n'
+                    '! name E. Gomez\n'
+                    '! name J. Chatelain\n'
+                    '! name S. Greenstreet\n'
+                    '# measurers\n'
+                    '! name T. Lister\n'
+                    '# telescope\n'
+                    '! name LCO LSC Node Aqawan A 0m4a at Cerro Tololo, Chile\n'
+                    '! design Schmidt-Cassegrain\n'
+                    '! aperture 0.4\n'
+                    '! detector CCD\n'
+                    '! fRatio 8.0\n'
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat|mag  |band|photCat|notes|remarks\n'
+                    '       |2015 XS54  |        | CCD|W89 |2015-12-05T01:10:49.90Z|  7.600000 | 32.755000 | 2MASS|20.5 |   R| 2MASS|     |\n')
+
+        message = generate_ades_psv_message(self.test_block3.id, self.test_block3.body.id)
+
+        i = 0
+        expected_lines = exp_msg.split('\n')
+        message_lines = message.split('\n')
+        while i < len(expected_lines):
+            self.assertEqual(expected_lines[i], message_lines[i])
+            i += 1
+
+        self.assertEqual(expected_message, message)
+
+    def test_W79(self):
+
+        self.test_block3.site = 'lsc'
+        self.test_block3.save()
+
+        self.test_frame_point4m.sitecode = 'W79'
+        self.test_frame_point4m.instrument = 'kb26'
+        self.test_frame_point4m.save()
+        exp_msg = ( '# version=2017\n'
+                    '# observatory\n'
+                    '! mpcCode W79\n'
+                    '# submitter\n'
+                    '! name T. Lister\n'
+                    '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
+                    '# observers\n'
+                    '! name T. Lister\n'
+                    '! name E. Gomez\n'
+                    '! name J. Chatelain\n'
+                    '! name S. Greenstreet\n'
+                    '# measurers\n'
+                    '! name T. Lister\n'
+                    '# telescope\n'
+                    '! name LCO LSC Node Aqawan B 0m4a at Cerro Tololo, Chile\n'
+                    '! design Schmidt-Cassegrain\n'
+                    '! aperture 0.4\n'
+                    '! detector CCD\n'
+                    '! fRatio 8.0\n'
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat|mag  |band|photCat|notes|remarks\n'
+                    '       |2015 XS54  |        | CCD|W79 |2015-12-05T01:10:49.90Z|  7.600000 | 32.755000 | 2MASS|20.5 |   R| 2MASS|     |\n')
+
+        message = generate_ades_psv_message(self.test_block3.id, self.test_block3.body.id)
+
+        i = 0
+        expected_lines = exp_msg.split('\n')
+        message_lines = message.split('\n')
+        while i < len(expected_lines):
+            self.assertEqual(expected_lines[i], message_lines[i])
+            i += 1
+
+        self.assertEqual(expected_message, message)
+
+    def test_V38(self):
+
+        self.test_block3.site = 'elp'
+        self.test_block3.save()
+
+        self.test_frame_point4m.sitecode = 'V38'
+        self.test_frame_point4m.instrument = 'kb26'
+        self.test_frame_point4m.save()
+        exp_msg = ( '# version=2017\n'
+                    '# observatory\n'
+                    '! mpcCode V38\n'
+                    '# submitter\n'
+                    '! name T. Lister\n'
+                    '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
+                    '# observers\n'
+                    '! name T. Lister\n'
+                    '! name E. Gomez\n'
+                    '! name J. Chatelain\n'
+                    '! name S. Greenstreet\n'
+                    '# measurers\n'
+                    '! name T. Lister\n'
+                    '# telescope\n'
+                    '! name LCO ELP Node Aqawan A 0m4a at McDonald Observatory, Texas\n'
+                    '! design Schmidt-Cassegrain\n'
+                    '! aperture 0.4\n'
+                    '! detector CCD\n'
+                    '! fRatio 8.0\n'
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat|mag  |band|photCat|notes|remarks\n'
+                    '       |2015 XS54  |        | CCD|V38 |2015-12-05T01:10:49.90Z|  7.600000 | 32.755000 | 2MASS|20.5 |   R| 2MASS|     |\n')
+
+        message = generate_ades_psv_message(self.test_block3.id, self.test_block3.body.id)
+
+        i = 0
+        expected_lines = exp_msg.split('\n')
+        message_lines = message.split('\n')
+        while i < len(expected_lines):
+            self.assertEqual(expected_lines[i], message_lines[i])
+            i += 1
+
+        self.assertEqual(expected_message, message)
+
+    def test_L09(self):
+
+        self.test_block3.site = 'cpt'
+        self.test_block3.save()
+
+        self.test_frame_point4m.sitecode = 'L09'
+        self.test_frame_point4m.instrument = 'kb96'
+        self.test_frame_point4m.save()
+        exp_msg = ( '# version=2017\n'
+                    '# observatory\n'
+                    '! mpcCode L09\n'
+                    '# submitter\n'
+                    '! name T. Lister\n'
+                    '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
+                    '# observers\n'
+                    '! name T. Lister\n'
+                    '! name E. Gomez\n'
+                    '! name J. Chatelain\n'
+                    '! name S. Greenstreet\n'
+                    '# measurers\n'
+                    '! name T. Lister\n'
+                    '# telescope\n'
+                    '! name LCO CPT Node Aqawan A 0m4a at Sutherland, South Africa\n'
+                    '! design Schmidt-Cassegrain\n'
+                    '! aperture 0.4\n'
+                    '! detector CCD\n'
+                    '! fRatio 8.0\n'
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat|mag  |band|photCat|notes|remarks\n'
+                    '       |2015 XS54  |        | CCD|L09 |2015-12-05T01:10:49.90Z|  7.600000 | 32.755000 | 2MASS|20.5 |   R| 2MASS|     |\n')
+
+        message = generate_ades_psv_message(self.test_block3.id, self.test_block3.body.id)
+
+        i = 0
+        expected_lines = exp_msg.split('\n')
+        message_lines = message.split('\n')
+        while i < len(expected_lines):
+            self.assertEqual(expected_lines[i], message_lines[i])
+            i += 1
+
+        self.assertEqual(expected_message, message)
+
+    def test_F65(self):
+
+        exp_msg = ( '# version=2017\n'
+                    '# observatory\n'
+                    '! mpcCode F65\n'
+                    '# submitter\n'
+                    '! name T. Lister\n'
+                    '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
+                    '# observers\n'
+                    '! name T. Lister\n'
+                    '! name E. Gomez\n'
+                    '! name J. Chatelain\n'
+                    '! name S. Greenstreet\n'
+                    '# measurers\n'
+                    '! name T. Lister\n'
+                    '# telescope\n'
+                    '! name LCO OGG Node 2m0 FTN at Haleakala, Maui\n'
+                    '! design Ritchey-Chretien\n'
+                    '! aperture 2.0\n'
+                    '! detector CCD\n'
+                    '! fRatio 10.0\n'
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat|mag  |band|photCat|notes|remarks\n'
+                    '       |2015 XS54  |        | CCD|F65 |2015-12-05T09:50:49.00Z|  7.600000 | 32.755000 | PPMXL|20.7 |   R| PPMXL|     |\n')
+
+        message = generate_ades_psv_message(self.test_block4.id, self.test_block4.body.id)
+
+        i = 0
+        expected_lines = exp_msg.split('\n')
+        message_lines = message.split('\n')
+        while i < len(expected_lines):
+            self.assertEqual(expected_lines[i], message_lines[i])
+            i += 1
+
+        self.assertEqual(expected_message, message)
+
+    def test_K93_gaia(self):
+
+        exp_msg = ( '# version=2017\n'
+                    '# observatory\n'
+                    '! mpcCode K93\n'
+                    '# submitter\n'
+                    '! name T. Lister\n'
+                    '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
+                    '# observers\n'
+                    '! name T. Lister\n'
+                    '! name E. Gomez\n'
+                    '! name J. Chatelain\n'
+                    '! name S. Greenstreet\n'
+                    '# measurers\n'
+                    '! name T. Lister\n'
+                    '# telescope\n'
+                    '! name LCO CPT Node 1m0 Dome C at Sutherland, South Africa\n'
+                    '! design Ritchey-Chretien\n'
+                    '! aperture 1.0\n'
+                    '! detector CCD\n'
+                    '! fRatio 8.0\n'
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat|mag  |band|photCat|notes|remarks\n'
+                    '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z| 15.500000 | -3.750000 | Gaia1|21.6 |   G| Gaia1|     |\n')
+
+        message = generate_ades_psv_message(self.test_block_gaia.id, self.test_block_gaia.body.id)
+
+        i = 0
+        expected_lines = exp_msg.split('\n')
+        message_lines = message.split('\n')
+        while i < len(expected_lines):
+            self.assertEqual(expected_lines[i], message_lines[i])
+            i += 1
+
+        self.assertEqual(expected_message, message)
+
+    def test_W86_QL(self):
+
+        exp_msg = ( '# version=2017\n'
+                    '# observatory\n'
+                    '! mpcCode W86\n'
+                    '# submitter\n'
+                    '! name T. Lister\n'
+                    '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
+                    '# observers\n'
+                    '! name T. Lister\n'
+                    '! name E. Gomez\n'
+                    '! name J. Chatelain\n'
+                    '! name S. Greenstreet\n'
+                    '# measurers\n'
+                    '! name T. Lister\n'
+                    '# telescope\n'
+                    '! name LCO LSC Node 1m0 Dome B at Cerro Tololo, Chile\n'
+                    '! design Ritchey-Chretien\n'
+                    '! aperture 1.0\n'
+                    '! detector CCD\n'
+                    '! fRatio 8.0\n'
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat|mag  |band|photCat|notes|remarks\n'
+                    '       |2015 XS54  |        | CCD|W86 |2015-12-05T01:10:49.90Z| 15.500000 | -3.750000 | 2MASS|21.6 |   V| 2MASS|     |\n')
+
+        message = generate_ades_psv_message(self.test_block2ql.id, self.test_block2ql.body.id)
+
+        i = 0
+        expected_lines = exp_msg.split('\n')
+        message_lines = message.split('\n')
+        while i < len(expected_lines):
+            self.assertEqual(expected_lines[i], message_lines[i])
+            i += 1
+
+        self.assertEqual(expected_message, message)
+
+    def test_K93_discovery(self):
+
+        # Add discovery flag to the SourceMeasurement and make a copy without
+        sm = SourceMeasurement.objects.get(frame=self.test_frame)
+        sm.flags = '*'
+        sm.save()
+
+        exp_msg = ( '# version=2017\n'
+                    '# observatory\n'
+                    '! mpcCode K93\n'
+                    '# submitter\n'
+                    '! name T. Lister\n'
+                    '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
+                    '# observers\n'
+                    '! name T. Lister\n'
+                    '! name E. Gomez\n'
+                    '! name J. Chatelain\n'
+                    '! name S. Greenstreet\n'
+                    '# measurers\n'
+                    '! name T. Lister\n'
+                    '# telescope\n'
+                    '! name LCO CPT Node 1m0 Dome C at Sutherland, South Africa\n'
+                    '! design Ritchey-Chretien\n'
+                    '! aperture 1.0\n'
+                    '! detector CCD\n'
+                    '! fRatio 8.0\n'
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat|mag  |band|photCat|notes|remarks\n'
+                    '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|157.500000 |-32.750000 | UCAC4|21.5 |   R| UCAC4|*    |\n')
+
+        message = generate_ades_psv_message(self.test_block.id, self.test_block.body.id)
+
+        i = 0
+        expected_lines = exp_msg.split('\n')
+        message_lines = message.split('\n')
+        while i < len(expected_lines):
+            self.assertEqual(expected_lines[i], message_lines[i])
+            i += 1
+
+        self.assertEqual(expected_message, message)
+
     def test_K93_gaiadr2(self):
 
         expected_message = ( '# version=2017\n'
