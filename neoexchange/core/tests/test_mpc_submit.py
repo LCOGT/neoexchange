@@ -1221,7 +1221,7 @@ class Test_Generate_ADES_PSV_Message(TestCase):
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
                     'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat|mag  |band|photCat|notes|remarks\n'
-                    '       |2015 XS54  |        | CCD|W86 |2015-12-05T01:10:49.90Z| 15.500000 | -3.750000 | 2MASS|21.6 |   V| 2MASS|     |\n')
+                    '       |2015 XS54  |        | CCD|W86 |2015-12-05T01:10:49.90Z| 15.500000 | -3.750000 | 2MASS|21.6 |   V| PPMXL|     |\n')
 
         message = generate_ades_psv_message(self.test_block2ql.id, self.test_block2ql.body.id)
 
