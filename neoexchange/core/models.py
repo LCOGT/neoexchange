@@ -12,7 +12,7 @@ GNU General Public License for more details.
 """
 from __future__ import unicode_literals
 from datetime import datetime, timedelta, date
-from math import pi, log10, sqrt, cos, degrees, ceil
+from math import pi, log10, sqrt, cos, degrees, ceil, sqrt
 from collections import Counter, OrderedDict
 import reversion
 import logging
@@ -1143,6 +1143,15 @@ class SourceMeasurement(models.Model):
         rms_available = False
         if self.err_obs_ra and self.err_obs_dec and self.err_obs_mag:
             rms_available = True
+            # Add RMS of Frame astrometric fit (in arcsec) to stored source
+            # standard deviations (in deg; already converted from SExtractor
+            # variances->standard deviations in get_catalog_items() & convert_value())
+            if self.frame.rms_of_fit:
+                err_obs_ra = sqrt(self.err_obs_ra**2 + ((self.frame.rms_of_fit/3600.0)**2))
+                err_obs_dec = sqrt(self.err_obs_dec**2 + ((self.frame.rms_of_fit/3600.0)**2))
+            else:
+                err_obs_ra = self.err_obs_ra
+                err_obs_dec = self.err_obs_dec
 
         if self.body.name:
             if len(self.body.name) > 4 and self.body.name[0:4].isdigit():
@@ -1164,24 +1173,27 @@ class SourceMeasurement(models.Model):
         frac_time = "{:.2f}Z".format(self.frame.midpoint.microsecond / 1e6)
         obsTime = obsTime + frac_time[1:]
         catalog_code = translate_catalog_code(self.frame.astrometric_catalog, ades_code=True)
+        if (self.frame.astrometric_catalog is None or self.frame.astrometric_catalog.strip() == '')\
+            and self.astrometric_catalog is not None:
+            catalog_code = translate_catalog_code(self.astrometric_catalog, ades_code=True)
 
         prec = 6
         if self.err_obs_ra:
-            prec = self._numdp(self.err_obs_ra)
+            prec = self._numdp(err_obs_ra)
         fmt_ra = "{ra:.{prec}f}".format(prec=prec, ra=self.obs_ra)
         fmt_ra, width, dpos = psv_padding(fmt_ra, 11, 'D', 4)
         prec = 6
         if self.err_obs_dec:
-            prec = self._numdp(self.err_obs_dec)
+            prec = self._numdp(err_obs_dec)
         fmt_dec = "{dec:.{prec}f}".format(prec=prec, dec=self.obs_dec)
         fmt_dec, width, dpos = psv_padding(fmt_dec, 11, 'D', 4)
-        fmt_mag = "{:4.1f} ".format(float(self.obs_mag))
+        fmt_mag = "{:4.1f}".format(float(self.obs_mag))
 
         tbl_fmt     = '%7s|%-11s|%8s|%4s|%-4s|%-23s|%11s|%11s|%6s|%-5s|%4s|%6s|%-5s|%-s'
         rms_tbl_fmt = '%7s|%-11s|%8s|%4s|%-4s|%-23s|%11s|%11s|%5s|%6s|%6s|%-5s|%6s|%4s|%6s|%6s|%6s|%6s|%-5s|%-s'
         if rms_available:
-            rms_ra = "{value:.{prec}f}".format(prec=self._numdp(self.err_obs_ra * 3600.0), value=self.err_obs_ra * 3600.0)
-            rms_dec = "{value:.{prec}f}".format(prec=self._numdp(self.err_obs_dec * 3600.0), value=self.err_obs_dec * 3600.0)
+            rms_ra = "{value:.{prec}f}".format(prec=self._numdp(err_obs_ra * 3600.0), value=err_obs_ra * 3600.0)
+            rms_dec = "{value:.{prec}f}".format(prec=self._numdp(err_obs_dec * 3600.0), value=err_obs_dec * 3600.0)
             rms_mag = "{value:.{prec}f}".format(prec=self._numdp(self.err_obs_mag), value=self.err_obs_mag)
             rms_mag, width, dpos = psv_padding(rms_mag, 6, 'D', 2)
 
@@ -1197,7 +1209,7 @@ class SourceMeasurement(models.Model):
 
             psv_line = rms_tbl_fmt % (body_name, provisional_name, tracklet_name, obs_type, self.frame.sitecode, \
                 obsTime, fmt_ra, fmt_dec, rms_ra, rms_dec,\
-                catalog_code, self.obs_mag, rms_mag, self.frame.map_filter(), \
+                catalog_code, fmt_mag, rms_mag, self.frame.map_filter(), \
                 catalog_code, phot_ap, log_snr, fwhm, self.flags, remarks)
         else:
             psv_line = tbl_fmt % (body_name, provisional_name, tracklet_name, obs_type, self.frame.sitecode, \
