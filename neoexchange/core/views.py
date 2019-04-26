@@ -1655,7 +1655,7 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False, desired_c
             logger.error("Could not obtain reference catalog for fits frame %s" % catfile)
             return -6, num_new_frames_created
 
-        scamp_status = run_scamp(configs_dir, dest_dir, new_ldac_catalog)
+        scamp_status = run_scamp(configs_dir, dest_dir, new_ldac_catalog, refcatalog=refcat)
         logger.info("Return status for scamp: {}".format(scamp_status))
 
         if scamp_status == 0:
