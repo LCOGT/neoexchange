@@ -1172,10 +1172,16 @@ class SourceMeasurement(models.Model):
         obsTime = obsTime.strftime("%Y-%m-%dT%H:%M:%S")
         frac_time = "{:.2f}Z".format(self.frame.midpoint.microsecond / 1e6)
         obsTime = obsTime + frac_time[1:]
-        catalog_code = translate_catalog_code(self.frame.astrometric_catalog, ades_code=True)
+        ast_catalog_code = translate_catalog_code(self.frame.astrometric_catalog, ades_code=True)
         if (self.frame.astrometric_catalog is None or self.frame.astrometric_catalog.strip() == '')\
             and self.astrometric_catalog is not None:
-            catalog_code = translate_catalog_code(self.astrometric_catalog, ades_code=True)
+            ast_catalog_code = translate_catalog_code(self.astrometric_catalog, ades_code=True)
+        phot_catalog_code = translate_catalog_code(self.frame.photometric_catalog, ades_code=True)
+        if (self.frame.photometric_catalog is None or self.frame.photometric_catalog.strip() == '')\
+            and self.photometric_catalog is not None:
+            phot_catalog_code = translate_catalog_code(self.photometric_catalog, ades_code=True)
+        if phot_catalog_code == '' and ast_catalog_code != '':
+            phot_catalog_code = ast_catalog_code
 
         prec = 6
         if self.err_obs_ra:
@@ -1209,12 +1215,12 @@ class SourceMeasurement(models.Model):
 
             psv_line = rms_tbl_fmt % (body_name, provisional_name, tracklet_name, obs_type, self.frame.sitecode, \
                 obsTime, fmt_ra, fmt_dec, rms_ra, rms_dec,\
-                catalog_code, fmt_mag, rms_mag, self.frame.map_filter(), \
-                catalog_code, phot_ap, log_snr, fwhm, self.flags, remarks)
+                ast_catalog_code, fmt_mag, rms_mag, self.frame.map_filter(), \
+                phot_catalog_code, phot_ap, log_snr, fwhm, self.flags, remarks)
         else:
             psv_line = tbl_fmt % (body_name, provisional_name, tracklet_name, obs_type, self.frame.sitecode, \
-                obsTime, fmt_ra, fmt_dec, catalog_code,\
-                fmt_mag, self.frame.map_filter(), catalog_code, self.flags, remarks)
+                obsTime, fmt_ra, fmt_dec, ast_catalog_code,\
+                fmt_mag, self.frame.map_filter(), phot_catalog_code, self.flags, remarks)
         return psv_line
 
     class Meta:
