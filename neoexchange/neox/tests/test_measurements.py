@@ -365,3 +365,49 @@ class MeasurementsPageTests(FunctionalTest):
 
         # Satisfied that his newly reported precovery for this asteroid has
         # been recorded, he leaves.
+
+    def test_display_ADES_measurements(self):
+
+        self.insert_test_measurements()
+        self.insert_extra_measurements()
+
+        # A user, Marco, is interested in seeing what existing measurements
+        # exist for a NEOCP candidate that he has heard about
+        target_url = self.live_server_url + reverse('target',kwargs={'pk':1})
+        self.browser.get(target_url)
+
+        # He sees a link that says it will show the source measurements
+        # available for this object.
+        link = self.browser.find_element_by_id('show-measurements')
+        target_url = "{0}/target/{1}/measurements/".format(self.live_server_url, 1)
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
+
+        # He clicks on the link and sees that he is taken to a page with details
+        # on the source measurements for this object
+        with self.wait_for_page_load(timeout=10):
+            link.click()
+        self.assertEqual(self.browser.current_url, target_url)
+        header_text = self.browser.find_element_by_class_name('headingleft').text
+        self.assertIn('Source Measurements: ' + self.body.current_name(), header_text)
+
+        # He sees a link that says it will display the measurements in ADES format
+        ades_link = self.browser.find_element_by_partial_link_text('View in ADES format')
+        ades_target_url = "{0}/target/{1}/measurements/ades/".format(self.live_server_url, 1)
+        actual_url = ades_link.get_attribute('href')
+        self.assertEqual(actual_url, ades_target_url)
+
+        # He clicks on the link and sees that he is taken to a page with the
+        # source measurements for this object in MPC 80 char format
+        ades_link.click()
+
+        # He sees that there is a table in which are the original
+        # discovery observations from WISE (obs. code C51) and from
+        # the LCOGT follow-up network.
+        testlines = [ 'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat|mag  |band|photCat|notes|remarks',
+                      '       |           | N999r0q| CCD|K91 |2015-04-20T18:00:00.00Z| 42.100000 |-30.050000 |      |21.1 |   R|      |     |',
+                    ]
+        pre_block = self.browser.find_element_by_tag_name('pre')
+        rows = pre_block.text.splitlines()
+        for test_text in testlines:
+            self.assertIn(test_text, [row.replace('\n', ' ') for row in rows])
