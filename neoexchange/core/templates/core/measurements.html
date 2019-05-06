@@ -19,7 +19,7 @@
 					{% endif %}
 				</div>
 				<div class="row">
-					<a href="{% if slot %}{% url 'block-report-mpc' slot.id %}{% else %}{% url 'measurement-mpc' body.id %}{%endif%}">[ View in MPC format ]</a></p>
+					<a href="{% if slot %}{% url 'block-report-mpc' slot.id %}{% else %}{% url 'measurement-mpc' body.id %}{%endif%}">[ View in MPC format ]</a>
 					<a href="{% url 'measurement-ades' body.id %}">[ View in ADES format ]</a></p>
 				</div>
 			</div>
