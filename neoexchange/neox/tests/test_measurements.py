@@ -124,6 +124,7 @@ class MeasurementsPageTests(FunctionalTest):
         if rms:
             frame_params['astrometric_catalog'] = 'PPMXL'
             frame_params['photometric_catalog'] = 'PPMXL'
+            frame_params['fwhm'] = 1.6
         self.test_frame = Frame.objects.create(pk=2, **frame_params)
 
         measure_params = { 'body' : self.body,
@@ -135,7 +136,9 @@ class MeasurementsPageTests(FunctionalTest):
                          }
         if rms:
             measure_params['err_obs_ra'] = 300e-3/3600.0
-            measure_params['err_obs_dec'] = 275e-3/3600.0        
+            measure_params['err_obs_dec'] = 275e-3/3600.0
+            measure_params['aperture_size'] = 1.56
+            measure_params['snr'] = 24.8
         self.test_measure2 = SourceMeasurement.objects.create(pk=2, **measure_params)
 
         # These measurements are precoverys, earlier in time but discovered later
@@ -422,9 +425,9 @@ class MeasurementsPageTests(FunctionalTest):
         # He sees that there is a table in which are the original
         # discovery observations from PanSTARRS (obs. code F51) and from
         # the LCOGT follow-up network.
-        testlines = [ 'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat|mag  |band|photCat|notes|remarks',
-                      '       |           | N999r0q| CCD|F51 |2015-03-21T06:00:00.00Z| 62.200000 |-11.050000 |      |21.5 |   r|      |     |',
-                      '       |           | N999r0q| CCD|K91 |2015-04-20T18:00:00.00Z| 42.100000 |-30.050000 |      |21.1 |   R|      |     |',
+        testlines = [ 'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |  astCat|mag  |band| photCat|notes|remarks',
+                      '       |           | N999r0q| CCD|F51 |2015-03-21T06:00:00.00Z| 62.200000 |-11.050000 |        |21.5 |   r|        |     |',
+                      '       |           | N999r0q| CCD|K91 |2015-04-20T18:00:00.00Z| 42.100000 |-30.050000 |        |21.1 |   R|        |     |',
                     ]
         pre_block = self.browser.find_element_by_tag_name('pre')
         rows = pre_block.text.splitlines()
@@ -469,10 +472,10 @@ class MeasurementsPageTests(FunctionalTest):
         # He sees that there is a table in which are the original
         # discovery observations from PanSTARRS (obs. code F51) and from
         # the LCOGT follow-up network.
-        testlines = [ 'permID |provID     |trkSub  |mode|stn |obsTime                |         ra|        dec|rmsRA|rmsDec|astCat|mag  |rmsMag|band| photCat|photAp|logSNR|seeing|notes|remarks',
-                      '       |           | N999r0q| CCD|F51 |2015-03-21T06:00:00.00Z| 62.200000 |-11.050000 |0.090| 0.090| 2MASS|21.5 |0.010 |   r| 2MASS|      |      |      |     |',
-                      '       |           | N999r0q| CCD|K91 |2015-04-20T18:00:00.00Z| 42.100000 |-30.050000 | 0.30|  0.28| UCAC4|21.1 |0.030 |   R| UCAC4|      |      |      |     |',
-                      '       |           | N999r0q| CCD|K91 |2015-04-21T18:00:00.00Z| 42.200000 |-31.050000 | 0.30|  0.28| PPMXL|20.9 |0.028 |   R| PPMXL|      |      |      |     |',
+        testlines = [ 'permID |provID     |trkSub  |mode|stn |obsTime                |         ra|        dec|rmsRA|rmsDec|  astCat|mag  |rmsMag|band| photCat|photAp|logSNR|seeing|notes|remarks',
+                      '       |           | N999r0q| CCD|F51 |2015-03-21T06:00:00.00Z| 62.200000 |-11.050000 |0.090| 0.090|   2MASS|21.5 |0.010 |   r|   2MASS|      |      |      |     |',
+                      '       |           | N999r0q| CCD|K91 |2015-04-20T18:00:00.00Z| 42.100000 |-30.050000 | 0.30|  0.28|   UCAC4|21.1 |0.030 |   R|   UCAC4|      |      |      |     |',
+                      '       |           | N999r0q| CCD|K91 |2015-04-21T18:00:00.00Z| 42.200000 |-31.050000 | 0.30|  0.28|   PPMXL|20.9 |0.028 |   R|   PPMXL|  1.56|1.3945|1.6000|     |',
                     ]
         pre_block = self.browser.find_element_by_tag_name('pre')
         rows = pre_block.text.splitlines()
