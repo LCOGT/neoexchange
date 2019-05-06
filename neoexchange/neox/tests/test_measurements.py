@@ -14,6 +14,7 @@ GNU General Public License for more details.
 """
 
 from .base import FunctionalTest
+import os
 from selenium import webdriver
 from django.core.urlresolvers import reverse
 from core.models import Body, Frame, SourceMeasurement
@@ -481,3 +482,39 @@ class MeasurementsPageTests(FunctionalTest):
         rows = pre_block.text.splitlines()
         for test_text in testlines:
             self.assertIn(test_text, [row.replace('\n', ' ') for row in rows])
+
+    def test_download_mpc_measurements(self):
+
+        self.insert_test_measurements()
+        self.insert_extra_measurements()
+
+        # A user, Marco, is interested in seeing what existing measurements
+        # exist for a NEOCP candidate that he has heard about
+        target_url = self.live_server_url + reverse('target',kwargs={'pk':1})
+        self.browser.get(target_url)
+
+        # He sees a link that says it will show the source measurements
+        # available for this object.
+        link = self.browser.find_element_by_id('show-measurements')
+        target_url = "{0}/target/{1}/measurements/".format(self.live_server_url, 1)
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
+
+        # He clicks on the link and sees that he is taken to a page with details
+        # on the source measurements for this object
+        with self.wait_for_page_load(timeout=10):
+            link.click()
+        self.assertEqual(self.browser.current_url, target_url)
+        header_text = self.browser.find_element_by_class_name('headingleft').text
+        self.assertIn('Source Measurements: ' + self.body.current_name(), header_text)
+
+        # He sees a link that says it will download the measurements in MPC format
+        mpc_dl_link = self.browser.find_element_by_partial_link_text('Download in MPC format')
+        mpc_dl_target_url = "{0}/target/{1}/measurements/mpc/download/".format(self.live_server_url, 1)
+        actual_url = mpc_dl_link.get_attribute('href')
+        self.assertEqual(actual_url, mpc_dl_target_url)
+
+        # He clicks the link and gets the file downloaded
+        mpc_dl_link.click()
+        dl_filepath = os.path.join(self.test_dir, self.body.current_name() + ".mpc")
+        self.assertTrue(os.path.exists(dl_filepath))

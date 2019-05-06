@@ -15,6 +15,7 @@ GNU General Public License for more details.
 
 from subprocess import check_output
 from datetime import datetime
+import tempfile
 
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.conf import settings
@@ -249,10 +250,17 @@ class FunctionalTest(StaticLiveServerTestCase):
 
     def setUp(self):
 
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+
         fp = webdriver.FirefoxProfile()
         fp.set_preference("browser.startup.homepage", "about:blank")
         fp.set_preference("startup.homepage_welcome_url", "about:blank")
         fp.set_preference("startup.homepage_welcome_url.additional", "about:blank")
+        # Don't ask where to save downloaded files
+        fp.set_preference("browser.download.folderList", 2);
+        fp.set_preference("browser.download.manager.showWhenStarting", False);
+        fp.set_preference("browser.download.dir", self.test_dir);
+        fp.set_preference("browser.helperApps.neverAsk.saveToDisk", "text/plain");
 
         if not hasattr(self, 'browser'):
             firefox_capabilities = DesiredCapabilities.FIREFOX
