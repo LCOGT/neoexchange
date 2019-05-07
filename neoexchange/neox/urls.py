@@ -24,7 +24,8 @@ from core.models import Body, Block, SourceMeasurement, SuperBlock, StaticSource
 from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockListView, ScheduleParameters, \
     ScheduleSubmit, ephemeris, home, BlockReport, ranking, MeasurementViewBody, MeasurementViewBlock, \
     UploadReport, BlockTimeSummary, ScheduleParametersCadence, ScheduleParametersSpectra, \
-    plotframe, make_plot, CandidatesViewBlock, BlockReportMPC, MeasurementDownloadMPC, \
+    plotframe, make_plot, CandidatesViewBlock, BlockReportMPC, \
+    MeasurementDownloadMPC, MeasurementDownloadADESPSV, \
     SuperBlockListView, SuperBlockDetailView, characterization, SpectroFeasibility, \
     display_spec, PlotSpec, display_movie, GuideMovie, \
     StaticSourceView, StaticSourceDetailView, ScheduleCalibSpectra, ScheduleCalibSubmit, \
@@ -57,6 +58,7 @@ urlpatterns = [
     url(r'^block/(?P<pk>\d+)/candidates/$', CandidatesViewBlock.as_view(), name='view-candidates'),
     url(r'^block/(?P<pk>\d+)/$', SuperBlockDetailView.as_view(model=SuperBlock), name='block-view'),
     url(r'^target/$', ListView.as_view(model=Body, queryset=Body.objects.filter(active=True).order_by('-origin', '-ingest'), context_object_name="target_list"), name='targetlist'),
+    url(r'^target/(?P<pk>\d+)/measurements/ades/download/$', MeasurementDownloadADESPSV.as_view(), name='download-ades'),
     url(r'^target/(?P<pk>\d+)/measurements/mpc/download/$', MeasurementDownloadMPC.as_view(), name='download-mpc'),
     url(r'^target/(?P<pk>\d+)/measurements/ades/$', MeasurementViewBody.as_view(template='core/adesreport.html'), name='measurement-ades'),
     url(r'^target/(?P<pk>\d+)/measurements/mpc/$', MeasurementViewBody.as_view(template='core/mpcreport.html'), name='measurement-mpc'),
