@@ -95,8 +95,8 @@ RUN cd /tmp/git_find_orb \
     && cd find_orb && make && make install && cp ps_1996.dat elp82.dat /root/.find_orb && cd .. \
     && cp /root/bin/fo /usr/local/bin/ \
     && chmod 755 /root \
-    && chown -R nginx:nginx /root/.find_orb \
     && rm -rf /tmp/git_find_orb
 
 # Copy default findorb config file
 COPY neoexchange/photometrics/configs/environ.def /root/.find_orb/
+RUN chown -R nginx:nginx /root/.find_orb
