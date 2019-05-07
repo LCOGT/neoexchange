@@ -883,8 +883,8 @@ class Test_Generate_ADES_PSV_Message(TestCase):
                     '! aperture 1.0\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
-                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat|mag  |band|photCat|notes|remarks\n'
-                    '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|157.500000 |-32.750000 | UCAC4|21.5 |   R| UCAC4|     |\n')
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |  astCat|mag  |band| photCat|notes|remarks\n'
+                    '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|157.500000 |-32.750000 |   UCAC4|21.5 |   R|   UCAC4|     |\n')
 
         message = generate_ades_psv_message(self.test_block.id, self.test_block.body.id)
 
@@ -917,8 +917,8 @@ class Test_Generate_ADES_PSV_Message(TestCase):
                     '! aperture 1.0\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
-                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat|mag  |band|photCat|notes|remarks\n'
-                    '       |2015 XS54  |        | CCD|W86 |2015-12-05T01:10:49.90Z|157.500000 |  0.660000 | 2MASS|21.5 |   R| 2MASS|K    |\n')
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |  astCat|mag  |band| photCat|notes|remarks\n'
+                    '       |2015 XS54  |        | CCD|W86 |2015-12-05T01:10:49.90Z|157.500000 |  0.660000 |   2MASS|21.5 |   R|   2MASS|K    |\n')
 
         message = generate_ades_psv_message(self.test_block2.id, self.test_block2.body.id)
 
@@ -951,8 +951,8 @@ class Test_Generate_ADES_PSV_Message(TestCase):
                     '! aperture 0.4\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
-                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat|mag  |band|photCat|notes|remarks\n'
-                    '       |2015 XS54  |        | CCD|Z21 |2015-12-05T01:10:49.90Z|  7.600000 | 32.755000 | 2MASS|20.5 |   R| 2MASS|     |\n')
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |  astCat|mag  |band| photCat|notes|remarks\n'
+                    '       |2015 XS54  |        | CCD|Z21 |2015-12-05T01:10:49.90Z|  7.600000 | 32.755000 |   2MASS|20.5 |   R|   2MASS|     |\n')
 
         message = generate_ades_psv_message(self.test_block3.id, self.test_block3.body.id)
 
@@ -992,8 +992,8 @@ class Test_Generate_ADES_PSV_Message(TestCase):
                     '! aperture 0.4\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
-                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat|mag  |band|photCat|notes|remarks\n'
-                    '       |2015 XS54  |        | CCD|W89 |2015-12-05T01:10:49.90Z|  7.600000 | 32.755000 | 2MASS|20.5 |   R| 2MASS|     |\n')
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |  astCat|mag  |band| photCat|notes|remarks\n'
+                    '       |2015 XS54  |        | CCD|W89 |2015-12-05T01:10:49.90Z|  7.600000 | 32.755000 |   2MASS|20.5 |   R|   2MASS|     |\n')
 
         message = generate_ades_psv_message(self.test_block3.id, self.test_block3.body.id)
 
@@ -1033,8 +1033,8 @@ class Test_Generate_ADES_PSV_Message(TestCase):
                     '! aperture 0.4\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
-                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat|mag  |band|photCat|notes|remarks\n'
-                    '       |2015 XS54  |        | CCD|W79 |2015-12-05T01:10:49.90Z|  7.600000 | 32.755000 | 2MASS|20.5 |   R| 2MASS|     |\n')
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |  astCat|mag  |band| photCat|notes|remarks\n'
+                    '       |2015 XS54  |        | CCD|W79 |2015-12-05T01:10:49.90Z|  7.600000 | 32.755000 |   2MASS|20.5 |   R|   2MASS|     |\n')
 
         message = generate_ades_psv_message(self.test_block3.id, self.test_block3.body.id)
 
@@ -1074,8 +1074,8 @@ class Test_Generate_ADES_PSV_Message(TestCase):
                     '! aperture 0.4\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
-                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat|mag  |band|photCat|notes|remarks\n'
-                    '       |2015 XS54  |        | CCD|V38 |2015-12-05T01:10:49.90Z|  7.600000 | 32.755000 | 2MASS|20.5 |   R| 2MASS|     |\n')
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |  astCat|mag  |band| photCat|notes|remarks\n'
+                    '       |2015 XS54  |        | CCD|V38 |2015-12-05T01:10:49.90Z|  7.600000 | 32.755000 |   2MASS|20.5 |   R|   2MASS|     |\n')
 
         message = generate_ades_psv_message(self.test_block3.id, self.test_block3.body.id)
 
@@ -1115,8 +1115,8 @@ class Test_Generate_ADES_PSV_Message(TestCase):
                     '! aperture 0.4\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
-                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat|mag  |band|photCat|notes|remarks\n'
-                    '       |2015 XS54  |        | CCD|L09 |2015-12-05T01:10:49.90Z|  7.600000 | 32.755000 | 2MASS|20.5 |   R| 2MASS|     |\n')
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |  astCat|mag  |band| photCat|notes|remarks\n'
+                    '       |2015 XS54  |        | CCD|L09 |2015-12-05T01:10:49.90Z|  7.600000 | 32.755000 |   2MASS|20.5 |   R|   2MASS|     |\n')
 
         message = generate_ades_psv_message(self.test_block3.id, self.test_block3.body.id)
 
@@ -1150,8 +1150,8 @@ class Test_Generate_ADES_PSV_Message(TestCase):
                     '! aperture 2.0\n'
                     '! detector CCD\n'
                     '! fRatio 10.0\n'
-                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat|mag  |band|photCat|notes|remarks\n'
-                    '       |2015 XS54  |        | CCD|F65 |2015-12-05T09:50:49.00Z|  7.600000 | 32.755000 | PPMXL|20.7 |   R| PPMXL|     |\n')
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |  astCat|mag  |band| photCat|notes|remarks\n'
+                    '       |2015 XS54  |        | CCD|F65 |2015-12-05T09:50:49.00Z|  7.600000 | 32.755000 |   PPMXL|20.7 |   R|   PPMXL|     |\n')
 
         message = generate_ades_psv_message(self.test_block4.id, self.test_block4.body.id)
 
@@ -1185,8 +1185,8 @@ class Test_Generate_ADES_PSV_Message(TestCase):
                     '! aperture 1.0\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
-                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat|mag  |band|photCat|notes|remarks\n'
-                    '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z| 15.500000 | -3.750000 | Gaia1|21.6 |   G| Gaia1|     |\n')
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |  astCat|mag  |band| photCat|notes|remarks\n'
+                    '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z| 15.500000 | -3.750000 |   Gaia1|21.6 |   G|   Gaia1|     |\n')
 
         message = generate_ades_psv_message(self.test_block_gaia.id, self.test_block_gaia.body.id)
 
@@ -1220,8 +1220,8 @@ class Test_Generate_ADES_PSV_Message(TestCase):
                     '! aperture 1.0\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
-                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat|mag  |band|photCat|notes|remarks\n'
-                    '       |2015 XS54  |        | CCD|W86 |2015-12-05T01:10:49.90Z| 15.500000 | -3.750000 | 2MASS|21.6 |   V| PPMXL|     |\n')
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |  astCat|mag  |band| photCat|notes|remarks\n'
+                    '       |2015 XS54  |        | CCD|W86 |2015-12-05T01:10:49.90Z| 15.500000 | -3.750000 |   2MASS|21.6 |   V|   PPMXL|     |\n')
 
         message = generate_ades_psv_message(self.test_block2ql.id, self.test_block2ql.body.id)
 
@@ -1260,8 +1260,8 @@ class Test_Generate_ADES_PSV_Message(TestCase):
                     '! aperture 1.0\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
-                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat|mag  |band|photCat|notes|remarks\n'
-                    '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|157.500000 |-32.750000 | UCAC4|21.5 |   R| UCAC4|*    |\n')
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |  astCat|mag  |band| photCat|notes|remarks\n'
+                    '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|157.500000 |-32.750000 |   UCAC4|21.5 |   R|   UCAC4|*    |\n')
 
         message = generate_ades_psv_message(self.test_block.id, self.test_block.body.id)
 
@@ -1295,8 +1295,8 @@ class Test_Generate_ADES_PSV_Message(TestCase):
                     '! aperture 1.0\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
-                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat|mag  |band|photCat|notes|remarks\n'
-                    '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z| 15.500000 | -3.750000 | Gaia2|21.6 |   G| Gaia2|     |\n')
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |  astCat|mag  |band| photCat|notes|remarks\n'
+                    '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z| 15.500000 | -3.750000 |   Gaia2|21.6 |   G|   Gaia2|     |\n')
 
         message = generate_ades_psv_message(self.test_block_gaiadr2.id, self.test_block_gaiadr2.body.id)
 
