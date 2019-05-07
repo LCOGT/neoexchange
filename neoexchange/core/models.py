@@ -1193,15 +1193,24 @@ class SourceMeasurement(models.Model):
             prec = self._numdp(err_obs_dec)
         fmt_dec = "{dec:.{prec}f}".format(prec=prec, dec=self.obs_dec)
         fmt_dec, width, dpos = psv_padding(fmt_dec, 11, 'D', 4)
-        fmt_mag = "{:4.1f}".format(float(self.obs_mag))
+        fmt_filter = " "
+        if self.obs_mag is not None:
+            fmt_mag = "{:4.1f}".format(float(self.obs_mag))
+            fmt_filter = self.frame.map_filter()
+        else:
+            fmt_mag = " "*5
+            phot_catalog_code = " "
 
         tbl_fmt     = '%7s|%-11s|%8s|%4s|%-4s|%-23s|%11s|%11s|%8s|%-5s|%4s|%8s|%-5s|%-s'
         rms_tbl_fmt = '%7s|%-11s|%8s|%4s|%-4s|%-23s|%11s|%11s|%5s|%6s|%8s|%-5s|%6s|%4s|%8s|%6s|%6s|%6s|%-5s|%-s'
         if rms_available:
             rms_ra = "{value:.{prec}f}".format(prec=self._numdp(err_obs_ra * 3600.0), value=err_obs_ra * 3600.0)
             rms_dec = "{value:.{prec}f}".format(prec=self._numdp(err_obs_dec * 3600.0), value=err_obs_dec * 3600.0)
-            rms_mag = "{value:.{prec}f}".format(prec=self._numdp(self.err_obs_mag), value=self.err_obs_mag)
-            rms_mag, width, dpos = psv_padding(rms_mag, 6, 'D', 2)
+            if self.obs_mag is not None:
+                rms_mag = "{value:.{prec}f}".format(prec=self._numdp(self.err_obs_mag), value=self.err_obs_mag)
+                rms_mag, width, dpos = psv_padding(rms_mag, 6, 'D', 2)
+            else:
+                rms_mag = " "
 
             phot_ap = " "*6
             if self.aperture_size:
@@ -1215,12 +1224,12 @@ class SourceMeasurement(models.Model):
 
             psv_line = rms_tbl_fmt % (body_name, provisional_name, tracklet_name, obs_type, self.frame.sitecode, \
                 obsTime, fmt_ra, fmt_dec, rms_ra, rms_dec,\
-                ast_catalog_code, fmt_mag, rms_mag, self.frame.map_filter(), \
+                ast_catalog_code, fmt_mag, rms_mag, fmt_filter, \
                 phot_catalog_code, phot_ap, log_snr, fwhm, self.flags, remarks)
         else:
             psv_line = tbl_fmt % (body_name, provisional_name, tracklet_name, obs_type, self.frame.sitecode, \
                 obsTime, fmt_ra, fmt_dec, ast_catalog_code,\
-                fmt_mag, self.frame.map_filter(), phot_catalog_code, self.flags, remarks)
+                fmt_mag, fmt_filter, phot_catalog_code, self.flags, remarks)
         return psv_line
 
     class Meta:

@@ -1431,6 +1431,39 @@ class TestSourceMeasurement(TestCase):
         psv_line = measure.format_psv_line()
         self.assertEqual(expected_psvline, psv_line)
 
+    def test_psv_nomag_1(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 220.5224583333333,
+                            'obs_dec' : -13.814777777777778,
+                            'obs_mag' : None,
+                            'astrometric_catalog' : "GAIA-DR2",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_psvline = '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|220.522458 |-13.814778 |   Gaia2|     |    |        |     |'
+        psv_line = measure.format_psv_line()
+        self.assertEqual(expected_psvline, psv_line)
+
+    def test_psv_rms_nomag_1(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 220.5224583333333,
+                            'obs_dec' : -13.814777777777778,
+                            'obs_mag' : None,
+                            'err_obs_ra' : 0.14/3600.0,
+                            'err_obs_dec': 0.16/3600.0,
+                            'err_obs_mag' : 0.12,
+                            'astrometric_catalog' : "GAIA-DR2",
+                            'photometric_catalog' : "GAIA-DR2",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_psvline = '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|220.522458 |-13.814778 | 0.14|  0.16|   Gaia2|     |      |    |        |      |      |1.0000|     |'
+
+        psv_line = measure.format_psv_line()
+        self.assertEqual(expected_psvline, psv_line)
+
     def test_psv_rms_1(self):
         measure_params = {  'body' : self.body,
                             'frame' : self.test_frame,
