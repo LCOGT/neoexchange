@@ -29,7 +29,7 @@ from django.forms.models import model_to_dict
 from core.models import Body, Proposal, Block
 from astrometrics.ephem_subs import determine_darkness_times
 from astrometrics.time_subs import datetime2mjd_utc
-from neox.tests.mocks import MockDateTime, mock_expand_cadence
+from neox.tests.mocks import MockDateTime, mock_expand_cadence, mock_fetchpage_and_make_soup
 from core.views import record_block, create_calib_sources, compute_vmag_pa
 # Import module to test
 from astrometrics.sources_subs import *
@@ -376,6 +376,13 @@ class TestFetchAreciboTargets(TestCase):
         targets = fetch_arecibo_targets(self.test_arecibo_page_v3)
 
         self.assertEqual(expected_targets, targets)
+
+    @patch('astrometrics.sources_subs.fetchpage_and_make_soup', mock_fetchpage_and_make_soup)
+    def test_page_down(self):
+        expected_targets = []
+        targets = fetch_arecibo_targets()
+        self.assertEqual(expected_targets, targets)
+
 
 class TestFetchGoldstoneTargets(TestCase):
 
@@ -1744,6 +1751,29 @@ class TestParseNEOCPExtraParams(TestCase):
             self.assertEqual(expected_obj_ids[obj][1], obj_ids[obj][1])
             obj += 1
 
+    @patch('astrometrics.sources_subs.fetchpage_and_make_soup', mock_fetchpage_and_make_soup)
+    def test_parse_neocpep_pccp_page_down(self):
+        """Test of 'Moved to the PCCP' entries"""
+
+        html = BeautifulSoup(self.table_header +
+                             '''
+        <tr><td><span style="display:none">WR0159E</span><center>WR0159E</center></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Moved to the <a href="/iau/NEO/pccp_tabular.html">PCCP</a></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td><td></td></tr>
+        ''' + self.table_footer, "html.parser")
+
+        obj_ids = parse_NEOCP_extra_params(html)
+        expected_obj_ids = []
+        self.assertEqual(expected_obj_ids, obj_ids)
+
 
 class TestParsePCCP(TestCase):
 
@@ -2678,6 +2708,12 @@ class TestFetchNEOCPObservations(TestCase):
         observations = fetch_NEOCP_observations(page)
         self.assertEqual(expected, observations)
 
+    @patch('astrometrics.sources_subs.fetchpage_and_make_soup', mock_fetchpage_and_make_soup)
+    def test_page_down(self):
+        observations = fetch_NEOCP_observations("test_body")
+        expected = None
+        self.assertEqual(expected, observations)
+
 
 class TestIMAPLogin(TestCase):
 
@@ -2965,6 +3001,7 @@ class TestSFUFetch(TestCase):
 
         self.assertEqual(expected_result[0], sfu_result[0])
         self.assertEqual(expected_result[1], sfu_result[1])
+
 
 class TestConfigureDefaults(TestCase):
 
@@ -4327,6 +4364,12 @@ class TestFetchFluxStandards(TestCase):
                     self.assertAlmostEqual(expected_standards[fluxstd][key], standards[fluxstd][key], places=self.precision)
                 else:
                     self.assertEqual(expected_standards[fluxstd][key], standards[fluxstd][key])
+
+    @patch('astrometrics.sources_subs.fetchpage_and_make_soup', mock_fetchpage_and_make_soup)
+    def test_standards_page_down(self):
+        expected_standards = None
+        standards = fetch_flux_standards(None, filter_optical_model=True)
+        self.assertEqual(expected_standards, standards)
 
 
 class TestReadSolarStandards(TestCase):
