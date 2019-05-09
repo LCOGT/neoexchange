@@ -341,7 +341,7 @@ class MeasurementDownloadMPC(View):
 
         measures = SourceMeasurement.objects.filter(body=body).order_by('frame__midpoint')
         data = { 'measures' : measures}
-        filename = "{}.mpc".format(body.current_name().replace(' ', '').replace('/', '_'))
+        filename = "{}_mpc.dat".format(body.current_name().replace(' ', '').replace('/', '_'))
 
         response = HttpResponse(self.template.render(data), content_type="text/plain")
         response['Content-Disposition'] = 'attachment; filename=' + filename

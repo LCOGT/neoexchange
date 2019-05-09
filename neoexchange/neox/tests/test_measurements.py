@@ -516,7 +516,7 @@ class MeasurementsPageTests(FunctionalTest):
 
         # He clicks the link and gets the file downloaded
         mpc_dl_link.click()
-        dl_filepath = os.path.join(self.test_dir, self.body.current_name() + ".mpc")
+        dl_filepath = os.path.join(self.test_dir, self.body.current_name() + "_mpc.dat")
         self.assertTrue(os.path.exists(dl_filepath))
 
     def test_download_ades_measurements(self):
