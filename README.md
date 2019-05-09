@@ -4,6 +4,12 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 2.8.1
+Several small updates and fixes
+* Improve tests for updated firefox
+* Remove gaps between RADAR target ingest & orbit update
+* Add error handling for spectroscopy when a 2m isn't available
+
 ### 2.8.0
 Improve Static Source Scheduling
 * Add features to Calib Scheduling Confirmation page to bring it up to date with standard version.
