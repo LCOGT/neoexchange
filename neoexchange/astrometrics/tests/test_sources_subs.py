@@ -4125,6 +4125,12 @@ class TestFetchTaxonomyData(TestCase):
 
         self.assertEqual(expected_length, len(targets))
 
+    @patch('astrometrics.sources_subs.fetchpage_and_make_soup', mock_fetchpage_and_make_soup)
+    def test_page_down(self):
+        expected_tax = []
+        targets = fetch_taxonomy_page(None)
+        self.assertEqual(expected_tax, targets)
+
     def test_basics_sdss(self):
         expected_length = 25
         targets = fetch_taxonomy_page(self.test_sdss_page)

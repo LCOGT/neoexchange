@@ -1884,19 +1884,13 @@ def parse_filter_file(site, spec, camera_list=None):
 
 
 def fetch_taxonomy_page(page=None):
-    """Fetches Taxonomy data to be compared against database. First from PDS, then from Binzel 2004"""
+    """Fetches Taxonomy data to be compared against database."""
 
     if page is None:
         taxonomy_url = 'https://sbn.psi.edu/archive/bundles/ast_taxonomy/data/taxonomy10.tab'
         data_file = fetchpage_and_make_soup(taxonomy_url)
         # data_file = urllib.request.urlopen(taxonomy_url)
         data_out = parse_taxonomy_data(data_file)
-
-        # Binzel_taxonomy_page appears to be completely included within PDS Version6.0
-        # binzel_taxonomy_page = os.path.join('astrometrics', 'binzel_tax.dat')
-        # with open(binzel_taxonomy_page, 'r') as input_file:
-        #    binzel_out=parse_binzel_data(input_file)
-        # data_out=data_out+binzel_out
     else:
         with open(page, 'r') as input_file:
             data_out = parse_taxonomy_data(input_file.read())
