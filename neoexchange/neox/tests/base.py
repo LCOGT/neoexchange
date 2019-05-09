@@ -15,6 +15,9 @@ GNU General Public License for more details.
 
 from subprocess import check_output
 from datetime import datetime
+from glob import glob
+import tempfile
+import os
 
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.conf import settings
@@ -249,10 +252,17 @@ class FunctionalTest(StaticLiveServerTestCase):
 
     def setUp(self):
 
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+
         fp = webdriver.FirefoxProfile()
         fp.set_preference("browser.startup.homepage", "about:blank")
         fp.set_preference("startup.homepage_welcome_url", "about:blank")
         fp.set_preference("startup.homepage_welcome_url.additional", "about:blank")
+        # Don't ask where to save downloaded files
+        fp.set_preference("browser.download.folderList", 2);
+        fp.set_preference("browser.download.manager.showWhenStarting", False);
+        fp.set_preference("browser.download.dir", self.test_dir);
+        fp.set_preference("browser.helperApps.neverAsk.saveToDisk", "text/plain");
 
         if not hasattr(self, 'browser'):
             firefox_capabilities = DesiredCapabilities.FIREFOX
@@ -282,6 +292,22 @@ class FunctionalTest(StaticLiveServerTestCase):
         self.browser.refresh()
 #       self.browser.implicitly_wait(5)
         self.browser.quit()
+
+        remove = True
+        debug_print = False
+        if remove:
+            try:
+                files_to_remove = glob(os.path.join(self.test_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.test_dir)
+            try:
+                os.rmdir(self.test_dir)
+                if debug_print:
+                    print("Removed", self.test_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.test_dir)
 
     def check_for_row_in_table(self, table_id, row_text):
         table = self.browser.find_element_by_id(table_id)

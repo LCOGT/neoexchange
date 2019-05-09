@@ -328,6 +328,45 @@ class MeasurementViewBody(View):
         return render(request, self.template, {'body': body, 'measures' : measures})
 
 
+class MeasurementDownloadMPC(View):
+
+    template = get_template('core/mpc_outputfile.txt')
+
+    def get(self, request, *args, **kwargs):
+        try:
+            body = Body.objects.get(id=kwargs['pk'])
+        except Body.DoesNotExist:
+            logger.warning("Could not find Body with pk={}".format(kwargs['pk']))
+            raise Http404("Body does not exist")
+
+        measures = SourceMeasurement.objects.filter(body=body).order_by('frame__midpoint')
+        data = { 'measures' : measures}
+        filename = "{}_mpc.dat".format(body.current_name().replace(' ', '').replace('/', '_'))
+
+        response = HttpResponse(self.template.render(data), content_type="text/plain")
+        response['Content-Disposition'] = 'attachment; filename=' + filename
+        return response
+
+
+class MeasurementDownloadADESPSV(View):
+
+    template = get_template('core/mpc_ades_psv_outputfile.txt')
+
+    def get(self, request, *args, **kwargs):
+        try:
+            body = Body.objects.get(id=kwargs['pk'])
+        except Body.DoesNotExist:
+            logger.warning("Could not find Body with pk={}".format(kwargs['pk']))
+            raise Http404("Body does not exist")
+
+        measures = SourceMeasurement.objects.filter(body=body).order_by('frame__midpoint')
+        data = { 'measures' : measures}
+        filename = "{}.psv".format(body.current_name().replace(' ', '').replace('/', '_'))
+
+        response = HttpResponse(self.template.render(data), content_type="text/plain")
+        response['Content-Disposition'] = 'attachment; filename=' + filename
+        return response
+
 def export_measurements(body_id, output_path=''):
 
     t = get_template('core/mpc_outputfile.txt')

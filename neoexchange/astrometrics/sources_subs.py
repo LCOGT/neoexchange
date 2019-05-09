@@ -521,7 +521,7 @@ def fetch_mpcobs(asteroid, debug=False):
     return None
 
 
-def translate_catalog_code(code_or_name):
+def translate_catalog_code(code_or_name, ades_code=False):
     """Mapping between the single character in column 72 of MPC records
     and the astrometric reference catalog used.
     Documentation at: https://www.minorplanetcenter.net/iau/info/CatalogueCodes.html"""
@@ -576,15 +576,33 @@ def translate_catalog_code(code_or_name):
                   "V" : "GAIA-DR2",
                   "W" : "UCAC5",
                   }
+    # https://www.minorplanetcenter.net/iau/info/ADESFieldValues.html
+    catalog_mapping = {'USNO-SA2.0'  : 'USNOSA2',  # Can't test, don't have CDs
+                       'USNO-A2.0'   : 'USNOA2',   # Can't test, don't have CDs
+                       'USNO-B1.0'   : 'USNOB1',
+                       'UCAC-3'      : 'UCAC3',
+                       'UCAC-4'      : 'UCAC4',
+                       'URAT-1'      : 'URAT1',    # Failed in Astrometrica, couldn't test
+                       'NOMAD'       : 'NOMAD',
+                       'CMC-14'      : 'CMC14',    # Failed in Astrometrica, couldn't test
+                       'CMC-15'      : 'CMC15',
+                       'PPMXL'       : 'PPMXL',
+                       'GAIA-DR1'    : 'Gaia1',
+                       'GAIA-DR2'    : 'Gaia2',
+                       '2MASS'       : '2MASS'
+                      }
     catalog_or_code = ''
     if len(code_or_name.strip()) == 1:
         catalog_or_code = catalog_codes.get(code_or_name, '')
         if not catalog_or_code:
             logger.warning("{} is not in our accepted list of astrometric catalog codes.".format(code_or_name))
     else:
-        for code, catalog in catalog_codes.items():
-            if code_or_name == catalog:
-                catalog_or_code = code
+        if ades_code is True:
+            catalog_or_code = catalog_mapping.get(code_or_name.upper(),'')
+        else:
+            for code, catalog in catalog_codes.items():
+                if code_or_name == catalog:
+                    catalog_or_code = code
 
     return catalog_or_code
 
@@ -910,6 +928,106 @@ def cycle_mpc_character_code(char):
         cycle = cycle - ord('0')
     return cycle
 
+def psv_padding(s, l, jtype, dpos=0):
+   """#
+      # PSV formatting routine (adapted from ADESMaster.adesutility.applyPaddingAndJustification)
+      #
+    psv_padding(s, l, jtype, dpos)
+
+       Inputs:
+          s: input string
+          l: output length (pad with blanks)
+             If string is too long it is returned without change
+          jtype: justification type
+                L: left
+                R: right
+             D<n>: decimal point in column <n>
+          dpos: decimal point in column <dpos> (for jtype = "D")
+
+       Return Value:
+            (padded string, l, dpos)
+            l is the achieved width.  It may be longer than l
+            dpos is the achieved dpos.  It may be different from dpos
+
+       The width and dpos may be different. These should be used to
+       update the headerInfo array if one is trying to achieve alignment
+       over multiple lines.
+   """
+
+   ll = len(s)
+   if jtype.upper() == 'L': # negative multipliers result in ''
+      outs = s + (l - ll)*' '
+      return (outs, len(outs), dpos)
+   elif jtype.upper() == 'R':
+      outs =  (l - ll)*' ' + s
+      return (outs, len(outs), dpos)
+   elif jtype.upper() == 'C':
+      i = (l-ll)//2
+      j = i
+      if i*2 != l-ll: j = j + 1
+      outs =  i*' ' + s + j*' '
+      return (outs, len(outs), dpos)
+   elif jtype.upper() == 'D':  # null strings not allowed
+      try:
+         if dpos < 0:
+           raise RuntimeError("Invalid negative value of dpos ("+ dpos + ")")
+      except:
+         raise RuntimeError("Illegal justification string " + jtype)
+      #
+      # pad only with spaces on both sides
+      # and do not change s
+      #
+      # if s has no decimal point don't add one
+      # but line up as if it were to the right
+      # of s.
+      #
+      # the result may be too wide.  This is OK
+      # we will do a fix-up on width in the caller.
+      # Note this means we have to do it twice but
+      # we never will get wider as a result of the
+      # second pass.
+      #
+      # Also, we assume s is a decimal for xsd.  If
+      # not, validation will fail later.  If there
+      # is more than one decimal point, it will fail
+      # here.
+      #
+      sp = s.split('.')
+      if (len(sp) == 1):  #No decimal point
+         sleft = s
+         sright = ''
+      elif (len(sp) == 2): #has decimal point
+         (sleft, sright) = sp
+      else:
+         raise RuntimeError('Illegal string ' + s + ' for decimal value')
+      #
+      # now re-pack with width
+      #
+      leftpad = dpos - 1 - len(sleft)
+      #
+      # figure out dpos extension
+      #
+      if leftpad < 0: # <n> needs adjusting
+          ndpos = dpos - leftpad
+          rightpad = (l - ndpos)  - len(sright)
+          dpos = ndpos
+      rightpad = (l - dpos)  - len(sright)
+      if (len(s) > 0) and (s[-1] == '.'): # trailing decimal point adjustment
+        sleft = s
+        rightpad = rightpad - 1
+      #
+      # works for negative values of leftpad and rightpad
+      # adding no characters
+         #
+      if sright:  # don't add '.' if sright is ''
+        retval =  leftpad * ' ' + sleft + '.' + sright + rightpad * ' '
+      else:
+        rightpad += 1
+        retval =  leftpad * ' ' + sleft + rightpad * ' '
+      return (retval, len(retval), dpos);
+
+   else:
+      raise RuntimeError ("Illegal justification string " + jtype)
 
 def parse_goldstone_chunks(chunks, dbg=False):
     """Tries to parse the Goldstone target line (a split()'ed list of fields)

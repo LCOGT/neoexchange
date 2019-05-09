@@ -165,9 +165,10 @@ class Command(BaseCommand):
                         }
         source, created = SourceMeasurement.objects.get_or_create(**source_params)
         mpc_line = source.format_mpc_line()
+        ades_psv_line = source.format_psv_line()
         if persist is not True:
             source.delete()
-        return mpc_line
+        return mpc_line, ades_psv_line
 
     def output_alcdef(self, lightcurve_file, block, site, dates, mags, mag_errors, filt, outmag):
         obj_name = block.body.current_name()
@@ -231,6 +232,7 @@ class Command(BaseCommand):
         zps = []
         zp_errs = []
         mpc_lines = []
+        psv_lines = []
         total_frame_count = 0
         mpc_site = []
         fwhm = []
@@ -321,8 +323,9 @@ class Command(BaseCommand):
 
                             if best_source and best_source.obs_mag > 0.0 and abs(mag_estimate - best_source.obs_mag) <= 3 * options['deltamag']:
                                 block_times.append(frame.midpoint)
-                                mpc_line = self.make_source_measurement(block.body, frame, best_source, persist=options['persist'])
+                                mpc_line, psv_line = self.make_source_measurement(block.body, frame, best_source, persist=options['persist'])
                                 mpc_lines.append(mpc_line)
+                                psv_lines.append(psv_line)
                                 block_mags.append(best_source.obs_mag)
                                 block_mag_errs.append(best_source.err_obs_mag)
                                 filter_list.append(frame.ALCDEF_filter_format())
@@ -361,6 +364,7 @@ class Command(BaseCommand):
 
         lightcurve_file = open(os.path.join(datadir, base_name + 'lightcurve_data.txt'), 'w')
         mpc_file = open(os.path.join(datadir, base_name + 'mpc_positions.txt'), 'w')
+        psv_file = open(os.path.join(datadir, base_name + 'ades_positions.psv'), 'w')
 
         # Calculate integer part of JD for first frame and use this as a
         # constant in case of wrapover to the next day
@@ -376,9 +380,15 @@ class Command(BaseCommand):
                 i += 1
             lightcurve_file.close()
 
+            # Write out MPC1992 80 column file
             for mpc_line in mpc_lines:
                 mpc_file.write(mpc_line + '\n')
             mpc_file.close()
+
+            # Write out ADES Pipe Separated Value file
+            for psv_line in psv_lines:
+                psv_file.write(psv_line + '\n')
+            psv_file.close()
 
             if options['title'] is None:
                 sites = ', '.join(mpc_site)
