@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 2.8.2
+Add ADES PSV export and MPC1992 and ADES PSV download options.
+
 ### 2.8.1
 Several small updates and fixes
 * Improve tests for updated firefox
