@@ -279,7 +279,10 @@ def smooth(x, y):
     window_num = 8
 
     while loc <= len(x):
-        stds = np.append(stds, np.nanstd(normy[loc-noise_window:loc]).value)
+        try:
+            stds = np.append(stds, np.nanstd(normy[loc-noise_window:loc]).value)
+        except AttributeError:
+            stds = np.append(stds, np.nanstd(normy[loc-noise_window:loc]))
         loc += int(len(x)/window_num)
 
     noisiness = np.nanmean(stds/((x[-1]-x[0])/len(x)).value)
@@ -354,7 +357,7 @@ def format_label_string_with_exponent(ax, axis='both'):
         ax.set_label_text(update_label(label, exponent_text))
 
 
-def plot_spectra(x, y, y_units, x_units, ax, title, ref=0, norm=0,):
+def plot_spectra(x, y, y_units, x_units, ax, title, ref=0, norm=0, log=False):
     """plots spectra data
        imputs: <x>: wavelength data for x axis
                <y>: flux data for y axis
@@ -362,16 +365,21 @@ def plot_spectra(x, y, y_units, x_units, ax, title, ref=0, norm=0,):
                <title>: plot title (should be object name)
                [ref]: 1 for sol_ref, 0 for asteroid
                [norm]: normalizes data when set to 1
+               [log]: if the y data is a logarithmic quantity when True
     """
 
     if norm == 1:
+        print("Normalizing")
         yyy = normalize(x, y)
     else:
         yyy = y
 
     ax.plot(x, yyy, linewidth=1)
     ax.set_xlabel('Wavelength ({})'.format(x_units.to_string('latex_inline')))
-    ax.set_ylabel(y_units.to_string('latex_inline'))
+    y_units_label = y_units.to_string('latex_inline')
+    if log:
+        y_units_label = '$\\log_{10} \\mathrm{F}_\\lambda\\ (' + y_units_label[1:] + ')'
+    ax.set_ylabel(y_units_label)
     format_label_string_with_exponent(ax, axis='y')
     ax.minorticks_on()
 
@@ -386,14 +394,16 @@ def plot_spectra(x, y, y_units, x_units, ax, title, ref=0, norm=0,):
     # set axis values
     peak_idx = np.searchsorted(x, 5000*u.AA)
     try:
-        ax.axis([x[0].value, x[-1].value, 0, (yyy[peak_idx]*2)])
+        ax.set_xlim(x[0].value, x[-1].value)
+        if log is False:
+            ax.set_ylim(0, (yyy[peak_idx]*2))
     except ValueError:
         pass
     except u.UnitsError:
         pass
 
 
-def get_spec_plot(path, spectra, obs_num):
+def get_spec_plot(path, spectra, obs_num, log=False):
 
     fig, ax = plt.subplots()
     x, y, yerr, xunits, yunits, name, details = read_spectra(path, spectra)
@@ -402,12 +412,18 @@ def get_spec_plot(path, spectra, obs_num):
     if details:
         title = 'UTC Date: {}'.format(details[0].strftime('%Y/%m/%d %X'))
         fig.suptitle('Request Number {} -- {} at {}'.format(details[3], name, details[2]))
+        obs_details = "_" + details[3]
     else:
-        title = name
-    xsmooth, ysmooth = smooth(x, y)
-    plot_spectra(xsmooth, ysmooth, yunits, xunits, ax, title)
+        title = name.upper()
+        obs_details = ''
+    if log:
+        y_log = np.log10(y.value)
+        xsmooth, ysmooth = smooth(x, y_log)
+    else:
+        xsmooth, ysmooth = smooth(x, y)
+    plot_spectra(xsmooth, ysmooth, yunits, xunits, ax, title, log=log)
 
-    save_file = os.path.join(path, name.replace(' ', '_') + "_" + details[3] + "_spectra_" + obs_num + ".png")
+    save_file = os.path.join(path, name.replace(' ', '_') + obs_details + "_spectra_" + str(obs_num) + ".png")
     fig.savefig(save_file, format='png')
     plt.close()
 
