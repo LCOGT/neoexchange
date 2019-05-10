@@ -289,8 +289,6 @@ class FunctionalTest(StaticLiveServerTestCase):
         self.insert_previous_spectra()
 
     def tearDown(self):
-        self.browser.refresh()
-#       self.browser.implicitly_wait(5)
         self.browser.quit()
 
         remove = True
