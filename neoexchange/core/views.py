@@ -2952,7 +2952,12 @@ def display_calibspec(request, pk):
         spec_plot = open(spec_file, 'rb').read()
         return HttpResponse(spec_plot, content_type="Image/png")
     else:
-        return HttpResponse()
+        import base64
+        # Return a 1x1 pixel gif in the case of no spectra file
+        PIXEL_GIF_DATA = base64.b64decode(
+            b"R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7")
+
+        return HttpResponse(PIXEL_GIF_DATA, content_type='image/gif')
 
 
 def make_spec(date_obs, obj, req, base_dir, prop, obs_num):
