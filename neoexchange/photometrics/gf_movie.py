@@ -64,7 +64,7 @@ def print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, lengt
         print()
 
 
-def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000):
+def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=False):
     """
     takes in list of .fits guide frames and turns them into a moving gif.
     <frames> = list of .fits frame paths
@@ -187,7 +187,8 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000):
             ax.add_artist(circle_5arcsec)
             ax.add_artist(circle_15arcsec)
 
-        print_progress_bar(n+1, len(fits_files), prefix='Creating Gif: Frame {}'.format(current_count), time_in=time_in)
+        if progress:
+            print_progress_bar(n+1, len(fits_files), prefix='Creating Gif: Frame {}'.format(current_count), time_in=time_in)
         return ax
 
     ax1 = update(0)
@@ -218,7 +219,7 @@ if __name__ == '__main__':
     if len(files) < 1:
         files = np.sort(glob(path+'*.fits'))
     if len(files) >= 1:
-        gif_file = make_gif(files, fr=fr, init_fr=ir)
+        gif_file = make_gif(files, fr=fr, init_fr=ir, progress=True)
         print("New gif created: {}".format(gif_file))
     else:
         print("No files found.")
