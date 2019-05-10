@@ -28,6 +28,7 @@ from astrometrics.ephem_subs import determine_rates_pa
 from photometrics.catalog_subs import get_fits_files, sort_rocks, find_first_last_frames
 from core.views import determine_active_proposals
 
+
 class Command(BaseCommand):
 
     help = 'Download and pipeline process data from the LCO Archive'
@@ -41,7 +42,6 @@ class Command(BaseCommand):
         parser.add_argument('--keep-temp-dir', action="store_true", help='Whether to remove the temporary directories')
         parser.add_argument('--object', action="store", help="Which object to analyze")
         parser.add_argument('--skip-download', action="store_true", help='Whether to skip downloading data')
-
 
     def handle(self, *args, **options):
         usage = "Incorrect usage. Usage: %s --date [YYYYMMDD] --proposal [proposal code] --datadir [path]" % ( argv[1] )
@@ -99,7 +99,7 @@ class Command(BaseCommand):
 
 # Step 3: For each object:
         for rock in objects:
-# Skip if a specific object was specified on the commandline and this isn't it
+            # Skip if a specific object was specified on the commandline and this isn't it
             if options['object'] is not None:
                 if options['object'] not in rock:
                     continue

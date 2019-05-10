@@ -64,15 +64,15 @@ def lco_api_call(url):
     return data
 
 
-def determine_archive_start_end(dt=None):
+def determine_archive_start_end(obs_t=None):
 
-    dt = dt or datetime.utcnow()
+    dt = obs_t or datetime.utcnow()
     start = datetime(dt.year, dt.month, dt.day, 16, 0, 0)
-    end = datetime(dt.year, dt.month, dt.day, 16, 0, 0)
-    if 0 <= dt.hour <= 16:
+    end = datetime(dt.year, dt.month, dt.day, 20, 0, 0)
+    end = end + timedelta(days=1)
+
+    if obs_t is None:
         start = start - timedelta(days=1)
-    elif 17 <= dt.hour <= 23:
-        end = end + timedelta(days=1)
 
     return start, end
 
