@@ -364,3 +364,49 @@ class TestCalibrationSources(FunctionalTest):
         self.assertEqual(actual_url, target_url)
 
         # Satisfied, he goes to find a currywurst
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_can_view_calibsource_spectra(self):
+        self.add_new_calib_sources()
+        MockDateTime.change_datetime(2018, 5, 22, 5, 0, 0)
+
+        # A new user, Daniel, goes to a hidden calibration page on the site
+        target_url = "{0}{1}".format(self.live_server_url, reverse('calibsource-view'))
+        self.browser.get(target_url)
+        actual_url = self.browser.current_url
+        self.assertEqual(actual_url, target_url)
+
+        # He notices the page title has the name of the site and the header
+        # mentions calibrations
+        self.assertIn('Calibration Sources | LCO NEOx', self.browser.title)
+        header_text = self.browser.find_element_by_class_name('headingleft').text
+        self.assertIn('Calibration Sources', header_text)
+
+        # He decides he would like to schedule a hot spectrophotometric standard
+        test_line = 'HR9087 00:01:49.42 -03:01:39.0 5.12 B7III Spectrophotometric standard'
+        self.check_for_row_in_table('id_calibsources', test_line)
+
+        # He picks HR9087 as being a suitably hot star
+        link = self.browser.find_element_by_link_text('HR9087')
+        target = StaticSource.objects.get(name='HR9087')
+        target_url = "{0}{1}".format(self.live_server_url, reverse('calibsource' , kwargs={'pk': target.pk}))
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
+
+        # He clicks the link to check the detail page to see if the spectrum
+        # is suitable
+        with self.wait_for_page_load(timeout=10):
+            link.click()
+        new_url = self.browser.current_url
+        self.assertEqual(new_url, actual_url)
+
+        # He sees the detail page for his standard
+        table_text = self.browser.find_element_by_id('id_staticsource_detail').text
+        self.assertIn('00:01:49.42', table_text)
+        self.assertIn('-03:01:39.0', table_text)
+        self.assertIn('B7III', table_text)
+        self.assertIn('Spectrophotometric standard', self.browser.find_element_by_class_name("section-title").text)
+
+        img_src = self.browser.find_element_by_id("id_spectraplot").get_attribute("src")
+        target_url = "{0}{1}".format(self.live_server_url, reverse('display_calibspec' , kwargs={'pk': target.pk}))
+        self.assertEqual(target_url, img_src)

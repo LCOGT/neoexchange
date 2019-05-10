@@ -27,7 +27,7 @@ from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockLis
     plotframe, make_plot, CandidatesViewBlock, BlockReportMPC, \
     MeasurementDownloadMPC, MeasurementDownloadADESPSV, \
     SuperBlockListView, SuperBlockDetailView, characterization, SpectroFeasibility, \
-    display_spec, PlotSpec, display_movie, GuideMovie, \
+    display_spec, display_calibspec, PlotSpec, display_movie, GuideMovie, \
     StaticSourceView, StaticSourceDetailView, ScheduleCalibSpectra, ScheduleCalibSubmit, \
     make_standards_plot, make_solar_standards_plot, CalibSpectroFeasibility, ScheduleCalibParameters
 
@@ -70,6 +70,7 @@ urlpatterns = [
     url(r'^calibsources/$', StaticSourceView.as_view(), name='calibsource-view'),
     url(r'^calibsources/solar/$', StaticSourceView.as_view(queryset=StaticSource.objects.filter(source_type=StaticSource.SOLAR_STANDARD).order_by('ra')), name='solarstandard-view'),
     url(r'^calibsources/(?P<pk>\d+)/$', StaticSourceDetailView.as_view(model=StaticSource), name='calibsource'),
+    url(r'^calibsources/(?P<pk>\d+)/spectra/spectra.png$', display_calibspec, name='display_calibspec'),
     url(r'^characterization/$', characterization, name='characterization'),
     url(r'^feasibility/(?P<pk>\d+)/$', SpectroFeasibility.as_view(), name='feasibility'),
     url(r'^feasibility/calib/(?P<pk>\d+)/$', CalibSpectroFeasibility.as_view(), name='feasibility-calib'),

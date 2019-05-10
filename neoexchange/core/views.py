@@ -2925,6 +2925,36 @@ def display_spec(request, pk, obs_num):
         return HttpResponse()
 
 
+def display_calibspec(request, pk):
+    try:
+        calibsource = StaticSource.objects.get(pk=pk)
+    except StaticSource.DoesNotExist:
+        return HttpResponse()
+
+    base_dir = os.path.join(settings.DATA_ROOT, 'cdbs', 'ctiostan')  # new base_dir for method
+
+    obj = calibsource.name.lower().replace(' ', '')
+    obs_num = '1'
+    spec_files = glob(os.path.join(base_dir, obj+"*"+"spectra"+"*"+obs_num+"*"+".png"))
+    if spec_files:
+        spec_file = spec_files[0]
+    else:
+        spec_file = ''
+    if not spec_file:
+        spec_file = "f" + obj + ".dat"
+        if os.path.exists(os.path.join(base_dir, spec_file)):
+            spec_file = get_spec_plot(base_dir, spec_file, obs_num, log=True)
+        else:
+            logger.warning("No flux file found for " + spec_file)
+            spec_file = ''
+    if spec_file:
+        logger.debug('Spectroscopy Plot: {}'.format(spec_file))
+        spec_plot = open(spec_file, 'rb').read()
+        return HttpResponse(spec_plot, content_type="Image/png")
+    else:
+        return HttpResponse()
+
+
 def make_spec(date_obs, obj, req, base_dir, prop, obs_num):
     """Creates plot of spectra data for spectra blocks
        <pk>: pk of block (not superblock)
