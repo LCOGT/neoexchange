@@ -20,6 +20,7 @@ import glob
 import logging
 from urllib.parse import urljoin
 
+
 import requests
 from django.conf import settings
 
@@ -258,7 +259,7 @@ def check_for_bad_file(filename, reject_dir='Bad'):
     return reject_file
 
 
-def download_files(frames, output_path, verbose=False, dbg=False):
+def download_files(frames, data_path, verbose=False, dbg=False):
     """Downloads and saves to disk, the specified files from the new Science
     Archive. Returns a list of the frames that were downloaded.
     Takes a dictionary <frames> (keyed by reduction levels and produced by
@@ -269,14 +270,13 @@ def download_files(frames, output_path, verbose=False, dbg=False):
     already exist. If [verbose] is set to True, the filename of the downloaded
     file will be printed."""
 
-    if not os.path.exists(output_path):
-        os.makedirs(output_path)
     downloaded_frames = []
     for reduction_lvl in frames.keys():
         logger.debug(reduction_lvl)
         frames_to_download = frames[reduction_lvl]
         for frame in frames_to_download:
             logger.debug(frame['filename'])
+            output_path = make_data_dir(data_path, frame)
             filename = os.path.join(output_path, frame['filename'])
             archive_md5 = frame['version_set'][-1]['md5']
             if check_for_existing_file(filename, archive_md5, dbg, verbose) or check_for_bad_file(filename):
@@ -287,6 +287,32 @@ def download_files(frames, output_path, verbose=False, dbg=False):
                 with open(filename, 'wb') as f:
                     f.write(requests.get(frame['url']).content)
     return downloaded_frames
+
+
+def make_data_dir(data_dir, frame):
+    filename = frame['filename']
+    print(filename)
+    if "tar.gz" in filename:
+        chunks = filename.split('_')
+        day_dir = chunks[3]
+    else:
+        chunks = filename.split('-')
+        day_dir = chunks[2]
+
+    try:
+        datetime.strptime(day_dir, '%Y%m%d')
+    except ValueError:
+        obs_date = datetime.strptime(frame['DATE_OBS'], '%Y-%m-%dT%H:%M:%S.%fZ')
+        day_dir = datetime.strftime(obs_date, '%Y%m%d')
+
+    out_path = os.path.join(data_dir, day_dir)
+    if not os.path.exists(out_path):
+        try:
+            os.makedirs(out_path)
+        except:
+            msg = "Error creating output path %s" % out_path
+            raise CommandError(msg)
+    return out_path
 
 
 def archive_lookup_images(images):
