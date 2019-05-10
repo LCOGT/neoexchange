@@ -330,7 +330,7 @@ class TestGetSpecPlot(TestCase):
     def test_fits_1(self):
 
         obs_num = '1'
-        expected_save_file = os.path.join(self.test_dir, '398188_1598411_spectra_' + obs_num +  '.png')
+        expected_save_file = os.path.join(self.test_dir, '398188_1598411_spectra_' + obs_num + '.png')
 
         save_file = get_spec_plot(self.test_dir, self.fitsfile, obs_num)
 
@@ -339,7 +339,25 @@ class TestGetSpecPlot(TestCase):
     def test_ctiostan_1(self):
 
         obs_num = 1
-        expected_save_file = os.path.join(self.test_dir, self.fitsfile.replace(os.path.splitext(self.fitsfile)[1], '.png'))
+        expected_save_file = os.path.join(self.test_dir, 'hr9087_spectra_' + str(obs_num) + '.png')
+
+        save_file = get_spec_plot(self.test_dir, self.datfile, obs_num)
+
+        self.assertEqual(expected_save_file, save_file)
+
+    def test_fits_2(self):
+
+        obs_num = '2'
+        expected_save_file = os.path.join(self.test_dir, '398188_1598411_spectra_' + obs_num + '.png')
+
+        save_file = get_spec_plot(self.test_dir, self.fitsfile, obs_num)
+
+        self.assertEqual(expected_save_file, save_file)
+
+    def test_ctiostan_2(self):
+
+        obs_num = 2
+        expected_save_file = os.path.join(self.test_dir, 'hr9087_spectra_' + str(obs_num) + '.png')
 
         save_file = get_spec_plot(self.test_dir, self.datfile, obs_num)
 
