@@ -405,6 +405,10 @@ def plot_spectra(x, y, y_units, x_units, ax, title, ref=0, norm=0, log=False):
 
 def get_spec_plot(path, spectra, obs_num, log=False):
 
+    if not os.path.exists(os.path.join(path, spectra)):
+        logger.error("Could not open: " + os.path.join(path, spectra))
+        return None
+
     fig, ax = plt.subplots()
     x, y, yerr, xunits, yunits, name, details = read_spectra(path, spectra)
     if not name:

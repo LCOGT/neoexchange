@@ -25,6 +25,11 @@ import numpy as np
 
 from photometrics.spectraplot import *
 
+# Disable logging during testing
+import logging
+logger = logging.getLogger(__name__)
+# Disable anything below CRITICAL level
+logging.disable(logging.CRITICAL)
 
 class TestReadSpectra(TestCase):
 
@@ -326,6 +331,15 @@ class TestGetSpecPlot(TestCase):
                     print("Removed", self.test_dir)
             except OSError:
                 print("Error removing temporary test directory", self.test_dir)
+
+    def test_no_file(self):
+
+        obs_num = '1'
+        expected_save_file = None
+
+        save_file = get_spec_plot(self.test_dir, 'foo.fits', obs_num)
+
+        self.assertEqual(expected_save_file, save_file)
 
     def test_fits_1(self):
 
