@@ -33,7 +33,7 @@ class Test_Determine_Archive_Start_End(TestCase):
         dt = datetime(2016, 4, 12,  23, 00, 5)
 
         expected_start = datetime(2016, 4, 12, 16, 0, 0)
-        expected_end = datetime(2016, 4, 13, 16, 0, 0)
+        expected_end = datetime(2016, 4, 13, 20, 0, 0)
 
         start, end = determine_archive_start_end(dt)
 
@@ -44,7 +44,7 @@ class Test_Determine_Archive_Start_End(TestCase):
         dt = datetime(2016, 4, 12,  23, 59, 59)
 
         expected_start = datetime(2016, 4, 12, 16, 0, 0)
-        expected_end = datetime(2016, 4, 13, 16, 0, 0)
+        expected_end = datetime(2016, 4, 13, 20, 0, 0)
 
         start, end = determine_archive_start_end(dt)
 
@@ -54,8 +54,8 @@ class Test_Determine_Archive_Start_End(TestCase):
     def test_date_after_utc_midnight(self):
         dt = datetime(2016, 4, 13,  3, 00, 5)
 
-        expected_start = datetime(2016, 4, 12, 16, 0, 0)
-        expected_end = datetime(2016, 4, 13, 16, 0, 0)
+        expected_start = datetime(2016, 4, 13, 16, 0, 0)
+        expected_end = datetime(2016, 4, 14, 20, 0, 0)
 
         start, end = determine_archive_start_end(dt)
 
@@ -63,9 +63,9 @@ class Test_Determine_Archive_Start_End(TestCase):
         self.assertEqual(expected_end, end)
 
     def test_date_closeto_day_rollover(self):
-        dt = datetime(2016, 4, 13, 15, 59, 59)
-        expected_start = datetime(2016, 4, 12, 16, 0, 0)
-        expected_end = datetime(2016, 4, 13, 16, 0, 0)
+        dt = datetime(2016, 12, 31, 15, 59, 59)
+        expected_start = datetime(2016, 12, 31, 16, 0, 0)
+        expected_end = datetime(2017, 1, 1, 20, 0, 0)
 
         start, end = determine_archive_start_end(dt)
 
@@ -76,7 +76,7 @@ class Test_Determine_Archive_Start_End(TestCase):
         dt = datetime(2016, 4, 13, 17, 00, 1)
 
         expected_start = datetime(2016, 4, 13, 16, 0, 0)
-        expected_end = datetime(2016, 4, 14, 16, 0, 0)
+        expected_end = datetime(2016, 4, 14, 20, 0, 0)
 
         start, end = determine_archive_start_end(dt)
 
@@ -86,8 +86,21 @@ class Test_Determine_Archive_Start_End(TestCase):
     def test_supplied_date_midnight(self):
         dt = datetime(2016, 4, 18, 00, 00, 00)
 
-        expected_start = datetime(2016, 4, 17, 16, 0, 0)
-        expected_end = datetime(2016, 4, 18, 16, 0, 0)
+        expected_start = datetime(2016, 4, 18, 16, 0, 0)
+        expected_end = datetime(2016, 4, 19, 20, 0, 0)
+
+        start, end = determine_archive_start_end(dt)
+
+        self.assertEqual(expected_start, start)
+        self.assertEqual(expected_end, end)
+
+    @patch('core.archive_subs.datetime', MockDateTime)
+    def test_no_supplied_date(self):
+        MockDateTime.change_datetime(2015, 11, 18, 12, 0, 0)
+        dt = None
+
+        expected_start = datetime(2015, 11, 17, 16, 0, 0)
+        expected_end = datetime(2015, 11, 19, 20, 0, 0)
 
         start, end = determine_archive_start_end(dt)
 
