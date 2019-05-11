@@ -301,8 +301,13 @@ def make_data_dir(data_dir, frame):
     try:
         datetime.strptime(day_dir, '%Y%m%d')
     except ValueError:
-        obs_date = datetime.strptime(frame['DATE_OBS'], '%Y-%m-%dT%H:%M:%S.%fZ')
-        day_dir = datetime.strftime(obs_date, '%Y%m%d')
+        try:
+            logger.warning("Filename ({}) does not contain day-obs.".format(filename))
+            obs_date = datetime.strptime(frame['DATE_OBS'], '%Y-%m-%dT%H:%M:%S.%fZ')
+            day_dir = datetime.strftime(obs_date, '%Y%m%d')
+        except ValueError:
+            logger.error("{} has improperly formated DATE_OBS in Header!")
+            day_dir = "bad_date"
 
     out_path = os.path.join(data_dir, day_dir)
     if not os.path.exists(out_path):
