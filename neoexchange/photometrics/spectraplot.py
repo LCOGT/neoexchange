@@ -227,7 +227,8 @@ def read_spectra(path, spectra):
 
             x_units = get_x_units(x_data)
             y_units, y_factor = get_y_units(list(ctiodata.readlines()))
-            obj_name = spectra.lstrip('f').replace('.dat', '')
+            # Strip off the 'f' for flux and extension
+            obj_name = spectra[1:].replace('.dat', '')
         else:
             raise ImportError("Could not find ctio readme file")
 
@@ -418,7 +419,7 @@ def get_spec_plot(path, spectra, obs_num, log=False):
         fig.suptitle('Request Number {} -- {} at {}'.format(details[3], name, details[2]))
         obs_details = "_" + details[3]
     else:
-        title = name.upper()
+        title = name.upper().replace('_', '-')
         obs_details = ''
     if log:
         y_log = np.log10(y.value)

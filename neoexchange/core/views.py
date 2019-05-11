@@ -2985,7 +2985,7 @@ def display_calibspec(request, pk):
 
     base_dir = os.path.join(settings.DATA_ROOT, 'cdbs', 'ctiostan')  # new base_dir for method
 
-    obj = calibsource.name.lower().replace(' ', '')
+    obj = calibsource.name.lower().replace(' ', '').replace('-', '_').replace('+', '')
     obs_num = '1'
     spec_files = glob(os.path.join(base_dir, obj+"*"+"spectra"+"*"+obs_num+"*"+".png"))
     if spec_files:
