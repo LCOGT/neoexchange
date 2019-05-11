@@ -350,15 +350,6 @@ class TestGetSpecPlot(TestCase):
 
         self.assertEqual(expected_save_file, save_file)
 
-    def test_ctiostan_1(self):
-
-        obs_num = 1
-        expected_save_file = os.path.join(self.test_dir, 'hr9087_spectra_' + str(obs_num) + '.png')
-
-        save_file = get_spec_plot(self.test_dir, self.datfile, obs_num)
-
-        self.assertEqual(expected_save_file, save_file)
-
     def test_fits_2(self):
 
         obs_num = '2'
@@ -368,11 +359,31 @@ class TestGetSpecPlot(TestCase):
 
         self.assertEqual(expected_save_file, save_file)
 
+    def test_ctiostan_1(self):
+
+        obs_num = 1
+        expected_save_file = os.path.join(self.test_dir, 'hr9087_spectra_' + str(obs_num) + '.png')
+
+        save_file = get_spec_plot(self.test_dir, self.datfile, obs_num)
+
+        self.assertEqual(expected_save_file, save_file)
+
     def test_ctiostan_2(self):
 
         obs_num = 2
         expected_save_file = os.path.join(self.test_dir, 'hr9087_spectra_' + str(obs_num) + '.png')
 
         save_file = get_spec_plot(self.test_dir, self.datfile, obs_num)
+
+        self.assertEqual(expected_save_file, save_file)
+
+    def test_ctiostan_feige(self):
+
+        obs_num = 1
+        expected_save_file = os.path.join(self.test_dir, 'feige999_spectra_' + str(obs_num) + '.png')
+
+        # Create symlink to existing CTIO standard file as a Feige standard
+        os.symlink(os.path.join(self.test_dir, self.datfile), os.path.join(self.test_dir, 'ffeige999.dat'))
+        save_file = get_spec_plot(self.test_dir, 'ffeige999.dat', obs_num)
 
         self.assertEqual(expected_save_file, save_file)
