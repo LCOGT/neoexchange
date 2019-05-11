@@ -291,7 +291,6 @@ def download_files(frames, data_path, verbose=False, dbg=False):
 
 def make_data_dir(data_dir, frame):
     filename = frame['filename']
-    print(filename)
     if "tar.gz" in filename:
         chunks = filename.split('_')
         day_dir = chunks[3]
