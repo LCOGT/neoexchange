@@ -370,7 +370,6 @@ def plot_spectra(x, y, y_units, x_units, ax, title, ref=0, norm=0, log=False):
     """
 
     if norm == 1:
-        print("Normalizing")
         yyy = normalize(x, y)
     else:
         yyy = y
@@ -422,6 +421,8 @@ def get_spec_plot(path, spectra, obs_num, log=False):
         title = name.upper().replace('_', '-')
         obs_details = ''
     if log:
+        # Adjust left side of subplot to give a little more room
+        fig.subplots_adjust(left=0.175)
         y_log = np.log10(y.value)
         xsmooth, ysmooth = smooth(x, y_log)
     else:
