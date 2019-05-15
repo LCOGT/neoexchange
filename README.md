@@ -4,6 +4,10 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 2.8.3
+* Enhance guide movie creation.
+* Allow for graceful failure when outside web endpoints are down.
+
 ### 2.8.2
 Add ADES PSV export and MPC1992 and ADES PSV download options.
 

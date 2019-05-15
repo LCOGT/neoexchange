@@ -19,14 +19,52 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from astropy.io import fits
 from astropy.wcs import WCS
+from astropy.wcs._wcs import InvalidTransformError
 from astropy.visualization import ZScaleInterval
 from datetime import datetime
 import os
 from glob import glob
 import argparse
+import warnings
 
 
-def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000):
+def print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█', time_in=None):
+    """
+    Call in a loop to create terminal progress bar
+    @params:
+        iteration   - Required  : current iteration (Int)
+        total       - Required  : total iterations (Int)
+        prefix      - Optional  : prefix string (Str)
+        suffix      - Optional  : suffix string (Str)
+        decimals    - Optional  : positive number of decimals in percent complete (Int)
+        length      - Optional  : character length of bar (Int)
+        fill        - Optional  : bar fill character (Str)
+        time_in     - Optional  : if given, will estimate time remaining until completion (Datetime object)
+    """
+    percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+    filled_length = int(length * iteration // total)
+    bar = fill * filled_length + '-' * (length - filled_length)
+    if time_in is not None:
+        now = datetime.now()
+        delta_t = now-time_in
+        delta_t = delta_t.total_seconds()
+        total_time = delta_t/iteration*(float(total)-iteration)
+        # print(total_time, delta_t, iteration, float(total))
+        if total_time > 90:
+            time_left = '| {0:.1f} min remaining |'.format(total_time/60)
+        elif total_time > 5400:
+            time_left = '| {0:.1f} hrs remaining |'.format(total_time/60/60)
+        else:
+            time_left = '| {0:.1f} sec remaining |'.format(total_time)
+    else:
+        time_left = ' '
+    print('\r%s |%s| %s%%%s%s' % (prefix, bar, percent, time_left, suffix), end='\r')
+    # Print New Line on Complete
+    if iteration == total:
+        print()
+
+
+def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=False):
     """
     takes in list of .fits guide frames and turns them into a moving gif.
     <frames> = list of .fits frame paths
@@ -60,12 +98,24 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000):
         try:
             header = hdul['SCI'].header
         except KeyError:
-            header = hdul['COMPRESSED_IMAGE'].header
+            try:
+                header = hdul['COMPRESSED_IMAGE'].header
+            except KeyError:
+                header = hdul[0].header
         # create title
         obj = header['OBJECT']
-        rn = header['REQNUM'].lstrip('0')
-        site = header['SITEID'].upper()
-        inst = header['INSTRUME'].upper()
+        try:
+            rn = header['REQNUM'].lstrip('0')
+        except KeyError:
+            rn = 'UNKNOWN'
+        try:
+            site = header['SITEID'].upper()
+        except KeyError:
+            site = ' '
+        try:
+            inst = header['INSTRUME'].upper()
+        except KeyError:
+            inst = ' '
 
     if title is None:
         title = 'Request Number {} -- {} at {} ({})'.format(rn, obj, site, inst)
@@ -74,19 +124,26 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000):
     if title:
         fig.suptitle(title)
 
+    time_in = datetime.now()
+
     def update(n):
         """ this method is required to build FuncAnimation
         <file> = frame currently being iterated
         output: return plot.
         """
+
         # get data/Header from Fits
         with fits.open(fits_files[n], ignore_missing_end=True) as hdul:
             try:
                 header_n = hdul['SCI'].header
                 data = hdul['SCI'].data
             except KeyError:
-                header_n = hdul['COMPRESSED_IMAGE'].header
-                data = hdul['COMPRESSED_IMAGE'].data
+                try:
+                    header_n = hdul['COMPRESSED_IMAGE'].header
+                    data = hdul['COMPRESSED_IMAGE'].data
+                except KeyError:
+                    header_n = hdul[0].header
+                    data = hdul[0].data
         # pull Date from Header
         try:
             date_obs = header_n['DATE-OBS']
@@ -97,21 +154,26 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000):
         ax = plt.gca()
         ax.clear()
         ax.axis('off')
-        wcs = WCS(header_n)  # get wcs transformation
         z_interval = ZScaleInterval().get_limits(data)  # set z-scale
-        # set wcs grid/axes
-        ax = plt.gca(projection=wcs)
-        dec = ax.coords['dec']
-        dec.set_major_formatter('dd:mm')
-        dec.set_ticks_position('br')
-        dec.set_ticklabel_position('br')
-        dec.set_ticklabel(fontsize=10, exclude_overlapping=True)
-        ra = ax.coords['ra']
-        ra.set_major_formatter('hh:mm:ss')
-        ra.set_ticks_position('lb')
-        ra.set_ticklabel_position('lb')
-        ra.set_ticklabel(fontsize=10, exclude_overlapping=True)
-        ax.coords.grid(color='black', ls='solid', alpha=0.5)
+        try:
+            # set wcs grid/axes
+            wcs = WCS(header_n)  # get wcs transformation
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                ax = plt.gca(projection=wcs)
+            dec = ax.coords['dec']
+            dec.set_major_formatter('dd:mm')
+            dec.set_ticks_position('br')
+            dec.set_ticklabel_position('br')
+            dec.set_ticklabel(fontsize=10, exclude_overlapping=True)
+            ra = ax.coords['ra']
+            ra.set_major_formatter('hh:mm:ss')
+            ra.set_ticks_position('lb')
+            ra.set_ticklabel_position('lb')
+            ra.set_ticklabel(fontsize=10, exclude_overlapping=True)
+            ax.coords.grid(color='black', ls='solid', alpha=0.5)
+        except InvalidTransformError:
+            pass
         # finish up plot
         current_count = len(np.unique(fits_files[:n+1]))
         ax.set_title('UT Date: {} ({} of {})'.format(date.strftime('%x %X'), current_count, int(len(fits_files)-(copies-1)*start_frames)), pad=10)
@@ -119,11 +181,14 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000):
         plt.imshow(data, cmap='gray', vmin=z_interval[0], vmax=z_interval[1])
 
         # If first few frames, add 5" and 15" reticle
-        if current_count < 6:
+        if current_count < 6 and fr != init_fr:
             circle_5arcsec = plt.Circle((header_n['CRPIX1'], header_n['CRPIX2']), 5/header_n['PIXSCALE'], fill=False, color='limegreen', linewidth=1.5)
             circle_15arcsec = plt.Circle((header_n['CRPIX1'], header_n['CRPIX2']), 15/header_n['PIXSCALE'], fill=False, color='lime', linewidth=1.5)
             ax.add_artist(circle_5arcsec)
             ax.add_artist(circle_15arcsec)
+
+        if progress:
+            print_progress_bar(n+1, len(fits_files), prefix='Creating Gif: Frame {}'.format(current_count), time_in=time_in)
         return ax
 
     ax1 = update(0)
@@ -147,15 +212,14 @@ if __name__ == '__main__':
     path = args.path
     fr = args.fr
     ir = args.ir
-    print(fr)
+    print("Base Framerate: {}".format(fr))
     if path[-1] != '/':
         path += '/'
     files = np.sort(glob(path+'*.fits.fz'))
     if len(files) < 1:
         files = np.sort(glob(path+'*.fits'))
     if len(files) >= 1:
-        gif_file = make_gif(files, fr=fr, init_fr=ir)
+        gif_file = make_gif(files, fr=fr, init_fr=ir, progress=True)
         print("New gif created: {}".format(gif_file))
     else:
         print("No files found.")
-
