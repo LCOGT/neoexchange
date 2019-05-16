@@ -251,3 +251,126 @@ class TestCheckArchiveImages(TestCase):
         self.assertEqual(expected_data['obstypes'], [x['OBSTYPE'] for x in frames])
         self.assertEqual(expected_data['redlevels'], [x['RLEVEL'] for x in frames])
         self.assertEqual(expected_data['files'], [x['filename'] for x in frames])
+
+
+class TestMakeDataDir(TestCase):
+
+    def test_basic_file(self):
+        frame = {'id': 11683740,
+                 'basename': 'lsc1m004-fa03-20190515-0219-e91',
+                 'area': {'type': 'Polygon',
+                          'coordinates': [[[-119.60667247040064, -80.84910808755131],
+                                           [-119.67692747520755, -81.29223462128944],
+                                           [-116.74877284149923, -81.29221942699515],
+                                           [-116.81921869244925, -80.84909362321092],
+                                           [-119.60667247040064, -80.84910808755131]]]},
+                 'related_frames': [9741441, 11683739, 11678988, 11678997, 11638089],
+                 'version_set': [{'id': 12114354,
+                                  'created': '2019-05-16T07:04:57.636775Z',
+                                  'key': 'rfjZxBPi1S0r0BsAjxp9t4jKn7VjrDkl',
+                                  'md5': 'a29e391ebc7dd2d74f9816e846690498',
+                                  'extension': '.fits.fz',
+                                  'url': 'https://s3.us-west-2.amazonaws.com/archive.lcogt.net/30b8/lsc1m004-fa03-20190515-0219-e91?versionId=rfjZxBPi1S0r0BsAjxp9t4jKn7VjrDkl&AWSAccessKeyId=AKIAIJQVPYFWOR234BCA&Signature=9JGuXQ3MLyJoGrpmyjF81uI03eo%3D&Expires=1558206826'}],
+                 'filename': 'lsc1m004-fa03-20190515-0219-e91.fits.fz',
+                 'url': 'https://s3.us-west-2.amazonaws.com/archive.lcogt.net/30b8/lsc1m004-fa03-20190515-0219-e91?versionId=rfjZxBPi1S0r0BsAjxp9t4jKn7VjrDkl&AWSAccessKeyId=AKIAIJQVPYFWOR234BCA&Signature=9JGuXQ3MLyJoGrpmyjF81uI03eo%3D&Expires=1558206826',
+                 'RLEVEL': 91,
+                 'DATE_OBS': '2019-05-16T07:03:49.689000Z',
+                 'PROPID': 'LCO2019A-006',
+                 'INSTRUME': 'fa03',
+                 'OBJECT': '2018 VX8',
+                 'SITEID': 'lsc',
+                 'TELID': '1m0a',
+                 'EXPTIME': '10.032',
+                 'FILTER': 'w',
+                 'L1PUBDAT': '2020-05-15T07:03:49.689000Z',
+                 'OBSTYPE': 'EXPOSE',
+                 'BLKUID': 532567027,
+                 'REQNUM': 1797014}
+
+        data_dir = 'foo/bar'
+
+        expected_out_dir = 'foo/bar/20190515'
+
+        outpath = make_data_dir(data_dir, frame)
+
+        self.assertEqual(expected_out_dir, outpath)
+
+    def test_tar_file(self):
+        frame = {'id': 11677339,
+                  'basename': 'LCOEngineering_0001796128_ftn_20190515_58619',
+                  'area': {'type': 'Polygon',
+                           'coordinates': [[[-103.68601696562837, 4.039698072765181],
+                                            [-103.71972148528238, 4.073683129762399],
+                                            [-103.85824703065822, 3.936951185095777],
+                                            [-103.82454233802372, 3.902971787782345],
+                                            [-103.68601696562837, 4.039698072765181]]]},
+                  'related_frames': [11675673],
+                  'version_set': [{'id': 12107875,
+                                   'created': '2019-05-15T19:14:05.537193Z',
+                                   'key': '36W5tzp4JbYVqSyvz3akoZ7Z1kK39fqv',
+                                   'md5': 'b66e09be8c21c906e6112bbc677ffe47',
+                                   'extension': '.tar.gz',
+                                   'url': 'https://s3.us-west-2.amazonaws.com/archive.lcogt.net/7761/LCOEngineering_0001796128_ftn_20190515_58619?versionId=36W5tzp4JbYVqSyvz3akoZ7Z1kK39fqv&AWSAccessKeyId=AKIAIJQVPYFWOR234BCA&Signature=UBe%2FifqiRBepVcUPQDD6ov2q0NU%3D&Expires=1558207304'}],
+                  'filename': 'LCOEngineering_0001796128_fts_20190514_58619.tar.gz',
+                  'url': 'https://s3.us-west-2.amazonaws.com/archive.lcogt.net/7761/LCOEngineering_0001796128_ftn_20190515_58619?versionId=36W5tzp4JbYVqSyvz3akoZ7Z1kK39fqv&AWSAccessKeyId=AKIAIJQVPYFWOR234BCA&Signature=UBe%2FifqiRBepVcUPQDD6ov2q0NU%3D&Expires=1558207304',
+                  'RLEVEL': 90,
+                  'DATE_OBS': '2019-05-14T13:38:20.059000Z',
+                  'PROPID': 'LCOEngineering',
+                  'INSTRUME': 'en06',
+                  'OBJECT': '2008 HS3',
+                  'SITEID': 'coj',
+                  'TELID': '2m0a',
+                  'EXPTIME': '1800.019',
+                  'FILTER': 'air',
+                  'L1PUBDAT': '2020-05-14T13:38:20.059000Z',
+                  'OBSTYPE': 'SPECTRUM',
+                  'BLKUID': 531938815,
+                  'REQNUM': 1796128}
+
+        data_dir = 'foo/bar'
+
+        expected_out_dir = data_dir + '/20190514'
+
+        outpath = make_data_dir(data_dir, frame)
+
+        self.assertEqual(expected_out_dir, outpath)
+
+    def test_ogg_tar_file(self):
+        frame = {'id': 11677339,
+                  'basename': 'LCOEngineering_0001796128_ftn_20190515_58619',
+                  'area': {'type': 'Polygon',
+                           'coordinates': [[[-103.68601696562837, 4.039698072765181],
+                                            [-103.71972148528238, 4.073683129762399],
+                                            [-103.85824703065822, 3.936951185095777],
+                                            [-103.82454233802372, 3.902971787782345],
+                                            [-103.68601696562837, 4.039698072765181]]]},
+                  'related_frames': [11675673],
+                  'version_set': [{'id': 12107875,
+                                   'created': '2019-03-01T19:14:05.537193Z',
+                                   'key': '36W5tzp4JbYVqSyvz3akoZ7Z1kK39fqv',
+                                   'md5': 'b66e09be8c21c906e6112bbc677ffe47',
+                                   'extension': '.tar.gz',
+                                   'url': 'https://s3.us-west-2.amazonaws.com/archive.lcogt.net/7761/LCOEngineering_0001796128_ftn_20190515_58619?versionId=36W5tzp4JbYVqSyvz3akoZ7Z1kK39fqv&AWSAccessKeyId=AKIAIJQVPYFWOR234BCA&Signature=UBe%2FifqiRBepVcUPQDD6ov2q0NU%3D&Expires=1558207304'}],
+                  'filename': 'LCOEngineering_0001796128_fts_20190301_58619.tar.gz',
+                  'url': 'https://s3.us-west-2.amazonaws.com/archive.lcogt.net/7761/LCOEngineering_0001796128_ftn_20190515_58619?versionId=36W5tzp4JbYVqSyvz3akoZ7Z1kK39fqv&AWSAccessKeyId=AKIAIJQVPYFWOR234BCA&Signature=UBe%2FifqiRBepVcUPQDD6ov2q0NU%3D&Expires=1558207304',
+                  'RLEVEL': 90,
+                  'DATE_OBS': '2019-03-01T13:38:20.059000Z',
+                  'PROPID': 'LCOEngineering',
+                  'INSTRUME': 'en06',
+                  'OBJECT': '2008 HS3',
+                  'SITEID': 'ogg',
+                  'TELID': '2m0a',
+                  'EXPTIME': '1800.019',
+                  'FILTER': 'air',
+                  'L1PUBDAT': '2020-05-14T13:38:20.059000Z',
+                  'OBSTYPE': 'SPECTRUM',
+                  'BLKUID': 531938815,
+                  'REQNUM': 1796128}
+
+        data_dir = 'foo/bar'
+
+        expected_out_dir = data_dir + '/20190228'
+
+        outpath = make_data_dir(data_dir, frame)
+
+        self.assertEqual(expected_out_dir, outpath)
