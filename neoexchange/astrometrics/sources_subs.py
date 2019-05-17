@@ -108,7 +108,7 @@ def fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser
     req_page = urllib.request.Request(url, headers=req_headers)
     opener = urllib.request.build_opener()  # create an opener object
     try:
-        response = opener.open(req_page)
+        response = opener.open(req_page, timeout=20)
     except (urllib.error.HTTPError, urllib.error.URLError) as e:
         if hasattr(e, 'code'):
             logger.warning("Page retrieval failed with HTTP Error %d: %s, retrying" % (e.code, e.reason))
@@ -371,14 +371,15 @@ def parse_NEOCP_extra_params(neocp_page, dbg=False):
                 comet_objects = parse_PCCP(pccp_page)
                 if dbg:
                     print(comet_objects)
-                for comet in comet_objects:
-                    obj_id = comet[0]
-                    if dbg:
-                        print("obj_id=", obj_id)
-                    if obj_id not in object_list:
-                        object_list.append(obj_id)
-                        new_object = (obj_id, comet[1])
-                        new_objects.append(new_object)
+                if comet_objects:
+                    for comet in comet_objects:
+                        obj_id = comet[0]
+                        if dbg:
+                            print("obj_id=", obj_id)
+                        if obj_id not in object_list:
+                            object_list.append(obj_id)
+                            new_object = (obj_id, comet[1])
+                            new_objects.append(new_object)
 
     return new_objects
 
@@ -473,6 +474,9 @@ def fetch_NEOCP_observations(obj_id_or_page):
         neocp_obs_page = fetchpage_and_make_soup(NEOCP_obs_url)
     else:
         neocp_obs_page = obj_id_or_page
+
+    if neocp_obs_page is None:
+        return None
 
 
 # If the object has left the NEOCP, the HTML will say 'None available at this time.'
@@ -1998,19 +2002,13 @@ def parse_filter_file(site, spec, camera_list=None):
 
 
 def fetch_taxonomy_page(page=None):
-    """Fetches Taxonomy data to be compared against database. First from PDS, then from Binzel 2004"""
+    """Fetches Taxonomy data to be compared against database."""
 
     if page is None:
         taxonomy_url = 'https://sbn.psi.edu/archive/bundles/ast_taxonomy/data/taxonomy10.tab'
         data_file = fetchpage_and_make_soup(taxonomy_url)
         # data_file = urllib.request.urlopen(taxonomy_url)
         data_out = parse_taxonomy_data(data_file)
-
-        # Binzel_taxonomy_page appears to be completely included within PDS Version6.0
-        # binzel_taxonomy_page = os.path.join('astrometrics', 'binzel_tax.dat')
-        # with open(binzel_taxonomy_page, 'r') as input_file:
-        #    binzel_out=parse_binzel_data(input_file)
-        # data_out=data_out+binzel_out
     else:
         with open(page, 'r') as input_file:
             data_out = parse_taxonomy_data(input_file.read())

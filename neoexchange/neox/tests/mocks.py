@@ -19,12 +19,14 @@ import os
 
 import astropy.units as u
 from django.contrib.auth import authenticate
-
+import logging
 from astrometrics.sources_subs import fetch_filter_list
 
+logger = logging.getLogger(__name__)
 
 # Adapted from http://www.ryangallen.com/wall/11/mock-today-django-testing/
 # and changed to datetime and python 2.x
+
 
 class MockDateTimeType(type):
 
@@ -61,6 +63,11 @@ class MockDateTime(datetime, metaclass=MockDateTimeType):
     @classmethod
     def utcnow(cls):
         return cls(cls.year, cls.month, cls.day, cls.hour, cls.minute, cls.second)
+
+
+def mock_fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser"):
+    logger.warning("Page retrieval failed because this is a test and no page was attempted.")
+    return None
 
 
 def mock_check_request_status(tracking_num):
