@@ -68,7 +68,9 @@ class Command(BaseCommand):
         if not os.path.exists(dataroot):
             self.stdout.write("Creating download location: %s" % dataroot)
             try:
+                oldumask = os.umask(0o002)
                 os.makedirs(dataroot)
+                os.umask(oldumask)
             except:
                 msg = "Error creating output path %s" % dataroot
                 raise CommandError(msg)

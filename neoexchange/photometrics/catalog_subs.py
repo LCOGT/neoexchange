@@ -1418,7 +1418,9 @@ def sort_rocks(fits_files):
                 objects.append(object_directory)
             object_directory = os.path.join(os.path.dirname(fits_filepath), object_directory)
             if not os.path.exists(object_directory):
+                oldumask = os.umask(0o002)
                 os.makedirs(object_directory)
+                os.umask(oldumask)
             dest_filepath = os.path.join(object_directory, os.path.basename(fits_filepath))
             # if the file is an e91 and an e11 exists in the working directory, remove the link to the e11 and link the e91
             if 'e91' in fits_filepath:

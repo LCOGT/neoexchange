@@ -316,7 +316,9 @@ def make_data_dir(data_dir, frame):
     out_path = os.path.join(data_dir, day_dir)
     if not os.path.exists(out_path):
         try:
+            oldumask = os.umask(0o002)
             os.makedirs(out_path)
+            os.umask(oldumask)
         except:
             msg = "Error creating output path %s" % out_path
             raise CommandError(msg)
