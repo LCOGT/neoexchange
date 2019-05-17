@@ -523,13 +523,65 @@ class StaticSourceView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super(StaticSourceView, self).get_context_data(**kwargs)
-        sun_ra, sun_dec = accurate_astro_darkness('500', datetime.now(), solar_pos=True)
+        sun_ra, sun_dec = accurate_astro_darkness('500', datetime.utcnow(), solar_pos=True)
         night_ra = degrees(sun_ra - pi)
         if night_ra < 0:
             night_ra += 360
         night_ra = degreestohms(night_ra, ':')
         night_dec = degreestodms(degrees(-sun_dec), ':')
         context['night'] = {'ra': night_ra, 'dec': night_dec}
+        return context
+
+
+class BestStandardsView(ListView):
+    template_name = 'core/best_calibsource_list.html'
+    model = StaticSource
+    paginate_by = 20
+
+    def determine_ra_range(self, utc_dt=datetime.utcnow(), HA_hours=3, dbg=False):
+        sun_ra, sun_dec = accurate_astro_darkness('500', utc_dt, solar_pos=True)
+        night_ra = degrees(sun_ra - pi)
+        if night_ra < 0:
+            night_ra += 360
+        if dbg: print(utc_dt, degreestohms(night_ra, ':'), HA_hours*15)
+
+        min_ra = night_ra - (HA_hours * 15)
+        if min_ra < 0:
+            min_ra += 360
+        max_ra = night_ra + (HA_hours * 15)
+        if max_ra > 360:
+            max_ra -= 360
+        if dbg: print("RA range=", min_ra, max_ra)
+
+        return min_ra, max_ra
+
+    def get_sources(self, utc_date=datetime.utcnow(), dbg=False):
+
+        min_ra, max_ra = self.determine_ra_range(utc_dt=utc_date, dbg=False)
+        if min_ra > max_ra:
+            # Wrap occurred
+            ra_filter = Q(ra__gte=min_ra) | Q(ra__lte=max_ra)
+        else:
+            ra_filter = Q(ra__gte=min_ra) & Q(ra__lte=max_ra)
+        ftn_standards = StaticSource.objects.filter(ra_filter, source_type=StaticSource.FLUX_STANDARD, dec__gte=0).order_by('ra')
+        fts_standards = StaticSource.objects.filter(ra_filter, source_type=StaticSource.FLUX_STANDARD, dec__lte=0).order_by('ra')
+        if dbg: print(ftn_standards,fts_standards)
+
+        return ftn_standards, fts_standards
+
+    def get_context_data(self, **kwargs):
+        context = super(BestStandardsView, self).get_context_data(**kwargs)
+        utc_date = datetime.utcnow()
+        sun_ra, sun_dec = accurate_astro_darkness('500', utc_date, solar_pos=True)
+        night_ra = degrees(sun_ra - pi)
+        if night_ra < 0:
+            night_ra += 360
+        night_ra = degreestohms(night_ra, ':')
+        night_dec = degreestodms(degrees(-sun_dec), ':')
+        context['night'] = {'ra': night_ra, 'dec': night_dec, 'utc_date' : utc_date.date}
+        ftn_standards, fts_standards = self.get_sources(utc_date=utc_date)
+        context['ftn_calibsources'] = ftn_standards
+        context['fts_calibsources'] = fts_standards
         return context
 
 
@@ -2923,6 +2975,41 @@ def display_spec(request, pk, obs_num):
         return HttpResponse(spec_plot, content_type="Image/png")
     else:
         return HttpResponse()
+
+
+def display_calibspec(request, pk):
+    try:
+        calibsource = StaticSource.objects.get(pk=pk)
+    except StaticSource.DoesNotExist:
+        return HttpResponse()
+
+    base_dir = os.path.join(settings.DATA_ROOT, 'cdbs', 'ctiostan')  # new base_dir for method
+
+    obj = calibsource.name.lower().replace(' ', '').replace('-', '_').replace('+', '')
+    obs_num = '1'
+    spec_files = glob(os.path.join(base_dir, obj+"*"+"spectra"+"*"+obs_num+"*"+".png"))
+    if spec_files:
+        spec_file = spec_files[0]
+    else:
+        spec_file = ''
+    if not spec_file:
+        spec_file = "f" + obj + ".dat"
+        if os.path.exists(os.path.join(base_dir, spec_file)):
+            spec_file = get_spec_plot(base_dir, spec_file, obs_num, log=True)
+        else:
+            logger.warning("No flux file found for " + spec_file)
+            spec_file = ''
+    if spec_file:
+        logger.debug('Spectroscopy Plot: {}'.format(spec_file))
+        spec_plot = open(spec_file, 'rb').read()
+        return HttpResponse(spec_plot, content_type="Image/png")
+    else:
+        import base64
+        # Return a 1x1 pixel gif in the case of no spectra file
+        PIXEL_GIF_DATA = base64.b64decode(
+            b"R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7")
+
+        return HttpResponse(PIXEL_GIF_DATA, content_type='image/gif')
 
 
 def make_spec(date_obs, obj, req, base_dir, prop, obs_num):

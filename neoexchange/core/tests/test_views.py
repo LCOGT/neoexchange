@@ -6068,3 +6068,50 @@ class TestDetermineActiveProposals(TestCase):
 
         self.assertEqual(expected_num, len(proposals))
         self.assertEqual(expected_code_1, proposals[0])
+
+class TestBestStandardsView(TestCase):
+
+    def setUp(self):
+        self.precision = 2
+        self.HA_hours = 3
+
+    def test_march_default_HA(self):
+        # Time is for March Equinox so anti-solar point is ~12h RA (=180 degrees)
+        expected_min_ra = 180 - self.HA_hours*15
+        expected_max_ra = 180 + self.HA_hours*15
+
+        min_ra, max_ra = BestStandardsView.determine_ra_range(self, utc_dt=datetime(2019, 3, 20,  22, 00, 00))
+
+        self.assertAlmostEqual(expected_min_ra, min_ra, self.precision)
+        self.assertAlmostEqual(expected_max_ra, max_ra, self.precision)
+
+    def test_march_HA1(self):
+        self.HA_hours = 1
+        # Time is for March Equinox so anti-solar point is ~12h RA (=180 degrees)
+        expected_min_ra = 180 - self.HA_hours*15
+        expected_max_ra = 180 + self.HA_hours*15
+
+        min_ra, max_ra = BestStandardsView.determine_ra_range(self, utc_dt=datetime(2019, 3, 20,  22, 00, 00), HA_hours=self.HA_hours)
+
+        self.assertAlmostEqual(expected_min_ra, min_ra, self.precision)
+        self.assertAlmostEqual(expected_max_ra, max_ra, self.precision)
+
+    def test_after_sept_equinox_default_HA(self):
+        # Time is for September Equinox so anti-solar point is ~00h RA
+        expected_min_ra = (0 - self.HA_hours*15) + 360
+        expected_max_ra = 0 + self.HA_hours*15
+
+        min_ra, max_ra = BestStandardsView.determine_ra_range(self, utc_dt=datetime(2019, 9, 23,  7, 40, 50))
+
+        self.assertAlmostEqual(expected_min_ra, min_ra, self.precision)
+        self.assertAlmostEqual(expected_max_ra, max_ra, self.precision)
+
+    def test_before_sept_equinox_default_HA(self):
+        # Time is for September Equinox so anti-solar point is ~00h RA
+        expected_min_ra = (0 - self.HA_hours*15) + 360
+        expected_max_ra = 0 + self.HA_hours*15
+
+        min_ra, max_ra = BestStandardsView.determine_ra_range(self, utc_dt=datetime(2019, 9, 23,  7, 40, 30))
+
+        self.assertAlmostEqual(expected_min_ra, min_ra, self.precision)
+        self.assertAlmostEqual(expected_max_ra, max_ra, self.precision)

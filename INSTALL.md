@@ -82,6 +82,13 @@ This can be done with e.g.
 on the Docker command line or adding this to the 'Volumes' tab in Rancher when
 upgrading.
 
+For the plotting of the flux standards, a `cdbs/ctiostan/` directory needs to be
+created in the file system pointed at by `DATA_ROOT`. Inside this directory
+should be placed the `f<objectname>.dat` files and the `aaareadme.ctio` file
+from `ftp://ftp.eso.org/pub/stecf/standards/ctiostan/`. The other objects from
+the `hststan`, `okestan` and `wdstan` directories of the FTP site should also be
+included in the `cdbs/ctiostan` directory.
+
 Local Testing
 -------------
 
