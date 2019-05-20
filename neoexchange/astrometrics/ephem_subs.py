@@ -28,6 +28,7 @@ from numpy import array, concatenate, zeros
 import copy
 from itertools import groupby
 import re
+from astroquery.jplhorizons import Horizons
 
 # Local imports
 from astrometrics.time_subs import datetime2mjd_utc, datetime2mjd_tdb, mjd_utc2mjd_tt, ut1_minus_utc, round_datetime
@@ -582,6 +583,55 @@ def call_compute_ephem(elements, dark_start, dark_end, site_code, ephem_step_siz
 
     return emp
 
+def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_limit=0):
+    """Calls JPL HORIZONS for the specified <obj_name> producing an ephemeris
+    from <start> to <end> for the MPC site code <site_code> with step size
+    of [ephem_step_size] (defaults to '1h').
+    Returns an AstroPy Table of the response with the following columns:
+    ['targetname',
+     'datetime_str',
+     'datetime_jd',
+     'H',
+     'G',
+     'solar_presence',
+     'flags',
+     'RA',
+     'DEC',
+     'RA_rate',
+     'DEC_rate',
+     'AZ',
+     'EL',
+     'V',
+     'surfbright',
+     'r',
+     'r_rate',
+     'delta',
+     'delta_rate',
+     'elong',
+     'elongFlag',
+     'alpha',
+     'RSS_3sigma',
+     'hour_angle',
+     'datetime']
+    """
+
+    eph = Horizons(id=obj_name, epochs={'start' : start.strftime("%Y-%m-%d %H:%M:%S"),
+            'stop' : end.strftime("%Y-%m-%d %H:%M:%S"), 'step' : ephem_step_size}, location=site_code)
+
+    airmass_limit = 99
+    if alt_limit > 0:
+        airmass_limit = S.sla_airmas(radians(90.0 - alt_limit))
+
+    ha_lowlimit, ha_hilimit, alt_limit = get_mountlimits(site_code)
+    ha_limit = max(abs(ha_lowlimit), abs(ha_hilimit)) / 15.0
+    try:
+        ephem = eph.ephemerides(quantities='1,3,4,9,19,20,23,24,38,42',
+            skip_daylight=True, airmass_lessthan=airmass_limit,
+            max_hour_angle=ha_limit)
+    except ValueError as e:
+        logger.warning("Error querying HORIZONS. Error message: ", e)
+        ephem = None
+    return ephem
 
 def read_findorb_ephem(empfile):
     """Routine to read find_orb produced ephemeris.emp files from non-interactive
