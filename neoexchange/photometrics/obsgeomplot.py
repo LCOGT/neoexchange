@@ -186,7 +186,7 @@ def plot_hoursup(ephem_ca, site_code, title=None):
     ax.get_xaxis().set_major_locator(mdates.DayLocator(interval=day_interval))
     ax.get_xaxis().set_major_formatter(mdates.DateFormatter("%m-%d"))
 
-    y_units_label = 'Hours above $30^\circ$ altitude'#.to_string('latex_inline')
+    y_units_label = 'Hours above $30^\circ$ altitude'
     ax.set_ylabel(y_units_label)
     ax2.set_ylabel('V magnitude')
     ax.legend(handles=(line_hours[0], line_vmag[0]), labels=('Hours up', 'V mag'), loc='best')
@@ -197,7 +197,7 @@ def plot_hoursup(ephem_ca, site_code, title=None):
     ax.yaxis.set_ticks_position('left')
     ax2.yaxis.set_ticks_position('right')
 
-    save_file = "{}_timeup_{}-{}.png".format(first['targetname'].replace(" ", "_"), dates[0].strftime("%Y%m%d"), dates[-1].strftime("%Y%m%d"))
+    save_file = "{}_timeup_{}_{}-{}.png".format(first['targetname'].replace(" ", "_"), site_code, dates[0].strftime("%Y%m%d"), dates[-1].strftime("%Y%m%d"))
     fig.savefig(save_file, format='png')
     plt.close()
 
