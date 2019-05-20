@@ -49,7 +49,7 @@ RUN yum -y install centos-release-scl \
         && yum -y install devtoolset-7
 
 # Enable LCO repo and install extra packages
-COPY config/lcogt.repo /etc/yum.repos.d/lcogt.repo
+COPY docker/etc/yum.repos.d/lcogt.repo /etc/yum.repos.d/lcogt.repo
 RUN yum -y install lcogt-python36 sextractor cdsclient scamp mtdlink\
         && yum clean all
 
