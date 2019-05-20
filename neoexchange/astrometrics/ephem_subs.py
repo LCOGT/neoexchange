@@ -29,6 +29,7 @@ import copy
 from itertools import groupby
 import re
 from astroquery.jplhorizons import Horizons
+from astropy.table import Column
 
 # Local imports
 from astrometrics.time_subs import datetime2mjd_utc, datetime2mjd_tdb, mjd_utc2mjd_tt, ut1_minus_utc, round_datetime
@@ -628,9 +629,13 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
         ephem = eph.ephemerides(quantities='1,3,4,9,19,20,23,24,38,42',
             skip_daylight=True, airmass_lessthan=airmass_limit,
             max_hour_angle=ha_limit)
+        dates = Column([datetime.strptime(d, "%Y-%b-%d %H:%M") for d in ephem['datetime_str']])
+        if 'datetime' not in ephem.colnames:
+            ephem.add_column(dates, name='datetime')
     except ValueError as e:
         logger.warning("Error querying HORIZONS. Error message: ", e)
         ephem = None
+
     return ephem
 
 def read_findorb_ephem(empfile):

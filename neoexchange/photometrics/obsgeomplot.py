@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 
 from astropy.table import Column
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 
 def plot_ra_dec(ephem, title=None):
     """Plot RA against Dec"""
@@ -102,7 +103,7 @@ def plot_brightness(ephem, title=None):
     ca_color = '#4700c3'
 
     fig, ax = plt.subplots()
-    dates = [datetime.strptime(d, "%Y-%b-%d %H:%M") for d in ephem['datetime_str']]
+    dates = ephem['datetime']
     ax.plot(dates, ephem['V'], color=hel_color, linestyle='-')
 
     perihelion = dates[ephem['r'].argmin()]
@@ -138,12 +139,11 @@ def plot_hoursup(ephem_ca, site_code, title=None):
     """
 
     first = ephem_ca[0]
-    dates = Column([datetime.strptime(d, "%Y-%b-%d %H:%M") for d in ephem_ca['datetime_str']])
-    if 'datetime' not in ephem_ca.colnames:
-        ephem_ca.add_column(dates, name='datetime')
 
     hours_visible = []
     visible_dates = []
+
+    dates = ephem_ca['datetime']
     start_date = dates[0].replace(hour=0, minute=0, second=0, microsecond=0)
     end_date = dates[-1].replace(hour=0, minute=0, second=0, microsecond=0)
     end_date += timedelta(days=1)
@@ -161,11 +161,11 @@ def plot_hoursup(ephem_ca, site_code, title=None):
         date += timedelta(days=1)
 
     fig, ax = plt.subplots()
-    ax.plot(visible_dates, hours_visible, 'k-', label='Hour up')
     ax2 = ax.twinx()
-    ax2.plot(dates, ephem_ca['V'], color= '#ff5900', linestyle='-.', label='V mag')
+    line_hours = ax.plot(visible_dates, hours_visible, 'k-')
+    line_vmag = ax2.plot(dates, ephem_ca['V'], color= '#ff5900', linestyle='-.')
     y2lim = ax2.get_ylim()
-    ax2.set_ylim[y2lim[1], y2lim[0])
+    ax2.set_ylim(y2lim[1], y2lim[0])
 
     if title is None:
         title = "{} for {} to {}".format(first['targetname'], dates[0].strftime("%Y-%m-%d"), dates[-1].strftime("%Y-%m-%d"))
@@ -174,15 +174,28 @@ def plot_hoursup(ephem_ca, site_code, title=None):
 
     ylim = ax.get_ylim()
     ax.set_ylim(0, ylim[1])
-    ax.set_xlabel('Date')
+    start_year = dates[0].year
+    end_year = dates[-1].year
+    year = str(start_year)
+    if start_year != end_year:
+        year = "{}--{}".format(start_year, end_year)
+    xlabel = "Date ({})".format(year)
+    ax.set_xlabel(xlabel)
+    num_days = dates[-1] - dates[0]
+    day_interval = max(int(num_days.days / 5), 1)
+    ax.get_xaxis().set_major_locator(mdates.DayLocator(interval=day_interval))
+    ax.get_xaxis().set_major_formatter(mdates.DateFormatter("%m-%d"))
+
     y_units_label = 'Hours above $30^\circ$ altitude'#.to_string('latex_inline')
     ax.set_ylabel(y_units_label)
     ax2.set_ylabel('V magnitude')
-    plt.legend()
+    ax.legend(handles=(line_hours[0], line_vmag[0]), labels=('Hours up', 'V mag'), loc='best')
 
     ax.minorticks_on()
+    ax2.minorticks_on()
     ax.xaxis.set_ticks_position('both')
-    ax.yaxis.set_ticks_position('both')
+    ax.yaxis.set_ticks_position('left')
+    ax2.yaxis.set_ticks_position('right')
 
     save_file = "{}_timeup_{}-{}.png".format(first['targetname'].replace(" ", "_"), dates[0].strftime("%Y%m%d"), dates[-1].strftime("%Y%m%d"))
     fig.savefig(save_file, format='png')
