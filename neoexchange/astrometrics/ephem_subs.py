@@ -25,6 +25,7 @@ except:
     pass
 
 from numpy import array, concatenate, zeros
+from numpy import sqrt as np_sqrt
 import copy
 from itertools import groupby
 import re
@@ -632,6 +633,14 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
         dates = Column([datetime.strptime(d, "%Y-%b-%d %H:%M") for d in ephem['datetime_str']])
         if 'datetime' not in ephem.colnames:
             ephem.add_column(dates, name='datetime')
+        # Convert units of RA/Dec rate from arcsec/hr to arcsec/min and compute
+        # mean rate
+        ephem['RA_rate'].convert_unit_to('arcsec/min')
+        ephem['DEC_rate'].convert_unit_to('arcsec/min')
+        rate_units = ephem['DEC_rate'].unit
+        mean_rate = np_sqrt(ephem['RA_rate']**2 + ephem['DEC_rate']**2)
+        mean_rate.unit = rate_units
+        ephem.add_column(mean_rate, name='mean_rate')
     except ValueError as e:
         logger.warning("Error querying HORIZONS. Error message: ", e)
         ephem = None
