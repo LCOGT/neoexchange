@@ -1111,7 +1111,10 @@ def schedule_check(data, body, ok_to_schedule=True):
         # If automatically finding Solar Analog, calculate exposure time.
         # Currently assume bright enough that 180s is the maximum exposure time.
         if solar_analog and solar_analog_params:
-            solar_analog_exptime = calc_asteroid_snr(solar_analog_params['vmag'], 'V', 180, instrument=data['instrument_code'], params=snr_params, optimize=True)
+            if data.get('calibsource_exptime', None):
+                solar_analog_exptime = data.get('calibsource_exptime')
+            else:
+                solar_analog_exptime = calc_asteroid_snr(solar_analog_params['vmag'], 'V', 180, instrument=data['instrument_code'], params=snr_params, optimize=True)
     else:
         # Determine exposure length and count
         if data.get('exp_length', None):

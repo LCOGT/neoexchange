@@ -168,7 +168,7 @@ class ScheduleBlockForm(forms.Form):
     instrument_code = forms.CharField(max_length=10, widget=forms.HiddenInput(), required=False)
     solar_analog = forms.BooleanField(initial=True, widget=forms.HiddenInput(), required=False)
     calibsource_id = forms.IntegerField(widget=forms.HiddenInput(), required=False)
-    calibsource_exptime = forms.IntegerField(widget=forms.HiddenInput(), required=False)
+    calibsource_exptime = forms.IntegerField(widget=forms.NumberInput(attrs={'size': '5'}), required=False)
     max_airmass = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     ipp_value = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     min_lunar_dist = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
