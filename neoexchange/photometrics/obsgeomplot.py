@@ -132,10 +132,13 @@ def plot_brightness(ephem, title=None):
 
     return save_file
 
-def plot_hoursup(ephem_ca, site_code, title=None):
+def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False):
     """Calculate the number of hours an object is up at a site <site_code>
     from <ephem_ca> - a more closely spaced ephemeris (e.g. 5m) over a
-    shorter range
+    shorter range. Produces a 2 panel plot which plots the hours above 30 deg
+    altitude and V magnitude in the bottom panel and the on-sky rate and
+    optionally (if [add_altitude]=True) in the top panel.
+    The name of plot file is returned.
     """
     ca_color = '#4700c3'
 
@@ -178,15 +181,27 @@ def plot_hoursup(ephem_ca, site_code, title=None):
     # Do top plot
     ax = axes[0]
     line_rate = ax.plot(dates, ephem_ca['mean_rate'], color='b', linestyle='-')
+    if add_altitude is True:
+        upper_ax2 = ax.twinx()
+        line_alt = upper_ax2.plot(dates, ephem_ca['EL'], color='g', linestyle=':')
+        ylim = upper_ax2.get_ylim()
+        upper_ax2.set_ylim(ylim[0], 90)
     ax.axvline(close_approach, color=ca_color)
 
     if title is None:
         title = "{} for {} to {}".format(first['targetname'], dates[0].strftime("%Y-%m-%d"), dates[-1].strftime("%Y-%m-%d"))
     fig.suptitle(title)
     ax.set_title('Visibility at ' + site_code)
-    ax.yaxis.set_ticks_position('both')
-    ax.minorticks_on()
+    if add_altitude is False:
+        ax.yaxis.set_ticks_position('both')
+    else:
+        ax.yaxis.set_ticks_position('left')
+        upper_ax2.yaxis.set_ticks_position('right')
+        upper_ax2.minorticks_on()
+        upper_ax2.set_ylabel("Altitude")
     ax.set_ylabel('Rate ("/min)')
+    ax.minorticks_on()
+
 #    ax.legend(handles=(line_rate[0],), labels=('Rate',), loc='best', fontsize='x-small')
 
     # Back to bottom plot to set date labels
