@@ -137,6 +137,7 @@ def plot_hoursup(ephem_ca, site_code, title=None):
     from <ephem_ca> - a more closely spaced ephemeris (e.g. 5m) over a
     shorter range
     """
+    ca_color = '#4700c3'
 
     first = ephem_ca[0]
 
@@ -147,6 +148,7 @@ def plot_hoursup(ephem_ca, site_code, title=None):
     start_date = dates[0].replace(hour=0, minute=0, second=0, microsecond=0)
     end_date = dates[-1].replace(hour=0, minute=0, second=0, microsecond=0)
     end_date += timedelta(days=1)
+    close_approach = dates[ephem_ca['delta'].argmin()]
 
     date = start_date
     while date < end_date:
@@ -160,18 +162,35 @@ def plot_hoursup(ephem_ca, site_code, title=None):
 #        print(date.date(), hours_up)
         date += timedelta(days=1)
 
-    fig, ax = plt.subplots()
+    fig, axes = plt.subplots(2,1,sharex=True)
+    fig.subplots_adjust(hspace=0.1)
+    # Do bottom plot
+    ax = axes[1]
     ax2 = ax.twinx()
     line_hours = ax.plot(visible_dates, hours_visible, 'k-')
     line_vmag = ax2.plot(dates, ephem_ca['V'], color= '#ff5900', linestyle='-.')
     y2lim = ax2.get_ylim()
     ax2.set_ylim(y2lim[1], y2lim[0])
+    ylim = ax.get_ylim()
+    ax.axvline(close_approach, color=ca_color)
+    ax.text(close_approach, 0.1*ylim[1], "C/A", rotation=90, color=ca_color, horizontalalignment='left')
+
+    # Do top plot
+    ax = axes[0]
+    line_rate = ax.plot(dates, ephem_ca['mean_rate'], color='b', linestyle='-')
+    ax.axvline(close_approach, color=ca_color)
 
     if title is None:
         title = "{} for {} to {}".format(first['targetname'], dates[0].strftime("%Y-%m-%d"), dates[-1].strftime("%Y-%m-%d"))
     fig.suptitle(title)
     ax.set_title('Visibility at ' + site_code)
+    ax.yaxis.set_ticks_position('both')
+    ax.minorticks_on()
+    ax.set_ylabel('Rate ("/min)')
+#    ax.legend(handles=(line_rate[0],), labels=('Rate',), loc='best', fontsize='x-small')
 
+    # Back to bottom plot to set date labels
+    ax = axes[1]
     ylim = ax.get_ylim()
     ax.set_ylim(0, ylim[1])
     start_year = dates[0].year
@@ -189,7 +208,7 @@ def plot_hoursup(ephem_ca, site_code, title=None):
     y_units_label = 'Hours above $30^\circ$ altitude'
     ax.set_ylabel(y_units_label)
     ax2.set_ylabel('V magnitude')
-    ax.legend(handles=(line_hours[0], line_vmag[0]), labels=('Hours up', 'V mag'), loc='best')
+    ax.legend(handles=(line_hours[0], line_vmag[0]), labels=('Hours up', 'V mag'), loc='best', fontsize='x-small')
 
     ax.minorticks_on()
     ax2.minorticks_on()
