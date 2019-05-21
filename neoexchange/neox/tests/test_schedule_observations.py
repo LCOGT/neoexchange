@@ -465,8 +465,8 @@ class ScheduleObservations(FunctionalTest):
         self.assertIn('0.2', snr)
         analog_sep = self.browser.find_element_by_id('id_solaranalog_sep_row').find_element_by_class_name('kv-value').text
         self.assertIn('60.4°', analog_sep)
-        analog_exptime = self.browser.find_element_by_id('id_solaranalog_exptime_row').find_element_by_class_name('kv-value').text
-        self.assertIn('45.0 secs', analog_exptime)
+        analog_exptime = self.browser.find_element_by_id('id_calibsource_exptime').get_attribute('value')
+        self.assertIn('45', analog_exptime)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list_no2m)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list_no2m)
