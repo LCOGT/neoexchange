@@ -4,6 +4,9 @@ from astropy.table import Column
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
+from astrometrics.ephem_subs import determine_darkness_times
+
+
 def plot_ra_dec(ephem, title=None):
     """Plot RA against Dec"""
 
@@ -132,7 +135,7 @@ def plot_brightness(ephem, title=None):
 
     return save_file
 
-def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False):
+def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, dbg=False):
     """Calculate the number of hours an object is up at a site <site_code>
     from <ephem_ca> - a more closely spaced ephemeris (e.g. 5m) over a
     shorter range. Produces a 2 panel plot which plots the hours above 30 deg
@@ -148,24 +151,36 @@ def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False):
     visible_dates = []
 
     dates = ephem_ca['datetime']
-    start_date = dates[0].replace(hour=0, minute=0, second=0, microsecond=0)
-    end_date = dates[-1].replace(hour=0, minute=0, second=0, microsecond=0)
-    end_date += timedelta(days=1)
+
+    # Determine times of darkness for the site for the first night and use
+    # the hour value of "sunset" as the boundary value of the night range
+    dark_start, dark_end = determine_darkness_times(site_code, dates[0])
+    dark_start = dark_start - timedelta(hours=2)
+    dark_end = dark_end + timedelta(hours=2)
+    start_date = dates[0].replace(hour=dark_start.hour, minute=0, second=0, microsecond=0)
+    if start_date >= dark_start:
+        start_date = start_date - timedelta(days=1)
+    end_date = dates[-1].replace(hour=dark_end.hour, minute=0, second=0, microsecond=0)
+    if dates[-1] < end_date:
+        if dbg: print("Subtracting 1 day from", end_date,dates[-1])
+        end_date -= timedelta(days=1)
+    if dbg: print(start_date, end_date)
     close_approach = dates[ephem_ca['delta'].argmin()]
 
     date = start_date
     while date < end_date:
-        visible_dates.append(date)
-        visible_ephem = ephem_ca[(ephem_ca['datetime'] >= date) & (ephem_ca['datetime'] < date + timedelta(days=1))]
+        visible_dates.append(date.date())
+        end_dt = date + timedelta(days=1)
+        visible_ephem = ephem_ca[(ephem_ca['datetime'] >= date) & (ephem_ca['datetime'] < end_dt) & (ephem_ca['solar_presence'] != 'C')]
         hours_up = 0.0
         if len(visible_ephem) > 0:
             time_up = visible_ephem[-1]['datetime'] - visible_ephem[0]['datetime']
             hours_up = time_up.total_seconds()/3600.0
         hours_visible.append(hours_up)
-#        print(date.date(), hours_up)
+        if dbg: print("{}->{}: {:.2f} hours".format(date.strftime("%Y-%m-%d %H:%M"), end_dt.strftime("%Y-%m-%d %H:%M"), hours_up))
         date += timedelta(days=1)
 
-    fig, axes = plt.subplots(2,1,sharex=True)
+    fig, axes = plt.subplots(2, 1, sharex=True, figsize=(10,8))
     fig.subplots_adjust(hspace=0.1)
     # Do bottom plot
     ax = axes[1]
