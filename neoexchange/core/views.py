@@ -47,6 +47,8 @@ try:
 except ImportError:
     pass
 import io
+import base64
+
 
 from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, \
     ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm
@@ -221,6 +223,52 @@ class BodySearchView(ListView):
             object_list = self.model.objects.all()
         return object_list
 
+class BodyVisibilityView(DetailView):
+    template_name = 'core/body_visibility.html'
+    model = Body
+
+def make_visibility_plot(request, pk, plot_type):
+
+    try:
+        body = Body.objects.get(pk=pk)
+    except Body.DoesNotExist:
+        return HttpResponse()
+
+    if plot_type not in ['radec', 'mag', 'dist', 'timeup']:
+        logger.warning("Invalid plot_type= {}".format(plot_type))
+        # Return a 1x1 pixel gif in the case of no visibility file
+        PIXEL_GIF_DATA = base64.b64decode(
+            b"R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7")
+
+        return HttpResponse(PIXEL_GIF_DATA, content_type='image/gif')
+    base_dir = os.path.join(settings.DATA_ROOT, 'visibility', str(body.pk))  # new base_dir for method
+
+    obj = body.name.lower().replace(' ', '').replace('-', '_').replace('+', '')
+    search_path = os.path.join(base_dir, obj+ "*" + plot_type + "*" + ".png")
+    print(obj, search_path)
+    vis_files = glob(os.path.join(base_dir, obj+ "*" + plot_type + "*" + ".png"))
+    print(vis_files)
+    if vis_files:
+        vis_file = vis_files[0]
+    else:
+        vis_file = ''
+    if not vis_file:
+        vis_file = "f" + obj + ".dat"
+        if os.path.exists(os.path.join(base_dir, vis_file)):
+            vis_file = get_vis_plot(base_dir, vis_file, obs_num, log=True)
+        else:
+            logger.warning("No flux file found for " + vis_file)
+            vis_file = ''
+    if vis_file:
+        logger.debug('Visibility Plot: {}'.format(vis_file))
+        vis_plot = open(vis_file, 'rb').read()
+        return HttpResponse(vis_plot, content_type="Image/png")
+    else:
+        # Return a 1x1 pixel gif in the case of no visibility file
+        PIXEL_GIF_DATA = base64.b64decode(
+            b"R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7")
+
+        return HttpResponse(PIXEL_GIF_DATA, content_type='image/gif')
 
 class BlockDetailView(DetailView):
     template_name = 'core/block_detail.html'
@@ -1579,6 +1627,7 @@ def build_characterization_list(disp=None):
                 body_dict['dec'] = emp_line[1]
                 body_dict['v_mag'] = emp_line[2]
                 body_dict['motion'] = emp_line[4]
+                body_dict['radar_target'] = body.radar_target()
                 if disp:
                     if disp in body_dict['obs_needed']:
                         unranked.append(body_dict)

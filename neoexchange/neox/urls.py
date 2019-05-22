@@ -30,7 +30,7 @@ from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockLis
     display_spec, display_calibspec, PlotSpec, display_movie, GuideMovie, \
     StaticSourceView, StaticSourceDetailView, ScheduleCalibSpectra, ScheduleCalibSubmit, \
     make_standards_plot, make_solar_standards_plot, CalibSpectroFeasibility, ScheduleCalibParameters, \
-    BestStandardsView
+    BestStandardsView, BodyVisibilityView, make_visibility_plot
 
 from analyser.views import BlockFramesView, ProcessCandidates
 
@@ -43,6 +43,7 @@ urlpatterns = [
     url(r'^plotframe/$', plotframe),
     url(r'^make-standards-plot/$', make_standards_plot, name='make-standards-plot'),
     url(r'^make-solar-standards-plot/$', make_solar_standards_plot, name='make-solar-standards-plot'),
+    url(r'^visibility_plot/(?P<pk>\d+)/(?P<plot_type>[a-z]*)/$', make_visibility_plot, name='visibility-plot'),
     url(r'^block/summary/$', BlockTimeSummary.as_view(), name='block-summary'),
     url(r'^block/list/$', SuperBlockListView.as_view(model=SuperBlock, queryset=SuperBlock.objects.order_by('-block_start'), context_object_name="block_list"), name='blocklist'),
     url(r'^block/(?P<pk>\d+)/spectra/(?P<obs_num>\d+)/spectra.png$', display_spec, name='display_spec'),
@@ -64,6 +65,7 @@ urlpatterns = [
     url(r'^target/(?P<pk>\d+)/measurements/ades/$', MeasurementViewBody.as_view(template='core/adesreport.html'), name='measurement-ades'),
     url(r'^target/(?P<pk>\d+)/measurements/mpc/$', MeasurementViewBody.as_view(template='core/mpcreport.html'), name='measurement-mpc'),
     url(r'^target/(?P<pk>\d+)/measurements/$', MeasurementViewBody.as_view(), name='measurement'),
+    url(r'^target/(?P<pk>\d+)/visibility/$', BodyVisibilityView.as_view(model=Body), name='visibility'),
     url(r'^target/(?P<pk>\d+)/$', BodyDetailView.as_view(model=Body), name='target'),
     url(r'^search/$', BodySearchView.as_view(context_object_name="target_list"), name='search'),
     url(r'^ephemeris/$', ephemeris, name='ephemeris'),

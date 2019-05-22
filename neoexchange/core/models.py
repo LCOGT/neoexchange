@@ -189,6 +189,13 @@ class Body(models.Model):
         else:
             return False
 
+    def radar_target(self):
+        # Returns True if the object is a radar target
+        if self.active is True and (self.origin == 'A' or self.origin == 'G' or self.origin =='R'):
+            return True
+        else:
+            return False
+
     def diameter(self):
         m = self.abs_mag
         avg = 0.167

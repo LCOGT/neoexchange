@@ -179,7 +179,11 @@
                             {% endif %}
                         {% endif %}
                     {% endif %}
-                    <td data-label="Observation Window">{{body.obs_start}}-{{body.obs_end}} </td>
+                    {% if body.radar_target %}
+                        <td data-label="Observation Window"><a href="{%url 'visibility' body.id %}">{{body.obs_start}}-{{body.obs_end}}</a>  </td>
+                    {% else %}
+                        <td data-label="Observation Window">{{body.obs_start}}-{{body.obs_end}} </td>
+                    {% endif %}
                     <td data-label="Reported?"></td>
                     </tr>
                 {% empty%}
