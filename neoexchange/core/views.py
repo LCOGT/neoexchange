@@ -1067,7 +1067,7 @@ def schedule_check(data, body, ok_to_schedule=True):
     lco_site_code = next(key for key, value in cfg.valid_site_codes.items() if value == data['site_code'])
 
     # calculate visibility
-    dark_and_up_time, max_alt = get_visibility(ra, dec, dark_midpoint, data['site_code'], '30 m', alt_limit, True, body_elements)
+    dark_and_up_time, max_alt = get_visibility(ra, dec, dark_midpoint, data['site_code'], '2 m', alt_limit, True, body_elements)
     if max_alt is not None:
         max_alt_airmass = S.sla_airmas((pi/2.0)-radians(max_alt))
     else:
