@@ -266,3 +266,50 @@ def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, dbg=False)
     plt.close()
 
     return save_file
+
+def plot_uncertainty(ephem, title=None):
+    """Plot uncertainty against time"""
+
+    ca_color = '#4700c3'
+
+    first = ephem[0]
+    dates = ephem['datetime']
+
+    ca_idx = ephem['delta'].argmin()
+    close_approach = None
+    if ca_idx > 0 and ca_idx < len(ephem):
+        close_approach = dates[ca_idx]
+
+    fig, ax = plt.subplots()
+
+    ax.plot(ephem['datetime'], ephem['RSS_3sigma'], 'k-')
+    ylim = ax.get_ylim()
+    ax.set_ylim(0, ylim[1])
+    if close_approach:
+        ax.axvline(close_approach, color=ca_color)
+        ax.text(close_approach, 0.1*ylim[1], "C/A", rotation=90, color=ca_color, horizontalalignment='left')
+
+    ax.set_xlabel("Date")
+    ax.set_ylabel('Uncertainty (")')
+    fig.autofmt_xdate()
+    ax.minorticks_on()
+    ax.yaxis.set_ticks_position('both')
+    ax.tick_params(axis='x', which='both', direction='in', bottom=True, top=True)
+
+    if title is None:
+        title = "{} for {} to {}".format(first['targetname'], dates[0].strftime("%Y-%m-%d"), dates[-1].strftime("%Y-%m-%d"))
+    fig.suptitle(title)
+    ax.set_title('Uncertainty')
+
+    target_name = first['targetname']
+    start_idx = target_name.find('(')
+    end_idx = target_name.find(')')
+    if start_idx >= 0 and end_idx >= 0:
+        new_name = target_name[start_idx:end_idx+1].replace(' ', '').replace('(','').replace(')','')
+        target_name = target_name[0:start_idx] + new_name + target_name[end_idx+2:]
+    target_name = target_name.replace(" ", "_")
+    save_file = "{}_uncertainty_{}-{}.png".format(target_name, dates[0].strftime("%Y%m%d"), dates[-1].strftime("%Y%m%d"))
+    fig.savefig(save_file, format='png')
+    plt.close()
+
+    return save_file
