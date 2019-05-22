@@ -169,15 +169,19 @@ def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, dbg=False)
 
     date = start_date
     while date < end_date:
-        visible_dates.append(date.date())
+        plot_date = date.date()
+        if date.hour >= 15:
+            plot_date = plot_date + timedelta(days=1)
+        visible_dates.append(plot_date)
         end_dt = date + timedelta(days=1)
-        visible_ephem = ephem_ca[(ephem_ca['datetime'] >= date) & (ephem_ca['datetime'] < end_dt) & (ephem_ca['solar_presence'] != 'C')]
+        visible_ephem = ephem_ca[(ephem_ca['datetime'] >= date) & (ephem_ca['datetime'] < end_dt) \
+            & (ephem_ca['solar_presence'] != 'C') & (ephem_ca['solar_presence'] != 'N')]
         hours_up = 0.0
         if len(visible_ephem) > 0:
             time_up = visible_ephem[-1]['datetime'] - visible_ephem[0]['datetime']
             hours_up = time_up.total_seconds()/3600.0
         hours_visible.append(hours_up)
-        if dbg: print("{}->{}: {:.2f} hours".format(date.strftime("%Y-%m-%d %H:%M"), end_dt.strftime("%Y-%m-%d %H:%M"), hours_up))
+        if dbg: print("For {}: {}->{}: {:.2f} hours".format(plot_date, date.strftime("%Y-%m-%d %H:%M"), end_dt.strftime("%Y-%m-%d %H:%M"), hours_up))
         date += timedelta(days=1)
 
     fig, axes = plt.subplots(2, 1, sharex=True, figsize=(10,8))
