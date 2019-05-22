@@ -277,7 +277,7 @@ def plot_uncertainty(ephem, title=None):
 
     ca_idx = ephem['delta'].argmin()
     close_approach = None
-    if ca_idx > 0 and ca_idx < len(ephem):
+    if ca_idx > 0 and ca_idx < len(ephem)-1:
         close_approach = dates[ca_idx]
 
     fig, ax = plt.subplots()
