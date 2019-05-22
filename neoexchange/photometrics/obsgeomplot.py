@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
 from astrometrics.ephem_subs import determine_darkness_times
+from photometrics.lineticks import LineTicks
 
 
 def plot_ra_dec(ephem, title=None):
@@ -282,7 +283,8 @@ def plot_uncertainty(ephem, title=None):
 
     fig, ax = plt.subplots()
 
-    ax.plot(ephem['datetime'], ephem['RSS_3sigma'], 'k-')
+    unc_line = ax.plot(ephem['datetime'], ephem['RSS_3sigma'], 'k-')
+    unc_line = unc_line[0]
     ylim = ax.get_ylim()
     ax.set_ylim(0, ylim[1])
     if close_approach:
@@ -296,10 +298,20 @@ def plot_uncertainty(ephem, title=None):
     ax.yaxis.set_ticks_position('both')
     ax.tick_params(axis='x', which='both', direction='in', bottom=True, top=True)
 
+    ephem_step = dates[1] - dates[0]
+    ephem_step = ephem_step.total_seconds()
+    ephem_step = min(ephem_step, 86400)
+    ephem_step_size = int(86400.0 / ephem_step)
+    # Make ticks along the line every 10 days
+    tick_steps = 10 * ephem_step_size
+    tick_labels = [datetime.strftime(dates[d_idx].date(), "%Y-%m-%d") for d_idx in range(0, len(dates), tick_steps)]
+
+    line_ticks = LineTicks(unc_line, range(0, len(dates), tick_steps), 10, label=tick_labels, lw=1.5, color='r')
+
     if title is None:
         title = "{} for {} to {}".format(first['targetname'], dates[0].strftime("%Y-%m-%d"), dates[-1].strftime("%Y-%m-%d"))
     fig.suptitle(title)
-    ax.set_title('Uncertainty')
+    ax.set_title('$3\sigma$ Plane-of-Sky Uncertainty')
 
     target_name = first['targetname']
     start_idx = target_name.find('(')
