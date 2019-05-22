@@ -61,7 +61,7 @@
                                 <input id='filter_all' onchange="this.form.submit();" style= "width:10px!important;vertical-align:middle!important;" type="radio" name="filter" value="" checked>
                             {% endif %}
                              All</label>
-					    </form></span>
+                        </form></span>
                     </th>
                     <th>
                         <span class="sortable" id="Hmag">H Mag.</span><br>
@@ -173,7 +173,7 @@
                             <td data-label="MANOS Target?"> <a href={{body.m_nir_link}}>{{body.m_wav}}</a></td>
                         {% else %}
                             {% if body.m_vis_link %}
-                            <td data-label="MANOS Target?"> <a href={{body.m_vis_link}}>{{body.m_wav}}</a></td>
+                                <td data-label="MANOS Target?"> <a href={{body.m_vis_link}}>{{body.m_wav}}</a></td>
                             {% else %}
                                 <td data-label="MANOS Target?"> {{body.m_wav}}</td>
                             {% endif %}
