@@ -135,17 +135,12 @@ def plot_brightness(ephem, title=None):
 
     return save_file
 
-def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, dbg=False):
-    """Calculate the number of hours an object is up at a site <site_code>
-    from <ephem_ca> - a more closely spaced ephemeris (e.g. 5m) over a
-    shorter range. Produces a 2 panel plot which plots the hours above 30 deg
-    altitude and V magnitude in the bottom panel and the on-sky rate and
-    optionally (if [add_altitude]=True) in the top panel.
-    The name of plot file is returned.
-    """
-    ca_color = '#4700c3'
-
-    first = ephem_ca[0]
+def determine_hours_up(ephem_ca, site_code, dbg=False):
+    """Determine the number of hours of visibility during the night for a site
+    (specified by <site_code>) by analyzing the <ephem_ca> produced by 
+    ephem_subs.horizons_ephem() with a more closely spaced ephemeris (e.g. 5m
+    stepsize) over a shorter range.
+    Returns a list of visible dates and hours up"""
 
     hours_visible = []
     visible_dates = []
@@ -165,7 +160,6 @@ def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, dbg=False)
         if dbg: print("Subtracting 1 day from", end_date,dates[-1])
         end_date -= timedelta(days=1)
     if dbg: print(start_date, end_date)
-    close_approach = dates[ephem_ca['delta'].argmin()]
 
     date = start_date
     while date < end_date:
@@ -183,6 +177,23 @@ def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, dbg=False)
         hours_visible.append(hours_up)
         if dbg: print("For {}: {}->{}: {:.2f} hours".format(plot_date, date.strftime("%Y-%m-%d %H:%M"), end_dt.strftime("%Y-%m-%d %H:%M"), hours_up))
         date += timedelta(days=1)
+
+    return visible_dates, hours_visible
+
+def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, dbg=False):
+    """Calculate the number of hours an object is up at a site <site_code>
+    from <ephem_ca> - a more closely spaced ephemeris (e.g. 5m) over a
+    shorter range. Produces a 2 panel plot which plots the hours above 30 deg
+    altitude and V magnitude in the bottom panel and the on-sky rate and
+    optionally (if [add_altitude]=True) in the top panel.
+    The name of plot file is returned.
+    """
+    ca_color = '#4700c3'
+
+    first = ephem_ca[0]
+    dates = ephem_ca['datetime']
+    close_approach = dates[ephem_ca['delta'].argmin()]
+    visible_dates, hours_visible = determine_hours_up(ephem_ca, site_code, dbg)
 
     fig, axes = plt.subplots(2, 1, sharex=True, figsize=(10,8))
     fig.subplots_adjust(hspace=0.1)
