@@ -1860,8 +1860,11 @@ def make_userrequest(elements, params):
         cal_target = make_target(params)
         exp_time = params['exp_time']
         params['exp_time'] = params['calibsrc_exptime']
+        ag_exptime = params.get('ag_exp_time', 10)
+        params['ag_exp_time'] = 10
         cal_molecule_list = make_molecules(params)
         params['exp_time'] = exp_time
+        params['ag_exp_time'] = ag_exptime
 
         cal_request = {
                         "location": location,
