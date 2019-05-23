@@ -68,6 +68,7 @@ neox.db
 neox.log
 geckodriver.log
 
+spectra.png
 lightcurve*.png
 lightcurve_data.txt
 phased_lc.png
