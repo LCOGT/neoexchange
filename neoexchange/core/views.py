@@ -440,7 +440,6 @@ def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_di
     new_ephem = (None, None)
     comp_time = start_time + timedelta(days=1)
 
-    print("refitting")
     filename, num_lines = export_measurements(body_id, dest_dir)
 
     if filename is not None:
@@ -1301,11 +1300,7 @@ def schedule_submit(data, body, username):
                 update_MPC_obs(body.current_name())
 
             # Invoke find_orb to update Body's elements and return ephemeris
-            new_ephemeris = refit_with_findorb(body.id, data['site_code'], data['start_time'])
-            if new_ephemeris is not None and new_ephemeris[1] is not None:
-                emp_info = new_ephemeris[0]
-                ephemeris = new_ephemeris[1]
-                emp_at_start = ephemeris[0]
+            refit_with_findorb(body.id, data['site_code'], data['start_time'])
 
             body.refresh_from_db()
             body_elements = model_to_dict(body)
@@ -1344,7 +1339,6 @@ def schedule_submit(data, body, username):
               'instrument_code' : data['instrument_code'],
               'solar_analog' : data.get('solar_analog', False),
               'calibsource' : calibsource_params,
-#              'findorb_ephem' : emp_at_start,
               'max_airmass' : data.get('max_airmass', 1.74),
               'ipp_value' : data.get('ipp_value', 1),
               'min_lunar_distance' : data.get('min_lunar_dist', 30),
