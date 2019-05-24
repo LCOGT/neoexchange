@@ -438,6 +438,7 @@ def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_di
     source_dir = os.path.abspath(os.path.join(os.getenv('HOME'), '.find_orb'))
     dest_dir = dest_dir or tempfile.mkdtemp(prefix='tmp_neox_')
     new_ephem = (None, None)
+    comp_time = start_time + timedelta(days=1)
 
     print("refitting")
     filename, num_lines = export_measurements(body_id, dest_dir)
