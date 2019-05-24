@@ -998,8 +998,6 @@ def schedule_check(data, body, ok_to_schedule=True):
     else:
         dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'])
         utc_date = data['utc_date']
-        # XXX Hacky McHackface for KW4 May 24 obs
-#        dark_end += timedelta(days=1)
         if dark_end <= datetime.utcnow():
             dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'] + timedelta(days=1))
             utc_date = data['utc_date'] + timedelta(days=1)
