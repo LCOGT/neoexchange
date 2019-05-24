@@ -440,6 +440,18 @@ def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_di
     new_ephem = (None, None)
     comp_time = start_time + timedelta(days=1)
 
+    # Check for recent enough elements
+    body = Body.objects.get(pk=body_id)
+    if body.epochofel:
+        time_to_current_epoch = abs(body.epochofel - comp_time)
+    else:
+        time_to_current_epoch = abs(datetime.min - comp_time)
+    time_to_current_epoch = time_to_current_epoch.total_seconds() / 86400.0
+    if time_to_current_epoch <= 2.0:
+        print("Current epoch is <2 days old; not updating")
+        logger.info("Current epoch is <2 days old; not updating")
+        return new_ephem
+    print("refitting")
     filename, num_lines = export_measurements(body_id, dest_dir)
 
     if filename is not None:
@@ -997,6 +1009,8 @@ def schedule_check(data, body, ok_to_schedule=True):
     else:
         dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'])
         utc_date = data['utc_date']
+        # XXX Hacky McHackface for KW4 May 24 obs
+#        dark_end += timedelta(days=1)
         if dark_end <= datetime.utcnow():
             dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'] + timedelta(days=1))
             utc_date = data['utc_date'] + timedelta(days=1)
@@ -1338,7 +1352,7 @@ def schedule_submit(data, body, username):
               'instrument_code' : data['instrument_code'],
               'solar_analog' : data.get('solar_analog', False),
               'calibsource' : calibsource_params,
-              'findorb_ephem' : emp_at_start,
+#              'findorb_ephem' : emp_at_start,
               'max_airmass' : data.get('max_airmass', 1.74),
               'ipp_value' : data.get('ipp_value', 1),
               'min_lunar_distance' : data.get('min_lunar_dist', 30),
