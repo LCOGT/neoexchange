@@ -355,7 +355,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
         sun_coord = S.sla_dcc2s(e_pos_hel * -1)
         sun_ra = S.sla_dranrm(sun_coord[0])
         sun_dec = sun_coord[1]
-        # rotate object ra to solar position
+        # rotate object RA to solar position
         lon_new = ra - sun_ra
         lon_new = atan2(sin(lon_new-pi/2) * cos(sun_dec) - tan(dec) * sin(sun_dec), cos(lon_new-pi/2)) + pi/2
         # convert longitude of object to distance in radians
@@ -484,7 +484,7 @@ def calc_moon_sep(obsdate, obj_ra, obj_dec, site_code):
     # Convert to alt, az (only the alt is actually needed)
     (moon_az, moon_alt) = moon_alt_az(obsdate, moon_app_ra, moon_app_dec, site_long, site_lat, site_hgt)
     moon_alt = degrees(moon_alt)
-    # Compute object<->Moon seperation and convert to degrees
+    # Compute object<->Moon separation and convert to degrees
     moon_obj_sep = S.sla_dsep(obj_ra, obj_dec, moon_app_ra, moon_app_dec)
     moon_obj_sep = degrees(moon_obj_sep)
     # Calculate Moon phase (in range 0.0..1.0)
@@ -1158,7 +1158,7 @@ def determine_exp_count(slot_length_in_mins, exp_time, site_code, filter_pattern
 
     # Make first estimate for exposure count ignoring molecule creation
     exp_count = int((slot_length - setup_overhead)/(exp_time + exp_overhead))
-    # Reduce exposure count by number of exposures necessary to accomidate molecule overhead
+    # Reduce exposure count by number of exposures necessary to accommodate molecule overhead
     mol_overhead = molecule_overhead(build_filter_blocks(filter_pattern, exp_count))
     exp_count = int(ceil(exp_count * (1.0-(mol_overhead / ((( exp_time + exp_overhead ) * exp_count) + mol_overhead)))))
     # Safety while loop for edge cases
@@ -1174,7 +1174,7 @@ def determine_exp_count(slot_length_in_mins, exp_time, site_code, filter_pattern
         logger.debug("Invalid exposure count")
         exp_count = None
 
-    # pretify slotlength to nearest .5 min
+    # prettify slotlength to nearest .5 min
     slot_length_in_mins = slot_length/60
     slot_length_in_mins = ceil(slot_length_in_mins*2)/2
     return slot_length_in_mins, exp_count
