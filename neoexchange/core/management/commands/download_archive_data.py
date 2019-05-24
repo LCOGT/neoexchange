@@ -21,7 +21,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
 
 from core.archive_subs import archive_login, get_frame_data, get_catalog_data, \
-    determine_archive_start_end, download_files
+    determine_archive_start_end, download_files, make_data_dir
 from core.views import make_movie, make_spec, determine_active_proposals
 
 
@@ -31,7 +31,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         out_path = settings.DATA_ROOT
-        parser.add_argument('--date', action="store", default=datetime.utcnow(), help='Date of the data to download (YYYYMMDD)')
+        parser.add_argument('--date', action="store", default=None, help='Date of the data to download (YYYYMMDD)')
         parser.add_argument('--proposal', action="store", default=None, help="Proposal code to query for data (e.g. LCO2019A-006; default is for all active proposals)")
         parser.add_argument('--datadir', default=out_path, help='Place to save data (e.g. %s)' % out_path)
         parser.add_argument('--spectraonly', default=False, action='store_true', help='Whether to only download spectra')
@@ -39,7 +39,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         usage = "Incorrect usage. Usage: %s [YYYYMMDD] [proposal code]" % ( argv[1] )
 
-        if type(options['date']) != datetime:
+        if isinstance(options['date'], str):
             try:
                 obs_date = datetime.strptime(options['date'], '%Y%m%d')
                 obs_date += timedelta(seconds=17*3600)
@@ -90,24 +90,17 @@ class Command(BaseCommand):
                                 all_frames[red_lvl] = catalogs[red_lvl]
                 for red_lvl in all_frames.keys():
                     self.stdout.write("Found %d frames for reduction level: %s" % ( len(all_frames[red_lvl]), red_lvl ))
-                daydir = start_date.strftime('%Y%m%d')
-                out_path = os.path.join(options['datadir'], daydir)
-                if not os.path.exists(out_path):
-                    try:
-                        os.makedirs(out_path)
-                    except:
-                        msg = "Error creating output path %s" % out_path
-                        raise CommandError(msg)
-                self.stdout.write("Downloading data to %s" % out_path)
+                out_path = options['datadir']
                 dl_frames = download_files(all_frames, out_path, verbose)
                 self.stdout.write("Downloaded %d frames" % ( len(dl_frames) ))
                 # unpack tarballs and make movie.
                 for frame in all_frames['']:
                     if "tar.gz" in frame['filename']:
-                        make_movie(obs_date, frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), out_path, frame['PROPID'])
-                        spec_plot, spec_count = make_spec(obs_date, frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), out_path, frame['PROPID'], 1)
+                        tar_path = make_data_dir(out_path, frame)
+                        make_movie(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, frame['PROPID'])
+                        spec_plot, spec_count = make_spec(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, frame['PROPID'], 1)
                         if spec_count > 1:
                             for obs in range(2, spec_count+1):
-                                make_spec(obs_date, frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), out_path, frame['PROPID'], obs)
+                                make_spec(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, frame['PROPID'], obs)
         else:
             self.stdout.write("No username and password or token defined (set NEOX_ODIN_USER and NEOX_ODIN_PASSWD or ARCHIVE_TOKEN)")

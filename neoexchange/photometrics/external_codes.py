@@ -155,7 +155,9 @@ def setup_working_dir(source_dir, dest_dir, config_files):
 
     if not os.path.exists(dest_dir):
         try:
+            oldumask = os.umask(0o002)
             os.makedirs(dest_dir)
+            os.umask(oldumask)
         except OSError:
             logger.error("Destination path '%s' could not be created" % dest_dir)
             return -2
