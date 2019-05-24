@@ -1916,7 +1916,7 @@ def submit_block_to_scheduler(elements, params):
         try:
             error_json = resp.json()
             error_msg = error_json.get('requests', msg)
-            if len(error_msg) == 1:
+            if len(error_msg) >= 1:
                 error_msg = error_msg[0].get('non_field_errors', msg)
                 msg = error_msg[0]
             elif error_json.get('non_field_errors', None) is not None:
