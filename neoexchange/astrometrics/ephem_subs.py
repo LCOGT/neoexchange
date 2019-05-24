@@ -854,7 +854,7 @@ def accurate_astro_darkness(sitecode, utc_date, solar_pos=False, debug=False):
 # Here we use 105 (-15 degrees Sun altitude) to keep windows away from the
 # brighter twilight which could be a problem for our faint targets.
 
-    sun_zd = 105
+    sun_zd = 102
     hourangle = degrees(acos(cos(radians(sun_zd))/(cos(site_lat)*cos(sun_app_dec))-tan(site_lat)*tan(sun_app_dec)))
 
     eqtime = 4.0 * (sun_mean_long - 0.0057183 - degrees(sun_app_ra) + degrees(dpsi) * cos(radians(eps)))
