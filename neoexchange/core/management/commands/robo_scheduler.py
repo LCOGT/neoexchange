@@ -64,7 +64,16 @@ def filter_bodies(bodies, obs_date = datetime.utcnow(), bright_limit = 19.0, fai
             prefix = '('
             suffix = ')'
         moon_sep_str = "%s%.1f%s" % ( prefix, moon_sep, suffix)
-        line_bits = format_emp_line((obs_date, body_line[0], body_line[1], vmag, sky_motion, -99, spd, sky_motion_pa), '500')
+        emp_line = { 'date' : obs_date,
+                     'ra' : body_line[0],
+                     'dec' : body_line[1],
+                     'mag' : vmag,
+                     'sky_motion' : sky_motion,
+                     'sky_motion_pa' : sky_motion_pa,
+                     'altitude' : -99,
+                     'southpole_sep' : spd
+                   }
+        line_bits = format_emp_line(emp_line, '500')
         schedule = True
         status = 'OK'
 
