@@ -557,12 +557,17 @@ fieldset legend { font-weight: bold; }
 #show-messages, .messages { text-align: center; position: relative; }
 .warning {  background-color: #fee57f; }
 .error {  background-color: #df0000; color: white; }
+.tablecell {
+  margin-left:auto;
+  margin-right:auto;
+}
+
 .msgpadded {
 	clear:both;
 	float:none;
 	margin-left:auto;
 	margin-right:auto;
-	padding: 8px 32px;
+	padding: 8px 24px;
 }
 
 #show-messages .warning, #show-messages .error, .messages .warning, .messages .error {  border-bottom: 1px solid #ccc; }
@@ -935,6 +940,83 @@ ul.candidate-controls li {width:100%;}
 .block-control { padding: 0 10px;}
 
 ul.candidate-controls li:hover {background-color:#eee; }
+
+
+
+.calibrator {
+	background: rgb(255,228,73) transparent;
+	background: rgba(255,228,73,0.6);
+	/* For IE 5.5 - 7 (strings are 8 digit colour codes with the first 2 being the opacity in range 0-255 as hex!)*/
+	filter:progid:DXImageTransform.Microsoft.gradient(startColorstr=#FFE449FF, endColorstr=#FFE449FF);
+	/* For IE 8*/
+	-ms-filter: "progid:DXImageTransform.Microsoft.gradient(startColorstr=#FFE449FF, endColorstr=#FFE449FF)";
+}
+strong.calibrator, strong.source, strong.sky {
+	padding:0 0.3em 0 0.3em;
+}
+
+/* The switch - the box around the slider */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+}
+
+/* Hide default HTML checkbox */
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* The slider */
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: #2196F3;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #2196F3;
+}
+
+input:checked + .slider:before {
+  -webkit-transform: translateX(26px);
+  -ms-transform: translateX(26px);
+  transform: translateX(26px);
+}
+
+/* Rounded sliders */
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
 
 /* Responsive design styles */
 
