@@ -36,7 +36,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         out_path = settings.DATA_ROOT
         parser.add_argument('--date', action="store", default=datetime.utcnow(), help='Date of the data to download (YYYYMMDD)')
-        parser.add_argument('--proposal', action="store", default=None, help="Proposal code to query for data (e.g. LCO2019A-006; default is for all active proposals)")
+        parser.add_argument('--proposal', action="store", default=None, help="Proposal code to query for data (e.g. LCO2019B-006; default is for all active proposals)")
         parser.add_argument('--datadir', action="store", default=out_path, help='Path for processed data (e.g. %s)' % out_path)
         parser.add_argument('--mtdlink_file_limit', action="store", type=int, default=9, help='Maximum number of images for running mtdlink')
         parser.add_argument('--keep-temp-dir', action="store_true", help='Whether to remove the temporary directories')

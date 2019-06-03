@@ -32,7 +32,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         out_path = settings.DATA_ROOT
         parser.add_argument('--date', action="store", default=None, help='Date of the data to download (YYYYMMDD)')
-        parser.add_argument('--proposal', action="store", default=None, help="Proposal code to query for data (e.g. LCO2019A-006; default is for all active proposals)")
+        parser.add_argument('--proposal', action="store", default=None, help="Proposal code to query for data (e.g. LCO2019B-023; default is for all active proposals)")
         parser.add_argument('--datadir', default=out_path, help='Place to save data (e.g. %s)' % out_path)
         parser.add_argument('--spectraonly', default=False, action='store_true', help='Whether to only download spectra')
 
