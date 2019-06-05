@@ -1751,6 +1751,60 @@ class TestParseNEOCPExtraParams(TestCase):
             self.assertEqual(expected_obj_ids[obj][1], obj_ids[obj][1])
             obj += 1
 
+    def test_parse_neocpep_new_dates_good_multi_entries(self):
+        html = BeautifulSoup(self.table_header +
+                             '''
+        <tr><td><span style="display:none">P10OkU8</span>&nbsp;<input type="checkbox" name="obj" VALUE="P10OkU8"> P10OkU8</td>
+        <td align="right"><span style="display:none">100</span>100&nbsp;&nbsp;&nbsp;</td>
+        <td>&nbsp;&nbsp;2019 05 30.3&nbsp;&nbsp;</td>
+        <td><span style="display:none">135.5475</span>&nbsp;&nbsp;13 33.0&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">052.7566</span>&nbsp;&nbsp;-37 14&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">29.5</span>&nbsp;&nbsp;20.5&nbsp;&nbsp;</td>
+        <td><span style="display:none">J2458634.158700</span>&nbsp;Added May 30.66 UT&nbsp;</td>
+        <td align="center">&nbsp;&nbsp;</td>
+        <td align="right">&nbsp;   4&nbsp;</td>
+        <td align="right">&nbsp;  0.03&nbsp;</td>
+        <td align="right">&nbsp;20.8&nbsp;</td>
+        <td align="right">&nbsp; 0.595&nbsp;</td><tr>
+        <tr><td><span style="display:none">A10dYck</span>&nbsp;<input type="checkbox" name="obj" VALUE="A10dYck"> A10dYck</td>
+        <td align="right"><span style="display:none">100</span>100&nbsp;&nbsp;&nbsp;</td>
+        <td>&nbsp;&nbsp;2019 05 30.4&nbsp;&nbsp;</td>
+        <td><span style="display:none">156.4714</span>&nbsp;&nbsp;14 56.7&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">054.0014</span>&nbsp;&nbsp;-35 59&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">31.4</span>&nbsp;&nbsp;18.6&nbsp;&nbsp;</td>
+        <td><span style="display:none">J2458634.129509</span>&nbsp;Updated May 30.63 UT&nbsp;</td>
+        <td align="center">&nbsp;&nbsp;</td>
+        <td align="right">&nbsp;   7&nbsp;</td>
+        <td align="right">&nbsp;  0.23&nbsp;</td>
+        <td align="right">&nbsp;21.6&nbsp;</td>
+        <td align="right">&nbsp; 0.281&nbsp;</td><tr>
+        ''' + self.table_footer, "html.parser")
+
+        obj_ids = parse_NEOCP_extra_params(html)
+        expected_obj_ids = [(u'P10OkU8', {'score' : 100,
+                                        'discovery_date' : datetime(2019, 5, 30, 7, 12, 00),
+                                        'num_obs' : 4,
+                                        'arc_length' : 0.03,
+                                        'not_seen' :  0.595,
+                                        'update_time': datetime(2019, 5, 30, 15, 48, 32),
+                                        'updated' : False
+                                }),
+                           (u'A10dYck', {'score' : 100,
+                                        'discovery_date' : datetime(2019, 5, 30, 9, 36, 00),
+                                        'num_obs' : 7,
+                                        'arc_length' : 0.23,
+                                        'not_seen' :  0.281,
+                                        'update_time': datetime(2019, 5, 30, 15, 6, 30),
+                                        'updated' : True
+                                })
+        ]
+        self.assertNotEqual(None, obj_ids)
+        obj = 0
+        while obj < len(expected_obj_ids):
+            self.assertEqual(expected_obj_ids[obj][0], obj_ids[obj][0])
+            self.assertEqual(expected_obj_ids[obj][1], obj_ids[obj][1])
+            obj += 1
+
     @patch('astrometrics.sources_subs.fetchpage_and_make_soup', mock_fetchpage_and_make_soup)
     def test_parse_neocpep_pccp_page_down(self):
         """Test of 'Moved to the PCCP' entries"""
@@ -1896,6 +1950,84 @@ class TestParsePCCP(TestCase):
                                         'not_seen' : 0.726,
                                         'update_time': datetime(2015, 9, 28, 17, 48, 10),
                                         'updated' : True
+                                       }
+                            ),
+                            ]
+        self.assertNotEqual(None, obj_ids)
+        obj = 0
+        while obj < len(expected_obj_ids):
+            self.assertEqual(expected_obj_ids[obj][0], obj_ids[obj][0])
+            self.assertEqual(expected_obj_ids[obj][1], obj_ids[obj][1])
+            obj += 1
+
+    def test_parse_pccp_newdates_multientries(self):
+
+        html = BeautifulSoup(self.table_header +
+                             '''
+        <tr><td><span style="display:none">A10dRr5</span>&nbsp;<input type="checkbox" name="obj" VALUE="A10dRr5"> A10dRr5</td>
+        <td align="right"><span style="display:none">086</span> 86&nbsp;&nbsp;&nbsp;</td>
+        <td>&nbsp;&nbsp;2019 05 27.6&nbsp;&nbsp;</td>
+        <td><span style="display:none">226.1313</span>&nbsp;&nbsp;19 35.4&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">154.5926</span>&nbsp;&nbsp;+64 35&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">30.7</span>&nbsp;&nbsp;19.3&nbsp;&nbsp;</td>
+        <td><span style="display:none">J2458634.240898</span>&nbsp;Updated May 30.74 UT&nbsp;</td>
+        <td align="center">&nbsp;&nbsp;</td>
+        <td align="right">&nbsp;  60&nbsp;</td>
+        <td align="right">&nbsp;  2.76&nbsp;</td>
+        <td align="right">&nbsp;13.4&nbsp;</td>
+        <td align="right">&nbsp; 0.568&nbsp;</td><tr>
+        <tr><td><span style="display:none">C0P3XJ2</span>&nbsp;<input type="checkbox" name="obj" VALUE="C0P3XJ2"> C0P3XJ2</td>
+        <td align="right"><span style="display:none">035</span> 35&nbsp;&nbsp;&nbsp;</td>
+        <td>&nbsp;&nbsp;2019 05 26.4&nbsp;&nbsp;</td>
+        <td><span style="display:none">180.6551</span>&nbsp;&nbsp;16 33.5&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">085.3800</span>&nbsp;&nbsp;-04 37&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">29.6</span>&nbsp;&nbsp;20.4&nbsp;&nbsp;</td>
+        <td><span style="display:none">J2458633.792922</span>&nbsp;Updated May 30.29 UT&nbsp;</td>
+        <td align="center">&nbsp;&nbsp;</td>
+        <td align="right">&nbsp;  51&nbsp;</td>
+        <td align="right">&nbsp;  3.91&nbsp;</td>
+        <td align="right">&nbsp;14.9&nbsp;</td>
+        <td align="right">&nbsp; 0.611&nbsp;</td><tr>
+        <tr><td><span style="display:none">A10dQbl</span>&nbsp;<input type="checkbox" name="obj" VALUE="A10dQbl"> A10dQbl</td>
+        <td align="right"><span style="display:none">035</span> 35&nbsp;&nbsp;&nbsp;</td>
+        <td>&nbsp;&nbsp;2019 05 25.6&nbsp;&nbsp;</td>
+        <td><span style="display:none">297.7413</span>&nbsp;&nbsp;00 21.8&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">096.3491</span>&nbsp;&nbsp;+06 20&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">32.7</span>&nbsp;&nbsp;17.3&nbsp;&nbsp;</td>
+        <td><span style="display:none">J2458633.646664</span>&nbsp;Added May 30.15 UT&nbsp;</td>
+        <td align="center">&nbsp;&nbsp;</td>
+        <td align="right">&nbsp;  51&nbsp;</td>
+        <td align="right">&nbsp;  4.33&nbsp;</td>
+        <td align="right">&nbsp;13.0&nbsp;</td>
+        <td align="right">&nbsp; 0.970&nbsp;</td><tr>
+        ''' + self.table_footer, "html.parser")
+
+        obj_ids = parse_PCCP(html)
+        expected_obj_ids = [(u'A10dRr5', {'score' : 86,
+                                        'discovery_date' : datetime(2019, 5, 27, 14, 24),
+                                        'num_obs' : 60,
+                                        'arc_length' :  2.76,
+                                        'not_seen' : 0.568,
+                                        'update_time': datetime(2019, 5, 30, 17, 46, 54),
+                                        'updated' : True
+                                       }
+                            ),
+                            (u'C0P3XJ2', {'score' : 35,
+                                        'discovery_date' : datetime(2019, 5, 26, 9, 36, 0),
+                                        'num_obs' : 51,
+                                        'arc_length' :  3.91,
+                                        'not_seen' : 0.611,
+                                        'update_time': datetime(2019, 5, 30, 7, 1, 48),
+                                        'updated' : True
+                                       }
+                            ),
+                            (u'A10dQbl', {'score' : 35,
+                                        'discovery_date' : datetime(2019, 5, 25, 14, 24),
+                                        'num_obs' : 51,
+                                        'arc_length' :  4.33,
+                                        'not_seen' : 0.970,
+                                        'update_time': datetime(2019, 5, 30,  3, 31, 12),
+                                        'updated' : False
                                        }
                             ),
                             ]

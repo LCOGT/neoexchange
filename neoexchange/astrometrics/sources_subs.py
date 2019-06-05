@@ -323,6 +323,14 @@ def parse_NEOCP_extra_params(neocp_page, dbg=False):
                         updated = True
                     elif update_date[0] == 'A':
                         updated = False
+                    elif update_date[0] == 'J':
+                        # At some point the MPC decided to changed their scheme
+                        # for the JD update time and now they all start with 'J'...
+                        update_type = cols[6].split()[1]
+                        if 'added' in update_type.lower():
+                            updated = False
+                        elif 'updated' in update_type.lower():
+                            updated = True
                     update_jd = update_date[1:]
                     update_date = jd_utc2datetime(update_jd)
             except:
@@ -415,6 +423,14 @@ def parse_PCCP(pccp_page, dbg=False):
                     updated = True
                 elif update_date[0] == 'A':
                     updated = False
+                elif update_date[0] == 'J':
+                    # At some point the MPC decided to changed their scheme
+                    # for the JD update time and now they all start with 'J'...
+                    update_type = cols[6].split()[1]
+                    if 'added' in update_type.lower():
+                        updated = False
+                    elif 'updated' in update_type.lower():
+                        updated = True
                 update_jd = update_date[1:]
                 update_date = jd_utc2datetime(update_jd)
             except:
