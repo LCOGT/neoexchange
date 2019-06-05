@@ -1289,25 +1289,26 @@ def schedule_submit(data, body, username):
 
     emp_at_start = None
     if isinstance(body, Body) and data.get('spectroscopy', False) is not False and body.source_type != 'C' and body.elements_type != 'MPC_COMET':
-        # Update MPC observations assuming too many updates have not been done recently and target is not a comet
-        cut_off_time = timedelta(minutes=1)
-        now = datetime.utcnow()
-        recent_updates = Body.objects.exclude(source_type='u').filter(update_time__gte=now-cut_off_time)
-        if len(recent_updates) < 1:
-            update_MPC_obs(body.current_name())
 
-        # Invoke find_orb to update Body's elements and return ephemeris
-        new_ephemeris = refit_with_findorb(body.id, data['site_code'], data['start_time'])
-        if new_ephemeris is not None and new_ephemeris[1] is not None:
-            emp_info = new_ephemeris[0]
-            ephemeris = new_ephemeris[1]
-            emp_at_start = ephemeris[0]
+        # Check for recent elements
+        if abs(body.epochofel-data['start_time']) >= timedelta(days=2):
+            # Update MPC observations assuming too many updates have not been done recently and target is not a comet
+            cut_off_time = timedelta(minutes=1)
+            now = datetime.utcnow()
+            recent_updates = Body.objects.exclude(source_type='u').filter(update_time__gte=now-cut_off_time)
+            if len(recent_updates) < 1:
+                update_MPC_obs(body.current_name())
 
-        body.refresh_from_db()
-        body_elements = model_to_dict(body)
-        body_elements['epochofel_mjd'] = body.epochofel_mjd()
-        body_elements['epochofperih_mjd'] = body.epochofperih_mjd()
-        body_elements['current_name'] = body.current_name()
+            # Invoke find_orb to update Body's elements and return ephemeris
+            refit_with_findorb(body.id, data['site_code'], data['start_time'])
+
+            body.refresh_from_db()
+            body_elements = model_to_dict(body)
+            body_elements['epochofel_mjd'] = body.epochofel_mjd()
+            body_elements['epochofperih_mjd'] = body.epochofperih_mjd()
+            body_elements['current_name'] = body.current_name()
+        else:
+            logger.info("Current epoch is <2 days old; not updating")
 
     if type(body) != StaticSource and data.get('spectroscopy', False) is True:
         body_elements = compute_vmag_pa(body_elements, data)
@@ -1338,7 +1339,6 @@ def schedule_submit(data, body, username):
               'instrument_code' : data['instrument_code'],
               'solar_analog' : data.get('solar_analog', False),
               'calibsource' : calibsource_params,
-              'findorb_ephem' : emp_at_start,
               'max_airmass' : data.get('max_airmass', 1.74),
               'ipp_value' : data.get('ipp_value', 1),
               'min_lunar_distance' : data.get('min_lunar_dist', 30),

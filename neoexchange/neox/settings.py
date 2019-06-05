@@ -7,7 +7,7 @@ from django.utils.crypto import get_random_string
 import rollbar
 
 
-VERSION = '2.8.4.2'
+VERSION = '2.8.5'
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
@@ -17,11 +17,6 @@ if BRANCH:
     BRANCH = '-' + BRANCH
 else:
     BRANCH = ''
-
-PREFIX = os.environ.get('PREFIX', '')
-
-if PREFIX != '':
-    FORCE_SCRIPT_NAME = '/neoexchange'
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -75,7 +70,7 @@ MEDIA_ROOT = '/var/www/html/media/'
 MEDIA_URL = '/media/'
 
 STATIC_ROOT = '/var/www/html/static/'
-STATIC_URL = PREFIX + '/static/'
+STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'core'), ]
 
 # List of finder classes that know how to find static files in
@@ -137,9 +132,9 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-LOGIN_URL = PREFIX + '/accounts/login/'
+LOGIN_URL = '/accounts/login/'
 
-LOGIN_REDIRECT_URL = PREFIX + '/'
+LOGIN_REDIRECT_URL = '/'
 
 # GRAPPELLI_INDEX_DASHBOARD = 'neox.dashboard.CustomIndexDashboard'
 
