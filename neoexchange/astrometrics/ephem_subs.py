@@ -743,7 +743,7 @@ def determine_darkness_times(site_code, utc_date=datetime.utcnow(), sun_zd=105, 
         utc_date = utc_date.replace(hour=0, minute=0, second=0, microsecond=0)
     except TypeError:
         utc_date = datetime.combine(utc_date, time())
-    (start_of_darkness, end_of_darkness) = astro_darkness(site_code, utc_date, sun_zd)
+    (start_of_darkness, end_of_darkness) = astro_darkness(site_code, utc_date, sun_zd=sun_zd)
     end_of_darkness = end_of_darkness+timedelta(hours=1)
     logger.debug("Start,End of darkness=%s %s", start_of_darkness, end_of_darkness)
     if utc_date > end_of_darkness:
@@ -756,7 +756,7 @@ def determine_darkness_times(site_code, utc_date=datetime.utcnow(), sun_zd=105, 
     utc_date = utc_date.replace(hour=0, minute=0, second=0, microsecond=0)
     logger.debug("Planning observations for %s for %s", utc_date, site_code)
     # Get hours of darkness for site
-    (dark_start, dark_end) = astro_darkness(site_code, utc_date, sun_zd)
+    (dark_start, dark_end) = astro_darkness(site_code, utc_date, sun_zd=sun_zd)
     logger.debug("Dark from %s to %s", dark_start, dark_end)
 
     return dark_start, dark_end
@@ -766,7 +766,7 @@ def astro_darkness(sitecode, utc_date, round_ad=True, sun_zd=105):
 
     accurate = True
     if accurate is True:
-        (ad_start, ad_end) = accurate_astro_darkness(sitecode, utc_date, sun_zd)
+        (ad_start, ad_end) = accurate_astro_darkness(sitecode, utc_date, sun_zd=sun_zd)
     else:
         (ad_start, ad_end) = crude_astro_darkness(sitecode, utc_date)
 
