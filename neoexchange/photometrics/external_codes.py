@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2016-2018 LCO
+Copyright (C) 2016-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@ GNU General Public License for more details.
 import logging
 import os
 from math import floor
-from datetime import datetime
+from datetime import datetime, timedelta
 from subprocess import call
 from collections import OrderedDict
 import warnings
@@ -134,6 +134,10 @@ def setup_findorb_environ_file(source_dir, site_code=500, start_time=datetime.ut
                 line = "EPHEM_START={}".format(start_time.strftime("%Y-%m-%d %H:%M"))
             elif line.lstrip()[0:14] == 'EPHEM_MPC_CODE':
                 line = "EPHEM_MPC_CODE=1 {:3s}".format(str(site_code).upper())
+            elif line.lstrip()[0:11] == 'EPHEM_STEPS':
+                line = "EPHEM_STEPS=24 30m"
+            elif line.lstrip()[0:9] == 'SETTINGS=':
+                line = 'SETTINGS=N,4,5,65568,2.000000,1.000000'
             print(line.rstrip(), file=out_fh)
 
     return
@@ -151,7 +155,9 @@ def setup_working_dir(source_dir, dest_dir, config_files):
 
     if not os.path.exists(dest_dir):
         try:
+            oldumask = os.umask(0o002)
             os.makedirs(dest_dir)
+            os.umask(oldumask)
         except OSError:
             logger.error("Destination path '%s' could not be created" % dest_dir)
             return -2
@@ -261,14 +267,19 @@ def determine_scamp_options(fits_catalog):
     return options
 
 
-def determine_findorb_options(site_code):
+def determine_findorb_options(site_code, start_time=datetime.utcnow()):
     """Options for find_orb:
     -z: use config directory for files (in $HOME/.find_orb),
+    -c combine designations,
     -q: quiet,
-    -C <code>: set MPC site code for ephemeris to <code>,
-    -e new.ephem: output ephemeris to new.ephem"""
+    -C <site_code>: set MPC site code for ephemeris to <site_code>,
+    -e new.ephem: output ephemeris to new.ephem,
+    -tE<date>: use <date> as the epoch of elements (rounded up to nearest day)
+    """
 
-    options = "-z -q -C {} -e new.ephem".format(site_code)
+    epoch_date = start_time.date() + timedelta(days=1)
+
+    options = "-z -c -q -C {} -e new.ephem -tE{}".format(site_code, epoch_date.strftime("%Y-%m-%d"))
 
     return options
 
@@ -435,7 +446,6 @@ def run_mtdlink(source_dir, dest_dir, fits_file_list, num_fits_files, param_file
 
     cmdline = "%s %s %s %s %s" % ( 'time', binary, '-verbose', options, linked_fits_files)
     cmdline = cmdline.rstrip()
-    print(cmdline)
 
     if dbg is True:
         retcode_or_cmdline = cmdline
@@ -465,7 +475,7 @@ def run_findorb(source_dir, dest_dir, obs_file, site_code=500, start_time=dateti
 
     setup_findorb_environ_file(source_dir, site_code, start_time)
 
-    options = determine_findorb_options(site_code)
+    options = determine_findorb_options(site_code, start_time)
     cmdline = "%s %s %s" % ( binary, obs_file, options)
     cmdline = cmdline.rstrip()
     if dbg:

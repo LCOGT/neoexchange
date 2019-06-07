@@ -1,0 +1,22 @@
+# version=2017
+# observatory
+! mpcCode {{measures.0.frame.sitecode}}
+# submitter
+! name T. Lister
+! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117
+# observers
+! name T. Lister
+! name E. Gomez
+! name J. Chatelain
+! name S. Greenstreet
+# measurers
+! name T. Lister
+# telescope
+! name {{measures.0.frame.return_site_string}}
+! design {{measures.0.frame.return_tel_string.design}}
+! aperture {{measures.0.frame.return_tel_string.aperture}}
+! detector {{measures.0.frame.return_tel_string.detector}}
+! fRatio {{measures.0.frame.return_tel_string.fRatio}}
+{{measures.0.format_psv_header}}
+{% for line in measures %}{{line.format_psv_line}}
+{% endfor %}

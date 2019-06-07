@@ -1,3 +1,18 @@
+"""
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2016-2019 LCO
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+"""
+
 import os
 from datetime import datetime
 from glob import glob
@@ -14,8 +29,8 @@ from photometrics.external_codes import make_pa_rate_dict, run_mtdlink
 class Command(BaseCommand):
 
     help = """Perform pipeline processing on a set of FITS frames.
-	   Steps include catalog creation, zeropoint determination, moving object detection and
-	   candidate storing."""
+        Steps include catalog creation, zeropoint determination, moving object detection and
+        candidate storing."""
 
     def add_arguments(self, parser):
         parser.add_argument('datadir', help='Path to the data to ingest')

@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2016-2018 LCO
+Copyright (C) 2016-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -36,6 +36,12 @@ from core.models import Body, Proposal, Block, Frame
 # Import module to test
 from photometrics.catalog_subs import *
 from core.views import check_catalog_and_refit
+
+# Disable logging during testing
+import logging
+logger = logging.getLogger(__name__)
+# Disable anything below CRITICAL level
+logging.disable(logging.CRITICAL)
 
 class ZeropointUnitTest(TestCase):
 

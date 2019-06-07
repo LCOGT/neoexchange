@@ -1,15 +1,32 @@
+"""
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2015-2019 LCO
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+"""
+
 from datetime import datetime as real_datetime
 from datetime import datetime
 import os
 
 import astropy.units as u
 from django.contrib.auth import authenticate
-
+import logging
 from astrometrics.sources_subs import fetch_filter_list
 
+logger = logging.getLogger(__name__)
 
 # Adapted from http://www.ryangallen.com/wall/11/mock-today-django-testing/
 # and changed to datetime and python 2.x
+
 
 class MockDateTimeType(type):
 
@@ -46,6 +63,11 @@ class MockDateTime(datetime, metaclass=MockDateTimeType):
     @classmethod
     def utcnow(cls):
         return cls(cls.year, cls.month, cls.day, cls.hour, cls.minute, cls.second)
+
+
+def mock_fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser"):
+    logger.warning("Page retrieval failed because this is a test and no page was attempted.")
+    return None
 
 
 def mock_check_request_status(tracking_num):
@@ -800,6 +822,12 @@ def mock_fetch_filter_list(site, spec):
     return fetch_filter_list(site, spec, test_filter_map)
 
 
+def mock_fetch_filter_list_no2m(site, spec):
+    test_filter_map = os.path.join('astrometrics', 'tests', 'test_no2m_camera_mapping.dat')
+
+    return fetch_filter_list(site, spec, test_filter_map)
+
+
 def mock_expand_cadence(user_request):
 
     cadence = {
@@ -918,3 +946,146 @@ def mock_fetch_sfu(sfu_value=None):
 
 def mock_submit_to_scheduler(elements, params):
     return -42, params
+
+
+def mock_update_elements_with_findorb(source_dir, dest_dir, filename, site_code, start_time):
+
+    if filename.lower() == 'i_am_broken':
+        elements_or_status = 255
+    else:
+        if start_time == datetime(2015, 11, 19):
+            not_seen_td = datetime.utcnow()-datetime(2015,11,19)
+            not_seen = not_seen_td.total_seconds() / 86400.0
+            elements = {
+                            'abs_mag' : 21.91,
+                            'slope' : 0.15,
+                            'active' : True,
+                            'origin' : 'M',
+                            'source_type' : 'U',
+                            'elements_type' : 'MPC_MINOR_PLANET',
+                            'provisional_name' : 'P10pqB2',
+                            'epochofel' : datetime(2015, 11, 20),
+                            'meananom' : 272.51789,
+                            'argofperih' : 339.46072,
+                            'longascnode' : 197.07906,
+                            'orbinc' : 10.74064,
+                            'eccentricity' :  0.3006186,
+                            'meandist' :  1.1899499,
+                            'arc_length' : 22.5/24.0,
+                            'num_obs' : 9,
+                            'not_seen' : not_seen,
+                            'orbit_rms' : 0.10,
+                            'update_time' : datetime.utcnow()
+                        }
+        else:
+            not_seen_td = datetime.utcnow()-datetime(2015,11,18)
+            not_seen = not_seen_td.total_seconds() / 86400.0
+            elements = {
+                            'abs_mag' : 21.91,
+                            'slope' : 0.15,
+                            'active' : True,
+                            'origin' : 'M',
+                            'source_type' : 'U',
+                            'elements_type' : 'MPC_MINOR_PLANET',
+                            'provisional_name' : 'P10pqB2',
+                            'epochofel' : datetime(2015, 11, 18),
+                            'meananom' : 270.89733,
+                            'argofperih' : 339.47051,
+                            'longascnode' : 197.11047,
+                            'orbinc' : 10.74649,
+                            'eccentricity' :  0.3001867,
+                            'meandist' :  1.1896136,
+                            'arc_length' : 22.5/24.0,
+                            'num_obs' : 9,
+                            'not_seen' : not_seen,
+                            'orbit_rms' : 0.10,
+                            'update_time' : datetime.utcnow()
+                        }
+        elements_or_status = elements
+        ephem_filename = os.path.join(dest_dir, 'new.ephem')
+        with open(ephem_filename, 'w') as f:
+            print("#(Z21) Tenerife-LCO Aqawan A #1: P10pqB2", file=f)
+            print("Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  '/hr    PA   \" sig PA", file=f)
+            print("---- -- -- -----  -------------   -----------  ------ ------ -----  --- ------ ------ ---- ---", file=f)
+            print("2015 11 19 00:00  03 41 05.068   -08 33 34.43  .32187 1.2819 152.1 21.1   2.25 219.1  3.16  35", file=f)
+            print("2015 11 19 00:30  03 41 02.195   -08 34 26.80  .32182 1.2818 152.1 21.1   2.25 219.2  3.24  34", file=f)
+            print("2015 11 19 01:00  03 40 59.317   -08 35 19.10  .32176 1.2817 152.1 21.1   2.25 219.2  3.33  33", file=f)
+            print("2015 11 19 01:30  03 40 56.439   -08 36 11.33  .32171 1.2816 152.1 21.1   2.25 219.3  3.42  32", file=f)
+
+    return elements_or_status
+
+
+def mock_update_elements_with_findorb_badrms(source_dir, dest_dir, filename, site_code, start_time):
+
+    not_seen_td = datetime.utcnow()-datetime(2015, 11, 18)
+    not_seen = not_seen_td.total_seconds() / 86400.0
+    elements = {
+                    'abs_mag' : 21.91,
+                    'slope' : 0.15,
+                    'active' : True,
+                    'origin' : 'M',
+                    'source_type' : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'provisional_name' : 'P10pqB2',
+                    'epochofel' : datetime(2015, 11, 18),
+                    'meananom' : 270.89733,
+                    'argofperih' : 339.47051,
+                    'longascnode' : 197.11047,
+                    'orbinc' : 10.74649,
+                    'eccentricity' :  0.3001867,
+                    'meandist' :  1.1896136,
+                    'arc_length' : 22.5/24.0,
+                    'num_obs' : 9,
+                    'not_seen' : not_seen,
+                    'orbit_rms' : 1.0,
+                    'update_time' : datetime.utcnow()
+                }
+    elements_or_status = elements
+
+    ephem_filename = os.path.join(dest_dir, 'new.ephem')
+    with open(ephem_filename, 'w') as f:
+        print("#(Z21) Tenerife-LCO Aqawan A #1: P10pqB2", file=f)
+        print("Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  '/hr    PA   \" sig PA", file=f)
+        print("---- -- -- -----  -------------   -----------  ------ ------ -----  --- ------ ------ ---- ---", file=f)
+        print("2015 11 19 00:00  03 41 05.068   -08 33 34.43  .32187 1.2819 152.1 21.1   2.25 219.1  3.16  35", file=f)
+        print("2015 11 19 00:30  03 41 02.195   -08 34 26.80  .32182 1.2818 152.1 21.1   2.25 219.2  3.24  34", file=f)
+
+    return elements_or_status
+
+
+def mock_update_elements_with_findorb_badepoch(source_dir, dest_dir, filename, site_code, start_time):
+
+    not_seen_td = datetime.utcnow()-datetime(2015, 11, 18)
+    not_seen = not_seen_td.total_seconds() / 86400.0
+    elements = {
+                    'abs_mag' : 21.91,
+                    'slope' : 0.15,
+                    'active' : True,
+                    'origin' : 'M',
+                    'source_type' : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'provisional_name' : 'P10pqB2',
+                    'epochofel' : datetime(2013, 11, 16),
+                    'meananom' : 269.48064,
+                    'argofperih' : 339.46074,
+                    'longascnode' : 197.07906,
+                    'orbinc' : 10.74064,
+                    'eccentricity' :  0.3006183,
+                    'meandist' :  1.1899464,
+                    'arc_length' : 22.5/24.0,
+                    'num_obs' : 9,
+                    'not_seen' : not_seen,
+                    'orbit_rms' : 0.10,
+                    'update_time' : datetime.utcnow()
+                }
+    elements_or_status = elements
+
+    ephem_filename = os.path.join(dest_dir, 'new.ephem')
+    with open(ephem_filename, 'w') as f:
+        print("#(T03) Haleakala-LCO Clamshell #3: P10pqB2", file=f)
+        print("Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  '/hr    PA   \" sig PA", file=f)
+        print("---- -- -- -----  -------------   -----------  ------ ------ -----  --- ------ ------ ---- ---", file=f)
+        print("2015 11 19 00:00  03 41 05.422   -08 33 24.33  .32194 1.2819 152.1 21.1   2.13 214.8  3.45  34", file=f)
+        print("2015 11 19 00:30  03 41 02.956   -08 34 16.84  .32189 1.2818 152.1 21.1   2.14 214.9  3.62  35", file=f)
+
+    return elements_or_status

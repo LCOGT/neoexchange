@@ -1,3 +1,18 @@
+"""
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2017-2019 LCO
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+"""
+
 import glob
 import os
 import requests
@@ -161,7 +176,7 @@ def add_markers_to_image(filename):
 def make_cutouts(candidates, frameids, jpg_files, blockid, download_dir, ymax):
     for candidate in candidates:
         cutouts = []
-        for frameid, filename, coords in zip(frameids, jpg_files,candidate['coords']):
+        for frameid, filename, coords in zip(frameids, jpg_files, candidate['coords']):
             outfile = os.path.join(download_dir, "frame-{}-{}-{}.jpg".format(blockid, candidate['id'], frameid))
             if os.path.isfile(outfile):
                 logger.debug("File exists: {}".format(outfile))

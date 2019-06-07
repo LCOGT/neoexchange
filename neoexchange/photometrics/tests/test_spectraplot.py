@@ -1,12 +1,35 @@
+"""
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2018-2019 LCO
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+"""
+
+import os
+import shutil
+import tempfile
+from collections import OrderedDict
+
 from django.test import TestCase
 from astropy import units as u
-import numpy as np
-import os
 from astropy.io.fits import Header
-from collections import OrderedDict
+import numpy as np
 
 from photometrics.spectraplot import *
 
+# Disable logging during testing
+import logging
+logger = logging.getLogger(__name__)
+# Disable anything below CRITICAL level
+logging.disable(logging.CRITICAL)
 
 class TestReadSpectra(TestCase):
 
@@ -277,3 +300,90 @@ class TestReadSpectra(TestCase):
 
         self.assertEqual(exp_x_len, len(smoothedx))
         self.assertEqual(exp_y_len, len(smoothedy))
+
+class TestGetSpecPlot(TestCase):
+    
+    def setUp(self):
+        files_to_copy = ['fhr9087.dat', 'test_fits.fits', 'aaareadme.ctio', ]
+        self.spectradir  = os.path.abspath(os.path.join('photometrics', 'tests', 'test_spectra'))
+        self.datfile  = files_to_copy[0]
+        self.fitsfile  = files_to_copy[1]
+
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+        for test_file in files_to_copy:
+            test_file_path = os.path.join(self.spectradir, test_file)
+            shutil.copy(test_file_path, self.test_dir)
+
+        self.remove = True
+        self.debug_print = False
+
+    def tearDown(self):
+        if self.remove:
+            try:
+                files_to_remove = glob(os.path.join(self.test_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.test_dir)
+            try:
+                os.rmdir(self.test_dir)
+                if self.debug_print:
+                    print("Removed", self.test_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.test_dir)
+
+    def test_no_file(self):
+
+        obs_num = '1'
+        expected_save_file = None
+
+        save_file = get_spec_plot(self.test_dir, 'foo.fits', obs_num)
+
+        self.assertEqual(expected_save_file, save_file)
+
+    def test_fits_1(self):
+
+        obs_num = '1'
+        expected_save_file = os.path.join(self.test_dir, '398188_1598411_spectra_' + obs_num + '.png')
+
+        save_file = get_spec_plot(self.test_dir, self.fitsfile, obs_num)
+
+        self.assertEqual(expected_save_file, save_file)
+
+    def test_fits_2(self):
+
+        obs_num = '2'
+        expected_save_file = os.path.join(self.test_dir, '398188_1598411_spectra_' + obs_num + '.png')
+
+        save_file = get_spec_plot(self.test_dir, self.fitsfile, obs_num)
+
+        self.assertEqual(expected_save_file, save_file)
+
+    def test_ctiostan_1(self):
+
+        obs_num = 1
+        expected_save_file = os.path.join(self.test_dir, 'hr9087_spectra_' + str(obs_num) + '.png')
+
+        save_file = get_spec_plot(self.test_dir, self.datfile, obs_num)
+
+        self.assertEqual(expected_save_file, save_file)
+
+    def test_ctiostan_2(self):
+
+        obs_num = 2
+        expected_save_file = os.path.join(self.test_dir, 'hr9087_spectra_' + str(obs_num) + '.png')
+
+        save_file = get_spec_plot(self.test_dir, self.datfile, obs_num)
+
+        self.assertEqual(expected_save_file, save_file)
+
+    def test_ctiostan_feige(self):
+
+        obs_num = 1
+        expected_save_file = os.path.join(self.test_dir, 'feige999_spectra_' + str(obs_num) + '.png')
+
+        # Create symlink to existing CTIO standard file as a Feige standard
+        os.symlink(os.path.join(self.test_dir, self.datfile), os.path.join(self.test_dir, 'ffeige999.dat'))
+        save_file = get_spec_plot(self.test_dir, 'ffeige999.dat', obs_num)
+
+        self.assertEqual(expected_save_file, save_file)

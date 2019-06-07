@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2014-2018 LCO
+Copyright (C) 2014-2019 LCO
 
 sources_subs.py -- Code to retrieve asteroid infomation from various sources.
 
@@ -42,7 +42,7 @@ from astropy.io import ascii
 
 import astrometrics.site_config as cfg
 from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime, datetime2mjd_utc, mjd_utc2mjd_tt, mjd_utc2datetime
-from astrometrics.ephem_subs import build_filter_blocks, MPC_site_code_to_domes, compute_ephem, perturb_elements
+from astrometrics.ephem_subs import build_filter_blocks, MPC_site_code_to_domes, compute_ephem, perturb_elements, LCOGT_site_codes
 from core.urlsubs import get_telescope_states
 
 logger = logging.getLogger(__name__)
@@ -108,7 +108,7 @@ def fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser
     req_page = urllib.request.Request(url, headers=req_headers)
     opener = urllib.request.build_opener()  # create an opener object
     try:
-        response = opener.open(req_page)
+        response = opener.open(req_page, timeout=20)
     except (urllib.error.HTTPError, urllib.error.URLError) as e:
         if hasattr(e, 'code'):
             logger.warning("Page retrieval failed with HTTP Error %d: %s, retrying" % (e.code, e.reason))
@@ -130,30 +130,52 @@ def parse_previous_NEOCP_id(items, dbg=False):
 
     ast = compile('^\s+A/\d{4}')
     if len(items) == 1:
+        if dbg: print("1 item found")
         # Is of the form "<foo> does not exist" or "<foo> was not confirmed". But can
         # now apparently include comets...
         chunks = items[0].split()
         none_id = ''
         body = chunks[0]
-        if chunks[1].find('does') >= 0:
+        if chunks[1].find('does') >= 0 or ('not' in chunks and 'real' in chunks):
             none_id = 'doesnotexist'
         elif chunks[0].find('Comet') >= 0:
             body = chunks[4]
             none_id = chunks[1] + ' ' + chunks[2]
-        if len(chunks) >= 5:
+        elif len(chunks) >= 5:
             if chunks[2].lower() == 'not' and chunks[3].lower() == 'confirmed':
                 none_id = 'wasnotconfirmed'
-            if chunks[2].lower() == 'not' and chunks[4].lower() == 'minor':
+            elif chunks[2].lower() == 'not' and chunks[4].lower() == 'minor':
                 none_id = 'wasnotminorplanet'
+            elif chunks[2].lower() == 'not' and chunks[3].lower() == 'interesting':
+                none_id = ''
+            else:
+                if dbg: print(chunks)
+                middle = chunks.index('=')
+                body = chunks[middle+1].rstrip()
+                none_id = ' '.join(chunks[:middle]).rstrip()
+        none_id = none_id.replace('(', '').replace(')', '')
         crossmatch = [body, none_id, '', ' '.join(chunks[-3:])]
     elif len(items) == 3:
+        if dbg: print("3 items found")
         # Is of the form "<foo> = <bar>(<date> UT)"
         if items[0].find('Comet') != 1 and len(ast.findall(items[0])) != 1:
-            newid = str(items[0]).lstrip()+items[1].string.strip()
-            provid_date = items[2].split('(')
-            provid = provid_date[0].replace(' = ', '')
-            date = '('+provid_date[1].strip()
-            mpec = ''
+            if items[1].string is not None:
+                newid = str(items[0]).lstrip()+items[1].string.strip()
+                provid_date = items[2].split('(')
+                provid = provid_date[0].replace(' = ', '').rstrip()
+                date = '('+provid_date[1].strip()
+                mpec = ''
+            else:
+                chunks = items[0].split('=')
+                newid = chunks[0].strip()
+                provid_date = chunks[1].split('(')
+                provid = provid_date[0].strip()
+                provid_date = provid_date[1].split(')')
+                date = '('+provid_date[0].strip()+')'
+                mpec = ''
+                if items[1].contents[0].string is not None:
+                    if items[1].contents[0].string == 'MPEC':
+                        mpec = items[1].contents[0].string + items[1].contents[1].string
         else:
             # Now matches comets and 'A/<YYYY>' type objects
             if dbg:
@@ -188,6 +210,7 @@ def parse_previous_NEOCP_id(items, dbg=False):
         crossmatch = [provid, newid, mpec, date]
     elif len(items) == 5:
         # Is of the form "<foo> = <bar> (date UT) [see MPEC<x>]"
+        if dbg: print("5 items found")
         newid = str(items[0]).lstrip()+items[1].string.strip()
         provid_date = items[2].split()
         provid = provid_date[1]
@@ -300,6 +323,14 @@ def parse_NEOCP_extra_params(neocp_page, dbg=False):
                         updated = True
                     elif update_date[0] == 'A':
                         updated = False
+                    elif update_date[0] == 'J':
+                        # At some point the MPC decided to changed their scheme
+                        # for the JD update time and now they all start with 'J'...
+                        update_type = cols[6].split()[1]
+                        if 'added' in update_type.lower():
+                            updated = False
+                        elif 'updated' in update_type.lower():
+                            updated = True
                     update_jd = update_date[1:]
                     update_date = jd_utc2datetime(update_jd)
             except:
@@ -348,14 +379,15 @@ def parse_NEOCP_extra_params(neocp_page, dbg=False):
                 comet_objects = parse_PCCP(pccp_page)
                 if dbg:
                     print(comet_objects)
-                for comet in comet_objects:
-                    obj_id = comet[0]
-                    if dbg:
-                        print("obj_id=", obj_id)
-                    if obj_id not in object_list:
-                        object_list.append(obj_id)
-                        new_object = (obj_id, comet[1])
-                        new_objects.append(new_object)
+                if comet_objects:
+                    for comet in comet_objects:
+                        obj_id = comet[0]
+                        if dbg:
+                            print("obj_id=", obj_id)
+                        if obj_id not in object_list:
+                            object_list.append(obj_id)
+                            new_object = (obj_id, comet[1])
+                            new_objects.append(new_object)
 
     return new_objects
 
@@ -391,6 +423,14 @@ def parse_PCCP(pccp_page, dbg=False):
                     updated = True
                 elif update_date[0] == 'A':
                     updated = False
+                elif update_date[0] == 'J':
+                    # At some point the MPC decided to changed their scheme
+                    # for the JD update time and now they all start with 'J'...
+                    update_type = cols[6].split()[1]
+                    if 'added' in update_type.lower():
+                        updated = False
+                    elif 'updated' in update_type.lower():
+                        updated = True
                 update_jd = update_date[1:]
                 update_date = jd_utc2datetime(update_jd)
             except:
@@ -451,6 +491,9 @@ def fetch_NEOCP_observations(obj_id_or_page):
     else:
         neocp_obs_page = obj_id_or_page
 
+    if neocp_obs_page is None:
+        return None
+
 
 # If the object has left the NEOCP, the HTML will say 'None available at this time.'
 # and the length of the list will be 1 (but clean of blank lines first using
@@ -468,7 +511,8 @@ def fetch_mpcobs(asteroid, debug=False):
     resulting observation as a list of text observations."""
 
     asteroid = asteroid.strip().replace(' ', '+')
-    query_url = 'https://www.minorplanetcenter.net/db_search/show_object?object_id=' + asteroid
+    html_id = asteroid.replace('/', '%2F')
+    query_url = 'https://www.minorplanetcenter.net/db_search/show_object?object_id=' + html_id
 
     page = fetchpage_and_make_soup(query_url)
     if page is None:
@@ -482,7 +526,7 @@ def fetch_mpcobs(asteroid, debug=False):
 
 # Use a list comprehension to find the 'tmp/<asteroid>.dat' link in among all
 # the other links. Turn any pluses (which were spaces) into underscores.
-    link = [x.get('href') for x in refs if 'tmp/'+asteroid.replace('+', '_') in x.get('href')]
+    link = [x.get('href') for x in refs if 'tmp/'+asteroid.replace('+', '_').replace('/', '_') in x.get('href')]
 
     if len(link) == 1:
         # Replace the '..' part with proper URL
@@ -497,7 +541,7 @@ def fetch_mpcobs(asteroid, debug=False):
     return None
 
 
-def translate_catalog_code(code_or_name):
+def translate_catalog_code(code_or_name, ades_code=False):
     """Mapping between the single character in column 72 of MPC records
     and the astrometric reference catalog used.
     Documentation at: https://www.minorplanetcenter.net/iau/info/CatalogueCodes.html"""
@@ -550,14 +594,35 @@ def translate_catalog_code(code_or_name):
                   "T" : "URAT-2",
                   "U" : "GAIA-DR1",
                   "V" : "GAIA-DR2",
+                  "W" : "UCAC5",
                   }
+    # https://www.minorplanetcenter.net/iau/info/ADESFieldValues.html
+    catalog_mapping = {'USNO-SA2.0'  : 'USNOSA2',  # Can't test, don't have CDs
+                       'USNO-A2.0'   : 'USNOA2',   # Can't test, don't have CDs
+                       'USNO-B1.0'   : 'USNOB1',
+                       'UCAC-3'      : 'UCAC3',
+                       'UCAC-4'      : 'UCAC4',
+                       'URAT-1'      : 'URAT1',    # Failed in Astrometrica, couldn't test
+                       'NOMAD'       : 'NOMAD',
+                       'CMC-14'      : 'CMC14',    # Failed in Astrometrica, couldn't test
+                       'CMC-15'      : 'CMC15',
+                       'PPMXL'       : 'PPMXL',
+                       'GAIA-DR1'    : 'Gaia1',
+                       'GAIA-DR2'    : 'Gaia2',
+                       '2MASS'       : '2MASS'
+                      }
     catalog_or_code = ''
-    if len(code_or_name) == 1:
+    if len(code_or_name.strip()) == 1:
         catalog_or_code = catalog_codes.get(code_or_name, '')
+        if not catalog_or_code:
+            logger.warning("{} is not in our accepted list of astrometric catalog codes.".format(code_or_name))
     else:
-        for code, catalog in catalog_codes.items():
-            if code_or_name == catalog:
-                catalog_or_code = code
+        if ades_code is True:
+            catalog_or_code = catalog_mapping.get(code_or_name.upper(),'')
+        else:
+            for code, catalog in catalog_codes.items():
+                if code_or_name == catalog:
+                    catalog_or_code = code
 
     return catalog_or_code
 
@@ -566,8 +631,8 @@ def parse_mpcobs(line):
     """Parse a MPC format 80 column observation record line, returning a
     dictionary of values or an empty dictionary if it couldn't be parsed
 
-    Be ware of potential confusion between obs_type of 'S' and 's'. This
-    enforced by MPC, see
+    Be aware of potential confusion between obs_type of 'S' and 's'. This
+    is enforced by MPC, see
     https://www.minorplanetcenter.net/iau/info/SatelliteObs.html
     """
 
@@ -579,12 +644,16 @@ def parse_mpcobs(line):
         return params
     number = str(line[0:5])
     prov_or_temp = str(line[5:12])
+    comet_desig = ['C', 'P', 'D', 'X', 'A']
 
-    if len(number.strip()) != 0 and len(prov_or_temp.strip()) != 0:
-        # Number and provisional/temp. desigination
+    if number.strip() in comet_desig and len(prov_or_temp.strip()) != 0:
+        # Comet with no number
+        body = number.strip() + prov_or_temp.strip()
+    elif len(number.strip()) != 0 and len(prov_or_temp.strip()) != 0:
+        # Number and provisional/temp. designation
         body = number
     elif len(number.strip()) == 0 or len(prov_or_temp.strip()) != 0:
-        # No number but provisional/temp. desigination
+        # No number but provisional/temp. designation
         body = prov_or_temp
     else:
         body = number
@@ -607,6 +676,19 @@ def parse_mpcobs(line):
     except ValueError:
         obs_mag = None
 
+    site_code = str(line[-3:])
+
+    discovery = False
+    lco_discovery = False
+    if line[12] == '*':
+        discovery = True
+        if site_code in LCOGT_site_codes():
+            lco_discovery = True
+        if flag == ' ':
+            flag = '*'
+        else:
+            flag = '*,' + flag
+
     if obs_type == 'C' or obs_type == 'S' or obs_type == 'A':
         # Regular CCD observations, first line of satellite observations or
         # observations that have been rotated from B1950 to J2000 ('A')
@@ -618,7 +700,9 @@ def parse_mpcobs(line):
                    'obs_mag'  : obs_mag,
                    'filter'   : filter,
                    'astrometric_catalog' : translate_catalog_code(line[71]),
-                   'site_code' : str(line[-3:])
+                   'site_code' : site_code,
+                   'discovery' : discovery,
+                   'lco_discovery' : lco_discovery
                  }
         ptr = 1
         ra_dec_string = line[32:56]
@@ -630,6 +714,9 @@ def parse_mpcobs(line):
     elif obs_type.upper() == 'R':
         # Radar observations, skip
         logger.debug("Found radar observation, skipping")
+    elif obs_type.upper() == 'M':
+        # Micrometer observations, skip
+        logger.debug("Found micrometer observation, skipping")
     elif obs_type == 's':
         # Second line of satellite-based observation, stuff whole line into
         # 'extrainfo' and parse what we can (so we can identify the corresponding
@@ -676,30 +763,71 @@ def fetch_mpcdb_page(asteroid, dbg=False):
     return page
 
 
-def parse_mpcorbit(page, dbg=False):
+def parse_mpcorbit(page, epoch_now=None, dbg=False):
+    """Parses a page of elements tables return from the Minor Planet Center (MPC)
+    database search page and returns an element set as a dictionary.
+    In the case of multiple element sets (normally comets), the closest in time
+    to [epoch_now] is returned."""
+    if epoch_now is None:
+        epoch_now = datetime.utcnow()
 
     data = []
     # Find the table of elements and then the subtables within it
-    elements_table = page.find('table', {'class' : 'nb'})
-    if elements_table is None:
-        if dbg:
-            logger.debug("No element tables found")
+    elements_tables = page.find_all('table', {'class' : 'nb'})
+    if elements_tables is None or len(elements_tables) == 0:
+        logger.warning("No element tables found")
         return {}
-    data_tables = elements_table.find_all('table')
-    for table in data_tables:
-        rows = table.find_all('tr')
-        for row in rows:
-            cols = row.find_all('td')
-            cols = [elem.text.strip() for elem in cols]
-            data.append([elem for elem in cols if elem])
 
-    elements = dict(clean_element(elem) for elem in data)
+    min_elements_dt = timedelta.max
+    best_elements = {}
+    for elements_table in elements_tables:
+        data_tables = elements_table.find_all('table')
+        for table in data_tables:
+            rows = table.find_all('tr')
+            for row in rows:
+                cols = row.find_all('td')
+                cols = [elem.text.strip() for elem in cols]
+                data.append([elem for elem in cols if elem])
 
+        elements = dict(clean_element(elem) for elem in data)
+        # Look for nearest element set in time
+        epoch = elements.get('epoch', None)
+        if dbg: print(epoch)
+        if epoch is not None:
+            try:
+                epoch_datetime = datetime.strptime(epoch, "%Y-%m-%d.0")
+                epoch_dt = epoch_now - epoch_datetime
+                if epoch_dt < min_elements_dt:
+                    # Closer match found, update best elements and minimum time
+                    # separation
+                    if dbg: print("Found closer element match", epoch_dt, min_elements_dt, epoch)
+                    best_elements = elements
+                    min_elements_dt = abs(epoch_dt)
+                else:
+                    if dbg: print("No closer match found")
+            except ValueError:
+                msg = "Couldn't parse epoch: " + epoch
+                logger.warning(msg)
     name_element = page.find('h3')
     if name_element is not None:
-        elements['obj_id'] = name_element.text.strip()
+        best_elements['obj_id'] = name_element.text.strip()
 
-    return elements
+    return best_elements
+
+
+def read_mpcorbit_file(orbit_file):
+
+    try:
+        orbfile_fh = open(orbit_file, 'r')
+    except IOError:
+        logger.warn("File %s not found" % orbit_file)
+        return None
+
+    orblines = orbfile_fh.readlines()
+    orbfile_fh.close()
+    orblines[0] = orblines[0].replace('Find_Orb  ', 'NEOCPNomin').rstrip()
+
+    return orblines
 
 
 class PackedError(Exception):
@@ -719,8 +847,11 @@ def validate_packcode(packcode):
 
     valid_cent_codes = {'I' : 18, 'J' : 19, 'K' : 20}
     valid_half_months = 'ABCDEFGHJKLMNOPQRSTUVWXY'
+    comet_desig = ['C', 'P', 'D', 'X', 'A']
 
-    if len(packcode) == 5 and packcode[0].isalpha() and packcode[1:].isdigit():
+    if len(packcode) == 5 and ((packcode[0].isalpha() and packcode[1:].isdigit()) or packcode.isdigit()):
+        return True
+    if len(packcode) == 8 and packcode[0] in comet_desig and packcode[1] in valid_cent_codes:
         return True
     if len(packcode) != 7:
         raise PackedError("Invalid packcode length")
@@ -735,6 +866,24 @@ def validate_packcode(packcode):
     return True
 
 
+def validate_text(text_string):
+    valid_symbols = '`~!@#$%^&*()_+- ={}|[]\:;<,>.?/"'+"'"
+    valid_characters = 'abcdefghijklmnopqrstuvwxyz'
+    if text_string is None:
+        return ''
+
+    out_string = ''
+    for char in text_string:
+        if char.isdigit():
+            out_string += char
+        elif char in valid_characters or char in valid_characters.upper():
+            out_string += char
+        elif char in valid_symbols:
+            out_string += char
+
+    return out_string
+
+
 def packed_to_normal(packcode):
     """Converts MPC packed provisional designations e.g. K10V01F to unpacked
     normal desigination i.e. 2010 VF1 including packed 5 digit number designations
@@ -742,37 +891,54 @@ def packed_to_normal(packcode):
 
 # Convert initial letter to century
     cent_codes = {'I' : 18, 'J' : 19, 'K' : 20}
+    comet_flag = ''
+    frag_tag = ''
+    comet_desig = ['C', 'P', 'D', 'X', 'A']
 
     if not validate_packcode(packcode):
         raise PackedError("Invalid packcode %s" % packcode)
         return None
+    elif len(packcode) == 5 and packcode.isdigit():
+        # Just a number
+        return str(int(packcode))
     elif len(packcode) == 5 and packcode[0].isalpha() and packcode[1:].isdigit():
         cycle = cycle_mpc_character_code(packcode[0])
         normal_code = str(cycle) + packcode[1:]
         return normal_code
+    elif len(packcode) == 8 and packcode[0] in comet_desig:
+        mpc_cent = cent_codes[packcode[1]]
+        comet_flag = '{}/'.format(packcode[0])
+        packcode = packcode[1:]
     else:
         mpc_cent = cent_codes[packcode[0]]
 
 # Convert next 2 digits to year
     mpc_year = packcode[1:3]
-    no_in_halfmonth = packcode[3] + packcode[6]
-# Turn the character of the cycle count, which runs 0--9, A--Z, a--z into a
-# consecutive integer by converting to ASCII code and skipping the non-alphanumerics
+    if not comet_flag or (packcode[-1] != "0" and packcode[-1].upper() == packcode[-1]):
+        no_in_halfmonth = packcode[3] + packcode[6]
+    else:
+        no_in_halfmonth = packcode[3]
+        if packcode[-1] != "0":
+            # if non-0 lower case code at the end of comet designation, then we are following a fragment
+            frag_tag = "-{}".format(packcode[-1].upper())
+
+    # Turn the character of the cycle count, which runs 0--9, A--Z, a--z into a
+    # consecutive integer by converting to ASCII code and skipping the non-alphanumerics
     cycle = cycle_mpc_character_code(packcode[4])
     digit = int(packcode[5])
     count = cycle * 10 + digit
-# No digits on the end of the unpacked designation if it's the first loop through
+    # No digits on the end of the unpacked designation if it's the first loop through
     if cycle == 0 and digit == 0:
         count = ''
 
 # Assemble unpacked code
-    normal_code = str(mpc_cent) + mpc_year + ' ' + no_in_halfmonth + str(count)
+    normal_code = comet_flag + str(mpc_cent) + mpc_year + ' ' + no_in_halfmonth + str(count) + frag_tag
 
     return normal_code
 
 
 def cycle_mpc_character_code(char):
-    """Convert MPC character code into a number 0--9, A--Z, a--z and return interger"""
+    """Convert MPC character code into a number 0--9, A--Z, a--z and return integer"""
     cycle = ord(char)
     if cycle >= ord('a'):
         cycle = cycle - 61
@@ -782,6 +948,106 @@ def cycle_mpc_character_code(char):
         cycle = cycle - ord('0')
     return cycle
 
+def psv_padding(s, l, jtype, dpos=0):
+   """#
+      # PSV formatting routine (adapted from ADESMaster.adesutility.applyPaddingAndJustification)
+      #
+    psv_padding(s, l, jtype, dpos)
+
+       Inputs:
+          s: input string
+          l: output length (pad with blanks)
+             If string is too long it is returned without change
+          jtype: justification type
+                L: left
+                R: right
+             D<n>: decimal point in column <n>
+          dpos: decimal point in column <dpos> (for jtype = "D")
+
+       Return Value:
+            (padded string, l, dpos)
+            l is the achieved width.  It may be longer than l
+            dpos is the achieved dpos.  It may be different from dpos
+
+       The width and dpos may be different. These should be used to
+       update the headerInfo array if one is trying to achieve alignment
+       over multiple lines.
+   """
+
+   ll = len(s)
+   if jtype.upper() == 'L': # negative multipliers result in ''
+      outs = s + (l - ll)*' '
+      return (outs, len(outs), dpos)
+   elif jtype.upper() == 'R':
+      outs =  (l - ll)*' ' + s
+      return (outs, len(outs), dpos)
+   elif jtype.upper() == 'C':
+      i = (l-ll)//2
+      j = i
+      if i*2 != l-ll: j = j + 1
+      outs =  i*' ' + s + j*' '
+      return (outs, len(outs), dpos)
+   elif jtype.upper() == 'D':  # null strings not allowed
+      try:
+         if dpos < 0:
+           raise RuntimeError("Invalid negative value of dpos ("+ dpos + ")")
+      except:
+         raise RuntimeError("Illegal justification string " + jtype)
+      #
+      # pad only with spaces on both sides
+      # and do not change s
+      #
+      # if s has no decimal point don't add one
+      # but line up as if it were to the right
+      # of s.
+      #
+      # the result may be too wide.  This is OK
+      # we will do a fix-up on width in the caller.
+      # Note this means we have to do it twice but
+      # we never will get wider as a result of the
+      # second pass.
+      #
+      # Also, we assume s is a decimal for xsd.  If
+      # not, validation will fail later.  If there
+      # is more than one decimal point, it will fail
+      # here.
+      #
+      sp = s.split('.')
+      if (len(sp) == 1):  #No decimal point
+         sleft = s
+         sright = ''
+      elif (len(sp) == 2): #has decimal point
+         (sleft, sright) = sp
+      else:
+         raise RuntimeError('Illegal string ' + s + ' for decimal value')
+      #
+      # now re-pack with width
+      #
+      leftpad = dpos - 1 - len(sleft)
+      #
+      # figure out dpos extension
+      #
+      if leftpad < 0: # <n> needs adjusting
+          ndpos = dpos - leftpad
+          rightpad = (l - ndpos)  - len(sright)
+          dpos = ndpos
+      rightpad = (l - dpos)  - len(sright)
+      if (len(s) > 0) and (s[-1] == '.'): # trailing decimal point adjustment
+        sleft = s
+        rightpad = rightpad - 1
+      #
+      # works for negative values of leftpad and rightpad
+      # adding no characters
+         #
+      if sright:  # don't add '.' if sright is ''
+        retval =  leftpad * ' ' + sleft + '.' + sright + rightpad * ' '
+      else:
+        rightpad += 1
+        retval =  leftpad * ' ' + sleft + rightpad * ' '
+      return (retval, len(retval), dpos);
+
+   else:
+      raise RuntimeError ("Illegal justification string " + jtype)
 
 def parse_goldstone_chunks(chunks, dbg=False):
     """Tries to parse the Goldstone target line (a split()'ed list of fields)
@@ -856,7 +1122,7 @@ def parse_goldstone_chunks(chunks, dbg=False):
 
 
 def fetch_goldstone_page():
-    """Fetches the Goldsotne page of radar targets, returning a BeautifulSoup
+    """Fetches the Goldstone page of radar targets, returning a BeautifulSoup
     page"""
 
     goldstone_url = 'http://echo.jpl.nasa.gov/asteroids/goldstone_asteroid_schedule.html'
@@ -869,8 +1135,8 @@ def fetch_goldstone_page():
 def fetch_goldstone_targets(page=None, dbg=False):
     """Fetches and parses the Goldstone list of radar targets, returning a list
     of object id's for the current year.
-    Takes either a BeautifulSoup page version of the Arecibo target page (from
-    a call to fetch_arecibo_page() - to allow  standalone testing) or  calls
+    Takes either a BeautifulSoup page version of the Goldstone target page (from
+    a call to fetch_goldstone_page() - to allow  standalone testing) or  calls
     this routine and then parses the resulting page.
     """
 
@@ -896,6 +1162,9 @@ def fetch_goldstone_targets(page=None, dbg=False):
             in_objects = True
         else:
             if in_objects is True:
+                if line.lstrip()[0:4].isdigit() is False:
+                    # Text comments in the table..
+                    continue
                 # Look for malformed comma-separated dates in the first part of
                 # the line and convert the first occurence to hyphens before
                 # splitting.
@@ -965,43 +1234,47 @@ def fetch_arecibo_targets(page=None):
         if len(tables) != 2 and len(tables) != 3 :
             logger.warning("Unexpected number of tables found in Arecibo page (Found %d)" % len(tables))
         else:
-            targets_table = tables[-1]
-            rows = targets_table.find_all('tr')
-            if len(rows) > 1:
-                for row in rows[1:]:
-                    items = row.find_all('td')
-                    target_object = items[0].text
-                    target_object = target_object.strip()
-                    # See if it is the form "(12345) 2008 FOO". If so, extract
-                    # just the asteroid number
-                    if '(' in target_object and ')' in target_object:
-                        # See if we have parentheses around the number or around the
-                        # temporary desigination.
-                        # If the first character in the string is a '(' we have the first
-                        # case and should split on the closing ')' and take the 0th chunk
-                        # If the first char is not a '(', then we have parentheses around
-                        # the temporary desigination and we should split on the '(', take
-                        # the 0th chunk and strip whitespace
-                        split_char = ')'
-                        if target_object[0] != '(':
-                            split_char = '('
-                        target_object = target_object.split(split_char)[0].replace('(', '')
+            for targets_table in tables[1:]:
+                rows = targets_table.find_all('tr')
+                if len(rows) > 1:
+                    for row in rows[1:]:
+                        items = row.find_all('td')
+                        target_object = items[0].text
                         target_object = target_object.strip()
-                    else:
-                        # No parentheses, either just a number or a number and name
-                        chunks = target_object.split(' ')
-                        if len(chunks) >= 2:
-                            if chunks[1].replace('-', '').isalpha() and len(chunks[1]) != 2:
-                                target_object = chunks[0]
-                            else:
-                                target_object = chunks[0] + " " + chunks[1]
+                        # See if it is the form "(12345) 2008 FOO". If so, extract
+                        # just the asteroid number
+                        if '(' in target_object and ')' in target_object:
+                            # See if we have parentheses around the number or around the
+                            # temporary desigination.
+                            # If the first character in the string is a '(' we have the first
+                            # case and should split on the closing ')' and take the 0th chunk
+                            # If the first char is not a '(', then we have parentheses around
+                            # the temporary desigination and we should split on the '(', take
+                            # the 0th chunk and strip whitespace
+                            split_char = ')'
+                            if target_object[0] != '(':
+                                split_char = '('
+                            target_object = target_object.split(split_char)[0].replace('(', '')
+                            target_object = target_object.strip()
                         else:
-                            logger.warning("Unable to parse Arecibo target %s" % target_object)
-                            target_object = None
-                    if target_object:
-                        targets.append(target_object)
-            else:
-                logger.warning("No targets found in Arecibo page")
+                            # No parentheses, either just a number or a number and name
+                            chunks = target_object.split(' ')
+                            if len(chunks) >= 2:
+                                if chunks[0].isalpha() and chunks[1].isalpha():
+                                    logger.warning("All text object found: " + target_object)
+                                    target_object = None
+                                else:
+                                    if chunks[1].replace('-', '').isalpha() and len(chunks[1]) != 2:
+                                        target_object = chunks[0]
+                                    else:
+                                        target_object = chunks[0] + " " + chunks[1]
+                            else:
+                                logger.warning("Unable to parse Arecibo target %s" % target_object)
+                                target_object = None
+                        if target_object:
+                            targets.append(target_object)
+                else:
+                    logger.warning("No targets found in Arecibo page")
     return targets
 
 
@@ -1107,13 +1380,14 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
         return []
     return NASA_targets
 
+
 def get_site_status(site_code):
-    '''Queries the Valhalla telescope states end point to determine if the
+    """Queries the Valhalla telescope states end point to determine if the
     passed <site_code> is available for scheduling.
     Returns True if the site/telescope is available for scheduling and
     assumed True if the status can't be determined. Otherwise if the
     last event for the telescope can be found and it does not show
-    'AVAILABLE', then the good_to_schedule status is set to False.'''
+    'AVAILABLE', then the good_to_schedule status is set to False."""
 
     good_to_schedule = True
     reason = ''
@@ -1146,6 +1420,7 @@ def fetch_yarkovsky_targets(yark_targets):
     yark_target_list = []
 
     for obj_id in yark_targets:
+        obj_id = obj_id.strip()
         if '_' in obj_id:
             obj_id = str(obj_id).replace('_', ' ')
         yark_target_list.append(obj_id)
@@ -1198,10 +1473,9 @@ def fetch_sfu(page=None):
 
 
 def make_location(params):
-    location = {
-        'site'            : params['site'].lower(),
-        'telescope_class' : params['pondtelescope'][0:3]
-    }
+    location = {'telescope_class' : params['pondtelescope'][0:3]}
+    if params.get('site', None):
+        location['site'] = params['site'].lower()
     if params['site_code'] == 'W85':
         location['telescope'] = '1m0a'
         location['observatory'] = 'doma'
@@ -1304,13 +1578,14 @@ def make_molecule(params, exp_filter):
             ag_mode = 'OFF'
             molecule['exposure_count'] = 1
             molecule['exposure_time'] = 60.0
-            if params['exp_type'].upper() == 'LAMP_FLAT' and 'slit_6.0as' in params['spectra_slit'] and 'COJ' in params['site'].upper():
+            if params['exp_type'].upper() == 'LAMP_FLAT' and 'slit_6.0as' in params['spectra_slit']:
                 molecule['exposure_time'] = 20.0
         molecule['spectra_slit'] = params['spectra_slit']
         molecule['ag_mode'] = ag_mode
         molecule['ag_name'] = ''
         molecule['acquire_mode'] = 'BRIGHTEST'
-        molecule['ag_exp_time'] = 10
+        molecule['ag_exp_time'] = params.get('ag_exp_time', 10)
+        molecule['acquire_exp_time'] = params.get('ag_exp_time', 10)
         if 'source_type' in params:  # then Sidereal target (use smaller window)
             molecule['acquire_radius_arcsec'] = 5.0
         else:
@@ -1361,10 +1636,12 @@ def make_molecules(params):
 def make_constraints(params):
     constraints = {
                     # 'max_airmass' : 2.0,    # 30 deg altitude (The maximum airmass you are willing to accept)
-                    'max_airmass' : 1.74,   # 35 deg altitude (The maximum airmass you are willing to accept)
+                    # 'max_airmass' : 1.74,   # 35 deg altitude (The maximum airmass you are willing to accept)
                     # 'max_airmass' : 1.55,   # 40 deg altitude (The maximum airmass you are willing to accept)
                     # 'max_airmass' : 2.37,   # 25 deg altitude (The maximum airmass you are willing to accept)
-                    'min_lunar_distance': 30
+                    # 'min_lunar_distance': 30
+                    'max_airmass' : params.get('max_airmass', 1.74),
+                    'min_lunar_distance' : params.get('min_lunar_distance', 30)
                   }
     return constraints
 
@@ -1480,7 +1757,7 @@ def make_cadence_valhalla(request, params, ipp_value, debug=False):
             print('Request {0} window start: {1} window end: {2}'.format(
                 i, request['windows'][0]['start'], request['windows'][0]['end']
             ))
-            i = i + 1
+            i += 1
 
     return cadence_user_request
 
@@ -1513,12 +1790,15 @@ def configure_defaults(params):
 
     params['pondtelescope'] = '1m0'
     params['observatory'] = ''
-    params['site'] = site_list[params['site_code']]
+    try:
+        params['site'] = site_list[params['site_code']]
+    except KeyError:
+        pass
     params['binning'] = 1
     params['instrument'] = '1M0-SCICAM-SINISTRO'
     params['exp_type'] = 'EXPOSE'
 
-    if params['site_code'] == 'F65' or params['site_code'] == 'E10':
+    if params['site_code'] in ['F65', 'E10', '2M0']:
         params['instrument'] = '2M0-SCICAM-SPECTRAL'
         params['binning'] = 2
         params['pondtelescope'] = '2m0'
@@ -1526,12 +1806,13 @@ def configure_defaults(params):
             params['exp_type'] = 'SPECTRUM'
             params['instrument'] = '2M0-FLOYDS-SCICAM'
             params['binning'] = 1
+            # params['ag_exp_time'] = 10
             if params.get('solar_analog', False) and len(params.get('calibsource', {})) > 0:
-                params['calibsrc_exptime'] = 60.0
+                params['calibsrc_exptime'] = params['calibsource']['calib_exptime']
             if params.get('filter', None):
                 del(params['filter'])
             params['spectra_slit'] = 'slit_6.0as'
-    elif params['site_code'] in ['Z17', 'Z21', 'W89', 'W79', 'T03', 'T04', 'Q58', 'Q59', 'V38', 'L09']:
+    elif params['site_code'] in ['Z17', 'Z21', 'W89', 'W79', 'T03', 'T04', 'Q58', 'Q59', 'V38', 'L09', '0M4']:
         params['instrument'] = '0M4-SCICAM-SBIG'
         params['pondtelescope'] = '0m4'
         params['binning'] = 1
@@ -1579,7 +1860,7 @@ def make_userrequest(elements, params):
 
     request = {
             "location": location,
-            "acceptability_threshold": 90,
+            "acceptability_threshold": params.get('acceptability_threshold', 90),
             "constraints": constraints,
             "target": target,
             "molecules": molecule_list,
@@ -1595,8 +1876,11 @@ def make_userrequest(elements, params):
         cal_target = make_target(params)
         exp_time = params['exp_time']
         params['exp_time'] = params['calibsrc_exptime']
+        ag_exptime = params.get('ag_exp_time', 10)
+        params['ag_exp_time'] = 10
         cal_molecule_list = make_molecules(params)
         params['exp_time'] = exp_time
+        params['ag_exp_time'] = ag_exptime
 
         cal_request = {
                         "location": location,
@@ -1609,10 +1893,7 @@ def make_userrequest(elements, params):
     else:
         cal_request = {}
 
-# If site is ELP, increase IPP value
-    ipp_value = 1.00
-    if params['site_code'] == 'V37':
-        ipp_value = 1.00
+    ipp_value = params.get('ipp_value', 1.0)
 
 # Add the Request to the outer User Request
     if 'period' in params.keys() and 'jitter' in params.keys():
@@ -1627,83 +1908,7 @@ def make_userrequest(elements, params):
     return user_request
 
 
-def check_for_perturbation(elements, params):
-    """
-    Check if target orbit needs perturbed elements sent to telescope
-    """
-
-    # compare unperturbed and perturbed coordinates at begining of night
-    emp_line_base = compute_ephem(params['start_time'], elements, params['site_code'], dbg=False, perturb=False, display=False)
-    emp_line_perturb = compute_ephem(params['start_time'], elements, params['site_code'], dbg=False, perturb=True, display=False)
-
-    # assaign Magnitude and position angle
-    if emp_line_base[3] and emp_line_base[3] > 0:
-        elements['v_mag'] = emp_line_base[3]
-    elements['sky_pa'] = emp_line_base[7]
-
-    # Calculate offset in arcseconds between two coordinates
-    try:
-        offset = degrees(S.sla_dsep(emp_line_base[1], emp_line_base[2], emp_line_perturb[1], emp_line_perturb[2])) * 3600
-    except IndexError:
-        logger.error("Could not compute perturbation coordinates")
-        offset = 0
-
-    # Compare with find_orb generated ephemeris
-    offset2 = 0
-    if params.get('findorb_ephem', None) is not None:
-        emp_start = params['findorb_ephem']
-        if emp_start is not None:
-            offset2 = degrees(S.sla_dsep(emp_line_base[1], emp_line_base[2], emp_start[1], emp_start[2])) * 3600
-
-    logger.info("Offset between perturbed and unperturbed position is %s arcseconds" % offset)
-    logger.info("Offset between find_orb  and unperturbed position is %s arcseconds" % offset2)
-
-    # Check if offset is "reasonable"
-    # Ignore if too small (won't matter)
-    # Ignore if too large (possible error. Should calculate new orbit instead)
-    if 1 < offset < 300:
-        logger.info("Perturbing Elements")
-        comet = False
-        if 'elements_type' in elements and str(elements['elements_type']).upper() == 'MPC_COMET':
-            comet = True
-
-        # Convert MJD(UTC) to MJD(TT)
-        mjd_utc = datetime2mjd_utc(params['start_time'])
-        mjd_tt = mjd_utc2mjd_tt(mjd_utc)
-
-        p_orbelems, p_epoch_mjd, j = perturb_elements(elements, elements['epochofel_mjd'], mjd_tt, comet, True)
-
-        if j != 0:
-            logger.error("Perturbing error=%s" % j)
-            return elements
-        if comet is True:
-            elements['epochofperih'] = p_epoch_mjd
-            elements['perihdist']    = p_orbelems['SemiAxisOrQ']
-        else:
-            elements['epochofel'] = mjd_utc2datetime(p_epoch_mjd)
-            elements['epochofel_mjd'] = p_epoch_mjd
-            elements['meandist']  = p_orbelems['SemiAxisOrQ']
-        elements['longascnode'] = degrees(p_orbelems['LongNode'])
-        elements['orbinc']      = degrees(p_orbelems['Inc'])
-        elements['argofperih']  = degrees(p_orbelems['ArgPeri'])
-        elements['eccentricity']= p_orbelems['Ecc']
-        elements['meananom']    = degrees(p_orbelems['MeanAnom'])
-        if emp_line_perturb[3] and emp_line_perturb[3] > 0:
-            elements['v_mag'] = emp_line_perturb[3]
-        elements['sky_pa'] = emp_line_perturb[7]
-    elif offset >= 100:
-        logger.error("Position offset large (%s arcsec). Consider updating orbit." % offset)
-
-    return elements
-
-
 def submit_block_to_scheduler(elements, params):
-
-    try:
-        if params['spectroscopy'] is not False and abs(elements['epochofel'] - params['start_time']) > timedelta(days=1):
-            elements = check_for_perturbation(elements, params)
-    except KeyError:
-        pass
 
     user_request = make_userrequest(elements, params)
 
@@ -1722,18 +1927,27 @@ def submit_block_to_scheduler(elements, params):
         return False, params
 
     if resp.status_code not in [200, 201]:
-        msg = "Parsing error"
-        logger.error(msg)
         logger.error(resp.json())
+        msg = "Parsing error"
         try:
-            error_msg = resp.json()
-            error_msg = error_msg.get('requests', msg)
-            if len(error_msg) == 1:
+            error_json = resp.json()
+            error_msg = error_json.get('requests', msg)
+            if len(error_msg) >= 1:
                 error_msg = error_msg[0].get('non_field_errors', msg)
                 msg = error_msg[0]
+            elif error_json.get('non_field_errors', None) is not None:
+                error_msg = error_json.get('non_field_errors', msg)
+                msg = error_msg[0]
         except AttributeError:
-            msg = "Unable to decode response from Valhalla"
+            try:
+                msg = user_request['errors']
+            except KeyError:
+                try:
+                    msg = user_request['proposal'][0]
+                except KeyError:
+                    msg = "Unable to decode response from Valhalla"
         params['error_msg'] = msg
+        logger.error(msg)
         return False, params
 
     response = resp.json()
@@ -1792,7 +2006,7 @@ def parse_filter_file(site, spec, camera_list=None):
             chunks = line.split(' ')
             chunks = list(filter(None, chunks))
             if len(chunks) == 13:
-                if chunks[0] == siteid and chunks[2][:-1] == telid[:-1]:
+                if (chunks[0] == siteid or siteid == 'xxx') and chunks[2][:-1] == telid[:-1]:
                     filt_list = chunks[12].split(',')
                     for filt in filter_list:
                         if filt in filt_list and filt not in site_filters:
@@ -1807,19 +2021,13 @@ def parse_filter_file(site, spec, camera_list=None):
 
 
 def fetch_taxonomy_page(page=None):
-    """Fetches Taxonomy data to be compared against database. First from PDS, then from Binzel 2004"""
+    """Fetches Taxonomy data to be compared against database."""
 
     if page is None:
         taxonomy_url = 'https://sbn.psi.edu/archive/bundles/ast_taxonomy/data/taxonomy10.tab'
         data_file = fetchpage_and_make_soup(taxonomy_url)
         # data_file = urllib.request.urlopen(taxonomy_url)
         data_out = parse_taxonomy_data(data_file)
-
-        # Binzel_taxonomy_page appears to be completely included within PDS Version6.0
-        # binzel_taxonomy_page = os.path.join('astrometrics', 'binzel_tax.dat')
-        # with open(binzel_taxonomy_page, 'r') as input_file:
-        #    binzel_out=parse_binzel_data(input_file)
-        # data_out=data_out+binzel_out
     else:
         with open(page, 'r') as input_file:
             data_out = parse_taxonomy_data(input_file.read())
@@ -1845,64 +2053,61 @@ def parse_binzel_data(tax_text=None):
 def parse_taxonomy_data(tax_text=None):
     """Parses the online taxonomy database for targets and pulls a list
     of these targets back.
+    PDS table has 125 characters/line (chunks = 16 once names/notes removed)
+    SDSS table has 117 characters/line (chunks = 6 once names/extra removed)
     """
 
     tax_text = str(tax_text).replace("\r", '\n').split("\n")
     tax_text = list(filter(None, tax_text))
-    # print(len(tax_text))
+
     tax_scheme = ['T',
                 'Ba',
                 'Td',
                 'H',
                 'S',
                 'B',
-                '3T/3B',
+                ['3T', '3B'],
                 'BD',
                 ]
     tax_table = []
+    if len(tax_text[0]) == 117:
+            offset = -1
+    else:
+        offset = 0
     for line in tax_text:
-        name = line[8:25]
-        end = line[103:]
-        line = line[:8]+line[26:104]
+        number = line[:8+offset].strip()
+        name = line[8+offset:25+offset].strip()
+        prov = line[25+offset:37+offset].strip()
+        end = line[103+offset*44:].strip()
+        line = line[36+offset:103+offset*44]
         chunks = line.split(' ')
         chunks = list(filter(None, chunks))
-        if chunks[0] != '':
-            if chunks[1] != '-':
-                chunks[1] = chunks[1]+' '+chunks[2]
-                del chunks[2]
-            chunks.insert(1, name)
-            if ',' in chunks[18]:
-                chunks[18] = chunks[18][:2]
-                chunks.insert(19, chunks[18][3:])
-            # print(chunks[0],len(chunks))
-            # parse Object ID=Object Number or Provisional designation if no number
-            if chunks[0] != '0':
-                obj_id = (chunks[0])
-            else:
-                obj_id = (chunks[2])
-            # Build Taxonomy reference table. This is clunky. Better to search table for matching values first?
-            index = range(1, 7)
-            index = [2*x+1 for x in index]+[17]
+        # parse Object ID=Object Number or Provisional designation if no number
+        if number != '0':
+            obj_id = number
+        else:
+            obj_id = prov
+        # Build Taxonomy reference table.
+        if len(chunks) == 6:
+            out = '{}|{}|{}'.format(chunks[1], chunks[2], chunks[5])
+            row = [obj_id, chunks[0], 'Sd', "SDSS", out]
+            tax_table.append(row)
+        elif len(chunks) == 16:
+            index = range(0, 8)
+            index = [2*x for x in index]+[13]
             for i in index:
+                out = ' '
                 if chunks[i] != '-':
-                    if end[0] != '-':
-                        chunks[i+1] = chunks[i+1] + "|" + end
-                    row = [obj_id, chunks[i], tax_scheme[(i-1)//2-1], "PDS6", chunks[i+1]]
+                    if i == 12 or i == 13:
+                        scheme = tax_scheme[6][i-12]
+                    else:
+                        if end[0] != '-':
+                            out = chunks[i+1] + "|" + end
+                        else:
+                            out = chunks[i+1]
+                        scheme = tax_scheme[i//2]
+                    row = [obj_id, chunks[i], scheme, "PDS6", out]
                     tax_table.append(row)
-            if chunks[15] != '-':
-                if end[0] != '-':
-                    out = end
-                else:
-                    out = ' '
-                row = [obj_id, chunks[15], "3T", "PDS6", out]
-                tax_table.append(row)
-            if chunks[16] != '-':
-                if end[0] != '-':
-                    out = end
-                else:
-                    out = ' '
-                row = [obj_id, chunks[16], "3B", "PDS6", out]
-                tax_table.append(row)
     return tax_table
 
 
@@ -2147,24 +2352,24 @@ def fetch_flux_standards(page=None, filter_optical_model=True, dbg=False):
         logger.warning("Passed page object was not a BeautifulSoup object")
     return flux_standards
 
+
 def read_solar_standards(standards_file):
 
     standards = {}
 
-    data = ascii.read(standards_file, format='fixed_width_no_header', \
-        names=('Name', 'RA', 'Dec', 'Vmag'), col_starts=(4,25,37,49))
+    data = ascii.read(standards_file, format='fixed_width_no_header', names=('Name', 'RA', 'Dec', 'Vmag'), col_starts=(4, 25, 37, 49))
     for row in data:
         name = row['Name'].replace('Land', 'Landolt').replace('(SA) ', 'SA')
         nstart = 1
         nstart, ra, status = S.sla_dafin(row['RA'].replace(':', ' '), nstart)
         if status == 0:
-            ra = ra * 15.0
+            ra *= 15.0
         else:
             ra = None
         nstart = 1
         nstart, dec, status = S.sla_dafin(row['Dec'].replace(':', ' '), nstart)
         if status != 0:
             dec = None
-        Vmag = row['Vmag']
-        standards[name] = { 'ra_rad' : ra, 'dec_rad' : dec, 'mag' : Vmag, 'spectral_type' : 'G2V' }
+        v_mag = row['Vmag']
+        standards[name] = { 'ra_rad' : ra, 'dec_rad' : dec, 'mag' : v_mag, 'spectral_type' : 'G2V'}
     return standards

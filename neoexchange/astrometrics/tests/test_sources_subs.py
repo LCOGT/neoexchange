@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2014-2018 LCO
+Copyright (C) 2014-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -28,11 +28,11 @@ from django.forms.models import model_to_dict
 
 from core.models import Body, Proposal, Block
 from astrometrics.ephem_subs import determine_darkness_times
-from neox.tests.mocks import MockDateTime, mock_expand_cadence
-from core.views import record_block, create_calib_sources
+from astrometrics.time_subs import datetime2mjd_utc
+from neox.tests.mocks import MockDateTime, mock_expand_cadence, mock_fetchpage_and_make_soup
+from core.views import record_block, create_calib_sources, compute_vmag_pa
 # Import module to test
 from astrometrics.sources_subs import *
-from astrometrics.time_subs import datetime2mjd_utc
 
 
 # Disable logging during testing
@@ -40,6 +40,148 @@ import logging
 logger = logging.getLogger(__name__)
 # Disable anything below CRITICAL level
 logging.disable(logging.CRITICAL)
+
+
+class TestPackedToNormal(TestCase):
+
+    def test_too_short_6(self):
+
+        self.assertRaises(PackedError, packed_to_normal, 'K19E00')
+
+    def test_too_long_8(self):
+
+        self.assertRaises(PackedError, packed_to_normal, 'K19E0042')
+
+    def test_bad_halfmonth_lc(self):
+
+        self.assertRaises(PackedError, packed_to_normal, 'J99a01A')
+
+    def test_bad_halfmonth_I(self):
+
+        self.assertRaises(PackedError, packed_to_normal, 'J99I01I')
+
+    def test_bad_halfmonth_Z(self):
+
+        self.assertRaises(PackedError, packed_to_normal, 'J99Z01Z')
+
+    def test_bad_halfmonth_order_lc(self):
+
+        self.assertRaises(PackedError, packed_to_normal, 'J99A01a')
+
+    def test_bad_halfmonth_order_space(self):
+
+        self.assertRaises(PackedError, packed_to_normal, 'J99A01 ')
+
+    def test_bad_halfmonth_Zorder_dash(self):
+
+        self.assertRaises(PackedError, packed_to_normal, 'J99A01-')
+
+    def test_bad_year(self):
+
+        self.assertRaises(PackedError, packed_to_normal, 'JabA01A')
+
+    def test_bad_chars(self):
+
+        self.assertRaises(PackedError, packed_to_normal, 'abcde')
+
+    def test_ast_00001(self):
+        expected = '1'
+
+        result = packed_to_normal('00001')
+
+        self.assertEqual(expected, result)
+
+    def test_ast_00433(self):
+        expected = '433'
+
+        result = packed_to_normal('00433')
+
+        self.assertEqual(expected, result)
+
+    def test_ast_06478(self):
+        expected = '6478'
+
+        result = packed_to_normal('06478')
+
+        self.assertEqual(expected, result)
+
+    def test_ast_99942(self):
+        expected = '99942'
+
+        result = packed_to_normal('99942')
+
+        self.assertEqual(expected, result)
+
+    def test_ast_A0001(self):
+        expected = '100001'
+
+        result = packed_to_normal('A0001')
+
+        self.assertEqual(expected, result)
+
+    def test_ast_a0001(self):
+        expected = '360001'
+
+        result = packed_to_normal('a0001')
+
+        self.assertEqual(expected, result)
+
+    def test_ast_I99A01A(self):
+        expected = '1899 AA1'
+
+        result = packed_to_normal('I99A01A')
+
+        self.assertEqual(expected, result)
+
+    def test_ast_J23P00F(self):
+        expected = '1923 PF'
+
+        result = packed_to_normal('J23P00F')
+
+        self.assertEqual(expected, result)
+
+    def test_ast_K03P00F(self):
+        expected = '2003 PF'
+
+        result = packed_to_normal('K03P00F')
+
+        self.assertEqual(expected, result)
+
+    def test_com_PK05Y020(self):
+        expected = 'P/2005 Y2'
+
+        result = packed_to_normal('PK05Y020')
+
+        self.assertEqual(expected, result)
+
+    def test_com_PK16B14A(self):
+        expected = 'P/2016 BA14'
+
+        result = packed_to_normal('PK16B14A')
+
+        self.assertEqual(expected, result)
+
+    def test_com_PK11WB3G(self):
+        expected = 'P/2011 WG113'
+
+        result = packed_to_normal('PK11WB3G')
+
+        self.assertEqual(expected, result)
+
+    def test_com_CJ83J010(self):
+        expected = 'C/1983 J1'
+
+        result = packed_to_normal('CJ83J010')
+
+        self.assertEqual(expected, result)
+
+    def test_com_PK13R03b(self):
+        expected = 'P/2013 R3-B'
+
+        result = packed_to_normal('PK13R03b')
+
+        self.assertEqual(expected, result)
+
 
 class TestGoldstoneChunkParser(TestCase):
     """Unit tests for the sources_subs.parse_goldstone_chunks() method"""
@@ -131,6 +273,10 @@ class TestFetchAreciboTargets(TestCase):
         self.test_arecibo_page_v2 = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
 
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_arecibo_page_v3.html'), 'r')
+        self.test_arecibo_page_v3 = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
         self.maxDiff = None
 
     def test_basics(self):
@@ -212,6 +358,31 @@ class TestFetchAreciboTargets(TestCase):
 
         self.assertEqual(expected_targets, targets)
 
+    def test_targets_v3(self):
+        expected_targets = [ u'2016 AZ8',
+                             u'433',
+                             u'2013 CW32',
+                             u'455176',
+                             u'2015 EG',
+                             u'88254',
+                             u'2019 AV2',
+                             u'2019 AP11',
+                             u'2019 BJ1',
+                             u'2019 BW1',
+                             u'2019 BH1',
+                             u'2019 BF1',
+                             u'2018 VX8']
+
+        targets = fetch_arecibo_targets(self.test_arecibo_page_v3)
+
+        self.assertEqual(expected_targets, targets)
+
+    @patch('astrometrics.sources_subs.fetchpage_and_make_soup', mock_fetchpage_and_make_soup)
+    def test_page_down(self):
+        expected_targets = []
+        targets = fetch_arecibo_targets()
+        self.assertEqual(expected_targets, targets)
+
 
 class TestFetchGoldstoneTargets(TestCase):
 
@@ -220,17 +391,24 @@ class TestFetchGoldstoneTargets(TestCase):
         test_fh = open(os.path.join('astrometrics', 'tests', 'test_goldstone_page.html'), 'r')
         self.test_goldstone_page = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_goldstone_page_v2.html'), 'r')
+        self.test_goldstone_page_v2 = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
 
         self.maxDiff = None
 
+    @patch('astrometrics.sources_subs.datetime', MockDateTime)
     def test_basics(self):
+        MockDateTime.change_datetime(2018, 4, 6, 2, 0, 0)
         expected_length = 49
 
         targets = fetch_goldstone_targets(self.test_goldstone_page)
 
         self.assertEqual(expected_length, len(targets))
 
+    @patch('astrometrics.sources_subs.datetime', MockDateTime)
     def test_targets(self):
+        MockDateTime.change_datetime(2018, 4, 6, 2, 0, 0)
         expected_targets = [ '3200',
                              '2017 VT14',
                              '2017 WX12',
@@ -283,6 +461,46 @@ class TestFetchGoldstoneTargets(TestCase):
                              '433']
 
         targets = fetch_goldstone_targets(self.test_goldstone_page)
+
+        self.assertEqual(expected_targets, targets)
+
+    @patch('astrometrics.sources_subs.datetime', MockDateTime)
+    def test_targets_with_extra(self):
+        MockDateTime.change_datetime(2019, 4, 8, 2, 0, 0)
+        expected_targets = [ '163081',
+                             '522684',
+                             '2008 HS3',
+                             '2018 VX8',
+                             '68950',
+                             '66391',
+                             '2011 HP',
+                             '441987',
+                             '494999',
+                             '10145',
+                             '293054',
+                             '2010 PK9',
+                             '2005 CL7',
+                             '454094',
+                             '153814',
+                             '141593',
+                             '66146',
+                             '1620',
+                             '237805',
+                             '467317',
+                             '2100',
+                             '297418',
+                             '2010 CO1',
+                             '1998 FF14',
+                             '162082',
+                             '2015 JD1',
+                             '2010 JG',
+                             '481394',
+                             '2011 YS62',
+                             '2011 WN15',
+                             '264357',
+                             '216258']
+
+        targets = fetch_goldstone_targets(self.test_goldstone_page_v2)
 
         self.assertEqual(expected_targets, targets)
 
@@ -370,6 +588,44 @@ class TestFetchGoldstoneTargets(TestCase):
         self.assertEqual(1, len(targets))
         self.assertEqual(expected_target, targets)
 
+
+class TestFetchYarkovskyTargets(TestCase):
+
+    def test_read_from_file(self):
+        expected_targets = [ '1999 NW2',
+                             '2015 BG4',
+                             '2009 SY',
+                             '455184',
+                             '1998 VS',
+                             '2002 JW15']
+
+        targets = [  '1999 NW2\n',
+                     '2015 BG4\n',
+                     '2009 SY\n',
+                     '455184\n',
+                     '1998 VS\n',
+                     '2002 JW15\n']
+
+        target_list = fetch_yarkovsky_targets(targets)
+
+        self.assertEqual(expected_targets, target_list)
+
+    def test_read_from_commandline(self):
+        expected_targets = [ '433',
+                             '1999 NW2',
+                             '2015 BG4',
+                             '455184',
+                             '2002 JW15']
+
+        targets = [  '433',
+                     '1999_NW2',
+                     '2015_BG4',
+                     '455184',
+                     '2002_JW15']
+
+        target_list = fetch_yarkovsky_targets(targets)
+
+        self.assertEqual(expected_targets, target_list)
 
 class TestSubmitBlockToScheduler(TestCase):
 
@@ -540,6 +796,32 @@ class TestSubmitBlockToScheduler(TestCase):
         self.assertEqual(user_request['requests'][0]['windows'][0]['start'], dark_start.strftime('%Y-%m-%dT%H:%M:%S'))
         self.assertEqual(user_request['requests'][0]['location'].get('telescope', None), None)
 
+    def test_make_generic_userrequest(self):
+
+        site_code = '2M0'
+        utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 18,
+                    'exp_time' : 50.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson',
+                    'filter_pattern' : 'w'
+                 }
+
+        user_request = make_userrequest(self.body_elements, params)
+
+        self.assertEqual(user_request['submitter'], 'bsimpson')
+        self.assertEqual(user_request['requests'][0]['windows'][0]['start'], dark_start.strftime('%Y-%m-%dT%H:%M:%S'))
+        self.assertEqual(user_request['requests'][0]['windows'][0]['end'], dark_end.strftime('%Y-%m-%dT%H:%M:%S'))
+        self.assertEqual(dark_start + timedelta(days=1), dark_end)
+        self.assertEqual(user_request['requests'][0]['location'].get('telescope', None), None)
+        self.assertEqual(user_request['requests'][0]['location'].get('site', None), None)
+        self.assertEqual(user_request['requests'][0]['location']['telescope_class'], '2m0')
+
     def test_make_spectra_userrequest(self):
         body_elements = model_to_dict(self.body)
         body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
@@ -560,7 +842,7 @@ class TestSubmitBlockToScheduler(TestCase):
                     'spectra_slit' : 'slit_6.0as'
                  }
 
-        body_elements = check_for_perturbation(body_elements, params)
+        body_elements = compute_vmag_pa(body_elements, params)
         user_request = make_userrequest(body_elements, params)
 
         self.assertAlmostEqual(user_request['requests'][0]['target']['vmag'], 20.88, 2)
@@ -816,7 +1098,7 @@ class TestSubmitBlockToScheduler(TestCase):
                     'start_time' :  utc_date + timedelta(hours=5),
                     'end_time'   :  utc_date + timedelta(hours=15),
                     'solar_analog' : True,
-                    'calibsource' : { 'name' : 'SA107-684', 'ra_deg' : 234.3254167, 'dec_deg' : -0.163889},
+                    'calibsource' : { 'name' : 'SA107-684', 'ra_deg' : 234.3254167, 'dec_deg' : -0.163889, 'calib_exptime': 60},
                   }
         expected_num_requests = 2
         expected_operator = 'MANY'
@@ -978,6 +1260,13 @@ class TestPreviousNEOCPParser(TestCase):
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
 
+    def test_probably_not_real_object(self):
+        items = [' SWAN was probably not a real object (Dec. 9.68 UT)\n']
+        expected = ['SWAN', 'doesnotexist' , '', '(Dec. 9.68 UT)']
+
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
     def test_non_neo(self):
 
         items = [u' 2015 QF', BeautifulSoup('<sub>   </sub>', "html.parser").sub, u' = WQ39346(Aug. 19.79 UT)\n']
@@ -1059,6 +1348,43 @@ class TestPreviousNEOCPParser(TestCase):
             BeautifulSoup(' <a href="/mpec/K18/K18E18.html"><i>MPEC</i> 2018-E18</a>', "html.parser").a,
             u']\n']
         expected = [u'ZC82561', u'A/2018 C2', u'MPEC 2018-E18', u'(Mar. 4.95 UT)']
+
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+    def test_new_with_mpec(self):
+        items = [' 2006 GC = P10MSkj (Apr. 7.98 UT)   [see ',
+            BeautifulSoup('<a href="/mpec/K19/K19G75.html"><i>MPEC</i> 2019-G75</a>', "html.parser").a,
+            ']\n']
+        expected = [u'P10MSkj', u'2006 GC', u'MPEC 2019-G75', u'(Apr. 7.98 UT)']
+
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+    def test_new_crossmatch(self):
+        items = ['ZTF02tx = C075WX1 (Apr. 8.66 UT)\n']
+        expected = [u'C075WX1', 'ZTF02tx', '', '(Apr. 8.66 UT)']
+ 
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+    def test_new_crossmatch2(self):
+        items = [' 2019 GR',  BeautifulSoup('<sub>3</sub>', "html.parser").sub, ' = P10Mrzv (Apr. 8.96 UT)\n']
+        expected = [u'P10Mrzv', '2019 GR3', '', '(Apr. 8.96 UT)']
+ 
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+    def test_new_crossmatch3(self):
+        items = [' 2017 QE = P10MWVQ (Apr. 7.90 UT)\n']
+        expected = [u'P10MWVQ', '2017 QE', '', '(Apr. 7.90 UT)']
+
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+    def test_remove_parentheses(self):
+        items = [' (455176) = A10c9Hv (Feb. 15.79 UT)\n']
+        expected = [u'A10c9Hv', '455176', '', '(Feb. 15.79 UT)']
 
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
@@ -1425,6 +1751,83 @@ class TestParseNEOCPExtraParams(TestCase):
             self.assertEqual(expected_obj_ids[obj][1], obj_ids[obj][1])
             obj += 1
 
+    def test_parse_neocpep_new_dates_good_multi_entries(self):
+        html = BeautifulSoup(self.table_header +
+                             '''
+        <tr><td><span style="display:none">P10OkU8</span>&nbsp;<input type="checkbox" name="obj" VALUE="P10OkU8"> P10OkU8</td>
+        <td align="right"><span style="display:none">100</span>100&nbsp;&nbsp;&nbsp;</td>
+        <td>&nbsp;&nbsp;2019 05 30.3&nbsp;&nbsp;</td>
+        <td><span style="display:none">135.5475</span>&nbsp;&nbsp;13 33.0&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">052.7566</span>&nbsp;&nbsp;-37 14&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">29.5</span>&nbsp;&nbsp;20.5&nbsp;&nbsp;</td>
+        <td><span style="display:none">J2458634.158700</span>&nbsp;Added May 30.66 UT&nbsp;</td>
+        <td align="center">&nbsp;&nbsp;</td>
+        <td align="right">&nbsp;   4&nbsp;</td>
+        <td align="right">&nbsp;  0.03&nbsp;</td>
+        <td align="right">&nbsp;20.8&nbsp;</td>
+        <td align="right">&nbsp; 0.595&nbsp;</td><tr>
+        <tr><td><span style="display:none">A10dYck</span>&nbsp;<input type="checkbox" name="obj" VALUE="A10dYck"> A10dYck</td>
+        <td align="right"><span style="display:none">100</span>100&nbsp;&nbsp;&nbsp;</td>
+        <td>&nbsp;&nbsp;2019 05 30.4&nbsp;&nbsp;</td>
+        <td><span style="display:none">156.4714</span>&nbsp;&nbsp;14 56.7&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">054.0014</span>&nbsp;&nbsp;-35 59&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">31.4</span>&nbsp;&nbsp;18.6&nbsp;&nbsp;</td>
+        <td><span style="display:none">J2458634.129509</span>&nbsp;Updated May 30.63 UT&nbsp;</td>
+        <td align="center">&nbsp;&nbsp;</td>
+        <td align="right">&nbsp;   7&nbsp;</td>
+        <td align="right">&nbsp;  0.23&nbsp;</td>
+        <td align="right">&nbsp;21.6&nbsp;</td>
+        <td align="right">&nbsp; 0.281&nbsp;</td><tr>
+        ''' + self.table_footer, "html.parser")
+
+        obj_ids = parse_NEOCP_extra_params(html)
+        expected_obj_ids = [(u'P10OkU8', {'score' : 100,
+                                        'discovery_date' : datetime(2019, 5, 30, 7, 12, 00),
+                                        'num_obs' : 4,
+                                        'arc_length' : 0.03,
+                                        'not_seen' :  0.595,
+                                        'update_time': datetime(2019, 5, 30, 15, 48, 32),
+                                        'updated' : False
+                                }),
+                           (u'A10dYck', {'score' : 100,
+                                        'discovery_date' : datetime(2019, 5, 30, 9, 36, 00),
+                                        'num_obs' : 7,
+                                        'arc_length' : 0.23,
+                                        'not_seen' :  0.281,
+                                        'update_time': datetime(2019, 5, 30, 15, 6, 30),
+                                        'updated' : True
+                                })
+        ]
+        self.assertNotEqual(None, obj_ids)
+        obj = 0
+        while obj < len(expected_obj_ids):
+            self.assertEqual(expected_obj_ids[obj][0], obj_ids[obj][0])
+            self.assertEqual(expected_obj_ids[obj][1], obj_ids[obj][1])
+            obj += 1
+
+    @patch('astrometrics.sources_subs.fetchpage_and_make_soup', mock_fetchpage_and_make_soup)
+    def test_parse_neocpep_pccp_page_down(self):
+        """Test of 'Moved to the PCCP' entries"""
+
+        html = BeautifulSoup(self.table_header +
+                             '''
+        <tr><td><span style="display:none">WR0159E</span><center>WR0159E</center></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Moved to the <a href="/iau/NEO/pccp_tabular.html">PCCP</a></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td><td></td></tr>
+        ''' + self.table_footer, "html.parser")
+
+        obj_ids = parse_NEOCP_extra_params(html)
+        expected_obj_ids = []
+        self.assertEqual(expected_obj_ids, obj_ids)
+
 
 class TestParsePCCP(TestCase):
 
@@ -1557,6 +1960,84 @@ class TestParsePCCP(TestCase):
             self.assertEqual(expected_obj_ids[obj][1], obj_ids[obj][1])
             obj += 1
 
+    def test_parse_pccp_newdates_multientries(self):
+
+        html = BeautifulSoup(self.table_header +
+                             '''
+        <tr><td><span style="display:none">A10dRr5</span>&nbsp;<input type="checkbox" name="obj" VALUE="A10dRr5"> A10dRr5</td>
+        <td align="right"><span style="display:none">086</span> 86&nbsp;&nbsp;&nbsp;</td>
+        <td>&nbsp;&nbsp;2019 05 27.6&nbsp;&nbsp;</td>
+        <td><span style="display:none">226.1313</span>&nbsp;&nbsp;19 35.4&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">154.5926</span>&nbsp;&nbsp;+64 35&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">30.7</span>&nbsp;&nbsp;19.3&nbsp;&nbsp;</td>
+        <td><span style="display:none">J2458634.240898</span>&nbsp;Updated May 30.74 UT&nbsp;</td>
+        <td align="center">&nbsp;&nbsp;</td>
+        <td align="right">&nbsp;  60&nbsp;</td>
+        <td align="right">&nbsp;  2.76&nbsp;</td>
+        <td align="right">&nbsp;13.4&nbsp;</td>
+        <td align="right">&nbsp; 0.568&nbsp;</td><tr>
+        <tr><td><span style="display:none">C0P3XJ2</span>&nbsp;<input type="checkbox" name="obj" VALUE="C0P3XJ2"> C0P3XJ2</td>
+        <td align="right"><span style="display:none">035</span> 35&nbsp;&nbsp;&nbsp;</td>
+        <td>&nbsp;&nbsp;2019 05 26.4&nbsp;&nbsp;</td>
+        <td><span style="display:none">180.6551</span>&nbsp;&nbsp;16 33.5&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">085.3800</span>&nbsp;&nbsp;-04 37&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">29.6</span>&nbsp;&nbsp;20.4&nbsp;&nbsp;</td>
+        <td><span style="display:none">J2458633.792922</span>&nbsp;Updated May 30.29 UT&nbsp;</td>
+        <td align="center">&nbsp;&nbsp;</td>
+        <td align="right">&nbsp;  51&nbsp;</td>
+        <td align="right">&nbsp;  3.91&nbsp;</td>
+        <td align="right">&nbsp;14.9&nbsp;</td>
+        <td align="right">&nbsp; 0.611&nbsp;</td><tr>
+        <tr><td><span style="display:none">A10dQbl</span>&nbsp;<input type="checkbox" name="obj" VALUE="A10dQbl"> A10dQbl</td>
+        <td align="right"><span style="display:none">035</span> 35&nbsp;&nbsp;&nbsp;</td>
+        <td>&nbsp;&nbsp;2019 05 25.6&nbsp;&nbsp;</td>
+        <td><span style="display:none">297.7413</span>&nbsp;&nbsp;00 21.8&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">096.3491</span>&nbsp;&nbsp;+06 20&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">32.7</span>&nbsp;&nbsp;17.3&nbsp;&nbsp;</td>
+        <td><span style="display:none">J2458633.646664</span>&nbsp;Added May 30.15 UT&nbsp;</td>
+        <td align="center">&nbsp;&nbsp;</td>
+        <td align="right">&nbsp;  51&nbsp;</td>
+        <td align="right">&nbsp;  4.33&nbsp;</td>
+        <td align="right">&nbsp;13.0&nbsp;</td>
+        <td align="right">&nbsp; 0.970&nbsp;</td><tr>
+        ''' + self.table_footer, "html.parser")
+
+        obj_ids = parse_PCCP(html)
+        expected_obj_ids = [(u'A10dRr5', {'score' : 86,
+                                        'discovery_date' : datetime(2019, 5, 27, 14, 24),
+                                        'num_obs' : 60,
+                                        'arc_length' :  2.76,
+                                        'not_seen' : 0.568,
+                                        'update_time': datetime(2019, 5, 30, 17, 46, 54),
+                                        'updated' : True
+                                       }
+                            ),
+                            (u'C0P3XJ2', {'score' : 35,
+                                        'discovery_date' : datetime(2019, 5, 26, 9, 36, 0),
+                                        'num_obs' : 51,
+                                        'arc_length' :  3.91,
+                                        'not_seen' : 0.611,
+                                        'update_time': datetime(2019, 5, 30, 7, 1, 48),
+                                        'updated' : True
+                                       }
+                            ),
+                            (u'A10dQbl', {'score' : 35,
+                                        'discovery_date' : datetime(2019, 5, 25, 14, 24),
+                                        'num_obs' : 51,
+                                        'arc_length' :  4.33,
+                                        'not_seen' : 0.970,
+                                        'update_time': datetime(2019, 5, 30,  3, 31, 12),
+                                        'updated' : False
+                                       }
+                            ),
+                            ]
+        self.assertNotEqual(None, obj_ids)
+        obj = 0
+        while obj < len(expected_obj_ids):
+            self.assertEqual(expected_obj_ids[obj][0], obj_ids[obj][0])
+            self.assertEqual(expected_obj_ids[obj][1], obj_ids[obj][1])
+            obj += 1
+
 
 class TestFetchMPCOrbit(TestCase):
 
@@ -1565,6 +2046,10 @@ class TestFetchMPCOrbit(TestCase):
         # an object
         test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcdb_2014UR.html'), 'r')
         self.test_mpcdb_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcdb_Comet243P.html'), 'r')
+        self.test_multiple_epochs_page = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
 
         # Set to None to show all differences
@@ -1614,6 +2099,182 @@ class TestFetchMPCOrbit(TestCase):
         elements = parse_mpcorbit(self.test_mpcdb_page)
         self.assertEqual(expected_elements, elements)
 
+    def test_fetch_243P_post2018Aug_epoch(self):
+
+        epoch = datetime(2018, 9, 5, 18, 0, 0)
+
+        expected_elements = {'epoch': '2018-08-30.0',
+                             'epoch JD': '2458360.5',
+                             'perihelion date': '2018-08-26.00689',
+                             'perihelion JD': '2458356.50689',
+                             'argument of perihelion': '283.55482',
+                             'ascending node': '87.65877',
+                             'inclination': '7.64145',
+                             'eccentricity': '0.3593001',
+                             'perihelion distance': '2.4544438',
+                             'radial non-grav. param.': None,
+                             'transverse non-grav. param.': None,
+                             'semimajor axis': '3.8308789',
+                             'mean anomaly': '0.52489',
+                             'mean daily motion': '0.13144867',
+                             'aphelion distance': '5.207',
+                             'period': '7.5',
+                             'P-vector [x]': '0.97228322',
+                             'P-vector [y]': '0.23016404',
+                             'P-vector [z]': '-0.04110774',
+                             'Q-vector [x]': '-0.19238738',
+                             'Q-vector [y]': '0.88749145',
+                             'Q-vector [z]': '0.41874339',
+                             'recip semimajor axis orig': None,
+                             'recip semimajor axis future': None,
+                             'recip semimajor axis error': None,
+                             'reference': 'MPC 111774',
+                             'observations used': '334',
+                             'residual rms': '0.60',
+                             'perturbers coarse indicator': 'M-v',
+                             'perturbers precise indicator': '0038h',
+                             'first observation date used': '2003-08-01.0',
+                             'last observation date used': '2018-09-19.0',
+                             'computer name': 'MPCW',
+                             'orbit quality code': None,
+                             'obj_id': '243P/NEAT'}
+
+        elements = parse_mpcorbit(self.test_multiple_epochs_page, epoch)
+        self.assertEqual(expected_elements, elements)
+
+    def test_fetch_243P_pre2018Aug_epoch(self):
+
+        # Set epoch to 1 second after the 160/2=80 days between the 2018-03-23
+        # and 2018-08-30 elements sets
+        epoch = datetime(2018, 6, 11, 0, 0, 1)
+
+        expected_elements = {'epoch': '2018-08-30.0',
+                             'epoch JD': '2458360.5',
+                             'perihelion date': '2018-08-26.00689',
+                             'perihelion JD': '2458356.50689',
+                             'argument of perihelion': '283.55482',
+                             'ascending node': '87.65877',
+                             'inclination': '7.64145',
+                             'eccentricity': '0.3593001',
+                             'perihelion distance': '2.4544438',
+                             'radial non-grav. param.': None,
+                             'transverse non-grav. param.': None,
+                             'semimajor axis': '3.8308789',
+                             'mean anomaly': '0.52489',
+                             'mean daily motion': '0.13144867',
+                             'aphelion distance': '5.207',
+                             'period': '7.5',
+                             'P-vector [x]': '0.97228322',
+                             'P-vector [y]': '0.23016404',
+                             'P-vector [z]': '-0.04110774',
+                             'Q-vector [x]': '-0.19238738',
+                             'Q-vector [y]': '0.88749145',
+                             'Q-vector [z]': '0.41874339',
+                             'recip semimajor axis orig': None,
+                             'recip semimajor axis future': None,
+                             'recip semimajor axis error': None,
+                             'reference': 'MPC 111774',
+                             'observations used': '334',
+                             'residual rms': '0.60',
+                             'perturbers coarse indicator': 'M-v',
+                             'perturbers precise indicator': '0038h',
+                             'first observation date used': '2003-08-01.0',
+                             'last observation date used': '2018-09-19.0',
+                             'computer name': 'MPCW',
+                             'orbit quality code': None,
+                             'obj_id': '243P/NEAT'}
+
+        elements = parse_mpcorbit(self.test_multiple_epochs_page, epoch)
+        self.assertEqual(expected_elements, elements)
+
+    def test_fetch_243P_post2018Mar_epoch(self):
+
+        # Set epoch to 1 second before the 160/2=80 days between the 2018-03-23
+        # and 2018-08-30 elements sets
+        epoch = datetime(2018, 6, 10, 23, 59, 59)
+
+        expected_elements = {'epoch': '2018-03-23.0',
+                             'epoch JD': '2458200.5',
+                             'perihelion date': '2018-08-26.04162',
+                             'perihelion JD': '2458356.54162',
+                             'argument of perihelion': '283.56217',
+                             'ascending node': '87.66076',
+                             'inclination': '7.64150',
+                             'eccentricity': '0.3591386',
+                             'perihelion distance': '2.4544160',
+                             'radial non-grav. param.': None,
+                             'transverse non-grav. param.': None,
+                             'semimajor axis': '3.8298701',
+                             'mean anomaly': '339.48043',
+                             'mean daily motion': '0.13150061',
+                             'aphelion distance': '5.205',
+                             'period': '7.5',
+                             'P-vector [x]': '0.97225165',
+                             'P-vector [y]': '0.23030922',
+                             'P-vector [z]': '-0.04104137',
+                             'Q-vector [x]': '-0.19254615',
+                             'Q-vector [y]': '0.88745569',
+                             'Q-vector [z]': '0.4187462',
+                             'recip semimajor axis orig': None,
+                             'recip semimajor axis future': None,
+                             'recip semimajor axis error': None,
+                             'reference': 'MPEC 2018-S50',
+                             'observations used': '334',
+                             'residual rms': '0.60',
+                             'perturbers coarse indicator': 'M-v',
+                             'perturbers precise indicator': '0038h',
+                             'first observation date used': '2003-08-01.0',
+                             'last observation date used': '2018-09-19.0',
+                             'computer name': 'MPCW',
+                             'orbit quality code': None,
+                             'obj_id': '243P/NEAT'}
+
+        elements = parse_mpcorbit(self.test_multiple_epochs_page, epoch)
+        self.assertEqual(expected_elements, elements)
+
+    def test_fetch_243P_pre2018Mar_epoch(self):
+
+        epoch = datetime(2018, 2, 14,  1,  2,  3)
+
+        expected_elements = {'epoch': '2018-03-23.0',
+                             'epoch JD': '2458200.5',
+                             'perihelion date': '2018-08-26.04162',
+                             'perihelion JD': '2458356.54162',
+                             'argument of perihelion': '283.56217',
+                             'ascending node': '87.66076',
+                             'inclination': '7.64150',
+                             'eccentricity': '0.3591386',
+                             'perihelion distance': '2.4544160',
+                             'radial non-grav. param.': None,
+                             'transverse non-grav. param.': None,
+                             'semimajor axis': '3.8298701',
+                             'mean anomaly': '339.48043',
+                             'mean daily motion': '0.13150061',
+                             'aphelion distance': '5.205',
+                             'period': '7.5',
+                             'P-vector [x]': '0.97225165',
+                             'P-vector [y]': '0.23030922',
+                             'P-vector [z]': '-0.04104137',
+                             'Q-vector [x]': '-0.19254615',
+                             'Q-vector [y]': '0.88745569',
+                             'Q-vector [z]': '0.4187462',
+                             'recip semimajor axis orig': None,
+                             'recip semimajor axis future': None,
+                             'recip semimajor axis error': None,
+                             'reference': 'MPEC 2018-S50',
+                             'observations used': '334',
+                             'residual rms': '0.60',
+                             'perturbers coarse indicator': 'M-v',
+                             'perturbers precise indicator': '0038h',
+                             'first observation date used': '2003-08-01.0',
+                             'last observation date used': '2018-09-19.0',
+                             'computer name': 'MPCW',
+                             'orbit quality code': None,
+                             'obj_id': '243P/NEAT'}
+
+        elements = parse_mpcorbit(self.test_multiple_epochs_page, epoch)
+        self.assertEqual(expected_elements, elements)
+
     def test_badpage(self):
 
         expected_elements = {}
@@ -1625,6 +2286,24 @@ class TestFetchMPCOrbit(TestCase):
         expected_elements = {}
         elements = parse_mpcorbit(BeautifulSoup('<html><table class="nb"><table></table></table></html>', 'html.parser'))
         self.assertEqual(expected_elements, elements)
+
+
+class TestReadMPCOrbitFile(TestCase):
+
+    def setUp(self):
+        self.orbit_file = os.path.join('astrometrics', 'tests', 'test_mpcorbit_2019EN.neocp')
+
+        self.maxDiff = None
+
+    def test1(self):
+
+        expected_orblines = ['K19E00N 21.17  0.15 K1939 343.19351   46.63108  192.93185    9.77594  0.6187870  0.30650105   2.1786196    FO 190311   190   1   59 days 0.21 M-P 06  NEOCPNomin 0000 2019 EN                     20190309',]
+
+        orblines = read_mpcorbit_file(self.orbit_file)
+
+        self.assertEqual(len(expected_orblines), len(orblines))
+        for i, expected_line in enumerate(expected_orblines):
+            self.assertEqual(expected_line, orblines[i])
 
 
 class TestParseMPCObsFormat(TestCase):
@@ -1654,6 +2333,7 @@ class TestParseMPCObsFormat(TestCase):
                             'p_#C_l' :  u'     K15TE5B 5C2015 10 17.34423 04 15 51.57 -02 07 27.4          18.6 VqEU017W88',
                             'p_ C_h' :  u'     K15TE5B  C2015 10 13.08015704 13 52.281-02 06 45.33         19.51Rt~1YjBY28',
                             'p_ S_l' :  u'     N00809b  S2015 06 22.29960 21 02 46.72 +57 58 39.3          20   RLNEOCPC51',
+                            'p_* S_l':  u'     N00809b* S2015 06 22.29960 21 02 46.72 +57 58 39.3          20   RLNEOCPC51',
                             'p_ s_l' :  u'     N00809b  s2015 06 22.29960 1 + 1978.7516 + 1150.7393 + 6468.8442   NEOCPC51',
                             'n_ R_l' :  u'01566         R1968 06 14.229167               +    11541710   2388 252 JPLRS253',
                             'n_ r_l' :  u'01566         r1968 06 14.229167S                        1000       252 JPLRS253',
@@ -1665,9 +2345,14 @@ class TestParseMPCObsFormat(TestCase):
                             'p_quoteC_h': u"     G07212  'C2017 11 02.17380 03 13 37.926+19 27 47.07         21.4 GUNEOCP309",
                             'n_pC_l' :  u'01566K15TE5B  C1968 10 13.08015704 13 52.281-02 06 45.33         19.51Rt~1YjBY28',
                             'cp_!C_h':  u'0315PK13V060 !C2013 11 06.14604623 28 19.756-24 20 45.77         21.6 Tt90966705',
+                            'cp_C_h':   u'    PK05Y020  C2006 12 25.86945 01 38 12.14 -09 52 27.0          18.9 Nr58738130',
                             'np_4A_l' : u'24554PLS2608 4A1960 09 28.39725 00 39 02.51 +00 49 57.8                Kb6053675',
-                            'np_4X_l' : u'24554PLS2608*4X1960 09 24.46184 00 42 27.17 +00 55 44.5          18.1  Kb6053675'
-
+                            'np_4X_l' : u'24554PLS2608*4X1960 09 24.46184 00 42 27.17 +00 55 44.5          18.1  Kb6053675',
+                            'p_* C_l' : u'     K15TE5B* C2015 10 19.36445 04 16 45.66 -02 06 29.9          18.7 RqEU023H45',
+                            'p_*KC_l' : u'     K15TE5B*KC2015 10 18.42125 04 16 20.07 -02 07 27.5          19.2 Vq     Q63',
+                            't_* C_l' : u'     LSCTLZZ* C2018 10 19.36445 04 16 45.66 -02 06 29.9          18.7 Rq     W85',
+                            't_*KC_l' : u'     LSCTLZZ*KC2018 10 18.42125 04 16 20.07 -02 07 27.5          19.2 Vq     W86',
+                            't_*IC_l' : u'     CPTTLAZ*IC2018 10 18.92125 04 16 20.07 -02 07 27.5          19.2 rV     L09',
                           }
         self.maxDiff = None
 
@@ -1689,7 +2374,9 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_mag'   : 18.7,
                             'filter'    : 'R',
                             'astrometric_catalog' : 'UCAC-4',
-                            'site_code' : 'H45'
+                            'site_code' : 'H45',
+                            'discovery' : False,
+                            'lco_discovery' : False
                           }
 
         params = parse_mpcobs(self.test_lines['p_ C_l'])
@@ -1706,7 +2393,9 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_mag'   : 19.2,
                             'filter'    : 'V',
                             'astrometric_catalog' : 'UCAC-4',
-                            'site_code' : 'H21'
+                            'site_code' : 'H21',
+                            'discovery' : False,
+                            'lco_discovery' : False
                           }
 
         params = parse_mpcobs(self.test_lines['p_KC_l'])
@@ -1723,7 +2412,9 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_mag'   : 18.6,
                             'filter'    : 'V',
                             'astrometric_catalog' : 'UCAC-4',
-                            'site_code' : 'W88'
+                            'site_code' : 'W88',
+                            'discovery' : False,
+                            'lco_discovery' : False
                           }
 
         params = parse_mpcobs(self.test_lines['p_#C_l'])
@@ -1740,7 +2431,9 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_mag'   : 19.51,
                             'filter'    : 'R',
                             'astrometric_catalog' : 'PPMXL',
-                            'site_code' : 'Y28'
+                            'site_code' : 'Y28',
+                            'discovery' : False,
+                            'lco_discovery' : False
                           }
 
         params = parse_mpcobs(self.test_lines['p_ C_h'])
@@ -1757,10 +2450,31 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_mag'   : 20.0,
                             'filter'    : 'R',
                             'astrometric_catalog' : '2MASS',
-                            'site_code' : 'C51'
+                            'site_code' : 'C51',
+                            'discovery' : False,
+                            'lco_discovery' : False
                             }
 
         params = parse_mpcobs(self.test_lines['p_ S_l'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_p_discovery_spaceS_l(self):
+        expected_params = { 'body'  : 'N00809b',
+                            'flags' : '*',
+                            'obs_type'  : 'S',
+                            'obs_date'  : datetime(2015, 6, 22, 7, 11, 25, int(0.44*1e6)),
+                            'obs_ra'    : 315.69466666666667,
+                            'obs_dec'   : 57.977583333333333,
+                            'obs_mag'   : 20.0,
+                            'filter'    : 'R',
+                            'astrometric_catalog' : '2MASS',
+                            'site_code' : 'C51',
+                            'discovery' : True,
+                            'lco_discovery' : False
+                            }
+
+        params = parse_mpcobs(self.test_lines['p_* S_l'])
 
         self.compare_dict(expected_params, params)
 
@@ -1799,7 +2513,9 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_mag'   : 18.1,
                             'filter'    : 'R',
                             'astrometric_catalog' : 'USNO-A2',
-                            'site_code' : '474'
+                            'site_code' : '474',
+                            'discovery' : False,
+                            'lco_discovery' : False
                           }
 
         params = parse_mpcobs(self.test_lines['n_tC_l'])
@@ -1816,7 +2532,9 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_mag'   : None,
                             'filter'    : ' ',
                             'astrometric_catalog' : 'UCAC-4',
-                            'site_code' : 'G96'
+                            'site_code' : 'G96',
+                            'discovery' : False,
+                            'lco_discovery' : False
                           }
 
         params = parse_mpcobs(self.test_lines['p_ C_n'])
@@ -1864,7 +2582,9 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_mag'   : 20.4,
                             'filter'    : 'V',
                             'astrometric_catalog' : '',
-                            'site_code' : 'W86'
+                            'site_code' : 'W86',
+                            'discovery' : False,
+                            'lco_discovery' : False
                           }
 
         params = parse_mpcobs(self.test_lines['p_ C_le'])
@@ -1881,7 +2601,9 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_mag'   : None,
                             'filter'    : 'V',
                             'astrometric_catalog' : 'UCAC-4',
-                            'site_code' : 'G96'
+                            'site_code' : 'G96',
+                            'discovery' : False,
+                            'lco_discovery' : False
                           }
 
         params = parse_mpcobs(self.test_lines['p_ C_f'])
@@ -1899,7 +2621,9 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_mag'   : 21.4,
                             'filter'    : 'G',
                             'astrometric_catalog' : 'GAIA-DR1',
-                            'site_code' : '309'
+                            'site_code' : '309',
+                            'discovery' : False,
+                            'lco_discovery' : False
                           }
 
         params = parse_mpcobs(self.test_lines['p_quoteC_h'])
@@ -1914,9 +2638,30 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_mag'   : 21.6,
                             'filter'    : 'T',
                             'astrometric_catalog' : 'PPMXL',
-                            'site_code' : '705'
+                            'site_code' : '705',
+                            'discovery' : False,
+                            'lco_discovery' : False
                           }
         params = parse_mpcobs(self.test_lines['cp_!C_h'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_cp_C_h(self):
+        """Test for comet with no number, only provisional designation"""
+        expected_params = { 'body'  : 'PK05Y020',
+                            'flags' : ' ',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2006, 12,  25, 20, 52, 0, int(0.4800*1e6)),
+                            'obs_ra'    : 24.5505833333333,
+                            'obs_dec'   : -9.87416666666,
+                            'obs_mag'   : 18.9,
+                            'filter'    : 'N',
+                            'astrometric_catalog' : 'UCAC-2',
+                            'site_code' : '130',
+                            'discovery' : False,
+                            'lco_discovery' : False
+                          }
+        params = parse_mpcobs(self.test_lines['cp_C_h'])
 
         self.compare_dict(expected_params, params)
 
@@ -1930,7 +2675,9 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_mag'   : None,
                             'filter'    : ' ',
                             'astrometric_catalog' : 'Yale',
-                            'site_code' : '675'
+                            'site_code' : '675',
+                            'discovery' : False,
+                            'lco_discovery' : False
                           }
         params = parse_mpcobs(self.test_lines['np_4A_l'])
 
@@ -1947,7 +2694,7 @@ class TestParseMPCObsFormat(TestCase):
         """Tests the case for both a number and a provisional designation"""
 
         expected_params = { 'body'  : '01566',
-                            'flags' : " ",
+                            'flags' : ' ',
                             'obs_type'  : 'C',
                             'obs_date'  : datetime(1968, 10, 13, 1, 55, 25, int(0.5648*1e6)),
                             'obs_ra'    : 63.4678375,
@@ -1955,10 +2702,107 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_mag'   : 19.51,
                             'filter'    : 'R',
                             'astrometric_catalog' : 'PPMXL',
-                            'site_code' : 'Y28'
+                            'site_code' : 'Y28',
+                            'discovery' : False,
+                            'lco_discovery' : False
                           }
 
         params = parse_mpcobs(self.test_lines['n_pC_l'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_p_discovery_spaceC_l(self):
+        expected_params = { 'body'  : 'K15TE5B',
+                            'flags' : '*',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2015, 10, 19, 8, 44, 48, int(0.48*1e6)),
+                            'obs_ra'    : 64.19025,
+                            'obs_dec'   : -2.1083055555555554,
+                            'obs_mag'   : 18.7,
+                            'filter'    : 'R',
+                            'astrometric_catalog' : 'UCAC-4',
+                            'site_code' : 'H45',
+                            'discovery' : True,
+                            'lco_discovery' : False
+                          }
+
+        params = parse_mpcobs(self.test_lines['p_* C_l'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_p_discovery_KC_l(self):
+        expected_params = { 'body'  : 'K15TE5B',
+                            'flags' : '*,K',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2015, 10, 18, 10, 6, 36, 0),
+                            'obs_ra'    : 64.083625,
+                            'obs_dec'   : -2.1243055555555554,
+                            'obs_mag'   : 19.2,
+                            'filter'    : 'V',
+                            'astrometric_catalog' : 'UCAC-4',
+                            'site_code' : 'Q63',
+                            'discovery' : True,
+                            'lco_discovery' : True
+                          }
+
+        params = parse_mpcobs(self.test_lines['p_*KC_l'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_t_discovery_spaceC_l(self):
+        expected_params = { 'body'  : 'LSCTLZZ',
+                            'flags' : '*',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2018, 10, 19, 8, 44, 48, int(0.48*1e6)),
+                            'obs_ra'    : 64.19025,
+                            'obs_dec'   : -2.1083055555555554,
+                            'obs_mag'   : 18.7,
+                            'filter'    : 'R',
+                            'astrometric_catalog' : 'UCAC-4',
+                            'site_code' : 'W85',
+                            'discovery' : True,
+                            'lco_discovery' : True
+                          }
+
+        params = parse_mpcobs(self.test_lines['t_* C_l'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_t_discovery_KC_l(self):
+        expected_params = { 'body'  : 'LSCTLZZ',
+                            'flags' : '*,K',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2018, 10, 18, 10, 6, 36, 0),
+                            'obs_ra'    : 64.083625,
+                            'obs_dec'   : -2.1243055555555554,
+                            'obs_mag'   : 19.2,
+                            'filter'    : 'V',
+                            'astrometric_catalog' : 'UCAC-4',
+                            'site_code' : 'W86',
+                            'discovery' : True,
+                            'lco_discovery' : True
+                          }
+
+        params = parse_mpcobs(self.test_lines['t_*KC_l'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_t_discovery_IC_l(self):
+        expected_params = { 'body'  : 'CPTTLAZ',
+                            'flags' : '*,I',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2018, 10, 18, 22, 6, 36, 0),
+                            'obs_ra'    : 64.083625,
+                            'obs_dec'   : -2.1243055555555554,
+                            'obs_mag'   : 19.2,
+                            'filter'    : 'r',
+                            'astrometric_catalog' : 'GAIA-DR2',
+                            'site_code' : 'L09',
+                            'discovery' : True,
+                            'lco_discovery' : True
+                          }
+
+        params = parse_mpcobs(self.test_lines['t_*IC_l'])
 
         self.compare_dict(expected_params, params)
 
@@ -1994,6 +2838,12 @@ class TestFetchNEOCPObservations(TestCase):
         ]
 
         observations = fetch_NEOCP_observations(page)
+        self.assertEqual(expected, observations)
+
+    @patch('astrometrics.sources_subs.fetchpage_and_make_soup', mock_fetchpage_and_make_soup)
+    def test_page_down(self):
+        observations = fetch_NEOCP_observations("test_body")
+        expected = None
         self.assertEqual(expected, observations)
 
 
@@ -2210,6 +3060,7 @@ class TestIMAPLogin(TestCase):
         targets = fetch_NASA_targets(mailbox, date_cutoff=2)
         self.assertEqual(expected_targets, targets)
 
+
 class TestSFUFetch(TestCase):
 
     def setUp(self):
@@ -2282,6 +3133,7 @@ class TestSFUFetch(TestCase):
 
         self.assertEqual(expected_result[0], sfu_result[0])
         self.assertEqual(expected_result[1], sfu_result[1])
+
 
 class TestConfigureDefaults(TestCase):
 
@@ -2826,6 +3678,7 @@ class TestMakeMolecule(TestCase):
                              'ag_name'     : '',
                              'acquire_mode': 'BRIGHTEST',
                              'ag_exp_time': 10,
+                             'acquire_exp_time': 10,
                              'acquire_radius_arcsec': 15.0
                             }
 
@@ -2849,6 +3702,7 @@ class TestMakeMolecule(TestCase):
                              'ag_name'     : '',
                              'acquire_mode': 'BRIGHTEST',
                              'ag_exp_time': 10,
+                             'acquire_exp_time': 10,
                              'acquire_radius_arcsec': 15.0
                             }
 
@@ -2873,6 +3727,7 @@ class TestMakeMolecule(TestCase):
                              'ag_name'     : '',
                              'acquire_mode': 'BRIGHTEST',
                              'ag_exp_time': 10,
+                             'acquire_exp_time': 10,
                              'acquire_radius_arcsec': 15.0
                             }
 
@@ -2887,7 +3742,7 @@ class TestMakeMolecule(TestCase):
         expected_molecule = {
                              'type' : 'LAMP_FLAT',
                              'exposure_count' : 1,
-                             'exposure_time' : 60.0,
+                             'exposure_time' : 20.0,
                              'bin_x'       : 1,
                              'bin_y'       : 1,
                              'instrument_name' : '2M0-FLOYDS-SCICAM',
@@ -2896,6 +3751,7 @@ class TestMakeMolecule(TestCase):
                              'ag_name'     : '',
                              'acquire_mode': 'BRIGHTEST',
                              'ag_exp_time': 10,
+                             'acquire_exp_time': 10,
                              'acquire_radius_arcsec': 15.0
                             }
 
@@ -2911,7 +3767,7 @@ class TestMakeMolecule(TestCase):
         expected_molecule = {
                              'type' : 'LAMP_FLAT',
                              'exposure_count' : 1,
-                             'exposure_time' : 60.0,
+                             'exposure_time' : 20.0,
                              'bin_x'       : 1,
                              'bin_y'       : 1,
                              'instrument_name' : '2M0-FLOYDS-SCICAM',
@@ -2920,6 +3776,7 @@ class TestMakeMolecule(TestCase):
                              'ag_name'     : '',
                              'acquire_mode': 'BRIGHTEST',
                              'ag_exp_time': 10,
+                             'acquire_exp_time': 10,
                              'acquire_radius_arcsec': 15.0
                             }
 
@@ -2941,6 +3798,7 @@ class TestMakeMolecule(TestCase):
                              'ag_name'     : '',
                              'acquire_mode': 'BRIGHTEST',
                              'ag_exp_time': 10,
+                             'acquire_exp_time': 10,
                              'acquire_radius_arcsec': 15.0
                             }
 
@@ -2964,6 +3822,7 @@ class TestMakeMolecules(TestCase):
                                                        'exp_time' : 60.0,
                                                        'exp_count' : 12,
                                                        'filter_pattern' : 'w'})
+
         self.filt_1m0_imaging = build_filter_blocks(self.params_1m0_imaging['filter_pattern'],
                                                     self.params_1m0_imaging['exp_count'])[0]
         self.params_0m4_imaging = configure_defaults({ 'site_code': 'Z21',
@@ -3010,6 +3869,7 @@ class TestMakeMolecules(TestCase):
 
         self.assertEqual(expected_num_molecules, len(molecules))
         self.assertEqual(expected_type, molecules[0]['type'])
+
 
     def test_2m_spectroscopy_nocalibs(self):
 
@@ -3386,14 +4246,26 @@ class TestFetchTaxonomyData(TestCase):
 
     def setUp(self):
         # Read and make soup from the stored, partial version of the PDS Taxonomy Database
-        # test_fh = open(os.path.join('astrometrics', 'tests', 'test_taxonomy_page.dat'), 'r')
-        # self.test_taxonomy_page = test_fh
-        # test_fh.close()
         self.test_taxonomy_page = os.path.join('astrometrics', 'tests', 'test_taxonomy_page.dat')
+
+        # Read and make soup from the stored, partial version of the SDSS Taxonomy Database
+        self.test_sdss_page = os.path.join('astrometrics', 'tests', 'test_sdss_tax_page.dat')
 
     def test_basics(self):
         expected_length = 33
         targets = fetch_taxonomy_page(self.test_taxonomy_page)
+
+        self.assertEqual(expected_length, len(targets))
+
+    @patch('astrometrics.sources_subs.fetchpage_and_make_soup', mock_fetchpage_and_make_soup)
+    def test_page_down(self):
+        expected_tax = []
+        targets = fetch_taxonomy_page(None)
+        self.assertEqual(expected_tax, targets)
+
+    def test_basics_sdss(self):
+        expected_length = 25
+        targets = fetch_taxonomy_page(self.test_sdss_page)
 
         self.assertEqual(expected_length, len(targets))
 
@@ -3409,6 +4281,19 @@ class TestFetchTaxonomyData(TestCase):
                              ['4713', 'Sw', "BD", "PDS6", 'a'],
                             ]
         tax_data = fetch_taxonomy_page(self.test_taxonomy_page)
+        for line in expected_targets:
+            self.assertIn(line, tax_data)
+
+    def test_targets_sdss(self):
+        expected_targets = [ ['166', 'C', "Sd", "SDSS", '78|1|-'],
+                             ['183', 'S', "Sd", "SDSS", '00|1|-'],
+                             ['251', 'L', "Sd", "SDSS", '96|2|LS'],
+                             ['1067', 'LS', "Sd", "SDSS", '65|1|-'],
+                             ['60707', 'DL', "Sd", "SDSS", '8|1|-'],
+                             ['2000 QO192', 'C', "Sd", "SDSS", '10|1|-'],
+                             ['962', 'S', "Sd", "SDSS", '96|4|CLSQ'],
+                            ]
+        tax_data = fetch_taxonomy_page(self.test_sdss_page)
         for line in expected_targets:
             self.assertIn(line, tax_data)
 
@@ -3439,8 +4324,8 @@ class TestFetchTaxonomyData(TestCase):
                          'S',
                          'S',
                          'A',
-                         'Sw',
                          'A',
+                         'Sw',
                          'Sl',
                          'Sl',
                          'C',
@@ -3451,10 +4336,36 @@ class TestFetchTaxonomyData(TestCase):
         taxonomy = [row[1] for row in tax_data]
         self.assertEqual(expected_tax, taxonomy)
 
-    def test_tax_site_pull(self):
-        expected_line = ['1', 'G', "T", "PDS6", "7G"]
-        tax_data = fetch_taxonomy_page()
-        self.assertEqual(expected_line, tax_data[0])
+    def test_tax_sdss(self):
+        expected_tax = [ 'C',
+                         'S',
+                         'S',
+                         'X',
+                         'C',
+                         'CX',
+                         'L',
+                         'S',
+                         'C',
+                         'L',
+                         'S',
+                         'LS',
+                         'C',
+                         'V',
+                         'S',
+                         'S',
+                         'DL',
+                         'C',
+                         'D',
+                         'S',
+                         'C',
+                         'LS',
+                         'XL',
+                         'D',
+                         'C',
+                          ]
+        tax_data = fetch_taxonomy_page(self.test_sdss_page)
+        taxonomy = [row[1] for row in tax_data]
+        self.assertEqual(expected_tax, taxonomy)
 
 
 class TestFetchPreviousSpectra(TestCase):
@@ -3592,6 +4503,12 @@ class TestFetchFluxStandards(TestCase):
                 else:
                     self.assertEqual(expected_standards[fluxstd][key], standards[fluxstd][key])
 
+    @patch('astrometrics.sources_subs.fetchpage_and_make_soup', mock_fetchpage_and_make_soup)
+    def test_standards_page_down(self):
+        expected_standards = None
+        standards = fetch_flux_standards(None, filter_optical_model=True)
+        self.assertEqual(expected_standards, standards)
+
 
 class TestReadSolarStandards(TestCase):
 
@@ -3620,158 +4537,3 @@ class TestReadSolarStandards(TestCase):
                     self.assertAlmostEqual(expected_standards[solstd][key], standards[solstd][key], places=self.precision, msg="Mismatch for {} on {}".format(solstd, key))
                 else:
                     self.assertEqual(expected_standards[solstd][key], standards[solstd][key])
-
-class TestCheckForPerturbation(TestCase):
-
-    def setUp(self):
-        params = {  'provisional_name' : 'N999r0q',
-                    'abs_mag'       : 21.0,
-                    'slope'         : 0.15,
-                    'epochofel'     : datetime(2015, 3, 19, 00, 00, 00),
-                    'meananom'      : 325.2636,
-                    'argofperih'    : 85.19251,
-                    'longascnode'   : 147.81325,
-                    'orbinc'        : 8.34739,
-                    'eccentricity'  : 0.1896865,
-                    'meandist'      : 1.2176312,
-                    'source_type'   : 'U',
-                    'elements_type' : 'MPC_MINOR_PLANET',
-                    'active'        : True,
-                    'origin'        : 'M',
-                    }
-        self.body, created = Body.objects.get_or_create(**params)
-
-        self.body_elements = model_to_dict(self.body)
-        self.body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
-        self.body_elements['current_name'] = self.body.current_name()
-        site_code = 'K92'
-        utc_date = datetime(2015, 3, 19, 00, 00, 00)
-        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        self.params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 18,
-                    'exp_time' : 50.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'filter_pattern' : 'w',
-                    'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson',
-                    'spectroscopy' : False
-                 }
-
-    def test_close_in_time(self):
-        params = self.params
-        params['start_time'] = params['start_time'] + relativedelta(days=1)
-
-        expected_e = self.body_elements['eccentricity']
-        expected_a = self.body_elements['meandist']
-        expected_i = self.body_elements['orbinc']
-        expected_long = self.body_elements['longascnode']
-        expected_epoch = self.body_elements['epochofel_mjd']
-
-        elements = check_for_perturbation(self.body_elements, params)
-
-        self.assertEqual(expected_epoch, elements['epochofel_mjd'])
-        self.assertEqual(expected_e, elements['eccentricity'])
-        self.assertEqual(expected_a, elements['meandist'])
-        self.assertEqual(expected_i, elements['orbinc'])
-        self.assertEqual(expected_long, elements['longascnode'])
-
-    def test_far_away(self):
-        params = self.params
-        params['start_time'] = params['start_time'] + relativedelta(days=100)
-
-        body_elements = self.body_elements
-        body_elements['meandist'] = 4.8
-        body_elements['eccentricity'] = 0.001
-
-        expected_e = body_elements['eccentricity']
-        expected_a = body_elements['meandist']
-        expected_i = body_elements['orbinc']
-        expected_long = body_elements['longascnode']
-        expected_epoch = body_elements['epochofel_mjd']
-
-        elements = check_for_perturbation(body_elements, params)
-
-        self.assertEqual(expected_epoch, elements['epochofel_mjd'])
-        self.assertEqual(expected_e, elements['eccentricity'])
-        self.assertEqual(expected_a, elements['meandist'])
-        self.assertEqual(expected_i, elements['orbinc'])
-        self.assertEqual(expected_long, elements['longascnode'])
-
-    def test_bad_calc(self):
-        params = self.params
-        params['start_time'] = params['start_time'] + relativedelta(days=100)
-
-        body_elements = self.body_elements
-        body_elements['meandist'] = .2
-        body_elements['eccentricity'] = 0.01
-
-        expected_e = body_elements['eccentricity']
-        expected_a = body_elements['meandist']
-        expected_i = body_elements['orbinc']
-        expected_long = body_elements['longascnode']
-        expected_epoch = body_elements['epochofel_mjd']
-
-        elements = check_for_perturbation(body_elements, params)
-
-        self.assertEqual(expected_epoch, elements['epochofel_mjd'])
-        self.assertEqual(expected_e, elements['eccentricity'])
-        self.assertEqual(expected_a, elements['meandist'])
-        self.assertEqual(expected_i, elements['orbinc'])
-        self.assertEqual(expected_long, elements['longascnode'])
-
-    def test_needs_perturb(self):
-        params = self.params
-        params['start_time'] = params['start_time'] + relativedelta(days=81)
-        params['spectroscopy'] = True
-
-        body_elements = self.body_elements
-        body_elements['meandist'] = 1.5349659
-        body_elements['eccentricity'] = 0.5182788
-        body_elements['orbinc'] = 4.75381
-        body_elements['longascnode'] = 117.60203
-        body_elements['argofperih'] = 229.36323
-        body_elements['meananom'] = 286.18972
-
-        expected_e = 0.5183245048558996
-        expected_a = 1.5350441058040079
-        expected_i = 4.754401449955707
-        expected_long = 117.59466442936079
-        expected_epoch = params['start_time']
-
-        elements = check_for_perturbation(body_elements, params)
-        self.assertEqual(expected_epoch.year, elements['epochofel'].year)
-        self.assertEqual(expected_epoch.month, elements['epochofel'].month)
-        self.assertEqual(expected_epoch.day, elements['epochofel'].day)
-        self.assertEqual(expected_e, elements['eccentricity'])
-        self.assertEqual(expected_a, elements['meandist'])
-        self.assertEqual(expected_i, elements['orbinc'])
-        self.assertEqual(expected_long, elements['longascnode'])
-
-    def test_needs_new_orbit(self):
-        params = self.params
-        params['start_time'] = params['start_time'] + relativedelta(days=810)
-        params['spectroscopy'] = True
-
-        body_elements = self.body_elements
-        body_elements['meandist'] = 1.5349659
-        body_elements['eccentricity'] = 0.5182788
-        body_elements['orbinc'] = 4.75381
-        body_elements['longascnode'] = 117.60203
-        body_elements['argofperih'] = 229.36323
-        body_elements['meananom'] = 286.18972
-
-        expected_e = body_elements['eccentricity']
-        expected_a = body_elements['meandist']
-        expected_i = body_elements['orbinc']
-        expected_long = body_elements['longascnode']
-        expected_epoch = body_elements['epochofel_mjd']
-
-        elements = check_for_perturbation(body_elements, params)
-
-        self.assertEqual(expected_epoch, elements['epochofel_mjd'])
-        self.assertEqual(expected_e, elements['eccentricity'])
-        self.assertEqual(expected_a, elements['meandist'])
-        self.assertEqual(expected_i, elements['orbinc'])
-        self.assertEqual(expected_long, elements['longascnode'])

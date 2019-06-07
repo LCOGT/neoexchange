@@ -10,23 +10,23 @@
 		<meta name="version" content="{{site_version}}" />
 		{% block meta %}{% endblock %}
 		{% block favicon %}
-		<link rel="shortcut icon" href="{% static "core/images/favicon.ico" %}" type="image/vnd.microsoft.icon" />
+		<link rel="shortcut icon" href="{% static 'core/images/favicon.ico' %}" type="image/vnd.microsoft.icon" />
 		{% endblock %}
 		<link href="http://fonts.googleapis.com/css?family=Open+Sans:400,800,300,600,300italic,400italic,600italic" rel="stylesheet" type="text/css">
 		{% block css-content %}{% endblock %}
-		<link rel="stylesheet" href="{% static "core/css/font-awesome.min.css" %}">
-		<link rel="stylesheet" href="{% static "core/css/skeleton.css" %}">
-		<link rel="stylesheet" href="{% static "core/css/normalize.css" %}">
-		<link rel="stylesheet" href="{% static "core/css/styles.css" %}">
-		<link rel="stylesheet" href="{% static "core/css/forms.css" %}">
+		<link rel="stylesheet" href="{% static 'core/css/font-awesome.min.css' %}">
+		<link rel="stylesheet" href="{% static 'core/css/skeleton.css' %}">
+		<link rel="stylesheet" href="{% static 'core/css/normalize.css' %}">
+		<link rel="stylesheet" href="{% static 'core/css/styles.css' %}">
+		<link rel="stylesheet" href="{% static 'core/css/forms.css' %}">
 
 
         {% block last-css-content %}{% endblock %}
         <!--[if lt IE 9]>
         <script src="https://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
         <![endif]-->
-		<script type="text/javascript" src="{% static "core/js/jquery-1.12.3.js" %}"></script>
-		<script type="text/javascript" src="{% static "core/js/jquery-ui-1.12.1.min.js" %}"></script>
+		<script type="text/javascript" src="{% static 'core/js/jquery-1.12.3.js' %}"></script>
+		<script type="text/javascript" src="{% static 'core/js/jquery-ui-1.12.1.min.js' %}"></script>
 		<script type="text/javascript">
 			$(document).ready(function(){
 
@@ -38,9 +38,12 @@
 				});
 
 				$(document).on('click','#messages-inbox',function(event){
-					centreDiv('#show-messages');
 					if ($('#show-messages').is(':visible')) $('#show-messages').fadeOut("fast");
 					else $('#show-messages').fadeIn("fast");
+				})
+
+				$(window).on('load',function(event){
+					centreDiv('#show-messages');
 					$('#show-messages-close').bind("click",function(){
 						$('#show-messages').fadeOut("fast");
 					});
@@ -64,6 +67,10 @@
 						{% block login %}
 						<div id="login" class="block">
 							<ul>
+								<li>
+									<span id="clock"></span>
+									<script type="text/javascript" src="{% static 'core/js/utc_clock.js' %}" charset="UTF-8"></script>
+								</li>
 								{% if user.is_authenticated %}
 								<li>
 									<a href="#" id="messages-inbox" class="fa fa-inbox{% if messages %} highlight{% endif %}"></a>
@@ -89,7 +96,7 @@
 					<div class="container-lg">
 					<div id="header" role="banner">
 						<div id="logo">
-							<a href="{% url 'home' %}" title="NEO exchange homepage" rel="home"><img src="{% static "core/images/NEO-logo_sm.jpg" %}" alt="NEO exchange" /></a>
+							<a href="{% url 'home' %}" title="NEO exchange homepage" rel="home"><img src="{% static 'core/images/NEO-logo_sm.jpg' %}" alt="NEO exchange" /></a>
 						</div>
 						<div id="site-name">
 							<strong>{% block title %}Minor planet follow-up portal{% endblock %}</strong>
@@ -148,6 +155,18 @@
 				{% block content %}{% endblock %}
 			</div>
 		</div>
+		{% if messages %}
+		<div id="show-messages" style="display:block;">
+			<div id="show-messages-inner">
+			<div id="show-messages-close">×</div>
+			{% for m in messages %}
+			<li class="{{m.tags}}">{{m}}</li>
+			{% empty %}
+			<li>No messages.</li>
+			{% endfor %}
+			</div>
+		</div>
+		{% else %}
 		<div id="show-messages" style="display:none;">
 			<div id="show-messages-inner">
 			<div id="show-messages-close">×</div>
@@ -158,6 +177,7 @@
 			{% endfor %}
 			</div>
 		</div>
+		{% endif %}
 		{% block end-scripts %}
 		{% endblock %}
 		<script>

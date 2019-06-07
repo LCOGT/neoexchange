@@ -1,3 +1,18 @@
+"""
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2017-2019 LCO
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+"""
+
 from datetime import datetime, timedelta
 from math import degrees
 
@@ -49,7 +64,16 @@ def filter_bodies(bodies, obs_date = datetime.utcnow(), bright_limit = 19.0, fai
             prefix = '('
             suffix = ')'
         moon_sep_str = "%s%.1f%s" % ( prefix, moon_sep, suffix)
-        line_bits = format_emp_line((obs_date, body_line[0], body_line[1], vmag, sky_motion, -99, spd, sky_motion_pa), '500')
+        emp_line = { 'date' : obs_date,
+                     'ra' : body_line[0],
+                     'dec' : body_line[1],
+                     'mag' : vmag,
+                     'sky_motion' : sky_motion,
+                     'sky_motion_pa' : sky_motion_pa,
+                     'altitude' : -99,
+                     'southpole_sep' : spd
+                   }
+        line_bits = format_emp_line(emp_line, '500')
         schedule = True
         status = 'OK'
 
@@ -125,7 +149,7 @@ class Command(BaseCommand):
         faint_default = 22.0
         spd_default = 95.0
         not_seen_default = 2.5
-        proposal_default = 'LCO2018B-013'
+        proposal_default = 'LCO2019B-023'
         speed_limit_default = 5.0
         parser.add_argument('--date', default=datetime.utcnow(), help='Date to schedule for (YYYYMMDD-HH)')
         parser.add_argument('--user', default='tlister@lcogt.net', help="Username to schedule as e.g. 'tlister@lcogt.net'")
@@ -139,6 +163,8 @@ class Command(BaseCommand):
         parser.add_argument('--not_seen', default=not_seen_default, type=float, help="Cutoff since object was seen ("+str(not_seen_default)+" days)")
         parser.add_argument('--too', action="store_true", help="Whether to execute as disruptive ToO")
         parser.add_argument('--object', default=None, type=str, help="Specific object to schedule")
+        parser.add_argument('--skip_north', action="store_true", help="Whether to skip scheduling in the North")
+        parser.add_argument('--skip_south', action="store_true", help="Whether to skip scheduling in the South")
 
     def handle(self, *args, **options):
         usage = "Incorrect usage. Usage: %s --date [YYYYMMDD[-HH]] --user [tlister@lcogt.net] --run"
@@ -221,40 +247,47 @@ class Command(BaseCommand):
         if options['run']:
 
             for tel_class in north_list.keys():
-                do_north = False
-                if len(sites['north'][tel_class]) > 0:
-                    for site in sites['north'][tel_class]:
-                        if site_status[site][0] == True:
-                            do_north = True
-                            north_form = {'site_code': sites['north'][tel_class][0],
-                                          'utc_date' : scheduling_date.date(),
-                                          'proposal_code': options['proposal'],
-                                          'too_mode' : options['too']}
-#                            if 'Z21' in north_form['site_code'] and datetime.utcnow().hour > 16:
-#                                north_form['utc_date'] = north_form['utc_date'] + timedelta(days=1)
-#                            break
-                do_south = False
-                if len(sites['south'][tel_class]) > 0:
-                    for site in sites['south'][tel_class]:
-                        if site_status[site][0] == True:
-                            do_south = True
-                            south_form = {'site_code': sites['south'][tel_class][0],
-                                          'utc_date' : scheduling_date.date(),
-                                          'proposal_code': options['proposal'],
-                                          'too_mode' : options['too']}
-#                            if 'K92' in south_form['site_code'] and datetime.utcnow().hour > 16:
-#                                south_form['utc_date'] = south_form['utc_date'] + timedelta(days=1)
-#                            break
+                if options['skip_north'] is False:
+                    do_north = False
+                    if len(sites['north'][tel_class]) > 0:
+                        for site in sites['north'][tel_class]:
+                            if site_status[site][0] is True:
+                                do_north = True
+                                north_form = {'site_code': sites['north'][tel_class][0],
+                                              'utc_date' : scheduling_date.date(),
+                                              'proposal_code': options['proposal'],
+                                              'too_mode' : options['too']}
+                else:
+                    do_north = False
 
+                if options['skip_south'] is False:
+                    do_south = False
+                    if len(sites['south'][tel_class]) > 0:
+                        for site in sites['south'][tel_class]:
+                            if site_status[site][0] is True:
+                                do_south = True
+                                south_form = {'site_code': sites['south'][tel_class][0],
+                                              'utc_date' : scheduling_date.date(),
+                                              'proposal_code': options['proposal'],
+                                              'too_mode' : options['too']}
+                else:
+                    do_south = False
+                # Schedule telescopes
                 if do_north:
                     num_scheduled, objects_scheduled = schedule_target_list(north_list[tel_class], north_form, username)
                     self.stdout.write("Scheduled %d (%s) in the North at %s" % (num_scheduled, objects_scheduled, north_form['site_code']))
                 else:
-                    self.stdout.write("No %s sites in the North available for scheduling" % tel_class)
+                    if options['skip_north']:
+                        self.stdout.write("Skipping {} scheduling in the North".format(tel_class))
+                    else:
+                        self.stdout.write("No %s sites in the North available for scheduling" % tel_class)
                 if do_south:
                     num_scheduled, objects_scheduled = schedule_target_list(south_list[tel_class], south_form, username)
                     self.stdout.write("Scheduled %d (%s) in the South at %s" % (num_scheduled,  objects_scheduled, south_form['site_code']))
                 else:
-                    self.stdout.write("No %s sites in the South available for scheduling" % tel_class)
+                    if options['skip_south']:
+                        self.stdout.write("Skipping {} scheduling in the South".format(tel_class))
+                    else:
+                        self.stdout.write("No %s sites in the South available for scheduling" % tel_class)
         else:
             self.stdout.write("Simulating scheduling at %s and %s" % (sites['north'], sites['south']) )

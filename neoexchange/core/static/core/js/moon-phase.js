@@ -129,4 +129,4 @@ function phase_junk(phase) {
 	}
 }
 
-phase_junk(moon_day(new Date()));
+//phase_junk(moon_day(new Date()));

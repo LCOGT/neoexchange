@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2014-2018 LCO
+Copyright (C) 2014-2019 LCO
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
@@ -12,7 +12,7 @@ GNU General Public License for more details.
 """
 from __future__ import unicode_literals
 from datetime import datetime, timedelta, date
-from math import pi, log10, sqrt, cos, degrees
+from math import pi, log10, sqrt, cos, degrees, ceil, sqrt
 from collections import Counter, OrderedDict
 import reversion
 import logging
@@ -37,7 +37,7 @@ from base64 import b64decode, b64encode
 
 from astrometrics.ast_subs import normal_to_packed
 from astrometrics.ephem_subs import compute_ephem, comp_FOM, get_sitecam_params, comp_sep
-from astrometrics.sources_subs import translate_catalog_code
+from astrometrics.sources_subs import translate_catalog_code, psv_padding
 from astrometrics.time_subs import dttodecimalday, degreestohms, degreestodms
 from astrometrics.albedo import asteroid_albedo, asteroid_diameter
 from core.archive_subs import check_for_archive_images
@@ -89,7 +89,8 @@ SITE_CHOICES = (
                     ('cpt', 'Sutherland'),
                     ('tfn', 'Tenerife'),
                     ('sbg', 'SBIG cameras'),
-                    ('sin', 'Sinistro cameras')
+                    ('sin', 'Sinistro cameras'),
+                    ('spc', 'Spectral cameras')
     )
 
 TAX_SCHEME_CHOICES = (
@@ -101,12 +102,14 @@ TAX_SCHEME_CHOICES = (
                         ('B', 'Bus'),
                         ('3T', 'S3OS2_TH'),
                         ('3B', 'S3OS2_BB'),
-                        ('BD', 'Bus-DeMeo')
+                        ('BD', 'Bus-DeMeo'),
+                        ('Sd', 'SDSS')
                      )
 
 TAX_REFERENCE_CHOICES = (
-                        ('PDS6', 'Neese, Asteroid Taxonomy V6.0. (2010).'),
+                        ('PDS6', 'Neese, Asteroid Taxonomy V6.0, (2010).'),
                         ('BZ04', 'Binzel, et al. (2004).'),
+                        ('SDSS', 'Hasselmann, et al. Asteroid Taxonomy V1.1, (2012).')
                      )
 
 SPECTRAL_WAV_CHOICES = (
@@ -131,6 +134,8 @@ class Proposal(models.Model):
     pi = models.CharField("PI", max_length=50, default='', help_text='Principal Investigator (PI)')
     tag = models.CharField(max_length=10, default='LCOGT')
     active = models.BooleanField('Proposal active?', default=True)
+    time_critical = models.BooleanField('Time Critical/ToO proposal?', default=False)
+    download = models.BooleanField('Auto download data?', default=True)
 
     class Meta:
         db_table = 'ingest_proposal'
@@ -156,6 +161,7 @@ class Body(models.Model):
     fast_moving         = models.BooleanField('Is this object fast?', default=False)
     urgency             = models.IntegerField(help_text='how urgent is this?', blank=True, null=True)
     epochofel           = models.DateTimeField('Epoch of elements', blank=True, null=True)
+    orbit_rms           = models.FloatField('Orbit quality of fit', blank=True, null=True, default=99.0)
     orbinc              = models.FloatField('Orbital inclination in deg', blank=True, null=True)
     longascnode         = models.FloatField('Longitude of Ascending Node (deg)', blank=True, null=True)
     argofperih          = models.FloatField('Arg of perihelion (deg)', blank=True, null=True)
@@ -236,7 +242,7 @@ class Body(models.Model):
             sitecode = '500'
             emp_line = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
             # Return just numerical values
-            return emp_line[1], emp_line[2], emp_line[3], emp_line[6], emp_line[4], emp_line[7]
+            return emp_line['ra'], emp_line['dec'], emp_line['mag'], emp_line['southpole_sep'], emp_line['sky_motion'], emp_line['sky_motion_pa']
         else:
             # Catch the case where there is no Epoch
             return False
@@ -264,8 +270,10 @@ class Body(models.Model):
             # calculate the ephemeris for each step (delta_t) within the time span df.
             while i <= df / delta_t + 1:
 
-                emp_line, mag_dot, separation = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False, detailed=True)
-                vmag = emp_line[3]
+                ephem_out = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
+                mag_dot = ephem_out['mag_dot']
+                separation = ephem_out['sun_sep']
+                vmag = ephem_out['mag']
 
                 # Eliminate bad magnitudes
                 if vmag < 0:
@@ -410,34 +418,43 @@ class SpectralInfo(models.Model):
                     else:
                         text_out = text_out + ' %s color indices were used.\n' % (text[0])
                 if "G" in text:
-                    text_out = text_out + ' Used groundbased radiometric albedo.'
+                    text_out += ' Used groundbased radiometric albedo.'
                 if "I" in text:
-                    text_out = text_out + ' Used IRAS radiometric albedo.'
+                    text_out += ' Used IRAS radiometric albedo.'
                 if "A" in text:
-                    text_out = text_out + ' An Unspecified albedo was used to eliminate Taxonomic degeneracy.'
+                    text_out += ' An Unspecified albedo was used to eliminate Taxonomic degeneracy.'
                 if "S" in text:
-                    text_out = text_out + ' Used medium-resolution spectrum by Chapman and Gaffey (1979).'
+                    text_out += ' Used medium-resolution spectrum by Chapman and Gaffey (1979).'
                 if "s" in text:
-                    text_out = text_out + ' Used high-resolution spectrum by Xu et al (1995) or Bus and Binzel (2002).'
+                    text_out += ' Used high-resolution spectrum by Xu et al (1995) or Bus and Binzel (2002).'
             elif self.tax_scheme == "BD":
                 if "a" in text:
-                    text_out = text_out + ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b). NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b). NIR: DeMeo et al. (2009).'
                 if "b" in text:
-                    text_out = text_out + ' Visible: Xu (1994), Xu et al. (1995). NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible: Xu (1994), Xu et al. (1995). NIR: DeMeo et al. (2009).'
                 if "c" in text:
-                    text_out = text_out + ' Visible: Burbine (2000), Burbine and Binzel (2002). NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible: Burbine (2000), Burbine and Binzel (2002). NIR: DeMeo et al. (2009).'
                 if "d" in text:
-                    text_out = text_out + ' Visible: Binzel et al. (2004c). NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible: Binzel et al. (2004c). NIR: DeMeo et al. (2009).'
                 if "e" in text:
-                    text_out = text_out + ' Visible and NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible and NIR: DeMeo et al. (2009).'
                 if "f" in text:
-                    text_out = text_out + ' Visible: Binzel et al. (2004b).  NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible: Binzel et al. (2004b).  NIR: DeMeo et al. (2009).'
                 if "g" in text:
-                    text_out = text_out + ' Visible: Binzel et al. (2001).  NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible: Binzel et al. (2001).  NIR: DeMeo et al. (2009).'
                 if "h" in text:
-                    text_out = text_out + ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b).  NIR: Binzel et al. (2004a).'
+                    text_out += ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b).  NIR: Binzel et al. (2004a).'
                 if "i" in text:
-                    text_out = text_out + ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b).  NIR: Rivkin et al. (2005).'
+                    text_out += ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b).  NIR: Rivkin et al. (2005).'
+        elif self.tax_reference == 'SDSS':
+            chunks = text.split('|')
+            if int(chunks[1]) > 1:
+                plural = 's'
+            else:
+                plural = ''
+            text_out = 'Probability score of {} found using {} observation{}.'.format(chunks[0], chunks[1], plural)
+            if chunks[2] != '-' and chunks[2] != self.taxonomic_class:
+                text_out += ' | Other less likely taxonomies also found ({})'.format(chunks[2].replace(self.taxonomic_class, ''))
         text_out = text_out+end
         return text_out
 
@@ -501,8 +518,11 @@ class SuperBlock(models.Model):
 
     def get_sites(self):
         qs = Block.objects.filter(superblock=self.id).values_list('site', flat=True).distinct()
-
-        return ", ".join(qs)
+        qs = [q for q in qs if q is not None]
+        if qs:
+            return ", ".join(qs)
+        else:
+            return None
 
     def get_telclass(self):
         qs = Block.objects.filter(superblock=self.id).values_list('telclass', 'obstype').distinct()
@@ -593,7 +613,7 @@ class Block(models.Model):
                       )
 
     telclass        = models.CharField(max_length=3, null=False, blank=False, default='1m0', choices=TELESCOPE_CHOICES)
-    site            = models.CharField(max_length=3, choices=SITE_CHOICES)
+    site            = models.CharField(max_length=3, choices=SITE_CHOICES, null=True)
     body            = models.ForeignKey(Body, null=True, blank=True)
     calibsource     = models.ForeignKey('StaticSource', null=True, blank=True)
     proposal        = models.ForeignKey(Proposal)
@@ -710,8 +730,13 @@ def pickle_wcs(wcs_object):
         wcs_header = wcs_object.to_header()
         # Add back missing NAXIS keywords, change back to CD matrix
         wcs_header.insert(0, ("NAXIS", 2, "number of array dimensions"))
-        wcs_header.insert(1, ("NAXIS1", wcs_object._naxis1, ""))
-        wcs_header.insert(2, ("NAXIS2", wcs_object._naxis2, ""))
+        naxis1 = 0
+        naxis2 = 0
+        if wcs_object.pixel_shape is not None and wcs_object.naxis == 2:
+            naxis1 = wcs_object.pixel_shape[0]
+            naxis2 = wcs_object.pixel_shape[1]
+        wcs_header.insert(1, ("NAXIS1", naxis1, ""))
+        wcs_header.insert(2, ("NAXIS2", naxis2, ""))
         wcs_header.remove("CDELT1")
         wcs_header.remove("CDELT2")
         # Some of these may be missing depending on whether there was any rotation
@@ -834,7 +859,7 @@ class Frame(models.Model):
     def get_x_size(self):
         x_size = None
         try:
-            x_size = self.wcs._naxis1
+            x_size = self.wcs.pixel_shape[0]
         except AttributeError:
             pass
         return x_size
@@ -842,7 +867,7 @@ class Frame(models.Model):
     def get_y_size(self):
         y_size = None
         try:
-            y_size = self.wcs._naxis2
+            y_size = self.wcs.pixel_shape[1]
         except AttributeError:
             pass
         return y_size
@@ -906,34 +931,54 @@ class Frame(models.Model):
 
     def return_tel_string(self):
 
-        point4m_string = '0.4-m f/8 Schmidt-Cassegrain + CCD'
-        onem_string = '1.0-m f/8 Ritchey-Chretien + CCD'
-        twom_string = '2.0-m f/10 Ritchey-Chretien + CCD'
+        detector = 'CCD'
+        point4m_aperture = 0.4
+        point4m_fRatio = 8.0
+        point4m_design = 'Schmidt-Cassegrain'
+        point4m_string = '{:.1f}-m f/{:1d} {} + {}'.format(point4m_aperture, int(point4m_fRatio), point4m_design, detector)
+        point4m_dict = {'full' : point4m_string, 'design' : point4m_design,
+                     'aperture' : point4m_aperture, 'fRatio' : point4m_fRatio, 'detector' : detector }
+
+        onem_aperture = 1.0
+        onem_fRatio = 8.0
+        onem_design = 'Ritchey-Chretien'
+        onem_string = '{:.1f}-m f/{:1d} {} + {}'.format(onem_aperture, int(onem_fRatio), onem_design, detector)
+        onem_dict = {'full' : onem_string, 'design' : onem_design,
+                     'aperture' : onem_aperture, 'fRatio' : onem_fRatio, 'detector' : detector }
+
+        twom_aperture = 2.0
+        twom_fRatio = 10.0
+        twom_design = 'Ritchey-Chretien'
+        twom_string = '{:.1f}-m f/{:2d} {} + {}'.format(twom_aperture, int(twom_fRatio), twom_design, detector)
+        twom_dict = {'full' : twom_string, 'design' : twom_design,
+                     'aperture' : twom_aperture, 'fRatio' : twom_fRatio, 'detector' : detector }
 
         tels_strings = {
-                        'K91' : onem_string,
-                        'K92' : onem_string,
-                        'K93' : onem_string,
-                        'W85' : onem_string,
-                        'W86' : onem_string,
-                        'W87' : onem_string,
-                        'V37' : onem_string,
-                        'Z21' : point4m_string,
-                        'Z17' : point4m_string,
-                        'Q58' : point4m_string,
-                        'Q59' : point4m_string,
-                        'Q63' : onem_string,
-                        'Q64' : onem_string,
-                        'E10' : twom_string,
-                        'F65' : twom_string,
-                        'T04' : point4m_string,
-                        'T03' : point4m_string,
-                        'W89' : point4m_string,
-                        'W79' : point4m_string,
-                        'V38' : point4m_string,
-                        'L09' : point4m_string,
+                        'K91' : onem_dict,
+                        'K92' : onem_dict,
+                        'K93' : onem_dict,
+                        'W85' : onem_dict,
+                        'W86' : onem_dict,
+                        'W87' : onem_dict,
+                        'V37' : onem_dict,
+                        'Z21' : point4m_dict,
+                        'Z17' : point4m_dict,
+                        'Q58' : point4m_dict,
+                        'Q59' : point4m_dict,
+                        'Q63' : onem_dict,
+                        'Q64' : onem_dict,
+                        'E10' : twom_dict,
+                        'F65' : twom_dict,
+                        'T04' : point4m_dict,
+                        'T03' : point4m_dict,
+                        'W89' : point4m_dict,
+                        'W79' : point4m_dict,
+                        'V38' : point4m_dict,
+                        'L09' : point4m_dict,
                         }
-        return tels_strings.get(self.sitecode, 'Unknown LCO telescope')
+        tel_string = tels_strings.get(self.sitecode, {'full:' : 'Unknown LCO telescope'})
+
+        return tel_string
 
     def map_filter(self):
         """Maps somewhat odd observed filters (e.g. 'solar') into the filter
@@ -947,6 +992,13 @@ class Frame(models.Model):
             if self.photometric_catalog in ['GAIA-DR1', 'GAIA-DR2']:
                 new_filter = 'G'
         return new_filter
+
+    def ALCDEF_filter_format(self):
+        """Formats current filter into acceptable name for printing in ALCDEF output."""
+        new_filt = self.filter
+        if len(new_filt) > 1 and new_filt[1] == 'p':
+            new_filt = 's'+new_filt[0]
+        return new_filt.upper()
 
     class Meta:
         verbose_name = _('Observed Frame')
@@ -1004,21 +1056,40 @@ class SourceMeasurement(models.Model):
         except TypeError:
             mag = "    "
 
-        obs_type = 'C'
         microday = True
+
+        if self.frame.extrainfo:
+            obs_type = self.frame.extrainfo
+            if obs_type == 'A':
+                microday = False
+        else:
+            obs_type = 'C'
+
         if self.frame.frametype == Frame.SATELLITE_FRAMETYPE:
             obs_type = 'S'
             microday = False
         flags = self.flags
-        if len(self.flags) == 1:
-            if self.flags == '*':
+        num_flags = flags.split(',')
+        if len(num_flags) == 1:
+            if num_flags[0] == '*':
                 # Discovery asterisk needs to go into column 13
                 flags = '* '
             else:
-                flags = ' ' + self.flags
-        elif len(self.flags) > 2:
+                flags = ' ' + num_flags[0]
+        elif len(num_flags) == 2:
+            if '*' in num_flags:
+                asterisk_index = num_flags.index('*')
+                flags = '*' + num_flags[1-asterisk_index]
+            else:
+                logger.warning("Flags longer than will fit into field - needs mapper")
+                flags = ' ' + num_flags[0]
+        else:
             logger.warning("Flags longer than will fit into field - needs mapper")
-            flags = self.flags[0:2]
+            if '*' in num_flags:
+                num_flags.remove('*')
+                flags = '*' + num_flags[0]
+            else:
+                flags = ' ' + num_flags[0]
 
         # Catalog code for column 72 (if desired)
         catalog_code = ' '
@@ -1039,6 +1110,127 @@ class SourceMeasurement(models.Model):
                 extrainfo = ''
             mpc_line = mpc_line + '\n' + extrainfo
         return mpc_line
+
+    def _numdp(self, value):
+        """Calculate number of d.p. following prescription in Figure 1 of
+        ADES description (https://github.com/IAU-ADES/ADES-Master/blob/master/ADES_Description.pdf)
+        """
+
+        num_dp = 1
+        if value is not None and value > 0:
+            num_dp = ceil(1-log10(value))
+        return num_dp
+
+    def format_psv_header(self):
+
+        tbl_hdr = ""
+        rms_available = False
+        if self.err_obs_ra and self.err_obs_dec and self.err_obs_mag:
+            rms_available = True
+            rms_tbl_fmt = '%7s|%-11s|%8s|%4s|%-4s|%-23s|%11s|%11s|%5s|%6s|%8s|%-5s|%6s|%4s|%8s|%6s|%6s|%6s|%-5s|%-s'
+            tbl_hdr = rms_tbl_fmt % ('permID ', 'provID', 'trkSub  ', 'mode', 'stn', 'obsTime', \
+                'ra', 'dec', 'rmsRA', 'rmsDec', 'astCat', 'mag', 'rmsMag', 'band', 'photCat', \
+                'photAp', 'logSNR', 'seeing', 'notes', 'remarks')
+        else:
+            tbl_fmt = '%7s|%-11s|%8s|%4s|%-4s|%-23s|%11s|%11s|%8s|%-5s|%4s|%8s|%-5s|%-s'
+            tbl_hdr = tbl_fmt % ('permID ', 'provID', 'trkSub  ', 'mode', 'stn', 'obsTime', \
+                'ra'.ljust(11), 'dec'.ljust(11), 'astCat', 'mag', 'band', 'photCat', 'notes', 'remarks')
+        return tbl_hdr
+
+    def format_psv_line(self):
+        psv_line = ""
+
+        rms_available = False
+        if self.err_obs_ra and self.err_obs_dec and self.err_obs_mag:
+            rms_available = True
+            # Add RMS of Frame astrometric fit (in arcsec) to stored source
+            # standard deviations (in deg; already converted from SExtractor
+            # variances->standard deviations in get_catalog_items() & convert_value())
+            if self.frame.rms_of_fit:
+                err_obs_ra = sqrt(self.err_obs_ra**2 + ((self.frame.rms_of_fit/3600.0)**2))
+                err_obs_dec = sqrt(self.err_obs_dec**2 + ((self.frame.rms_of_fit/3600.0)**2))
+            else:
+                err_obs_ra = self.err_obs_ra
+                err_obs_dec = self.err_obs_dec
+
+        if self.body.name:
+            if len(self.body.name) > 4 and self.body.name[0:4].isdigit():
+                provisional_name = self.body.name
+                body_name = ''
+            else:
+                body_name = self.body.name
+                provisional_name = ''
+            tracklet_name = ''
+        else:
+            tracklet_name = self.body.provisional_name
+            provisional_name = ''
+            body_name = ''
+        obs_type = 'CCD'
+        remarks = ''
+
+        obsTime = self.frame.midpoint
+        obsTime = obsTime.strftime("%Y-%m-%dT%H:%M:%S")
+        frac_time = "{:.2f}Z".format(self.frame.midpoint.microsecond / 1e6)
+        obsTime = obsTime + frac_time[1:]
+        ast_catalog_code = translate_catalog_code(self.frame.astrometric_catalog, ades_code=True)
+        if (self.frame.astrometric_catalog is None or self.frame.astrometric_catalog.strip() == '')\
+            and self.astrometric_catalog is not None:
+            ast_catalog_code = translate_catalog_code(self.astrometric_catalog, ades_code=True)
+        phot_catalog_code = translate_catalog_code(self.frame.photometric_catalog, ades_code=True)
+        if (self.frame.photometric_catalog is None or self.frame.photometric_catalog.strip() == '')\
+            and self.photometric_catalog is not None:
+            phot_catalog_code = translate_catalog_code(self.photometric_catalog, ades_code=True)
+        if phot_catalog_code == '' and ast_catalog_code != '':
+            phot_catalog_code = ast_catalog_code
+
+        prec = 6
+        if self.err_obs_ra:
+            prec = self._numdp(err_obs_ra)
+        fmt_ra = "{ra:.{prec}f}".format(prec=prec, ra=self.obs_ra)
+        fmt_ra, width, dpos = psv_padding(fmt_ra, 11, 'D', 4)
+        prec = 6
+        if self.err_obs_dec:
+            prec = self._numdp(err_obs_dec)
+        fmt_dec = "{dec:.{prec}f}".format(prec=prec, dec=self.obs_dec)
+        fmt_dec, width, dpos = psv_padding(fmt_dec, 11, 'D', 4)
+        fmt_filter = " "
+        if self.obs_mag is not None:
+            fmt_mag = "{:4.1f}".format(float(self.obs_mag))
+            fmt_filter = self.frame.map_filter()
+        else:
+            fmt_mag = " "*5
+            phot_catalog_code = " "
+
+        tbl_fmt     = '%7s|%-11s|%8s|%4s|%-4s|%-23s|%11s|%11s|%8s|%-5s|%4s|%8s|%-5s|%-s'
+        rms_tbl_fmt = '%7s|%-11s|%8s|%4s|%-4s|%-23s|%11s|%11s|%5s|%6s|%8s|%-5s|%6s|%4s|%8s|%6s|%6s|%6s|%-5s|%-s'
+        if rms_available:
+            rms_ra = "{value:.{prec}f}".format(prec=self._numdp(err_obs_ra * 3600.0), value=err_obs_ra * 3600.0)
+            rms_dec = "{value:.{prec}f}".format(prec=self._numdp(err_obs_dec * 3600.0), value=err_obs_dec * 3600.0)
+            if self.obs_mag is not None:
+                rms_mag = "{value:.{prec}f}".format(prec=self._numdp(self.err_obs_mag), value=self.err_obs_mag)
+                rms_mag, width, dpos = psv_padding(rms_mag, 6, 'D', 2)
+            else:
+                rms_mag = " "
+
+            phot_ap = " "*6
+            if self.aperture_size:
+                phot_ap = "{:6.2f}".format(self.aperture_size)
+            log_snr = " "*6
+            if self.snr and self.snr > 0:
+                log_snr = "{:6.4f}".format(log10(self.snr))
+            fwhm = " "*6
+            if self.frame.fwhm:
+                fwhm = "{:6.4f}".format(self.frame.fwhm)
+
+            psv_line = rms_tbl_fmt % (body_name, provisional_name, tracklet_name, obs_type, self.frame.sitecode, \
+                obsTime, fmt_ra, fmt_dec, rms_ra, rms_dec,\
+                ast_catalog_code, fmt_mag, rms_mag, fmt_filter, \
+                phot_catalog_code, phot_ap, log_snr, fwhm, self.flags, remarks)
+        else:
+            psv_line = tbl_fmt % (body_name, provisional_name, tracklet_name, obs_type, self.frame.sitecode, \
+                obsTime, fmt_ra, fmt_dec, ast_catalog_code,\
+                fmt_mag, fmt_filter, phot_catalog_code, self.flags, remarks)
+        return psv_line
 
     class Meta:
         verbose_name = _('Source Measurement')
@@ -1124,20 +1316,21 @@ class CatalogSources(models.Model):
         2:  The object was originally blended with another one,
         4:  At least one pixel of the object is saturated (or very close to),
         8:  The object is truncated (too close to an image boundary),
-        16: Object’s aperture data are incomplete or corrupted,
-        32: Object’s isophotal data are incomplete or corrupted (SExtractor V1 compat; no consequence),
+        16: Object's aperture data are incomplete or corrupted,
+        32: Object's isophotal data are incomplete or corrupted (SExtractor V1 compat; no consequence),
         64: A memory overflow occurred during deblending,
         128:A memory overflow occurred during extraction.
         """
 
         flag = ' '
-        if self.flags >= 1 and self.flags <=3:
+        if 1 <= self.flags <= 3:
             # Set 'Involved with star'
             flag = 'I'
         elif self.flags >= 8:
             # Set 'close to Edge'
             flag = 'E'
         return flag
+
 
 def detections_array_dtypes():
     """Declare the columns and types of the structured numpy array for holding
@@ -1191,7 +1384,7 @@ class Candidate(models.Model):
         try:
             elements = model_to_dict(body)
             emp_line = compute_ephem(time, elements, self.block.site, perturb=False)
-            separation = comp_sep(self.avg_ra, self.avg_dec, emp_line[1], emp_line[2])
+            separation = comp_sep(self.avg_ra, self.avg_dec, emp_line['ra'], emp_line['dec'])
         except AttributeError:
             separation = None
 
@@ -1238,6 +1431,7 @@ class PanoptesReport(models.Model):
 
     def __str__(self):
         return "Block {} Candidate {} is Subject {}".format(self.block.id, self.candidate.id, self.subject_id)
+
 
 @python_2_unicode_compatible
 class StaticSource(models.Model):

@@ -5,10 +5,21 @@
 
 {% block script-content %}
 <script type="text/javascript">
+  const urlParams = new URLSearchParams(window.location.search);
+  const is_cadence = urlParams.get('cadence');
   $(document).ready(function(){
     // Initially hide the cadence form
-    $('#cadence-switch').hide();
-    $('#cadence_request').hide();
+
+
+    if (is_cadence){
+      $('#single-switch').hide();
+      $('#single_request').hide();
+      $('#cadence-switch').show();
+      $('#cadence_request').show();
+    } else {
+      $('#cadence-switch').hide();
+      $('#cadence_request').hide();
+    }
 
     $('a.mode-switch').click(function(event){
       $('.mode-switch').toggle();

@@ -1,3 +1,18 @@
+"""
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2015-2019 LCO
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+"""
+
 from .base import FunctionalTest
 from mock import patch
 from neox.tests.mocks import MockDateTime
@@ -106,8 +121,8 @@ class RankingPageTest(FunctionalTest):
             'Rank FOM Target Name NEOCP Score Discovery Date R.A. Dec. South Polar Distance V Mag. Updated? Num. Obs. Arc H Mag. Not Seen (days) Observed? Reported?')
         # Position below computed for 2015-07-01 17:00:00
         testlines = [u'1 1.8e+76 V38821zi 100 May 10, 2015, noon 23 43 14.40 +19 59 08.2 110.0 20.7 2 0.07 21.0 12.29 Not yet Not yet',
-                    u'2 2.5e-01 N999r0q 90 May 10, 2015, noon 23 43 14.40 +19 59 08.2 110.0 20.7 17 3.0 21.0 0.42 1/2 1/2',
-                    u'3 1.5e-01 q382918r 85 May 10, 2015, noon 23 43 14.40 +19 59 08.2 110.0 20.7 35 42.0 21.0 2.22 Not yet Not yet',
+                    u'2 2.5e-01 N999r0q 90 May 10, 2015, noon 23 43 14.40 +19 59 08.2 110.0 20.7 17 3.12 21.0 0.42 1/2 1/2',
+                    u'3 1.5e-01 q382918r 85 May 10, 2015, noon 23 43 14.40 +19 59 08.2 110.0 20.7 35 42.00 21.0 2.22 Not yet Not yet',
                      '4 bloop 100 May 10, 2015, noon 23 43 14.40 +19 59 08.2 110.0 20.7 2 0.07 21.0 None Not yet Not yet']
         self.check_for_row_in_table('id_ranked_targets', testlines[0])
         self.check_for_row_in_table('id_ranked_targets', testlines[1])
