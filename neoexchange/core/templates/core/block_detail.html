@@ -89,6 +89,7 @@
                         <ul class="block-status">
                         {% for blk in object.block_set.all %}
                         <li class="{% cycle 'odd' 'even' %}">
+                            <span class="block-control">Request Number: <a href="{{blk.make_obsblock_link}}">{{blk.request_number}}</a></span><br/>
                             <span class="block-status-line">
                               <span class="block-status-item">
                               {% if blk.reported and blk.when_observed %}

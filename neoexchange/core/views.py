@@ -133,7 +133,7 @@ def summarise_block_efficiency(block_filter=0):
     summary = []
     proposals = Proposal.objects.all()
     for proposal in proposals:
-        blocks = Block.objects.filter(proposal=proposal)
+        blocks = Block.objects.filter(superblock__proposal=proposal)
         observed = blocks.filter(num_observed__isnull=False)
         if len(blocks) > block_filter:
             proposal_summary = {
@@ -884,15 +884,13 @@ def record_block(tracking_number, params, form_data, body):
             no_timezone_blk_end = params['request_windows'][i][0]['end'][:-1]
             block_kwargs = { 'superblock' : sblock_pk,
                              'telclass' : params['pondtelescope'].lower(),
-                             'site'     : params['site'].lower(),
-                             'body'     : body,
-                             'proposal' : Proposal.objects.get(code=form_data['proposal_code']),
-                             'groupid'  : form_data['group_id'],
+                             'site'     : site,
+                             'obstype'  : obstype,
                              'block_start' : datetime.strptime(no_timezone_blk_start, '%Y-%m-%dT%H:%M:%S'),
                              'block_end'   : datetime.strptime(no_timezone_blk_end, '%Y-%m-%dT%H:%M:%S'),
-                             'tracking_number' : request,
-                             'num_exposures'   : form_data['exp_count'],
-                             'exp_length'      : form_data['exp_length'],
+                             'request_number'  : request,
+                             'num_exposures'   : params['exp_count'],
+                             'exp_length'      : params['exp_time'],
                              'active'   : True
                            }
             pk = Block.objects.create(**block_kwargs)
@@ -1833,9 +1831,9 @@ def find_spec(pk):
     if 'REQNUM' in data:
         req = data['REQNUM']
     else:
-        req = block.tracking_number
-    path = os.path.join(base_dir, '', date_obs, obj + '_' + req, '')
-    prop = block.proposal.code
+        req = block.request_number
+    path = os.path.join(base_dir, date_obs, obj + '_' + req)
+    prop = block.superblock.proposal.code
     if not glob(os.path.join(base_dir, date_obs, prop+'_*'+req+'*.tar.gz')):
         date_obs = str(int(date_obs)-1)
         path = os.path.join(base_dir, '', date_obs, obj + '_' + req, '')

@@ -423,15 +423,26 @@ class SuperBlock(models.Model):
 @python_2_unicode_compatible
 class Block(models.Model):
 
+    OPT_IMAGING = 0
+    OPT_SPECTRA = 1
+    OPT_IMAGING_CALIB = 2
+    OPT_SPECTRA_CALIB = 3
+    OBSTYPE_CHOICES = (
+                        (OPT_IMAGING, 'Optical imaging'),
+                        (OPT_SPECTRA, 'Optical spectra'),
+                        (OPT_IMAGING_CALIB, 'Optical imaging calibration'),
+                        (OPT_SPECTRA_CALIB, 'Optical spectro calibration')
+                      )
+
     telclass        = models.CharField(max_length=3, null=False, blank=False, default='1m0', choices=TELESCOPE_CHOICES)
-    site            = models.CharField(max_length=3, choices=SITE_CHOICES)
-    body            = models.ForeignKey(Body)
-    proposal        = models.ForeignKey(Proposal)
+    site            = models.CharField(max_length=3, choices=SITE_CHOICES, null=True)
+    body            = models.ForeignKey(Body, null=True, blank=True)
+    calibsource     = models.ForeignKey('StaticSource', null=True, blank=True)
     superblock      = models.ForeignKey(SuperBlock, null=True, blank=True)
-    groupid         = models.CharField(max_length=55, null=True, blank=True)
+    obstype         = models.SmallIntegerField('Observation Type', null=False, blank=False, default=0, choices=OBSTYPE_CHOICES)
     block_start     = models.DateTimeField(null=True, blank=True)
     block_end       = models.DateTimeField(null=True, blank=True)
-    tracking_number = models.CharField(max_length=10, null=True, blank=True)
+    request_number  = models.CharField(max_length=10, null=True, blank=True)
     num_exposures   = models.IntegerField(null=True, blank=True)
     exp_length      = models.FloatField('Exposure length in seconds', null=True, blank=True)
     num_observed    = models.IntegerField(help_text='No. of scheduler blocks executed', null=True, blank=True)
@@ -440,11 +451,18 @@ class Block(models.Model):
     reported        = models.BooleanField(default=False)
     when_reported   = models.DateTimeField(null=True, blank=True)
 
+    def current_name(self):
+        name = ''
+        if self.body is not None:
+            name = self.body.current_name()
+        elif self.calibsource is not None:
+            name = self.calibsource.name
+        return name
+
     def make_obsblock_link(self):
         url = ''
-        # XXX Change to request number and point at requests endpoint (https://observe.lco.global/requests/<request no.>/
-        if self.tracking_number is not None and self.tracking_number != '':
-            url = urljoin(settings.PORTAL_REQUEST_URL, self.tracking_number)
+        if self.request_number is not None and self.request_number != '':
+            url = urljoin(settings.PORTAL_REQUEST_URL, self.request_number)
         return url
 
     def num_red_frames(self):
@@ -461,23 +479,28 @@ class Block(models.Model):
             total_exposure_number = ql_frames.count()
         return total_exposure_number
 
+    def num_spectro_frames(self):
+        """Returns the numbers of different types of spectroscopic frames"""
+        num_moltypes_string = 'No data'
+        data, num_frames = check_for_archive_images(self.request_number, obstype='')
+        if num_frames > 0:
+            moltypes = [x['OBSTYPE'] if x['RLEVEL'] != 90 else "TAR" for x in data]
+            num_moltypes = {x : moltypes.count(x) for x in set(moltypes)}
+            num_moltypes_sort = OrderedDict(sorted(num_moltypes.items(), reverse=True))
+            num_moltypes_string = ", ".join([x+": "+str(num_moltypes_sort[x]) for x in num_moltypes_sort])
+        return num_moltypes_string
+
+    def num_spectra_complete(self):
+        """Returns the number of actually completed spectra excluding lamps/arcs"""
+        num_spectra = 0
+        data, num_frames = check_for_archive_images(self.request_number, obstype='')
+        if num_frames > 0:
+            moltypes = [x['OBSTYPE'] if x['RLEVEL'] != 90 else "TAR" for x in data]
+            num_spectra = moltypes.count('SPECTRUM')
+        return num_spectra
+
     def num_candidates(self):
         return Candidate.objects.filter(block=self.id).count()
-
-    def save(self, *args, **kwargs):
-        if not self.superblock:
-            sblock_kwargs = {
-                                'body' : self.body,
-                                'proposal' : self.proposal,
-                                'block_start' : self.block_start,
-                                'block_end' : self.block_end,
-                                'groupid' : self.groupid,
-                                'tracking_number' : self.tracking_number,
-                                'active' : self.active
-                            }
-            sblock, created = SuperBlock.objects.get_or_create(pk=self.id, **sblock_kwargs)
-            self.superblock = sblock
-        super(Block, self).save(*args, **kwargs)
 
     class Meta:
         verbose_name = _('Observation Block')
@@ -490,7 +513,7 @@ class Block(models.Model):
         else:
             text = 'not '
 
-        return '%s is %sactive' % (self.tracking_number, text)
+        return '%s is %sactive' % (self.request_number, text)
 
 
 def unpickle_wcs(wcs_string):

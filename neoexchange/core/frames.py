@@ -256,8 +256,16 @@ def block_status(block_id):
     #only the one block used to call this procedure.
     exposure_count = 0
     for r in data['requests']:
-        if r['id'] == int(block.tracking_number) or len(data['requests']) < 2:
-            images, num_archive_frames = check_for_archive_images(request_id=r['id'])
+        if r['id'] == int(block.request_number) or len(data['requests']) < 2:
+            obstype = 'EXPOSE'
+            try:
+                if block.obstype == Block.OPT_SPECTRA or block.obstype == Block.OPT_SPECTRA_CALIB:
+                    # Set OBSTYPE to null string for archive search so we get all
+                    # types of frames
+                    obstype = ''
+            except AttributeError:
+                logger.warning("Unable to find observation type for Block/track# %s / %s" % (block_id, tracking_num))
+            images, num_archive_frames = check_for_archive_images(request_id=r['id'], obstype=obstype)
             logger.info('Request no. %s x %s images (%s total all red. levels)' % (r['id'], len(images), num_archive_frames))
             if images:
                 exposure_count = sum([x['exposure_count'] for x in r['molecules']])
