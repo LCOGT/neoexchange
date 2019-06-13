@@ -93,8 +93,17 @@ class BlockAdmin(VersionAdmin):
             name = obj.calibsource.name
         return name
 
+    def groupid(self, obj):
+        groupid = ''
+        if obj.superblock.groupid is not None:
+            groupid = obj.superblock.groupid
+        return groupid
+
+    def proposal(self, obj):
+        return obj.superblock.proposal
+
     list_display = ('groupid', 'body_name', 'site', 'proposal', 'block_start', 'num_observed', 'active', 'reported', 'zoo_friendly', 'sent_to_zoo')
-    list_filter = ('site', 'telclass', 'proposal', 'block_start', 'num_observed', 'active', 'reported',)
+    list_filter = ('site', 'telclass', 'superblock__proposal', 'block_start', 'num_observed', 'active', 'reported',)
 
     ordering = ('-block_start',)
 

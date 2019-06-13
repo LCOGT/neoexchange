@@ -336,7 +336,7 @@ def block_status(block_id):
     # only the one block used to call this procedure.
     exposure_count = 0
     for r in data['requests']:
-        if r['id'] == int(block.tracking_number) or len(data['requests']) < 2:
+        if r['id'] == int(block.request_number) or len(data['requests']) < 2:
             obstype = 'EXPOSE'
             try:
                 if block.obstype == Block.OPT_SPECTRA or block.obstype == Block.OPT_SPECTRA_CALIB:
