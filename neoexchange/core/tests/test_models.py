@@ -71,13 +71,22 @@ class TestBody(TestCase):
         self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
 
         # Create test blocks
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'cpt',
+        sblock_params = {
                          'body'     : self.body,
                          'proposal' : self.neo_proposal,
                          'block_start' : '2015-04-20 13:00:00',
                          'block_end'   : '2015-04-21 03:00:00',
                          'tracking_number' : '00042',
+                         'active'   : True,
+                       }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'cpt',
+                         'body'     : self.body,
+                         'superblock' : self.test_sblock,
+                         'block_start' : '2015-04-20 13:00:00',
+                         'block_end'   : '2015-04-21 03:00:00',
+                         'request_number' : '10042',
                          'num_exposures' : 5,
                          'exp_length' : 42.0,
                          'active'   : True,
@@ -86,13 +95,22 @@ class TestBody(TestCase):
                        }
         self.test_block = Block.objects.create(**block_params)
 
-        block_params2 = { 'telclass' : '2m0',
-                         'site'     : 'coj',
+        sblock_params2 = {
                          'body'     : self.body3,
                          'proposal' : self.neo_proposal,
                          'block_start' : '2015-04-20 03:00:00',
                          'block_end'   : '2015-04-20 13:00:00',
                          'tracking_number' : '00043',
+                         'active'   : False,
+                       }
+        self.test_sblock2 = SuperBlock.objects.create(**sblock_params2)
+        block_params2 = { 'telclass' : '2m0',
+                         'site'     : 'coj',
+                         'body'     : self.body3,
+                         'superblock' : self.test_sblock2,
+                         'block_start' : '2015-04-20 03:00:00',
+                         'block_end'   : '2015-04-20 13:00:00',
+                         'request_number' : '10043',
                          'num_exposures' : 7,
                          'exp_length' : 30.0,
                          'active'   : False,
@@ -101,13 +119,22 @@ class TestBody(TestCase):
                        }
         self.test_block2 = Block.objects.create(**block_params2)
 
-        block_params3 = { 'telclass' : '2m0',
-                         'site'     : 'coj',
+        sblock_params3 = {
                          'body'     : self.body4,
                          'proposal' : self.neo_proposal,
                          'block_start' : '2015-04-20 03:00:00',
                          'block_end'   : '2015-04-20 13:00:00',
                          'tracking_number' : '00044',
+                         'active'   : False,
+                       }
+        self.test_sblock3 = SuperBlock.objects.create(**sblock_params3)
+        block_params3 = { 'telclass' : '2m0',
+                         'site'     : 'coj',
+                         'body'     : self.body4,
+                         'superblock' : self.test_sblock3,
+                         'block_start' : '2015-04-20 03:00:00',
+                         'block_end'   : '2015-04-20 13:00:00',
+                         'request_number' : '10044',
                          'num_exposures' : 7,
                          'exp_length' : 30.0,
                          'active'   : False,
@@ -116,13 +143,22 @@ class TestBody(TestCase):
                        }
         self.test_block3 = Block.objects.create(**block_params3)
 
-        block_params5a = { 'telclass' : '2m0',
-                         'site'     : 'coj',
+        sblock_params5a = {
                          'body'     : self.body5,
                          'proposal' : self.neo_proposal,
                          'block_start' : '2015-04-20 03:00:00',
                          'block_end'   : '2015-04-20 13:00:00',
                          'tracking_number' : '00045',
+                         'active'   : False,
+                       }
+        self.test_sblock5a = SuperBlock.objects.create(**sblock_params5a)
+        block_params5a = { 'telclass' : '2m0',
+                         'site'     : 'coj',
+                         'body'     : self.body5,
+                         'superblock' : self.test_sblock5a,
+                         'block_start' : '2015-04-20 03:00:00',
+                         'block_end'   : '2015-04-20 13:00:00',
+                         'request_number' : '10045',
                          'num_exposures' : 7,
                          'exp_length' : 30.0,
                          'active'   : False,
@@ -131,13 +167,22 @@ class TestBody(TestCase):
                        }
         self.test_block5a = Block.objects.create(**block_params5a)
 
-        block_params5b = { 'telclass' : '2m0',
-                         'site'     : 'coj',
+        sblock_params5b = {
                          'body'     : self.body5,
                          'proposal' : self.neo_proposal,
                          'block_start' : '2015-04-20 03:00:00',
                          'block_end'   : '2015-04-20 13:00:00',
                          'tracking_number' : '00045',
+                         'active'   : False,
+                       }
+        self.test_sblock5b = SuperBlock.objects.create(**sblock_params5b)
+        block_params5b = { 'telclass' : '2m0',
+                         'site'     : 'coj',
+                         'body'     : self.body5,
+                         'superblock' : self.test_sblock5b,
+                         'block_start' : '2015-04-20 03:00:00',
+                         'block_end'   : '2015-04-20 13:00:00',
+                         'request_number' : '10045',
                          'num_exposures' : 7,
                          'exp_length' : 30.0,
                          'active'   : False,
@@ -413,12 +458,11 @@ class TestSuperBlock(TestCase):
         params1 = { 'telclass' : '2m0',
                     'site' : 'coj',
                     'body' : self.body,
-                    'proposal' : self.proposal,
                     'superblock' : self.sblock,
                     'obstype' : Block.OPT_SPECTRA,
                     'block_start' : datetime(2015, 4, 20, 4, 0),
                     'block_end' : datetime(2015, 4, 20, 5, 15),
-                    'tracking_number' : '1',
+                    'request_number' : '1',
                     'num_exposures' : 1,
                     'exp_length' : 1800
                   }
@@ -427,12 +471,11 @@ class TestSuperBlock(TestCase):
         params2 = { 'telclass' : '1m0',
                     'site' : 'coj',
                     'body' : self.body,
-                    'proposal' : self.proposal,
                     'superblock' : self.sblock,
                     'obstype' : Block.OPT_IMAGING,
                     'block_start' : datetime(2015, 4, 20, 6, 15),
                     'block_end' : datetime(2015, 4, 20, 6, 30),
-                    'tracking_number' : '2',
+                    'request_number' : '2',
                     'num_exposures' : 4,
                     'exp_length' : 120.0
                   }
@@ -441,12 +484,11 @@ class TestSuperBlock(TestCase):
         params3 = { 'telclass' : '1m0',
                     'site' : 'coj',
                     'body' : self.body,
-                    'proposal' : self.proposal,
                     'superblock' : self.sblock,
                     'obstype' : Block.OPT_IMAGING,
                     'block_start' : datetime(2015, 4, 20, 8, 0),
                     'block_end' : datetime(2015, 4, 20, 10, 15),
-                    'tracking_number' : '3',
+                    'request_number' : '3',
                     'num_exposures' : 120,
                     'exp_length' : 60.0
                   }
@@ -550,12 +592,11 @@ class TestBlock(TestCase):
                     'site' : 'coj',
                     'body' : cls.body,
                     'calibsource' : None,
-                    'proposal' : cls.proposal,
                     'superblock' : cls.sblock,
                     'obstype' : Block.OPT_SPECTRA,
                     'block_start' : datetime(2015, 4, 20, 4, 0),
                     'block_end' : datetime(2015, 4, 20, 5, 15),
-                    'tracking_number' : '1',
+                    'request_number' : '1',
                     'num_exposures' : 1,
                     'exp_length' : 1800
                   }
@@ -563,12 +604,11 @@ class TestBlock(TestCase):
                     'site' : 'coj',
                     'body' : cls.body,
                     'calibsource' : None,
-                    'proposal' : cls.proposal,
                     'superblock' : cls.sblock,
                     'obstype' : Block.OPT_IMAGING,
                     'block_start' : datetime(2015, 4, 20, 6, 15),
                     'block_end' : datetime(2015, 4, 20, 6, 30),
-                    'tracking_number' : '2',
+                    'request_number' : '2',
                     'num_exposures' : 4,
                     'exp_length' : 120.0
                   }
@@ -577,12 +617,11 @@ class TestBlock(TestCase):
                     'site' : 'coj',
                     'body' : cls.body,
                     'calibsource' : None,
-                    'proposal' : cls.proposal,
                     'superblock' : cls.sblock,
                     'obstype' : Block.OPT_IMAGING,
                     'block_start' : datetime(2015, 4, 20, 8, 0),
                     'block_end' : datetime(2015, 4, 20, 10, 15),
-                    'tracking_number' : '3',
+                    'request_number' : '3',
                     'num_exposures' : 120,
                     'exp_length' : 60.0
                   }
@@ -591,12 +630,11 @@ class TestBlock(TestCase):
                     'site' : 'coj',
                     'body' : None,
                     'calibsource' : cls.staticsrc,
-                    'proposal' : cls.proposal,
                     'superblock' : cls.sblock,
                     'obstype' : Block.OPT_SPECTRA,
                     'block_start' : datetime(2015, 4, 20, 4, 0),
                     'block_end' : datetime(2015, 4, 20, 5, 15),
-                    'tracking_number' : '4',
+                    'request_number' : '4',
                     'num_exposures' : 1,
                     'exp_length' : 300.0
                   }
@@ -652,13 +690,22 @@ class TestFrame(TestCase):
         self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
 
         # Create test blocks
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'cpt',
+        sblock_params = {
                          'body'     : self.body,
                          'proposal' : self.neo_proposal,
                          'block_start' : '2015-07-13 18:00:00',
                          'block_end'   : '2015-07-14 03:00:00',
                          'tracking_number' : '00042',
+                         'active'   : True,
+                       }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'cpt',
+                         'body'     : self.body,
+                         'superblock' : self.test_sblock,
+                         'block_start' : '2015-07-13 18:00:00',
+                         'block_end'   : '2015-07-14 03:00:00',
+                         'request_number' : '10042',
                          'num_exposures' : 5,
                          'exp_length' : 40.0,
                          'active'   : True,
@@ -1028,13 +1075,22 @@ class TestSourceMeasurement(TestCase):
         self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
 
         # Create test blocks
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'cpt',
+        sblock_params = {
                          'body'     : self.body,
                          'proposal' : self.neo_proposal,
                          'block_start' : '2015-07-13 18:00:00',
                          'block_end'   : '2015-07-14 03:00:00',
                          'tracking_number' : '00042',
+                         'active'   : True,
+                       }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'cpt',
+                         'body'     : self.body,
+                         'superblock' : self.test_sblock,
+                         'block_start' : '2015-07-13 18:00:00',
+                         'block_end'   : '2015-07-14 03:00:00',
+                         'request_number' : '10042',
                          'num_exposures' : 5,
                          'exp_length' : 40.0,
                          'active'   : True,
@@ -1044,13 +1100,22 @@ class TestSourceMeasurement(TestCase):
                        }
         self.test_block = Block.objects.create(**block_params)
 
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'lsc',
+        sblock_params = {
                          'body'     : self.body2,
                          'proposal' : self.neo_proposal,
                          'block_start' : '2015-12-04 00:40:00',
                          'block_end'   : '2015-12-04 08:10:00',
                          'tracking_number' : '0000117781',
+                         'active'   : False,
+                       }
+        self.test_sblock2 = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'lsc',
+                         'body'     : self.body2,
+                         'superblock' : self.test_sblock2,
+                         'block_start' : '2015-12-04 00:40:00',
+                         'block_end'   : '2015-12-04 08:10:00',
+                         'request_number' : '0010117781',
                          'num_exposures' : 15,
                          'exp_length' : 95.0,
                          'active'   : False,
@@ -1563,13 +1628,22 @@ class TestCatalogSources(TestCase):
         self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
 
         # Create test blocks
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'cpt',
+        sblock_params = {
                          'body'     : self.body,
                          'proposal' : self.neo_proposal,
                          'block_start' : '2015-07-13 18:00:00',
                          'block_end'   : '2015-07-14 03:00:00',
                          'tracking_number' : '00042',
+                         'active'   : True,
+                       }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'cpt',
+                         'body'     : self.body,
+                         'superblock' : self.test_sblock,
+                         'block_start' : '2015-07-13 18:00:00',
+                         'block_end'   : '2015-07-14 03:00:00',
+                         'request_number' : '10042',
                          'num_exposures' : 5,
                          'exp_length' : 40.0,
                          'active'   : True,
@@ -1643,13 +1717,22 @@ class TestCandidate(TestCase):
         self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
 
         # Create test blocks
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'cpt',
+        sblock_params = {
                          'body'     : self.body,
                          'proposal' : self.neo_proposal,
                          'block_start' : '2015-07-13 18:00:00',
                          'block_end'   : '2015-07-14 03:00:00',
                          'tracking_number' : '00042',
+                         'active'   : True,
+                       }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'cpt',
+                         'body'     : self.body,
+                         'superblock' : self.test_sblock,
+                         'block_start' : '2015-07-13 18:00:00',
+                         'block_end'   : '2015-07-14 03:00:00',
+                         'request_number' : '10042',
                          'num_exposures' : 5,
                          'exp_length' : 40.0,
                          'active'   : True,

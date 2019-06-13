@@ -18,7 +18,7 @@ from datetime import datetime
 from django.test import TestCase
 
 from neox.tests.mocks import MockDateTime
-from core.models import Body, Proposal, Block, Frame, SourceMeasurement
+from core.models import Body, Proposal, SuperBlock, Block, Frame, SourceMeasurement
 
 # Import module to test
 from core.mpc_submit import *
@@ -70,13 +70,22 @@ class Test_Generate_Message(TestCase):
         self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
 
         # Create test blocks
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'cpt',
+        sblock_params = {
                          'body'     : self.body,
                          'proposal' : self.neo_proposal,
                          'block_start' : '2015-07-13 18:00:00',
                          'block_end'   : '2015-07-14 03:00:00',
                          'tracking_number' : '00042',
+                         'active'   : True,
+                       }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'cpt',
+                         'body'     : self.body,
+                         'superblock' : self.test_sblock,
+                         'block_start' : '2015-07-13 18:00:00',
+                         'block_end'   : '2015-07-14 03:00:00',
+                         'request_number' : '10042',
                          'num_exposures' : 5,
                          'exp_length' : 40.0,
                          'active'   : True,
@@ -85,18 +94,35 @@ class Test_Generate_Message(TestCase):
                          'reported' : False
                        }
         self.test_block = Block.objects.create(**block_params)
-        block_params['tracking_number'] = '00043'
+
+        sblock_params['tracking_number'] = '00043'
+        self.test_sblock_gaia = SuperBlock.objects.create(**sblock_params)
+        block_params['request_number'] = '10043'
+        block_params['superblock'] = self.test_sblock_gaia
         self.test_block_gaia = Block.objects.create(**block_params)
-        block_params['tracking_number'] = '00243'
+
+        sblock_params['tracking_number'] = '00243'
+        self.test_sblock_gaiadr2 = SuperBlock.objects.create(**sblock_params)
+        block_params['request_number'] = '10243'
+        block_params['superblock'] = self.test_sblock_gaiadr2
         self.test_block_gaiadr2 = Block.objects.create(**block_params)
 
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'lsc',
+        sblock_params = {
                          'body'     : self.body2,
                          'proposal' : self.neo_proposal,
                          'block_start' : '2015-12-04 00:40:00',
                          'block_end'   : '2015-12-04 08:10:00',
                          'tracking_number' : '0000117781',
+                         'active'   : False,
+                       }
+        self.test_sblock2 = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'lsc',
+                         'body'     : self.body2,
+                         'superblock' : self.test_sblock2,
+                         'block_start' : '2015-12-04 00:40:00',
+                         'block_end'   : '2015-12-04 08:10:00',
+                         'request_number' : '0010117781',
                          'num_exposures' : 15,
                          'exp_length' : 95.0,
                          'active'   : False,
@@ -107,13 +133,22 @@ class Test_Generate_Message(TestCase):
         self.test_block2 = Block.objects.create(**block_params)
         self.test_block2ql = Block.objects.create(**block_params)
 
-        block_params = { 'telclass' : '0m4',
-                         'site'     : 'tfn',
+        sblock_params = {
                          'body'     : self.body2,
                          'proposal' : self.neo_proposal,
                          'block_start' : '2015-12-04 00:40:00',
                          'block_end'   : '2015-12-04 08:10:00',
                          'tracking_number' : '0000117782',
+                         'active'   : False,
+                       }
+        self.test_sblock3 = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '0m4',
+                         'site'     : 'tfn',
+                         'body'     : self.body2,
+                         'superblock' : self.test_sblock3,
+                         'block_start' : '2015-12-04 00:40:00',
+                         'block_end'   : '2015-12-04 08:10:00',
+                         'request_number' : '0010117782',
                          'num_exposures' : 30,
                          'exp_length' : 120.0,
                          'active'   : False,
@@ -123,13 +158,22 @@ class Test_Generate_Message(TestCase):
                        }
         self.test_block3 = Block.objects.create(**block_params)
 
-        block_params = { 'telclass' : '2m0',
-                         'site'     : 'ogg',
+        sblock_params = {
                          'body'     : self.body2,
                          'proposal' : self.neo_proposal,
                          'block_start' : '2015-12-25 05:40:00',
                          'block_end'   : '2015-12-04 14:10:00',
                          'tracking_number' : '0000117783',
+                         'active'   : False,
+                       }
+        self.test_sblock4 = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '2m0',
+                         'site'     : 'ogg',
+                         'body'     : self.body2,
+                         'superblock' : self.test_sblock4,
+                         'block_start' : '2015-12-25 05:40:00',
+                         'block_end'   : '2015-12-04 14:10:00',
+                         'request_number' : '0010117783',
                          'num_exposures' :  5,
                          'exp_length' : 120.0,
                          'active'   : False,
@@ -656,13 +700,22 @@ class Test_Generate_ADES_PSV_Message(TestCase):
         self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
 
         # Create test blocks
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'cpt',
+        sblock_params = {
                          'body'     : self.body,
                          'proposal' : self.neo_proposal,
                          'block_start' : '2015-07-13 18:00:00',
                          'block_end'   : '2015-07-14 03:00:00',
                          'tracking_number' : '00042',
+                         'active'   : True,
+                       }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'cpt',
+                         'body'     : self.body,
+                         'superblock' : self.test_sblock,
+                         'block_start' : '2015-07-13 18:00:00',
+                         'block_end'   : '2015-07-14 03:00:00',
+                         'request_number' : '10042',
                          'num_exposures' : 5,
                          'exp_length' : 40.0,
                          'active'   : True,
@@ -671,18 +724,35 @@ class Test_Generate_ADES_PSV_Message(TestCase):
                          'reported' : False
                        }
         self.test_block = Block.objects.create(**block_params)
-        block_params['tracking_number'] = '00043'
+
+        sblock_params['tracking_number'] = '00043'
+        self.test_sblock_gaia = SuperBlock.objects.create(**sblock_params)
+        block_params['request_number'] = '10043'
+        block_params['superblock'] = self.test_sblock_gaia
         self.test_block_gaia = Block.objects.create(**block_params)
-        block_params['tracking_number'] = '00243'
+
+        sblock_params['tracking_number'] = '00243'
+        self.test_sblock_gaiadr2 = SuperBlock.objects.create(**sblock_params)
+        block_params['request_number'] = '10243'
+        block_params['superblock'] = self.test_sblock_gaiadr2
         self.test_block_gaiadr2 = Block.objects.create(**block_params)
 
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'lsc',
+        sblock_params = {
                          'body'     : self.body2,
                          'proposal' : self.neo_proposal,
                          'block_start' : '2015-12-04 00:40:00',
                          'block_end'   : '2015-12-04 08:10:00',
                          'tracking_number' : '0000117781',
+                         'active'   : False,
+                       }
+        self.test_sblock2 = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'lsc',
+                         'body'     : self.body2,
+                         'superblock' : self.test_sblock2,
+                         'block_start' : '2015-12-04 00:40:00',
+                         'block_end'   : '2015-12-04 08:10:00',
+                         'request_number' : '0010117781',
                          'num_exposures' : 15,
                          'exp_length' : 95.0,
                          'active'   : False,
@@ -693,13 +763,22 @@ class Test_Generate_ADES_PSV_Message(TestCase):
         self.test_block2 = Block.objects.create(**block_params)
         self.test_block2ql = Block.objects.create(**block_params)
 
-        block_params = { 'telclass' : '0m4',
-                         'site'     : 'tfn',
+        sblock_params = {
                          'body'     : self.body2,
                          'proposal' : self.neo_proposal,
                          'block_start' : '2015-12-04 00:40:00',
                          'block_end'   : '2015-12-04 08:10:00',
                          'tracking_number' : '0000117782',
+                         'active'   : False,
+                       }
+        self.test_sblock3 = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '0m4',
+                         'site'     : 'tfn',
+                         'body'     : self.body2,
+                         'superblock' : self.test_sblock3,
+                         'block_start' : '2015-12-04 00:40:00',
+                         'block_end'   : '2015-12-04 08:10:00',
+                         'request_number' : '0010117782',
                          'num_exposures' : 30,
                          'exp_length' : 120.0,
                          'active'   : False,
@@ -709,13 +788,22 @@ class Test_Generate_ADES_PSV_Message(TestCase):
                        }
         self.test_block3 = Block.objects.create(**block_params)
 
-        block_params = { 'telclass' : '2m0',
-                         'site'     : 'ogg',
+        sblock_params = {
                          'body'     : self.body2,
                          'proposal' : self.neo_proposal,
                          'block_start' : '2015-12-25 05:40:00',
                          'block_end'   : '2015-12-04 14:10:00',
                          'tracking_number' : '0000117783',
+                         'active'   : False,
+                       }
+        self.test_sblock4 = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '2m0',
+                         'site'     : 'ogg',
+                         'body'     : self.body2,
+                         'superblock' : self.test_sblock4,
+                         'block_start' : '2015-12-25 05:40:00',
+                         'block_end'   : '2015-12-04 14:10:00',
+                         'request_number' : '0010117783',
                          'num_exposures' :  5,
                          'exp_length' : 120.0,
                          'active'   : False,
