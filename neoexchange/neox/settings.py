@@ -151,9 +151,10 @@ INSTALLED_APPS = (
     'analyser.apps.AstrometerConfig',
 )
 
+rollbar_default_env = 'development' if DEBUG else 'production'
 ROLLBAR = {
     'access_token': os.environ.get('ROLLBAR_TOKEN',''),
-    'environment': 'development' if DEBUG else 'production',
+    'environment' : os.environ.get('ROLLBAR_ENVIRONMENT', rollbar_default_env),
     'root': BASE_DIR,
 }
 rollbar.init(**ROLLBAR)
