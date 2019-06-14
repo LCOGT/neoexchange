@@ -1976,47 +1976,50 @@ def submit_block_to_scheduler(elements, params):
     return tracking_number, params
 
 
-def fetch_filter_list(site, spec, page=None):
-    """Fetches the camera mappings page"""
+def fetch_filter_list(site, spec):
+    """Fetches the filter list from the configdb"""
 
-    if page is None:
-        camera_mappings = 'http://configdb.lco.gtn/camera_mappings/'
-        data_file = fetchpage_and_make_soup(camera_mappings)
-        data_out = parse_filter_file(site, spec, data_file)
+    siteid, encid, telid = MPC_site_code_to_domes(site)
+    if '1m0' in telid.lower():
+        camid = "1m0-SciCam-Sinistro"
+    elif '0m4' in telid.lower():
+        camid = "0m4-SciCam-SBIG"
+    elif '2m0' in telid.lower():
+        if spec:
+            camid = "2m0-FLOYDS-SciCam"
+        else:
+            camid = "2m0-SciCam-Spectral"
     else:
-        with open(page, 'r') as input_file:
-            data_out = parse_filter_file(site, spec, input_file.read())
+        camid = ''
+
+    if siteid == 'xxx':
+        siteid = encid = telid = ''
+
+    request_url = 'http://configdb.lco.gtn/instruments/?telescope={}&science_camera=&autoguider_camera=&camera_type={}&site={}&enclosure={}&state=SCHEDULABLE'.format(telid, camid, siteid, encid)
+    resp = requests.get(request_url, timeout=20, verify=True).json()
+
+    data_out = parse_filter_file(resp, spec)
+    if not data_out:
+        logger.error('Could not find any filters for {}'.format(site))
     return data_out
 
 
-def parse_filter_file(site, spec, camera_list=None):
-    """Parses the camera mappings page and sends back a list of filters at the given site code.
+def parse_filter_file(resp, spec):
+    """Parses the returned json dictionary and pull out the list of approved filters
     """
     if spec is not True:
         filter_list = cfg.phot_filters
     else:
         filter_list = cfg.spec_filters
 
-    siteid, encid, telid = MPC_site_code_to_domes(site)
-
-    camera_list = str(camera_list).split("\n")
     site_filters = []
-    try:
-        for line in camera_list:
-            chunks = line.split(' ')
-            chunks = list(filter(None, chunks))
-            if len(chunks) == 13:
-                if (chunks[0] == siteid or siteid == 'xxx') and chunks[2][:-1] == telid[:-1]:
-                    filt_list = chunks[12].split(',')
-                    for filt in filter_list:
-                        if filt in filt_list and filt not in site_filters:
-                            site_filters.append(filt)
-    except Exception as e:
-        msg = "Could not read camera mappings file"
-        logger.error(msg)
-        logger.error(e)
-    if not site_filters:
-        logger.error('Could not find any filters for {}'.format(site))
+    for result in resp['results']:
+        filters_1tel = result['science_camera']['filters']
+        filt_list = filters_1tel.split(',')
+        for filt in filter_list:
+            if filt in filt_list and filt not in site_filters:
+                site_filters.append(filt)
+
     return site_filters
 
 
