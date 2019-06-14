@@ -116,8 +116,8 @@ class FrameAdmin(VersionAdmin):
     format_midpoint.admin_order_field = 'midpoint'
 
     def block_groupid(self, obj):
-        if obj.block:
-            return obj.block.groupid
+        if obj.block and obj.block.superblock:
+            return obj.block.superblock.groupid
         else:
             return "No block"
 

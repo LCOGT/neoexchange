@@ -1375,7 +1375,7 @@ class Candidate(models.Model):
         verbose_name = _('Candidate')
 
     def __str__(self):
-        return "%s#%04d" % (self.block.tracking_number, self.cand_id)
+        return "%s#%04d" % (self.block.request_number, self.cand_id)
 
 
 @python_2_unicode_compatible
