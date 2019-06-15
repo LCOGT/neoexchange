@@ -19,6 +19,8 @@ from django.contrib import admin
 from django.contrib.auth.views import login, logout
 from django.views.generic import ListView, DetailView
 from django.core.urlresolvers import reverse_lazy
+from rest_framework.routers import DefaultRouter
+from rest_framework.authtoken.views import obtain_auth_token
 
 from core.models import Body, Block, SourceMeasurement, SuperBlock, StaticSource
 from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockListView, ScheduleParameters, \
@@ -33,12 +35,19 @@ from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockLis
     BestStandardsView
 
 from analyser.views import BlockFramesView, ProcessCandidates
-
+from core.viewsets import ProposalViewSet
 
 admin.autodiscover()
+router = DefaultRouter()
+router.register(r'proposals', ProposalViewSet, 'proposals')
+
+api_urlpatterns = ([
+    url(r'^', include(router.urls)),
+], 'api')
 
 urlpatterns = [
     url(r'^$', home, name='home'),
+    url(r'^api/', include(api_urlpatterns)),
     url(r'^makeplot/$', make_plot, name='makeplot'),
     url(r'^plotframe/$', plotframe),
     url(r'^make-standards-plot/$', make_standards_plot, name='make-standards-plot'),

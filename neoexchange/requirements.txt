@@ -7,6 +7,7 @@ astroquery
 pyslalib
 beautifulsoup4
 django-reversion>=2.0
+djangorestframework
 html5lib
 ipython
 nose

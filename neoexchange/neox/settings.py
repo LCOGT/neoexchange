@@ -7,7 +7,7 @@ from django.utils.crypto import get_random_string
 import rollbar
 
 
-VERSION = '2.8.6'
+VERSION = '3.0.0a'
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
@@ -147,6 +147,7 @@ INSTALLED_APPS = (
     'django.contrib.admin',
     'django.contrib.messages',
     'reversion',
+    'rest_framework',
     'core.apps.CoreConfig',
     'analyser.apps.AstrometerConfig',
 )
