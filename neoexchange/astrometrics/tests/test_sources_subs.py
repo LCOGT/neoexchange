@@ -1173,56 +1173,223 @@ class TestFetchFilterList(TestCase):
     """Unit test for getting current filters from configdb"""
 
     def setUp(self):
-        # Read stored version of camera mappings file
-        self.test_filter_map = os.path.join('astrometrics', 'tests', 'test_camera_mapping.dat')
+        self.lsc_1m_rsp = {
+                        "count": 1,
+                        "next": 'null',
+                        "previous": 'null',
+                        "results": [
+                            {
+                                "id": 92,
+                                "code": "fa15",
+                                "state": "SCHEDULABLE",
+                                "telescope": "http://configdb.lco.gtn/telescopes/10/",
+                                "science_camera": {
+                                    "id": 93,
+                                    "code": "fa15",
+                                    "camera_type": {
+                                        "id": 3,
+                                        "name": "1.0 meter Sinistro",
+                                        "code": "1m0-SciCam-Sinistro",
+                                    },
+                                    "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,ND,400um-Pinhole,150um-Pinhole",
+                                    "host": "inst.1m0a.doma.lsc.lco.gtn"
+                                },
+                                "__str__": "lsc.doma.1m0a.fa15-ef06"
+                            }
+                        ]
+                    }
 
-    def test_1m_cpt(self):
-        expected_filter_list = ['air', 'U', 'B', 'V', 'R', 'I', 'up', 'gp', 'rp', 'ip', 'zs', 'Y', 'w']
+        self.all_1m_rsp = {
+                        "count": 4,
+                        "next": 'null',
+                        "previous": 'null',
+                        "results": [
+                            {
+                                "id": 1,
+                                "code": "fa01",
+                                "state": "SCHEDULABLE",
+                                "telescope": "http://configdb.lco.gtn/telescopes/10/",
+                                "science_camera": {
+                                    "id": 1,
+                                    "code": "fa01",
+                                    "camera_type": {
+                                        "id": 3,
+                                        "name": "1.0 meter Sinistro",
+                                        "code": "1m0-SciCam-Sinistro",
+                                    },
+                                    "filters": "I,R,U",
+                                    "host": "inst.1m0a.doma.lsc.lco.gtn"
+                                },
+                                "__str__": "lsc.doma.1m0a.fa15-ef06"
+                            },
+                            {
+                                "id": 2,
+                                "code": "fa02",
+                                "state": "SCHEDULABLE",
+                                "telescope": "http://configdb.lco.gtn/telescopes/10/",
+                                "science_camera": {
+                                    "id": 2,
+                                    "code": "fa02",
+                                    "camera_type": {
+                                        "id": 3,
+                                        "name": "1.0 meter Sinistro",
+                                        "code": "1m0-SciCam-Sinistro",
+                                    },
+                                    "filters": "ip,gp,zs,B,ND,400um-Pinhole,150um-Pinhole",
+                                    "host": "inst.1m0a.doma.lsc.lco.gtn"
+                                },
+                                "__str__": "lsc.doma.1m0a.fa15-ef06"
+                            },
+                            {
+                                "id": 3,
+                                "code": "fa03",
+                                "state": "SCHEDULABLE",
+                                "telescope": "http://configdb.lco.gtn/telescopes/10/",
+                                "science_camera": {
+                                    "id": 3,
+                                    "code": "fa03",
+                                    "camera_type": {
+                                        "id": 3,
+                                        "name": "1.0 meter Sinistro",
+                                        "code": "1m0-SciCam-Sinistro",
+                                    },
+                                    "filters": "Y,up,air,rp",
+                                    "host": "inst.1m0a.doma.lsc.lco.gtn"
+                                },
+                                "__str__": "lsc.doma.1m0a.fa15-ef06"
+                            },
+                            {
+                                "id": 4,
+                                "code": "fa04",
+                                "state": "SCHEDULABLE",
+                                "telescope": "http://configdb.lco.gtn/telescopes/10/",
+                                "science_camera": {
+                                    "id": 4,
+                                    "code": "fa04",
+                                    "camera_type": {
+                                        "id": 3,
+                                        "name": "1.0 meter Sinistro",
+                                        "code": "1m0-SciCam-Sinistro",
+                                    },
+                                    "filters": "U,w,Y,up,B,ND,400um-Pinhole,150um-Pinhole",
+                                    "host": "inst.1m0a.doma.lsc.lco.gtn"
+                                },
+                                "__str__": "lsc.doma.1m0a.fa15-ef06"
+                            }
+                        ]
+                    }
+        self.all_2m_rsp = {
+                        "count": 4,
+                        "next": 'null',
+                        "previous": 'null',
+                        "results": [
+                            {
+                                "id": 40,
+                                "code": "floyds01",
+                                "state": "SCHEDULABLE",
+                                "telescope": "http://configdb.lco.gtn/telescopes/14/",
+                                "science_camera": {
+                                    "id": 17,
+                                    "code": "floyds01",
+                                    "camera_type": {
+                                        "name": "2.0 meter FLOYDS",
+                                        "code": "2m0-FLOYDS-SciCam",
+                                    },
+                                    "filters": "slit_6.0as,slit_1.6as,slit_2.0as,slit_1.2as",
+                                    "host": "floyds.ogg.lco.gtn"
+                                },
+                                "__str__": "ogg.clma.2m0a.floyds01-kb42"
+                            },
+                            {
+                                "id": 84,
+                                "code": "floyds02",
+                                "state": "SCHEDULABLE",
+                                "telescope": "http://configdb.lco.gtn/telescopes/3/",
+                                "science_camera": {
+                                    "id": 18,
+                                    "code": "floyds02",
+                                    "camera_type": {
+                                        "name": "2.0 meter FLOYDS",
+                                        "code": "2m0-FLOYDS-SciCam",
+                                    },
+                                    "filters": "slit_6.0as,slit_1.6as,slit_2.0as,slit_1.2as",
+                                    "host": "floyds.coj.lco.gtn"
+                                },
+                                "__str__": "coj.clma.2m0a.floyds02-kb38"
+                            },
+                            {
+                                "id": 7,
+                                "code": "fs01",
+                                "state": "SCHEDULABLE",
+                                "telescope": "http://configdb.lco.gtn/telescopes/3/",
+                                "science_camera": {
+                                    "id": 19,
+                                    "code": "fs01",
+                                    "camera_type": {
+                                        "name": "2.0 meter Spectral",
+                                        "code": "2m0-SciCam-Spectral",
+                                    },
+                                    "filters": "D51,H-Beta,OIII,H-Alpha,Skymapper-VS,solar,Astrodon-UV,I,R,Y,up,air,rp,ip,gp,zs,V,B,200um-Pinhole",
+                                    "host": "fs.coj.lco.gtn"
+                                },
+                                "__str__": "coj.clma.2m0a.fs01-kb34"
+                            },
+                            {
+                                "id": 42,
+                                "code": "fs02",
+                                "state": "SCHEDULABLE",
+                                "telescope": "http://configdb.lco.gtn/telescopes/14/",
+                                "science_camera": {
+                                    "id": 20,
+                                    "code": "fs02",
+                                    "camera_type": {
+                                        "name": "2.0 meter Spectral",
+                                        "code": "2m0-SciCam-Spectral",
+                                    },
+                                    "filters": "D51,H-Beta,OIII,H-Alpha,Skymapper-VS,solar,Astrodon-UV,I,R,Y,up,air,rp,ip,gp,zs,V,B,200um-Pinhole",
+                                    "host": "fs.ogg.lco.gtn"
+                                },
+                                "__str__": "ogg.clma.2m0a.fs02-kb40"
+                            }
+                        ]
+                    }
 
-        filter_list = fetch_filter_list('K91', False, self.test_filter_map)
-        self.assertEqual(expected_filter_list, filter_list)
+        self.empty = {
+                        "count": 0,
+                        "next": 'null',
+                        "previous": 'null',
+                        "results": []
+                    }
 
-    def test_0m4_ogg(self):
-        expected_filter_list = ['air', 'B', 'V', 'up', 'gp', 'rp', 'ip', 'zs', 'w']
+    def test_1m_lsc(self):
+        expected_filter_list = ['air', 'ND', 'U', 'B', 'V', 'R', 'I', 'up', 'gp', 'rp', 'ip', 'zs', 'Y', 'w']
 
-        filter_list = fetch_filter_list('T04', False, self.test_filter_map)
-        self.assertEqual(expected_filter_list, filter_list)
+        filter_list = parse_filter_file(self.lsc_1m_rsp, False)
+        self.assertCountEqual(expected_filter_list, filter_list)
 
-    def test_2m_ogg(self):
+    def test_1m_all(self):
+        expected_filter_list = ['air', 'ND', 'U', 'B', 'R', 'I', 'up', 'gp', 'rp', 'ip', 'zs', 'Y', 'w']
+
+        filter_list = parse_filter_file(self.all_1m_rsp, False)
+        self.assertCountEqual(expected_filter_list, filter_list)
+
+    def test_2m_spectral(self):
         expected_filter_list = ['air', 'Astrodon-UV', 'B', 'V', 'R', 'I', 'up', 'gp', 'rp', 'ip', 'Skymapper-VS', 'solar', 'zs', 'Y']
 
-        filter_list = fetch_filter_list('F65', False, self.test_filter_map)
-        self.assertEqual(expected_filter_list, filter_list)
-
-    def test_1m_lsc_domeb(self):
-        expected_filter_list = ['air', 'ND' , 'U', 'B', 'V', 'R', 'I', 'up', 'gp', 'rp', 'ip', 'zs', 'Y', 'w']
-
-        filter_list = fetch_filter_list('W86', False, self.test_filter_map)
-        self.assertEqual(expected_filter_list, filter_list)
+        filter_list = parse_filter_file(self.all_2m_rsp, False)
+        self.assertCountEqual(expected_filter_list, filter_list)
 
     def test_unavailable_telescope(self):
         expected_filter_list = []
 
-        filter_list = fetch_filter_list('Z21', False, self.test_filter_map)
-        self.assertEqual(expected_filter_list, filter_list)
-
-    def test_lowercase_telescope(self):
-        expected_filter_list = ['air', 'B', 'V', 'up', 'gp', 'rp', 'ip', 'zs', 'w']
-
-        filter_list = fetch_filter_list('t04', False, self.test_filter_map)
-        self.assertEqual(expected_filter_list, filter_list)
-
-    def test_invalid_telescope(self):
-        expected_filter_list = []
-
-        filter_list = fetch_filter_list('BESTtelescope', False, self.test_filter_map)
-        self.assertEqual(expected_filter_list, filter_list)
+        filter_list = parse_filter_file(self.empty, False)
+        self.assertCountEqual(expected_filter_list, filter_list)
 
     def test_spectra_telescope(self):
         expected_filter_list = ['slit_1.2as', 'slit_1.6as', 'slit_2.0as', 'slit_6.0as']
 
-        filter_list = fetch_filter_list('F65', True, self.test_filter_map)
-        self.assertEqual(expected_filter_list, filter_list)
+        filter_list = parse_filter_file(self.all_2m_rsp, True)
+        self.assertCountEqual(expected_filter_list, filter_list)
 
 
 class TestPreviousNEOCPParser(TestCase):

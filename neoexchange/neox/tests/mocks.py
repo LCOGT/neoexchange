@@ -20,7 +20,8 @@ import os
 import astropy.units as u
 from django.contrib.auth import authenticate
 import logging
-from astrometrics.sources_subs import fetch_filter_list
+from astrometrics.sources_subs import parse_filter_file
+from astrometrics.ephem_subs import MPC_site_code_to_domes
 
 logger = logging.getLogger(__name__)
 
@@ -817,15 +818,97 @@ class MockCandidate(object):
 # Submission-related mocks
 
 def mock_fetch_filter_list(site, spec):
-    test_filter_map = os.path.join('astrometrics', 'tests', 'test_camera_mapping.dat')
 
-    return fetch_filter_list(site, spec, test_filter_map)
+    siteid, encid, telid = MPC_site_code_to_domes(site)
+
+    lsc_1m_rsp = {
+                        "count": 1,
+                        "next": 'null',
+                        "previous": 'null',
+                        "results": [
+                            {
+                                "id": 92,
+                                "code": "fa15",
+                                "state": "SCHEDULABLE",
+                                "telescope": "http://configdb.lco.gtn/telescopes/10/",
+                                "science_camera": {
+                                    "id": 93,
+                                    "code": "fa15",
+                                    "camera_type": {
+                                        "id": 3,
+                                        "name": "1.0 meter Sinistro",
+                                        "code": "1m0-SciCam-Sinistro",
+                                    },
+                                    "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,ND,400um-Pinhole,150um-Pinhole",
+                                    "host": "inst.1m0a.doma.lsc.lco.gtn"
+                                },
+                                "__str__": "lsc.doma.1m0a.fa15-ef06"
+                            }
+                        ]
+                    }
+    all_2m_rsp = {
+                        "count": 2,
+                        "next": 'null',
+                        "previous": 'null',
+                        "results": [
+                            {
+                                "id": 40,
+                                "code": "floyds01",
+                                "state": "SCHEDULABLE",
+                                "telescope": "http://configdb.lco.gtn/telescopes/14/",
+                                "science_camera": {
+                                    "id": 17,
+                                    "code": "floyds01",
+                                    "camera_type": {
+                                        "name": "2.0 meter FLOYDS",
+                                        "code": "2m0-FLOYDS-SciCam",
+                                    },
+                                    "filters": "slit_6.0as,slit_1.6as,slit_2.0as,slit_1.2as",
+                                    "host": "floyds.ogg.lco.gtn"
+                                },
+                                "__str__": "ogg.clma.2m0a.floyds01-kb42"
+                            },
+                            {
+                                "id": 7,
+                                "code": "fs01",
+                                "state": "SCHEDULABLE",
+                                "telescope": "http://configdb.lco.gtn/telescopes/3/",
+                                "science_camera": {
+                                    "id": 19,
+                                    "code": "fs01",
+                                    "camera_type": {
+                                        "name": "2.0 meter Spectral",
+                                        "code": "2m0-SciCam-Spectral",
+                                    },
+                                    "filters": "D51,H-Beta,OIII,H-Alpha,Skymapper-VS,solar,Astrodon-UV,I,R,Y,up,air,rp,ip,gp,zs,V,B,200um-Pinhole",
+                                    "host": "fs.coj.lco.gtn"
+                                },
+                                "__str__": "coj.clma.2m0a.fs01-kb34"
+                            }
+                        ]
+                    }
+
+    empty = {
+                        "count": 0,
+                        "next": 'null',
+                        "previous": 'null',
+                        "results": []
+                    }
+
+    if '2m0' in telid.lower():
+        resp = all_2m_rsp
+    elif '1m0' in telid.lower() or '0m4' in telid.lower():
+        resp = lsc_1m_rsp
+    else:
+        resp = empty
+
+    out_data = parse_filter_file(resp, spec)
+    return out_data
 
 
 def mock_fetch_filter_list_no2m(site, spec):
-    test_filter_map = os.path.join('astrometrics', 'tests', 'test_no2m_camera_mapping.dat')
 
-    return fetch_filter_list(site, spec, test_filter_map)
+    return []
 
 
 def mock_expand_cadence(user_request):

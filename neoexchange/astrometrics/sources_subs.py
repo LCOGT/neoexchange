@@ -1995,7 +1995,7 @@ def fetch_filter_list(site, spec):
     if siteid == 'xxx':
         siteid = encid = telid = ''
 
-    request_url = 'http://configdb.lco.gtn/instruments/?telescope={}&science_camera=&autoguider_camera=&camera_type={}&site={}&enclosure={}&state=SCHEDULABLE'.format(telid, camid, siteid, encid)
+    request_url = 'http://configdb.lco.gtn/instruments/?telescope={}&science_camera=&autoguider_camera=&camera_type={}&site={}&enclosure={}&state=SCHEDULABLE'.format(telid.lower(), camid, siteid.lower(), encid.lower())
     resp = requests.get(request_url, timeout=20, verify=True).json()
 
     data_out = parse_filter_file(resp, spec)
