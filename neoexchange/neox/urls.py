@@ -35,11 +35,12 @@ from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockLis
     BestStandardsView
 
 from analyser.views import BlockFramesView, ProcessCandidates
-from core.viewsets import ProposalViewSet
+from core.viewsets import ProposalViewSet, FrameViewSet
 
 admin.autodiscover()
 router = DefaultRouter()
 router.register(r'proposals', ProposalViewSet, 'proposals')
+router.register(r'frames', FrameViewSet, 'frames')
 
 api_urlpatterns = ([
     url(r'^', include(router.urls)),

@@ -1,8 +1,9 @@
 import json
+from datetime import datetime
 
 from django.test import TestCase
 
-from core.models import Proposal
+from core.models import Proposal, Frame
 
 # Import modules to test
 from core.viewsets import *
@@ -69,3 +70,12 @@ class ProposalAPITest(TestCase):
                  }
             ]
         )
+
+class FrameAPITest(TestCase):
+    base_url = '/api/frames/{}/'
+
+    def test_get_returns_json_200(self):
+        test_frame = Frame.objects.create(filename='cpt1m010-fa16-20190330-0129-e91.fits', midpoint=datetime(2019,4,20,19,30,0))
+        response = self.client.get(self.base_url.format(test_frame.id))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
