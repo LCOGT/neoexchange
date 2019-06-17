@@ -148,6 +148,7 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'reversion',
     'rest_framework',
+    'django_filters',
     'core.apps.CoreConfig',
     'analyser.apps.AstrometerConfig',
 )

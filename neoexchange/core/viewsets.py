@@ -1,7 +1,9 @@
 from rest_framework import serializers, viewsets
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from django_filters.rest_framework import DjangoFilterBackend
 
 from core.models import Proposal, Frame
+from core.filters import FrameFilter
 
 
 class ProposalSerializer(serializers.ModelSerializer):
@@ -12,7 +14,7 @@ class ProposalSerializer(serializers.ModelSerializer):
 class FrameSerializer(serializers.ModelSerializer):
     class Meta:
         model = Frame
-        fields = '__all__'
+        exclude = ('wcs', )
         read_only_fields = (
             'id',
         )
@@ -25,6 +27,9 @@ class FrameViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticatedOrReadOnly,)
     http_method_names = ['get', 'head', 'options']
     serializer_class = FrameSerializer
+    filter_backends = (DjangoFilterBackend,)
+    filter_class = FrameFilter
+
     def get_queryset(self):
         if self.request.user.is_staff:
             qs = Frame.objects.all()
