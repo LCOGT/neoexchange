@@ -107,7 +107,8 @@ class BaseViewTest(APITestCase):
         self.test_sblock = SuperBlock.objects.create(**sblock_params)
         self.block_params = { 'superblock' : self.test_sblock,
                               'proposal' :  self.test_proposal,
-                              'obstype' : Block.OPT_IMAGING
+                              'obstype' : Block.OPT_IMAGING,
+                              'num_exposures' : 42,
                             }
         self.test_block = Block.objects.create(**self.block_params)
 
@@ -384,9 +385,9 @@ class BlockAPITest(BaseViewTest):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['content-type'], 'application/json')
 
-    def test_get_returns_json_404(self):
+    def test_anonymous_get_returns_json_200(self):
         response = self.client.get(self.base_url.format(self.test_block.id))
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(response['content-type'], 'application/json')
 
     def test_get_for_LCO_data(self):
@@ -397,26 +398,25 @@ class BlockAPITest(BaseViewTest):
         self.assertEqual(
             json.loads(response.content.decode('utf8')),
             {
-                "astrometric_catalog": " ",
-                "block": 1,
-                "exptime": None,
-                "extrainfo": None,
-                "filename": 'cpt1m010-fa16-20190330-0129-e91.fits',
-                "filter": "w",
-                "frameid": None,
-                "frametype": 91,
-                "fwhm": None,
-                "id": 1,
-                "instrument": None,
-                "midpoint": "2019-04-20T19:30:00",
-                "nstars_in_fit": None,
-                "photometric_catalog": " ",
-                "quality": " ",
-                "rms_of_fit": None,
-                "sitecode": "K91",
-                "time_uncertainty": None,
-                "zeropoint": None,
-                "zeropoint_err": None
+                    "active": False,
+                    "block_end": None,
+                    "block_start": None,
+                    "body": None,
+                    "calibsource": None,
+                    "exp_length" : None,
+                    "groupid": None,
+                    "id": 1,
+                    "num_exposures": 42,
+                    "num_observed": None,
+                    "obstype": 0,
+                    "proposal": self.test_proposal.id,
+                    "reported": False,
+                    "site": None,
+                    "superblock": self.test_sblock.id,
+                    "telclass": '1m0',
+                    "tracking_number": None,
+                    "when_observed": None,
+                    "when_reported": None,
             }
         )
 
@@ -436,26 +436,25 @@ class BlockAPITest(BaseViewTest):
               'previous' : None,
               'results' : [
                 {
-                    "astrometric_catalog": " ",
-                    "block": 1,
-                    "exptime": None,
-                    "extrainfo": None,
-                    "filename": 'cpt1m010-fa16-20190330-0130-e91.fits',
-                    "filter": "w",
-                    "frameid": None,
-                    "frametype": 91,
-                    "fwhm": None,
-                    "id": 2,
-                    "instrument": None,
-                    "midpoint": "2019-04-20T19:31:00",
-                    "nstars_in_fit": None,
-                    "photometric_catalog": " ",
-                    "quality": " ",
-                    "rms_of_fit": None,
-                    "sitecode": "K91",
-                    "time_uncertainty": None,
-                    "zeropoint": None,
-                    "zeropoint_err": None
+                    "active": False,
+                    "block_end": None,
+                    "block_start": None,
+                    "body": None,
+                    "calibsource": None,
+                    "exp_length" : None,
+                    "groupid": None,
+                    "id": 1,
+                    "num_exposures": 42,
+                    "num_observed": None,
+                    "obstype": 3,
+                    "proposal": self.test_proposal.id,
+                    "reported": False,
+                    "site": None,
+                    "superblock": self.test_sblock.id,
+                    "telclass": '1m0',
+                    "tracking_number": None,
+                    "when_observed": None,
+                    "when_reported": None,
                 }
             ]
         })
@@ -482,19 +481,18 @@ class BlockAPITest(BaseViewTest):
                     "calibsource": None,
                     "exp_length" : None,
                     "groupid": None,
-                    "obstype": 0,
-                    "fwhm": None,
                     "id": 1,
-                    "instrument": None,
-                    "midpoint": "2019-04-20T19:30:00",
-                    "nstars_in_fit": None,
-                    "photometric_catalog": " ",
-                    "quality": " ",
-                    "rms_of_fit": None,
-                    "sitecode": "K91",
-                    "time_uncertainty": None,
-                    "zeropoint": None,
-                    "zeropoint_err": None
+                    "num_exposures": 42,
+                    "num_observed": None,
+                    "obstype": 3,
+                    "proposal": self.test_proposal.id,
+                    "reported": False,
+                    "site": None,
+                    "superblock": self.test_sblock.id,
+                    "telclass": '1m0',
+                    "tracking_number": None,
+                    "when_observed": None,
+                    "when_reported": None,
                 }
             ]
         })
