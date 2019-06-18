@@ -377,7 +377,7 @@ class FrameAPITest(BaseViewTest):
 
 class BlockAPITest(BaseViewTest):
     base_url = '/api/blocks/{}/'
-    query_url = '/api/blocks/?tracking_number={}&blocktype={}'
+    query_url = '/api/blocks/?tracking_number={}&obstype={}'
 
     def test_get_returns_json_200(self):
         self.login()
@@ -462,6 +462,9 @@ class BlockAPITest(BaseViewTest):
     def test_find_block_by_obstype(self):
         self.login()
         self.block_params['obstype'] = Block.OPT_SPECTRA_CALIB
+        self.block_params['num_exposures'] = 1
+        self.block_params['site'] = 'ogg'
+        self.block_params['telclass'] = '2m0'
         test_block2 = Block.objects.create(**self.block_params)
 
         response = self.client.get(self.query_url.format('', test_block2.obstype))
@@ -481,15 +484,15 @@ class BlockAPITest(BaseViewTest):
                     "calibsource": None,
                     "exp_length" : None,
                     "groupid": None,
-                    "id": 1,
-                    "num_exposures": 42,
+                    "id": 2,
+                    "num_exposures": 1,
                     "num_observed": None,
                     "obstype": 3,
                     "proposal": self.test_proposal.id,
                     "reported": False,
-                    "site": None,
+                    "site": 'ogg',
                     "superblock": self.test_sblock.id,
-                    "telclass": '1m0',
+                    "telclass": '2m0',
                     "tracking_number": None,
                     "when_observed": None,
                     "when_reported": None,
