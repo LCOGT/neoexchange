@@ -31,7 +31,7 @@ import astropy.units as u
 from numpy import where, array
 from numpy.testing import assert_allclose
 
-from core.models import Body, Proposal, Block, Frame
+from core.models import Body, Proposal, SuperBlock, Block, Frame
 
 # Import module to test
 from photometrics.catalog_subs import *
@@ -2172,14 +2172,23 @@ class UpdateFrameZeropointTest(FITSUnitTest):
         self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
 
         # Create test block
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'LSC',
+        sblock_params = {
                          'body'     : self.body_with_provname,
                          'proposal' : self.neo_proposal,
                          'groupid'  : self.body_with_provname.current_name() + '_CPT-20150420',
                          'block_start' : '2017-03-08 05:05:00',
                          'block_end'   : '2017-03-08 05:22:36',
                          'tracking_number' : '0000358587',
+                         'active'   : False
+                       }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'LSC',
+                         'body'     : self.body_with_provname,
+                         'superblock' : self.test_sblock,
+                         'block_start' : '2017-03-08 05:05:00',
+                         'block_end'   : '2017-03-08 05:22:36',
+                         'request_number' : '0001358587',
                          'num_exposures' : 6,
                          'exp_length' : 120.0,
                          'active'   : False

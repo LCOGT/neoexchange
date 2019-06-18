@@ -20,7 +20,7 @@ from django.core.urlresolvers import reverse
 from neox.tests.mocks import MockCandidate
 #Import module to test
 from analyser.views import *
-from core.models import Body, Block, SourceMeasurement, Proposal
+from core.models import Body, SuperBlock, Block, SourceMeasurement, Proposal
 
 class Test_Analyser(TestCase):
 
@@ -45,13 +45,22 @@ class Test_Analyser(TestCase):
                     'origin'        : 'M',
                     }
         self.body, created = Body.objects.get_or_create(**params)
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'cpt',
+        sblock_params = {
                          'body'     : self.body,
                          'proposal' : self.neo_proposal,
                          'block_start' : '2017-01-01 13:00:00',
                          'block_end'   : '2017-02-01 03:00:00',
                          'tracking_number' : '00042',
+                         'active'   : True,
+                       }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'cpt',
+                         'body'     : self.body,
+                         'superblock' : self.test_sblock,
+                         'block_start' : '2017-01-01 13:00:00',
+                         'block_end'   : '2017-02-01 03:00:00',
+                         'request_number' : '00042',
                          'num_exposures' : 5,
                          'exp_length' : 42.0,
                          'active'   : True,

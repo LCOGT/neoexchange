@@ -210,10 +210,9 @@ class FunctionalTest(StaticLiveServerTestCase):
         block_params = { 'telclass' : '1m0',
                          'site'     : 'cpt',
                          'body'     : self.body,
-                         'proposal' : self.neo_proposal,
                          'block_start' : '2015-04-20 13:00:00',
                          'block_end'   : '2015-04-21 03:00:00',
-                         'tracking_number' : '00042',
+                         'request_number' : '10042',
                          'num_exposures' : 5,
                          'exp_length' : 42.0,
                          'active'   : True,
@@ -235,10 +234,9 @@ class FunctionalTest(StaticLiveServerTestCase):
         block_params2 = { 'telclass' : '2m0',
                          'site'     : 'coj',
                          'body'     : self.body,
-                         'proposal' : self.test_proposal,
                          'block_start' : '2015-04-20 03:00:00',
                          'block_end'   : '2015-04-20 13:00:00',
-                         'tracking_number' : '00043',
+                         'request_number' : '10043',
                          'num_exposures' : 7,
                          'exp_length' : 30.0,
                          'active'   : False,
@@ -253,6 +251,13 @@ class FunctionalTest(StaticLiveServerTestCase):
     def setUp(self):
 
         self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+
+        self.insert_test_body()
+        self.insert_test_calib()
+        self.insert_test_proposals()
+        self.insert_test_blocks()
+        self.insert_test_taxonomy()
+        self.insert_previous_spectra()
 
         fp = webdriver.FirefoxProfile()
         fp.set_preference("browser.startup.homepage", "about:blank")
@@ -281,12 +286,6 @@ class FunctionalTest(StaticLiveServerTestCase):
 
             self.browser = webdriver.Firefox(capabilities=firefox_capabilities, firefox_profile=fp)
         self.browser.implicitly_wait(5)
-        self.insert_test_body()
-        self.insert_test_calib()
-        self.insert_test_proposals()
-        self.insert_test_blocks()
-        self.insert_test_taxonomy()
-        self.insert_previous_spectra()
 
     def tearDown(self):
         self.browser.quit()
