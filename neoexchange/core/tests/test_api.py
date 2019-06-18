@@ -101,10 +101,10 @@ class BaseViewTest(APITestCase):
                                }
         self.test_proposal, created = Proposal.objects.get_or_create(**test_proposal_params)
         pp = ProposalPermission.objects.create(proposal=self.test_proposal, user=self.bart)
-        sblock_params = {
+        self.sblock_params = {
                             'proposal' : self.test_proposal,
                         }
-        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+        self.test_sblock = SuperBlock.objects.create(**self.sblock_params)
         self.block_params = { 'superblock' : self.test_sblock,
                               'proposal' :  self.test_proposal,
                               'obstype' : Block.OPT_IMAGING,
@@ -422,35 +422,39 @@ class BlockAPITest(BaseViewTest):
 
     def test_find_blocks_by_superblock(self):
         self.login()
+        self.sblock_params['tracking_number'] = '0420'
+        test_sblock2 = SuperBlock.objects.create(**self.sblock_params)
         self.block_params['block_start'] = datetime(2019,4,20,16,00,0)
         self.block_params['block_end'] = datetime(2019,4,21, 3,30,0)
+        self.block_params['superblock'] = test_sblock2
         test_block2 = Block.objects.create(**self.block_params)
 
         response = self.client.get(self.query_url.format(test_block2.superblock.tracking_number, ''))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['content-type'], 'application/json')
+        foo = json.loads(response.content.decode('utf8'))
         self.assertEqual(
             json.loads(response.content.decode('utf8')),
-            { 'count' : 2,
+            { 'count' : 1,
               'next' : None,
               'previous' : None,
               'results' : [
                 {
                     "active": False,
-                    "block_end": None,
-                    "block_start": None,
+                    "block_end": "2019-04-21T03:30:00",
+                    "block_start": "2019-04-20T16:00:00",
                     "body": None,
                     "calibsource": None,
                     "exp_length" : None,
                     "groupid": None,
-                    "id": 1,
+                    "id": 2,
                     "num_exposures": 42,
                     "num_observed": None,
-                    "obstype": 3,
+                    "obstype": 0,
                     "proposal": self.test_proposal.id,
                     "reported": False,
                     "site": None,
-                    "superblock": self.test_sblock.id,
+                    "superblock": test_sblock2.id,
                     "telclass": '1m0',
                     "tracking_number": None,
                     "when_observed": None,

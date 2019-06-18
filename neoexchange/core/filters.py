@@ -11,6 +11,10 @@ class FrameFilter(django_filters.FilterSet):
 
 class BlockFilter(django_filters.FilterSet):
 
+    tracking_number = django_filters.CharFilter(
+        field_name='superblock__tracking_number', lookup_expr='icontains',
+        label='Tracking Number', distinct=True
+    )
     class Meta:
         model = Block
         fields = ('tracking_number', 'obstype')
