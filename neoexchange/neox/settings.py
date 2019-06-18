@@ -261,6 +261,8 @@ NEO_ODIN_PASSWD = os.environ.get('NEOX_ODIN_PASSWD', '')
 
 THUMBNAIL_URL = 'https://thumbnails.lco.global/'
 
+CONFIGDB_API_URL = 'http://configdb.lco.gtn/'
+
 ARCHIVE_API_URL = 'https://archive-api.lco.global/'
 ARCHIVE_FRAMES_URL = ARCHIVE_API_URL + 'frames/'
 ARCHIVE_TOKEN_URL = ARCHIVE_API_URL + 'api-token-auth/'
