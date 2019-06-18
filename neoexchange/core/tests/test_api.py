@@ -82,6 +82,7 @@ class ProposalAPITest(TestCase):
 
 class FrameAPITest(APITestCase):
     base_url = '/api/frames/{}/'
+    query_url = '/api/frames/?filename={}&frametype={}'
 
     def setUp(self):
         self.bart = User.objects.create_user(
@@ -214,3 +215,153 @@ class FrameAPITest(APITestCase):
                 "zeropoint_err": None
             }
         )
+
+    def test_find_frame_by_filename(self):
+        self.login()
+        frame_params = {
+                        'sitecode' : 'K91',
+                        'filename' : 'cpt1m010-fa16-20190330-0129-e91.fits',
+                        'midpoint' : datetime(2019,4,20,19,30,0),
+                        'filter'   : 'w',
+                        'frametype': Frame.BANZAI_RED_FRAMETYPE,
+                        'block'    : self.test_block
+                       }
+        test_frame = Frame.objects.create(**frame_params)
+        frame_params['filename'] = 'cpt1m010-fa16-20190330-0130-e91.fits'
+        frame_params['midpoint'] = datetime(2019,4,20,19,31,0)
+        test_frame2 = Frame.objects.create(**frame_params)
+
+        response = self.client.get(self.query_url.format(test_frame2.filename, ''))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+        self.assertEqual(
+            json.loads(response.content.decode('utf8')),
+            { 'count' : 1,
+              'next' : None,
+              'previous' : None,
+              'results' : [
+                {
+                    "astrometric_catalog": " ",
+                    "block": 1,
+                    "exptime": None,
+                    "extrainfo": None,
+                    "filename": 'cpt1m010-fa16-20190330-0130-e91.fits',
+                    "filter": "w",
+                    "frameid": None,
+                    "frametype": 91,
+                    "fwhm": None,
+                    "id": 2,
+                    "instrument": None,
+                    "midpoint": "2019-04-20T19:31:00",
+                    "nstars_in_fit": None,
+                    "photometric_catalog": " ",
+                    "quality": " ",
+                    "rms_of_fit": None,
+                    "sitecode": "K91",
+                    "time_uncertainty": None,
+                    "zeropoint": None,
+                    "zeropoint_err": None
+                }
+            ]
+        })
+
+    def test_find_frame_by_frametype(self):
+        self.login()
+        frame_params = {
+                        'sitecode' : 'K91',
+                        'filename' : 'cpt1m010-fa16-20190330-0129-e91.fits',
+                        'midpoint' : datetime(2019,4,20,19,30,0),
+                        'filter'   : 'w',
+                        'frametype': Frame.BANZAI_RED_FRAMETYPE,
+                        'block'    : self.test_block
+                       }
+        test_frame = Frame.objects.create(**frame_params)
+        frame_params['filename'] = 'cpt1m010-fa16-20190330-0129-e91_ldac.fits'
+        frame_params['frametype'] = Frame.BANZAI_LDAC_CATALOG
+        test_frame2 = Frame.objects.create(**frame_params)
+
+        response = self.client.get(self.query_url.format('', test_frame2.frametype))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+        self.assertEqual(
+            json.loads(response.content.decode('utf8')),
+            { 'count' : 1,
+              'next' : None,
+              'previous' : None,
+              'results' : [
+                {
+                    "astrometric_catalog": " ",
+                    "block": 1,
+                    "exptime": None,
+                    "extrainfo": None,
+                    "filename": 'cpt1m010-fa16-20190330-0129-e91_ldac.fits',
+                    "filter": "w",
+                    "frameid": None,
+                    "frametype": 6,
+                    "fwhm": None,
+                    "id": 2,
+                    "instrument": None,
+                    "midpoint": "2019-04-20T19:30:00",
+                    "nstars_in_fit": None,
+                    "photometric_catalog": " ",
+                    "quality": " ",
+                    "rms_of_fit": None,
+                    "sitecode": "K91",
+                    "time_uncertainty": None,
+                    "zeropoint": None,
+                    "zeropoint_err": None
+                }
+            ]
+        })
+
+    def test_find_frame_by_filename_and_frametype(self):
+        self.login()
+        frame_params = {
+                        'sitecode' : 'K91',
+                        'filename' : 'cpt1m010-fa16-20190330-0129-e91.fits',
+                        'midpoint' : datetime(2019,4,20,19,30,0),
+                        'filter'   : 'w',
+                        'frametype': Frame.BANZAI_RED_FRAMETYPE,
+                        'block'    : self.test_block
+                       }
+        test_frame = Frame.objects.create(**frame_params)
+        frame_params['filename'] = 'cpt1m010-fa16-20190330-0130-e91.fits'
+        frame_params['midpoint'] = datetime(2019,4,20,19,31,0)
+        test_frame3 = Frame.objects.create(**frame_params)
+        frame_params['filename'] = 'cpt1m010-fa16-20190330-0130-e91_ldac.fits'
+        frame_params['frametype'] = Frame.BANZAI_LDAC_CATALOG
+        test_frame3 = Frame.objects.create(**frame_params)
+
+        response = self.client.get(self.query_url.format(test_frame3.filename, test_frame3.frametype))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+        self.assertEqual(
+            json.loads(response.content.decode('utf8')),
+            { 'count' : 1,
+              'next' : None,
+              'previous' : None,
+              'results' : [
+                {
+                    "astrometric_catalog": " ",
+                    "block": 1,
+                    "exptime": None,
+                    "extrainfo": None,
+                    "filename": 'cpt1m010-fa16-20190330-0130-e91_ldac.fits',
+                    "filter": "w",
+                    "frameid": None,
+                    "frametype": 6,
+                    "fwhm": None,
+                    "id": 3,
+                    "instrument": None,
+                    "midpoint": "2019-04-20T19:31:00",
+                    "nstars_in_fit": None,
+                    "photometric_catalog": " ",
+                    "quality": " ",
+                    "rms_of_fit": None,
+                    "sitecode": "K91",
+                    "time_uncertainty": None,
+                    "zeropoint": None,
+                    "zeropoint_err": None
+                }
+            ]
+        })
