@@ -1,5 +1,5 @@
 from rest_framework import serializers, viewsets
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from django_filters.rest_framework import DjangoFilterBackend
 
 from core.models import Proposal, SuperBlock, Block, Frame, CatalogSources
@@ -87,7 +87,7 @@ class FrameViewSet(viewsets.ModelViewSet):
 
 
 class CatalogSourcesViewSet(viewsets.ModelViewSet):
-    permission_classes = (IsAuthenticatedOrReadOnly,)
+    permission_classes = (IsAuthenticated,)
     serializer_class = CatalogSourcesSerializer
     filter_backends = (DjangoFilterBackend,)
     filter_class = CatalogSourcesFilter

@@ -680,6 +680,7 @@ class CatalogSourcesAPITest(BaseViewTest):
                             'obs_y' : 511.5,
                             'obs_ra' : 42.0,
                             'obs_dec' : -32.0,
+                            'obs_mag' : 20.1,
                             'err_obs_ra': 1.8/3600.0,
                             'err_obs_dec': 0.9/3600.0,
                             'err_obs_mag': 0.1,
@@ -696,11 +697,43 @@ class CatalogSourcesAPITest(BaseViewTest):
         self.login()
 
         response = self.client.get(self.base_url.format(self.test_catsrc1.id))
-        print(self.base_url.format(self.test_catsrc1.id))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['content-type'], 'application/json')
 
-    def test_anonymous_get_returns_json_404(self):
+    def test_anonymous_get_returns_json_403(self):
+        response = self.client.get(self.base_url.format(self.test_catsrc1.id))
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response['content-type'], 'application/json')
+        self.assertEqual(json.loads(response.content.decode('utf8')),
+            {'detail' : 'Authentication credentials were not provided.'}
+        )
+
+    def test_get_for_LCO_data(self):
+        self.login()
         response = self.client.get(self.base_url.format(self.test_catsrc1.id))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['content-type'], 'application/json')
+        self.assertEqual(
+            json.loads(response.content.decode('utf8')),
+            {
+                    "aperture_size": 4.0,
+                    "background": 4.2,
+                    "ellipticity": 0.5,
+                    "err_obs_dec": 0.00025,
+                    "err_obs_mag": 0.1,
+                    "err_obs_ra": 0.0005,
+                    "flags": 0,
+                    "flux_max": None,
+                    "frame": 1,
+                    "id": 1,
+                    "major_axis": 5.2,
+                    "minor_axis": 2.6,
+                    "obs_dec": -32.0,
+                    "obs_mag": 20.1,
+                    "obs_ra": 42.0,
+                    "obs_x": 1024.1,
+                    "obs_y": 511.5,
+                    "position_angle": -30.0,
+                    "threshold": None
+            }
+        )
