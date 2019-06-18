@@ -368,3 +368,129 @@ class FrameAPITest(BaseViewTest):
                 }
             ]
         })
+
+
+class BlockAPITest(BaseViewTest):
+    base_url = '/api/blocks/{}/'
+    query_url = '/api/blocks/?tracking_number={}&blocktype={}'
+
+    def test_get_returns_json_200(self):
+        self.login()
+        response = self.client.get(self.base_url.format(test_block.id))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+
+    def test_get_returns_json_404(self):
+        response = self.client.get(self.base_url.format(test_block.id))
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response['content-type'], 'application/json')
+
+    def test_get_for_LCO_data(self):
+        self.login()
+        response = self.client.get(self.base_url.format(test_block.id))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+        self.assertEqual(
+            json.loads(response.content.decode('utf8')),
+            {
+                "astrometric_catalog": " ",
+                "block": 1,
+                "exptime": None,
+                "extrainfo": None,
+                "filename": 'cpt1m010-fa16-20190330-0129-e91.fits',
+                "filter": "w",
+                "frameid": None,
+                "frametype": 91,
+                "fwhm": None,
+                "id": 1,
+                "instrument": None,
+                "midpoint": "2019-04-20T19:30:00",
+                "nstars_in_fit": None,
+                "photometric_catalog": " ",
+                "quality": " ",
+                "rms_of_fit": None,
+                "sitecode": "K91",
+                "time_uncertainty": None,
+                "zeropoint": None,
+                "zeropoint_err": None
+            }
+        )
+
+    def test_find_blocks_by_superblock(self):
+        self.login()
+        block_params['block_start'] = datetime(2019,4,20,16,00,0)
+        block_params['block_end'] = datetime(2019,4,21, 3,30,0)
+        test_block2 = Block.objects.create(**block_params)
+
+        response = self.client.get(self.query_url.format(test_block2.superblock.tracking_number, ''))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+        self.assertEqual(
+            json.loads(response.content.decode('utf8')),
+            { 'count' : 2,
+              'next' : None,
+              'previous' : None,
+              'results' : [
+                {
+                    "astrometric_catalog": " ",
+                    "block": 1,
+                    "exptime": None,
+                    "extrainfo": None,
+                    "filename": 'cpt1m010-fa16-20190330-0130-e91.fits',
+                    "filter": "w",
+                    "frameid": None,
+                    "frametype": 91,
+                    "fwhm": None,
+                    "id": 2,
+                    "instrument": None,
+                    "midpoint": "2019-04-20T19:31:00",
+                    "nstars_in_fit": None,
+                    "photometric_catalog": " ",
+                    "quality": " ",
+                    "rms_of_fit": None,
+                    "sitecode": "K91",
+                    "time_uncertainty": None,
+                    "zeropoint": None,
+                    "zeropoint_err": None
+                }
+            ]
+        })
+
+    def test_find_block_by_blocktype(self):
+        self.login()
+        block_params['obstype'] = Block.OPT_SPECTRA_CALIB
+        test_block2 = Block.objects.create(**block_params)
+
+        response = self.client.get(self.query_url.format('', test_block2.blocktype))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+        self.assertEqual(
+            json.loads(response.content.decode('utf8')),
+            { 'count' : 1,
+              'next' : None,
+              'previous' : None,
+              'results' : [
+                {
+                    "astrometric_catalog": " ",
+                    "block": 1,
+                    "exptime": None,
+                    "extrainfo": None,
+                    "filename": 'cpt1m010-fa16-20190330-0129-e91_ldac.fits',
+                    "filter": "w",
+                    "frameid": None,
+                    "frametype": 6,
+                    "fwhm": None,
+                    "id": 2,
+                    "instrument": None,
+                    "midpoint": "2019-04-20T19:30:00",
+                    "nstars_in_fit": None,
+                    "photometric_catalog": " ",
+                    "quality": " ",
+                    "rms_of_fit": None,
+                    "sitecode": "K91",
+                    "time_uncertainty": None,
+                    "zeropoint": None,
+                    "zeropoint_err": None
+                }
+            ]
+        })
