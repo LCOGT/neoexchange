@@ -8,7 +8,7 @@ pyslalib
 beautifulsoup4
 django-reversion>=2.0
 djangorestframework
-django-filters
+django-filter
 html5lib
 ipython
 nose
