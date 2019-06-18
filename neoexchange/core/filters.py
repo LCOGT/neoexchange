@@ -1,6 +1,6 @@
 import django_filters
 
-from core.models import SuperBlock, Block, Frame, CatalogSources
+from core.models import SuperBlock, Block, Frame, CatalogSources, Body
 
 
 class SuperBlockFilter(django_filters.FilterSet):
@@ -44,3 +44,10 @@ class CatalogSourcesFilter(django_filters.FilterSet):
     class Meta:
         model = CatalogSources
         fields = ('frame_id', 'frame_filename', 'ra', 'dec')
+
+
+class BodyFilter(django_filters.FilterSet):
+
+    class Meta:
+        model = Body
+        fields = ('name', 'provisional_name', 'origin')

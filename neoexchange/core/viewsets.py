@@ -2,9 +2,9 @@ from rest_framework import serializers, viewsets
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from django_filters.rest_framework import DjangoFilterBackend
 
-from core.models import Proposal, SuperBlock, Block, Frame, CatalogSources
+from core.models import Proposal, SuperBlock, Block, Frame, CatalogSources, Body
 from core.views import user_proposals
-from core.filters import SuperBlockFilter, BlockFilter, FrameFilter, CatalogSourcesFilter
+from core.filters import SuperBlockFilter, BlockFilter, FrameFilter, CatalogSourcesFilter, BodyFilter
 
 
 class ProposalSerializer(serializers.ModelSerializer):
@@ -37,6 +37,12 @@ class FrameSerializer(serializers.ModelSerializer):
 class CatalogSourcesSerializer(serializers.ModelSerializer):
     class Meta:
         model = CatalogSources
+        fields = '__all__'
+
+
+class BodySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Body
         fields = '__all__'
 
 
@@ -92,3 +98,16 @@ class CatalogSourcesViewSet(viewsets.ModelViewSet):
     filter_backends = (DjangoFilterBackend,)
     filter_class = CatalogSourcesFilter
     queryset = CatalogSources.objects.all()
+
+
+class BodyViewSet(viewsets.ModelViewSet):
+    permission_classes = (IsAuthenticatedOrReadOnly,)
+    http_method_names = ['get', 'head', 'options']
+    serializer_class = BodySerializer
+    filter_backends = (DjangoFilterBackend,)
+    filter_class = BodyFilter
+
+    def get_queryset(self):
+        qs = Body.objects.all()
+
+        return qs

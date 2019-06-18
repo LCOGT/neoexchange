@@ -1109,12 +1109,11 @@ class CatalogSourcesAPITest(BaseViewTest):
 
 
 class BodyAPITest(BaseViewTest):
-    base_url = '/api/body/{}/'
-    query_url = '/api/body/?name={}&provisional_name={}&origin={}'
+    base_url = '/api/bodies/{}/'
+    query_url = '/api/bodies/?name={}&provisional_name={}&origin={}'
 
     def test_get_returns_json_200(self):
         self.login()
-        print(self.test_body)
         response = self.client.get(self.base_url.format(self.test_body.id))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['content-type'], 'application/json')
