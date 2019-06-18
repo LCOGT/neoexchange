@@ -105,7 +105,11 @@ class BaseViewTest(APITestCase):
                             'proposal' : self.test_proposal,
                         }
         self.test_sblock = SuperBlock.objects.create(**sblock_params)
-        self.test_block = Block.objects.create(superblock=self.test_sblock, proposal=self.test_proposal)
+        self.block_params = { 'superblock' : self.test_sblock,
+                              'proposal' :  self.test_proposal,
+                              'obstype' : Block.OPT_IMAGING
+                            }
+        self.test_block = Block.objects.create(**self.block_params)
 
         self.maxDiff = None
 
@@ -376,18 +380,18 @@ class BlockAPITest(BaseViewTest):
 
     def test_get_returns_json_200(self):
         self.login()
-        response = self.client.get(self.base_url.format(test_block.id))
+        response = self.client.get(self.base_url.format(self.test_block.id))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['content-type'], 'application/json')
 
     def test_get_returns_json_404(self):
-        response = self.client.get(self.base_url.format(test_block.id))
+        response = self.client.get(self.base_url.format(self.test_block.id))
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response['content-type'], 'application/json')
 
     def test_get_for_LCO_data(self):
         self.login()
-        response = self.client.get(self.base_url.format(test_block.id))
+        response = self.client.get(self.base_url.format(self.test_block.id))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['content-type'], 'application/json')
         self.assertEqual(
@@ -418,9 +422,9 @@ class BlockAPITest(BaseViewTest):
 
     def test_find_blocks_by_superblock(self):
         self.login()
-        block_params['block_start'] = datetime(2019,4,20,16,00,0)
-        block_params['block_end'] = datetime(2019,4,21, 3,30,0)
-        test_block2 = Block.objects.create(**block_params)
+        self.block_params['block_start'] = datetime(2019,4,20,16,00,0)
+        self.block_params['block_end'] = datetime(2019,4,21, 3,30,0)
+        test_block2 = Block.objects.create(**self.block_params)
 
         response = self.client.get(self.query_url.format(test_block2.superblock.tracking_number, ''))
         self.assertEqual(response.status_code, 200)
@@ -456,12 +460,12 @@ class BlockAPITest(BaseViewTest):
             ]
         })
 
-    def test_find_block_by_blocktype(self):
+    def test_find_block_by_obstype(self):
         self.login()
-        block_params['obstype'] = Block.OPT_SPECTRA_CALIB
-        test_block2 = Block.objects.create(**block_params)
+        self.block_params['obstype'] = Block.OPT_SPECTRA_CALIB
+        test_block2 = Block.objects.create(**self.block_params)
 
-        response = self.client.get(self.query_url.format('', test_block2.blocktype))
+        response = self.client.get(self.query_url.format('', test_block2.obstype))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['content-type'], 'application/json')
         self.assertEqual(
@@ -471,16 +475,16 @@ class BlockAPITest(BaseViewTest):
               'previous' : None,
               'results' : [
                 {
-                    "astrometric_catalog": " ",
-                    "block": 1,
-                    "exptime": None,
-                    "extrainfo": None,
-                    "filename": 'cpt1m010-fa16-20190330-0129-e91_ldac.fits',
-                    "filter": "w",
-                    "frameid": None,
-                    "frametype": 6,
+                    "active": False,
+                    "block_end": None,
+                    "block_start": None,
+                    "body": None,
+                    "calibsource": None,
+                    "exp_length" : None,
+                    "groupid": None,
+                    "obstype": 0,
                     "fwhm": None,
-                    "id": 2,
+                    "id": 1,
                     "instrument": None,
                     "midpoint": "2019-04-20T19:30:00",
                     "nstars_in_fit": None,

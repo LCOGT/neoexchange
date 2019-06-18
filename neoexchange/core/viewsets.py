@@ -2,15 +2,16 @@ from rest_framework import serializers, viewsets
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from django_filters.rest_framework import DjangoFilterBackend
 
-from core.models import Proposal, Frame
+from core.models import Proposal, Block, Frame 
 from core.views import user_proposals
-from core.filters import FrameFilter
+from core.filters import BlockFilter, FrameFilter
 
 
 class ProposalSerializer(serializers.ModelSerializer):
     class Meta:
         model = Proposal
         exclude = ('id',)
+
 
 class FrameSerializer(serializers.ModelSerializer):
     class Meta:
@@ -20,9 +21,16 @@ class FrameSerializer(serializers.ModelSerializer):
             'id',
         )
 
+
+class BlockSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Block
+        fields = '__all__'
+
 class ProposalViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Proposal.objects.filter(download=True, active=True)
     serializer_class = ProposalSerializer
+
 
 class FrameViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticatedOrReadOnly,)
@@ -40,4 +48,17 @@ class FrameViewSet(viewsets.ModelViewSet):
             )
         else:
             qs = Frame.objects.filter(frametype__in=[Frame.NONLCO_FRAMETYPE, Frame.SATELLITE_FRAMETYPE])
+        return qs
+
+
+class BlockViewSet(viewsets.ModelViewSet):
+    permission_classes = (IsAuthenticatedOrReadOnly,)
+    http_method_names = ['get', 'head', 'options']
+    serializer_class = BlockSerializer
+    filter_backends = (DjangoFilterBackend,)
+    filter_class = BlockFilter
+
+    def get_queryset(self):
+        qs = Block.objects.all()
+
         return qs
