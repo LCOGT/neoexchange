@@ -1648,6 +1648,7 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp, resp)
         self.assertLessEqual(len(resp['group_id']), 50)
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_end_B_semester(self):
         MockDateTime.change_datetime(2016, 3, 31, 22, 0, 0)
@@ -1674,6 +1675,7 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['exp_count'], resp['exp_count'])
         self.assertEqual(expected_resp['exp_length'], resp['exp_length'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_start_A_semester(self):
         MockDateTime.change_datetime(2016, 4, 1, 0, 0, 1)
@@ -1701,6 +1703,7 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['exp_count'], resp['exp_count'])
         self.assertEqual(expected_resp['exp_length'], resp['exp_length'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_mid_A_semester(self):
         MockDateTime.change_datetime(2016, 4, 20, 23, 0, 0)
@@ -1729,6 +1732,7 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['exp_length'], resp['exp_length'])
         self.assertAlmostEqual(expected_resp['magnitude'], resp['magnitude'], 2)
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_mid_past_A_semester(self):
         MockDateTime.change_datetime(2015, 4, 20, 23, 1, 0)
@@ -1754,6 +1758,7 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_end_A_semester(self):
         MockDateTime.change_datetime(2016, 9, 30, 23, 0, 0)
@@ -1777,6 +1782,7 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_schedule_for_B_at_A_semester_end(self):
         MockDateTime.change_datetime(2017, 3, 31, 23, 0, 0)
@@ -1800,6 +1806,7 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_schedule_for_B_at_A_semester_end2(self):
 
@@ -1824,6 +1831,7 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_start_B_semester(self):
         MockDateTime.change_datetime(2016, 10, 1, 0, 0, 1)
@@ -1847,6 +1855,7 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_2017AB_semester(self):
         MockDateTime.change_datetime(2017, 9, 28, 19, 0, 0)
@@ -1869,6 +1878,7 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_end_2017AB_semester(self):
         MockDateTime.change_datetime(2017, 11, 30, 19, 0, 0)
@@ -1891,6 +1901,7 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_start_2018A_semester(self):
         MockDateTime.change_datetime(2017, 12,  1,  1, 0, 0)
@@ -1913,6 +1924,7 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_end_2018A_semester(self):
         MockDateTime.change_datetime(2018,  5, 31, 23, 0, 0)
@@ -1935,6 +1947,7 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_start_2018B_semester(self):
         MockDateTime.change_datetime(2018,  6,  1,  1, 0, 0)
@@ -1957,6 +1970,7 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_end_2018B_semester(self):
         MockDateTime.change_datetime(2018, 11, 30, 23, 0, 0)
