@@ -80,9 +80,7 @@ class ProposalAPITest(TestCase):
             }
         )
 
-class FrameAPITest(APITestCase):
-    base_url = '/api/frames/{}/'
-    query_url = '/api/frames/?filename={}&frametype={}'
+class BaseViewTest(APITestCase):
 
     def setUp(self):
         self.bart = User.objects.create_user(
@@ -114,6 +112,11 @@ class FrameAPITest(APITestCase):
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def login(self):
         self.assertTrue(self.client.login(username='bart', password='simpson'))
+
+
+class FrameAPITest(BaseViewTest):
+    base_url = '/api/frames/{}/'
+    query_url = '/api/frames/?filename={}&frametype={}'
 
     def test_get_returns_json_200_for_nonLCO(self):
         frame_params = {
