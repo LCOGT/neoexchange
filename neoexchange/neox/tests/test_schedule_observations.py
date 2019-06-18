@@ -357,8 +357,8 @@ class ScheduleObservations(FunctionalTest):
         warn_num = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('warning').text
         self.assertIn('1', warn_num)
 
-    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
-    @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list_no2m)
+    @patch('core.forms.fetch_filter_list', mock_fetch_filter_list_no2m)
     @patch('core.forms.datetime', MockDateTime)
     @patch('core.views.datetime', MockDateTime)
     def test_schedule_missing_telescope(self):
