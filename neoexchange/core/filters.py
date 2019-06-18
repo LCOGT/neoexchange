@@ -36,7 +36,9 @@ class CatalogSourcesFilter(django_filters.FilterSet):
     frame_filename = django_filters.CharFilter(
         field_name='frame__filename', lookup_expr='icontains', label='Frame filename'
     )
+    ra = django_filters.RangeFilter(field_name='obs_ra')
+    dec = django_filters.RangeFilter(field_name='obs_dec')
 
     class Meta:
         model = CatalogSources
-        fields = ('frame_id', 'frame_filename')
+        fields = ('frame_id', 'frame_filename', 'ra', 'dec')

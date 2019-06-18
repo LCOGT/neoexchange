@@ -833,3 +833,248 @@ class CatalogSourcesAPITest(BaseViewTest):
             json.loads(response.content.decode('utf8')),
             { 'count' : 0, 'next' : None, 'previous' : None, 'results' : [] }
         )
+
+    def test_get_by_frame_ra_range1(self):
+        self.login()
+
+        self.catsrc_params['obs_ra'] -= 0.2
+        test_catsrc2 = CatalogSources.objects.create(**self.catsrc_params)
+
+        response = self.client.get(self.query_url.format('', '', self.test_catsrc1.obs_ra-0.1, self.test_catsrc1.obs_ra+0.1, '', ''))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+        self.assertEqual(
+            json.loads(response.content.decode('utf8')),
+            { 'count' : 1,
+              'next' : None,
+              'previous' : None,
+              'results' : [
+                    {
+                    "aperture_size": 4.0,
+                    "background": 4.2,
+                    "ellipticity": 0.5,
+                    "err_obs_dec": 0.00025,
+                    "err_obs_mag": 0.1,
+                    "err_obs_ra": 0.0005,
+                    "flags": 0,
+                    "flux_max": None,
+                    "frame": 1,
+                    "id": 1,
+                    "major_axis": 5.2,
+                    "minor_axis": 2.6,
+                    "obs_dec": -32.0,
+                    "obs_mag": 20.1,
+                    "obs_ra": 42.0,
+                    "obs_x": 1024.1,
+                    "obs_y": 511.5,
+                    "position_angle": -30.0,
+                    "threshold": None
+                    }
+                ]
+            }
+        )
+
+    def test_get_by_frame_ra_range2(self):
+        self.login()
+
+        response = self.client.get(self.query_url.format('', '', self.test_catsrc1.obs_ra+0.5, self.test_catsrc1.obs_ra+1.0, '', ''))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+        self.assertEqual(
+            json.loads(response.content.decode('utf8')),
+            { 'count' : 0, 'next' : None, 'previous' : None, 'results' : [] }
+        )
+
+    def test_get_by_frame_ra_range3(self):
+        self.login()
+
+        self.catsrc_params['obs_ra'] += 0.2
+        test_catsrc2 = CatalogSources.objects.create(**self.catsrc_params)
+
+        response = self.client.get(self.query_url.format('', '', self.test_catsrc1.obs_ra-0.1, self.test_catsrc1.obs_ra+0.1, '', ''))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+        self.assertEqual(
+            json.loads(response.content.decode('utf8')),
+            { 'count' : 1,
+              'next' : None,
+              'previous' : None,
+              'results' : [
+                    {
+                    "aperture_size": 4.0,
+                    "background": 4.2,
+                    "ellipticity": 0.5,
+                    "err_obs_dec": 0.00025,
+                    "err_obs_mag": 0.1,
+                    "err_obs_ra": 0.0005,
+                    "flags": 0,
+                    "flux_max": None,
+                    "frame": 1,
+                    "id": 1,
+                    "major_axis": 5.2,
+                    "minor_axis": 2.6,
+                    "obs_dec": -32.0,
+                    "obs_mag": 20.1,
+                    "obs_ra": 42.0,
+                    "obs_x": 1024.1,
+                    "obs_y": 511.5,
+                    "position_angle": -30.0,
+                    "threshold": None
+                    }
+                ]
+            }
+        )
+
+    def test_get_by_frame_ra_range4(self):
+        self.login()
+
+        response = self.client.get(self.query_url.format('', '', self.test_catsrc1.obs_ra+0.5, self.test_catsrc1.obs_ra+1.0, '', ''))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+        self.assertEqual(
+            json.loads(response.content.decode('utf8')),
+            { 'count' : 0, 'next' : None, 'previous' : None, 'results' : [] }
+        )
+
+    def test_get_by_frame_dec_range1(self):
+        self.login()
+
+        self.catsrc_params['obs_dec'] -= 0.2
+        test_catsrc2 = CatalogSources.objects.create(**self.catsrc_params)
+
+        response = self.client.get(self.query_url.format('', '', '', '', self.test_catsrc1.obs_dec-0.1, self.test_catsrc1.obs_dec+0.1))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+        self.assertEqual(
+            json.loads(response.content.decode('utf8')),
+            { 'count' : 1,
+              'next' : None,
+              'previous' : None,
+              'results' : [
+                    {
+                    "aperture_size": 4.0,
+                    "background": 4.2,
+                    "ellipticity": 0.5,
+                    "err_obs_dec": 0.00025,
+                    "err_obs_mag": 0.1,
+                    "err_obs_ra": 0.0005,
+                    "flags": 0,
+                    "flux_max": None,
+                    "frame": 1,
+                    "id": 1,
+                    "major_axis": 5.2,
+                    "minor_axis": 2.6,
+                    "obs_dec": -32.0,
+                    "obs_mag": 20.1,
+                    "obs_ra": 42.0,
+                    "obs_x": 1024.1,
+                    "obs_y": 511.5,
+                    "position_angle": -30.0,
+                    "threshold": None
+                    }
+                ]
+            }
+        )
+
+    def test_get_by_frame_dec_range2(self):
+        self.login()
+
+        response = self.client.get(self.query_url.format('', '', '', '', self.test_catsrc1.obs_dec+0.5, self.test_catsrc1.obs_dec+1.0))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+        self.assertEqual(
+            json.loads(response.content.decode('utf8')),
+            { 'count' : 0, 'next' : None, 'previous' : None, 'results' : [] }
+        )
+
+    def test_get_by_frame_dec_range3(self):
+        self.login()
+
+        self.catsrc_params['obs_dec'] += 0.2
+        test_catsrc2 = CatalogSources.objects.create(**self.catsrc_params)
+
+        response = self.client.get(self.query_url.format('', '', '', '', self.test_catsrc1.obs_dec-0.1, self.test_catsrc1.obs_dec+0.1))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+        self.assertEqual(
+            json.loads(response.content.decode('utf8')),
+            { 'count' : 1,
+              'next' : None,
+              'previous' : None,
+              'results' : [
+                    {
+                    "aperture_size": 4.0,
+                    "background": 4.2,
+                    "ellipticity": 0.5,
+                    "err_obs_dec": 0.00025,
+                    "err_obs_mag": 0.1,
+                    "err_obs_ra": 0.0005,
+                    "flags": 0,
+                    "flux_max": None,
+                    "frame": 1,
+                    "id": 1,
+                    "major_axis": 5.2,
+                    "minor_axis": 2.6,
+                    "obs_dec": -32.0,
+                    "obs_mag": 20.1,
+                    "obs_ra": 42.0,
+                    "obs_x": 1024.1,
+                    "obs_y": 511.5,
+                    "position_angle": -30.0,
+                    "threshold": None
+                    }
+                ]
+            }
+        )
+
+    def test_get_by_frame_dec_range4(self):
+        self.login()
+
+        response = self.client.get(self.query_url.format('', '', '', '', self.test_catsrc1.obs_dec+0.5, self.test_catsrc1.obs_dec+1.0))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+        self.assertEqual(
+            json.loads(response.content.decode('utf8')),
+            { 'count' : 0, 'next' : None, 'previous' : None, 'results' : [] }
+        )
+
+    def test_get_by_frame_ra_dec_range1(self):
+        self.login()
+
+        self.catsrc_params['obs_ra'] -= 0.2
+        self.catsrc_params['obs_dec'] += 0.2
+        test_catsrc2 = CatalogSources.objects.create(**self.catsrc_params)
+
+        response = self.client.get(self.query_url.format('', '', self.test_catsrc1.obs_ra-0.1, self.test_catsrc1.obs_ra+0.1, self.test_catsrc1.obs_dec-0.1, self.test_catsrc1.obs_dec+0.1))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+        self.assertEqual(
+            json.loads(response.content.decode('utf8')),
+            { 'count' : 1,
+              'next' : None,
+              'previous' : None,
+              'results' : [
+                    {
+                    "aperture_size": 4.0,
+                    "background": 4.2,
+                    "ellipticity": 0.5,
+                    "err_obs_dec": 0.00025,
+                    "err_obs_mag": 0.1,
+                    "err_obs_ra": 0.0005,
+                    "flags": 0,
+                    "flux_max": None,
+                    "frame": 1,
+                    "id": 1,
+                    "major_axis": 5.2,
+                    "minor_axis": 2.6,
+                    "obs_dec": -32.0,
+                    "obs_mag": 20.1,
+                    "obs_ra": 42.0,
+                    "obs_x": 1024.1,
+                    "obs_y": 511.5,
+                    "position_angle": -30.0,
+                    "threshold": None
+                    }
+                ]
+            }
+        )
