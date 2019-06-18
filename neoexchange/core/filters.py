@@ -1,6 +1,6 @@
 import django_filters
 
-from core.models import SuperBlock, Block, Frame
+from core.models import SuperBlock, Block, Frame, CatalogSources
 
 
 class SuperBlockFilter(django_filters.FilterSet):
@@ -28,3 +28,15 @@ class FrameFilter(django_filters.FilterSet):
     class Meta:
         model = Frame
         fields = ('filename', 'frametype')
+
+
+class CatalogSourcesFilter(django_filters.FilterSet):
+
+    frame_id = django_filters.NumberFilter('frame__id', label='Frame ID#')
+    frame_filename = django_filters.CharFilter(
+        field_name='frame__filename', lookup_expr='icontains', label='Frame filename'
+    )
+
+    class Meta:
+        model = CatalogSources
+        fields = ('frame_id', 'frame_filename')

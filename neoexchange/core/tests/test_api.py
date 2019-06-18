@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase, APIClient
 
-from core.models import Proposal, ProposalPermission, SuperBlock, Block, Frame
+from core.models import Proposal, ProposalPermission, SuperBlock, Block, Frame, CatalogSources
 from mock import patch
 from neox.tests.mocks import mock_lco_authenticate
 
@@ -656,3 +656,51 @@ class SuperBlockAPITest(BaseViewTest):
                 }
             ]
         })
+
+
+class CatalogSourcesAPITest(BaseViewTest):
+    base_url = '/api/catsources/{}/'
+    query_url = '/api/catsources/?frame_id={}&frame_filename={}&ra_min={}&ra_max={}}&dec_min={}&dec_max={}'
+
+    def setUp(self):
+        super(CatalogSourcesAPITest, self).setUp()
+
+        self.frame_params = {
+                'block'    : self.test_block,
+                'sitecode' : 'K91',
+                'filename' : 'cpt1m010-fa16-20190330-0129-e91.fits',
+                'midpoint' : datetime(2019,4,20,19,30,0),
+                'filter'   : 'w',
+                'frametype': Frame.BANZAI_RED_FRAMETYPE
+               }
+        self.test_frame = Frame.objects.create(**self.frame_params)
+
+        self.catsrc_params = {   'frame' : self.test_frame,
+                            'obs_x' : 1024.1,
+                            'obs_y' : 511.5,
+                            'obs_ra' : 42.0,
+                            'obs_dec' : -32.0,
+                            'err_obs_ra': 1.8/3600.0,
+                            'err_obs_dec': 0.9/3600.0,
+                            'err_obs_mag': 0.1,
+                            'background' : 4.2,
+                            'major_axis' : 5.2,
+                            'minor_axis' : 2.6,
+                            'position_angle' : -30.0,
+                            'ellipticity' : 0.5,
+                            'aperture_size' : 4.0,
+                        }
+        self.test_catsrc1 = CatalogSources.objects.create(**self.catsrc_params)
+
+    def test_get_returns_json_200(self):
+        self.login()
+
+        response = self.client.get(self.base_url.format(self.test_catsrc1.id))
+        print(self.base_url.format(self.test_catsrc1.id))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+
+    def test_anonymous_get_returns_json_404(self):
+        response = self.client.get(self.base_url.format(self.test_catsrc1.id))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')

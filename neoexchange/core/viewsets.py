@@ -2,9 +2,9 @@ from rest_framework import serializers, viewsets
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from django_filters.rest_framework import DjangoFilterBackend
 
-from core.models import Proposal, SuperBlock, Block, Frame
+from core.models import Proposal, SuperBlock, Block, Frame, CatalogSources
 from core.views import user_proposals
-from core.filters import SuperBlockFilter, BlockFilter, FrameFilter
+from core.filters import SuperBlockFilter, BlockFilter, FrameFilter, CatalogSourcesFilter
 
 
 class ProposalSerializer(serializers.ModelSerializer):
@@ -32,6 +32,12 @@ class FrameSerializer(serializers.ModelSerializer):
         read_only_fields = (
             'id',
         )
+
+
+class CatalogSourcesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CatalogSources
+        fields = '__all__'
 
 
 class ProposalViewSet(viewsets.ReadOnlyModelViewSet):
@@ -78,3 +84,11 @@ class FrameViewSet(viewsets.ModelViewSet):
         else:
             qs = Frame.objects.filter(frametype__in=[Frame.NONLCO_FRAMETYPE, Frame.SATELLITE_FRAMETYPE])
         return qs
+
+
+class CatalogSourcesViewSet(viewsets.ModelViewSet):
+    permission_classes = (IsAuthenticatedOrReadOnly,)
+    serializer_class = CatalogSourcesSerializer
+    filter_backends = (DjangoFilterBackend,)
+    filter_class = CatalogSourcesFilter
+    queryset = CatalogSources.objects.all()
