@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase, APIClient
 
-from core.models import Proposal, ProposalPermission, SuperBlock, Block, Frame, CatalogSources
+from core.models import Proposal, ProposalPermission, SuperBlock, Block, Frame, CatalogSources, Body
 from mock import patch
 from neox.tests.mocks import mock_lco_authenticate
 
@@ -17,6 +17,7 @@ import logging
 logger = logging.getLogger(__name__)
 # Disable anything below CRITICAL level
 logging.disable(logging.CRITICAL)
+
 
 class ProposalAPITest(TestCase):
     base_url = '/api/proposals/{}/'
@@ -39,14 +40,15 @@ class ProposalAPITest(TestCase):
         response = self.client.get(self.base_url.format(neo_proposal.id))
         self.assertEqual(
             json.loads(response.content.decode('utf8')),
-                {'code' : 'LCO2015A-009',
-                 'title' : 'LCOGT NEO Follow-up Network',
-                 'pi' : "",
-                 'tag' : 'LCOGT',
-                 'active' : True,
-                 'time_critical' : False,
-                 'download' : True
-                 }
+            {
+                'code' : 'LCO2015A-009',
+                'title' : 'LCOGT NEO Follow-up Network',
+                'pi' : "",
+                'tag' : 'LCOGT',
+                'active' : True,
+                'time_critical' : False,
+                'download' : True
+            }
         )
 
     def test_returns_download_only_proposal(self):
@@ -60,7 +62,7 @@ class ProposalAPITest(TestCase):
                                 'download' : True
         }
         neo_proposal = Proposal.objects.create(**neo_proposal_params)
-        response = self.client.get(self.base_url.format(None).replace('None/',''))
+        response = self.client.get(self.base_url.format(None).replace('None/', ''))
         self.assertEqual(
             json.loads(response.content.decode('utf8')),
             {
@@ -80,6 +82,7 @@ class ProposalAPITest(TestCase):
             }
         )
 
+
 class BaseViewTest(APITestCase):
 
     def setUp(self):
@@ -87,9 +90,9 @@ class BaseViewTest(APITestCase):
             username='bart',
             password='simpson',
             email='bart@simpson.org',
-            first_name = 'Bart',
-            last_name = 'Simpson',
-            is_active = 1
+            first_name='Bart',
+            last_name='Simpson',
+            is_active=1
         )
         neo_proposal_params = { 'code'  : 'LCO2015A-009',
                                 'title' : 'LCOGT NEO Follow-up Network'
@@ -112,6 +115,23 @@ class BaseViewTest(APITestCase):
                             }
         self.test_block = Block.objects.create(**self.block_params)
 
+        self.body_params = {'provisional_name' : 'N999r0q',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    }
+        self.test_body = Body.objects.create(**self.body_params)
+
         self.maxDiff = None
 
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
@@ -126,7 +146,7 @@ class FrameAPITest(BaseViewTest):
     def test_get_returns_json_200_for_nonLCO(self):
         frame_params = {
                         'sitecode' : 'G96',
-                        'midpoint' : datetime(2019,4,20,19,30,0),
+                        'midpoint' : datetime(2019, 4, 20, 19, 30, 0),
                         'filter'   : 'V',
                         'frametype': Frame.NONLCO_FRAMETYPE
                        }
@@ -139,7 +159,7 @@ class FrameAPITest(BaseViewTest):
         frame_params = {
                         'sitecode' : 'K91',
                         'filename' : 'cpt1m010-fa16-20190330-0129-e91.fits',
-                        'midpoint' : datetime(2019,4,20,19,30,0),
+                        'midpoint' : datetime(2019, 4, 20, 19, 30, 0),
                         'filter'   : 'w',
                         'frametype': Frame.BANZAI_RED_FRAMETYPE
                        }
@@ -189,7 +209,7 @@ class FrameAPITest(BaseViewTest):
         frame_params = {
                         'sitecode' : 'K91',
                         'filename' : 'cpt1m010-fa16-20190330-0129-e91.fits',
-                        'midpoint' : datetime(2019,4,20,19,30,0),
+                        'midpoint' : datetime(2019, 4, 20, 19, 30, 0),
                         'filter'   : 'w',
                         'frametype': Frame.BANZAI_RED_FRAMETYPE,
                         'block'    : self.test_block
@@ -229,14 +249,14 @@ class FrameAPITest(BaseViewTest):
         frame_params = {
                         'sitecode' : 'K91',
                         'filename' : 'cpt1m010-fa16-20190330-0129-e91.fits',
-                        'midpoint' : datetime(2019,4,20,19,30,0),
+                        'midpoint' : datetime(2019, 4, 20, 19, 30, 0),
                         'filter'   : 'w',
                         'frametype': Frame.BANZAI_RED_FRAMETYPE,
                         'block'    : self.test_block
                        }
         test_frame = Frame.objects.create(**frame_params)
         frame_params['filename'] = 'cpt1m010-fa16-20190330-0130-e91.fits'
-        frame_params['midpoint'] = datetime(2019,4,20,19,31,0)
+        frame_params['midpoint'] = datetime(2019, 4, 20, 19, 31, 0)
         test_frame2 = Frame.objects.create(**frame_params)
 
         response = self.client.get(self.query_url.format(test_frame2.filename, ''))
@@ -270,15 +290,16 @@ class FrameAPITest(BaseViewTest):
                     "zeropoint": None,
                     "zeropoint_err": None
                 }
-            ]
-        })
+              ]
+            }
+        )
 
     def test_find_frame_by_frametype(self):
         self.login()
         frame_params = {
                         'sitecode' : 'K91',
                         'filename' : 'cpt1m010-fa16-20190330-0129-e91.fits',
-                        'midpoint' : datetime(2019,4,20,19,30,0),
+                        'midpoint' : datetime(2019, 4, 20, 19, 30, 0),
                         'filter'   : 'w',
                         'frametype': Frame.BANZAI_RED_FRAMETYPE,
                         'block'    : self.test_block
@@ -319,22 +340,23 @@ class FrameAPITest(BaseViewTest):
                     "zeropoint": None,
                     "zeropoint_err": None
                 }
-            ]
-        })
+              ]
+            }
+        )
 
     def test_find_frame_by_filename_and_frametype(self):
         self.login()
         frame_params = {
                         'sitecode' : 'K91',
                         'filename' : 'cpt1m010-fa16-20190330-0129-e91.fits',
-                        'midpoint' : datetime(2019,4,20,19,30,0),
+                        'midpoint' : datetime(2019, 4, 20, 19, 30, 0),
                         'filter'   : 'w',
                         'frametype': Frame.BANZAI_RED_FRAMETYPE,
                         'block'    : self.test_block
                        }
         test_frame = Frame.objects.create(**frame_params)
         frame_params['filename'] = 'cpt1m010-fa16-20190330-0130-e91.fits'
-        frame_params['midpoint'] = datetime(2019,4,20,19,31,0)
+        frame_params['midpoint'] = datetime(2019, 4, 20, 19, 31, 0)
         test_frame3 = Frame.objects.create(**frame_params)
         frame_params['filename'] = 'cpt1m010-fa16-20190330-0130-e91_ldac.fits'
         frame_params['frametype'] = Frame.BANZAI_LDAC_CATALOG
@@ -371,8 +393,9 @@ class FrameAPITest(BaseViewTest):
                     "zeropoint": None,
                     "zeropoint_err": None
                 }
-            ]
-        })
+              ]
+            }
+        )
 
 
 class BlockAPITest(BaseViewTest):
@@ -424,8 +447,8 @@ class BlockAPITest(BaseViewTest):
         self.login()
         self.sblock_params['tracking_number'] = '0420'
         test_sblock2 = SuperBlock.objects.create(**self.sblock_params)
-        self.block_params['block_start'] = datetime(2019,4,20,16,00,0)
-        self.block_params['block_end'] = datetime(2019,4,21, 3,30,0)
+        self.block_params['block_start'] = datetime(2019, 4, 20, 16, 00, 0)
+        self.block_params['block_end'] = datetime(2019, 4, 21, 3, 30, 0)
         self.block_params['superblock'] = test_sblock2
         test_block2 = Block.objects.create(**self.block_params)
 
@@ -460,8 +483,9 @@ class BlockAPITest(BaseViewTest):
                     "when_observed": None,
                     "when_reported": None,
                 }
-            ]
-        })
+              ]
+            }
+        )
 
     def test_find_block_by_obstype(self):
         self.login()
@@ -501,8 +525,9 @@ class BlockAPITest(BaseViewTest):
                     "when_observed": None,
                     "when_reported": None,
                 }
-            ]
-        })
+                ]
+            }
+        )
 
 
 class SuperBlockAPITest(BaseViewTest):
@@ -576,21 +601,22 @@ class SuperBlockAPITest(BaseViewTest):
                     "timeused": None,
                     "tracking_number": "0420",
                 }
-            ]
-        })
+              ]
+            }
+        )
 
     def test_find_superblocks_by_daterange(self):
         self.login()
-        self.sblock_params['block_start'] = datetime(2019,4,21,23,0,0)
-        self.sblock_params['block_end'] = datetime(2019,4,22,12,0,0)
+        self.sblock_params['block_start'] = datetime(2019, 4, 21, 23, 0, 0)
+        self.sblock_params['block_end'] = datetime(2019, 4, 22, 12, 0, 0)
         self.sblock_params['tracking_number'] = "0421"
         test_sblock2 = SuperBlock.objects.create(**self.sblock_params)
-        self.sblock_params['block_start'] = datetime(2019,4,22,16,0,0)
-        self.sblock_params['block_end'] = datetime(2019,4,23, 3,30,0)
+        self.sblock_params['block_start'] = datetime(2019, 4, 22, 16, 0, 0)
+        self.sblock_params['block_end'] = datetime(2019, 4, 23, 3, 30, 0)
         self.sblock_params['tracking_number'] = "0422"
         test_sblock3 = SuperBlock.objects.create(**self.sblock_params)
 
-        response = self.client.get(self.query_url.format('', datetime(2019,4,21,22,0,59), datetime(2019,4,22,13,0,0)))
+        response = self.client.get(self.query_url.format('', datetime(2019, 4, 21, 22, 0, 59), datetime(2019, 4, 22, 13, 0, 0)))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['content-type'], 'application/json')
         self.assertEqual(
@@ -615,17 +641,18 @@ class SuperBlockAPITest(BaseViewTest):
                     "timeused": None,
                     "tracking_number": "0421",
                 }
-            ]
-        })
+              ]
+            }
+        )
 
     def test_find_superblocks_by_daterange_string(self):
         self.login()
-        self.sblock_params['block_start'] = datetime(2019,4,21,23,0,0)
-        self.sblock_params['block_end'] = datetime(2019,4,22,12,0,0)
+        self.sblock_params['block_start'] = datetime(2019, 4, 21, 23, 0, 0)
+        self.sblock_params['block_end'] = datetime(2019, 4, 22, 12, 0, 0)
         self.sblock_params['tracking_number'] = "0421"
         test_sblock2 = SuperBlock.objects.create(**self.sblock_params)
-        self.sblock_params['block_start'] = datetime(2019,4,22,16,0,0)
-        self.sblock_params['block_end'] = datetime(2019,4,23, 3,30,0)
+        self.sblock_params['block_start'] = datetime(2019, 4, 22, 16, 0, 0)
+        self.sblock_params['block_end'] = datetime(2019, 4, 23, 3, 30, 0)
         self.sblock_params['tracking_number'] = "0422"
         test_sblock3 = SuperBlock.objects.create(**self.sblock_params)
 
@@ -654,8 +681,9 @@ class SuperBlockAPITest(BaseViewTest):
                     "timeused": None,
                     "tracking_number": "0421",
                 }
-            ]
-        })
+              ]
+            }
+        )
 
 
 class CatalogSourcesAPITest(BaseViewTest):
@@ -669,7 +697,7 @@ class CatalogSourcesAPITest(BaseViewTest):
                 'block'    : self.test_block,
                 'sitecode' : 'K91',
                 'filename' : 'cpt1m010-fa16-20190330-0129-e91.fits',
-                'midpoint' : datetime(2019,4,20,19,30,0),
+                'midpoint' : datetime(2019, 4, 20, 19, 30, 0),
                 'filter'   : 'w',
                 'frametype': Frame.BANZAI_RED_FRAMETYPE
                }
@@ -751,25 +779,25 @@ class CatalogSourcesAPITest(BaseViewTest):
               'previous' : None,
               'results' : [
                     {
-                    "aperture_size": 4.0,
-                    "background": 4.2,
-                    "ellipticity": 0.5,
-                    "err_obs_dec": 0.00025,
-                    "err_obs_mag": 0.1,
-                    "err_obs_ra": 0.0005,
-                    "flags": 0,
-                    "flux_max": None,
-                    "frame": 1,
-                    "id": 1,
-                    "major_axis": 5.2,
-                    "minor_axis": 2.6,
-                    "obs_dec": -32.0,
-                    "obs_mag": 20.1,
-                    "obs_ra": 42.0,
-                    "obs_x": 1024.1,
-                    "obs_y": 511.5,
-                    "position_angle": -30.0,
-                    "threshold": None
+                        "aperture_size": 4.0,
+                        "background": 4.2,
+                        "ellipticity": 0.5,
+                        "err_obs_dec": 0.00025,
+                        "err_obs_mag": 0.1,
+                        "err_obs_ra": 0.0005,
+                        "flags": 0,
+                        "flux_max": None,
+                        "frame": 1,
+                        "id": 1,
+                        "major_axis": 5.2,
+                        "minor_axis": 2.6,
+                        "obs_dec": -32.0,
+                        "obs_mag": 20.1,
+                        "obs_ra": 42.0,
+                        "obs_x": 1024.1,
+                        "obs_y": 511.5,
+                        "position_angle": -30.0,
+                        "threshold": None
                     }
                 ]
             }
@@ -799,25 +827,25 @@ class CatalogSourcesAPITest(BaseViewTest):
               'previous' : None,
               'results' : [
                     {
-                    "aperture_size": 4.0,
-                    "background": 4.2,
-                    "ellipticity": 0.5,
-                    "err_obs_dec": 0.00025,
-                    "err_obs_mag": 0.1,
-                    "err_obs_ra": 0.0005,
-                    "flags": 0,
-                    "flux_max": None,
-                    "frame": 1,
-                    "id": 1,
-                    "major_axis": 5.2,
-                    "minor_axis": 2.6,
-                    "obs_dec": -32.0,
-                    "obs_mag": 20.1,
-                    "obs_ra": 42.0,
-                    "obs_x": 1024.1,
-                    "obs_y": 511.5,
-                    "position_angle": -30.0,
-                    "threshold": None
+                        "aperture_size": 4.0,
+                        "background": 4.2,
+                        "ellipticity": 0.5,
+                        "err_obs_dec": 0.00025,
+                        "err_obs_mag": 0.1,
+                        "err_obs_ra": 0.0005,
+                        "flags": 0,
+                        "flux_max": None,
+                        "frame": 1,
+                        "id": 1,
+                        "major_axis": 5.2,
+                        "minor_axis": 2.6,
+                        "obs_dec": -32.0,
+                        "obs_mag": 20.1,
+                        "obs_ra": 42.0,
+                        "obs_x": 1024.1,
+                        "obs_y": 511.5,
+                        "position_angle": -30.0,
+                        "threshold": None
                     }
                 ]
             }
@@ -850,25 +878,25 @@ class CatalogSourcesAPITest(BaseViewTest):
               'previous' : None,
               'results' : [
                     {
-                    "aperture_size": 4.0,
-                    "background": 4.2,
-                    "ellipticity": 0.5,
-                    "err_obs_dec": 0.00025,
-                    "err_obs_mag": 0.1,
-                    "err_obs_ra": 0.0005,
-                    "flags": 0,
-                    "flux_max": None,
-                    "frame": 1,
-                    "id": 1,
-                    "major_axis": 5.2,
-                    "minor_axis": 2.6,
-                    "obs_dec": -32.0,
-                    "obs_mag": 20.1,
-                    "obs_ra": 42.0,
-                    "obs_x": 1024.1,
-                    "obs_y": 511.5,
-                    "position_angle": -30.0,
-                    "threshold": None
+                        "aperture_size": 4.0,
+                        "background": 4.2,
+                        "ellipticity": 0.5,
+                        "err_obs_dec": 0.00025,
+                        "err_obs_mag": 0.1,
+                        "err_obs_ra": 0.0005,
+                        "flags": 0,
+                        "flux_max": None,
+                        "frame": 1,
+                        "id": 1,
+                        "major_axis": 5.2,
+                        "minor_axis": 2.6,
+                        "obs_dec": -32.0,
+                        "obs_mag": 20.1,
+                        "obs_ra": 42.0,
+                        "obs_x": 1024.1,
+                        "obs_y": 511.5,
+                        "position_angle": -30.0,
+                        "threshold": None
                     }
                 ]
             }
@@ -901,25 +929,25 @@ class CatalogSourcesAPITest(BaseViewTest):
               'previous' : None,
               'results' : [
                     {
-                    "aperture_size": 4.0,
-                    "background": 4.2,
-                    "ellipticity": 0.5,
-                    "err_obs_dec": 0.00025,
-                    "err_obs_mag": 0.1,
-                    "err_obs_ra": 0.0005,
-                    "flags": 0,
-                    "flux_max": None,
-                    "frame": 1,
-                    "id": 1,
-                    "major_axis": 5.2,
-                    "minor_axis": 2.6,
-                    "obs_dec": -32.0,
-                    "obs_mag": 20.1,
-                    "obs_ra": 42.0,
-                    "obs_x": 1024.1,
-                    "obs_y": 511.5,
-                    "position_angle": -30.0,
-                    "threshold": None
+                        "aperture_size": 4.0,
+                        "background": 4.2,
+                        "ellipticity": 0.5,
+                        "err_obs_dec": 0.00025,
+                        "err_obs_mag": 0.1,
+                        "err_obs_ra": 0.0005,
+                        "flags": 0,
+                        "flux_max": None,
+                        "frame": 1,
+                        "id": 1,
+                        "major_axis": 5.2,
+                        "minor_axis": 2.6,
+                        "obs_dec": -32.0,
+                        "obs_mag": 20.1,
+                        "obs_ra": 42.0,
+                        "obs_x": 1024.1,
+                        "obs_y": 511.5,
+                        "position_angle": -30.0,
+                        "threshold": None
                     }
                 ]
             }
@@ -952,25 +980,25 @@ class CatalogSourcesAPITest(BaseViewTest):
               'previous' : None,
               'results' : [
                     {
-                    "aperture_size": 4.0,
-                    "background": 4.2,
-                    "ellipticity": 0.5,
-                    "err_obs_dec": 0.00025,
-                    "err_obs_mag": 0.1,
-                    "err_obs_ra": 0.0005,
-                    "flags": 0,
-                    "flux_max": None,
-                    "frame": 1,
-                    "id": 1,
-                    "major_axis": 5.2,
-                    "minor_axis": 2.6,
-                    "obs_dec": -32.0,
-                    "obs_mag": 20.1,
-                    "obs_ra": 42.0,
-                    "obs_x": 1024.1,
-                    "obs_y": 511.5,
-                    "position_angle": -30.0,
-                    "threshold": None
+                        "aperture_size": 4.0,
+                        "background": 4.2,
+                        "ellipticity": 0.5,
+                        "err_obs_dec": 0.00025,
+                        "err_obs_mag": 0.1,
+                        "err_obs_ra": 0.0005,
+                        "flags": 0,
+                        "flux_max": None,
+                        "frame": 1,
+                        "id": 1,
+                        "major_axis": 5.2,
+                        "minor_axis": 2.6,
+                        "obs_dec": -32.0,
+                        "obs_mag": 20.1,
+                        "obs_ra": 42.0,
+                        "obs_x": 1024.1,
+                        "obs_y": 511.5,
+                        "position_angle": -30.0,
+                        "threshold": None
                     }
                 ]
             }
@@ -984,7 +1012,7 @@ class CatalogSourcesAPITest(BaseViewTest):
         self.assertEqual(response['content-type'], 'application/json')
         self.assertEqual(
             json.loads(response.content.decode('utf8')),
-            { 'count' : 0, 'next' : None, 'previous' : None, 'results' : [] }
+            {'count' : 0, 'next' : None, 'previous' : None, 'results' : []}
         )
 
     def test_get_by_frame_dec_range3(self):
@@ -1003,25 +1031,25 @@ class CatalogSourcesAPITest(BaseViewTest):
               'previous' : None,
               'results' : [
                     {
-                    "aperture_size": 4.0,
-                    "background": 4.2,
-                    "ellipticity": 0.5,
-                    "err_obs_dec": 0.00025,
-                    "err_obs_mag": 0.1,
-                    "err_obs_ra": 0.0005,
-                    "flags": 0,
-                    "flux_max": None,
-                    "frame": 1,
-                    "id": 1,
-                    "major_axis": 5.2,
-                    "minor_axis": 2.6,
-                    "obs_dec": -32.0,
-                    "obs_mag": 20.1,
-                    "obs_ra": 42.0,
-                    "obs_x": 1024.1,
-                    "obs_y": 511.5,
-                    "position_angle": -30.0,
-                    "threshold": None
+                        "aperture_size": 4.0,
+                        "background": 4.2,
+                        "ellipticity": 0.5,
+                        "err_obs_dec": 0.00025,
+                        "err_obs_mag": 0.1,
+                        "err_obs_ra": 0.0005,
+                        "flags": 0,
+                        "flux_max": None,
+                        "frame": 1,
+                        "id": 1,
+                        "major_axis": 5.2,
+                        "minor_axis": 2.6,
+                        "obs_dec": -32.0,
+                        "obs_mag": 20.1,
+                        "obs_ra": 42.0,
+                        "obs_x": 1024.1,
+                        "obs_y": 511.5,
+                        "position_angle": -30.0,
+                        "threshold": None
                     }
                 ]
             }
@@ -1035,7 +1063,7 @@ class CatalogSourcesAPITest(BaseViewTest):
         self.assertEqual(response['content-type'], 'application/json')
         self.assertEqual(
             json.loads(response.content.decode('utf8')),
-            { 'count' : 0, 'next' : None, 'previous' : None, 'results' : [] }
+            {'count' : 0, 'next' : None, 'previous' : None, 'results' : []}
         )
 
     def test_get_by_frame_ra_dec_range1(self):
@@ -1055,26 +1083,38 @@ class CatalogSourcesAPITest(BaseViewTest):
               'previous' : None,
               'results' : [
                     {
-                    "aperture_size": 4.0,
-                    "background": 4.2,
-                    "ellipticity": 0.5,
-                    "err_obs_dec": 0.00025,
-                    "err_obs_mag": 0.1,
-                    "err_obs_ra": 0.0005,
-                    "flags": 0,
-                    "flux_max": None,
-                    "frame": 1,
-                    "id": 1,
-                    "major_axis": 5.2,
-                    "minor_axis": 2.6,
-                    "obs_dec": -32.0,
-                    "obs_mag": 20.1,
-                    "obs_ra": 42.0,
-                    "obs_x": 1024.1,
-                    "obs_y": 511.5,
-                    "position_angle": -30.0,
-                    "threshold": None
+                        "aperture_size": 4.0,
+                        "background": 4.2,
+                        "ellipticity": 0.5,
+                        "err_obs_dec": 0.00025,
+                        "err_obs_mag": 0.1,
+                        "err_obs_ra": 0.0005,
+                        "flags": 0,
+                        "flux_max": None,
+                        "frame": 1,
+                        "id": 1,
+                        "major_axis": 5.2,
+                        "minor_axis": 2.6,
+                        "obs_dec": -32.0,
+                        "obs_mag": 20.1,
+                        "obs_ra": 42.0,
+                        "obs_x": 1024.1,
+                        "obs_y": 511.5,
+                        "position_angle": -30.0,
+                        "threshold": None
                     }
                 ]
             }
         )
+
+
+class BodyAPITest(BaseViewTest):
+    base_url = '/api/body/{}/'
+    query_url = '/api/body/?name={}&provisional_name={}&origin={}'
+
+    def test_get_returns_json_200(self):
+        self.login()
+        print(self.test_body)
+        response = self.client.get(self.base_url.format(self.test_body.id))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
