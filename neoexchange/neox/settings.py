@@ -160,6 +160,16 @@ ROLLBAR = {
 }
 rollbar.init(**ROLLBAR)
 
+##################################
+# Django REST Framework settings #
+##################################
+
+REST_FRAMEWORK = {
+    'TEST_REQUEST_DEFAULT_FORMAT': 'json',
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'PAGE_SIZE': 50,
+}
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': True,

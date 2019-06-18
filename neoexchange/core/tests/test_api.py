@@ -2,8 +2,12 @@ import json
 from datetime import datetime
 
 from django.test import TestCase
+from django.contrib.auth.models import User
+from rest_framework.test import APITestCase, APIClient
 
-from core.models import Proposal, Frame
+from core.models import Proposal, ProposalPermission, SuperBlock, Block, Frame
+from mock import patch
+from neox.tests.mocks import mock_lco_authenticate
 
 # Import modules to test
 from core.viewsets import *
@@ -59,20 +63,56 @@ class ProposalAPITest(TestCase):
         response = self.client.get(self.base_url.format(None).replace('None/',''))
         self.assertEqual(
             json.loads(response.content.decode('utf8')),
-            [
-                {'code' : 'LCO2015A-009',
-                 'title' : 'LCOGT NEO Follow-up Network',
-                 'pi' : "",
-                 'tag' : 'LCOGT',
-                 'active' : True,
-                 'time_critical' : False,
-                 'download' : True
-                 }
-            ]
+            {
+                'count' : 1,
+                'next'  : None,
+                'previous' : None,
+                'results' : [
+                    {'code' : 'LCO2015A-009',
+                     'title' : 'LCOGT NEO Follow-up Network',
+                     'pi' : "",
+                     'tag' : 'LCOGT',
+                     'active' : True,
+                     'time_critical' : False,
+                     'download' : True
+                     }
+                ]
+            }
         )
 
-class FrameAPITest(TestCase):
+class FrameAPITest(APITestCase):
     base_url = '/api/frames/{}/'
+
+    def setUp(self):
+        self.bart = User.objects.create_user(
+            username='bart',
+            password='simpson',
+            email='bart@simpson.org',
+            first_name = 'Bart',
+            last_name = 'Simpson',
+            is_active = 1
+        )
+        neo_proposal_params = { 'code'  : 'LCO2015A-009',
+                                'title' : 'LCOGT NEO Follow-up Network'
+                              }
+        self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
+
+        test_proposal_params = { 'code'  : 'LCOEngineering',
+                                 'title' : 'Test Proposal'
+                               }
+        self.test_proposal, created = Proposal.objects.get_or_create(**test_proposal_params)
+        pp = ProposalPermission.objects.create(proposal=self.test_proposal, user=self.bart)
+        sblock_params = {
+                            'proposal' : self.test_proposal,
+                        }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+        self.test_block = Block.objects.create(superblock=self.test_sblock, proposal=self.test_proposal)
+
+        self.maxDiff = None
+
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
+    def login(self):
+        self.assertTrue(self.client.login(username='bart', password='simpson'))
 
     def test_get_returns_json_200_for_nonLCO(self):
         frame_params = {
@@ -129,6 +169,46 @@ class FrameAPITest(TestCase):
                 "quality": " ",
                 "rms_of_fit": None,
                 "sitecode": "G96",
+                "time_uncertainty": None,
+                "zeropoint": None,
+                "zeropoint_err": None
+            }
+        )
+
+    def test_get_for_LCO_data(self):
+        self.login()
+        frame_params = {
+                        'sitecode' : 'K91',
+                        'filename' : 'cpt1m010-fa16-20190330-0129-e91.fits',
+                        'midpoint' : datetime(2019,4,20,19,30,0),
+                        'filter'   : 'w',
+                        'frametype': Frame.BANZAI_RED_FRAMETYPE,
+                        'block'    : self.test_block
+                       }
+        test_frame = Frame.objects.create(**frame_params)
+        response = self.client.get(self.base_url.format(test_frame.id))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+        self.assertEqual(
+            json.loads(response.content.decode('utf8')),
+            {
+                "astrometric_catalog": " ",
+                "block": 1,
+                "exptime": None,
+                "extrainfo": None,
+                "filename": 'cpt1m010-fa16-20190330-0129-e91.fits',
+                "filter": "w",
+                "frameid": None,
+                "frametype": 91,
+                "fwhm": None,
+                "id": 1,
+                "instrument": None,
+                "midpoint": "2019-04-20T19:30:00",
+                "nstars_in_fit": None,
+                "photometric_catalog": " ",
+                "quality": " ",
+                "rms_of_fit": None,
+                "sitecode": "K91",
                 "time_uncertainty": None,
                 "zeropoint": None,
                 "zeropoint_err": None

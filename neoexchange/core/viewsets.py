@@ -3,6 +3,7 @@ from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from django_filters.rest_framework import DjangoFilterBackend
 
 from core.models import Proposal, Frame
+from core.views import user_proposals
 from core.filters import FrameFilter
 
 
@@ -35,7 +36,7 @@ class FrameViewSet(viewsets.ModelViewSet):
             qs = Frame.objects.all()
         elif self.request.user.is_authenticated:
             qs = Frame.objects.filter(
-                proposal__in=self.request.user.proposal_set.all()
+                block__superblock__proposal__in=user_proposals(self.request.user)
             )
         else:
             qs = Frame.objects.filter(frametype__in=[Frame.NONLCO_FRAMETYPE, Frame.SATELLITE_FRAMETYPE])
