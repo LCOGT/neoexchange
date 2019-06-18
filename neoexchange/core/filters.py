@@ -1,12 +1,15 @@
 import django_filters
 
-from core.models import Block, Frame
+from core.models import SuperBlock, Block, Frame
 
-class FrameFilter(django_filters.FilterSet):
 
+class SuperBlockFilter(django_filters.FilterSet):
+
+    blockstart_before = django_filters.DateTimeFilter(field_name='block_start', lookup_expr='lte', label='Block start before')
+    blockstart_after = django_filters.DateTimeFilter(field_name='block_start', lookup_expr='gte', label='Block start after')
     class Meta:
-        model = Frame
-        fields = ('filename', 'frametype')
+        model = SuperBlock
+        fields = ('tracking_number', 'blockstart_before', 'blockstart_after')
 
 
 class BlockFilter(django_filters.FilterSet):
@@ -18,3 +21,10 @@ class BlockFilter(django_filters.FilterSet):
     class Meta:
         model = Block
         fields = ('tracking_number', 'obstype')
+
+
+class FrameFilter(django_filters.FilterSet):
+
+    class Meta:
+        model = Frame
+        fields = ('filename', 'frametype')

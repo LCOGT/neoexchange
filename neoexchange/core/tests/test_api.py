@@ -503,3 +503,156 @@ class BlockAPITest(BaseViewTest):
                 }
             ]
         })
+
+
+class SuperBlockAPITest(BaseViewTest):
+    base_url = '/api/superblocks/{}/'
+    query_url = '/api/superblocks/?tracking_number={}&blockstart_after={}&blockstart_before={}'
+
+    def test_get_returns_json_200(self):
+        self.login()
+        response = self.client.get(self.base_url.format(self.test_sblock.id))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+
+    def test_anonymous_get_returns_json_200(self):
+        response = self.client.get(self.base_url.format(self.test_sblock.id))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+
+    def test_get_for_LCO_data(self):
+        self.login()
+        response = self.client.get(self.base_url.format(self.test_sblock.id))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+        self.assertEqual(
+            json.loads(response.content.decode('utf8')),
+            {
+                    "active": False,
+                    "block_end": None,
+                    "block_start": None,
+                    "body": None,
+                    "cadence": False,
+                    "calibsource": None,
+                    "groupid": None,
+                    "id": 1,
+                    "jitter": None,
+                    "period": None,
+                    "proposal": self.test_proposal.id,
+                    "rapid_response": False,
+                    "timeused": None,
+                    "tracking_number": None,
+            }
+        )
+
+    def test_find_superblocks_by_trackingnum(self):
+        self.login()
+        self.sblock_params['tracking_number'] = '0420'
+        test_sblock2 = SuperBlock.objects.create(**self.sblock_params)
+
+        response = self.client.get(self.query_url.format(test_sblock2.tracking_number, '', ''))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+        foo = json.loads(response.content.decode('utf8'))
+        self.assertEqual(
+            json.loads(response.content.decode('utf8')),
+            { 'count' : 1,
+              'next' : None,
+              'previous' : None,
+              'results' : [
+                {
+                    "active": False,
+                    "block_end": None,
+                    "block_start": None,
+                    "body": None,
+                    "cadence": False,
+                    "calibsource": None,
+                    "groupid": None,
+                    "id": 2,
+                    "jitter": None,
+                    "period": None,
+                    "proposal": self.test_proposal.id,
+                    "rapid_response": False,
+                    "timeused": None,
+                    "tracking_number": "0420",
+                }
+            ]
+        })
+
+    def test_find_superblocks_by_daterange(self):
+        self.login()
+        self.sblock_params['block_start'] = datetime(2019,4,21,23,0,0)
+        self.sblock_params['block_end'] = datetime(2019,4,22,12,0,0)
+        self.sblock_params['tracking_number'] = "0421"
+        test_sblock2 = SuperBlock.objects.create(**self.sblock_params)
+        self.sblock_params['block_start'] = datetime(2019,4,22,16,0,0)
+        self.sblock_params['block_end'] = datetime(2019,4,23, 3,30,0)
+        self.sblock_params['tracking_number'] = "0422"
+        test_sblock3 = SuperBlock.objects.create(**self.sblock_params)
+
+        response = self.client.get(self.query_url.format('', datetime(2019,4,21,22,0,59), datetime(2019,4,22,13,0,0)))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+        self.assertEqual(
+            json.loads(response.content.decode('utf8')),
+            { 'count' : 1,
+              'next' : None,
+              'previous' : None,
+              'results' : [
+                {
+                    "active": False,
+                    "block_end": "2019-04-22T12:00:00",
+                    "block_start": "2019-04-21T23:00:00",
+                    "body": None,
+                    "cadence": False,
+                    "calibsource": None,
+                    "groupid": None,
+                    "id": 2,
+                    "jitter": None,
+                    "period": None,
+                    "proposal": self.test_proposal.id,
+                    "rapid_response": False,
+                    "timeused": None,
+                    "tracking_number": "0421",
+                }
+            ]
+        })
+
+    def test_find_superblocks_by_daterange_string(self):
+        self.login()
+        self.sblock_params['block_start'] = datetime(2019,4,21,23,0,0)
+        self.sblock_params['block_end'] = datetime(2019,4,22,12,0,0)
+        self.sblock_params['tracking_number'] = "0421"
+        test_sblock2 = SuperBlock.objects.create(**self.sblock_params)
+        self.sblock_params['block_start'] = datetime(2019,4,22,16,0,0)
+        self.sblock_params['block_end'] = datetime(2019,4,23, 3,30,0)
+        self.sblock_params['tracking_number'] = "0422"
+        test_sblock3 = SuperBlock.objects.create(**self.sblock_params)
+
+        response = self.client.get(self.query_url.format('', "2019-04-21 22:0:59", "2019-04-22 13:00:00"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+        self.assertEqual(
+            json.loads(response.content.decode('utf8')),
+            { 'count' : 1,
+              'next' : None,
+              'previous' : None,
+              'results' : [
+                {
+                    "active": False,
+                    "block_end": "2019-04-22T12:00:00",
+                    "block_start": "2019-04-21T23:00:00",
+                    "body": None,
+                    "cadence": False,
+                    "calibsource": None,
+                    "groupid": None,
+                    "id": 2,
+                    "jitter": None,
+                    "period": None,
+                    "proposal": self.test_proposal.id,
+                    "rapid_response": False,
+                    "timeused": None,
+                    "tracking_number": "0421",
+                }
+            ]
+        })
