@@ -1032,7 +1032,7 @@ class SourceMeasurement(models.Model):
     astrometric_catalog = models.CharField('Astrometric catalog used', max_length=40, default=' ')
     photometric_catalog = models.CharField('Photometric catalog used', max_length=40, default=' ')
     aperture_size = models.FloatField('Size of aperture (arcsec)', blank=True, null=True)
-    snr = models.FloatField('Size of aperture (arcsec)', blank=True, null=True)
+    snr = models.FloatField('Signal to noise of detection', blank=True, null=True)
     flags = models.CharField('Frame Quality flags', help_text='Comma separated list of frame/condition flags', max_length=40, blank=True, default=' ')
 
     def format_mpc_line(self, include_catcode=False):
