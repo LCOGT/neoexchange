@@ -456,6 +456,116 @@ class FrameAPITest(BaseViewTest):
         )
 
 
+class AddFrameAPITest(BaseViewTest):
+    base_url =  '/api/frames/{}/'
+    model="frames"
+
+    def setUp(self):
+        super(AddFrameAPITest, self).setUp()
+
+        self.frame_params = {
+                'block'    : self.test_block,
+                'sitecode' : 'K91',
+                'instrument' : 'fa16',
+                'filename' : 'cpt1m010-fa16-20190330-0129-e91.fits',
+                'midpoint' : "2019-04-20T19:30:00",
+                'filter'   : 'w',
+                'frametype': Frame.BANZAI_RED_FRAMETYPE,
+                'fwhm' : 2.0,
+               }
+
+        self.maxDiff = None
+
+    def test_create_a_frame_logged_in(self):
+        self.login()
+        valid_data = self.frame_params.copy()
+        valid_data['block'] = valid_data['block'].id
+        response = self.make_a_request(self.model, kind="post", data=valid_data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.test_frame = Frame.objects.create(**self.frame_params)
+        valid_data = model_to_dict(self.test_frame)
+        valid_data['id'] = 1
+        self.assertEqual(response.data, valid_data)
+
+    def test_create_a_invalid_frame1(self):
+        self.login()
+        invalid_data = self.frame_params
+        invalid_data['block'] = invalid_data['block'].id
+        invalid_data['sitecode'] = None
+        response = self.make_a_request(self.model, kind="post", data=invalid_data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(json.loads(response.content.decode('utf8')),
+            {'sitecode': ['This field may not be null.'] }
+            )
+
+    def test_create_a_invalid_frame2(self):
+        self.login()
+        invalid_data = self.frame_params
+        invalid_data['block'] = invalid_data['block'].id
+        invalid_data['filter'] = None
+        invalid_data['frametype'] = None
+        response = self.make_a_request(self.model, kind="post", data=invalid_data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(json.loads(response.content.decode('utf8')),
+            {   'frametype': ['This field may not be null.'],
+                 'filter':  ['This field may not be null.']
+            }
+        )
+
+    def test_create_a_frame_anonymous(self):
+        valid_data = self.frame_params
+        valid_data['block'] = valid_data['block'].id
+        response = self.make_a_request(self.model, kind="post", data=valid_data)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_update_a_frame(self):
+        self.login()
+        test_frame = Frame.objects.create(**self.frame_params)
+        valid_data = model_to_dict(test_frame)
+        valid_data['zeropoint'] = 24.75
+        valid_data['zeropoint_err'] = 0.01
+        valid_data['astrometric_catalog'] = 'GAIA-DR2'
+        valid_data['photometric_catalog'] = 'GAIA-DR2'
+        valid_data['quality'] = "1"
+        response = self.make_a_request(self.model, kind="put", id=test_frame.id, data=valid_data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, valid_data)
+
+        # Query list endpoint and verify we still only have 1 item
+        response = self.client.get(self.base_url.format('').rsplit('/', 1)[0])  # Much yuck...
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+        self.assertEqual(json.loads(response.content.decode('utf8')),
+            { 'count' : 1,
+              'next' : None,
+              'previous' : None,
+              'results' : [
+                    {
+                        "astrometric_catalog": "GAIA-DR2",
+                        "block": 1,
+                        "exptime": None,
+                        "extrainfo": None,
+                        "filename": "cpt1m010-fa16-20190330-0129-e91.fits",
+                        "filter": "w",
+                        "frameid": None,
+                        "frametype": 91,
+                        "fwhm": 2.0,
+                        "id": 1,
+                        "instrument": "fa16",
+                        "midpoint": "2019-04-20T19:30:00",
+                        "nstars_in_fit": None,
+                        "photometric_catalog": "GAIA-DR2",
+                        "quality": "1",
+                        "rms_of_fit": None,
+                        "sitecode": "K91",
+                        "time_uncertainty": None,
+                        "zeropoint": 24.75,
+                        "zeropoint_err": 0.01
+                    }
+                ]
+            }
+        )
+
 class BlockAPITest(BaseViewTest):
     base_url = '/api/blocks/{}/'
     query_url = '/api/blocks/?tracking_number={}&obstype={}'

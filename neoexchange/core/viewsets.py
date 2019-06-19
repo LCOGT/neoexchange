@@ -83,7 +83,7 @@ class BlockViewSet(viewsets.ModelViewSet):
 
 class FrameViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticatedOrReadOnly,)
-    http_method_names = ['get', 'head', 'options']
+    http_method_names = ['get', 'post', 'put', 'head', 'options']
     serializer_class = FrameSerializer
     filter_backends = (DjangoFilterBackend,)
     filter_class = FrameFilter
