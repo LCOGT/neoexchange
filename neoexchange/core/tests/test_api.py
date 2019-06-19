@@ -140,6 +140,35 @@ class BaseViewTest(APITestCase):
     def login(self):
         self.assertTrue(self.client.login(username='bart', password='simpson'))
 
+    def make_a_request(self, model="srcmeasures", kind="post", **kwargs):
+        """
+        Make a post request to create a entry in [model] or a put request to
+        update an entry
+        :param model: model/api endpoint to access
+        :param kind: HTTP VERB
+        :return:
+        """
+        if kind == "post":
+            return self.client.post(
+                reverse(
+                    "api:{}-list".format(model),
+                ),
+                data=json.dumps(kwargs["data"]),
+                content_type='application/json'
+            )
+        elif kind == "put":
+            return self.client.put(
+                reverse(
+                    "api:{}-detail".format(model),
+                    kwargs={
+                        "pk": kwargs["id"]
+                    }
+                ),
+                data=json.dumps(kwargs["data"]),
+                content_type='application/json'
+            )
+        else:
+            return None
 
 class FrameAPITest(BaseViewTest):
     base_url = '/api/frames/{}/'
@@ -1156,39 +1185,11 @@ class AddCatalogSourcesAPITest(BaseViewTest):
                         }
         self.maxDiff = None
 
-    def make_a_request(self, kind="post", **kwargs):
-        """
-        Make a post request to create a CatalogSource
-        :param kind: HTTP VERB
-        :return:
-        """
-        if kind == "post":
-            return self.client.post(
-                reverse(
-                    "api:catsources-list",
-                ),
-                data=json.dumps(kwargs["data"]),
-                content_type='application/json'
-            )
-        elif kind == "put":
-            return self.client.put(
-                reverse(
-                    "api:catsources-detail",
-                    kwargs={
-                        "pk": kwargs["id"]
-                    }
-                ),
-                data=json.dumps(kwargs["data"]),
-                content_type='application/json'
-            )
-        else:
-            return None
-
     def test_create_a_catsrc_logged_in(self):
         self.login()
         valid_data = self.catsrc_params
         valid_data['frame'] = valid_data['frame'].id
-        response = self.make_a_request(kind="post", data=valid_data)
+        response = self.make_a_request(model="catsources", kind="post", data=valid_data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         valid_data['id'] = 1
         valid_data['flags'] = 0
@@ -1201,7 +1202,7 @@ class AddCatalogSourcesAPITest(BaseViewTest):
         invalid_data = self.catsrc_params
         invalid_data['frame'] = invalid_data['frame'].id
         invalid_data['obs_ra'] = None
-        response = self.make_a_request(kind="post", data=invalid_data)
+        response = self.make_a_request(model="catsources", kind="post", data=invalid_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(json.loads(response.content.decode('utf8')),
             {'obs_ra': ['This field may not be null.'] }
@@ -1210,7 +1211,7 @@ class AddCatalogSourcesAPITest(BaseViewTest):
     def test_create_a_catsrc_anonymous(self):
         valid_data = self.catsrc_params
         valid_data['frame'] = valid_data['frame'].id
-        response = self.make_a_request(kind="post", data=valid_data)
+        response = self.make_a_request(model="catsources", kind="post", data=valid_data)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
@@ -1248,34 +1249,6 @@ class AddSourceMeasurementAPITest(BaseViewTest):
                         }
         self.maxDiff = None
 
-    def make_a_request(self, kind="post", **kwargs):
-        """
-        Make a post request to create a SourceMeasurement
-        :param kind: HTTP VERB
-        :return:
-        """
-        if kind == "post":
-            return self.client.post(
-                reverse(
-                    "api:srcmeasures-list",
-                ),
-                data=json.dumps(kwargs["data"]),
-                content_type='application/json'
-            )
-        elif kind == "put":
-            return self.client.put(
-                reverse(
-                    "api:srcmeasures-detail",
-                    kwargs={
-                        "pk": kwargs["id"]
-                    }
-                ),
-                data=json.dumps(kwargs["data"]),
-                content_type='application/json'
-            )
-        else:
-            return None
-
     def test_get_returns_json_200(self):
         self.login()
         test_srcmeasure = SourceMeasurement.objects.create(**self.srcmeasure_params)
@@ -1297,7 +1270,7 @@ class AddSourceMeasurementAPITest(BaseViewTest):
         valid_data = self.srcmeasure_params
         valid_data['frame'] = valid_data['frame'].id
         valid_data['body'] = valid_data['body'].id
-        response = self.make_a_request(kind="post", data=valid_data)
+        response = self.make_a_request(model="srcmeasures", kind="post", data=valid_data)
         valid_data['id'] = 1
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data, valid_data)
@@ -1307,7 +1280,7 @@ class AddSourceMeasurementAPITest(BaseViewTest):
         invalid_data = self.srcmeasure_params
         invalid_data['frame'] = None
         invalid_data['body'] = invalid_data['body'].id
-        response = self.make_a_request(kind="post", data=invalid_data)
+        response = self.make_a_request(model="srcmeasures", kind="post", data=invalid_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(json.loads(response.content.decode('utf8')),
             {'frame': ['This field may not be null.'] }
@@ -1318,7 +1291,7 @@ class AddSourceMeasurementAPITest(BaseViewTest):
         invalid_data = self.srcmeasure_params
         invalid_data['frame'] = invalid_data['frame'].id
         invalid_data['body'] = None
-        response = self.make_a_request(kind="post", data=invalid_data)
+        response = self.make_a_request(model="srcmeasures", kind="post", data=invalid_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(json.loads(response.content.decode('utf8')),
             {'body': ['This field may not be null.'] }
@@ -1328,5 +1301,5 @@ class AddSourceMeasurementAPITest(BaseViewTest):
         valid_data = self.srcmeasure_params
         valid_data['frame'] = valid_data['frame'].id
         valid_data['body'] = valid_data['body'].id
-        response = self.make_a_request(kind="post", data=valid_data)
+        response = self.make_a_request(model="srcmeasures", kind="post", data=valid_data)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
