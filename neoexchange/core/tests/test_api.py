@@ -697,6 +697,90 @@ class BlockAPITest(BaseViewTest):
             }
         )
 
+    def test_find_frames_for_block(self):
+        self.login()
+        self.frame_params = {
+                'block'    : self.test_block,
+                'sitecode' : 'K91',
+                'filename' : 'cpt1m010-fa16-20190420-0129-e91.fits',
+                'midpoint' : datetime(2019, 4, 20, 19, 30, 0),
+                'filter'   : 'w',
+                'frametype': Frame.BANZAI_RED_FRAMETYPE
+               }
+        self.test_frame = Frame.objects.create(**self.frame_params)
+        self.frame_params['filename'] = 'cpt1m010-fa16-20190420-0128-e91.fits'
+        self.frame_params['midpoint'] = datetime(2019, 4, 20, 19, 00, 0)
+        self.test_frame2 = Frame.objects.create(**self.frame_params)
+
+        # Create extra Block and Frame to check we're pulling the right one
+        self.block_params['block_start'] = datetime(2019, 4, 27, 16, 0, 0)
+        self.block_params['block_end'] = datetime(2019, 4, 28, 3, 0, 0)
+        self.block_params['tracking_number'] = '0043'
+        self.test_block2 = Block.objects.create(**self.block_params)
+        self.frame_params = {
+                'block'    : self.test_block2,
+                'sitecode' : 'K91',
+                'filename' : 'cpt1m010-fa16-20190428-0029-e91.fits',
+                'midpoint' : datetime(2019, 4, 27, 19, 30, 0),
+                'filter'   : 'w',
+                'frametype': Frame.BANZAI_RED_FRAMETYPE
+               }
+        self.test_frame3 = Frame.objects.create(**self.frame_params)
+
+        response = self.client.get(self.base_url.format(self.test_block.id) + 'frames/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response['content-type'], 'application/json')
+#        self.show_response(response.data)
+        self.assertEqual(
+            json.loads(response.content.decode('utf8')),
+                [
+                    {
+                        "astrometric_catalog": " ",
+                        "block": 1,
+                        "exptime": None,
+                        "extrainfo": None,
+                        "filename": "cpt1m010-fa16-20190420-0129-e91.fits",
+                        "filter": "w",
+                        "frameid": None,
+                        "frametype": 91,
+                        "fwhm": None,
+                        "id": 1,
+                        "instrument": None,
+                        "midpoint": "2019-04-20T19:30:00",
+                        "nstars_in_fit": None,
+                        "photometric_catalog": " ",
+                        "quality": " ",
+                        "rms_of_fit": None,
+                        "sitecode": "K91",
+                        "time_uncertainty": None,
+                        "zeropoint": None,
+                        "zeropoint_err": None
+                    },
+                    {
+                        "astrometric_catalog": " ",
+                        "block": 1,
+                        "exptime": None,
+                        "extrainfo": None,
+                        "filename": "cpt1m010-fa16-20190420-0128-e91.fits",
+                        "filter": "w",
+                        "frameid": None,
+                        "frametype": 91,
+                        "fwhm": None,
+                        "id": 2,
+                        "instrument": None,
+                        "midpoint": "2019-04-20T19:00:00",
+                        "nstars_in_fit": None,
+                        "photometric_catalog": " ",
+                        "quality": " ",
+                        "rms_of_fit": None,
+                        "sitecode": "K91",
+                        "time_uncertainty": None,
+                        "zeropoint": None,
+                        "zeropoint_err": None
+                    }
+                ]
+        )
+
 
 class SuperBlockAPITest(BaseViewTest):
     base_url = '/api/superblocks/{}/'
