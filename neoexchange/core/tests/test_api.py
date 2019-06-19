@@ -3,6 +3,7 @@ from datetime import datetime
 
 from django.urls import reverse
 from django.contrib.auth.models import User
+from django.forms import model_to_dict
 from rest_framework.test import APITestCase, APIClient
 from rest_framework.views import status
 
@@ -169,6 +170,13 @@ class BaseViewTest(APITestCase):
             )
         else:
             return None
+
+    def show_response(self, response):
+        """Format the passed <response> as JSON with dictionary keys alphabetically
+        sorted and with 4 space indent"""
+
+        print(json.dumps(response, sort_keys=True, indent=4))
+
 
 class FrameAPITest(BaseViewTest):
     base_url = '/api/frames/{}/'
@@ -1215,12 +1223,12 @@ class AddCatalogSourcesAPITest(BaseViewTest):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
-class AddSourceMeasurementAPITest(BaseViewTest):
+class SourceMeasurementAPITest(BaseViewTest):
     base_url = '/api/srcmeasures/{}/'
     query_url = '/api/srcmeasures/?frame_id={}&frame_filename={}&ra_min={}&ra_max={}&dec_min={}&dec_max={}'
 
     def setUp(self):
-        super(AddSourceMeasurementAPITest, self).setUp()
+        super(SourceMeasurementAPITest, self).setUp()
 
         self.frame_params = {
                 'block'    : self.test_block,
@@ -1265,6 +1273,38 @@ class AddSourceMeasurementAPITest(BaseViewTest):
             {'detail' : 'Authentication credentials were not provided.'}
         )
 
+    def test_list_all_srcmeasures(self):
+        self.login()
+        test_srcmeasure = SourceMeasurement.objects.create(**self.srcmeasure_params)
+        response = self.client.get(self.base_url.format('').rsplit('/',1)[0])  # Much yuck...
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+#        self.show_response(response.data)
+        self.assertEqual(json.loads(response.content.decode('utf8')),
+            { 'count' : 1,
+              'next' : None,
+              'previous' : None,
+              'results' : [
+                    {
+                        "aperture_size": 4.0,
+                        "astrometric_catalog": "GAIA-DR2",
+                        "body": 1,
+                        "err_obs_dec": 0.00025,
+                        "err_obs_mag": 0.1,
+                        "err_obs_ra": 0.0005,
+                        "flags": 'I',
+                        "frame": 1,
+                        "id": 1,
+                        "obs_dec": -32.0,
+                        "obs_mag": 20.1,
+                        "obs_ra": 42.0,
+                        "photometric_catalog": "GAIA-DR2",
+                        "snr" : 4.2
+                    }
+                ]
+            }
+        )
+
     def test_create_a_srcmeasure_logged_in(self):
         self.login()
         valid_data = self.srcmeasure_params
@@ -1303,3 +1343,44 @@ class AddSourceMeasurementAPITest(BaseViewTest):
         valid_data['body'] = valid_data['body'].id
         response = self.make_a_request(model="srcmeasures", kind="post", data=valid_data)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_update_a_srcmeasure(self):
+        self.login()
+        test_srcmeasure = SourceMeasurement.objects.create(**self.srcmeasure_params)
+        valid_data = model_to_dict(test_srcmeasure)
+        valid_data['obs_ra'] += 0.1
+        valid_data['obs_dec'] += 0.1
+#        self.show_response(valid_data)
+        response = self.make_a_request(model="srcmeasures", kind="put", id=test_srcmeasure.id, data=valid_data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, valid_data)
+
+        # Query list endpoint and verify we still only have 1 item
+        response = self.client.get(self.base_url.format('').rsplit('/',1)[0])  # Much yuck...
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+#        self.show_response(response.data)
+        self.assertEqual(json.loads(response.content.decode('utf8')),
+            { 'count' : 1,
+              'next' : None,
+              'previous' : None,
+              'results' : [
+                    {
+                        "aperture_size": 4.0,
+                        "astrometric_catalog": "GAIA-DR2",
+                        "body": 1,
+                        "err_obs_dec": 0.00025,
+                        "err_obs_mag": 0.1,
+                        "err_obs_ra": 0.0005,
+                        "flags": 'I',
+                        "frame": 1,
+                        "id": 1,
+                        "obs_dec": -31.9,
+                        "obs_mag": 20.1,
+                        "obs_ra": 42.1,
+                        "photometric_catalog": "GAIA-DR2",
+                        "snr" : 4.2
+                    }
+                ]
+            }
+        )

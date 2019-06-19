@@ -127,7 +127,7 @@ class BodyViewSet(viewsets.ModelViewSet):
 
 class SourceMeasurementViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated,)
-    http_method_names = ['get', 'post', 'head', 'options']
+    http_method_names = ['get', 'post', 'put', 'head', 'options']
     serializer_class = SourceMeasurementSerializer
     filter_backends = (DjangoFilterBackend,)
     filter_class = SourceMeasurementFilter
