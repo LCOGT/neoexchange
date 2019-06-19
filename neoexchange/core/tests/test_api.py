@@ -1,7 +1,6 @@
 import json
 from datetime import datetime
 
-from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase, APIClient
@@ -21,7 +20,7 @@ logger = logging.getLogger(__name__)
 logging.disable(logging.CRITICAL)
 
 
-class ProposalAPITest(TestCase):
+class ProposalAPITest(APITestCase):
     base_url = '/api/proposals/{}/'
 
     def test_get_returns_json_200(self):
