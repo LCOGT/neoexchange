@@ -130,10 +130,29 @@ class BaseViewTest(APITestCase):
                     'meandist'      : 1.2176312,
                     'source_type'   : 'U',
                     'elements_type' : 'MPC_MINOR_PLANET',
-                    'active'        : True,
+                    'active'        : False,
                     'origin'        : 'M',
+                    'ingest'        : datetime(2018, 11, 30, 23, 0, 0)
                     }
         self.test_body = Body.objects.create(**self.body_params)
+        self.body_params2 = {'name' : 'Rocky4',
+                    'provisional_name': 'littlerock',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'N',
+                    'ingest'        : datetime(2018, 11, 30, 23, 0, 0)
+                    }
+        self.test_body2 = Body.objects.create(**self.body_params2)
 
         self.maxDiff = None
 
@@ -1157,6 +1176,191 @@ class BodyAPITest(BaseViewTest):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['content-type'], 'application/json')
 
+    def test_anonymous_get_returns_json_200(self):
+        response = self.client.get(self.base_url.format(self.test_body.id))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+
+    def test_get_for_LCO_data(self):
+        self.login()
+        response = self.client.get(self.base_url.format(self.test_body.id))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+        self.assertEqual(
+            json.loads(response.content.decode('utf8')),
+            {
+                'abs_mag': 21.0,
+                'active': False,
+                'arc_length': None,
+                'argofperih': 85.19251,
+                'discovery_date': None,
+                'eccentricity': 0.1896865,
+                'elements_type': 'MPC_MINOR_PLANET',
+                'epochofel': '2015-03-19T00:00:00',
+                'epochofperih': None,
+                'fast_moving': False,
+                'id': 1,
+                'ingest': '2018-11-30T23:00:00',
+                'longascnode': 147.81325,
+                'meananom': 325.2636,
+                'meandist': 1.2176312,
+                'name': None,
+                'not_seen': None,
+                'num_obs': None,
+                'orbinc': 8.34739,
+                'orbit_rms': 99.0,
+                'origin': 'M',
+                'perihdist': None,
+                'provisional_name': 'N999r0q',
+                'provisional_packed': None,
+                'score': None,
+                'slope': 0.15,
+                'source_type': 'U',
+                'update_time': None,
+                'updated': False,
+                'urgency': None
+            }
+        )
+
+    def test_find_body_by_name(self):
+        response = self.client.get(self.query_url.format(self.test_body2.name, '', ''))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+        self.assertEqual(
+            json.loads(response.content.decode('utf8')),
+            { 'count' : 1,
+              'next' : None,
+              'previous' : None,
+              'results' : [
+                {
+                    'abs_mag': 21.0,
+                    'active': True,
+                    'arc_length': None,
+                    'argofperih': 85.19251,
+                    'discovery_date': None,
+                    'eccentricity': 0.1896865,
+                    'elements_type': 'MPC_MINOR_PLANET',
+                    'epochofel': '2015-03-19T00:00:00',
+                    'epochofperih': None,
+                    'fast_moving': False,
+                    'id': 2,
+                    'ingest': '2018-11-30T23:00:00',
+                    'longascnode': 147.81325,
+                    'meananom': 325.2636,
+                    'meandist': 1.2176312,
+                    'name': 'Rocky4',
+                    'not_seen': None,
+                    'num_obs': None,
+                    'orbinc': 8.34739,
+                    'orbit_rms': 99.0,
+                    'origin': 'N',
+                    'perihdist': None,
+                    'provisional_name': 'littlerock',
+                    'provisional_packed': None,
+                    'score': None,
+                    'slope': 0.15,
+                    'source_type': 'U',
+                    'update_time': None,
+                    'updated': False,
+                    'urgency': None
+                }
+              ]
+            }
+        )
+
+    def test_find_body_by_provname(self):
+        response = self.client.get(self.query_url.format('', self.test_body.provisional_name, ''))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+        self.assertEqual(
+            json.loads(response.content.decode('utf8')),
+            { 'count' : 1,
+              'next' : None,
+              'previous' : None,
+              'results' : [
+                {
+                    'abs_mag': 21.0,
+                    'active': False,
+                    'arc_length': None,
+                    'argofperih': 85.19251,
+                    'discovery_date': None,
+                    'eccentricity': 0.1896865,
+                    'elements_type': 'MPC_MINOR_PLANET',
+                    'epochofel': '2015-03-19T00:00:00',
+                    'epochofperih': None,
+                    'fast_moving': False,
+                    'id': 1,
+                    'ingest': '2018-11-30T23:00:00',
+                    'longascnode': 147.81325,
+                    'meananom': 325.2636,
+                    'meandist': 1.2176312,
+                    'name': None,
+                    'not_seen': None,
+                    'num_obs': None,
+                    'orbinc': 8.34739,
+                    'orbit_rms': 99.0,
+                    'origin': 'M',
+                    'perihdist': None,
+                    'provisional_name': 'N999r0q',
+                    'provisional_packed': None,
+                    'score': None,
+                    'slope': 0.15,
+                    'source_type': 'U',
+                    'update_time': None,
+                    'updated': False,
+                    'urgency': None
+                }
+                ]
+            }
+        )
+
+    def test_find_body_by_origin(self):
+
+        response = self.client.get(self.query_url.format('', '', 'M'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+        self.assertEqual(
+            json.loads(response.content.decode('utf8')),
+            { 'count' : 1,
+              'next' : None,
+              'previous' : None,
+              'results' : [
+                {
+                    'abs_mag': 21.0,
+                    'active': False,
+                    'arc_length': None,
+                    'argofperih': 85.19251,
+                    'discovery_date': None,
+                    'eccentricity': 0.1896865,
+                    'elements_type': 'MPC_MINOR_PLANET',
+                    'epochofel': '2015-03-19T00:00:00',
+                    'epochofperih': None,
+                    'fast_moving': False,
+                    'id': 1,
+                    'ingest': '2018-11-30T23:00:00',
+                    'longascnode': 147.81325,
+                    'meananom': 325.2636,
+                    'meandist': 1.2176312,
+                    'name': None,
+                    'not_seen': None,
+                    'num_obs': None,
+                    'orbinc': 8.34739,
+                    'orbit_rms': 99.0,
+                    'origin': 'M',
+                    'perihdist': None,
+                    'provisional_name': 'N999r0q',
+                    'provisional_packed': None,
+                    'score': None,
+                    'slope': 0.15,
+                    'source_type': 'U',
+                    'update_time': None,
+                    'updated': False,
+                    'urgency': None
+                }
+                ]
+            }
+        )
+
 
 class AddCatalogSourcesAPITest(BaseViewTest):
     base_url = '/api/catsources/{}/'
@@ -1169,7 +1373,7 @@ class AddCatalogSourcesAPITest(BaseViewTest):
                 'block'    : self.test_block,
                 'sitecode' : 'K91',
                 'filename' : 'cpt1m010-fa16-20190330-0129-e91.fits',
-                'midpoint' : datetime(2019,4,20,19,30,0),
+                'midpoint' : datetime(2019, 4, 20, 19, 30, 0),
                 'filter'   : 'w',
                 'frametype': Frame.BANZAI_RED_FRAMETYPE
                }
@@ -1234,7 +1438,7 @@ class SourceMeasurementAPITest(BaseViewTest):
                 'block'    : self.test_block,
                 'sitecode' : 'K91',
                 'filename' : 'cpt1m010-fa16-20190330-0129-e91.fits',
-                'midpoint' : datetime(2019,4,20,19,30,0),
+                'midpoint' : datetime(2019, 4, 20, 19, 30, 0),
                 'filter'   : 'w',
                 'frametype': Frame.BANZAI_RED_FRAMETYPE
                }
@@ -1315,7 +1519,7 @@ class SourceMeasurementAPITest(BaseViewTest):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data, valid_data)
 
-    def test_create_a_invalid_srcmeasure_logged_in(self):
+    def test_create_a_invalid_srcmeasure_logged_in_invalid_body(self):
         self.login()
         invalid_data = self.srcmeasure_params
         invalid_data['frame'] = None
@@ -1323,10 +1527,10 @@ class SourceMeasurementAPITest(BaseViewTest):
         response = self.make_a_request(model="srcmeasures", kind="post", data=invalid_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(json.loads(response.content.decode('utf8')),
-            {'frame': ['This field may not be null.'] }
+            {'frame': ['This field may not be null.']}
             )
 
-    def test_create_a_invalid_srcmeasure_logged_in(self):
+    def test_create_a_invalid_srcmeasure_logged_in_Invalid_frame(self):
         self.login()
         invalid_data = self.srcmeasure_params
         invalid_data['frame'] = invalid_data['frame'].id
@@ -1334,7 +1538,7 @@ class SourceMeasurementAPITest(BaseViewTest):
         response = self.make_a_request(model="srcmeasures", kind="post", data=invalid_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(json.loads(response.content.decode('utf8')),
-            {'body': ['This field may not be null.'] }
+            {'body': ['This field may not be null.']}
             )
 
     def test_create_a_srcmeasure_anonymous(self):
@@ -1356,7 +1560,7 @@ class SourceMeasurementAPITest(BaseViewTest):
         self.assertEqual(response.data, valid_data)
 
         # Query list endpoint and verify we still only have 1 item
-        response = self.client.get(self.base_url.format('').rsplit('/',1)[0])  # Much yuck...
+        response = self.client.get(self.base_url.format('').rsplit('/', 1)[0])  # Much yuck...
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['content-type'], 'application/json')
 #        self.show_response(response.data)
