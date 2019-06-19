@@ -2,9 +2,11 @@ from rest_framework import serializers, viewsets, generics
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from django_filters.rest_framework import DjangoFilterBackend
 
-from core.models import Proposal, SuperBlock, Block, Frame, CatalogSources, Body
+from core.models import Proposal, SuperBlock, Block, Frame, CatalogSources, Body, \
+    SourceMeasurement
 from core.views import user_proposals
-from core.filters import SuperBlockFilter, BlockFilter, FrameFilter, CatalogSourcesFilter, BodyFilter
+from core.filters import SuperBlockFilter, BlockFilter, FrameFilter, CatalogSourcesFilter, \
+    BodyFilter, SourceMeasurementFilter
 
 
 class ProposalSerializer(serializers.ModelSerializer):
@@ -43,6 +45,12 @@ class CatalogSourcesSerializer(serializers.ModelSerializer):
 class BodySerializer(serializers.ModelSerializer):
     class Meta:
         model = Body
+        fields = '__all__'
+
+
+class SourceMeasurementSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SourceMeasurement
         fields = '__all__'
 
 
@@ -103,6 +111,7 @@ class CatalogSourcesViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save()
 
+
 class BodyViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticatedOrReadOnly,)
     http_method_names = ['get', 'head', 'options']
@@ -114,3 +123,12 @@ class BodyViewSet(viewsets.ModelViewSet):
         qs = Body.objects.all()
 
         return qs
+
+
+class SourceMeasurementViewSet(viewsets.ModelViewSet):
+    permission_classes = (IsAuthenticated,)
+    http_method_names = ['get', 'post', 'head', 'options']
+    serializer_class = SourceMeasurementSerializer
+    filter_backends = (DjangoFilterBackend,)
+    filter_class = SourceMeasurementFilter
+    queryset = SourceMeasurement.objects.all()

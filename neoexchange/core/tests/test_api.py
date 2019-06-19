@@ -6,7 +6,8 @@ from django.contrib.auth.models import User
 from rest_framework.test import APITestCase, APIClient
 from rest_framework.views import status
 
-from core.models import Proposal, ProposalPermission, SuperBlock, Block, Frame, CatalogSources, Body
+from core.models import Proposal, ProposalPermission, SuperBlock, Block, Frame, \
+    CatalogSources, Body, SourceMeasurement
 from mock import patch
 from neox.tests.mocks import mock_lco_authenticate
 
@@ -1208,6 +1209,113 @@ class AddCatalogSourcesAPITest(BaseViewTest):
 
     def test_create_a_catsrc_anonymous(self):
         valid_data = self.catsrc_params
+        valid_data['frame'] = valid_data['frame'].id
+        response = self.make_a_request(kind="post", data=valid_data)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class AddSourceMeasurementAPITest(BaseViewTest):
+    base_url = '/api/srcmeasures/{}/'
+    query_url = '/api/srcmeasures/?frame_id={}&frame_filename={}&ra_min={}&ra_max={}&dec_min={}&dec_max={}'
+
+    def setUp(self):
+        super(AddSourceMeasurementAPITest, self).setUp()
+
+        self.frame_params = {
+                'block'    : self.test_block,
+                'sitecode' : 'K91',
+                'filename' : 'cpt1m010-fa16-20190330-0129-e91.fits',
+                'midpoint' : datetime(2019,4,20,19,30,0),
+                'filter'   : 'w',
+                'frametype': Frame.BANZAI_RED_FRAMETYPE
+               }
+        self.test_frame = Frame.objects.create(**self.frame_params)
+
+        self.srcmeasure_params = {
+                            'body'  : self.test_body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 42.0,
+                            'obs_dec' : -32.0,
+                            'obs_mag' : 20.1,
+                            'err_obs_ra': 1.8/3600.0,
+                            'err_obs_dec': 0.9/3600.0,
+                            'aperture_size' : 4.0,
+                            'astrometric_catalog' : 'GAIA-DR2',
+                            'photometric_catalog' : 'GAIA-DR2',
+                            'snr' : 4.2,
+                            'flags' : ' '
+                        }
+        self.maxDiff = None
+
+    def make_a_request(self, kind="post", **kwargs):
+        """
+        Make a post request to create a SourceMeasurement
+        :param kind: HTTP VERB
+        :return:
+        """
+        if kind == "post":
+            return self.client.post(
+                reverse(
+                    "api:srcmeasures-list",
+                ),
+                data=json.dumps(kwargs["data"]),
+                content_type='application/json'
+            )
+        elif kind == "put":
+            return self.client.put(
+                reverse(
+                    "api:srcmeasures-detail",
+                    kwargs={
+                        "pk": kwargs["id"]
+                    }
+                ),
+                data=json.dumps(kwargs["data"]),
+                content_type='application/json'
+            )
+        else:
+            return None
+
+    def test_get_returns_json_200(self):
+        self.login()
+        test_srcmeasure = SourceMeasurement.objects.create(**self.srcmeasure_params)
+        response = self.client.get(self.base_url.format(test_srcmeasure.id))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+
+    def test_anonymous_get_returns_json_403(self):
+        test_srcmeasure = SourceMeasurement.objects.create(**self.srcmeasure_params)
+        response = self.client.get(self.base_url.format(test_srcmeasure.id))
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response['content-type'], 'application/json')
+        self.assertEqual(json.loads(response.content.decode('utf8')),
+            {'detail' : 'Authentication credentials were not provided.'}
+        )
+
+    def test_create_a_catsrc_logged_in(self):
+        self.login()
+        valid_data = self.srcmeasure_params
+        valid_data['frame'] = valid_data['frame'].id
+        response = self.make_a_request(kind="post", data=valid_data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        valid_data['id'] = 1
+        valid_data['flags'] = 0
+        valid_data['flux_max'] = None
+        valid_data['threshold'] = None
+        self.assertEqual(response.data, valid_data)
+
+    def test_create_a_invalid_catsrc_logged_in(self):
+        self.login()
+        invalid_data = self.srcmeasure_params
+        invalid_data['frame'] = invalid_data['frame'].id
+        invalid_data['obs_ra'] = None
+        response = self.make_a_request(kind="post", data=invalid_data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(json.loads(response.content.decode('utf8')),
+            {'obs_ra': ['This field may not be null.'] }
+            )
+
+    def test_create_a_catsrc_anonymous(self):
+        valid_data = self.srcmeasure_params
         valid_data['frame'] = valid_data['frame'].id
         response = self.make_a_request(kind="post", data=valid_data)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

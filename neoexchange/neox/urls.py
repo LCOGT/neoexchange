@@ -36,7 +36,7 @@ from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockLis
 
 from analyser.views import BlockFramesView, ProcessCandidates
 from core.viewsets import ProposalViewSet, SuperBlockViewSet, BlockViewSet, FrameViewSet, \
-    CatalogSourcesViewSet, BodyViewSet
+    CatalogSourcesViewSet, BodyViewSet, SourceMeasurementViewSet
 
 admin.autodiscover()
 router = DefaultRouter()
@@ -46,6 +46,7 @@ router.register(r'blocks', BlockViewSet, 'blocks')
 router.register(r'superblocks', SuperBlockViewSet, 'superblocks')
 router.register(r'catsources', CatalogSourcesViewSet, 'catsources')
 router.register(r'bodies', BodyViewSet, 'bodies')
+router.register(r'srcmeasures', SourceMeasurementViewSet, 'srcmeasures')
 
 
 api_urlpatterns = ([

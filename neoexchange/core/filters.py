@@ -1,6 +1,6 @@
 import django_filters
 
-from core.models import SuperBlock, Block, Frame, CatalogSources, Body
+from core.models import SuperBlock, Block, Frame, CatalogSources, Body, SourceMeasurement
 
 
 class SuperBlockFilter(django_filters.FilterSet):
@@ -51,3 +51,17 @@ class BodyFilter(django_filters.FilterSet):
     class Meta:
         model = Body
         fields = ('name', 'provisional_name', 'origin')
+
+
+class SourceMeasurementFilter(django_filters.FilterSet):
+
+    frame_id = django_filters.NumberFilter('frame__id', label='Frame ID#')
+    frame_filename = django_filters.CharFilter(
+        field_name='frame__filename', lookup_expr='icontains', label='Frame filename'
+    )
+    ra = django_filters.RangeFilter(field_name='obs_ra')
+    dec = django_filters.RangeFilter(field_name='obs_dec')
+
+    class Meta:
+        model = SourceMeasurement
+        fields = ('frame_id', 'frame_filename', 'ra', 'dec')
