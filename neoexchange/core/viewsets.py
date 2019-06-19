@@ -1,4 +1,4 @@
-from rest_framework import serializers, viewsets
+from rest_framework import serializers, viewsets, generics
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -94,11 +94,14 @@ class FrameViewSet(viewsets.ModelViewSet):
 
 class CatalogSourcesViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated,)
+    http_method_names = ['get', 'post', 'head', 'options']
     serializer_class = CatalogSourcesSerializer
     filter_backends = (DjangoFilterBackend,)
     filter_class = CatalogSourcesFilter
     queryset = CatalogSources.objects.all()
 
+    def perform_create(self, serializer):
+        serializer.save()
 
 class BodyViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticatedOrReadOnly,)

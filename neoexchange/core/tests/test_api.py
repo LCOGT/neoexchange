@@ -2,8 +2,10 @@ import json
 from datetime import datetime
 
 from django.test import TestCase
+from django.urls import reverse
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase, APIClient
+from rest_framework.views import status
 
 from core.models import Proposal, ProposalPermission, SuperBlock, Block, Frame, CatalogSources, Body
 from mock import patch
@@ -1117,3 +1119,96 @@ class BodyAPITest(BaseViewTest):
         response = self.client.get(self.base_url.format(self.test_body.id))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['content-type'], 'application/json')
+
+
+class AddCatalogSourcesAPITest(BaseViewTest):
+    base_url = '/api/catsources/{}/'
+    query_url = '/api/catsources/?frame_id={}&frame_filename={}&ra_min={}&ra_max={}&dec_min={}&dec_max={}'
+
+    def setUp(self):
+        super(AddCatalogSourcesAPITest, self).setUp()
+
+        self.frame_params = {
+                'block'    : self.test_block,
+                'sitecode' : 'K91',
+                'filename' : 'cpt1m010-fa16-20190330-0129-e91.fits',
+                'midpoint' : datetime(2019,4,20,19,30,0),
+                'filter'   : 'w',
+                'frametype': Frame.BANZAI_RED_FRAMETYPE
+               }
+        self.test_frame = Frame.objects.create(**self.frame_params)
+
+        self.catsrc_params = {   'frame' : self.test_frame,
+                            'obs_x' : 1024.1,
+                            'obs_y' : 511.5,
+                            'obs_ra' : 42.0,
+                            'obs_dec' : -32.0,
+                            'obs_mag' : 20.1,
+                            'err_obs_ra': 1.8/3600.0,
+                            'err_obs_dec': 0.9/3600.0,
+                            'err_obs_mag': 0.1,
+                            'background' : 4.2,
+                            'major_axis' : 5.2,
+                            'minor_axis' : 2.6,
+                            'position_angle' : -30.0,
+                            'ellipticity' : 0.5,
+                            'aperture_size' : 4.0,
+                        }
+        self.maxDiff = None
+
+    def make_a_request(self, kind="post", **kwargs):
+        """
+        Make a post request to create a CatalogSource
+        :param kind: HTTP VERB
+        :return:
+        """
+        if kind == "post":
+            return self.client.post(
+                reverse(
+                    "api:catsources-list",
+                ),
+                data=json.dumps(kwargs["data"]),
+                content_type='application/json'
+            )
+        elif kind == "put":
+            return self.client.put(
+                reverse(
+                    "api:catsources-detail",
+                    kwargs={
+                        "pk": kwargs["id"]
+                    }
+                ),
+                data=json.dumps(kwargs["data"]),
+                content_type='application/json'
+            )
+        else:
+            return None
+
+    def test_create_a_catsrc_logged_in(self):
+        self.login()
+        valid_data = self.catsrc_params
+        valid_data['frame'] = valid_data['frame'].id
+        response = self.make_a_request(kind="post", data=valid_data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        valid_data['id'] = 1
+        valid_data['flags'] = 0
+        valid_data['flux_max'] = None
+        valid_data['threshold'] = None
+        self.assertEqual(response.data, valid_data)
+
+    def test_create_a_invalid_catsrc_logged_in(self):
+        self.login()
+        invalid_data = self.catsrc_params
+        invalid_data['frame'] = invalid_data['frame'].id
+        invalid_data['obs_ra'] = None
+        response = self.make_a_request(kind="post", data=invalid_data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(json.loads(response.content.decode('utf8')),
+            {'obs_ra': ['This field may not be null.'] }
+            )
+
+    def test_create_a_catsrc_anonymous(self):
+        valid_data = self.catsrc_params
+        valid_data['frame'] = valid_data['frame'].id
+        response = self.make_a_request(kind="post", data=valid_data)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

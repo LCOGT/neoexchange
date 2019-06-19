@@ -35,7 +35,8 @@ from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockLis
     BestStandardsView
 
 from analyser.views import BlockFramesView, ProcessCandidates
-from core.viewsets import ProposalViewSet, SuperBlockViewSet, BlockViewSet, FrameViewSet, CatalogSourcesViewSet, BodyViewSet
+from core.viewsets import ProposalViewSet, SuperBlockViewSet, BlockViewSet, FrameViewSet, \
+    CatalogSourcesViewSet, BodyViewSet
 
 admin.autodiscover()
 router = DefaultRouter()
