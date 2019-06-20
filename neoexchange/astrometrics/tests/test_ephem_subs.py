@@ -20,7 +20,7 @@ import tempfile
 from glob import glob
 import mock
 
-from django.test import TestCase
+from django.test import TestCase, tag
 from django.forms.models import model_to_dict
 
 # Import module to test
@@ -68,6 +68,14 @@ class TestGetMountLimits(TestCase):
 
     def test_1m_by_site_code(self):
         (neg_limit, pos_limit, alt_limit) = get_mountlimits('K91')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '1m')
+
+    def test_1m_by_site_elp2(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('ELP-DOMB-1m0a')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '1m')
+
+    def test_1m_by_site_code_elp2(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('V99')
         self.compare_limits(pos_limit, neg_limit, alt_limit, '1m')
 
     def test_1m_by_site_code_lowercase(self):
@@ -683,7 +691,7 @@ class TestComputeFOM(TestCase):
 
         self.assertEqual(expected_FOM, FOM)
 
-
+@tag('slow')
 class TestLongTermScheduling(TestCase):
 
     def setUp(self):
@@ -1530,6 +1538,14 @@ class TestDetermineSlotLength(TestCase):
         slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
+    def test_slot_length_basic_elp_1m0_2(self):
+        site_code = 'V99'
+        name = 'A101foo'
+        mag = 19.0
+        expected_length = 20
+        slot_length = determine_slot_length(mag, site_code)
+        self.assertEqual(expected_length, slot_length)
+
 
 class TestGetSiteCamParams(TestCase):
 
@@ -1716,6 +1732,16 @@ class TestGetSiteCamParams(TestCase):
         self.assertEqual(self.max_exp, max_exp_time)
         self.assertEqual(self.onem_setup_overhead, setup_overhead)
         self.assertEqual(self.sinistro_exp_overhead, exp_overhead)
+
+    def test_1m_elp_site_sinistro_domeB(self):
+        site_code = 'V99'
+        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        self.assertEqual(site_code.upper(), chk_site_code)
+        self.assertEqual(0.389, pixel_scale)
+        self.assertEqual(self.onem_sinistro_fov, ccd_fov)
+        self.assertEqual(self.onem_setup_overhead, setup_overhead)
+        self.assertEqual(self.sinistro_exp_overhead, exp_overhead)
+        self.assertEqual(self.max_exp, max_exp_time)
 
 
 class TestDetermineExpTimeCount(TestCase):
@@ -2065,6 +2091,54 @@ class TestGetSitePos(TestCase):
         site_code = 'BPL'
 
         expected_site_name = 'LCO Back Parking Lot Node (BPL)'
+
+        site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+
+        self.assertEqual(expected_site_name, site_name)
+        self.assertNotEqual(site_long, 0.0)
+        self.assertNotEqual(site_lat, 0.0)
+        self.assertNotEqual(site_hgt, 0.0)
+
+    def test_elp_num1_by_code(self):
+        site_code = 'V37'
+
+        expected_site_name = 'LCO ELP Node 1m0 Dome A at McDonald Observatory'
+
+        site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+
+        self.assertEqual(expected_site_name, site_name)
+        self.assertNotEqual(site_long, 0.0)
+        self.assertNotEqual(site_lat, 0.0)
+        self.assertNotEqual(site_hgt, 0.0)
+
+    def test_elp_num1_by_name(self):
+        site_code = 'ELP-DOMA'
+
+        expected_site_name = 'LCO ELP Node 1m0 Dome A at McDonald Observatory'
+
+        site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+
+        self.assertEqual(expected_site_name, site_name)
+        self.assertNotEqual(site_long, 0.0)
+        self.assertNotEqual(site_lat, 0.0)
+        self.assertNotEqual(site_hgt, 0.0)
+
+    def test_elp_num2_by_code(self):
+        site_code = 'V99'
+
+        expected_site_name = 'LCO ELP Node 1m0 Dome B at McDonald Observatory'
+
+        site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+
+        self.assertEqual(expected_site_name, site_name)
+        self.assertNotEqual(site_long, 0.0)
+        self.assertNotEqual(site_lat, 0.0)
+        self.assertNotEqual(site_hgt, 0.0)
+
+    def test_elp_num2_by_name(self):
+        site_code = 'ELP-DOMB'
+
+        expected_site_name = 'LCO ELP Node 1m0 Dome B at McDonald Observatory'
 
         site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
 
