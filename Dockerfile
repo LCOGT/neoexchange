@@ -68,12 +68,6 @@ RUN pip3 install -U numpy \
 # Ensure crond will run on all host operating systems
 RUN sed -i -e 's/\(session\s*required\s*pam_loginuid.so\)/#\1/' /etc/pam.d/crond
 
-# Copy operating system configuration files
-COPY docker/ /
-
-# Copy the LCO NEOexchange webapp files
-COPY neoexchange /var/www/apps/neoexchange
-
 # Download and build find_orb
 RUN mkdir /tmp/git_find_orb \
     && cd /tmp/git_find_orb \
@@ -93,6 +87,12 @@ RUN cd /tmp/git_find_orb \
     && cp /root/bin/fo /usr/local/bin/ \
     && chmod 755 /root \
     && rm -rf /tmp/git_find_orb
+
+# Copy operating system configuration files
+COPY docker/ /
+
+# Copy the LCO NEOexchange webapp files
+COPY neoexchange /var/www/apps/neoexchange
 
 # Copy default findorb config file
 COPY neoexchange/photometrics/configs/environ.def /root/.find_orb/
