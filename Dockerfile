@@ -4,8 +4,7 @@ MAINTAINER LCOGT <webmaster@lco.global>
 # Add path to python3.6
 ENV PATH=/opt/lcogt-python36/bin:$PATH
 
-# The entry point is our init script, which runs startup tasks, then
-# execs the supervisord daemon
+# The entry point is our init script, which runs startup tasks, then starts gunicorn
 ENTRYPOINT [ "/init" ]
 
 # Setup the Python Django environment
@@ -27,7 +26,7 @@ RUN curl -fsSLO "$SUPERCRONIC_URL" \
 # Install packages and update base system
 RUN yum -y install epel-release \
         && yum -y install libjpeg-devel \
-                supervisor libssl libffi libffi-devel \
+                libssl libffi libffi-devel \
                 mariadb-devel gcc gcc-gfortran openssl-devel ImageMagick \
                 less wget which tcsh plplot plplot-libs plplot-devel \
                 git gcc-c++ ncurses-devel \

@@ -9,5 +9,8 @@ mkdir -p /var/www/apps/astropycache/astropy
 
 chmod g+s /data/eng/rocks
 
-# Run under supervisord
-exec /usr/bin/supervisord -n -c /etc/supervisord.conf
+# use "/bin/bash" as the default command if none was specified
+[[ "$#" -eq "0" ]] && set -- /bin/bash
+
+# execute default command
+exec "$@"
