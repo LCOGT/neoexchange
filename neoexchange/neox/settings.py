@@ -236,7 +236,9 @@ DATABASES = {
         "USER": os.environ.get('NEOX_DB_USER',''),
         "PASSWORD": os.environ.get('NEOX_DB_PASSWD',''),
         "HOST": os.environ.get('NEOX_DB_HOST',''),
-        "OPTIONS"   : {'init_command': 'SET storage_engine=INNODB'},
+        "OPTIONS": {
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+        },
 
     }
 }
