@@ -10,8 +10,6 @@ chown -R nginx:nginx /var/www/apps/astropy*
 
 # Setup the LCOGT NEOx webapp
 chown -R nginx:nginx /var/www/apps/neoexchange
-python3 /var/www/apps/neoexchange/manage.py migrate --noinput
-python3 /var/www/apps/neoexchange/manage.py collectstatic --noinput
 
 chown -R nginx:nginx /data/eng
 chmod g+s /data/eng/rocks
