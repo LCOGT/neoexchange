@@ -1,25 +1,5 @@
-################################################################################
-#
-# Runs the LCO Python Django NEO Exchange webapp using nginx + gunicorn
-#
-# The change from uwsgi to gunicorn was made to support python 3.6. Since usgi is 
-# linked against the python libraries, it is hard to support the non-system python
-# we want to use.
-# The decision to run both nginx and gunicorn in the same container was made because
-# it avoids duplicating all of the Python code and static files in two containers.
-# It is convenient to have the whole webapp logically grouped into the same container.
-#
-# You can choose to expose the nginx and gunicorn ports separately, or you can
-# just default to using the nginx port only (recommended). There is no
-# requirement to map all exposed container ports onto host ports.
-#
-
-################################################################################
 FROM centos:7
 MAINTAINER LCOGT <webmaster@lco.global>
-
-# nginx runs on port 80, gunicorn is linked in the nginx conf
-EXPOSE 80
 
 # Add path to python3.6
 ENV PATH=/opt/lcogt-python36/bin:$PATH
@@ -46,11 +26,11 @@ RUN curl -fsSLO "$SUPERCRONIC_URL" \
 
 # Install packages and update base system
 RUN yum -y install epel-release \
-        && yum -y install libjpeg-devel nginx \
+        && yum -y install libjpeg-devel \
                 supervisor libssl libffi libffi-devel \
                 mariadb-devel gcc gcc-gfortran openssl-devel ImageMagick \
                 less wget which tcsh plplot plplot-libs plplot-devel \
-                git gcc-c++ ncurses-devel\
+                git gcc-c++ ncurses-devel \
         && yum -y update
 
 # Install Developer Toolset 7 for newer g++ version
@@ -59,7 +39,7 @@ RUN yum -y install centos-release-scl \
 
 # Enable LCO repo and install extra packages
 COPY docker/etc/yum.repos.d/lcogt.repo /etc/yum.repos.d/lcogt.repo
-RUN yum -y install lcogt-python36 sextractor cdsclient scamp mtdlink\
+RUN yum -y install lcogt-python36 sextractor cdsclient scamp mtdlink \
         && yum clean all
 
 ENV PIP_TRUSTED_HOST buildsba.lco.gtn
@@ -105,7 +85,7 @@ COPY neoexchange /var/www/apps/neoexchange
 
 # Copy default findorb config file
 COPY neoexchange/photometrics/configs/environ.def /root/.find_orb/
-RUN chown -R nginx:nginx /root/.find_orb && chmod 2775 /root/.find_orb
+RUN chmod 2775 /root/.find_orb
 
 # Working directory should be the Django directory
 WORKDIR /var/www/apps/neoexchange

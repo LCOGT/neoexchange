@@ -6,12 +6,7 @@ ulimit -c 0
 # Setup locations for AstroPy's config and caches
 mkdir -p /var/www/apps/astropyconfig/astropy
 mkdir -p /var/www/apps/astropycache/astropy
-chown -R nginx:nginx /var/www/apps/astropy*
 
-# Setup the LCOGT NEOx webapp
-chown -R nginx:nginx /var/www/apps/neoexchange
-
-chown -R nginx:nginx /data/eng
 chmod g+s /data/eng/rocks
 
 # Run under supervisord
