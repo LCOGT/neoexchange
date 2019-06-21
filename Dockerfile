@@ -97,3 +97,6 @@ RUN cd /tmp/git_find_orb \
 # Copy default findorb config file
 COPY neoexchange/photometrics/configs/environ.def /root/.find_orb/
 RUN chown -R nginx:nginx /root/.find_orb && chmod 2775 /root/.find_orb
+
+# Working directory should be the Django directory
+WORKDIR /var/www/apps/neoexchange
