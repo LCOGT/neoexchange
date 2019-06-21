@@ -32,9 +32,21 @@ ENTRYPOINT [ "/init" ]
 ENV PYTHONPATH /var/www/apps
 ENV DJANGO_SETTINGS_MODULE neox.settings
 
+# Supercronic environment variables
+ENV SUPERCRONIC_URL=https://github.com/aptible/supercronic/releases/download/v0.1.9/supercronic-linux-amd64 \
+    SUPERCRONIC=supercronic-linux-amd64 \
+    SUPERCRONIC_SHA1SUM=5ddf8ea26b56d4a7ff6faecdd8966610d5cb9d85
+
+# Supercronic installation
+RUN curl -fsSLO "$SUPERCRONIC_URL" \
+        && echo "${SUPERCRONIC_SHA1SUM}  ${SUPERCRONIC}" | sha1sum -c - \
+        && chmod +x "$SUPERCRONIC" \
+        && mv "$SUPERCRONIC" "/usr/local/bin/${SUPERCRONIC}" \
+        && ln -s "/usr/local/bin/${SUPERCRONIC}" /usr/local/bin/supercronic
+
 # Install packages and update base system
 RUN yum -y install epel-release \
-        && yum -y install cronie libjpeg-devel nginx \
+        && yum -y install libjpeg-devel nginx \
                 supervisor libssl libffi libffi-devel \
                 mariadb-devel gcc gcc-gfortran openssl-devel ImageMagick \
                 less wget which tcsh plplot plplot-libs plplot-devel \
@@ -64,9 +76,6 @@ RUN pip3 install -U numpy \
     && pip3 install -U pip \
     && pip3 install --trusted-host $PIP_TRUSTED_HOST -r /var/www/apps/neoexchange/requirements.txt \
     && rm -rf ~/.cache/pip
-
-# Ensure crond will run on all host operating systems
-RUN sed -i -e 's/\(session\s*required\s*pam_loginuid.so\)/#\1/' /etc/pam.d/crond
 
 # Download and build find_orb
 RUN mkdir /tmp/git_find_orb \

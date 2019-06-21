@@ -1,6 +1,5 @@
 #!/bin/bash
 
-source /var/www/apps/neoexchange/cronwrapper
 export PYTHONPATH="/var/www/apps/neoexchange/"
 dataroot=/data/eng/rocks
 umask 002
