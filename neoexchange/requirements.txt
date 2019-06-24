@@ -12,7 +12,6 @@ ipython
 nose
 pytz
 six>=1.10.0
-#wsgiref
 pycparser
 requests[security]
 selenium>=3.8,<4.0
