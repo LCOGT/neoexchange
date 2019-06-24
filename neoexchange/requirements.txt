@@ -23,6 +23,6 @@ matplotlib
 fits2image
 panoptes-client
 pillow
-gunicorn
+gunicorn[gevent]~=19.9.0
 rollbar
 sty
