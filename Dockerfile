@@ -23,25 +23,35 @@ RUN curl -fsSLO "$SUPERCRONIC_URL" \
         && mv "$SUPERCRONIC" "/usr/local/bin/${SUPERCRONIC}" \
         && ln -s "/usr/local/bin/${SUPERCRONIC}" /usr/local/bin/supercronic
 
-# Install packages and update base system
-RUN yum -y install epel-release \
-        && yum -y install libjpeg-devel \
-                libssl libffi libffi-devel \
-                mariadb-devel gcc gcc-gfortran openssl-devel ImageMagick \
-                less wget which tcsh plplot plplot-libs plplot-devel \
-                git gcc-c++ ncurses-devel \
-        && yum -y update
-
-# Install Developer Toolset 7 for newer g++ version
-RUN yum -y install centos-release-scl \
-        && yum -y install devtoolset-7
-
-# Enable LCO repo and install extra packages
+# Enable LCO RPM repository
 COPY docker/etc/yum.repos.d/lcogt.repo /etc/yum.repos.d/lcogt.repo
-RUN yum -y install lcogt-python36 sextractor cdsclient scamp mtdlink \
-        && yum clean all
 
-ENV PIP_TRUSTED_HOST buildsba.lco.gtn
+# Install packages and update base system
+RUN yum -y install centos-release-scl epel-release \
+        && yum -y install \
+            cdsclient \
+            devtoolset-7 \
+            gcc \
+            gcc-c++ \
+            gcc-gfortran \
+            git \
+            ImageMagick \
+            lcogt-python36 \
+            less \
+            libffi-devel \
+            libjpeg-devel \
+            libssl \
+            mariadb-devel \
+            mtdlink \
+            ncurses-devel \
+            openssl-devel \
+            plplot-devel \
+            scamp \
+            sextractor \
+            tcsh \
+            wget \
+            which \
+        && yum -y clean all
 
 # Setup our python env now so it can be cached
 COPY neoexchange/requirements.txt /var/www/apps/neoexchange/requirements.txt
@@ -51,10 +61,9 @@ COPY neoexchange/requirements.txt /var/www/apps/neoexchange/requirements.txt
 # Then the LCO packages which have to be installed after the normal pip install
 # numpy needs to be explicitly installed first otherwise pySLALIB
 # fails with a missing numpy.distutils.core reference for...reasons...
-RUN pip3 install -U numpy \
-    && pip3 install -U pip \
-    && pip3 install --trusted-host $PIP_TRUSTED_HOST -r /var/www/apps/neoexchange/requirements.txt \
-    && rm -rf ~/.cache/pip
+RUN pip3 --no-cache-dir install --upgrade pip \
+    && pip3 --no-cache-dir install --upgrade numpy \
+    && pip3 --no-cache-dir install --trusted-host buildsba.lco.gtn -r /var/www/apps/neoexchange/requirements.txt
 
 # Download and build find_orb
 RUN mkdir /tmp/git_find_orb \
@@ -65,7 +74,7 @@ RUN mkdir /tmp/git_find_orb \
     && git clone https://github.com/Bill-Gray/find_orb.git
 
 # Start a new shell and enable the Developer Toolset 7 toolchain so we get newer (7.3) g++
-SHELL ["scl", "enable devtoolset-7"]
+SHELL [ "scl", "enable", "devtoolset-7" ]
 RUN cd /tmp/git_find_orb \
     && cd lunar && make && make install && cd .. \
     && cd jpl_eph && make && make install && cd .. \
