@@ -1680,7 +1680,7 @@ def record_block(tracking_number, params, form_data, target):
             obstype = Block.OPT_IMAGING
             if params.get('spectroscopy', False):
                 obstype = Block.OPT_SPECTRA
-                if request_type == 'SIDEREAL':
+                if request_type == 'SIDEREAL' or request_type == 'ICRS':
                     obstype = Block.OPT_SPECTRA_CALIB
 
             # sort site vs camera
@@ -1709,7 +1709,7 @@ def record_block(tracking_number, params, form_data, target):
                              'exp_length'      : params['exp_time'],
                              'active'   : True
                            }
-            if request_type == 'SIDEREAL' and params.get('solar_analog', False) is True and len(params.get('calibsource', {})) > 0:
+            if (request_type == 'SIDEREAL' or request_type == 'ICRS') and params.get('solar_analog', False) is True and len(params.get('calibsource', {})) > 0:
                 try:
                     calib_source = StaticSource.objects.get(pk=params['calibsource']['id'])
                 except StaticSource.DoesNotExist:
@@ -1718,7 +1718,7 @@ def record_block(tracking_number, params, form_data, target):
                 block_kwargs['body'] = None
                 block_kwargs['calibsource'] = calib_source
                 block_kwargs['exp_length'] = params['calibsrc_exptime']
-            elif request_type == 'SIDEREAL':
+            elif request_type == 'SIDEREAL' or request_type == 'ICRS':
                 block_kwargs['body'] = None
                 block_kwargs['calibsource'] = target
             else:

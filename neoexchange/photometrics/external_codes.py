@@ -279,7 +279,7 @@ def determine_findorb_options(site_code, start_time=datetime.utcnow()):
 
     epoch_date = start_time.date() + timedelta(days=1)
 
-    options = "-z -c -q -C {} -e new.ephem -tE{}".format(site_code, epoch_date.strftime("%Y-%m-%d"))
+    options = "-z -c -q -C {} -tE{}".format(site_code, epoch_date.strftime("%Y-%m-%d"))
 
     return options
 
