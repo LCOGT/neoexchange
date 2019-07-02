@@ -269,7 +269,7 @@ ARCHIVE_TOKEN_URL = ARCHIVE_API_URL + 'api-token-auth/'
 ARCHIVE_TOKEN = os.environ.get('ARCHIVE_TOKEN', '')
 
 PORTAL_API_URL = 'https://observe.lco.global/api/'
-PORTAL_REQUEST_API = PORTAL_API_URL + 'requestgroups/'
+PORTAL_REQUEST_API = PORTAL_API_URL + 'userrequests/'
 PORTAL_USERREQUEST_URL = 'https://observe.lco.global/requestgroups/'
 PORTAL_REQUEST_URL = 'https://observe.lco.global/requests/'
 PORTAL_TOKEN_URL = PORTAL_API_URL + 'api-token-auth/'
