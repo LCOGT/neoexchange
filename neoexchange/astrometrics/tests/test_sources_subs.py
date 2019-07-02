@@ -691,6 +691,50 @@ class TestSubmitBlockToScheduler(TestCase):
             self.assertEqual(block.block_start, block.superblock.block_start)
             self.assertEqual(block.block_end, block.superblock.block_end)
 
+    @patch('astrometrics.sources_subs.requests.post')
+    def test_submit_body_for_cpt_V3(self, mock_post):
+        mock_post.return_value.status_code = 200
+
+        mock_post.return_value.json.return_value = {'id': 999, 'requests' :
+            [{'id': 111, 'configurations' :
+                [{'id' : 222, 'target' : {'type' : 'ORBITAL-ELEMENTS' }}
+                ],
+            'duration' : 1820}]}
+
+        site_code = 'K92'
+        utc_date = datetime.now()+timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 18,
+                    'exp_time' : 50.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'filter_pattern' : 'w',
+                    'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson'
+                 }
+
+        resp, sched_params = submit_block_to_scheduler(self.body_elements, params)
+        self.assertEqual(resp, '999')
+
+        # store block
+        data = params
+        data['proposal_code'] = 'LCO2015A-009'
+        data['exp_length'] = 91
+        block_resp = record_block(resp, sched_params, data, self.body)
+        self.assertEqual(block_resp, True)
+
+        # Test that block has same start/end as superblock
+        blocks = Block.objects.filter(active=True)
+        for block in blocks:
+            self.assertEqual(block.block_start, block.superblock.block_start)
+            self.assertEqual(block.block_end, block.superblock.block_end)
+            self.assertEqual(block.request_number, '111')
+            self.assertEqual(block.obstype, Block.OPT_IMAGING)
+            self.assertEqual(block.num_exposures, params['exp_count'])
+            self.assertEqual(block.exp_length, params['exp_time'])
+
     @patch('astrometrics.sources_subs.expand_cadence', mock_expand_cadence)
     @patch('astrometrics.sources_subs.requests.post')
     def test_submit_cadence(self, mock_post):
