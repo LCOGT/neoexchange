@@ -1951,7 +1951,7 @@ def submit_block_to_scheduler(elements, params):
         return False, params
 
     response = resp.json()
-    tracking_number = response.get('id', '')
+    tracking_number = str(response.get('id', ''))
 
     request_items = response.get('requests', '')
 
@@ -1963,7 +1963,12 @@ def submit_block_to_scheduler(elements, params):
         params['error_msg'] = msg
         return False, params
 
-    request_types = dict([(r['id'], r['target']['type']) for r in request_items])
+    if len(request_items) > 0:
+        request_types = {}
+        if 'configurations' in request_items[0]:
+            request_types = dict([(str(r['id']), r['configurations'][0]['target']['type']) for r in request_items])
+        else:
+            request_types = dict([(r['id'], r['target']['type']) for r in request_items])
     request_windows = [r['windows'] for r in user_request['requests']]
 
     params['block_duration'] = sum([float(_['duration']) for _ in request_items])

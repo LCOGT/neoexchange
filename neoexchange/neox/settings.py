@@ -7,7 +7,7 @@ from django.utils.crypto import get_random_string
 import rollbar
 
 
-VERSION = '2.8.7a'
+VERSION = '2.8.8a'
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
@@ -270,7 +270,7 @@ ARCHIVE_TOKEN = os.environ.get('ARCHIVE_TOKEN', '')
 
 PORTAL_API_URL = 'https://observe.lco.global/api/'
 PORTAL_REQUEST_API = PORTAL_API_URL + 'userrequests/'
-PORTAL_USERREQUEST_URL = 'https://observe.lco.global/userrequests/'
+PORTAL_USERREQUEST_URL = 'https://observe.lco.global/requestgroups/'
 PORTAL_REQUEST_URL = 'https://observe.lco.global/requests/'
 PORTAL_TOKEN_URL = PORTAL_API_URL + 'api-token-auth/'
 PORTAL_TOKEN = os.environ.get('VALHALLA_TOKEN', '')
