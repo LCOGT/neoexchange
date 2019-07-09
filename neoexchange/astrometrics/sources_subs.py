@@ -1708,7 +1708,7 @@ def expand_cadence(user_request):
             cadence_url,
             json=user_request,
             headers={'Authorization': 'Token {}'.format(settings.PORTAL_TOKEN)},
-            timeout=20.0
+            timeout=120.0
          )
     except requests.exceptions.Timeout:
         msg = "Observing portal API timed out"
