@@ -1918,7 +1918,7 @@ def submit_block_to_scheduler(elements, params):
             settings.PORTAL_REQUEST_API,
             json=user_request,
             headers={'Authorization': 'Token {}'.format(settings.PORTAL_TOKEN)},
-            timeout=20.0
+            timeout=120.0
          )
     except requests.exceptions.Timeout:
         msg = "Observing portal API timed out"
