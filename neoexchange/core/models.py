@@ -49,7 +49,7 @@ OBJECT_TYPES = (
                 ('N', 'NEO'),
                 ('A', 'Asteroid'),
                 ('C', 'Comet'),
-                ('K', 'KBO'),
+                ('K', 'TNO'),
                 ('E', 'Centaur'),
                 ('T', 'Trojan'),
                 ('U', 'Candidate'),
@@ -57,8 +57,42 @@ OBJECT_TYPES = (
                 ('W', 'Was not interesting'),
                 ('D', 'Discovery, non NEO'),
                 ('J', 'Artificial satellite'),
-                ('H', 'Hyperbolic asteroids')
+                ('M', 'Natural Satellite'),
+                ('P', 'Major Planet')
             )
+
+OBJECT_SUBTYPES = (
+                ('N', 'NEO'),
+                ('N1', 'Atira'),             # Q<1AU
+                ('N2', 'Aten'),              # a<1AU<Q
+                ('N3', 'Apollo'),            # q<1AU<a
+                ('N4', 'Amor'),              # 1AU<q<1.3AU
+                ('PH', 'PHA'),
+                ('MI', 'Inner Main-Belt'),   # a < 2.0 au; q > 1.666 au
+                ('M', 'Main-Belt'),
+                ('MO', 'Outer Main-Belt'),   # 3.2 au < a < 4.6 au
+                ('A', 'Active'),
+                ('MH', 'Hilda'),             # 3/2 resonance w/ Jupiter
+                ('T4', 'L4'),
+                ('T5', 'L5'),
+                ('P1', 'Mercury'),
+                ('P2', 'Venus'),
+                ('P3', 'Earth'),
+                ('P4', 'Mars'),
+                ('P5', 'Jupiter'),
+                ('P6', 'Saturn'),
+                ('P7', 'Uranus'),
+                ('P8', 'Neptune'),
+                ('P9', 'Pluto'),
+                ('PL', 'Plutino'),
+                ('K', 'Classical KBO'),
+                ('S', 'SDO'),
+                ('H', 'Hyperbolic'),
+                ('PA', 'Parabolic'),
+                ('JF', 'Jupiter Family'),   # P < 20
+                ('HT', 'Halley-Type'),      # 20 y < P < 200 y
+            )
+
 
 ELEMENTS_TYPES = (('MPC_MINOR_PLANET', 'MPC Minor Planet'), ('MPC_COMET', 'MPC Comet'))
 
@@ -156,6 +190,8 @@ class Body(models.Model):
     name                = models.CharField('Designation', max_length=15, blank=True, null=True)
     origin              = models.CharField('Where did this target come from?', max_length=1, choices=ORIGINS, default="M", blank=True, null=True)
     source_type         = models.CharField('Type of object', max_length=1, choices=OBJECT_TYPES, blank=True, null=True)
+    source_subtype_1    = models.CharField('Subtype of object', max_length=2, choices=OBJECT_SUBTYPES, blank=True, null=True)
+    source_subtype_2    = models.CharField('Subtype of object', max_length=2, choices=OBJECT_SUBTYPES, blank=True, null=True)
     elements_type       = models.CharField('Elements type', max_length=16, choices=ELEMENTS_TYPES, blank=True, null=True)
     active              = models.BooleanField('Actively following?', default=False)
     fast_moving         = models.BooleanField('Is this object fast?', default=False)
