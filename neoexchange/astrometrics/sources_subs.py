@@ -1484,7 +1484,7 @@ def make_location(params):
         location['observatory'] = 'domc'
     elif params['site_code'] == 'V99':
         location['telescope'] = '1m0a'
-        location['observatory'] = 'domb'
+        location['enclosure'] = 'domb'
     return location
 
 
@@ -1831,7 +1831,7 @@ def configure_defaults(params):
             params['observatory'] = 'aqwa'
     elif params['site_code'] == 'V99':
         # Hardwire new ELP #2 to dome b until we get a real site code
-        params['observatory'] = 'domb'
+        params['enclosure'] = 'domb'
 
     return params
 
