@@ -1711,7 +1711,7 @@ def expand_cadence(user_request):
             cadence_url,
             json=user_request,
             headers={'Authorization': 'Token {}'.format(settings.PORTAL_TOKEN)},
-            timeout=20.0
+            timeout=120.0
          )
     except requests.exceptions.Timeout:
         msg = "Observing portal API timed out"
@@ -1925,7 +1925,7 @@ def submit_block_to_scheduler(elements, params):
             settings.PORTAL_REQUEST_API,
             json=user_request,
             headers={'Authorization': 'Token {}'.format(settings.PORTAL_TOKEN)},
-            timeout=20.0
+            timeout=120.0
          )
     except requests.exceptions.Timeout:
         msg = "Observing portal API timed out"
@@ -1937,14 +1937,7 @@ def submit_block_to_scheduler(elements, params):
         logger.error(resp.json())
         msg = "Parsing error"
         try:
-            error_json = resp.json()
-            error_msg = error_json.get('requests', msg)
-            if len(error_msg) >= 1:
-                error_msg = error_msg[0].get('non_field_errors', msg)
-                msg = error_msg[0]
-            elif error_json.get('non_field_errors', None) is not None:
-                error_msg = error_json.get('non_field_errors', msg)
-                msg = error_msg[0]
+            msg = resp.json()
         except AttributeError:
             try:
                 msg = user_request['errors']
