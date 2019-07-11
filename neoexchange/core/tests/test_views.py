@@ -4005,7 +4005,7 @@ class TestFrames(TestCase):
 
 @patch('core.views.datetime', MockDateTime)
 @patch('astrometrics.time_subs.datetime', MockDateTime)
-class TestClean_crossid(TestCase):
+class TestCleanCrossid(TestCase):
 
     def setUp(self):
         MockDateTime.change_datetime(2015, 11, 5, 18, 0, 0)
@@ -4014,7 +4014,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'P10p9py', u'2015 VV1', '', u'(Nov. 5.30 UT)']
         expected_params = { 'active' : False,
                             'name' : '2015 VV1',
-                            'source_type' : 'A'
+                            'source_type' : 'A',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4025,7 +4026,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'WV82468', u'2015 VB2', u'MPEC 2015-V51', u'(Nov. 5.60 UT)']
         expected_params = { 'active' : True,
                             'name' : '2015 VB2',
-                            'source_type' : 'N'
+                            'source_type' : 'N',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4036,7 +4038,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'P10o0Ha', u'2015 SE20', u'MPEC 2015-T29', u'(Oct. 8.59 UT)']
         expected_params = { 'active' : False,
                             'name' : '2015 SE20',
-                            'source_type' : 'N'
+                            'source_type' : 'N',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4047,7 +4050,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'WTB842B', 'doesnotexist', '', u'(Oct. 9.19 UT)']
         expected_params = { 'active' : False,
                             'name' : '',
-                            'source_type' : 'X'
+                            'source_type' : 'X',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4058,7 +4062,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'P10oYZI', 'wasnotconfirmed', '', u'(Nov. 4.81 UT)']
         expected_params = { 'active' : False,
                             'name' : '',
-                            'source_type' : 'U'
+                            'source_type' : 'U',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4069,7 +4074,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'P10oYZI', '', '', u'(Nov. 4.81 UT)']
         expected_params = { 'active' : False,
                             'name' : '',
-                            'source_type' : 'W'
+                            'source_type' : 'W',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4080,7 +4086,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'A10422t', 'wasnotminorplanet', '', u'(Sept. 20.89 UT)']
         expected_params = { 'active' : False,
                             'name' : '',
-                            'source_type' : 'J'
+                            'source_type' : 'J',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4091,7 +4098,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'WV2B5A8', u'C/2015 V2', u'CBET 5432', u'(Nov. 5.49 UT)']
         expected_params = { 'active' : True,
                             'name' : 'C/2015 V2',
-                            'source_type' : 'C'
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4102,7 +4110,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'WV2B5A8', u'C/2015 V2', u'CBET 5432', u'(Nov. 1.49 UT)']
         expected_params = { 'active' : False,
                             'name' : 'C/2015 V2',
-                            'source_type' : 'C'
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4113,7 +4122,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'WV2B5A8', u'C/2015 V2', u'IAUC-', u'(Nov. 5.49 UT)']
         expected_params = { 'active' : True,
                             'name' : 'C/2015 V2',
-                            'source_type' : 'C'
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4124,7 +4134,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'WV2B5A8', u'C/2015 V2', u'IAUC-', u'(Nov. 1.49 UT)']
         expected_params = { 'active' : False,
                             'name' : 'C/2015 V2',
-                            'source_type' : 'C'
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4135,7 +4146,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'LM02L2J', u'C/2015 TQ209', u'IAUC 2015-', u'(Oct. 24.07 UT)']
         expected_params = { 'active' : False,
                             'name' : 'C/2015 TQ209',
-                            'source_type' : 'C'
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4146,7 +4158,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'NM0015a', u'C/2015 X8', u'MPEC 2015-Y20', u'(Nov. 3.63 UT)']
         expected_params = { 'active' : True,
                             'name' : 'C/2015 X8',
-                            'source_type' : 'C'
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4157,7 +4170,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'NM0015a', u'C/2015 X8', u'MPEC 2015-Y20', u'(Oct. 18.63 UT)']
         expected_params = { 'active' : False,
                             'name' : 'C/2015 X8',
-                            'source_type' : 'C'
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4170,7 +4184,8 @@ class TestClean_crossid(TestCase):
         crossid = ['ZS9E891 ', '0046P  ', '', '(Sept. 16.62 UT)']
         expected_params = { 'active' : True,
                             'name' : '46P',
-                            'source_type' : 'C'
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4183,18 +4198,20 @@ class TestClean_crossid(TestCase):
         crossid = ['ZS9E891 ', '0046P  ', '', '(Sept. 16.62 UT)']
         expected_params = { 'active' : False,
                             'name' : '46P',
-                            'source_type' : 'C'
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
 
         self.assertEqual(expected_params, params)
 
-    def test_hyperbolic_asteroid1(self):
+    def test_active_asteroid1(self):
         crossid = [u'ZC82561', u'A/2018 C2', u'MPEC 2018-E18', u'(Nov. 4.95 UT)']
         expected_params = { 'active' : True,
                             'name' : 'A/2018 C2',
-                            'source_type' : 'H'
+                            'source_type' : 'A',
+                            'source_subtype_1': 'A'
                           }
 
         params = clean_crossid(crossid)
@@ -4202,10 +4219,11 @@ class TestClean_crossid(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_hyperbolic_asteroid2(self):
-        crossid = [u'P10EwQh', u'A/2017 U7', u'MPEC 2018-E17', u'(Nov. 4.94 UT)']
+        crossid = [u'P10EwQh', u'I/2017 U7', u'MPEC 2018-E17', u'(Nov. 4.94 UT)']
         expected_params = { 'active' : True,
-                            'name' : 'A/2017 U7',
-                            'source_type' : 'H'
+                            'name' : 'I/2017 U7',
+                            'source_type' : 'A',
+                            'source_subtype_1': 'H'
                           }
 
         params = clean_crossid(crossid)
@@ -4217,7 +4235,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'NM0015a', u'C/2015 X8', u'MPEC 2015-Y20', u'(Oct. 18.63 UT)']
         expected_params = { 'active' : False,
                             'name' : 'C/2015 X8',
-                            'source_type' : 'C'
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4229,7 +4248,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'P10sKEk', u'2016 CP264', '', u'(Feb. 30.00 UT)']
         expected_params = { 'active' : False,
                             'name' : '2016 CP264',
-                            'source_type' : 'A'
+                            'source_type' : 'A',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4241,7 +4261,21 @@ class TestClean_crossid(TestCase):
         crossid = [u'P10tmAL ', u'2013 AM76', '', u'(Mar.  9.97 UT)']
         expected_params = { 'active' : False,
                             'name' : '2013 AM76',
-                            'source_type' : 'A'
+                            'source_type' : 'A',
+                            'source_subtype_1': ''
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_moon(self):
+        MockDateTime.change_datetime(2016, 4, 8, 0, 30, 0)
+        crossid = [u'P10tmAL ', u'Mars II', '', u'(Mar.  9.97 UT)']
+        expected_params = { 'active' : False,
+                            'name' : 'Mars II',
+                            'source_type' : 'M',
+                            'source_subtype_1': 'P4'
                           }
 
         params = clean_crossid(crossid)
@@ -4843,7 +4877,7 @@ class TestCheckCatalogAndRefitNew(TestCase):
         self.assertEqual(expected_num_new_frames, num_new_frames)
 
 
-class TestUpdate_Crossids(TestCase):
+class TestUpdateCrossids(TestCase):
 
     @classmethod
     def setUpTestData(cls):
@@ -5042,6 +5076,32 @@ class TestUpdate_Crossids(TestCase):
         # Set Mock time to less than 3 days past the time of the cross ident.
         MockDateTime.change_datetime(2017, 9, 21, 10, 40, 0)
 
+        crossid_info = [u'ZC99999', u'I/2018 C2', u'MPEC 2018-E18', u'(Mar. 4.95 UT)']
+
+        self.body.origin = u'M'
+        self.body.source_type = u'U'
+        self.body.provisional_name = 'ZC99999'
+        self.body.save()
+
+        status = update_crossids(crossid_info, dbg=False)
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+
+        self.assertEqual(True, status)
+        self.assertEqual(False, body.active)
+        self.assertEqual('A', body.source_type)
+        self.assertEqual('H', body.source_subtype_1)
+        self.assertEqual('M', body.origin)
+        self.assertEqual('I/2018 C2', body.name)
+        self.assertEqual('MPC_COMET', body.elements_type)
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_check_active_ast(self):
+
+        # Set Mock time to less than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2017, 9, 21, 10, 40, 0)
+
         crossid_info = [u'ZC99999', u'A/2018 C2', u'MPEC 2018-E18', u'(Mar. 4.95 UT)']
 
         self.body.origin = u'M'
@@ -5055,10 +5115,37 @@ class TestUpdate_Crossids(TestCase):
 
         self.assertEqual(True, status)
         self.assertEqual(False, body.active)
-        self.assertEqual('H', body.source_type)
+        self.assertEqual('A', body.source_type)
+        self.assertEqual('A', body.source_subtype_1)
         self.assertEqual('M', body.origin)
         self.assertEqual('A/2018 C2', body.name)
-        self.assertEqual('MPC_COMET', body.elements_type)
+        self.assertEqual('MPC_MINOR_PLANET', body.elements_type)
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_check_moon(self):
+
+        # Set Mock time to less than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2017, 9, 21, 10, 40, 0)
+
+        crossid_info = [u'ZC99999', u'Saturn XIV', '', u'(Mar. 4.95 UT)']
+
+        self.body.origin = u'M'
+        self.body.source_type = u'U'
+        self.body.provisional_name = 'ZC99999'
+        self.body.save()
+
+        status = update_crossids(crossid_info, dbg=False)
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+
+        self.assertEqual(True, status)
+        self.assertEqual(False, body.active)
+        self.assertEqual('M', body.source_type)
+        self.assertEqual('P6', body.source_subtype_1)
+        self.assertEqual('M', body.origin)
+        self.assertEqual('Saturn XIV', body.name)
+        self.assertEqual('MPC_MINOR_PLANET', body.elements_type)
 
     @patch('core.views.datetime', MockDateTime)
     @patch('astrometrics.time_subs.datetime', MockDateTime)
@@ -5101,12 +5188,12 @@ class TestUpdate_Crossids(TestCase):
 
     @patch('core.views.datetime', MockDateTime)
     @patch('astrometrics.time_subs.datetime', MockDateTime)
-    def test_check_hyperbolic_ast_blank_body(self):
+    def test_check_Hyperbolic_ast_blank_body(self):
 
         # Set Mock time to more than 3 days past the time of the cross ident.
         MockDateTime.change_datetime(2017, 3,  8, 10, 40, 0)
 
-        crossid_info = [u'ZC82561', u'A/2018 C2', u'MPEC 2018-E18', u'(Mar. 4.95 UT)']
+        crossid_info = [u'ZC82561', u'I/2018 C2', u'MPEC 2018-E18', u'(Mar. 4.95 UT)']
 
         status = update_crossids(crossid_info, dbg=False)
 
@@ -5114,9 +5201,10 @@ class TestUpdate_Crossids(TestCase):
 
         self.assertEqual(True, status)
         self.assertEqual(False, body.active)
-        self.assertEqual('H', body.source_type)
+        self.assertEqual('A', body.source_type)
+        self.assertEqual('H', body.source_subtype_1)
         self.assertEqual('M', body.origin)
-        self.assertEqual('A/2018 C2', body.name)
+        self.assertEqual('I/2018 C2', body.name)
         self.assertEqual('MPC_COMET', body.elements_type)
 
     @patch('core.views.datetime', MockDateTime)

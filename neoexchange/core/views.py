@@ -1295,7 +1295,7 @@ def schedule_submit(data, body, username):
             # Update MPC observations assuming too many updates have not been done recently and target is not a comet
             cut_off_time = timedelta(minutes=1)
             now = datetime.utcnow()
-            recent_updates = Body.objects.exclude(source_type='u').filter(update_time__gte=now-cut_off_time)
+            recent_updates = Body.objects.exclude(source_type='U').filter(update_time__gte=now-cut_off_time)
             if len(recent_updates) < 1:
                 update_MPC_obs(body.current_name())
 
@@ -2067,14 +2067,14 @@ def update_crossids(astobj, dbg=False):
         # Find out if the details have changed, if they have, save a revision
         # But first check if it is a comet or NEO and came from somewhere other
         # than the MPC. In this case, leave it active.
-        if body.source_type in ['N', 'C', 'H'] and body.origin != 'M':
+        if (body.source_type in ['N', 'C'] or body.source_subtype_1 == 'H') and body.origin != 'M':
             kwargs['active'] = True
         # Check if we are trying to "downgrade" a NEO or other target type
         # to an asteroid
         if body.source_type != 'A' and body.origin != 'M' and kwargs['source_type'] == 'A':
             logger.warning("Not downgrading type for %s from %s to %s" % (body.current_name(), body.source_type, kwargs['source_type']))
             kwargs['source_type'] = body.source_type
-        if kwargs['source_type'] in ['C', 'H']:
+        if kwargs['source_type'] == 'C' or (kwargs['source_type'] == 'A' and kwargs['source_subtype_1'] == 'H'):
             if dbg: print("Converting to comet")
             kwargs = convert_ast_to_comet(kwargs, body)
         if dbg:
@@ -2118,6 +2118,7 @@ def clean_crossid(astobj, dbg=False):
 
     active = True
     objtype = ''
+    sub1 = ''
     if obj_id != '' and desig == 'wasnotconfirmed':
         if dbg: print("Case 1")
         # Unconfirmed, no longer interesting so set inactive
@@ -2146,7 +2147,7 @@ def clean_crossid(astobj, dbg=False):
     elif obj_id != '' and desig != '':
         # Confirmed
         if ('CBET' in reference or 'IAUC' in reference or 'MPEC' in reference) and 'C/' in desig:
-            # There is a reference to an CBET or IAUC so we assume it's "very
+            # There is a reference to a CBET or IAUC so we assume it's "very
             # interesting" i.e. a comet
             if dbg: print("Case 5a")
             objtype = 'C'
@@ -2158,8 +2159,13 @@ def clean_crossid(astobj, dbg=False):
             if dbg: print("Case 5b")
             objtype = 'N'
             if 'A/' in desig:
+                # Check if it is an active (Comet-like) asteroid
+                objtype = 'A'
+                sub1 = 'A'
+            if 'I/' in desig:
                 # Check if it is an inactive hyperbolic asteroid
-                objtype = 'H'
+                objtype = 'A'
+                sub1 = 'H'
             if time_from_confirm > interesting_cutoff:
                 active = False
         elif desig[-1] == 'P' and desig[0:-1].isdigit():
@@ -2174,17 +2180,27 @@ def clean_crossid(astobj, dbg=False):
             if time_from_confirm > interesting_cutoff:
                 active = False
         else:
-            if dbg: print("Case 5z")
-            objtype = 'A'
-            active = False
+            chunks = desig.split()
+            for i, planet in enumerate(['Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto']):
+                if chunks[0] == planet and ('I' in chunks[1] or 'V' in chunks[1] or 'X' in chunks[1]):
+                    if dbg: print("Case 5d")
+                    objtype = 'M'
+                    sub1 = 'P' + str(i+1)
+                    active = False
+                    break
+            if objtype == '':
+                if dbg: print("Case 5z")
+                objtype = 'A'
+                active = False
 
     if objtype != '':
         params = {'source_type': objtype,
+                  'source_subtype_1': sub1,
                   'name': desig,
                   'active': active
                   }
         if dbg:
-            print("%07s->%s (%s) %s" % (obj_id, params['name'], params['source_type'], params['active']))
+            print("%07s->%s (%s/%s) %s" % (obj_id, params['name'], params['source_type'],params['source_subtype_1'], params['active']))
     else:
         logger.warning("Unparseable cross-identification: %s" % astobj)
         params = {}
