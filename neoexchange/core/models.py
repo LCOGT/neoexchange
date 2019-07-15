@@ -160,6 +160,14 @@ SPECTRAL_SOURCE_CHOICES = (
                         ('O', 'Other')
                      )
 
+DESIG_CHOICES = (
+                ('N', 'Name'),
+                ('#', 'Number'),
+                ('P', 'Provisional Designation'),
+                ('C', 'NEO Candidate Designation'),
+                ('T', 'Temporary Designation')
+                )
+
 
 @python_2_unicode_compatible
 class Proposal(models.Model):
@@ -425,6 +433,24 @@ class Body(models.Model):
                 and self.name is not None and self.name != u'':
             return_name = self.name
         return u'%s is %sactive' % (return_name, text)
+
+
+@python_2_unicode_compatible
+class Designations(models.Model):
+    body        = models.ForeignKey(Body, on_delete=models.CASCADE)
+    desig       = models.CharField('Designation', blank=True, null=True, max_length=30)
+    desig_type  = models.CharField('Designation Type', blank=True, choices=DESIG_CHOICES, null=True, max_length=1)
+    preferred    = models.BooleanField('Is this the preferred designation of this type?', default=False)
+    packed      = models.BooleanField('Is this a packed designation?', default=False)
+    desig_notes = models.CharField('Notes on Nomenclature', max_length=30, blank=True, null=True)
+
+    class Meta:
+        verbose_name = _('Object Designation')
+        verbose_name_plural = _('Object Designations')
+        db_table = 'ingest_names'
+
+    def __str__(self):
+        return "%s is a designation for %s (pk=%s)" % (self.desig, self.body.name, self.body.id)
 
 
 @python_2_unicode_compatible
