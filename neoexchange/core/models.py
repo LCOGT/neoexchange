@@ -168,6 +168,19 @@ DESIG_CHOICES = (
                 ('T', 'Temporary Designation')
                 )
 
+PARAM_CHOICES = (
+                ('H', 'Absolute Magnitude'),
+                ('G', 'Phase Slope'),
+                ('D', 'Diameter'),
+                ('R', 'Density'),
+                ('P', 'Rotation Period'),
+                ('A', 'LC Amplitude'),
+                ('O', 'Pole Orientation'),
+                ('ab', 'Albedo'),
+                ('Y', 'Yarkovsky Drift'),
+                ('E', 'Coma Extent')
+                )
+
 
 @python_2_unicode_compatible
 class Proposal(models.Model):
@@ -451,6 +464,32 @@ class Designations(models.Model):
 
     def __str__(self):
         return "%s is a designation for %s (pk=%s)" % (self.desig, self.body.name, self.body.id)
+
+
+@python_2_unicode_compatible
+class PhysicalParameters(models.Model):
+    body           = models.ForeignKey(Body, on_delete=models.CASCADE)
+    parameter_type = models.CharField('Physical Parameter Type', blank=True, null=True, choices=PARAM_CHOICES, max_length=2)
+    value          = models.FloatField('Physical Parameter Value', blank=True, null=True)
+    error          = models.FloatField('Physical Parameter Error', blank=True, null=True)
+    value2         = models.FloatField('2nd component of Physical Parameter', blank=True, null=True)
+    error2         = models.FloatField('Error for 2nd component of Physical Parameter', blank=True, null=True)
+    units          = models.CharField('Physical Parameter Units', blank=True, null=True, max_length=30)
+    quality        = models.CharField('Physical Parameter Quality Designation', blank=True, null=True, max_length=10)
+    preferred      = models.BooleanField('Is this the preferred value for this type of parameter?', default=False)
+    reference      = models.CharField('Reference for this value', max_length=50, blank=True, null=True)
+    notes          = models.CharField('Notes on this value', max_length=50, blank=True, null=True)
+
+    class Meta:
+        verbose_name = _('Physical Parameter')
+        verbose_name_plural = _('Physical Parameterss')
+        db_table = 'ingest_physical_parameters'
+
+    def __str__(self):
+        if self.value2:
+            return "({}, {}) is the {} for {} (pk={})".format(self.value, self.value2, self.parameter_type, self.body.name, self.body.id)
+        else:
+            return "{}{} is the {} for {} (pk={})".format(self.value, self.units, self.parameter_type, self.body.name, self.body.id)
 
 
 @python_2_unicode_compatible
