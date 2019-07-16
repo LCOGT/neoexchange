@@ -482,7 +482,7 @@ class PhysicalParameters(models.Model):
 
     class Meta:
         verbose_name = _('Physical Parameter')
-        verbose_name_plural = _('Physical Parameterss')
+        verbose_name_plural = _('Physical Parameters')
         db_table = 'ingest_physical_parameters'
 
     def __str__(self):
@@ -490,6 +490,27 @@ class PhysicalParameters(models.Model):
             return "({}, {}) is the {} for {} (pk={})".format(self.value, self.value2, self.parameter_type, self.body.name, self.body.id)
         else:
             return "{}{} is the {} for {} (pk={})".format(self.value, self.units, self.parameter_type, self.body.name, self.body.id)
+
+
+@python_2_unicode_compatible
+class ColorValues(models.Model):
+    body          = models.ForeignKey(Body, on_delete=models.CASCADE)
+    color_band    = models.CharField('X-X filter combination', blank=True, null=True, max_length=30)
+    value         = models.FloatField('Color Value', blank=True, null=True)
+    error         = models.FloatField('Color error', blank=True, null=True)
+    units         = models.CharField('Color Units', blank=True, null=True, max_length=30)
+    quality       = models.CharField('Color Quality Designation', blank=True, null=True, max_length=10)
+    preferred     = models.BooleanField('Is this the preferred value for this color band?', default=False)
+    reference     = models.CharField('Reference for this value', max_length=50, blank=True, null=True)
+    notes         = models.CharField('Notes on this value', max_length=50, blank=True, null=True)
+
+    class Meta:
+        verbose_name = _('Color Value')
+        verbose_name_plural = _('Color Values')
+        db_table = 'ingest_colors'
+
+    def __str__(self):
+        return "{} is the {} color for {} (pk={})".format(self.value, self.color_band, self.body.name, self.body.id)
 
 
 @python_2_unicode_compatible
