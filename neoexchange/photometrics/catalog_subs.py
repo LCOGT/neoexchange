@@ -23,12 +23,15 @@ from datetime import datetime, timedelta
 from math import sqrt, log10, log, degrees
 from collections import OrderedDict
 import time
-from requests.exceptions import ReadTimeout
+from requests.exceptions import ReadTimeout, ConnectTimeout
 import re
+import warnings
 
+from astropy.utils.exceptions import AstropyDeprecationWarning
 from astropy.io import fits
 from astropy.table import Table
 from astropy.coordinates import Angle
+warnings.simplefilter('ignore', category = AstropyDeprecationWarning)
 from astroquery.vizier import Vizier
 import astropy.units as u
 import astropy.coordinates as coord
@@ -103,7 +106,7 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
             query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit}, columns=['RAJ2000', 'DEJ2000','e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup'])
         else:
             query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
-        query_service.VIZIER_SERVER = 'vizier.cfa.harvard.edu' # 'vizier.hia.nrc.ca'
+        query_service.VIZIER_SERVER ='vizier.hia.nrc.ca' #  'vizier.cfa.harvard.edu' #
         query_service.TIMEOUT = 60
         try:
             result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
