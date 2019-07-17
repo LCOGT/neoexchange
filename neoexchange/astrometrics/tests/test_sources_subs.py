@@ -4829,3 +4829,51 @@ class TestReadSolarStandards(TestCase):
                     self.assertAlmostEqual(expected_standards[solstd][key], standards[solstd][key], places=self.precision, msg="Mismatch for {} on {}".format(solstd, key))
                 else:
                     self.assertEqual(expected_standards[solstd][key], standards[solstd][key])
+
+
+class TestFetchJPLPhysParams(TestCase):
+
+    def setUp(self):
+        params = {  'provisional_name' : '1',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : datetime(2015, 3, 19, 00, 00, 00),
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+    
+#    def test_1(self):
+#        bodies = Body.objects.all()
+#        expected_body = bodies[0]
+#        
+#        jpl_body = fetch_jpl_phys_params(bodies[0])
+#        
+#        self.assertEqual(expected_body, jpl_body)
+#    
+#    def test_2(self):
+#        bodies = Body.objects.all()
+#        expected_body = bodies[0]
+#        
+#        jpl_body = fetch_jpl_alt_des(bodies[0])
+#        
+#        self.assertEqual(expected_body, jpl_body)
+
+    def test_3(self):
+        bodies = Body.objects.all()
+        expected_body = bodies[0]
+        
+        jpl_body = fetch_jpl_physparams_altdes_noorbit(bodies[0])
+        
+        self.assertEqual(expected_body, jpl_body)
+
+
+
