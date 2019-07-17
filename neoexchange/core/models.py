@@ -430,6 +430,41 @@ class Body(models.Model):
             reported = 'Not yet'
         return observed, reported
 
+    def save_physical_parameters(self, kwargs):
+        """Takes a dictionary of arguments. Dictionary specifics depend on what parameters are being added."""
+        if 'color_band' in kwargs.keys():
+            model = ColorValues
+        elif 'desig_type' in kwargs.keys():
+            model = Designations
+        elif 'tax_scheme' in kwargs.keys():
+            model = SpectralInfo
+        else:
+            model = PhysicalParameters
+        current_params = model.objects.filter(body=self.id)
+
+        new_param = False
+        if current_params:
+            for param in current_params:
+                param_dict = model_to_dict(param)
+                for k, v in kwargs.items():
+                    quantity = param_dict.get(k, '')
+                    if isinstance(quantity, float) and v is not None:
+                        v = float(v)
+                    if v != quantity:
+                        new_param = True
+        else:
+            new_param = True
+
+        if new_param is True:
+            kwargs['body'] = self
+            try:
+                model.objects.create(**kwargs)
+            except TypeError:
+                logger.warning("Input dictionary contains invalid keywords")
+                new_param = False
+
+        return new_param
+
     class Meta:
         verbose_name = _('Minor Body')
         verbose_name_plural = _('Minor Bodies')
@@ -487,9 +522,9 @@ class PhysicalParameters(models.Model):
 
     def __str__(self):
         if self.value2:
-            return "({}, {}) is the {} for {} (pk={})".format(self.value, self.value2, self.parameter_type, self.body.name, self.body.id)
+            return "({}, {}) is the {} for {} (pk={})".format(self.value, self.value2, self.get_parameter_type_display(), self.body.name, self.body.id)
         else:
-            return "{}{} is the {} for {} (pk={})".format(self.value, self.units, self.parameter_type, self.body.name, self.body.id)
+            return "{}{} is the {} for {} (pk={})".format(self.value, self.units, self.get_parameter_type_display(), self.body.name, self.body.id)
 
 
 @python_2_unicode_compatible
