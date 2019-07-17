@@ -35,7 +35,7 @@ warnings.simplefilter('ignore', category = AstropyDeprecationWarning)
 from astroquery.vizier import Vizier
 import astropy.units as u
 import astropy.coordinates as coord
-from astropy.wcs import WCS
+from astropy.wcs import WCS, FITSFixedWarning
 from astropy.wcs.utils import proj_plane_pixel_scales
 from astropy import __version__ as astropyversion
 
@@ -1002,6 +1002,11 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
         elif fits_keyword[0] == '<' and fits_keyword[-1] == '>':
             header_item = None
             if fits_keyword == '<WCS>':
+                # Suppress warnings from newer astropy versions which raise
+                # FITSFixedWarning on the lack of OBSGEO-L,-B,-H keywords even
+                # though we have OBSGEO-X,-Y,-Z as recommended by the FITS
+                # Paper VII standard...
+                warnings.simplefilter('ignore', category = FITSFixedWarning)
                 fits_wcs = WCS(catalog_header)
                 pixscale = proj_plane_pixel_scales(fits_wcs).mean()*3600.0
                 header_item = {item: round(pixscale, 5), 'wcs' : fits_wcs}
