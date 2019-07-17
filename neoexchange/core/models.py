@@ -430,6 +430,16 @@ class Body(models.Model):
             reported = 'Not yet'
         return observed, reported
 
+    def get_physical_parameters(self, param_type=None, return_all=True):
+        phys_params = PhysicalParameters.objects.filter(body=self.id)
+        out_params = []
+        for param in phys_params:
+            if param.preferred or return_all:
+                param_dict = model_to_dict(param)
+                param_dict['type_display'] = param.get_parameter_type_display()
+                out_params.append(param_dict)
+        return out_params
+
     def save_physical_parameters(self, kwargs):
         """Takes a dictionary of arguments. Dictionary specifics depend on what parameters are being added."""
         if 'color_band' in kwargs.keys():

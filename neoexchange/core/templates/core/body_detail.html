@@ -171,6 +171,12 @@
                                         <td class="kv-value">{{body.slope|multiply:2.5}}</td>
                                     </tr>
                                     {% endif %}
+                                    {% for p in body.get_physical_parameters %}
+                                    <tr>
+                                        <td class="kv-key">{{p.type_display}}</td>
+                                        <td class="kv-value">{{p.value}}</td>
+                                    </tr>
+                                    {% endfor %}
                                 </tbody>
                             </table>
                             <h5 class="section-title">Follow-up Details</h5>
