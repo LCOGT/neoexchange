@@ -444,26 +444,35 @@ class Body(models.Model):
         """Takes a dictionary of arguments. Dictionary specifics depend on what parameters are being added."""
         if 'color_band' in kwargs.keys():
             model = ColorValues
+            type_key = 'color_band'
         elif 'desig_type' in kwargs.keys():
             model = Designations
+            type_key = 'desig_type'
         elif 'tax_scheme' in kwargs.keys():
             model = SpectralInfo
+            type_key = 'tax_scheme'
         else:
             model = PhysicalParameters
+            type_key = 'parameter_type'
         current_params = model.objects.filter(body=self.id)
 
-        new_param = False
+        new_param = True
         if current_params:
             for param in current_params:
                 param_dict = model_to_dict(param)
-                for k, v in kwargs.items():
-                    quantity = param_dict.get(k, '')
-                    if isinstance(quantity, float) and v is not None:
-                        v = float(v)
-                    if v != quantity:
-                        new_param = True
-        else:
-            new_param = True
+                diff_values = {k: kwargs[k] for k in kwargs if k in param_dict and kwargs[k] != param_dict[k]}
+                if len(diff_values) == 0:
+                    new_param = False
+                elif len(diff_values) == 1 and 'preferred' in diff_values:
+                    param.preferred = kwargs['preferred']
+                    param.save()
+                    new_param = False
+                elif len(diff_values) == 1 and 'body' in diff_values:
+                    new_param = False
+                else:
+                    if param_dict[type_key] == kwargs[type_key] and kwargs['preferred'] and param_dict['preferred']:
+                        param.preferred = False
+                        param.save()
 
         if new_param is True:
             kwargs['body'] = self
