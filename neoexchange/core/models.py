@@ -49,7 +49,7 @@ OBJECT_TYPES = (
                 ('N', 'NEO'),
                 ('A', 'Asteroid'),
                 ('C', 'Comet'),
-                ('K', 'KBO'),
+                ('K', 'TNO'),
                 ('E', 'Centaur'),
                 ('T', 'Trojan'),
                 ('U', 'Candidate'),
@@ -57,8 +57,42 @@ OBJECT_TYPES = (
                 ('W', 'Was not interesting'),
                 ('D', 'Discovery, non NEO'),
                 ('J', 'Artificial satellite'),
-                ('H', 'Hyperbolic asteroids')
+                ('M', 'Natural Satellite'),
+                ('P', 'Major Planet')
             )
+
+OBJECT_SUBTYPES = (
+                ('N', 'NEO'),
+                ('N1', 'Atira'),             # Q<1AU
+                ('N2', 'Aten'),              # a<1AU<Q
+                ('N3', 'Apollo'),            # q<1AU<a
+                ('N4', 'Amor'),              # 1AU<q<1.3AU
+                ('PH', 'PHA'),
+                ('MI', 'Inner Main-Belt'),   # a < 2.0 au; q > 1.666 au
+                ('M', 'Main-Belt'),
+                ('MO', 'Outer Main-Belt'),   # 3.2 au < a < 4.6 au
+                ('A', 'Active'),
+                ('MH', 'Hilda'),             # 3/2 resonance w/ Jupiter
+                ('T4', 'L4'),
+                ('T5', 'L5'),
+                ('P1', 'Mercury'),
+                ('P2', 'Venus'),
+                ('P3', 'Earth'),
+                ('P4', 'Mars'),
+                ('P5', 'Jupiter'),
+                ('P6', 'Saturn'),
+                ('P7', 'Uranus'),
+                ('P8', 'Neptune'),
+                ('P9', 'Pluto'),
+                ('PL', 'Plutino'),
+                ('K', 'Classical KBO'),
+                ('S', 'SDO'),
+                ('H', 'Hyperbolic'),
+                ('PA', 'Parabolic'),
+                ('JF', 'Jupiter Family'),   # P < 20
+                ('HT', 'Halley-Type'),      # 20 y < P < 200 y
+            )
+
 
 ELEMENTS_TYPES = (('MPC_MINOR_PLANET', 'MPC Minor Planet'), ('MPC_COMET', 'MPC Comet'))
 
@@ -126,6 +160,27 @@ SPECTRAL_SOURCE_CHOICES = (
                         ('O', 'Other')
                      )
 
+DESIG_CHOICES = (
+                ('N', 'Name'),
+                ('#', 'Number'),
+                ('P', 'Provisional Designation'),
+                ('C', 'NEO Candidate Designation'),
+                ('T', 'Temporary Designation')
+                )
+
+PARAM_CHOICES = (
+                ('H', 'Absolute Magnitude'),
+                ('G', 'Phase Slope'),
+                ('D', 'Diameter'),
+                ('R', 'Density'),
+                ('P', 'Rotation Period'),
+                ('A', 'LC Amplitude'),
+                ('O', 'Pole Orientation'),
+                ('ab', 'Albedo'),
+                ('Y', 'Yarkovsky Drift'),
+                ('E', 'Coma Extent')
+                )
+
 
 @python_2_unicode_compatible
 class Proposal(models.Model):
@@ -156,6 +211,8 @@ class Body(models.Model):
     name                = models.CharField('Designation', max_length=15, blank=True, null=True)
     origin              = models.CharField('Where did this target come from?', max_length=1, choices=ORIGINS, default="M", blank=True, null=True)
     source_type         = models.CharField('Type of object', max_length=1, choices=OBJECT_TYPES, blank=True, null=True)
+    source_subtype_1    = models.CharField('Subtype of object', max_length=2, choices=OBJECT_SUBTYPES, blank=True, null=True)
+    source_subtype_2    = models.CharField('Subtype of object', max_length=2, choices=OBJECT_SUBTYPES, blank=True, null=True)
     elements_type       = models.CharField('Elements type', max_length=16, choices=ELEMENTS_TYPES, blank=True, null=True)
     active              = models.BooleanField('Actively following?', default=False)
     fast_moving         = models.BooleanField('Is this object fast?', default=False)
@@ -373,6 +430,60 @@ class Body(models.Model):
             reported = 'Not yet'
         return observed, reported
 
+    def get_physical_parameters(self, param_type=None, return_all=True):
+        phys_params = PhysicalParameters.objects.filter(body=self.id)
+        out_params = []
+        for param in phys_params:
+            if param.preferred or return_all:
+                param_dict = model_to_dict(param)
+                param_dict['type_display'] = param.get_parameter_type_display()
+                out_params.append(param_dict)
+        return out_params
+
+    def save_physical_parameters(self, kwargs):
+        """Takes a dictionary of arguments. Dictionary specifics depend on what parameters are being added."""
+        if 'color_band' in kwargs.keys():
+            model = ColorValues
+            type_key = 'color_band'
+        elif 'desig_type' in kwargs.keys():
+            model = Designations
+            type_key = 'desig_type'
+        elif 'tax_scheme' in kwargs.keys():
+            model = SpectralInfo
+            type_key = 'tax_scheme'
+        else:
+            model = PhysicalParameters
+            type_key = 'parameter_type'
+        current_params = model.objects.filter(body=self.id)
+
+        new_param = True
+        if current_params:
+            for param in current_params:
+                param_dict = model_to_dict(param)
+                diff_values = {k: kwargs[k] for k in kwargs if k in param_dict and kwargs[k] != param_dict[k]}
+                if len(diff_values) == 0:
+                    new_param = False
+                elif len(diff_values) == 1 and 'preferred' in diff_values:
+                    param.preferred = kwargs['preferred']
+                    param.save()
+                    new_param = False
+                elif len(diff_values) == 1 and 'body' in diff_values:
+                    new_param = False
+                else:
+                    if param_dict[type_key] == kwargs[type_key] and kwargs['preferred'] and param_dict['preferred']:
+                        param.preferred = False
+                        param.save()
+
+        if new_param is True:
+            kwargs['body'] = self
+            try:
+                model.objects.create(**kwargs)
+            except TypeError:
+                logger.warning("Input dictionary contains invalid keywords")
+                new_param = False
+
+        return new_param
+
     class Meta:
         verbose_name = _('Minor Body')
         verbose_name_plural = _('Minor Bodies')
@@ -389,6 +500,71 @@ class Body(models.Model):
                 and self.name is not None and self.name != u'':
             return_name = self.name
         return u'%s is %sactive' % (return_name, text)
+
+
+@python_2_unicode_compatible
+class Designations(models.Model):
+    body        = models.ForeignKey(Body, on_delete=models.CASCADE)
+    desig       = models.CharField('Designation', blank=True, null=True, max_length=30)
+    desig_type  = models.CharField('Designation Type', blank=True, choices=DESIG_CHOICES, null=True, max_length=1)
+    preferred    = models.BooleanField('Is this the preferred designation of this type?', default=False)
+    packed      = models.BooleanField('Is this a packed designation?', default=False)
+    desig_notes = models.CharField('Notes on Nomenclature', max_length=30, blank=True, null=True)
+
+    class Meta:
+        verbose_name = _('Object Designation')
+        verbose_name_plural = _('Object Designations')
+        db_table = 'ingest_names'
+
+    def __str__(self):
+        return "%s is a designation for %s (pk=%s)" % (self.desig, self.body.name, self.body.id)
+
+
+@python_2_unicode_compatible
+class PhysicalParameters(models.Model):
+    body           = models.ForeignKey(Body, on_delete=models.CASCADE)
+    parameter_type = models.CharField('Physical Parameter Type', blank=True, null=True, choices=PARAM_CHOICES, max_length=2)
+    value          = models.FloatField('Physical Parameter Value', blank=True, null=True)
+    error          = models.FloatField('Physical Parameter Error', blank=True, null=True)
+    value2         = models.FloatField('2nd component of Physical Parameter', blank=True, null=True)
+    error2         = models.FloatField('Error for 2nd component of Physical Parameter', blank=True, null=True)
+    units          = models.CharField('Physical Parameter Units', blank=True, null=True, max_length=30)
+    quality        = models.CharField('Physical Parameter Quality Designation', blank=True, null=True, max_length=10)
+    preferred      = models.BooleanField('Is this the preferred value for this type of parameter?', default=False)
+    reference      = models.CharField('Reference for this value', max_length=50, blank=True, null=True)
+    notes          = models.CharField('Notes on this value', max_length=50, blank=True, null=True)
+
+    class Meta:
+        verbose_name = _('Physical Parameter')
+        verbose_name_plural = _('Physical Parameters')
+        db_table = 'ingest_physical_parameters'
+
+    def __str__(self):
+        if self.value2:
+            return "({}, {}) is the {} for {} (pk={})".format(self.value, self.value2, self.get_parameter_type_display(), self.body.name, self.body.id)
+        else:
+            return "{}{} is the {} for {} (pk={})".format(self.value, self.units, self.get_parameter_type_display(), self.body.name, self.body.id)
+
+
+@python_2_unicode_compatible
+class ColorValues(models.Model):
+    body          = models.ForeignKey(Body, on_delete=models.CASCADE)
+    color_band    = models.CharField('X-X filter combination', blank=True, null=True, max_length=30)
+    value         = models.FloatField('Color Value', blank=True, null=True)
+    error         = models.FloatField('Color error', blank=True, null=True)
+    units         = models.CharField('Color Units', blank=True, null=True, max_length=30)
+    quality       = models.CharField('Color Quality Designation', blank=True, null=True, max_length=10)
+    preferred     = models.BooleanField('Is this the preferred value for this color band?', default=False)
+    reference     = models.CharField('Reference for this value', max_length=50, blank=True, null=True)
+    notes         = models.CharField('Notes on this value', max_length=50, blank=True, null=True)
+
+    class Meta:
+        verbose_name = _('Color Value')
+        verbose_name_plural = _('Color Values')
+        db_table = 'ingest_colors'
+
+    def __str__(self):
+        return "{} is the {} color for {} (pk={})".format(self.value, self.color_band, self.body.name, self.body.id)
 
 
 @python_2_unicode_compatible

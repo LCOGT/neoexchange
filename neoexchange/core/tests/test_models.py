@@ -417,6 +417,121 @@ class TestComputeFOM(TestCase):
 
         self.assertEqual(expected_FOM, FOM)
 
+
+class TestSavePhysicalParameters(TestCase):
+
+    def setUp(self):
+        params = {  'name' : '21545',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    'not_seen'      : 2.3942,
+                    'arc_length'    : 0.4859,
+                    'score'         : 83,
+                    'abs_mag'       : 19.8
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+
+        self.phys1 = {'parameter_type': 'H',
+                 'value': 24.56,
+                 'error': 0.05,
+                 'units': 'mag',
+                 'reference' : "Bob and Friends, 2019",
+                 'notes': 'This is a fake entry',
+                 'preferred': True
+                 }
+
+        self.phys2 = {'parameter_type': 'P',
+                 'value': 8.7,
+                 'error': 0.5,
+                 'units': 'h',
+                 'reference': "Bob and Friends, 2019",
+                 'notes': 'This is a fake entry',
+                 'preferred': True
+                 }
+
+        self.col1 = {'color_band': 'V-R',
+                 'value': .87,
+                 'error': 0.05,
+                 'units': 'mag',
+                 'reference': "Bob and Friends, 2019",
+                 'notes': 'This is a fake entry',
+                 'preferred': True
+                 }
+
+        self.des1 = {'desig_type': 'N',
+                 'desig': 'Rock&Roll',
+                 'desig_notes': 'This is a fake entry',
+                 'preferred': True
+                 }
+
+    def test_save_get_param(self):
+        self.body.save_physical_parameters(self.phys1)
+        self.body.save_physical_parameters(self.phys2)
+
+        get_db = self.body.get_physical_parameters()
+
+        self.assertEqual(self.phys1['value'], get_db[0]['value'])
+        self.assertEqual(self.phys2['value'], get_db[1]['value'])
+        self.assertEqual('Absolute Magnitude', get_db[0]['type_display'])
+
+    def test_wont_save_same_data_twice(self):
+        self.body.save_physical_parameters(self.phys1)
+        self.body.save_physical_parameters(self.phys1)
+        self.body.save_physical_parameters(self.phys2)
+        self.body.save_physical_parameters(self.phys1)
+        self.body.save_physical_parameters(self.phys2)
+
+        get_db = self.body.get_physical_parameters()
+
+        self.assertEqual(len(get_db), 2)
+
+    def test_overwrite_priority(self):
+        self.body.save_physical_parameters(self.phys1)
+        self.body.save_physical_parameters(self.phys2)
+
+        new_data = self.phys1
+        new_data['value'] = 12.5
+        self.body.save_physical_parameters(new_data)
+
+        get_db = self.body.get_physical_parameters()
+
+        self.assertFalse(get_db[0]['preferred'])
+        self.assertTrue(get_db[1]['preferred'])
+        self.assertTrue(get_db[2]['preferred'])
+
+    def test_change_priority(self):
+
+        new_data1 = self.phys1.copy()
+        new_data_old = self.phys1.copy()
+        self.body.save_physical_parameters(self.phys1)
+
+        new_data1['value'] = 12.5
+        self.body.save_physical_parameters(new_data1)
+
+        self.body.save_physical_parameters(self.phys2)
+
+        new_data_old['preferred'] = True
+
+        self.body.save_physical_parameters(new_data_old)
+
+        get_db = self.body.get_physical_parameters()
+
+        self.assertTrue(get_db[0]['preferred'])
+        self.assertFalse(get_db[1]['preferred'])
+        self.assertTrue(get_db[2]['preferred'])
+
+
 class TestSuperBlock(TestCase):
 
     def setUp(self):

@@ -202,6 +202,7 @@ def determine_time_of_perih(meandist, meananom, epochofel):
 
     return epochofperih
 
+
 def convert_ast_to_comet(kwargs, body):
     """Converts the parameters of an object initially identified as an asteroid
     to a comet.
@@ -209,7 +210,7 @@ def convert_ast_to_comet(kwargs, body):
     model object.
     """
     params = kwargs
-    if kwargs['source_type'] in ['C', 'H'] or kwargs.get('eccentricity', 0.0) > 0.9:
+    if kwargs['source_type'] == 'C' or kwargs.get('eccentricity', 0.0) > 0.9 or (kwargs['source_type'] == 'A' and kwargs['source_subtype_1'] == 'H'):
         if body:
             params['meandist'] = params.get('meandist', body.meandist)
             params['eccentricity'] = params.get('eccentricity', body.eccentricity)
