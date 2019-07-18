@@ -4850,24 +4850,9 @@ class TestFetchJPLPhysParams(TestCase):
                     'origin'        : 'M',
                     }
         self.body, created = Body.objects.get_or_create(**params)
-    
-#    def test_1(self):
-#        bodies = Body.objects.all()
-#        expected_body = bodies[0]
-#        
-#        jpl_body = fetch_jpl_phys_params(bodies[0])
-#        
-#        self.assertEqual(expected_body, jpl_body)
-#    
-#    def test_2(self):
-#        bodies = Body.objects.all()
-#        expected_body = bodies[0]
-#        
-#        jpl_body = fetch_jpl_alt_des(bodies[0])
-#        
-#        self.assertEqual(expected_body, jpl_body)
 
-    def test_3(self):
+
+    def test_1(self):
         bodies = Body.objects.all()
         expected_body = bodies[0]
         
