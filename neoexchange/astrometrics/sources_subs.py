@@ -2382,26 +2382,6 @@ def read_solar_standards(standards_file):
     return standards
 
 
-#def fetch_jpl_phys_params(body):
-#    jpl_url_base = 'https://ssd-api.jpl.nasa.gov/sbdb.api'   
-#    request_url = jpl_url_base + '?sstr={}&phys-par=Y'.format(body.current_name())
-#    resp = requests.get(request_url, timeout=20, verify=True).json()
-#    
-#    pp = pprint.PrettyPrinter(indent=4)
-#    pp.pprint(resp)
-#    return body
-
-
-#def fetch_jpl_alt_des(body):
-#    jpl_url_base = 'https://ssd-api.jpl.nasa.gov/sbdb.api'
-#    request_url = jpl_url_base + '?sstr={}&alt-des=Y'.format(body.current_name())
-#    resp = requests.get(request_url, timeout=20, verify=True).json()
-#    
-#    pp = pprint.PrettyPrinter(indent=4)
-#    pp.pprint(resp)
-#    return body
-
-
 def fetch_jpl_physparams_altdes_noorbit(body):
     jpl_url_base = 'https://ssd-api.jpl.nasa.gov/sbdb.api'
     request_url = jpl_url_base + '?sstr={}&phys-par=Y&alt-des=Y&no-orbit=Y'.format(body.current_name())
@@ -2414,8 +2394,7 @@ def fetch_jpl_physparams_altdes_noorbit(body):
     return body
 
 
-#def jpl_physparams_altdes():
-#dictionary?
+#dictionary
 #absolute magnitude, magnitude slope,diameter,extent,GM,bulk density, 
 #rotation period, pole direction, geometric albedo, B-V, U-B, 
 #Tholen spectral type, SMASSII spectral type
