@@ -2033,6 +2033,8 @@ class TestUpdate_MPC_orbit(TestCase):
                              'fast_moving' : False,
                              'score' : None,
                              'source_type' : 'N',
+                             'source_subtype_1' : None,
+                             'source_subtype_2': None,
                              'update_time' : datetime(2015, 10, 9, 0),
                              'updated' : True,
                              'urgency' : None
