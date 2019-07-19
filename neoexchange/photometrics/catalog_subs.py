@@ -23,7 +23,7 @@ from datetime import datetime, timedelta
 from math import sqrt, log10, log, degrees
 from collections import OrderedDict
 import time
-from requests.exceptions import ReadTimeout, ConnectTimeout
+from requests.exceptions import ReadTimeout, ConnectTimeout, ConnectionError
 import re
 import warnings
 
@@ -116,13 +116,13 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
         query_service.TIMEOUT = 60
         try:
             result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=cat_mapping[cat_name])
-        except ReadTimeout:
+        except (ReadTimeout, ConnectionError):
             logger.warning("Timeout seen querying {}".format(query_service.VIZIER_SERVER))
             query_service.TIMEOUT = 120
             result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=cat_mapping[cat_name])
         except ConnectTimeout:
             old_server = query_service.VIZIER_SERVER
-            query_service.VIZIER_SERVER = 'vizier.hia.nrc.ca'
+            query_service.VIZIER_SERVER = 'vizier.cfa.harvard.edu'
             logger.warning("Timeout querying {}. Switching to {}".format(old_server, query_service.VIZIER_SERVER))
             result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=cat_mapping[cat_name])
         # resulting catalog table
