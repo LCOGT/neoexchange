@@ -269,7 +269,7 @@ def cross_match(FITS_table, cat_table, cat_name="UCAC4", cross_match_diff_thresh
                             ra_cat_2 = ra_table_2_temp
                             rmag_cat_1 = rmag_table_1_temp
                             rmag_cat_2 = rmag_table_2_temp
-                            if rmag_cat_1 is not None and rmag_cat_2 is not None:
+                            if rmag_cat_1 is not None and rmag_cat_2 is not None and np.isnan(rmag_cat_1) is False and np.isnan(rmag_cat_2) is False:
                                 rmag_diff = abs(rmag_cat_1 - rmag_cat_2)
                             else:
                                 rmag_diff = None
@@ -1088,7 +1088,7 @@ def subset_catalog_table(fits_table, column_mapping):
     return new_table
 
 
-def get_catalog_items(header_items, table, catalog_type='LCOGT', flag_filter=0):
+def get_catalog_items_old(header_items, table, catalog_type='LCOGT', flag_filter=0):
     """Extract the needed columns specified in the mapping from the FITS
     binary table. Sources with a FLAGS value greater than [flag_filter]
     will not be returned.
@@ -1149,6 +1149,57 @@ def get_catalog_items(header_items, table, catalog_type='LCOGT', flag_filter=0):
             out_table.add_row(source_items)
     return out_table
 
+
+def get_catalog_items_new(header_items, table, catalog_type='LCOGT', flag_filter=0):
+    """Extract the needed columns specified in the mapping from the FITS
+    binary table. Sources with a FLAGS value greater than [flag_filter]
+    will not be returned.
+    The sources in the catalog are returned as an AstroPy Table containing
+    the subset of columns specified in the table mapping."""
+
+    if catalog_type == 'LCOGT':
+        hdr_mapping, tbl_mapping = oracdr_catalog_mapping()
+    elif catalog_type == 'FITS_LDAC':
+        hdr_mapping, tbl_mapping = fitsldac_catalog_mapping()
+    elif catalog_type == 'BANZAI':
+        hdr_mapping, tbl_mapping = banzai_catalog_mapping()
+    elif catalog_type == 'BANZAI_LDAC':
+        hdr_mapping, tbl_mapping = banzai_ldac_catalog_mapping()
+    else:
+        logger.error("Unsupported catalog mapping: %s", catalog_type)
+        return None
+
+    # Check if all columns exist first
+    for column in tbl_mapping.values():
+        if column not in table.names:
+            raise FITSTblException(column)
+            return None
+
+    new_table = subset_catalog_table(table, tbl_mapping)
+    # Rename columns
+    for new_name in tbl_mapping:
+        new_table.rename_column(tbl_mapping[new_name], new_name)
+
+    # Filter on flags first
+    if 'flags' in tbl_mapping:
+         size_before = len(new_table)
+         new_table = new_table[new_table['flags'] <= flag_filter]
+         size_after = len(new_table)
+         logger.debug("Filtered table. Number of sources {}->{}".format(size_before, size_after))
+
+    # Convert columns
+    new_table['obs_ra_err'] = np.sqrt(new_table['obs_ra_err'])
+    new_table['obs_dec_err'] = np.sqrt(new_table['obs_dec_err'])
+    FLUX2MAG = 2.5/log(10)
+    new_table['obs_mag_err'] = FLUX2MAG * (new_table['obs_mag_err'] / new_table['obs_mag'])
+    new_table['obs_mag'] = -2.5 * np.log10(new_table['obs_mag'])
+    if 'threshold' in tbl_mapping.keys() and 'MU_' in tbl_mapping['threshold'].upper():
+        scale = header_items['pixel_scale'] * header_items['pixel_scale']
+        new_table['threshold'] = np.power(10, (new_table['threshold']/-2.5)) * scale
+    if header_items.get('zeropoint', -99) != -99:
+        new_table['obs_mag'] += header_items['zeropoint']
+
+    return new_table
 
 def update_ldac_catalog_wcs(fits_image_file, fits_catalog, overwrite=True):
     """Updates the world co-ordinates (ALPHA_J2000, DELTA_J2000) in a FITS LDAC
@@ -1212,7 +1263,7 @@ def update_ldac_catalog_wcs(fits_image_file, fits_catalog, overwrite=True):
     return status
 
 
-def extract_catalog(catfile, catalog_type='LCOGT', flag_filter=0):
+def extract_catalog(catfile, catalog_type='LCOGT', flag_filter=0, new=True):
     """High-level routine to read LCOGT FITS catalogs from <catfile>.
     This returns a dictionary of needed header items and an AstroPy table of
     the sources that pass the [flag_filter] cut-off or None if the file could
@@ -1224,7 +1275,10 @@ def extract_catalog(catfile, catalog_type='LCOGT', flag_filter=0):
     if len(fits_header) != 0 and len(fits_table) != 0:
         header = get_catalog_header(fits_header, catalog_type)
         # get_catalog_items() is the slow part
-        table = get_catalog_items(header, fits_table, catalog_type, flag_filter)
+        if new:
+            table = get_catalog_items_new(header, fits_table, catalog_type, flag_filter)
+        else:
+            table = get_catalog_items_old(header, fits_table, catalog_type, flag_filter)
 
     return header, table
 
@@ -1233,7 +1287,7 @@ def update_zeropoint(header, table, avg_zeropoint, std_zeropoint):
 
     header['zeropoint'] = avg_zeropoint
     header['zeropoint_err'] = std_zeropoint
-    header['zeropoint_src'] = 'py_zp_match-V0.1'
+    header['zeropoint_src'] = 'py_zp_match-V0.2'
 
     for source in table:
         source['obs_mag'] += avg_zeropoint
