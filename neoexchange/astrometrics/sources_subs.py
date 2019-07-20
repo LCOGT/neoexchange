@@ -2388,16 +2388,102 @@ def fetch_jpl_physparams_altdes_noorbit(body):
     resp = requests.get(request_url, timeout=20, verify=True).json()
     
     pp = pprint.PrettyPrinter(indent=4)
-#    pp.pprint(resp['phys_par'])
-    for par in resp['phys_par']:
-        print(par)
-    return body
+    pp.pprint(resp['phys_par'])
+    #for par in resp['phys_par']:
+        #print(par)
+        #return par
+
+
+        
+
+    
+    
+    for p in resp['phys_par']:
+        if 'H' in p['name']: #absolute magnitude
+            p_type = 'H'
+        elif 'G' in p['name']:#magnitude (phase) slope
+            p_type = 'G'
+        elif 'diameter' in p['name']:#diameter
+            p_type = 'D'     
+        #elif p_name = 'extent':#extent
+        elif 'GM' in p['name']:#GM
+            p_type = 'M'
+        elif 'density' in p['name']:#density
+            p_type = 'R'
+        elif 'rot_per' in p['name']:#rotation period
+            p_type = 'P'
+        elif 'pole' in p['name']:#pole direction
+            p_type = 'O'
+        elif 'albedo' in p['name']:#geometric albedo
+            p_type = 'ab'
+        elif 'color' in p['desc']:
+            continue 
+        elif 'spectral' in p['desc']:
+            continue
+        else:
+            p_type = p['name']
+
+        try:
+            jpl_value = float(p['value'])
+        except (TypeError, ValueError):
+            jpl_value = p['value']
+        try:
+            jpl_error = float(p['sigma'])
+        except (TypeError, ValueError):
+            jpl_error = p['sigma']
+
+        jpl_value2 = jpl_error2 = None
+
+        if isinstance(jpl_value, str) and '/' in jpl_value:
+            jpl_value,jpl_value2 = jpl_value.split('/')
+            
+        if isinstance(jpl_error, str) and '/' in jpl_error:
+            jpl_error,jpl_error2 = jpl_error.split('/')
+        
+
+
+
+
+        phys_params =   {'parameter_type': p_type,
+            'value': jpl_value,
+            'error': jpl_error,
+            'value2': jpl_value2,
+            'error2': jpl_error2,
+            'units': p['units'],
+            'preferred': True,
+            'reference': p['ref'],
+            'notes': p['notes'],
+            }
+
+        
+        print(phys_params) 
+               
+
+#    for p in resp['phys_par']:
+#        if 'BV' in p['name']:#BV spectral
+#            c_type = 'BV'
+#        elif 'UB' in p['name']:
+#            c_type = 'UB'
+#        
+#        color_values =   {'color_band': c_type,
+#            'value': jpl_value,
+#            'error': jpl_error,
+#            'units': c['units'],
+#            'preferred': True,
+#            'reference': c['ref'],
+#            'notes': c['notes'],
+#            }  
+
+
+#        print(color_values)
+
+
 
 
 #dictionary
-#absolute magnitude, magnitude slope,diameter,extent,GM,bulk density, 
-#rotation period, pole direction, geometric albedo, B-V, U-B, 
-#Tholen spectral type, SMASSII spectral type
+#Physical parameters from jpl: absolute magnitude, magnitude slope,diameter,extent,GM,bulk density, rotation period, pole direction, geometric albedo, 
+#Colors: B-V, U-B, 
+#Spectra: Tholen spectral type, SMASSII spectral type
 
 
 

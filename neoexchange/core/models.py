@@ -178,7 +178,8 @@ PARAM_CHOICES = (
                 ('O', 'Pole Orientation'),
                 ('ab', 'Albedo'),
                 ('Y', 'Yarkovsky Drift'),
-                ('E', 'Coma Extent')
+                ('E', 'Coma Extent'),
+                ('M', 'Mass')
                 )
 
 

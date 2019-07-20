@@ -4861,4 +4861,17 @@ class TestFetchJPLPhysParams(TestCase):
         self.assertEqual(expected_body, jpl_body)
 
 
+    def test_2(self):
+        valueA = "0.007/0.002"
+        if '/' in valueA:
+            valueA1,valueA2 = valueA.split('/')
+            return valueA1, valueA2
+
+        value1 = 0.007
+        value2 = 0.002
+
+        self.assertEqual(value1, valueA1)
+        self.assertEqual(value2, valueA2)
+        
+    
 
