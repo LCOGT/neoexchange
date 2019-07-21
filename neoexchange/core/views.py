@@ -2348,6 +2348,10 @@ def ingest_new_object(orbit_file, obs_file=None, dbg=False):
     if obs_file is None:
         obs_file = orbit_file.replace('neocp', 'dat')
 
+    # If not found, try new-style obs file name
+    if os.path.exists(obs_file) is False:
+        obs_file = orbit_file.replace('.neocp', '_mpc.dat')
+
     local_discovery = False
     try:
         obsfile_fh = open(obs_file, 'r')
