@@ -58,11 +58,8 @@ def reset_database_connection():
 def call_cross_match_and_zeropoint(catfile, std_zeropoint_tolerance=0.1, cat_name="UCAC4",  set_row_limit=10000, rmag_limit="<=15.0"):
 
     if type(catfile) == str:
-
         header, table = extract_catalog(catfile)
-
     else:
-
         header, table = (catfile[0], catfile[1])
 
     start = time.time()
@@ -269,7 +266,7 @@ def cross_match(FITS_table, cat_table, cat_name="UCAC4", cross_match_diff_thresh
                             ra_cat_2 = ra_table_2_temp
                             rmag_cat_1 = rmag_table_1_temp
                             rmag_cat_2 = rmag_table_2_temp
-                            if rmag_cat_1 is not None and rmag_cat_2 is not None and np.isnan(rmag_cat_1) is False and np.isnan(rmag_cat_2) is False:
+                            if rmag_cat_1 is not None and rmag_cat_2 is not None and not np.isnan(rmag_cat_1) and not np.isnan(rmag_cat_2):
                                 rmag_diff = abs(rmag_cat_1 - rmag_cat_2)
                             else:
                                 rmag_diff = None
