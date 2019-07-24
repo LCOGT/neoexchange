@@ -471,7 +471,7 @@ class TestFindOrbRunner(ExternalCodeUnitTest):
 
     # These test use a fake binary name and set dbg=True to echo the generated
     # command line rather than actually executing the real find_orb code.
-    @skipIf(True)
+    @skipIf(True, 'FindOrb is still Broken')
     def test_sitecode_default(self):
         eph_time = datetime(2018, 4, 20)
 
@@ -482,7 +482,7 @@ class TestFindOrbRunner(ExternalCodeUnitTest):
 
         self.assertEqual(expected_status, status)
 
-    @skipIf(True)
+    @skipIf(True, 'FindOrb is still Broken')
     def test_sitecode_T03(self):
         site_code = 'T03'
         eph_time = datetime(2018, 12, 31, 23, 59)
