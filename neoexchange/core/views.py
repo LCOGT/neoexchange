@@ -2614,7 +2614,7 @@ def create_source_measurement(obs_lines, block=None):
                                 logger.warning("Multiple matching satellite frames for %s from %s on %s found" % (params['body'], params['obs_date'], params['site_code']))
                                 continue
                     else:
-                        # If no satelites, check for existing frames, and create new ones
+                        # If no satellites, check for existing frames, and create new ones
                         if frame_list:
                             frame = next((frm for frm in frame_list if frm.sitecode == params['site_code'] and params['obs_date'] == frm.midpoint), None)
                             if not frame:
