@@ -2382,30 +2382,26 @@ def read_solar_standards(standards_file):
     return standards
 
 
-def fetch_jpl_physparams_altdes_noorbit(body):
+def fetch_jpl_physparams_altdes(body):
     jpl_url_base = 'https://ssd-api.jpl.nasa.gov/sbdb.api'
     request_url = jpl_url_base + '?sstr={}&phys-par=Y&alt-des=Y&no-orbit=Y'.format(body.current_name())
     resp = requests.get(request_url, timeout=20, verify=True).json()
     
     pp = pprint.PrettyPrinter(indent=4)
-    pp.pprint(resp['phys_par'])
-    #for par in resp['phys_par']:
-        #print(par)
-        #return par
+    #pp.pprint(resp)
+    pp.pprint(resp['object'])    
+    #pp.pprint(resp['phys_par'])
 
-
-        
-
-    
     
     for p in resp['phys_par']:
-        if 'H' in p['name']: #absolute magnitude
+        if 'H' is p['name']: #absolute magnitude
             p_type = 'H'
-        elif 'G' in p['name']:#magnitude (phase) slope
+        elif 'G' is p['name']:#magnitude (phase) slope
             p_type = 'G'
         elif 'diameter' in p['name']:#diameter
             p_type = 'D'     
-        #elif p_name = 'extent':#extent
+        elif 'extent' in p['name']:#extent
+            continue        
         elif 'GM' in p['name']:#GM
             p_type = 'M'
         elif 'density' in p['name']:#density
@@ -2416,8 +2412,6 @@ def fetch_jpl_physparams_altdes_noorbit(body):
             p_type = 'O'
         elif 'albedo' in p['name']:#geometric albedo
             p_type = 'ab'
-        elif 'color' in p['desc']:
-            continue 
         elif 'spectral' in p['desc']:
             continue
         else:
@@ -2439,9 +2433,7 @@ def fetch_jpl_physparams_altdes_noorbit(body):
             
         if isinstance(jpl_error, str) and '/' in jpl_error:
             jpl_error,jpl_error2 = jpl_error.split('/')
-        
-
-
+    
 
 
         phys_params =   {'parameter_type': p_type,
@@ -2454,36 +2446,151 @@ def fetch_jpl_physparams_altdes_noorbit(body):
             'reference': p['ref'],
             'notes': p['notes'],
             }
-
         
-        print(phys_params) 
-               
 
-#    for p in resp['phys_par']:
-#        if 'BV' in p['name']:#BV spectral
-#            c_type = 'BV'
-#        elif 'UB' in p['name']:
-#            c_type = 'UB'
-#        
-#        color_values =   {'color_band': c_type,
-#            'value': jpl_value,
-#            'error': jpl_error,
-#            'units': c['units'],
-#            'preferred': True,
-#            'reference': c['ref'],
-#            'notes': c['notes'],
-#            }  
+        if 'color' in p['desc']:
+            phys_params['color_band'] = p['title']
+            del phys_params['parameter_type']
+        
+        #body.save_physical_parameters(phys_params)
+        #pp.pprint(phys_params) 
+ 
+ 
+    fullname = resp['object']['fullname']
+    desig1 = None 
+    desig2 = None
+    prov_des = None     
+    if fullname[0] is '(':
+        prov_des = fullname
+    elif ' ' in fullname:
+        space_num = fullname.count(' ')
+        if space_num is 3:
+            part1,part2,part3,part4 = fullname.split(' ')
+            desig1 = part1
+            if part2 [0].isalpha:
+                desig2 = part2
+                prov_des = '{} {}'.format(part3,part4)
+        elif space_num is 2:
+            part1,part2,part3 = fullname.split(' ')
+            desig1 = part1
+            if part2[0].isdigit:
+                prov_des = '{} {}'.format(part2,part3)
+        elif space_num is 1:
+            part1,part2 = fullname.split(' ')
+            desig1 = part1
+            desig2 = part2   
+    elif '/' in fullname: #comet
+        desig1 = fullname
+            
+  
+    print(resp['object']['des_alt'][''])        
+#    numofdes = len(resp['object']['des_alt'])
+#    print(numofdes)
+#    des_alt = resp['object']['des_alt']
+#    print(des_alt[0:4])
+#    for d in des_alt:
+#        if 'pri' in des_alt:
+#            preferred = True
+#        else:
+#            preferred = False
+           
+
+#    if 'rn' in des_alt:
+#        pass
+#    if 'yl' in des_alt:
+#        pass
+
+#        print(preferred)
+
+    obj_des =   {'desig1': desig1,
+        'desig2': desig2, 
+        'desig1_type': '#',
+        'desig2_type': 'N', 
+    #    'desig_type': desig_type, #DESIG CHOICES = ('N', 'Name'),('#', 'Number')
+        'prov_des': prov_des,
+#        'preferred': preferred,
+        #'desig_notes': ,
+        }
+        
+    pp.pprint(obj_des)    
+
+    
+    
+    code = resp['object']['orbit_class']['code']
+    source_type = None
+    source_subtype_1 = None
+    source_subtype_2 = None
+    if 'CEN' in code: #centaur
+        source_type = 'E'
+    elif 'TJN' in code: #jupiter trojan
+        source_type = 'T'
+        source_subtype_1 = 'P5'
+    elif 'TNO' in code: #TransNeptunion Object TNO
+        source_type = 'K'        
+    elif 'IEO' in code:#Atira
+        source_subtype_1 = 'N1'
+    elif 'ATE' in code:#Aten
+        source_subtype_1 = 'N2'
+    elif 'APO' in code:#Apollo
+        source_subtype_1 = 'N3'   
+    elif 'AMO' in code:#Amor
+        source_subtype_1 = 'N4'
+    elif 'IMB' in code:#inner main belt
+        source_subtype_1 = 'MI'
+    elif 'MBA' in code:#main belt
+        source_subtype_1 = 'M'   
+    elif 'OMB' in code:#outer main belt
+        source_subtype_1 = 'MO'
+#    if code is '':#L4
+#        source_subtype_1 = 'T4'
+#    if code is '':#L5
+#        source_subtype_1 = 'T5'
+#    if code is 'MCA':#Mars #MCA mars crossing asteroid?
+#        source_subtype_1 = 'P4'
+    elif 'HYA' in code:#hyperbolic asteroid
+        source_subtype_1 = 'H'
+    elif 'HYP' in code:#hyperbolic comet
+        source_subtype_1 = 'H'
+    elif 'PAA' in code:#parabolic asteroid
+        source_subtype_1 = 'PA'
+    elif 'PAR' in code:#parabolic comet
+        source_subtype_1 = 'PA'
+    elif 'JFC' in code:#Jupiter family comet P<20yrs
+        source_subtype_1 = 'JF'
+    elif 'JFc' in code: #jupiter family comet 2<Tjupiter<3
+        source_subtype_1 = 'JF'
+    elif 'HTC' in code:#Halley type comet
+        source_subtype_1 = 'HT'
 
 
-#        print(color_values)
+    if resp['object']['neo'] is False and resp['object']['pha'] is False:
+        source_subtype_2 = None
+    elif resp['object']['neo'] is True and resp['object']['pha'] is True:
+        source_subtype_2 = 'PH'
+    elif resp['object']['neo'] is True and resp['object']['pha'] is False:
+        source_subtype_2 = 'N'
 
 
+    source_types =   {'source_type': source_type,
+        'source_subtype_1': source_subtype_1,
+        'source_subtype_2': source_subtype_2,
+        }
+
+    pp.pprint(source_types)
 
 
-#dictionary
-#Physical parameters from jpl: absolute magnitude, magnitude slope,diameter,extent,GM,bulk density, rotation period, pole direction, geometric albedo, 
-#Colors: B-V, U-B, 
-#Spectra: Tholen spectral type, SMASSII spectral type
-
+#EXAMPLE  #for comet is fullname = 20D/Westphal
+#
+####{'des': '624',
+#    'des_alt': [{'des': '1948 VD'}, {'pri': 'A907 CF'}],
+#    'fullname': '624 Hektor (A907 CF)',
+#####'kind': 'an',
+#    'neo': False,
+#    'orbit_class': {'code': 'TJN', 'name': 'Jupiter Trojan'},
+#####'orbit_id': '90',
+#    'pha': False,
+#####'prefix': None,
+#####'shortname': '624 Hektor',
+#####'spkid': '2000624'}
 
 

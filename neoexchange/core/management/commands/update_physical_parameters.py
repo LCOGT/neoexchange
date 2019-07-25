@@ -15,7 +15,7 @@ GNU General Public License for more details.
 
 from django.core.management.base import BaseCommand, CommandError
 from core.models import Body
-from astrometrics.sources_subs import fetch_jpl_phys_params
+from astrometrics.sources_subs import fetch_jpl_physparams_altdes
 
 
 class Command(BaseCommand):
@@ -31,10 +31,13 @@ class Command(BaseCommand):
             bodies = Body.objects.filter(name=obj_id)
         else:
             bodies = Body.objects.filter(active=True).exclude(origin='M')
-                   
-        body = fetch_jpl_physparams_altdes_noorbit(body[0])
         
-        print(body)
+        body = bodies[0]
+           
+        fetch_jpl_physparams_altdes(body)
         
+        #print(body)
+        phys_param_results = body.get_physical_parameters()
+        print(phys_param_results)
 
 

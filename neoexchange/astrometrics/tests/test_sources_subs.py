@@ -4834,7 +4834,7 @@ class TestReadSolarStandards(TestCase):
 class TestFetchJPLPhysParams(TestCase):
 
     def setUp(self):
-        params = {  'provisional_name' : '1',
+        params = {  'provisional_name' : '2555',
                     'abs_mag'       : 21.0,
                     'slope'         : 0.15,
                     'epochofel'     : datetime(2015, 3, 19, 00, 00, 00),
@@ -4856,7 +4856,7 @@ class TestFetchJPLPhysParams(TestCase):
         bodies = Body.objects.all()
         expected_body = bodies[0]
         
-        jpl_body = fetch_jpl_physparams_altdes_noorbit(bodies[0])
+        jpl_body = fetch_jpl_physparams_altdes(bodies[0])
         
         self.assertEqual(expected_body, jpl_body)
 
@@ -4865,13 +4865,51 @@ class TestFetchJPLPhysParams(TestCase):
         valueA = "0.007/0.002"
         if '/' in valueA:
             valueA1,valueA2 = valueA.split('/')
-            return valueA1, valueA2
+            
 
-        value1 = 0.007
-        value2 = 0.002
+        value1 = '0.007'
+        value2 = '0.002'
 
         self.assertEqual(value1, valueA1)
         self.assertEqual(value2, valueA2)
+
+
+    def test_3(self):
+        fullname = '2555 Thomas 1980 OC'
+        number = name = prov_des = None     
+        if fullname[0] is '(': #if only (provisional des)
+            prov_des = fullname
+#            des_type = 'number'
+        elif ' ' in fullname: #if there is number+name before (provisional des)
+            #fullname = fullname.strip('(')
+            #if ' ' in fullname: #if space
+            space_num = fullname.count(' ')
+            if space_num is 3: #2555 Thomas 1980 OC
+                part1,part2,part3,part4 = fullname.split(' ')
+                number = part1
+                if part2 [0].isalpha:
+                    name = part2
+                    prov_des = '{} {}'.format(part3,part4)
+            elif space_num is 2: #254857 (2005 RT33)
+                part1,part2,part3 = fullname.split(' ')
+                number = part1
+                if part2[0].isdigit:
+                    prov_des = '{} {}'.format(part2,part3)
+            elif space_num is 1: #16 Psyche
+                part1,part2 = fullname.split(' ')
+                number = part1
+                name = part2   
+        elif '/' in fullname: #comet ex: 20D/Westphal
+            name = fullname
+
+
+
+#        des =   {'number': number,
+#            'name': name,
+#            'trash': trash,
+#            }
+#        print(space_num)
+#        print('number =', number,',', 'name =', name,',', 'prov_des =', prov_des)                    
         
-    
+
 
