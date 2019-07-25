@@ -76,16 +76,24 @@ def run_sextractor(dest_dir, fits_file, binary=None):
 
     return retcode_or_cmdline
 
-def update_fits_header(image_header, astrometry_response):
+def update_fits_header(image_header, response_json):
+    '''Update the fits header <image_header> with results of astrometric fit from <response_json>
+    The updated header is returned
+    '''
     
     header_keywords_to_update = ['CTYPE1', 'CTYPE2', 'CRPIX1', 'CRPIX2', 'CRVAL1',
                                      'CRVAL2', 'CD1_1', 'CD1_2', 'CD2_1', 'CD2_2']
 
     for keyword in header_keywords_to_update:
-        image_header[keyword] = astrometry_response.json()[keyword]
+        image_header[keyword] = response_json[keyword]
 
-    if astrometry_response.json()['solved'] is True:
+    if response_json['solved'] is True:
+        #update wcs status, rms error, # of match sources, catalog type in header
         image_header['WCSERR'] = 0
+        image_header['WCSRDRES'] = response_json['rms_error']
+        image_header['WCSMATCH'] = response_json['num_source_matches']
+        image_header['WCCATTYP'] = 'GAIA-DR2'
+
     return image_header 
 
 def add_ra_dec_to_catalog(catalog, header):
@@ -126,7 +134,7 @@ if __name__ == "__main__":
             if astrometry_response.json()['solved'] is True:
                 print('solved')
                 #update fits header
-                new_header = update_fits_header(header, astrometry_response)
+                new_header = update_fits_header(header, astrometry_response.json())
                 # Write out new file
                 hdu_list[0].header = new_header
                 new_file =fits_file.replace('g00', 'g91')
