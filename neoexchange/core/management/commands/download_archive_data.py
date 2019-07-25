@@ -56,10 +56,8 @@ class Command(BaseCommand):
         if options['verbosity'] < 1:
             verbose = False
 
-        username = os.environ.get('NEOX_ODIN_USER', None)
-        password = os.environ.get('NEOX_ODIN_PASSWD', None)
         archive_token = os.environ.get('ARCHIVE_TOKEN', None)
-        if (username is not None and password is not None) or archive_token is not None:
+        if archive_token is not None:
             auth_headers = archive_login(username, password)
             start_date, end_date = determine_archive_start_end(obs_date)
             for proposal in proposals:
@@ -103,4 +101,4 @@ class Command(BaseCommand):
                             for obs in range(2, spec_count+1):
                                 make_spec(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, frame['PROPID'], obs)
         else:
-            self.stdout.write("No username and password or token defined (set NEOX_ODIN_USER and NEOX_ODIN_PASSWD or ARCHIVE_TOKEN)")
+            self.stdout.write("No token defined (set ARCHIVE_TOKEN environment variable)")

@@ -251,9 +251,6 @@ EMAIL_HOST_PASSWORD = os.environ.get('NEOX_EMAIL_PASSWORD', '')
 # LCO Api settings #
 ####################
 
-NEO_ODIN_USER = os.environ.get('NEOX_ODIN_USER', '')
-NEO_ODIN_PASSWD = os.environ.get('NEOX_ODIN_PASSWD', '')
-
 THUMBNAIL_URL = 'https://thumbnails.lco.global/'
 
 CONFIGDB_API_URL = 'http://configdb.lco.gtn/'
