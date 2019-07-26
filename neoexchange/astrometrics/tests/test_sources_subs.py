@@ -4834,7 +4834,7 @@ class TestReadSolarStandards(TestCase):
 class TestFetchJPLPhysParams(TestCase):
 
     def setUp(self):
-        params = {  'provisional_name' : '2555',
+        params = {  'provisional_name' : '7777',
                     'abs_mag'       : 21.0,
                     'slope'         : 0.15,
                     'epochofel'     : datetime(2015, 3, 19, 00, 00, 00),

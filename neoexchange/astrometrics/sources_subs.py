@@ -2457,42 +2457,42 @@ def fetch_jpl_physparams_altdes(body):
  
  
     fullname = resp['object']['fullname']
-    desig1 = None 
-    desig2 = None
-    prov_des = None     
+    number = name = prov_des = None     
     if fullname[0] is '(':
         prov_des = fullname
     elif ' ' in fullname:
         space_num = fullname.count(' ')
         if space_num is 3:
             part1,part2,part3,part4 = fullname.split(' ')
-            desig1 = part1
+            number = part1
             if part2 [0].isalpha:
-                desig2 = part2
+                name = part2
                 prov_des = '{} {}'.format(part3,part4)
         elif space_num is 2:
             part1,part2,part3 = fullname.split(' ')
-            desig1 = part1
+            number = part1
             if part2[0].isdigit:
                 prov_des = '{} {}'.format(part2,part3)
         elif space_num is 1:
             part1,part2 = fullname.split(' ')
-            desig1 = part1
-            desig2 = part2   
+            number = part1
+            name = part2   
     elif '/' in fullname: #comet
-        desig1 = fullname
+        part1,part2 = fullname.split('/')
+        number = part1
+        name = part2
             
   
-    print(resp['object']['des_alt'][''])        
-#    numofdes = len(resp['object']['des_alt'])
-#    print(numofdes)
-#    des_alt = resp['object']['des_alt']
+    print(resp['object']['des_alt'])        
+    numofdes = len(resp['object']['des_alt'])
+    print(numofdes)
+    des_alt = resp['object']['des_alt']
 #    print(des_alt[0:4])
-#    for d in des_alt:
-#        if 'pri' in des_alt:
-#            preferred = True
-#        else:
-#            preferred = False
+    for d in des_alt:
+        if 'pri' in des_alt:
+            preferred = True
+        else:
+            preferred = False
            
 
 #    if 'rn' in des_alt:
@@ -2502,17 +2502,29 @@ def fetch_jpl_physparams_altdes(body):
 
 #        print(preferred)
 
-    obj_des =   {'desig1': desig1,
-        'desig2': desig2, 
-        'desig1_type': '#',
-        'desig2_type': 'N', 
-    #    'desig_type': desig_type, #DESIG CHOICES = ('N', 'Name'),('#', 'Number')
-        'prov_des': prov_des,
+    designation =   {'desig': number, 
+        'desig_type': '#', 
 #        'preferred': preferred,
-        #'desig_notes': ,
+#        'desig_notes': ,
+        }
+
+    pp.pprint(designation)
+
+    designation =   {'desig': name, 
+        'desig_type': 'N', 
+#        'preferred': preferred,
+#        'desig_notes': ,
+        }
+
+    pp.pprint(designation)
+
+    designation =   {'desig': prov_des, 
+        'desig_type': 'P', 
+        'preferred': preferred,
+#        'desig_notes': ,
         }
         
-    pp.pprint(obj_des)    
+    pp.pprint(designation)    
 
     
     
@@ -2541,11 +2553,11 @@ def fetch_jpl_physparams_altdes(body):
         source_subtype_1 = 'M'   
     elif 'OMB' in code:#outer main belt
         source_subtype_1 = 'MO'
-#    if code is '':#L4
+#    if code is '##':#L4
 #        source_subtype_1 = 'T4'
-#    if code is '':#L5
+#    if code is '##':#L5
 #        source_subtype_1 = 'T5'
-#    if code is 'MCA':#Mars #MCA mars crossing asteroid?
+#    if code is 'MCA':#Mars #MCA = mars crossing asteroid?
 #        source_subtype_1 = 'P4'
     elif 'HYA' in code:#hyperbolic asteroid
         source_subtype_1 = 'H'
