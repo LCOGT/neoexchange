@@ -2591,18 +2591,4 @@ def fetch_jpl_physparams_altdes(body):
     pp.pprint(source_types)
 
 
-#EXAMPLE  #for comet is fullname = 20D/Westphal
-#
-####{'des': '624',
-#    'des_alt': [{'des': '1948 VD'}, {'pri': 'A907 CF'}],
-#    'fullname': '624 Hektor (A907 CF)',
-#####'kind': 'an',
-#    'neo': False,
-#    'orbit_class': {'code': 'TJN', 'name': 'Jupiter Trojan'},
-#####'orbit_id': '90',
-#    'pha': False,
-#####'prefix': None,
-#####'shortname': '624 Hektor',
-#####'spkid': '2000624'}
-
 
