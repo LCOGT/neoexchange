@@ -104,14 +104,20 @@ class Command(BaseCommand):
                     if "tar.gz" in frame['filename']:
                         tar_path = make_data_dir(out_path, frame)
                         movie_file = make_movie(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, frame['PROPID'])
-                        movie_file_up = movie_file.replace(out_path,"")[1:]
-                        file = default_storage.open(movie_file_up, 'wb+')
-                        with open(movie_file,'rb+') as f:
-                            file.write(f.read())
-                        file.close()
+                        self.save_file(movie_file, out_path)
                         spec_plot, spec_count = make_spec(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, frame['PROPID'], 1)
+                        self.save_file(spec_plot, out_path)
                         if spec_count > 1:
                             for obs in range(2, spec_count+1):
-                                make_spec(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, frame['PROPID'], obs)
+                                spec_plot, spec_count = make_spec(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, frame['PROPID'], obs)
+                                self.save_file(spec_plot, out_path)
         else:
             self.stdout.write("No username and password or token defined (set NEOX_ODIN_USER and NEOX_ODIN_PASSWD or ARCHIVE_TOKEN)")
+
+    def save_file(self, filename, out_path):
+        filename_up = filename.replace(out_path,"")[1:]
+        file = default_storage.open(filename_up, 'wb+')
+        with open(filename,'rb+') as f:
+            file.write(f.read())
+        file.close()
+        return

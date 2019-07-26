@@ -3025,9 +3025,8 @@ def make_spec(date_obs, obj, req, base_dir, prop, obs_num):
        <pk>: pk of block (not superblock)
     """
     path = os.path.join(base_dir, obj + '_' + req)
-    # filenames = glob(os.path.join(path, '*_2df_ex.fits'))  # checks for file in path
-    # filenames = default_storage.listdir(path)
-    filenames = [os.path.join(path,f) for f in default_storage.listdir(path)[1] if f.endswith("*_2df_ex.fits")]
+    filenames = glob(os.path.join(path, '*_2df_ex.fits'))  # checks for file in path
+    # filenames = [os.path.join(path,f) for f in default_storage.listdir(path)[1] if f.endswith("*_2df_ex.fits")]
     spectra_path = None
     tar_path = unpack_path = None
     obs_num = str(obs_num)
