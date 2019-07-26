@@ -960,7 +960,9 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
                 self.success = False
                 msg = "It was not possible to submit your request to the scheduler."
                 if sched_params.get('error_msg', None):
-                    msg += "\nAdditional information:" + sched_params['error_msg']
+                    msg += "\nAdditional information:"
+                    error_msgs = sched_params['error_msg'].get('non_field_errors', [])
+                    msg += "\n".join(error_msgs)
                 messages.warning(self.request, msg)
             return super(ScheduleSubmit, self).form_valid(new_form)
 
@@ -1680,7 +1682,7 @@ def record_block(tracking_number, params, form_data, target):
             obstype = Block.OPT_IMAGING
             if params.get('spectroscopy', False):
                 obstype = Block.OPT_SPECTRA
-                if request_type == 'SIDEREAL':
+                if request_type == 'SIDEREAL' or request_type == 'ICRS':
                     obstype = Block.OPT_SPECTRA_CALIB
 
             # sort site vs camera
@@ -1709,7 +1711,7 @@ def record_block(tracking_number, params, form_data, target):
                              'exp_length'      : params['exp_time'],
                              'active'   : True
                            }
-            if request_type == 'SIDEREAL' and params.get('solar_analog', False) is True and len(params.get('calibsource', {})) > 0:
+            if (request_type == 'SIDEREAL' or request_type == 'ICRS') and params.get('solar_analog', False) is True and len(params.get('calibsource', {})) > 0:
                 try:
                     calib_source = StaticSource.objects.get(pk=params['calibsource']['id'])
                 except StaticSource.DoesNotExist:
@@ -1718,7 +1720,7 @@ def record_block(tracking_number, params, form_data, target):
                 block_kwargs['body'] = None
                 block_kwargs['calibsource'] = calib_source
                 block_kwargs['exp_length'] = params['calibsrc_exptime']
-            elif request_type == 'SIDEREAL':
+            elif request_type == 'SIDEREAL' or request_type == 'ICRS':
                 block_kwargs['body'] = None
                 block_kwargs['calibsource'] = target
             else:
@@ -2348,6 +2350,10 @@ def ingest_new_object(orbit_file, obs_file=None, dbg=False):
     if obs_file is None:
         obs_file = orbit_file.replace('neocp', 'dat')
 
+    # If not found, try new-style obs file name
+    if os.path.exists(obs_file) is False:
+        obs_file = orbit_file.replace('.neocp', '_mpc.dat')
+
     local_discovery = False
     try:
         obsfile_fh = open(obs_file, 'r')
@@ -2610,7 +2616,7 @@ def create_source_measurement(obs_lines, block=None):
                                 logger.warning("Multiple matching satellite frames for %s from %s on %s found" % (params['body'], params['obs_date'], params['site_code']))
                                 continue
                     else:
-                        # If no satelites, check for existing frames, and create new ones
+                        # If no satellites, check for existing frames, and create new ones
                         if frame_list:
                             frame = next((frm for frm in frame_list if frm.sitecode == params['site_code'] and params['obs_date'] == frm.midpoint), None)
                             if not frame:

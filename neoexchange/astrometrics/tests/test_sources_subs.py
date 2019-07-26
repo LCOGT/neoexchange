@@ -26,7 +26,7 @@ from bs4 import BeautifulSoup
 from django.test import TestCase
 from django.forms.models import model_to_dict
 
-from core.models import Body, Proposal, Block
+from core.models import Body, Proposal, Block, StaticSource
 from astrometrics.ephem_subs import determine_darkness_times
 from astrometrics.time_subs import datetime2mjd_utc
 from neox.tests.mocks import MockDateTime, mock_expand_cadence, mock_fetchpage_and_make_soup
@@ -655,6 +655,14 @@ class TestSubmitBlockToScheduler(TestCase):
                               }
         self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
 
+        ssource_params = {  'name' : 'SA107-684',
+                            'ra' : 234.3,
+                            'dec' : -0.16,
+                            'vmag' : 7.0,
+                            'source_type' : StaticSource.SOLAR_STANDARD
+                        }
+        self.ssource = StaticSource.objects.create(**ssource_params)
+
     @patch('astrometrics.sources_subs.requests.post')
     def test_submit_body_for_cpt(self, mock_post):
         mock_post.return_value.status_code = 200
@@ -690,6 +698,50 @@ class TestSubmitBlockToScheduler(TestCase):
         for block in blocks:
             self.assertEqual(block.block_start, block.superblock.block_start)
             self.assertEqual(block.block_end, block.superblock.block_end)
+
+    @patch('astrometrics.sources_subs.requests.post')
+    def test_submit_body_for_cpt_V3(self, mock_post):
+        mock_post.return_value.status_code = 200
+
+        mock_post.return_value.json.return_value = {'id': 999, 'requests' :
+            [{'id': 111, 'configurations' :
+                [{'id' : 222, 'target' : {'type' : 'ORBITAL-ELEMENTS' }}
+                ],
+            'duration' : 1820}]}
+
+        site_code = 'K92'
+        utc_date = datetime.now()+timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 18,
+                    'exp_time' : 50.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'filter_pattern' : 'w',
+                    'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson'
+                 }
+
+        resp, sched_params = submit_block_to_scheduler(self.body_elements, params)
+        self.assertEqual(resp, '999')
+
+        # store block
+        data = params
+        data['proposal_code'] = 'LCO2015A-009'
+        data['exp_length'] = 91
+        block_resp = record_block(resp, sched_params, data, self.body)
+        self.assertEqual(block_resp, True)
+
+        # Test that block has same start/end as superblock
+        blocks = Block.objects.filter(active=True)
+        for block in blocks:
+            self.assertEqual(block.block_start, block.superblock.block_start)
+            self.assertEqual(block.block_end, block.superblock.block_end)
+            self.assertEqual(block.request_number, '111')
+            self.assertEqual(block.obstype, Block.OPT_IMAGING)
+            self.assertEqual(block.num_exposures, params['exp_count'])
+            self.assertEqual(block.exp_length, params['exp_time'])
 
     @patch('astrometrics.sources_subs.expand_cadence', mock_expand_cadence)
     @patch('astrometrics.sources_subs.requests.post')
@@ -773,6 +825,79 @@ class TestSubmitBlockToScheduler(TestCase):
         for block in blocks:
             self.assertEqual(block.block_start, block.superblock.block_start)
             self.assertEqual(block.block_end, block.superblock.block_end)
+
+    @patch('astrometrics.sources_subs.requests.post')
+    def test_submit_spectra_for_ogg_V3(self, mock_post):
+        mock_post.return_value.status_code = 201
+
+        mock_post.return_value.json.return_value = {'id': 999, 'requests' : [
+            {'id': 111, 'duration' : 1820, 'configurations' : [{
+                'id' : 2635701,
+                'constraints' : {'max_airmass' : 1.74,},
+                'instrument_configs' : [{'optical_elements': {'slit' : 'slit_6.0as'}, 'rotator_mode' : 'VFLOAT'}],
+                'target': {'type': 'ORBITAL_ELEMENTS', 'name' : '11500'},
+                'type' : 'SPECTRUM'
+                },
+                ]
+            },
+            {'id' : 112, 'duration' : 665, 'configurations' : [{
+                'id' : 2635704,
+                'constraints' : {'max_airmass' : 1.74,},
+                'instrument_configs' : [{'optical_elements': {'slit' : 'slit_6.0as'}, 'rotator_mode' : 'VFLOAT'}],
+                'target': {'type': 'ICRS', 'name' : 'SA107-684', 'ra' : 234.3, 'dec' : -0.16},
+                'type' : 'SPECTRUM'
+                },
+                ]}
+            ]
+        }
+
+        body_elements = model_to_dict(self.body)
+        body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+        body_elements['current_name'] = self.body.current_name()
+        site_code = 'F65'
+        utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 1,
+                    'exp_time' : 150.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'filter_pattern' : 'slit_6.0as',
+                    'group_id' : body_elements['current_name'] + '_' + 'ogg' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson',
+                    'solar_analog' : True,
+                    'calibsource' : {'id' : 1, 'name' : 'SA107-684', 'ra_deg' : 234.3, 'dec_deg' : -0.16, 'calib_exptime' : 60},
+                    'calibsrc_exptime' : 60,
+                    'spectroscopy' : True,
+                    'spectra_slit' : 'slit_6.0as'
+                 }
+
+        resp, sched_params = submit_block_to_scheduler(body_elements, params)
+        self.assertEqual(resp, '999')
+
+        # store block
+        data = params
+        data['proposal_code'] = 'LCO2015A-009'
+        data['exp_length'] = params['exp_time']
+        block_resp = record_block(resp, sched_params, data, self.body)
+        self.assertEqual(block_resp, True)
+
+        # Test that block has same start/end as superblock
+        blocks = Block.objects.filter(active=True)
+        self.assertEqual(2, blocks.count())
+        for block in blocks:
+            self.assertEqual(block.block_start, block.superblock.block_start)
+            self.assertEqual(block.block_end, block.superblock.block_end)
+        self.assertEqual(blocks[0].obstype, Block.OPT_SPECTRA)
+        self.assertEqual(blocks[0].exp_length, params['exp_time'])
+        self.assertEqual(blocks[0].calibsource, None)
+        self.assertNotEqual(blocks[0].body, None)
+        self.assertEqual(blocks[1].obstype, Block.OPT_SPECTRA_CALIB)
+        self.assertEqual(blocks[1].exp_length, params['calibsrc_exptime'])
+        self.assertEqual(blocks[1].body, None)
+        self.assertNotEqual(blocks[1].calibsource, None)
+        self.assertEqual(blocks[1].calibsource.name, params['calibsource']['name'])
 
     def test_make_userrequest(self):
 

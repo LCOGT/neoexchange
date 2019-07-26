@@ -968,7 +968,7 @@ class Frame(models.Model):
         new_filter = self.filter
         # Don't perform any mapping if it's not LCO data
         if self.frametype not in [self.NONLCO_FRAMETYPE, self.SATELLITE_FRAMETYPE]:
-            if self.filter == 'solar' or self.filter == 'w':
+            if self.filter == 'solar' or self.filter == 'w' or self.filter == 'LL':
                 new_filter = 'R'
             if self.photometric_catalog in ['GAIA-DR1', 'GAIA-DR2']:
                 new_filter = 'G'

@@ -23,10 +23,13 @@ from datetime import datetime, timedelta
 from math import sqrt, log10, log, degrees
 from collections import OrderedDict
 import time
+import warnings
 
+from astropy.utils.exceptions import AstropyDeprecationWarning
 from astropy.io import fits
 from astropy.table import Table
 from astropy.coordinates import Angle
+warnings.simplefilter('ignore', category = AstropyDeprecationWarning)
 from astroquery.vizier import Vizier
 import astropy.units as u
 import astropy.coordinates as coord
