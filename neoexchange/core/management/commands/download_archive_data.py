@@ -16,9 +16,12 @@ GNU General Public License for more details.
 import os
 from sys import argv
 from datetime import datetime, timedelta
+from tempfile import mkdtemp
 
 from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
+from django.core.files import File
+from django.core.files.storage import default_storage
 
 from core.archive_subs import archive_login, get_frame_data, get_catalog_data, \
     determine_archive_start_end, download_files, make_data_dir
@@ -30,7 +33,10 @@ class Command(BaseCommand):
     help = 'Download data from the LCO Archive'
 
     def add_arguments(self, parser):
-        out_path = settings.DATA_ROOT
+        if not settings.USE_S3:
+            out_path = settings.DATA_ROOT
+        else:
+            out_path = mkdtemp()
         parser.add_argument('--date', action="store", default=None, help='Date of the data to download (YYYYMMDD)')
         parser.add_argument('--proposal', action="store", default=None, help="Proposal code to query for data (e.g. LCO2019B-023; default is for all active proposals)")
         parser.add_argument('--datadir', default=out_path, help='Place to save data (e.g. %s)' % out_path)
@@ -97,7 +103,12 @@ class Command(BaseCommand):
                 for frame in all_frames['']:
                     if "tar.gz" in frame['filename']:
                         tar_path = make_data_dir(out_path, frame)
-                        make_movie(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, frame['PROPID'])
+                        movie_file = make_movie(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, frame['PROPID'])
+                        movie_file_up = movie_file.replace(out_path,"")[1:]
+                        file = default_storage.open(movie_file_up, 'wb+')
+                        with open(movie_file,'rb+') as f:
+                            file.write(f.read())
+                        file.close()
                         spec_plot, spec_count = make_spec(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, frame['PROPID'], 1)
                         if spec_count > 1:
                             for obs in range(2, spec_count+1):
