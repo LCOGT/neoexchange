@@ -58,7 +58,7 @@ class Command(BaseCommand):
 
         archive_token = os.environ.get('ARCHIVE_TOKEN', None)
         if archive_token is not None:
-            auth_headers = archive_login(username, password)
+            auth_headers = archive_login()
             start_date, end_date = determine_archive_start_end(obs_date)
             for proposal in proposals:
                 self.stdout.write("Looking for frames between %s->%s from %s" % ( start_date, end_date, proposal ))
