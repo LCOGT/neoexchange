@@ -1147,10 +1147,12 @@ def get_catalog_items_old(header_items, table, catalog_type='LCOGT', flag_filter
     return out_table
 
 
-def get_catalog_items_new(header_items, table, catalog_type='LCOGT', flag_filter=0):
+def get_catalog_items_new(header_items, table, catalog_type='LCOGT', flag_filter=0, neg_flux_mask=True):
     """Extract the needed columns specified in the mapping from the FITS
     binary table. Sources with a FLAGS value greater than [flag_filter]
     will not be returned.
+    If [neg_flux_mask] is True (the default), then sources with -ve flux will
+    be removed from the returned table.
     The sources in the catalog are returned as an AstroPy Table containing
     the subset of columns specified in the table mapping."""
 
@@ -1184,6 +1186,10 @@ def get_catalog_items_new(header_items, table, catalog_type='LCOGT', flag_filter
          size_after = len(new_table)
          logger.debug("Filtered table. Number of sources {}->{}".format(size_before, size_after))
 
+    # Filter out -ve fluxes
+    if neg_flux_mask:
+        good_flux_mask = new_table['obs_mag'] > 0.0
+        new_table = new_table[good_flux_mask]
     # Convert columns
     new_table['obs_ra_err'] = np.sqrt(new_table['obs_ra_err'])
     new_table['obs_dec_err'] = np.sqrt(new_table['obs_dec_err'])
