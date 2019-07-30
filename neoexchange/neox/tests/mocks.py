@@ -787,6 +787,18 @@ def mock_archive_frame_header(archive_headers):
         }
     return header
 
+def mock_archive_spectra_header(archive_headers):
+    header = { "data": {
+                    "DATE_OBS": "2019-07-27T15:52:19.512",
+                    "DAY_OBS" : "20190727",
+                    "ENCID" : "clma",
+                    "SITEID" : "coj",
+                    "TELID" : "2m0a",
+                    "OBJECT" : "455432",
+                    "REQNUM" : "1878696"
+                        }
+             }
+    return header
 
 def mock_find_images_for_block(blockid):
     data = ([{'img': '1'}, {'img': '2'}, ], [{'coords': [{'y': 1086.004, 'x': 1278.912}, {'y': 1086.047, 'x': 1278.9821}], 'id': '15'}], 2028, 2028)
