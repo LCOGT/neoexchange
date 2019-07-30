@@ -16,7 +16,8 @@ GNU General Public License for more details.
 import os
 from sys import argv
 from datetime import datetime, timedelta
-from tempfile import mkdtemp
+from tempfile import mkdtemp, gettempdir
+import shutil
 
 from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
@@ -113,6 +114,9 @@ class Command(BaseCommand):
                                 self.save_file(spec_plot, out_path)
         else:
             self.stdout.write("No username and password or token defined (set NEOX_ODIN_USER and NEOX_ODIN_PASSWD or ARCHIVE_TOKEN)")
+        # Check if we're using a temp dir and then delete it
+        if gettempdir() in out_path:
+            shutil.rmtree(out_path)
 
     def save_file(self, filename, out_path):
         filename_up = filename.replace(out_path,"")[1:]
