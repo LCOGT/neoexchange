@@ -279,8 +279,6 @@ PORTAL_PROFILE_URL = PORTAL_API_URL + 'profile/'
 ZOONIVERSE_USER = os.environ.get('ZOONIVERSE_USER', '')
 ZOONIVERSE_PASSWD = os.environ.get('ZOONIVERSE_PASSWD', '')
 
-# DATA_ROOT = os.getenv('DATA_ROOT', '/apophis/eng/rocks/')
-
 # Use AWS S3 for Media Files
 USE_S3 = ast.literal_eval(os.environ.get('USE_S3', 'False'))
 if USE_S3:
@@ -297,6 +295,9 @@ if USE_S3:
     MEDIA_URL = f'https://s3-{AWS_S3_REGION_NAME}.amazonaws.com/{AWS_STORAGE_BUCKET_NAME}/{PUBLIC_MEDIA_LOCATION}/'
     DEFAULT_FILE_STORAGE = 'neox.storage_backends.PublicMediaStorage'
     # DATA_ROOT = PUBLIC_MEDIA_LOCATION
+else:
+    # For local use
+    DATA_ROOT = os.getenv('DATA_ROOT', '/apophis/eng/rocks/')
 
 
 #######################
