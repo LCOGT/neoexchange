@@ -2974,10 +2974,16 @@ def find_spec_plots(path, obj, req, obs_num):
     if path is not None and obj is not None and obs_num is not None:
         if not settings.USE_S3:
             # If local, look for PNG files
-            spec_files = glob(os.path.join(path, obj+"*"+"spectra"+"*"+obs_num+"*"+".png"))
+                suffix = "spectra"+"*"+obs_num+"*"+".png"
+                if obs_num.isdigit() is False:
+                    suffix = obs_num
+                spec_files = glob(os.path.join(path, obj+"*"+suffix))
         else:
             if req is not None:
-                png_file = "{}/{}_{}_spectra_{}.png".format(path, obj, req, obs_num)
+                if obs_num.isdigit() is False:
+                    png_file = "{}/{}_{}_{}".format(path, obj, req, obs_num)
+                else:
+                    png_file = "{}/{}_{}_spectra_{}.png".format(path, obj, req, obs_num)
             else:
                 png_file = "{}/{}_spectra_{}.png".format(path, obj, obs_num)
             spec_files = [png_file,]
@@ -3107,7 +3113,8 @@ def display_movie(request, pk):
     logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date_obs, req, prop))
     logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
 
-    movie_files = glob(os.path.join(path, "Guide_frames", obj.replace(' ', '_') + "*guidemovie.gif"))
+    movie_files = find_spec_plots(os.path.join(path, "Guide_frames"), obj.replace(' ', '_'), req, "guidemovie.gif")
+    print(movie_files)
     if movie_files:
         movie_file = movie_files[0]
     else:
@@ -3116,7 +3123,11 @@ def display_movie(request, pk):
         movie_file = make_movie(date_obs, obj, req, base_dir, prop)
     if movie_file:
         logger.debug('MOVIE FILE: {}'.format(movie_file))
-        movie = open(movie_file, 'rb').read()
+        if settings.USE_S3:
+            logger.debug("S3 path=", movie_file)
+            movie = default_storage.open(movie_file, 'rb').read()
+        else:
+            movie = open(movie_file, 'rb').read()
         return HttpResponse(movie, content_type="Image/gif")
     else:
         return HttpResponse()

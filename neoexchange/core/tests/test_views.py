@@ -6430,9 +6430,11 @@ class TestFindSpecPlots(TestCase):
         self.tmp_dir = tempfile.mkdtemp()
         settings.DATA_ROOT = self.tmp_dir
         self.day_dir = os.path.join(settings.DATA_ROOT, '20190727')
+        self.remove = True
 
     def tearDown(self):
-        shutil.rmtree(self.tmp_dir)
+        if self.remove is True:
+            shutil.rmtree(self.tmp_dir)
 
     def touch_file(self, path):
         if not os.path.exists(os.path.dirname(path)):
@@ -6470,6 +6472,14 @@ class TestFindSpecPlots(TestCase):
 
         self.assertEqual([expected_files[0],], spec_files)
 
+    def test_local_guidemovie(self):
+        base_dir = os.path.join(self.day_dir, '1999KW4_1234', 'Guide_frames')
+        expected_files = [os.path.join(base_dir, '1999KW4_1234_guidemovie.gif'),]
+        self.touch_file(expected_files[0])
+
+        spec_files = find_spec_plots(base_dir, '1999KW4', '1234', 'guidemovie.gif')
+
+        self.assertEqual(expected_files, spec_files)
     def test_S3_1plot(self):
         settings.USE_S3 = True
         settings.DATA_ROOT = ''
@@ -6489,5 +6499,16 @@ class TestFindSpecPlots(TestCase):
         self.touch_file(expected_files[0])
 
         spec_files = find_spec_plots(base_dir, 'LTT1078', None, '1')
+
+        self.assertEqual(expected_files, spec_files)
+
+    def test_S3_guidemovie(self):
+        settings.USE_S3 = True
+        settings.DATA_ROOT = ''
+        base_dir = os.path.join('data', '1999KW4_1234', 'Guide_frames')
+        expected_files = [os.path.join(base_dir, '1999KW4_1234_guidemovie.gif'),]
+        self.touch_file(expected_files[0])
+
+        spec_files = find_spec_plots(base_dir, '1999KW4', '1234', 'guidemovie.gif')
 
         self.assertEqual(expected_files, spec_files)
