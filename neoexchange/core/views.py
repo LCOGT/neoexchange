@@ -2974,7 +2974,10 @@ def find_spec_plots(path, obj, req, obs_num):
         # If local, look for PNG files
         spec_files = glob(os.path.join(path, obj+"*"+"spectra"+"*"+obs_num+"*"+".png"))
     else:
-        png_file = "{}/{}_{}_spectra_{}.png".format(path, obj, req, obs_num)
+        if req is not None:
+            png_file = "{}/{}_{}_spectra_{}.png".format(path, obj, req, obs_num)
+        else:
+            png_file = "{}/{}_spectra_{}.png".format(path, obj, obs_num)
         spec_files = [png_file,]
     return spec_files
 
@@ -3013,7 +3016,7 @@ def display_calibspec(request, pk):
 
     obj = calibsource.name.lower().replace(' ', '').replace('-', '_').replace('+', '')
     obs_num = '1'
-    spec_files = glob(os.path.join(base_dir, obj+"*"+"spectra"+"*"+obs_num+"*"+".png"))
+    spec_files = find_spec_plots(base_dir, obj, None, obs_num)
     if spec_files:
         spec_file = spec_files[0]
     else:
@@ -3027,7 +3030,10 @@ def display_calibspec(request, pk):
             spec_file = ''
     if spec_file:
         logger.debug('Spectroscopy Plot: {}'.format(spec_file))
-        spec_plot = open(spec_file, 'rb').read()
+        if settings.USE_S3:
+            spec_plot = default_storage.open(spec_file, 'rb').read()
+        else:
+            spec_plot = open(spec_file, 'rb').read()
         return HttpResponse(spec_plot, content_type="Image/png")
     else:
         import base64
