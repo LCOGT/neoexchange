@@ -28,3 +28,4 @@ pillow
 gunicorn
 rollbar
 sty
+awscli
