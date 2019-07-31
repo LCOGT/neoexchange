@@ -6420,3 +6420,74 @@ class TestFindSpec(TestCase):
         self.assertEqual(self.test_block.request_number, req)
         self.assertEqual(expected_path, path)
         self.assertEqual(self.eng_proposal.code, prop)
+
+
+class TestFindSpecPlots(TestCase):
+
+    def setUp(self):
+        # Disable S3 by default for tests
+        settings.USE_S3 = False
+        self.tmp_dir = tempfile.mkdtemp()
+        settings.DATA_ROOT = self.tmp_dir
+        self.day_dir = os.path.join(settings.DATA_ROOT, '20190727')
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp_dir)
+
+    def touch_file(self, path):
+        if not os.path.exists(os.path.dirname(path)):
+            os.makedirs(os.path.dirname(path))
+        with open(path, 'a'):
+            pass
+
+    def test_local_data_missing(self):
+        spec_files = find_spec_plots(None, None, None, None)
+
+        self.assertEqual(None, spec_files)
+
+    def test_local_data_no_data(self):
+        spec_files = find_spec_plots(settings.DATA_ROOT, '1999KW4', '1234', '1')
+
+        self.assertEqual([], spec_files)
+
+    def test_local_data_1plot(self):
+        base_dir = os.path.join(self.day_dir, '1999KW4_1234')
+        expected_files = [os.path.join(base_dir, '1999KW4_1234_spectra_1.png'),]
+        self.touch_file(expected_files[0])
+
+        spec_files = find_spec_plots(base_dir, '1999KW4', '1234', '1')
+
+        self.assertEqual(expected_files, spec_files)
+
+    def test_local_data_2plot(self):
+        base_dir = os.path.join(self.day_dir, '1999KW4_1234')
+        expected_files = [os.path.join(base_dir, '1999KW4_1234_spectra_1.png'),
+                          os.path.join(base_dir, '1999KW4_1234_spectra_2.png'),]
+        self.touch_file(expected_files[0])
+        self.touch_file(expected_files[1])
+
+        spec_files = find_spec_plots(base_dir, '1999KW4', '1234', '1')
+
+        self.assertEqual([expected_files[0],], spec_files)
+
+    def test_S3_1plot(self):
+        settings.USE_S3 = True
+        settings.DATA_ROOT = ''
+        base_dir = os.path.join('data', '1999KW4_1234')
+        expected_files = [os.path.join(base_dir, '1999KW4_1234_spectra_1.png'),]
+        self.touch_file(expected_files[0])
+
+        spec_files = find_spec_plots(base_dir, '1999KW4', '1234', '1')
+
+        self.assertEqual(expected_files, spec_files)
+
+    def test_S3_calibplot(self):
+        settings.USE_S3 = True
+        settings.DATA_ROOT = ''
+        base_dir = os.path.join('data', 'cdbs', 'ctiostan')
+        expected_files = [os.path.join(base_dir, 'LTT1078_spectra_1.png'),]
+        self.touch_file(expected_files[0])
+
+        spec_files = find_spec_plots(base_dir, 'LTT1078', None, '1')
+
+        self.assertEqual(expected_files, spec_files)

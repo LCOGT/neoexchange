@@ -2970,15 +2970,17 @@ def find_spec(pk):
 
 def find_spec_plots(path, obj, req, obs_num):
 
-    if not settings.USE_S3:
-        # If local, look for PNG files
-        spec_files = glob(os.path.join(path, obj+"*"+"spectra"+"*"+obs_num+"*"+".png"))
-    else:
-        if req is not None:
-            png_file = "{}/{}_{}_spectra_{}.png".format(path, obj, req, obs_num)
+    spec_files = None
+    if path is not None and obj is not None and obs_num is not None:
+        if not settings.USE_S3:
+            # If local, look for PNG files
+            spec_files = glob(os.path.join(path, obj+"*"+"spectra"+"*"+obs_num+"*"+".png"))
         else:
-            png_file = "{}/{}_spectra_{}.png".format(path, obj, obs_num)
-        spec_files = [png_file,]
+            if req is not None:
+                png_file = "{}/{}_{}_spectra_{}.png".format(path, obj, req, obs_num)
+            else:
+                png_file = "{}/{}_spectra_{}.png".format(path, obj, obs_num)
+            spec_files = [png_file,]
     return spec_files
 
 def display_spec(request, pk, obs_num):
