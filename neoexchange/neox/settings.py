@@ -294,7 +294,7 @@ if USE_S3:
     PUBLIC_MEDIA_LOCATION = 'data'
     MEDIA_URL = f'https://s3-{AWS_S3_REGION_NAME}.amazonaws.com/{AWS_STORAGE_BUCKET_NAME}/{PUBLIC_MEDIA_LOCATION}/'
     DEFAULT_FILE_STORAGE = 'neox.storage_backends.PublicMediaStorage'
-    # DATA_ROOT = PUBLIC_MEDIA_LOCATION
+    DATA_ROOT = ''
 else:
     # For local use
     DATA_ROOT = os.getenv('DATA_ROOT', '/apophis/eng/rocks/')

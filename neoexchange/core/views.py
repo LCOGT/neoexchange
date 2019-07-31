@@ -2934,7 +2934,10 @@ def find_spec(pk):
     """find directory of spectra for a certain block
     NOTE: Currently will only pull first spectrum of a superblock
     """
-    base_dir = settings.DATA_ROOT
+    if not settings.USE_S3:
+        base_dir = settings.DATA_ROOT
+    else:
+        base_dir = ''
     try:
         # block = list(Block.objects.filter(superblock=list(SuperBlock.objects.filter(pk=pk))[0]))[0]
         block = Block.objects.get(pk=pk)
@@ -2957,12 +2960,23 @@ def find_spec(pk):
         req = block.request_number
     path = os.path.join(base_dir, date_obs, obj + '_' + req)
     prop = block.superblock.proposal.code
-    if not glob(os.path.join(base_dir, date_obs, prop+'_*'+req+'*.tar.gz')):
-        date_obs = str(int(date_obs)-1)
-        path = os.path.join(base_dir, date_obs, obj + '_' + req)
+    # Only go fossicking around in the filesystem if not using S3
+    if not settings.USE_S3:
+        if not glob(os.path.join(base_dir, date_obs, prop+'_*'+req+'*.tar.gz')):
+            date_obs = str(int(date_obs)-1)
+            path = os.path.join(base_dir, date_obs, obj + '_' + req)
 
     return date_obs, obj, req, path, prop
 
+def find_spec_plots(path, obj, req, obs_num):
+
+    if not settings.USE_S3:
+        # If local, look for PNG files
+        spec_files = glob(os.path.join(path, obj+"*"+"spectra"+"*"+obs_num+"*"+".png"))
+    else:
+        png_file = "{}/{}_{}_spectra_{}.png".format(path, obj, req, obs_num)
+        spec_files = [png_file,]
+    return spec_files
 
 def display_spec(request, pk, obs_num):
     date_obs, obj, req, path, prop = find_spec(pk)
@@ -2970,7 +2984,8 @@ def display_spec(request, pk, obs_num):
     logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date_obs, req, prop))
     logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
 
-    spec_files = glob(os.path.join(path, obj+"*"+"spectra"+"*"+obs_num+"*"+".png"))
+    spec_files = find_spec_plots(path, obj, req, obs_num)
+
     if spec_files:
         spec_file = spec_files[0]
     else:
@@ -2979,7 +2994,10 @@ def display_spec(request, pk, obs_num):
         spec_file, spec_count = make_spec(date_obs, obj, req, base_dir, prop, obs_num)
     if spec_file:
         logger.debug('Spectroscopy Plot: {}'.format(spec_file))
-        spec_plot = open(spec_file, 'rb').read()
+        if settings.USE_S3:
+            spec_plot = default_storage.open(spec_file, 'rb').read()
+        else:
+            spec_plot = open(spec_file, 'rb').read()
         return HttpResponse(spec_plot, content_type="Image/png")
     else:
         return HttpResponse()
