@@ -157,9 +157,9 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=False
         z_interval = ZScaleInterval().get_limits(data)  # set z-scale
         try:
             # set wcs grid/axes
-            wcs = WCS(header_n)  # get wcs transformation
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
+                wcs = WCS(header_n)  # get wcs transformation
                 ax = plt.gca(projection=wcs)
             dec = ax.coords['dec']
             dec.set_major_formatter('dd:mm')

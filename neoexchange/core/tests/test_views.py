@@ -23,6 +23,7 @@ from math import degrees
 
 from django.test import TestCase
 from django.forms.models import model_to_dict
+from django.conf import settings
 from bs4 import BeautifulSoup
 from mock import patch
 from astropy.io import fits
@@ -31,6 +32,7 @@ from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check
     mock_check_request_status_null, mock_check_request_status_notfound, \
     mock_check_for_images_no_millisecs, \
     mock_check_for_images_bad_date, mock_ingest_frames, mock_archive_frame_header, \
+    mock_archive_spectra_header, \
     mock_odin_login, mock_run_sextractor_make_catalog, mock_fetch_filter_list, \
     mock_update_elements_with_findorb, mock_update_elements_with_findorb_badrms, \
     mock_update_elements_with_findorb_badepoch
@@ -6290,3 +6292,223 @@ class TestBestStandardsView(TestCase):
 
         self.assertAlmostEqual(expected_min_ra, min_ra, self.precision)
         self.assertAlmostEqual(expected_max_ra, max_ra, self.precision)
+
+class TestFindSpec(TestCase):
+
+    def setUp(self):
+        body_params = {
+                         'provisional_name': None,
+                         'provisional_packed': 'j5432',
+                         'name': '455432',
+                         'origin': 'A',
+                         'source_type': 'N',
+                         'elements_type': 'MPC_MINOR_PLANET',
+                         'active': True,
+                         'fast_moving': True,
+                         'urgency': None,
+                         'epochofel': datetime(2019, 7, 31, 0, 0),
+                         'orbit_rms': 0.46,
+                         'orbinc': 31.23094,
+                         'longascnode': 301.42266,
+                         'argofperih': 22.30793,
+                         'eccentricity': 0.3660154,
+                         'meandist': 1.7336673,
+                         'meananom': 352.55084,
+                         'perihdist': None,
+                         'epochofperih': None,
+                         'abs_mag': 18.54,
+                         'slope': 0.15,
+                         'score': None,
+                         'discovery_date': datetime(2003, 9, 7, 3, 7, 18),
+                         'num_obs': 130,
+                         'arc_length': 6209.0,
+                         'not_seen': 3.7969329574421296,
+                         'updated': True,
+                         'ingest': datetime(2019, 7, 4, 5, 28, 39),
+                         'update_time': datetime(2019, 7, 30, 19, 7, 35)
+                        }
+        self.test_body = Body.objects.create(**body_params)
+
+        proposal_params = { 'code'   : 'LCOEngineering',
+                                'title'  : 'LCOEngineering',
+                                'active' : True
+                              }
+        self.eng_proposal, created = Proposal.objects.get_or_create(**proposal_params)
+
+        sblock_params = {
+                        'body' : self.test_body,
+                        'block_start' : datetime(2019, 7, 27, 8, 30),
+                        'block_end'   : datetime(2019, 7, 27,19, 30),
+                        'proposal' : self.eng_proposal,
+                        'tracking_number' : '818566'
+                        }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+
+        block_params = {
+                        'body' : self.test_body,
+                        'superblock' : self.test_sblock,
+                        'block_start' : datetime(2019, 7, 27, 8, 30),
+                        'block_end'   : datetime(2019, 7, 27,19, 30),
+                        'obstype' : Block.OPT_SPECTRA,
+                        'request_number' : '1878696',
+                        'num_exposures' : 1,
+                        'exp_length' : 1800
+                        }
+        self.test_block = Block.objects.create(**block_params)
+
+        frame_params = {
+                         'block' : self.test_block,
+                         'sitecode': 'E10',
+                         'instrument': 'en12',
+                         'filter': 'SLIT_30.0x6.0AS',
+                         'filename': 'coj2m002-en12-20190727-0014-w00.fits',
+                         'frameid' : 12272496,
+                         'frametype' : Frame.SPECTRUM_FRAMETYPE,
+                         'midpoint': datetime(2019, 7, 27, 15, 52, 29, 495000),
+
+                        }
+        self.test_flatframe = Frame.objects.create(**frame_params)
+
+    @patch('core.views.lco_api_call', mock_archive_spectra_header)
+    def test_local_data_no_tarball(self):
+        settings.USE_S3 = False
+        settings.DATA_ROOT = tempfile.mkdtemp()
+
+        expected_date = '20190726'
+        expected_path = os.path.join(settings.DATA_ROOT, expected_date, self.test_body.current_name() + '_' + self.test_block.request_number)
+
+        date_obs, obj, req, path, prop = find_spec(self.test_block.pk)
+
+        self.assertEqual(expected_date, date_obs)
+        self.assertEqual(self.test_body.current_name(), obj)
+        self.assertEqual(self.test_block.request_number, req)
+        self.assertEqual(expected_path, path)
+        self.assertEqual(self.eng_proposal.code, prop)
+
+    @patch('core.views.lco_api_call', mock_archive_spectra_header)
+    def test_local_data_with_tarball(self):
+        settings.USE_S3 = False
+        settings.DATA_ROOT = tempfile.mkdtemp()
+
+        expected_date = '20190727'
+        expected_path = os.path.join(settings.DATA_ROOT, expected_date, self.test_body.current_name() + '_' + self.test_block.request_number)
+        os.makedirs(os.path.join(settings.DATA_ROOT, expected_date))
+        fake_tar = os.path.join(settings.DATA_ROOT, expected_date, self.eng_proposal.code + '_' + self.test_block.request_number + '.tar.gz')
+        with open(fake_tar, 'a'):
+            pass
+
+        date_obs, obj, req, path, prop = find_spec(self.test_block.pk)
+
+        self.assertEqual(expected_date, date_obs)
+        self.assertEqual(self.test_body.current_name(), obj)
+        self.assertEqual(self.test_block.request_number, req)
+        self.assertEqual(expected_path, path)
+        self.assertEqual(self.eng_proposal.code, prop)
+
+    @patch('core.views.lco_api_call', mock_archive_spectra_header)
+    def test_S3_data(self):
+        settings.USE_S3 = True
+        settings.DATA_ROOT = None
+
+        expected_date = '20190727'
+        expected_path = os.path.join('', expected_date, self.test_body.current_name() + '_' + self.test_block.request_number)
+
+        date_obs, obj, req, path, prop = find_spec(self.test_block.pk)
+
+        self.assertEqual(expected_date, date_obs)
+        self.assertEqual(self.test_body.current_name(), obj)
+        self.assertEqual(self.test_block.request_number, req)
+        self.assertEqual(expected_path, path)
+        self.assertEqual(self.eng_proposal.code, prop)
+
+
+class TestFindSpecPlots(TestCase):
+
+    def setUp(self):
+        # Disable S3 by default for tests
+        settings.USE_S3 = False
+        self.tmp_dir = tempfile.mkdtemp()
+        settings.DATA_ROOT = self.tmp_dir
+        self.day_dir = os.path.join(settings.DATA_ROOT, '20190727')
+        self.remove = True
+
+    def tearDown(self):
+        if self.remove is True:
+            shutil.rmtree(self.tmp_dir)
+
+    def touch_file(self, path):
+        if not os.path.exists(os.path.dirname(path)):
+            os.makedirs(os.path.dirname(path))
+        with open(path, 'a'):
+            pass
+
+    def test_local_data_missing(self):
+        spec_files = find_spec_plots(None, None, None, None)
+
+        self.assertEqual(None, spec_files)
+
+    def test_local_data_no_data(self):
+        spec_files = find_spec_plots(settings.DATA_ROOT, '1999KW4', '1234', '1')
+
+        self.assertEqual([], spec_files)
+
+    def test_local_data_1plot(self):
+        base_dir = os.path.join(self.day_dir, '1999KW4_1234')
+        expected_files = [os.path.join(base_dir, '1999KW4_1234_spectra_1.png'),]
+        self.touch_file(expected_files[0])
+
+        spec_files = find_spec_plots(base_dir, '1999KW4', '1234', '1')
+
+        self.assertEqual(expected_files, spec_files)
+
+    def test_local_data_2plot(self):
+        base_dir = os.path.join(self.day_dir, '1999KW4_1234')
+        expected_files = [os.path.join(base_dir, '1999KW4_1234_spectra_1.png'),
+                          os.path.join(base_dir, '1999KW4_1234_spectra_2.png'),]
+        self.touch_file(expected_files[0])
+        self.touch_file(expected_files[1])
+
+        spec_files = find_spec_plots(base_dir, '1999KW4', '1234', '1')
+
+        self.assertEqual([expected_files[0],], spec_files)
+
+    def test_local_guidemovie(self):
+        base_dir = os.path.join(self.day_dir, '1999KW4_1234', 'Guide_frames')
+        expected_files = [os.path.join(base_dir, '1999KW4_1234_guidemovie.gif'),]
+        self.touch_file(expected_files[0])
+
+        spec_files = find_spec_plots(base_dir, '1999KW4', '1234', 'guidemovie.gif')
+
+        self.assertEqual(expected_files, spec_files)
+    def test_S3_1plot(self):
+        settings.USE_S3 = True
+        settings.DATA_ROOT = ''
+        base_dir = os.path.join('data', '1999KW4_1234')
+        expected_files = [os.path.join(base_dir, '1999KW4_1234_spectra_1.png'),]
+        self.touch_file(expected_files[0])
+
+        spec_files = find_spec_plots(base_dir, '1999KW4', '1234', '1')
+
+        self.assertEqual(expected_files, spec_files)
+
+    def test_S3_calibplot(self):
+        settings.USE_S3 = True
+        settings.DATA_ROOT = ''
+        base_dir = os.path.join('data', 'cdbs', 'ctiostan')
+        expected_files = [os.path.join(base_dir, 'LTT1078_spectra_1.png'),]
+        self.touch_file(expected_files[0])
+
+        spec_files = find_spec_plots(base_dir, 'LTT1078', None, '1')
+
+        self.assertEqual(expected_files, spec_files)
+
+    def test_S3_guidemovie(self):
+        settings.USE_S3 = True
+        settings.DATA_ROOT = ''
+        base_dir = os.path.join('data', '1999KW4_1234', 'Guide_frames')
+        expected_files = [os.path.join(base_dir, '1999KW4_1234_guidemovie.gif'),]
+        self.touch_file(expected_files[0])
+
+        spec_files = find_spec_plots(base_dir, '1999KW4', '1234', 'guidemovie.gif')
+
+        self.assertEqual(expected_files, spec_files)

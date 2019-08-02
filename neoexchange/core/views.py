@@ -29,6 +29,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.files.storage import default_storage
 from django.core.urlresolvers import reverse, reverse_lazy
 from django.shortcuts import render, redirect
 from django.views.generic import DetailView, ListView, FormView, TemplateView, View
@@ -2933,7 +2934,10 @@ def find_spec(pk):
     """find directory of spectra for a certain block
     NOTE: Currently will only pull first spectrum of a superblock
     """
-    base_dir = settings.DATA_ROOT
+    if not settings.USE_S3:
+        base_dir = settings.DATA_ROOT
+    else:
+        base_dir = ''
     try:
         # block = list(Block.objects.filter(superblock=list(SuperBlock.objects.filter(pk=pk))[0]))[0]
         block = Block.objects.get(pk=pk)
@@ -2956,12 +2960,34 @@ def find_spec(pk):
         req = block.request_number
     path = os.path.join(base_dir, date_obs, obj + '_' + req)
     prop = block.superblock.proposal.code
-    if not glob(os.path.join(base_dir, date_obs, prop+'_*'+req+'*.tar.gz')):
-        date_obs = str(int(date_obs)-1)
-        path = os.path.join(base_dir, date_obs, obj + '_' + req)
+    # Only go fossicking around in the filesystem if not using S3
+    if not settings.USE_S3:
+        if not glob(os.path.join(base_dir, date_obs, prop+'_*'+req+'*.tar.gz')):
+            date_obs = str(int(date_obs)-1)
+            path = os.path.join(base_dir, date_obs, obj + '_' + req)
 
     return date_obs, obj, req, path, prop
 
+def find_spec_plots(path, obj, req, obs_num):
+
+    spec_files = None
+    if path is not None and obj is not None and obs_num is not None:
+        if not settings.USE_S3:
+            # If local, look for PNG files
+                suffix = "spectra"+"*"+obs_num+"*"+".png"
+                if obs_num.isdigit() is False:
+                    suffix = obs_num
+                spec_files = glob(os.path.join(path, obj+"*"+suffix))
+        else:
+            if req is not None:
+                if obs_num.isdigit() is False:
+                    png_file = "{}/{}_{}_{}".format(path, obj, req, obs_num)
+                else:
+                    png_file = "{}/{}_{}_spectra_{}.png".format(path, obj, req, obs_num)
+            else:
+                png_file = "{}/{}_spectra_{}.png".format(path, obj, obs_num)
+            spec_files = [png_file,]
+    return spec_files
 
 def display_spec(request, pk, obs_num):
     date_obs, obj, req, path, prop = find_spec(pk)
@@ -2969,7 +2995,8 @@ def display_spec(request, pk, obs_num):
     logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date_obs, req, prop))
     logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
 
-    spec_files = glob(os.path.join(path, obj+"*"+"spectra"+"*"+obs_num+"*"+".png"))
+    spec_files = find_spec_plots(path, obj, req, obs_num)
+
     if spec_files:
         spec_file = spec_files[0]
     else:
@@ -2978,7 +3005,10 @@ def display_spec(request, pk, obs_num):
         spec_file, spec_count = make_spec(date_obs, obj, req, base_dir, prop, obs_num)
     if spec_file:
         logger.debug('Spectroscopy Plot: {}'.format(spec_file))
-        spec_plot = open(spec_file, 'rb').read()
+        if settings.USE_S3:
+            spec_plot = default_storage.open(spec_file, 'rb').read()
+        else:
+            spec_plot = open(spec_file, 'rb').read()
         return HttpResponse(spec_plot, content_type="Image/png")
     else:
         return HttpResponse()
@@ -2994,7 +3024,7 @@ def display_calibspec(request, pk):
 
     obj = calibsource.name.lower().replace(' ', '').replace('-', '_').replace('+', '')
     obs_num = '1'
-    spec_files = glob(os.path.join(base_dir, obj+"*"+"spectra"+"*"+obs_num+"*"+".png"))
+    spec_files = find_spec_plots(base_dir, obj, None, obs_num)
     if spec_files:
         spec_file = spec_files[0]
     else:
@@ -3008,7 +3038,10 @@ def display_calibspec(request, pk):
             spec_file = ''
     if spec_file:
         logger.debug('Spectroscopy Plot: {}'.format(spec_file))
-        spec_plot = open(spec_file, 'rb').read()
+        if settings.USE_S3:
+            spec_plot = default_storage.open(spec_file, 'rb').read()
+        else:
+            spec_plot = open(spec_file, 'rb').read()
         return HttpResponse(spec_plot, content_type="Image/png")
     else:
         import base64
@@ -3025,6 +3058,7 @@ def make_spec(date_obs, obj, req, base_dir, prop, obs_num):
     """
     path = os.path.join(base_dir, obj + '_' + req)
     filenames = glob(os.path.join(path, '*_2df_ex.fits'))  # checks for file in path
+    # filenames = [os.path.join(path,f) for f in default_storage.listdir(path)[1] if f.endswith("*_2df_ex.fits")]
     spectra_path = None
     tar_path = unpack_path = None
     obs_num = str(obs_num)
@@ -3079,7 +3113,8 @@ def display_movie(request, pk):
     logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date_obs, req, prop))
     logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
 
-    movie_files = glob(os.path.join(path, "Guide_frames", obj.replace(' ', '_') + "*guidemovie.gif"))
+    movie_files = find_spec_plots(os.path.join(path, "Guide_frames"), obj.replace(' ', '_'), req, "guidemovie.gif")
+    print(movie_files)
     if movie_files:
         movie_file = movie_files[0]
     else:
@@ -3088,7 +3123,11 @@ def display_movie(request, pk):
         movie_file = make_movie(date_obs, obj, req, base_dir, prop)
     if movie_file:
         logger.debug('MOVIE FILE: {}'.format(movie_file))
-        movie = open(movie_file, 'rb').read()
+        if settings.USE_S3:
+            logger.debug("S3 path=", movie_file)
+            movie = default_storage.open(movie_file, 'rb').read()
+        else:
+            movie = open(movie_file, 'rb').read()
         return HttpResponse(movie, content_type="Image/gif")
     else:
         return HttpResponse()

@@ -16,9 +16,13 @@ GNU General Public License for more details.
 import os
 from sys import argv
 from datetime import datetime, timedelta
+from tempfile import mkdtemp, gettempdir
+import shutil
 
 from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
+from django.core.files import File
+from django.core.files.storage import default_storage
 
 from core.archive_subs import archive_login, get_frame_data, get_catalog_data, \
     determine_archive_start_end, download_files, make_data_dir
@@ -30,7 +34,10 @@ class Command(BaseCommand):
     help = 'Download data from the LCO Archive'
 
     def add_arguments(self, parser):
-        out_path = settings.DATA_ROOT
+        if not settings.USE_S3:
+            out_path = settings.DATA_ROOT
+        else:
+            out_path = mkdtemp()
         parser.add_argument('--date', action="store", default=None, help='Date of the data to download (YYYYMMDD)')
         parser.add_argument('--proposal', action="store", default=None, help="Proposal code to query for data (e.g. LCO2019B-023; default is for all active proposals)")
         parser.add_argument('--datadir', default=out_path, help='Place to save data (e.g. %s)' % out_path)
@@ -95,10 +102,25 @@ class Command(BaseCommand):
                 for frame in all_frames['']:
                     if "tar.gz" in frame['filename']:
                         tar_path = make_data_dir(out_path, frame)
-                        make_movie(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, frame['PROPID'])
+                        movie_file = make_movie(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, frame['PROPID'])
+                        self.save_file(movie_file, out_path)
                         spec_plot, spec_count = make_spec(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, frame['PROPID'], 1)
+                        self.save_file(spec_plot, out_path)
                         if spec_count > 1:
                             for obs in range(2, spec_count+1):
-                                make_spec(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, frame['PROPID'], obs)
+                                spec_plot, spec_count = make_spec(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, frame['PROPID'], obs)
+                                self.save_file(spec_plot, out_path)
         else:
             self.stdout.write("No token defined (set ARCHIVE_TOKEN environment variable)")
+
+        # Check if we're using a temp dir and then delete it
+        if gettempdir() in out_path:
+            shutil.rmtree(out_path)
+
+    def save_file(self, filename, out_path):
+        filename_up = filename.replace(out_path,"")[1:]
+        file = default_storage.open(filename_up, 'wb+')
+        with open(filename,'rb+') as f:
+            file.write(f.read())
+        file.close()
+        return

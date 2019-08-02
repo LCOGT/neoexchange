@@ -18,6 +18,8 @@ selenium>=3.8,<4.0
 pytest-django
 mock
 django-oauth-toolkit<1.2.0
+django-storages
+boto3
 requests_oauthlib
 matplotlib
 fits2image
