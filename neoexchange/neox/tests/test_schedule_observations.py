@@ -357,8 +357,8 @@ class ScheduleObservations(FunctionalTest):
         warn_num = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('warning').text
         self.assertIn('1', warn_num)
 
-    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
-    @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list_no2m)
+    @patch('core.forms.fetch_filter_list', mock_fetch_filter_list_no2m)
     @patch('core.forms.datetime', MockDateTime)
     @patch('core.views.datetime', MockDateTime)
     def test_schedule_missing_telescope(self):
@@ -465,8 +465,8 @@ class ScheduleObservations(FunctionalTest):
         self.assertIn('0.2', snr)
         analog_sep = self.browser.find_element_by_id('id_solaranalog_sep_row').find_element_by_class_name('kv-value').text
         self.assertIn('60.4°', analog_sep)
-        analog_exptime = self.browser.find_element_by_id('id_solaranalog_exptime_row').find_element_by_class_name('kv-value').text
-        self.assertIn('45.0 secs', analog_exptime)
+        analog_exptime = self.browser.find_element_by_id('id_calibsource_exptime').get_attribute('value')
+        self.assertIn('45', analog_exptime)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list_no2m)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list_no2m)
@@ -580,7 +580,7 @@ class ScheduleObservations(FunctionalTest):
 
         # The page refreshes and a series of values for the Solar Analog appear at the bottom.
         snr = self.browser.find_element_by_id('id_snr_row').find_element_by_class_name('kv-value').text
-        self.assertIn('5.2', snr)
+        self.assertIn('5.3', snr)
         analog_warn = self.browser.find_element_by_id('id_no_solaranalog_row').find_element_by_class_name('warning').text
         self.assertIn('No Valid Solar Analog Found!'.upper(), analog_warn)
 
@@ -646,8 +646,8 @@ class ScheduleObservations(FunctionalTest):
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
         self.assertIn('60.0', exp_length)
         vis = self.browser.find_element_by_id('id_visibility_row').find_element_by_class_name('kv-value').text
-        self.assertIn('62', vis)
-        self.assertIn('2.0 hrs', vis)
+        self.assertIn('64', vis)
+        self.assertIn('2.3 hrs', vis)
         moon_sep = self.browser.find_element_by_id('id_moon_row').find_element_by_class_name('kv-value').text
         self.assertIn('106.3', moon_sep)
 
@@ -675,7 +675,7 @@ class ScheduleObservations(FunctionalTest):
 
         # The page refreshes and we get correct hours visible and a warning on moon dist
         vis = self.browser.find_element_by_id('id_visibility_row').find_element_by_class_name('kv-value').text
-        self.assertIn('1.5 hrs', vis)
+        self.assertIn('1.7 hrs', vis)
         moon_warn = self.browser.find_element_by_id('id_moon_row').find_element_by_class_name('warning').text
         self.assertIn('106.3', moon_warn)
 

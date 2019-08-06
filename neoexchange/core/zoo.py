@@ -176,7 +176,7 @@ def add_markers_to_image(filename):
 def make_cutouts(candidates, frameids, jpg_files, blockid, download_dir, ymax):
     for candidate in candidates:
         cutouts = []
-        for frameid, filename, coords in zip(frameids, jpg_files,candidate['coords']):
+        for frameid, filename, coords in zip(frameids, jpg_files, candidate['coords']):
             outfile = os.path.join(download_dir, "frame-{}-{}-{}.jpg".format(blockid, candidate['id'], frameid))
             if os.path.isfile(outfile):
                 logger.debug("File exists: {}".format(outfile))

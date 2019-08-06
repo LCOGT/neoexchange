@@ -181,7 +181,7 @@ class Command(BaseCommand):
                          'AllowSharing': 'TRUE',
                          'MPCCode'     : site,
                          'Delimiter'   : 'PIPE',
-                         'ContactInfo' : '[{}]'.format(block.proposal.pi),
+                         'ContactInfo' : '[{}]'.format(block.superblock.proposal.pi),
                          'ContactName' : 'T. Lister',
                          'DifferMags'  : 'FALSE',
                          'Facility'    : 'Las Cumbres Observatory',

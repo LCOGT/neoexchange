@@ -72,7 +72,7 @@
                     <tr id="id_visibility_row">
                         {% if data.vis_time > 0 and data.max_alt_airmass < data.max_airmass %}
                             <td class="kv-key">Hours Visible per site / Max Altitude</td>
-                            <td class="kv-value">{{ data.vis_time}} hrs / {{ data.max_alt|floatformat:0}}&deg</td>
+                            <td class="kv-value">{{ data.vis_time|floatformat:1}} hrs / {{ data.max_alt|floatformat:0}}&deg</td>
                         {% else %}
                             <td class="kv-key">Hours Visible / Max Altitude</td>
                         <td class="kv-value">
@@ -321,7 +321,7 @@
                     </tr>
                     <tr id="id_solaranalog_exptime_row">
                         <td class="kv-key">Exposure time</td>
-                        <td class="kv-value">{{data.calibsource_exptime|floatformat:1 }} secs</td>
+                        <td class="kv-value">{{form.calibsource_exptime }} secs</td>
                     </tr>
                     <tr id="id_solaranalog_mag_row">
                         <td class="kv-key">V Mag / Spectral Type</td>

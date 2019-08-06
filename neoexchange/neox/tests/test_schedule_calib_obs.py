@@ -141,8 +141,8 @@ class ScheduleObservations(FunctionalTest):
         # length, number and length of exposures appear
         magnitude = self.browser.find_element_by_id('id_magnitude_row').find_element_by_class_name('kv-value').text
         self.assertIn('7.0', magnitude)
-        moon_sep = self.browser.find_element_by_id('id_visibility_row').find_element_by_class_name('kv-value').text
-        self.assertIn('7.0 hrs / 88°', moon_sep)
+        vis = self.browser.find_element_by_id('id_visibility_row').find_element_by_class_name('kv-value').text
+        self.assertIn('7.8 hrs / 88°', vis)
         slot_length = self.browser.find_element_by_id('id_slot_length_row').find_element_by_class_name('kv-value').text
         self.assertIn('21', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
@@ -281,8 +281,8 @@ class ScheduleObservations(FunctionalTest):
         # length, number and length of exposures appear
         magnitude = self.browser.find_element_by_id('id_magnitude_row').find_element_by_class_name('kv-value').text
         self.assertIn('7.0', magnitude)
-        moon_sep = self.browser.find_element_by_id('id_visibility_row').find_element_by_class_name('kv-value').text
-        self.assertIn('3.0 hrs / 40°', moon_sep)
+        vis = self.browser.find_element_by_id('id_visibility_row').find_element_by_class_name('kv-value').text
+        self.assertIn('3.1 hrs / 40°', vis)
         slot_length = self.browser.find_element_by_id('id_slot_length_row').find_element_by_class_name('kv-value').text
         self.assertIn('21', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
@@ -320,7 +320,7 @@ class ScheduleObservations(FunctionalTest):
 
         # The page refreshes and we get correct hours visible and a warning on moon dist
         vis = self.browser.find_element_by_id('id_visibility_row').find_element_by_class_name('kv-value').text
-        self.assertIn('4.0 hrs', vis)
+        self.assertIn('4.6 hrs', vis)
         moon_warn = self.browser.find_element_by_id('id_moon_row').find_element_by_class_name('warning').text
         self.assertIn('35.3', moon_warn)
 

@@ -71,7 +71,7 @@ class Command(BaseCommand):
             except TypeError:
                 logger.debug("Problem encountered")
                 continue
-            images = fetch_observations(block.tracking_number)
+            images = fetch_observations(block.superblock.tracking_number)
             if images:
                 frames = {'91':images}
             else:
@@ -82,13 +82,14 @@ class Command(BaseCommand):
             jpg_files = []
             if not download_dir:
                 download_dir = tempfile.mkdtemp()
+            download_dir = os.path.join(download_dir, block.superblock.tracking_number)
             files = download_files(frames, download_dir)
             if not files:
                 # Double check in case we already have the files
-                files = glob.glob(os.path.join(download_dir, "*.fz"))
+                files = glob.glob(os.path.join(download_dir, '**', "*.fz"))
             if files:
-                for frameid, filename in zip(frameids,files):
-                    jpg_name = os.path.join(download_dir, frameid+ ".jpg")
+                for frameid, filename in zip(frameids, files):
+                    jpg_name = os.path.join(download_dir, "jpegs", frameid + ".jpg")
                     if os.path.isfile(jpg_name):
                         jpg_files.append(jpg_name)
                         logger.debug('File exists: {}'.format(jpg_name))

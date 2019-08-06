@@ -28,6 +28,7 @@ from astrometrics.ephem_subs import determine_rates_pa
 from photometrics.catalog_subs import get_fits_files, sort_rocks, find_first_last_frames
 from core.views import determine_active_proposals
 
+
 class Command(BaseCommand):
 
     help = 'Download and pipeline process data from the LCO Archive'
@@ -35,13 +36,12 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         out_path = settings.DATA_ROOT
         parser.add_argument('--date', action="store", default=datetime.utcnow(), help='Date of the data to download (YYYYMMDD)')
-        parser.add_argument('--proposal', action="store", default=None, help="Proposal code to query for data (e.g. LCO2019A-006; default is for all active proposals)")
+        parser.add_argument('--proposal', action="store", default=None, help="Proposal code to query for data (e.g. LCO2019B-006; default is for all active proposals)")
         parser.add_argument('--datadir', action="store", default=out_path, help='Path for processed data (e.g. %s)' % out_path)
         parser.add_argument('--mtdlink_file_limit', action="store", type=int, default=9, help='Maximum number of images for running mtdlink')
         parser.add_argument('--keep-temp-dir', action="store_true", help='Whether to remove the temporary directories')
         parser.add_argument('--object', action="store", help="Which object to analyze")
         parser.add_argument('--skip-download', action="store_true", help='Whether to skip downloading data')
-
 
     def handle(self, *args, **options):
         usage = "Incorrect usage. Usage: %s --date [YYYYMMDD] --proposal [proposal code] --datadir [path]" % ( argv[1] )
@@ -68,7 +68,9 @@ class Command(BaseCommand):
         if not os.path.exists(dataroot):
             self.stdout.write("Creating download location: %s" % dataroot)
             try:
+                oldumask = os.umask(0o002)
                 os.makedirs(dataroot)
+                os.umask(oldumask)
             except:
                 msg = "Error creating output path %s" % dataroot
                 raise CommandError(msg)
@@ -99,7 +101,7 @@ class Command(BaseCommand):
 
 # Step 3: For each object:
         for rock in objects:
-# Skip if a specific object was specified on the commandline and this isn't it
+            # Skip if a specific object was specified on the commandline and this isn't it
             if options['object'] is not None:
                 if options['object'] not in rock:
                     continue

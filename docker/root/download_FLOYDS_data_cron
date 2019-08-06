@@ -21,5 +21,5 @@ fi
 
 cd $PYTHONPATH
 python3 manage.py download_archive_data --datadir ${dataroot} --spectraonly ${date_options} --proposal LCOEngineering
-python3 manage.py download_archive_data --datadir ${dataroot} --spectraonly ${date_options} --proposal LCO2019A-006
-python3 manage.py download_archive_data --datadir ${dataroot} --spectraonly ${date_options} --proposal LCO2019A-006b
+python3 manage.py download_archive_data --datadir ${dataroot} --spectraonly ${date_options} --proposal LCO2019B-023
+python3 manage.py download_archive_data --datadir ${dataroot} --spectraonly ${date_options} --proposal LCO2019B-023b

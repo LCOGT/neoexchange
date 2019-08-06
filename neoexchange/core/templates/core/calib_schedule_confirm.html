@@ -67,7 +67,7 @@
                     <tr id="id_visibility_row">
                         {% if data.vis_time and data.max_alt_airmass < data.max_airmass %}
                             <td class="kv-key">Hours Visible / Max Altitude</td>
-                            <td class="kv-value">{{ data.vis_time}} hrs / {{ data.max_alt|floatformat:0}}&deg</td>
+                            <td class="kv-value">{{ data.vis_time|floatformat:1}} hrs / {{ data.max_alt|floatformat:0}}&deg</td>
                         {% else %}
                             <td class="kv-key">Hours Visible / Max Altitude</td>
                         <td class="kv-value">

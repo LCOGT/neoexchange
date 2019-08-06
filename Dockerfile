@@ -32,9 +32,6 @@ ENTRYPOINT [ "/init" ]
 ENV PYTHONPATH /var/www/apps
 ENV DJANGO_SETTINGS_MODULE neox.settings
 
-# Set the PREFIX env variable
-ENV PREFIX /neoexchange
-
 # Install packages and update base system
 RUN yum -y install epel-release \
         && yum -y install cronie libjpeg-devel nginx \
@@ -49,7 +46,7 @@ RUN yum -y install centos-release-scl \
         && yum -y install devtoolset-7
 
 # Enable LCO repo and install extra packages
-COPY config/lcogt.repo /etc/yum.repos.d/lcogt.repo
+COPY docker/etc/yum.repos.d/lcogt.repo /etc/yum.repos.d/lcogt.repo
 RUN yum -y install lcogt-python36 sextractor cdsclient scamp mtdlink\
         && yum clean all
 
@@ -99,4 +96,4 @@ RUN cd /tmp/git_find_orb \
 
 # Copy default findorb config file
 COPY neoexchange/photometrics/configs/environ.def /root/.find_orb/
-RUN chown -R nginx:nginx /root/.find_orb
+RUN chown -R nginx:nginx /root/.find_orb && chmod 2775 /root/.find_orb

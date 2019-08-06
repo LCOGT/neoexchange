@@ -323,6 +323,14 @@ def parse_NEOCP_extra_params(neocp_page, dbg=False):
                         updated = True
                     elif update_date[0] == 'A':
                         updated = False
+                    elif update_date[0] == 'J':
+                        # At some point the MPC decided to changed their scheme
+                        # for the JD update time and now they all start with 'J'...
+                        update_type = cols[6].split()[1]
+                        if 'added' in update_type.lower():
+                            updated = False
+                        elif 'updated' in update_type.lower():
+                            updated = True
                     update_jd = update_date[1:]
                     update_date = jd_utc2datetime(update_jd)
             except:
@@ -415,6 +423,14 @@ def parse_PCCP(pccp_page, dbg=False):
                     updated = True
                 elif update_date[0] == 'A':
                     updated = False
+                elif update_date[0] == 'J':
+                    # At some point the MPC decided to changed their scheme
+                    # for the JD update time and now they all start with 'J'...
+                    update_type = cols[6].split()[1]
+                    if 'added' in update_type.lower():
+                        updated = False
+                    elif 'updated' in update_type.lower():
+                        updated = True
                 update_jd = update_date[1:]
                 update_date = jd_utc2datetime(update_jd)
             except:
@@ -1292,7 +1308,9 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
     list_address = '"small-bodies-observations@lists.nasa.gov"'
     list_authors = [ '"paul.a.abell@nasa.gov"',
                         '"paul.w.chodas@jpl.nasa.gov"',
-                        '"brent.w.barbee@nasa.gov"']
+                        '"brent.w.barbee@nasa.gov"',
+                        '"Barbee, Brent W. (GSFC-5950) via small-bodies-observations"']
+
     list_prefix = '[' + list_address.replace('"', '').split('@')[0] + ']'
     list_suffix = 'Observations Requested'
 
@@ -1692,7 +1710,7 @@ def expand_cadence(user_request):
             cadence_url,
             json=user_request,
             headers={'Authorization': 'Token {}'.format(settings.PORTAL_TOKEN)},
-            timeout=20.0
+            timeout=120.0
          )
     except requests.exceptions.Timeout:
         msg = "Observing portal API timed out"
@@ -1860,8 +1878,11 @@ def make_userrequest(elements, params):
         cal_target = make_target(params)
         exp_time = params['exp_time']
         params['exp_time'] = params['calibsrc_exptime']
+        ag_exptime = params.get('ag_exp_time', 10)
+        params['ag_exp_time'] = 10
         cal_molecule_list = make_molecules(params)
         params['exp_time'] = exp_time
+        params['ag_exp_time'] = ag_exptime
 
         cal_request = {
                         "location": location,
@@ -1899,7 +1920,7 @@ def submit_block_to_scheduler(elements, params):
             settings.PORTAL_REQUEST_API,
             json=user_request,
             headers={'Authorization': 'Token {}'.format(settings.PORTAL_TOKEN)},
-            timeout=20.0
+            timeout=120.0
          )
     except requests.exceptions.Timeout:
         msg = "Observing portal API timed out"
@@ -1911,14 +1932,7 @@ def submit_block_to_scheduler(elements, params):
         logger.error(resp.json())
         msg = "Parsing error"
         try:
-            error_json = resp.json()
-            error_msg = error_json.get('requests', msg)
-            if len(error_msg) == 1:
-                error_msg = error_msg[0].get('non_field_errors', msg)
-                msg = error_msg[0]
-            elif error_json.get('non_field_errors', None) is not None:
-                error_msg = error_json.get('non_field_errors', msg)
-                msg = error_msg[0]
+            msg = resp.json()
         except AttributeError:
             try:
                 msg = user_request['errors']
@@ -1932,7 +1946,7 @@ def submit_block_to_scheduler(elements, params):
         return False, params
 
     response = resp.json()
-    tracking_number = response.get('id', '')
+    tracking_number = str(response.get('id', ''))
 
     request_items = response.get('requests', '')
 
@@ -1944,7 +1958,12 @@ def submit_block_to_scheduler(elements, params):
         params['error_msg'] = msg
         return False, params
 
-    request_types = dict([(r['id'], r['target']['type']) for r in request_items])
+    if len(request_items) > 0:
+        request_types = {}
+        if 'configurations' in request_items[0]:
+            request_types = dict([(str(r['id']), r['configurations'][0]['target']['type']) for r in request_items])
+        else:
+            request_types = dict([(r['id'], r['target']['type']) for r in request_items])
     request_windows = [r['windows'] for r in user_request['requests']]
 
     params['block_duration'] = sum([float(_['duration']) for _ in request_items])
@@ -1957,47 +1976,54 @@ def submit_block_to_scheduler(elements, params):
     return tracking_number, params
 
 
-def fetch_filter_list(site, spec, page=None):
-    """Fetches the camera mappings page"""
+def fetch_filter_list(site, spec):
+    """Fetches the filter list from the configdb"""
 
-    if page is None:
-        camera_mappings = 'http://configdb.lco.gtn/camera_mappings/'
-        data_file = fetchpage_and_make_soup(camera_mappings)
-        data_out = parse_filter_file(site, spec, data_file)
+    siteid, encid, telid = MPC_site_code_to_domes(site)
+    if '1m0' in telid.lower():
+        camid = "1m0-SciCam-Sinistro"
+    elif '0m4' in telid.lower():
+        camid = "0m4-SciCam-SBIG"
+    elif '2m0' in telid.lower():
+        if spec:
+            camid = "2m0-FLOYDS-SciCam"
+        else:
+            camid = "2m0-SciCam-Spectral"
     else:
-        with open(page, 'r') as input_file:
-            data_out = parse_filter_file(site, spec, input_file.read())
+        camid = ''
+
+    if siteid == 'xxx':
+        siteid = encid = telid = ''
+
+    # Disable specific telescope check, use all telescopes of appropriate class at a site.
+    encid = telid = ''
+
+    request_url = settings.CONFIGDB_API_URL + 'instruments/'
+    request_url += '?telescope={}&science_camera=&autoguider_camera=&camera_type={}&site={}&enclosure={}&state=SCHEDULABLE'.format(telid.lower(), camid, siteid.lower(), encid.lower())
+    resp = requests.get(request_url, timeout=20, verify=True).json()
+
+    data_out = parse_filter_file(resp, spec)
+    if not data_out:
+        logger.error('Could not find any filters for {}'.format(site))
     return data_out
 
 
-def parse_filter_file(site, spec, camera_list=None):
-    """Parses the camera mappings page and sends back a list of filters at the given site code.
+def parse_filter_file(resp, spec):
+    """Parses the returned json dictionary and pull out the list of approved filters
     """
     if spec is not True:
         filter_list = cfg.phot_filters
     else:
         filter_list = cfg.spec_filters
 
-    siteid, encid, telid = MPC_site_code_to_domes(site)
-
-    camera_list = str(camera_list).split("\n")
     site_filters = []
-    try:
-        for line in camera_list:
-            chunks = line.split(' ')
-            chunks = list(filter(None, chunks))
-            if len(chunks) == 13:
-                if (chunks[0] == siteid or siteid == 'xxx') and chunks[2][:-1] == telid[:-1]:
-                    filt_list = chunks[12].split(',')
-                    for filt in filter_list:
-                        if filt in filt_list and filt not in site_filters:
-                            site_filters.append(filt)
-    except Exception as e:
-        msg = "Could not read camera mappings file"
-        logger.error(msg)
-        logger.error(e)
-    if not site_filters:
-        logger.error('Could not find any filters for {}'.format(site))
+    for result in resp['results']:
+        filters_1tel = result['science_camera']['filters']
+        filt_list = filters_1tel.split(',')
+        for filt in filter_list:
+            if filt in filt_list and filt not in site_filters:
+                site_filters.append(filt)
+
     return site_filters
 
 
