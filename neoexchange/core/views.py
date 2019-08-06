@@ -12,6 +12,7 @@ GNU General Public License for more details.
 """
 
 import os
+from shutil import move
 from glob import glob
 from datetime import datetime, timedelta, date
 from math import floor, ceil, degrees, radians, pi, acos
@@ -60,7 +61,8 @@ from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
     MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes, \
     determine_spectro_slot_length, get_sitepos, read_findorb_ephem, accurate_astro_darkness,\
-    get_visibility, determine_exp_count, determine_star_trails, calc_moon_sep, get_alt_from_airmass
+    get_visibility, determine_exp_count, determine_star_trails, calc_moon_sep, \
+    get_alt_from_airmass, horizons_ephem
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs, validate_text,\
@@ -79,6 +81,7 @@ from core.mpc_submit import email_report_to_mpc
 from core.archive_subs import lco_api_call
 from photometrics.SA_scatter import readSources, genGalPlane, plotScatter, \
     plotFormat
+from photometrics.obsgeomplot import *
 
 logger = logging.getLogger(__name__)
 
@@ -227,14 +230,15 @@ class BodyVisibilityView(DetailView):
     template_name = 'core/body_visibility.html'
     model = Body
 
-def make_visibility_plot(request, pk, plot_type):
+def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow()):
 
+    logger.setLevel(logging.DEBUG)
     try:
         body = Body.objects.get(pk=pk)
     except Body.DoesNotExist:
         return HttpResponse()
 
-    if plot_type not in ['radec', 'mag', 'dist', 'timeup']:
+    if plot_type not in ['radec', 'mag', 'dist', 'timeup', 'uncertainty']:
         logger.warning("Invalid plot_type= {}".format(plot_type))
         # Return a 1x1 pixel gif in the case of no visibility file
         PIXEL_GIF_DATA = base64.b64decode(
@@ -243,22 +247,33 @@ def make_visibility_plot(request, pk, plot_type):
         return HttpResponse(PIXEL_GIF_DATA, content_type='image/gif')
     base_dir = os.path.join(settings.DATA_ROOT, 'visibility', str(body.pk))  # new base_dir for method
 
-    obj = body.name.lower().replace(' ', '').replace('-', '_').replace('+', '')
+    obj = body.name.replace(' ', '').replace('-', '_').replace('+', '')
     search_path = os.path.join(base_dir, obj+ "*" + plot_type + "*" + ".png")
-    print(obj, search_path)
+    logger.debug(obj, search_path)
     vis_files = glob(os.path.join(base_dir, obj+ "*" + plot_type + "*" + ".png"))
-    print(vis_files)
+    logger.debug(vis_files)
     if vis_files:
         vis_file = vis_files[0]
     else:
         vis_file = ''
     if not vis_file:
-        vis_file = "f" + obj + ".dat"
-        if os.path.exists(os.path.join(base_dir, vis_file)):
-            vis_file = get_vis_plot(base_dir, vis_file, obs_num, log=True)
-        else:
-            logger.warning("No flux file found for " + vis_file)
-            vis_file = ''
+        start = start_date.date()
+        end = start + timedelta(days=31)
+        site_code = '-1'
+        ephem = horizons_ephem(body.name, start, end, site_code)
+        if plot_type == 'radec':
+            vis_file = plot_ra_dec(ephem)
+        elif plot_type == 'mag':
+            vis_file = plot_brightness(ephem)
+        elif plot_type == 'dist':
+            vis_file = plot_helio_geo_dist(ephem)
+        elif plot_type == 'uncertainty':
+            vis_file = plot_uncertainty(ephem)
+        if vis_file != '':
+            if not os.path.exists(base_dir):
+                os.makedirs(base_dir)
+            move(vis_file, os.path.join(base_dir, vis_file))
+            vis_file = os.path.join(base_dir, vis_file)
     if vis_file:
         logger.debug('Visibility Plot: {}'.format(vis_file))
         vis_plot = open(vis_file, 'rb').read()

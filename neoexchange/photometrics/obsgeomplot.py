@@ -8,6 +8,20 @@ from astrometrics.ephem_subs import determine_darkness_times
 from photometrics.lineticks import LineTicks
 
 
+def make_targetname(target_name):
+    """Strip bad characters out of the target name so it can be used in plot
+    filenames
+    """
+
+    start_idx = target_name.find('(')
+    end_idx = target_name.find(')')
+    if start_idx >= 0 and end_idx >= 0:
+        new_name = target_name[start_idx:end_idx+1].replace(' ', '').replace('(','').replace(')','')
+        target_name = target_name[0:start_idx] + new_name + target_name[end_idx+2:]
+    target_name = target_name.replace(" ", "_")
+
+    return target_name
+
 def plot_ra_dec(ephem, title=None):
     """Plot RA against Dec"""
 
@@ -38,7 +52,8 @@ def plot_ra_dec(ephem, title=None):
     ax.annotate(last_date.strftime("%Y-%m-%d"), xy=(last['RA'], last['DEC']), xytext=(last['RA'], last['DEC']+10),
             arrowprops=dict(arrowstyle='->'))
 
-    save_file = "{}_radec_{}-{}.png".format(first['targetname'].replace(" ", "_"), first_date.strftime("%Y%m%d"), last_date.strftime("%Y%m%d"))
+    targetname = make_targetname(first['targetname'])
+    save_file = "{}_radec_{}-{}.png".format(targetname, first_date.strftime("%Y%m%d"), last_date.strftime("%Y%m%d"))
     fig.savefig(save_file, format='png')
     plt.close()
 
@@ -86,7 +101,8 @@ def plot_helio_geo_dist(ephem, title=None):
     fig.suptitle(title)
     ax.set_title('Heliocentric & Geocentric distance')
 
-    save_file = "{}_dist_{}-{}.png".format(first['targetname'].replace(" ", "_"), first_date.strftime("%Y%m%d"), last_date.strftime("%Y%m%d"))
+    targetname = make_targetname(first['targetname'])
+    save_file = "{}_dist_{}-{}.png".format(targetname, first_date.strftime("%Y%m%d"), last_date.strftime("%Y%m%d"))
     fig.savefig(save_file, format='png')
     plt.close()
 
@@ -130,7 +146,8 @@ def plot_brightness(ephem, title=None):
     fig.suptitle(title)
     ax.set_title('Predicted brightness')
 
-    save_file = "{}_mag_{}-{}.png".format(first['targetname'].replace(" ", "_"), first_date.strftime("%Y%m%d"), last_date.strftime("%Y%m%d"))
+    targetname = make_targetname(first['targetname'])
+    save_file = "{}_mag_{}-{}.png".format(targetname, first_date.strftime("%Y%m%d"), last_date.strftime("%Y%m%d"))
     fig.savefig(save_file, format='png')
     plt.close()
 
@@ -246,10 +263,11 @@ def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, dbg=False)
         year = "{}--{}".format(start_year, end_year)
     xlabel = "Date ({})".format(year)
     ax.set_xlabel(xlabel)
-    num_days = dates[-1] - dates[0]
-    day_interval = max(int(num_days.days / 5), 1)
-    ax.get_xaxis().set_major_locator(mdates.DayLocator(interval=day_interval))
-    ax.get_xaxis().set_major_formatter(mdates.DateFormatter("%m-%d"))
+#    num_days = dates[-1] - dates[0]
+#    day_interval = max(int(num_days.days / 5), 1)
+#    ax.get_xaxis().set_major_locator(mdates.DayLocator(interval=day_interval))
+#    ax.get_xaxis().set_major_formatter(mdates.DateFormatter("%m-%d"))
+    fig.autofmt_xdate()
 
     y_units_label = 'Hours above $30^\circ$ altitude'
     ax.set_ylabel(y_units_label)
@@ -262,7 +280,8 @@ def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, dbg=False)
     ax.yaxis.set_ticks_position('left')
     ax2.yaxis.set_ticks_position('right')
 
-    save_file = "{}_timeup_{}_{}-{}.png".format(first['targetname'].replace(" ", "_"), site_code, dates[0].strftime("%Y%m%d"), dates[-1].strftime("%Y%m%d"))
+    targetname = make_targetname(first['targetname'])
+    save_file = "{}_timeup_{}_{}-{}.png".format(targetname, site_code, dates[0].strftime("%Y%m%d"), dates[-1].strftime("%Y%m%d"))
     fig.savefig(save_file, format='png')
     plt.close()
 
@@ -303,7 +322,7 @@ def plot_uncertainty(ephem, title=None):
     ephem_step = min(ephem_step, 86400)
     ephem_step_size = int(86400.0 / ephem_step)
     # Make ticks along the line every 10 days
-    tick_steps = 10 * ephem_step_size
+    tick_steps = 5 * ephem_step_size
     tick_labels = [datetime.strftime(dates[d_idx].date(), "%Y-%m-%d") for d_idx in range(0, len(dates), tick_steps)]
 
     line_ticks = LineTicks(unc_line, range(0, len(dates), tick_steps), 10, label=tick_labels, lw=1.5, color='r')
@@ -313,14 +332,8 @@ def plot_uncertainty(ephem, title=None):
     fig.suptitle(title)
     ax.set_title('$3\sigma$ Plane-of-Sky Uncertainty')
 
-    target_name = first['targetname']
-    start_idx = target_name.find('(')
-    end_idx = target_name.find(')')
-    if start_idx >= 0 and end_idx >= 0:
-        new_name = target_name[start_idx:end_idx+1].replace(' ', '').replace('(','').replace(')','')
-        target_name = target_name[0:start_idx] + new_name + target_name[end_idx+2:]
-    target_name = target_name.replace(" ", "_")
-    save_file = "{}_uncertainty_{}-{}.png".format(target_name, dates[0].strftime("%Y%m%d"), dates[-1].strftime("%Y%m%d"))
+    targetname = make_targetname(first['targetname'])
+    save_file = "{}_uncertainty_{}-{}.png".format(targetname, dates[0].strftime("%Y%m%d"), dates[-1].strftime("%Y%m%d"))
     fig.savefig(save_file, format='png')
     plt.close()
 

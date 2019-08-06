@@ -22,6 +22,7 @@
                 <img src="{% url 'visibility-plot' body.pk 'dist' %}" id="id_distanceplot">
                 <h5  class="section-title"><span class="">Predicted Brightness</span></h5>
                 <img src="{% url 'visibility-plot' body.pk 'mag' %}" id="id_magplot">
-                <img src="{% url 'visibility-plot' body.pk 'wibble' %}" id="id_magplot">
+                <h5  class="section-title"><span class="">Positional Uncertainty</span></h5>
+                <img src="{% url 'visibility-plot' body.pk 'uncertainty' %}" id="id_uncertainty">
             </div>
 {% endblock %}
