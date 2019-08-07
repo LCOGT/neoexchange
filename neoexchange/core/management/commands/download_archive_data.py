@@ -26,7 +26,8 @@ from django.core.files.storage import default_storage
 
 from core.archive_subs import archive_login, get_frame_data, get_catalog_data, \
     determine_archive_start_end, download_files, make_data_dir
-from core.views import make_movie, make_spec, determine_active_proposals
+from core.views import determine_active_proposals
+from photometrics.spectraplot import make_movie, make_spec
 
 
 class Command(BaseCommand):
@@ -105,20 +106,22 @@ class Command(BaseCommand):
                     if "tar.gz" in frame['filename']:
                         tar_path = make_data_dir(out_path, frame)
                         movie_file = make_movie(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, frame['PROPID'])
-                        self.save_file(movie_file, out_path)
                         spec_plot, spec_count = make_spec(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, frame['PROPID'], 1)
-                        self.save_file(spec_plot, out_path)
+                        if settings.USE_S3:
+                            self.save_to_default(movie_file, out_path)
+                            self.save_to_default(spec_plot, out_path)
                         if spec_count > 1:
                             for obs in range(2, spec_count+1):
                                 spec_plot, spec_count = make_spec(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, frame['PROPID'], obs)
-                                self.save_file(spec_plot, out_path)
+                                if settings.USE_S3:
+                                    self.save_to_default(spec_plot, out_path)
         else:
             self.stdout.write("No username and password or token defined (set NEOX_ODIN_USER and NEOX_ODIN_PASSWD or ARCHIVE_TOKEN)")
         # Check if we're using a temp dir and then delete it
         if gettempdir() in out_path:
             shutil.rmtree(out_path)
 
-    def save_file(self, filename, out_path):
+    def save_to_default(self, filename, out_path):
         filename_up = filename.replace(out_path,"")[1:]
         file = default_storage.open(filename_up, 'wb+')
         with open(filename,'rb+') as f:
