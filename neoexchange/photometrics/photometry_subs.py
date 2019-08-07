@@ -616,6 +616,7 @@ def construct_tic_params(instrument, passband='ip'):
 
     ft_area = 2.574*u.meter**2
     floyds_read_noise = 3.7
+    spectral_read_noise = 10.5
     tic_params = {}
 
     wavelength = map_filter_to_wavelength(passband)
@@ -663,6 +664,26 @@ def construct_tic_params(instrument, passband='ip'):
                        'fwhm' : 1.7 * u.arcsec,
                        'slit_width' : 6.0 * u.arcsec,
                        'gain'       : 2.0 * u.photon / u.count,
+                     }
+    elif 'SPECTRAL' in instrument.upper():
+        tic_params = {
+                       'imaging'   : True,
+                       'sky_mag'   : sky_mag,
+                       'read_noise': spectral_read_noise,
+                       'eff_area'  : ft_area,
+                       'flux_mag0' : flux_mag0_Jy,
+                       'wavelength':  wavelength,
+                       'filter'    : passband,
+                       'num_mirrors' : 2,  # M1, M2
+                       'num_ar_coatings' : 6,
+                       'num_inst_mirrors' : 0,  # No. of reflective surfaces inside instrument
+                       'grating_eff': 1.0,
+                       'ccd_qe'     : 'SINISTRO_CCD_qe.dat',
+                       'pixel_scale': 10.121*(u.arcsec/u.mm)*(30.0*u.micron).to(u.mm)/u.pixel,
+                       'wave_scale' : None,
+                       'fwhm' : 1.7 * u.arcsec,
+                       'slit_width' : None,
+                       'gain'       : 7.7 * u.photon / u.count,
                      }
     # Calculate and store instrument efficiency
     tic_params['instrument_eff'] = instrument_throughput(tic_params)
