@@ -27,7 +27,8 @@ from django.core.files.storage import default_storage
 from core.archive_subs import archive_login, get_frame_data, get_catalog_data, \
     determine_archive_start_end, download_files, make_data_dir
 from core.views import determine_active_proposals
-from photometrics.spectraplot import make_movie, make_spec
+from photometrics.spectraplot import make_spec
+from photometrics.gf_movie import make_movie
 
 
 class Command(BaseCommand):
@@ -64,7 +65,7 @@ class Command(BaseCommand):
         if options['verbosity'] < 1:
             verbose = False
 
-        archive_token = os.environ.get('ARCHIVE_TOKEN', None)
+        archive_token = settings.ARCHIVE_TOKEN
         if archive_token is not None:
             auth_headers = archive_login()
             start_date, end_date = determine_archive_start_end(obs_date)
@@ -103,16 +104,11 @@ class Command(BaseCommand):
                 for frame in all_frames['']:
                     if "tar.gz" in frame['filename']:
                         tar_path = make_data_dir(out_path, frame)
-                        movie_file = make_movie(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, frame['PROPID'])
-                        spec_plot, spec_count = make_spec(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, frame['PROPID'], 1)
-                        if settings.USE_S3:
-                            self.save_to_default(movie_file, out_path)
-                            self.save_to_default(spec_plot, out_path)
+                        movie_file = make_movie(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, out_path, frame['PROPID'])
+                        spec_plot, spec_count = make_spec(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, out_path, frame['PROPID'], 1)
                         if spec_count > 1:
                             for obs in range(2, spec_count+1):
-                                spec_plot, spec_count = make_spec(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, frame['PROPID'], obs)
-                                if settings.USE_S3:
-                                    self.save_to_default(spec_plot, out_path)
+                                spec_plot, spec_count = make_spec(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, out_path, frame['PROPID'], obs)
         else:
             self.stdout.write("No token defined (set ARCHIVE_TOKEN environment variable)")
 

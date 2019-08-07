@@ -318,7 +318,7 @@ if 'test' in sys.argv:
 # Allow any settings to be defined in local_settings.py which should be
 # ignored in your version control system allowing for settings to be
 # defined per machine.
-if not CURRENT_PATH.startswith('/var/www'):
+if not CURRENT_PATH.startswith('/app'):
     try:
         from .local_settings import *
     except ImportError as e:

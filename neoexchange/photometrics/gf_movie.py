@@ -26,7 +26,13 @@ import os
 from glob import glob
 import argparse
 import warnings
+import logging
 
+from django.core.files.storage import default_storage
+
+from photometrics.external_codes import unpack_tarball
+
+logger = logging.getLogger(__name__)
 
 def print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█', time_in=None):
     """
@@ -64,7 +70,7 @@ def print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, lengt
         print()
 
 
-def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=False):
+def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=False, out_path=""):
     """
     takes in list of .fits guide frames and turns them into a moving gif.
     <frames> = list of .fits frame paths
@@ -197,12 +203,19 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=False
     # takes in fig, update function, and frame rate set to fr
     anim = FuncAnimation(fig, update, frames=len(fits_files), blit=False, interval=fr)
 
-    savefile = os.path.join(path, obj.replace(' ', '_') + '_' + rn + '_guidemovie.gif')
-    anim.save(savefile, dpi=90, writer='imagemagick')
+    filename = os.path.join(path, obj.replace(' ', '_') + '_' + rn + '_guidemovie.gif')
+    anim.save(filename, dpi=90, writer='imagemagick')
 
-    return savefile
+    # Save to default location because Matplotlib wants a string filename not File object
+    daydir = path.replace(out_path,"").lstrip("/")
+    movie_filename = os.path.join(daydir, obj.replace(' ', '_') + '_' + rn + '_guidemovie.gif')
+    movie_file = default_storage.open(movie_filename,"wb+")
+    with open(filename,'rb+') as f:
+        movie_file.write(f.read())
+    movie_file.close()
+    return movie_file.name
 
-def make_movie(date_obs, obj, req, base_dir, prop):
+def make_movie(date_obs, obj, req, base_dir, out_path, prop):
     """Make gif of FLOYDS Guide Frames given the following:
     <date_obs> -- Day of Observation (i.e. '20180910')
     <obj> -- object name w/ spaces replaced by underscores (i.e. '144332' or '2018_EB1')
@@ -253,7 +266,7 @@ def make_movie(date_obs, obj, req, base_dir, prop):
     if frames is not None and len(frames) > 0:
         logger.debug("#Frames = {}".format(len(frames)))
         logger.info("Making Movie...")
-        movie_file = make_gif(frames)
+        movie_file = make_gif(frames, out_path=out_path)
         return movie_file
     else:
         logger.error("There must be at least 1 frame to make guide movie.")
