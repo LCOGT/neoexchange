@@ -490,9 +490,9 @@ class SuperBlock(models.Model):
 
     cadence         = models.BooleanField(default=False)
     rapid_response  = models.BooleanField('Is this a ToO/Rapid Response observation?', default=False)
-    body            = models.ForeignKey(Body, null=True, blank=True)
-    calibsource     = models.ForeignKey('StaticSource', null=True, blank=True)
-    proposal        = models.ForeignKey(Proposal)
+    body            = models.ForeignKey(Body, null=True, blank=True, on_delete=models.CASCADE)
+    calibsource     = models.ForeignKey('StaticSource', null=True, blank=True, on_delete=models.CASCADE)
+    proposal        = models.ForeignKey(Proposal, on_delete=models.CASCADE)
     block_start     = models.DateTimeField(null=True, blank=True)
     block_end       = models.DateTimeField(null=True, blank=True)
     groupid         = models.CharField(max_length=55, null=True, blank=True)
@@ -614,9 +614,9 @@ class Block(models.Model):
 
     telclass        = models.CharField(max_length=3, null=False, blank=False, default='1m0', choices=TELESCOPE_CHOICES)
     site            = models.CharField(max_length=3, choices=SITE_CHOICES, null=True)
-    body            = models.ForeignKey(Body, null=True, blank=True)
-    calibsource     = models.ForeignKey('StaticSource', null=True, blank=True)
-    superblock      = models.ForeignKey(SuperBlock, null=True, blank=True)
+    body            = models.ForeignKey(Body, null=True, blank=True, on_delete=models.CASCADE)
+    calibsource     = models.ForeignKey('StaticSource', null=True, blank=True, on_delete=models.CASCADE)
+    superblock      = models.ForeignKey(SuperBlock, null=True, blank=True, on_delete=models.CASCADE)
     obstype         = models.SmallIntegerField('Observation Type', null=False, blank=False, default=0, choices=OBSTYPE_CHOICES)
     block_start     = models.DateTimeField(null=True, blank=True)
     block_end       = models.DateTimeField(null=True, blank=True)
@@ -822,7 +822,7 @@ class Frame(models.Model):
     filename    = models.CharField('FITS filename', max_length=50, blank=True, null=True)
     exptime     = models.FloatField('Exposure time in seconds', null=True, blank=True)
     midpoint    = models.DateTimeField('UTC date/time of frame midpoint', null=False, blank=False, db_index=True)
-    block       = models.ForeignKey(Block, null=True, blank=True)
+    block       = models.ForeignKey(Block, null=True, blank=True, on_delete=models.CASCADE)
     quality     = models.CharField('Frame Quality flags', help_text='Comma separated list of frame/condition flags', max_length=40, blank=True, default=' ')
     zeropoint   = models.FloatField('Frame zeropoint (mag.)', null=True, blank=True)
     zeropoint_err = models.FloatField('Error on Frame zeropoint (mag.)', null=True, blank=True)
@@ -1002,8 +1002,8 @@ class SourceMeasurement(models.Model):
     any new measurements performed on data from the LCOGT NEO Follow-up Network
     """
 
-    body = models.ForeignKey(Body)
-    frame = models.ForeignKey(Frame)
+    body = models.ForeignKey(Body, on_delete=models.CASCADE)
+    frame = models.ForeignKey(Frame, on_delete=models.CASCADE)
     obs_ra = models.FloatField('Observed RA', blank=True, null=True)
     obs_dec = models.FloatField('Observed Dec', blank=True, null=True)
     obs_mag = models.FloatField('Observed Magnitude', blank=True, null=True)
@@ -1227,7 +1227,7 @@ class CatalogSources(models.Model):
     of objects.
     """
 
-    frame = models.ForeignKey(Frame)
+    frame = models.ForeignKey(Frame, on_delete=models.CASCADE)
     obs_x = models.FloatField('CCD X co-ordinate')
     obs_y = models.FloatField('CCD Y co-ordinate')
     obs_ra = models.FloatField('Observed RA')
@@ -1329,7 +1329,7 @@ class Candidate(models.Model):
     """Class to hold candidate moving object detections found by the moving
     object code"""
 
-    block = models.ForeignKey(Block)
+    block = models.ForeignKey(Block, on_delete=models.CASCADE)
     cand_id = models.PositiveIntegerField('Candidate Id')
     score = models.FloatField('Candidate Score')
     avg_midpoint = models.DateTimeField('Average UTC midpoint')
@@ -1383,8 +1383,8 @@ class ProposalPermission(models.Model):
     """
     Linking a user to proposals in NEOx to control their access
     """
-    proposal = models.ForeignKey(Proposal)
-    user = models.ForeignKey(User)
+    proposal = models.ForeignKey(Proposal, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
 
     class Meta:
         verbose_name = _('Proposal Permission')
@@ -1398,12 +1398,12 @@ class PanoptesReport(models.Model):
     """
     Status of block
     """
-    block = models.ForeignKey(Block)
+    block = models.ForeignKey(Block, on_delete=models.CASCADE)
     when_submitted = models.DateTimeField('Date sent to Zooniverse', blank=True, null=True)
     last_check = models.DateTimeField(blank=True, null=True)
     active = models.BooleanField(default=False)
     subject_id = models.IntegerField('Subject ID', blank=True, null=True)
-    candidate = models.ForeignKey(Candidate)
+    candidate = models.ForeignKey(Candidate, on_delete=models.CASCADE)
     verifications = models.IntegerField(default=0)
     classifiers = models.TextField(help_text='Volunteers usernames who found NEOs', blank=True, null=True)
 

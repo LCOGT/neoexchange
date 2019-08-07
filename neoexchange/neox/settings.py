@@ -308,6 +308,7 @@ if 'test' in sys.argv:
         'NAME': 'test.db', # Add the name of your SQLite3 database file here.
         },
     }
+    USE_S3 = False
 
 
 

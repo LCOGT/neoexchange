@@ -436,17 +436,17 @@ def get_spec_plot(path, spectra, obs_num, basepath="", log=False):
     path = path.replace(basepath,"").lstrip("/")
     plot_filename = os.path.join(path, name.replace(' ', '_') + obs_details + "_spectra_" + str(obs_num) + ".png")
 
-    save_file = default_storage.open(plot_filename,"w")
-    fig.savefig(save_file, format='png')
+    fig_file  = default_storage.open(plot_filename,"wb+")
+    fig.savefig(fig_file, format='png')
     plt.close()
-    save_file.close()
+    fig_file.close()
 
     # Write raw data to ascii file
-    save_file = default_storage.open(plot_filename.replace('.png', '.ascii'), "w")
-    ascii.write([x, y, yerr], save_file, names=['Wavelength ({})'.format(xunits), 'Flux ({})'.format(yunits), 'Flux_error'], overwrite=True)
-    save_file.close()
+    ascii_file = default_storage.open(plot_filename.replace('.png', '.ascii'), "w")
+    ascii.write([x, y, yerr], ascii_file, names=['Wavelength ({})'.format(xunits), 'Flux ({})'.format(yunits), 'Flux_error'], overwrite=True)
+    ascii_file.close()
 
-    return save_file
+    return fig_file.name
 
 def make_spec(date_obs, obj, req, indir, basepath, prop, obs_num):
     """Creates plot of spectra data for spectra blocks
