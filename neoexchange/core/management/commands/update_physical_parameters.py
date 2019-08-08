@@ -36,7 +36,13 @@ class Command(BaseCommand):
            
         fetch_jpl_physparams_altdes(body)
         
-        #print(body)
+        resp = fetch_jpl_physparams_altdes(body)
+        
+        store_jpl_physparams(resp['phys_par'], body)
+        store_jpl_desigs(resp['object'], body)
+        store_jpl_sourcetypes(resp['object']['orbit_class']['code'], body)    
+        
+       
         phys_param_results = body.get_physical_parameters()
         print(phys_param_results)
 

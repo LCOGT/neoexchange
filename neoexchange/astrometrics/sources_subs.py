@@ -2383,20 +2383,23 @@ def read_solar_standards(standards_file):
 
 
 def fetch_jpl_physparams_altdes(body):
+    """Function to fetch physical parameters, designations, source types, and subtypes from JPL Horizons (online)"""
     jpl_url_base = 'https://ssd-api.jpl.nasa.gov/sbdb.api'
     request_url = jpl_url_base + '?sstr={}&phys-par=Y&alt-des=Y&no-orbit=Y'.format(body.current_name())
     resp = requests.get(request_url, timeout=20, verify=True).json()
     
-    pp = pprint.PrettyPrinter(indent=4)
-    #pp.pprint(resp)
-    pp.pprint(resp['object'])    
-    #pp.pprint(resp['phys_par'])
-
+#    pp = pprint.PrettyPrinter(indent=4)
+    print(resp)
+    return resp
     
-    for p in resp['phys_par']:
+    
+def store_jpl_physparams(phys_par, body):
+    """Function to store object physical parameters from JPL Horizons"""
+    
+    for p in phys_par:   
         if 'H' is p['name']: #absolute magnitude
             p_type = 'H'
-        elif 'G' is p['name']:#magnitude (phase) slope
+        elif 'G' is p['name']: #magnitude (phase) slope
             p_type = 'G'
         elif 'diameter' in p['name']:#diameter
             p_type = 'D'     
@@ -2412,6 +2415,11 @@ def fetch_jpl_physparams_altdes(body):
             p_type = 'O'
         elif 'albedo' in p['name']:#geometric albedo
             p_type = 'ab'
+#        elif 'M1' is p['name']:#absolute magnitude of comet and coma (total)
+#        elif 'M2' is p['name']:#comet total magnitude parameter  
+#        elif 'K1' is p['name']:#comet total magnitude slope parameter
+#        elif 'K2' is p['name']:#comet nuclear magnitude slope parameter
+#        elif 'PC' is p['name']:#comet nuclear magnitude law - phase coefficient    
         elif 'spectral' in p['desc']:
             continue
         else:
@@ -2452,11 +2460,14 @@ def fetch_jpl_physparams_altdes(body):
             phys_params['color_band'] = p['title']
             del phys_params['parameter_type']
         
-        #body.save_physical_parameters(phys_params)
-        #pp.pprint(phys_params) 
+        body.save_physical_parameters(phys_params)
+        #pp.pprint(phys_params)
  
  
-    fullname = resp['object']['fullname']
+def store_jpl_desigs(obj, body):
+    """Function to store object name, number, and designations from JPL Horizons"""
+    
+    fullname = obj['fullname']
     number = name = prov_des = None     
     if fullname[0] is '(':
         prov_des = fullname
@@ -2465,7 +2476,7 @@ def fetch_jpl_physparams_altdes(body):
         if space_num is 3:
             part1,part2,part3,part4 = fullname.split(' ')
             number = part1
-            if part2 [0].isalpha:
+            if part2[0].isalpha:
                 name = part2
                 prov_des = '{} {}'.format(part3,part4)
         elif space_num is 2:
@@ -2481,114 +2492,97 @@ def fetch_jpl_physparams_altdes(body):
         part1,part2 = fullname.split('/')
         number = part1
         name = part2
-            
-  
-    print(resp['object']['des_alt'])        
-    numofdes = len(resp['object']['des_alt'])
-    print(numofdes)
-    des_alt = resp['object']['des_alt']
-#    print(des_alt[0:4])
-    for d in des_alt:
-        if 'pri' in des_alt:
-            preferred = True
-        else:
-            preferred = False
-           
-
-#    if 'rn' in des_alt:
-#        pass
-#    if 'yl' in des_alt:
-#        pass
-
-#        print(preferred)
-
-    designation =   {'desig': number, 
-        'desig_type': '#', 
-#        'preferred': preferred,
-#        'desig_notes': ,
-        }
-
-    pp.pprint(designation)
-
-    designation =   {'desig': name, 
-        'desig_type': 'N', 
-#        'preferred': preferred,
-#        'desig_notes': ,
-        }
-
-    pp.pprint(designation)
-
-    designation =   {'desig': prov_des, 
-        'desig_type': 'P', 
-        'preferred': preferred,
-#        'desig_notes': ,
-        }
         
-    pp.pprint(designation)    
+    if prov_des != None:
+        Prov_Des = prov_des.strip('()')
+    elif prov_des == None:
+        Prov_Des = None      
+          
+    des_dict_list = [{'desig': number, 'desig_type': '#', 'preferred': True},
+                     {'desig': name, 'desig_type': 'N', 'preferred': True}
+                     ]
 
+
+    des_alt = resp['object']['des_alt']
+    #print('des_alt =', des_alt)
+    preferred = False
+    for d in des_alt:
+        for des in d:
+            if des == 'pri':
+                preferred = True
+                alt_des = d[des]
+            if des == 'des':
+                preferred = False
+                alt_des = d[des]
+        prov_des_dict = {'desig': alt_des, 
+                         'desig_type': 'P', 
+                         'preferred': preferred}
+        des_dict_list.append(prov_des_dict)
+   
+#    pp.pprint(des_dict_list)
+    for D in des_dict_list:
+        body.save_physical_parameters(D)
     
+  
+def store_jpl_sourcetypes(code, body):  #code = resp['object']['orbit_class']['code']
+    """Function to store object source types and subtypes from JPL Horizons"""
     
-    code = resp['object']['orbit_class']['code']
-    source_type = None
-    source_subtype_1 = None
-    source_subtype_2 = None
-    if 'CEN' in code: #centaur
+    source_type = source_subtype_1 = source_subtype_2 = None
+    if 'CEN' in code: #Centaur
         source_type = 'E'
-    elif 'TJN' in code: #jupiter trojan
+    elif 'TJN' in code: #Jupiter trojan
         source_type = 'T'
         source_subtype_1 = 'P5'
-    elif 'TNO' in code: #TransNeptunion Object TNO
+    elif 'TNO' in code: #Trans-Neptunian Object
         source_type = 'K'        
-    elif 'IEO' in code:#Atira
+    elif 'IEO' in code: #Atira
         source_subtype_1 = 'N1'
-    elif 'ATE' in code:#Aten
+    elif 'ATE' in code: #Aten
         source_subtype_1 = 'N2'
-    elif 'APO' in code:#Apollo
+    elif 'APO' in code: #Apollo
         source_subtype_1 = 'N3'   
-    elif 'AMO' in code:#Amor
+    elif 'AMO' in code: #Amor
         source_subtype_1 = 'N4'
-    elif 'IMB' in code:#inner main belt
+    elif 'IMB' in code: #inner main belt
         source_subtype_1 = 'MI'
-    elif 'MBA' in code:#main belt
+    elif 'MBA' in code: #main belt
         source_subtype_1 = 'M'   
-    elif 'OMB' in code:#outer main belt
+    elif 'OMB' in code: #outer main belt
         source_subtype_1 = 'MO'
-#    if code is '##':#L4
+#    if code is '##': #L4
 #        source_subtype_1 = 'T4'
-#    if code is '##':#L5
+#    if code is '##': #L5
 #        source_subtype_1 = 'T5'
-#    if code is 'MCA':#Mars #MCA = mars crossing asteroid?
+#    if code is 'MCA': #Mars? #MCA = mars crossing asteroid
 #        source_subtype_1 = 'P4'
-    elif 'HYA' in code:#hyperbolic asteroid
+    elif 'HYA' in code: #hyperbolic asteroid
         source_subtype_1 = 'H'
-    elif 'HYP' in code:#hyperbolic comet
+    elif 'HYP' in code: #hyperbolic comet
         source_subtype_1 = 'H'
-    elif 'PAA' in code:#parabolic asteroid
+    elif 'PAA' in code: #parabolic asteroid
         source_subtype_1 = 'PA'
-    elif 'PAR' in code:#parabolic comet
+    elif 'PAR' in code: #parabolic comet
         source_subtype_1 = 'PA'
-    elif 'JFC' in code:#Jupiter family comet P<20yrs
+    elif 'JFC' in code: #Jupiter family comet P<20yrs
         source_subtype_1 = 'JF'
-    elif 'JFc' in code: #jupiter family comet 2<Tjupiter<3
+    elif 'JFc' in code: #Jupiter family comet 2<Tjupiter<3
         source_subtype_1 = 'JF'
-    elif 'HTC' in code:#Halley type comet
+    elif 'HTC' in code: #Halley type comet
         source_subtype_1 = 'HT'
+    else:
+        source_subtype_1 = code
 
 
-    if resp['object']['neo'] is False and resp['object']['pha'] is False:
-        source_subtype_2 = None
-    elif resp['object']['neo'] is True and resp['object']['pha'] is True:
+    if resp['object']['neo'] is True and resp['object']['pha'] is True:
         source_subtype_2 = 'PH'
     elif resp['object']['neo'] is True and resp['object']['pha'] is False:
         source_subtype_2 = 'N'
 
 
-    source_types =   {'source_type': source_type,
-        'source_subtype_1': source_subtype_1,
-        'source_subtype_2': source_subtype_2,
-        }
-
-    pp.pprint(source_types)
-
+    body.source_type = source_type
+    body.source_subtype_1 = source_subtype_1
+    body.source_subtype_2 = source_subtype_2
+    body.save()
+        
 
 

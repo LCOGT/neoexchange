@@ -26,7 +26,7 @@ from bs4 import BeautifulSoup
 from django.test import TestCase
 from django.forms.models import model_to_dict
 
-from core.models import Body, Proposal, Block, StaticSource
+from core.models import Body, Proposal, Block, StaticSource, PhysicalParameters, Designations
 from astrometrics.ephem_subs import determine_darkness_times
 from astrometrics.time_subs import datetime2mjd_utc
 from neox.tests.mocks import MockDateTime, mock_expand_cadence, mock_fetchpage_and_make_soup
@@ -4834,7 +4834,7 @@ class TestReadSolarStandards(TestCase):
 class TestFetchJPLPhysParams(TestCase):
 
     def setUp(self):
-        params = {  'provisional_name' : '7777',
+        params = {  'name' : '2555',
                     'abs_mag'       : 21.0,
                     'slope'         : 0.15,
                     'epochofel'     : datetime(2015, 3, 19, 00, 00, 00),
@@ -4850,16 +4850,79 @@ class TestFetchJPLPhysParams(TestCase):
                     'origin'        : 'M',
                     }
         self.body, created = Body.objects.get_or_create(**params)
+        
+        self.resp = {'phys_par': [{'ref': 'MPO347540',
+                   'value': '11.9',
+                   'name': 'H',
+                   'desc': 'absolute magnitude (magnitude at 1 au from Sun and observer)',
+                   'notes': None,
+                   'sigma': None,
+                   'title': 'absolute magnitude',
+                   'units': None},
+                  {'ref': 'urn:nasa:pds:neowise_diameters_albedos::2.0[mainbelt] (http://adsabs.harvard.edu/abs/2012ApJ...759L...8M)',
+                   'value': '10.256',
+                   'name': 'diameter',
+                   'desc': 'effective body diameter',
+                   'notes': None,
+                   'sigma': '1.605',
+                   'title': 'diameter',
+                   'units': 'km'},
+                  {'ref': 'urn:nasa:pds:neowise_diameters_albedos::2.0[mainbelt] (http://adsabs.harvard.edu/abs/2012ApJ...759L...8M)',
+                   'value': '0.320',
+                   'name': 'albedo',
+                   'desc': 'geometric albedo',
+                   'notes': None,
+                   'sigma': '0.152',
+                   'title': 'geometric albedo',
+                   'units': None}],
+                 'object': {'shortname': '2555 Thomas',
+                  'neo': False,
+                  'des_alt': [{'pri': '1980 OC'},
+                   {'des': '1976 YQ'},
+                   {'des': '1971 UZ2'},
+                   {'des': '1961 US'}],
+                  'orbit_class': {'name': 'Main-belt Asteroid', 'code': 'MBA'},
+                  'pha': False,
+                  'spkid': '2002555',
+                  'kind': 'an',
+                  'orbit_id': '30',
+                  'fullname': '2555 Thomas (1980 OC)',
+                  'des': '2555',
+                  'prefix': None},
+                 'signature': {'source': 'NASA/JPL Small-Body Database (SBDB) API',
+                  'version': '1.1'}}
+
+
 
 
     def test_1(self):
         bodies = Body.objects.all()
-        expected_body = bodies[0]
+        body = bodies[0]
         
-        jpl_body = fetch_jpl_physparams_altdes(bodies[0])
+#names under phys_par: H, diameter, albedo
+        expected_values = 'H'
+        phys_params = PhysicalParameters.objects.filter(body=body)
+        self.assertNotEqual(phys_params, None)
         
-        self.assertEqual(expected_body, jpl_body)
-
+        store_jpl_physparams(self.resp['phys_par'], body)
+        
+        
+        phys_params = PhysicalParameters.objects.filter(body=body)
+        print(phys_params)
+        
+        for p in phys_params:
+           
+                
+        
+        self.assertEqual(phys_params, expected_values)
+         
+                 
+         
+         
+        #self.assertNotEqual(phys_params,)
+#def store_jpl_physparams(phys_par, body):
+#def store_jpl_desigs(obj, body):
+#def store_jpl_sourcetypes(code, body): 
 
     def test_2(self):
         valueA = "0.007/0.002"
@@ -4875,41 +4938,40 @@ class TestFetchJPLPhysParams(TestCase):
 
 
     def test_3(self):
-        fullname = '2555 Thomas 1980 OC'
-        number = name = prov_des = None     
-        if fullname[0] is '(': #if only (provisional des)
+        fullname = '2555 Thomas (1980 OC)'   
+        if fullname[0] is '(':
             prov_des = fullname
-#            des_type = 'number'
-        elif ' ' in fullname: #if there is number+name before (provisional des)
-            #fullname = fullname.strip('(')
-            #if ' ' in fullname: #if space
+        elif ' ' in fullname:
             space_num = fullname.count(' ')
-            if space_num is 3: #2555 Thomas 1980 OC
+            if space_num is 3:
                 part1,part2,part3,part4 = fullname.split(' ')
                 number = part1
                 if part2 [0].isalpha:
                     name = part2
                     prov_des = '{} {}'.format(part3,part4)
-            elif space_num is 2: #254857 (2005 RT33)
+            elif space_num is 2:
                 part1,part2,part3 = fullname.split(' ')
                 number = part1
                 if part2[0].isdigit:
                     prov_des = '{} {}'.format(part2,part3)
-            elif space_num is 1: #16 Psyche
+            elif space_num is 1:
                 part1,part2 = fullname.split(' ')
                 number = part1
                 name = part2   
-        elif '/' in fullname: #comet ex: 20D/Westphal
-            name = fullname
-
-
-
-#        des =   {'number': number,
-#            'name': name,
-#            'trash': trash,
-#            }
-#        print(space_num)
-#        print('number =', number,',', 'name =', name,',', 'prov_des =', prov_des)                    
+        elif '/' in fullname: #comet
+            part1,part2 = fullname.split('/')
+            number = part1
+            name = part2
+    
+                
+        Number = '2555'
+        Name = 'Thomas'
+        Prov_Des = '(1980 OC)'
         
-
+        self.assertEqual(Number, number)
+        self.assertEqual(Name, name)     
+        self.assertEqual(Prov_Des, prov_des)
+        
+      
+#    def test_4(self):
 
