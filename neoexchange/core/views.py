@@ -2995,6 +2995,7 @@ def display_calibspec(request, pk):
     try:
         calibsource = StaticSource.objects.get(pk=pk)
     except StaticSource.DoesNotExist:
+        logger.debug("Source not found")
         return HttpResponse()
 
     base_dir = os.path.join('cdbs', 'ctiostan')  # new base_dir for method
@@ -3013,11 +3014,13 @@ def display_calibspec(request, pk):
         else:
             logger.warning("No flux file found for " + spec_file)
             spec_file = ''
-    if spec_file:
+    if spec_file and default_storage.exists(spec_file):
         logger.debug('Spectroscopy Plot: {}'.format(spec_file))
         spec_plot = default_storage.open(spec_file, 'rb').read()
         return HttpResponse(spec_plot, content_type="Image/png")
     else:
+        print(spec_file)
+        logger.debug("No spectrum found")
         import base64
         # Return a 1x1 pixel gif in the case of no spectra file
         PIXEL_GIF_DATA = base64.b64decode(
@@ -3050,16 +3053,10 @@ def display_movie(request, pk):
     if movie_files:
         movie_file = movie_files[0]
     else:
-        movie_file = ''
-    if not movie_file:
         movie_file = make_movie(date_obs, obj, req, base_dir, prop)
     if movie_file:
         logger.debug('MOVIE FILE: {}'.format(movie_file))
-        if settings.USE_S3:
-            logger.debug("S3 path=", movie_file)
-            movie = default_storage.open(movie_file, 'rb').read()
-        else:
-            movie = open(movie_file, 'rb').read()
+        movie = default_storage.open(movie_file, 'rb').read()
         return HttpResponse(movie, content_type="Image/gif")
     else:
         return HttpResponse()

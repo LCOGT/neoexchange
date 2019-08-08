@@ -15,6 +15,8 @@ GNU General Public License for more details.
 
 import sys
 import numpy as np
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from astropy.io import fits
@@ -203,7 +205,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=False
     # takes in fig, update function, and frame rate set to fr
     anim = FuncAnimation(fig, update, frames=len(fits_files), blit=False, interval=fr)
 
-    filename = os.path.join(path, obj.replace(' ', '_') + '_' + rn + '_guidemovie.gif')
+    filename = os.path.join(path, obj.replace(' ', '_') + '_' + rn + '_tmp_guidemovie.gif')
     anim.save(filename, dpi=90, writer='imagemagick')
 
     # Save to default location because Matplotlib wants a string filename not File object

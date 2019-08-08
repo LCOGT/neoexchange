@@ -289,7 +289,8 @@ if USE_S3:
     DATA_ROOT = ''
 else:
     # For local use
-    DATA_ROOT = os.getenv('DATA_ROOT', '/apophis/eng/rocks/')
+    MEDIA_ROOT = os.getenv('DATA_ROOT', '/apophis/eng/rocks/')
+    DATA_ROOT = MEDIA_ROOT
 
 
 #######################
