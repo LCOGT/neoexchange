@@ -281,7 +281,7 @@ if __name__ == '__main__':
     path = args.path
     fr = args.fr
     ir = args.ir
-    print("Base Framerate: {}".format(fr))
+    logger.debug("Base Framerate: {}".format(fr))
     if path[-1] != '/':
         path += '/'
     files = np.sort(glob(path+'*.fits.fz'))
@@ -289,6 +289,6 @@ if __name__ == '__main__':
         files = np.sort(glob(path+'*.fits'))
     if len(files) >= 1:
         gif_file = make_gif(files, fr=fr, init_fr=ir, progress=True)
-        print("New gif created: {}".format(gif_file))
+        logger.info("New gif created: {}".format(gif_file))
     else:
-        print("No files found.")
+        logger.info("No files found.")
