@@ -3019,8 +3019,7 @@ def display_calibspec(request, pk):
         spec_plot = default_storage.open(spec_file, 'rb').read()
         return HttpResponse(spec_plot, content_type="Image/png")
     else:
-        print(spec_file)
-        logger.debug("No spectrum found")
+        logger.debug("No spectrum found for: ", spec_file)
         import base64
         # Return a 1x1 pixel gif in the case of no spectra file
         PIXEL_GIF_DATA = base64.b64decode(
