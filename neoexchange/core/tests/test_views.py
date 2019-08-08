@@ -6372,10 +6372,9 @@ class TestFindSpec(TestCase):
     @patch('core.views.lco_api_call', mock_archive_spectra_header)
     def test_local_data_no_tarball(self):
         settings.USE_S3 = False
-        settings.DATA_ROOT = tempfile.mkdtemp()
 
-        expected_date = '20190726'
-        expected_path = os.path.join(settings.DATA_ROOT, expected_date, self.test_body.current_name() + '_' + self.test_block.request_number)
+        expected_date = '20190727'
+        expected_path = os.path.join(expected_date, self.test_body.current_name() + '_' + self.test_block.request_number)
 
         date_obs, obj, req, path, prop = find_spec(self.test_block.pk)
 
@@ -6387,23 +6386,22 @@ class TestFindSpec(TestCase):
 
     @patch('core.views.lco_api_call', mock_archive_spectra_header)
     def test_local_data_with_tarball(self):
-        settings.USE_S3 = False
-        settings.DATA_ROOT = tempfile.mkdtemp()
 
-        expected_date = '20190727'
-        expected_path = os.path.join(settings.DATA_ROOT, expected_date, self.test_body.current_name() + '_' + self.test_block.request_number)
-        os.makedirs(os.path.join(settings.DATA_ROOT, expected_date))
-        fake_tar = os.path.join(settings.DATA_ROOT, expected_date, self.eng_proposal.code + '_' + self.test_block.request_number + '.tar.gz')
-        with open(fake_tar, 'a'):
-            pass
+        with self.settings(MEDIA_ROOT=tempfile.mkdtemp()):
+            expected_date = '20190727'
+            expected_path = os.path.join(expected_date, self.test_body.current_name() + '_' + self.test_block.request_number)
+            # os.makedirs(expected_date)
+            fake_tar = os.path.join(expected_date, self.eng_proposal.code + '_' + self.test_block.request_number + '.tar.gz')
+            with open(fake_tar, 'a'):
+                pass
 
-        date_obs, obj, req, path, prop = find_spec(self.test_block.pk)
+            date_obs, obj, req, path, prop = find_spec(self.test_block.pk)
 
-        self.assertEqual(expected_date, date_obs)
-        self.assertEqual(self.test_body.current_name(), obj)
-        self.assertEqual(self.test_block.request_number, req)
-        self.assertEqual(expected_path, path)
-        self.assertEqual(self.eng_proposal.code, prop)
+            self.assertEqual(expected_date, date_obs)
+            self.assertEqual(self.test_body.current_name(), obj)
+            self.assertEqual(self.test_block.request_number, req)
+            self.assertEqual(expected_path, path)
+            self.assertEqual(self.eng_proposal.code, prop)
 
     @patch('core.views.lco_api_call', mock_archive_spectra_header)
     def test_S3_data(self):
