@@ -16,7 +16,7 @@ GNU General Public License for more details.
 from datetime import datetime
 from django.test import TestCase
 from django.http import HttpRequest
-from django.core.urlresolvers import resolve, reverse
+from django.urls import resolve, reverse
 from django.template.loader import render_to_string
 from django.views.generic import ListView
 from django.forms.models import model_to_dict

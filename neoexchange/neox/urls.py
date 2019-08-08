@@ -18,7 +18,7 @@ from django.contrib.staticfiles import views
 from django.contrib import admin
 from django.contrib.auth.views import login, logout
 from django.views.generic import ListView, DetailView
-from django.core.urlresolvers import reverse_lazy
+from django.urls import reverse_lazy
 
 from core.models import Body, Block, SourceMeasurement, SuperBlock, StaticSource
 from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockListView, ScheduleParameters, \

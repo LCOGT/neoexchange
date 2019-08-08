@@ -18,7 +18,7 @@ from mock import patch
 from neox.tests.mocks import MockDateTime
 from datetime import datetime
 from core.models import Body, PreviousSpectra
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 
 
 class CharacterizationPageTest(FunctionalTest):
