@@ -3049,7 +3049,6 @@ def display_movie(request, pk):
     logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
 
     movie_files = find_spec_plots(os.path.join(path, "Guide_frames"), obj.replace(' ', '_'), req, "guidemovie.gif")
-    print(movie_files)
     if movie_files:
         movie_file = movie_files[0]
     else:
