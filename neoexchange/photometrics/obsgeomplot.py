@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
 from astropy.table import Column
-import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 import matplotlib.dates as mdates
 
 from astrometrics.ephem_subs import determine_darkness_times
@@ -25,7 +25,10 @@ def make_targetname(target_name):
 def plot_ra_dec(ephem, title=None):
     """Plot RA against Dec"""
 
-    fig, ax = plt.subplots()
+    # Generate the figure **without using pyplot**.
+    # https://matplotlib.org/faq/howto_faq.html#matplotlib-in-a-web-application-server
+    fig = Figure()
+    ax = fig.subplots()
 
     ax.plot(ephem['RA'], ephem['DEC'])
     ax.set_xlim(360.0, 0.0)
@@ -55,7 +58,6 @@ def plot_ra_dec(ephem, title=None):
     targetname = make_targetname(first['targetname'])
     save_file = "{}_radec_{}-{}.png".format(targetname, first_date.strftime("%Y%m%d"), last_date.strftime("%Y%m%d"))
     fig.savefig(save_file, format='png')
-    plt.close()
 
     return save_file
 
@@ -74,7 +76,9 @@ def plot_helio_geo_dist(ephem, title=None):
     peri_color = '#ff5900' # Sort of orange
     ca_color = '#4700c3'
 
-    fig, ax = plt.subplots()
+    # Generate the figure **without using pyplot**.
+    fig = Figure()
+    ax = fig.subplots()
     dates = [datetime.strptime(d, "%Y-%b-%d %H:%M") for d in ephem['datetime_str']]
     ax.plot(dates, ephem['r'], color=hel_color, linestyle='-')
     ax.plot(dates, ephem['delta'], color=geo_color, linestyle='-')
@@ -104,7 +108,6 @@ def plot_helio_geo_dist(ephem, title=None):
     targetname = make_targetname(first['targetname'])
     save_file = "{}_dist_{}-{}.png".format(targetname, first_date.strftime("%Y%m%d"), last_date.strftime("%Y%m%d"))
     fig.savefig(save_file, format='png')
-    plt.close()
 
     return save_file
 
@@ -122,7 +125,9 @@ def plot_brightness(ephem, title=None):
     peri_color = '#ff5900' # Sort of orange
     ca_color = '#4700c3'
 
-    fig, ax = plt.subplots()
+    # Generate the figure **without using pyplot**.
+    fig = Figure()
+    ax = fig.subplots()
     dates = ephem['datetime']
     ax.plot(dates, ephem['V'], color=hel_color, linestyle='-')
 
@@ -149,7 +154,6 @@ def plot_brightness(ephem, title=None):
     targetname = make_targetname(first['targetname'])
     save_file = "{}_mag_{}-{}.png".format(targetname, first_date.strftime("%Y%m%d"), last_date.strftime("%Y%m%d"))
     fig.savefig(save_file, format='png')
-    plt.close()
 
     return save_file
 
@@ -213,7 +217,9 @@ def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, dbg=False)
     close_approach = dates[ephem_ca['delta'].argmin()]
     visible_dates, hours_visible = determine_hours_up(ephem_ca, site_code, dbg)
 
-    fig, axes = plt.subplots(2, 1, sharex=True, figsize=(10,8))
+    # Generate the figure **without using pyplot**.
+    fig = Figure(figsize=(10,8))
+    axes = fig.subplots(2, 1, sharex=True)
     fig.subplots_adjust(hspace=0.1)
     # Do bottom plot
     ax = axes[1]
@@ -283,7 +289,6 @@ def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, dbg=False)
     targetname = make_targetname(first['targetname'])
     save_file = "{}_timeup_{}_{}-{}.png".format(targetname, site_code, dates[0].strftime("%Y%m%d"), dates[-1].strftime("%Y%m%d"))
     fig.savefig(save_file, format='png')
-    plt.close()
 
     return save_file
 
@@ -300,7 +305,9 @@ def plot_uncertainty(ephem, title=None):
     if ca_idx > 0 and ca_idx < len(ephem)-1:
         close_approach = dates[ca_idx]
 
-    fig, ax = plt.subplots()
+    # Generate the figure **without using pyplot**.
+    fig = Figure()
+    ax = fig.subplots()
 
     unc_line = ax.plot(ephem['datetime'], ephem['RSS_3sigma'], 'k-')
     unc_line = unc_line[0]
@@ -335,6 +342,5 @@ def plot_uncertainty(ephem, title=None):
     targetname = make_targetname(first['targetname'])
     save_file = "{}_uncertainty_{}-{}.png".format(targetname, dates[0].strftime("%Y%m%d"), dates[-1].strftime("%Y%m%d"))
     fig.savefig(save_file, format='png')
-    plt.close()
 
     return save_file
