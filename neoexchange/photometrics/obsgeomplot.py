@@ -79,7 +79,7 @@ def plot_helio_geo_dist(ephem, title=None):
     # Generate the figure **without using pyplot**.
     fig = Figure()
     ax = fig.subplots()
-    dates = [datetime.strptime(d, "%Y-%b-%d %H:%M") for d in ephem['datetime_str']]
+    dates =  ephem['datetime']
     ax.plot(dates, ephem['r'], color=hel_color, linestyle='-')
     ax.plot(dates, ephem['delta'], color=geo_color, linestyle='-')
 
@@ -87,18 +87,23 @@ def plot_helio_geo_dist(ephem, title=None):
     close_approach = dates[ephem['delta'].argmin()]
 
     ylim = ax.get_ylim()
-    ax.vlines([perihelion, close_approach], ylim[0], ylim[1], colors=[peri_color, ca_color])
+    # Only plot if the perihelion and close approach aren't at the ends of the ephemeris
+    if perihelion != dates[0] and perihelion != dates[-1]:
+        ax.vlines(perihelion, ylim[0], ylim[1], colors=peri_color)
+        ax.text(perihelion, 0.9*ylim[1], "perihelion", rotation=90, color=peri_color, horizontalalignment='right')
+    if close_approach != dates[0] and close_approach != dates[-1]:
+        ax.vlines(close_approach, ylim[0], ylim[1], colors=ca_color)
+        ax.text(close_approach, 0.1*ylim[1], "C/A", rotation=90, color=ca_color, horizontalalignment='left')
     ax.set_ylim(0, ylim[1])
     ax.set_xlabel('Date')
     ax.set_ylabel('Distance (AU)')
+    fig.autofmt_xdate()
     ax.minorticks_on()
     ax.xaxis.set_ticks_position('both')
     ax.yaxis.set_ticks_position('both')
 
     ax.annotate('Heliocentric', xy=(dates[0], first['r']), color=hel_color)
     ax.annotate('Geocentric', xy=(dates[-1], last['delta']), color=geo_color, horizontalalignment='right')
-    ax.text(perihelion, 0.9*ylim[1], "perihelion", rotation=90, color=peri_color, horizontalalignment='right')
-    ax.text(close_approach, 0.1*ylim[1], "C/A", rotation=90, color=ca_color, horizontalalignment='left')
 
     if title is None:
         title = "{} for {} to {}".format(first['targetname'], first_date.strftime("%Y-%m-%d"), last_date.strftime("%Y-%m-%d"))
@@ -135,16 +140,23 @@ def plot_brightness(ephem, title=None):
     close_approach = dates[ephem['delta'].argmin()]
 
     ylim = ax.get_ylim()
-    ax.vlines([perihelion, close_approach], ylim[0], ylim[1], colors=[peri_color, ca_color])
+    # Only plot if the perihelion and close approach aren't at the ends of the ephemeris
+    if perihelion != dates[0] and perihelion != dates[-1]:
+        ax.vlines(perihelion, ylim[0], ylim[1], colors=peri_color)
+        ax.text(perihelion, 0.9*ylim[1], "perihelion", rotation=90, color=peri_color, horizontalalignment='right')
+    if close_approach != dates[0] and close_approach != dates[-1]:
+        ax.vlines(close_approach, ylim[0], ylim[1], colors=ca_color)
+        ypos = ylim[1] - ((ylim[1] - ylim[0]) * 0.1)
+        ax.text(close_approach, ypos, "C/A", rotation=90, color=ca_color, horizontalalignment='left')
     ax.set_ylim(ylim[1], ylim[0])
     ax.set_xlabel('Date')
     ax.set_ylabel('V magnitude')
+    fig.autofmt_xdate()
     ax.minorticks_on()
     ax.xaxis.set_ticks_position('both')
     ax.yaxis.set_ticks_position('both')
+    ax.tick_params(axis='x', which='both', direction='in', bottom=True, top=True)
 
-    ax.text(perihelion, 0.9*ylim[1], "perihelion", rotation=90, color=peri_color, horizontalalignment='right')
-    ax.text(close_approach, 0.1*ylim[1], "C/A", rotation=90, color=ca_color, horizontalalignment='left')
 
     if title is None:
         title = "{} for {} to {}".format(first['targetname'], first_date.strftime("%Y-%m-%d"), last_date.strftime("%Y-%m-%d"))
