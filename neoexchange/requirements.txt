@@ -21,6 +21,7 @@ mock
 django-oauth-toolkit<1.2.0
 requests_oauthlib
 matplotlib
+bokeh
 fits2image
 panoptes-client
 pillow

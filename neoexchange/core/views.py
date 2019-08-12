@@ -2963,6 +2963,25 @@ def find_spec(pk):
     return date_obs, obj, req, path, prop
 
 
+def test_plot(block, obs_num):
+    from django.shortcuts import render
+    from bokeh.plotting import figure
+    from bokeh.resources import CDN
+    from bokeh.embed import components
+
+    date_obs, obj, req, path, prop = find_spec(block.id)
+    base_dir = os.path.join(settings.DATA_ROOT, date_obs)
+    spec_file, spec_count = make_spec(date_obs, obj, req, base_dir, prop, obs_num)
+    print(spec_count, spec_file)
+
+    plot = figure()
+    plot.circle([1, 2], [3, 4])
+
+    script, div = components(plot, CDN)
+
+    return script, div
+
+
 def display_spec(request, pk, obs_num):
     date_obs, obj, req, path, prop = find_spec(pk)
     base_dir = os.path.join(settings.DATA_ROOT, date_obs)  # new base_dir for method
@@ -3066,7 +3085,8 @@ class PlotSpec(View):  # make loging required later
 
     def get(self, request, *args, **kwargs):
         block = Block.objects.get(pk=kwargs['pk'])
-        params = {'pk': kwargs['pk'], 'obs_num': kwargs['obs_num'], 'sb_id': block.superblock.id}
+        script, div = test_plot(block, kwargs['obs_num'])
+        params = {'pk': kwargs['pk'], 'obs_num': kwargs['obs_num'], 'sb_id': block.superblock.id, "the_script": script, "the_div": div}
 
         return render(request, self.template_name, params)
 

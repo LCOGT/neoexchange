@@ -2,6 +2,14 @@
 
 {% block header %}Spectrum for block: {{pk}}{% endblock %}
 
+{% block last-css-content %}
+<link rel="stylesheet" href="http://cdn.pydata.org/bokeh/release/bokeh-1.3.4.min.css">
+{% endblock %}
+
+{% block script-content %}
+<script src="http://cdn.pydata.org/bokeh/release/bokeh-1.3.4.min.js"></script>
+{% endblock %}
+
 {% block bodyclass %}page{% endblock %}
 
 {% block extramenu %}
@@ -17,4 +25,9 @@
         <img src="{% url 'display_spec' pk  obs_num %}" alt="Could not find or create spectra file to plot."> <!-- TO DO: Make alternate when image not found-->
     {% endblock %}
 </div>
+
+    {{ the_div|safe }}
+    {{ the_script|safe }}
+
+
 {% endblock %}
