@@ -25,7 +25,6 @@ BASE_DIR = os.path.dirname(CURRENT_PATH)
 
 SECRET_KEY = '<50 random characters>'
 
-PREFIX =""
 DEBUG = True
 PRODUCTION = False
 STATIC_ROOT =  '<filesystem path>'

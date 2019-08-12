@@ -4,6 +4,12 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 2.8.6
+Change URL scheme for new prefix
+
+### 2.8.5
+Modifications to scheme on refitting elements.
+
 ### 2.8.4
 Add support for displaying log Flux plots of spectrophotometric standards with CTIO/HST/Oke spectra. Add view to show best calibration sources for the telescopes for the current night.
 

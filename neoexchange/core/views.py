@@ -157,7 +157,7 @@ def summarise_block_efficiency(block_filter=0):
     summary = []
     proposals = Proposal.objects.all()
     for proposal in proposals:
-        blocks = Block.objects.filter(proposal=proposal)
+        blocks = Block.objects.filter(superblock__proposal=proposal)
         observed = blocks.filter(num_observed__isnull=False)
         if len(blocks) > block_filter:
             proposal_summary = {
@@ -960,7 +960,9 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
                 self.success = False
                 msg = "It was not possible to submit your request to the scheduler."
                 if sched_params.get('error_msg', None):
-                    msg += "\nAdditional information:" + sched_params['error_msg']
+                    msg += "\nAdditional information:"
+                    error_msgs = sched_params['error_msg'].get('non_field_errors', [])
+                    msg += "\n".join(error_msgs)
                 messages.warning(self.request, msg)
             return super(ScheduleSubmit, self).form_valid(new_form)
 
@@ -1067,7 +1069,7 @@ def schedule_check(data, body, ok_to_schedule=True):
     lco_site_code = next(key for key, value in cfg.valid_site_codes.items() if value == data['site_code'])
 
     # calculate visibility
-    dark_and_up_time, max_alt = get_visibility(ra, dec, dark_midpoint, data['site_code'], '30 m', alt_limit, True, body_elements)
+    dark_and_up_time, max_alt = get_visibility(ra, dec, dark_midpoint, data['site_code'], '2 m', alt_limit, True, body_elements)
     if max_alt is not None:
         max_alt_airmass = S.sla_airmas((pi/2.0)-radians(max_alt))
     else:
@@ -1289,25 +1291,26 @@ def schedule_submit(data, body, username):
 
     emp_at_start = None
     if isinstance(body, Body) and data.get('spectroscopy', False) is not False and body.source_type != 'C' and body.elements_type != 'MPC_COMET':
-        # Update MPC observations assuming too many updates have not been done recently and target is not a comet
-        cut_off_time = timedelta(minutes=1)
-        now = datetime.utcnow()
-        recent_updates = Body.objects.exclude(source_type='u').filter(update_time__gte=now-cut_off_time)
-        if len(recent_updates) < 1:
-            update_MPC_obs(body.current_name())
 
-        # Invoke find_orb to update Body's elements and return ephemeris
-        new_ephemeris = refit_with_findorb(body.id, data['site_code'], data['start_time'])
-        if new_ephemeris is not None and new_ephemeris[1] is not None:
-            emp_info = new_ephemeris[0]
-            ephemeris = new_ephemeris[1]
-            emp_at_start = ephemeris[0]
+        # Check for recent elements
+        if abs(body.epochofel-data['start_time']) >= timedelta(days=2):
+            # Update MPC observations assuming too many updates have not been done recently and target is not a comet
+            cut_off_time = timedelta(minutes=1)
+            now = datetime.utcnow()
+            recent_updates = Body.objects.exclude(source_type='u').filter(update_time__gte=now-cut_off_time)
+            if len(recent_updates) < 1:
+                update_MPC_obs(body.current_name())
 
-        body.refresh_from_db()
-        body_elements = model_to_dict(body)
-        body_elements['epochofel_mjd'] = body.epochofel_mjd()
-        body_elements['epochofperih_mjd'] = body.epochofperih_mjd()
-        body_elements['current_name'] = body.current_name()
+            # Invoke find_orb to update Body's elements and return ephemeris
+            refit_with_findorb(body.id, data['site_code'], data['start_time'])
+
+            body.refresh_from_db()
+            body_elements = model_to_dict(body)
+            body_elements['epochofel_mjd'] = body.epochofel_mjd()
+            body_elements['epochofperih_mjd'] = body.epochofperih_mjd()
+            body_elements['current_name'] = body.current_name()
+        else:
+            logger.info("Current epoch is <2 days old; not updating")
 
     if type(body) != StaticSource and data.get('spectroscopy', False) is True:
         body_elements = compute_vmag_pa(body_elements, data)
@@ -1338,7 +1341,6 @@ def schedule_submit(data, body, username):
               'instrument_code' : data['instrument_code'],
               'solar_analog' : data.get('solar_analog', False),
               'calibsource' : calibsource_params,
-              'findorb_ephem' : emp_at_start,
               'max_airmass' : data.get('max_airmass', 1.74),
               'ipp_value' : data.get('ipp_value', 1),
               'min_lunar_distance' : data.get('min_lunar_dist', 30),
@@ -1680,7 +1682,7 @@ def record_block(tracking_number, params, form_data, target):
             obstype = Block.OPT_IMAGING
             if params.get('spectroscopy', False):
                 obstype = Block.OPT_SPECTRA
-                if request_type == 'SIDEREAL':
+                if request_type == 'SIDEREAL' or request_type == 'ICRS':
                     obstype = Block.OPT_SPECTRA_CALIB
 
             # sort site vs camera
@@ -1701,17 +1703,15 @@ def record_block(tracking_number, params, form_data, target):
             block_kwargs = { 'superblock' : sblock_pk,
                              'telclass' : params['pondtelescope'].lower(),
                              'site'     : site,
-                             'proposal' : Proposal.objects.get(code=form_data['proposal_code']),
                              'obstype'  : obstype,
-                             'groupid'  : params['group_id'],
                              'block_start' : datetime.strptime(no_timezone_blk_start, '%Y-%m-%dT%H:%M:%S'),
                              'block_end'   : datetime.strptime(no_timezone_blk_end, '%Y-%m-%dT%H:%M:%S'),
-                             'tracking_number' : request,
+                             'request_number'  : request,
                              'num_exposures'   : params['exp_count'],
                              'exp_length'      : params['exp_time'],
                              'active'   : True
                            }
-            if request_type == 'SIDEREAL' and params.get('solar_analog', False) is True and len(params.get('calibsource', {})) > 0:
+            if (request_type == 'SIDEREAL' or request_type == 'ICRS') and params.get('solar_analog', False) is True and len(params.get('calibsource', {})) > 0:
                 try:
                     calib_source = StaticSource.objects.get(pk=params['calibsource']['id'])
                 except StaticSource.DoesNotExist:
@@ -1720,7 +1720,7 @@ def record_block(tracking_number, params, form_data, target):
                 block_kwargs['body'] = None
                 block_kwargs['calibsource'] = calib_source
                 block_kwargs['exp_length'] = params['calibsrc_exptime']
-            elif request_type == 'SIDEREAL':
+            elif request_type == 'SIDEREAL' or request_type == 'ICRS':
                 block_kwargs['body'] = None
                 block_kwargs['calibsource'] = target
             else:
@@ -2350,6 +2350,10 @@ def ingest_new_object(orbit_file, obs_file=None, dbg=False):
     if obs_file is None:
         obs_file = orbit_file.replace('neocp', 'dat')
 
+    # If not found, try new-style obs file name
+    if os.path.exists(obs_file) is False:
+        obs_file = orbit_file.replace('.neocp', '_mpc.dat')
+
     local_discovery = False
     try:
         obsfile_fh = open(obs_file, 'r')
@@ -2612,7 +2616,7 @@ def create_source_measurement(obs_lines, block=None):
                                 logger.warning("Multiple matching satellite frames for %s from %s on %s found" % (params['body'], params['obs_date'], params['site_code']))
                                 continue
                     else:
-                        # If no satelites, check for existing frames, and create new ones
+                        # If no satellites, check for existing frames, and create new ones
                         if frame_list:
                             frame = next((frm for frm in frame_list if frm.sitecode == params['site_code'] and params['obs_date'] == frm.midpoint), None)
                             if not frame:
@@ -2949,9 +2953,9 @@ def find_spec(pk):
     if 'REQNUM' in data:
         req = data['REQNUM'].lstrip("0")
     else:
-        req = block.tracking_number
+        req = block.request_number
     path = os.path.join(base_dir, date_obs, obj + '_' + req)
-    prop = block.proposal.code
+    prop = block.superblock.proposal.code
     if not glob(os.path.join(base_dir, date_obs, prop+'_*'+req+'*.tar.gz')):
         date_obs = str(int(date_obs)-1)
         path = os.path.join(base_dir, date_obs, obj + '_' + req)
