@@ -120,7 +120,7 @@ class EphemQueryFormTest(TestCase):
     def test_ephem_form_has_all_sites(self):
         form = EphemQuery()
         self.assertIsInstance(form, EphemQuery)
-        self.assertIn('ELP 1.0m - V37; (McDonald, Texas)', form.as_p())
+        self.assertIn('ELP 1.0m - V37,V39; (McDonald, Texas)', form.as_p())
         self.assertIn('value="V37"', form.as_p())
         self.assertIn('FTN 2.0m - F65; (Maui, Hawaii )', form.as_p())
         self.assertIn('value="F65"', form.as_p())
@@ -221,10 +221,8 @@ class TestScheduleForm(TestCase):
     def test_sched_form_has_all_sites(self):
         form = ScheduleForm()
         self.assertIsInstance(form, ScheduleForm)
-        self.assertIn('ELP 1.0m - V37; (McDonald, Texas)', form.as_p())
+        self.assertIn('ELP 1.0m - V37,V39; (McDonald, Texas)', form.as_p())
         self.assertIn('value="V37"', form.as_p())
-        self.assertIn('ELP 1.0m #2 - V99; (McDonald, Texas)', form.as_p())
-        self.assertIn('value="V99"', form.as_p())
         self.assertIn('FTN 2.0m - F65; (Maui, Hawaii )', form.as_p())
         self.assertIn('value="F65"', form.as_p())
         self.assertIn('FTS 2.0m - E10; (Siding Spring, Aust.)', form.as_p())
@@ -323,10 +321,8 @@ class TestScheduleCadenceForm(TestCase):
     def test_sched_form_has_all_sites(self):
         form = ScheduleCadenceForm()
         self.assertIsInstance(form, ScheduleCadenceForm)
-        self.assertIn('ELP 1.0m - V37; (McDonald, Texas)', form.as_p())
+        self.assertIn('ELP 1.0m - V37,V39; (McDonald, Texas)', form.as_p())
         self.assertIn('value="V37"', form.as_p())
-        self.assertIn('ELP 1.0m #2 - V99; (McDonald, Texas)', form.as_p())
-        self.assertIn('value="V99"', form.as_p())
         self.assertIn('FTN 2.0m - F65; (Maui, Hawaii )', form.as_p())
         self.assertIn('value="F65"', form.as_p())
         self.assertIn('FTS 2.0m - E10; (Siding Spring, Aust.)', form.as_p())

@@ -999,7 +999,7 @@ class TestSubmitBlockToScheduler(TestCase):
 
     def test_1m_sinistro_elp_domb_userrequest(self):
 
-        site_code = 'V99'
+        site_code = 'V39'
         utc_date = datetime.now()+timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
         params = {  'proposal_id' : 'LCO2015A-009',
@@ -3690,7 +3690,7 @@ class TestConfigureDefaults(TestCase):
         test_params = {
               'exp_count': 42,
               'exp_time': 42.0,
-              'site_code': 'V99',
+              'site_code': 'V39',
               }
 
         expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',

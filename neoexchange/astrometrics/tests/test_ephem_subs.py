@@ -75,7 +75,7 @@ class TestGetMountLimits(TestCase):
         self.compare_limits(pos_limit, neg_limit, alt_limit, '1m')
 
     def test_1m_by_site_code_elp2(self):
-        (neg_limit, pos_limit, alt_limit) = get_mountlimits('V99')
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('V39')
         self.compare_limits(pos_limit, neg_limit, alt_limit, '1m')
 
     def test_1m_by_site_code_lowercase(self):
@@ -1539,7 +1539,7 @@ class TestDetermineSlotLength(TestCase):
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_basic_elp_1m0_2(self):
-        site_code = 'V99'
+        site_code = 'V39'
         name = 'A101foo'
         mag = 19.0
         expected_length = 20
@@ -1734,7 +1734,7 @@ class TestGetSiteCamParams(TestCase):
         self.assertEqual(self.sinistro_exp_overhead, exp_overhead)
 
     def test_1m_elp_site_sinistro_domeB(self):
-        site_code = 'V99'
+        site_code = 'V39'
         chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
         self.assertEqual(site_code.upper(), chk_site_code)
         self.assertEqual(0.389, pixel_scale)
@@ -2124,7 +2124,7 @@ class TestGetSitePos(TestCase):
         self.assertNotEqual(site_hgt, 0.0)
 
     def test_elp_num2_by_code(self):
-        site_code = 'V99'
+        site_code = 'V39'
 
         expected_site_name = 'LCO ELP Node 1m0 Dome B at McDonald Observatory'
 
