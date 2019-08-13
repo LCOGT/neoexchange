@@ -2968,14 +2968,21 @@ def test_plot(block, obs_num):
     from bokeh.plotting import figure
     from bokeh.resources import CDN
     from bokeh.embed import components
+    from astropy.io import ascii
 
     date_obs, obj, req, path, prop = find_spec(block.id)
     base_dir = os.path.join(settings.DATA_ROOT, date_obs)
     spec_file, spec_count = make_spec(date_obs, obj, req, base_dir, prop, obs_num)
-    print(spec_count, spec_file)
+    dat_file = spec_file.replace('.png', '.ascii')
+    data = ascii.read(dat_file)  # read in data
+    # assuming 3 columns: wavelength, flux/reflectance, error
+    columns = data.keys()
+    x_data = data[columns[0]]  # converting tables to ndarrays
+    y_data = data[columns[1]]
+    flux_error = data[columns[2]]
 
     plot = figure()
-    plot.circle([1, 2], [3, 4])
+    plot.line(x_data, y_data)
 
     script, div = components(plot, CDN)
 
