@@ -77,7 +77,7 @@ def int_to_mutant_hex_char(number):
     elif number < 36:
         rval = ord('A') - 10
     else:
-        rval = ord('a')  - 36 
+        rval = ord('a') - 36
 
     return chr(rval + number)
 
@@ -90,6 +90,7 @@ def normal_to_packed(obj_name, dbg=False):
     
     rval = 0
     comet = False
+    comet_type = ''
     
     # Check for comet-style designations such as 'P/1995 O1' 
     # and such.  Leading character can be P, C, X, D, or A.
@@ -103,16 +104,17 @@ def normal_to_packed(obj_name, dbg=False):
         obj_name = obj_name.rstrip()[:-1]
 
     buff = obj_name.replace(" ", "")
-    if dbg: print("len(buff)=", len(buff))
+    if dbg:
+        print("len(buff)=", len(buff))
 
     if buff.isdigit():
         # Simple numbered asteroid or comet
         number = int(buff)
 
         if comet:
-            packed_desig = "%04d%c       " % ( number, comet_type)
+            packed_desig = "%04d%c       " % (number, comet_type)
         else:
-            packed_desig = "%c%04d       " % ( int_to_mutant_hex_char( number // 10000), number % 10000);
+            packed_desig = "%c%04d       " % (int_to_mutant_hex_char( number // 10000), number % 10000)
     # If the name starts with four digits followed by an uppercase letter, it's
     # a provisional (un-numbered) designation e.g. '1984 DA' or '2015 BM510'
     elif len(buff) >= 4 and buff[0:4].isdigit() and buff[4].isupper():
@@ -121,13 +123,14 @@ def normal_to_packed(obj_name, dbg=False):
         if comet is False:
             comet_type = " "
         pack11 = '0'
-        i=5
+        i = 5
         if len(buff) > 5 and buff[5].isupper():
             pack11 = buff[5]
-            i = i+1
-        
+            i += 1
+
         sub_designator_str = re.sub('(\d*)([a-zA-Z]*)$', r'\1', buff[i:])
-        if dbg: print('sub_designator_str=', sub_designator_str, len(sub_designator_str))
+        if dbg:
+            print('sub_designator_str=', sub_designator_str, len(sub_designator_str))
         sub_designator = 0
         if sub_designator_str != '':
             sub_designator = int(sub_designator_str)
@@ -138,9 +141,7 @@ def normal_to_packed(obj_name, dbg=False):
             pack9 = chr(ord('A') + sub_designator // 10 - 10)
         else:
             pack9 = chr(ord('a') + sub_designator // 10 - 36)
-        packed_desig = "    %c%c%02d%c%c%c%c" % ( comet_type, 
-            ord('A') - 10 + year // 100, year % 100,
-            str(buff[4]).upper(), pack9, pack10, pack11)
+        packed_desig = "    %c%c%02d%c%c%c%c" % (comet_type, ord('A') - 10 + year // 100, year % 100, str(buff[4]).upper(), pack9, pack10, pack11)
     else:
         # Bad id
         packed_desig = ' ' * 12
@@ -170,7 +171,7 @@ def determine_asteroid_type(perihdist, eccentricity):
     else:
         # Test for eccentricity close to or greater than 1.0
         if abs(eccentricity-1.0) >= 1e-3 and eccentricity < 1.0:
-            semi_axis = perihdist / (1.0 - eccentricity )
+            semi_axis = perihdist / (1.0 - eccentricity)
             if perihdist >= jupiter_semidist and jupiter_semidist <= semi_axis <= neptune_semidist:
                 obj_type = 'E'  # Centaur
             elif perihdist > neptune_semidist:
@@ -188,7 +189,7 @@ def determine_time_of_perih(meandist, meananom, epochofel):
     (<epochofel>:as a datetime).
     Returns the epoch of perihelion as a datetime."""
 
-    gauss_k = degrees(0.01720209895) # Gaussian gravitional constant
+    gauss_k = degrees(0.01720209895)  # Gaussian gravitional constant
 
     # Compute 'n', the mean daily motion
     n = gauss_k / (meandist * sqrt(meandist))
@@ -220,8 +221,7 @@ def convert_ast_to_comet(kwargs, body):
         if params.get('slope', 0.15) == 0.15:
             params['slope'] = 4.0
         params['elements_type'] = 'MPC_COMET'
-        if params['eccentricity'] is not None and params['meandist'] is not None and \
-            params['meananom'] is not None and params['epochofel'] is not None:
+        if params['eccentricity'] is not None and params['meandist'] is not None and params['meananom'] is not None and params['epochofel'] is not None:
             if params['eccentricity'] < 1.0:
                 params['perihdist'] = params['meandist'] * (1.0 - params['eccentricity'])
             params['epochofperih'] = determine_time_of_perih(params['meandist'], params['meananom'], params['epochofel'])
