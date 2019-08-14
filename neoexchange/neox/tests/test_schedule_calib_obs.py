@@ -366,22 +366,22 @@ class ScheduleObservations(FunctionalTest):
 
         # Bart has heard about a new website for NEOs. He goes to the
         # page for a calib source, but the best case telescope is missing
-        start_url = reverse('calibsource', kwargs={'pk': 2})
+        start_url = reverse('calibsource-view')
         self.browser.get(self.live_server_url + start_url)
+        link = self.browser.find_element_by_link_text('CD-34d241')
+        with self.wait_for_page_load(timeout=10):
+            link.click()
 
         # He sees a Schedule Observations button
         link = self.browser.find_element_by_id('schedule-spectro-obs')
-        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-calib-spectra',
-                                                                   kwargs={'instrument_code': 'E10-FLOYDS', 'pk': 2}))
         actual_url = link.get_attribute('href')
-        self.assertEqual(actual_url, target_url)
+        self.assertIn('E10-FLOYDS', actual_url)
 
         # He clicks the link to go to the Schedule Observations page
         with self.wait_for_page_load(timeout=10):
             link.click()
-        self.browser.implicitly_wait(10)
         new_url = self.browser.current_url
-        self.assertEqual(str(new_url), target_url)
+        self.assertEqual(str(new_url), actual_url)
 
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_id('verify-scheduling').click()
@@ -407,7 +407,6 @@ class ScheduleObservations(FunctionalTest):
         # He clicks the link to go to the Schedule Observations page
         with self.wait_for_page_load(timeout=10):
             link.click()
-        self.browser.implicitly_wait(10)
         new_url = self.browser.current_url
         self.assertEqual(str(new_url), target_url)
 
