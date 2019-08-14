@@ -928,7 +928,7 @@ def get_mag_mapping(site_code):
     dictionary is returned if the site name isn't recognized"""
 
     twom_site_codes = ['F65', 'E10', '2M', '2M0']
-    good_onem_site_codes = ['V37', 'K91', 'K92', 'K93', 'W85', 'W86', 'W87', 'Q63', 'Q64', 'GOOD1M', '1M0']
+    good_onem_site_codes = ['V37', 'V39', 'K91', 'K92', 'K93', 'W85', 'W86', 'W87', 'Q63', 'Q64', 'GOOD1M', '1M0']
     # COJ normally has bad seeing, allow more time
     # Disabled by TAL 2018/8/10 after mirror recoating
 #    bad_onem_site_codes = ['Q63', 'Q64']
@@ -1251,13 +1251,20 @@ def get_sitepos(site_code, dbg=False):
         (site_long, status) =  S.sla_daf2r(104, 0., 54.63)
         site_long = -site_long
         site_hgt = 2010.0
-        site_name = 'LCO Node at McDonald Observatory (ELP)'
+        site_name = 'LCO ELP Node 1m0 Dome A at McDonald Observatory'
+    elif site_code == 'ELP-DOMB' or site_code == 'V39':
+        # Position from screenshot of Annie's GPS on mount at site...
+        (site_lat, status)  =  S.sla_daf2r(30, 40, 48.00)
+        (site_long, status) =  S.sla_daf2r(104, 0.0, 55.74)
+        site_long = -site_long
+        site_hgt = 2029.4
+        site_name = 'LCO ELP Node 1m0 Dome B at McDonald Observatory'
     elif site_code == 'ELP-AQWA-0M4A' or site_code == 'V38':
         (site_lat, status)  =  S.sla_daf2r(30, 40, 48.15)
         (site_long, status) =  S.sla_daf2r(104, 0., 54.24)
         site_long = -site_long
         site_hgt = 2027.0
-        site_name = 'LCO Node at McDonald Observatory (ELP)'
+        site_name = 'LCO ELP Node 0m4a Aqawan A at McDonald Observatory'
     elif site_code == 'BPL':
         (site_lat, status)  =  S.sla_daf2r(34, 25, 57)
         (site_long, status) =  S.sla_daf2r(119, 51, 46)
@@ -1634,7 +1641,7 @@ def get_mountlimits(site_code_or_name):
     ha_neg_limit = -12.0 * 15.0
     alt_limit = 25.0
 
-    if '-1M0A' in site or site in ['V37', 'W85', 'W86', 'W87', 'K91', 'K92', 'K93', 'Q63', 'Q64']:
+    if '-1M0A' in site or site in ['V37', 'V39', 'W85', 'W86', 'W87', 'K91', 'K92', 'K93', 'Q63', 'Q64']:
         ha_pos_limit = 4.5 * 15.0
         ha_neg_limit = -4.5 * 15.0
         alt_limit = 30.0

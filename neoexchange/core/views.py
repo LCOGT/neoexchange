@@ -960,7 +960,9 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
                 self.success = False
                 msg = "It was not possible to submit your request to the scheduler."
                 if sched_params.get('error_msg', None):
-                    msg += "\nAdditional information:" + sched_params['error_msg']
+                    msg += "\nAdditional information:"
+                    error_msgs = sched_params['error_msg'].get('non_field_errors', [])
+                    msg += "\n".join(error_msgs)
                 messages.warning(self.request, msg)
             return super(ScheduleSubmit, self).form_valid(new_form)
 
@@ -1607,7 +1609,8 @@ def check_for_block(form_data, params, new_body):
 
     # XXX Code smell, duplicated from sources_subs.configure_defaults()
     site_list = { 'V37' : 'ELP' ,
-                  'K92' : 'CPT' ,
+                  'V39' : 'ELP',
+                  'K92' : 'CPT',
                   'K93' : 'CPT',
                   'Q63' : 'COJ',
                   'W85' : 'LSC',
@@ -1618,8 +1621,7 @@ def check_for_block(form_data, params, new_body):
                   'Z21' : 'TFN',
                   'Q58' : 'COJ',
                   'Q59' : 'COJ',
-                  'T04' : 'OGG',
-                  'V99' : 'ELP'
+                  'T04' : 'OGG'
                   }
 
     try:
@@ -2364,6 +2366,10 @@ def ingest_new_object(orbit_file, obs_file=None, dbg=False):
     if obs_file is None:
         obs_file = orbit_file.replace('neocp', 'dat')
 
+    # If not found, try new-style obs file name
+    if os.path.exists(obs_file) is False:
+        obs_file = orbit_file.replace('.neocp', '_mpc.dat')
+
     local_discovery = False
     try:
         obsfile_fh = open(obs_file, 'r')
@@ -2626,7 +2632,7 @@ def create_source_measurement(obs_lines, block=None):
                                 logger.warning("Multiple matching satellite frames for %s from %s on %s found" % (params['body'], params['obs_date'], params['site_code']))
                                 continue
                     else:
-                        # If no satelites, check for existing frames, and create new ones
+                        # If no satellites, check for existing frames, and create new ones
                         if frame_list:
                             frame = next((frm for frm in frame_list if frm.sitecode == params['site_code'] and params['obs_date'] == frm.midpoint), None)
                             if not frame:

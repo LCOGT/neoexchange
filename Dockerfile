@@ -89,7 +89,9 @@ RUN cd /tmp/git_find_orb \
     && cd jpl_eph && make && make install && cd .. \
     && cd lunar && make integrat && make install && cd .. \
     && cd sat_code && make && make install && cd .. \
-    && cd find_orb && make && make install && cp ps_1996.dat elp82.dat /root/.find_orb && cd .. \
+    && cd find_orb && make && make install \
+    && if [[ -f "ps_1996.dat" && -f "elp82.dat" ]]; then cp ps_1996.dat elp82.dat /root/.find_orb; fi \
+    && cd .. \
     && cp /root/bin/fo /usr/local/bin/ \
     && chmod 755 /root \
     && rm -rf /tmp/git_find_orb

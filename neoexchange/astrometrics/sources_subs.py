@@ -1310,7 +1310,9 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
     list_address = '"small-bodies-observations@lists.nasa.gov"'
     list_authors = [ '"paul.a.abell@nasa.gov"',
                         '"paul.w.chodas@jpl.nasa.gov"',
-                        '"brent.w.barbee@nasa.gov"']
+                        '"brent.w.barbee@nasa.gov"',
+                        '"Barbee, Brent W. (GSFC-5950) via small-bodies-observations"']
+
     list_prefix = '[' + list_address.replace('"', '').split('@')[0] + ']'
     list_suffix = 'Observations Requested'
 
@@ -1484,6 +1486,9 @@ def make_location(params):
     elif params['site_code'] == 'W87':
         location['telescope'] = '1m0a'
         location['observatory'] = 'domc'
+    elif params['site_code'] == 'V39':
+        location['telescope'] = '1m0a'
+        location['observatory'] = 'domb'
     return location
 
 
@@ -1767,6 +1772,7 @@ def make_cadence_valhalla(request, params, ipp_value, debug=False):
 def configure_defaults(params):
 
     site_list = { 'V37' : 'ELP',
+                  'V39' : 'ELP',
                   'K91' : 'CPT',
                   'K92' : 'CPT',
                   'K93' : 'CPT',
