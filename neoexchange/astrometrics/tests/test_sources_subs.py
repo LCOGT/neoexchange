@@ -3695,7 +3695,7 @@ class TestConfigureDefaults(TestCase):
 
         expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
                             'pondtelescope': '1m0',
-                            'observatory': 'domb',
+                            'observatory': '',
                             'exp_type': 'EXPOSE',
                             'site': 'ELP',
                             'binning': 1}
