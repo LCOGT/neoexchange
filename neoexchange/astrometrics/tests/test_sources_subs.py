@@ -26,14 +26,14 @@ from bs4 import BeautifulSoup
 from django.test import TestCase
 from django.forms.models import model_to_dict
 
-from core.models import Body, Proposal, Block, StaticSource, PhysicalParameters, Designations
+from core.models import Body, Proposal, Block, StaticSource, PhysicalParameters, Designations, ColorValues
 from astrometrics.ephem_subs import determine_darkness_times
 from astrometrics.time_subs import datetime2mjd_utc
 from neox.tests.mocks import MockDateTime, mock_expand_cadence, mock_fetchpage_and_make_soup
 from core.views import record_block, create_calib_sources, compute_vmag_pa
 # Import module to test
 from astrometrics.sources_subs import *
-
+from collections import Counter ###
 
 # Disable logging during testing
 import logging
@@ -4832,7 +4832,7 @@ class TestReadSolarStandards(TestCase):
 
 
 class TestFetchJPLPhysParams(TestCase):
-
+    """Tests the sources_subs.py Fetch JPL PhysParams functions."""
     def setUp(self):
         params = {  'name' : '2555',
                     'abs_mag'       : 21.0,
@@ -4844,7 +4844,7 @@ class TestFetchJPLPhysParams(TestCase):
                     'orbinc'        : 8.34739,
                     'eccentricity'  : 0.1896865,
                     'meandist'      : 1.2176312,
-                    'source_type'   : 'U',
+                    'source_type'   : 'A',
                     'elements_type' : 'MPC_MINOR_PLANET',
                     'active'        : True,
                     'origin'        : 'M',
@@ -4891,87 +4891,293 @@ class TestFetchJPLPhysParams(TestCase):
                   'prefix': None},
                  'signature': {'source': 'NASA/JPL Small-Body Database (SBDB) API',
                   'version': '1.1'}}
+                  
 
 
-
-
-    def test_1(self):
+    def test_store_stuff_physparams(self):
+        """Test the storage of physical parameter types, values, and errors."""
         bodies = Body.objects.all()
         body = bodies[0]
         
-#names under phys_par: H, diameter, albedo
-        expected_values = 'H'
         phys_params = PhysicalParameters.objects.filter(body=body)
-        self.assertNotEqual(phys_params, None)
         
         store_jpl_physparams(self.resp['phys_par'], body)
         
-        
-        phys_params = PhysicalParameters.objects.filter(body=body)
-        print(phys_params)
-        
+        expected_values = [11.9, 10.256, 0.320]
+        expected_ptypes = ['H', 'D', 'ab']       
+        expected_sigmas = [None, 1.605, 0.152]        
+        expected = list(zip(expected_values, expected_ptypes, expected_sigmas))
         for p in phys_params:
-           
-                
-        
-        self.assertEqual(phys_params, expected_values)
-         
-                 
-         
-         
-        #self.assertNotEqual(phys_params,)
-#def store_jpl_physparams(phys_par, body):
-#def store_jpl_desigs(obj, body):
-#def store_jpl_sourcetypes(code, body): 
-
-    def test_2(self):
-        valueA = "0.007/0.002"
-        if '/' in valueA:
-            valueA1,valueA2 = valueA.split('/')
+            test_list = (p.value, p.parameter_type, p.error)
+            self.assertIn(test_list, expected)
+            expected.remove(test_list)
             
+        self.assertEqual(expected, [])  
 
-        value1 = '0.007'
-        value2 = '0.002'
+        
+    def test_pole_orient(self):
+        """Test the splitting of the value and error numbers.
+         Also to test the storage of these values."""
+        bodies = Body.objects.all()
+        body = bodies[0]   
 
-        self.assertEqual(value1, valueA1)
-        self.assertEqual(value2, valueA2)
+        pole_test = [{"value":"291.421/66.758",
+                    "name":"pole",
+                    "sigma":"0.007/0.002",
+                    "units":None}]
+
+        phys_params = PhysicalParameters.objects.filter(body=body)
+        dbpole_param = phys_params.filter(parameter_type='O')
+        store_jpl_physparams(pole_test, body)        
+
+        self.assertEqual(dbpole_param[0].value, 291.421)
+        self.assertEqual(dbpole_param[0].value2, 66.758)
+        self.assertEqual(dbpole_param[0].error, 0.007)
+        self.assertEqual(dbpole_param[0].error2, 0.002)
+  
+        
+    def test_color(self):
+        """Test the storage of color bands, values, and errors."""
+        bodies = Body.objects.all()
+        body = bodies[0] 
+            
+        color_test = [{"value":"0.426",
+                    "name":"UB",
+                    "desc":"color index U-B magnitude difference",
+                    "sigma":"0.026",
+                    "title":"U-B",
+                    "units":None}]
+
+        color_param = ColorValues.objects.filter(body=body)
+        store_jpl_physparams(color_test, body)
+
+        self.assertEqual(color_param[0].value, 0.426)
+        self.assertEqual(color_param[0].color_band, 'U-B')
+        self.assertEqual(color_param[0].error, 0.026)
 
 
-    def test_3(self):
-        fullname = '2555 Thomas (1980 OC)'   
-        if fullname[0] is '(':
-            prov_des = fullname
-        elif ' ' in fullname:
-            space_num = fullname.count(' ')
-            if space_num is 3:
-                part1,part2,part3,part4 = fullname.split(' ')
-                number = part1
-                if part2 [0].isalpha:
-                    name = part2
-                    prov_des = '{} {}'.format(part3,part4)
-            elif space_num is 2:
-                part1,part2,part3 = fullname.split(' ')
-                number = part1
-                if part2[0].isdigit:
-                    prov_des = '{} {}'.format(part2,part3)
-            elif space_num is 1:
-                part1,part2 = fullname.split(' ')
-                number = part1
-                name = part2   
-        elif '/' in fullname: #comet
-            part1,part2 = fullname.split('/')
-            number = part1
-            name = part2
+    def test_store_stuff_desigs(self):
+        """Test the storage of designations without any duplicate designations.
+           Also to test the storage of preferred designations."""
+        bodies = Body.objects.all()
+        body = bodies[0]
+        
+        expected_desigs = ['Thomas', '2555', '1980 OC', '1976 YQ', '1971 UZ2', '1961 US']
+        expected_dtypes = ['N', '#', 'P', 'P', 'P', 'P']
+        expected = list(zip(expected_desigs, expected_dtypes))
+        #expected = [[x,expected_dtypes[i]] for i,x in enumerate(expected_desigs)]
+        desigs = Designations.objects.filter(body=body)
+        store_jpl_desigs(self.resp['object'], body)
+        #running second time to test we're only storing values once
+        store_jpl_desigs(self.resp['object'], body)
+        for d in desigs:
+            test_list = (d.desig, d.desig_type)
+            self.assertIn(test_list, expected)
+            expected.remove(test_list)
+            
+        self.assertEqual(expected, [])
+                                
+        
+        #testing for preferred designations
+        prov_desig = desigs.filter(desig_type='P').filter(preferred=True)
+        self.assertEqual(len(prov_desig), 1)
+        self.assertEqual('1980 OC', prov_desig[0].desig)
+        
+        
+    def test_store_stuff_desigs_noprovdes(self):
+        """Test for when there are no alternate designations."""
+        bodies = Body.objects.all()
+        body = bodies[0]
+
+        Pallas = {"object":{"neo":False,
+           "des_alt":[],
+           "orbit_class":{"name":"Main-belt Asteroid","code":"MBA"},
+           "pha":False,
+           "spkid":"2000002",
+           "kind":"an",
+           "orbit_id":"35",
+           "fullname":"2 Pallas",
+           "des":"2",
+           "prefix":None},
+           "signature":{"source":"NASA/JPL Small-Body Database (SBDB) API",
+           "version":"1.1"}}
+          
+        desigs = Designations.objects.filter(body=body) 
+        store_jpl_desigs(Pallas['object'], body)  
+        
+        self.assertEqual(desigs[0].desig, '2')
+        self.assertEqual(desigs[0].desig_type, '#')
+        self.assertEqual(desigs[1].desig, 'Pallas')
+        self.assertEqual(desigs[1].desig_type, 'N')
+        self.assertEqual(len(Pallas['object']['des_alt']), 0)
+
+
+    def test_store_stuff_desigs_comet(self):
+        """Test the storage of comet designations."""
+        bodies = Body.objects.all()
+        body = bodies[0]
+        
+        Westphal = {"object":{"neo":True,
+                    "des_alt":[{"yl":"1913d",
+                    "rn":"1913 VI",
+                    "des":"20D/1913 S1"},
+                    {"rn":"1852 IV",
+                    "des":"20D/1852 O1"}],
+                    "orbit_class":{"name":"Halley-type Comet*","code":"HTC"},
+                    "pha":False,
+                    "spkid":"1000212",
+                    "kind":"cn",
+                    "orbit_id":"19",
+                    "fullname":"20D/Westphal",
+                    "des":"20D",
+                    "prefix":"D"},
+                    "signature":{"source":"NASA/JPL Small-Body Database (SBDB) API",
+                    "version":"1.1"}}
+
+        comet_des = Designations.objects.filter(body=body)   
+        store_jpl_desigs(Westphal['object'], body)
+
+        self.assertEqual(comet_des[0].desig, '20D')
+        self.assertEqual(comet_des[0].desig_type, '#')
+        self.assertEqual(comet_des[1].desig, 'Westphal')
+        self.assertEqual(comet_des[1].desig_type, 'N')
+
+
+    def test_store_stuff_desigs_noname(self):
+        """Test the storage of an object's designations when there is no name."""
+        bodies = Body.objects.all()
+        body = bodies[0]
+        
+        ex_obj = {"object":{"neo":False,
+                  "des_alt":[{"pri":"2005 RT33"}],
+                  "orbit_class":{"name":"Main-belt Asteroid","code":"MBA"},
+                  "pha":False,
+                  "spkid":"2254857",
+                  "kind":"an",
+                  "orbit_id":"12",
+                  "fullname":"254857 (2005 RT33)",
+                  "des":"254857",
+                  "prefix":None},
+                  "signature":{"source":"NASA/JPL Small-Body Database (SBDB) API",
+                  "version":"1.1"}}        
+
+        obj_ex = Designations.objects.filter(body=body)
+        store_jpl_desigs(ex_obj['object'], body)
+        
+        self.assertEqual(obj_ex[0].desig, '254857')
+        self.assertEqual(obj_ex[0].desig_type, '#')
+        self.assertEqual(obj_ex[1].desig, '2005 RT33')
+        self.assertEqual(obj_ex[1].desig_type, 'P')
+        
     
-                
-        Number = '2555'
-        Name = 'Thomas'
-        Prov_Des = '(1980 OC)'
+    def test_store_stuff_desigs_nonamenum(self):
+        """Test the storage of an object's designations when there is no name and number
+           (only a provisional designation)."""
+        bodies = Body.objects.all()
+        body = bodies[0]
         
-        self.assertEqual(Number, number)
-        self.assertEqual(Name, name)     
-        self.assertEqual(Prov_Des, prov_des)
+        ex_obj = {"object":{"neo":False,
+                  "des_alt":[],
+                  "orbit_class":{"name":"Inner Main-belt Asteroid","code":"IMB"},
+                  "pha":False,
+                  "spkid":"3841574",
+                  "kind":"au",
+                  "orbit_id":"3",
+                  "fullname":"(2019 HG2)",
+                  "des":"2019 HG2",
+                  "prefix":None},
+                  "signature":{"source":"NASA/JPL Small-Body Database (SBDB) API",
+                  "version":"1.1"}}
+                  
+        obj_ex = Designations.objects.filter(body=body)
+        store_jpl_desigs(ex_obj['object'], body)
         
-      
-#    def test_4(self):
+        self.assertEqual(obj_ex[0].desig, '2019 HG2')
+        self.assertEqual(obj_ex[0].desig_type, 'P')
+
+
+    def test_store_stuff_sourcetypes(self):
+        """Test the storage of sourcetypes."""
+        bodies = Body.objects.all()
+        body = bodies[0]
+        objcode = self.resp['object']['orbit_class']['code']
+        objcode = 'TJN'
+        store_jpl_sourcetypes(objcode, self.resp['object'], body)
+  
+        self.assertEqual(body.source_type, 'T')
+        self.assertEqual(body.source_subtype_1, 'P5')       
+        self.assertEqual(body.source_subtype_2, None)
+        
+        
+    def test_store_stuff_neo_pha_1(self):
+        """Test the storage of source subtypes when the object is labeled as an NEO
+           but not as a PHA."""        
+        bodies = Body.objects.all()
+        body = bodies[0]
+        objcode = self.resp['object']
+        objcode['orbit_class']['code'] = 'APO'
+        body.source_type = None
+        body.save()
+        objcode['neo'] = True
+        objcode['pha'] = False
+        store_jpl_sourcetypes(objcode['orbit_class']['code'], objcode, body)
+  
+        self.assertEqual(body.source_type, 'N')
+        self.assertEqual(body.source_subtype_1, 'N3')       
+        self.assertEqual(body.source_subtype_2, None)
+        
+        
+    def test_store_stuff_neo_pha_2(self):
+        """Test the storage of source subtypes when the object is labeled as both an NEO
+           and as a PHA."""                
+        bodies = Body.objects.all()
+        body = bodies[0]
+        objcode = self.resp['object']
+        objcode['orbit_class']['code'] = 'APO'
+        body.source_type = 'N'
+        body.save()
+        objcode['neo'] = True
+        objcode['pha'] = True
+        store_jpl_sourcetypes(objcode['orbit_class']['code'], objcode, body)
+  
+        self.assertEqual(body.source_type, 'N')
+        self.assertEqual(body.source_subtype_1, 'N3')       
+        self.assertEqual(body.source_subtype_2, 'PH')
+        
+        
+    def test_store_stuff_neo_pha_3(self):
+        """Test the storage of source subtypes when the object is labeled as a PHA
+           but not as an NEO (This situation is rare)."""                    
+        bodies = Body.objects.all()
+        body = bodies[0]
+        objcode = self.resp['object']
+        objcode['orbit_class']['code'] = 'APO'
+        body.source_type = None
+        body.save()
+        objcode['neo'] = False
+        objcode['pha'] = True
+        store_jpl_sourcetypes(objcode['orbit_class']['code'], objcode, body)
+  
+        self.assertEqual(body.source_type, None)
+        self.assertEqual(body.source_subtype_1, 'N3')       
+        self.assertEqual(body.source_subtype_2, None)
+        
+        
+    def test_store_stuff_neo_pha_4(self):
+        """Test the storage of source subtypes when the object is a comet
+           (instead of an asteroid) and is labeled as both an NEO and as a PHA."""                
+        bodies = Body.objects.all()
+        body = bodies[0]
+        objcode = self.resp['object']
+        objcode['orbit_class']['code'] = 'JFC'
+        body.source_type = 'C'
+        body.save()
+        objcode['neo'] = True
+        objcode['pha'] = True
+        store_jpl_sourcetypes(objcode['orbit_class']['code'], objcode, body)
+  
+        self.assertEqual(body.source_type, 'C')
+        self.assertEqual(body.source_subtype_1, 'JF')       
+        self.assertEqual(body.source_subtype_2, 'PH')
+
 
