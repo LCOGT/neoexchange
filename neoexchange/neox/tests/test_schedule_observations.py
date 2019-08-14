@@ -800,7 +800,6 @@ class ScheduleObservations(FunctionalTest):
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
         self.assertIn('Schedule this Object', submit)
 
-
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.datetime', MockDateTime)
