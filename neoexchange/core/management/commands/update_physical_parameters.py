@@ -14,8 +14,12 @@ GNU General Public License for more details.
 """
 
 from django.core.management.base import BaseCommand, CommandError
+from datetime import datetime, timedelta
 from core.models import Body
-from astrometrics.sources_subs import fetch_jpl_physparams_altdes
+from astrometrics.sources_subs import fetch_jpl_physparams_altdes, store_jpl_sourcetypes, store_jpl_desigs,\
+    store_jpl_physparams
+import logging
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
@@ -25,25 +29,20 @@ class Command(BaseCommand):
         parser.add_argument('target', type=str, nargs='?', default=None, help='Target to update (enter Provisional Designations w/ an underscore, i.e. 2002_DF3)')
 
     def handle(self, *args, **options):
-        
+
         if options['target']:
             obj_id = str(options['target']).replace('_', ' ')
             bodies = Body.objects.filter(name=obj_id)
         else:
             bodies = Body.objects.filter(active=True).exclude(origin='M')
-        
-        body = bodies[0]
-           
-        fetch_jpl_physparams_altdes(body)
-        
-        resp = fetch_jpl_physparams_altdes(body)
-        
-        store_jpl_physparams(resp['phys_par'], body)
-        store_jpl_desigs(resp['object'], body)
-        store_jpl_sourcetypes(resp['object']['orbit_class']['code'], resp['object'], body)    
-#        store_jpl_source_subtypes(resp['object'], body)
-       
-        phys_param_results = body.get_physical_parameters()
-        print(phys_param_results)
 
+        i = 0
+        for body in bodies:
+            self.stdout.write("{} ==== Updating {} ==== ({} of {}) ".format(datetime.now().strftime('%Y-%m-%d %H:%M'), body.current_name(), i+1, len(bodies)))
 
+            resp = fetch_jpl_physparams_altdes(body)
+
+            store_jpl_physparams(resp['phys_par'], body)
+            store_jpl_desigs(resp['object'], body)
+            store_jpl_sourcetypes(resp['object']['orbit_class']['code'], resp['object'], body)
+            i += 1

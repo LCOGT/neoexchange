@@ -2454,6 +2454,7 @@ def store_jpl_physparams(phys_par, body):
                        'units': p.get('units', None),
                        'reference': p.get('ref', None),
                        'notes': p.get('notes', None),
+                       'preferred': True
                        }
 
         # Change dictionary if color
@@ -2464,9 +2465,11 @@ def store_jpl_physparams(phys_par, body):
             phys_params['value2'] = jpl_value2
             phys_params['error2'] = jpl_error2  
 
-        body.save_physical_parameters(phys_params)
- 
- 
+        saved = body.save_physical_parameters(phys_params)
+        if saved:
+            logger.info('New Physical Parameter saved for {}: {}'.format(body.current_name(), p.get('desc', 'unknown')))
+
+
 def store_jpl_desigs(obj, body):
     """Function to store object name, number, and designations from JPL Horizons"""
 
@@ -2524,7 +2527,9 @@ def store_jpl_desigs(obj, body):
 
     for D in des_dict_list:
         if D['desig']:
-            body.save_physical_parameters(D)
+            saved = body.save_physical_parameters(D)
+            if saved:
+                logger.info('New Designation saved for {}: {}'.format(body.current_name(), D['desig']))
     
   
 def store_jpl_sourcetypes(code, obj, body):
