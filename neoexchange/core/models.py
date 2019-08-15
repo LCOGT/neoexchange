@@ -287,6 +287,24 @@ class Body(models.Model):
         else:
             return "Unknown"
 
+    def full_name(self):
+        name = Designations.objects.filter(body=self.id).filter(desig_type='N').filter(preferred=True)
+        num = Designations.objects.filter(body=self.id).filter(desig_type='#').filter(preferred=True)
+        prov_dev = Designations.objects.filter(body=self.id).filter(desig_type='P').filter(preferred=True)
+        fname = ''
+        if num:
+            fname += num[0].desig + ' '
+        if name:
+            fname += name[0].desig
+        if fname and prov_dev:
+            fname += ' ({})'.format(prov_dev[0].desig)
+        elif prov_dev:
+            fname += prov_dev[0].desig
+        else:
+            fname = self.current_name()
+
+        return fname
+
     def old_name(self):
         if self.provisional_name and self.name:
             return self.provisional_name
