@@ -33,7 +33,6 @@ from neox.tests.mocks import MockDateTime, mock_expand_cadence, mock_fetchpage_a
 from core.views import record_block, create_calib_sources, compute_vmag_pa
 # Import module to test
 from astrometrics.sources_subs import *
-from collections import Counter ###
 
 # Disable logging during testing
 import logging
@@ -627,6 +626,7 @@ class TestFetchYarkovskyTargets(TestCase):
 
         self.assertEqual(expected_targets, target_list)
 
+
 class TestSubmitBlockToScheduler(TestCase):
 
     def setUp(self):
@@ -667,7 +667,7 @@ class TestSubmitBlockToScheduler(TestCase):
     def test_submit_body_for_cpt(self, mock_post):
         mock_post.return_value.status_code = 200
 
-        mock_post.return_value.json.return_value = {'id': '999', 'requests' : [{'id': '111', 'target' : {'type' : 'NON-SIDEREAL' }, 'duration' : 1820}]}
+        mock_post.return_value.json.return_value = {'id': '999', 'requests' : [{'id': '111', 'target' : {'type' : 'NON-SIDEREAL'}, 'duration' : 1820}]}
 
         site_code = 'K92'
         utc_date = datetime.now()+timedelta(days=1)
@@ -705,7 +705,7 @@ class TestSubmitBlockToScheduler(TestCase):
 
         mock_post.return_value.json.return_value = {'id': 999, 'requests' :
             [{'id': 111, 'configurations' :
-                [{'id' : 222, 'target' : {'type' : 'ORBITAL-ELEMENTS' }}
+                [{'id' : 222, 'target' : {'type' : 'ORBITAL-ELEMENTS'}}
                 ],
             'duration' : 1820}]}
 
@@ -748,9 +748,9 @@ class TestSubmitBlockToScheduler(TestCase):
     def test_submit_cadence(self, mock_post):
         mock_post.return_value.status_code = 200
 
-        mock_post.return_value.json.return_value = {'id': '999', 'requests' : [{'id': '111', 'target' : {'type' : 'NON-SIDEREAL' }, 'duration' : 1820},
-                                                                               {'id': '222', 'target' : {'type' : 'NON-SIDEREAL' }, 'duration' : 1820},
-                                                                               {'id': '333', 'target' : {'type' : 'NON-SIDEREAL' }, 'duration' : 1820}]}
+        mock_post.return_value.json.return_value = {'id': '999', 'requests' : [{'id': '111', 'target' : {'type' : 'NON-SIDEREAL'}, 'duration' : 1820},
+                                                                               {'id': '222', 'target' : {'type' : 'NON-SIDEREAL'}, 'duration' : 1820},
+                                                                               {'id': '333', 'target' : {'type' : 'NON-SIDEREAL'}, 'duration' : 1820}]}
 
         site_code = 'V38'
         utc_date = datetime(2015, 3, 19, 00, 00, 00) + timedelta(days=1)
@@ -833,7 +833,7 @@ class TestSubmitBlockToScheduler(TestCase):
         mock_post.return_value.json.return_value = {'id': 999, 'requests' : [
             {'id': 111, 'duration' : 1820, 'configurations' : [{
                 'id' : 2635701,
-                'constraints' : {'max_airmass' : 1.74,},
+                'constraints' : {'max_airmass' : 1.74},
                 'instrument_configs' : [{'optical_elements': {'slit' : 'slit_6.0as'}, 'rotator_mode' : 'VFLOAT'}],
                 'target': {'type': 'ORBITAL_ELEMENTS', 'name' : '11500'},
                 'type' : 'SPECTRUM'
@@ -842,7 +842,7 @@ class TestSubmitBlockToScheduler(TestCase):
             },
             {'id' : 112, 'duration' : 665, 'configurations' : [{
                 'id' : 2635704,
-                'constraints' : {'max_airmass' : 1.74,},
+                'constraints' : {'max_airmass' : 1.74},
                 'instrument_configs' : [{'optical_elements': {'slit' : 'slit_6.0as'}, 'rotator_mode' : 'VFLOAT'}],
                 'target': {'type': 'ICRS', 'name' : 'SA107-684', 'ra' : 234.3, 'dec' : -0.16},
                 'type' : 'SPECTRUM'
@@ -1044,7 +1044,7 @@ class TestSubmitBlockToScheduler(TestCase):
 
         self.assertEqual(user_request['submitter'], 'bsimpson')
         self.assertEqual(user_request['requests'][0]['windows'][0]['start'], dark_start.strftime('%Y-%m-%dT%H:%M:%S'))
-        self.assertEqual(user_request['requests'][0]['location'].get('telescope',None), None)
+        self.assertEqual(user_request['requests'][0]['location'].get('telescope', None), None)
         self.assertEqual(user_request['requests'][0].get('observation_type', None), None)
         self.assertEqual(user_request['observation_type'], 'TARGET_OF_OPPORTUNITY')
 
@@ -1360,7 +1360,7 @@ class TestFetchFilterList(TestCase):
                                 "telescope": "http://configdb.lco.gtn/telescopes/10/",
                                 "science_camera": {
                                     "id": 1,
-                                    "code": "fa01",
+                                    "TestIMAPLogincode": "fa01",
                                     "camera_type": {
                                         "id": 3,
                                         "name": "1.0 meter Sinistro",
@@ -2613,7 +2613,7 @@ class TestReadMPCOrbitFile(TestCase):
 
     def test1(self):
 
-        expected_orblines = ['K19E00N 21.17  0.15 K1939 343.19351   46.63108  192.93185    9.77594  0.6187870  0.30650105   2.1786196    FO 190311   190   1   59 days 0.21 M-P 06  NEOCPNomin 0000 2019 EN                     20190309',]
+        expected_orblines = ['K19E00N 21.17  0.15 K1939 343.19351   46.63108  192.93185    9.77594  0.6187870  0.30650105   2.1786196    FO 190311   190   1   59 days 0.21 M-P 06  NEOCPNomin 0000 2019 EN                     20190309']
 
         orblines = read_mpcorbit_file(self.orbit_file)
 
@@ -2944,6 +2944,8 @@ class TestParseMPCObsFormat(TestCase):
 
         params = parse_mpcobs(self.test_lines['p_quoteC_h'])
 
+        self.compare_dict(expected_params, params)
+
     def test_cp_plingC_h(self):
         expected_params = { 'body'  : '0315P',
                             'flags' : '!',
@@ -3002,7 +3004,6 @@ class TestParseMPCObsFormat(TestCase):
     def test_np_fourX_l(self):
         expected_params = { }
         params = parse_mpcobs(self.test_lines['np_4X_l'])
-
 
         self.compare_dict(expected_params, params)
 
@@ -3233,7 +3234,7 @@ class TestIMAPLogin(TestCase):
         mailbox = MagicMock()
         mailbox.select.return_value = ("OK", [b'1'])
         mailbox.search.return_value = ("OK", [b'1'])
-        mailbox.fetch.return_value =  ("OK", [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 CV246 - Observations Requested\r\nDate: Tue, 18 Feb 2016 21:27:04 +000\r\n')])
+        mailbox.fetch.return_value = ("OK", [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 CV246 - Observations Requested\r\nDate: Tue, 18 Feb 2016 21:27:04 +000\r\n')])
 
         expected_targets = ['2016 CV246']
         targets = fetch_NASA_targets(mailbox)
@@ -3246,7 +3247,7 @@ class TestIMAPLogin(TestCase):
         mailbox = MagicMock()
         mailbox.select.return_value = ("OK", [b'1'])
         mailbox.search.return_value = ("OK", [b'1'])
-        mailbox.fetch.return_value =  ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-birds-observations] 2016 CV246 - Observations Requested\r\nDate: Tue, 16 Feb 2018 21:27:04 +000\r\n')])
+        mailbox.fetch.return_value = ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-birds-observations] 2016 CV246 - Observations Requested\r\nDate: Tue, 16 Feb 2018 21:27:04 +000\r\n')])
 
         expected_targets = []
         targets = fetch_NASA_targets(mailbox)
@@ -3259,7 +3260,7 @@ class TestIMAPLogin(TestCase):
         mailbox = MagicMock()
         mailbox.select.return_value = ("OK", [b'1'])
         mailbox.search.return_value = ("OK", [b'1'])
-        mailbox.fetch.return_value =  ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 CV246 - Radar Requested\r\nDate: Tue, 18 Feb 2016 21:27:04 +000\r\n')])
+        mailbox.fetch.return_value = ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 CV246 - Radar Requested\r\nDate: Tue, 18 Feb 2016 21:27:04 +000\r\n')])
 
         expected_targets = []
         targets = fetch_NASA_targets(mailbox)
@@ -3272,7 +3273,7 @@ class TestIMAPLogin(TestCase):
         mailbox = MagicMock()
         mailbox.select.return_value = ("OK", [b'1'])
         mailbox.search.return_value = ("OK", [b'1'])
-        mailbox.fetch.return_value =  ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 22 Feb 2016 20:27:04 -0500\r\n')])
+        mailbox.fetch.return_value = ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 22 Feb 2016 20:27:04 -0500\r\n')])
 
         expected_targets = ['2016 BA14']
         targets = fetch_NASA_targets(mailbox)
@@ -3285,7 +3286,7 @@ class TestIMAPLogin(TestCase):
         mailbox = MagicMock()
         mailbox.select.return_value = ("OK", [b'1'])
         mailbox.search.return_value = ("OK", [b'1'])
-        mailbox.fetch.return_value =  ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 13 Feb 2016 20:27:04 -0800\r\n')])
+        mailbox.fetch.return_value = ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 13 Feb 2016 20:27:04 -0800\r\n')])
 
         expected_targets = []
         targets = fetch_NASA_targets(mailbox)
@@ -3331,7 +3332,7 @@ class TestIMAPLogin(TestCase):
         mailbox = MagicMock()
         mailbox.select.return_value = ("OK", [b'1'])
         mailbox.search.return_value = ("OK", [b'1'])
-        mailbox.fetch.return_value =  ('OK', [(b'1 (RFC822 {12326}', b'Subject: Fwd: [small-bodies-observations] 2016 DJ - Observations Requested\r\nDate: Tue, 23 Feb 2016 11:25:29 -0800\r\n')])
+        mailbox.fetch.return_value = ('OK', [(b'1 (RFC822 {12326}', b'Subject: Fwd: [small-bodies-observations] 2016 DJ - Observations Requested\r\nDate: Tue, 23 Feb 2016 11:25:29 -0800\r\n')])
 
         expected_targets = ['2016 DJ']
         targets = fetch_NASA_targets(mailbox)
@@ -3344,7 +3345,7 @@ class TestIMAPLogin(TestCase):
         mailbox = MagicMock()
         mailbox.select.return_value = ("OK", [b'1'])
         mailbox.search.return_value = ("OK", [b'1'])
-        mailbox.fetch.return_value =  ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 13 Feb 2016 20:27:04 -0800\r\n')])
+        mailbox.fetch.return_value = ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 13 Feb 2016 20:27:04 -0800\r\n')])
 
         expected_targets = []
         targets = fetch_NASA_targets(mailbox, date_cutoff=2)
@@ -3357,7 +3358,7 @@ class TestIMAPLogin(TestCase):
         mailbox = MagicMock()
         mailbox.select.return_value = ("OK", [b'1'])
         mailbox.search.return_value = ("OK", [b'1'])
-        mailbox.fetch.return_value =  ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 13 Feb 2016 20:27:04 -0800\r\n')])
+        mailbox.fetch.return_value = ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 13 Feb 2016 20:27:04 -0800\r\n')])
 
         expected_targets = ['2016 BA14']
         targets = fetch_NASA_targets(mailbox, date_cutoff=2)
@@ -3370,7 +3371,7 @@ class TestIMAPLogin(TestCase):
         mailbox = MagicMock()
         mailbox.select.return_value = ("OK", [b'1'])
         mailbox.search.return_value = ("OK", [b'1'])
-        mailbox.fetch.return_value =  ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 TQ11, 2016 SR2, 2016 NP56,\r\n\t2016 ND1- Observations Requested\r\nDate: Mon, 24 Oct 2016 20:20:57 +0000\r\n')])
+        mailbox.fetch.return_value = ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 TQ11, 2016 SR2, 2016 NP56,\r\n\t2016 ND1- Observations Requested\r\nDate: Mon, 24 Oct 2016 20:20:57 +0000\r\n')])
 
         expected_targets = ['2016 TQ11', '2016 SR2', '2016 NP56', '2016 ND1']
         targets = fetch_NASA_targets(mailbox, date_cutoff=2)
@@ -3389,7 +3390,7 @@ class TestSFUFetch(TestCase):
 
     def test(self):
 
-        expected_result = (datetime(2018,1,15,17,44,10), 70*self.sfu)
+        expected_result = (datetime(2018, 1, 15, 17, 44, 10), 70*self.sfu)
 
         sfu_result = fetch_sfu(self.test_sfu_page)
 
@@ -3443,7 +3444,7 @@ class TestSFUFetch(TestCase):
                 </body></html>
                 '''
         page = BeautifulSoup(html, 'html.parser')
-        expected_result = (datetime(2018,1,15,17,44,10), None)
+        expected_result = (datetime(2018, 1, 15, 17, 44, 10), None)
 
         sfu_result = fetch_sfu(page)
 
@@ -4205,7 +4206,6 @@ class TestMakeMolecules(TestCase):
         self.assertEqual(expected_num_molecules, len(molecules))
         self.assertEqual(expected_type, molecules[0]['type'])
 
-
     def test_2m_spectroscopy_nocalibs(self):
 
         expected_num_molecules = 1
@@ -4934,8 +4934,6 @@ class TestFetchJPLPhysParams(TestCase):
                   'prefix': None},
                  'signature': {'source': 'NASA/JPL Small-Body Database (SBDB) API',
                   'version': '1.1'}}
-                  
-
 
     def test_store_stuff_physparams(self):
         """Test the storage of physical parameter types, values, and errors."""
@@ -4957,7 +4955,6 @@ class TestFetchJPLPhysParams(TestCase):
             
         self.assertEqual(expected, [])  
 
-        
     def test_pole_orient(self):
         """Test the splitting of the value and error numbers.
          Also to test the storage of these values."""
@@ -4977,19 +4974,18 @@ class TestFetchJPLPhysParams(TestCase):
         self.assertEqual(dbpole_param[0].value2, 66.758)
         self.assertEqual(dbpole_param[0].error, 0.007)
         self.assertEqual(dbpole_param[0].error2, 0.002)
-  
-        
+
     def test_color(self):
         """Test the storage of color bands, values, and errors."""
         bodies = Body.objects.all()
         body = bodies[0] 
-            
-        color_test = [{"value":"0.426",
-                    "name":"UB",
-                    "desc":"color index U-B magnitude difference",
-                    "sigma":"0.026",
-                    "title":"U-B",
-                    "units":None}]
+
+        color_test = [{"value": "0.426",
+                       "name" : "UB",
+                       "desc" : "color index U-B magnitude difference",
+                       "sigma": "0.026",
+                       "title": "U-B",
+                       "units": None}]
 
         color_param = ColorValues.objects.filter(body=body)
         store_jpl_physparams(color_test, body)
@@ -4998,163 +4994,164 @@ class TestFetchJPLPhysParams(TestCase):
         self.assertEqual(color_param[0].color_band, 'U-B')
         self.assertEqual(color_param[0].error, 0.026)
 
-
     def test_store_stuff_desigs(self):
         """Test the storage of designations without any duplicate designations.
            Also to test the storage of preferred designations."""
         bodies = Body.objects.all()
         body = bodies[0]
-        
+
         expected_desigs = ['Thomas', '2555', '1980 OC', '1976 YQ', '1971 UZ2', '1961 US']
         expected_dtypes = ['N', '#', 'P', 'P', 'P', 'P']
         expected = list(zip(expected_desigs, expected_dtypes))
-        #expected = [[x,expected_dtypes[i]] for i,x in enumerate(expected_desigs)]
+        # expected = [[x,expected_dtypes[i]] for i,x in enumerate(expected_desigs)]
         desigs = Designations.objects.filter(body=body)
         store_jpl_desigs(self.resp['object'], body)
-        #running second time to test we're only storing values once
+
+        # running second time to test we're only storing values once
         store_jpl_desigs(self.resp['object'], body)
         for d in desigs:
             test_list = (d.desig, d.desig_type)
             self.assertIn(test_list, expected)
             expected.remove(test_list)
-            
+
         self.assertEqual(expected, [])
-                                
-        
-        #testing for preferred designations
+
+        # testing for preferred designations
         prov_desig = desigs.filter(desig_type='P').filter(preferred=True)
         self.assertEqual(len(prov_desig), 1)
         self.assertEqual('1980 OC', prov_desig[0].desig)
-        
-        
+
     def test_store_stuff_desigs_noprovdes(self):
         """Test for when there are no alternate designations."""
         bodies = Body.objects.all()
         body = bodies[0]
 
-        Pallas = {"object":{"neo":False,
-           "des_alt":[],
-           "orbit_class":{"name":"Main-belt Asteroid","code":"MBA"},
-           "pha":False,
-           "spkid":"2000002",
-           "kind":"an",
-           "orbit_id":"35",
-           "fullname":"2 Pallas",
-           "des":"2",
-           "prefix":None},
-           "signature":{"source":"NASA/JPL Small-Body Database (SBDB) API",
-           "version":"1.1"}}
-          
+        pallas = {"neo": False,
+                   "des_alt": [],
+                   "orbit_class":
+                       {"name": "Main-belt Asteroid",
+                        "code": "MBA"},
+                   "pha": False,
+                   "spkid": "2000002",
+                   "kind": "an",
+                   "orbit_id": "35",
+                   "fullname": "2 Pallas",
+                   "des": "2",
+                   "prefix": None}
+
         desigs = Designations.objects.filter(body=body) 
-        store_jpl_desigs(Pallas['object'], body)  
-        
+        store_jpl_desigs(pallas, body)
+
         self.assertEqual(desigs[0].desig, '2')
         self.assertEqual(desigs[0].desig_type, '#')
         self.assertEqual(desigs[1].desig, 'Pallas')
         self.assertEqual(desigs[1].desig_type, 'N')
-        self.assertEqual(len(Pallas['object']['des_alt']), 0)
-
+        self.assertEqual(len(desigs), 2)
 
     def test_store_stuff_desigs_comet(self):
         """Test the storage of comet designations."""
         bodies = Body.objects.all()
         body = bodies[0]
-        
-        Westphal = {"object":{"neo":True,
-                    "des_alt":[{"yl":"1913d",
-                    "rn":"1913 VI",
-                    "des":"20D/1913 S1"},
-                    {"rn":"1852 IV",
-                    "des":"20D/1852 O1"}],
-                    "orbit_class":{"name":"Halley-type Comet*","code":"HTC"},
-                    "pha":False,
-                    "spkid":"1000212",
-                    "kind":"cn",
-                    "orbit_id":"19",
-                    "fullname":"20D/Westphal",
-                    "des":"20D",
-                    "prefix":"D"},
-                    "signature":{"source":"NASA/JPL Small-Body Database (SBDB) API",
-                    "version":"1.1"}}
+
+        westphal = {"object":
+                        {"neo": True,
+                         "des_alt":
+                             [{"yl": "1913d",
+                               "rn": "1913 VI",
+                               "des": "20D/1913 S1"},
+                              {"rn": "1852 IV",
+                               "des": "20D/1852 O1"},
+                              {"yl": "1813d",
+                               "rn": "1813 VI"}],
+                         "orbit_class":
+                             {"name": "Halley-type Comet*",
+                              "code": "HTC"},
+                         "pha": False,
+                         "spkid": "1000212",
+                         "kind": "cn",
+                         "orbit_id": "19",
+                        "fullname": "20D/Westphal",
+                         "des": "20D",
+                         "prefix": "D"},
+                    "signature":
+                        {"source": "NASA/JPL Small-Body Database (SBDB) API",
+                         "version": "1.1"}
+                    }
 
         comet_des = Designations.objects.filter(body=body)   
-        store_jpl_desigs(Westphal['object'], body)
+        store_jpl_desigs(westphal['object'], body)
 
         self.assertEqual(comet_des[0].desig, '20D')
         self.assertEqual(comet_des[0].desig_type, '#')
         self.assertEqual(comet_des[1].desig, 'Westphal')
         self.assertEqual(comet_des[1].desig_type, 'N')
 
-
     def test_store_stuff_desigs_noname(self):
         """Test the storage of an object's designations when there is no name."""
         bodies = Body.objects.all()
         body = bodies[0]
-        
-        ex_obj = {"object":{"neo":False,
-                  "des_alt":[{"pri":"2005 RT33"}],
-                  "orbit_class":{"name":"Main-belt Asteroid","code":"MBA"},
-                  "pha":False,
-                  "spkid":"2254857",
-                  "kind":"an",
-                  "orbit_id":"12",
-                  "fullname":"254857 (2005 RT33)",
-                  "des":"254857",
-                  "prefix":None},
-                  "signature":{"source":"NASA/JPL Small-Body Database (SBDB) API",
-                  "version":"1.1"}}        
+
+        ex_obj = {"neo": False,
+                  "des_alt":
+                      [{"pri": "2005 RT33"}],
+                  "orbit_class":
+                      {"name": "Main-belt Asteroid",
+                       "code": "MBA"},
+                  "pha": False,
+                  "spkid": "2254857",
+                  "kind": "an",
+                  "orbit_id": "12",
+                  "fullname": "254857 (2005 RT33)",
+                  "des": "254857",
+                  "prefix": None}
 
         obj_ex = Designations.objects.filter(body=body)
-        store_jpl_desigs(ex_obj['object'], body)
-        
+        store_jpl_desigs(ex_obj, body)
+
         self.assertEqual(obj_ex[0].desig, '254857')
         self.assertEqual(obj_ex[0].desig_type, '#')
         self.assertEqual(obj_ex[1].desig, '2005 RT33')
         self.assertEqual(obj_ex[1].desig_type, 'P')
-        
-    
+
     def test_store_stuff_desigs_nonamenum(self):
         """Test the storage of an object's designations when there is no name and number
            (only a provisional designation)."""
         bodies = Body.objects.all()
         body = bodies[0]
-        
-        ex_obj = {"object":{"neo":False,
-                  "des_alt":[],
-                  "orbit_class":{"name":"Inner Main-belt Asteroid","code":"IMB"},
-                  "pha":False,
-                  "spkid":"3841574",
-                  "kind":"au",
-                  "orbit_id":"3",
-                  "fullname":"(2019 HG2)",
-                  "des":"2019 HG2",
-                  "prefix":None},
-                  "signature":{"source":"NASA/JPL Small-Body Database (SBDB) API",
-                  "version":"1.1"}}
-                  
+
+        ex_obj = {"neo": False,
+                  "des_alt": [],
+                  "orbit_class":
+                      {"name": "Inner Main-belt Asteroid",
+                       "code": "IMB"},
+                  "pha": False,
+                  "spkid": "3841574",
+                  "kind": "au",
+                  "orbit_id": "3",
+                  "fullname": "(2019 HG2)",
+                  "des": "2019 HG2",
+                  "prefix": None}
+
         obj_ex = Designations.objects.filter(body=body)
-        store_jpl_desigs(ex_obj['object'], body)
-        
+        store_jpl_desigs(ex_obj, body)
+
         self.assertEqual(obj_ex[0].desig, '2019 HG2')
         self.assertEqual(obj_ex[0].desig_type, 'P')
-
 
     def test_store_stuff_sourcetypes(self):
         """Test the storage of sourcetypes."""
         bodies = Body.objects.all()
         body = bodies[0]
-        objcode = self.resp['object']['orbit_class']['code']
         objcode = 'TJN'
         store_jpl_sourcetypes(objcode, self.resp['object'], body)
-  
+
         self.assertEqual(body.source_type, 'T')
         self.assertEqual(body.source_subtype_1, 'P5')       
         self.assertEqual(body.source_subtype_2, None)
-        
-        
+
     def test_store_stuff_neo_pha_1(self):
         """Test the storage of source subtypes when the object is labeled as an NEO
-           but not as a PHA."""        
+           but not as a PHA."""
         bodies = Body.objects.all()
         body = bodies[0]
         objcode = self.resp['object']
@@ -5164,15 +5161,14 @@ class TestFetchJPLPhysParams(TestCase):
         objcode['neo'] = True
         objcode['pha'] = False
         store_jpl_sourcetypes(objcode['orbit_class']['code'], objcode, body)
-  
+
         self.assertEqual(body.source_type, 'N')
         self.assertEqual(body.source_subtype_1, 'N3')       
         self.assertEqual(body.source_subtype_2, None)
-        
-        
+
     def test_store_stuff_neo_pha_2(self):
         """Test the storage of source subtypes when the object is labeled as both an NEO
-           and as a PHA."""                
+           and as a PHA."""
         bodies = Body.objects.all()
         body = bodies[0]
         objcode = self.resp['object']
@@ -5182,12 +5178,11 @@ class TestFetchJPLPhysParams(TestCase):
         objcode['neo'] = True
         objcode['pha'] = True
         store_jpl_sourcetypes(objcode['orbit_class']['code'], objcode, body)
-  
+
         self.assertEqual(body.source_type, 'N')
         self.assertEqual(body.source_subtype_1, 'N3')       
         self.assertEqual(body.source_subtype_2, 'PH')
-        
-        
+
     def test_store_stuff_neo_pha_3(self):
         """Test the storage of source subtypes when the object is labeled as a PHA
            but not as an NEO (This situation is rare)."""                    
@@ -5200,12 +5195,11 @@ class TestFetchJPLPhysParams(TestCase):
         objcode['neo'] = False
         objcode['pha'] = True
         store_jpl_sourcetypes(objcode['orbit_class']['code'], objcode, body)
-  
+
         self.assertEqual(body.source_type, None)
         self.assertEqual(body.source_subtype_1, 'N3')       
         self.assertEqual(body.source_subtype_2, None)
-        
-        
+
     def test_store_stuff_neo_pha_4(self):
         """Test the storage of source subtypes when the object is a comet
            (instead of an asteroid) and is labeled as both an NEO and as a PHA."""                
@@ -5218,7 +5212,7 @@ class TestFetchJPLPhysParams(TestCase):
         objcode['neo'] = True
         objcode['pha'] = True
         store_jpl_sourcetypes(objcode['orbit_class']['code'], objcode, body)
-  
+
         self.assertEqual(body.source_type, 'C')
         self.assertEqual(body.source_subtype_1, 'JF')       
         self.assertEqual(body.source_subtype_2, 'PH')
