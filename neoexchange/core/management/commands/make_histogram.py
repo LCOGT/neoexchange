@@ -184,14 +184,20 @@ class Command(BaseCommand):
     
     overlap_list = list(set(diameter_nlist) & set(period_nlist))
     #print(overlap_list)
-    print(len(overlap_list))
+    #print(len(overlap_list))
 
+
+
+    diameter_values = []
+    period_values = []
     for o in overlap_list:
         x = diameters.filter(body__name=o)
-        print(x)
         y = periods.filter(body__name=o)
-        
+        diameter_values.append(x[0].value)
+        period_values.append(y[0].value)
 
+    plt.scatter(diameter_values, period_values)        
+    plt.show()
 
 
 
@@ -206,5 +212,4 @@ class Command(BaseCommand):
     
     
     
-
 
