@@ -211,7 +211,7 @@ class MeasurementsPageTests(FunctionalTest):
         # He is taken to a page with the object's details on it.
         self.assertEqual(self.browser.current_url, target_url)
         header_text = self.browser.find_element_by_class_name('headingleft').text
-        self.assertIn('Object: ' + self.body.current_name(), header_text)
+        self.assertIn(self.body.full_name(), header_text)
 
         # He sees a link that says it will show the measurements
         # available for this object.

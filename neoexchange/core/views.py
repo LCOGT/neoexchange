@@ -214,12 +214,12 @@ class BodySearchView(ListView):
         name = name.strip()
         if name != '':
             if name.isdigit():
-                object_list = self.model.objects.filter(name=name)
+                object_list = self.model.objects.filter(designations__desig=name).filter(designations__desig_type='#')
             else:
-                object_list = self.model.objects.filter(Q(provisional_name__icontains=name) | Q(provisional_packed__icontains=name) | Q(name__icontains=name))
+                object_list = self.model.objects.filter(Q(designations__desig__icontains=name) | Q(provisional_name__icontains=name) | Q(provisional_packed__icontains=name) | Q(name__icontains=name))
         else:
             object_list = self.model.objects.all()
-        return object_list
+        return list(set(object_list))
 
 
 class BlockDetailView(DetailView):
@@ -366,6 +366,7 @@ class MeasurementDownloadADESPSV(View):
         response = HttpResponse(self.template.render(data), content_type="text/plain")
         response['Content-Disposition'] = 'attachment; filename=' + filename
         return response
+
 
 def export_measurements(body_id, output_path=''):
 

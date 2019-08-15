@@ -293,14 +293,18 @@ class Body(models.Model):
         prov_dev = Designations.objects.filter(body=self.id).filter(desig_type='P').filter(preferred=True)
         fname = ''
         if num:
-            fname += num[0].desig + ' '
+            fname += num[0].desig
+            if not fname.isdigit():
+                fname += '/'
+            else:
+                fname += ' '
         if name:
             fname += name[0].desig
         if fname and prov_dev:
             fname += ' ({})'.format(prov_dev[0].desig)
         elif prov_dev:
             fname += prov_dev[0].desig
-        else:
+        if not fname:
             fname = self.current_name()
 
         return fname

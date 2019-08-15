@@ -2495,7 +2495,12 @@ def store_jpl_desigs(obj, body):
     elif '/' in fullname:  # comet
         part1, part2 = fullname.split('/')
         number = part1
-        name = part2
+        if '(' in part2:
+            part21, part22 = part2.split('(')
+            name = part21
+            prov_des = part22.strip('()')
+        else:
+            name = part2
 
     # designation dictionary
     des_dict_list = [{'desig': number, 'desig_type': '#', 'preferred': True},
