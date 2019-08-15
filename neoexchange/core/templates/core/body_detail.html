@@ -172,9 +172,46 @@
                                     </tr>
                                     {% endif %}
                                     {% for p in body.get_physical_parameters %}
-                                    <tr>
-                                        <td class="kv-key">{{p.type_display}} ({{p.units}})</td>
-                                        <td class="kv-value">{{p.value}}</td>
+                                    <tr><td ><table align="left"  style="margin: 0px"><tr>
+                                            <td class="kv-key">
+                                                <div class="tooltip">{{p.type_display}}
+                                                    <span class="tooltiptext" style="left:30%">
+                                                        {% if p.notes %}
+                                                            {{p.notes}}
+                                                        <br>
+                                                        <br>
+                                                        {% endif %}
+                                                        {{p.reference}}
+                                                    </span>
+                                                </div>
+                                            </td><td></td></tr></table>
+                                        </td>
+                                        <td ><table align="right"  style="margin: 0px"><tr>
+                                            <td class="kv-value">
+                                                    {% if p.error %}
+                                                <div class="tooltip">
+                                                    {% endif %}
+                                                    {% if p.units %}
+                                                        {{p.value}} {{p.units}}
+                                                    {% else %}
+                                                        {% if p.value2 %}
+                                                            {{p.value}}/{{p.value2}}
+                                                        {% else %}
+                                                            {{p.value}}
+                                                        {% endif %}
+                                                    {% endif %}
+                                                    {% if p.error %}
+                                                    <span class="tooltiptext" style="width:fit-content;left:75%">
+                                                        {% if p.error2 %}
+                                                        +/- {{p.error}} <br> +/- {{p.error2}}
+                                                        {% else %}
+                                                        +/- {{p.error}}
+                                                        {% endif %}
+                                                    </span>
+                                                </div>
+                                                {% endif %}
+                                            </td><td></td></tr></table>
+                                        </td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
