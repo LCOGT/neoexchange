@@ -1260,6 +1260,9 @@ class TestCalcEffectiveArea(SNRTestCase):
 
 class TestInstThroughput(SNRTestCase):
 
+    def setUp(self):
+        self.precision = 12
+
     def test_floyds_defaults(self):
         expected_throughput = 0.6659793414426959
 
@@ -1267,7 +1270,7 @@ class TestInstThroughput(SNRTestCase):
 
         throughput = instrument_throughput(tic_params)
 
-        self.assertEqual(expected_throughput, throughput)
+        self.assertAlmostEqual(expected_throughput, throughput, self.precision)
 
     def test_vary_surfaces(self):
         expected_throughput = 0.6846361911280793
@@ -1278,7 +1281,61 @@ class TestInstThroughput(SNRTestCase):
 
         throughput = instrument_throughput(tic_params)
 
-        self.assertEqual(expected_throughput, throughput)
+        self.assertAlmostEqual(expected_throughput, throughput, self.precision)
+
+    def test_vary_lenses(self):
+        expected_throughput = 0.862391455556
+
+        tic_params = {
+                      'num_ar_coatings' : 2,
+                      'num_inst_lenses' : 1,
+                      'num_inst_mirrors' : 3}
+
+        throughput = instrument_throughput(tic_params)
+
+        self.assertAlmostEqual(expected_throughput, throughput, self.precision)
+
+
+class TestConstructTICParams(SNRTestCase):
+
+    def setUp(self):
+        self.precision = 7
+
+    def test_ftn_floyds_default(self):
+        expected_params = { 'instrument_eff' : 0.665979341443,
+                            'grating_eff' : 0.87,
+                            'read_noise' : 3.7,
+                            'gain' : 2.0 * u.photon / u.count
+                          }
+
+        tic_params = construct_tic_params('F65-FLOYDS')
+
+        for key in expected_params:
+            self.assertAlmostEqual(expected_params[key], tic_params[key], self.precision)
+
+    def test_fts_floyds_rp(self):
+        expected_params = { 'instrument_eff' : 0.665979341443,
+                            'grating_eff' : 0.78,
+                            'read_noise' : 3.7,
+                            'gain' : 2.0 * u.photon / u.count
+                          }
+
+        tic_params = construct_tic_params('E10-FLOYDS', 'rp')
+
+        for key in expected_params:
+            self.assertAlmostEqual(expected_params[key], tic_params[key], self.precision)
+
+    def test_ftn_spectral_gp(self):
+        expected_params = { 'instrument_eff' : 0.686339028913,
+                            'grating_eff' : 1.00,
+                            'read_noise' : 10.5,
+                            'gain' : 7.7 * u.photon / u.count
+                          }
+
+        tic_params = construct_tic_params('F65-SPECTRAL', 'gp')
+
+        for key in expected_params:
+            self.assertAlmostEqual(expected_params[key], tic_params[key], self.precision)
 
 
 class TestComputeFloydsSNR(SNRTestCase):

@@ -494,10 +494,9 @@ def instrument_throughput(tic_params):
     # Air-glass interfaces: prism (2 sides), field flattener (4 sides)
     num_ar_coating = tic_params.get('num_ar_coatings', 6)
     throughput = ar_coating**num_ar_coating
-    # Fused silica prism (two passes)
-    throughput *= ccd_window**2
-    # Fused quartz CCD window
-    throughput *= ccd_window
+    # Fused silica prism (two passes) and CCD window
+    num_lenses = tic_params.get('num_inst_lenses', 3)
+    throughput *= ccd_window**num_lenses
     # Mirrors:  Collimator, Fold, Camera, Grating
     num_mirrors = tic_params.get('num_inst_mirrors', 4)
     throughput *= mirror_coating**num_mirrors
@@ -665,7 +664,7 @@ def construct_tic_params(instrument, passband='ip'):
                        'slit_width' : 6.0 * u.arcsec,
                        'gain'       : 2.0 * u.photon / u.count,
                      }
-    elif 'SPECTRAL' in instrument.upper():
+    elif 'F65-SPECTRAL' in instrument.upper():
         tic_params = {
                        'imaging'   : True,
                        'sky_mag'   : sky_mag,
@@ -681,7 +680,7 @@ def construct_tic_params(instrument, passband='ip'):
                        'ccd_qe'     : 'SINISTRO_CCD_qe.dat',
                        'pixel_scale': 10.121*(u.arcsec/u.mm)*(30.0*u.micron).to(u.mm)/u.pixel,
                        'wave_scale' : None,
-                       'fwhm' : 1.7 * u.arcsec,
+                       'fwhm' : 1.3 * u.arcsec,
                        'slit_width' : None,
                        'gain'       : 7.7 * u.photon / u.count,
                      }
