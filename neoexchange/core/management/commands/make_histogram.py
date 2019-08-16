@@ -1,6 +1,9 @@
-""""""
+"""
+This code is for plotting diameter and rotational period values of NEOs on histograms and scatter plots.
+The data used for plotting is stored from the JPL Horizons database.
+This code was written and last edited by Isabel Kosic on August 16th, 2019 during a summer internship at LCO.
 
-
+"""
 
 
 from django.core.management.base import BaseCommand, CommandError
@@ -23,7 +26,6 @@ from sys import exit
 
 
 class Command(BaseCommand):
-    #table = Table.read('NEOs.csv')
 
     def handle(self, *args, **options):
         self.stdout.write("=== Populating Bodies from JPL %s ===")
@@ -41,17 +43,11 @@ class Command(BaseCommand):
                 
                         
         numofvalues = len(value_list)
-        print(numofvalues)
-        
         minbin = (min(value_list))
-        print(minbin)
         maxbin = math.ceil(max(value_list))
-        print(maxbin)
         numofbins = round(np.sqrt(len(value_list)))
-        print(numofbins)
         Bins = 2 * math.ceil(numofbins)
         diffbin = round((maxbin - minbin)/numofbins)
-        print(diffbin)
         
         plt.hist(value_list, bins=Bins, alpha=1, histtype='bar', align='mid', rwidth=1, color='skyblue', edgecolor='black')
         plt.title(title)
@@ -75,18 +71,12 @@ class Command(BaseCommand):
                     value_list_zoom.append(datum.value)
                     
         numofvalues_zoom = len(value_list_zoom)
-        print(numofvalues_zoom)
-        
         minbin = (min(value_list_zoom))
-        print(minbin)
         maxbin = math.ceil(max(value_list_zoom))
-        print(maxbin)
         numofbins = round(np.sqrt(len(value_list_zoom)))
-        print(numofbins)
         Bins = 3 * math.ceil(numofbins)
         diffbin = round((maxbin - minbin)/numofbins)
-        print(diffbin)
-        
+
         plt.hist(value_list_zoom, bins=Bins, alpha=1, histtype='bar', align='mid', rwidth=1, color='skyblue', edgecolor='black')
         plt.title(title)
         #plt.xscale('log')
@@ -110,36 +100,20 @@ class Command(BaseCommand):
         for datum2 in data2:
             if datum2.value:
                 value_list2.append(datum2.value)
-        
-                     
+                             
         numofvalues1 = len(value_list1)
-        print('numofvalues1', numofvalues1)
         numofvalues2 = len(value_list2)
-        print('numofvalues2', numofvalues2)
-
-        
         minbin1 = math.floor(min(value_list1))
-        print('minbin1', minbin1)
         maxbin1 = math.ceil(max(value_list1))
-        print('maxbin1', maxbin1)
         numofbins1 = round(np.sqrt(len(value_list1)))
-        print('numofbins1', numofbins1)
         Bins1 = math.ceil(numofbins1)
-        print('Bins1', Bins1)
         diffbin1 = round((maxbin1 - minbin1)/numofbins1)
-        print('diffbin1', diffbin1)
-        
         minbin2 = math.floor(min(value_list2))
-        print('minbin2', minbin2)
         maxbin2 = math.ceil(max(value_list2))
-        print('maxbin2', maxbin2)
         numofbins2 = round(np.sqrt(len(value_list2)))
-        print('numofbins2', numofbins2)
         Bins2 = math.ceil(numofbins2)
-        print('Bins2', Bins2)
         diffbin2 = round((maxbin2 - minbin2)/numofbins2)
-        print('diffbin2', diffbin2)
-        
+
         #2D figure with Diameter and Rotational Period
         plt.hist2d(value_list1, value_list2, bins=[30, 35], norm=colors.LogNorm())
         #for white area, add ..., norm=colors.LogNorm())
@@ -149,8 +123,7 @@ class Command(BaseCommand):
         plt.xticks()
         plt.yticks()
         plt.show()    
-        
-        
+             
         
     #print(Body.objects.filter().count())
     diameters = PhysicalParameters.objects.filter(parameter_type='D').exclude(body=13)
@@ -161,6 +134,7 @@ class Command(BaseCommand):
     #plot_histogram(periods, title="Rotation Period Histogram", xlabel='Rotation Period (hours)')
     #plot_histogram(periods, title="Frequency Histogram", xlabel='Frequency (Hz)')
     #plot_histogram_zoomin(diameters, title='NEO Diameter Histogram (up to 1km)', xlabel='Diameter (km)', ylabel='', color='')
+    ###plot_histogram_2D(diameters, periods, title="Diameter vs Rotation Period", xlabel='Diameter (km)', ylabel='Rotation Period (hrs)')
     
     diameter_vlist = []
     diameter_nlist = []
@@ -169,8 +143,6 @@ class Command(BaseCommand):
             #print(d, ',', d.value, ',', d.body.name)
             diameter_vlist.append(d.value)
             diameter_nlist.append(d.body.name)
-    #print(diameter_list)
-    #print(len(diameter_list))
     
     period_vlist = []
     period_nlist = []
@@ -179,30 +151,31 @@ class Command(BaseCommand):
             #print(p, ',', p.value, ',', p.body.name)
             period_vlist.append(p.value)
             period_nlist.append(p.body.name)
-    #print(period_list)        
-    #print(len(period_list))
     
     overlap_list = list(set(diameter_nlist) & set(period_nlist))
-    #print(overlap_list)
-    #print(len(overlap_list))
-
-
 
     diameter_values = []
     period_values = []
+    diameter_errors = []
+    period_errors = []
     for o in overlap_list:
         x = diameters.filter(body__name=o)
         y = periods.filter(body__name=o)
         diameter_values.append(x[0].value)
         period_values.append(y[0].value)
+        diameter_errors.append(x[0].error)
+        period_errors.append(y[0].error)
+        
 
-    plt.scatter(diameter_values, period_values)        
+    plt.scatter(diameter_values, period_values, s=10)
+    plt.title("Diameter vs Rotation Period")
+    plt.xlabel('Diameter (km)')
+    plt.ylabel('Rotation Period (hrs)')
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.gca().invert_yaxis()
+    plt.errorbar(diameter_values, period_values, xerr=diameter_errors, yerr=period_errors, ecolor='red')
     plt.show()
-
-
-
-    
-    #plot_histogram_2D(diameters, periods, title="Diameter vs Rotation Period", xlabel='Diameter (km)', ylabel='Rotation Period (hrs)')
     
     
     
