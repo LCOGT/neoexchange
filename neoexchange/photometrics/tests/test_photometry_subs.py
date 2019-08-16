@@ -1295,6 +1295,20 @@ class TestInstThroughput(SNRTestCase):
 
         self.assertAlmostEqual(expected_throughput, throughput, self.precision)
 
+    def test_vary_lens_throughput(self):
+        # Simulate e.g. Corning 7980 high throughput fused silica for FT Spectral
+        expected_throughput = 0.913517247484
+
+        tic_params = {
+                      'num_ar_coatings' : 6,
+                      'num_inst_lenses' : 3,
+                      'inst_lens_trans' : 0.99,
+                      'num_inst_mirrors' : 0}
+
+        throughput = instrument_throughput(tic_params)
+
+        self.assertAlmostEqual(expected_throughput, throughput, self.precision)
+
 
 class TestConstructTICParams(SNRTestCase):
 

@@ -488,7 +488,7 @@ def instrument_throughput(tic_params):
     ar_coating = 0.99
     # Fused silica (for the prism) and fused quartz (for the CCD window)
     # turn out to have the same transmission...
-    ccd_window = 0.9
+    ccd_window = tic_params.get('inst_lens_trans', 0.9)
     mirror_coating = 0.9925
 
     # Air-glass interfaces: prism (2 sides), field flattener (4 sides)
