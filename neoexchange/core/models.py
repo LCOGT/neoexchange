@@ -296,9 +296,9 @@ class Body(models.Model):
             fname += num[0].desig
             if not fname.isdigit():
                 fname += '/'
-            else:
-                fname += ' '
         if name:
+            if fname and fname.isdigit():
+                fname += ' '
             fname += name[0].desig
         if fname and prov_dev:
             fname += ' ({})'.format(prov_dev[0].desig)
@@ -455,11 +455,17 @@ class Body(models.Model):
 
     def get_physical_parameters(self, param_type=None, return_all=True):
         phys_params = PhysicalParameters.objects.filter(body=self.id)
+        color_params = ColorValues.objects.filter(body=self.id)
         out_params = []
         for param in phys_params:
-            if param.preferred or return_all:
+            if (param.preferred or return_all) and (not param_type or param.parameter_type == param_type or param.get_parameter_type_display().upper() == param_type.upper()):
                 param_dict = model_to_dict(param)
                 param_dict['type_display'] = param.get_parameter_type_display()
+                out_params.append(param_dict)
+        for param in color_params:
+            if (param.preferred or return_all) and (not param_type or param.color_band == param_type or 'COLOR' in param_type.upper()):
+                param_dict = model_to_dict(param)
+                param_dict['type_display'] = param.color_band
                 out_params.append(param_dict)
         return out_params
 
