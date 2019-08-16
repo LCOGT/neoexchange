@@ -35,7 +35,7 @@ from bs4 import BeautifulSoup
 import astropy.units as u
 try:
     import pyslalib.slalib as S
-except:
+except ModuleNotFoundError:
     pass
 from django.conf import settings
 from astropy.io import ascii
@@ -618,7 +618,7 @@ def translate_catalog_code(code_or_name, ades_code=False):
             logger.warning("{} is not in our accepted list of astrometric catalog codes.".format(code_or_name))
     else:
         if ades_code is True:
-            catalog_or_code = catalog_mapping.get(code_or_name.upper(),'')
+            catalog_or_code = catalog_mapping.get(code_or_name.upper(), '')
         else:
             for code, catalog in catalog_codes.items():
                 if code_or_name == catalog:
@@ -792,7 +792,8 @@ def parse_mpcorbit(page, epoch_now=None, dbg=False):
         elements = dict(clean_element(elem) for elem in data)
         # Look for nearest element set in time
         epoch = elements.get('epoch', None)
-        if dbg: print(epoch)
+        if dbg:
+            print(epoch)
         if epoch is not None:
             try:
                 epoch_datetime = datetime.strptime(epoch, "%Y-%m-%d.0")
@@ -800,11 +801,13 @@ def parse_mpcorbit(page, epoch_now=None, dbg=False):
                 if epoch_dt < min_elements_dt:
                     # Closer match found, update best elements and minimum time
                     # separation
-                    if dbg: print("Found closer element match", epoch_dt, min_elements_dt, epoch)
+                    if dbg:
+                        print("Found closer element match", epoch_dt, min_elements_dt, epoch)
                     best_elements = elements
                     min_elements_dt = abs(epoch_dt)
                 else:
-                    if dbg: print("No closer match found")
+                    if dbg:
+                        print("No closer match found")
             except ValueError:
                 msg = "Couldn't parse epoch: " + epoch
                 logger.warning(msg)
@@ -820,7 +823,7 @@ def read_mpcorbit_file(orbit_file):
     try:
         orbfile_fh = open(orbit_file, 'r')
     except IOError:
-        logger.warn("File %s not found" % orbit_file)
+        logger.warning("File %s not found" % orbit_file)
         return None
 
     orblines = orbfile_fh.readlines()
@@ -897,7 +900,6 @@ def packed_to_normal(packcode):
 
     if not validate_packcode(packcode):
         raise PackedError("Invalid packcode %s" % packcode)
-        return None
     elif len(packcode) == 5 and packcode.isdigit():
         # Just a number
         return str(int(packcode))
@@ -941,113 +943,112 @@ def cycle_mpc_character_code(char):
     """Convert MPC character code into a number 0--9, A--Z, a--z and return integer"""
     cycle = ord(char)
     if cycle >= ord('a'):
-        cycle = cycle - 61
+        cycle -= 61
     elif ord('A') <= cycle < ord('Z'):
-        cycle = cycle - 55
+        cycle -= 55
     else:
-        cycle = cycle - ord('0')
+        cycle -= ord('0')
     return cycle
 
+
 def psv_padding(s, l, jtype, dpos=0):
-   """#
-      # PSV formatting routine (adapted from ADESMaster.adesutility.applyPaddingAndJustification)
-      #
+    """PSV formatting routine (adapted from ADESMaster.adesutility.applyPaddingAndJustification)
+
     psv_padding(s, l, jtype, dpos)
 
-       Inputs:
-          s: input string
-          l: output length (pad with blanks)
-             If string is too long it is returned without change
-          jtype: justification type
-                L: left
-                R: right
-             D<n>: decimal point in column <n>
-          dpos: decimal point in column <dpos> (for jtype = "D")
+    Inputs:
+        s: input string
+        l: output length (pad with blanks)
+            If string is too long it is returned without change
+        jtype: justification type
+            L: left
+            R: right
+            C: center
+            D: Justify on Decimal
+        dpos: decimal point in column <dpos> (for jtype = "D")
 
-       Return Value:
-            (padded string, l, dpos)
-            l is the achieved width.  It may be longer than l
-            dpos is the achieved dpos.  It may be different from dpos
+    Return Value:
+        (padded string, l, dpos)
+        l is the achieved width.  It may be longer than l
+        dpos is the achieved dpos.  It may be different from dpos
 
-       The width and dpos may be different. These should be used to
-       update the headerInfo array if one is trying to achieve alignment
-       over multiple lines.
-   """
+        The width and dpos may be different. These should be used to
+        update the headerInfo array if one is trying to achieve alignment
+        over multiple lines.
+    """
 
-   ll = len(s)
-   if jtype.upper() == 'L': # negative multipliers result in ''
-      outs = s + (l - ll)*' '
-      return (outs, len(outs), dpos)
-   elif jtype.upper() == 'R':
-      outs =  (l - ll)*' ' + s
-      return (outs, len(outs), dpos)
-   elif jtype.upper() == 'C':
-      i = (l-ll)//2
-      j = i
-      if i*2 != l-ll: j = j + 1
-      outs =  i*' ' + s + j*' '
-      return (outs, len(outs), dpos)
-   elif jtype.upper() == 'D':  # null strings not allowed
-      try:
-         if dpos < 0:
-           raise RuntimeError("Invalid negative value of dpos ("+ dpos + ")")
-      except:
-         raise RuntimeError("Illegal justification string " + jtype)
-      #
-      # pad only with spaces on both sides
-      # and do not change s
-      #
-      # if s has no decimal point don't add one
-      # but line up as if it were to the right
-      # of s.
-      #
-      # the result may be too wide.  This is OK
-      # we will do a fix-up on width in the caller.
-      # Note this means we have to do it twice but
-      # we never will get wider as a result of the
-      # second pass.
-      #
-      # Also, we assume s is a decimal for xsd.  If
-      # not, validation will fail later.  If there
-      # is more than one decimal point, it will fail
-      # here.
-      #
-      sp = s.split('.')
-      if (len(sp) == 1):  #No decimal point
-         sleft = s
-         sright = ''
-      elif (len(sp) == 2): #has decimal point
-         (sleft, sright) = sp
-      else:
-         raise RuntimeError('Illegal string ' + s + ' for decimal value')
-      #
-      # now re-pack with width
-      #
-      leftpad = dpos - 1 - len(sleft)
-      #
-      # figure out dpos extension
-      #
-      if leftpad < 0: # <n> needs adjusting
-          ndpos = dpos - leftpad
-          rightpad = (l - ndpos)  - len(sright)
-          dpos = ndpos
-      rightpad = (l - dpos)  - len(sright)
-      if (len(s) > 0) and (s[-1] == '.'): # trailing decimal point adjustment
-        sleft = s
-        rightpad = rightpad - 1
-      #
-      # works for negative values of leftpad and rightpad
-      # adding no characters
-         #
-      if sright:  # don't add '.' if sright is ''
-        retval =  leftpad * ' ' + sleft + '.' + sright + rightpad * ' '
-      else:
-        rightpad += 1
-        retval =  leftpad * ' ' + sleft + rightpad * ' '
-      return (retval, len(retval), dpos);
+    ll = len(s)
+    if jtype.upper() == 'L':  # negative multipliers result in ''
+        outs = s + (l - ll)*' '
+        return outs, len(outs), dpos
+    elif jtype.upper() == 'R':
+        outs = (l - ll)*' ' + s
+        return outs, len(outs), dpos
+    elif jtype.upper() == 'C':
+        i = (l-ll)//2
+        j = i
+        if i*2 != l-ll:
+            j += 1
+        outs = i*' ' + s + j*' '
+        return outs, len(outs), dpos
+    elif jtype.upper() == 'D':  # null strings not allowed
+        try:
+            if dpos < 0:
+                raise RuntimeError("Invalid negative value of dpos ({})".format(dpos))
+        except TypeError:
+            raise RuntimeError("Illegal Decimal position: {} ".format(dpos))
 
-   else:
-      raise RuntimeError ("Illegal justification string " + jtype)
+        # pad only with spaces on both sides
+        # and do not change s
+        #
+        # if s has no decimal point don't add one
+        # but line up as if it were to the right
+        # of s.
+        #
+        # the result may be too wide.  This is OK
+        # we will do a fix-up on width in the caller.
+        # Note this means we have to do it twice but
+        # we never will get wider as a result of the
+        # second pass.
+        #
+        # Also, we assume s is a decimal for xsd.  If
+        # not, validation will fail later.  If there
+        # is more than one decimal point, it will fail
+        # here.
+
+        sp = s.split('.')
+        if len(sp) == 1:  # No decimal point
+            sleft = s
+            sright = ''
+        elif len(sp) == 2:  # has decimal point
+            (sleft, sright) = sp
+        else:
+            raise RuntimeError('Illegal string for decimal justification: {}'.format(s))
+
+        # now re-pack with width
+        leftpad = dpos - 1 - len(sleft)
+
+        # figure out dpos extension
+        if leftpad < 0:  # <n> needs adjusting
+            ndpos = dpos - leftpad
+            dpos = ndpos
+        rightpad = (l - dpos) - len(sright)
+        if (len(s) > 0) and (s[-1] == '.'):  # trailing decimal point adjustment
+            sleft = s
+            rightpad -= 1
+
+        # works for negative values of leftpad and rightpad
+        # adding no characters
+        if sright:  # don't add '.' if sright is ''
+            retval = leftpad * ' ' + sleft + '.' + sright + rightpad * ' '
+        else:
+            rightpad += 1
+            retval = leftpad * ' ' + sleft + rightpad * ' '
+        return retval, len(retval), dpos
+
+    else:
+        raise RuntimeError("Illegal justification string: {} ".format(jtype))
+
 
 def parse_goldstone_chunks(chunks, dbg=False):
     """Tries to parse the Goldstone target line (a split()'ed list of fields)
@@ -1397,7 +1398,7 @@ def get_site_status(site_code):
 # Get dictionary mapping LCO code (site-enclosure-telescope) to MPC site code
 # and reverse it
     site_codes = cfg.valid_site_codes
-    lco_codes = {mpc_code:lco_code.lower().replace('-', '.') for lco_code,mpc_code in site_codes.items()}
+    lco_codes = {mpc_code:lco_code.lower().replace('-', '.') for lco_code, mpc_code in site_codes.items()}
 
     response = get_telescope_states()
 
@@ -1413,7 +1414,7 @@ def get_site_status(site_code):
             good_to_schedule = False
             reason = 'Not available for scheduling'
 
-    return (good_to_schedule, reason)
+    return good_to_schedule, reason
 
 
 def fetch_yarkovsky_targets(yark_targets):
@@ -1518,7 +1519,6 @@ def make_target(params):
 def make_moving_target(elements):
     """Make a target dictionary for the request from an element set"""
 
-#    print(elements)
     # Generate initial dictionary of things in common
     target = {
                   'name'                : elements['current_name'],
@@ -1934,7 +1934,7 @@ def submit_block_to_scheduler(elements, params):
 
     if resp.status_code not in [200, 201]:
         logger.error(resp.json())
-        msg = "Parsing error"
+        # msg = "Parsing error"
         try:
             msg = resp.json()
         except AttributeError:
@@ -1962,8 +1962,8 @@ def submit_block_to_scheduler(elements, params):
         params['error_msg'] = msg
         return False, params
 
+    request_types = {}
     if len(request_items) > 0:
-        request_types = {}
         if 'configurations' in request_items[0]:
             request_types = dict([(str(r['id']), r['configurations'][0]['target']['type']) for r in request_items])
         else:
@@ -2172,9 +2172,9 @@ def fetch_smass_targets(page=None, cut_off=None):
 
                     if t_link.split('.')[-1] != 'txt':
                         if t_link.split('.')[-1] == 'tx':
-                            t_link = t_link + 't'
+                            t_link += 't'
                         else:
-                            t_link = t_link + '.txt'
+                            t_link += '.txt'
                     t_link = 'http://smass.mit.edu/' + t_link
                     if 'Vis' in t_wav:
                         v_link = t_link
@@ -2327,7 +2327,6 @@ def fetch_flux_standards(page=None, filter_optical_model=True, dbg=False):
                 name = link.text.strip()
                 if dbg:
                     print("Standard=", name)
-                standard_details = {}
                 if link.next_sibling:
                     string = link.next_sibling.encode('ascii', 'ignore')
                     if dbg:
@@ -2335,7 +2334,7 @@ def fetch_flux_standards(page=None, filter_optical_model=True, dbg=False):
                     nstart = 1
                     nstart, ra, status = S.sla_dafin(string, nstart)
                     if status == 0:
-                        ra = ra * 15.0
+                        ra *= 15.0
                     else:
                         ra = None
                     nstart, dec, status = S.sla_dafin(string, nstart)
@@ -2384,3 +2383,227 @@ def read_solar_standards(standards_file):
         v_mag = row['Vmag']
         standards[name] = { 'ra_rad' : ra, 'dec_rad' : dec, 'mag' : v_mag, 'spectral_type' : 'G2V'}
     return standards
+
+
+def fetch_jpl_physparams_altdes(body):
+    """Function to fetch physical parameters, designations, source types, and subtypes from JPL Horizons (online)"""
+    jpl_url_base = 'https://ssd-api.jpl.nasa.gov/sbdb.api'
+    request_url = jpl_url_base + '?sstr={}&phys-par=Y&alt-des=Y&no-orbit=Y'.format(body.current_name())
+    resp = requests.get(request_url, timeout=20, verify=True).json()
+
+    return resp
+
+
+def store_jpl_physparams(phys_par, body):
+    """Function to store object physical parameters from JPL Horizons"""
+
+    # parsing the JPL physparams dictionary
+    for p in phys_par:   
+        if 'H' is p['name']:  # absolute magnitude
+            p_type = 'H'
+        elif 'G' is p['name']:  # magnitude (phase) slope
+            p_type = 'G'
+        elif 'diameter' in p['name']:  # diameter
+            p_type = 'D'     
+        elif 'extent' in p['name']:  # extent
+            continue        
+        elif 'GM' in p['name']:  # GM
+            p_type = 'M'
+        elif 'density' in p['name']:  # density
+            p_type = 'R'
+        elif 'rot_per' in p['name']:  # rotation period
+            p_type = 'P'
+        elif 'pole' in p['name']:  # pole direction
+            p_type = 'O'
+        elif 'albedo' in p['name']:  # geometric albedo
+            p_type = 'ab'
+        # Parameters available from the MPC, but not stored by us at the moment.
+#        elif 'M1' is p['name']: # absolute magnitude of comet and coma (total)
+#        elif 'M2' is p['name']: # comet total magnitude parameter  
+#        elif 'K1' is p['name']: # comet total magnitude slope parameter
+#        elif 'K2' is p['name']: # comet nuclear magnitude slope parameter
+#        elif 'PC' is p['name']: # comet nuclear magnitude law - phase coefficient
+        elif 'spectral' in p['desc']:
+            continue
+        else:
+            p_type = p['name']
+
+        # Making sure we're storing float, not string
+        try:
+            jpl_value = float(p['value'])
+        except (TypeError, ValueError):
+            jpl_value = p['value']
+        try:
+            jpl_error = float(p['sigma'])
+        except (TypeError, ValueError):
+            jpl_error = p['sigma']
+
+        # Splitting values that are connected values
+        jpl_value2 = jpl_error2 = None
+
+        if isinstance(jpl_value, str) and '/' in jpl_value:
+            jpl_value, jpl_value2 = jpl_value.split('/')
+
+        if isinstance(jpl_error, str) and '/' in jpl_error:
+            jpl_error, jpl_error2 = jpl_error.split('/')
+
+        # Build physparams dictionary
+        phys_params = {'parameter_type': p_type,
+                       'value': jpl_value,
+                       'error': jpl_error,
+                       'units': p.get('units', None),
+                       'reference': p.get('ref', None),
+                       'notes': p.get('notes', None),
+                       'preferred': True
+                       }
+
+        # Change dictionary if color
+        if 'color' in p.get('desc', ''):
+            phys_params['color_band'] = p['title']
+            del phys_params['parameter_type']
+        else:
+            phys_params['value2'] = jpl_value2
+            phys_params['error2'] = jpl_error2  
+
+        saved = body.save_physical_parameters(phys_params)
+        if saved:
+            logger.info('New Physical Parameter saved for {}: {}'.format(body.current_name(), p.get('desc', 'unknown')))
+
+
+def store_jpl_desigs(obj, body):
+    """Function to store object name, number, and designations from JPL Horizons"""
+
+    # parsing through JPL designations
+    fullname = obj['fullname']
+    number = name = prov_des = None
+    if fullname[0] is '(':
+        prov_des = fullname.strip('()')
+    elif ' ' in fullname:
+        space_num = fullname.count(' ')
+        if space_num is 3:
+            part1, part2, part3, part4 = fullname.split(' ')
+            number = part1
+            if part2[0].isalpha:
+                name = part2
+        elif space_num is 2:
+            part1, part2, part3 = fullname.split(' ')
+            number = part1
+        elif space_num is 1:
+            part1, part2 = fullname.split(' ')
+            number = part1
+            name = part2   
+    elif '/' in fullname:  # comet
+        part1, part2 = fullname.split('/')
+        number = part1
+        if '(' in part2:
+            part21, part22 = part2.split('(')
+            name = part21
+            prov_des = part22.strip('()')
+        else:
+            name = part2
+
+    # designation dictionary
+    des_dict_list = [{'desig': number, 'desig_type': '#', 'preferred': True},
+                     {'desig': name, 'desig_type': 'N', 'preferred': True},
+                     {'desig': prov_des, 'desig_type': 'P', 'preferred': True}]
+
+    des_alt = obj['des_alt']
+    preferred = False
+    if len(des_alt) >= 1:
+        for d in des_alt:
+            alt_des = None
+            for des in d:
+                if des == 'pri':
+                    preferred = True
+                    alt_des = d[des]
+                elif des == 'des':
+                    preferred = False
+                    alt_des = d[des]
+                elif des == 'rn':
+                    continue
+                elif des == 'yl':
+                    continue
+
+            if alt_des:
+                prov_des_dict = {'desig': alt_des,
+                                 'desig_type': 'P',
+                                 'preferred': preferred}
+                des_dict_list.append(prov_des_dict)
+
+    for D in des_dict_list:
+        if D['desig']:
+            saved = body.save_physical_parameters(D)
+            if saved:
+                logger.info('New Designation saved for {}: {}'.format(body.current_name(), D['desig']))
+    
+  
+def store_jpl_sourcetypes(code, obj, body):
+    """Function to store object source types and subtypes from JPL Horizons"""
+    
+    source_type = source_subtype_1 = source_subtype_2 = None
+    if 'CEN' in code:  # Centaur
+        source_type = 'E'
+    elif 'TJN' in code:  # Jupiter trojan
+        source_type = 'T'
+        source_subtype_1 = 'P5'
+    elif 'TNO' in code:  # Trans-Neptunian Object
+        source_type = 'K'        
+    elif 'IEO' in code:  # Atira
+        source_subtype_1 = 'N1'
+    elif 'ATE' in code:  # Aten
+        source_subtype_1 = 'N2'
+    elif 'APO' in code:  # Apollo
+        source_subtype_1 = 'N3'   
+    elif 'AMO' in code:  # Amor
+        source_subtype_1 = 'N4'
+    elif 'IMB' in code:  # inner main belt
+        source_subtype_1 = 'MI'
+    elif 'MBA' in code:  # main belt
+        source_subtype_1 = 'M'
+    elif 'OMB' in code:  # outer main belt
+        source_subtype_1 = 'MO'
+    # No current way to tell if L4/L5 Trojan from JPL
+#    if code is '##': # L4
+#        source_subtype_1 = 'T4'
+#    if code is '##': # L5
+#        source_subtype_1 = 'T5'
+    # We do not have category for "Mars Crossing Asteroid"
+#    if code is 'MCA': # MCA = mars crossing asteroid
+#        source_subtype_1 = 'P4'
+    elif 'HYA' in code:  # hyperbolic asteroid
+        source_subtype_1 = 'H'
+    elif 'HYP' in code:  # hyperbolic comet
+        source_subtype_1 = 'H'
+    elif 'PAA' in code:  # parabolic asteroid
+        source_subtype_1 = 'PA'
+    elif 'PAR' in code:  # parabolic comet
+        source_subtype_1 = 'PA'
+    elif 'JFC' in code:  # Jupiter family comet P<20yrs
+        source_subtype_1 = 'JF'
+    elif 'JFc' in code:  # Jupiter family comet 2<Tjupiter<3
+        source_subtype_1 = 'JF'
+    elif 'HTC' in code:  # Halley type comet
+        source_subtype_1 = 'HT'
+    else:
+        source_subtype_1 = code
+
+    if obj['neo'] is True:
+        source_type = body.source_type
+        if not source_type:
+            source_type = 'N'
+        if obj['pha'] is True:
+            source_subtype_2 = 'PH'
+        if source_type != 'N':
+            if not source_subtype_1:
+                source_subtype_1 = 'N'
+            elif not source_subtype_2:
+                source_subtype_2 = 'N'
+
+    if source_type:
+        body.source_type = source_type        
+    body.source_subtype_1 = source_subtype_1
+    body.source_subtype_2 = source_subtype_2
+    body.save()
+        
+
+
