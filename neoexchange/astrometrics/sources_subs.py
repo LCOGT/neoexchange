@@ -2388,7 +2388,8 @@ def read_solar_standards(standards_file):
 def fetch_jpl_physparams_altdes(body):
     """Function to fetch physical parameters, designations, source types, and subtypes from JPL Horizons (online)"""
     jpl_url_base = 'https://ssd-api.jpl.nasa.gov/sbdb.api'
-    request_url = jpl_url_base + '?sstr={}&phys-par=Y&alt-des=Y&no-orbit=Y'.format(body.current_name())
+    obj_id = body.current_name().strip('()')
+    request_url = jpl_url_base + '?sstr={}&phys-par=Y&alt-des=Y&no-orbit=Y'.format(obj_id)
     resp = requests.get(request_url, timeout=20, verify=True).json()
 
     return resp

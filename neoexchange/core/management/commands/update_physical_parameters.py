@@ -34,15 +34,19 @@ class Command(BaseCommand):
             obj_id = str(options['target']).replace('_', ' ')
             bodies = Body.objects.filter(name=obj_id)
         else:
-            bodies = Body.objects.filter(active=True).exclude(origin='M')
+            bodies = Body.objects.filter(active=True).exclude(origin='M') 
+
 
         i = 0
         for body in bodies:
             self.stdout.write("{} ==== Updating {} ==== ({} of {}) ".format(datetime.now().strftime('%Y-%m-%d %H:%M'), body.current_name(), i+1, len(bodies)))
 
             resp = fetch_jpl_physparams_altdes(body)
-
-            store_jpl_physparams(resp['phys_par'], body)
-            store_jpl_desigs(resp['object'], body)
-            store_jpl_sourcetypes(resp['object']['orbit_class']['code'], resp['object'], body)
+            
+            if 'code' not in list(resp.keys()):
+                store_jpl_physparams(resp['phys_par'], body)
+                store_jpl_desigs(resp['object'], body)
+                store_jpl_sourcetypes(resp['object']['orbit_class']['code'], resp['object'], body)
+            else:
+                logger.warning("Did not update {}: code {}".format(body.current_name(), resp['code']))
             i += 1
