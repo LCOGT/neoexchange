@@ -56,14 +56,18 @@ def sptype_to_pickles_standard(sp_type):
     return mapping.get(sp_type.upper(), None)
 
 def get_filter_transmission(optics_path, filename='FLOYDS_AG_filter.csv'):
-    header, wavelengths, trans = specio.read_ascii_spec(os.path.join(optics_path, filename), wave_unit=u.nm, flux_unit='%', delimiter=',', header_start=0, data_start=64)
+    if 'csv' in filename:
+        #LCO Optics lab format assumed
+        header, wavelengths, trans = specio.read_ascii_spec(os.path.join(optics_path, filename), wave_unit=u.nm, flux_unit='%', delimiter=',', header_start=0, data_start=64)
+    else:
+        header, wavelengths, trans = specio.read_ascii_spec(os.path.join(optics_path, filename), wave_unit=u.nm, flux_unit='%')
     trans *= 100
     bp = SpectralElement(Empirical1D, points=wavelengths, lookup_table=trans)
 
     return bp
 
-def get_mirror_reflectivity(optics_path):
-    header, wavelengths, refl = specio.read_ascii_spec(os.path.join(optics_path, 'Protected_Al_mirror.dat'), wave_unit=u.nm, flux_unit='%')
+def get_mirror_reflectivity(optics_path, filename='Protected_Al_mirror.dat'):
+    header, wavelengths, refl = specio.read_ascii_spec(os.path.join(optics_path, filename), wave_unit=u.nm, flux_unit='%')
     mirror = BaseUnitlessSpectrum(Empirical1D, points=wavelengths, lookup_table=refl)
 
     return mirror

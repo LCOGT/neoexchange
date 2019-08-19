@@ -616,6 +616,7 @@ def construct_tic_params(instrument, passband='ip'):
     ft_area = 2.574*u.meter**2
     floyds_read_noise = 3.7
     spectral_read_noise = 10.5
+    pyxis_read_noise = 9.0
     tic_params = {}
 
     wavelength = map_filter_to_wavelength(passband)
@@ -675,6 +676,8 @@ def construct_tic_params(instrument, passband='ip'):
                        'filter'    : passband,
                        'num_mirrors' : 2,  # M1, M2
                        'num_ar_coatings' : 6,
+                       'num_inst_lenses' : 3,
+                       'inst_lens_trans' : 0.99,
                        'num_inst_mirrors' : 0,  # No. of reflective surfaces inside instrument
                        'grating_eff': 1.0,
                        'ccd_qe'     : 'SINISTRO_CCD_qe.dat',
@@ -683,6 +686,32 @@ def construct_tic_params(instrument, passband='ip'):
                        'fwhm' : 1.3 * u.arcsec,
                        'slit_width' : None,
                        'gain'       : 7.7 * u.photon / u.count,
+                     }
+    elif 'F65-MUSCAT' in instrument.upper():
+        # Mapping of bandpass to number of "lenses" where number is 2+3 (correctors)
+        # plus number of dichroic mirrors in the channel (since they have very similar
+        # 99% transmission/reflection as high purity fused silica
+        muscat_num_lenses = { 'gp' : 5+1, 'rp' : 5+2, 'ip' : 5+3, 'zs' : 5+3 }
+        tic_params = {
+                       'imaging'   : True,
+                       'sky_mag'   : sky_mag,
+                       'read_noise': pyxis_read_noise,
+                       'eff_area'  : ft_area,
+                       'flux_mag0' : flux_mag0_Jy,
+                       'wavelength':  wavelength,
+                       'filter'    : passband,
+                       'num_mirrors' : 2,  # M1, M2
+                       'num_ar_coatings' : 5*2, # 5 lenses, 2 sides each
+                       'num_inst_lenses' : muscat_num_lenses.get(passband, 5),
+                       'inst_lens_trans' : 0.99,
+                       'num_inst_mirrors' : 1,  # No. of reflective surfaces inside instrument
+                       'grating_eff': 1.0,
+                       'ccd_qe'     : 'PYXIS_CCD_qe.dat',
+                       'pixel_scale': 10.121*(u.arcsec/u.mm)*(30.0*u.micron).to(u.mm)/u.pixel,
+                       'wave_scale' : None,
+                       'fwhm' : 1.3 * u.arcsec,
+                       'slit_width' : None,
+                       'gain'       : 2.0 * u.photon / u.count,
                      }
     # Calculate and store instrument efficiency
     tic_params['instrument_eff'] = instrument_throughput(tic_params)
