@@ -230,6 +230,13 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
         logger.error("Perturbing error=%s" % j)
         return {}
 
+    # Check we have everything we need before computing positions
+    if p_orbelems['Inc'] is None or p_orbelems['LongNode'] is None or p_orbelems['ArgPeri'] is None\
+        or p_orbelems['SemiAxisOrQ'] is None or p_orbelems['Ecc'] is None:
+            logger.error("Missing parameter for %s (%s)" % (orbelems['name'], orbelems['provisional_name']))
+            logger.error(p_orbelems)
+            return {}
+
     r3 = -100.
     delta = 0.0
     delta_dot = 0.0
