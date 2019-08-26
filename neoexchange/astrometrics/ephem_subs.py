@@ -1010,6 +1010,13 @@ def get_sitepos(site_code, dbg=False):
         site_long = -site_long
         site_hgt = 2010.0
         site_name = 'LCO Node at McDonald Observatory (ELP)'
+    elif site_code == 'ELP-DOMB' or site_code == 'V39':
+        # Position from screenshot of Annie's GPS on mount at site...
+        (site_lat, status)  =  S.sla_daf2r(30, 40, 48.00)
+        (site_long, status) =  S.sla_daf2r(104, 0.0, 55.74)
+        site_long = -site_long
+        site_hgt = 2029.4
+        site_name = 'LCO ELP Node 1m0 Dome B at McDonald Observatory'
     elif site_code == 'ELP-AQWA-0M4A' or site_code == 'V38':
         (site_lat, status)  =  S.sla_daf2r(30, 40, 48.15)
         (site_long, status) =  S.sla_daf2r(104, 0., 54.24)
