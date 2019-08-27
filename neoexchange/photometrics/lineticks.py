@@ -99,9 +99,14 @@ class LineTicks:
             self.ticks.append(this_tick)
 
             if self.label:
-                this_ticklabel = ax.text(x[i]+tx*3, y[i]+ty*3, self.label[j],
-                        transform=transforms.IdentityTransform(),
-                        ha='left', va='bottom', clip_on=True, rotation=90)
+                if self.direction == -1:
+                    this_ticklabel = ax.text(x[i]+tx*3, y[i]+ty*3, self.label[j],
+                            transform=transforms.IdentityTransform(),
+                            ha='left', va='center', clip_on=True, rotation=90*self.direction, rotation_mode='anchor')
+                else:
+                    this_ticklabel = ax.text(x[i]+tx*3, y[i]+ty*3, self.label[j],
+                            transform=transforms.IdentityTransform(),
+                            ha='left', va='bottom', clip_on=True, rotation=90, rotation_mode='default')
                 self.tick_labels.append(this_ticklabel)
 
     def on_change_lims(self, ax):
