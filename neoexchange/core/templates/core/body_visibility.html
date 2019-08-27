@@ -23,6 +23,8 @@
                 <h5  class="section-title"><span class="">Predicted Brightness</span></h5>
                 <img src="{% url 'visibility-plot' body.pk 'mag' %}" id="id_magplot">
                 <h5  class="section-title"><span class="">Positional Uncertainty</span></h5>
-                <img src="{% url 'visibility-plot' body.pk 'uncertainty' %}" id="id_uncertainty">
+                <img src="{% url 'visibility-plot' body.pk 'uncertainty' %}" id="id_uncertaintyplot">
+                <h5  class="section-title"><span class="">Hours Up</span></h5>
+                <img src="{% url 'visibility-plot' body.pk 'hoursup' %}" id="id_hoursupplot">
             </div>
 {% endblock %}

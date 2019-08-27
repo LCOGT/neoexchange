@@ -238,7 +238,7 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow()):
     except Body.DoesNotExist:
         return HttpResponse()
 
-    if plot_type not in ['radec', 'mag', 'dist', 'timeup', 'uncertainty']:
+    if plot_type not in ['radec', 'mag', 'dist', 'hoursup', 'uncertainty']:
         logger.warning("Invalid plot_type= {}".format(plot_type))
         # Return a 1x1 pixel gif in the case of no visibility file
         PIXEL_GIF_DATA = base64.b64decode(
@@ -249,9 +249,9 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow()):
 
     obj = body.name.replace(' ', '').replace('-', '_').replace('+', '')
     search_path = os.path.join(base_dir, obj+ "*" + plot_type + "*" + ".png")
-    logger.debug(obj, search_path)
+    print(obj, search_path)
     vis_files = glob(os.path.join(base_dir, obj+ "*" + plot_type + "*" + ".png"))
-    logger.debug(vis_files)
+    print(vis_files)
     if vis_files:
         vis_file = vis_files[0]
     else:
@@ -269,6 +269,9 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow()):
             vis_file = plot_helio_geo_dist(ephem)
         elif plot_type == 'uncertainty':
             vis_file = plot_uncertainty(ephem)
+        elif plot_type == 'hoursup':
+            ephem = horizons_ephem(body.name, start, end, 'W85', '10m', alt_limit=30)
+            vis_file = plot_hoursup(ephem, 'W85')
         if vis_file != '':
             if not os.path.exists(base_dir):
                 os.makedirs(base_dir)

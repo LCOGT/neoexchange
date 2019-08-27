@@ -300,7 +300,7 @@ def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, dbg=False)
     ax2.yaxis.set_ticks_position('right')
 
     targetname = make_targetname(first['targetname'])
-    save_file = "{}_timeup_{}_{}-{}.png".format(targetname, site_code, dates[0].strftime("%Y%m%d"), dates[-1].strftime("%Y%m%d"))
+    save_file = "{}_hoursup_{}_{}-{}.png".format(targetname, site_code, dates[0].strftime("%Y%m%d"), dates[-1].strftime("%Y%m%d"))
     fig.savefig(save_file, format='png')
 
     return save_file
