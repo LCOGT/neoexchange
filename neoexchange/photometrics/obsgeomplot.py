@@ -90,7 +90,8 @@ def plot_helio_geo_dist(ephem, title=None):
     # Only plot if the perihelion and close approach aren't at the ends of the ephemeris
     if perihelion != dates[0] and perihelion != dates[-1]:
         ax.vlines(perihelion, ylim[0], ylim[1], colors=peri_color)
-        ax.text(perihelion, 0.9*ylim[1], "perihelion", rotation=90, color=peri_color, horizontalalignment='right')
+        ax.text(perihelion, 0.9*ylim[1], "perihelion", rotation=90, color=peri_color,
+            horizontalalignment='right', verticalalignment='bottom', rotation_mode='anchor')
     if close_approach != dates[0] and close_approach != dates[-1]:
         ax.vlines(close_approach, ylim[0], ylim[1], colors=ca_color)
         ax.text(close_approach, 0.1*ylim[1], "C/A", rotation=90, color=ca_color, horizontalalignment='left')
