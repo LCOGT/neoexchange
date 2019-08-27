@@ -345,7 +345,10 @@ def plot_uncertainty(ephem, title=None):
     tick_steps = 5 * ephem_step_size
     tick_labels = [datetime.strftime(dates[d_idx].date(), "%Y-%m-%d") for d_idx in range(0, len(dates), tick_steps)]
 
-    line_ticks = LineTicks(unc_line, range(0, len(dates), tick_steps), 10, label=tick_labels, lw=1.5, color='r')
+    tick_direction = 1
+    if ephem['RSS_3sigma'].mean() > ylim[1]/2.0:
+        tick_direction = -1
+    line_ticks = LineTicks(unc_line, range(0, len(dates), tick_steps), 10, label=tick_labels, lw=1.5, direction=tick_direction, color='r')
 
     if title is None:
         title = "{} for {} to {}".format(first['targetname'], dates[0].strftime("%Y-%m-%d"), dates[-1].strftime("%Y-%m-%d"))
