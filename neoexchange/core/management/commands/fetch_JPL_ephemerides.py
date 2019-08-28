@@ -41,6 +41,6 @@ class Command(BaseCommand):
             }
             try:
                 response = client.download_file(**params)
+                self.stdout.write("Downloaded file to " + params['Filename'])
             except ClientError as e:
                 self.stdout.write(e)
-
