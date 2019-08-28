@@ -22,12 +22,13 @@ from django.db.models import Q
 from astrometrics.sources_subs import imap_login, fetch_NASA_targets, random_delay
 from core.views import update_MPC_orbit
 
+
 class Command(BaseCommand):
     help = 'Fetch NASA targets from an email folder'
 
     def handle(self, *args, **options):
-        username = os.environ.get('NEOX_EMAIL_USERNAME','')
-        password = os.environ.get('NEOX_EMAIL_PASSWORD','')
+        username = os.environ.get('NEOX_EMAIL_USERNAME', '')
+        password = os.environ.get('NEOX_EMAIL_PASSWORD', '')
         if username != '' and password != '':
             self.stdout.write("==== Fetching NASA targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
             mailbox = imap_login(username, password)

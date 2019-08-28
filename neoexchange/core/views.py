@@ -41,6 +41,7 @@ from django.conf import settings
 from bs4 import BeautifulSoup
 import reversion
 import requests
+import re
 import numpy as np
 try:
     import pyslalib.slalib as S
@@ -54,6 +55,7 @@ from .models import *
 from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih, \
     convert_ast_to_comet
 import astrometrics.site_config as cfg
+from astrometrics.albedo import asteroid_diameter
 from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
     MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes, \
@@ -2337,6 +2339,14 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
         time_to_new_epoch = abs(kwargs['epochofel'] - datetime.now())
     if not body.epochofel or time_to_new_epoch <= time_to_current_epoch:
         save_and_make_revision(body, kwargs)
+        previous_albedos = PhysicalParameters.objects.filter(body=body, parameter_type='ab', preferred=True)
+        if previous_albedos:
+            albedo = previous_albedos[0]
+        else:
+            albedo = None
+        params = build_initial_phys_des_params([], kwargs['abs_mag'], albedo)
+        for param in params:
+            body.save_physical_parameters(param)
         if not created:
             logger.info("Updated elements for %s from MPC" % obj_id)
         else:
@@ -2346,6 +2356,54 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
         body.save()
         logger.info("More recent elements already stored for %s" % obj_id)
     return True
+
+
+def build_initial_phys_des_params(names, hmag=None, albedo=None):
+    params = []
+    for name in names:
+        # Guess name type based on structure
+        n = name.strip()
+        if n.isdigit():
+            dtype = '#'
+        elif ' ' in n:
+            dtype = 'P'
+        elif n[-1] in ['P', 'C', 'D'] and n[:-1].isdigit():
+            dtype = '#'
+        elif bool(re.search('\d', n)):
+            dtype = 'C'
+        else:
+            dtype = 'N'
+        desig_dict = {'desig': name,
+                      'desig_type': dtype,
+                      'preferred': False,
+                      'desig_notes': 'pre_gen'
+                        }
+        params.append(desig_dict)
+    if not albedo:
+        # guess albedo from JPL mean
+        albedo = 0.14
+        albedo_dict = {'value': albedo,
+                       'parameter_type': 'ab',
+                       'preferred': False,
+                       'reference': 'MPC',
+                       'notes': 'Initial Albedo Guess'
+                       }
+        params.append(albedo_dict)
+    if hmag:
+        hmag_dict = {'value': hmag,
+                     'parameter_type': 'H',
+                     'preferred': False,
+                     'reference': 'MPC',
+                     'notes': 'MPC Ingested Mag'
+                     }
+        diam_dict = {'value': asteroid_diameter(albedo, hmag),
+                     'parameter_type': 'D',
+                     'preferred': False,
+                     'reference': 'MPC',
+                     'notes': 'Initial Diameter Guess using H={} and albedo={}'.format(hmag, albedo)
+                     }
+        params.append(hmag_dict).append(diam_dict)
+    return params
 
 
 def ingest_new_object(orbit_file, obs_file=None, dbg=False):

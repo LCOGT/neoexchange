@@ -39,7 +39,7 @@ from astrometrics.ast_subs import normal_to_packed
 from astrometrics.ephem_subs import compute_ephem, comp_FOM, get_sitecam_params, comp_sep
 from astrometrics.sources_subs import translate_catalog_code, psv_padding
 from astrometrics.time_subs import dttodecimalday, degreestohms, degreestodms
-from astrometrics.albedo import asteroid_albedo, asteroid_diameter
+from astrometrics.albedo import asteroid_diameter
 from core.archive_subs import check_for_archive_images
 
 logger = logging.getLogger(__name__)
