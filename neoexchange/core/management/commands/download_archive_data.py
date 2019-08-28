@@ -78,7 +78,7 @@ class Command(BaseCommand):
                 all_frames = {}
                 for obstype in obstypes:
                     if obstype == 'EXPOSE':
-                        redlevel = ['91', '11']
+                        redlevel = ['91', ]
                     else:
                         # '' seems to be needed to get the tarball of FLOYDS products
                         redlevel = ['0', '']
@@ -101,7 +101,7 @@ class Command(BaseCommand):
                 dl_frames = download_files(all_frames, out_path, verbose)
                 self.stdout.write("Downloaded %d frames" % ( len(dl_frames) ))
                 # unpack tarballs and make movie.
-                for frame in all_frames['']:
+                for frame in all_frames.get('', []):
                     if "tar.gz" in frame['filename']:
                         tar_path = make_data_dir(out_path, frame)
                         movie_file = make_movie(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, out_path, frame['PROPID'])
