@@ -82,8 +82,8 @@ class NewVisitorTest(FunctionalTest):
         datebox.send_keys('2015-04-21')
 
         site_choices = Select(self.get_item_input_box('id_site_code'))
-        self.assertIn('ELP 1.0m - V37; (McDonald, Texas)', [option.text for option in site_choices.options])
-        site_choices.select_by_visible_text('ELP 1.0m - V37; (McDonald, Texas)')
+        self.assertIn('ELP 1.0m - V37,V39; (McDonald, Texas)', [option.text for option in site_choices.options])
+        site_choices.select_by_visible_text('ELP 1.0m - V37,V39; (McDonald, Texas)')
 
         # When he hits Enter, he is taken to a new page and now the page shows an ephemeris
         # for the target with a column header and a series of rows for the position
@@ -177,9 +177,9 @@ class NewVisitorTest(FunctionalTest):
         # He notices a new selection for the site code and chooses ELP (V37)
         # XXX Code smell: Too many static text constants
         site_choices = Select(self.get_item_input_box('id_site_code'))
-        self.assertIn('ELP 1.0m - V37; (McDonald, Texas)', [option.text for option in site_choices.options])
+        self.assertIn('ELP 1.0m - V37,V39; (McDonald, Texas)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('ELP 1.0m - V37; (McDonald, Texas)')
+        site_choices.select_by_visible_text('ELP 1.0m - V37,V39; (McDonald, Texas)')
 
         # He notices a new textbox for the date that is wanted which is filled
         # in with the current date

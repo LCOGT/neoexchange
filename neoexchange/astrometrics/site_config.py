@@ -44,6 +44,7 @@ inst_overhead = {   'onemsbig_exp_overhead'         : 15.5,
 
 # Telescope sites
 valid_site_codes = { 'ELP-DOMA-1M0A' : 'V37',
+                     'ELP-DOMB-1M0A' : 'V39',
                      'LSC-DOMA-1M0A' : 'W85',
                      'LSC-DOMB-1M0A' : 'W86',
                      'LSC-DOMC-1M0A' : 'W87',

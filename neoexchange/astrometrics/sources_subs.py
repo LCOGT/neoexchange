@@ -1484,6 +1484,9 @@ def make_location(params):
     elif params['site_code'] == 'W87':
         location['telescope'] = '1m0a'
         location['observatory'] = 'domc'
+    elif params['site_code'] == 'V39':
+        location['telescope'] = '1m0a'
+        location['observatory'] = 'domb'
     return location
 
 
@@ -1767,6 +1770,7 @@ def make_cadence_valhalla(request, params, ipp_value, debug=False):
 def configure_defaults(params):
 
     site_list = { 'V37' : 'ELP',
+                  'V39' : 'ELP',
                   'K91' : 'CPT',
                   'K92' : 'CPT',
                   'K93' : 'CPT',

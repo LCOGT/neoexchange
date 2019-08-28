@@ -50,7 +50,7 @@ RUN curl -fsSL https://github.com/Bill-Gray/find_orb/archive/${FIND_ORB_VERSION}
         && cd find_orb-${FIND_ORB_VERSION} \
         && make \
         && make install \
-        && cp ps_1996.dat elp82.dat /root/.find_orb/
+        && if [[ -f "ps_1996.dat" && -f "elp82.dat" ]]; then cp ps_1996.dat elp82.dat /root/.find_orb; fi
 
 # Copy default findorb config file
 COPY neoexchange/photometrics/configs/environ.def /root/.find_orb/
