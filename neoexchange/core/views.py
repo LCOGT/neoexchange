@@ -1737,6 +1737,22 @@ def record_block(tracking_number, params, form_data, target):
         return False
 
 
+def sort_des_type(name):
+    # Guess name type based on structure
+    n = name.strip()
+    if n.isdigit():
+        dtype = '#'
+    elif ' ' in n or '_' in n:
+        dtype = 'P'
+    elif n[-1] in ['P', 'C', 'D'] and n[:-1].isdigit():
+        dtype = '#'
+    elif bool(re.search('\d', n)):
+        dtype = 'C'
+    else:
+        dtype = 'N'
+    return dtype
+
+
 def return_fields_for_saving():
     """Returns a list of fields that should be checked before saving a revision.
     Split out from save_and_make_revision() so it can be consistently used by the
@@ -1746,7 +1762,7 @@ def return_fields_for_saving():
               'epochofel', 'abs_mag', 'slope', 'orbinc', 'longascnode', 'eccentricity', 'argofperih', 'meandist', 'meananom',
               'score', 'discovery_date', 'num_obs', 'arc_length']
 
-    param_fields = ['abs_mag']
+    param_fields = ['abs_mag', 'slope', 'provisional_name', 'name']
 
     return body_fields, param_fields
 
@@ -1762,7 +1778,7 @@ def save_and_make_revision(body, kwargs):
 
     b_fields, p_fields = return_fields_for_saving()
 
-    p_field_to_p_code = {'abs_mag': 'H'}
+    p_field_to_p_code = {'abs_mag': 'H', 'slope': 'G', 'provisional_name': 'C', 'name': 'P'}
 
     update = False
 
@@ -1776,8 +1792,17 @@ def save_and_make_revision(body, kwargs):
             if k in b_fields:
                 update = True
         if k in p_fields:
-            p_dict = {'value': v,
-                      'parameter_type': p_field_to_p_code[k],
+            param_code = p_field_to_p_code[k]
+            if 'name' in k:
+                param_label = 'desig_type'
+                val_label = 'desig'
+                if k == 'name':
+                    param_code = sort_des_type(str(v))
+            else:
+                param_label = 'parameter_type'
+                val_label = 'value'
+            p_dict = {val_label: v,
+                      param_label: param_code,
                       'preferred': False,
                       'reference': 'MPC Default'
                       }
@@ -2372,54 +2397,6 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
         body.save()
         logger.info("More recent elements already stored for %s" % obj_id)
     return True
-
-
-def build_initial_phys_des_params(names, hmag=None, albedo=None):
-    params = []
-    for name in names:
-        # Guess name type based on structure
-        n = name.strip()
-        if n.isdigit():
-            dtype = '#'
-        elif ' ' in n:
-            dtype = 'P'
-        elif n[-1] in ['P', 'C', 'D'] and n[:-1].isdigit():
-            dtype = '#'
-        elif bool(re.search('\d', n)):
-            dtype = 'C'
-        else:
-            dtype = 'N'
-        desig_dict = {'desig': name,
-                      'desig_type': dtype,
-                      'preferred': False,
-                      'desig_notes': 'pre_gen'
-                        }
-        params.append(desig_dict)
-    if not albedo:
-        # guess albedo from JPL mean
-        albedo = 0.14
-        albedo_dict = {'value': albedo,
-                       'parameter_type': 'ab',
-                       'preferred': False,
-                       'reference': 'MPC',
-                       'notes': 'Initial Albedo Guess'
-                       }
-        params.append(albedo_dict)
-    if hmag:
-        hmag_dict = {'value': hmag,
-                     'parameter_type': 'H',
-                     'preferred': False,
-                     'reference': 'MPC',
-                     'notes': 'MPC Ingested Mag'
-                     }
-        diam_dict = {'value': asteroid_diameter(albedo, hmag),
-                     'parameter_type': 'D',
-                     'preferred': False,
-                     'reference': 'MPC',
-                     'notes': 'Initial Diameter Guess using H={} and albedo={}'.format(hmag, albedo)
-                     }
-        params.append(hmag_dict).append(diam_dict)
-    return params
 
 
 def ingest_new_object(orbit_file, obs_file=None, dbg=False):
