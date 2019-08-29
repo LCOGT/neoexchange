@@ -1740,6 +1740,8 @@ def record_block(tracking_number, params, form_data, target):
 def sort_des_type(name):
     # Guess name type based on structure
     n = name.strip()
+    if not n:
+        return ''
     if n.isdigit():
         dtype = '#'
     elif ' ' in n or '_' in n:

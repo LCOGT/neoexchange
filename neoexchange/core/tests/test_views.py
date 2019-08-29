@@ -53,6 +53,7 @@ logger = logging.getLogger(__name__)
 # Disable anything below CRITICAL level
 logging.disable(logging.CRITICAL)
 
+
 class TestClean_NEOCP_Object(TestCase):
 
     def test_X33656(self):
@@ -307,7 +308,7 @@ class TestClean_NEOCP_Object(TestCase):
         expected_elements = { 'provisional_name' : 'LSCTLGj',
                               'abs_mag'     : 16.54,
                               'slope'       : 0.15,
-                              'epochofel'   : datetime(2016,11,  8, 0, 0, 0),
+                              'epochofel'   : datetime(2016, 11,  8, 0, 0, 0),
                               'meananom'    : 258.25752,
                               'argofperih'  :  52.27105,
                               'longascnode' : 101.57581,
@@ -379,7 +380,7 @@ class TestClean_NEOCP_Object(TestCase):
         update_MPC_orbit(obj_id)
 
     def test_create_discovered_object(self):
-        obj_id ='LSCTLF8'
+        obj_id = 'LSCTLF8'
         elements = { 'abs_mag'     : 16.2,
                       'slope'       : 0.15,
                       'epochofel'   : datetime(2015, 6, 23, 0, 0, 0),
@@ -396,7 +397,7 @@ class TestClean_NEOCP_Object(TestCase):
                     }
         body, created = Body.objects.get_or_create(provisional_name=obj_id)
         # We are creating this object
-        self.assertEqual(True,created)
+        self.assertEqual(True, created)
         resp = save_and_make_revision(body, elements)
         # Need to call full_clean() to validate the fields as this is not
         # done on save() (called by get_or_create() or save_and_make_revision())
@@ -524,7 +525,7 @@ class TestClean_NEOCP_Object(TestCase):
             self.assertEqual(expected_elements[element], elements[element])
 
 
-class TestCheck_for_block(TestCase):
+class TestCheckForBlock(TestCase):
 
     def setUp(self):
         # Initialise with three test bodies a test proposal and several blocks.
@@ -618,8 +619,7 @@ class TestCheck_for_block(TestCase):
         sblock_params3 = {
                          'body'     : self.body_with_provname,
                          'proposal' : self.neo_proposal,
-                         'groupid'  : self.body_with_provname.current_name() + \
-                            '_LSC-20150421',
+                         'groupid'  : self.body_with_provname.current_name() + '_LSC-20150421',
                          'block_start' : '2015-04-21 23:00:00',
                          'block_end'   : '2015-04-22 03:00:00',
                          'tracking_number' : '00044',
@@ -644,8 +644,7 @@ class TestCheck_for_block(TestCase):
         sblock_params4 = {
                          'body'     : self.body_no_provname1,
                          'proposal' : self.neo_proposal,
-                         'groupid'  : self.body_no_provname1.current_name() + \
-                            '_LSC-20150421',
+                         'groupid'  : self.body_no_provname1.current_name() + '_LSC-20150421',
                          'block_start' : '2015-04-21 23:00:00',
                          'block_end'   : '2015-04-22 03:00:00',
                          'tracking_number' : '00045',
@@ -670,8 +669,7 @@ class TestCheck_for_block(TestCase):
         sblock_params5 = {
                          'body'     : self.body_no_provname2,
                          'proposal' : self.neo_proposal,
-                         'groupid'  : self.body_no_provname2.current_name() + \
-                            '_ELP-20141121_lc',
+                         'groupid'  : self.body_no_provname2.current_name() + '_ELP-20141121_lc',
                          'block_start' : '2014-11-21 03:00:00',
                          'block_end'   : '2014-11-21 13:00:00',
                          'tracking_number' : '00006',
@@ -696,8 +694,7 @@ class TestCheck_for_block(TestCase):
         sblock_params6 = {
                          'body'     : self.body_no_provname2,
                          'proposal' : self.neo_proposal,
-                         'groupid'  : self.body_no_provname2.current_name() + \
-                            '_ELP-20141121',
+                         'groupid'  : self.body_no_provname2.current_name() + '_ELP-20141121',
                          'block_start' : '2014-11-21 03:00:00',
                          'block_end'   : '2014-11-21 13:00:00',
                          'tracking_number' : '00007',
@@ -944,7 +941,7 @@ class TestCheck_for_block(TestCase):
         bid = 1
         resp = block_status(block_id=bid)
         blk = Block.objects.get(id=bid)
-        self.assertEqual(blk.num_observed,1)
+        self.assertEqual(blk.num_observed, 1)
 
     @patch('core.frames.check_request_status', mock_check_request_status_notfound)
     def test_block_not_found(self):
@@ -989,7 +986,7 @@ class TestRecordBlock(TestCase):
                               'exp_count' : self.spectro_params['exp_count'],
                               'exp_length' : self.spectro_params['exp_time'],
                             }
-        body_params = { 'name' : '4' }
+        body_params = {'name' : '4'}
         self.spectro_body = Body.objects.create(**body_params)
 
         proposal_params = { 'code' : self.spectro_params['proposal_id'], }
@@ -1080,9 +1077,9 @@ class TestRecordBlock(TestCase):
 
     def test_imaging_block_rr_proposal(self):
         imaging_params = self.imaging_params
-        imaging_params['proposal_id'] = imaging_params['proposal_id'] + 'b'
+        imaging_params['proposal_id'] += 'b'
         imaging_form = self.imaging_form
-        imaging_form['proposal_code'] = imaging_form['proposal_code'] + 'b'
+        imaging_form['proposal_code'] += 'b'
 
         block_resp = record_block(self.imaging_tracknum, imaging_params, imaging_form, self.imaging_body)
 
@@ -1105,13 +1102,13 @@ class TestRecordBlock(TestCase):
         self.assertEqual(True, sblocks[0].rapid_response)
 
     def test_spectro_and_solar_block(self):
-        new_params =  { 'calibsource' : {  'id': 1,
-                                           'name': 'Landolt SA107-684',
-                                           'ra_deg': 234.325,
-                                           'dec_deg': -0.164,
-                                           'pm_ra': 0.0,
-                                           'pm_dec': 0.0,
-                                           'parallax': 0.0
+        new_params = { 'calibsource' : {'id': 1,
+                                        'name': 'Landolt SA107-684',
+                                        'ra_deg': 234.325,
+                                        'dec_deg': -0.164,
+                                        'pm_ra': 0.0,
+                                        'pm_dec': 0.0,
+                                        'parallax': 0.0
                                         },
                         'calibsrc_exptime' : 60.0,
                         'dec_deg' : -0.164,
@@ -1176,7 +1173,7 @@ class TestRecordBlock(TestCase):
         self.assertEqual(self.spectro_params['block_duration'], sblocks[0].timeused)
 
 
-class TestSchedule_Check(TestCase):
+class TestScheduleCheck(TestCase):
 
     def setUp(self):
         # Initialise with three test bodies a test proposal and several blocks.
@@ -1994,7 +1991,7 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
 
-class TestUpdate_MPC_orbit(TestCase):
+class TestUpdateMPCOrbit(TestCase):
 
     def setUp(self):
 
@@ -2020,7 +2017,6 @@ class TestUpdate_MPC_orbit(TestCase):
                              'meandist': 0.9967710,
                              'orbinc': 8.25708,
                              'meananom': 221.74204,
-                             'num_obs': None ,  # '147',
                              'epochofperih': None,
                              'perihdist': None,
                              'slope': 0.15,

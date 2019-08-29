@@ -483,6 +483,15 @@ class Body(models.Model):
         else:
             model = PhysicalParameters
             type_key = 'parameter_type'
+
+        # Don't save empty values
+        try:
+            if not kwargs['value']:
+                return False
+        except KeyError:
+            if not kwargs['desig']:
+                return False
+
         current_params = model.objects.filter(body=self.id)
 
         new_param = True
