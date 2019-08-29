@@ -2309,7 +2309,7 @@ class TestIngestNewObject(TestCase):
                         'source_type' : 'N',
                         'abs_mag': 10.59,
                         'slope'  : 0.15,
-                        'epochofel' : datetime(2019, 2,10, 0, 0),
+                        'epochofel' : datetime(2019, 2, 10, 0, 0),
                         'meananom'  :   4.70349,
                         'argofperih' : 178.80773,
                         'longascnode' : 304.30790,
@@ -2334,7 +2334,7 @@ class TestIngestNewObject(TestCase):
                         'source_type' : 'N',
                         'abs_mag': 22.23,
                         'slope'  : 0.15,
-                        'epochofel' : datetime(2011,10, 1, 0, 0),
+                        'epochofel' : datetime(2011, 10, 1, 0, 0),
                         'meananom'  :  37.31731,
                         'argofperih' :  45.96308,
                         'longascnode' : 229.74785,
@@ -2376,7 +2376,7 @@ class TestIngestNewObject(TestCase):
 
     def _compare_bodies(self, body1, body2, excluded_keys={'_state', 'not_seen', 'ingest', 'update_time'}):
         d1, d2 = body1.__dict__, body2.__dict__
-        for key,value in d1.items():
+        for key, value in d1.items():
             if key in excluded_keys:
                 continue
             self.assertEqual(value, d2[key], "Compare failure on " + key)
@@ -2592,7 +2592,8 @@ class TestIngestNewObject(TestCase):
         self.assertFalse(created)
         self.assertEqual(expected_msg, msg)
 
-class TestUpdate_MPC_obs(TestCase):
+
+class TestUpdateMPCObs(TestCase):
     def setUp(self):
         self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
 
@@ -2722,7 +2723,7 @@ class TestUpdate_MPC_obs(TestCase):
         self.assertEqual(num_lines, len(lines)-1)
 
 
-class TestClean_mpcorbit(TestCase):
+class TestCleanMPCOrbit(TestCase):
 
     def setUp(self):
         # Read and make soup from a static version of the HTML table/page for
@@ -2742,8 +2743,8 @@ class TestClean_mpcorbit(TestCase):
         test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcdb_Comet243P.html'), 'r')
         self.test_multiple_epochs_page = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
-        self.test_comet_elements_2018Aug_epoch = parse_mpcorbit(self.test_multiple_epochs_page, epoch_now=datetime(2018,9,25))
-        self.test_comet_elements_2018Mar_epoch = parse_mpcorbit(self.test_multiple_epochs_page, epoch_now=datetime(2018,2,14))
+        self.test_comet_elements_2018Aug_epoch = parse_mpcorbit(self.test_multiple_epochs_page, epoch_now=datetime(2018, 9, 25))
+        self.test_comet_elements_2018Mar_epoch = parse_mpcorbit(self.test_multiple_epochs_page, epoch_now=datetime(2018, 2, 14))
 
         self.test_hyperbolic_elements = {
                                          'argument of perihelion': '325.96205',
@@ -2881,7 +2882,7 @@ class TestClean_mpcorbit(TestCase):
                                         'discovery_date': datetime(2003, 8, 1, 0),
                                         'num_obs': '334',
                                         'arc_length': '5528',
-                                        'not_seen' :  -216.87383101851853,
+                                        'not_seen' : -216.87383101851853,
                                         'update_time' : datetime(2018, 9, 19, 0),
                                         'updated' : True
                                     }
@@ -3815,7 +3816,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_spec_block)
         frames = Frame.objects.filter(sitecode='E10')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.SPECTRUM_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'E10')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -3879,7 +3880,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_spec_block)
         frames = Frame.objects.filter(sitecode='E10')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.SPECTRUM_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'E10')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -3909,7 +3910,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_spec_block)
         frames = Frame.objects.filter(sitecode='E10')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.SPECTRUM_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'E10')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -3940,7 +3941,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_spec_block)
         frames = Frame.objects.filter(sitecode='E10')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.SPECTRUM_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'E10')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -3970,7 +3971,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_spec_block)
         frames = Frame.objects.filter(sitecode='E10')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.SPECTRUM_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'E10')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -4281,7 +4282,7 @@ class TestCleanCrossid(TestCase):
         self.assertEqual(expected_params, params)
 
 
-class TestSummarise_Block_Efficiency(TestCase):
+class TestSummariseBlockEfficiency(TestCase):
 
     def setUp(self):
         # Initialise with a test body, three test proposals and several blocks.
@@ -4567,7 +4568,7 @@ class TestCheckCatalogAndRefitNew(TestCase):
 
         proposal_params = { 'code': 'test',
                             'title': 'test',
-                            'pi':'sgreenstreet@lcogt.net',
+                            'pi': 'sgreenstreet@lcogt.net',
                             'tag': 'LCOGT',
                             'active': True
                           }
@@ -5358,7 +5359,7 @@ class TestUpdateCrossids(TestCase):
         body.ingest = datetime(2018, 9, 2, 12, 13, 14)
         body.save()
 
-        block,created = Block.objects.get_or_create(body=body)
+        block, created = Block.objects.get_or_create(body=body)
         self.assertEqual(3, Body.objects.count(), msg="Before update_crossids; should be 3 Bodies")
 
         status = update_crossids(crossid_info, dbg=False)
@@ -5394,7 +5395,7 @@ class TestUpdateCrossids(TestCase):
         body.ingest = datetime(2018, 9, 2, 12, 13, 14)
         body.save()
 
-        sblock,created = SuperBlock.objects.get_or_create(body=body, proposal=self.neo_proposal)
+        sblock, created = SuperBlock.objects.get_or_create(body=body, proposal=self.neo_proposal)
         self.assertEqual(3, Body.objects.count(), msg="Before update_crossids; should be 3 Bodies")
 
         status = update_crossids(crossid_info, dbg=False)
@@ -5546,7 +5547,7 @@ class TestStoreDetections(TestCase):
         self.assertEqual(expected_num_cands, len(cands))
 
 
-class Test_Generate_New_Candidate_Id_Blank(TestCase):
+class TestGenerateNewCandidateIdBlank(TestCase):
 
     def test_no_discoveries(self):
         expected_id = 'LNX0001'
@@ -5576,7 +5577,7 @@ class Test_Generate_New_Candidate_Id_Blank(TestCase):
         self.assertEqual(expected_id, new_id)
 
 
-class Test_Generate_New_Candidate_Id(TestCase):
+class TestGenerateNewCandidateId(TestCase):
 
     def setUp(self):
 
@@ -5623,7 +5624,7 @@ class Test_Generate_New_Candidate_Id(TestCase):
         self.assertEqual(3, Body.objects.count())
 
 
-class Test_Add_New_Taxonomy_Data(TestCase):
+class TestAddNewTaxonomyData(TestCase):
 
     def setUp(self):
 
@@ -5961,7 +5962,8 @@ class TestExportMeasurements(TestCase):
                 print("Error removing files in temporary test directory", self.test_dir)
             try:
                 os.rmdir(self.test_dir)
-                if self.debug_print: print("Removed", self.test_dir)
+                if self.debug_print:
+                    print("Removed", self.test_dir)
             except OSError:
                 print("Error removing temporary test directory", self.test_dir)
 
@@ -6122,7 +6124,7 @@ class TestRefitWithFindOrb(TestCase):
         expected_ephem_length = 4
         expected_num_srcmeas = SourceMeasurement.objects.filter(body=self.test_body).count()
         expected_meananom = 272.51789
-        expected_eccentricity =  0.3006186
+        expected_eccentricity = 0.3006186
         expected_epoch = datetime(2015, 11, 20)
         expected_src_type = 'U'
         expected_origin = 'M'
@@ -6329,6 +6331,7 @@ class TestDetermineActiveProposals(TestCase):
 
         self.assertEqual(expected_num, len(proposals))
         self.assertEqual(expected_code_1, proposals[0])
+
 
 class TestBestStandardsView(TestCase):
 
