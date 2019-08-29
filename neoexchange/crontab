@@ -4,7 +4,6 @@
 20,50 * * * * python3 manage.py update_neocp_data
 30 0,4,8,12,16,20 * * * python3 manage.py update_crossids
 */20 * * * * python3 manage.py update_blocks
-30 */6 * * * python3 manage.py zoo_mtd_confirm
 10 7 * * * python3 manage.py update_taxonomy_data
 03 06,19 * * * python3 manage.py update_targets
 30 7 * * 0 python3 manage.py update_external_spectroscopy_data -a
