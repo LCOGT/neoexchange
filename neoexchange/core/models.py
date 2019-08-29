@@ -486,6 +486,7 @@ class Body(models.Model):
         current_params = model.objects.filter(body=self.id)
 
         new_param = True
+        new_type = True
         if current_params:
             for param in current_params:
                 param_dict = model_to_dict(param)
@@ -502,7 +503,11 @@ class Body(models.Model):
                     if param_dict[type_key] == kwargs[type_key] and kwargs['preferred'] and param_dict['preferred']:
                         param.preferred = False
                         param.save()
+                if param_dict[type_key] == kwargs[type_key] and ( kwargs['preferred'] or param_dict['preferred']):
+                    new_type = False
 
+        if new_type is True:
+            kwargs['preferred'] = True
         if new_param is True:
             kwargs['body'] = self
             try:

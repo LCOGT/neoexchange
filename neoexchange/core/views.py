@@ -1742,11 +1742,13 @@ def return_fields_for_saving():
     Split out from save_and_make_revision() so it can be consistently used by the
     remove_bad_revisions management command."""
 
-    fields = ['provisional_name', 'provisional_packed', 'name', 'origin', 'source_type',  'elements_type',
+    body_fields = ['provisional_name', 'provisional_packed', 'name', 'origin', 'source_type',  'elements_type',
               'epochofel', 'abs_mag', 'slope', 'orbinc', 'longascnode', 'eccentricity', 'argofperih', 'meandist', 'meananom',
               'score', 'discovery_date', 'num_obs', 'arc_length']
 
-    return fields
+    param_fields = ['abs_mag']
+
+    return body_fields, param_fields
 
 
 def save_and_make_revision(body, kwargs):
@@ -1758,7 +1760,9 @@ def save_and_make_revision(body, kwargs):
     so use the type of original to convert and then compare.
     """
 
-    fields = return_fields_for_saving()
+    b_fields, p_fields = return_fields_for_saving()
+
+    p_field_to_p_code = {'abs_mag': 'H'}
 
     update = False
 
@@ -1769,8 +1773,28 @@ def save_and_make_revision(body, kwargs):
             v = float(v)
         if v != param:
             setattr(body, k, v)
-            if k in fields:
+            if k in b_fields:
                 update = True
+        if k in p_fields:
+            p_dict = {'value': v,
+                      'parameter_type': p_field_to_p_code[k],
+                      'preferred': False,
+                      'reference': 'MPC Default'
+                      }
+            phys_update = body.save_physical_parameters(p_dict)
+            if k == 'abs_mag' and phys_update:
+                albedo = body.get_physical_parameters(param_type='ab')
+                if not albedo:
+                    albedo = [{'value': 0.14}]
+                diam_dict = {'value': round(asteroid_diameter(albedo[0]['value'], v), 2),
+                             'parameter_type': 'D',
+                             'units': 'm',
+                             'preferred': False,
+                             'reference': 'Default',
+                             'notes': 'Initial Diameter Guess using H={} and albedo={}'.format(v, albedo[0]['value'])
+                            }
+                body.save_physical_parameters(diam_dict)
+
     if update:
         with reversion.create_revision():
             body.save()
@@ -2339,14 +2363,6 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
         time_to_new_epoch = abs(kwargs['epochofel'] - datetime.now())
     if not body.epochofel or time_to_new_epoch <= time_to_current_epoch:
         save_and_make_revision(body, kwargs)
-        previous_albedos = PhysicalParameters.objects.filter(body=body, parameter_type='ab', preferred=True)
-        if previous_albedos:
-            albedo = previous_albedos[0]
-        else:
-            albedo = None
-        params = build_initial_phys_des_params([], kwargs['abs_mag'], albedo)
-        for param in params:
-            body.save_physical_parameters(param)
         if not created:
             logger.info("Updated elements for %s from MPC" % obj_id)
         else:
@@ -2489,7 +2505,7 @@ def ingest_new_object(orbit_file, obs_file=None, dbg=False):
         if dbg: print("Looking in the DB for ", obj_id)
         query = Q(provisional_name__exact=obj_id)
         if name is not None:
-            query = query | Q(name__exact=name)
+            query |= Q(name__exact=name)
         bodies = Body.objects.filter(query)
         if bodies.count() == 0:
             body, created = Body.objects.get_or_create(provisional_name__exact=obj_id)
