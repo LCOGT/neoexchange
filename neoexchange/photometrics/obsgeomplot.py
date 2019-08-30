@@ -249,8 +249,9 @@ def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, dbg=False)
     y2lim = ax2.get_ylim()
     ax2.set_ylim(y2lim[1], y2lim[0])
     ylim = ax.get_ylim()
-    ax.axvline(close_approach, color=ca_color)
-    ax.text(close_approach, 0.1*ylim[1], "C/A", rotation=90, color=ca_color, horizontalalignment='left')
+    if close_approach != dates[0] and close_approach != dates[-1]:
+        ax.axvline(close_approach, color=ca_color)
+        ax.text(close_approach, 0.1*ylim[1], "C/A", rotation=90, color=ca_color, horizontalalignment='left')
 
     # Do top plot
     ax = axes[0]
@@ -260,7 +261,8 @@ def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, dbg=False)
         line_alt = upper_ax2.plot(dates, ephem_ca['EL'], color='g', linestyle=':')
         ylim = upper_ax2.get_ylim()
         upper_ax2.set_ylim(ylim[0], 90)
-    ax.axvline(close_approach, color=ca_color)
+    if close_approach != dates[0] and close_approach != dates[-1]:
+        ax.axvline(close_approach, color=ca_color)
 
     if title is None:
         title = "{} for {} to {}".format(first['targetname'], dates[0].strftime("%Y-%m-%d"), dates[-1].strftime("%Y-%m-%d"))
@@ -282,17 +284,7 @@ def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, dbg=False)
     ax = axes[1]
     ylim = ax.get_ylim()
     ax.set_ylim(0, ylim[1])
-    start_year = dates[0].year
-    end_year = dates[-1].year
-    year = str(start_year)
-    if start_year != end_year:
-        year = "{}--{}".format(start_year, end_year)
-    xlabel = "Date ({})".format(year)
-    ax.set_xlabel(xlabel)
-#    num_days = dates[-1] - dates[0]
-#    day_interval = max(int(num_days.days / 5), 1)
-#    ax.get_xaxis().set_major_locator(mdates.DayLocator(interval=day_interval))
-#    ax.get_xaxis().set_major_formatter(mdates.DateFormatter("%m-%d"))
+    ax.set_xlabel("Date")
     fig.autofmt_xdate()
 
     y_units_label = 'Hours above $30^\circ$ altitude'
