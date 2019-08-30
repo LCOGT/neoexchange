@@ -270,8 +270,9 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow()):
         elif plot_type == 'uncertainty':
             vis_file = plot_uncertainty(ephem)
         elif plot_type == 'hoursup':
-            ephem = horizons_ephem(body.name, start, end, 'W85', '10m', alt_limit=30)
-            vis_file = plot_hoursup(ephem, 'W85')
+            site_code = 'W85'
+            ephem = horizons_ephem(body.name, start, end, site_code, '10m', alt_limit=30)
+            vis_file = plot_hoursup(ephem, site_code)
         if vis_file != '':
             if not os.path.exists(base_dir):
                 os.makedirs(base_dir)

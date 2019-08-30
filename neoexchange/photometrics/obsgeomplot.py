@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import logging
 
 from astropy.table import Column
 from matplotlib.figure import Figure
@@ -6,6 +7,8 @@ import matplotlib.dates as mdates
 
 from astrometrics.ephem_subs import determine_darkness_times
 from photometrics.lineticks import LineTicks
+
+logger = logging.getLogger(__name__)
 
 
 def make_targetname(target_name):
@@ -224,6 +227,10 @@ def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, dbg=False)
     The name of plot file is returned.
     """
     ca_color = '#4700c3'
+
+    if ephem_ca is None or len(ephem_ca) < 2:
+        logger.warning("Ephemeris is too short (no visibility?)")
+        return ''
 
     first = ephem_ca[0]
     dates = ephem_ca['datetime']
