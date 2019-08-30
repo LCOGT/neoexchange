@@ -1748,7 +1748,7 @@ def sort_des_type(name):
         dtype = 'P'
     elif n[-1] in ['P', 'C', 'D'] and n[:-1].isdigit():
         dtype = '#'
-    elif bool(re.search('\d', n)):
+    elif bool(re.search('\d', n)) or (not n.isupper() and sum(1 for c in n if c.isupper()) > 1):
         dtype = 'C'
     else:
         dtype = 'N'
@@ -1796,18 +1796,19 @@ def save_and_make_revision(body, kwargs):
         if k in p_fields:
             param_code = p_field_to_p_code[k]
             if 'name' in k:
-                param_label = 'desig_type'
-                val_label = 'desig'
                 if k == 'name':
                     param_code = sort_des_type(str(v))
+                p_dict = {'desig_type': param_code,
+                              'desig': v,
+                              'desig_notes': 'MPC Default',
+                              'preferred': False,
+                              }
             else:
-                param_label = 'parameter_type'
-                val_label = 'value'
-            p_dict = {val_label: v,
-                      param_label: param_code,
-                      'preferred': False,
-                      'reference': 'MPC Default'
-                      }
+                p_dict = {'value': v,
+                          'parameter_type': param_code,
+                          'preferred': False,
+                          'reference': 'MPC Default'
+                          }
             phys_update = body.save_physical_parameters(p_dict)
             if k == 'abs_mag' and phys_update:
                 albedo = body.get_physical_parameters(param_type='ab')
@@ -1981,7 +1982,7 @@ def clean_NEOCP_object(page_list):
 
         elif 21 <= len(current) <= 25:
             # The first 20 characters can get very messy if there is a temporary
-            # and permanent desigination as the absolute magntiude and slope gets
+            # and permanent designation as the absolute magnitude and slope gets
             # pushed up and partially overwritten. Sort this mess out and then the
             # rest obeys the documentation on the MPC site:
             # https://www.minorplanetcenter.net/iau/info/MPOrbitFormat.html)
@@ -2001,7 +2002,7 @@ def clean_NEOCP_object(page_list):
                 readable_desig = line[166:194].strip()
             elements_type = 'MPC_MINOR_PLANET'
             source_type = 'U'
-            if readable_desig and readable_desig[0:2] =='P/':
+            if readable_desig and readable_desig[0:2] == 'P/':
                 elements_type = 'MPC_COMET'
                 source_type = 'C'
 
@@ -2458,20 +2459,22 @@ def ingest_new_object(orbit_file, obs_file=None, dbg=False):
                     name = None
                 kwargs['name'] = name
                 kwargs['provisional_packed'] = kwargs['provisional_name']
-                if name is not None and obj_id.strip() == name.replace(' ', '') and name.strip().count(' ') == 1:
+                if name is not None and obj_id.strip() == name.replace(' ', ''):
                     kwargs['provisional_name'] = None
                     kwargs['origin'] = 'M'
                 else:
                     kwargs['provisional_name'] = obj_id
                 # Determine perihelion distance and asteroid type
                 if kwargs.get('eccentricity', None) is not None and kwargs.get('eccentricity', 2.0) < 1.0\
-                    and kwargs.get('meandist', None) is not None:
+                        and kwargs.get('meandist', None) is not None:
                     perihdist = kwargs['meandist'] * (1.0 - kwargs['eccentricity'])
                     source_type = determine_asteroid_type(perihdist, kwargs['eccentricity'])
-                    if dbg: print("New source type", source_type)
+                    if dbg:
+                        print("New source type", source_type)
                     kwargs['source_type'] = source_type
                 if local_discovery:
-                    if dbg: print("Setting to local origin")
+                    if dbg:
+                        print("Setting to local origin")
                     kwargs['origin'] = 'L'
                     kwargs['source_type'] = 'D'
         else:
@@ -2481,7 +2484,8 @@ def ingest_new_object(orbit_file, obs_file=None, dbg=False):
         kwargs['discovery_date'] = discovery_date
         # Needs to be __exact (and the correct database collation set on Body)
         # to perform case-sensitive lookup on the provisional name.
-        if dbg: print("Looking in the DB for ", obj_id)
+        if dbg:
+            print("Looking in the DB for ", obj_id)
         query = Q(provisional_name__exact=obj_id)
         if name is not None:
             query |= Q(name__exact=name)

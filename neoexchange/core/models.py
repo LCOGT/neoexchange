@@ -560,7 +560,7 @@ class Designations(models.Model):
         db_table = 'ingest_names'
 
     def __str__(self):
-        return "%s is a designation for %s (pk=%s)" % (self.desig, self.body.name, self.body.id)
+        return "%s is a designation for %s (pk=%s)" % (self.desig, self.body.full_name(), self.body.id)
 
 
 @python_2_unicode_compatible
@@ -584,9 +584,9 @@ class PhysicalParameters(models.Model):
 
     def __str__(self):
         if self.value2:
-            return "({}, {}) is the {} for {} (pk={})".format(self.value, self.value2, self.get_parameter_type_display(), self.body.name, self.body.id)
+            return "({}, {}) is the {} for {} (pk={})".format(self.value, self.value2, self.get_parameter_type_display(), self.body.full_name(), self.body.id)
         else:
-            return "{}{} is the {} for {} (pk={})".format(self.value, self.units, self.get_parameter_type_display(), self.body.name, self.body.id)
+            return "{}{} is the {} for {} (pk={})".format(self.value, self.units, self.get_parameter_type_display(), self.body.full_name(), self.body.id)
 
 
 @python_2_unicode_compatible

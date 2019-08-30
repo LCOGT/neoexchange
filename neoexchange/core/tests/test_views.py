@@ -372,7 +372,7 @@ class TestClean_NEOCP_Object(TestCase):
         self.assertEqual(False, created)
         resp = save_and_make_revision(body, elements)
         # Saving the new elements
-        self.assertEqual(True,resp)
+        self.assertEqual(True, resp)
 
     def test_update_MPC_duplicate(self):
         self.save_N007riz()
@@ -2303,7 +2303,7 @@ class TestIngestNewObject(TestCase):
         self.body_LSCTLZZ = Body(**self.params_LSCTLZZ)
 
         self.eros_params = { 'id' : 1,
-                        'provisional_name' : '433',
+                        'provisional_name' : None,
                         'provisional_packed' : '00433',
                         'name' : '433',
                         'source_type' : 'N',
@@ -2402,6 +2402,33 @@ class TestIngestNewObject(TestCase):
         self.assertTrue(created)
         self.assertEqual(expected_msg, msg)
 
+    def test_phys_params_new_body(self):
+        body = self.body_LSCTLZZ
+        self.assertEqual(body.get_physical_parameters(), [])
+
+        expected_types = ['H', 'D', 'G']
+        expected_values = [21.17, 207.23, 0.15]
+        expected_params = list(zip(expected_types, expected_values))
+
+        expected_names = [['C', 'LSCTLZZ']]
+
+        ingest_new_object(self.disc_orbit_file)
+
+        phys_params = body.get_physical_parameters()
+        names = Designations.objects.filter(body=body)
+
+        for param in phys_params:
+            test_list = (param['parameter_type'], param['value'])
+            self.assertIn(test_list, expected_params)
+            expected_params.remove(test_list)
+        self.assertEqual(expected_params, [])
+
+        for name in names:
+            test_list = [name.desig_type, name.desig]
+            self.assertIn(test_list, expected_names)
+            expected_names.remove(test_list)
+        self.assertEqual(expected_names, [])
+
     def test_discovery_existing_no_changes(self):
 
         expected_body = self.body_LSCTLZZ
@@ -2419,6 +2446,24 @@ class TestIngestNewObject(TestCase):
         self._compare_bodies(expected_body, body)
         self.assertFalse(created)
         self.assertEqual(expected_msg, msg)
+
+    def test_phys_params_no_changes(self):
+        body = self.body_LSCTLZZ
+        expected_params = 3
+        expected_names = 1
+
+        ingest_new_object(self.disc_orbit_file)
+
+        phys_params = body.get_physical_parameters
+        names = Designations.objects.filter(body=body)
+
+        self.assertEqual(len(phys_params()), expected_params)
+        self.assertEqual(len(names), expected_names)
+
+        ingest_new_object(self.disc_orbit_file)
+
+        self.assertEqual(len(phys_params()), expected_params)
+        self.assertEqual(len(names), expected_names)
 
     def test_discovery_existing_new_provname(self):
 
@@ -2451,6 +2496,29 @@ class TestIngestNewObject(TestCase):
         self.assertFalse(created)
         self.assertEqual(expected_msg, msg)
 
+    def test_designation_new_provname(self):
+        body = self.body_LSCTLZZ
+        expected_types = ['C', 'P']
+        expected_desigs = ['LSCTLZZ', '2019 EN']
+        expected_names = list(zip(expected_types, expected_desigs))
+
+        ingest_new_object(self.disc_orbit_file)
+
+        names = Designations.objects.filter(body=body)
+
+        # Remove symlink to LSCTLZZ.neocp orbit file and re-symlink to the 2019EN.neocp one
+        # so desigination inside the file changes but it stays as LSCTLZZ.neocp
+        os.unlink(self.disc_orbit_file)
+        os.symlink(self.orig_orbit_file, self.disc_orbit_file)
+
+        ingest_new_object(self.disc_orbit_file)
+
+        for name in names:
+            test_list = (name.desig_type, name.desig)
+            self.assertIn(test_list, expected_names)
+            expected_names.remove(test_list)
+        self.assertEqual(expected_names, [])
+
     def test_knownNEO_not_existing(self):
 
         expected_body = self.body_2019EN
@@ -2468,6 +2536,22 @@ class TestIngestNewObject(TestCase):
         self._compare_bodies(expected_body, body)
         self.assertTrue(created)
         self.assertEqual(expected_msg, msg)
+
+    def test_designation_knownNEO(self):
+        body = self.body_2019EN
+        expected_types = ['P']
+        expected_desigs = ['2019 EN']
+        expected_names = list(zip(expected_types, expected_desigs))
+
+        ingest_new_object(self.orbit_file)
+
+        names = Designations.objects.filter(body=body)
+
+        for name in names:
+            test_list = (name.desig_type, name.desig)
+            self.assertIn(test_list, expected_names)
+            expected_names.remove(test_list)
+        self.assertEqual(expected_names, [])
 
     def test_knownNEO_not_existing_no_obsfile(self):
 
@@ -2551,6 +2635,22 @@ class TestIngestNewObject(TestCase):
         self._compare_bodies(expected_body, body)
         self.assertFalse(created)
         self.assertEqual(expected_msg, msg)
+
+    def test_designation_known_num_NEO(self):
+        body = self.body_433
+        expected_types = ['#']
+        expected_desigs = ['433']
+        expected_names = list(zip(expected_types, expected_desigs))
+
+        ingest_new_object(self.eros_orbit_file)
+
+        names = Designations.objects.filter(body=body)
+
+        for name in names:
+            test_list = (name.desig_type, name.desig)
+            self.assertIn(test_list, expected_names)
+            expected_names.remove(test_list)
+        self.assertEqual(expected_names, [])
 
     def test_known_provNEO_not_existing(self):
 

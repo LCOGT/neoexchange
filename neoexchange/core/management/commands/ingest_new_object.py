@@ -1,4 +1,4 @@
-'''
+"""
 NEO exchange: NEO observing portal for Las Cumbres Observatory
 Copyright (C) 2015-2019 LCO
 
@@ -11,7 +11,7 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-'''
+"""
 from sys import argv
 import os
 from datetime import datetime
@@ -25,6 +25,7 @@ import logging
 
 
 logger = logging.getLogger(__name__)
+
 
 class Command(BaseCommand):
     help = 'Ingest new objects from a local NEOCP 1-line file produced by e.g. find_orb'
