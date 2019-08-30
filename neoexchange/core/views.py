@@ -271,6 +271,8 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow()):
             vis_file = plot_uncertainty(ephem)
         elif plot_type == 'hoursup':
             site_code = 'W85'
+            if ephem['DEC'].mean() > 5:
+                site_code = 'V37'
             ephem = horizons_ephem(body.name, start, end, site_code, '10m', alt_limit=30)
             vis_file = plot_hoursup(ephem, site_code)
         if vis_file != '':
