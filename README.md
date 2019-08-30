@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 2.8.9
+Add support for the ELP Dome B 1-meter telescope.
+
 ### 2.8.6
 Change URL scheme for new prefix
 
