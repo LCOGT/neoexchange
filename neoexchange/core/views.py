@@ -274,7 +274,7 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow()):
             if ephem['DEC'].mean() > 5:
                 site_code = 'V37'
             ephem = horizons_ephem(body.name, start, end, site_code, '10m', alt_limit=30)
-            vis_file = plot_hoursup(ephem, site_code)
+            vis_file = plot_hoursup(ephem, site_code, add_rate=False)
         if vis_file != '':
             if not os.path.exists(base_dir):
                 os.makedirs(base_dir)

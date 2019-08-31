@@ -218,12 +218,14 @@ def determine_hours_up(ephem_ca, site_code, dbg=False):
 
     return visible_dates, hours_visible
 
-def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, dbg=False):
+def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, add_rate=True, dbg=False):
     """Calculate the number of hours an object is up at a site <site_code>
     from <ephem_ca> - a more closely spaced ephemeris (e.g. 5m) over a
-    shorter range. Produces a 2 panel plot which plots the hours above 30 deg
-    altitude and V magnitude in the bottom panel and the on-sky rate and
-    optionally (if [add_altitude]=True) in the top panel.
+    shorter range. If [add_rate]=True:
+        Produces a 2 panel plot which plots the hours above 30 deg altitude and
+         V magnitude in the bottom panel and the on-sky rate and optionally (if
+         [add_altitude]=True) in the top panel.
+    otherwise a single panel plot of the hours and V magnitude is produced
     The name of plot file is returned.
     """
     ca_color = '#4700c3'
@@ -238,11 +240,18 @@ def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, dbg=False)
     visible_dates, hours_visible = determine_hours_up(ephem_ca, site_code, dbg)
 
     # Generate the figure **without using pyplot**.
-    fig = Figure(figsize=(10,8))
-    axes = fig.subplots(2, 1, sharex=True)
+    if add_rate:
+#        fig = Figure(figsize=(10,8))
+        fig = Figure()
+        axes = fig.subplots(2, 1, sharex=True)
+    else:
+        fig = Figure()
+        axes = fig.subplots(1, 1)
+        ax = axes
     fig.subplots_adjust(hspace=0.1)
     # Do bottom plot
-    ax = axes[1]
+    if add_rate:
+        ax = axes[1]
     ax2 = ax.twinx()
     line_hours = ax.plot(visible_dates, hours_visible, 'k-')
     line_vmag = ax2.plot(dates, ephem_ca['V'], color= '#ff5900', linestyle='-.')
@@ -253,35 +262,38 @@ def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, dbg=False)
         ax.axvline(close_approach, color=ca_color)
         ax.text(close_approach, 0.1*ylim[1], "C/A", rotation=90, color=ca_color, horizontalalignment='left')
 
-    # Do top plot
-    ax = axes[0]
-    line_rate = ax.plot(dates, ephem_ca['mean_rate'], color='b', linestyle='-')
-    if add_altitude is True:
-        upper_ax2 = ax.twinx()
-        line_alt = upper_ax2.plot(dates, ephem_ca['EL'], color='g', linestyle=':')
-        ylim = upper_ax2.get_ylim()
-        upper_ax2.set_ylim(ylim[0], 90)
-    if close_approach != dates[0] and close_approach != dates[-1]:
-        ax.axvline(close_approach, color=ca_color)
+    if add_rate:
+        # Do top plot
+        ax = axes[0]
+        line_rate = ax.plot(dates, ephem_ca['mean_rate'], color='b', linestyle='-')
+        if add_altitude is True:
+            upper_ax2 = ax.twinx()
+            line_alt = upper_ax2.plot(dates, ephem_ca['EL'], color='g', linestyle=':')
+            ylim = upper_ax2.get_ylim()
+            upper_ax2.set_ylim(ylim[0], 90)
+        if close_approach != dates[0] and close_approach != dates[-1]:
+            ax.axvline(close_approach, color=ca_color)
 
+
+        if add_altitude is False:
+            ax.yaxis.set_ticks_position('both')
+        else:
+            ax.yaxis.set_ticks_position('left')
+            upper_ax2.yaxis.set_ticks_position('right')
+            upper_ax2.minorticks_on()
+            upper_ax2.set_ylabel("Altitude")
+        ax.set_ylabel('Rate ("/min)')
+        ax.minorticks_on()
+
+    ax.set_title('Visibility at ' + site_code)
     if title is None:
         title = "{} for {} to {}".format(first['targetname'], dates[0].strftime("%Y-%m-%d"), dates[-1].strftime("%Y-%m-%d"))
     fig.suptitle(title)
-    ax.set_title('Visibility at ' + site_code)
-    if add_altitude is False:
-        ax.yaxis.set_ticks_position('both')
-    else:
-        ax.yaxis.set_ticks_position('left')
-        upper_ax2.yaxis.set_ticks_position('right')
-        upper_ax2.minorticks_on()
-        upper_ax2.set_ylabel("Altitude")
-    ax.set_ylabel('Rate ("/min)')
-    ax.minorticks_on()
-
 #    ax.legend(handles=(line_rate[0],), labels=('Rate',), loc='best', fontsize='x-small')
 
     # Back to bottom plot to set date labels
-    ax = axes[1]
+    if add_rate:
+        ax = axes[1]
     ylim = ax.get_ylim()
     ax.set_ylim(0, ylim[1])
     ax.set_xlabel("Date")
