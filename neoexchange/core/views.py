@@ -1737,7 +1737,7 @@ def record_block(tracking_number, params, form_data, target):
         return False
 
 
-def sort_des_type(name):
+def sort_des_type(name, default='T'):
     # Guess name type based on structure
     n = name.strip()
     if not n:
@@ -1750,8 +1750,10 @@ def sort_des_type(name):
         dtype = '#'
     elif bool(re.search('\d', n)) or (not n.isupper() and sum(1 for c in n if c.isupper()) > 1):
         dtype = 'C'
-    else:
+    elif n.replace('-', '').replace("'", "").isalpha() and not n.isupper():
         dtype = 'N'
+    else:
+        dtype = default
     return dtype
 
 
@@ -1801,17 +1803,18 @@ def save_and_make_revision(body, kwargs):
                 p_dict = {'desig_type': param_code,
                               'desig': v,
                               'desig_notes': 'MPC Default',
-                              'preferred': False,
+                              'preferred': True,
                               }
             else:
                 p_dict = {'value': v,
                           'parameter_type': param_code,
                           'preferred': False,
-                          'reference': 'MPC Default'
+                          'reference': 'MPC Default',
+                          'notes': 'Updated: {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M'))
                           }
             phys_update = body.save_physical_parameters(p_dict)
             if k == 'abs_mag' and phys_update:
-                albedo = body.get_physical_parameters(param_type='ab')
+                albedo = body.get_physical_parameters(param_type='ab', return_all=False)
                 if not albedo:
                     albedo = [{'value': 0.14}]
                 diam_dict = {'value': round(asteroid_diameter(albedo[0]['value'], v), 2),
@@ -2105,6 +2108,12 @@ def update_crossids(astobj, dbg=False):
         body = sorted_bodies[0]
         logger.info("Taking %s (id=%d) as canonical Body" % (body.current_name(), body.pk))
         for del_body in sorted_bodies[1:]:
+            del_names = Designations.objects.filter(body=del_body)
+            for name in del_names:
+                des_dict = model_to_dict(name)
+                del des_dict['id']
+                del des_dict['body']
+                body.save_physical_parameters(des_dict)
             logger.info("Trying to remove %s (id=%d) duplicate Body" % (del_body.current_name(), del_body.pk))
             num_sblocks = SuperBlock.objects.filter(body=del_body).count()
             num_blocks = Block.objects.filter(body=del_body).count()
@@ -2133,13 +2142,15 @@ def update_crossids(astobj, dbg=False):
             logger.warning("Not downgrading type for %s from %s to %s" % (body.current_name(), body.source_type, kwargs['source_type']))
             kwargs['source_type'] = body.source_type
         if kwargs['source_type'] == 'C' or (kwargs['source_type'] == 'A' and kwargs['source_subtype_1'] == 'H'):
-            if dbg: print("Converting to comet")
+            if dbg:
+                print("Converting to comet")
             kwargs = convert_ast_to_comet(kwargs, body)
         if dbg:
             print(kwargs)
         check_body = Body.objects.filter(provisional_name=temp_id, **kwargs)
         if check_body.count() == 0:
             save_and_make_revision(body, kwargs)
+            body.save_physical_parameters({'desig': temp_id, 'desig_type': sort_des_type(temp_id, default='C'), 'desig_notes': 'MPC Default'})
             logger.info("Updated cross identification for %s" % body.current_name())
     elif kwargs != {}:
         # Didn't know about this object before so create but make inactive
@@ -2178,27 +2189,31 @@ def clean_crossid(astobj, dbg=False):
     objtype = ''
     sub1 = ''
     if obj_id != '' and desig == 'wasnotconfirmed':
-        if dbg: print("Case 1")
+        if dbg:
+            print("Case 1")
         # Unconfirmed, no longer interesting so set inactive
         objtype = 'U'
         desig = ''
         active = False
     elif obj_id != '' and desig == 'doesnotexist':
         # Did not exist, no longer interesting so set inactive
-        if dbg: print("Case 2")
+        if dbg:
+            print("Case 2")
         objtype = 'X'
         desig = ''
         active = False
     elif obj_id != '' and desig == 'wasnotminorplanet':
         # "was not a minor planet"; set to satellite and no longer interesting
-        if dbg: print("Case 3")
+        if dbg:
+            print("Case 3")
         objtype = 'J'
         desig = ''
         active = False
     elif obj_id != '' and desig == '' and reference == '':
         # "Was not interesting" (normally a satellite), no longer interesting
         # so set inactive
-        if dbg: print("Case 4")
+        if dbg:
+            print("Case 4")
         objtype = 'W'
         desig = ''
         active = False
@@ -2207,14 +2222,16 @@ def clean_crossid(astobj, dbg=False):
         if ('CBET' in reference or 'IAUC' in reference or 'MPEC' in reference) and 'C/' in desig:
             # There is a reference to a CBET or IAUC so we assume it's "very
             # interesting" i.e. a comet
-            if dbg: print("Case 5a")
+            if dbg:
+                print("Case 5a")
             objtype = 'C'
             if time_from_confirm > interesting_cutoff:
                 active = False
         elif 'MPEC' in reference:
             # There is a reference to an MPEC so we assume it's
             # "interesting" i.e. an NEO
-            if dbg: print("Case 5b")
+            if dbg:
+                print("Case 5b")
             objtype = 'N'
             if 'A/' in desig:
                 # Check if it is an active (Comet-like) asteroid
@@ -2228,7 +2245,8 @@ def clean_crossid(astobj, dbg=False):
                 active = False
         elif desig[-1] == 'P' and desig[0:-1].isdigit():
             # Crossid from NEO candidate to comet
-            if dbg: print("Case 5c")
+            if dbg:
+                print("Case 5c")
             objtype = 'C'
             try:
                 desig = str(int(desig[0:-1]))
@@ -2241,13 +2259,15 @@ def clean_crossid(astobj, dbg=False):
             chunks = desig.split()
             for i, planet in enumerate(['Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto']):
                 if chunks[0] == planet and ('I' in chunks[1] or 'V' in chunks[1] or 'X' in chunks[1]):
-                    if dbg: print("Case 5d")
+                    if dbg:
+                        print("Case 5d")
                     objtype = 'M'
                     sub1 = 'P' + str(i+1)
                     active = False
                     break
             if objtype == '':
-                if dbg: print("Case 5z")
+                if dbg:
+                    print("Case 5z")
                 objtype = 'A'
                 active = False
 
@@ -2258,7 +2278,7 @@ def clean_crossid(astobj, dbg=False):
                   'active': active
                   }
         if dbg:
-            print("%07s->%s (%s/%s) %s" % (obj_id, params['name'], params['source_type'],params['source_subtype_1'], params['active']))
+            print("%07s->%s (%s/%s) %s" % (obj_id, params['name'], params['source_type'], params['source_subtype_1'], params['active']))
     else:
         logger.warning("Unparseable cross-identification: %s" % astobj)
         params = {}
@@ -2371,7 +2391,7 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
         # When the crossid happens we end up with multiple versions of the body.
         # Need to pick the one has been most recently updated
         bodies = Body.objects.filter(
-            name=obj_id, provisional_name__isnull=False).order_by('-ingest')
+            name=obj_id, update_MPC_orbit=False).order_by('-ingest')
         created = False
         if not bodies:
             bodies = Body.objects.filter(name=obj_id).order_by('-ingest')

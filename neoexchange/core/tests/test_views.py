@@ -54,7 +54,7 @@ logger = logging.getLogger(__name__)
 logging.disable(logging.CRITICAL)
 
 
-class TestClean_NEOCP_Object(TestCase):
+class TestCleanNEOCPObject(TestCase):
 
     def test_X33656(self):
         obs_page = [u'X33656  23.9  0.15  K1548 330.99052  282.94050   31.81272   13.02458  0.7021329  0.45261672   1.6800247                  3   1    0 days 0.21         NEOCPNomin',
@@ -2062,6 +2062,26 @@ class TestUpdateMPCOrbit(TestCase):
                 self.assertEqual(self.expected_elements[key], new_body_elements[key])
 
     @patch('core.views.datetime', MockDateTime)
+    def test_2014UR_MPC_physparams(self):
+
+        expected_types = ['H', 'D', 'G']
+        expected_values = [26.6, 17.0, 0.15]
+        expected_params = list(zip(expected_types, expected_values))
+
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
+        status = update_MPC_orbit(self.test_mpcdb_page, origin='M')
+        self.assertEqual(True, status)
+
+        body = Body.objects.last()
+        phys_params = body.get_physical_parameters
+
+        for param in phys_params():
+            test_list = (param['parameter_type'], param['value'])
+            self.assertIn(test_list, expected_params)
+            expected_params.remove(test_list)
+        self.assertEqual(expected_params, [])
+
+    @patch('core.views.datetime', MockDateTime)
     def test_2014UR_Goldstone(self):
 
         expected_elements = self.expected_elements
@@ -2131,6 +2151,55 @@ class TestUpdateMPCOrbit(TestCase):
         test_elements = ['epochofel', 'meananom', 'argofperih', 'longascnode', 'orbinc', 'eccentricity']
         for key in test_elements:
             self.assertNotEqual(expected_elements[key], new_body_elements[key])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_physparams_given_albedo(self):
+        params = {'name': '2014 UR',
+                  'abs_mag': 21.0,
+                  'slope': 0.1,
+                  'epochofel': '2012-03-19 00:00:00',
+                  'elements_type': u'MPC_MINOR_PLANET',
+                  'meananom': 325.2636,
+                  'argofperih': 85.19251,
+                  'longascnode': 147.81325,
+                  'orbinc': 8.34739,
+                  'eccentricity': 0.1896865,
+                  'meandist': 1.2176312,
+                  'source_type': 'U',
+                  'num_obs': 1596,
+                  'origin': 'M',
+                  }
+
+        self.body, created = Body.objects.get_or_create(**params)
+
+        expected_types = ['H', 'D', 'G', 'ab']
+        expected_values = [26.6, 28.45, 0.15, 0.05]
+        expected_params = list(zip(expected_types, expected_values))
+
+        body = Body.objects.last()
+        phys_params = body.get_physical_parameters
+        albedo_dict = {'value': 0.2,
+                       'parameter_type': 'ab',
+                       'preferred': True
+                       }
+
+        # Save first albedo
+        body.save_physical_parameters(albedo_dict)
+
+        # update albedo
+        albedo_dict['value'] = 0.05
+        body.save_physical_parameters(albedo_dict)
+
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
+        status = update_MPC_orbit(self.test_mpcdb_page, origin='A')
+        self.assertEqual(True, status)
+
+        #test diameter uses only updated albedo and not default or old albedo
+        for param in phys_params(return_all=False):
+            test_list = (param['parameter_type'], param['value'])
+            self.assertIn(test_list, expected_params)
+            expected_params.remove(test_list)
+        self.assertEqual(expected_params, [])
 
     @patch('core.views.datetime', MockDateTime)
     def test_2014UR_Arecibo_older_exists(self):
@@ -4997,6 +5066,13 @@ class TestUpdateCrossids(TestCase):
                     }
         cls.body, created = Body.objects.get_or_create(**params)
 
+        des_dict = {'desig_type': 'C',
+                    'desig': params['provisional_name'],
+                    'desig_notes': 'Test_candidate',
+                    'preferred': True,
+                    }
+        cls.body.save_physical_parameters(des_dict)
+
         params = {  'provisional_name': 'ZC82561',
                     'provisional_packed': None,
                     'origin': 'M',
@@ -5027,6 +5103,9 @@ class TestUpdateCrossids(TestCase):
                     }
         cls.blank_body, created = Body.objects.get_or_create(**params)
 
+        des_dict['desig'] = params['provisional_name']
+        cls.blank_body.save_physical_parameters(des_dict)
+
         neo_proposal_params = { 'code'  : 'LCO2015B-005',
                                 'title' : 'LCOGT NEO Follow-up Network'
                               }
@@ -5034,6 +5113,29 @@ class TestUpdateCrossids(TestCase):
 
     def setUp(self):
         self.body.refresh_from_db()
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_crossids_update_designations_to_prov_des(self):
+        expected_types = ['C', 'P']
+        expected_desigs = ['LM05OFG', '2016 JD18']
+        expected_names = list(zip(expected_types, expected_desigs))
+
+        # Set Mock time to more than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2016, 5, 13, 10, 40, 0)
+
+        crossid_info = [u'LM05OFG', u'2016 JD18', u'MPEC 2016-J96', u'(May 9.64 UT)']
+
+        update_crossids(crossid_info, dbg=False)
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+        names = Designations.objects.filter(body=body)
+
+        for name in names:
+            test_list = (name.desig_type, name.desig)
+            self.assertIn(test_list, expected_names)
+            expected_names.remove(test_list)
+        self.assertEqual(expected_names, [])
 
     @patch('core.views.datetime', MockDateTime)
     @patch('astrometrics.time_subs.datetime', MockDateTime)
@@ -5076,6 +5178,29 @@ class TestUpdateCrossids(TestCase):
         self.assertEqual('C', body.source_type)
         self.assertEqual('A', body.origin)
         self.assertEqual('C/2016 JD18', body.name)
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_crossids_update_designations_to_comet_des(self):
+        expected_types = ['C', 'P']
+        expected_desigs = ['LM05OFG', 'C/2016 JD18']
+        expected_names = list(zip(expected_types, expected_desigs))
+
+        # Set Mock time to more than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2016, 5, 13, 10, 40, 0)
+
+        crossid_info = [u'LM05OFG', u'C/2016 JD18', u'MPEC 2016-J96', u'(May 9.64 UT)']
+
+        update_crossids(crossid_info, dbg=False)
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+        names = Designations.objects.filter(body=body)
+
+        for name in names:
+            test_list = (name.desig_type, name.desig)
+            self.assertIn(test_list, expected_names)
+            expected_names.remove(test_list)
+        self.assertEqual(expected_names, [])
 
     @patch('core.views.datetime', MockDateTime)
     @patch('astrometrics.time_subs.datetime', MockDateTime)
@@ -5384,6 +5509,58 @@ class TestUpdateCrossids(TestCase):
         self.assertEqual('2015 FP118', body.name)
         self.assertEqual('MPC_MINOR_PLANET', body.elements_type)
         self.assertIs(None, body.perihdist)
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_crossids_update_multiple_designations(self):
+        expected_types = ['C', 'P', 'C', 'C']
+        expected_desigs = ['LM05OFG', '2015 FP118', 'ZTF00Y8', 'A9999']
+        expected_names = list(zip(expected_types, expected_desigs))
+
+        # Set Mock time to less than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2018, 9, 5, 10, 40, 0)
+
+        crossid_info = ['ZTF00Y8 ', '2015 FP118', '', '(Sept. 3.50 UT)']
+
+        self.body.origin = u'A'
+        self.body.source_type = u'N'
+        self.body.name = '2015 FP118'
+        self.body.epochofel = datetime(2018, 9, 5, 0, 0)
+        self.body.eccentricity = 0.5415182
+        self.body.meandist = 5.8291288
+        self.body.meananom = 7.63767
+        self.body.perihdist = None
+        self.body.epochofperih = None
+        self.body.ingest = datetime(2018, 9, 1, 1, 2, 3)
+        self.body.save()
+
+        # Create duplicate with different info
+        body = Body.objects.get(pk=self.body.pk)
+        body.pk = None
+        body.provisional_name = 'A9999'
+        body.origin = 'N'
+        body.ingest = datetime(2018, 9, 2, 12, 13, 14)
+        body.save()
+
+        des_dicts = [{'desig_type': 'C', 'desig': 'A9999'},
+                     {'desig_type': 'P', 'desig': '2015 FP118'}
+                     ]
+        for des in des_dicts:
+            body.save_physical_parameters(des)
+
+        self.assertEqual(3, Body.objects.count(), msg="Before update_crossids; should be 3 Bodies")
+
+        update_crossids(crossid_info, dbg=False)
+        self.assertEqual(2, Body.objects.count(), msg="After update_crossids; should be 2 Bodies")
+
+        body = Body.objects.get(name='2015 FP118')
+        names = Designations.objects.filter(body=body)
+
+        for name in names:
+            test_list = (name.desig_type, name.desig)
+            self.assertIn(test_list, expected_names)
+            expected_names.remove(test_list)
+        self.assertEqual(expected_names, [])
 
     @patch('core.views.datetime', MockDateTime)
     @patch('astrometrics.time_subs.datetime', MockDateTime)

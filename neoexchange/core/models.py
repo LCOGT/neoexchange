@@ -474,23 +474,25 @@ class Body(models.Model):
         if 'color_band' in kwargs.keys():
             model = ColorValues
             type_key = 'color_band'
+            value_key = 'value'
         elif 'desig_type' in kwargs.keys():
             model = Designations
             type_key = 'desig_type'
+            value_key = 'desig'
         elif 'tax_scheme' in kwargs.keys():
             model = SpectralInfo
             type_key = 'tax_scheme'
+            value_key = 'value'
         else:
             model = PhysicalParameters
             type_key = 'parameter_type'
+            value_key = 'value'
 
         # Don't save empty values
-        try:
-            if not kwargs['value']:
-                return False
-        except KeyError:
-            if not kwargs['desig']:
-                return False
+        if not kwargs[value_key]:
+            return False
+        if 'preferred' not in kwargs:
+            kwargs['preferred'] = False
 
         current_params = model.objects.filter(body=self.id)
 
@@ -508,6 +510,14 @@ class Body(models.Model):
                     new_param = False
                 elif len(diff_values) == 1 and 'body' in diff_values:
                     new_param = False
+                elif param_dict[type_key] == kwargs[type_key] and param_dict[value_key] == kwargs[value_key]:
+                    for value in diff_values:
+                        if isinstance(param_dict[value], str):
+                            if isinstance(kwargs[value], str):
+                                kwargs[value] += ('/' + param_dict[value])
+                            else:
+                                kwargs[value] = param_dict[value]
+                    param.delete()
                 else:
                     if param_dict[type_key] == kwargs[type_key] and kwargs['preferred'] and param_dict['preferred']:
                         param.preferred = False

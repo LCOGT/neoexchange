@@ -2494,11 +2494,16 @@ def store_jpl_desigs(obj, body):
             name = part2   
     elif '/' in fullname:  # comet
         part1, part2 = fullname.split('/')
-        number = part1
+        if len(part1) == 1 and part1.isalpha():
+            prov_des = fullname
+        else:
+            number = part1
         if '(' in part2:
             part21, part22 = part2.split('(')
             name = part21
             prov_des = part22.strip('()')
+        elif ' ' in part2 and number:
+            prov_des = part2
         else:
             name = part2
 
