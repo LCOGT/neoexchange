@@ -2493,7 +2493,7 @@ class TestIngestNewObject(TestCase):
         self.assertEqual(expected_params, [])
 
         for name in names:
-            test_list = [name.desig_type, name.desig]
+            test_list = [name.desig_type, name.value]
             self.assertIn(test_list, expected_names)
             expected_names.remove(test_list)
         self.assertEqual(expected_names, [])
@@ -2583,7 +2583,7 @@ class TestIngestNewObject(TestCase):
         ingest_new_object(self.disc_orbit_file)
 
         for name in names:
-            test_list = (name.desig_type, name.desig)
+            test_list = (name.desig_type, name.value)
             self.assertIn(test_list, expected_names)
             expected_names.remove(test_list)
         self.assertEqual(expected_names, [])
@@ -2617,7 +2617,7 @@ class TestIngestNewObject(TestCase):
         names = Designations.objects.filter(body=body)
 
         for name in names:
-            test_list = (name.desig_type, name.desig)
+            test_list = (name.desig_type, name.value)
             self.assertIn(test_list, expected_names)
             expected_names.remove(test_list)
         self.assertEqual(expected_names, [])
@@ -2716,7 +2716,7 @@ class TestIngestNewObject(TestCase):
         names = Designations.objects.filter(body=body)
 
         for name in names:
-            test_list = (name.desig_type, name.desig)
+            test_list = (name.desig_type, name.value)
             self.assertIn(test_list, expected_names)
             expected_names.remove(test_list)
         self.assertEqual(expected_names, [])
@@ -5067,8 +5067,8 @@ class TestUpdateCrossids(TestCase):
         cls.body, created = Body.objects.get_or_create(**params)
 
         des_dict = {'desig_type': 'C',
-                    'desig': params['provisional_name'],
-                    'desig_notes': 'Test_candidate',
+                    'value': params['provisional_name'],
+                    'notes': 'Test_candidate',
                     'preferred': True,
                     }
         cls.body.save_physical_parameters(des_dict)
@@ -5103,7 +5103,7 @@ class TestUpdateCrossids(TestCase):
                     }
         cls.blank_body, created = Body.objects.get_or_create(**params)
 
-        des_dict['desig'] = params['provisional_name']
+        des_dict['value'] = params['provisional_name']
         cls.blank_body.save_physical_parameters(des_dict)
 
         neo_proposal_params = { 'code'  : 'LCO2015B-005',
@@ -5132,7 +5132,7 @@ class TestUpdateCrossids(TestCase):
         names = Designations.objects.filter(body=body)
 
         for name in names:
-            test_list = (name.desig_type, name.desig)
+            test_list = (name.desig_type, name.value)
             self.assertIn(test_list, expected_names)
             expected_names.remove(test_list)
         self.assertEqual(expected_names, [])
@@ -5197,7 +5197,7 @@ class TestUpdateCrossids(TestCase):
         names = Designations.objects.filter(body=body)
 
         for name in names:
-            test_list = (name.desig_type, name.desig)
+            test_list = (name.desig_type, name.value)
             self.assertIn(test_list, expected_names)
             expected_names.remove(test_list)
         self.assertEqual(expected_names, [])
@@ -5542,8 +5542,8 @@ class TestUpdateCrossids(TestCase):
         body.ingest = datetime(2018, 9, 2, 12, 13, 14)
         body.save()
 
-        des_dicts = [{'desig_type': 'C', 'desig': 'A9999'},
-                     {'desig_type': 'P', 'desig': '2015 FP118'}
+        des_dicts = [{'desig_type': 'C', 'value': 'A9999'},
+                     {'desig_type': 'P', 'value': '2015 FP118'}
                      ]
         for des in des_dicts:
             body.save_physical_parameters(des)
@@ -5557,7 +5557,7 @@ class TestUpdateCrossids(TestCase):
         names = Designations.objects.filter(body=body)
 
         for name in names:
-            test_list = (name.desig_type, name.desig)
+            test_list = (name.desig_type, name.value)
             self.assertIn(test_list, expected_names)
             expected_names.remove(test_list)
         self.assertEqual(expected_names, [])

@@ -2508,9 +2508,9 @@ def store_jpl_desigs(obj, body):
             name = part2
 
     # designation dictionary
-    des_dict_list = [{'desig': number, 'desig_type': '#', 'preferred': True},
-                     {'desig': name, 'desig_type': 'N', 'preferred': True},
-                     {'desig': prov_des, 'desig_type': 'P', 'preferred': True}]
+    des_dict_list = [{'value': number, 'desig_type': '#', 'preferred': True},
+                     {'value': name, 'desig_type': 'N', 'preferred': True},
+                     {'value': prov_des, 'desig_type': 'P', 'preferred': True}]
 
     des_alt = obj['des_alt']
     preferred = False
@@ -2530,16 +2530,16 @@ def store_jpl_desigs(obj, body):
                     continue
 
             if alt_des:
-                prov_des_dict = {'desig': alt_des,
+                prov_des_dict = {'value': alt_des,
                                  'desig_type': 'P',
                                  'preferred': preferred}
                 des_dict_list.append(prov_des_dict)
 
     for D in des_dict_list:
-        if D['desig']:
+        if D['value']:
             saved = body.save_physical_parameters(D)
             if saved:
-                logger.info('New Designation saved for {}: {}'.format(body.current_name(), D['desig']))
+                logger.info('New Designation saved for {}: {}'.format(body.current_name(), D['value']))
     
   
 def store_jpl_sourcetypes(code, obj, body):

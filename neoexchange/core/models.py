@@ -293,17 +293,17 @@ class Body(models.Model):
         prov_dev = Designations.objects.filter(body=self.id).filter(desig_type='P').filter(preferred=True)
         fname = ''
         if num:
-            fname += num[0].desig
+            fname += num[0].value
             if not fname.isdigit():
                 fname += '/'
         if name:
             if fname and fname.isdigit():
                 fname += ' '
-            fname += name[0].desig
+            fname += name[0].value
         if fname and prov_dev:
-            fname += ' ({})'.format(prov_dev[0].desig)
+            fname += ' ({})'.format(prov_dev[0].value)
         elif prov_dev:
-            fname += prov_dev[0].desig
+            fname += prov_dev[0].value
         if not fname:
             fname = self.current_name()
 
@@ -474,22 +474,18 @@ class Body(models.Model):
         if 'color_band' in kwargs.keys():
             model = ColorValues
             type_key = 'color_band'
-            value_key = 'value'
         elif 'desig_type' in kwargs.keys():
             model = Designations
             type_key = 'desig_type'
-            value_key = 'desig'
         elif 'tax_scheme' in kwargs.keys():
             model = SpectralInfo
             type_key = 'tax_scheme'
-            value_key = 'value'
         else:
             model = PhysicalParameters
             type_key = 'parameter_type'
-            value_key = 'value'
 
         # Don't save empty values
-        if not kwargs[value_key]:
+        if not kwargs['value']:
             return False
         if 'preferred' not in kwargs:
             kwargs['preferred'] = False
@@ -510,7 +506,7 @@ class Body(models.Model):
                     new_param = False
                 elif len(diff_values) == 1 and 'body' in diff_values:
                     new_param = False
-                elif param_dict[type_key] == kwargs[type_key] and param_dict[value_key] == kwargs[value_key]:
+                elif param_dict[type_key] == kwargs[type_key] and param_dict['value'] == kwargs['value']:
                     for value in diff_values:
                         if isinstance(param_dict[value], str):
                             if isinstance(kwargs[value], str):
@@ -558,11 +554,11 @@ class Body(models.Model):
 @python_2_unicode_compatible
 class Designations(models.Model):
     body        = models.ForeignKey(Body, on_delete=models.CASCADE)
-    desig       = models.CharField('Designation', blank=True, null=True, max_length=30)
+    value       = models.CharField('Designation', blank=True, null=True, max_length=30)
     desig_type  = models.CharField('Designation Type', blank=True, choices=DESIG_CHOICES, null=True, max_length=1)
     preferred    = models.BooleanField('Is this the preferred designation of this type?', default=False)
     packed      = models.BooleanField('Is this a packed designation?', default=False)
-    desig_notes = models.CharField('Notes on Nomenclature', max_length=30, blank=True, null=True)
+    notes = models.CharField('Notes on Nomenclature', max_length=30, blank=True, null=True)
 
     class Meta:
         verbose_name = _('Object Designation')
@@ -570,7 +566,7 @@ class Designations(models.Model):
         db_table = 'ingest_names'
 
     def __str__(self):
-        return "%s is a designation for %s (pk=%s)" % (self.desig, self.body.full_name(), self.body.id)
+        return "%s is a designation for %s (pk=%s)" % (self.value, self.body.full_name(), self.body.id)
 
 
 @python_2_unicode_compatible

@@ -470,8 +470,8 @@ class TestSavePhysicalParameters(TestCase):
                  }
 
         self.des1 = {'desig_type': 'N',
-                 'desig': 'Rock&Roll',
-                 'desig_notes': 'This is a fake entry',
+                 'value': 'Rock&Roll',
+                 'notes': 'This is a fake entry',
                  'preferred': True
                  }
 
@@ -695,26 +695,26 @@ class TestGetFullName(TestCase):
         self.body, created = Body.objects.get_or_create(**params)
 
         self.des1 = {'desig_type': 'N',
-                     'desig': 'Rock&Roll',
-                     'desig_notes': 'This is a fake entry',
+                     'value': 'Rock&Roll',
+                     'notes': 'This is a fake entry',
                      'preferred': True
                      }
 
         self.des2 = {'desig_type': '#',
-                     'desig': '4224',
-                     'desig_notes': 'This is a fake entry',
+                     'value': '4224',
+                     'notes': 'This is a fake entry',
                      'preferred': True
                      }
 
         self.des3 = {'desig_type': 'P',
-                     'desig': '1969 QQ3',
-                     'desig_notes': 'This is a fake entry',
+                     'value': '1969 QQ3',
+                     'notes': 'This is a fake entry',
                      'preferred': True
                      }
 
         self.des4 = {'desig_type': 'P',
-                     'desig': '1888 UT3',
-                     'desig_notes': 'This is a fake entry',
+                     'value': '1888 UT3',
+                     'notes': 'This is a fake entry',
                      'preferred': False
                      }
 
@@ -756,7 +756,7 @@ class TestGetFullName(TestCase):
 
     def test_comet_num(self):
         expected_name = '4224P/Rock&Roll'
-        self.des2['desig'] += 'P'
+        self.des2['value'] += 'P'
         self.body.save_physical_parameters(self.des2)
         self.body.save_physical_parameters(self.des1)
         full_name = self.body.full_name()
@@ -764,9 +764,9 @@ class TestGetFullName(TestCase):
 
     def test_comet_num_old(self):
         expected_name = 'P/1876 W2 (New)'
-        self.des2['desig'] = 'P'
-        self.des1['desig'] = '1876 W2'
-        self.des3['desig'] = 'New'
+        self.des2['value'] = 'P'
+        self.des1['value'] = '1876 W2'
+        self.des3['value'] = 'New'
         self.body.save_physical_parameters(self.des2)
         self.body.save_physical_parameters(self.des1)
         self.body.save_physical_parameters(self.des3)

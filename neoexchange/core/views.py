@@ -217,9 +217,9 @@ class BodySearchView(ListView):
         object_list = []
         if name != '':
             if name.isdigit():
-                object_list = self.model.objects.filter(designations__desig=name).filter(designations__desig_type='#')
+                object_list = self.model.objects.filter(designations__value=name).filter(designations__value_type='#')
             if not object_list:
-                object_list = self.model.objects.filter(Q(designations__desig__icontains=name) | Q(provisional_name__icontains=name) | Q(provisional_packed__icontains=name) | Q(name__icontains=name))
+                object_list = self.model.objects.filter(Q(designations__value__icontains=name) | Q(provisional_name__icontains=name) | Q(provisional_packed__icontains=name) | Q(name__icontains=name))
         else:
             object_list = self.model.objects.all()
         return list(set(object_list))
@@ -1801,8 +1801,8 @@ def save_and_make_revision(body, kwargs):
                 if k == 'name':
                     param_code = sort_des_type(str(v))
                 p_dict = {'desig_type': param_code,
-                              'desig': v,
-                              'desig_notes': 'MPC Default',
+                              'value': v,
+                              'notes': 'MPC Default',
                               'preferred': True,
                               }
             else:
@@ -2150,7 +2150,7 @@ def update_crossids(astobj, dbg=False):
         check_body = Body.objects.filter(provisional_name=temp_id, **kwargs)
         if check_body.count() == 0:
             save_and_make_revision(body, kwargs)
-            body.save_physical_parameters({'desig': temp_id, 'desig_type': sort_des_type(temp_id, default='C'), 'desig_notes': 'MPC Default'})
+            body.save_physical_parameters({'value': temp_id, 'desig_type': sort_des_type(temp_id, default='C'), 'notes': 'MPC Default'})
             logger.info("Updated cross identification for %s" % body.current_name())
     elif kwargs != {}:
         # Didn't know about this object before so create but make inactive

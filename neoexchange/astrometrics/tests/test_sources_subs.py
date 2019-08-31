@@ -5010,7 +5010,7 @@ class TestFetchJPLPhysParams(TestCase):
         # running second time to test we're only storing values once
         store_jpl_desigs(self.resp['object'], body)
         for d in desigs:
-            test_list = (d.desig, d.desig_type)
+            test_list = (d.value, d.desig_type)
             self.assertIn(test_list, expected)
             expected.remove(test_list)
 
@@ -5019,7 +5019,7 @@ class TestFetchJPLPhysParams(TestCase):
         # testing for preferred designations
         prov_desig = desigs.filter(desig_type='P').filter(preferred=True)
         self.assertEqual(len(prov_desig), 1)
-        self.assertEqual('1980 OC', prov_desig[0].desig)
+        self.assertEqual('1980 OC', prov_desig[0].value)
 
     def test_store_stuff_desigs_noprovdes(self):
         """Test for when there are no alternate designations."""
@@ -5042,9 +5042,9 @@ class TestFetchJPLPhysParams(TestCase):
         desigs = Designations.objects.filter(body=body) 
         store_jpl_desigs(pallas, body)
 
-        self.assertEqual(desigs[0].desig, '2')
+        self.assertEqual(desigs[0].value, '2')
         self.assertEqual(desigs[0].desig_type, '#')
-        self.assertEqual(desigs[1].desig, 'Pallas')
+        self.assertEqual(desigs[1].value, 'Pallas')
         self.assertEqual(desigs[1].desig_type, 'N')
         self.assertEqual(len(desigs), 2)
 
@@ -5081,9 +5081,9 @@ class TestFetchJPLPhysParams(TestCase):
         comet_des = Designations.objects.filter(body=body)   
         store_jpl_desigs(westphal['object'], body)
 
-        self.assertEqual(comet_des[0].desig, '20D')
+        self.assertEqual(comet_des[0].value, '20D')
         self.assertEqual(comet_des[0].desig_type, '#')
-        self.assertEqual(comet_des[1].desig, 'Westphal')
+        self.assertEqual(comet_des[1].value, 'Westphal')
         self.assertEqual(comet_des[1].desig_type, 'N')
 
     def test_store_stuff_desigs_noname(self):
@@ -5108,9 +5108,9 @@ class TestFetchJPLPhysParams(TestCase):
         obj_ex = Designations.objects.filter(body=body)
         store_jpl_desigs(ex_obj, body)
 
-        self.assertEqual(obj_ex[0].desig, '254857')
+        self.assertEqual(obj_ex[0].value, '254857')
         self.assertEqual(obj_ex[0].desig_type, '#')
-        self.assertEqual(obj_ex[1].desig, '2005 RT33')
+        self.assertEqual(obj_ex[1].value, '2005 RT33')
         self.assertEqual(obj_ex[1].desig_type, 'P')
 
     def test_store_stuff_desigs_nonamenum(self):
@@ -5135,7 +5135,7 @@ class TestFetchJPLPhysParams(TestCase):
         obj_ex = Designations.objects.filter(body=body)
         store_jpl_desigs(ex_obj, body)
 
-        self.assertEqual(obj_ex[0].desig, '2019 HG2')
+        self.assertEqual(obj_ex[0].value, '2019 HG2')
         self.assertEqual(obj_ex[0].desig_type, 'P')
 
     def test_store_stuff_sourcetypes(self):
