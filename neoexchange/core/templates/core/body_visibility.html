@@ -17,14 +17,16 @@
             <!-- Main body -->
             <div class="container" id="main">
                 <h5  class="section-title"><span class="">Right Ascension and Declination</span></h5>
-                <img src="{% url 'visibility-plot' body.pk 'radec' %}" id="id_radecplot">
+                <img src="{% url 'visibility-plot' pk=body.pk plot_type='radec' %}" id="id_radecplot">
                 <h5  class="section-title"><span class="">Heliocentric and Geocentric Distances</span></h5>
-                <img src="{% url 'visibility-plot' body.pk 'dist' %}" id="id_distanceplot">
+                <img src="{% url 'visibility-plot' pk=body.pk plot_type='dist' %}" id="id_distanceplot">
                 <h5  class="section-title"><span class="">Predicted Brightness</span></h5>
-                <img src="{% url 'visibility-plot' body.pk 'mag' %}" id="id_magplot">
+                <img src="{% url 'visibility-plot' pk=body.pk plot_type='mag' %}" id="id_magplot">
                 <h5  class="section-title"><span class="">Positional Uncertainty</span></h5>
-                <img src="{% url 'visibility-plot' body.pk 'uncertainty' %}" id="id_uncertaintyplot">
+                <img src="{% url 'visibility-plot' pk=body.pk plot_type='uncertainty' %}" id="id_uncertaintyplot">
                 <h5  class="section-title"><span class="">Hours Up</span></h5>
-                <img src="{% url 'visibility-plot' body.pk 'hoursup' %}" id="id_hoursupplot">
+                <img src="{% url 'visibility-plot' pk=body.pk plot_type='hoursup' %}" id="id_hoursupplot">
+                <img src="{% url 'visibility-plot' pk=body.pk plot_type='hoursup' site_code='F65' %}" id="id_hoursupplot">
+                <img src="{% url 'visibility-plot' pk=body.pk plot_type='hoursup' site_code='E10' %}" id="id_hoursupplot">
             </div>
 {% endblock %}

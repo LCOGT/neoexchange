@@ -230,7 +230,7 @@ class BodyVisibilityView(DetailView):
     template_name = 'core/body_visibility.html'
     model = Body
 
-def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow()):
+def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow(), site_code='-1'):
 
     logger.setLevel(logging.DEBUG)
     try:
@@ -248,10 +248,13 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow()):
     base_dir = os.path.join(settings.DATA_ROOT, 'visibility', str(body.pk))  # new base_dir for method
 
     obj = body.name.replace(' ', '').replace('-', '_').replace('+', '')
-    search_path = os.path.join(base_dir, obj+ "*" + plot_type + "*" + ".png")
-    print(obj, search_path)
-    vis_files = glob(os.path.join(base_dir, obj+ "*" + plot_type + "*" + ".png"))
-    print(vis_files)
+    site = ''
+    if plot_type == 'hoursup' and site_code != '-1':
+        site = "_" + site_code + "_"
+    search_path = os.path.join(base_dir, obj+ "*" + plot_type + site + "*" + ".png")
+#    print(obj, search_path)
+    vis_files = glob(search_path)
+#    print(vis_files)
     if vis_files:
         vis_file = vis_files[0]
     else:
@@ -259,7 +262,6 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow()):
     if not vis_file:
         start = start_date.date()
         end = start + timedelta(days=31)
-        site_code = '-1'
         ephem = horizons_ephem(body.name, start, end, site_code)
         if plot_type == 'radec':
             vis_file = plot_ra_dec(ephem)
@@ -270,9 +272,10 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow()):
         elif plot_type == 'uncertainty':
             vis_file = plot_uncertainty(ephem)
         elif plot_type == 'hoursup':
-            site_code = 'W85'
-            if ephem['DEC'].mean() > 5:
-                site_code = 'V37'
+            if site_code == -1:
+                site_code = 'W85'
+                if ephem['DEC'].mean() > 5:
+                    site_code = 'V37'
             ephem = horizons_ephem(body.name, start, end, site_code, '10m', alt_limit=30)
             vis_file = plot_hoursup(ephem, site_code, add_rate=False)
         if vis_file != '':
