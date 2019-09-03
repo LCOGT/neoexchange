@@ -26,7 +26,7 @@ from core.models import SourceMeasurement, Frame, CatalogSources
 class Command(BaseCommand):
 
     """
-    Export content following relationships.
+    Export content following relationships. We use XML format for some content types because it preserves the custom field info.
     """
 
     help = 'Export content following relationships'

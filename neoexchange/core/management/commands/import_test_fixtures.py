@@ -28,8 +28,10 @@ from core.admin import FrameResource, SourceMeasResource, CatalogResource
 class Command(BaseCommand):
 
     """
-    Import content following relationships.
-    A fresh, migrated database is needed to first
+    Import content following relationships. Run this after you have run export_test_fixtures on server and downloaded contents of
+    core/fixtures/
+    A fresh, migrated database is needed to first ie.:
+    ./manage.py migrate; ./manage.py import_test_fixtures
     """
 
     help = 'Import content following relationships'
