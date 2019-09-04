@@ -4,6 +4,7 @@ import logging
 from astropy.table import Column
 from matplotlib.figure import Figure
 import matplotlib.dates as mdates
+from matplotlib.ticker import FormatStrFormatter
 
 from astrometrics.ephem_subs import determine_darkness_times
 from photometrics.lineticks import LineTicks
@@ -308,6 +309,8 @@ def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, add_rate=T
     ax2.minorticks_on()
     ax.xaxis.set_ticks_position('both')
     ax.yaxis.set_ticks_position('left')
+    # Ensure V magnitude on RHS only has 1 d.p of precision to prevent label going off right
+    ax2.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
     ax2.yaxis.set_ticks_position('right')
 
     targetname = make_targetname(first['targetname'])
