@@ -1294,7 +1294,7 @@ class CatalogSources(models.Model):
     def make_snr(self):
         snr = None
         if self.obs_mag > 0.0 and self.err_obs_mag > 0.0:
-            snr = self.err_obs_mag / self.obs_mag
+            snr = 1.0 / self.err_obs_mag
         return snr
 
     def map_numeric_to_mpc_flags(self):
