@@ -217,7 +217,7 @@ class BodySearchView(ListView):
         object_list = []
         if name != '':
             if name.isdigit():
-                object_list = self.model.objects.filter(designations__value=name).filter(designations__value_type='#')
+                object_list = self.model.objects.filter(designations__value=name).filter(designations__desig_type='#')
             if not object_list:
                 object_list = self.model.objects.filter(Q(designations__value__icontains=name) | Q(provisional_name__icontains=name) | Q(provisional_packed__icontains=name) | Q(name__icontains=name))
         else:
@@ -1816,13 +1816,25 @@ def save_and_make_revision(body, kwargs):
             if k == 'abs_mag' and phys_update:
                 albedo = body.get_physical_parameters(param_type='ab', return_all=False)
                 if not albedo:
-                    albedo = [{'value': 0.14}]
-                diam_dict = {'value': round(asteroid_diameter(albedo[0]['value'], v), 2),
+                    albedo = [{'value': 0.14, 'error': 0.5-0.14, 'error2': 0.14-0.01}]
+                albedo_mid = albedo[0]['value']
+                if albedo[0]['error']:
+                    albedo_high = albedo_mid + albedo[0]['error']
+                    if albedo[0]['error2']:
+                        albedo_low = albedo_mid - albedo[0]['error2']
+                    else:
+                        albedo_low = albedo_mid - albedo[0]['error']
+                else:
+                    albedo_high = albedo_mid + 0.01
+                    albedo_low = albedo_mid - 0.01
+                diam_dict = {'value': round(asteroid_diameter(albedo_mid, v), 2),
+                             'error': round(asteroid_diameter(albedo_low, v) - asteroid_diameter(albedo_mid, v)),
+                             'error2': round(asteroid_diameter(albedo_mid, v) - asteroid_diameter(albedo_high, v)),
                              'parameter_type': 'D',
                              'units': 'm',
                              'preferred': False,
                              'reference': 'Default',
-                             'notes': 'Initial Diameter Guess using H={} and albedo={}'.format(v, albedo[0]['value'])
+                             'notes': 'Initial Diameter Guess using H={} and albedo={} ({} to {})'.format(v, round(albedo_mid,2), round(albedo_low,2), round(albedo_high,2))
                             }
                 body.save_physical_parameters(diam_dict)
 

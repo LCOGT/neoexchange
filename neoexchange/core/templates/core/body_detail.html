@@ -217,9 +217,13 @@
                                                     {% if p.error %}
                                                     <span class="tooltiptext" style="width:fit-content;left:75%;width:-moz-fit-content;">
                                                         {% if p.error2 %}
-                                                        +/- {{p.error}} <br> +/- {{p.error2}}
+                                                            {% if p.value2 %}
+                                                                +/- {{p.error}} <br> +/- {{p.error2}}
+                                                            {% else %}
+                                                                +{{p.error}} / -{{p.error2}}
+                                                            {% endif %}
                                                         {% else %}
-                                                        +/- {{p.error}}
+                                                            +/- {{p.error}}
                                                         {% endif %}
                                                     </span>
                                                 </div>

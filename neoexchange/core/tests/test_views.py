@@ -2478,6 +2478,7 @@ class TestIngestNewObject(TestCase):
         expected_types = ['H', 'D', 'G']
         expected_values = [21.17, 207.23, 0.15]
         expected_params = list(zip(expected_types, expected_values))
+        expected_diam_range = [568, 98]
 
         expected_names = [['C', 'LSCTLZZ']]
 
@@ -2490,6 +2491,9 @@ class TestIngestNewObject(TestCase):
             test_list = (param['parameter_type'], param['value'])
             self.assertIn(test_list, expected_params)
             expected_params.remove(test_list)
+            if param['parameter_type'] == 'D':
+                self.assertEqual(param['error'], expected_diam_range[0])
+                self.assertEqual(param['error2'], expected_diam_range[1])
         self.assertEqual(expected_params, [])
 
         for name in names:
