@@ -20,6 +20,7 @@ import logging
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import models
+from django.db.models import Sum
 from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
 from django.utils.encoding import force_text, python_2_unicode_compatible
@@ -565,7 +566,12 @@ class SuperBlock(models.Model):
     def get_num_observed(self):
         qs = Block.objects.filter(superblock=self.id)
 
-        return qs.filter(num_observed__gte=1).count(), qs.count()
+        num_obs_dict = qs.filter(num_observed__gte=1).aggregate(num_observed=Sum('num_observed'))
+        if num_obs_dict.get('num_observed', None) is None:
+            num_obs = 0
+        else:
+            num_obs = num_obs_dict.get('num_observed', 0)
+        return num_obs, qs.count()
 
     def get_num_reported(self):
         qs = Block.objects.filter(superblock=self.id)
