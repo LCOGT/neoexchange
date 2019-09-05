@@ -1680,6 +1680,14 @@ def record_block(tracking_number, params, form_data, target):
             # cut off json UTC timezone remnant
             no_timezone_blk_start = params['request_windows'][i][0]['start'][:-1]
             no_timezone_blk_end = params['request_windows'][i][0]['end'][:-1]
+            try:
+                dt_notz_blk_start = datetime.strptime(no_timezone_blk_start, '%Y-%m-%dT%H:%M:%S')
+            except ValueError:
+                dt_notz_blk_start = datetime.strptime(no_timezone_blk_start, '%Y-%m-%dT%H:%M:%S.%f')
+            try:
+                dt_notz_blk_end = datetime.strptime(no_timezone_blk_end, '%Y-%m-%dT%H:%M:%S')
+            except ValueError:
+                dt_notz_blk_end = datetime.strptime(no_timezone_blk_end, '%Y-%m-%dT%H:%M:%S.%f')
             obstype = Block.OPT_IMAGING
             if params.get('spectroscopy', False):
                 obstype = Block.OPT_SPECTRA
@@ -1705,8 +1713,8 @@ def record_block(tracking_number, params, form_data, target):
                              'telclass' : params['pondtelescope'].lower(),
                              'site'     : site,
                              'obstype'  : obstype,
-                             'block_start' : datetime.strptime(no_timezone_blk_start, '%Y-%m-%dT%H:%M:%S'),
-                             'block_end'   : datetime.strptime(no_timezone_blk_end, '%Y-%m-%dT%H:%M:%S'),
+                             'block_start' : dt_notz_blk_start,
+                             'block_end'   : dt_notz_blk_end,
                              'request_number'  : request,
                              'num_exposures'   : params['exp_count'],
                              'exp_length'      : params['exp_time'],

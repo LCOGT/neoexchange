@@ -1015,8 +1015,8 @@ class TestRecordBlock(TestCase):
                               'pondtelescope': '1m0',
                               'proposal_id': 'LCO2019A-001',
                               'request_numbers': {1440123: 'NON_SIDEREAL'},
-                              'request_windows': [[{'end': '2018-03-16T03:30:00',
-                                 'start': '2018-03-15T20:20:00'}]],
+                              'request_windows': [[{'end': '2018-03-16T03:30:00.600000Z',
+                                 'start': '2018-03-15T20:20:00.400000Z'}]],
                               'site': 'CPT',
                               'site_code': 'K91',
                               'start_time': datetime(2018, 3, 15, 18, 20),
@@ -1073,8 +1073,8 @@ class TestRecordBlock(TestCase):
         # the (potentially) narrower per-Request windows
         self.assertEqual(self.imaging_form['start_time'], sblocks[0].block_start)
         self.assertEqual(self.imaging_form['end_time'], sblocks[0].block_end)
-        self.assertEqual(datetime(2018, 3, 15, 20, 20, 0), blocks[0].block_start)
-        self.assertEqual(datetime(2018, 3, 16, 3, 30, 0), blocks[0].block_end)
+        self.assertEqual(datetime(2018, 3, 15, 20, 20, 0, 400000), blocks[0].block_start)
+        self.assertEqual(datetime(2018, 3, 16, 3, 30, 0, 600000), blocks[0].block_end)
         self.assertEqual(self.imaging_tracknum, sblocks[0].tracking_number)
         self.assertTrue(self.imaging_tracknum != blocks[0].request_number)
         self.assertEqual(self.imaging_params['block_duration'], sblocks[0].timeused)
@@ -1082,9 +1082,9 @@ class TestRecordBlock(TestCase):
 
     def test_imaging_block_rr_proposal(self):
         imaging_params = self.imaging_params
-        imaging_params['proposal_id'] = imaging_params['proposal_id'] + 'b'
+        imaging_params['proposal_id'] += 'b'
         imaging_form = self.imaging_form
-        imaging_form['proposal_code'] = imaging_form['proposal_code'] + 'b'
+        imaging_form['proposal_code'] += 'b'
 
         block_resp = record_block(self.imaging_tracknum, imaging_params, imaging_form, self.imaging_body)
 
@@ -1098,8 +1098,8 @@ class TestRecordBlock(TestCase):
         # the (potentially) narrower per-Request windows
         self.assertEqual(self.imaging_form['start_time'], sblocks[0].block_start)
         self.assertEqual(self.imaging_form['end_time'], sblocks[0].block_end)
-        self.assertEqual(datetime(2018, 3, 15, 20, 20, 0), blocks[0].block_start)
-        self.assertEqual(datetime(2018, 3, 16, 3, 30, 0), blocks[0].block_end)
+        self.assertEqual(datetime(2018, 3, 15, 20, 20, 0, 400000), blocks[0].block_start)
+        self.assertEqual(datetime(2018, 3, 16, 3, 30, 0, 600000), blocks[0].block_end)
         self.assertEqual(self.imaging_tracknum, sblocks[0].tracking_number)
         self.assertTrue(self.imaging_tracknum != blocks[0].request_number)
         self.assertEqual(self.imaging_params['block_duration'], sblocks[0].timeused)
