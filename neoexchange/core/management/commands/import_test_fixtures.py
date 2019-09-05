@@ -23,7 +23,6 @@ from django.core import serializers
 import tablib
 
 from core.models import *
-from core.admin import FrameResource, SourceMeasResource, CatalogResource
 
 class Command(BaseCommand):
 
