@@ -2061,6 +2061,9 @@ def update_crossids(astobj, dbg=False):
                     logger.warning("Found %d SuperBlocks and %d Blocks referring to this Body; not deleting" % (num_sblocks, num_blocks))
             else:
                 logger.info("Origin of Body is MPC, not removing")
+                # Set to inactive to prevent candidates hanging around
+                del_body.active = False
+                del_body.save()
 
     # Determine what type of new object it is and whether to keep it active
     kwargs = clean_crossid(astobj, dbg)
