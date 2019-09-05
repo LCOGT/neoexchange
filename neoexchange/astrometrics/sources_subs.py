@@ -147,13 +147,33 @@ def parse_previous_NEOCP_id(items, dbg=False):
                 none_id = 'wasnotminorplanet'
         crossmatch = [body, none_id, '', ' '.join(chunks[-3:])]
     elif len(items) == 3:
-        # Is of the form "<foo> = <bar>(<date> UT)"
-        if items[0].find('Comet') != 1 and len(ast.findall(items[0])) != 1:
-            newid = str(items[0]).lstrip()+items[1].string.strip()
-            provid_date = items[2].split('(')
-            provid = provid_date[0].replace(' = ', '')
-            date = '('+provid_date[1].strip()
+        if dbg: print("3 items found")
+        if items[0].lower().find('was not confirmed') != -1:
+            # Is an odd case of not confirmed but with an MPEC...
+            chunks = items[0].split()
+            newid = 'wasnotconfirmed'
+            provid = chunks[0]
             mpec = ''
+            date = ' '.join(chunks[-4:-1])
+        elif items[0].find('Comet') != 1 and len(ast.findall(items[0])) != 1:
+            # Is of the form "<foo> = <bar>(<date> UT)"
+            if items[1].string is not None:
+                newid = str(items[0]).lstrip()+items[1].string.strip()
+                provid_date = items[2].split('(')
+                provid = provid_date[0].replace(' = ', '').rstrip()
+                date = '('+provid_date[1].strip()
+                mpec = ''
+            else:
+                chunks = items[0].split('=')
+                newid = chunks[0].strip()
+                provid_date = chunks[1].split('(')
+                provid = provid_date[0].strip()
+                provid_date = provid_date[1].split(')')
+                date = '('+provid_date[0].strip()+')'
+                mpec = ''
+                if items[1].contents[0].string is not None:
+                    if items[1].contents[0].string == 'MPEC':
+                        mpec = items[1].contents[0].string + items[1].contents[1].string
         else:
             # Now matches comets and 'A/<YYYY>' type objects
             if dbg:

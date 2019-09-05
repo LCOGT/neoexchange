@@ -1094,6 +1094,52 @@ class TestPreviousNEOCPParser(TestCase):
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
 
+    def test_new_with_mpec(self):
+        items = [' 2006 GC = P10MSkj (Apr. 7.98 UT)   [see ',
+            BeautifulSoup('<a href="/mpec/K19/K19G75.html"><i>MPEC</i> 2019-G75</a>', "html.parser").a,
+            ']\n']
+        expected = [u'P10MSkj', u'2006 GC', u'MPEC 2019-G75', u'(Apr. 7.98 UT)']
+
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+    def test_new_crossmatch(self):
+        items = ['ZTF02tx = C075WX1 (Apr. 8.66 UT)\n']
+        expected = [u'C075WX1', 'ZTF02tx', '', '(Apr. 8.66 UT)']
+ 
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+    def test_new_crossmatch2(self):
+        items = [' 2019 GR',  BeautifulSoup('<sub>3</sub>', "html.parser").sub, ' = P10Mrzv (Apr. 8.96 UT)\n']
+        expected = [u'P10Mrzv', '2019 GR3', '', '(Apr. 8.96 UT)']
+ 
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+    def test_new_crossmatch3(self):
+        items = [' 2017 QE = P10MWVQ (Apr. 7.90 UT)\n']
+        expected = [u'P10MWVQ', '2017 QE', '', '(Apr. 7.90 UT)']
+
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+    def test_remove_parentheses(self):
+        items = [' (455176) = A10c9Hv (Feb. 15.79 UT)\n']
+        expected = [u'A10c9Hv', '455176', '', '(Feb. 15.79 UT)']
+
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+    def test_was_not_confirmed_with_MPEC(self):
+        items = [' P10QYyp was not confirmed (Sept. 4.34 UT)   [see ',
+            BeautifulSoup('<a href="/mpec/K19/K19R24.html"><i>MPEC</i> 2019-R24</a>', "html.parser").a,
+            ']\n']
+        expected = [u'P10QYyp', 'wasnotconfirmed', '', u'(Sept. 4.34 UT)']
+
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
 
 class TestParseNEOCP(TestCase):
 
