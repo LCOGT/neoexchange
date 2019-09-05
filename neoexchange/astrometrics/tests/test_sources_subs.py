@@ -1705,6 +1705,15 @@ class TestPreviousNEOCPParser(TestCase):
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
 
+    def test_was_not_confirmed_with_MPEC(self):
+        items = [' P10QYyp was not confirmed (Sept. 4.34 UT)   [see ',
+            BeautifulSoup('<a href="/mpec/K19/K19R24.html"><i>MPEC</i> 2019-R24</a>', "html.parser").a,
+            ']\n']
+        expected = [u'P10QYyp', 'wasnotconfirmed', '', u'(Sept. 4.34 UT)']
+
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
 
 class TestParseNEOCP(TestCase):
 

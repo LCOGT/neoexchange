@@ -157,8 +157,15 @@ def parse_previous_NEOCP_id(items, dbg=False):
         crossmatch = [body, none_id, '', ' '.join(chunks[-3:])]
     elif len(items) == 3:
         if dbg: print("3 items found")
-        # Is of the form "<foo> = <bar>(<date> UT)"
-        if items[0].find('Comet') != 1 and len(ast.findall(items[0])) != 1:
+        if items[0].lower().find('was not confirmed') != -1:
+            # Is an odd case of not confirmed but with an MPEC...
+            chunks = items[0].split()
+            newid = 'wasnotconfirmed'
+            provid = chunks[0]
+            mpec = ''
+            date = ' '.join(chunks[-4:-1])
+        elif items[0].find('Comet') != 1 and len(ast.findall(items[0])) != 1:
+            # Is of the form "<foo> = <bar>(<date> UT)"
             if items[1].string is not None:
                 newid = str(items[0]).lstrip()+items[1].string.strip()
                 provid_date = items[2].split('(')
