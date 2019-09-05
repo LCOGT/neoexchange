@@ -23,6 +23,8 @@ from datetime import datetime, timedelta
 from math import sqrt, log10, log, degrees
 from collections import OrderedDict
 import time
+from requests.exceptions import ReadTimeout, ConnectTimeout, ConnectionError
+import re
 import warnings
 
 from astropy.utils.exceptions import AstropyDeprecationWarning
@@ -95,8 +97,19 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
             query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'rmag', 'e_rmag'])
         else:
             query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
-        result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
-
+        query_service.VIZIER_SERVER ='vizier.hia.nrc.ca' #  'vizier.cfa.harvard.edu' #
+        query_service.TIMEOUT = 60
+        try:
+            result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
+        except (ReadTimeout, ConnectionError):
+            logger.warning("Timeout seen querying {}".format(query_service.VIZIER_SERVER))
+            query_service.TIMEOUT = 120
+            result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
+        except ConnectTimeout:
+            old_server = query_service.VIZIER_SERVER
+            query_service.VIZIER_SERVER = 'vizier.cfa.harvard.edu'
+            logger.warning("Timeout querying {}. Switching to {}".format(old_server, query_service.VIZIER_SERVER))
+            result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
         # resulting catalog table
         # if resulting catalog table is empty or the r mag column has only masked values, try the other catalog and redo
         # the query; if the resulting catalog table is still empty, fill the table with zeros
