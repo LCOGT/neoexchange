@@ -15,6 +15,8 @@ GNU General Public License for more details.
 
 import sys
 import numpy as np
+import matplotlib
+#matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from astropy.io import fits
@@ -26,7 +28,13 @@ import os
 from glob import glob
 import argparse
 import warnings
+import logging
 
+from django.core.files.storage import default_storage
+
+from photometrics.external_codes import unpack_tarball
+
+logger = logging.getLogger(__name__)
 
 def print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█', time_in=None):
     """
@@ -64,7 +72,7 @@ def print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, lengt
         print()
 
 
-def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=False):
+def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=False, out_path=""):
     """
     takes in list of .fits guide frames and turns them into a moving gif.
     <frames> = list of .fits frame paths
@@ -157,9 +165,9 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=False
         z_interval = ZScaleInterval().get_limits(data)  # set z-scale
         try:
             # set wcs grid/axes
-            wcs = WCS(header_n)  # get wcs transformation
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
+                wcs = WCS(header_n)  # get wcs transformation
                 ax = plt.gca(projection=wcs)
             dec = ax.coords['dec']
             dec.set_major_formatter('dd:mm')
@@ -197,11 +205,74 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=False
     # takes in fig, update function, and frame rate set to fr
     anim = FuncAnimation(fig, update, frames=len(fits_files), blit=False, interval=fr)
 
-    savefile = os.path.join(path, obj.replace(' ', '_') + '_' + rn + '_guidemovie.gif')
-    anim.save(savefile, dpi=90, writer='imagemagick')
+    filename = os.path.join(path, obj.replace(' ', '_') + '_' + rn + '_tmp_guidemovie.gif')
+    anim.save(filename, dpi=90, writer='imagemagick')
 
-    return savefile
+    # Save to default location because Matplotlib wants a string filename not File object
+    daydir = path.replace(out_path,"").lstrip("/")
+    movie_filename = os.path.join(daydir, obj.replace(' ', '_') + '_' + rn + '_guidemovie.gif')
+    movie_file = default_storage.open(movie_filename,"wb+")
+    with open(filename,'rb+') as f:
+        movie_file.write(f.read())
+    movie_file.close()
+    return movie_file.name
 
+def make_movie(date_obs, obj, req, base_dir, out_path, prop):
+    """Make gif of FLOYDS Guide Frames given the following:
+    <date_obs> -- Day of Observation (i.e. '20180910')
+    <obj> -- object name w/ spaces replaced by underscores (i.e. '144332' or '2018_EB1')
+    <req> -- Request number of the observation
+    <base_dir> -- Directory of data. This will be the DATA_ROOT/date_obs/
+    <prop> -- Proposal ID
+    NOTE: Can take a while to load if building new gif with many frames.
+    """
+
+    path = os.path.join(base_dir, obj + '_' + req)
+    logger.info('BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(obj, date_obs, req, prop))
+    logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
+
+    filename = glob(os.path.join(path, '*2df_ex.fits'))  # checking if unpacked
+    frames = []
+    if not filename:
+        unpack_path = os.path.join(base_dir, obj+'_'+req)
+        tar_files = glob(os.path.join(base_dir, prop+"*"+req+"*.tar.gz"))  # if file not found, looks for tarball
+        if tar_files:
+            tar_path = tar_files[0]
+            logger.info("Unpacking 1st tar")
+            spec_files = unpack_tarball(tar_path, unpack_path)  # unpacks tarball
+            filename = spec_files[0]
+        else:
+            logger.error("Could not find tarball for request: %s" % req)
+            return None
+    if filename:  # If first order tarball is unpacked
+        movie_dir = glob(os.path.join(path, "Guide_frames"))
+        if movie_dir:  # if 2nd order tarball is unpacked
+            frames = glob(os.path.join(movie_dir[0], "*.fits.fz"))
+            if not frames:
+                frames = glob(os.path.join(movie_dir[0], "*.fits"))
+        else:  # unpack 2nd tarball
+            tarintar = glob(os.path.join(path, "*.tar"))
+            if tarintar:
+                unpack_path = os.path.join(path, 'Guide_frames')
+                guide_files = unpack_tarball(tarintar[0], unpack_path)  # unpacks tar
+                logger.info("Unpacking tar in tar")
+                for file in guide_files:
+                    if '.fits.fz' in file:
+                        frames.append(file)
+            else:
+                logger.error("Could not find Guide Frames or Guide Frame tarball for request: %s" % req)
+                return None
+    else:
+        logger.error("Could not find spectrum data or tarball for request: %s" % req)
+        return None
+    if frames is not None and len(frames) > 0:
+        logger.debug("#Frames = {}".format(len(frames)))
+        logger.info("Making Movie...")
+        movie_file = make_gif(frames, out_path=out_path)
+        return movie_file
+    else:
+        logger.error("There must be at least 1 frame to make guide movie.")
+        return None
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -212,7 +283,7 @@ if __name__ == '__main__':
     path = args.path
     fr = args.fr
     ir = args.ir
-    print("Base Framerate: {}".format(fr))
+    logger.debug("Base Framerate: {}".format(fr))
     if path[-1] != '/':
         path += '/'
     files = np.sort(glob(path+'*.fits.fz'))
@@ -220,6 +291,6 @@ if __name__ == '__main__':
         files = np.sort(glob(path+'*.fits'))
     if len(files) >= 1:
         gif_file = make_gif(files, fr=fr, init_fr=ir, progress=True)
-        print("New gif created: {}".format(gif_file))
+        logger.info("New gif created: {}".format(gif_file))
     else:
-        print("No files found.")
+        logger.info("No files found.")

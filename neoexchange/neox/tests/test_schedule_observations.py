@@ -22,7 +22,7 @@ from neox.tests.mocks import MockDateTime, mock_lco_authenticate, mock_fetch_fil
 
 from datetime import datetime
 from django.test.client import Client
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.contrib.auth.models import User
 from core.models import Body, Proposal
 

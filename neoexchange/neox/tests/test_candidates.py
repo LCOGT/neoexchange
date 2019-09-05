@@ -17,7 +17,7 @@ from .base import FunctionalTest
 from datetime import datetime
 
 from django.contrib.auth.models import User
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 
 from core.models import Candidate
 

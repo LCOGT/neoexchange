@@ -16,7 +16,7 @@ GNU General Public License for more details.
 from .base import FunctionalTest
 from mock import patch
 
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.contrib.auth.models import User
 
 from neox.tests.mocks import MockDateTime, mock_lco_authenticate, mock_fetch_archive_frames

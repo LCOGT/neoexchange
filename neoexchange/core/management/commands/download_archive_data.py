@@ -16,13 +16,19 @@ GNU General Public License for more details.
 import os
 from sys import argv
 from datetime import datetime, timedelta
+from tempfile import mkdtemp, gettempdir
+import shutil
 
 from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
+from django.core.files import File
+from django.core.files.storage import default_storage
 
 from core.archive_subs import archive_login, get_frame_data, get_catalog_data, \
     determine_archive_start_end, download_files, make_data_dir
-from core.views import make_movie, make_spec, determine_active_proposals
+from core.views import determine_active_proposals
+from photometrics.spectraplot import make_spec
+from photometrics.gf_movie import make_movie
 
 
 class Command(BaseCommand):
@@ -30,7 +36,10 @@ class Command(BaseCommand):
     help = 'Download data from the LCO Archive'
 
     def add_arguments(self, parser):
-        out_path = settings.DATA_ROOT
+        if not settings.USE_S3:
+            out_path = settings.DATA_ROOT
+        else:
+            out_path = mkdtemp()
         parser.add_argument('--date', action="store", default=None, help='Date of the data to download (YYYYMMDD)')
         parser.add_argument('--proposal', action="store", default=None, help="Proposal code to query for data (e.g. LCO2019B-023; default is for all active proposals)")
         parser.add_argument('--datadir', default=out_path, help='Place to save data (e.g. %s)' % out_path)
@@ -56,11 +65,9 @@ class Command(BaseCommand):
         if options['verbosity'] < 1:
             verbose = False
 
-        username = os.environ.get('NEOX_ODIN_USER', None)
-        password = os.environ.get('NEOX_ODIN_PASSWD', None)
-        archive_token = os.environ.get('ARCHIVE_TOKEN', None)
-        if (username is not None and password is not None) or archive_token is not None:
-            auth_headers = archive_login(username, password)
+        archive_token = settings.ARCHIVE_TOKEN
+        if archive_token is not None:
+            auth_headers = archive_login()
             start_date, end_date = determine_archive_start_end(obs_date)
             for proposal in proposals:
                 self.stdout.write("Looking for frames between %s->%s from %s" % ( start_date, end_date, proposal ))
@@ -71,7 +78,7 @@ class Command(BaseCommand):
                 all_frames = {}
                 for obstype in obstypes:
                     if obstype == 'EXPOSE':
-                        redlevel = ['91', '11']
+                        redlevel = ['91', ]
                     else:
                         # '' seems to be needed to get the tarball of FLOYDS products
                         redlevel = ['0', '']
@@ -94,13 +101,25 @@ class Command(BaseCommand):
                 dl_frames = download_files(all_frames, out_path, verbose)
                 self.stdout.write("Downloaded %d frames" % ( len(dl_frames) ))
                 # unpack tarballs and make movie.
-                for frame in all_frames['']:
+                for frame in all_frames.get('', []):
                     if "tar.gz" in frame['filename']:
                         tar_path = make_data_dir(out_path, frame)
-                        make_movie(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, frame['PROPID'])
-                        spec_plot, spec_count = make_spec(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, frame['PROPID'], 1)
+                        movie_file = make_movie(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, out_path, frame['PROPID'])
+                        spec_plot, spec_count = make_spec(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, out_path, frame['PROPID'], 1)
                         if spec_count > 1:
                             for obs in range(2, spec_count+1):
-                                make_spec(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, frame['PROPID'], obs)
+                                spec_plot, spec_count = make_spec(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, out_path, frame['PROPID'], obs)
         else:
-            self.stdout.write("No username and password or token defined (set NEOX_ODIN_USER and NEOX_ODIN_PASSWD or ARCHIVE_TOKEN)")
+            self.stdout.write("No token defined (set ARCHIVE_TOKEN environment variable)")
+
+        # Check if we're using a temp dir and then delete it
+        if gettempdir() in out_path:
+            shutil.rmtree(out_path)
+
+    def save_to_default(self, filename, out_path):
+        filename_up = filename.replace(out_path,"")[1:]
+        file = default_storage.open(filename_up, 'wb+')
+        with open(filename,'rb+') as f:
+            file.write(f.read())
+        file.close()
+        return

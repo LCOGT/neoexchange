@@ -15,7 +15,7 @@ GNU General Public License for more details.
 
 from .base import FunctionalTest
 from django.test import TestCase
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from core.models import Body
