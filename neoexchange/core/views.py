@@ -1762,7 +1762,7 @@ def clean_NEOCP_object(page_list):
             # See if this is a local discovery
             provisional_name = line[0:7]
             origin = 'M'
-            if provisional_name[0:5] in ['CPTTL', 'LSCTL', 'ELPTL', 'COJTL', 'COJAT', 'LSCAT', 'LSCJM' ]:
+            if provisional_name[0:5] in ['CPTTL', 'LSCTL', 'ELPTL', 'COJTL', 'COJAT', 'LSCAT', 'LSCJM', 'LLZ00' ]:
                 origin = 'L'
             params = {
                 'abs_mag': abs_mag,
@@ -1780,6 +1780,7 @@ def clean_NEOCP_object(page_list):
                 'origin': origin,
                 'provisional_name' : provisional_name,
                 'num_obs' : int(line[117:122]),
+                'orbit_rms' : None,
                 'update_time' : datetime.utcnow(),
                 'arc_length' : None,
                 'not_seen' : None
@@ -1813,6 +1814,12 @@ def clean_NEOCP_object(page_list):
                 params['not_seen'] = not_seen.total_seconds() / 86400.0  # Leap seconds can go to hell...
             except:
                 pass
+            try:
+                orbit_rms = float(line[137:141])
+            except:
+                orbit_rms = None
+            if orbit_rms:
+                params['orbit_rms'] = orbit_rms
         else:
             logger.warning(
                 "Did not get right number of parameters for %s. Values %s", current[0], current)
