@@ -12,7 +12,7 @@ GNU General Public License for more details.
 """
 from __future__ import unicode_literals
 from datetime import datetime, timedelta, date
-from math import pi, log10, sqrt, cos, degrees
+from math import pi, log10, sqrt, cos, degrees, ceil, sqrt
 from collections import Counter, OrderedDict
 import reversion
 import logging
@@ -20,6 +20,7 @@ import logging
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import models
+from django.db.models import Sum
 from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
 from django.utils.encoding import force_text, python_2_unicode_compatible
@@ -37,7 +38,7 @@ from base64 import b64decode, b64encode
 
 from astrometrics.ast_subs import normal_to_packed
 from astrometrics.ephem_subs import compute_ephem, comp_FOM, get_sitecam_params, comp_sep
-from astrometrics.sources_subs import translate_catalog_code
+from astrometrics.sources_subs import translate_catalog_code, psv_padding
 from astrometrics.time_subs import dttodecimalday, degreestohms, degreestodms
 from astrometrics.albedo import asteroid_albedo, asteroid_diameter
 from core.archive_subs import check_for_archive_images
@@ -102,12 +103,14 @@ TAX_SCHEME_CHOICES = (
                         ('B', 'Bus'),
                         ('3T', 'S3OS2_TH'),
                         ('3B', 'S3OS2_BB'),
-                        ('BD', 'Bus-DeMeo')
+                        ('BD', 'Bus-DeMeo'),
+                        ('Sd', 'SDSS')
                      )
 
 TAX_REFERENCE_CHOICES = (
-                        ('PDS6', 'Neese, Asteroid Taxonomy V6.0. (2010).'),
+                        ('PDS6', 'Neese, Asteroid Taxonomy V6.0, (2010).'),
                         ('BZ04', 'Binzel, et al. (2004).'),
+                        ('SDSS', 'Hasselmann, et al. Asteroid Taxonomy V1.1, (2012).')
                      )
 
 SPECTRAL_WAV_CHOICES = (
@@ -132,6 +135,8 @@ class Proposal(models.Model):
     pi = models.CharField("PI", max_length=50, default='', help_text='Principal Investigator (PI)')
     tag = models.CharField(max_length=10, default='LCOGT')
     active = models.BooleanField('Proposal active?', default=True)
+    time_critical = models.BooleanField('Time Critical/ToO proposal?', default=False)
+    download = models.BooleanField('Auto download data?', default=True)
 
     class Meta:
         db_table = 'ingest_proposal'
@@ -157,6 +162,7 @@ class Body(models.Model):
     fast_moving         = models.BooleanField('Is this object fast?', default=False)
     urgency             = models.IntegerField(help_text='how urgent is this?', blank=True, null=True)
     epochofel           = models.DateTimeField('Epoch of elements', blank=True, null=True)
+    orbit_rms           = models.FloatField('Orbit quality of fit', blank=True, null=True, default=99.0)
     orbinc              = models.FloatField('Orbital inclination in deg', blank=True, null=True)
     longascnode         = models.FloatField('Longitude of Ascending Node (deg)', blank=True, null=True)
     argofperih          = models.FloatField('Arg of perihelion (deg)', blank=True, null=True)
@@ -236,8 +242,11 @@ class Body(models.Model):
             orbelems = model_to_dict(self)
             sitecode = '500'
             emp_line = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
+            if not emp_line:
+                return False
+            else:
             # Return just numerical values
-            return emp_line[1], emp_line[2], emp_line[3], emp_line[6], emp_line[4], emp_line[7]
+                return emp_line['ra'], emp_line['dec'], emp_line['mag'], emp_line['southpole_sep'], emp_line['sky_motion'], emp_line['sky_motion_pa']
         else:
             # Catch the case where there is no Epoch
             return False
@@ -265,8 +274,10 @@ class Body(models.Model):
             # calculate the ephemeris for each step (delta_t) within the time span df.
             while i <= df / delta_t + 1:
 
-                emp_line, mag_dot, separation = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False, detailed=True)
-                vmag = emp_line[3]
+                ephem_out = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
+                mag_dot = ephem_out['mag_dot']
+                separation = ephem_out['sun_sep']
+                vmag = ephem_out['mag']
 
                 # Eliminate bad magnitudes
                 if vmag < 0:
@@ -411,34 +422,43 @@ class SpectralInfo(models.Model):
                     else:
                         text_out = text_out + ' %s color indices were used.\n' % (text[0])
                 if "G" in text:
-                    text_out = text_out + ' Used groundbased radiometric albedo.'
+                    text_out += ' Used groundbased radiometric albedo.'
                 if "I" in text:
-                    text_out = text_out + ' Used IRAS radiometric albedo.'
+                    text_out += ' Used IRAS radiometric albedo.'
                 if "A" in text:
-                    text_out = text_out + ' An Unspecified albedo was used to eliminate Taxonomic degeneracy.'
+                    text_out += ' An Unspecified albedo was used to eliminate Taxonomic degeneracy.'
                 if "S" in text:
-                    text_out = text_out + ' Used medium-resolution spectrum by Chapman and Gaffey (1979).'
+                    text_out += ' Used medium-resolution spectrum by Chapman and Gaffey (1979).'
                 if "s" in text:
-                    text_out = text_out + ' Used high-resolution spectrum by Xu et al (1995) or Bus and Binzel (2002).'
+                    text_out += ' Used high-resolution spectrum by Xu et al (1995) or Bus and Binzel (2002).'
             elif self.tax_scheme == "BD":
                 if "a" in text:
-                    text_out = text_out + ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b). NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b). NIR: DeMeo et al. (2009).'
                 if "b" in text:
-                    text_out = text_out + ' Visible: Xu (1994), Xu et al. (1995). NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible: Xu (1994), Xu et al. (1995). NIR: DeMeo et al. (2009).'
                 if "c" in text:
-                    text_out = text_out + ' Visible: Burbine (2000), Burbine and Binzel (2002). NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible: Burbine (2000), Burbine and Binzel (2002). NIR: DeMeo et al. (2009).'
                 if "d" in text:
-                    text_out = text_out + ' Visible: Binzel et al. (2004c). NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible: Binzel et al. (2004c). NIR: DeMeo et al. (2009).'
                 if "e" in text:
-                    text_out = text_out + ' Visible and NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible and NIR: DeMeo et al. (2009).'
                 if "f" in text:
-                    text_out = text_out + ' Visible: Binzel et al. (2004b).  NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible: Binzel et al. (2004b).  NIR: DeMeo et al. (2009).'
                 if "g" in text:
-                    text_out = text_out + ' Visible: Binzel et al. (2001).  NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible: Binzel et al. (2001).  NIR: DeMeo et al. (2009).'
                 if "h" in text:
-                    text_out = text_out + ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b).  NIR: Binzel et al. (2004a).'
+                    text_out += ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b).  NIR: Binzel et al. (2004a).'
                 if "i" in text:
-                    text_out = text_out + ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b).  NIR: Rivkin et al. (2005).'
+                    text_out += ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b).  NIR: Rivkin et al. (2005).'
+        elif self.tax_reference == 'SDSS':
+            chunks = text.split('|')
+            if int(chunks[1]) > 1:
+                plural = 's'
+            else:
+                plural = ''
+            text_out = 'Probability score of {} found using {} observation{}.'.format(chunks[0], chunks[1], plural)
+            if chunks[2] != '-' and chunks[2] != self.taxonomic_class:
+                text_out += ' | Other less likely taxonomies also found ({})'.format(chunks[2].replace(self.taxonomic_class, ''))
         text_out = text_out+end
         return text_out
 
@@ -474,9 +494,9 @@ class SuperBlock(models.Model):
 
     cadence         = models.BooleanField(default=False)
     rapid_response  = models.BooleanField('Is this a ToO/Rapid Response observation?', default=False)
-    body            = models.ForeignKey(Body, null=True, blank=True)
-    calibsource     = models.ForeignKey('StaticSource', null=True, blank=True)
-    proposal        = models.ForeignKey(Proposal)
+    body            = models.ForeignKey(Body, null=True, blank=True, on_delete=models.CASCADE)
+    calibsource     = models.ForeignKey('StaticSource', null=True, blank=True, on_delete=models.CASCADE)
+    proposal        = models.ForeignKey(Proposal, on_delete=models.CASCADE)
     block_start     = models.DateTimeField(null=True, blank=True)
     block_end       = models.DateTimeField(null=True, blank=True)
     groupid         = models.CharField(max_length=55, null=True, blank=True)
@@ -539,7 +559,12 @@ class SuperBlock(models.Model):
     def get_num_observed(self):
         qs = Block.objects.filter(superblock=self.id)
 
-        return qs.filter(num_observed__gte=1).count(), qs.count()
+        num_obs_dict = qs.filter(num_observed__gte=1).aggregate(num_observed=Sum('num_observed'))
+        if num_obs_dict.get('num_observed', None) is None:
+            num_obs = 0
+        else:
+            num_obs = num_obs_dict.get('num_observed', 0)
+        return num_obs, qs.count()
 
     def get_num_reported(self):
         qs = Block.objects.filter(superblock=self.id)
@@ -598,15 +623,13 @@ class Block(models.Model):
 
     telclass        = models.CharField(max_length=3, null=False, blank=False, default='1m0', choices=TELESCOPE_CHOICES)
     site            = models.CharField(max_length=3, choices=SITE_CHOICES, null=True)
-    body            = models.ForeignKey(Body, null=True, blank=True)
-    calibsource     = models.ForeignKey('StaticSource', null=True, blank=True)
-    proposal        = models.ForeignKey(Proposal)
-    superblock      = models.ForeignKey(SuperBlock, null=True, blank=True)
+    body            = models.ForeignKey(Body, null=True, blank=True, on_delete=models.CASCADE)
+    calibsource     = models.ForeignKey('StaticSource', null=True, blank=True, on_delete=models.CASCADE)
+    superblock      = models.ForeignKey(SuperBlock, null=True, blank=True, on_delete=models.CASCADE)
     obstype         = models.SmallIntegerField('Observation Type', null=False, blank=False, default=0, choices=OBSTYPE_CHOICES)
-    groupid         = models.CharField(max_length=55, null=True, blank=True)
     block_start     = models.DateTimeField(null=True, blank=True)
     block_end       = models.DateTimeField(null=True, blank=True)
-    tracking_number = models.CharField(max_length=10, null=True, blank=True)
+    request_number  = models.CharField(max_length=10, null=True, blank=True)
     num_exposures   = models.IntegerField(null=True, blank=True)
     exp_length      = models.FloatField('Exposure length in seconds', null=True, blank=True)
     num_observed    = models.IntegerField(help_text='No. of scheduler blocks executed', null=True, blank=True)
@@ -625,9 +648,8 @@ class Block(models.Model):
 
     def make_obsblock_link(self):
         url = ''
-        # XXX Change to request number and point at requests endpoint (https://observe.lco.global/requests/<request no.>/
-        if self.tracking_number is not None and self.tracking_number != '':
-            url = urljoin(settings.PORTAL_REQUEST_URL, self.tracking_number)
+        if self.request_number is not None and self.request_number != '':
+            url = urljoin(settings.PORTAL_REQUEST_URL, self.request_number)
         return url
 
     def num_red_frames(self):
@@ -647,7 +669,7 @@ class Block(models.Model):
     def num_spectro_frames(self):
         """Returns the numbers of different types of spectroscopic frames"""
         num_moltypes_string = 'No data'
-        data, num_frames = check_for_archive_images(self.tracking_number, obstype='')
+        data, num_frames = check_for_archive_images(self.request_number, obstype='')
         if num_frames > 0:
             moltypes = [x['OBSTYPE'] if x['RLEVEL'] != 90 else "TAR" for x in data]
             num_moltypes = {x : moltypes.count(x) for x in set(moltypes)}
@@ -658,7 +680,7 @@ class Block(models.Model):
     def num_spectra_complete(self):
         """Returns the number of actually completed spectra excluding lamps/arcs"""
         num_spectra = 0
-        data, num_frames = check_for_archive_images(self.tracking_number, obstype='')
+        data, num_frames = check_for_archive_images(self.request_number, obstype='')
         if num_frames > 0:
             moltypes = [x['OBSTYPE'] if x['RLEVEL'] != 90 else "TAR" for x in data]
             num_spectra = moltypes.count('SPECTRUM')
@@ -666,22 +688,6 @@ class Block(models.Model):
 
     def num_candidates(self):
         return Candidate.objects.filter(block=self.id).count()
-
-    def save(self, *args, **kwargs):
-        if not self.superblock:
-            sblock_kwargs = {
-                                'body' : self.body,
-                                'calibsource' : self.calibsource,
-                                'proposal' : self.proposal,
-                                'block_start' : self.block_start,
-                                'block_end' : self.block_end,
-                                'groupid' : self.groupid,
-                                'tracking_number' : self.tracking_number,
-                                'active' : self.active
-                            }
-            sblock, created = SuperBlock.objects.get_or_create(pk=self.id, **sblock_kwargs)
-            self.superblock = sblock
-        super(Block, self).save(*args, **kwargs)
 
     class Meta:
         verbose_name = _('Observation Block')
@@ -694,7 +700,7 @@ class Block(models.Model):
         else:
             text = 'not '
 
-        return '%s is %sactive' % (self.tracking_number, text)
+        return '%s is %sactive' % (self.request_number, text)
 
 
 def unpickle_wcs(wcs_string):
@@ -825,7 +831,7 @@ class Frame(models.Model):
     filename    = models.CharField('FITS filename', max_length=50, blank=True, null=True)
     exptime     = models.FloatField('Exposure time in seconds', null=True, blank=True)
     midpoint    = models.DateTimeField('UTC date/time of frame midpoint', null=False, blank=False, db_index=True)
-    block       = models.ForeignKey(Block, null=True, blank=True)
+    block       = models.ForeignKey(Block, null=True, blank=True, on_delete=models.CASCADE)
     quality     = models.CharField('Frame Quality flags', help_text='Comma separated list of frame/condition flags', max_length=40, blank=True, default=' ')
     zeropoint   = models.FloatField('Frame zeropoint (mag.)', null=True, blank=True)
     zeropoint_err = models.FloatField('Error on Frame zeropoint (mag.)', null=True, blank=True)
@@ -915,34 +921,54 @@ class Frame(models.Model):
 
     def return_tel_string(self):
 
-        point4m_string = '0.4-m f/8 Schmidt-Cassegrain + CCD'
-        onem_string = '1.0-m f/8 Ritchey-Chretien + CCD'
-        twom_string = '2.0-m f/10 Ritchey-Chretien + CCD'
+        detector = 'CCD'
+        point4m_aperture = 0.4
+        point4m_fRatio = 8.0
+        point4m_design = 'Schmidt-Cassegrain'
+        point4m_string = '{:.1f}-m f/{:1d} {} + {}'.format(point4m_aperture, int(point4m_fRatio), point4m_design, detector)
+        point4m_dict = {'full' : point4m_string, 'design' : point4m_design,
+                     'aperture' : point4m_aperture, 'fRatio' : point4m_fRatio, 'detector' : detector }
+
+        onem_aperture = 1.0
+        onem_fRatio = 8.0
+        onem_design = 'Ritchey-Chretien'
+        onem_string = '{:.1f}-m f/{:1d} {} + {}'.format(onem_aperture, int(onem_fRatio), onem_design, detector)
+        onem_dict = {'full' : onem_string, 'design' : onem_design,
+                     'aperture' : onem_aperture, 'fRatio' : onem_fRatio, 'detector' : detector }
+
+        twom_aperture = 2.0
+        twom_fRatio = 10.0
+        twom_design = 'Ritchey-Chretien'
+        twom_string = '{:.1f}-m f/{:2d} {} + {}'.format(twom_aperture, int(twom_fRatio), twom_design, detector)
+        twom_dict = {'full' : twom_string, 'design' : twom_design,
+                     'aperture' : twom_aperture, 'fRatio' : twom_fRatio, 'detector' : detector }
 
         tels_strings = {
-                        'K91' : onem_string,
-                        'K92' : onem_string,
-                        'K93' : onem_string,
-                        'W85' : onem_string,
-                        'W86' : onem_string,
-                        'W87' : onem_string,
-                        'V37' : onem_string,
-                        'Z21' : point4m_string,
-                        'Z17' : point4m_string,
-                        'Q58' : point4m_string,
-                        'Q59' : point4m_string,
-                        'Q63' : onem_string,
-                        'Q64' : onem_string,
-                        'E10' : twom_string,
-                        'F65' : twom_string,
-                        'T04' : point4m_string,
-                        'T03' : point4m_string,
-                        'W89' : point4m_string,
-                        'W79' : point4m_string,
-                        'V38' : point4m_string,
-                        'L09' : point4m_string,
+                        'K91' : onem_dict,
+                        'K92' : onem_dict,
+                        'K93' : onem_dict,
+                        'W85' : onem_dict,
+                        'W86' : onem_dict,
+                        'W87' : onem_dict,
+                        'V37' : onem_dict,
+                        'Z21' : point4m_dict,
+                        'Z17' : point4m_dict,
+                        'Q58' : point4m_dict,
+                        'Q59' : point4m_dict,
+                        'Q63' : onem_dict,
+                        'Q64' : onem_dict,
+                        'E10' : twom_dict,
+                        'F65' : twom_dict,
+                        'T04' : point4m_dict,
+                        'T03' : point4m_dict,
+                        'W89' : point4m_dict,
+                        'W79' : point4m_dict,
+                        'V38' : point4m_dict,
+                        'L09' : point4m_dict,
                         }
-        return tels_strings.get(self.sitecode, 'Unknown LCO telescope')
+        tel_string = tels_strings.get(self.sitecode, {'full:' : 'Unknown LCO telescope'})
+
+        return tel_string
 
     def map_filter(self):
         """Maps somewhat odd observed filters (e.g. 'solar') into the filter
@@ -951,11 +977,18 @@ class Frame(models.Model):
         new_filter = self.filter
         # Don't perform any mapping if it's not LCO data
         if self.frametype not in [self.NONLCO_FRAMETYPE, self.SATELLITE_FRAMETYPE]:
-            if self.filter == 'solar' or self.filter == 'w':
+            if self.filter == 'solar' or self.filter == 'w' or self.filter == 'LL':
                 new_filter = 'R'
             if self.photometric_catalog in ['GAIA-DR1', 'GAIA-DR2']:
                 new_filter = 'G'
         return new_filter
+
+    def ALCDEF_filter_format(self):
+        """Formats current filter into acceptable name for printing in ALCDEF output."""
+        new_filt = self.filter
+        if len(new_filt) > 1 and new_filt[1] == 'p':
+            new_filt = 's'+new_filt[0]
+        return new_filt.upper()
 
     class Meta:
         verbose_name = _('Observed Frame')
@@ -978,8 +1011,8 @@ class SourceMeasurement(models.Model):
     any new measurements performed on data from the LCOGT NEO Follow-up Network
     """
 
-    body = models.ForeignKey(Body)
-    frame = models.ForeignKey(Frame)
+    body = models.ForeignKey(Body, on_delete=models.CASCADE)
+    frame = models.ForeignKey(Frame, on_delete=models.CASCADE)
     obs_ra = models.FloatField('Observed RA', blank=True, null=True)
     obs_dec = models.FloatField('Observed Dec', blank=True, null=True)
     obs_mag = models.FloatField('Observed Magnitude', blank=True, null=True)
@@ -1013,21 +1046,40 @@ class SourceMeasurement(models.Model):
         except TypeError:
             mag = "    "
 
-        obs_type = 'C'
         microday = True
+
+        if self.frame.extrainfo:
+            obs_type = self.frame.extrainfo
+            if obs_type == 'A':
+                microday = False
+        else:
+            obs_type = 'C'
+
         if self.frame.frametype == Frame.SATELLITE_FRAMETYPE:
             obs_type = 'S'
             microday = False
         flags = self.flags
-        if len(self.flags) == 1:
-            if self.flags == '*':
+        num_flags = flags.split(',')
+        if len(num_flags) == 1:
+            if num_flags[0] == '*':
                 # Discovery asterisk needs to go into column 13
                 flags = '* '
             else:
-                flags = ' ' + self.flags
-        elif len(self.flags) > 2:
+                flags = ' ' + num_flags[0]
+        elif len(num_flags) == 2:
+            if '*' in num_flags:
+                asterisk_index = num_flags.index('*')
+                flags = '*' + num_flags[1-asterisk_index]
+            else:
+                logger.warning("Flags longer than will fit into field - needs mapper")
+                flags = ' ' + num_flags[0]
+        else:
             logger.warning("Flags longer than will fit into field - needs mapper")
-            flags = self.flags[0:2]
+            if '*' in num_flags:
+                num_flags.remove('*')
+                flags = '*' + num_flags[0]
+            else:
+                flags = ' ' + num_flags[0]
 
         # Catalog code for column 72 (if desired)
         catalog_code = ' '
@@ -1049,6 +1101,127 @@ class SourceMeasurement(models.Model):
             mpc_line = mpc_line + '\n' + extrainfo
         return mpc_line
 
+    def _numdp(self, value):
+        """Calculate number of d.p. following prescription in Figure 1 of
+        ADES description (https://github.com/IAU-ADES/ADES-Master/blob/master/ADES_Description.pdf)
+        """
+
+        num_dp = 1
+        if value is not None and value > 0:
+            num_dp = ceil(1-log10(value))
+        return num_dp
+
+    def format_psv_header(self):
+
+        tbl_hdr = ""
+        rms_available = False
+        if self.err_obs_ra and self.err_obs_dec and self.err_obs_mag:
+            rms_available = True
+            rms_tbl_fmt = '%7s|%-11s|%8s|%4s|%-4s|%-23s|%11s|%11s|%5s|%6s|%8s|%-5s|%6s|%4s|%8s|%6s|%6s|%6s|%-5s|%-s'
+            tbl_hdr = rms_tbl_fmt % ('permID ', 'provID', 'trkSub  ', 'mode', 'stn', 'obsTime', \
+                'ra', 'dec', 'rmsRA', 'rmsDec', 'astCat', 'mag', 'rmsMag', 'band', 'photCat', \
+                'photAp', 'logSNR', 'seeing', 'notes', 'remarks')
+        else:
+            tbl_fmt = '%7s|%-11s|%8s|%4s|%-4s|%-23s|%11s|%11s|%8s|%-5s|%4s|%8s|%-5s|%-s'
+            tbl_hdr = tbl_fmt % ('permID ', 'provID', 'trkSub  ', 'mode', 'stn', 'obsTime', \
+                'ra'.ljust(11), 'dec'.ljust(11), 'astCat', 'mag', 'band', 'photCat', 'notes', 'remarks')
+        return tbl_hdr
+
+    def format_psv_line(self):
+        psv_line = ""
+
+        rms_available = False
+        if self.err_obs_ra and self.err_obs_dec and self.err_obs_mag:
+            rms_available = True
+            # Add RMS of Frame astrometric fit (in arcsec) to stored source
+            # standard deviations (in deg; already converted from SExtractor
+            # variances->standard deviations in get_catalog_items() & convert_value())
+            if self.frame.rms_of_fit:
+                err_obs_ra = sqrt(self.err_obs_ra**2 + ((self.frame.rms_of_fit/3600.0)**2))
+                err_obs_dec = sqrt(self.err_obs_dec**2 + ((self.frame.rms_of_fit/3600.0)**2))
+            else:
+                err_obs_ra = self.err_obs_ra
+                err_obs_dec = self.err_obs_dec
+
+        if self.body.name:
+            if len(self.body.name) > 4 and self.body.name[0:4].isdigit():
+                provisional_name = self.body.name
+                body_name = ''
+            else:
+                body_name = self.body.name
+                provisional_name = ''
+            tracklet_name = ''
+        else:
+            tracklet_name = self.body.provisional_name
+            provisional_name = ''
+            body_name = ''
+        obs_type = 'CCD'
+        remarks = ''
+
+        obsTime = self.frame.midpoint
+        obsTime = obsTime.strftime("%Y-%m-%dT%H:%M:%S")
+        frac_time = "{:.2f}Z".format(self.frame.midpoint.microsecond / 1e6)
+        obsTime = obsTime + frac_time[1:]
+        ast_catalog_code = translate_catalog_code(self.frame.astrometric_catalog, ades_code=True)
+        if (self.frame.astrometric_catalog is None or self.frame.astrometric_catalog.strip() == '')\
+            and self.astrometric_catalog is not None:
+            ast_catalog_code = translate_catalog_code(self.astrometric_catalog, ades_code=True)
+        phot_catalog_code = translate_catalog_code(self.frame.photometric_catalog, ades_code=True)
+        if (self.frame.photometric_catalog is None or self.frame.photometric_catalog.strip() == '')\
+            and self.photometric_catalog is not None:
+            phot_catalog_code = translate_catalog_code(self.photometric_catalog, ades_code=True)
+        if phot_catalog_code == '' and ast_catalog_code != '':
+            phot_catalog_code = ast_catalog_code
+
+        prec = 6
+        if self.err_obs_ra:
+            prec = self._numdp(err_obs_ra)
+        fmt_ra = "{ra:.{prec}f}".format(prec=prec, ra=self.obs_ra)
+        fmt_ra, width, dpos = psv_padding(fmt_ra, 11, 'D', 4)
+        prec = 6
+        if self.err_obs_dec:
+            prec = self._numdp(err_obs_dec)
+        fmt_dec = "{dec:.{prec}f}".format(prec=prec, dec=self.obs_dec)
+        fmt_dec, width, dpos = psv_padding(fmt_dec, 11, 'D', 4)
+        fmt_filter = " "
+        if self.obs_mag is not None:
+            fmt_mag = "{:4.1f}".format(float(self.obs_mag))
+            fmt_filter = self.frame.map_filter()
+        else:
+            fmt_mag = " "*5
+            phot_catalog_code = " "
+
+        tbl_fmt     = '%7s|%-11s|%8s|%4s|%-4s|%-23s|%11s|%11s|%8s|%-5s|%4s|%8s|%-5s|%-s'
+        rms_tbl_fmt = '%7s|%-11s|%8s|%4s|%-4s|%-23s|%11s|%11s|%5s|%6s|%8s|%-5s|%6s|%4s|%8s|%6s|%6s|%6s|%-5s|%-s'
+        if rms_available:
+            rms_ra = "{value:.{prec}f}".format(prec=self._numdp(err_obs_ra * 3600.0), value=err_obs_ra * 3600.0)
+            rms_dec = "{value:.{prec}f}".format(prec=self._numdp(err_obs_dec * 3600.0), value=err_obs_dec * 3600.0)
+            if self.obs_mag is not None:
+                rms_mag = "{value:.{prec}f}".format(prec=self._numdp(self.err_obs_mag), value=self.err_obs_mag)
+                rms_mag, width, dpos = psv_padding(rms_mag, 6, 'D', 2)
+            else:
+                rms_mag = " "
+
+            phot_ap = " "*6
+            if self.aperture_size:
+                phot_ap = "{:6.2f}".format(self.aperture_size)
+            log_snr = " "*6
+            if self.snr and self.snr > 0:
+                log_snr = "{:6.4f}".format(log10(self.snr))
+            fwhm = " "*6
+            if self.frame.fwhm:
+                fwhm = "{:6.4f}".format(self.frame.fwhm)
+
+            psv_line = rms_tbl_fmt % (body_name, provisional_name, tracklet_name, obs_type, self.frame.sitecode, \
+                obsTime, fmt_ra, fmt_dec, rms_ra, rms_dec,\
+                ast_catalog_code, fmt_mag, rms_mag, fmt_filter, \
+                phot_catalog_code, phot_ap, log_snr, fwhm, self.flags, remarks)
+        else:
+            psv_line = tbl_fmt % (body_name, provisional_name, tracklet_name, obs_type, self.frame.sitecode, \
+                obsTime, fmt_ra, fmt_dec, ast_catalog_code,\
+                fmt_mag, fmt_filter, phot_catalog_code, self.flags, remarks)
+        return psv_line
+
     class Meta:
         verbose_name = _('Source Measurement')
         verbose_name_plural = _('Source Measurements')
@@ -1063,7 +1236,7 @@ class CatalogSources(models.Model):
     of objects.
     """
 
-    frame = models.ForeignKey(Frame)
+    frame = models.ForeignKey(Frame, on_delete=models.CASCADE)
     obs_x = models.FloatField('CCD X co-ordinate')
     obs_y = models.FloatField('CCD Y co-ordinate')
     obs_ra = models.FloatField('Observed RA')
@@ -1140,13 +1313,14 @@ class CatalogSources(models.Model):
         """
 
         flag = ' '
-        if self.flags >= 1 and self.flags <=3:
+        if 1 <= self.flags <= 3:
             # Set 'Involved with star'
             flag = 'I'
         elif self.flags >= 8:
             # Set 'close to Edge'
             flag = 'E'
         return flag
+
 
 def detections_array_dtypes():
     """Declare the columns and types of the structured numpy array for holding
@@ -1164,7 +1338,7 @@ class Candidate(models.Model):
     """Class to hold candidate moving object detections found by the moving
     object code"""
 
-    block = models.ForeignKey(Block)
+    block = models.ForeignKey(Block, on_delete=models.CASCADE)
     cand_id = models.PositiveIntegerField('Candidate Id')
     score = models.FloatField('Candidate Score')
     avg_midpoint = models.DateTimeField('Average UTC midpoint')
@@ -1200,7 +1374,7 @@ class Candidate(models.Model):
         try:
             elements = model_to_dict(body)
             emp_line = compute_ephem(time, elements, self.block.site, perturb=False)
-            separation = comp_sep(self.avg_ra, self.avg_dec, emp_line[1], emp_line[2])
+            separation = comp_sep(self.avg_ra, self.avg_dec, emp_line['ra'], emp_line['dec'])
         except AttributeError:
             separation = None
 
@@ -1210,7 +1384,7 @@ class Candidate(models.Model):
         verbose_name = _('Candidate')
 
     def __str__(self):
-        return "%s#%04d" % (self.block.tracking_number, self.cand_id)
+        return "%s#%04d" % (self.block.request_number, self.cand_id)
 
 
 @python_2_unicode_compatible
@@ -1218,8 +1392,8 @@ class ProposalPermission(models.Model):
     """
     Linking a user to proposals in NEOx to control their access
     """
-    proposal = models.ForeignKey(Proposal)
-    user = models.ForeignKey(User)
+    proposal = models.ForeignKey(Proposal, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
 
     class Meta:
         verbose_name = _('Proposal Permission')
@@ -1233,12 +1407,12 @@ class PanoptesReport(models.Model):
     """
     Status of block
     """
-    block = models.ForeignKey(Block)
+    block = models.ForeignKey(Block, on_delete=models.CASCADE)
     when_submitted = models.DateTimeField('Date sent to Zooniverse', blank=True, null=True)
     last_check = models.DateTimeField(blank=True, null=True)
     active = models.BooleanField(default=False)
     subject_id = models.IntegerField('Subject ID', blank=True, null=True)
-    candidate = models.ForeignKey(Candidate)
+    candidate = models.ForeignKey(Candidate, on_delete=models.CASCADE)
     verifications = models.IntegerField(default=0)
     classifiers = models.TextField(help_text='Volunteers usernames who found NEOs', blank=True, null=True)
 
@@ -1247,6 +1421,7 @@ class PanoptesReport(models.Model):
 
     def __str__(self):
         return "Block {} Candidate {} is Subject {}".format(self.block.id, self.candidate.id, self.subject_id)
+
 
 @python_2_unicode_compatible
 class StaticSource(models.Model):

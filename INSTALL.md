@@ -25,7 +25,6 @@ BASE_DIR = os.path.dirname(CURRENT_PATH)
 
 SECRET_KEY = '<50 random characters>'
 
-PREFIX =""
 DEBUG = True
 PRODUCTION = False
 STATIC_ROOT =  '<filesystem path>'
@@ -81,6 +80,13 @@ This can be done with e.g.
 `-v /mnt/docker/neoexchange/ephemerides:/ephemerides:ro`
 on the Docker command line or adding this to the 'Volumes' tab in Rancher when
 upgrading.
+
+For the plotting of the flux standards, a `cdbs/ctiostan/` directory needs to be
+created in the file system pointed at by `DATA_ROOT`. Inside this directory
+should be placed the `f<objectname>.dat` files and the `aaareadme.ctio` file
+from `ftp://ftp.eso.org/pub/stecf/standards/ctiostan/`. The other objects from
+the `hststan`, `okestan` and `wdstan` directories of the FTP site should also be
+included in the `cdbs/ctiostan` directory.
 
 Local Testing
 -------------

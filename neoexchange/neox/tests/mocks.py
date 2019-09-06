@@ -19,12 +19,15 @@ import os
 
 import astropy.units as u
 from django.contrib.auth import authenticate
+import logging
+from astrometrics.sources_subs import parse_filter_file
+from astrometrics.ephem_subs import MPC_site_code_to_domes
 
-from astrometrics.sources_subs import fetch_filter_list
-
+logger = logging.getLogger(__name__)
 
 # Adapted from http://www.ryangallen.com/wall/11/mock-today-django-testing/
 # and changed to datetime and python 2.x
+
 
 class MockDateTimeType(type):
 
@@ -61,6 +64,11 @@ class MockDateTime(datetime, metaclass=MockDateTimeType):
     @classmethod
     def utcnow(cls):
         return cls(cls.year, cls.month, cls.day, cls.hour, cls.minute, cls.second)
+
+
+def mock_fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser"):
+    logger.warning("Page retrieval failed because this is a test and no page was attempted.")
+    return None
 
 
 def mock_check_request_status(tracking_num):
@@ -779,6 +787,18 @@ def mock_archive_frame_header(archive_headers):
         }
     return header
 
+def mock_archive_spectra_header(archive_headers):
+    header = { "data": {
+                    "DATE_OBS": "2019-07-27T15:52:19.512",
+                    "DAY_OBS" : "20190727",
+                    "ENCID" : "clma",
+                    "SITEID" : "coj",
+                    "TELID" : "2m0a",
+                    "OBJECT" : "455432",
+                    "REQNUM" : "1878696"
+                        }
+             }
+    return header
 
 def mock_find_images_for_block(blockid):
     data = ([{'img': '1'}, {'img': '2'}, ], [{'coords': [{'y': 1086.004, 'x': 1278.912}, {'y': 1086.047, 'x': 1278.9821}], 'id': '15'}], 2028, 2028)
@@ -810,9 +830,97 @@ class MockCandidate(object):
 # Submission-related mocks
 
 def mock_fetch_filter_list(site, spec):
-    test_filter_map = os.path.join('astrometrics', 'tests', 'test_camera_mapping.dat')
 
-    return fetch_filter_list(site, spec, test_filter_map)
+    siteid, encid, telid = MPC_site_code_to_domes(site)
+
+    lsc_1m_rsp = {
+                        "count": 1,
+                        "next": 'null',
+                        "previous": 'null',
+                        "results": [
+                            {
+                                "id": 92,
+                                "code": "fa15",
+                                "state": "SCHEDULABLE",
+                                "telescope": "http://configdb.lco.gtn/telescopes/10/",
+                                "science_camera": {
+                                    "id": 93,
+                                    "code": "fa15",
+                                    "camera_type": {
+                                        "id": 3,
+                                        "name": "1.0 meter Sinistro",
+                                        "code": "1m0-SciCam-Sinistro",
+                                    },
+                                    "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,ND,400um-Pinhole,150um-Pinhole",
+                                    "host": "inst.1m0a.doma.lsc.lco.gtn"
+                                },
+                                "__str__": "lsc.doma.1m0a.fa15-ef06"
+                            }
+                        ]
+                    }
+    all_2m_rsp = {
+                        "count": 2,
+                        "next": 'null',
+                        "previous": 'null',
+                        "results": [
+                            {
+                                "id": 40,
+                                "code": "floyds01",
+                                "state": "SCHEDULABLE",
+                                "telescope": "http://configdb.lco.gtn/telescopes/14/",
+                                "science_camera": {
+                                    "id": 17,
+                                    "code": "floyds01",
+                                    "camera_type": {
+                                        "name": "2.0 meter FLOYDS",
+                                        "code": "2m0-FLOYDS-SciCam",
+                                    },
+                                    "filters": "slit_6.0as,slit_1.6as,slit_2.0as,slit_1.2as",
+                                    "host": "floyds.ogg.lco.gtn"
+                                },
+                                "__str__": "ogg.clma.2m0a.floyds01-kb42"
+                            },
+                            {
+                                "id": 7,
+                                "code": "fs01",
+                                "state": "SCHEDULABLE",
+                                "telescope": "http://configdb.lco.gtn/telescopes/3/",
+                                "science_camera": {
+                                    "id": 19,
+                                    "code": "fs01",
+                                    "camera_type": {
+                                        "name": "2.0 meter Spectral",
+                                        "code": "2m0-SciCam-Spectral",
+                                    },
+                                    "filters": "D51,H-Beta,OIII,H-Alpha,Skymapper-VS,solar,Astrodon-UV,I,R,Y,up,air,rp,ip,gp,zs,V,B,200um-Pinhole",
+                                    "host": "fs.coj.lco.gtn"
+                                },
+                                "__str__": "coj.clma.2m0a.fs01-kb34"
+                            }
+                        ]
+                    }
+
+    empty = {
+                        "count": 0,
+                        "next": 'null',
+                        "previous": 'null',
+                        "results": []
+                    }
+
+    if '2m0' in telid.lower():
+        resp = all_2m_rsp
+    elif '1m0' in telid.lower() or '0m4' in telid.lower():
+        resp = lsc_1m_rsp
+    else:
+        resp = empty
+
+    out_data = parse_filter_file(resp, spec)
+    return out_data
+
+
+def mock_fetch_filter_list_no2m(site, spec):
+
+    return []
 
 
 def mock_expand_cadence(user_request):
@@ -933,3 +1041,146 @@ def mock_fetch_sfu(sfu_value=None):
 
 def mock_submit_to_scheduler(elements, params):
     return -42, params
+
+
+def mock_update_elements_with_findorb(source_dir, dest_dir, filename, site_code, start_time):
+
+    if filename.lower() == 'i_am_broken':
+        elements_or_status = 255
+    else:
+        if start_time == datetime(2015, 11, 19):
+            not_seen_td = datetime.utcnow()-datetime(2015,11,19)
+            not_seen = not_seen_td.total_seconds() / 86400.0
+            elements = {
+                            'abs_mag' : 21.91,
+                            'slope' : 0.15,
+                            'active' : True,
+                            'origin' : 'M',
+                            'source_type' : 'U',
+                            'elements_type' : 'MPC_MINOR_PLANET',
+                            'provisional_name' : 'P10pqB2',
+                            'epochofel' : datetime(2015, 11, 20),
+                            'meananom' : 272.51789,
+                            'argofperih' : 339.46072,
+                            'longascnode' : 197.07906,
+                            'orbinc' : 10.74064,
+                            'eccentricity' :  0.3006186,
+                            'meandist' :  1.1899499,
+                            'arc_length' : 22.5/24.0,
+                            'num_obs' : 9,
+                            'not_seen' : not_seen,
+                            'orbit_rms' : 0.10,
+                            'update_time' : datetime.utcnow()
+                        }
+        else:
+            not_seen_td = datetime.utcnow()-datetime(2015,11,18)
+            not_seen = not_seen_td.total_seconds() / 86400.0
+            elements = {
+                            'abs_mag' : 21.91,
+                            'slope' : 0.15,
+                            'active' : True,
+                            'origin' : 'M',
+                            'source_type' : 'U',
+                            'elements_type' : 'MPC_MINOR_PLANET',
+                            'provisional_name' : 'P10pqB2',
+                            'epochofel' : datetime(2015, 11, 18),
+                            'meananom' : 270.89733,
+                            'argofperih' : 339.47051,
+                            'longascnode' : 197.11047,
+                            'orbinc' : 10.74649,
+                            'eccentricity' :  0.3001867,
+                            'meandist' :  1.1896136,
+                            'arc_length' : 22.5/24.0,
+                            'num_obs' : 9,
+                            'not_seen' : not_seen,
+                            'orbit_rms' : 0.10,
+                            'update_time' : datetime.utcnow()
+                        }
+        elements_or_status = elements
+        ephem_filename = os.path.join(dest_dir, 'new.ephem')
+        with open(ephem_filename, 'w') as f:
+            print("#(Z21) Tenerife-LCO Aqawan A #1: P10pqB2", file=f)
+            print("Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  '/hr    PA   \" sig PA", file=f)
+            print("---- -- -- -----  -------------   -----------  ------ ------ -----  --- ------ ------ ---- ---", file=f)
+            print("2015 11 19 00:00  03 41 05.068   -08 33 34.43  .32187 1.2819 152.1 21.1   2.25 219.1  3.16  35", file=f)
+            print("2015 11 19 00:30  03 41 02.195   -08 34 26.80  .32182 1.2818 152.1 21.1   2.25 219.2  3.24  34", file=f)
+            print("2015 11 19 01:00  03 40 59.317   -08 35 19.10  .32176 1.2817 152.1 21.1   2.25 219.2  3.33  33", file=f)
+            print("2015 11 19 01:30  03 40 56.439   -08 36 11.33  .32171 1.2816 152.1 21.1   2.25 219.3  3.42  32", file=f)
+
+    return elements_or_status
+
+
+def mock_update_elements_with_findorb_badrms(source_dir, dest_dir, filename, site_code, start_time):
+
+    not_seen_td = datetime.utcnow()-datetime(2015, 11, 18)
+    not_seen = not_seen_td.total_seconds() / 86400.0
+    elements = {
+                    'abs_mag' : 21.91,
+                    'slope' : 0.15,
+                    'active' : True,
+                    'origin' : 'M',
+                    'source_type' : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'provisional_name' : 'P10pqB2',
+                    'epochofel' : datetime(2015, 11, 18),
+                    'meananom' : 270.89733,
+                    'argofperih' : 339.47051,
+                    'longascnode' : 197.11047,
+                    'orbinc' : 10.74649,
+                    'eccentricity' :  0.3001867,
+                    'meandist' :  1.1896136,
+                    'arc_length' : 22.5/24.0,
+                    'num_obs' : 9,
+                    'not_seen' : not_seen,
+                    'orbit_rms' : 1.0,
+                    'update_time' : datetime.utcnow()
+                }
+    elements_or_status = elements
+
+    ephem_filename = os.path.join(dest_dir, 'new.ephem')
+    with open(ephem_filename, 'w') as f:
+        print("#(Z21) Tenerife-LCO Aqawan A #1: P10pqB2", file=f)
+        print("Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  '/hr    PA   \" sig PA", file=f)
+        print("---- -- -- -----  -------------   -----------  ------ ------ -----  --- ------ ------ ---- ---", file=f)
+        print("2015 11 19 00:00  03 41 05.068   -08 33 34.43  .32187 1.2819 152.1 21.1   2.25 219.1  3.16  35", file=f)
+        print("2015 11 19 00:30  03 41 02.195   -08 34 26.80  .32182 1.2818 152.1 21.1   2.25 219.2  3.24  34", file=f)
+
+    return elements_or_status
+
+
+def mock_update_elements_with_findorb_badepoch(source_dir, dest_dir, filename, site_code, start_time):
+
+    not_seen_td = datetime.utcnow()-datetime(2015, 11, 18)
+    not_seen = not_seen_td.total_seconds() / 86400.0
+    elements = {
+                    'abs_mag' : 21.91,
+                    'slope' : 0.15,
+                    'active' : True,
+                    'origin' : 'M',
+                    'source_type' : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'provisional_name' : 'P10pqB2',
+                    'epochofel' : datetime(2013, 11, 16),
+                    'meananom' : 269.48064,
+                    'argofperih' : 339.46074,
+                    'longascnode' : 197.07906,
+                    'orbinc' : 10.74064,
+                    'eccentricity' :  0.3006183,
+                    'meandist' :  1.1899464,
+                    'arc_length' : 22.5/24.0,
+                    'num_obs' : 9,
+                    'not_seen' : not_seen,
+                    'orbit_rms' : 0.10,
+                    'update_time' : datetime.utcnow()
+                }
+    elements_or_status = elements
+
+    ephem_filename = os.path.join(dest_dir, 'new.ephem')
+    with open(ephem_filename, 'w') as f:
+        print("#(T03) Haleakala-LCO Clamshell #3: P10pqB2", file=f)
+        print("Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  '/hr    PA   \" sig PA", file=f)
+        print("---- -- -- -----  -------------   -----------  ------ ------ -----  --- ------ ------ ---- ---", file=f)
+        print("2015 11 19 00:00  03 41 05.422   -08 33 24.33  .32194 1.2819 152.1 21.1   2.13 214.8  3.45  34", file=f)
+        print("2015 11 19 00:30  03 41 02.956   -08 34 16.84  .32189 1.2818 152.1 21.1   2.14 214.9  3.62  35", file=f)
+
+    return elements_or_status

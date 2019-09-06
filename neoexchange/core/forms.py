@@ -23,13 +23,14 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext_lazy as _
 from astrometrics.sources_subs import fetch_sfu, fetch_filter_list
 from .models import Body, Proposal, Block, StaticSource
+from astrometrics.time_subs import tomorrow
 
 logger = logging.getLogger(__name__)
 
 
 SITES = (('1M0', '------------ Any 1.0m ------------'),
          ('W86', 'LSC 1.0m - W85-87; (CTIO, Chile)'),
-         ('V37', 'ELP 1.0m - V37; (McDonald, Texas)'),
+         ('V37', 'ELP 1.0m - V37,V39; (McDonald, Texas)'),
          ('Q63', 'COJ 1.0m - Q63-64; (Siding Spring, Aust.)'),
          ('K92', 'CPT 1.0m - K91-93; (Sutherland, S. Africa)'),
          ('0M4', '------------ Any 0.4m ------------'),
@@ -105,9 +106,9 @@ class ScheduleCadenceForm(forms.Form):
     proposal_code = forms.ChoiceField(required=True, widget=forms.Select(attrs={'id': 'id_proposal_code_cad', }))
     site_code = forms.ChoiceField(required=True, choices=SITES, widget=forms.Select(attrs={'id': 'id_site_code_cad', }))
     start_time = forms.DateTimeField(input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M'],
-                                     initial=datetime.today(), required=True, error_messages={'required': _(u'UTC start date is required')})
+                                     initial=datetime.today, required=True, error_messages={'required': _(u'UTC start date is required')})
     end_time = forms.DateTimeField(input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M'],
-                                   initial=datetime.today()+timedelta(days=1), required=True, error_messages={'required': _(u'UTC end date is required')})
+                                   initial=tomorrow, required=True, error_messages={'required': _(u'UTC end date is required')})
     period = forms.FloatField(initial=2.0, required=True, widget=forms.TextInput(attrs={'size': '10'}), error_messages={'required': _(u'Period is required')})
     jitter = forms.FloatField(initial=0.25, required=True, widget=forms.TextInput(attrs={'size': '10'}), error_messages={'required': _(u'Jitter is required')})
 
@@ -167,6 +168,7 @@ class ScheduleBlockForm(forms.Form):
     instrument_code = forms.CharField(max_length=10, widget=forms.HiddenInput(), required=False)
     solar_analog = forms.BooleanField(initial=True, widget=forms.HiddenInput(), required=False)
     calibsource_id = forms.IntegerField(widget=forms.HiddenInput(), required=False)
+    calibsource_exptime = forms.IntegerField(widget=forms.NumberInput(attrs={'size': '5'}), required=False)
     max_airmass = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     ipp_value = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     min_lunar_dist = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
@@ -294,6 +296,13 @@ class ScheduleSpectraForm(forms.Form):
         if start < datetime.utcnow().date():
             raise forms.ValidationError("Window cannot start in the past")
         return start
+
+    def clean(self):
+        cleaned_data = super(ScheduleSpectraForm, self).clean()
+        site = self.cleaned_data['instrument_code']
+        spectra = self.cleaned_data['spectroscopy']
+        if not fetch_filter_list(site[0:3], spectra):
+            raise forms.ValidationError("This Site/Instrument combination is not currently available.")
 
     def __init__(self, *args, **kwargs):
         self.proposal_code = kwargs.pop('proposal_code', None)

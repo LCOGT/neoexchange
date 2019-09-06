@@ -70,11 +70,10 @@ class TestBlockStatus(TestCase):
         block_params = { 'telclass' : '0m4',
                          'site'     : 'elp',
                          'body'     : self.body,
-                         'proposal' : self.neo_proposal,
                          'superblock'  : self.super_block,
                          'block_start' : '2015-04-20 13:00:00',
                          'block_end'   : '2015-04-21 03:00:00',
-                         'tracking_number' : '00003',
+                         'request_number' : '01003',
                          'num_exposures' : 5,
                          'exp_length' : 42.0,
                          'active'   : True,
@@ -87,10 +86,9 @@ class TestBlockStatus(TestCase):
                          'site'     : 'elp',
                          'body'     : self.body,
                          'superblock'  : self.super_block,
-                         'proposal' : self.neo_proposal,
                          'block_start' : '2015-04-20 13:00:00',
                          'block_end'   : '2015-04-21 03:00:00',
-                         'tracking_number' : '1430663',
+                         'request_number' : '1430663',
                          'num_exposures' : 5,
                          'exp_length' : 42.0,
                          'active'   : True,
@@ -103,10 +101,9 @@ class TestBlockStatus(TestCase):
                          'site'     : 'elp',
                          'body'     : self.body,
                          'superblock'  : self.super_block,
-                         'proposal' : self.neo_proposal,
                          'block_start' : '2015-04-20 13:00:00',
                          'block_end'   : '2015-04-21 03:00:00',
-                         'tracking_number' : '00015',
+                         'request_number' : '00015',
                          'num_exposures' : 5,
                          'exp_length' : 42.0,
                          'active'   : True,
@@ -119,10 +116,9 @@ class TestBlockStatus(TestCase):
                          'site'     : 'elp',
                          'body'     : self.body,
                          'superblock'  : self.super_block,
-                         'proposal' : self.neo_proposal,
                          'block_start' : '2015-04-20 13:00:00',
                          'block_end'   : '2015-04-21 03:00:00',
-                         'tracking_number' : '00009',
+                         'request_number' : '00009',
                          'num_exposures' : 5,
                          'exp_length' : 42.0,
                          'active'   : True,
@@ -147,10 +143,9 @@ class TestBlockStatus(TestCase):
                                'site'     : 'ogg',
                                'body'     : self.body,
                                'superblock'  : self.spec_super_block,
-                               'proposal' : self.neo_proposal,
                                'block_start' : '2015-04-20 13:00:00',
                                'block_end'   : '2015-04-21 03:00:00',
-                               'tracking_number' : '1391169',
+                               'request_number' : '1391169',
                                'num_exposures' : 1,
                                'exp_length' : 1800.0,
                                'active'   : True,
@@ -541,7 +536,7 @@ class TestBlockStatus(TestCase):
                            u'created': u'2018-02-23T23:56:01.697048Z',
                            u'duration': 9372,
                            u'fail_count': 0,
-                           u'id': 3,
+                           u'id': 1003,
                            u'location': {u'site': u'elp', u'telescope_class': u'0m4'},
                            u'modified': u'2018-02-24T11:46:40.239116Z',
                            u'molecules': [{u'acquire_mode': u'OFF',
@@ -831,7 +826,7 @@ class TestBlockStatus(TestCase):
     @patch('core.frames.check_request_status', side_effect=mock_check_result_status)
     @patch('core.frames.check_for_archive_images', side_effect=mock_check_for_archive_images)
     def test_correct_frames_per_block(self, check_request_status, check_for_archive_images, lco_api_call):
-        expected = ['1test_3.fits', '2test_3.fits', '3test_3.fits']
+        expected = ['1test_1003.fits', '2test_1003.fits', '3test_1003.fits']
         blocks = Block.objects.filter(active=True)
         for block in blocks:
             block_status(block.id)
@@ -903,11 +898,10 @@ class TestFrameParamsFromHeader(TestCase):
         block_params = { 'telclass' : '0m4',
                          'site'     : 'elp',
                          'body'     : self.body,
-                         'proposal' : self.neo_proposal,
                          'superblock'  : self.super_block,
                          'block_start' : '2015-04-20 13:00:00',
                          'block_end'   : '2015-04-21 03:00:00',
-                         'tracking_number' : '00003',
+                         'request_number' : '00103',
                          'num_exposures' : 5,
                          'exp_length' : 42.0,
                          'active'   : True,
@@ -919,15 +913,16 @@ class TestFrameParamsFromHeader(TestCase):
         self.maxDiff = None
 
     def test_expose_red_good_rlevel(self):
-        expected_params = {  'midpoint' : datetime(2015, 4, 20, 16, 00, 14, int(0.409*1e6)),
+        expected_params = {  'midpoint' : datetime(2015, 4, 20, 16, 00, 14, int(0.4105*1e6)),
                              'sitecode' : 'V38',
                              'filter'   : 'w',
                              'frametype': 91,
                              'block'    : self.test_block,
                              'instrument': 'kb92',
                              'filename'  : 'elp0m411-kb92-20150420-0236-e91.fits',
-                             'exptime'   : 20.0,
-                             'wcs'       : WCS() }
+                             'exptime'   : 20.003,
+                             'wcs'       : WCS()
+                             }
 
         header_params = { 'SITEID'   : 'elp',
                           'ENCID'    : 'aqwa',
@@ -939,11 +934,11 @@ class TestFrameParamsFromHeader(TestCase):
                           'OBSTYPE'  : 'EXPOSE',
                           'ORIGNAME' : 'elp0m411-kb92-20150420-0236-e00',
                           'RLEVEL'   : 91,
-                          'L1FWHM'   : 1.42
+                          'L1FWHM'   : 1.42,
+                          'UTSTOP'   : '16:00:24.412'
                         }
 
         frame_params = frame_params_from_header(header_params, self.test_block)
-
         for key in expected_params:
             if key != 'wcs':
                 self.assertEqual(expected_params[key], frame_params[key], "Comparison failed on " + key)
@@ -957,7 +952,8 @@ class TestFrameParamsFromHeader(TestCase):
                              'instrument': 'kb92',
                              'filename'  : 'elp0m411-kb92-20150420-0236-e91.fits',
                              'exptime'   : 20.0,
-                             'wcs'       : WCS() }
+                             'wcs'       : WCS()
+                             }
 
         header_params = { 'SITEID'   : 'elp',
                           'ENCID'    : 'aqwa',

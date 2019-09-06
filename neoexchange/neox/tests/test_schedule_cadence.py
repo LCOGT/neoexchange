@@ -22,7 +22,7 @@ from neox.tests.mocks import MockDateTime, mock_lco_authenticate, mock_fetch_fil
 
 from datetime import datetime
 from django.test.client import Client
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.contrib.auth.models import User
 from core.models import Body, Proposal
 from neox.auth_backend import update_proposal_permissions
@@ -150,8 +150,8 @@ class ScheduleCadence(FunctionalTest):
 
         # He fixes his mistake and enters the correct details
         site_choices = Select(self.browser.find_element_by_id('id_site_code_cad'))
-        self.assertIn('ELP 1.0m - V37; (McDonald, Texas)', [option.text for option in site_choices.options])
-        site_choices.select_by_visible_text('ELP 1.0m - V37; (McDonald, Texas)')
+        self.assertIn('ELP 1.0m - V37,V39; (McDonald, Texas)', [option.text for option in site_choices.options])
+        site_choices.select_by_visible_text('ELP 1.0m - V37,V39; (McDonald, Texas)')
 
         MockDateTime.change_datetime(2015, 4, 20, 1, 30, 00)
         datebox = self.get_item_input_box('id_start_time')
@@ -188,7 +188,7 @@ class ScheduleCadence(FunctionalTest):
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
-        self.assertIn('13', num_exp)
+        self.assertIn('14', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
         self.assertIn('55.0', exp_length)
         jitter = self.browser.find_element_by_id('id_jitter').get_attribute('value')
@@ -266,9 +266,9 @@ class ScheduleCadence(FunctionalTest):
         proposal_choices.select_by_visible_text(self.neo_proposal.title)
 
         site_choices = Select(self.browser.find_element_by_id('id_site_code_cad'))
-        self.assertIn('ELP 1.0m - V37; (McDonald, Texas)', [option.text for option in site_choices.options])
+        self.assertIn('ELP 1.0m - V37,V39; (McDonald, Texas)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('ELP 1.0m - V37; (McDonald, Texas)')
+        site_choices.select_by_visible_text('ELP 1.0m - V37,V39; (McDonald, Texas)')
 
         MockDateTime.change_datetime(2015, 4, 20, 1, 30, 00)
         datebox = self.get_item_input_box('id_start_time')
@@ -304,7 +304,7 @@ class ScheduleCadence(FunctionalTest):
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
-        self.assertIn('13', num_exp)
+        self.assertIn('14', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
         self.assertIn('55.0', exp_length)
         jitter = self.browser.find_element_by_id('id_jitter').get_attribute('value')
@@ -386,9 +386,9 @@ class ScheduleCadence(FunctionalTest):
         proposal_choices.select_by_visible_text(self.neo_proposal.title)
 
         site_choices = Select(self.browser.find_element_by_id('id_site_code_cad'))
-        self.assertIn('ELP 1.0m - V37; (McDonald, Texas)', [option.text for option in site_choices.options])
+        self.assertIn('ELP 1.0m - V37,V39; (McDonald, Texas)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('ELP 1.0m - V37; (McDonald, Texas)')
+        site_choices.select_by_visible_text('ELP 1.0m - V37,V39; (McDonald, Texas)')
 
         MockDateTime.change_datetime(2015, 4, 20, 1, 30, 00)
         datebox = self.get_item_input_box('id_start_time')
@@ -425,7 +425,7 @@ class ScheduleCadence(FunctionalTest):
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
-        self.assertIn('13', num_exp)
+        self.assertIn('14', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
         self.assertIn('55.0', exp_length)
 

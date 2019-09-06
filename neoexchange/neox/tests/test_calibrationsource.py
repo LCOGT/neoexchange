@@ -17,7 +17,7 @@ import os
 from math import radians
 
 from .base import FunctionalTest
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.contrib.auth.models import User
 from bs4 import BeautifulSoup
 # from selenium import webdriver
@@ -36,18 +36,6 @@ from core.models import Proposal, StaticSource
 class TestCalibrationSources(FunctionalTest):
 
     def setUp(self):
-        test_fh = open(os.path.join('astrometrics', 'tests', 'flux_standards_lis.html'), 'r')
-        test_flux_page = BeautifulSoup(test_fh, "html.parser")
-        test_fh.close()
-        self.flux_standards = fetch_flux_standards(test_flux_page)
-        num_created = create_calib_sources(self.flux_standards)
-        solar_standards = { 'Landolt SA98-978' : { 'ra_rad' : radians(102.8916666666666),
-                                                   'dec_rad' : radians(-0.1925),
-                                                   'mag' : 10.5,
-                                                   'spectral_type' : 'G2V'},
-                          }
-        num_created = create_calib_sources(solar_standards, StaticSource.SOLAR_STANDARD)
-
         # Create a user to test login
         self.insert_test_proposals()
         self.username = 'bart'
@@ -62,6 +50,19 @@ class TestCalibrationSources(FunctionalTest):
         update_proposal_permissions(self.bart, [{'code': self.neo_proposal.code}])
 
         super(TestCalibrationSources, self).setUp()
+
+    def add_new_calib_sources(self):
+        test_fh = open(os.path.join('astrometrics', 'tests', 'flux_standards_lis.html'), 'r')
+        test_flux_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+        self.flux_standards = fetch_flux_standards(test_flux_page)
+        num_created = create_calib_sources(self.flux_standards)
+        solar_standards = {'Landolt SA98-978': {'ra_rad': radians(102.8916666666666),
+                                                'dec_rad': radians(-0.1925),
+                                                'mag': 10.5,
+                                                'spectral_type': 'G2V'},
+                           }
+        num_created = create_calib_sources(solar_standards, StaticSource.SOLAR_STANDARD)
 
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def login(self):
@@ -90,6 +91,7 @@ class TestCalibrationSources(FunctionalTest):
 
     @patch('core.views.datetime', MockDateTime)
     def test_can_view_calibsources(self):
+        self.add_new_calib_sources()
         MockDateTime.change_datetime(2018, 5, 22, 5, 0, 0)
 
         # A new user, Daniel, goes to a hidden calibration page on the site
@@ -129,6 +131,7 @@ class TestCalibrationSources(FunctionalTest):
     @patch('core.forms.datetime', MockDateTime)
     @patch('core.views.submit_block_to_scheduler', mock_submit_to_scheduler)
     def test_can_schedule_calibsource(self):
+        self.add_new_calib_sources()
         self.test_login()
         MockDateTime.change_datetime(2018, 5, 22, 5, 0, 0)
 
@@ -194,6 +197,7 @@ class TestCalibrationSources(FunctionalTest):
     @patch('core.forms.datetime', MockDateTime)
     @patch('core.views.submit_block_to_scheduler', mock_submit_to_scheduler)
     def test_can_schedule_calibsource_fts(self):
+        self.add_new_calib_sources()
         self.test_login()
         MockDateTime.change_datetime(2018, 5, 22, 5, 0, 0)
 
@@ -260,6 +264,7 @@ class TestCalibrationSources(FunctionalTest):
     @patch('core.forms.datetime', MockDateTime)
     @patch('core.views.submit_block_to_scheduler', mock_submit_to_scheduler)
     def test_can_schedule_specific_calibsource(self):
+        self.add_new_calib_sources()
         self.test_login()
         MockDateTime.change_datetime(2018, 5, 22, 5, 0, 0)
 
@@ -359,3 +364,95 @@ class TestCalibrationSources(FunctionalTest):
         self.assertEqual(actual_url, target_url)
 
         # Satisfied, he goes to find a currywurst
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_can_view_calibsource_spectra(self):
+        self.add_new_calib_sources()
+        MockDateTime.change_datetime(2018, 5, 22, 5, 0, 0)
+
+        # A new user, Daniel, goes to a hidden calibration page on the site
+        target_url = "{0}{1}".format(self.live_server_url, reverse('calibsource-view'))
+        self.browser.get(target_url)
+        actual_url = self.browser.current_url
+        self.assertEqual(actual_url, target_url)
+
+        # He notices the page title has the name of the site and the header
+        # mentions calibrations
+        self.assertIn('Calibration Sources | LCO NEOx', self.browser.title)
+        header_text = self.browser.find_element_by_class_name('headingleft').text
+        self.assertIn('Calibration Sources', header_text)
+
+        # He decides he would like to schedule a hot spectrophotometric standard
+        test_line = 'HR9087 00:01:49.42 -03:01:39.0 5.12 B7III Spectrophotometric standard'
+        self.check_for_row_in_table('id_calibsources', test_line)
+
+        # He picks HR9087 as being a suitably hot star
+        link = self.browser.find_element_by_link_text('HR9087')
+        target = StaticSource.objects.get(name='HR9087')
+        target_url = "{0}{1}".format(self.live_server_url, reverse('calibsource' , kwargs={'pk': target.pk}))
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
+
+        # He clicks the link to check the detail page to see if the spectrum
+        # is suitable
+        with self.wait_for_page_load(timeout=10):
+            link.click()
+        new_url = self.browser.current_url
+        self.assertEqual(new_url, actual_url)
+
+        # He sees the detail page for his standard
+        table_text = self.browser.find_element_by_id('id_staticsource_detail').text
+        self.assertIn('00:01:49.42', table_text)
+        self.assertIn('-03:01:39.0', table_text)
+        self.assertIn('B7III', table_text)
+        self.assertIn('Spectrophotometric standard', self.browser.find_element_by_class_name("section-title").text)
+
+        img_src = self.browser.find_element_by_id("id_spectraplot").get_attribute("src")
+        target_url = "{0}{1}".format(self.live_server_url, reverse('display_calibspec' , kwargs={'pk': target.pk}))
+        self.assertEqual(target_url, img_src)
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_can_view_best_calibsources(self):
+        self.add_new_calib_sources()
+        MockDateTime.change_datetime(2019, 10, 5, 22, 0, 0)
+
+        # A new user, Curtis, goes to a calibration page on the site
+        target_url = "{0}{1}".format(self.live_server_url, reverse('calibsource-view'))
+        self.browser.get(target_url)
+        actual_url = self.browser.current_url
+        self.assertEqual(actual_url, target_url)
+
+        # He notices the page title has the name of the site and the header
+        # mentions calibrations
+        self.assertIn('Calibration Sources | LCO NEOx', self.browser.title)
+        header_text = self.browser.find_element_by_class_name('headingleft').text
+        self.assertIn('Calibration Sources', header_text)
+
+        anti_solar_element = self.browser.find_element_by_id("anti_solar_point")
+        anti_solar_point = "Current Anti-Solar Point: RA = 00:45:30.55 / Dec = +04:53:15.7"
+        self.assertEqual(anti_solar_point, anti_solar_element.text)
+
+        # He decides he would like to find a calibration standard to schedule
+        # which will be up all night.
+        # He sees a Show Best Standards button
+        link = self.browser.find_element_by_id('show-best-standards')
+        target_url = "{0}{1}".format(self.live_server_url, reverse('beststandards-view'))
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
+
+        with self.wait_for_page_load(timeout=10):
+            link.click()
+
+        # He notices the page title has best suggested calibraions and the header
+        # mentions calibrations for the current date
+        self.assertIn('Best Calibration Sources | LCO NEOx', self.browser.title)
+        header_text = self.browser.find_element_by_id('night_banner').text
+        self.assertIn('Best Calibration Sources for Oct. 5, 2019', header_text)
+
+        # He checks there are some suitable targets for FTS
+        test_lines = ['HR9087 00:01:49.42 -03:01:39.0 5.12 B7III',
+                      'CD-34d241 00:41:46.92 -33:39:08.5 11.23 F']
+        for test_line in test_lines:
+            self.check_for_row_in_table('id_fts_calibsources', test_line)
+
+        # Satisified, he cycles off into the sunset

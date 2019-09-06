@@ -23,7 +23,7 @@ from neox.tests.mocks import MockDateTime
 # from datetime import datetime as real_datetime
 from datetime import datetime
 from core.models import Body
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 
 
 class NewVisitorTest(FunctionalTest):
@@ -103,7 +103,7 @@ class NewVisitorTest(FunctionalTest):
         self.check_for_header_in_table('id_neo_targets',
             'Rank Target Name Type R.A. Dec. Mag. Num.Obs. Arc Not Seen (days) NEOCP Score Updated?')
         # Position below computed for 2015-07-01 17:00:00
-        testlines = [u'1 N999r0q Candidate 23 43 14.40 +19 59 08.2 20.7 17 3.00 0.420 90',
+        testlines = [u'1 N999r0q Candidate 23 43 14.40 +19 59 08.2 20.7 17 3.12 0.423 90',
                     u'2 1995 YR1 NEO 23 43 14.40 +19 59 08.2 20.7 35 42.00 2.220 None']
         self.check_for_row_in_table('id_neo_targets', testlines[0])
         self.check_for_row_in_table('id_neo_targets', testlines[1])

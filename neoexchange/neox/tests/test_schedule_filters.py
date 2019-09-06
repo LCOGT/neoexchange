@@ -24,7 +24,7 @@ from unittest import skipIf
 
 from datetime import datetime
 from django.test.client import Client
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.contrib.auth.models import User
 from core.models import Body, Proposal
 
@@ -104,9 +104,9 @@ class ScheduleObservations(FunctionalTest):
         proposal_choices.select_by_visible_text(self.neo_proposal.title)
 
         site_choices = Select(self.browser.find_element_by_id('id_site_code'))
-        self.assertIn('ELP 1.0m - V37; (McDonald, Texas)', [option.text for option in site_choices.options])
+        self.assertIn('ELP 1.0m - V37,V39; (McDonald, Texas)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('ELP 1.0m - V37; (McDonald, Texas)')
+        site_choices.select_by_visible_text('ELP 1.0m - V37,V39; (McDonald, Texas)')
 
         MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
@@ -124,7 +124,7 @@ class ScheduleObservations(FunctionalTest):
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
-        self.assertIn('12', num_exp)
+        self.assertIn('14', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
         self.assertIn('60.0', exp_length)
 
@@ -137,7 +137,7 @@ class ScheduleObservations(FunctionalTest):
         self.assertIn('w', filter_pattern)
         
         # There is a help option listing the proper input format and available filters
-        expected_filters = 'air, ND, U, B, V, R, I, B*ND, V*ND, R*ND, I*ND, up, gp, rp, ip, zs, Y, w'
+        expected_filters = 'air, ND, U, B, V, R, I, up, gp, rp, ip, zs, Y, w'
         filter_help = self.browser.find_element_by_id('id_filter_pattern_row').find_element_by_class_name('kv-key').get_attribute("name")
         self.assertEqual(expected_filters, filter_help)
 
@@ -146,7 +146,7 @@ class ScheduleObservations(FunctionalTest):
             pattern_iterations = self.browser.find_element_by_id('id_pattern_iterations_row').find_element_by_class_name('kv-value').text
 
         # Updating filter pattern updates the number of iterations
-        iterations_expected = u'3.33'
+        iterations_expected = u'3.67'
         filter_pattern_box = self.browser.find_element_by_id('id_filter_pattern')
         filter_pattern_box.clear()
         filter_pattern_box.send_keys('V,I,R')
@@ -156,7 +156,7 @@ class ScheduleObservations(FunctionalTest):
         self.assertEqual(iterations_expected, pattern_iterations)
 
         # updating the slot length increases the number of iterations
-        iterations_expected = u'17.0'
+        iterations_expected = u'18.67'
         slot_length_box = self.browser.find_element_by_id('id_slot_length')
         slot_length_box.clear()
         slot_length_box.send_keys('102')

@@ -23,6 +23,7 @@ from math import degrees
 
 from django.test import TestCase
 from django.forms.models import model_to_dict
+from django.conf import settings
 from bs4 import BeautifulSoup
 from mock import patch
 from astropy.io import fits
@@ -31,9 +32,12 @@ from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check
     mock_check_request_status_null, mock_check_request_status_notfound, \
     mock_check_for_images_no_millisecs, \
     mock_check_for_images_bad_date, mock_ingest_frames, mock_archive_frame_header, \
-    mock_odin_login, mock_run_sextractor_make_catalog, mock_fetch_filter_list
+    mock_archive_spectra_header, \
+    mock_odin_login, mock_run_sextractor_make_catalog, mock_fetch_filter_list, \
+    mock_update_elements_with_findorb, mock_update_elements_with_findorb_badrms, \
+    mock_update_elements_with_findorb_badepoch
 
-from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
+from astrometrics.ephem_subs import compute_ephem, determine_darkness_times
 from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs, \
     fetch_flux_standards, read_solar_standards
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header
@@ -50,7 +54,6 @@ import logging
 logger = logging.getLogger(__name__)
 # Disable anything below CRITICAL level
 logging.disable(logging.CRITICAL)
-
 
 class TestClean_NEOCP_Object(TestCase):
 
@@ -72,7 +75,8 @@ class TestClean_NEOCP_Object(TestCase):
                               'elements_type': 'MPC_MINOR_PLANET',
                               'origin'      : 'M',
                               'source_type' : 'U',
-                              'active'      : True
+                              'active'      : True,
+                              'orbit_rms'   : 0.21
                             }
         elements = clean_NEOCP_object(obs_page)
         for element in expected_elements:
@@ -97,7 +101,8 @@ class TestClean_NEOCP_Object(TestCase):
                               'elements_type': 'MPC_MINOR_PLANET',
                               'origin'      : 'M',
                               'source_type' : 'U',
-                              'active'      : True
+                              'active'      : True,
+                              'orbit_rms'   : 0.34
                             }
         elements = clean_NEOCP_object(obs_page)
         for element in expected_elements:
@@ -133,7 +138,8 @@ class TestClean_NEOCP_Object(TestCase):
                               'source_type' : 'U',
                               'active'      : True,
                               'arc_length'  : 10.4/1440.0,
-                              'not_seen'    : 1.5
+                              'not_seen'    : 1.5,
+                              'orbit_rms'   : 0.08
                             }
         elements = clean_NEOCP_object(obs_page)
         for element in expected_elements:
@@ -162,7 +168,8 @@ class TestClean_NEOCP_Object(TestCase):
                               'source_type' : 'U',
                               'active'      : True,
                               'arc_length'  : 3.0,
-                              'not_seen'    : 12.25
+                              'not_seen'    : 12.25,
+                              'orbit_rms'   : 0.14
                             }
         elements = clean_NEOCP_object(obs_page)
         for element in expected_elements:
@@ -191,7 +198,8 @@ class TestClean_NEOCP_Object(TestCase):
                               'source_type' : 'U',
                               'active'      : True,
                               'arc_length'  : 87/1440.0,
-                              'not_seen'    :  3.25
+                              'not_seen'    :  3.25,
+                              'orbit_rms'   : 1.21
                             }
         elements = clean_NEOCP_object(obs_page)
         for element in expected_elements:
@@ -220,7 +228,8 @@ class TestClean_NEOCP_Object(TestCase):
                               'source_type' : 'U',
                               'active'      : True,
                               'arc_length'  : 87/24.0,
-                              'not_seen'    :  3.25
+                              'not_seen'    :  3.25,
+                              'orbit_rms'   : 1.21
                             }
         elements = clean_NEOCP_object(obs_page)
         for element in expected_elements:
@@ -250,7 +259,8 @@ class TestClean_NEOCP_Object(TestCase):
                               'active'      : True,
                               'num_obs'     : 185,
                               'arc_length'  : 1826.0,
-                              'not_seen'    : 90.25
+                              'not_seen'    : 90.25,
+                              'orbit_rms'   : 0.37
                             }
         elements = clean_NEOCP_object(obs_page)
         for element in expected_elements:
@@ -280,7 +290,8 @@ class TestClean_NEOCP_Object(TestCase):
                               'active'      : True,
                               'num_obs'     : 339,
                               'arc_length'  : 1826.0,
-                              'not_seen'    : 79.25
+                              'not_seen'    : 79.25,
+                              'orbit_rms'   : 0.33
                             }
         elements = clean_NEOCP_object(obs_page)
         for element in expected_elements:
@@ -311,6 +322,7 @@ class TestClean_NEOCP_Object(TestCase):
                               'active'      : True,
                               'arc_length'  : 3.0,
                               'not_seen'    : 11.75,
+                              'orbit_rms'   : 0.09
                             }
         elements = clean_NEOCP_object(obs_page_list)
         for element in expected_elements:
@@ -557,28 +569,46 @@ class TestCheck_for_block(TestCase):
         self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
 
         # Create test blocks
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'CPT',
+        sblock_params = {
                          'body'     : self.body_with_provname,
                          'proposal' : self.neo_proposal,
                          'groupid'  : self.body_with_provname.current_name() + '_CPT-20150420',
                          'block_start' : '2015-04-20 13:00:00',
                          'block_end'   : '2015-04-21 03:00:00',
                          'tracking_number' : '00042',
+                         'active'   : True
+                       }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'CPT',
+                         'body'     : self.body_with_provname,
+                         'superblock' : self.test_sblock,
+                         'block_start' : '2015-04-20 13:00:00',
+                         'block_end'   : '2015-04-21 03:00:00',
+                         'request_number' : '10042',
                          'num_exposures' : 5,
                          'exp_length' : 42.0,
                          'active'   : True
                        }
         self.test_block = Block.objects.create(**block_params)
 
-        block_params2 = { 'telclass' : '1m0',
-                         'site'     : 'CPT',
+        sblock_params2 = {
                          'body'     : self.body_with_provname,
                          'proposal' : self.neo_proposal,
                          'groupid'  : self.body_with_provname.current_name() + '_CPT-20150420',
                          'block_start' : '2015-04-20 03:00:00',
                          'block_end'   : '2015-04-20 13:00:00',
                          'tracking_number' : '00043',
+                         'active'   : False,
+                       }
+        self.test_sblock2 = SuperBlock.objects.create(**sblock_params2)
+        block_params2 = { 'telclass' : '1m0',
+                         'site'     : 'CPT',
+                         'body'     : self.body_with_provname,
+                         'superblock' : self.test_sblock2,
+                         'block_start' : '2015-04-20 03:00:00',
+                         'block_end'   : '2015-04-20 13:00:00',
+                         'request_number' : '10043',
                          'num_exposures' : 7,
                          'exp_length' : 30.0,
                          'active'   : False,
@@ -587,8 +617,7 @@ class TestCheck_for_block(TestCase):
                        }
         self.test_block2 = Block.objects.create(**block_params2)
 
-        block_params3 = { 'telclass' : '1m0',
-                         'site'     : 'LSC',
+        sblock_params3 = {
                          'body'     : self.body_with_provname,
                          'proposal' : self.neo_proposal,
                          'groupid'  : self.body_with_provname.current_name() + \
@@ -596,6 +625,16 @@ class TestCheck_for_block(TestCase):
                          'block_start' : '2015-04-21 23:00:00',
                          'block_end'   : '2015-04-22 03:00:00',
                          'tracking_number' : '00044',
+                         'active'   : True,
+                       }
+        self.test_sblock3 = SuperBlock.objects.create(**sblock_params3)
+        block_params3 = { 'telclass' : '1m0',
+                         'site'     : 'LSC',
+                         'body'     : self.body_with_provname,
+                         'superblock' : self.test_sblock3,
+                         'block_start' : '2015-04-21 23:00:00',
+                         'block_end'   : '2015-04-22 03:00:00',
+                         'request_number' : '10044',
                          'num_exposures' : 7,
                          'exp_length' : 30.0,
                          'active'   : True,
@@ -604,8 +643,7 @@ class TestCheck_for_block(TestCase):
                        }
         self.test_block3 = Block.objects.create(**block_params3)
 
-        block_params4 = { 'telclass' : '1m0',
-                         'site'     : 'LSC',
+        sblock_params4 = {
                          'body'     : self.body_no_provname1,
                          'proposal' : self.neo_proposal,
                          'groupid'  : self.body_no_provname1.current_name() + \
@@ -613,6 +651,16 @@ class TestCheck_for_block(TestCase):
                          'block_start' : '2015-04-21 23:00:00',
                          'block_end'   : '2015-04-22 03:00:00',
                          'tracking_number' : '00045',
+                         'active'   : True,
+                       }
+        self.test_sblock4 = SuperBlock.objects.create(**sblock_params4)
+        block_params4 = { 'telclass' : '1m0',
+                         'site'     : 'LSC',
+                         'body'     : self.body_no_provname1,
+                         'superblock' : self.test_sblock4,
+                         'block_start' : '2015-04-21 23:00:00',
+                         'block_end'   : '2015-04-22 03:00:00',
+                         'request_number' : '10045',
                          'num_exposures' : 7,
                          'exp_length' : 30.0,
                          'active'   : True,
@@ -621,8 +669,7 @@ class TestCheck_for_block(TestCase):
                        }
         self.test_block4 = Block.objects.create(**block_params4)
 
-        block_params5 = { 'telclass' : '1m0',
-                         'site'     : 'ELP',
+        sblock_params5 = {
                          'body'     : self.body_no_provname2,
                          'proposal' : self.neo_proposal,
                          'groupid'  : self.body_no_provname2.current_name() + \
@@ -630,6 +677,16 @@ class TestCheck_for_block(TestCase):
                          'block_start' : '2014-11-21 03:00:00',
                          'block_end'   : '2014-11-21 13:00:00',
                          'tracking_number' : '00006',
+                         'active'   : True,
+                       }
+        self.test_sblock5 = SuperBlock.objects.create(**sblock_params5)
+        block_params5 = { 'telclass' : '1m0',
+                         'site'     : 'ELP',
+                         'body'     : self.body_no_provname2,
+                         'superblock' : self.test_sblock5,
+                         'block_start' : '2014-11-21 03:00:00',
+                         'block_end'   : '2014-11-21 13:00:00',
+                         'request_number' : '10006',
                          'num_exposures' : 77,
                          'exp_length' : 30.0,
                          'active'   : True,
@@ -638,8 +695,7 @@ class TestCheck_for_block(TestCase):
                        }
         self.test_block5 = Block.objects.create(**block_params5)
 
-        block_params6 = { 'telclass' : '1m0',
-                         'site'     : 'ELP',
+        sblock_params6 = {
                          'body'     : self.body_no_provname2,
                          'proposal' : self.neo_proposal,
                          'groupid'  : self.body_no_provname2.current_name() + \
@@ -647,6 +703,16 @@ class TestCheck_for_block(TestCase):
                          'block_start' : '2014-11-21 03:00:00',
                          'block_end'   : '2014-11-21 13:00:00',
                          'tracking_number' : '00007',
+                         'active'   : True,
+                       }
+        self.test_sblock6 = SuperBlock.objects.create(**sblock_params6)
+        block_params6 = { 'telclass' : '1m0',
+                         'site'     : 'ELP',
+                         'body'     : self.body_no_provname2,
+                         'superblock' : self.test_sblock6,
+                         'block_start' : '2014-11-21 03:00:00',
+                         'block_end'   : '2014-11-21 13:00:00',
+                         'request_number' : '10007',
                          'num_exposures' : 7,
                          'exp_length' : 30.0,
                          'active'   : True,
@@ -655,21 +721,30 @@ class TestCheck_for_block(TestCase):
                        }
         self.test_block6 = Block.objects.create(**block_params6)
 
-        block_params7 = { 'telclass' : '1m0',
-                         'site'     : 'CPT',
+        sblock_params7 = {
                          'body'     : self.body_with_uppername,
                          'proposal' : self.neo_proposal,
                          'groupid'  : self.body_with_uppername.current_name() + '_CPT-20150420',
                          'block_start' : '2015-04-20 03:00:00',
                          'block_end'   : '2015-04-20 13:00:00',
                          'tracking_number' : '00069',
+                         'active'   : False,
+                       }
+        self.test_sblock7 = SuperBlock.objects.create(**sblock_params7)
+        block_params7 = { 'telclass' : '1m0',
+                         'site'     : 'CPT',
+                         'body'     : self.body_with_uppername,
+                         'superblock' : self.test_sblock7,
+                         'block_start' : '2015-04-20 03:00:00',
+                         'block_end'   : '2015-04-20 13:00:00',
+                         'request_number' : '10069',
                          'num_exposures' : 5,
                          'exp_length' : 130.0,
                          'active'   : False,
                          'num_observed' : 1,
                          'reported' : True
                        }
-        self.test_block2 = Block.objects.create(**block_params2)
+        self.test_block7 = Block.objects.create(**block_params7)
 
     def test_db_storage(self):
         expected_body_count = 5  # Pew, pew, bang, bang...
@@ -898,7 +973,7 @@ class TestRecordBlock(TestCase):
                               'instrument_code': 'E10-FLOYDS',
                               'observatory': '',
                               'pondtelescope': '2m0',
-                              'proposal_id': 'LCOEngineering',
+                              'proposal_id': 'LCO2019A-001',
                               'request_numbers': {1450339: 'NON_SIDEREAL'},
                               'request_windows': [[{'end': '2018-03-16T18:30:00',
                                  'start': '2018-03-16T11:20:00'}]],
@@ -921,6 +996,10 @@ class TestRecordBlock(TestCase):
 
         proposal_params = { 'code' : self.spectro_params['proposal_id'], }
         self.proposal = Proposal.objects.create(**proposal_params)
+        # Create Time-Critical version of proposal
+        proposal_params = { 'code' : self.spectro_params['proposal_id'] + 'b',
+                            'time_critical' : True}
+        self.proposal_tc = Proposal.objects.create(**proposal_params)
 
         self.imaging_tracknum = '576013'
         self.imaging_params = {
@@ -934,10 +1013,10 @@ class TestRecordBlock(TestCase):
                               'instrument': '1M0-SCICAM-SINISTRO',
                               'observatory': '',
                               'pondtelescope': '1m0',
-                              'proposal_id': 'LCOEngineering',
+                              'proposal_id': 'LCO2019A-001',
                               'request_numbers': {1440123: 'NON_SIDEREAL'},
-                              'request_windows': [[{'end': '2018-03-16T03:30:00',
-                                 'start': '2018-03-15T20:20:00'}]],
+                              'request_windows': [[{'end': '2018-03-16T03:30:00.600000Z',
+                                 'start': '2018-03-15T20:20:00.400000Z'}]],
                               'site': 'CPT',
                               'site_code': 'K91',
                               'start_time': datetime(2018, 3, 15, 18, 20),
@@ -978,7 +1057,7 @@ class TestRecordBlock(TestCase):
         self.assertEqual(datetime(2018, 3, 16, 11, 20, 0), blocks[0].block_start)
         self.assertEqual(datetime(2018, 3, 16, 18, 30, 0), blocks[0].block_end)
         self.assertEqual(self.spectro_tracknum, sblocks[0].tracking_number)
-        self.assertTrue(self.spectro_tracknum != blocks[0].tracking_number)
+        self.assertTrue(self.spectro_tracknum != blocks[0].request_number)
         self.assertEqual(self.spectro_params['block_duration'], sblocks[0].timeused)
 
     def test_imaging_block(self):
@@ -994,11 +1073,38 @@ class TestRecordBlock(TestCase):
         # the (potentially) narrower per-Request windows
         self.assertEqual(self.imaging_form['start_time'], sblocks[0].block_start)
         self.assertEqual(self.imaging_form['end_time'], sblocks[0].block_end)
-        self.assertEqual(datetime(2018, 3, 15, 20, 20, 0), blocks[0].block_start)
-        self.assertEqual(datetime(2018, 3, 16, 3, 30, 0), blocks[0].block_end)
+        self.assertEqual(datetime(2018, 3, 15, 20, 20, 0, 400000), blocks[0].block_start)
+        self.assertEqual(datetime(2018, 3, 16, 3, 30, 0, 600000), blocks[0].block_end)
         self.assertEqual(self.imaging_tracknum, sblocks[0].tracking_number)
-        self.assertTrue(self.imaging_tracknum != blocks[0].tracking_number)
+        self.assertTrue(self.imaging_tracknum != blocks[0].request_number)
         self.assertEqual(self.imaging_params['block_duration'], sblocks[0].timeused)
+        self.assertEqual(False, sblocks[0].rapid_response)
+
+    def test_imaging_block_rr_proposal(self):
+        imaging_params = self.imaging_params
+        imaging_params['proposal_id'] += 'b'
+        imaging_form = self.imaging_form
+        imaging_form['proposal_code'] += 'b'
+
+        block_resp = record_block(self.imaging_tracknum, imaging_params, imaging_form, self.imaging_body)
+
+        self.assertTrue(block_resp)
+        sblocks = SuperBlock.objects.all()
+        blocks = Block.objects.all()
+        self.assertEqual(1, sblocks.count())
+        self.assertEqual(1, blocks.count())
+        self.assertEqual(Block.OPT_IMAGING, blocks[0].obstype)
+        # Check the SuperBlock has the broader time window but the Block(s) have
+        # the (potentially) narrower per-Request windows
+        self.assertEqual(self.imaging_form['start_time'], sblocks[0].block_start)
+        self.assertEqual(self.imaging_form['end_time'], sblocks[0].block_end)
+        self.assertEqual(datetime(2018, 3, 15, 20, 20, 0, 400000), blocks[0].block_start)
+        self.assertEqual(datetime(2018, 3, 16, 3, 30, 0, 600000), blocks[0].block_end)
+        self.assertEqual(self.imaging_tracknum, sblocks[0].tracking_number)
+        self.assertTrue(self.imaging_tracknum != blocks[0].request_number)
+        self.assertEqual(self.imaging_params['block_duration'], sblocks[0].timeused)
+        self.assertEqual(self.proposal_tc, sblocks[0].proposal)
+        self.assertEqual(True, sblocks[0].rapid_response)
 
     def test_spectro_and_solar_block(self):
         new_params =  { 'calibsource' : {  'id': 1,
@@ -1037,7 +1143,7 @@ class TestRecordBlock(TestCase):
         self.assertEqual(self.spectro_form['end_time'], sblocks[0].block_end)
         self.assertFalse(sblocks[0].cadence)
         self.assertEqual(self.spectro_tracknum, sblocks[0].tracking_number)
-        self.assertTrue(self.spectro_tracknum != blocks[0].tracking_number)
+        self.assertTrue(self.spectro_tracknum != blocks[0].request_number)
         self.assertEqual(self.spectro_params['block_duration'], sblocks[0].timeused)
 
         self.assertEqual(datetime(2018, 3, 16, 11, 20, 0), blocks[0].block_start)
@@ -1068,7 +1174,7 @@ class TestRecordBlock(TestCase):
         self.assertEqual(datetime(2018, 3, 16, 11, 20, 0), blocks[0].block_start)
         self.assertEqual(datetime(2018, 3, 16, 18, 30, 0), blocks[0].block_end)
         self.assertEqual(self.spectro_tracknum, sblocks[0].tracking_number)
-        self.assertTrue(self.spectro_tracknum != blocks[0].tracking_number)
+        self.assertTrue(self.spectro_tracknum != blocks[0].request_number)
         self.assertEqual(self.spectro_params['block_duration'], sblocks[0].timeused)
 
 
@@ -1136,11 +1242,11 @@ class TestSchedule_Check(TestCase):
                         'target_name': self.body_mp.current_name(),
                         'magnitude': 19.099441743160916,
                         'speed': 2.9012947050834836,
-                        'slot_length': 20,
+                        'slot_length': 20.0,
                         'filter_pattern': 'w',
-                        'pattern_iterations': 12.0,
-                        'available_filters': 'air, U, B, V, R, I, up, gp, rp, ip, zs, Y, w',
-                        'exp_count': 12,
+                        'pattern_iterations': 14.0,
+                        'available_filters': 'air, ND, U, B, V, R, I, up, gp, rp, ip, zs, Y, w',
+                        'exp_count': 14,
                         'exp_length': 50.0,
                         'schedule_ok': True,
                         'site_code': data['site_code'],
@@ -1155,27 +1261,29 @@ class TestSchedule_Check(TestCase):
                         'period' : None,
                         'jitter' : None,
                         'instrument_code' : '',
+                        'saturated': None,
                         'snr' : None,
                         'too_mode': False,
                         'calibs' : '',
                         'spectroscopy' : False,
                         'calibsource' : {},
                         'calibsource_id' : -1,
+                        'calibsource_exptime' : 60,
                         'solar_analog' : False,
-                        'vis_time': 6.5,
+                        'vis_time': 7.2,
                         'lco_enc': 'DOMA',
                         'lco_site': 'COJ',
                         'lco_tel': '1M0',
-                        'max_alt': 67.75712514525094,
+                        'max_alt': 67.92580631422568,
                         'moon_alt': -58.300710434796706,
-                        'moon_phase': 0.011439155504957221,
+                        'moon_phase': 1.1439155504957221,
                         'moon_sep': 170.66180769265674,
                         'trail_len': 2.41774558756957,
                         'typical_seeing': 2.0,
                         'ipp_value': 1.0,
                         'ag_exp_time': None,
                         'max_airmass': 1.74,
-                        'max_alt_airmass': 1.0802297303647255,
+                        'max_alt_airmass': 1.0789381246330223,
                         'min_lunar_dist': 30,
                         'acceptability_threshold': 90
                         }
@@ -1223,27 +1331,29 @@ class TestSchedule_Check(TestCase):
                         'period' : None,
                         'jitter' : None,
                         'instrument_code' : 'E10-FLOYDS',
-                        'snr' : 3.2107142545718275,
+                        'saturated': False,
+                        'snr' : 4.954398764579462,
                         'calibs' : 'both',
                         'spectroscopy' : True,
                         'too_mode': False,
                         'calibsource' : {},
                         'calibsource_id' : -1,
+                        'calibsource_exptime' : 60,
                         'solar_analog' : False,
-                        'vis_time': 7.5,
+                        'vis_time': 8.0,
                         'lco_enc': 'CLMA',
                         'lco_site': 'COJ',
                         'lco_tel': '2M0',
-                        'max_alt': 67.75685165409215,
+                        'max_alt': 67.92557395445273,
                         'moon_alt': -58.30060609532361,
-                        'moon_phase': 0.011439162208279174,
+                        'moon_phase': 1.1439162208279174,
                         'moon_sep': 170.66180760224114,
                         'trail_len': 0.48354895802581555,
                         'typical_seeing': 2.0,
                         'ipp_value': 1.0,
                         'ag_exp_time': 10,
                         'max_airmass': 2.0,
-                        'max_alt_airmass': 1.0802318346065136,
+                        'max_alt_airmass': 1.078939895293435,
                         'min_lunar_dist': 30,
                         'acceptability_threshold': 90
                         }
@@ -1291,27 +1401,29 @@ class TestSchedule_Check(TestCase):
                         'period' : None,
                         'jitter' : None,
                         'instrument_code' : 'E10-FLOYDS',
-                        'snr' : 3.2107142545718275,
+                        'saturated': False,
+                        'snr' : 4.954398764579462,
                         'calibs' : 'both',
                         'spectroscopy' : True,
                         'too_mode': False,
                         'calibsource' : {'separation_deg' : 11.551868532224177, **model_to_dict(self.solar_analog)},
                         'calibsource_id' : 1,
+                        'calibsource_exptime' : 180,
                         'solar_analog' : True,
-                        'vis_time': 6.5,
+                        'vis_time': 7.2,
                         'lco_enc': 'CLMA',
                         'lco_site': 'COJ',
                         'lco_tel': '2M0',
-                        'max_alt': 67.75685165409215,
+                        'max_alt': 67.92557395445273,
                         'moon_alt': -58.30060609532361,
-                        'moon_phase': 0.011439162208279174,
+                        'moon_phase': 1.1439162208279174,
                         'moon_sep': 170.66180760224114,
                         'trail_len': 0.48354895802581555,
                         'typical_seeing': 2.0,
                         'ipp_value': 1.0,
                         'ag_exp_time': 10,
                         'max_airmass': 1.74,
-                        'max_alt_airmass': 1.0802318346065136,
+                        'max_alt_airmass': 1.078939895293435,
                         'min_lunar_dist': 30,
                         'acceptability_threshold': 90
                         }
@@ -1341,11 +1453,11 @@ class TestSchedule_Check(TestCase):
                         'target_name': self.body_mp.current_name(),
                         'magnitude': 19.111452844407932,
                         'speed': 2.8743096178906367,
-                        'slot_length': 20,
+                        'slot_length': 20.0,
                         'filter_pattern': 'w',
-                        'pattern_iterations': 12.0,
-                        'available_filters': 'air, U, B, V, R, I, up, gp, rp, ip, zs, Y, w',
-                        'exp_count': 12,
+                        'pattern_iterations': 14.0,
+                        'available_filters': 'air, ND, U, B, V, R, I, up, gp, rp, ip, zs, Y, w',
+                        'exp_count': 14,
                         'exp_length': 50.0,
                         'schedule_ok': True,
                         'site_code': data['site_code'],
@@ -1362,27 +1474,29 @@ class TestSchedule_Check(TestCase):
                         'num_times' : 3,
                         'total_time' : 1.0,
                         'instrument_code' : '',
+                        'saturated': None,
                         'snr' : None,
                         'too_mode': False,
                         'calibs' : '',
                         'spectroscopy' : False,
                         'calibsource' : {},
                         'calibsource_id' : -1,
+                        'calibsource_exptime' : 60,
                         'solar_analog' : False,
-                        'vis_time': 6.5,
+                        'vis_time': 7.2,
                         'lco_enc': 'DOMA',
                         'lco_site': 'COJ',
                         'lco_tel': '1M0',
-                        'max_alt': 67.70515036289103,
+                        'max_alt': 67.86516541407252,
                         'moon_alt': -43.42555786736966,
-                        'moon_phase': 0.00890997165773788,
+                        'moon_phase': 0.8909971657737881,
                         'moon_sep': 171.79313958425425,
                         'trail_len': 2.395258014908864,
                         'typical_seeing': 2.0,
                         'ipp_value': 1.0,
                         'ag_exp_time': None,
                         'max_airmass': 1.74,
-                        'max_alt_airmass': 1.0806302130727632,
+                        'max_alt_airmass': 1.0794010270302936,
                         'min_lunar_dist': 30,
                         'acceptability_threshold': 90
                         }
@@ -1412,11 +1526,11 @@ class TestSchedule_Check(TestCase):
                         'target_name': self.body_mp.current_name(),
                         'magnitude': 19.111452844407932,
                         'speed': 2.8743096178906367,
-                        'slot_length': 20,
+                        'slot_length': 20.0,
                         'filter_pattern': 'w',
-                        'pattern_iterations': 12.0,
-                        'available_filters': 'air, U, B, V, R, I, up, gp, rp, ip, zs, Y, w',
-                        'exp_count': 12,
+                        'pattern_iterations': 14.0,
+                        'available_filters': 'air, ND, U, B, V, R, I, up, gp, rp, ip, zs, Y, w',
+                        'exp_count': 14,
                         'exp_length': 50.0,
                         'schedule_ok': True,
                         'site_code': data['site_code'],
@@ -1433,27 +1547,29 @@ class TestSchedule_Check(TestCase):
                         'num_times' : 3,
                         'total_time' : 1.0,
                         'instrument_code' : '',
+                        'saturated': None,
                         'snr' : None,
                         'too_mode': False,
                         'calibs' : '',
                         'spectroscopy' : False,
                         'calibsource' : {},
                         'calibsource_id' : -1,
+                        'calibsource_exptime' : 60,
                         'solar_analog' : False,
-                        'vis_time': 6.5,
+                        'vis_time': 7.2,
                         'lco_enc': 'DOMA',
                         'lco_site': 'COJ',
                         'lco_tel': '1M0',
-                        'max_alt': 67.70515036289103,
+                        'max_alt': 67.86516541407252,
                         'moon_alt': -43.42555786736966,
-                        'moon_phase': 0.00890997165773788,
+                        'moon_phase': 0.8909971657737881,
                         'moon_sep': 171.79313958425425,
                         'trail_len': 2.395258014908864,
                         'typical_seeing': 2.0,
                         'ipp_value': 1.0,
                         'ag_exp_time': None,
                         'max_airmass': 1.74,
-                        'max_alt_airmass': 1.0806302130727632,
+                        'max_alt_airmass': 1.0794010270302936,
                         'min_lunar_dist': 30,
                         'acceptability_threshold': 90
                         }
@@ -1481,11 +1597,11 @@ class TestSchedule_Check(TestCase):
                         'target_name': self.body_mp.current_name(),
                         'magnitude': 19.111452844407932,
                         'speed': 2.8743096178906367,
-                        'slot_length': 20,
+                        'slot_length': 20.0,
                         'filter_pattern': 'w',
-                        'pattern_iterations': 12.0,
-                        'available_filters': 'air, U, B, V, R, I, up, gp, rp, ip, zs, Y, w',
-                        'exp_count': 12,
+                        'pattern_iterations': 14.0,
+                        'available_filters': 'air, ND, U, B, V, R, I, up, gp, rp, ip, zs, Y, w',
+                        'exp_count': 14,
                         'exp_length': 50.0,
                         'schedule_ok': True,
                         'site_code': data['site_code'],
@@ -1503,26 +1619,28 @@ class TestSchedule_Check(TestCase):
                         'total_time' : 1.0,
                         'instrument_code' : '',
                         'too_mode': False,
+                        'saturated': None,
                         'snr' : None,
                         'calibs' : '',
                         'spectroscopy' : False,
                         'calibsource' : {},
                         'calibsource_id' : -1,
+                        'calibsource_exptime' : 60,
                         'solar_analog' : False,
-                        'vis_time': 6.5,
+                        'vis_time': 7.2,
                         'lco_enc': 'DOMA',
                         'lco_site': 'COJ',
                         'lco_tel': '1M0',
-                        'max_alt': 67.70515036289103,
+                        'max_alt': 67.86516541407252,
                         'moon_alt': -43.42555786736966,
-                        'moon_phase': 0.00890997165773788,
+                        'moon_phase': 0.8909971657737881,
                         'moon_sep': 171.79313958425425,
                         'trail_len': 2.395258014908864,
                         'typical_seeing': 2.0,
                         'ipp_value': 1.0,
                         'ag_exp_time': None,
                         'max_airmass': 1.74,
-                        'max_alt_airmass': 1.0806302130727632,
+                        'max_alt_airmass': 1.0794010270302936,
                         'min_lunar_dist': 30,
                         'acceptability_threshold': 90
                         }
@@ -1532,6 +1650,7 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp, resp)
         self.assertLessEqual(len(resp['group_id']), 50)
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_end_B_semester(self):
         MockDateTime.change_datetime(2016, 3, 31, 22, 0, 0)
@@ -1545,7 +1664,7 @@ class TestSchedule_Check(TestCase):
                         'target_name': self.body_mp.current_name(),
                         'start_time' : '2016-03-31T17:40:00',
                         'end_time'   : '2016-03-31T23:59:59',
-                        'exp_count'  : 16,
+                        'exp_count'  : 18,
                         'exp_length' : 30.0,
                         'mid_time': '2016-03-31T20:49:59.500000',
 
@@ -1558,6 +1677,7 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['exp_count'], resp['exp_count'])
         self.assertEqual(expected_resp['exp_length'], resp['exp_length'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_start_A_semester(self):
         MockDateTime.change_datetime(2016, 4, 1, 0, 0, 1)
@@ -1571,7 +1691,7 @@ class TestSchedule_Check(TestCase):
                         'target_name': self.body_mp.current_name(),
                         'start_time' : '2016-04-01T00:00:00',
                         'end_time'   : '2016-04-01T03:40:00',
-                        'exp_count'  : 16,
+                        'exp_count'  : 18,
                         'exp_length' : 30.0,
                         'mid_time': '2016-04-01T01:50:00',
 
@@ -1585,6 +1705,7 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['exp_count'], resp['exp_count'])
         self.assertEqual(expected_resp['exp_length'], resp['exp_length'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_mid_A_semester(self):
         MockDateTime.change_datetime(2016, 4, 20, 23, 0, 0)
@@ -1598,7 +1719,7 @@ class TestSchedule_Check(TestCase):
                         'target_name': self.body_mp.current_name(),
                         'start_time' : '2016-04-21T02:30:00',
                         'end_time'   : '2016-04-21T11:10:00',
-                        'exp_count'  : 6,
+                        'exp_count'  : 7,
                         'exp_length' : 165,
                         'mid_time': '2016-04-21T06:50:00',
                         'magnitude' : 20.97
@@ -1613,6 +1734,7 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['exp_length'], resp['exp_length'])
         self.assertAlmostEqual(expected_resp['magnitude'], resp['magnitude'], 2)
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_mid_past_A_semester(self):
         MockDateTime.change_datetime(2015, 4, 20, 23, 1, 0)
@@ -1638,6 +1760,7 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_end_A_semester(self):
         MockDateTime.change_datetime(2016, 9, 30, 23, 0, 0)
@@ -1661,6 +1784,7 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_schedule_for_B_at_A_semester_end(self):
         MockDateTime.change_datetime(2017, 3, 31, 23, 0, 0)
@@ -1684,6 +1808,7 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_schedule_for_B_at_A_semester_end2(self):
 
@@ -1708,6 +1833,7 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_start_B_semester(self):
         MockDateTime.change_datetime(2016, 10, 1, 0, 0, 1)
@@ -1731,6 +1857,7 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_2017AB_semester(self):
         MockDateTime.change_datetime(2017, 9, 28, 19, 0, 0)
@@ -1753,6 +1880,7 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_end_2017AB_semester(self):
         MockDateTime.change_datetime(2017, 11, 30, 19, 0, 0)
@@ -1775,6 +1903,7 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_start_2018A_semester(self):
         MockDateTime.change_datetime(2017, 12,  1,  1, 0, 0)
@@ -1797,6 +1926,7 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_end_2018A_semester(self):
         MockDateTime.change_datetime(2018,  5, 31, 23, 0, 0)
@@ -1819,6 +1949,7 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_start_2018B_semester(self):
         MockDateTime.change_datetime(2018,  6,  1,  1, 0, 0)
@@ -1841,6 +1972,7 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_end_2018B_semester(self):
         MockDateTime.change_datetime(2018, 11, 30, 23, 0, 0)
@@ -1886,6 +2018,7 @@ class TestUpdate_MPC_orbit(TestCase):
                              'longascnode': 24.87559,
                              'eccentricity': 0.0120915,
                              'epochofel': datetime(2016, 1, 13, 0),
+                             'orbit_rms': 99,
                              'meandist': 0.9967710,
                              'orbinc': 8.25708,
                              'meananom': 221.74204,
@@ -2105,8 +2238,371 @@ class TestUpdate_MPC_orbit(TestCase):
                 self.assertEqual(expected_elements[key], new_body_elements[key])
 
 
+class TestIngestNewObject(TestCase):
+
+    def setUp(self):
+
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+
+        self.orig_orbit_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcorbit_2019EN.neocp'))
+        self.orig_obs_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcorbit_2019EN.dat'))
+        self.orbit_file = os.path.join(self.test_dir, '2019EN.neocp')
+        self.obs_file = os.path.join(self.test_dir, '2019EN.dat')
+        os.symlink(self.orig_orbit_file, self.orbit_file)
+        os.symlink(self.orig_obs_file, self.obs_file)
+
+        self.orig_disc_orbit_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcorbit_LSCTLZZ.neocp'))
+        self.orig_disc_obs_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcorbit_LSCTLZZ.dat'))
+        self.disc_orbit_file = os.path.join(self.test_dir, 'LSCTLZZ.neocp')
+        self.disc_obs_file = os.path.join(self.test_dir, 'LSCTLZZ.dat')
+        os.symlink(self.orig_disc_orbit_file, self.disc_orbit_file)
+        os.symlink(self.orig_disc_obs_file, self.disc_obs_file)
+
+        self.orig_eros_orbit_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcorbit_433.neocp'))
+        self.orig_eros_obs_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcorbit_433.dat'))
+        self.eros_orbit_file = os.path.join(self.test_dir, '433.neocp')
+        self.eros_obs_file = os.path.join(self.test_dir, '433.dat')
+        os.symlink(self.orig_eros_orbit_file, self.eros_orbit_file)
+        os.symlink(self.orig_eros_obs_file, self.eros_obs_file)
+
+        self.orig_K11H00P_orbit_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcorbit_2011HP.neocp'))
+        self.orig_K11H00P_obs_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcorbit_2011HP.dat'))
+        self.K11H00P_orbit_file = os.path.join(self.test_dir, '2011HP.neocp')
+        self.K11H00P_obs_file = os.path.join(self.test_dir, '2011HP.dat')
+        os.symlink(self.orig_K11H00P_orbit_file, self.K11H00P_orbit_file)
+        os.symlink(self.orig_K11H00P_obs_file, self.K11H00P_obs_file)
+
+        self.params = { 'id' : 1,
+                        'provisional_name' : None,
+                        'provisional_packed' : 'K19E00N',
+                        'name' : '2019 EN',
+                        'source_type' : 'N',
+                        'abs_mag': 21.17,
+                        'slope'  : 0.15,
+                        'epochofel' : datetime(2019, 3, 9, 0, 0),
+                        'meananom'  : 343.19351,
+                        'argofperih' : 46.63108,
+                        'longascnode' : 192.93185,
+                        'orbinc' : 9.77594,
+                        'eccentricity' : 0.618787,
+                        'meandist' : 2.1786196,
+                        'elements_type' : 'MPC_MINOR_PLANET',
+                        'active' : True,
+                        'origin' : 'M',
+                        'num_obs' : 190,
+                        'orbit_rms' : 0.21,
+                        'discovery_date' : datetime(2019, 3,  2,  6, 51,  5, 472000),
+                        'update_time' : datetime(2019, 3, 12, 16, 55, 35, 113989),
+                        'arc_length' : 59.0,
+                        'not_seen' : 3.7052675231018517
+                      }
+        self.body_2019EN = Body(**self.params)
+
+        self.params_LSCTLZZ = self.params.copy()
+        self.params_LSCTLZZ['provisional_name'] = 'LSCTLZZ'
+        self.params_LSCTLZZ['provisional_packed'] = None
+        self.params_LSCTLZZ['name'] = None
+        self.params_LSCTLZZ['origin'] = 'L'
+        self.params_LSCTLZZ['source_type'] = 'U'
+        self.body_LSCTLZZ = Body(**self.params_LSCTLZZ)
+
+        self.eros_params = { 'id' : 1,
+                        'provisional_name' : '433',
+                        'provisional_packed' : '00433',
+                        'name' : '433',
+                        'source_type' : 'N',
+                        'abs_mag': 10.59,
+                        'slope'  : 0.15,
+                        'epochofel' : datetime(2019, 2,10, 0, 0),
+                        'meananom'  :   4.70349,
+                        'argofperih' : 178.80773,
+                        'longascnode' : 304.30790,
+                        'orbinc' : 10.82903,
+                        'eccentricity' : 0.222729,
+                        'meandist' : 1.4580661,
+                        'elements_type' : 'MPC_MINOR_PLANET',
+                        'active' : True,
+                        'origin' : 'M',
+                        'num_obs' : 7707,
+                        'orbit_rms' : 0.51,
+                        'update_time' : datetime(2019, 3, 12, 16, 55, 35, 113989),
+                        'arc_length' : 46385,
+                        'not_seen' : 3.7052675231018517
+                      }
+        self.body_433 = Body(**self.eros_params)
+
+        self.K11H00P_params = { 'id' : 1,
+                        'provisional_name' : None,
+                        'provisional_packed' : 'K11H00P',
+                        'name' : '2011 HP',
+                        'source_type' : 'N',
+                        'abs_mag': 22.23,
+                        'slope'  : 0.15,
+                        'epochofel' : datetime(2011,10, 1, 0, 0),
+                        'meananom'  :  37.31731,
+                        'argofperih' :  45.96308,
+                        'longascnode' : 229.74785,
+                        'orbinc' :  3.74433,
+                        'eccentricity' : 0.4800081,
+                        'meandist' : 1.9235922,
+                        'elements_type' : 'MPC_MINOR_PLANET',
+                        'active' : True,
+                        'origin' : 'M',
+                        'num_obs' : 213,
+                        'orbit_rms' : 0.35,
+                        'update_time' : datetime(2019, 3, 12, 16, 55, 35, 113989),
+                        'arc_length' : 160.0,
+                        'not_seen' : 3.7052675231018517
+                      }
+        self.body_K11H00P = Body(**self.K11H00P_params)
+
+        self.remove = True
+        self.debug_print = False
+
+        self.maxDiff = None
+
+    def tearDown(self):
+        if self.remove:
+            try:
+                files_to_remove = glob(os.path.join(self.test_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.test_dir)
+            try:
+                os.rmdir(self.test_dir)
+                if self.debug_print:
+                    print("Removed", self.test_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.test_dir)
+        else:
+            print("Not removing. Temporary test directory=", self.test_dir)
+
+    def _compare_bodies(self, body1, body2, excluded_keys={'_state', 'not_seen', 'ingest', 'update_time'}):
+        d1, d2 = body1.__dict__, body2.__dict__
+        for key,value in d1.items():
+            if key in excluded_keys:
+                continue
+            self.assertEqual(value, d2[key], "Compare failure on " + key)
+
+    def test_no_orbit_file(self):
+        expected_body = None
+        expected_msg = "Could not read orbit file: wibble"
+
+        body, created, msg = ingest_new_object('wibble')
+
+        self.assertEqual(expected_body, body)
+        self.assertFalse(created)
+        self.assertEqual(expected_msg, msg)
+
+    def test_discovery_not_existing(self):
+
+        expected_body = self.body_LSCTLZZ
+        expected_msg = "Added new local target LSCTLZZ"
+
+        body, created, msg = ingest_new_object(self.disc_orbit_file)
+
+        self._compare_bodies(expected_body, body)
+        self.assertTrue(created)
+        self.assertEqual(expected_msg, msg)
+
+    def test_discovery_existing_no_changes(self):
+
+        expected_body = self.body_LSCTLZZ
+        expected_msg = "No changes saved for LSCTLZZ"
+
+        self.body_LSCTLZZ.save()
+        num_bodies_before = Body.objects.count()
+        self.assertEqual(1, num_bodies_before)
+        body, created, msg = ingest_new_object(self.disc_orbit_file)
+
+        num_bodies_after = Body.objects.count()
+        self.assertEqual(1, num_bodies_after)
+        # Update expected values
+        expected_body.updated = True
+        self._compare_bodies(expected_body, body)
+        self.assertFalse(created)
+        self.assertEqual(expected_msg, msg)
+
+    def test_discovery_existing_new_provname(self):
+
+        expected_body = self.body_LSCTLZZ
+        expected_msg = "Updated LSCTLZZ"
+
+        self.body_LSCTLZZ.save()
+        self.body_LSCTLZZ.refresh_from_db()
+        bodies_before = Body.objects.all()
+        num_bodies_before = bodies_before.count()
+        self.assertEqual(1, num_bodies_before)
+        self.assertEqual('L', self.body_LSCTLZZ.origin)
+        # Remove symlink to LSCTLZZ.neocp orbit file and re-symlink to the 2019EN.neocp one
+        # so desigination inside the file changes but it stays as LSCTLZZ.neocp
+        os.unlink(self.disc_orbit_file)
+        os.symlink(self.orig_orbit_file, self.disc_orbit_file)
+        body, created, msg = ingest_new_object(self.disc_orbit_file)
+
+        bodies = Body.objects.all()
+        num_bodies_after = bodies.count()
+        self.assertEqual(1, num_bodies_after)
+        # Update expected values
+        expected_body.updated = True
+        expected_body.provisional_packed = 'K19E00N'
+        expected_body.name = '2019 EN'
+        expected_body.origin = 'L'
+        expected_body.source_type = 'D'
+
+        self._compare_bodies(expected_body, body)
+        self.assertFalse(created)
+        self.assertEqual(expected_msg, msg)
+
+    def test_knownNEO_not_existing(self):
+
+        expected_body = self.body_2019EN
+        expected_msg = "Added new local target 2019EN"
+
+        bodies_before = Body.objects.all()
+        num_bodies_before = bodies_before.count()
+        self.assertEqual(0, num_bodies_before)
+        body, created, msg = ingest_new_object(self.orbit_file)
+
+        bodies = Body.objects.all()
+        num_bodies_after = bodies.count()
+        self.assertEqual(1, num_bodies_after)
+
+        self._compare_bodies(expected_body, body)
+        self.assertTrue(created)
+        self.assertEqual(expected_msg, msg)
+
+    def test_knownNEO_not_existing_no_obsfile(self):
+
+        expected_body = self.body_2019EN
+        expected_msg = "Added new local target 2019EN"
+
+        os.unlink(self.obs_file)
+        bodies_before = Body.objects.all()
+        num_bodies_before = bodies_before.count()
+        self.assertEqual(0, num_bodies_before)
+        body, created, msg = ingest_new_object(self.orbit_file)
+
+        bodies = Body.objects.all()
+        num_bodies_after = bodies.count()
+        self.assertEqual(1, num_bodies_after)
+        # Update expected values, deleting discovery date (since no obs file)
+        expected_body.discovery_date = None
+
+        self._compare_bodies(expected_body, body)
+        self.assertTrue(created)
+        self.assertEqual(expected_msg, msg)
+
+    def test_knownNEO_existing(self):
+
+        expected_body = self.body_2019EN
+        expected_msg = "No changes saved for 2019EN"
+
+        self.body_2019EN.save()
+        self.body_2019EN.refresh_from_db()
+
+        bodies_before = Body.objects.all()
+        num_bodies_before = bodies_before.count()
+        self.assertEqual(1, num_bodies_before)
+        body, created, msg = ingest_new_object(self.orbit_file)
+
+        bodies = Body.objects.all()
+        num_bodies_after = bodies.count()
+        self.assertEqual(1, num_bodies_after)
+        expected_body.updated = True
+
+        self._compare_bodies(expected_body, body)
+        self.assertFalse(created)
+        self.assertEqual(expected_msg, msg)
+
+    def test_knownnumNEO_not_existing(self):
+
+        expected_body = self.body_433
+        expected_msg = "Added new local target 433"
+
+        bodies_before = Body.objects.all()
+        num_bodies_before = bodies_before.count()
+        self.assertEqual(0, num_bodies_before)
+        body, created, msg = ingest_new_object(self.eros_orbit_file)
+
+        bodies = Body.objects.all()
+        num_bodies_after = bodies.count()
+        self.assertEqual(1, num_bodies_after)
+
+        self._compare_bodies(expected_body, body)
+        self.assertTrue(created)
+        self.assertEqual(expected_msg, msg)
+
+    def test_knownnumNEO_existing(self):
+
+        expected_body = self.body_433
+        expected_msg = "No changes saved for 433"
+
+        self.body_433.save()
+        self.body_433.refresh_from_db()
+
+        bodies_before = Body.objects.all()
+        num_bodies_before = bodies_before.count()
+        self.assertEqual(1, num_bodies_before)
+        body, created, msg = ingest_new_object(self.eros_orbit_file)
+
+        bodies = Body.objects.all()
+        num_bodies_after = bodies.count()
+        self.assertEqual(1, num_bodies_after)
+        expected_body.updated = True
+
+        self._compare_bodies(expected_body, body)
+        self.assertFalse(created)
+        self.assertEqual(expected_msg, msg)
+
+    def test_known_provNEO_not_existing(self):
+
+        expected_body = self.body_K11H00P
+        expected_msg = "Added new local target 2011HP"
+
+        bodies_before = Body.objects.all()
+        num_bodies_before = bodies_before.count()
+        self.assertEqual(0, num_bodies_before)
+        body, created, msg = ingest_new_object(self.K11H00P_orbit_file)
+
+        bodies = Body.objects.all()
+        num_bodies_after = bodies.count()
+        self.assertEqual(1, num_bodies_after)
+
+        self._compare_bodies(expected_body, body)
+        self.assertTrue(created)
+        self.assertEqual(expected_msg, msg)
+
+    def test_known_provNEO_existing(self):
+
+        expected_body = self.body_K11H00P
+        expected_msg = "No changes saved for 2011HP"
+
+        self.body_K11H00P.save()
+        self.body_K11H00P.refresh_from_db()
+
+        bodies_before = Body.objects.all()
+        num_bodies_before = bodies_before.count()
+        self.assertEqual(1, num_bodies_before)
+        body, created, msg = ingest_new_object(self.K11H00P_orbit_file)
+
+        bodies = Body.objects.all()
+        num_bodies_after = bodies.count()
+        self.assertEqual(1, num_bodies_after)
+        expected_body.updated = True
+
+        self._compare_bodies(expected_body, body)
+        self.assertFalse(created)
+        self.assertEqual(expected_msg, msg)
+
 class TestUpdate_MPC_obs(TestCase):
     def setUp(self):
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+
+        self.debug_print = False
+        self.maxDiff = None
+
         test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcobs_WSAE9A6.dat'), 'r')
         self.test_mpcobs_page = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
@@ -2172,16 +2668,16 @@ class TestUpdate_MPC_obs(TestCase):
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
 
     def test2_multiple_designations(self):
-        expected_measures = 23
+        expected_measures = 28
         measures = update_MPC_obs(self.test_mpcobs_page2)
         self.assertEqual(len(measures), expected_measures)
 
     def test_repeat_sources(self):
-        expected_measures = 11
-        total_measures = 23
-        expected_frames = 23
-        first_date = datetime(1998, 2, 21, 2, 13, 10, 272000)
-        last_date = datetime(2018, 7, 10, 3, 35, 44, 448000)
+        expected_measures = 16
+        total_measures = 28
+        expected_frames = 28
+        first_date = datetime(1992, 6, 3, 5, 27, 4, 896000)
+        last_date = datetime(2018, 12, 4, 21, 4, 6, 240000)
 
         # Read in old measures
         initial_measures = update_MPC_obs(self.test_mpcobs_page3)
@@ -2205,6 +2701,29 @@ class TestUpdate_MPC_obs(TestCase):
 
         measures = update_MPC_obs(self.test_mpcobs_page4)
         self.assertEqual(len(measures), expected_measures)
+
+    def test_obs_export(self):
+        measures = update_MPC_obs(self.test_mpcobs_page2)
+        expected_filename = os.path.join(self.test_dir, '13553.mpc')
+        expected_out1 = '13553         C1998 02 21.09248010 31 21.78 +03 20 23.2          20.1 V      557\n'
+        expected_out0 = '13553         A1994 06 05.27986 14 24 59.76 -00 36 53.4                      675\n'
+        expected_num_lines = 24
+
+        body = Body.objects.get(name='13553')
+        filename, num_lines = export_measurements(body.id, self.test_dir)
+
+        self.assertEqual(expected_filename, filename)
+        self.assertEqual(expected_num_lines, num_lines)
+
+        lines = []
+        with open(filename, 'r') as test_mpc_out:
+            line = test_mpc_out.readline()
+            while line:
+                lines.append(line)
+                line = test_mpc_out.readline()
+        self.assertEqual(expected_out0, lines[0])
+        self.assertEqual(expected_out1, lines[1])
+        self.assertEqual(num_lines, len(lines)-1)
 
 
 class TestClean_mpcorbit(TestCase):
@@ -2502,6 +3021,11 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
+        self.assertEqual(expected_params['obs_mag'], source_measure.obs_mag)
+        self.assertEqual(expected_params['flags'], source_measure.flags)
+        self.assertEqual(None, source_measure.err_obs_ra)
+        self.assertEqual(None, source_measure.err_obs_dec)
+        self.assertEqual(None, source_measure.err_obs_mag)
 
     def test_create_nonLCO_nocat(self):
         expected_params = { 'body'  : 'WSAE9A6',
@@ -2528,6 +3052,11 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
+        self.assertEqual(expected_params['obs_mag'], source_measure.obs_mag)
+        self.assertEqual(expected_params['flags'], source_measure.flags)
+        self.assertEqual(None, source_measure.err_obs_ra)
+        self.assertEqual(None, source_measure.err_obs_dec)
+        self.assertEqual(None, source_measure.err_obs_mag)
 
     def test_create_nonLCO_nomag(self):
         expected_params = { 'body'  : 'WSAE9A6',
@@ -2554,6 +3083,11 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
+        self.assertEqual(expected_params['obs_mag'], source_measure.obs_mag)
+        self.assertEqual(expected_params['flags'], source_measure.flags)
+        self.assertEqual(None, source_measure.err_obs_ra)
+        self.assertEqual(None, source_measure.err_obs_dec)
+        self.assertEqual(None, source_measure.err_obs_mag)
 
     def test_create_nonLCO_flags(self):
         expected_params = { 'body'  : 'WSAE9A6',
@@ -2580,6 +3114,11 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
+        self.assertEqual(expected_params['obs_mag'], source_measure.obs_mag)
+        self.assertEqual(expected_params['flags'], source_measure.flags)
+        self.assertEqual(None, source_measure.err_obs_ra)
+        self.assertEqual(None, source_measure.err_obs_dec)
+        self.assertEqual(None, source_measure.err_obs_mag)
 
     def test_create_blankline(self):
 
@@ -2612,6 +3151,11 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
+        self.assertEqual(expected_params['obs_mag'], source_measure.obs_mag)
+        self.assertEqual(expected_params['flags'], source_measure.flags)
+        self.assertEqual(None, source_measure.err_obs_ra)
+        self.assertEqual(None, source_measure.err_obs_dec)
+        self.assertEqual(None, source_measure.err_obs_mag)
 
     def test_create_LCO_flagI(self):
         expected_params = { 'body'  : 'WSAE9A6',
@@ -2638,15 +3182,84 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
+        self.assertEqual(expected_params['obs_mag'], source_measure.obs_mag)
+        self.assertEqual(expected_params['flags'], source_measure.flags)
+        self.assertEqual(None, source_measure.err_obs_ra)
+        self.assertEqual(None, source_measure.err_obs_dec)
+        self.assertEqual(None, source_measure.err_obs_mag)
+
+    def test_create_LCO_flagI_and_discovery(self):
+        expected_params = { 'body'  : 'WSAE9A6',
+                            'flags' : '*,I',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2015, 9, 20, 23, 31, 40, int(0.08*1e6)),
+                            'obs_ra'    : 325.54225,
+                            'obs_dec'   : -11.541111111111112,
+                            'obs_mag'   : 21.6,
+                            'filter'    : 'R',
+                            'astrometric_catalog' : '',
+                            'site_code' : 'K93'
+                          }
+
+        test_obsline = self.test_obslines[6].replace('6 IC', '6*IC')
+        source_measures = create_source_measurement(test_obsline)
+        source_measure = source_measures[0]
+
+        self.assertEqual(SourceMeasurement, type(source_measure))
+        self.assertEqual(Body, type(source_measure.body))
+        self.assertEqual(expected_params['body'], source_measure.body.current_name())
+        self.assertEqual(expected_params['filter'], source_measure.frame.filter)
+        self.assertEqual(Frame.SINGLE_FRAMETYPE, source_measure.frame.frametype)
+        self.assertEqual(expected_params['obs_date'], source_measure.frame.midpoint)
+        self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
+        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
+        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
+        self.assertEqual(expected_params['obs_mag'], source_measure.obs_mag)
+        self.assertEqual(expected_params['flags'], source_measure.flags)
+        self.assertEqual(None, source_measure.err_obs_ra)
+        self.assertEqual(None, source_measure.err_obs_dec)
+        self.assertEqual(None, source_measure.err_obs_mag)
+
+    def test_create_LCO_flagK_and_discovery(self):
+        expected_params = { 'body'  : 'WSAE9A6',
+                            'flags' : '*,K',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2015, 9, 20, 23, 24, 46, int(0.4832*1e6)),
+                            'obs_ra'    : 325.540625,
+                            'obs_dec'   : -11.536666666666667,
+                            'obs_mag'   : 21.4,
+                            'filter'    : 'R',
+                            'astrometric_catalog' : '',
+                            'site_code' : 'K93'
+                          }
+
+        test_obsline = self.test_obslines[5].replace('6 KC', '6*KC')
+        source_measures = create_source_measurement(test_obsline)
+        source_measure = source_measures[0]
+
+        self.assertEqual(SourceMeasurement, type(source_measure))
+        self.assertEqual(Body, type(source_measure.body))
+        self.assertEqual(expected_params['body'], source_measure.body.current_name())
+        self.assertEqual(expected_params['filter'], source_measure.frame.filter)
+        self.assertEqual(Frame.SINGLE_FRAMETYPE, source_measure.frame.frametype)
+        self.assertEqual(expected_params['obs_date'], source_measure.frame.midpoint)
+        self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
+        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
+        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
+        self.assertEqual(expected_params['obs_mag'], source_measure.obs_mag)
+        self.assertEqual(expected_params['flags'], source_measure.flags)
+        self.assertEqual(None, source_measure.err_obs_ra)
+        self.assertEqual(None, source_measure.err_obs_dec)
+        self.assertEqual(None, source_measure.err_obs_mag)
 
     def test_create_satellite(self):
         expected_params = { 'body'  : 'N009ags',
-                            'flags' : '',
+                            'flags' : '*',
                             'obs_type'  : 'S',
                             'obs_date'  : datetime(2016, 2, 8, 18, 15, 30, int(0.528*1e6)),
                             'obs_ra'    : 228.56833333333333,
                             'obs_dec'   : -9.775,
-                            'obs_mag'   : '19',
+                            'obs_mag'   : 19.0,
                             'filter'    : 'R',
                             'astrometric_catalog' : '2MASS',
                             'site_code' : 'C51',
@@ -2667,6 +3280,11 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
         self.assertEqual(expected_extrainfo, source_measure.frame.extrainfo)
+        self.assertEqual(expected_params['obs_mag'], source_measure.obs_mag)
+        self.assertEqual(expected_params['flags'], source_measure.flags)
+        self.assertEqual(None, source_measure.err_obs_ra)
+        self.assertEqual(None, source_measure.err_obs_dec)
+        self.assertEqual(None, source_measure.err_obs_mag)
 
     def test_create_non_existant_body(self):
 
@@ -2704,6 +3322,7 @@ class TestCreate_sourcemeasurement(TestCase):
     def test_create_with_trailing_space(self):
 
         expected_params = { 'body' : 'G07212',
+                            'flags' : "'",
                             'filter' : 'G',
                             'obs_date' : datetime(2017, 11, 2, 4, 10, 16, int(0.32*1e6)),
                             'site_code' : '309',
@@ -2727,6 +3346,11 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
+        self.assertEqual(expected_params['obs_mag'], source_measure.obs_mag)
+        self.assertEqual(expected_params['flags'], source_measure.flags)
+        self.assertEqual(None, source_measure.err_obs_ra)
+        self.assertEqual(None, source_measure.err_obs_dec)
+        self.assertEqual(None, source_measure.err_obs_mag)
 
 
 class TestFrames(TestCase):
@@ -2751,43 +3375,70 @@ class TestFrames(TestCase):
                               }
         self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
         # Create test blocks
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'CPT',
+        sblock_params = {
                          'body'     : self.test_body,
                          'proposal' : self.neo_proposal,
                          'groupid'  : 'TEMP_GROUP',
                          'block_start' : '2015-09-20 13:00:00',
                          'block_end'   : '2015-09-21 03:00:00',
                          'tracking_number' : '00001',
+                         'active'   : True
+                       }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'CPT',
+                         'body'     : self.test_body,
+                         'superblock' : self.test_sblock,
+                         'block_start' : '2015-09-20 13:00:00',
+                         'block_end'   : '2015-09-21 03:00:00',
+                         'request_number' : '00001',
                          'num_exposures' : 5,
                          'exp_length' : 42.0,
                          'active'   : True
                        }
         self.test_block = Block.objects.create(**block_params)
 
-        block_params = { 'telclass' : '0m4',
-                         'site'     : 'CPT',
+        sblock_params = {
                          'body'     : self.test_body,
                          'proposal' : self.neo_proposal,
                          'groupid'  : 'TEMP_GROUP',
                          'block_start' : '2017-12-11 13:00:00',
                          'block_end'   : '2017-12-12 03:00:00',
                          'tracking_number' : '522289',
+                         'active'   : True
+                       }
+        self.test_sblock_0m4 = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '0m4',
+                         'site'     : 'CPT',
+                         'body'     : self.test_body,
+                         'superblock' : self.test_sblock_0m4,
+                         'block_start' : '2017-12-11 13:00:00',
+                         'block_end'   : '2017-12-12 03:00:00',
+                         'request_number' : '522289',
                          'num_exposures' : 5,
                          'exp_length' : 145.0,
                          'active'   : True
                        }
         self.test_block_0m4 = Block.objects.create(**block_params)
 
-        block_params = { 'obstype' : Block.OPT_SPECTRA,
-                         'telclass' : '2m0',
-                         'site'     : 'coj',
+        sblock_params = {
                          'body'     : self.test_body,
                          'proposal' : self.neo_proposal,
                          'groupid'  : 'TEMP_GROUP_spectra',
                          'block_start' : '2017-12-11 13:00:00',
                          'block_end'   : '2017-12-12 03:00:00',
                          'tracking_number' : '1509481',
+                         'active'   : True
+                       }
+        self.test_sblock_spec = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'obstype' : Block.OPT_SPECTRA,
+                         'telclass' : '2m0',
+                         'site'     : 'coj',
+                         'body'     : self.test_body,
+                         'superblock' : self.test_sblock_spec,
+                         'block_start' : '2017-12-11 13:00:00',
+                         'block_end'   : '2017-12-12 03:00:00',
+                         'request_number' : '1509481',
                          'num_exposures' : 1,
                          'exp_length' : 1800.0,
                          'active'   : True
@@ -2910,7 +3561,8 @@ class TestFrames(TestCase):
                         "EXPTIME"  : "145",
                         "GROUPID"  : "TEMP",
                         "RLEVEL"   : 11,
-                        "L1FWHM"   : "2.42433"
+                        "L1FWHM"   : "2.42433",
+                        "UTSTOP"   : "00:01:53.067"
                 }
         midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
         midpoint += timedelta(seconds=float(params['EXPTIME']) / 2.0)
@@ -2936,7 +3588,8 @@ class TestFrames(TestCase):
                         "EXPTIME"  : "145",
                         "GROUPID"  : "TEMP",
                         "RLEVEL"   : 91,
-                        "L1FWHM"   : "2.42433"
+                        "L1FWHM"   : "2.42433",
+                        "UTSTOP"   : "00:01:53.067"
                 }
         midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
         midpoint += timedelta(seconds=float(params['EXPTIME']) / 2.0)
@@ -2947,6 +3600,36 @@ class TestFrames(TestCase):
         self.assertEqual(frames[0].frametype, Frame.BANZAI_RED_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'K91')
         self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].instrument, params['INSTRUME'])
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e91.fits'))
+
+    def test_ingest_frames_banzai_red_badexptime(self):
+        """Test that we preferentially take midpoint from UTSTOP over EXPTIME"""
+        params = {
+                        "DATE_OBS": "2015-12-31T23:59:28.067",
+                        "ENCID": "doma",
+                        "SITEID": "cpt",
+                        "TELID": "1m0a",
+                        "FILTER": "R",
+                        "INSTRUME" : "kb70",
+                        "ORIGNAME" : "cpt1m010-kb70-20150420-0001-e00",
+                        "EXPTIME"  : "200",
+                        "GROUPID"  : "TEMP",
+                        "RLEVEL"   : 91,
+                        "L1FWHM"   : "2.42433",
+                        "UTSTOP"   : "00:00:54.067"
+                }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) / 2.0)
+
+        frame = create_frame(params, self.test_block)
+        frames = Frame.objects.filter(sitecode='K91')
+        self.assertEqual(1, frames.count())
+        self.assertEqual(frames[0].frametype, Frame.BANZAI_RED_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'K91')
+        self.assertEqual(frames[0].quality, 'ABORTED')
+        self.assertNotEqual(frames[0].midpoint, midpoint)
         self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
         self.assertEqual(frames[0].instrument, params['INSTRUME'])
         self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e91.fits'))
@@ -3128,6 +3811,8 @@ class TestFrames(TestCase):
                     "ORIGNAME" : "coj2m002-en05-20180509-0017-e00",
                     "EXPTIME"  : "1800.0000",
                     "GROUPID"  : "4709_E10-20180509_spectra",
+                    "UTSTOP"   : "13:59:13.383"
+
                   }
         midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
         midpoint += timedelta(seconds=float(params['EXPTIME']) / 2.0)
@@ -3140,6 +3825,40 @@ class TestFrames(TestCase):
         self.assertEqual(frames[0].midpoint, midpoint)
         self.assertEqual(frames[0].filter, 'SLIT_30.0x2.0AS')
 #        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].instrument, params['INSTRUME'])
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e00.fits'))
+
+    def test_ingest_frames_spectro_spectrum_realistic_exptime(self):
+        """ In the wild, FLOYDS exposure times vary by 10s of miliseconds"""
+        params = {
+                    "DATE_OBS": "2018-05-09T13:28:52.383",
+                    "ENCID": "clma",
+                    "SITEID" : "coj",
+                    "TELID" : "2m0a",
+                    "OBSTYPE" : "SPECTRUM",
+                    "FILTER" : "air     ",
+                    "APERTYPE" : "SLIT    ",
+                    "APERLEN" : 30.0,
+                    "APERWID" : 2.0,
+                    "INSTRUME" : "en05",
+                    "ORIGNAME" : "coj2m002-en05-20180509-0017-e00",
+                    "EXPTIME"  : "1800.0000",
+                    "GROUPID"  : "4709_E10-20180509_spectra",
+                    "UTSTOP"   : "13:59:13.327"
+
+                  }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) / 2.0)
+
+        frame = create_frame(params, self.test_spec_block)
+        frames = Frame.objects.filter(sitecode='E10')
+        expdif = frames[0].midpoint-midpoint
+        self.assertEqual(1, frames.count())
+        self.assertEqual(frames[0].frametype, Frame.SPECTRUM_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'E10')
+        self.assertNotEqual(frames[0].midpoint, midpoint)
+        self.assertAlmostEqual(expdif.total_seconds(), 0.0, places=1)
+        self.assertEqual(frames[0].filter, 'SLIT_30.0x2.0AS')
         self.assertEqual(frames[0].instrument, params['INSTRUME'])
         self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e00.fits'))
 
@@ -3563,28 +4282,46 @@ class TestSummarise_Block_Efficiency(TestCase):
         proposal = Proposal.objects.create(**proposal_params)
 
         # Create test blocks
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'CPT',
+        sblock_params = {
                          'body'     : self.body,
                          'proposal' : proposal,
                          'groupid'  : self.body.current_name() + '_CPT-20150420',
                          'block_start' : '2015-04-20 13:00:00',
                          'block_end'   : '2015-04-21 03:00:00',
                          'tracking_number' : '00042',
+                         'active'   : True
+                       }
+        test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'CPT',
+                         'body'     : self.body,
+                         'superblock' : test_sblock,
+                         'block_start' : '2015-04-20 13:00:00',
+                         'block_end'   : '2015-04-21 03:00:00',
+                         'request_number' : '10042',
                          'num_exposures' : 5,
                          'exp_length' : 42.0,
                          'active'   : True
                        }
         test_block = Block.objects.create(**block_params)
 
-        block_params2 = { 'telclass' : '1m0',
-                         'site'     : 'CPT',
+        sblock_params2 = {
                          'body'     : self.body,
                          'proposal' : proposal,
                          'groupid'  : self.body.current_name() + '_CPT-20150420',
                          'block_start' : '2015-04-20 03:00:00',
                          'block_end'   : '2015-04-20 13:00:00',
                          'tracking_number' : '00043',
+                         'active'   : False,
+                       }
+        test_sblock2 = SuperBlock.objects.create(**sblock_params2)
+        block_params2 = { 'telclass' : '1m0',
+                         'site'     : 'CPT',
+                         'body'     : self.body,
+                         'superblock' : test_sblock2,
+                         'block_start' : '2015-04-20 03:00:00',
+                         'block_end'   : '2015-04-20 13:00:00',
+                         'request_number' : '10043',
                          'num_exposures' : 7,
                          'exp_length' : 30.0,
                          'active'   : False,
@@ -3609,14 +4346,23 @@ class TestSummarise_Block_Efficiency(TestCase):
         proposal = Proposal.objects.create(**proposal_params)
 
         # Create test blocks
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'CPT',
+        sblock_params = {
                          'body'     : self.body,
                          'proposal' : proposal,
                          'groupid'  : self.body.current_name() + '_CPT-20150420',
                          'block_start' : '2015-04-20 13:00:00',
                          'block_end'   : '2015-04-21 03:00:00',
                          'tracking_number' : '00042',
+                         'active'   : True
+                       }
+        test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'CPT',
+                         'body'     : self.body,
+                         'superblock' : test_sblock,
+                         'block_start' : '2015-04-20 13:00:00',
+                         'block_end'   : '2015-04-21 03:00:00',
+                         'request_number' : '10042',
                          'num_exposures' : 5,
                          'exp_length' : 42.0,
                          'active'   : True
@@ -3639,28 +4385,46 @@ class TestSummarise_Block_Efficiency(TestCase):
         proposal1 = Proposal.objects.create(**proposal_params)
 
         # Create test blocks
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'CPT',
+        sblock_params = {
                          'body'     : self.body,
                          'proposal' : proposal1,
                          'groupid'  : self.body.current_name() + '_CPT-20150420',
                          'block_start' : '2015-04-20 13:00:00',
                          'block_end'   : '2015-04-21 03:00:00',
                          'tracking_number' : '00042',
+                         'active'   : True
+                       }
+        test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'CPT',
+                         'body'     : self.body,
+                         'superblock' : test_sblock,
+                         'block_start' : '2015-04-20 13:00:00',
+                         'block_end'   : '2015-04-21 03:00:00',
+                         'request_number' : '10042',
                          'num_exposures' : 5,
                          'exp_length' : 42.0,
                          'active'   : True
                        }
         test_block = Block.objects.create(**block_params)
 
-        block_params2 = { 'telclass' : '1m0',
-                         'site'     : 'CPT',
+        sblock_params2 = {
                          'body'     : self.body,
                          'proposal' : proposal1,
                          'groupid'  : self.body.current_name() + '_CPT-20150420',
                          'block_start' : '2015-04-20 03:00:00',
                          'block_end'   : '2015-04-20 13:00:00',
                          'tracking_number' : '00043',
+                         'active'   : False,
+                       }
+        test_sblock2 = SuperBlock.objects.create(**sblock_params2)
+        block_params2 = { 'telclass' : '1m0',
+                         'site'     : 'CPT',
+                         'body'     : self.body,
+                         'superblock' : test_sblock2,
+                         'block_start' : '2015-04-20 03:00:00',
+                         'block_end'   : '2015-04-20 13:00:00',
+                         'request_number' : '10043',
                          'num_exposures' : 7,
                          'exp_length' : 30.0,
                          'active'   : False,
@@ -3675,14 +4439,23 @@ class TestSummarise_Block_Efficiency(TestCase):
         proposal2 = Proposal.objects.create(**proposal_params)
 
         # Create test blocks
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'CPT',
+        sblock_params = {
                          'body'     : self.body,
                          'proposal' : proposal2,
                          'groupid'  : self.body.current_name() + '_CPT-20150420',
                          'block_start' : '2015-04-20 13:00:00',
                          'block_end'   : '2015-04-21 03:00:00',
                          'tracking_number' : '00042',
+                         'active'   : True
+                       }
+        test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'CPT',
+                         'body'     : self.body,
+                         'superblock' : test_sblock,
+                         'block_start' : '2015-04-20 13:00:00',
+                         'block_end'   : '2015-04-21 03:00:00',
+                         'request_number' : '10042',
                          'num_exposures' : 5,
                          'exp_length' : 42.0,
                          'active'   : True
@@ -3770,14 +4543,23 @@ class TestCheckCatalogAndRefitNew(TestCase):
                           }
         self.test_proposal, created = Proposal.objects.get_or_create(**proposal_params)
 
-        block_params = {    'telclass': '1m0',
-                            'site': 'K92',
+        sblock_params = {
                             'body': self.test_body,
                             'proposal': self.test_proposal,
                             'groupid': 'P10w5z5_cpt_20160801',
                             'block_start': datetime(2016, 8, 1, 17),
                             'block_end': datetime(2016, 8, 2, 4),
                             'tracking_number': '0013',
+                            'active': False,
+                        }
+        self.test_sblock, created = SuperBlock.objects.get_or_create(**sblock_params)
+        block_params = {    'telclass': '1m0',
+                            'site': 'K92',
+                            'body': self.test_body,
+                            'superblock': self.test_sblock,
+                            'block_start': datetime(2016, 8, 1, 17),
+                            'block_end': datetime(2016, 8, 2, 4),
+                            'request_number': '1013',
                             'num_exposures': 5,
                             'exp_length': 225.0,
                             'num_observed': 1,
@@ -4492,7 +5274,7 @@ class TestUpdate_Crossids(TestCase):
         body.ingest = datetime(2018, 9, 2, 12, 13, 14)
         body.save()
 
-        block,created = Block.objects.get_or_create(body=body, proposal=self.neo_proposal)
+        block,created = Block.objects.get_or_create(body=body)
         self.assertEqual(3, Body.objects.count(), msg="Before update_crossids; should be 3 Bodies")
 
         status = update_crossids(crossid_info, dbg=False)
@@ -4640,14 +5422,23 @@ class TestStoreDetections(TestCase):
         self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
 
         # Create test blocks
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'ELP',
+        sblock_params = {
                          'body'     : self.body_with_provname,
                          'proposal' : self.neo_proposal,
                          'groupid'  : self.body_with_provname.current_name() + '_CPT-20150420',
                          'block_start' : '2016-02-26 03:00:00',
                          'block_end'   : '2016-02-26 13:00:00',
                          'tracking_number' : '00042',
+                         'active'   : True
+                       }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'ELP',
+                         'body'     : self.body_with_provname,
+                         'superblock'  : self.test_sblock,
+                         'block_start' : '2016-02-26 03:00:00',
+                         'block_end'   : '2016-02-26 13:00:00',
+                         'request_number' : '00042',
                          'num_exposures' : 5,
                          'exp_length' : 42.0,
                          'active'   : True
@@ -4767,36 +5558,36 @@ class Test_Add_New_Taxonomy_Data(TestCase):
         self.test_spectra = SpectralInfo.objects.create(pk=1, **tax_params)
 
     def test_one_body(self):
-        expected_res = True
-        test_obj = ['LNX0003', 'SU', "T", "PDS6", "7G"]
-        new_tax = update_taxonomy(test_obj)
+        expected_res = 1
+        test_obj = [['LNX0003', 'SU', "T", "PDS6", "7G"]]
+        new_tax = update_taxonomy(self.body, test_obj)
 
         self.assertEqual(expected_res, new_tax)
 
     def test_new_target(self):
         expected_res = False
-        test_obj = ['4702', 'S', "B", "PDS6", "s"]
-        new_tax = update_taxonomy(test_obj)
+        test_obj = [['4702', 'S', "B", "PDS6", "s"]]
+        new_tax = update_taxonomy(self.body, test_obj)
 
         self.assertEqual(expected_res, new_tax)
 
     def test_same_data(self):
-        expected_res = False
-        test_obj = ['980', 'S3', "Ba", "PDS6", "7I"]
-        new_tax = update_taxonomy(test_obj)
+        expected_res = 0
+        test_obj = [['980', 'S3', "Ba", "PDS6", "7I"]]
+        new_tax = update_taxonomy(self.body, test_obj)
 
         self.assertEqual(expected_res, new_tax)
 
     def test_same_data_twice(self):
-        expected_res = False
-        test_obj = ['980', 'SU', "T", "PDS6", "7G"]
-        new_tax = update_taxonomy(test_obj)
-        new_tax = update_taxonomy(test_obj)
+        expected_res = 0
+        test_obj = [['980', 'SU', "T", "PDS6", "7G"]]
+        new_tax = update_taxonomy(self.body, test_obj)
+        new_tax = update_taxonomy(self.body, test_obj)
 
         self.assertEqual(expected_res, new_tax)
 
 
-class Test_Add_External_Spectroscopy_Data(TestCase):
+class TestAddExternalSpectroscopyData(TestCase):
 
     def setUp(self):
 
@@ -5007,9 +5798,9 @@ class TestFindBestSolarAnalog(TestCase):
 
         utc_date = datetime(2017, 11, 15, 14, 0, 0)
         emp = compute_ephem(utc_date, model_to_dict(self.test_body), 'F65', perturb=False)
-        self.assertAlmostEqual(expected_ra, emp[1], self.precision)
-        self.assertAlmostEqual(expected_dec, emp[2], self.precision)
-        close_standard, close_params = find_best_solar_analog(emp[1], emp[2])
+        self.assertAlmostEqual(expected_ra, emp['ra'], self.precision)
+        self.assertAlmostEqual(expected_dec, emp['dec'], self.precision)
+        close_standard, close_params = find_best_solar_analog(emp['ra'], emp['dec'], 'F65')
 
         self.assertEqual(expected_standard, close_standard)
         for key in expected_params:
@@ -5028,9 +5819,9 @@ class TestFindBestSolarAnalog(TestCase):
 
         utc_date = datetime(2014, 4, 20, 13, 30, 0)
         emp = compute_ephem(utc_date, model_to_dict(self.test_body), 'E10', perturb=False)
-        self.assertAlmostEqual(expected_ra, emp[1], self.precision)
-        self.assertAlmostEqual(expected_dec, emp[2], self.precision)
-        close_standard, close_params = find_best_solar_analog(emp[1], emp[2])
+        self.assertAlmostEqual(expected_ra, emp['ra'], self.precision)
+        self.assertAlmostEqual(expected_dec, emp['dec'], self.precision)
+        close_standard, close_params = find_best_solar_analog(emp['ra'], emp['dec'], 'E10')
 
         self.assertEqual(expected_standard, close_standard)
         for key in expected_params:
@@ -5047,18 +5838,18 @@ class TestFindBestSolarAnalog(TestCase):
 
         utc_date = datetime(2020, 9, 5, 13, 30, 0)
         emp = compute_ephem(utc_date, model_to_dict(self.test_body), 'E10', perturb=False)
-        self.assertAlmostEqual(expected_ra, emp[1], self.precision)
-        self.assertAlmostEqual(expected_dec, emp[2], self.precision)
-        close_standard, close_params = find_best_solar_analog(emp[1], emp[2], min_sep=5.0)
+        self.assertAlmostEqual(expected_ra, emp['ra'], self.precision)
+        self.assertAlmostEqual(expected_dec, emp['dec'], self.precision)
+        close_standard, close_params = find_best_solar_analog(emp['ra'], emp['dec'], 'E10', ha_sep=0.5)
 
         self.assertEqual(expected_standard, close_standard)
         self.assertEqual(expected_params, close_params)
 
 
-class Test_Export_Measurements(TestCase):
+class TestExportMeasurements(TestCase):
 
     def setUp(self):
-        self.test_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
 
         self.debug_print = False
         self.maxDiff = None
@@ -5104,3 +5895,618 @@ class Test_Export_Measurements(TestCase):
 
         self.assertEqual(expected_filename, filename)
         self.assertEqual(expected_num_lines, num_lines)
+
+
+class TestUpdateElementsWithFindOrb(TestCase):
+
+    def setUp(self):
+        self.source_dir = os.path.abspath(os.path.join(os.getenv('HOME'), '.find_orb'))
+        self.dest_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+        orig_filename = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcobs_P10pqB2.dat'))
+        self.filename = os.path.basename(orig_filename)
+        os.symlink(orig_filename, os.path.join(self.dest_dir, self.filename))
+
+        self.debug_print = False
+        self.maxDiff = None
+
+    def tearDown(self):
+        remove = True
+        if remove:
+            try:
+                files_to_remove = glob(os.path.join(self.dest_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.dest_dir)
+            try:
+                os.rmdir(self.dest_dir)
+                if self.debug_print:
+                    print("Removed", self.dest_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.dest_dir)
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('neox.tests.mocks.datetime', MockDateTime)
+    def test_goodelements(self):
+
+        MockDateTime.change_datetime(2015, 11, 18, 12, 0, 0)
+        # Overwrite real method with Mock. Not sure why 'patch' isn't working
+        # but it isn't...
+        update_elements_with_findorb = mock_update_elements_with_findorb
+
+        expected_elements = {   'abs_mag' : 21.91,
+                                'slope' : 0.15,
+                                'active' : True,
+                                'origin' : 'M',
+                                'source_type' : 'U',
+                                'elements_type' : 'MPC_MINOR_PLANET',
+                                'provisional_name' : 'P10pqB2',
+                                'epochofel' : datetime(2015, 11, 18),
+                                'meananom' : 270.89733,
+                                'argofperih' : 339.47051,
+                                'longascnode' : 197.11047,
+                                'orbinc' : 10.74649,
+                                'eccentricity' :  0.3001867,
+                                'meandist' :  1.1896136,
+                                'arc_length' : 22.5/24.0,
+                                'num_obs' : 9,
+                                'not_seen' : 0.5,
+                                'update_time' : datetime(2015, 11, 18, 12, 0, 0),
+                                'orbit_rms' : 0.1
+                            }
+
+        start_time = datetime(2015, 11, 18, 23)
+        site_code = 'Z21'
+        elements_or_status = update_elements_with_findorb(self.source_dir, self.dest_dir, self.filename, site_code, start_time)
+
+        self.assertEqual(expected_elements, elements_or_status)
+
+    def test_bad_filename(self):
+
+        # Overwrite real method with Mock. Not sure why 'patch' isn't working
+        # but it isn't...
+        update_elements_with_findorb = mock_update_elements_with_findorb
+
+        expected_status = 255
+
+        start_time = datetime(2015, 11, 19)
+        site_code = 'Z21'
+
+        elements_or_status = update_elements_with_findorb(self.source_dir, self.dest_dir, 'i_am_broken', site_code, start_time)
+
+        self.assertEqual(expected_status, elements_or_status)
+
+
+class TestRefitWithFindOrb(TestCase):
+
+    @classmethod
+    def setUpTestData(cls):
+        P10pqB2_params = { 'provisional_name' : 'P10pqB2',
+                           'source_type' : 'U',
+                           'epochofel' : datetime(2014, 12, 23)
+                         }
+
+        cls.test_body = Body.objects.create(**P10pqB2_params)
+
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcobs_P10pqB2.dat'), 'r')
+        test_obslines = test_fh.readlines()
+        test_fh.close()
+        source_measures = create_source_measurement(test_obslines)
+
+    def setUp(self):
+        self.source_dir = os.path.abspath(os.path.join(os.getenv('HOME'), '.find_orb'))
+        self.dest_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+
+        self.debug_print = False
+        self.remove = True
+
+        self.maxDiff = None
+
+        self.test_body.refresh_from_db()
+
+    def tearDown(self):
+        if self.remove:
+            try:
+                files_to_remove = glob(os.path.join(self.dest_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.dest_dir)
+            try:
+                os.rmdir(self.dest_dir)
+                if self.debug_print:
+                    print("Removed", self.dest_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.dest_dir)
+        else:
+            print("dest_dir=", self.dest_dir)
+
+    @patch('core.views.update_elements_with_findorb', mock_update_elements_with_findorb)
+    def test_Z21(self):
+        start_time = datetime(2015, 11, 19)
+        site_code = 'Z21'
+
+        expected_emp_info = { 'obj_id' : self.test_body.current_name(),
+                              'emp_sitecode' : site_code,
+                              'emp_timesys' : '(UTC)',
+                              'emp_rateunits' : "'/hr"}
+        expected_ephem = [(datetime(2015, 11, 19, 0,  0, 0), 0.9646629670872465, -0.14939257239592119,  21.1, 2.25, 3.16),
+                          (datetime(2015, 11, 19, 0, 30, 0), 0.9644540366313723, -0.14964646932071826, 21.1, 2.25, 3.24),
+                          (datetime(2015, 11, 19, 1,  0, 0), 0.9642447425652374, -0.14990002687593854, 21.1, 2.25, 3.33),
+                          (datetime(2015, 11, 19, 1, 30, 0), 0.9640354484991024, -0.15015324506158206, 21.1, 2.25, 3.42)
+                         ]
+        expected_ephem_length = 4
+        expected_num_srcmeas = SourceMeasurement.objects.filter(body=self.test_body).count()
+        expected_meananom = 272.51789
+        expected_eccentricity =  0.3006186
+        expected_epoch = datetime(2015, 11, 20)
+        expected_src_type = 'U'
+        expected_origin = 'M'
+
+        emp_info, new_ephem = refit_with_findorb(self.test_body.pk, site_code, start_time, self.dest_dir)
+        self.assertEqual(expected_emp_info, emp_info)
+        self.assertEqual(expected_ephem_length, len(new_ephem))
+        i = 0
+        while i < len(expected_ephem):
+            self.assertEqual(expected_ephem[i], new_ephem[i])
+            i += 1
+
+        body = Body.objects.get(provisional_name=self.test_body.current_name())
+
+        self.assertEqual(expected_num_srcmeas, body.num_obs)
+        self.assertEqual(expected_epoch, body.epochofel)
+        self.assertEqual(expected_meananom, body.meananom)
+        self.assertEqual(expected_eccentricity, body.eccentricity)
+        self.assertEqual(expected_src_type, body.source_type)
+        self.assertEqual(expected_origin, body.origin)
+
+    @patch('core.views.update_elements_with_findorb', mock_update_elements_with_findorb_badrms)
+    def test_with_bad_RMS(self):
+        start_time = datetime(2015, 11, 19)
+        site_code = 'Z21'
+
+        expected_emp_info = { 'obj_id' : self.test_body.current_name(),
+                              'emp_sitecode' : site_code,
+                              'emp_timesys' : '(UTC)',
+                              'emp_rateunits' : "'/hr"}
+        expected_ephem = [(datetime(2015, 11, 19, 0,  0, 0), 0.9646629670872465, -0.14939257239592119,  21.1, 2.25, 3.16),
+                          (datetime(2015, 11, 19, 0, 30, 0), 0.9644540366313723, -0.14964646932071826, 21.1, 2.25, 3.24)
+                         ]
+        expected_ephem_length = 2
+        expected_num_srcmeas = None
+        expected_meananom = None
+        expected_epoch = datetime(2014, 12, 23)
+        expected_src_type = 'U'
+        expected_origin = 'M'
+
+        emp_info, new_ephem = refit_with_findorb(self.test_body.pk, site_code, start_time, self.dest_dir)
+
+        self.assertEqual(expected_emp_info, emp_info)
+        self.assertEqual(expected_ephem_length, len(new_ephem))
+        i = 0
+        while i < len(expected_ephem):
+            self.assertEqual(expected_ephem[i], new_ephem[i])
+            i += 1
+
+        body = Body.objects.get(provisional_name=self.test_body.current_name())
+
+        self.assertEqual(expected_num_srcmeas, body.num_obs)
+        self.assertEqual(expected_epoch, body.epochofel)
+        self.assertEqual(expected_meananom, body.meananom)
+        self.assertEqual(expected_src_type, body.source_type)
+        self.assertEqual(expected_origin, body.origin)
+
+    @patch('core.views.update_elements_with_findorb', mock_update_elements_with_findorb_badepoch)
+    def test_with_bad_epoch(self):
+        start_time = datetime(2015, 11, 19)
+        site_code = 'T03'
+
+        expected_emp_info = { 'obj_id' : self.test_body.current_name(),
+                              'emp_sitecode' : site_code,
+                              'emp_timesys' : '(UTC)',
+                              'emp_rateunits' : "'/hr"}
+        expected_ephem = [(datetime(2015, 11, 19, 0,  0, 0), 0.9646887106937134, -0.14934360621412912,  21.1, 2.13, 3.45),
+                          (datetime(2015, 11, 19, 0, 30, 0), 0.9645093781130711, -0.14959818187807974, 21.1, 2.14, 3.62)
+                         ]
+        expected_ephem_length = 2
+        expected_num_srcmeas = None
+        expected_meananom = None
+        expected_epoch = datetime(2014, 12, 23)
+        expected_src_type = 'U'
+        expected_origin = 'M'
+
+        emp_info, new_ephem = refit_with_findorb(self.test_body.pk, site_code, start_time, self.dest_dir)
+
+        self.assertEqual(expected_emp_info, emp_info)
+        self.assertEqual(expected_ephem_length, len(new_ephem))
+        i = 0
+        while i < len(expected_ephem):
+            self.assertEqual(expected_ephem[i], new_ephem[i])
+            i += 1
+
+        body = Body.objects.get(provisional_name=self.test_body.current_name())
+
+        self.assertEqual(expected_num_srcmeas, body.num_obs)
+        self.assertEqual(expected_epoch, body.epochofel)
+        self.assertEqual(expected_meananom, body.meananom)
+        self.assertEqual(expected_src_type, body.source_type)
+        self.assertEqual(expected_origin, body.origin)
+
+
+class TestDetermineActiveProposals(TestCase):
+
+    @classmethod
+    def setUpTestData(cls):
+        proposal_params = { 'code'   : 'LCO2019A-005',
+                                'title'  : 'LCOGT NEO Follow-up Network',
+                                'active' : True
+                              }
+        cls.active_proposal, created = Proposal.objects.get_or_create(**proposal_params)
+        proposal_params['code'] = 'LCOEngineering'
+        cls.eng_proposal, created = Proposal.objects.get_or_create(**proposal_params)
+        proposal_params['code'] = 'LCOEPO2014B-010'
+        proposal_params['download'] = False
+        cls.epo_proposal, created = Proposal.objects.get_or_create(**proposal_params)
+        proposal_params['code'] = 'LCO2018B-010'
+        proposal_params['download'] = True
+        proposal_params['active'] = False
+        cls.inactive_proposal, created = Proposal.objects.get_or_create(**proposal_params)
+        proposal_params['code'] = 'LCO2019A-008'
+        proposal_params['active'] = True
+        proposal_params['download'] = False
+        cls.skipped_proposal, created = Proposal.objects.get_or_create(**proposal_params)
+
+    def test_setup(self):
+        proposals = Proposal.objects.all()
+        self.assertEqual(5, proposals.count())
+
+        active_proposals = proposals.filter(active=True, download=True)
+        self.assertEqual(2, active_proposals.count())
+
+        inactive_proposals = proposals.filter(active=False)
+        self.assertEqual(1, inactive_proposals.count())
+
+    def test_nodefault(self):
+        expected_num = 2
+        expected_code_1 = 'LCO2019A-005'
+        expected_code_2 = 'LCOEngineering'
+
+        proposals = determine_active_proposals()
+
+        self.assertEqual(expected_num, len(proposals))
+        self.assertEqual(expected_code_1, proposals[0])
+        self.assertEqual(expected_code_2, proposals[1])
+
+    def test_default_existing_active(self):
+        expected_num = 1
+        expected_code_1 = 'LCO2019A-005'
+
+        proposals = determine_active_proposals('LCO2019A-005')
+
+        self.assertEqual(expected_num, len(proposals))
+        self.assertEqual(expected_code_1, proposals[0])
+
+    def test_default_existing_inactive(self):
+        expected_num = 1
+        expected_code_1 = 'LCO2018B-010'
+
+        proposals = determine_active_proposals('LCO2018B-010')
+
+        self.assertEqual(expected_num, len(proposals))
+        self.assertEqual(expected_code_1, proposals[0])
+
+    def test_default_not_existing(self):
+        expected_num = 0
+        expected_proposals = []
+
+        proposals = determine_active_proposals('LCO2019A-905')
+
+        self.assertEqual(expected_num, len(proposals))
+        self.assertEqual(expected_proposals, proposals)
+
+    def test_default_existing_active_lc(self):
+        expected_num = 1
+        expected_code_1 = 'LCO2019A-005'
+
+        proposals = determine_active_proposals('lco2019a-005')
+
+        self.assertEqual(expected_num, len(proposals))
+        self.assertEqual(expected_code_1, proposals[0])
+
+    def test_include_epo_proposal(self):
+        expected_num = 4
+        expected_code_1 = 'LCO2019A-005'
+        expected_code_2 = 'LCO2019A-008'
+        expected_code_3 = 'LCOEPO2014B-010'
+        expected_code_4 = 'LCOEngineering'
+
+        proposals = determine_active_proposals(filter_proposals=False)
+
+        self.assertEqual(expected_num, len(proposals))
+        self.assertEqual(expected_code_1, proposals[0])
+        self.assertEqual(expected_code_2, proposals[1])
+        self.assertEqual(expected_code_3, proposals[2])
+        self.assertEqual(expected_code_4, proposals[3])
+
+    def test_specific_epo_proposal(self):
+        expected_num = 1
+        expected_code_1 = 'LCOEPO2014B-010'
+
+        proposals = determine_active_proposals('LCOEPO2014B-010')
+
+        self.assertEqual(expected_num, len(proposals))
+        self.assertEqual(expected_code_1, proposals[0])
+
+    def test_specific_skipped_proposal(self):
+        expected_num = 1
+        expected_code_1 = 'LCO2019A-008'
+
+        proposals = determine_active_proposals('LCO2019A-008')
+
+        self.assertEqual(expected_num, len(proposals))
+        self.assertEqual(expected_code_1, proposals[0])
+
+class TestBestStandardsView(TestCase):
+
+    def setUp(self):
+        self.precision = 2
+        self.HA_hours = 3
+
+    def test_march_default_HA(self):
+        # Time is for March Equinox so anti-solar point is ~12h RA (=180 degrees)
+        expected_min_ra = 180 - self.HA_hours*15
+        expected_max_ra = 180 + self.HA_hours*15
+
+        min_ra, max_ra = BestStandardsView.determine_ra_range(self, utc_dt=datetime(2019, 3, 20,  22, 00, 00))
+
+        self.assertAlmostEqual(expected_min_ra, min_ra, self.precision)
+        self.assertAlmostEqual(expected_max_ra, max_ra, self.precision)
+
+    def test_march_HA1(self):
+        self.HA_hours = 1
+        # Time is for March Equinox so anti-solar point is ~12h RA (=180 degrees)
+        expected_min_ra = 180 - self.HA_hours*15
+        expected_max_ra = 180 + self.HA_hours*15
+
+        min_ra, max_ra = BestStandardsView.determine_ra_range(self, utc_dt=datetime(2019, 3, 20,  22, 00, 00), HA_hours=self.HA_hours)
+
+        self.assertAlmostEqual(expected_min_ra, min_ra, self.precision)
+        self.assertAlmostEqual(expected_max_ra, max_ra, self.precision)
+
+    def test_after_sept_equinox_default_HA(self):
+        # Time is for September Equinox so anti-solar point is ~00h RA
+        expected_min_ra = (0 - self.HA_hours*15) + 360
+        expected_max_ra = 0 + self.HA_hours*15
+
+        min_ra, max_ra = BestStandardsView.determine_ra_range(self, utc_dt=datetime(2019, 9, 23,  7, 40, 50))
+
+        self.assertAlmostEqual(expected_min_ra, min_ra, self.precision)
+        self.assertAlmostEqual(expected_max_ra, max_ra, self.precision)
+
+    def test_before_sept_equinox_default_HA(self):
+        # Time is for September Equinox so anti-solar point is ~00h RA
+        expected_min_ra = (0 - self.HA_hours*15) + 360
+        expected_max_ra = 0 + self.HA_hours*15
+
+        min_ra, max_ra = BestStandardsView.determine_ra_range(self, utc_dt=datetime(2019, 9, 23,  7, 40, 30))
+
+        self.assertAlmostEqual(expected_min_ra, min_ra, self.precision)
+        self.assertAlmostEqual(expected_max_ra, max_ra, self.precision)
+
+class TestFindSpec(TestCase):
+
+    def setUp(self):
+        body_params = {
+                         'provisional_name': None,
+                         'provisional_packed': 'j5432',
+                         'name': '455432',
+                         'origin': 'A',
+                         'source_type': 'N',
+                         'elements_type': 'MPC_MINOR_PLANET',
+                         'active': True,
+                         'fast_moving': True,
+                         'urgency': None,
+                         'epochofel': datetime(2019, 7, 31, 0, 0),
+                         'orbit_rms': 0.46,
+                         'orbinc': 31.23094,
+                         'longascnode': 301.42266,
+                         'argofperih': 22.30793,
+                         'eccentricity': 0.3660154,
+                         'meandist': 1.7336673,
+                         'meananom': 352.55084,
+                         'perihdist': None,
+                         'epochofperih': None,
+                         'abs_mag': 18.54,
+                         'slope': 0.15,
+                         'score': None,
+                         'discovery_date': datetime(2003, 9, 7, 3, 7, 18),
+                         'num_obs': 130,
+                         'arc_length': 6209.0,
+                         'not_seen': 3.7969329574421296,
+                         'updated': True,
+                         'ingest': datetime(2019, 7, 4, 5, 28, 39),
+                         'update_time': datetime(2019, 7, 30, 19, 7, 35)
+                        }
+        self.test_body = Body.objects.create(**body_params)
+
+        proposal_params = { 'code'   : 'LCOEngineering',
+                                'title'  : 'LCOEngineering',
+                                'active' : True
+                              }
+        self.eng_proposal, created = Proposal.objects.get_or_create(**proposal_params)
+
+        sblock_params = {
+                        'body' : self.test_body,
+                        'block_start' : datetime(2019, 7, 27, 8, 30),
+                        'block_end'   : datetime(2019, 7, 27,19, 30),
+                        'proposal' : self.eng_proposal,
+                        'tracking_number' : '818566'
+                        }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+
+        block_params = {
+                        'body' : self.test_body,
+                        'superblock' : self.test_sblock,
+                        'block_start' : datetime(2019, 7, 27, 8, 30),
+                        'block_end'   : datetime(2019, 7, 27,19, 30),
+                        'obstype' : Block.OPT_SPECTRA,
+                        'request_number' : '1878696',
+                        'num_exposures' : 1,
+                        'exp_length' : 1800
+                        }
+        self.test_block = Block.objects.create(**block_params)
+
+        frame_params = {
+                         'block' : self.test_block,
+                         'sitecode': 'E10',
+                         'instrument': 'en12',
+                         'filter': 'SLIT_30.0x6.0AS',
+                         'filename': 'coj2m002-en12-20190727-0014-w00.fits',
+                         'frameid' : 12272496,
+                         'frametype' : Frame.SPECTRUM_FRAMETYPE,
+                         'midpoint': datetime(2019, 7, 27, 15, 52, 29, 495000),
+
+                        }
+        self.test_flatframe = Frame.objects.create(**frame_params)
+
+    @patch('core.views.lco_api_call', mock_archive_spectra_header)
+    def test_local_data_no_tarball(self):
+        settings.USE_S3 = False
+
+        expected_date = '20190727'
+        expected_path = os.path.join(expected_date, self.test_body.current_name() + '_' + self.test_block.request_number)
+
+        date_obs, obj, req, path, prop = find_spec(self.test_block.pk)
+
+        self.assertEqual(expected_date, date_obs)
+        self.assertEqual(self.test_body.current_name(), obj)
+        self.assertEqual(self.test_block.request_number, req)
+        self.assertEqual(expected_path, path)
+        self.assertEqual(self.eng_proposal.code, prop)
+
+    @patch('core.views.lco_api_call', mock_archive_spectra_header)
+    def test_local_data_with_tarball(self):
+
+        with self.settings(MEDIA_ROOT=tempfile.mkdtemp()):
+            expected_date = '20190727'
+            expected_path = os.path.join(expected_date, self.test_body.current_name() + '_' + self.test_block.request_number)
+            # os.makedirs(expected_date)
+            fake_tar = os.path.join(expected_date, self.eng_proposal.code + '_' + self.test_block.request_number + '.tar.gz')
+            with open(fake_tar, 'a'):
+                pass
+
+            date_obs, obj, req, path, prop = find_spec(self.test_block.pk)
+
+            self.assertEqual(expected_date, date_obs)
+            self.assertEqual(self.test_body.current_name(), obj)
+            self.assertEqual(self.test_block.request_number, req)
+            self.assertEqual(expected_path, path)
+            self.assertEqual(self.eng_proposal.code, prop)
+
+    @patch('core.views.lco_api_call', mock_archive_spectra_header)
+    def test_S3_data(self):
+        settings.USE_S3 = True
+        settings.DATA_ROOT = None
+
+        expected_date = '20190727'
+        expected_path = os.path.join('', expected_date, self.test_body.current_name() + '_' + self.test_block.request_number)
+
+        date_obs, obj, req, path, prop = find_spec(self.test_block.pk)
+
+        self.assertEqual(expected_date, date_obs)
+        self.assertEqual(self.test_body.current_name(), obj)
+        self.assertEqual(self.test_block.request_number, req)
+        self.assertEqual(expected_path, path)
+        self.assertEqual(self.eng_proposal.code, prop)
+
+
+class TestFindSpecPlots(TestCase):
+
+    def setUp(self):
+        # Disable S3 by default for tests
+        settings.USE_S3 = False
+        self.tmp_dir = tempfile.mkdtemp()
+        settings.DATA_ROOT = self.tmp_dir
+        self.day_dir = os.path.join(settings.DATA_ROOT, '20190727')
+        self.remove = True
+
+    def tearDown(self):
+        if self.remove is True:
+            shutil.rmtree(self.tmp_dir)
+
+    def touch_file(self, path):
+        if not os.path.exists(os.path.dirname(path)):
+            os.makedirs(os.path.dirname(path))
+        with open(path, 'a'):
+            pass
+
+    def test_local_data_missing(self):
+        spec_files = find_spec_plots(None, None, None, None)
+
+        self.assertEqual(None, spec_files)
+
+    def test_local_data_no_data(self):
+        spec_files = find_spec_plots(settings.DATA_ROOT, '1999KW4', '1234', '1')
+
+        self.assertEqual([], spec_files)
+
+    def test_local_data_1plot(self):
+        base_dir = os.path.join(self.day_dir, '1999KW4_1234')
+        expected_files = [os.path.join(base_dir, '1999KW4_1234_spectra_1.png'),]
+        self.touch_file(expected_files[0])
+
+        spec_files = find_spec_plots(base_dir, '1999KW4', '1234', '1')
+
+        self.assertEqual(expected_files, spec_files)
+
+    def test_local_data_2plot(self):
+        base_dir = os.path.join(self.day_dir, '1999KW4_1234')
+        expected_files = [os.path.join(base_dir, '1999KW4_1234_spectra_1.png'),
+                          os.path.join(base_dir, '1999KW4_1234_spectra_2.png'),]
+        self.touch_file(expected_files[0])
+        self.touch_file(expected_files[1])
+
+        spec_files = find_spec_plots(base_dir, '1999KW4', '1234', '1')
+
+        self.assertEqual([expected_files[0],], spec_files)
+
+    def test_local_guidemovie(self):
+        base_dir = os.path.join(self.day_dir, '1999KW4_1234', 'Guide_frames')
+        expected_files = [os.path.join(base_dir, '1999KW4_1234_guidemovie.gif'),]
+        self.touch_file(expected_files[0])
+
+        spec_files = find_spec_plots(base_dir, '1999KW4', '1234', 'guidemovie.gif')
+
+        self.assertEqual(expected_files, spec_files)
+    def test_S3_1plot(self):
+        settings.USE_S3 = True
+        settings.DATA_ROOT = ''
+        base_dir = os.path.join('data', '1999KW4_1234')
+        expected_files = [os.path.join(base_dir, '1999KW4_1234_spectra_1.png'),]
+        self.touch_file(expected_files[0])
+
+        spec_files = find_spec_plots(base_dir, '1999KW4', '1234', '1')
+
+        self.assertEqual(expected_files, spec_files)
+
+    def test_S3_calibplot(self):
+        settings.USE_S3 = True
+        settings.DATA_ROOT = ''
+        base_dir = os.path.join('data', 'cdbs', 'ctiostan')
+        expected_files = [os.path.join(base_dir, 'LTT1078_spectra_1.png'),]
+        self.touch_file(expected_files[0])
+
+        spec_files = find_spec_plots(base_dir, 'LTT1078', None, '1')
+
+        self.assertEqual(expected_files, spec_files)
+
+    def test_S3_guidemovie(self):
+        settings.USE_S3 = True
+        settings.DATA_ROOT = ''
+        base_dir = os.path.join('data', '1999KW4_1234', 'Guide_frames')
+        expected_files = [os.path.join(base_dir, '1999KW4_1234_guidemovie.gif'),]
+        self.touch_file(expected_files[0])
+
+        spec_files = find_spec_plots(base_dir, '1999KW4', '1234', 'guidemovie.gif')
+
+        self.assertEqual(expected_files, spec_files)

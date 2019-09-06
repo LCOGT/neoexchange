@@ -481,3 +481,12 @@ def timeit(method):
         return result
 
     return timed
+
+
+def tomorrow(n=1):
+    """
+    Build a function for returning tomorrow's date using datetime.today()
+    Will accept integer for number of days after today to return.
+    """
+    t = datetime.today() + timedelta(days=n)
+    return t

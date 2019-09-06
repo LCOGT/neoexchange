@@ -12,7 +12,7 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.contrib import admin
 
 from core.models import *
@@ -93,8 +93,17 @@ class BlockAdmin(VersionAdmin):
             name = obj.calibsource.name
         return name
 
+    def groupid(self, obj):
+        groupid = ''
+        if obj.superblock.groupid is not None:
+            groupid = obj.superblock.groupid
+        return groupid
+
+    def proposal(self, obj):
+        return obj.superblock.proposal
+
     list_display = ('groupid', 'body_name', 'site', 'proposal', 'block_start', 'num_observed', 'active', 'reported', 'zoo_friendly', 'sent_to_zoo')
-    list_filter = ('site', 'telclass', 'proposal', 'block_start', 'num_observed', 'active', 'reported',)
+    list_filter = ('site', 'telclass', 'superblock__proposal', 'block_start', 'num_observed', 'active', 'reported',)
 
     ordering = ('-block_start',)
 
@@ -107,8 +116,8 @@ class FrameAdmin(VersionAdmin):
     format_midpoint.admin_order_field = 'midpoint'
 
     def block_groupid(self, obj):
-        if obj.block:
-            return obj.block.groupid
+        if obj.block and obj.block.superblock:
+            return obj.block.superblock.groupid
         else:
             return "No block"
 
@@ -147,7 +156,7 @@ class PreviousSpectraAdmin(VersionAdmin):
 
 
 class ProposalAdmin(admin.ModelAdmin):
-    list_display = ('code', 'title', 'pi', 'tag', 'active')
+    list_display = ('code', 'title', 'pi', 'tag', 'active', 'time_critical', 'download')
 
 
 class SourceMeasurementAdmin(admin.ModelAdmin):

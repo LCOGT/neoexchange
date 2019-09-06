@@ -1,5 +1,0 @@
-[lcogt]
-name=LCOGT Package Repository $releasever - $basearch
-baseurl=http://packagerepo.lco.gtn/repos/lcogt/$releasever
-enabled=1
-gpgcheck=0

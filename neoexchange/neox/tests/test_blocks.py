@@ -16,7 +16,7 @@ GNU General Public License for more details.
 from .base import FunctionalTest
 from mock import patch
 
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.contrib.auth.models import User
 
 from neox.tests.mocks import MockDateTime, mock_lco_authenticate, mock_fetch_archive_frames
@@ -110,10 +110,9 @@ class SuperBlockListValidationTest(FunctionalTest):
         block_params = { 'telclass' : '1m0',
                          'site'     : 'cpt',
                          'body'     : self.body,
-                         'proposal' : self.neo_proposal,
                          'block_start' : '2015-04-21 13:00:00',
                          'block_end'   : '2015-04-22 03:00:00',
-                         'tracking_number' : '00044',
+                         'request_number' : '00044',
                          'num_exposures' : 5,
                          'exp_length' : 40.0,
                          'active'   : True,
@@ -241,12 +240,11 @@ class SpectroBlocksListValidationTest(FunctionalTest):
         block_params = { 'telclass' : '2m0',
                          'site'     : 'ogg',
                          'body'     : self.body,
-                         'proposal' : self.test_proposal,
                          'superblock' : self.test_sblock,
                          'obstype'  : Block.OPT_SPECTRA,
                          'block_start' : '2015-04-20 13:00:00',
                          'block_end'   : '2015-04-21 03:00:00',
-                         'tracking_number' : '12345',
+                         'request_number' : '12345',
                          'num_exposures' : 1,
                          'exp_length' : 1800.0,
                          'active'   : True,
@@ -317,12 +315,11 @@ class SpectroBlocksDetailValidationTest(FunctionalTest):
         block_params = { 'telclass' : '2m0',
                          'site'     : 'ogg',
                          'body'     : self.body,
-                         'proposal' : self.test_proposal,
                          'superblock' : self.test_sblock,
                          'obstype'  : Block.OPT_SPECTRA,
                          'block_start' : '2015-04-20 13:00:00',
                          'block_end'   : '2015-04-21 03:00:00',
-                         'tracking_number' : '12345',
+                         'request_number' : '12345',
                          'num_exposures' : 1,
                          'exp_length' : 1800.0,
                          'active'   : True,

@@ -19,10 +19,12 @@
                     <a class="button button-primary" href="{% url 'schedule-calib-spectra' 'F65-FLOYDS' '-' %}" id="schedule-solar-ftn-obs">Schedule FTN Calib Observations</a>
                     <a class="button button-primary" href="{% url 'schedule-calib-spectra' 'E10-FLOYDS' '-' %}" id="schedule-solar-fts-obs">Schedule FTS Calib Observations</a>
                     <a class="button button-primary" href="{% url 'calibsource-view' %}" id="show-all-calibsources">Show all Calibration Sources</a>
+                    <a class="button button-primary" href="{% url 'beststandards-view' %}" id="show-best-standards">Show best standards</a>
                 {% else %}
                     <a class="button button-primary" href="{% url 'schedule-calib-spectra' 'F65-FLOYDS' '-' %}" id="schedule-calib-ftn-obs">Schedule FTN Calib Observations</a>
                     <a class="button button-primary" href="{% url 'schedule-calib-spectra' 'E10-FLOYDS' '-' %}" id="schedule-calib-fts-obs">Schedule FTS Calib Observations</a>
                     <a class="button button-primary" href="{% url 'solarstandard-view' %}" id="show-solar-standards">Show only Solar Analogs</a>
+                    <a class="button button-primary" href="{% url 'beststandards-view' %}" id="show-best-standards">Show best standards</a>
                 {% endif %}
             </div>
             <span id="anti_solar_point"> <b> Current Anti-Solar Point: RA = {{night.ra}} / Dec = {{night.dec}} </b></span>

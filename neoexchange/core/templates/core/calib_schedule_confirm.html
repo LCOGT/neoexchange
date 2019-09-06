@@ -45,25 +45,29 @@
                         <td class="kv-key">Proposal</td>
                         <td class="kv-value">{{ data.proposal_code }}</td>
                     </tr>
+                    <tr id="id_group_id_row">
+                        <td class="kv-key">Group ID</td>
+                        <td class="kv-value">{{ form.group_id }}</td>
+                    </tr>
                     {% if data.instrument_code %}
-                        <tr id="id_site">
+                        <tr id="id_site_row">
                             <td class="kv-key">Site/Instrument</td>
                             <td class="kv-value">{{data.instrument_code}} <i class="fa fa-arrow-right"></i> {{data.lco_site}} {{data.lco_tel}} ({{data.lco_enc}})</td>
                         </tr>
                     {% else %}
-                        <tr id="id_site">
+                        <tr id="id_site_row">
                             <td class="kv-key">Site</td>
                             <td class="kv-value">{{data.site_code}} <i class="fa fa-arrow-right"></i> {{data.lco_site}} {{data.lco_tel}} ({{data.lco_enc}})</td>
                         </tr>
                     {% endif %}
-                    <tr id="id_utc_date">
+                    <tr id="id_utc_date_row">
                         <td class="kv-key">UTC date</td>
                         <td class="kv-value">{{ data.utc_date}}</td>
                     </tr>
-                    <tr id="id_visibility">
+                    <tr id="id_visibility_row">
                         {% if data.vis_time and data.max_alt_airmass < data.max_airmass %}
                             <td class="kv-key">Hours Visible / Max Altitude</td>
-                            <td class="kv-value">{{ data.vis_time}} hrs / {{ data.max_alt}}&deg</td>
+                            <td class="kv-value">{{ data.vis_time|floatformat:1}} hrs / {{ data.max_alt|floatformat:0}}&deg</td>
                         {% else %}
                             <td class="kv-key">Hours Visible / Max Altitude</td>
                         <td class="kv-value">
@@ -71,39 +75,45 @@
                                 <span class="warning msgpadded"> Target Not Visible</span>
                                 <span class="tooltiptext" style="width: 150px;">
                                     <u>Target is never higher than Required Airmass.</u>
-                                    <br>Max altitude of target during observation window is {{data.max_alt}}&deg (airmass {{data.max_alt_airmass|floatformat:2}}) <br>
+                                    <br>Max altitude of target during observation window is {{data.max_alt|floatformat:1}}&deg (airmass {{data.max_alt_airmass|floatformat:2}}) <br>
                                 </span></div></td></tr></table></td>
                         {% endif %}
                     </tr>
                 </tbody>
             </table>
+              <h6 class="section-title">Calculated characteristics at {{ data.mid_time }}</h6>
             <table class="keyvalue-table" style="width:100%">
                 <tbody>
-                    <tr id="id_ra">
+                    <tr id="id_ra_row">
                         <td class="kv-key">Right Ascension</td>
-                        <td class="kv-value">{{ data.ra_midpoint|degreestohms:" " }}</td>
+                        <td class="kv-value">{{ data.ra_midpoint|radianstohms:" " }}</td>
                     </tr>
-                    <tr id="id_dec">
+                    <tr id="id_dec_row">
                         <td class="kv-key">Declination</td>
-                        <td class="kv-value">{{ data.dec_midpoint|degreestodms:" " }}</td>
+                        <td class="kv-value">{{ data.dec_midpoint|radianstodms:" " }}</td>
                     </tr>
-                     <tr id="id_magnitude">
+                     <tr id="id_magnitude_row">
                         <td class="kv-key">Magnitude</td>
                         <td class="kv-value">{{ data.magnitude|floatformat:2 }}</td>
                     </tr>
-                    <tr id="id_moon">
+                    <tr id="id_moon_row">
                         <td class="kv-key">Lunar Phase / Separation </td>
                         <td class="kv-value">
                             <table style="margin-bottom: 0; margin-left: auto">
                                 <tr>
-                                    <td>
-                                        <svg id="moon"  xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="250 70 4.5 4.5" preserveAspectRatio="xMidYMin slice"
-                                        style="height: 1; overflow: visible" ></svg>
-                                        <script type="text/javascript" src="{% static 'core/js/moon-phase.js' %}" charset="UTF-8"></script>
-                                        <script type="text/javascript" charset="UTF-8">
-                                            var today = today || new Date();
-                                            document.getElementById('mooncent').innerHTML += (moon_day(today)*100).toFixed(1) + "%";
-                                        </script>
+                                    <td><table align="left"  style="margin: 0px"><tr><td class="kv-key">
+                                        <div class="tooltip">
+                                            <svg id="moon"  xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="250 70 4.5 4.5" preserveAspectRatio="xMidYMin slice"
+                                            style="height: 1px; overflow: visible" ></svg>
+                                            <script type="text/javascript" src="{% static 'core/js/moon-phase.js' %}" charset="UTF-8"></script>
+                                            <script type="text/javascript" charset="UTF-8">
+                                                var obs_day = new Date('{{ data.mid_time }}'+'Z') || new Date();
+                                                phase_junk(moon_day(obs_day));
+                                            </script>
+                                        <span class="tooltiptext" style="left:0; margin-bottom: 15px; width: auto; margin-left: -45px">
+                                            <u>Illumination Fraction:</u>
+                                            <br>{{data.moon_phase|floatformat:0}}%
+                                        </span></div></td><td></td></tr></table>
                                     </td>
                                     {% if data.moon_sep < data.min_lunar_dist %}
                                     <td style="border: none">
@@ -121,7 +131,7 @@
                         </td>
                     </tr>
                     {% if data.spectroscopy %}
-                    <tr id="id_slit_pattern"><td ><table align="left"  style="margin: 0px"><tr><td class="kv-key" name="{{data.available_filters}}">
+                    <tr id="id_slit_pattern_row"><td ><table align="left"  style="margin: 0px"><tr><td class="kv-key" name="{{data.available_filters}}">
                             <div class="tooltip">Slit Pattern
                             <span class="tooltiptext" style="left:75%">Comma Separated Pattern
                             <br>(e.g.: slit_6.0as,slit_2.0as,slit_6.0as)<br>
@@ -130,7 +140,7 @@
                         <td class="kv-value">{{ form.filter_pattern }}</td>
                     </tr>
                     {% else %}
-                    <tr id="id_filter_pattern"><td ><table align="left"  style="margin: 0px"><tr><td class="kv-key" name="{{data.available_filters}}">
+                    <tr id="id_filter_pattern_row"><td ><table align="left"  style="margin: 0px"><tr><td class="kv-key" name="{{data.available_filters}}">
                             <div class="tooltip">Filter Pattern
                             <span class="tooltiptext" style="left:75%">Comma Separated Pattern
                             <br>(e.g.: rp,gp,rp,ip,rp)<br>
@@ -139,62 +149,83 @@
                         <td class="kv-value">{{ form.filter_pattern }}</td>
                     </tr>
                     {% endif %}
-                    <tr id="id_pattern_iterations">
-                        <td class="kv-key">Pattern Iterations</td>
-                        {% if data.pattern_iterations < 1 %}
-                        <td ><table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip">{{ data.pattern_iterations }}
-                            <span class="tooltiptext" style="width: 150px;"><u>Too Few Exposures To Finish Sequence</u>
-                            <br>Consider Increasing Slot Length <br></span></div></td></tr></table></td>
+                    {% if data.pattern_iterations != data.exp_count %}
+                        <tr id="id_pattern_iterations_row">
+                            <td class="kv-key">Pattern Iterations</td>
+                            {% if data.pattern_iterations < 1 %}
+                            <td ><table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip">
+                                <span class="warning msgpadded">{{ data.pattern_iterations }}</span>
+                                <span class="tooltiptext" style="width: 150px;"><u>Too Few Exposures To Finish Sequence</u>
+                                <br>Consider Increasing Slot Length <br></span></div></td></tr></table></td>
+                            {% else %}
+                            <td class="kv-value">{{ data.pattern_iterations }}</td>
+                            {% endif %}
+                        </tr>
+                    {% endif %}
+                    <tr id="id_slot_length_row">
+                        <td class="kv-key">Slot length</td>
+                        {% if data.spectroscopy %}
+                            <td class="kv-value">{{ data.slot_length }} mins</td>
                         {% else %}
-                        <td class="kv-value">{{ data.pattern_iterations }}</td>
+                            <td class="kv-value">{{ form.slot_length }} mins</td>
                         {% endif %}
                     </tr>
-                    <tr id="id_slot_length">
-                        <td class="kv-key">Slot length</td>
-                        <td class="kv-value">{{ form.slot_length }} mins</td>
-                    </tr>
-                    <tr id="id_no_of_exps">
+                    <tr id="id_no_of_exps_row">
                         <td class="kv-key">No. of exposures</td>
                         <td class="kv-value">{{ data.exp_count }}</td>
                     </tr>
-                    <tr id="id_expose_length">
+                    <tr id="id_expose_length_row">
                         <td class="kv-key">Exposure length</td>
                         <td class="kv-value">{{ form.exp_length }} secs</td>
                     </tr>
                     {% if data.snr %}
-                    <tr id="id_snr">
+                    <tr id="id_snr_row">
                         <td class="kv-key">SNR</td>
-                        <td class="kv-value">{{ data.snr|floatformat:1 }}</td>
+                        {% if data.saturated %}
+                            <td ><table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip">
+                                <span class="warning msgpadded"> {{ data.snr|floatformat:1 }} </span>
+                                <span class="tooltiptext" style="width: 150px;"><u>Target Might Saturate!</u>
+                                <br>Consider Reducing Exposure Time <br></span></div></td></tr></table></td>
+                        {% else %}
+                            {% if data.snr < 10 and data.spectroscopy%}
+                                <td ><table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip">
+                                    <span class="warning msgpadded"> {{ data.snr|floatformat:1 }} </span>
+                                    <span class="tooltiptext" style="width: 150px;"><u>Target Very Faint!</u>
+                                    <br>Consider Increasing Exposure Time <br></span></div></td></tr></table></td>
+                            {% else %}
+                                <td class="kv-value">{{ data.snr|floatformat:1 }}</td>
+                            {% endif %}
+                        {% endif %}
                     </tr>
                     {% endif %}
-                    <tr id="id_window">
+                    <tr id="id_window_row">
                         <td class="kv-key">Window (UTC)</td>
                         <td class="kv-value">{{ data.start_time }} -> {{ data.end_time }}</td>
                     </tr>
                     {% if data.jitter %}
-                    <tr id="id_jitter">
+                    <tr id="id_jitter_row">
                         <td class="kv-key">Jitter (hours)</td>
                         <td class="kv-value">{{ data.jitter }}</td>
                     </tr>
                     {% endif %}
                     {% if data.period %}
-                    <tr id="id_period">
+                    <tr id="id_period_row">
                         <td class="kv-key">Period (hours)</td>
                         <td class="kv-value">{{ data.period }}</td>
                     </tr>
                     {% endif %}
                     {% if data.num_times and data.total_time %}
-                    <tr id="id_cadence_cost">
+                    <tr id="id_cadence_cost_row">
                         <td class="kv-key">No. of repeats / Total time (hours)</td>
                         <td class="kv-value">{{ data.num_times }} / {{ data.total_time|floatformat:2 }}</td>
                     </tr>
                     {% endif %}
                     {% if data.spectroscopy %}
-                    <tr id="id_spectroscopy">
+                    <tr id="id_spectroscopy_row">
                         <td class="kv-key">Spectroscopy</td>
                         <td class="kv-value">{{ data.spectroscopy }}</td>
                     </tr>
-                    <tr id="id_spectroscopy">
+                    <tr id="id_spectroscopy_calibs_row">
                         <td class="kv-key">Calibs</td>
                         <td class="kv-value">{{ data.calibs }}</td>
                     </tr>
@@ -217,38 +248,40 @@
           <div id="advanced_options" class="mode-container">
           <h6 class="section-title"></h6>
           <table class="keyvalue-table">
-              <tr id="id_max_arimass">
+              <tr id="id_max_arimass_row">
                   <td class="kv-key">Max Acceptable Airmass</td>
-                  <td class="kv-value">{{ form.max_airmass }}</td>
+                  <td >
+                      <table align="left"  style="margin: 0px"><tr><td class="kv-value">
+                            <div class="tooltip">{{ form.max_airmass }}
+                            <span class="tooltiptext" style="left:60%; width:75px;"><u>Altitude:</u>
+                            <span name="min_alt">{{data.max_airmass|get_alt_from_airmass|floatformat:1}}&deg</span></span></div></td><td></td></tr>
+                      </table>
+                  </td>
               </tr>
-              <tr id="id_min_lunar_dist">
+              <tr id="id_min_lunar_dist_row">
                   <td class="kv-key">Minimum Lunar Separation (&deg)</td>
                   <td class="kv-value">{{ form.min_lunar_dist }}</td>
               </tr>
-              <tr id="id_ipp_value">
+              <tr id="id_ipp_value_row">
                   <td class="kv-key">IPP</td>
                   <td class="kv-value">{{ form.ipp_value }}</td>
               </tr>
-              <tr id="id_acceptability">
+              <tr id="id_acceptability_row">
                   <td class="kv-key">Acceptability Threshold (%)</td>
                   <td class="kv-value">{{ form.acceptability_threshold }}</td>
               </tr>
+              {% if data.spectroscopy %}
+              <tr id="id_ag_exp_time_row">
+                  <td class="kv-key">GuideCam Exposure time (s)</td>
+                  <td class="kv-value">{{ form.ag_exp_time }}</td>
+              </tr>
+              {% endif %}
           </table>
           </div>
         {% endif%}
-          {{form.start_time}}
-          {{form.end_time}}
-          {{form.exp_count}}
-          {{form.proposal_code}}
-          {{form.site_code}}
-          {{form.instrument_code}}
-          {{form.group_id}}
-          {{form.utc_date}}
-          {{form.jitter}}
-          {{form.period}}
-          {{forms.pattern_iterations}}
-          {{form.spectroscopy}}
-          {{form.calibs}}
+          {% for hidden in form.hidden_fields %}
+            {{ hidden }}
+          {% endfor %}
         </div>
       </div>
 

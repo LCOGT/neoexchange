@@ -22,7 +22,7 @@
                         {% endif %}
                     </div>
                     <div class="row">
-                        <div class="eight columns">
+                        <div class="four columns">
                             <h5  class="section-title"><span class="">Type</span><span class="msgpadded">{{staticsource.get_source_type_display}}</span></h5>
                             <table class="keyvalue-table" id="id_staticsource_detail">
                                 <tbody>
@@ -52,37 +52,43 @@
                                     </tr>
                                 </tbody>
                             </table>
-
-                            <a class="button button-primary" href="{% url 'feasibility-calib' staticsource.id %}" id="check-feasibility">Check Spectroscopic Feasibility</a>
-                            <h5  class="section-title">Recent Blocks Scheduled</h5>
-                            <ul class="block-status">
-                                {% for b in blocks %}
-                                <li class="{% cycle 'odd' 'even' %}">
-                                        <a href="{% url 'block-view' b.id %}">
-                                        <span class="block-status-line">
-                                            <span class="block-status-item">
-                                            {% if b.reported and b.when_observed %}
-                                            <i class="fa fa-check-circle-o fa-lg" style="color:#339933;"></i>
-                                        {% elif b.when_observed and not b.reported %}
-                                            <i class="fa fa-clock-o fa-lg" style="color: #FF9933;"></i>
-                                            {% elif not b.reported and not b.when_observed and b.active %}
-                                            <i class="fa fa-circle-o fa-lg" style="color:#263c6f;"></i>
-                                            {% elif not b.reported and not b.when_observed and  not b.active %}
-                                            <i class="fa fa-minus-circle fa-lg" style="color:#df0000;"></i>
-                                            {% endif %}
-                                            </span>
-                                            <span class="block-status-item">{{b.block_start|date:"c"}}</span>
-                                            <span class="block-status-item"><i class="fa fa-long-arrow-right"></i></span>
-                                            <span class="block-status-item">{{b.block_end|date:"c"}}</span>
-                                            <span class="block-status-item">{{b.site|upper}}</span>
-                                        </span>
-                                        </a>
-                                </li>
-                                {% empty %}
-                                <li>No blocks have been scheduled</li>
-                                {% endfor %}
-                            </ul>
                         </div>
+                        <div class="four columns">
+                            <h5 class="section-title">Spectra</h5>
+                            <img src="{% url 'display_calibspec' staticsource.pk %}" id="id_spectraplot">
+                        </div>
+                    </div>
+                    <a class="button button-primary" href="{% url 'feasibility-calib' staticsource.id %}" id="check-feasibility">Check Spectroscopic Feasibility</a>
+                    <div>
+                        <h5  class="section-title">Recent Blocks Scheduled</h5>
+                        <ul class="block-status">
+                            {% for b in blocks %}
+                            <li class="{% cycle 'odd' 'even' %}">
+                                    <a href="{% url 'block-view' b.superblock.id %}">
+                                    <span class="block-status-line">
+                                        <span class="block-status-item">
+                                        {% if b.reported and b.when_observed %}
+                                        <i class="fa fa-check-circle-o fa-lg" style="color:#339933;"></i>
+                                    {% elif b.when_observed and not b.reported %}
+                                        <i class="fa fa-clock-o fa-lg" style="color: #FF9933;"></i>
+                                        {% elif not b.reported and not b.when_observed and b.active %}
+                                        <i class="fa fa-circle-o fa-lg" style="color:#263c6f;"></i>
+                                        {% elif not b.reported and not b.when_observed and  not b.active %}
+                                        <i class="fa fa-minus-circle fa-lg" style="color:#df0000;"></i>
+                                        {% endif %}
+                                        </span>
+                                        <span class="block-status-item">{{b.block_start|date:"c"}}</span>
+                                        <span class="block-status-item"><i class="fa fa-long-arrow-right"></i></span>
+                                        <span class="block-status-item">{{b.block_end|date:"c"}}</span>
+                                        <span class="block-status-item">{{b.site|upper}}</span>
+                                        <span class="block-status-item">Req: {{b.tracking_number}}</span>
+                                    </span>
+                                    </a>
+                            </li>
+                            {% empty %}
+                            <li>No blocks have been scheduled</li>
+                            {% endfor %}
+                        </ul>
                     </div>
                 </div>
 {% endblock %}
