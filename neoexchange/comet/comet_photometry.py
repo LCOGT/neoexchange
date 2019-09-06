@@ -21,7 +21,7 @@ from photutils import CircularAperture, SkyCircularAperture, aperture_photometry
 from photutils.utils import calc_total_error
 from photutils.background import Background2D, MedianBackground
 
-path.insert(0, os.path.join(os.getenv('HOME'), 'git/neoexchange_stable/neoexchange'))
+path.insert(0, os.path.join(os.getenv('HOME'), 'git/neoexchange_comet/neoexchange'))
 os.environ['DJANGO_SETTINGS_MODULE'] = 'neox.settings'
 import django
 from django.conf import settings
@@ -31,10 +31,11 @@ from astrometrics.ephem_subs import LCOGT_domes_to_site_codes
 from comet_subs import *
 
 #comet = '67P'
-comet = '243P'
-comet_color = 0.56
+#comet = '243P'
+#comet_color = 0.56
+comet = '46P'
 
-datadir = os.path.join(os.getenv('HOME'), 'Asteroids', comet, 'Pipeline', 'Temp')
+datadir = os.path.join(os.getenv('HOME'), 'Asteroids', comet, 'Pipeline' ) #, 'Temp')
 datadir = os.path.join(os.path.abspath(datadir), '')
 if not os.path.exists(datadir):
     os.makedirs(datadir)
@@ -48,7 +49,7 @@ FLUX2MAG = 2.5/log(10)
 images, catalogs = determine_images_and_catalogs(datadir)
 
 # Create log file, write header
-log_file = os.path.join(datadir, comet + '_phot_test2.log')
+log_file = os.path.join(datadir, comet + '_phot.log')
 
 if os.path.exists(log_file):
     os.remove(log_file)
