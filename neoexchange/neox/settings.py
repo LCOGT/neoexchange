@@ -199,31 +199,40 @@ LOGGING = {
         }
     },
     'loggers': {
-        # 'django.request': {
-        #     'handlers': ['mail_admins'],
-        #     'level': 'ERROR',
-        #     'propagate': True,
-        # },
-        'django.request': {
+        '': {
             'handlers':['console'],
-            'propagate': True,
             'level':'ERROR',
         },
         'core' : {
             'handlers' : ['console'],
             'level'    : 'INFO',
+            # required to avoid double logging with root logger
+            'propagate': False,
         },
         'astrometrics' : {
             'handlers' : ['console'],
             'level'    : 'ERROR',
+            # required to avoid double logging with root logger
+            'propagate': False,
         },
         'photometrics' : {
             'handlers' : ['console'],
             'level'    : 'ERROR',
+            # required to avoid double logging with root logger
+            'propagate': False,
         },
         'neox': {
             'handlers': ['console'],
-            'level' : 'ERROR'
+            'level' : 'ERROR',
+            # required to avoid double logging with root logger
+            'propagate': False,
+        },
+        'comet_subs': {
+            'handlers': ['console'],
+            'level' : 'DEBUG',
+            # required to avoid double logging with root logger
+            'propagate': False,
+            'formatter' : 'simple'
         }
     }
 }
