@@ -292,7 +292,7 @@ def add_l1filter(fits_file):
 
 
 @timeit
-def run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type='ASCII', dbg=False):
+def run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type='ASCII', dbg=False, aperture=None):
     """Run SExtractor (using either the binary specified by [binary] or by
     looking for 'sex' in the PATH) on the passed <fits_file> with the results
     and any temporary files created in <dest_dir>. <source_dir> is the path
@@ -322,6 +322,8 @@ def run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type='A
         options = determine_sext_options(root_fits_file)
     else:
         options = determine_sext_options(fits_file)
+    if aperture is not None:
+        options += " -PHOT_APERTURES {:.2f}".format(aperture)
     cmdline = "%s %s -c %s %s" % ( binary, fits_file, sextractor_config_file, options )
     cmdline = cmdline.rstrip()
 

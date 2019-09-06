@@ -141,7 +141,7 @@ def retrieve_zp_err(fits_frame):
     return frame.zeropoint, frame.zeropoint_err
 
 
-def make_CSS_catalogs(source_dir, dest_dir, fits_file, catalog_type='CSS:ASCII_HEAD'):
+def make_CSS_catalogs(source_dir, dest_dir, fits_file, catalog_type='CSS:ASCII_HEAD', aperture=None):
 
     new_output_catalog = os.path.basename(fits_file)
     new_output_catalog = new_output_catalog.replace('[SCI]', '').replace('.fits', '_cat.ascii')
@@ -153,7 +153,7 @@ def make_CSS_catalogs(source_dir, dest_dir, fits_file, catalog_type='CSS:ASCII_H
             return 0, new_output_catalog_path
     print("source_dir= {}\ndest_dir= {}\nfits_file= {}".format(source_dir, dest_dir, fits_file))
     logger.info("Creating new SExtractor catalog for {}".format(fits_file))
-    sext_status = run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type=catalog_type, dbg=False)
+    sext_status = run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type=catalog_type, dbg=False, aperture=aperture)
     print(sext_status)
     if sext_status == 0:
         output_catalog = 'test.cat'
@@ -181,15 +181,24 @@ def great_circle_distance(ra1, dec1, ra2, dec2):
     distance_rad = np.arccos(np.sin(dec1_rad) * np.sin(dec2_rad) + np.cos(dec1_rad) * np.cos(dec2_rad) * np.cos(ra2_rad - ra1_rad))
     return np.rad2deg(distance_rad)
 
-def calibrate_catalog(catfile, cat_center, table_format='ascii.sextractor', radius=0.5 ):
+def calibrate_catalog(catfile, cat_center, trim_limits, table_format='ascii.sextractor', radius=0.5, flux_column='FLUX_ISOCOR', fluxerr_column='FLUXERR_ISOCOR'):
+
+    FLUX2MAG = 2.5/np.log(10)
 
     # Read in SExtractor catalog and rename columns
     logger.info("Reading catalog {}".format(catfile))
     phot = Table.read(catfile, format=table_format)
     phot['ALPHAWIN_J2000'].name = 'RA'
     phot['DELTAWIN_J2000'].name = 'DEC'
-    # Filter out sources without good extraction FLAGS
-    clean_phot = phot[phot['FLAGS'] == 0]
+    # Filter out sources without good extraction FLAGS and off chip
+    mask1 = phot['FLAGS'] == 0
+    mask2 = phot['XWIN_IMAGE'] > trim_limits[0]
+    mask3 = phot['YWIN_IMAGE'] > trim_limits[1]
+    mask4 = phot['XWIN_IMAGE'] <= trim_limits[2]
+    mask5 = phot['YWIN_IMAGE'] <= trim_limits[3]
+    mask = mask1 & mask2 & mask3 & mask4 & mask5    # AND all the masks together
+    clean_phot = phot[mask]
+    logger.debug("Size of input and filtered catalogs= {}, {}".format(len(phot), len(clean_phot)))
 
     # Create SkyCoord and filter down to find sources within the specified
     # radius (since out field is bigger than the maximum allowed in the PS1
@@ -198,21 +207,30 @@ def calibrate_catalog(catfile, cat_center, table_format='ascii.sextractor', radi
     lco_cut = clean_phot[great_circle_distance(cat_center.ra.deg, cat_center.dec.deg, clean_phot['RA'], clean_phot['DEC']) <= radius]
     lco_cut_coords = SkyCoord(lco_cut['RA'], lco_cut['DEC'], unit='deg')
 
+    match_radius = 3.5*u.arcsec
+    object_cat = lco_cut[great_circle_distance(cat_center.ra.deg, cat_center.dec.deg, lco_cut['RA'], lco_cut['DEC']) <= match_radius.to(u.deg).value]
+    if len(object_cat) == 1:
+        logger.debug("Match at x={:.3f}, y={:.3f}".format(object_cat['XWIN_IMAGE'][0], object_cat['YWIN_IMAGE'][0]))
+        obj_mag = -2.5 * np.log10(object_cat[flux_column])
+        obj_err = object_cat[fluxerr_column] / object_cat[flux_column] * FLUX2MAG
+    else:
+        logger.warn("Found unexpected number of target match ({})".format(len(object_cat)))
+        obj_mag = obj_err = None
     ps1_db_file = catfile.replace('.ascii', '.db')
     if os.path.exists(ps1_db_file):
         logger.info("Using existing PS1 DB")
         ps1 = cvc.PanSTARRS1(ps1_db_file)
     else:
-        logger.info("Fetching PS1 catalog around {} with radius {} deg".format(cat_center, radius))
+        logger.info("Fetching PS1 catalog around {} with radius {} deg".format(cat_center.to_string('decimal'), radius))
         ps1 = fetch_ps1_field(cat_center, radius)
     objids, distances = ps1.xmatch(lco_cut_coords)
-    r_inst = -2.5 * np.log10(lco_cut['FLUX_ISOCOR'])
-    r_err = lco_cut['FLUXERR_ISOCOR'] / lco_cut['FLUX_ISOCOR'] * 1.0857
+    r_inst = -2.5 * np.log10(lco_cut[flux_column])
+    r_err = lco_cut[fluxerr_column] / lco_cut[flux_column] * FLUX2MAG
     zp, C, unc, r, gmr, gmi = ps1.cal_color(objids, r_inst, 'r', 'g-r',  mlim=[11, 18], gmi_lim=[0.2, 1.4])
     plotfile = catfile.replace('cat.ascii', 'ps1_cc.png')
     plot_color_correction(C, zp, r, gmr, r_inst, filename=plotfile, filter_name='r')
 
-    return zp, C, unc, r, gmr, gmi
+    return zp, C, unc, r, gmr, gmi, obj_mag, obj_err
 
 def fetch_ps1_field(cat_center, radius=0.5, max_records=50001, db_name='cat.db'):
 

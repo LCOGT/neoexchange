@@ -15,7 +15,7 @@ from astropy.time import Time
 from astropy.wcs import WCS
 from astropy.wcs._wcs import InvalidTransformError
 from astropy.wcs.utils import proj_plane_pixel_scales
-
+from astropy.stats import SigmaClip
 
 from photutils import CircularAperture, SkyCircularAperture, aperture_photometry
 from photutils.utils import calc_total_error
@@ -48,12 +48,12 @@ FLUX2MAG = 2.5/log(10)
 images, catalogs = determine_images_and_catalogs(datadir)
 
 # Create log file, write header
-log_file = os.path.join(datadir, comet + '_phot.log')
+log_file = os.path.join(datadir, comet + '_phot_test2.log')
 
 if os.path.exists(log_file):
     os.remove(log_file)
 log_fh = open(log_file, 'w')
-print('# Filename                               Filter JD            MJD-57000.0         RA (J2000.0) Dec             RA (J2000.0) Dec         X (pixels) Y      Radius (pixels/") Mag (coords) Mag+ZP   Magerr   Mag (Skypos) Mag+ZP  Magerr    ZP       ZPerr Mag(PS1 CC) ZP(PS1) ZPerr(PS1) C(PS1)', file=log_fh)
+print('# Filename                               Filter JD            MJD-57000.0         RA (J2000.0) Dec             RA (J2000.0) Dec         X (pixels) Y      Radius (pixels/") Mag (coords) Mag+ZP   Magerr   Mag (Skypos) Mag+ZP  Magerr    ZP       ZPerr Mag(SEX) Magerr Mag(PS1 CC) Magerr ZP(PS1) ZPerr(PS1) C(PS1)', file=log_fh)
 #                  elp1m008-fl05-20160127-0273-e90.fits   r'   2457416.02037 415.520368588 185.611169209 +08.200143039 2001.3375 2067.4000   23.4026 -11.84046 +16.11954   +0.08323 -11.84523 +16.11477  +0.08284   27.96000
 
 # Loop over all images
@@ -77,10 +77,12 @@ for fits_fpath in images:
     #   Determine background and subtract
     if bkg_map:
         bkg_estimator = MedianBackground()
-        bkg = Background2D(image, (50, 50), filter_size=(3, 3), bkg_estimator=bkg_estimator, mask=mask)
+        sigma_clip = SigmaClip(sigma=3.)
+        bkg = Background2D(image, (50, 50), filter_size=(3, 3), bkg_estimator=bkg_estimator, sigma_clip=sigma_clip, mask=mask)
         sky_level = bkg.background
         sky_sigma = bkg.background_rms
-        effective_gain = header['gain']
+        print("Background & rms=", bkg.background_median, bkg.background_rms_median)
+        effective_gain = header['gain'] * header['exptime']
         print("Gain=", effective_gain)
         error = calc_total_error(image, sky_sigma, effective_gain)
         image_sub = image - sky_level
@@ -125,21 +127,26 @@ for fits_fpath in images:
         else:
             print("Could not find needed WCS header keywords")
             exit(-2)
+    trim_limits = [0, 0, fits_wcs.pixel_shape[0], fits_wcs.pixel_shape[1]]
+    print("Trim limits=", trim_limits)
+
     x, y = fits_wcs.wcs_world2pix(ra, dec, 1)
     pixscale = proj_plane_pixel_scales(fits_wcs).mean()*3600.0
     print("Pixelscales=", pixscale, header.get('secpix', ''))
 
     #   Determine aperture size and perform aperture photometry at the position
     radius = determine_aperture_size(delta, pixscale)
+    print("Pixel photometry:")
     print("X, Y, Radius (pixels, arcsec)= {:.3f} {:.3f} {:9.5f} {:9.5f}".format(x, y, radius, radius*pixscale))
 
     apertures = CircularAperture((x,y), r=radius)
-    phot_table = aperture_photometry(image_sub, apertures, mask=mask, error=error)
+    phot_table = aperture_photometry(image_sub, apertures, mask=mask, method='exact', error=error)
     print(phot_table)
 
+    print("Sky Coords aperture photometry:")
     sky_position = SkyCoord(ra, dec, unit='deg', frame='icrs')
     sky_apertures = SkyCircularAperture(sky_position, r=radius * pixscale * u.arcsec)
-    skypos_phot_table = aperture_photometry(image_sub, sky_apertures, wcs=fits_wcs, mask=mask, error=error)
+    skypos_phot_table = aperture_photometry(image_sub, sky_apertures, wcs=fits_wcs, mask=mask, method='exact', error=error)
     print("%13.7f %16.8f %s" % (skypos_phot_table['aperture_sum'].data[0], skypos_phot_table['aperture_sum_err'].data[0], sky_position.to_string('hmsdms')))
 
     #   Convert flux to absolute magnitude
@@ -175,16 +182,18 @@ for fits_fpath in images:
             abs_mag = abs_mag - 0.2105
         print(mag, abs_mag, abs_mag_err, skypos_mag, abs_skypos_mag, abs_skypos_mag_err, zp, zp_err)
 
-    status, catalog = make_CSS_catalogs(configs_dir, datadir, fits_fpath, catalog_type='CSS:ASCII_HEAD')
+    status, catalog = make_CSS_catalogs(configs_dir, datadir, fits_fpath, catalog_type='CSS:ASCII_HEAD', aperture=radius*2.0)
     if status == 0:
-        zp_PS1, C_PS1, zp_err_PS1, r, gmr, gmi = calibrate_catalog(catalog, sky_position)
+        zp_PS1, C_PS1, zp_err_PS1, r, gmr, gmi, obj_mag, obj_err = calibrate_catalog(catalog, sky_position, trim_limits, flux_column='FLUX_APER', fluxerr_column='FLUXERR_APER')
         print("ZP, color slope, uncertainty= {:7.3f} {:.6f} {:.3f}".format(zp_PS1, C_PS1, zp_err_PS1))
-        rmag_cc = (C_PS1 * comet_color) + zp_PS1 + mag
-    log_format = "%s   %3s  %.5f %.9f %013.9f %+013.9f %s %9.4f %9.4f %8.3f (%6.3f) %+9.5f %8.5f  %9.5f %+9.5f %9.5f %9.5f  %7.3f %7.3f %7.4f    %7.3f %7.3f    %+7.5f"
+        rmag_cc = (C_PS1 * comet_color) + zp_PS1 + obj_mag
+        rmag_err_cc = sqrt(pow(obj_err, 2) + pow(zp_err_PS1, 2))
+
+    log_format = "%s   %3s  %.5f %.9f %013.9f %+013.9f %s %9.4f %9.4f %8.3f (%6.3f) %+9.5f %8.5f  %9.5f %+9.5f %9.5f %9.5f  %7.3f %7.3f %7.3f %7.3f %7.4f    %7.3f %7.3f %7.3f    %+7.5f"
     log_line = log_format % (fits_frame, obs_filter, jd_utc_mid, mjd_utc_mid-57000.0, \
         ra, dec, sky_position.to_string('hmsdms', sep=' ', precision=4), x, y, radius, radius*pixscale, \
         mag, abs_mag, abs_mag_err, skypos_mag, abs_skypos_mag, abs_skypos_mag_err, zp, zp_err,\
-        rmag_cc, zp_PS1, zp_err_PS1, C_PS1)
+        obj_mag, obj_err, rmag_cc, rmag_err_cc, zp_PS1, zp_err_PS1, C_PS1)
     print(log_line, file=log_fh)
     print
 
