@@ -105,9 +105,9 @@ class ScheduleCadenceForm(forms.Form):
     proposal_code = forms.ChoiceField(required=True, widget=forms.Select(attrs={'id': 'id_proposal_code_cad', }))
     site_code = forms.ChoiceField(required=True, choices=SITES, widget=forms.Select(attrs={'id': 'id_site_code_cad', }))
     start_time = forms.DateTimeField(input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M'],
-                                     initial=datetime.today, required=True, error_messages={'required': _(u'UTC start date is required')})
+                                     initial=datetime.today(), required=True, error_messages={'required': _(u'UTC start date is required')})
     end_time = forms.DateTimeField(input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M'],
-                                   initial=datetime.today, required=True, error_messages={'required': _(u'UTC end date is required')})
+                                   initial=datetime.today()+timedelta(days=1), required=True, error_messages={'required': _(u'UTC end date is required')})
     period = forms.FloatField(initial=2.0, required=True, widget=forms.TextInput(attrs={'size': '10'}), error_messages={'required': _(u'Period is required')})
     jitter = forms.FloatField(initial=0.25, required=True, widget=forms.TextInput(attrs={'size': '10'}), error_messages={'required': _(u'Jitter is required')})
 
@@ -123,12 +123,22 @@ class ScheduleCadenceForm(forms.Form):
     #         raise forms.ValidationError("Window cannot end in the past")
     #     return end
 
+    def clean_period(self):
+        if self.cleaned_data['period'] is not None and self.cleaned_data['period'] < 0.02:
+            return 0.02
+        else:
+            return self.cleaned_data['period']
+
     def clean(self):
         cleaned_data = super(ScheduleCadenceForm, self).clean()
-        start = cleaned_data['start_time']
-        end = cleaned_data['end_time']
-        if end < start:
-            raise forms.ValidationError("End date must be after start date")
+        try:
+            start = cleaned_data['start_time']
+            end = cleaned_data['end_time']
+            if end < start:
+                raise forms.ValidationError("End date must be after start date")
+        except KeyError:
+            # Bad datetimes should be caught by Django validation
+            pass
 
     def __init__(self, *args, **kwargs):
         self.proposal_code = kwargs.pop('proposal_code', None)
@@ -150,8 +160,8 @@ class ScheduleBlockForm(forms.Form):
     site_code = forms.CharField(max_length=5, widget=forms.HiddenInput())
     group_id = forms.CharField(max_length=50, widget=forms.TextInput(attrs={'style': 'text-align: right; width: -webkit-fill-available; width: -moz-available;'}))
     utc_date = forms.DateField(input_formats=['%Y-%m-%d', ], widget=forms.HiddenInput(), required=False)
-    jitter = forms.FloatField(widget=forms.HiddenInput(), required=False)
-    period = forms.FloatField(widget=forms.HiddenInput(), required=False)
+    jitter = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}), required=False)
+    period = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}), required=False)
     spectroscopy = forms.BooleanField(required=False, widget=forms.HiddenInput())
     calibs = forms.ChoiceField(required=False, widget=forms.HiddenInput(), choices=CALIBS)
     instrument_code = forms.CharField(max_length=10, widget=forms.HiddenInput(), required=False)
@@ -238,6 +248,12 @@ class ScheduleBlockForm(forms.Form):
             cleaned_filter_pattern = ''
         return cleaned_filter_pattern
 
+    def clean_period(self):
+        if self.cleaned_data['period'] is not None and self.cleaned_data['period'] < 0.02:
+            return 0.02
+        else:
+            return self.cleaned_data['period']
+
     def clean(self):
         cleaned_data = super(ScheduleBlockForm, self).clean()
         site = self.cleaned_data['site_code']
@@ -260,9 +276,6 @@ class ScheduleBlockForm(forms.Form):
                 raise forms.ValidationError('%(bad)s are not acceptable filters at this site.', params={'bad': ",".join(bad_filters)})
         elif self.cleaned_data['exp_count'] == 0:
             raise forms.ValidationError("There must be more than 1 exposure")
-        elif self.cleaned_data['period'] is not None and self.cleaned_data['jitter'] is not None:
-            if self.cleaned_data['period'] > 0.0 and self.cleaned_data['slot_length'] / 60.0 > self.cleaned_data['jitter']:
-                raise forms.ValidationError("Jitter must be larger than slot length")
         return cleaned_data
 
 

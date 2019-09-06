@@ -4,6 +4,13 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 2.7.9
+Improve Cadence scheduling
+* Default end-date is current date + 24 hours
+* Adjust jitter/Period from the confirmation page
+* Handle bad dates rather than crashing
+* Various warnings and tips to help with scheduling
+
 ### 2.7.8
 Comet elements are now selected based on nearest in time.
 

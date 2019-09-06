@@ -1546,7 +1546,7 @@ def make_cadence_valhalla(request, params, ipp_value, debug=False):
             print('Request {0} window start: {1} window end: {2}'.format(
                 i, request['windows'][0]['start'], request['windows'][0]['end']
             ))
-            i = i + 1
+            i += 1
 
     return cadence_user_request
 
@@ -1725,7 +1725,13 @@ def submit_block_to_scheduler(elements, params):
                 error_msg = error_json.get('non_field_errors', msg)
                 msg = error_msg[0]
         except AttributeError:
-            msg = "Unable to decode response from Valhalla"
+            try:
+                msg = user_request['errors']
+            except KeyError:
+                try:
+                    msg = user_request['proposal'][0]
+                except KeyError:
+                    msg = "Unable to decode response from Valhalla"
         params['error_msg'] = msg
         logger.error(msg)
         return False, params

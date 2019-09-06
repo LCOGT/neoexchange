@@ -641,7 +641,7 @@ class ScheduleParametersCadence(LoginRequiredMixin, LookUpBodyMixin, FormView):
     def form_valid(self, form, request):
         data = schedule_check(form.cleaned_data, self.body, self.ok_to_schedule)
         new_form = ScheduleBlockForm(data)
-        return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.body})
+        return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.body, 'cadence':True})
 
 
 class ScheduleParametersSpectra(LoginRequiredMixin, LookUpBodyMixin, FormView):
@@ -837,7 +837,6 @@ def schedule_check(data, body, ok_to_schedule=True):
     # Check for valid proposal
     # validate_proposal_time(data['proposal_code'])
 
-    # Determine magnitude
     if data.get('start_time') and data.get('end_time'):
         dark_start = data.get('start_time')
         dark_end = data.get('end_time')
@@ -979,13 +978,20 @@ def schedule_check(data, body, ok_to_schedule=True):
     period = data.get('period', None)
     jitter = data.get('jitter', None)
 
-    if period and jitter:
+    if period is not None and jitter is not None:
+        # Increase Jitter if shorter than slot length
+        if jitter < slot_length / 60:
+            jitter = round(slot_length / 60, 2)+.01
+        if period < 0.02:
+            period = 0.02
+
         # Number of times the cadence request will run between start and end date
-        cadence_start = data['start_time']
-        cadence_end = data['end_time']
+        cadence_start = dark_start
+        cadence_end = dark_end
         total_run_time = cadence_end - cadence_start
         cadence_period = timedelta(seconds=data['period']*3600.0)
         total_requests = 1 + int(floor(total_run_time.total_seconds() / cadence_period.total_seconds()))
+
         # Remove the last start if the request would run past the cadence end
         if cadence_start + total_requests * cadence_period + timedelta(seconds=slot_length*60.0) > cadence_end:
             total_requests -= 1
@@ -1850,7 +1856,7 @@ def update_crossids(astobj, dbg=False):
     # but don't have a blank 'name'
     bodies = Body.objects.filter(Q(provisional_name=temp_id) | Q(name=desig) & ~Q(name=''))
     if dbg: print("temp_id={},desig={},bodies={}".format(temp_id,desig,bodies))
-    
+
     if bodies.count() == 0:
         body = Body.objects.create(provisional_name=temp_id, name=desig)
         created = True

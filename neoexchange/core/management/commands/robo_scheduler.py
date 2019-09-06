@@ -154,6 +154,8 @@ class Command(BaseCommand):
         parser.add_argument('--not_seen', default=not_seen_default, type=float, help="Cutoff since object was seen ("+str(not_seen_default)+" days)")
         parser.add_argument('--too', action="store_true", help="Whether to execute as disruptive ToO")
         parser.add_argument('--object', default=None, type=str, help="Specific object to schedule")
+        parser.add_argument('--skip_north', action="store_true", help="Whether to skip scheduling in the North")
+        parser.add_argument('--skip_south', action="store_true", help="Whether to skip scheduling in the South")
 
     def handle(self, *args, **options):
         usage = "Incorrect usage. Usage: %s --date [YYYYMMDD[-HH]] --user [tlister@lcogt.net] --run"
@@ -236,40 +238,47 @@ class Command(BaseCommand):
         if options['run']:
 
             for tel_class in north_list.keys():
-                do_north = False
-                if len(sites['north'][tel_class]) > 0:
-                    for site in sites['north'][tel_class]:
-                        if site_status[site][0] == True:
-                            do_north = True
-                            north_form = {'site_code': sites['north'][tel_class][0],
-                                          'utc_date' : scheduling_date.date(),
-                                          'proposal_code': options['proposal'],
-                                          'too_mode' : options['too']}
-#                            if 'Z21' in north_form['site_code'] and datetime.utcnow().hour > 16:
-#                                north_form['utc_date'] = north_form['utc_date'] + timedelta(days=1)
-#                            break
-                do_south = False
-                if len(sites['south'][tel_class]) > 0:
-                    for site in sites['south'][tel_class]:
-                        if site_status[site][0] == True:
-                            do_south = True
-                            south_form = {'site_code': sites['south'][tel_class][0],
-                                          'utc_date' : scheduling_date.date(),
-                                          'proposal_code': options['proposal'],
-                                          'too_mode' : options['too']}
-#                            if 'K92' in south_form['site_code'] and datetime.utcnow().hour > 16:
-#                                south_form['utc_date'] = south_form['utc_date'] + timedelta(days=1)
-#                            break
+                if options['skip_north'] is False:
+                    do_north = False
+                    if len(sites['north'][tel_class]) > 0:
+                        for site in sites['north'][tel_class]:
+                            if site_status[site][0] is True:
+                                do_north = True
+                                north_form = {'site_code': sites['north'][tel_class][0],
+                                              'utc_date' : scheduling_date.date(),
+                                              'proposal_code': options['proposal'],
+                                              'too_mode' : options['too']}
+                else:
+                    do_north = False
 
+                if options['skip_south'] is False:
+                    do_south = False
+                    if len(sites['south'][tel_class]) > 0:
+                        for site in sites['south'][tel_class]:
+                            if site_status[site][0] is True:
+                                do_south = True
+                                south_form = {'site_code': sites['south'][tel_class][0],
+                                              'utc_date' : scheduling_date.date(),
+                                              'proposal_code': options['proposal'],
+                                              'too_mode' : options['too']}
+                else:
+                    do_south = False
+                # Schedule telescopes
                 if do_north:
                     num_scheduled, objects_scheduled = schedule_target_list(north_list[tel_class], north_form, username)
                     self.stdout.write("Scheduled %d (%s) in the North at %s" % (num_scheduled, objects_scheduled, north_form['site_code']))
                 else:
-                    self.stdout.write("No %s sites in the North available for scheduling" % tel_class)
+                    if options['skip_north']:
+                        self.stdout.write("Skipping {} scheduling in the North".format(tel_class))
+                    else:
+                        self.stdout.write("No %s sites in the North available for scheduling" % tel_class)
                 if do_south:
                     num_scheduled, objects_scheduled = schedule_target_list(south_list[tel_class], south_form, username)
                     self.stdout.write("Scheduled %d (%s) in the South at %s" % (num_scheduled,  objects_scheduled, south_form['site_code']))
                 else:
-                    self.stdout.write("No %s sites in the South available for scheduling" % tel_class)
+                    if options['skip_south']:
+                        self.stdout.write("Skipping {} scheduling in the South".format(tel_class))
+                    else:
+                        self.stdout.write("No %s sites in the South available for scheduling" % tel_class)
         else:
             self.stdout.write("Simulating scheduling at %s and %s" % (sites['north'], sites['south']) )

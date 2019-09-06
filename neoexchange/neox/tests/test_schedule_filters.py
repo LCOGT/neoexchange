@@ -117,13 +117,13 @@ class ScheduleObservations(FunctionalTest):
 
         # The page refreshes and a series of values for magnitude, speed, slot
         # length, number and length of exposures appear
-        magnitude = self.browser.find_element_by_id('id_magnitude').find_element_by_class_name('kv-value').text
+        magnitude = self.browser.find_element_by_id('id_magnitude_row').find_element_by_class_name('kv-value').text
         self.assertIn('20.39', magnitude)
-        speed = self.browser.find_element_by_id('id_speed').find_element_by_class_name('kv-value').text
+        speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
         self.assertIn('2.52 "/min', speed)
-        slot_length = self.browser.find_element_by_name('slot_length').get_attribute('value')
+        slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
-        num_exp = self.browser.find_element_by_id('id_no_of_exps').find_element_by_class_name('kv-value').text
+        num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
         self.assertIn('12', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
         self.assertIn('60.0', exp_length)
@@ -133,40 +133,40 @@ class ScheduleObservations(FunctionalTest):
         self.assertIn('Schedule this Object', submit)
 
         # there is an option to input a filter Pattern with a default value of 'w'
-        filter_pattern = self.browser.find_element_by_name('filter_pattern').get_attribute("value")
+        filter_pattern = self.browser.find_element_by_id('id_filter_pattern').get_attribute("value")
         self.assertIn('w', filter_pattern)
         
         # There is a help option listing the proper input format and available filters
         expected_filters = 'air, ND, U, B, V, R, I, B*ND, V*ND, R*ND, I*ND, up, gp, rp, ip, zs, Y, w'
-        filter_help = self.browser.find_element_by_id('id_filter_pattern').find_element_by_class_name('kv-key').get_attribute("name")
+        filter_help = self.browser.find_element_by_id('id_filter_pattern_row').find_element_by_class_name('kv-key').get_attribute("name")
         self.assertEqual(expected_filters, filter_help)
 
         # There is a spot to input the number of iterations (default = number of exposures)
         with self.assertRaises(NoSuchElementException):
-            pattern_iterations = self.browser.find_element_by_id('id_pattern_iterations').find_element_by_class_name('kv-value').text
+            pattern_iterations = self.browser.find_element_by_id('id_pattern_iterations_row').find_element_by_class_name('kv-value').text
 
         # Updating filter pattern updates the number of iterations
         iterations_expected = u'3.33'
-        filter_pattern_box = self.browser.find_element_by_name('filter_pattern')
+        filter_pattern_box = self.browser.find_element_by_id('id_filter_pattern')
         filter_pattern_box.clear()
         filter_pattern_box.send_keys('V,I,R')
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_id("id_edit_button").click()
-        pattern_iterations = self.browser.find_element_by_id('id_pattern_iterations').find_element_by_class_name('kv-value').text
+        pattern_iterations = self.browser.find_element_by_id('id_pattern_iterations_row').find_element_by_class_name('kv-value').text
         self.assertEqual(iterations_expected, pattern_iterations)
 
         # updating the slot length increases the number of iterations
         iterations_expected = u'17.0'
-        slot_length_box = self.browser.find_element_by_name('slot_length')
+        slot_length_box = self.browser.find_element_by_id('id_slot_length')
         slot_length_box.clear()
         slot_length_box.send_keys('102')
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_id("id_edit_button").click()
-        pattern_iterations = self.browser.find_element_by_id('id_pattern_iterations').find_element_by_class_name('kv-value').text
+        pattern_iterations = self.browser.find_element_by_id('id_pattern_iterations_row').find_element_by_class_name('kv-value').text
         self.assertEqual(iterations_expected, pattern_iterations)
 
         # cannot update filter pattern with unacceptable filters with incorrect syntax
-        filter_pattern_box = self.browser.find_element_by_name('filter_pattern')
+        filter_pattern_box = self.browser.find_element_by_id('id_filter_pattern')
         filter_pattern_box.clear()
         filter_pattern_box.send_keys('42,V,v,W,w,gp fg, hj, k-t/g/h')
         with self.wait_for_page_load(timeout=10):
