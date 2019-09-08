@@ -25,9 +25,16 @@ except:
     pass
 
 from numpy import array, concatenate, zeros
+from numpy import sqrt as np_sqrt
 import copy
 from itertools import groupby
 import re
+import warnings
+
+from astropy.utils.exceptions import AstropyDeprecationWarning
+warnings.simplefilter('ignore', category = AstropyDeprecationWarning)
+from astroquery.jplhorizons import Horizons
+from astropy.table import Column
 
 # Local imports
 from astrometrics.time_subs import datetime2mjd_utc, datetime2mjd_tdb, mjd_utc2mjd_tt, ut1_minus_utc, round_datetime
@@ -359,7 +366,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
         sun_coord = S.sla_dcc2s(e_pos_hel * -1)
         sun_ra = S.sla_dranrm(sun_coord[0])
         sun_dec = sun_coord[1]
-        # rotate object ra to solar position
+        # rotate object RA to solar position
         lon_new = ra - sun_ra
         lon_new = atan2(sin(lon_new-pi/2) * cos(sun_dec) - tan(dec) * sin(sun_dec), cos(lon_new-pi/2)) + pi/2
         # convert longitude of object to distance in radians
@@ -488,7 +495,7 @@ def calc_moon_sep(obsdate, obj_ra, obj_dec, site_code):
     # Convert to alt, az (only the alt is actually needed)
     (moon_az, moon_alt) = moon_alt_az(obsdate, moon_app_ra, moon_app_dec, site_long, site_lat, site_hgt)
     moon_alt = degrees(moon_alt)
-    # Compute object<->Moon seperation and convert to degrees
+    # Compute object<->Moon separation and convert to degrees
     moon_obj_sep = S.sla_dsep(obj_ra, obj_dec, moon_app_ra, moon_app_dec)
     moon_obj_sep = degrees(moon_obj_sep)
     # Calculate Moon phase (in range 0.0..1.0)
@@ -589,6 +596,67 @@ def call_compute_ephem(elements, dark_start, dark_end, site_code, ephem_step_siz
 
     return emp
 
+def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_limit=0):
+    """Calls JPL HORIZONS for the specified <obj_name> producing an ephemeris
+    from <start> to <end> for the MPC site code <site_code> with step size
+    of [ephem_step_size] (defaults to '1h').
+    Returns an AstroPy Table of the response with the following columns:
+    ['targetname',
+     'datetime_str',
+     'datetime_jd',
+     'H',
+     'G',
+     'solar_presence',
+     'flags',
+     'RA',
+     'DEC',
+     'RA_rate',
+     'DEC_rate',
+     'AZ',
+     'EL',
+     'V',
+     'surfbright',
+     'r',
+     'r_rate',
+     'delta',
+     'delta_rate',
+     'elong',
+     'elongFlag',
+     'alpha',
+     'RSS_3sigma',
+     'hour_angle',
+     'datetime']
+    """
+
+    eph = Horizons(id=obj_name, epochs={'start' : start.strftime("%Y-%m-%d %H:%M:%S"),
+            'stop' : end.strftime("%Y-%m-%d %H:%M:%S"), 'step' : ephem_step_size}, location=site_code)
+
+    airmass_limit = 99
+    if alt_limit > 0:
+        airmass_limit = S.sla_airmas(radians(90.0 - alt_limit))
+
+    ha_lowlimit, ha_hilimit, alt_limit = get_mountlimits(site_code)
+    ha_limit = max(abs(ha_lowlimit), abs(ha_hilimit)) / 15.0
+    try:
+        ephem = eph.ephemerides(quantities='1,3,4,9,19,20,23,24,38,42',
+            skip_daylight=True, airmass_lessthan=airmass_limit,
+            max_hour_angle=ha_limit)
+        dates = Column([datetime.strptime(d, "%Y-%b-%d %H:%M") for d in ephem['datetime_str']])
+        if 'datetime' not in ephem.colnames:
+            ephem.add_column(dates, name='datetime')
+        # Convert units of RA/Dec rate from arcsec/hr to arcsec/min and compute
+        # mean rate
+        ephem['RA_rate'].convert_unit_to('arcsec/min')
+        ephem['DEC_rate'].convert_unit_to('arcsec/min')
+        rate_units = ephem['DEC_rate'].unit
+        mean_rate = np_sqrt(ephem['RA_rate']**2 + ephem['DEC_rate']**2)
+        mean_rate.unit = rate_units
+        ephem.add_column(mean_rate, name='mean_rate')
+    except ValueError as e:
+        logger.warning("Error querying HORIZONS. Error message: ", e)
+        ephem = None
+
+    return ephem
 
 def read_findorb_ephem(empfile):
     """Routine to read find_orb produced ephemeris.emp files from non-interactive
@@ -1003,17 +1071,6 @@ def get_mag_mapping(site_code):
                 21.0 : 35,
                 99   : 60
                }
-    elif site_code in point4m_site_codes:
-        mag_mapping = {
-                12   : 15.0,
-                15   : 17.5,
-                17.5 : 20,
-                18.5 : 22.5,
-                19.5 : 25,
-                20   : 27.5,
-                20.5 : 32.5,
-                21.0 : 35
-               }
     else:
         mag_mapping = {}
 
@@ -1112,7 +1169,7 @@ def determine_exp_count(slot_length_in_mins, exp_time, site_code, filter_pattern
 
     # Make first estimate for exposure count ignoring molecule creation
     exp_count = int((slot_length - setup_overhead)/(exp_time + exp_overhead))
-    # Reduce exposure count by number of exposures necessary to accomidate molecule overhead
+    # Reduce exposure count by number of exposures necessary to accommodate molecule overhead
     mol_overhead = molecule_overhead(build_filter_blocks(filter_pattern, exp_count))
     exp_count = int(ceil(exp_count * (1.0-(mol_overhead / ((( exp_time + exp_overhead ) * exp_count) + mol_overhead)))))
     # Safety while loop for edge cases
@@ -1128,7 +1185,7 @@ def determine_exp_count(slot_length_in_mins, exp_time, site_code, filter_pattern
         logger.debug("Invalid exposure count")
         exp_count = None
 
-    # pretify slotlength to nearest .5 min
+    # prettify slotlength to nearest .5 min
     slot_length_in_mins = slot_length/60
     slot_length_in_mins = ceil(slot_length_in_mins*2)/2
     return slot_length_in_mins, exp_count
