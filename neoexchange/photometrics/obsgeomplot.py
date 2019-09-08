@@ -23,6 +23,7 @@ def make_targetname(target_name):
         new_name = target_name[start_idx:end_idx+1].replace(' ', '').replace('(','').replace(')','')
         target_name = target_name[0:start_idx] + new_name + target_name[end_idx+2:]
     target_name = target_name.replace(" ", "_")
+    target_name = target_name.replace("/", "_")
 
     return target_name
 
