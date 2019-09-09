@@ -135,12 +135,16 @@ def plot_brightness(ephem, title=None):
     geo_color = "#0083ff" # A nice pale blue
     peri_color = '#ff5900' # Sort of orange
     ca_color = '#4700c3'
+    mag_column = 'V'
+    if 'Tmag' in ephem.colnames:
+        # Switch to using comet Total magnitude
+        mag_column = 'Tmag'
 
     # Generate the figure **without using pyplot**.
     fig = Figure()
     ax = fig.subplots()
     dates = ephem['datetime']
-    ax.plot(dates, ephem['V'], color=hel_color, linestyle='-')
+    ax.plot(dates, ephem[mag_column], color=hel_color, linestyle='-')
 
     perihelion = dates[ephem['r'].argmin()]
     close_approach = dates[ephem['delta'].argmin()]
@@ -156,7 +160,11 @@ def plot_brightness(ephem, title=None):
         ax.text(close_approach, ypos, "C/A", rotation=90, color=ca_color, horizontalalignment='left')
     ax.set_ylim(ylim[1], ylim[0])
     ax.set_xlabel('Date')
-    ax.set_ylabel('V magnitude')
+    if mag_column == 'Tmag':
+        ax.set_ylabel('Total magnitude')
+    else:
+        ax.set_ylabel('V magnitude')
+
     fig.autofmt_xdate()
     ax.minorticks_on()
     ax.xaxis.set_ticks_position('both')
@@ -240,6 +248,10 @@ def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, add_rate=T
     dates = ephem_ca['datetime']
     close_approach = dates[ephem_ca['delta'].argmin()]
     visible_dates, hours_visible = determine_hours_up(ephem_ca, site_code, dbg)
+    mag_column = 'V'
+    if 'Tmag' in ephem_ca.colnames:
+        # Switch to using comet Total magnitude
+        mag_column = 'Tmag'
 
     # Generate the figure **without using pyplot**.
     if add_rate:
@@ -256,7 +268,7 @@ def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, add_rate=T
         ax = axes[1]
     ax2 = ax.twinx()
     line_hours = ax.plot(visible_dates, hours_visible, 'k-')
-    line_vmag = ax2.plot(dates, ephem_ca['V'], color= '#ff5900', linestyle='-.')
+    line_vmag = ax2.plot(dates, ephem_ca[mag_column], color= '#ff5900', linestyle='-.')
     y2lim = ax2.get_ylim()
     ax2.set_ylim(y2lim[1], y2lim[0])
     ylim = ax.get_ylim()
@@ -303,8 +315,12 @@ def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, add_rate=T
 
     y_units_label = 'Hours above $30^\circ$ altitude'
     ax.set_ylabel(y_units_label)
-    ax2.set_ylabel('V magnitude')
-    ax.legend(handles=(line_hours[0], line_vmag[0]), labels=('Hours up', 'V mag'), loc='best', fontsize='x-small')
+    if mag_column == 'Tmag':
+        mag_label = 'Total magnitude'
+    else:
+        mag_label = 'V magnitude'
+    ax2.set_ylabel(mag_label)
+    ax.legend(handles=(line_hours[0], line_vmag[0]), labels=('Hours up', mag_label), loc='best', fontsize='x-small')
 
     ax.minorticks_on()
     ax2.minorticks_on()
