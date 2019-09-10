@@ -76,6 +76,26 @@ def make_mask(image, saturation, low_clip=0.0):
 
     return mask
 
+def subtract_background(header, image, bkg_map):
+    #   Determine background and subtract
+    if bkg_map:
+        bkg_estimator = MedianBackground()
+        sigma_clip = SigmaClip(sigma=3.)
+        bkg = Background2D(image, (50, 50), filter_size=(3, 3), bkg_estimator=bkg_estimator, sigma_clip=sigma_clip, mask=mask)
+        sky_level = bkg.background
+        sky_sigma = bkg.background_rms
+        print("Background & rms=", bkg.background_median, bkg.background_rms_median)
+        effective_gain = header['gain'] * header['exptime']
+        print("Gain=", effective_gain)
+        error = calc_total_error(image, sky_sigma, effective_gain)
+        image_sub = image - sky_level
+    else:
+        mean, median, std = sigma_clipped_stats(image, sigma=3.0, iters=3, mask=mask)
+        print("Mean, median, std. dev=", mean, median, std)
+        image_sub = image - median
+
+    return image_sub
+
 def determine_aperture_size(delta, pixscale):
     '''Determine the size of a comet-photometry standard 10,000km aperture for
     the passed pixel scale <pixscale> (in arcsec/pixel) and distance <delta> (in AU)'''

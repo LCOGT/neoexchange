@@ -67,40 +67,21 @@ for fits_fpath in images:
 
     #   Open image
     header, image = open_image(fits_fpath)
-    
-    #   Make bad pixel mask of saturated and very low values
-    low_clip = 100.0
-    if bkg_map:
-        low_clip = -50.0
-    sat_level = header.get('saturate', 55000)
-    mask = make_mask(image, sat_level, low_clip)
 
-    #   Determine background and subtract
-    if bkg_map:
-        bkg_estimator = MedianBackground()
-        sigma_clip = SigmaClip(sigma=3.)
-        bkg = Background2D(image, (50, 50), filter_size=(3, 3), bkg_estimator=bkg_estimator, sigma_clip=sigma_clip, mask=mask)
-        sky_level = bkg.background
-        sky_sigma = bkg.background_rms
-        print("Background & rms=", bkg.background_median, bkg.background_rms_median)
-        effective_gain = header['gain'] * header['exptime']
-        print("Gain=", effective_gain)
-        error = calc_total_error(image, sky_sigma, effective_gain)
-        image_sub = image - sky_level
-    else:
-        mean, median, std = sigma_clipped_stats(image, sigma=3.0, iters=3, mask=mask)
-        print("Mean, median, std. dev=", mean, median, std)
-        image_sub = image - median
-
-    #   Determine position of comet in this frame
+    # Determine site id, MPC site code, instrument and set catalog type for later
     if 'mpccode' in header:
         sitecode = header['mpccode']
         siteid = 'CSS'
         instrument = sitecode.upper() + '_STA10k'
+        cat_type = 'CSS:ASCII_HEAD'
     else:
         sitecode = LCOGT_domes_to_site_codes(header['siteid'], header['encid'], header['telid'])
         siteid = header['siteid'].upper()
         instrument = header['instrume'].lower()
+        cat_type = 'COMETCAM:ASCII_HEAD'
+        default_pixelscale = 0.1838220980370765
+
+    #   Determine position of comet in this frame
     ephem_file = comet + "_ephem_%s_%s_%s.txt" % ( siteid, instrument, sitecode.upper())
     print("Reading ephemeris from", ephem_file)
     ephem_file = os.path.join(os.getenv('HOME'), 'Asteroids', ephem_file)
@@ -110,80 +91,104 @@ for fits_fpath in images:
         date_obs = Time(mjd_utc_mid, format='mjd', scale='utc')
         date_obs.format = 'isot'
     else:
-        mjd_utc_mid = header['mjd-obs'] + (header['exptime']/2.0/86400.0)
-        date_obs =  header['date-obs']
+        date_obs = Time(header['date-obs'], format='isot', scale='utc')
+        date_obs += header['exptime']/2.0/86400.0
+        mjd_utc_mid = date_obs.mjd
+        date_obs.format = 'isot'
     jd_utc_mid = mjd_utc_mid + 2400000.5
     print("JD=", jd_utc_mid, date_obs, header['exptime'], header['exptime']/2.0/86400.0)
     ra, dec, del_ra, del_dec, delta, phase = interpolate_ephemeris(ephem_file, jd_utc_mid, with_rdot=False)
+    sky_position = SkyCoord(ra, dec, unit='deg', frame='icrs')
     print("RA, Dec, delta for frame=", ra, dec, delta)
 
-    try:
-        fits_wcs = WCS(header)
-    except InvalidTransformError:
-        print("Changing WCS CTYPEi to TPV")
-        if 'CTYPE1' in header and 'CTYPE2' in header:
-            header['CTYPE1'] = 'RA---TPV'
-            header['CTYPE2'] = 'DEC--TPV'
+    if header.get('wcserr', 99) == 0:
+        # Good WCS
+        #   Make bad pixel mask of saturated and very low values
+        low_clip = 100.0
+        if bkg_map:
+            low_clip = -50.0
+        sat_level = header.get('saturate', 55000)
+        mask = make_mask(image, sat_level, low_clip)
+
+        image_sub = subtract_background(header, image, bkg_map)
+
+        try:
             fits_wcs = WCS(header)
+        except InvalidTransformError:
+            print("Changing WCS CTYPEi to TPV")
+            if 'CTYPE1' in header and 'CTYPE2' in header:
+                header['CTYPE1'] = 'RA---TPV'
+                header['CTYPE2'] = 'DEC--TPV'
+                fits_wcs = WCS(header)
+            else:
+                print("Could not find needed WCS header keywords")
+                exit(-2)
+
+        trim_limits = [0, 0, fits_wcs.pixel_shape[0], fits_wcs.pixel_shape[1]]
+
+        x, y = fits_wcs.wcs_world2pix(ra, dec, 1)
+        pixscale = proj_plane_pixel_scales(fits_wcs).mean()*3600.0
+        print("Pixelscales=", pixscale, header.get('secpix', ''))
+
+        #   Determine aperture size and perform aperture photometry at the position
+        radius = determine_aperture_size(delta, pixscale)
+        print("Pixel photometry:")
+        print("X, Y, Radius (pixels, arcsec)= {:.3f} {:.3f} {:9.5f} {:9.5f}".format(x, y, radius, radius*pixscale))
+
+        apertures = CircularAperture((x,y), r=radius)
+        phot_table = aperture_photometry(image_sub, apertures, mask=mask, method='exact', error=error)
+        print(phot_table)
+
+        print("Sky Coords aperture photometry:")
+        sky_apertures = SkyCircularAperture(sky_position, r=radius * pixscale * u.arcsec)
+        skypos_phot_table = aperture_photometry(image_sub, sky_apertures, wcs=fits_wcs, mask=mask, method='exact', error=error)
+        print("%13.7f %16.8f %s" % (skypos_phot_table['aperture_sum'].data[0], skypos_phot_table['aperture_sum_err'].data[0], sky_position.to_string('hmsdms')))
+
+        #   Convert flux to absolute magnitude
+        try:
+            mag = -2.5*log10(phot_table['aperture_sum'])
+            magerr = FLUX2MAG * (phot_table['aperture_sum_err'] / phot_table['aperture_sum'])
+        except ValueError:
+            print("-ve flux value")
+            mag = magerr = -99.0
+        try:
+            skypos_mag = -2.5*log10(skypos_phot_table['aperture_sum'])
+            skypos_magerr = FLUX2MAG * (skypos_phot_table['aperture_sum_err'] / skypos_phot_table['aperture_sum'])
+        except ValueError:
+            print("-ve flux value")
+            skypos_mag = skypos_magerr = -99.0
+
+        # Get observed filter, Convert 'p' to prime
+        obs_filter = header['filter']
+        obs_filter = obs_filter[:-1] + obs_filter[-1].replace("p", "'")
+        if zp < 0 and zp_err < 0:
+            print("Bad zeropoint for %s" % fits_frame)
+            abs_mag = abs_mag_err = -99.0
+            abs_skypos_mag = abs_skypos_mag_err = -99.0
+        elif mag < -90:
+            print("Bad magnitude determination")
         else:
-            print("Could not find needed WCS header keywords")
-            exit(-2)
-    trim_limits = [0, 0, fits_wcs.pixel_shape[0], fits_wcs.pixel_shape[1]]
+            abs_mag = mag+zp
+            abs_mag_err = sqrt(pow(magerr, 2) + pow(zp_err, 2))
+            abs_skypos_mag = skypos_mag+zp
+            abs_skypos_mag_err = sqrt(pow(skypos_magerr, 2) + pow(zp_err, 2))
+            if obs_filter == "r'":
+                print("Correcting r' magnitude to R")
+                abs_mag = abs_mag - 0.2105
+            print(mag, abs_mag, abs_mag_err, skypos_mag, abs_skypos_mag, abs_skypos_mag_err, zp, zp_err)
+    else:
+        # Bad WCS
+        pixscale = default_pixelscale
+        radius = determine_aperture_size(delta, pixscale)
+        print("Pixel photometry:")
+        print("Radius (pixels, arcsec)= {:9.5f} {:9.5f}".format(radius, radius*pixscale))
+
+        trim_limits = [0, 0, header['naxis1'], header['naxis2']]
+
     print("Trim limits=", trim_limits)
 
-    x, y = fits_wcs.wcs_world2pix(ra, dec, 1)
-    pixscale = proj_plane_pixel_scales(fits_wcs).mean()*3600.0
-    print("Pixelscales=", pixscale, header.get('secpix', ''))
-
-    #   Determine aperture size and perform aperture photometry at the position
-    radius = determine_aperture_size(delta, pixscale)
-    print("Pixel photometry:")
-    print("X, Y, Radius (pixels, arcsec)= {:.3f} {:.3f} {:9.5f} {:9.5f}".format(x, y, radius, radius*pixscale))
-
-    apertures = CircularAperture((x,y), r=radius)
-    phot_table = aperture_photometry(image_sub, apertures, mask=mask, method='exact', error=error)
-    print(phot_table)
-
-    print("Sky Coords aperture photometry:")
-    sky_position = SkyCoord(ra, dec, unit='deg', frame='icrs')
-    sky_apertures = SkyCircularAperture(sky_position, r=radius * pixscale * u.arcsec)
-    skypos_phot_table = aperture_photometry(image_sub, sky_apertures, wcs=fits_wcs, mask=mask, method='exact', error=error)
-    print("%13.7f %16.8f %s" % (skypos_phot_table['aperture_sum'].data[0], skypos_phot_table['aperture_sum_err'].data[0], sky_position.to_string('hmsdms')))
-
-    #   Convert flux to absolute magnitude
-    try:
-        mag = -2.5*log10(phot_table['aperture_sum'])
-        magerr = FLUX2MAG * (phot_table['aperture_sum_err'] / phot_table['aperture_sum'])
-    except ValueError:
-        print("-ve flux value")
-        mag = magerr = -99.0
-    try:
-        skypos_mag = -2.5*log10(skypos_phot_table['aperture_sum'])
-        skypos_magerr = FLUX2MAG * (skypos_phot_table['aperture_sum_err'] / skypos_phot_table['aperture_sum'])
-    except ValueError:
-        print("-ve flux value")
-        skypos_mag = skypos_magerr = -99.0
-
-    # Get observed filter, Convert 'p' to prime
-    obs_filter = header['filter']
-    obs_filter = obs_filter[:-1] + obs_filter[-1].replace("p", "'")
-    if zp < 0 and zp_err < 0:
-        print("Bad zeropoint for %s" % fits_frame)
-        abs_mag = abs_mag_err = -99.0
-        abs_skypos_mag = abs_skypos_mag_err = -99.0
-    elif mag < -90:
-        print("Bad magnitude determination")
-    else:
-        abs_mag = mag+zp
-        abs_mag_err = sqrt(pow(magerr, 2) + pow(zp_err, 2))
-        abs_skypos_mag = skypos_mag+zp
-        abs_skypos_mag_err = sqrt(pow(skypos_magerr, 2) + pow(zp_err, 2))
-        if obs_filter == "r'":
-            print("Correcting r' magnitude to R")
-            abs_mag = abs_mag - 0.2105
-        print(mag, abs_mag, abs_mag_err, skypos_mag, abs_skypos_mag, abs_skypos_mag_err, zp, zp_err)
-
-    status, catalog = make_CSS_catalogs(configs_dir, datadir, fits_fpath, catalog_type='CSS:ASCII_HEAD', aperture=radius*2.0)
+    # Make SExtractor catalog
+    status, catalog = make_CSS_catalogs(configs_dir, datadir, fits_fpath, catalog_type=cat_type, aperture=radius*2.0)
     if status == 0:
         zp_PS1, C_PS1, zp_err_PS1, r, gmr, gmi, obj_mag, obj_err = calibrate_catalog(catalog, sky_position, trim_limits, flux_column='FLUX_APER', fluxerr_column='FLUXERR_APER')
         print("ZP, color slope, uncertainty= {:7.3f} {:.6f} {:.3f}".format(zp_PS1, C_PS1, zp_err_PS1))
