@@ -53,6 +53,7 @@ def open_image(fits_file):
         hdulist = fits.open(fits_file)
         header = hdulist[0].header
         image = hdulist[0].data
+        hdulist.close()
     except IOError as e:
         print("Unable to open FITS file %s (Reason=%s)" % (fits_file, e))
 
@@ -130,6 +131,8 @@ def interpolate_ephemeris(ephem_file, jd, with_rdot=True):
     return ra.degree, dec.degree, float(delta_ra), float(delta_dec), float(delta), float(phase)
 
 def retrieve_zp_err(fits_frame):
+    zp = -99
+    zp_err = -99
     try:
         frame = Frame.objects.get(filename=fits_frame)
     except Frame.DoesNotExist:
@@ -138,7 +141,12 @@ def retrieve_zp_err(fits_frame):
     except Frame.MultipleObjectsReturned:
         print("Multiple processed frame records found for %s" % fits_frame)
         exit(-1)
-    return frame.zeropoint, frame.zeropoint_err
+    if frame.zeropoint is not None:
+        zp = frame.zeropoint
+    if frame.zeropoint_err is not None:
+        zp_err = frame.zeropoint_err
+
+    return zp, zp_err
 
 
 def make_CSS_catalogs(source_dir, dest_dir, fits_file, catalog_type='CSS:ASCII_HEAD', aperture=None):
