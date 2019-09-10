@@ -56,7 +56,7 @@ def default_sextractor_config_files(catalog_type='ASCII'):
     """Return a list of the needed files for SExtractor. The config file should
     be in element 0"""
 
-    common_config_files = ['gauss_1.5_3x3.conv', 'default.nnw']
+    common_config_files = ['gauss_1.5_3x3.conv', 'default.nnw', 'tophat_1.5_3x3.conv']
     config_files = ['sextractor_neox.conf',
                     'sextractor_ascii.params']
     if catalog_type == 'FITS_LDAC':
@@ -64,6 +64,9 @@ def default_sextractor_config_files(catalog_type='ASCII'):
                         'sextractor_ldac.params']
     elif catalog_type == 'CSS:ASCII_HEAD':
         config_files = ['sextractor_CSS_ascii.conf',
+                        'sextractor_CSS_ascii.params']
+    elif catalog_type == 'COMETCAM:ASCII_HEAD':
+        config_files = ['sextractor_Cometcam_ascii.conf',
                         'sextractor_CSS_ascii.params']
     config_files = config_files + common_config_files
     return config_files
