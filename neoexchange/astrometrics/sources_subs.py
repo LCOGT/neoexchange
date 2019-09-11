@@ -949,7 +949,7 @@ def cycle_mpc_character_code(char):
     cycle = ord(char)
     if cycle >= ord('a'):
         cycle = cycle - 61
-    elif ord('A') <= cycle < ord('Z'):
+    elif ord('A') <= cycle <= ord('Z'):
         cycle = cycle - 55
     else:
         cycle = cycle - ord('0')

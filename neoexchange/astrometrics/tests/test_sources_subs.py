@@ -119,6 +119,13 @@ class TestPackedToNormal(TestCase):
 
         self.assertEqual(expected, result)
 
+    def test_ast_Z4030(self):
+        expected = '354030'
+
+        result = packed_to_normal('Z4030')
+
+        self.assertEqual(expected, result)
+
     def test_ast_a0001(self):
         expected = '360001'
 
