@@ -98,7 +98,7 @@ def subtract_background(header, image, mask, bkg_map):
         print("Mean, median, std. dev=", mean, median, std)
         image_sub = image - median
 
-    return image_sub
+    return image_sub, error
 
 def determine_aperture_size(delta, pixscale):
     '''Determine the size of a comet-photometry standard 10,000km aperture for
@@ -213,9 +213,12 @@ def great_circle_distance(ra1, dec1, ra2, dec2):
     distance_rad = np.arccos(np.sin(dec1_rad) * np.sin(dec2_rad) + np.cos(dec1_rad) * np.cos(dec2_rad) * np.cos(ra2_rad - ra1_rad))
     return np.rad2deg(distance_rad)
 
-def calibrate_catalog(catfile, cat_center, trim_limits, table_format='ascii.sextractor', radius=0.5, flux_column='FLUX_ISOCOR', fluxerr_column='FLUXERR_ISOCOR'):
-
-    FLUX2MAG = 2.5/np.log(10)
+def read_and_filter_catalog(catfile, trim_limits, table_format='ascii.sextractor'):
+    """Read in the [table_format] (normally SEXtractor ASCII) catalog file
+    referenced by <catfile> and trim it to the specified <trim_limits> (in the
+    format [xlow, ylow, xhigh, yhigh].
+    Two Astropy Tables are returned with the original catalog and the filtered
+    version"""
 
     # Read in SExtractor catalog and rename columns
     logger.info("Reading catalog {}".format(catfile))
@@ -230,10 +233,19 @@ def calibrate_catalog(catfile, cat_center, trim_limits, table_format='ascii.sext
     mask5 = phot['YWIN_IMAGE'] <= trim_limits[3]
     mask = mask1 & mask2 & mask3 & mask4 & mask5    # AND all the masks together
     clean_phot = phot[mask]
+
+    return phot, clean_phot
+
+def calibrate_catalog(catfile, cat_center, trim_limits, table_format='ascii.sextractor', radius=0.5, flux_column='FLUX_ISOCOR', fluxerr_column='FLUXERR_ISOCOR'):
+
+    FLUX2MAG = 2.5/np.log(10)
+
+    # Read in SExtractor catalog and rename columns
+    phot, clean_phot = read_and_filter_catalog(catfile, trim_limits, table_format)
     logger.debug("Size of input and filtered catalogs= {}, {}".format(len(phot), len(clean_phot)))
 
     # Create SkyCoord and filter down to find sources within the specified
-    # radius (since out field is bigger than the maximum allowed in the PS1
+    # radius (since out field could be bigger than the maximum allowed in the PS1
     # catalog query)
     lco = SkyCoord(clean_phot['RA'], clean_phot['DEC'], unit='deg')
     lco_cut = clean_phot[great_circle_distance(cat_center.ra.deg, cat_center.dec.deg, clean_phot['RA'], clean_phot['DEC']) <= radius]

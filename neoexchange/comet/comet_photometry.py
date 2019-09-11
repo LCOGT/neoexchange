@@ -50,7 +50,7 @@ log_file = os.path.join(datadir, comet + '_phot.log')
 if os.path.exists(log_file):
     os.remove(log_file)
 log_fh = open(log_file, 'w')
-print('# Filename                               Filter JD            MJD-57000.0         RA (J2000.0) Dec             RA (J2000.0) Dec         X (pixels) Y      Radius (pixels/") Mag (coords) Mag+ZP   Magerr   Mag (Skypos) Mag+ZP  Magerr    ZP       ZPerr Mag(SEX) Magerr Mag(PS1 CC) Magerr ZP(PS1) ZPerr(PS1) C(PS1)', file=log_fh)
+print('# Filename                              WCS Filter JD            MJD-57000.0         RA (J2000.0) Dec             RA (J2000.0) Dec         X (pixels) Y      Radius (pixels/") Mag (coords) Mag+ZP   Magerr   Mag (Skypos) Mag+ZP  Magerr    ZP       ZPerr Mag(SEX) Magerr Mag(PS1 CC) Magerr ZP(PS1) ZPerr(PS1) C(PS1)', file=log_fh)
 #                  elp1m008-fl05-20160127-0273-e90.fits   r'   2457416.02037 415.520368588 185.611169209 +08.200143039 2001.3375 2067.4000   23.4026 -11.84046 +16.11954   +0.08323 -11.84523 +16.11477  +0.08284   27.96000
 
 # Loop over all images
@@ -109,7 +109,7 @@ for fits_fpath in images:
     sat_level = header.get('saturate', 55000)
     mask = make_mask(image, sat_level, low_clip)
 
-    image_sub = subtract_background(header, image, mask, bkg_map)
+    image_sub, error = subtract_background(header, image, mask, bkg_map)
 
     try:
         fits_wcs = WCS(header)
@@ -123,7 +123,8 @@ for fits_fpath in images:
             print("Could not find needed WCS header keywords")
             exit(-2)
 
-    if header.get('wcserr', 99) == 0:
+    wcserr = header.get('wcserr', 99)
+    if wcserr == 0:
         pixscale = proj_plane_pixel_scales(fits_wcs).mean()*3600.0
     else:
         # Bad WCS
@@ -139,10 +140,15 @@ for fits_fpath in images:
 
     #   Determine aperture size and perform aperture photometry at the position
     radius = determine_aperture_size(delta, pixscale)
+    if radius/pixscale >= 0.1 * ((trim_limits[2] + trim_limits[3])/2.0):
+        # Normal 10,000km aperture is bigger than the chip at ~500 pixels for 46P
+        # Scale down by factor...no idea if this is the right thing to do...
+        print("Scaling radius by factor 0.1")
+        radius /= 10.0
     print("Pixel photometry:")
     print("X, Y, Radius (pixels, arcsec)= {:.3f} {:.3f} {:9.5f} {:9.5f}".format(x, y, radius, radius*pixscale))
 
-    if header.get('wcserr', 99) == 0:
+    if wcserr == 0:
 
         apertures = CircularAperture((x,y), r=radius)
         phot_table = aperture_photometry(image_sub, apertures, mask=mask, method='exact', error=error)
@@ -186,7 +192,7 @@ for fits_fpath in images:
     # Make SExtractor catalog
     status, catalog = make_CSS_catalogs(configs_dir, datadir, fits_fpath, catalog_type=cat_type, aperture=radius*2.0)
     if status == 0:
-        if header.get('wcserr', 99) == 0:
+        if wcserr == 0:
             zp_PS1, C_PS1, zp_err_PS1, r, gmr, gmi, obj_mag, obj_err = calibrate_catalog(catalog, sky_position, trim_limits, flux_column='FLUX_APER', fluxerr_column='FLUXERR_APER')
             print("ZP, color slope, uncertainty= {:7.3f} {:.6f} {:.3f}".format(zp_PS1, C_PS1, zp_err_PS1))
             rmag_cc = (C_PS1 * comet_color) + zp_PS1 + obj_mag
@@ -200,8 +206,30 @@ for fits_fpath in images:
             rmag_cc = rmag_err_cc = -99.0
             zp_PS1 = C_PS1 = zp_err_PS1 = -99.0
 
-    log_format = "%s   %3s  %.5f %.9f %013.9f %+013.9f %s %9.4f %9.4f %8.3f (%6.3f) %+9.5f %8.5f  %9.5f %+9.5f %9.5f %9.5f  %7.3f %7.3f %7.3f %7.3f %7.4f    %7.3f %7.3f %7.3f    %+7.5f"
-    log_line = log_format % (fits_frame, obs_filter, jd_utc_mid, mjd_utc_mid-57000.0, \
+            # Read in SExtractor catalog and we'll try to find the comet in there
+            phot, clean_phot = read_and_filter_catalog(catalog, trim_limits)
+
+            # Create SkyCoord and filter down to find sources within the specified
+            # radius (since out field could be bigger than the maximum allowed in the PS1
+            # catalog query)
+            match_radius = 30 * u.arcsec
+            lco = SkyCoord(clean_phot['RA'], clean_phot['DEC'], unit='deg')
+            lco_cut = clean_phot[great_circle_distance(sky_position.ra.deg, sky_position.dec.deg, clean_phot['RA'], clean_phot['DEC']) <= match_radius.to(u.deg).value]
+            if len(lco_cut) == 0:
+                print("No match found within", match_radius)
+            elif len(lco_cut) == 1:
+                print("Found match at X,Y= {:.2f} {:.2f}".format(lco_cut[0]['XWIN_IMAGE'], lco_cut[0]['YWIN_IMAGE']))
+                #   Convert flux to magnitude
+                try:
+                    obj_mag = -2.5*log10(lco_cut[0]['FLUX_APER'])
+                    obj_err = FLUX2MAG * (lco_cut[0]['FLUXERR_APER'] / lco_cut[0]['FLUX_APER'])
+                except ValueError:
+                    print("-ve flux value")
+            else:
+                print("Multiple matches found")
+
+    log_format = "%s   %2d    %3s  %.5f %.9f %013.9f %+013.9f %s %9.4f %9.4f %8.3f (%6.3f) %+9.5f %8.5f  %9.5f %+9.5f %9.5f %9.5f  %7.3f %7.3f %7.3f %7.3f %7.4f    %7.3f %7.3f %7.3f    %+7.5f"
+    log_line = log_format % (fits_frame, wcserr, obs_filter, jd_utc_mid, mjd_utc_mid-57000.0, \
         ra, dec, sky_position.to_string('hmsdms', sep=' ', precision=4), x, y, radius, radius*pixscale, \
         mag, abs_mag, abs_mag_err, skypos_mag, abs_skypos_mag, abs_skypos_mag_err, zp, zp_err,\
         obj_mag, obj_err, rmag_cc, rmag_err_cc, zp_PS1, zp_err_PS1, C_PS1)
