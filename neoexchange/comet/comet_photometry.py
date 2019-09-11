@@ -10,16 +10,12 @@ import numpy as np
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.io import fits
-from astropy.stats import sigma_clipped_stats, mad_std
 from astropy.time import Time
 from astropy.wcs import WCS
 from astropy.wcs._wcs import InvalidTransformError
 from astropy.wcs.utils import proj_plane_pixel_scales
-from astropy.stats import SigmaClip
 
 from photutils import CircularAperture, SkyCircularAperture, aperture_photometry
-from photutils.utils import calc_total_error
-from photutils.background import Background2D, MedianBackground
 
 path.insert(0, os.path.join(os.getenv('HOME'), 'git/neoexchange_comet/neoexchange'))
 os.environ['DJANGO_SETTINGS_MODULE'] = 'neox.settings'
@@ -101,39 +97,52 @@ for fits_fpath in images:
     sky_position = SkyCoord(ra, dec, unit='deg', frame='icrs')
     print("RA, Dec, delta for frame=", ra, dec, delta)
 
-    if header.get('wcserr', 99) == 0:
-        # Good WCS
-        #   Make bad pixel mask of saturated and very low values
-        low_clip = 100.0
-        if bkg_map:
-            low_clip = -50.0
-        sat_level = header.get('saturate', 55000)
-        mask = make_mask(image, sat_level, low_clip)
+    # Get observed filter, Convert 'p' to prime
+    obs_filter = header['filter']
+    obs_filter = obs_filter[:-1] + obs_filter[-1].replace("p", "'")
 
-        image_sub = subtract_background(header, image, bkg_map)
 
-        try:
+    #   Make bad pixel mask of saturated and very low values
+    low_clip = 100.0
+    if bkg_map:
+        low_clip = -50.0
+    sat_level = header.get('saturate', 55000)
+    mask = make_mask(image, sat_level, low_clip)
+
+    image_sub = subtract_background(header, image, mask, bkg_map)
+
+    try:
+        fits_wcs = WCS(header)
+    except InvalidTransformError:
+        print("Changing WCS CTYPEi to TPV")
+        if 'CTYPE1' in header and 'CTYPE2' in header:
+            header['CTYPE1'] = 'RA---TPV'
+            header['CTYPE2'] = 'DEC--TPV'
             fits_wcs = WCS(header)
-        except InvalidTransformError:
-            print("Changing WCS CTYPEi to TPV")
-            if 'CTYPE1' in header and 'CTYPE2' in header:
-                header['CTYPE1'] = 'RA---TPV'
-                header['CTYPE2'] = 'DEC--TPV'
-                fits_wcs = WCS(header)
-            else:
-                print("Could not find needed WCS header keywords")
-                exit(-2)
+        else:
+            print("Could not find needed WCS header keywords")
+            exit(-2)
 
-        trim_limits = [0, 0, fits_wcs.pixel_shape[0], fits_wcs.pixel_shape[1]]
-
-        x, y = fits_wcs.wcs_world2pix(ra, dec, 1)
+    if header.get('wcserr', 99) == 0:
         pixscale = proj_plane_pixel_scales(fits_wcs).mean()*3600.0
-        print("Pixelscales=", pixscale, header.get('secpix', ''))
+    else:
+        # Bad WCS
+        print("WCS was bad, predicted positions will be wrong and assuming pixelscale")
+        pixscale = default_pixelscale
 
-        #   Determine aperture size and perform aperture photometry at the position
-        radius = determine_aperture_size(delta, pixscale)
-        print("Pixel photometry:")
-        print("X, Y, Radius (pixels, arcsec)= {:.3f} {:.3f} {:9.5f} {:9.5f}".format(x, y, radius, radius*pixscale))
+    print("Pixelscales=", pixscale, header.get('secpix', ''))
+
+    trim_limits = [0, 0, fits_wcs.pixel_shape[0], fits_wcs.pixel_shape[1]]
+
+    x, y = fits_wcs.wcs_world2pix(ra, dec, 1)
+
+
+    #   Determine aperture size and perform aperture photometry at the position
+    radius = determine_aperture_size(delta, pixscale)
+    print("Pixel photometry:")
+    print("X, Y, Radius (pixels, arcsec)= {:.3f} {:.3f} {:9.5f} {:9.5f}".format(x, y, radius, radius*pixscale))
+
+    if header.get('wcserr', 99) == 0:
 
         apertures = CircularAperture((x,y), r=radius)
         phot_table = aperture_photometry(image_sub, apertures, mask=mask, method='exact', error=error)
@@ -158,9 +167,6 @@ for fits_fpath in images:
             print("-ve flux value")
             skypos_mag = skypos_magerr = -99.0
 
-        # Get observed filter, Convert 'p' to prime
-        obs_filter = header['filter']
-        obs_filter = obs_filter[:-1] + obs_filter[-1].replace("p", "'")
         if zp < 0 and zp_err < 0:
             print("Bad zeropoint for %s" % fits_frame)
             abs_mag = abs_mag_err = -99.0
@@ -176,24 +182,23 @@ for fits_fpath in images:
                 print("Correcting r' magnitude to R")
                 abs_mag = abs_mag - 0.2105
             print(mag, abs_mag, abs_mag_err, skypos_mag, abs_skypos_mag, abs_skypos_mag_err, zp, zp_err)
-    else:
-        # Bad WCS
-        pixscale = default_pixelscale
-        radius = determine_aperture_size(delta, pixscale)
-        print("Pixel photometry:")
-        print("Radius (pixels, arcsec)= {:9.5f} {:9.5f}".format(radius, radius*pixscale))
-
-        trim_limits = [0, 0, header['naxis1'], header['naxis2']]
-
-    print("Trim limits=", trim_limits)
 
     # Make SExtractor catalog
     status, catalog = make_CSS_catalogs(configs_dir, datadir, fits_fpath, catalog_type=cat_type, aperture=radius*2.0)
     if status == 0:
-        zp_PS1, C_PS1, zp_err_PS1, r, gmr, gmi, obj_mag, obj_err = calibrate_catalog(catalog, sky_position, trim_limits, flux_column='FLUX_APER', fluxerr_column='FLUXERR_APER')
-        print("ZP, color slope, uncertainty= {:7.3f} {:.6f} {:.3f}".format(zp_PS1, C_PS1, zp_err_PS1))
-        rmag_cc = (C_PS1 * comet_color) + zp_PS1 + obj_mag
-        rmag_err_cc = sqrt(pow(obj_err, 2) + pow(zp_err_PS1, 2))
+        if header.get('wcserr', 99) == 0:
+            zp_PS1, C_PS1, zp_err_PS1, r, gmr, gmi, obj_mag, obj_err = calibrate_catalog(catalog, sky_position, trim_limits, flux_column='FLUX_APER', fluxerr_column='FLUXERR_APER')
+            print("ZP, color slope, uncertainty= {:7.3f} {:.6f} {:.3f}".format(zp_PS1, C_PS1, zp_err_PS1))
+            rmag_cc = (C_PS1 * comet_color) + zp_PS1 + obj_mag
+            rmag_err_cc = sqrt(pow(obj_err, 2) + pow(zp_err_PS1, 2))
+        else:
+            mag = magerr = -99.0
+            abs_mag = abs_mag_err = -99.0
+            abs_skypos_mag = abs_skypos_mag_err = -99.0
+            skypos_mag = skypos_magerr = -99.0
+            obj_mag = obj_err = -99.0
+            rmag_cc = rmag_err_cc = -99.0
+            zp_PS1 = C_PS1 = zp_err_PS1 = -99.0
 
     log_format = "%s   %3s  %.5f %.9f %013.9f %+013.9f %s %9.4f %9.4f %8.3f (%6.3f) %+9.5f %8.5f  %9.5f %+9.5f %9.5f %9.5f  %7.3f %7.3f %7.3f %7.3f %7.4f    %7.3f %7.3f %7.3f    %+7.5f"
     log_line = log_format % (fits_frame, obs_filter, jd_utc_mid, mjd_utc_mid-57000.0, \
