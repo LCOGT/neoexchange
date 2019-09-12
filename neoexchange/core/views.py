@@ -272,12 +272,15 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow(), s
         elif plot_type == 'uncertainty':
             vis_file = plot_uncertainty(ephem)
         elif plot_type == 'hoursup':
+            tel_alt_limit = 30
             if site_code == '-1':
                 site_code = 'W85'
                 if ephem['DEC'].mean() > 5:
                     site_code = 'V37'
-            ephem = horizons_ephem(body.name, start, end, site_code, '10m', alt_limit=30)
-            vis_file = plot_hoursup(ephem, site_code, add_rate=False)
+            if site_code == 'F65' or site_code == 'E10':
+                tel_alt_limit = 20
+            ephem = horizons_ephem(body.name, start, end, site_code, '5m', alt_limit=tel_alt_limit)
+            vis_file = plot_hoursup(ephem, site_code, add_rate=False, alt_limit=tel_alt_limit)
         if vis_file != '':
             if not os.path.exists(base_dir):
                 os.makedirs(base_dir)

@@ -219,16 +219,18 @@ def determine_hours_up(ephem_ca, site_code, dbg=False):
         visible_ephem = ephem_ca[(ephem_ca['datetime'] >= date) & (ephem_ca['datetime'] < end_dt) \
             & (ephem_ca['solar_presence'] != 'C') & (ephem_ca['solar_presence'] != 'N')]
         hours_up = 0.0
+        vis_times = ''
         if len(visible_ephem) > 0:
             time_up = visible_ephem[-1]['datetime'] - visible_ephem[0]['datetime']
             hours_up = time_up.total_seconds()/3600.0
+            vis_times = " ({}->{})".format(visible_ephem[0]['datetime'], visible_ephem[-1]['datetime'])
         hours_visible.append(hours_up)
-        if dbg: print("For {}: {}->{}: {:.2f} hours".format(plot_date, date.strftime("%Y-%m-%d %H:%M"), end_dt.strftime("%Y-%m-%d %H:%M"), hours_up))
+        if dbg: print("For {}: {}->{}: {:.2f} hours{}".format(plot_date, date.strftime("%Y-%m-%d %H:%M"), end_dt.strftime("%Y-%m-%d %H:%M"), hours_up, vis_times))
         date += timedelta(days=1)
 
     return visible_dates, hours_visible
 
-def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, add_rate=True, dbg=False):
+def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, add_rate=True, dbg=False, alt_limit=30):
     """Calculate the number of hours an object is up at a site <site_code>
     from <ephem_ca> - a more closely spaced ephemeris (e.g. 5m) over a
     shorter range. If [add_rate]=True:
@@ -313,7 +315,7 @@ def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, add_rate=T
     ax.set_xlabel("Date")
     fig.autofmt_xdate()
 
-    y_units_label = 'Hours above $30^\circ$ altitude'
+    y_units_label = 'Hours above $' + str(alt_limit) + '^\circ$ altitude'
     ax.set_ylabel(y_units_label)
     if mag_column == 'Tmag':
         mag_label = 'Total magnitude'
