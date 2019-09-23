@@ -252,7 +252,7 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow(), s
     site = ''
     if plot_type == 'hoursup' and site_code != '-1':
         site = "_" + site_code + "_"
-    search_path = os.path.join(base_dir, obj+ "*" + plot_type + site + "*" + ".png")
+    search_path = os.path.join(base_dir, "*" + obj + "*" + plot_type + site + "*" + ".png")
 #    print(obj, search_path)
     vis_files = glob(search_path)
 #    print(vis_files)
@@ -287,7 +287,7 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow(), s
         if vis_file != '':
             if not os.path.exists(base_dir):
                 os.makedirs(base_dir)
-            move(vis_file, os.path.join(base_dir, vis_file))
+            move(os.path.join(settings.DATA_ROOT, vis_file), os.path.join(base_dir, vis_file))
             vis_file = os.path.join(base_dir, vis_file)
     if vis_file:
         logger.debug('Visibility Plot: {}'.format(vis_file))
