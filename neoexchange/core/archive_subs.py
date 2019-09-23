@@ -36,9 +36,12 @@ if sys.version_info < (2, 7, 9):
     ssl_verify = False  # Danger, danger !
 
 
-def archive_login(username, password):
+def archive_login(username=None, password=None):
     """
-    Wrapper function to get API token for Archive
+    Wrapper function to get API token for Archive. [username] and [password]
+    are optional; If the PORTAL or ARCHIVE token (depending on the URL lookup)
+    is not found inside get_lcogt_headers(), then this will allow the retrieval
+    of the token via a passed username and password.
     """
     archive_url = settings.ARCHIVE_TOKEN_URL
     return get_lcogt_headers(archive_url, username, password)
