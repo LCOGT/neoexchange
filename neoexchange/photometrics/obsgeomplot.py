@@ -62,7 +62,9 @@ def plot_ra_dec(ephem, title=None):
 
     targetname = make_targetname(first['targetname'])
     save_file = "{}_radec_{}-{}.png".format(targetname, first_date.strftime("%Y%m%d"), last_date.strftime("%Y%m%d"))
-    fig.savefig(save_file, format='png')
+    fig_file  = default_storage.open(save_file,"wb+")
+    fig.savefig(fig_file, format='png')
+    fig_file.close()
 
     return save_file
 
@@ -118,7 +120,9 @@ def plot_helio_geo_dist(ephem, title=None):
 
     targetname = make_targetname(first['targetname'])
     save_file = "{}_dist_{}-{}.png".format(targetname, first_date.strftime("%Y%m%d"), last_date.strftime("%Y%m%d"))
-    fig.savefig(save_file, format='png')
+    fig_file  = default_storage.open(save_file,"wb+")
+    fig.savefig(fig_file, format='png')
+    fig_file.close()
 
     return save_file
 
@@ -179,13 +183,15 @@ def plot_brightness(ephem, title=None):
 
     targetname = make_targetname(first['targetname'])
     save_file = "{}_mag_{}-{}.png".format(targetname, first_date.strftime("%Y%m%d"), last_date.strftime("%Y%m%d"))
-    fig.savefig(save_file, format='png')
+    fig_file  = default_storage.open(save_file,"wb+")
+    fig.savefig(fig_file, format='png')
+    fig_file.close()
 
     return save_file
 
 def determine_hours_up(ephem_ca, site_code, dbg=False):
     """Determine the number of hours of visibility during the night for a site
-    (specified by <site_code>) by analyzing the <ephem_ca> produced by 
+    (specified by <site_code>) by analyzing the <ephem_ca> produced by
     ephem_subs.horizons_ephem() with a more closely spaced ephemeris (e.g. 5m
     stepsize) over a shorter range.
     Returns a list of visible dates and hours up"""
@@ -334,7 +340,9 @@ def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, add_rate=T
 
     targetname = make_targetname(first['targetname'])
     save_file = "{}_hoursup_{}_{}-{}.png".format(targetname, site_code, dates[0].strftime("%Y%m%d"), dates[-1].strftime("%Y%m%d"))
-    fig.savefig(save_file, format='png')
+    fig_file  = default_storage.open(save_file,"wb+")
+    fig.savefig(fig_file, format='png')
+    fig_file.close()
 
     return save_file
 
@@ -390,6 +398,8 @@ def plot_uncertainty(ephem, title=None):
 
     targetname = make_targetname(first['targetname'])
     save_file = "{}_uncertainty_{}-{}.png".format(targetname, dates[0].strftime("%Y%m%d"), dates[-1].strftime("%Y%m%d"))
-    fig.savefig(save_file, format='png')
+    fig_file  = default_storage.open(save_file,"wb+")
+    fig.savefig(fig_file, format='png')
+    fig_file.close()
 
     return save_file
