@@ -5,6 +5,7 @@ from astropy.table import Column
 from matplotlib.figure import Figure
 import matplotlib.dates as mdates
 from matplotlib.ticker import FormatStrFormatter
+from django.core.files.storage import default_storage
 
 from astrometrics.ephem_subs import determine_darkness_times
 from photometrics.lineticks import LineTicks

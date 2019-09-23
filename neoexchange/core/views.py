@@ -274,14 +274,16 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow(), s
             vis_file = plot_uncertainty(ephem)
         elif plot_type == 'hoursup':
             tel_alt_limit = 30
+            to_add_rate = False
             if site_code == '-1':
                 site_code = 'W85'
                 if ephem['DEC'].mean() > 5:
                     site_code = 'V37'
             if site_code == 'F65' or site_code == 'E10':
                 tel_alt_limit = 20
+                to_add_rate=True
             ephem = horizons_ephem(body.name, start, end, site_code, '5m', alt_limit=tel_alt_limit)
-            vis_file = plot_hoursup(ephem, site_code, add_rate=False, alt_limit=tel_alt_limit)
+            vis_file = plot_hoursup(ephem, site_code, add_rate=to_add_rate, alt_limit=tel_alt_limit)
         if vis_file != '':
             if not os.path.exists(base_dir):
                 os.makedirs(base_dir)
@@ -1038,6 +1040,13 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
                 if sched_params.get('error_msg', None):
                     msg += "\nAdditional information:"
                     error_msgs = sched_params['error_msg'].get('non_field_errors', [])
+                    if error_msgs == []:
+                        error_msgs = sched_params['error_msg'].get('errors', [])
+                        if type(error_msgs) == dict:
+                            requests = error_msgs.get('requests', [])
+                            error_msgs = []
+                            for request in requests:
+                                error_msgs += request.get('non_field_errors', [])
                     msg += "\n".join(error_msgs)
                 messages.warning(self.request, msg)
             return super(ScheduleSubmit, self).form_valid(new_form)
