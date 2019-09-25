@@ -143,7 +143,7 @@ def plot_helio_geo_dist(ephem, title=None):
     return save_file
 
 def plot_brightness(ephem, title=None):
-    """Plot magnitude against time
+    """Plot magnitude and elongation against time
     """
 
     first = ephem[0]
@@ -166,8 +166,8 @@ def plot_brightness(ephem, title=None):
     ax2 = ax.twinx()
 
     dates = ephem['datetime']
-    ax.plot(dates, ephem[mag_column], color=hel_color, linestyle='-')
-    ax2.plot(dates, ephem['elong'], color=geo_color, linestyle='-')
+    line_mag = ax.plot(dates, ephem[mag_column], color=hel_color, linestyle='-')
+    line_elong = ax2.plot(dates, ephem['elong'], color=geo_color, linestyle='-')
 
     perihelion = dates[ephem['r'].argmin()]
     close_approach = dates[ephem['delta'].argmin()]
@@ -184,10 +184,10 @@ def plot_brightness(ephem, title=None):
     ax.set_ylim(ylim[1], ylim[0])
     ax.set_xlabel('Date')
     if mag_column == 'Tmag':
-        ax.set_ylabel('Total magnitude')
+        ax.set_ylabel('Total magnitude', color=hel_color)
     else:
-        ax.set_ylabel('V magnitude')
-    ax2.set_ylabel('Elongation')
+        ax.set_ylabel('V magnitude', color=hel_color)
+    ax2.set_ylabel('Elongation (degrees)', color=geo_color)
 
     fig.autofmt_xdate()
     ax.minorticks_on()
@@ -202,6 +202,7 @@ def plot_brightness(ephem, title=None):
         title = "{} for {} to {}".format(first['targetname'], first_date.strftime("%Y-%m-%d"), last_date.strftime("%Y-%m-%d"))
     fig.suptitle(title)
     ax.set_title('Predicted brightness')
+    ax.legend((line_mag[0], line_elong[0]), ('Magnitude', 'Elongation'), loc='best', fontsize='x-small')
     # Add watermark
     add_watermark(fig)
 
