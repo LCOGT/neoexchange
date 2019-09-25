@@ -163,8 +163,11 @@ def plot_brightness(ephem, title=None):
     # Generate the figure **without using pyplot**.
     fig = Figure()
     ax = fig.subplots()
+    ax2 = ax.twinx()
+
     dates = ephem['datetime']
     ax.plot(dates, ephem[mag_column], color=hel_color, linestyle='-')
+    ax2.plot(dates, ephem['elong'], color=geo_color, linestyle='-')
 
     perihelion = dates[ephem['r'].argmin()]
     close_approach = dates[ephem['delta'].argmin()]
@@ -184,11 +187,14 @@ def plot_brightness(ephem, title=None):
         ax.set_ylabel('Total magnitude')
     else:
         ax.set_ylabel('V magnitude')
+    ax2.set_ylabel('Elongation')
 
     fig.autofmt_xdate()
     ax.minorticks_on()
+    ax2.minorticks_on()
     ax.xaxis.set_ticks_position('both')
-    ax.yaxis.set_ticks_position('both')
+    ax.yaxis.set_ticks_position('left')
+    ax2.yaxis.set_ticks_position('right')
     ax.tick_params(axis='x', which='both', direction='in', bottom=True, top=True)
 
 
