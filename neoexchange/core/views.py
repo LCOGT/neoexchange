@@ -257,7 +257,8 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow(), s
     vis_files = glob(search_path)
 #    print(vis_files)
     if vis_files:
-        vis_file = vis_files[0]
+        # Find most recent file
+        vis_file = max(vis_files, key=os.path.getctime)
     else:
         vis_file = ''
     if not vis_file:
