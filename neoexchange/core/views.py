@@ -39,6 +39,10 @@ from django.template.loader import get_template
 from http.client import HTTPSConnection
 from django.conf import settings
 from bs4 import BeautifulSoup
+from bokeh.plotting import figure, ColumnDataSource
+from bokeh.resources import CDN
+from bokeh.embed import components
+from bokeh.models import HoverTool, Label
 import reversion
 import requests
 import numpy as np
@@ -58,7 +62,8 @@ from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
     MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes, \
     determine_spectro_slot_length, get_sitepos, read_findorb_ephem, accurate_astro_darkness,\
-    get_visibility, determine_exp_count, determine_star_trails, calc_moon_sep, get_alt_from_airmass
+    get_visibility, determine_exp_count, determine_star_trails, calc_moon_sep, get_alt_from_airmass,\
+    dark_and_object_up, compute_dark_and_up_time, moon_ra_dec, target_rise_set, moonphase
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs, validate_text,\
@@ -179,6 +184,9 @@ class BodyDetailView(DetailView):
         context['blocks'] = Block.objects.filter(body=self.object).order_by('block_start')
         context['taxonomies'] = SpectralInfo.objects.filter(body=self.object)
         context['spectra'] = sort_previous_spectra(self)
+        lin_script, lin_div = lin_vis_plot(self.object)
+        context['lin_script'] = lin_script
+        context['lin_div'] = lin_div
         return context
 
 
@@ -2965,9 +2973,6 @@ def find_spec(pk):
 
 def test_plot(block, obs_num):
     from django.shortcuts import render
-    from bokeh.plotting import figure
-    from bokeh.resources import CDN
-    from bokeh.embed import components
     from astropy.io import ascii
 
     date_obs, obj, req, path, prop = find_spec(block.id)
@@ -2983,6 +2988,206 @@ def test_plot(block, obs_num):
 
     plot = figure()
     plot.line(x_data, y_data)
+
+    script, div = components(plot, CDN)
+
+    return script, div
+
+
+def datetime_to_radians(ref_time, input_time):
+    if input_time:
+        t_diff = input_time - ref_time
+        t_diff_hours = t_diff.total_seconds()/3600
+        t_diff_radians = t_diff_hours/24*2*pi + pi/2
+    else:
+        t_diff_radians = 0
+    return t_diff_radians
+
+
+def build_visibility_source(body, site_list, radius, site_code, color_list, d, alt_limit, step_size):
+    body_elements = model_to_dict(body)
+    vis = {"x": [],
+           "y": [],
+           "sun_rise": [],
+           "sun_set": [],
+           "obj_rise": [],
+           "obj_set": [],
+           "moon_rise": [],
+           "moon_set": [],
+           "moon_phase": [],
+           "colors": [],
+           "site": [],
+           "radius": [],
+           "inner": [],
+           "outer": [],
+           "obj_vis": [],
+           "max_alt": []
+           }
+
+    for i, site in enumerate(site_list):
+
+        dark_start, dark_end = determine_darkness_times(site, d)
+        (site_name, site_long, site_lat, site_hgt) = get_sitepos(site)
+        (moon_app_ra, moon_app_dec, diam) = moon_ra_dec(d, site_long, site_lat, site_hgt)
+        moon_rise, moon_set, moon_max_alt, moon_vis_time = target_rise_set(d, moon_app_ra, moon_app_dec, site, 10, step_size, sun=False)
+        moon_phase = moonphase(d, site_long, site_lat, site_hgt)
+        emp = call_compute_ephem(body_elements, d, d + timedelta(days=1), site, step_size)
+        obj_up_emp = dark_and_object_up(emp, d, d + timedelta(days=1), 0 , alt_limit=alt_limit)
+        vis_time, emp_obj_up, set_time = compute_dark_and_up_time(obj_up_emp, step_size)
+        obj_set = datetime_to_radians(d, set_time)
+        dark_and_up_time, max_alt = get_visibility(None, None, d, site, step_size, alt_limit, False, body_elements)
+
+        radius += 0.1
+        if i == 3:
+            radius += 0.05
+        vis["x"].append(0)
+        vis["y"].append(0)
+        vis["sun_rise"].append(datetime_to_radians(d, dark_end))
+        vis["sun_set"].append(datetime_to_radians(d, dark_start))
+        vis["obj_rise"].append(obj_set-(vis_time/24*2*pi))
+        vis["obj_set"].append(obj_set)
+        vis["moon_rise"].append(datetime_to_radians(d, moon_set)-(moon_vis_time/24*2*pi))
+        vis["moon_set"].append(datetime_to_radians(d, moon_set))
+        vis["moon_phase"].append(moon_phase/2)
+        vis["colors"].append(color_list[i])
+        vis["site"].append(site_code[i])
+        vis["radius"].append(radius)
+        vis["inner"].append(radius - 0.05)
+        vis["outer"].append(radius + 0.05)
+        vis["obj_vis"].append(dark_and_up_time)
+        vis["max_alt"].append(max_alt)
+
+    return vis, emp
+
+
+def current_visibility_plot(body):
+
+    TOOLTIPS = """
+        <div>
+            <div>
+                <span style="font-size: 17px; font-weight: bold; color: @colors;">@site</span>
+            </div>
+            <div>
+                <span style="font-size: 15px;">Visibility:</span>
+                <span style="font-size: 10px; color: #696;">@obj_vis{1.1} hours</span>
+                <br>
+                <span style="font-size: 15px;">Max Altitude:</span>
+                <span style="font-size: 10px; color: #696;">@max_alt deg</span>
+            </div>
+        </div>
+    """
+    hover = HoverTool(tooltips=TOOLTIPS, point_policy="follow_mouse", line_policy="none")
+    plot = figure(toolbar_location=None, x_range=(-1, 1), y_range=(-1, 1), tools=[hover], plot_width=300, plot_height=300)
+    plot.grid.visible = False
+    plot.outline_line_color = None
+    plot.axis.visible = False
+
+    radius = .25
+    site_code = ['LSC', 'CPT', 'COJ', 'ELP', 'TFN', 'OGG']
+    site_list = ['W85', 'K91', 'Q63', 'V37', 'Z21', 'F65']
+    color_list = ['darkviolet', 'forestgreen', 'saddlebrown', 'coral', 'darkslategray', 'dodgerblue']
+    d = datetime.utcnow()
+    step_size = '30 m'
+    alt_limit = 30
+    vis, emp = build_visibility_source(body, site_list, radius, site_code, color_list, d, alt_limit, step_size)
+
+    source = ColumnDataSource(data=vis)
+    plot.annular_wedge(x='x', y='y', inner_radius='inner', outer_radius='outer',
+                       start_angle=0.001, end_angle=2 * pi, color="white", source=source)
+    plot.annular_wedge(x='x', y='y', inner_radius='inner', outer_radius='outer',
+                       start_angle="obj_rise", end_angle="obj_set", color="colors", source=source)
+
+    plot.annular_wedge(x='x', y='y', inner_radius='inner', outer_radius='radius',
+                start_angle="moon_rise", end_angle="moon_set", color="gray", fill_alpha='moon_phase', line_width=2, source=source)
+    plot.annular_wedge(x='x', y='y', inner_radius='radius', outer_radius='outer',
+                       start_angle="sun_rise", end_angle="sun_set", color="khaki", fill_alpha=0.5, line_width=2,
+                       source=source)
+    plot.arc('x', 'y', radius='inner', start_angle=0, end_angle=2 * pi, color="black", line_width=2, source=source)
+    plot.arc('x', 'y', radius='outer', start_angle=0, end_angle=2 * pi, color="black", line_width=2, source=source)
+
+    # Build Clock
+    h = 0
+    while h < 24:
+        plot.ray([0], [0], angle=h/24*2*pi, length=1, color="gray", alpha=.25)
+        h += 1
+    plot.ray([0], [0], angle=pi/2, length=1, color="red", alpha=.75)
+    plot.ray([0], [0], angle=0, length=1, color="gray", alpha=.75)
+    plot.ray([0], [0], angle=pi, length=1, color="gray", alpha=.75)
+    plot.ray([0], [0], angle=3*pi/2, length=1, color="gray", alpha=.75)
+    plot.wedge([0], [0], radius=.29, start_angle=0, end_angle=2 * pi, color="white")
+
+    # get RA/DEC
+    plot.add_layout(Label(x=0, y=0, text="{} mag".format(emp[0][3]), text_align="center", text_baseline="middle", text_font_style="bold"))
+
+    script, div = components(plot, CDN)
+
+    return script, div
+
+
+def lin_vis_plot(body):
+
+
+
+    radius = .25
+    site_code = ['LSC', 'CPT', 'COJ', 'ELP', 'TFN', 'OGG']
+    site_list = ['W85', 'K91', 'Q63', 'V37', 'Z21', 'F65']
+    color_list = ['darkviolet', 'forestgreen', 'saddlebrown', 'coral', 'darkslategray', 'dodgerblue']
+    d = datetime.utcnow()
+    step_size = '30 m'
+    alt_limit = 30
+    vis, emp = build_visibility_source(body, site_list, radius, site_code, color_list, d, alt_limit, step_size)
+
+    new_x = []
+    for i, l in enumerate(site_code):
+        new_x.append(-1 + i * ( 2 / (len(site_list)-1)))
+    vis['x'] = new_x
+    rad = ((2 / (len(site_list)-1))*.9)/2
+
+    source = ColumnDataSource(data=vis)
+
+    TOOLTIPS = """
+            <div>
+                <div>
+                    <span style="font-size: 17px; font-weight: bold; color: @colors;">@site</span>
+                </div>
+                <div>
+                    <span style="font-size: 15px;">Visibility:</span>
+                    <span style="font-size: 10px; color: #696;">@obj_vis{1.1} hours</span>
+                    <br>
+                    <span style="font-size: 15px;">Max Alt:</span>
+                    <span style="font-size: 10px; color: #696;">@max_alt deg</span>
+                    """+"""
+                    <br>
+                    <span style="font-size: 15px;">V Mag:</span>
+                    <span style="font-size: 10px; color: #696;">{}</span>
+                </div>
+            </div>
+        """.format(emp[0][3])
+
+    hover = HoverTool(tooltips=TOOLTIPS, point_policy="follow_mouse", line_policy="none")
+    plot = figure(toolbar_location=None, x_range=(-1.5, 1.5), y_range=(-.5, .5), tools=[hover], plot_width=300,
+                  plot_height=75)
+    plot.grid.visible = False
+    plot.outline_line_color = None
+    plot.axis.visible = False
+
+    # base
+    plot.wedge(x='x', y='y', radius=rad, start_angle=0.001, end_angle=2 * pi, color="white", source=source)
+    # object
+    plot.wedge(x='x', y='y', radius=rad, start_angle="obj_rise", end_angle="obj_set", color="colors", source=source)
+    # sun
+    plot.wedge(x='x', y='y', radius=rad * .75, start_angle="sun_rise", end_angle="sun_set", color="khaki", source=source)
+    # moon
+    plot.wedge(x='x', y='y', radius=rad * .5, start_angle="moon_rise", end_angle="moon_set", color="gray",
+               fill_alpha='moon_phase', source=source)
+
+    # Build Clock
+    plot.arc('x', 'y', radius=rad, start_angle=0, end_angle=2 * pi, color="black", line_width=2, source=source)
+    plot.ray('x', 'y', angle=pi/2, length=rad, color="red", alpha=.75, line_width=2, source=source)
+    plot.ray('x', 'y', angle=0, length=rad, color="gray", alpha=.75, source=source)
+    plot.ray('x', 'y', angle=pi, length=rad, color="gray", alpha=.75, source=source)
+    plot.wedge('x', 'y', radius=rad * .25, start_angle=0, end_angle=2 * pi, color="white", source=source)
+    plot.arc('x', 'y', radius=rad * .25, start_angle=0, end_angle=2 * pi, color="black", line_width=2, source=source)
 
     script, div = components(plot, CDN)
 
