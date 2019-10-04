@@ -199,7 +199,7 @@ def spectrum_plot(spectra, ax, data_set, analog=None, offset=0):
     # test = [j for j, x in enumerate(xxx) if 6000 < x < 7000]
 
     find_g = [j for j, x in enumerate(xxx) if 5400 < x < 5600]
-    smoothy = smoothy / np.mean(smoothy[find_g])
+    smoothy /= np.mean(smoothy[find_g])
 
     offy = [y + 0.2*offset for y in smoothy]
     ax.plot(xxx[test], smoothy[test], label=data_set)
@@ -210,14 +210,20 @@ class Command(BaseCommand):
     help = 'This code converts a fits file trace into a normalized reflectance spectrum using a solar analog.'
 
     def add_arguments(self, parser):
-        parser.add_argument("--path", help="Output path for plots", type=str, default='')
+        parser.add_argument("--outpath", help="Output path for plots", type=str, default='')
+        parser.add_argument("--path", help="base path spectra", type=str, default='')
         parser.add_argument("--title", help="Title for Plot", type=str, default='Normalized Spectra')
 
     def handle(self, *args, **options):
         path = options['path']
+        outpath = options['outpath']
         title = options['title']
         trace = 'test'
         reflec = True
+        if path[-1] != '/':
+            path += '/'
+        if outpath[-1] != '/':
+            outpath += '/'
 
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1, title=title)
@@ -249,7 +255,7 @@ class Command(BaseCommand):
                 print("Default = {object} -- {analog} -- {obj date}")
                 label = input("Data label:")
 
-                ax, normalized_ast_spec, ast_wav = spectrum_plot(trace, ax, label, sol_trace)
+                ax, normalized_ast_spec, ast_wav = spectrum_plot(path + trace, ax, label, path + sol_trace)
 
             if reflec:
                 ax.set_ylabel('Reflectance Spectra (Normalized at $5500 \AA$)')
@@ -257,6 +263,5 @@ class Command(BaseCommand):
                 ax.set_ylabel('Relative Spectra (Normalized at $5500 \AA$)')
             ax.set_xlabel('Wavelength ($\AA$)')
             ax.legend()
-            plt.savefig(path+'spectra.png')
-            print('New spectroscopy plot saved to {} .'.format(path+'spectra.png'))
-
+            plt.savefig(outpath + 'temp.png')
+            print('New spectroscopy plot saved to {}'.format(outpath + 'temp.png'))
