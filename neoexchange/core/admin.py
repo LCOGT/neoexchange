@@ -139,6 +139,7 @@ class FrameAdmin(VersionAdmin):
 
     list_display = ('id', 'block_groupid', 'quality', 'frametype', 'filename_or_midpoint', 'exptime', 'filter', 'sitecode')
     list_filter = ('quality', 'frametype', 'midpoint', 'filter', 'sitecode', 'instrument')
+    search_fields = ('filename', )
 
     ordering = ('-midpoint',)
 
