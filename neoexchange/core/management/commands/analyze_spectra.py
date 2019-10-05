@@ -161,11 +161,11 @@ def pull_data_from_text(spectra):
     return xxx, yyy
 
 
-def spectrum_plot(spectra, ax, data_set, analog=None, offset=0):
+def spectrum_plot(spectra, data_set='', analog=None, offset=0):
     windows = ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']
     spec_x, spec_y, spec_header = pull_data_from_spectrum(spectra)
     if spec_y is None:
-        return ax, None, None
+        return data_set, None, None
 
     box = 100
 
@@ -195,23 +195,24 @@ def spectrum_plot(spectra, ax, data_set, analog=None, offset=0):
 
     smoothy = np.array(yyy)
 
-    test = [j for j, x in enumerate(xxx) if 4000 < x < 10000]
-    # test = [j for j, x in enumerate(xxx) if 6000 < x < 7000]
+    if analog:
+        test = [j for j, x in enumerate(xxx) if 4000 < x < 10000]
+    else:
+        test = [j for j, x in enumerate(xxx) if 3100 < x < 10000]
 
     find_g = [j for j, x in enumerate(xxx) if 5400 < x < 5600]
     smoothy /= np.mean(smoothy[find_g])
+    smoothy += 0.2*offset
 
-    offy = [y + 0.2*offset for y in smoothy]
-    ax.plot(xxx[test], smoothy[test], label=data_set)
-    return ax, offy, xxx
+    return data_set, smoothy[test], xxx[test]
 
 
 class Command(BaseCommand):
     help = 'This code converts a fits file trace into a normalized reflectance spectrum using a solar analog.'
 
     def add_arguments(self, parser):
-        parser.add_argument("--outpath", help="Output path for plots", type=str, default='')
-        parser.add_argument("--path", help="base path spectra", type=str, default='')
+        parser.add_argument("--outpath", help="Output path for plots", type=str, default='./')
+        parser.add_argument("--path", help="base path spectra", type=str, default='~')
         parser.add_argument("--title", help="Title for Plot", type=str, default='Normalized Spectra')
 
     def handle(self, *args, **options):
@@ -249,13 +250,18 @@ class Command(BaseCommand):
                 sol_trace = input("Path to solar analog trace:")
                 if not sol_trace:
                     reflec = False
+                    sol_path_trace = ''
+                else:
+                    sol_path_trace = path + sol_trace
 
                 print("=========================================================================")
                 print("Input label for these data (Leave blank for default, for no label type 'None').")
                 print("Default = {object} -- {analog} -- {obj date}")
                 label = input("Data label:")
 
-                ax, normalized_ast_spec, ast_wav = spectrum_plot(path + trace, ax, label, path + sol_trace)
+                print(path+trace)
+                data_set, normalized_ast_spec, ast_wav = spectrum_plot(path + trace, label, sol_path_trace)
+                ax.plot(ast_wav, normalized_ast_spec, label=data_set)
 
             if reflec:
                 ax.set_ylabel('Reflectance Spectra (Normalized at $5500 \AA$)')

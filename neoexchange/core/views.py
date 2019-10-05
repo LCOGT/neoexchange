@@ -42,7 +42,8 @@ from bs4 import BeautifulSoup
 from bokeh.plotting import figure, ColumnDataSource
 from bokeh.resources import CDN
 from bokeh.embed import components
-from bokeh.models import HoverTool, Label
+from bokeh.models import HoverTool, Label, CrosshairTool
+from bokeh.palettes import viridis
 import reversion
 import requests
 import numpy as np
@@ -52,6 +53,7 @@ except ImportError:
     pass
 import io
 
+from core.management.commands.analyze_spectra import *
 from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, \
     ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm
 from .models import *
@@ -2971,25 +2973,99 @@ def find_spec(pk):
     return date_obs, obj, req, path, prop
 
 
+def find_analog(date_obs, site):
+
+    analog_blocks = Block.objects.filter(obstype=3, site=site, when_observed__lte=date_obs+timedelta(days=10), when_observed__gte=date_obs-timedelta(days=10))
+
+    star_list = []
+    time_diff = []
+    for b in analog_blocks:
+        d_out, obj, req, path, prop = find_spec(b.id)
+        filenames = glob(os.path.join(path, '*_2df_ex.fits'))
+        for fn in filenames:
+            star_list.append(fn)
+            time_diff.append(abs(date_obs - b.when_observed))
+
+    analog_list = [calib for _, calib in sorted(zip(time_diff, star_list))]
+    # analog_list = ["/apophis/eng/rocks/20190525/HD_44594_1802657/nttHD44594_fts_20190525_merge_6.0_58629_1_2df_ex.fits",
+    #                "/apophis/eng/rocks/20190525/HD_81809_1802659/nttHD81809_fts_20190525_merge_6.0_58629_1_2df_ex.fits"
+    #                ]
+
+    return analog_list
+
+
 def test_plot(block, obs_num):
-    from django.shortcuts import render
-    from astropy.io import ascii
 
     date_obs, obj, req, path, prop = find_spec(block.id)
-    base_dir = os.path.join(settings.DATA_ROOT, date_obs)
-    spec_file, spec_count = make_spec(date_obs, obj, req, base_dir, prop, obs_num)
-    dat_file = spec_file.replace('.png', '.ascii')
-    data = ascii.read(dat_file)  # read in data
-    # assuming 3 columns: wavelength, flux/reflectance, error
-    columns = data.keys()
-    x_data = data[columns[0]]  # converting tables to ndarrays
-    y_data = data[columns[1]]
-    flux_error = data[columns[2]]
+    filenames = glob(os.path.join(path, '*_2df_ex.fits'))
+    analogs = find_analog(block.when_observed, block.site)
 
-    plot = figure()
-    plot.line(x_data, y_data)
+    # Build raw Plot
+    raw_label, raw_spec, ast_wav = spectrum_plot(filenames[0])
+    analog_label, analog_spec, star_wav = spectrum_plot(analogs[0], offset=2)
 
-    script, div = components(plot, CDN)
+    plot = figure(x_range=(3500, 10500), y_range=(0, 1.75), plot_width=800, plot_height=400)
+    plot.line(ast_wav, raw_spec, legend=raw_label, muted_alpha=0.25)
+    plot.legend.click_policy = 'mute'
+
+    # Set Axes
+    plot.axis.axis_line_width = 2
+    plot.axis.axis_label_text_font_size = "12pt"
+    plot.axis.major_tick_line_width = 2
+    plot.xaxis.axis_label = "Wavelength (Å)"
+    plot.yaxis.axis_label = 'Relative Spectra (Normalized at 5500 Å)'
+
+    if filenames[0] != analogs[0] and analogs[0]:
+        plot.line(star_wav, analog_spec, color="firebrick", legend=analog_label, muted=True, muted_alpha=0.25,
+                  muted_color="firebrick")
+        # Build Reflectance Plot
+        plot2 = figure(x_range=(3500, 10500), y_range=(0.5, 1.75), plot_width=800, plot_height=400)
+        spec_dict = read_mean_tax()
+        spec_dict["Wavelength"] = [l*10000 for l in spec_dict["Wavelength"]]
+
+        stand_list = ['A', 'B', 'C', 'D', 'L', 'Q', 'S', 'Sq', 'V', 'X', 'Xe']
+        init_stand = ['C', 'Q', 'S', 'X']
+        colors = viridis(len(stand_list))
+        for j, tax in enumerate(stand_list):
+            lower = np.array([mean - spec_dict[tax + '_Sigma'][i] for i, mean in enumerate(spec_dict[tax + "_Mean"])])
+            upper = np.array([mean + spec_dict[tax + '_Sigma'][i] for i, mean in enumerate(spec_dict[tax + "_Mean"])])
+            wav_box = np.array(spec_dict["Wavelength"])
+            xs = np.concatenate([wav_box, wav_box[::-1]])
+            ys = np.concatenate([upper, lower[::-1]])
+
+            if tax in init_stand:
+                vis = True
+            else:
+                vis = False
+
+            source = ColumnDataSource(spec_dict)
+
+            plot2.line("Wavelength", tax+"_Mean", source=source, color=colors[j], name=tax + "-Type", line_width=2, line_dash='dashed', legend=tax, visible=vis)
+            plot2.patch(xs, ys, fill_alpha=.25, line_width=1, fill_color=colors[j], line_color="black", name=tax + "-Type", legend=tax, line_alpha=.25, visible=vis)
+
+        data_label_reflec, reflec_spec, reflec_ast_wav = spectrum_plot(filenames[0], analog=analogs[0])
+
+        hover = HoverTool(tooltips="$name", point_policy="follow_mouse", line_policy="none")
+        plot2.line(reflec_ast_wav, reflec_spec, line_width=3, name=obj)
+        plot2.add_tools(hover)
+        plot2.legend.click_policy = 'hide'
+        plot2.legend.orientation = 'horizontal'
+
+        # set axes
+        plot2.axis.axis_line_width = 2
+        plot2.axis.axis_label_text_font_size = "12pt"
+        plot2.axis.major_tick_line_width = 2
+        plot2.xaxis.axis_label = "Wavelength (Å)"
+        plot2.yaxis.axis_label = 'Reflectance Spectra (Normalized at 5500 Å)'
+
+        plot2.title.text = 'Object: {}    Analog: {}'.format(raw_label, analog_label)
+
+        spec_plots = {"raw_spec": plot, "reflec_spec": plot2}
+    else:
+        spec_plots = {"raw_spec": plot}
+
+    # Create script/div
+    script, div = components(spec_plots, CDN)
 
     return script, div
 
@@ -3232,8 +3308,10 @@ class PlotSpec(View):  # make loging required later
     def get(self, request, *args, **kwargs):
         block = Block.objects.get(pk=kwargs['pk'])
         script, div = test_plot(block, kwargs['obs_num'])
-        params = {'pk': kwargs['pk'], 'obs_num': kwargs['obs_num'], 'sb_id': block.superblock.id, "the_script": script, "the_div": div}
-
+        try:
+            params = {'pk': kwargs['pk'], 'obs_num': kwargs['obs_num'], 'sb_id': block.superblock.id, "the_script": script, "raw_div": div["raw_spec"], "reflec_div": div["reflec_spec"]}
+        except KeyError:
+            params = {'pk': kwargs['pk'], 'obs_num': kwargs['obs_num'], 'sb_id': block.superblock.id, "the_script": script, "raw_div": div["raw_spec"]}
         return render(request, self.template_name, params)
 
 
