@@ -55,7 +55,7 @@ def lco_api_call(url):
     headers = {'Authorization': 'Token ' + token}
     data = None
     try:
-        resp = requests.get(url, headers=headers, timeout=20, verify=ssl_verify)
+        resp = requests.get(url, headers=headers, timeout=60, verify=ssl_verify)
         data = resp.json()
     except requests.exceptions.InvalidSchema as err:
         data = None
