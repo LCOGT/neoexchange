@@ -43,7 +43,7 @@ from bokeh.plotting import figure, ColumnDataSource
 from bokeh.resources import CDN
 from bokeh.embed import components
 from bokeh.models import HoverTool, Label, CrosshairTool
-from bokeh.palettes import viridis
+from bokeh.palettes import Category20
 import reversion
 import requests
 import numpy as np
@@ -2987,37 +2987,80 @@ def find_analog(date_obs, site):
             time_diff.append(abs(date_obs - b.when_observed))
 
     analog_list = [calib for _, calib in sorted(zip(time_diff, star_list))]
-    # analog_list = ["/apophis/eng/rocks/20190525/HD_44594_1802657/nttHD44594_fts_20190525_merge_6.0_58629_1_2df_ex.fits",
-    #                "/apophis/eng/rocks/20190525/HD_81809_1802659/nttHD81809_fts_20190525_merge_6.0_58629_1_2df_ex.fits"
-    #                ]
 
     return analog_list
 
 
-def test_plot(block, obs_num):
-
+def plot_floyds_spec(block, obs_num=1):
     date_obs, obj, req, path, prop = find_spec(block.id)
     filenames = glob(os.path.join(path, '*_2df_ex.fits'))
     analogs = find_analog(block.when_observed, block.site)
 
-    # Build raw Plot
-    raw_label, raw_spec, ast_wav = spectrum_plot(filenames[0])
+    raw_label, raw_spec, ast_wav = spectrum_plot(filenames[obs_num-1])
     analog_label, analog_spec, star_wav = spectrum_plot(analogs[0], offset=2)
 
-    plot = figure(x_range=(3500, 10500), y_range=(0, 1.75), plot_width=800, plot_height=400)
-    plot.line(ast_wav, raw_spec, legend=raw_label, muted_alpha=0.25)
-    plot.legend.click_policy = 'mute'
+    data_spec = {'label': raw_label,
+                 'spec': raw_spec,
+                 'wav': ast_wav,
+                 'filename': filenames[obs_num-1]}
+    analog_data = {'label': analog_label,
+                   'spec': analog_spec,
+                   'wav': star_wav,
+                   'filename': analogs[0]}
 
-    # Set Axes
-    plot.axis.axis_line_width = 2
-    plot.axis.axis_label_text_font_size = "12pt"
-    plot.axis.major_tick_line_width = 2
-    plot.xaxis.axis_label = "Wavelength (Å)"
-    plot.yaxis.axis_label = 'Relative Spectra (Normalized at 5500 Å)'
+    script, div = spec_plot(data_spec, analog_data)
 
-    if filenames[0] != analogs[0] and analogs[0]:
-        plot.line(star_wav, analog_spec, color="firebrick", legend=analog_label, muted=True, muted_alpha=0.25,
-                  muted_color="firebrick")
+    return script, div
+
+
+def plot_all_spec(body):
+    p_spec = PreviousSpectra.objects.filter(body=body)
+    data_spec = []
+    for spec in p_spec:
+        if spec.spec_ir:
+            wav, flux, err = pull_data_from_text(spec.spec_ir)
+            label = "{} -- {}, {}(IR)".format(body.current_name(), spec.spec_date, spec.spec_source)
+            new_spec = {'label': label,
+                 'spec': flux,
+                 'wav': wav,
+                 'err': err,
+                 'filename': spec.spec_ir}
+            data_spec.append(new_spec)
+        if spec.spec_vis:
+            wav, flux, err = pull_data_from_text(spec.spec_vis)
+            label = "{} -- {}, {}(Vis)".format(body.current_name(), spec.spec_date, spec.spec_ref)
+            new_spec = {'label': label,
+                 'spec': flux,
+                 'wav': wav,
+                 'err': err,
+                 'filename': spec.spec_vis}
+            data_spec.append(new_spec)
+
+    script, div = spec_plot(data_spec, None, reflec=True)
+
+    return script, div, p_spec
+
+
+def spec_plot(data_spec, analog_data, reflec=False):
+
+    spec_plots = {}
+    if not reflec:
+        plot = figure(x_range=(3500, 10500), y_range=(0, 1.75), plot_width=800, plot_height=400)
+        plot.line(data_spec['wav'], data_spec['spec'], legend=data_spec['label'], muted_alpha=0.25)
+        plot.legend.click_policy = 'mute'
+
+        # Set Axes
+        plot.axis.axis_line_width = 2
+        plot.axis.axis_label_text_font_size = "12pt"
+        plot.axis.major_tick_line_width = 2
+        plot.xaxis.axis_label = "Wavelength (Å)"
+        plot.yaxis.axis_label = 'Relative Spectra (Normalized at 5500 Å)'
+        spec_plots["raw_spec"] = plot
+
+    if (data_spec != analog_data and analog_data) or reflec:
+        if not reflec:
+            plot.line(analog_data['wav'], analog_data['spec'], color="firebrick", legend=analog_data['label'],
+                      muted=True, muted_alpha=0.25, muted_color="firebrick")
         # Build Reflectance Plot
         plot2 = figure(x_range=(3500, 10500), y_range=(0.5, 1.75), plot_width=800, plot_height=400)
         spec_dict = read_mean_tax()
@@ -3025,7 +3068,7 @@ def test_plot(block, obs_num):
 
         stand_list = ['A', 'B', 'C', 'D', 'L', 'Q', 'S', 'Sq', 'V', 'X', 'Xe']
         init_stand = ['C', 'Q', 'S', 'X']
-        colors = viridis(len(stand_list))
+        colors = Category20[len(stand_list)]
         for j, tax in enumerate(stand_list):
             lower = np.array([mean - spec_dict[tax + '_Sigma'][i] for i, mean in enumerate(spec_dict[tax + "_Mean"])])
             upper = np.array([mean + spec_dict[tax + '_Sigma'][i] for i, mean in enumerate(spec_dict[tax + "_Mean"])])
@@ -3043,10 +3086,22 @@ def test_plot(block, obs_num):
             plot2.line("Wavelength", tax+"_Mean", source=source, color=colors[j], name=tax + "-Type", line_width=2, line_dash='dashed', legend=tax, visible=vis)
             plot2.patch(xs, ys, fill_alpha=.25, line_width=1, fill_color=colors[j], line_color="black", name=tax + "-Type", legend=tax, line_alpha=.25, visible=vis)
 
-        data_label_reflec, reflec_spec, reflec_ast_wav = spectrum_plot(filenames[0], analog=analogs[0])
+        if not reflec:
+            data_label_reflec, reflec_spec, reflec_ast_wav = spectrum_plot(data_spec['filename'], analog=analog_data['filename'])
+            plot2.line(reflec_ast_wav, reflec_spec, line_width=3, name=data_spec['label'])
+            plot2.title.text = 'Object: {}    Analog: {}'.format(data_spec['label'], analog_data['label'])
+        else:
+            for spec in data_spec:
+                plot2.circle(spec['wav'], spec['spec'], size=3, name=spec['label'])
+            title = data_spec[0]['label']
+            for d in data_spec:
+                if d['label'] != title:
+                    chunks = d['label'].split("--")
+                    title += ' /' + chunks[1]
+            plot2.title.text = 'Object: {}'.format(title)
 
         hover = HoverTool(tooltips="$name", point_policy="follow_mouse", line_policy="none")
-        plot2.line(reflec_ast_wav, reflec_spec, line_width=3, name=obj)
+
         plot2.add_tools(hover)
         plot2.legend.click_policy = 'hide'
         plot2.legend.orientation = 'horizontal'
@@ -3058,11 +3113,7 @@ def test_plot(block, obs_num):
         plot2.xaxis.axis_label = "Wavelength (Å)"
         plot2.yaxis.axis_label = 'Reflectance Spectra (Normalized at 5500 Å)'
 
-        plot2.title.text = 'Object: {}    Analog: {}'.format(raw_label, analog_label)
-
-        spec_plots = {"raw_spec": plot, "reflec_spec": plot2}
-    else:
-        spec_plots = {"raw_spec": plot}
+        spec_plots["reflec_spec"] = plot2
 
     # Create script/div
     script, div = components(spec_plots, CDN)
@@ -3124,7 +3175,7 @@ def build_visibility_source(body, site_list, radius, site_code, color_list, d, a
         vis["obj_set"].append(obj_set)
         vis["moon_rise"].append(datetime_to_radians(d, moon_set)-(moon_vis_time/24*2*pi))
         vis["moon_set"].append(datetime_to_radians(d, moon_set))
-        vis["moon_phase"].append(moon_phase/2)
+        vis["moon_phase"].append(moon_phase)
         vis["colors"].append(color_list[i])
         vis["site"].append(site_code[i])
         vis["radius"].append(radius)
@@ -3301,17 +3352,29 @@ def make_spec(date_obs, obj, req, base_dir, prop, obs_num):
         return None, None
 
 
-class PlotSpec(View):  # make loging required later
+class BlockSpec(View):  # make loging required later
 
     template_name = 'core/plot_spec.html'
 
     def get(self, request, *args, **kwargs):
         block = Block.objects.get(pk=kwargs['pk'])
-        script, div = test_plot(block, kwargs['obs_num'])
+        script, div = plot_floyds_spec(block, int(kwargs['obs_num']))
         try:
             params = {'pk': kwargs['pk'], 'obs_num': kwargs['obs_num'], 'sb_id': block.superblock.id, "the_script": script, "raw_div": div["raw_spec"], "reflec_div": div["reflec_spec"]}
         except KeyError:
             params = {'pk': kwargs['pk'], 'obs_num': kwargs['obs_num'], 'sb_id': block.superblock.id, "the_script": script, "raw_div": div["raw_spec"]}
+        return render(request, self.template_name, params)
+
+
+class PlotSpec(View):
+
+    template_name = 'core/plot_spec.html'
+
+    def get(self, request, *args, **kwargs):
+        body = Body.objects.get(pk=kwargs['pk'])
+        script, div, p_spec = plot_all_spec(body)
+        params = {'body': body, 'floyds': False, "the_script": script, "reflec_div": div["reflec_spec"], "p_spec": p_spec}
+
         return render(request, self.template_name, params)
 
 

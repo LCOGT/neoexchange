@@ -27,10 +27,10 @@ from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockLis
     plotframe, make_plot, CandidatesViewBlock, BlockReportMPC, \
     MeasurementDownloadMPC, MeasurementDownloadADESPSV, \
     SuperBlockListView, SuperBlockDetailView, characterization, SpectroFeasibility, \
-    display_spec, display_calibspec, PlotSpec, display_movie, GuideMovie, \
+    display_spec, display_calibspec, BlockSpec, display_movie, GuideMovie, \
     StaticSourceView, StaticSourceDetailView, ScheduleCalibSpectra, ScheduleCalibSubmit, \
     make_standards_plot, make_solar_standards_plot, CalibSpectroFeasibility, ScheduleCalibParameters, \
-    BestStandardsView
+    BestStandardsView, PlotSpec
 
 from analyser.views import BlockFramesView, ProcessCandidates
 
@@ -46,7 +46,7 @@ urlpatterns = [
     url(r'^block/summary/$', BlockTimeSummary.as_view(), name='block-summary'),
     url(r'^block/list/$', SuperBlockListView.as_view(model=SuperBlock, queryset=SuperBlock.objects.order_by('-block_start'), context_object_name="block_list"), name='blocklist'),
     url(r'^block/(?P<pk>\d+)/spectra/(?P<obs_num>\d+)/spectra.png$', display_spec, name='display_spec'),
-    url(r'^block/(?P<pk>\d+)/spectra/(?P<obs_num>\d+)/$', PlotSpec.as_view(), name='plotspec'),
+    url(r'^block/(?P<pk>\d+)/spectra/(?P<obs_num>\d+)/$', BlockSpec.as_view(), name='blockspec'),
     url(r'^block/(?P<pk>\d+)/guidemovie/$', GuideMovie.as_view(), name='guidemovie'),
     url(r'^block/(?P<pk>\d+)/spectra/guidemovie.gif$', display_movie, name='display_movie'),
     url(r'^block/(?P<pk>\d+)/source/(?P<source>\d+)/report/submit/$', BlockReportMPC.as_view(), name='block-submit-mpc'),
@@ -65,6 +65,7 @@ urlpatterns = [
     url(r'^target/(?P<pk>\d+)/measurements/mpc/$', MeasurementViewBody.as_view(template='core/mpcreport.html'), name='measurement-mpc'),
     url(r'^target/(?P<pk>\d+)/measurements/$', MeasurementViewBody.as_view(), name='measurement'),
     url(r'^target/(?P<pk>\d+)/$', BodyDetailView.as_view(model=Body), name='target'),
+    url(r'^target/(?P<pk>\d+)/spectra/$', PlotSpec.as_view(), name='plotspec'),
     url(r'^search/$', BodySearchView.as_view(context_object_name="target_list"), name='search'),
     url(r'^ephemeris/$', ephemeris, name='ephemeris'),
     url(r'^ranking/$', ranking, name='ranking'),

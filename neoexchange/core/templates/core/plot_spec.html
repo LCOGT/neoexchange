@@ -1,6 +1,12 @@
 {% extends 'base.html' %}
 
-{% block header %}Spectrum for block: {{pk}}{% endblock %}
+{% block header %}
+{% if floyds is False %}
+    Spectrum for object: {{body.current_name}}
+{% else %}
+    Spectrum for block: {{pk}}
+{% endif %}
+{% endblock %}
 
 {% block last-css-content %}
 <link rel="stylesheet" href="http://cdn.pydata.org/bokeh/release/bokeh-1.3.4.min.css">
@@ -13,11 +19,17 @@
 
 {% block bodyclass %}page{% endblock %}
 
+
 {% block extramenu %}
     <div class="headingleft">
+        {% if floyds is False %}
+        <h1>Object: <a href="{% url 'target' body.pk %}">{{body.current_name}}</a></h1>
+        {% else %}
         <h1>Block: <a href="{% url 'block-view' sb_id %}">{{pk}}</a></h1>
+        {% endif %}
     </div>
 {% endblock%}
+
 
 {% block main-content %}
 <!-- Main body -->
@@ -26,6 +38,21 @@
         {{ reflec_div|safe }}
         {{ raw_div|safe }}
     {% endblock %}
-</div>
 
+
+<h5 class="section-title">Spectroscopy Sources</h5>
+{% if p_spec %}
+    {% for p in p_spec %}
+        {% if p.spec_vis %}
+            <a href={{p.spec_vis}}>{{p.spec_wav}} {{ p.get_spec_source_display }} Spectra from {{ p.spec_date }}</a> <br>
+        {% else %}
+            {% if p.spec_ir %}
+                <a href={{p.spec_ir}}>{{p.spec_wav}} {{ p.get_spec_source_display }} Spectra from {{ p.spec_date }}</a> <br>
+            {% endif %}
+        {% endif %}
+    {% endfor %}
+{% else %}
+Floyds Data
+{% endif %}
+</div>
 {% endblock %}

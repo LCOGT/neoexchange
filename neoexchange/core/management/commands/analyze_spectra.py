@@ -17,6 +17,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
 from astropy.io import fits
 from astropy.wcs import WCS
+import urllib
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
@@ -145,20 +146,31 @@ def pull_data_from_spectrum(spectra):
 
 
 def pull_data_from_text(spectra):
-    f = open(spectra)
-    lines = f.readlines()
+    try:
+        f = open(spectra)
+        lines = f.readlines()
+    except FileNotFoundError:
+        lines = urllib.request.urlopen(spectra).read()
+        lines = re.split('[\n\r]', str(lines, 'utf-8'))
     xxx = []
     yyy = []
-    print(len(lines))
+    err = []
     for line in lines:
         try:
             chunks = line.split(' ')
             chunks = list(filter(None, chunks))
-            xxx.append(float(chunks[0])*10000)
-            yyy.append(float(chunks[1])+.85)
+            if len(chunks) >= 2:
+                if float(chunks[1]) != -1:
+                    if float(chunks[0]) < 1000:
+                        xxx.append(float(chunks[0])*10000)
+                    else:
+                        xxx.append(float(chunks[0]))
+                    yyy.append(float(chunks[1]))
+                    if len(chunks) >= 3:
+                        err.append(float(chunks[2]))
         except ValueError:
             continue
-    return xxx, yyy
+    return xxx, yyy, err
 
 
 def spectrum_plot(spectra, data_set='', analog=None, offset=0):
