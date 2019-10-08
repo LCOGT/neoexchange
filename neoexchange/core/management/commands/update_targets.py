@@ -31,6 +31,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('target', type=str, nargs='?', default=None, help='Target to update (enter Provisional Designations w/ an underscore, i.e. 2002_DF3)')
+        parser.add_argument('--date', action="store", default=datetime.utcnow(), help='Date for updating elements (YYYYMMDD)')
 
     def handle(self, *args, **options):
         if options['target']:
@@ -38,6 +39,14 @@ class Command(BaseCommand):
             bodies = Body.objects.filter(name=obj_id)
         else:
             bodies = Body.objects.filter(active=True).exclude(origin='M')
+        if type(options['date']) != datetime:
+            try:
+                start_date = datetime.strptime(options['date'], '%Y%m%d')
+                start_date += timedelta(seconds=12*3600)
+            except ValueError:
+                raise CommandError(usage)
+        else:
+            start_date = options['date']
         i = f = 0
         for body in bodies:
             self.stdout.write("{} ==== Updating {} ==== ({} of {}) ".format(datetime.now().strftime('%Y-%m-%d %H:%M'), body.current_name(), i+1, len(bodies)))
@@ -66,7 +75,7 @@ class Command(BaseCommand):
             # Will update epoch to date of most recent obs.
             # Will only update if new epoch closer to present than previous.
             if measures or body.fast_moving or options['target']:
-                refit_with_findorb(body.id, 500)
+                refit_with_findorb(body.id, 500, start_date)
                 f += 1
                 body.refresh_from_db()
 

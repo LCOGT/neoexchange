@@ -14,6 +14,11 @@ GNU General Public License for more details.
 """
 
 from subprocess import check_output
+from datetime import datetime
+from glob import glob
+import tempfile
+import os
+
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.conf import settings
 from contextlib import contextmanager
@@ -23,7 +28,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.expected_conditions import staleness_of
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
-from core.models import Body, Proposal, Block, SuperBlock, SpectralInfo, PreviousSpectra
+from core.models import Body, Proposal, Block, SuperBlock, SpectralInfo, PreviousSpectra, StaticSource
 
 
 class FunctionalTest(StaticLiveServerTestCase):
@@ -66,6 +71,56 @@ class FunctionalTest(StaticLiveServerTestCase):
                     'updated'       : True,
                     }
         self.body, created = Body.objects.get_or_create(pk=1, **params)
+
+    def insert_test_calib(self):
+        params = {   'name'         : 'HD 30455',
+                     'ra'           : 72.1754166666667,
+                     'dec'          : 18.7094444444444,
+                     'pm_ra'        : 0.0,
+                     'pm_dec'       : 0.0,
+                     'parallax'     : 0.0,
+                     'vmag'         : 7.0,
+                     'spectral_type': 'G2V',
+                     'source_type'  : 4,
+                     'notes'        : '',
+                     'quality'      : 0,
+                     'reference'    : ''
+                     }
+        self.calib, created = StaticSource.objects.get_or_create(pk=1, **params)
+
+    def insert_test_comet(self):
+        params = { 
+                     'provisional_name': 'P10MsRM',
+                     'provisional_packed': None,
+                     'name': 'C/2006 F4',
+                     'origin': 'M',
+                     'source_type': 'C',
+                     'elements_type': 'MPC_COMET',
+                     'active': True,
+                     'fast_moving': False,
+                     'urgency': None,
+                     'epochofel': datetime(2019, 4, 3, 0, 0),
+                     'orbit_rms': 0.03,
+                     'orbinc': 3.76939,
+                     'longascnode': 195.84794,
+                     'argofperih': 241.31051,
+                     'eccentricity': 0.5418256,
+                     'meandist': 1.8391873,
+                     'meananom': None,
+                     'perihdist': 0.84266853766512,
+                     'epochofperih': datetime(2018, 12, 15, 8, 24, 15),
+                     'abs_mag': 19.4,
+                     'slope': 4.0,
+                     'score': 11,
+                     'discovery_date': datetime(2019, 4, 3, 7, 12),
+                     'num_obs': 4,
+                     'arc_length': 0.03,
+                     'not_seen': 0.372,
+                     'updated': False,
+                     'ingest': datetime(2019, 4, 3, 15, 20, 42),
+                     'update_time': datetime(2019, 4, 3, 14, 50, 28)
+                }
+        self.comet, created = Body.objects.get_or_create(pk=2, **params)
 
     def insert_test_taxonomy(self):
 
@@ -155,10 +210,9 @@ class FunctionalTest(StaticLiveServerTestCase):
         block_params = { 'telclass' : '1m0',
                          'site'     : 'cpt',
                          'body'     : self.body,
-                         'proposal' : self.neo_proposal,
                          'block_start' : '2015-04-20 13:00:00',
                          'block_end'   : '2015-04-21 03:00:00',
-                         'tracking_number' : '00042',
+                         'request_number' : '10042',
                          'num_exposures' : 5,
                          'exp_length' : 42.0,
                          'active'   : True,
@@ -180,10 +234,9 @@ class FunctionalTest(StaticLiveServerTestCase):
         block_params2 = { 'telclass' : '2m0',
                          'site'     : 'coj',
                          'body'     : self.body,
-                         'proposal' : self.test_proposal,
                          'block_start' : '2015-04-20 03:00:00',
                          'block_end'   : '2015-04-20 13:00:00',
-                         'tracking_number' : '00043',
+                         'request_number' : '10043',
                          'num_exposures' : 7,
                          'exp_length' : 30.0,
                          'active'   : False,
@@ -197,10 +250,24 @@ class FunctionalTest(StaticLiveServerTestCase):
 
     def setUp(self):
 
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+
+        self.insert_test_body()
+        self.insert_test_calib()
+        self.insert_test_proposals()
+        self.insert_test_blocks()
+        self.insert_test_taxonomy()
+        self.insert_previous_spectra()
+
         fp = webdriver.FirefoxProfile()
         fp.set_preference("browser.startup.homepage", "about:blank")
         fp.set_preference("startup.homepage_welcome_url", "about:blank")
         fp.set_preference("startup.homepage_welcome_url.additional", "about:blank")
+        # Don't ask where to save downloaded files
+        fp.set_preference("browser.download.folderList", 2);
+        fp.set_preference("browser.download.manager.showWhenStarting", False);
+        fp.set_preference("browser.download.dir", self.test_dir);
+        fp.set_preference("browser.helperApps.neverAsk.saveToDisk", "text/plain");
 
         if not hasattr(self, 'browser'):
             firefox_capabilities = DesiredCapabilities.FIREFOX
@@ -219,16 +286,25 @@ class FunctionalTest(StaticLiveServerTestCase):
 
             self.browser = webdriver.Firefox(capabilities=firefox_capabilities, firefox_profile=fp)
         self.browser.implicitly_wait(5)
-        self.insert_test_body()
-        self.insert_test_proposals()
-        self.insert_test_blocks()
-        self.insert_test_taxonomy()
-        self.insert_previous_spectra()
 
     def tearDown(self):
-        self.browser.refresh()
-#       self.browser.implicitly_wait(5)
         self.browser.quit()
+
+        remove = True
+        debug_print = False
+        if remove:
+            try:
+                files_to_remove = glob(os.path.join(self.test_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.test_dir)
+            try:
+                os.rmdir(self.test_dir)
+                if debug_print:
+                    print("Removed", self.test_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.test_dir)
 
     def check_for_row_in_table(self, table_id, row_text):
         table = self.browser.find_element_by_id(table_id)

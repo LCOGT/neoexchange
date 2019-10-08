@@ -230,6 +230,13 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
         logger.error("Perturbing error=%s" % j)
         return {}
 
+    # Check we have everything we need before computing positions
+    if p_orbelems['Inc'] is None or p_orbelems['LongNode'] is None or p_orbelems['ArgPeri'] is None\
+        or p_orbelems['SemiAxisOrQ'] is None or p_orbelems['Ecc'] is None:
+            logger.error("Missing parameter for %s (%s)" % (orbelems['name'], orbelems['provisional_name']))
+            logger.error(p_orbelems)
+            return {}
+
     r3 = -100.
     delta = 0.0
     delta_dot = 0.0
@@ -728,12 +735,13 @@ def determine_rates_pa(start_time, end_time, elements, site_code):
     return min_rate, max_rate, pa, deltapa
 
 
-def determine_darkness_times(site_code, utc_date=datetime.utcnow(), debug=False):
+def determine_darkness_times(site_code, utc_date=datetime.utcnow(), sun_zd=105, debug=False):
     """Determine the times of darkness at the site specified by <site_code>
     for the date of [utc_date] (which defaults to UTC now if not given).
     The darkness times given are when the Sun is lower than -15 degrees
     altitude (intermediate between nautical (-12) and astronomical (-18)
     darkness, which has been chosen as more appropriate for fainter asteroids.
+    This can be overridden by passing a different value for [sun_zd].
     """
     # Check if current date is greater than the end of the last night's astro darkness
     # Add 1 hour to this to give a bit of slack at the end and not suddenly jump
@@ -742,7 +750,7 @@ def determine_darkness_times(site_code, utc_date=datetime.utcnow(), debug=False)
         utc_date = utc_date.replace(hour=0, minute=0, second=0, microsecond=0)
     except TypeError:
         utc_date = datetime.combine(utc_date, time())
-    (start_of_darkness, end_of_darkness) = astro_darkness(site_code, utc_date)
+    (start_of_darkness, end_of_darkness) = astro_darkness(site_code, utc_date, sun_zd=sun_zd)
     end_of_darkness = end_of_darkness+timedelta(hours=1)
     logger.debug("Start,End of darkness=%s %s", start_of_darkness, end_of_darkness)
     if utc_date > end_of_darkness:
@@ -755,17 +763,17 @@ def determine_darkness_times(site_code, utc_date=datetime.utcnow(), debug=False)
     utc_date = utc_date.replace(hour=0, minute=0, second=0, microsecond=0)
     logger.debug("Planning observations for %s for %s", utc_date, site_code)
     # Get hours of darkness for site
-    (dark_start, dark_end) = astro_darkness(site_code, utc_date)
+    (dark_start, dark_end) = astro_darkness(site_code, utc_date, sun_zd=sun_zd)
     logger.debug("Dark from %s to %s", dark_start, dark_end)
 
     return dark_start, dark_end
 
 
-def astro_darkness(sitecode, utc_date, round_ad=True):
+def astro_darkness(sitecode, utc_date, round_ad=True, sun_zd=105):
 
     accurate = True
     if accurate is True:
-        (ad_start, ad_end) = accurate_astro_darkness(sitecode, utc_date)
+        (ad_start, ad_end) = accurate_astro_darkness(sitecode, utc_date, sun_zd=sun_zd)
     else:
         (ad_start, ad_end) = crude_astro_darkness(sitecode, utc_date)
 
@@ -809,7 +817,7 @@ def crude_astro_darkness(sitecode, utc_date):
     return ad_start, ad_end
 
 
-def accurate_astro_darkness(sitecode, utc_date, solar_pos=False, debug=False):
+def accurate_astro_darkness(sitecode, utc_date, solar_pos=False, debug=False, sun_zd=105):
 
     # Convert passed UTC date to MJD and then Julian centuries
 
@@ -854,7 +862,6 @@ def accurate_astro_darkness(sitecode, utc_date, solar_pos=False, debug=False):
 # Here we use 105 (-15 degrees Sun altitude) to keep windows away from the
 # brighter twilight which could be a problem for our faint targets.
 
-    sun_zd = 105
     hourangle = degrees(acos(cos(radians(sun_zd))/(cos(site_lat)*cos(sun_app_dec))-tan(site_lat)*tan(sun_app_dec)))
 
     eqtime = 4.0 * (sun_mean_long - 0.0057183 - degrees(sun_app_ra) + degrees(dpsi) * cos(radians(eps)))
@@ -928,7 +935,7 @@ def get_mag_mapping(site_code):
     dictionary is returned if the site name isn't recognized"""
 
     twom_site_codes = ['F65', 'E10', '2M', '2M0']
-    good_onem_site_codes = ['V37', 'K91', 'K92', 'K93', 'W85', 'W86', 'W87', 'Q63', 'Q64', 'GOOD1M', '1M0']
+    good_onem_site_codes = ['V37', 'V39', 'K91', 'K92', 'K93', 'W85', 'W86', 'W87', 'Q63', 'Q64', 'GOOD1M', '1M0']
     # COJ normally has bad seeing, allow more time
     # Disabled by TAL 2018/8/10 after mirror recoating
 #    bad_onem_site_codes = ['Q63', 'Q64']
@@ -1251,13 +1258,20 @@ def get_sitepos(site_code, dbg=False):
         (site_long, status) =  S.sla_daf2r(104, 0., 54.63)
         site_long = -site_long
         site_hgt = 2010.0
-        site_name = 'LCO Node at McDonald Observatory (ELP)'
+        site_name = 'LCO ELP Node 1m0 Dome A at McDonald Observatory'
+    elif site_code == 'ELP-DOMB' or site_code == 'V39':
+        # Position from screenshot of Annie's GPS on mount at site...
+        (site_lat, status)  =  S.sla_daf2r(30, 40, 48.00)
+        (site_long, status) =  S.sla_daf2r(104, 0.0, 55.74)
+        site_long = -site_long
+        site_hgt = 2029.4
+        site_name = 'LCO ELP Node 1m0 Dome B at McDonald Observatory'
     elif site_code == 'ELP-AQWA-0M4A' or site_code == 'V38':
         (site_lat, status)  =  S.sla_daf2r(30, 40, 48.15)
         (site_long, status) =  S.sla_daf2r(104, 0., 54.24)
         site_long = -site_long
         site_hgt = 2027.0
-        site_name = 'LCO Node at McDonald Observatory (ELP)'
+        site_name = 'LCO ELP Node 0m4a Aqawan A at McDonald Observatory'
     elif site_code == 'BPL':
         (site_lat, status)  =  S.sla_daf2r(34, 25, 57)
         (site_long, status) =  S.sla_daf2r(119, 51, 46)
@@ -1634,7 +1648,7 @@ def get_mountlimits(site_code_or_name):
     ha_neg_limit = -12.0 * 15.0
     alt_limit = 25.0
 
-    if '-1M0A' in site or site in ['V37', 'W85', 'W86', 'W87', 'K91', 'K92', 'K93', 'Q63', 'Q64']:
+    if '-1M0A' in site or site in ['V37', 'V39', 'W85', 'W86', 'W87', 'K91', 'K92', 'K93', 'Q63', 'Q64']:
         ha_pos_limit = 4.5 * 15.0
         ha_neg_limit = -4.5 * 15.0
         alt_limit = 30.0

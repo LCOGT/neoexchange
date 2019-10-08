@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 SITES = (('1M0', '------------ Any 1.0m ------------'),
          ('W86', 'LSC 1.0m - W85-87; (CTIO, Chile)'),
-         ('V37', 'ELP 1.0m - V37; (McDonald, Texas)'),
+         ('V37', 'ELP 1.0m - V37,V39; (McDonald, Texas)'),
          ('Q63', 'COJ 1.0m - Q63-64; (Siding Spring, Aust.)'),
          ('K92', 'CPT 1.0m - K91-93; (Sutherland, S. Africa)'),
          ('0M4', '------------ Any 0.4m ------------'),
@@ -168,6 +168,7 @@ class ScheduleBlockForm(forms.Form):
     instrument_code = forms.CharField(max_length=10, widget=forms.HiddenInput(), required=False)
     solar_analog = forms.BooleanField(initial=True, widget=forms.HiddenInput(), required=False)
     calibsource_id = forms.IntegerField(widget=forms.HiddenInput(), required=False)
+    calibsource_exptime = forms.IntegerField(widget=forms.NumberInput(attrs={'size': '5'}), required=False)
     max_airmass = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     ipp_value = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     min_lunar_dist = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
@@ -295,6 +296,13 @@ class ScheduleSpectraForm(forms.Form):
         if start < datetime.utcnow().date():
             raise forms.ValidationError("Window cannot start in the past")
         return start
+
+    def clean(self):
+        cleaned_data = super(ScheduleSpectraForm, self).clean()
+        site = self.cleaned_data['instrument_code']
+        spectra = self.cleaned_data['spectroscopy']
+        if not fetch_filter_list(site[0:3], spectra):
+            raise forms.ValidationError("This Site/Instrument combination is not currently available.")
 
     def __init__(self, *args, **kwargs):
         self.proposal_code = kwargs.pop('proposal_code', None)

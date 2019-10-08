@@ -23,7 +23,7 @@ from neox.tests.mocks import MockDateTime
 # from datetime import datetime as real_datetime
 from datetime import datetime
 from core.models import Body
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 
 
 class NewVisitorTest(FunctionalTest):

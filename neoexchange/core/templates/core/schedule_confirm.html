@@ -72,7 +72,7 @@
                     <tr id="id_visibility_row">
                         {% if data.vis_time > 0 and data.max_alt_airmass < data.max_airmass %}
                             <td class="kv-key">Hours Visible per site / Max Altitude</td>
-                            <td class="kv-value">{{ data.vis_time}} hrs / {{ data.max_alt|floatformat:0}}&deg</td>
+                            <td class="kv-value">{{ data.vis_time|floatformat:1}} hrs / {{ data.max_alt|floatformat:0}}&deg</td>
                         {% else %}
                             <td class="kv-key">Hours Visible / Max Altitude</td>
                         <td class="kv-value">
@@ -126,14 +126,19 @@
                         <td class="kv-value">
                             <table style="margin-bottom: 0; margin-left: auto">
                                 <tr>
-                                    <td>
-                                        <svg id="moon"  xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="250 70 4.5 4.5" preserveAspectRatio="xMidYMin slice"
-                                        style="height: 1px; overflow: visible" ></svg>
-                                        <script type="text/javascript" src="{% static 'core/js/moon-phase.js' %}" charset="UTF-8"></script>
-                                        <script type="text/javascript" charset="UTF-8">
-                                            var today = today || new Date();
-                                            document.getElementById('mooncent').innerHTML += (moon_day(today)*100).toFixed(1) + "%";
-                                        </script>
+                                    <td><table align="left"  style="margin: 0px"><tr><td class="kv-key">
+                                        <div class="tooltip">
+                                            <svg id="moon"  xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="250 70 4.5 4.5" preserveAspectRatio="xMidYMin slice"
+                                            style="height: 1px; overflow: visible" ></svg>
+                                            <script type="text/javascript" src="{% static 'core/js/moon-phase.js' %}" charset="UTF-8"></script>
+                                            <script type="text/javascript" charset="UTF-8">
+                                                var obs_day = new Date('{{ data.mid_time }}'+'Z') || new Date();
+                                                phase_junk(moon_day(obs_day));
+                                            </script>
+                                        <span class="tooltiptext" style="left:0; margin-bottom: 15px; width: auto; margin-left: -45px">
+                                            <u>Illumination Fraction:</u>
+                                            <br>{{data.moon_phase|floatformat:0}}%
+                                        </span></div></td><td></td></tr></table>
                                     </td>
                                     {% if data.moon_sep < data.min_lunar_dist %}
                                     <td style="border: none">
@@ -219,9 +224,23 @@
                         <td class="kv-value">{{ form.exp_length }} secs</td>
                     </tr>
                     {% if data.snr %}
-                    <tr id="id_snr">
+                    <tr id="id_snr_row">
                         <td class="kv-key">SNR</td>
-                        <td class="kv-value">{{ data.snr|floatformat:1 }}</td>
+                        {% if data.saturated %}
+                            <td ><table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip">
+                                <span class="warning msgpadded"> {{ data.snr|floatformat:1 }} </span>
+                                <span class="tooltiptext" style="width: 150px;"><u>Target Might Saturate!</u>
+                                <br>Consider Reducing Exposure Time <br></span></div></td></tr></table></td>
+                        {% else %}
+                            {% if data.snr < 10 and data.spectroscopy%}
+                                <td ><table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip">
+                                    <span class="warning msgpadded"> {{ data.snr|floatformat:1 }} </span>
+                                    <span class="tooltiptext" style="width: 150px;"><u>Low Signal to Noise!</u>
+                                    <br>Consider Increasing Exposure Time <br></span></div></td></tr></table></td>
+                            {% else %}
+                                <td class="kv-value">{{ data.snr|floatformat:1 }}</td>
+                            {% endif %}
+                        {% endif %}
                     </tr>
                     {% endif %}
                     <tr id="id_window_row">
@@ -287,21 +306,42 @@
                         <td class="kv-key">Calibs</td>
                         <td class="kv-value">{{ data.calibs }}</td>
                     </tr>
-                    {% if data.solar_analog %}
-                    <tr id="id_solaranalog_row">
-                        <td class="kv-key">Solar Analog</td>
-                        <td class="kv-value">{{ data.calibsource.name }}</td>
-                    </tr>
-                    <tr id="id_solaranalag_params_row">
-                        <td class="kv-key">Position/V magnitude</td>
-                        <td class="kv-value">{{ data.calibsource.ra|degreestohms:" " }} {{data.calibsource.dec|degreestodms:" "}}/{{data.calibsource.vmag|floatformat:1 }}</td>
-                    </tr>
-                    {% endif %}
                     {% endif %}
                 </tbody>
             </table>
         {% endif %}
+              {% if data.solar_analog %}
+              <h6 class="section-title">Solar Analog: {{ data.calibsource.name }}</h6>
+            <table class="keyvalue-table" style="width:100%">
+                <tbody>
+                    {% if data.calibsource.name %}
+                    <tr id="id_solaranalog_sep_row">
+                        <td class="kv-key">Separation from Target</td>
+                        <td class="kv-value">{{data.calibsource.separation_deg|floatformat:1 }}&deg</td>
+                    </tr>
+                    <tr id="id_solaranalog_exptime_row">
+                        <td class="kv-key">Exposure time</td>
+                        <td class="kv-value">{{form.calibsource_exptime }} secs</td>
+                    </tr>
+                    <tr id="id_solaranalog_mag_row">
+                        <td class="kv-key">V Mag / Spectral Type</td>
+                        <td class="kv-value">{{data.calibsource.vmag|floatformat:1 }} / {{data.calibsource.spectral_type}}</td>
+                    </tr>
+                    <tr id="id_solaranalog_coord_row">
+                        <td class="kv-key">Coordinates</td>
+                        <td class="kv-value">{{ data.calibsource.ra|degreestohms:" " }} {{data.calibsource.dec|degreestodms:" "}}</td>
+                    </tr>
+                    {% else %}
+                    <tr id="id_no_solaranalog_row">
+                        <td class="kv-key"><span class="warning msgpadded">No Valid Solar Analog Found! </span></td>
+                        <td class="kv-value"></td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+              {% endif %}
       </div>
+
       <div class="four columns">
         {% if form.errors%}
           {% if form.spectroscopy.value == 'True' %}

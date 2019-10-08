@@ -16,3 +16,13 @@ neoexchange/photometrics/tests/*
 neoexchange/lightcurve.png
 neoexchange/lightcurve_data.txt
 neoexchange/mpc_positions.txt
+neoexchange/phased_lc.png
+neoexchange/*uncertainty_*.png
+neoexchange/*timeup_*.png
+neoexchange/*radec_*.png
+neoexchange/*mag_*.png
+neoexchange/*dist_*.png
+neoexchange/ALCDEF*.txt
+neoexchange/*.json
+neoexchange/environ.dat
+

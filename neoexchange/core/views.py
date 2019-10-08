@@ -15,8 +15,9 @@ import os
 from glob import glob
 from datetime import datetime, timedelta, date
 from math import floor, ceil, degrees, radians, pi, acos
+from astropy import units as u
 import matplotlib
-matplotlib.use('TkAgg')
+#matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import json
 import urllib
@@ -28,7 +29,8 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
-from django.core.urlresolvers import reverse, reverse_lazy
+from django.core.files.storage import default_storage
+from django.urls import reverse, reverse_lazy
 from django.shortcuts import render, redirect
 from django.views.generic import DetailView, ListView, FormView, TemplateView, View
 from django.views.generic.edit import FormView
@@ -69,8 +71,8 @@ from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     determine_filenames, increment_red_level, update_ldac_catalog_wcs, FITSHdrException
 from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
-from photometrics.spectraplot import get_spec_plot
-from photometrics.gf_movie import make_gif
+from photometrics.spectraplot import get_spec_plot, make_spec
+from photometrics.gf_movie import make_gif, make_movie
 from core.frames import create_frame, ingest_frames, measurements_from_block
 from core.mpc_submit import email_report_to_mpc
 from core.archive_subs import lco_api_call
@@ -105,10 +107,10 @@ def user_proposals(user):
     return proposals
 
 
-def determine_active_proposals(proposal_code=None, filter_epo=True):
+def determine_active_proposals(proposal_code=None, filter_proposals=True):
     """Determine and return the active Proposals or verify the passed [proposal_code]
-    exists. If [filter_epo] is set to True (the default), proposals of the form
-    'xxxEPO20yy' are excluded from the returned proposal list.
+    exists. If [filter_proposals] is set to True (the default), proposals
+    with `proposal.download=False` are excluded from the returned proposal list.
 
     Returns a list of proposal codes.
     """
@@ -122,8 +124,8 @@ def determine_active_proposals(proposal_code=None, filter_epo=True):
             proposals = []
     else:
         proposals = Proposal.objects.filter(active=True)
-        if filter_epo:
-            proposals = proposals.exclude(code__contains='EPO')
+        if filter_proposals is True:
+            proposals = proposals.filter(download=True)
         proposals = proposals.order_by('code').values_list('code', flat=True)
 
     return proposals
@@ -156,7 +158,7 @@ def summarise_block_efficiency(block_filter=0):
     summary = []
     proposals = Proposal.objects.all()
     for proposal in proposals:
-        blocks = Block.objects.filter(proposal=proposal)
+        blocks = Block.objects.filter(superblock__proposal=proposal)
         observed = blocks.filter(num_observed__isnull=False)
         if len(blocks) > block_filter:
             proposal_summary = {
@@ -327,6 +329,45 @@ class MeasurementViewBody(View):
         return render(request, self.template, {'body': body, 'measures' : measures})
 
 
+class MeasurementDownloadMPC(View):
+
+    template = get_template('core/mpc_outputfile.txt')
+
+    def get(self, request, *args, **kwargs):
+        try:
+            body = Body.objects.get(id=kwargs['pk'])
+        except Body.DoesNotExist:
+            logger.warning("Could not find Body with pk={}".format(kwargs['pk']))
+            raise Http404("Body does not exist")
+
+        measures = SourceMeasurement.objects.filter(body=body).order_by('frame__midpoint')
+        data = { 'measures' : measures}
+        filename = "{}_mpc.dat".format(body.current_name().replace(' ', '').replace('/', '_'))
+
+        response = HttpResponse(self.template.render(data), content_type="text/plain")
+        response['Content-Disposition'] = 'attachment; filename=' + filename
+        return response
+
+
+class MeasurementDownloadADESPSV(View):
+
+    template = get_template('core/mpc_ades_psv_outputfile.txt')
+
+    def get(self, request, *args, **kwargs):
+        try:
+            body = Body.objects.get(id=kwargs['pk'])
+        except Body.DoesNotExist:
+            logger.warning("Could not find Body with pk={}".format(kwargs['pk']))
+            raise Http404("Body does not exist")
+
+        measures = SourceMeasurement.objects.filter(body=body).order_by('frame__midpoint')
+        data = { 'measures' : measures}
+        filename = "{}.psv".format(body.current_name().replace(' ', '').replace('/', '_'))
+
+        response = HttpResponse(self.template.render(data), content_type="text/plain")
+        response['Content-Disposition'] = 'attachment; filename=' + filename
+        return response
+
 def export_measurements(body_id, output_path=''):
 
     t = get_template('core/mpc_outputfile.txt')
@@ -398,6 +439,7 @@ def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_di
     source_dir = os.path.abspath(os.path.join(os.getenv('HOME'), '.find_orb'))
     dest_dir = dest_dir or tempfile.mkdtemp(prefix='tmp_neox_')
     new_ephem = (None, None)
+    comp_time = start_time + timedelta(days=1)
 
     filename, num_lines = export_measurements(body_id, dest_dir)
 
@@ -411,10 +453,10 @@ def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_di
                 body = Body.objects.get(pk=body_id)
                 logger.info("{}: FindOrb found an orbital rms of {} using {} observations.".format(body.current_name(), new_elements['orbit_rms'], new_elements['num_obs']))
                 if body.epochofel:
-                    time_to_current_epoch = abs(body.epochofel - start_time)
+                    time_to_current_epoch = abs(body.epochofel - comp_time)
                 else:
-                    time_to_current_epoch = abs(datetime.min - start_time)
-                time_to_new_epoch = abs(new_elements['epochofel'] - start_time)
+                    time_to_current_epoch = abs(datetime.min - comp_time)
+                time_to_new_epoch = abs(new_elements['epochofel'] - comp_time)
                 if time_to_new_epoch <= time_to_current_epoch and new_elements['orbit_rms'] < 1.0:
                     # Reset some fields to avoid overwriting
 
@@ -433,7 +475,7 @@ def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_di
                     if new_elements['orbit_rms'] >= 1.0:
                         message += " and rms was too high"
                     message += ". Did not update"
-                logger.info("%s Body #%d (%s) with FIndOrb" % (message, body.pk, body.current_name()))
+                logger.info("%s Body #%d (%s) with FindOrb" % (message, body.pk, body.current_name()))
 
                 # Read in ephemeris file
                 ephem_file = os.path.join(dest_dir, 'new.ephem')
@@ -482,13 +524,65 @@ class StaticSourceView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super(StaticSourceView, self).get_context_data(**kwargs)
-        sun_ra, sun_dec = accurate_astro_darkness('500', datetime.now(), solar_pos=True)
+        sun_ra, sun_dec = accurate_astro_darkness('500', datetime.utcnow(), solar_pos=True)
         night_ra = degrees(sun_ra - pi)
         if night_ra < 0:
             night_ra += 360
         night_ra = degreestohms(night_ra, ':')
         night_dec = degreestodms(degrees(-sun_dec), ':')
         context['night'] = {'ra': night_ra, 'dec': night_dec}
+        return context
+
+
+class BestStandardsView(ListView):
+    template_name = 'core/best_calibsource_list.html'
+    model = StaticSource
+    paginate_by = 20
+
+    def determine_ra_range(self, utc_dt=datetime.utcnow(), HA_hours=3, dbg=False):
+        sun_ra, sun_dec = accurate_astro_darkness('500', utc_dt, solar_pos=True)
+        night_ra = degrees(sun_ra - pi)
+        if night_ra < 0:
+            night_ra += 360
+        if dbg: print(utc_dt, degreestohms(night_ra, ':'), HA_hours*15)
+
+        min_ra = night_ra - (HA_hours * 15)
+        if min_ra < 0:
+            min_ra += 360
+        max_ra = night_ra + (HA_hours * 15)
+        if max_ra > 360:
+            max_ra -= 360
+        if dbg: print("RA range=", min_ra, max_ra)
+
+        return min_ra, max_ra
+
+    def get_sources(self, utc_date=datetime.utcnow(), dbg=False):
+
+        min_ra, max_ra = self.determine_ra_range(utc_dt=utc_date, dbg=False)
+        if min_ra > max_ra:
+            # Wrap occurred
+            ra_filter = Q(ra__gte=min_ra) | Q(ra__lte=max_ra)
+        else:
+            ra_filter = Q(ra__gte=min_ra) & Q(ra__lte=max_ra)
+        ftn_standards = StaticSource.objects.filter(ra_filter, source_type=StaticSource.FLUX_STANDARD, dec__gte=0).order_by('ra')
+        fts_standards = StaticSource.objects.filter(ra_filter, source_type=StaticSource.FLUX_STANDARD, dec__lte=0).order_by('ra')
+        if dbg: print(ftn_standards,fts_standards)
+
+        return ftn_standards, fts_standards
+
+    def get_context_data(self, **kwargs):
+        context = super(BestStandardsView, self).get_context_data(**kwargs)
+        utc_date = datetime.utcnow()
+        sun_ra, sun_dec = accurate_astro_darkness('500', utc_date, solar_pos=True)
+        night_ra = degrees(sun_ra - pi)
+        if night_ra < 0:
+            night_ra += 360
+        night_ra = degreestohms(night_ra, ':')
+        night_dec = degreestodms(degrees(-sun_dec), ':')
+        context['night'] = {'ra': night_ra, 'dec': night_dec, 'utc_date' : utc_date.date}
+        ftn_standards, fts_standards = self.get_sources(utc_date=utc_date)
+        context['ftn_calibsources'] = ftn_standards
+        context['fts_calibsources'] = fts_standards
         return context
 
 
@@ -867,7 +961,9 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
                 self.success = False
                 msg = "It was not possible to submit your request to the scheduler."
                 if sched_params.get('error_msg', None):
-                    msg += "\nAdditional information:" + sched_params['error_msg']
+                    msg += "\nAdditional information:"
+                    error_msgs = sched_params['error_msg'].get('non_field_errors', [])
+                    msg += "\n".join(error_msgs)
                 messages.warning(self.request, msg)
             return super(ScheduleSubmit, self).form_valid(new_form)
 
@@ -921,6 +1017,7 @@ def schedule_check(data, body, ok_to_schedule=True):
 
     solar_analog_id = -1
     solar_analog_params = {}
+    solar_analog_exptime = 60
     if type(body) == Body:
         emp = compute_ephem(dark_midpoint, body_elements, data['site_code'],
             dbg=False, perturb=False, display=False)
@@ -937,15 +1034,15 @@ def schedule_check(data, body, ok_to_schedule=True):
         if spectroscopy and solar_analog:
             # Try and find a suitable solar analog "close" to RA, Dec midpoint
             # of block
-            close_solarstd, close_solarstd_params = find_best_solar_analog(ra, dec)
+            close_solarstd, close_solarstd_params = find_best_solar_analog(ra, dec, data['site_code'])
             if close_solarstd is not None:
                 solar_analog_id = close_solarstd.id
                 solar_analog_params = close_solarstd_params
     else:
         magnitude = body.vmag
         speed = 0.0
-        ra = body.ra
-        dec = body.dec
+        ra = radians(body.ra)
+        dec = radians(body.dec)
 
     # Determine filter pattern
     if data.get('filter_pattern'):
@@ -973,7 +1070,7 @@ def schedule_check(data, body, ok_to_schedule=True):
     lco_site_code = next(key for key, value in cfg.valid_site_codes.items() if value == data['site_code'])
 
     # calculate visibility
-    dark_and_up_time, max_alt = get_visibility(ra, dec, dark_midpoint, data['site_code'], '30 m', alt_limit, True, body_elements)
+    dark_and_up_time, max_alt = get_visibility(ra, dec, dark_midpoint, data['site_code'], '2 m', alt_limit, True, body_elements)
     if max_alt is not None:
         max_alt_airmass = S.sla_airmas((pi/2.0)-radians(max_alt))
     else:
@@ -989,15 +1086,38 @@ def schedule_check(data, body, ok_to_schedule=True):
         except MagRangeError:
             slot_length = 60
             ok_to_schedule = False
-    snr = None
 
+    # determine lunar position
+    moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(dark_midpoint, ra, dec, data['site_code'])
+    min_lunar_dist = data.get('min_lunar_dist', 30)
+    if moon_phase <= .25:
+        moon_phase_code = 'D'
+    elif moon_phase <= .75:
+        moon_phase_code = 'G'
+    else:
+        moon_phase_code = 'B'
+
+    # Calculate slot length, exposure time, SNR
+    snr = None
+    saturated = None
     if spectroscopy:
-        new_mag, new_passband, snr = calc_asteroid_snr(magnitude, 'V', data['exp_length'], instrument=data['instrument_code'])
+        snr_params = {'airmass': max_alt_airmass,
+                      'slit_width': float(filter_pattern[5:8])*u.arcsec,
+                      'moon_phase' : moon_phase_code
+                      }
+        new_mag, new_passband, snr, saturated = calc_asteroid_snr(magnitude, 'V', data['exp_length'], instrument=data['instrument_code'], params=snr_params)
         exp_count = data['exp_count']
         exp_length = data.get('exp_length', 1)
         slot_length = determine_spectro_slot_length(data['exp_length'], data['calibs'])
         slot_length /= 60.0
         slot_length = ceil(slot_length)
+        # If automatically finding Solar Analog, calculate exposure time.
+        # Currently assume bright enough that 180s is the maximum exposure time.
+        if solar_analog and solar_analog_params:
+            if data.get('calibsource_exptime', None):
+                solar_analog_exptime = data.get('calibsource_exptime')
+            else:
+                solar_analog_exptime = calc_asteroid_snr(solar_analog_params['vmag'], 'V', 180, instrument=data['instrument_code'], params=snr_params, optimize=True)
     else:
         # Determine exposure length and count
         if data.get('exp_length', None):
@@ -1020,10 +1140,6 @@ def schedule_check(data, body, ok_to_schedule=True):
         typical_seeing = 3.0
     else:
         typical_seeing = 2.0
-
-    # determine lunar position
-    moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(dark_midpoint, ra, dec, data['site_code'])
-    min_lunar_dist = data.get('min_lunar_dist', 30)
 
     # get ipp value
     ipp_value = data.get('ipp_value', 1.00)
@@ -1101,6 +1217,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'period' : period,
         'jitter' : jitter,
         'snr' : snr,
+        'saturated' : saturated,
         'spectroscopy' : spectroscopy,
         'calibs' : data.get('calibs', ''),
         'instrument_code' : data['instrument_code'],
@@ -1112,7 +1229,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'vis_time' : dark_and_up_time,
         'moon_alt' : moon_alt,
         'moon_sep' : moon_obj_sep,
-        'moon_phase' : moon_phase,
+        'moon_phase' : moon_phase * 100,
         'min_lunar_dist' : min_lunar_dist,
         'max_airmass': max_airmass,
         'ipp_value': ipp_value,
@@ -1122,7 +1239,8 @@ def schedule_check(data, body, ok_to_schedule=True):
         'typical_seeing' : typical_seeing,
         'solar_analog' : solar_analog,
         'calibsource' : solar_analog_params,
-        'calibsource_id' : solar_analog_id
+        'calibsource_id' : solar_analog_id,
+        'calibsource_exptime' : solar_analog_exptime,
     }
 
     if period and jitter:
@@ -1166,32 +1284,34 @@ def schedule_submit(data, body, username):
                                     'pm_dec'  : calibsource.pm_dec,
                                     'parallax': calibsource.parallax,
                                     'source_type' : calibsource.source_type,
-                                    'vmag' : calibsource.vmag
+                                    'vmag' : calibsource.vmag,
+                                    'calib_exptime': data.get('calibsource_exptime', 60)
                                  }
         except StaticSource.DoesNotExist:
             logger.error("Was passed a StaticSource id=%d, but it now can't be found" % data['calibsource_id'])
 
     emp_at_start = None
     if isinstance(body, Body) and data.get('spectroscopy', False) is not False and body.source_type != 'C' and body.elements_type != 'MPC_COMET':
-        # Update MPC observations assuming too many updates have not been done recently and target is not a comet
-        cut_off_time = timedelta(minutes=1)
-        now = datetime.utcnow()
-        recent_updates = Body.objects.exclude(source_type='u').filter(update_time__gte=now-cut_off_time)
-        if len(recent_updates) < 1:
-            update_MPC_obs(body.current_name())
 
-        # Invoke find_orb to update Body's elements and return ephemeris
-        new_ephemeris = refit_with_findorb(body.id, data['site_code'], data['start_time'])
-        if new_ephemeris is not None and new_ephemeris[1] is not None:
-            emp_info = new_ephemeris[0]
-            ephemeris = new_ephemeris[1]
-            emp_at_start = ephemeris[0]
+        # Check for recent elements
+        if abs(body.epochofel-data['start_time']) >= timedelta(days=2):
+            # Update MPC observations assuming too many updates have not been done recently and target is not a comet
+            cut_off_time = timedelta(minutes=1)
+            now = datetime.utcnow()
+            recent_updates = Body.objects.exclude(source_type='u').filter(update_time__gte=now-cut_off_time)
+            if len(recent_updates) < 1:
+                update_MPC_obs(body.current_name())
 
-        body.refresh_from_db()
-        body_elements = model_to_dict(body)
-        body_elements['epochofel_mjd'] = body.epochofel_mjd()
-        body_elements['epochofperih_mjd'] = body.epochofperih_mjd()
-        body_elements['current_name'] = body.current_name()
+            # Invoke find_orb to update Body's elements and return ephemeris
+            refit_with_findorb(body.id, data['site_code'], data['start_time'])
+
+            body.refresh_from_db()
+            body_elements = model_to_dict(body)
+            body_elements['epochofel_mjd'] = body.epochofel_mjd()
+            body_elements['epochofperih_mjd'] = body.epochofperih_mjd()
+            body_elements['current_name'] = body.current_name()
+        else:
+            logger.info("Current epoch is <2 days old; not updating")
 
     if type(body) != StaticSource and data.get('spectroscopy', False) is True:
         body_elements = compute_vmag_pa(body_elements, data)
@@ -1222,7 +1342,6 @@ def schedule_submit(data, body, username):
               'instrument_code' : data['instrument_code'],
               'solar_analog' : data.get('solar_analog', False),
               'calibsource' : calibsource_params,
-              'findorb_ephem' : emp_at_start,
               'max_airmass' : data.get('max_airmass', 1.74),
               'ipp_value' : data.get('ipp_value', 1),
               'min_lunar_distance' : data.get('min_lunar_dist', 30),
@@ -1321,7 +1440,7 @@ def feasibility_check(data, body):
         spectral_type = 'Mean'
     else:
         spectral_type = 'Solar'
-    data['new_mag'], data['new_passband'], data['snr'] = calc_asteroid_snr(data['magnitude'], ast_mag_bandpass, data['exp_length'], instrument=data['instrument_code'], params=snr_params, taxonomy=spectral_type)
+    data['new_mag'], data['new_passband'], data['snr'], data['saturated'] = calc_asteroid_snr(data['magnitude'], ast_mag_bandpass, data['exp_length'], instrument=data['instrument_code'], params=snr_params, taxonomy=spectral_type)
     calibs = data.get('calibs', 'both')
     slot_length = determine_spectro_slot_length(data['exp_length'], calibs)
     slot_length /= 60.0
@@ -1494,7 +1613,8 @@ def check_for_block(form_data, params, new_body):
 
     # XXX Code smell, duplicated from sources_subs.configure_defaults()
     site_list = { 'V37' : 'ELP' ,
-                  'K92' : 'CPT' ,
+                  'V39' : 'ELP',
+                  'K92' : 'CPT',
                   'K93' : 'CPT',
                   'Q63' : 'COJ',
                   'W85' : 'LSC',
@@ -1505,8 +1625,7 @@ def check_for_block(form_data, params, new_body):
                   'Z21' : 'TFN',
                   'Q58' : 'COJ',
                   'Q59' : 'COJ',
-                  'T04' : 'OGG',
-                  'V99' : 'ELP'
+                  'T04' : 'OGG'
                   }
 
     try:
@@ -1537,8 +1656,9 @@ def record_block(tracking_number, params, form_data, target):
         cadence = False
         if len(params.get('request_numbers', [])) > 1 and params.get('period', -1.0) > 0.0 and params.get('jitter', -1.0) > 0.0:
             cadence = True
+        proposal = Proposal.objects.get(code=form_data['proposal_code'])
         sblock_kwargs = {
-                         'proposal' : Proposal.objects.get(code=form_data['proposal_code']),
+                         'proposal' : proposal,
                          'groupid'  : form_data['group_id'],
                          'block_start' : form_data['start_time'],
                          'block_end'   : form_data['end_time'],
@@ -1554,16 +1674,27 @@ def record_block(tracking_number, params, form_data, target):
             sblock_kwargs['calibsource'] = target
         else:
             sblock_kwargs['body'] = target
+        # Check if this went to a rapid response proposal
+        if proposal.time_critical is True:
+            sblock_kwargs['rapid_response'] = True
         sblock_pk = SuperBlock.objects.create(**sblock_kwargs)
         i = 0
         for request, request_type in params.get('request_numbers', {}).items():
             # cut off json UTC timezone remnant
             no_timezone_blk_start = params['request_windows'][i][0]['start'][:-1]
             no_timezone_blk_end = params['request_windows'][i][0]['end'][:-1]
+            try:
+                dt_notz_blk_start = datetime.strptime(no_timezone_blk_start, '%Y-%m-%dT%H:%M:%S')
+            except ValueError:
+                dt_notz_blk_start = datetime.strptime(no_timezone_blk_start, '%Y-%m-%dT%H:%M:%S.%f')
+            try:
+                dt_notz_blk_end = datetime.strptime(no_timezone_blk_end, '%Y-%m-%dT%H:%M:%S')
+            except ValueError:
+                dt_notz_blk_end = datetime.strptime(no_timezone_blk_end, '%Y-%m-%dT%H:%M:%S.%f')
             obstype = Block.OPT_IMAGING
             if params.get('spectroscopy', False):
                 obstype = Block.OPT_SPECTRA
-                if request_type == 'SIDEREAL':
+                if request_type == 'SIDEREAL' or request_type == 'ICRS':
                     obstype = Block.OPT_SPECTRA_CALIB
 
             # sort site vs camera
@@ -1584,17 +1715,15 @@ def record_block(tracking_number, params, form_data, target):
             block_kwargs = { 'superblock' : sblock_pk,
                              'telclass' : params['pondtelescope'].lower(),
                              'site'     : site,
-                             'proposal' : Proposal.objects.get(code=form_data['proposal_code']),
                              'obstype'  : obstype,
-                             'groupid'  : params['group_id'],
-                             'block_start' : datetime.strptime(no_timezone_blk_start, '%Y-%m-%dT%H:%M:%S'),
-                             'block_end'   : datetime.strptime(no_timezone_blk_end, '%Y-%m-%dT%H:%M:%S'),
-                             'tracking_number' : request,
+                             'block_start' : dt_notz_blk_start,
+                             'block_end'   : dt_notz_blk_end,
+                             'request_number'  : request,
                              'num_exposures'   : params['exp_count'],
                              'exp_length'      : params['exp_time'],
                              'active'   : True
                            }
-            if request_type == 'SIDEREAL' and params.get('solar_analog', False) is True and len(params.get('calibsource', {})) > 0:
+            if (request_type == 'SIDEREAL' or request_type == 'ICRS') and params.get('solar_analog', False) is True and len(params.get('calibsource', {})) > 0:
                 try:
                     calib_source = StaticSource.objects.get(pk=params['calibsource']['id'])
                 except StaticSource.DoesNotExist:
@@ -1603,7 +1732,7 @@ def record_block(tracking_number, params, form_data, target):
                 block_kwargs['body'] = None
                 block_kwargs['calibsource'] = calib_source
                 block_kwargs['exp_length'] = params['calibsrc_exptime']
-            elif request_type == 'SIDEREAL':
+            elif request_type == 'SIDEREAL' or request_type == 'ICRS':
                 block_kwargs['body'] = None
                 block_kwargs['calibsource'] = target
             else:
@@ -1836,7 +1965,7 @@ def clean_NEOCP_object(page_list):
             # See if this is a local discovery
             provisional_name = line[0:7].rstrip()
             origin = 'M'
-            if provisional_name[0:5] in ['CPTTL', 'LSCTL', 'ELPTL', 'COJTL', 'COJAT', 'LSCAT', 'LSCJM' ]:
+            if provisional_name[0:5] in ['CPTTL', 'LSCTL', 'ELPTL', 'COJTL', 'COJAT', 'LSCAT', 'LSCJM', 'LLZ00' ]:
                 origin = 'L'
             params = {
                 'abs_mag': abs_mag,
@@ -1943,6 +2072,9 @@ def update_crossids(astobj, dbg=False):
                     logger.warning("Found %d SuperBlocks and %d Blocks referring to this Body; not deleting" % (num_sblocks, num_blocks))
             else:
                 logger.info("Origin of Body is MPC, not removing")
+                # Set to inactive to prevent candidates hanging around
+                del_body.active = False
+                del_body.save()
 
     # Determine what type of new object it is and whether to keep it active
     kwargs = clean_crossid(astobj, dbg)
@@ -2233,6 +2365,10 @@ def ingest_new_object(orbit_file, obs_file=None, dbg=False):
     if obs_file is None:
         obs_file = orbit_file.replace('neocp', 'dat')
 
+    # If not found, try new-style obs file name
+    if os.path.exists(obs_file) is False:
+        obs_file = orbit_file.replace('.neocp', '_mpc.dat')
+
     local_discovery = False
     try:
         obsfile_fh = open(obs_file, 'r')
@@ -2495,7 +2631,7 @@ def create_source_measurement(obs_lines, block=None):
                                 logger.warning("Multiple matching satellite frames for %s from %s on %s found" % (params['body'], params['obs_date'], params['site_code']))
                                 continue
                     else:
-                        # If no satelites, check for existing frames, and create new ones
+                        # If no satellites, check for existing frames, and create new ones
                         if frame_list:
                             frame = next((frm for frm in frame_list if frm.sitecode == params['site_code'] and params['obs_date'] == frm.midpoint), None)
                             if not frame:
@@ -2508,7 +2644,8 @@ def create_source_measurement(obs_lines, block=None):
                                             'obs_ra'  : params['obs_ra'],
                                             'obs_dec' : params['obs_dec'],
                                             'obs_mag' : params['obs_mag'],
-                                            'flags'   : params['flags']
+                                            'flags'   : params['flags'],
+                                            'astrometric_catalog': params['astrometric_catalog'],
                                          }
                         if source_list and next((src for src in source_list if src.frame == measure_params['frame']), None):
                             measure_created = False
@@ -2811,7 +2948,7 @@ def find_spec(pk):
     """find directory of spectra for a certain block
     NOTE: Currently will only pull first spectrum of a superblock
     """
-    base_dir = settings.DATA_ROOT
+
     try:
         # block = list(Block.objects.filter(superblock=list(SuperBlock.objects.filter(pk=pk))[0]))[0]
         block = Block.objects.get(pk=pk)
@@ -2831,76 +2968,78 @@ def find_spec(pk):
     if 'REQNUM' in data:
         req = data['REQNUM'].lstrip("0")
     else:
-        req = block.tracking_number
-    path = os.path.join(base_dir, date_obs, obj + '_' + req)
-    prop = block.proposal.code
-    if not glob(os.path.join(base_dir, date_obs, prop+'_*'+req+'*.tar.gz')):
-        date_obs = str(int(date_obs)-1)
-        path = os.path.join(base_dir, date_obs, obj + '_' + req)
+        req = block.request_number
+    path = os.path.join(date_obs, obj + '_' + req).lstrip('/')
+    prop = block.superblock.proposal.code
 
     return date_obs, obj, req, path, prop
 
+def find_spec_plots(path=None, obj=None, req=None, obs_num=None):
+
+    spec_files = None
+    if path and obj and obs_num:
+        if req:
+            if not obs_num.isdigit():
+                png_file = "{}/{}_{}_{}".format(path, obj, req, obs_num)
+            else:
+                png_file = "{}/{}_{}_spectra_{}.png".format(path, obj, req, obs_num)
+        else:
+            png_file = "{}/{}_spectra_{}.png".format(path, obj, obs_num)
+        spec_files = [png_file,]
+    return spec_files
 
 def display_spec(request, pk, obs_num):
     date_obs, obj, req, path, prop = find_spec(pk)
-    base_dir = os.path.join(settings.DATA_ROOT, date_obs)  # new base_dir for method
+    base_dir = str(date_obs)  # new base_dir for method
     logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date_obs, req, prop))
     logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
 
-    spec_files = glob(os.path.join(path, obj+"*"+"spectra"+"*"+obs_num+"*"+".png"))
+    spec_files = find_spec_plots(path, obj, req, obs_num)
+
     if spec_files:
         spec_file = spec_files[0]
-    else:
-        spec_file = ''
-    if not spec_file:
-        spec_file, spec_count = make_spec(date_obs, obj, req, base_dir, prop, obs_num)
-    if spec_file:
         logger.debug('Spectroscopy Plot: {}'.format(spec_file))
-        spec_plot = open(spec_file, 'rb').read()
+        spec_plot = default_storage.open(spec_file, 'rb').read()
         return HttpResponse(spec_plot, content_type="Image/png")
     else:
         return HttpResponse()
 
 
-def make_spec(date_obs, obj, req, base_dir, prop, obs_num):
-    """Creates plot of spectra data for spectra blocks
-       <pk>: pk of block (not superblock)
-    """
-    path = os.path.join(base_dir, obj + '_' + req)
-    filenames = glob(os.path.join(path, '*_2df_ex.fits'))  # checks for file in path
-    spectra_path = None
-    tar_path = unpack_path = None
-    obs_num = str(obs_num)
-    if filenames:
-        spectra_path = filenames[int(obs_num)-1]
-        spec_count = len(filenames)
+def display_calibspec(request, pk):
+    try:
+        calibsource = StaticSource.objects.get(pk=pk)
+    except StaticSource.DoesNotExist:
+        logger.debug("Source not found")
+        return HttpResponse()
+
+    base_dir = os.path.join('cdbs', 'ctiostan')  # new base_dir for method
+
+    obj = calibsource.name.lower().replace(' ', '').replace('-', '_').replace('+', '')
+    obs_num = '1'
+    spec_files = find_spec_plots(base_dir, obj, None, obs_num)
+    if spec_files:
+        spec_file = spec_files[0]
     else:
-        tar_files = glob(os.path.join(base_dir, prop+'_*'+req+'*.tar.gz'))  # if file not found, looks for tarball
-        if tar_files:
-            for tar in tar_files:
-                if req in tar:
-                    tar_path = tar
-                    unpack_path = os.path.join(base_dir, obj+'_'+req)
-            if not tar_path and not unpack_path:
-                logger.error("Could not find tarball for request: %s" % req)
-                return None, None
-            spec_files = unpack_tarball(tar_path, unpack_path)  # upacks tarball
-            spec_list = [spec for spec in spec_files if '_2df_ex.fits' in spec]
-            spectra_path = spec_list[int(obs_num)-1]
-            spec_count = len(spec_list)
+        spec_file = ''
+    if not spec_file:
+        spec_file = "f" + obj + ".dat"
+        if default_storage.exists(os.path.join(base_dir, spec_file)):
+            spec_file = get_spec_plot(base_dir, spec_file, obs_num, log=True)
         else:
-            logger.error("Could not find spectrum data or tarball for request: %s" % req)
-            return None, None
-
-    if spectra_path:  # plots spectra
-        spec_file = os.path.basename(spectra_path)
-        spec_dir = os.path.dirname(spectra_path)
-        spec_plot = get_spec_plot(spec_dir, spec_file, obs_num)
-        return spec_plot, spec_count
-
+            logger.warning("No flux file found for " + spec_file)
+            spec_file = ''
+    if spec_file and default_storage.exists(spec_file):
+        logger.debug('Spectroscopy Plot: {}'.format(spec_file))
+        spec_plot = default_storage.open(spec_file, 'rb').read()
+        return HttpResponse(spec_plot, content_type="Image/png")
     else:
-        logger.error("Could not find spectrum data for request: %s" % req)
-        return None, None
+        logger.debug("No spectrum found for: ", spec_file)
+        import base64
+        # Return a 1x1 pixel gif in the case of no spectra file
+        PIXEL_GIF_DATA = base64.b64decode(
+            b"R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7")
+
+        return HttpResponse(PIXEL_GIF_DATA, content_type='image/gif')
 
 
 class PlotSpec(View):  # make loging required later
@@ -2922,78 +3061,17 @@ def display_movie(request, pk):
     logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date_obs, req, prop))
     logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
 
-    movie_files = glob(os.path.join(path, "Guide_frames", obj.replace(' ', '_') + "*guidemovie.gif"))
+    movie_files = find_spec_plots(os.path.join(path, "Guide_frames"), obj.replace(' ', '_'), req, "guidemovie.gif")
     if movie_files:
         movie_file = movie_files[0]
     else:
-        movie_file = ''
-    if not movie_file:
         movie_file = make_movie(date_obs, obj, req, base_dir, prop)
     if movie_file:
         logger.debug('MOVIE FILE: {}'.format(movie_file))
-        movie = open(movie_file, 'rb').read()
+        movie = default_storage.open(movie_file, 'rb').read()
         return HttpResponse(movie, content_type="Image/gif")
     else:
         return HttpResponse()
-
-
-def make_movie(date_obs, obj, req, base_dir, prop):
-    """Make gif of FLOYDS Guide Frames given the following:
-    <date_obs> -- Day of Observation (i.e. '20180910')
-    <obj> -- object name w/ spaces replaced by underscores (i.e. '144332' or '2018_EB1')
-    <req> -- Request number of the observation
-    <base_dir> -- Directory of data. This will be the DATA_ROOT/date_obs/
-    <prop> -- Proposal ID
-    NOTE: Can take a while to load if building new gif with many frames.
-    """
-
-    path = os.path.join(base_dir, obj + '_' + req)
-    logger.info('BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(obj, date_obs, req, prop))
-    logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
-
-    filename = glob(os.path.join(path, '*2df_ex.fits'))  # checking if unpacked
-    frames = []
-    if not filename:
-        unpack_path = os.path.join(base_dir, obj+'_'+req)
-        tar_files = glob(os.path.join(base_dir, prop+"*"+req+"*.tar.gz"))  # if file not found, looks for tarball
-        if tar_files:
-            tar_path = tar_files[0]
-            logger.info("Unpacking 1st tar")
-            spec_files = unpack_tarball(tar_path, unpack_path)  # unpacks tarball
-            filename = spec_files[0]
-        else:
-            logger.error("Could not find tarball for request: %s" % req)
-            return None
-    if filename:  # If first order tarball is unpacked
-        movie_dir = glob(os.path.join(path, "Guide_frames"))
-        if movie_dir:  # if 2nd order tarball is unpacked
-            frames = glob(os.path.join(movie_dir[0], "*.fits.fz"))
-            if not frames:
-                frames = glob(os.path.join(movie_dir[0], "*.fits"))
-        else:  # unpack 2nd tarball
-            tarintar = glob(os.path.join(path, "*.tar"))
-            if tarintar:
-                unpack_path = os.path.join(path, 'Guide_frames')
-                guide_files = unpack_tarball(tarintar[0], unpack_path)  # unpacks tar
-                logger.info("Unpacking tar in tar")
-                for file in guide_files:
-                    if '.fits.fz' in file:
-                        frames.append(file)
-            else:
-                logger.error("Could not find Guide Frames or Guide Frame tarball for request: %s" % req)
-                return None
-    else:
-        logger.error("Could not find spectrum data or tarball for request: %s" % req)
-        return None
-    if frames is not None and len(frames) > 0:
-        logger.debug("#Frames = {}".format(len(frames)))
-        logger.info("Making Movie...")
-        movie_file = make_gif(frames)
-        return movie_file
-    else:
-        logger.error("There must be at least 1 frame to make guide movie.")
-        return None
-
 
 class GuideMovie(View):
     # make logging required later
@@ -3193,10 +3271,10 @@ def find_best_flux_standard(sitecode, utc_date=None, flux_standards=None, debug=
     return close_standard, close_params
 
 
-def find_best_solar_analog(ra_rad, dec_rad, min_sep=4.0*15.0, solar_standards=None, debug=False):
+def find_best_solar_analog(ra_rad, dec_rad, site, ha_sep=4.0, solar_standards=None, debug=False):
     """Finds the "best" solar analog (closest to the passed RA, Dec (in radians,
-    from e.g. compute_ephem)) within [min_sep] degrees (defaults to 60deg (=4 hours
-    of HA).
+    from e.g. compute_ephem)) within [ha_sep] hours (defaults to 4 hours
+    of HA) that can be seen from the appropriate site.
     If a match is found, the StaticSource object is returned along with a
     dictionary of parameters, including the additional 'seperation_deg' with the
     minimum separation found (in degrees)"""
@@ -3206,13 +3284,23 @@ def find_best_solar_analog(ra_rad, dec_rad, min_sep=4.0*15.0, solar_standards=No
     if solar_standards is None:
         solar_standards = StaticSource.objects.filter(source_type=StaticSource.SOLAR_STANDARD)
 
+    if site == 'E10':
+        dec_lim = [-90.0, 20.0]
+    elif site == 'F65':
+        dec_lim = [-20.0, 90.0]
+    else:
+        dec_lim = [-20.0, 20.0]
+
+    min_sep = None
     for standard in solar_standards:
+        ra_diff = abs(standard.ra - degrees(ra_rad)) / 15
         sep = degrees(S.sla_dsep(radians(standard.ra), radians(standard.dec), ra_rad, dec_rad))
         if debug:
-            print("%10s %1d %011.7f %+11.7f %7.3f %7.3f (%10s)" % (standard.name.replace("Landolt ", "") , standard.source_type, standard.ra, standard.dec, sep, min_sep, close_standard))
-        if sep < min_sep:
-            min_sep = sep
-            close_standard = standard
+            print("%10s %1d %011.7f %+11.7f %7.3f %7.3f (%10s)" % (standard.name.replace("Landolt ", "") , standard.source_type, standard.ra, standard.dec, sep, ha_sep, close_standard))
+        if ra_diff < ha_sep and (dec_lim[0] <= standard.dec <= dec_lim[1]):
+            if min_sep is None or sep < min_sep:
+                min_sep = sep
+                close_standard = standard
     if close_standard is not None:
         close_params = model_to_dict(close_standard)
         close_params['separation_deg'] = min_sep

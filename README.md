@@ -4,6 +4,48 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 3.0.2
+Minor bug fixes
+
+### 3.0.1
+Minor bug fixes
+
+### 3.0.0
+Support for deploying into Amazon Web Services (AWS) using Kubernetes and Helm
+
+### 2.8.9
+Add support for the ELP Dome B 1-meter telescope.
+
+### 2.8.6
+Change URL scheme for new prefix
+
+### 2.8.5
+Modifications to scheme on refitting elements.
+
+### 2.8.4
+Add support for displaying log Flux plots of spectrophotometric standards with CTIO/HST/Oke spectra. Add view to show best calibration sources for the telescopes for the current night.
+
+### 2.8.3
+* Enhance guide movie creation.
+* Allow for graceful failure when outside web endpoints are down.
+
+### 2.8.2
+Add ADES PSV export and MPC1992 and ADES PSV download options.
+
+### 2.8.1
+Several small updates and fixes
+* Improve tests for updated firefox
+* Remove gaps between RADAR target ingest & orbit update
+* Add error handling for spectroscopy when a 2m isn't available
+
+### 2.8.0
+Improve Static Source Scheduling
+* Add features to Calib Scheduling Confirmation page to bring it up to date with standard version.
+* Add warning for potentially saturated targets.
+* Add Tests for Calib scheduling confirmation page
+* Add Solar Analog details to NEO scheduling confirmation page
+* Make exposure time calculator for Spectroscopic observations of Solar Analogs
+
 ### 2.7.13
 Calculate frame midpoint based on UTSTOP rather than EXPTIME. Improve ingestion of new objects and record and output discovery asterisks.
 
