@@ -13,7 +13,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 
-from subprocess import check_output
+from subprocess import check_output, CalledProcessError
 from datetime import datetime
 from glob import glob
 import tempfile
@@ -89,7 +89,7 @@ class FunctionalTest(StaticLiveServerTestCase):
         self.calib, created = StaticSource.objects.get_or_create(pk=1, **params)
 
     def insert_test_comet(self):
-        params = { 
+        params = {
                      'provisional_name': 'P10MsRM',
                      'provisional_packed': None,
                      'name': 'C/2006 F4',
@@ -276,7 +276,7 @@ class FunctionalTest(StaticLiveServerTestCase):
             # independent...
             try:
                 version = check_output(["firefox", "--version"], universal_newlines=True)
-            except (OSError, subprocess.CalledProcessError):
+            except (OSError, CalledProcessError):
                 version = None
             if version and 'Firefox' in version:
                 version_num = version.rstrip().split(' ')[-1]
