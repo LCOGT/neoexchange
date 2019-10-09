@@ -217,7 +217,11 @@
                                                                         {% endif %}
 								</tbody>
 							</table>
-							<h5 class="section-title">Spectroscopy Details <a href="{% url 'plotspec' body.pk %}" style="font-size: small;">(Plots)</a> </h5>
+							<h5 class="section-title">Spectroscopy Details
+                                {% if spectra %}
+                                <a href="{% url 'plotspec' body.pk %}" style="font-size: small;">(Plots)</a>
+                                {% endif %}
+                            </h5>
 							<table class="keyvalue-table" id="id_spectralinfo">
 								<tbody>
 								    {% for s in spectra %}
