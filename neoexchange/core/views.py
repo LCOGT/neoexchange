@@ -3247,8 +3247,44 @@ def lin_vis_plot(body):
     plot.ray('x', 'y', angle=pi/2, length=rad, color="red", alpha=.75, line_width=2, source=source)
     plot.ray('x', 'y', angle=0, length=rad, color="gray", alpha=.75, source=source)
     plot.ray('x', 'y', angle=pi, length=rad, color="gray", alpha=.75, source=source)
+    plot.ray('x', 'y', angle=3*pi/2, length=rad, color="gray", alpha=.75, source=source)
     plot.wedge('x', 'y', radius=rad * .25, start_angle=0, end_angle=2 * pi, color="white", source=source)
     plot.arc('x', 'y', radius=rad * .25, start_angle=0, end_angle=2 * pi, color="black", line_width=2, source=source)
+
+    # Build Help
+    plot.wedge(x='x', y='y', radius=rad, start_angle=0.001, end_angle=2 * pi, color="white", source=source, alpha=0.75, legend="?", visible=False)
+    plot.text([new_x[0]], [rad+.1], text=["Now"], text_color='red', text_align='center', text_font_size='10px', legend="?", visible=False)
+    plot.ray([new_x[0]], [0], angle=pi/2, length=rad, color="red", alpha=.75, line_width=2, legend="?", visible=False)
+    plot.wedge(x=vis['x'][1], y=vis['y'][1], radius=rad, start_angle=vis["obj_rise"][1], end_angle=vis["obj_set"][1], fill_color=vis["colors"][1], line_color="black", legend="?", visible=False)
+    plot.text(vis['x'][1], [rad+.1], text=["Target"], text_color=vis["colors"][1], text_align='center', text_font_size='10px', legend="?", visible=False)
+    plot.wedge(x=vis['x'][2], y=vis['y'][2], radius=rad * .75, start_angle=vis["sun_rise"][2], end_angle=vis["sun_set"][2], fill_color="khaki", line_color="black", legend="?", visible=False)
+    plot.text(vis['x'][2], [rad+.1], text=["Sun"], text_color="darkgoldenrod", text_align='center', text_font_size='10px', legend="?", visible=False)
+    plot.wedge(x=vis['x'][3], y=vis['y'][3], radius=rad * .5, start_angle=vis["moon_rise"][3], end_angle=vis["moon_set"][3], fill_color="gray", line_color="black", fill_alpha=vis['moon_phase'][3], legend="?", visible=False)
+    plot.text(vis['x'][3], [rad + .1], text=["Moon"], text_color="dimgray", text_align='center', text_font_size='10px', legend="?", visible=False)
+    plot.arc(vis['x'][4], vis['y'][4], radius=rad * .6, start_angle=0, end_angle=pi, color="black", line_width=2, direction='clock', legend="?", visible=False)
+    plot.triangle(vis['x'][4]-(rad * .58), vis['y'][4], color="black", size=6, legend="?", visible=False)
+    plot.text(vis['x'][4], [rad+.1], text=["Time"], text_color='black', text_align='center', text_font_size='10px', legend="?", visible=False)
+    plot.ray(vis['x'][5], [0], angle=0, length=rad, color="black", legend="?", visible=False)
+    plot.ray(vis['x'][5], [0], angle=pi, length=rad, color="black", legend="?", visible=False)
+    plot.ray(vis['x'][5], [0], angle=3*pi/2, length=rad, color="black", legend="?", visible=False)
+    plot.text(vis['x'][5], [rad+.1], text=["6 hours"], text_color='black', text_align='center', text_font_size='10px', legend="?", visible=False)
+    plot.wedge('x', 'y', radius=rad * .25, start_angle=0, end_angle=2 * pi, color="white", source=source, legend="?", visible=False)
+    plot.arc('x', 'y', radius=rad * .25, start_angle=0, end_angle=2 * pi, color="black", line_width=1, source=source, legend="?", visible=False)
+    plot.line([vis['x'][0]-rad, vis['x'][0]-rad, vis['x'][0]], [-rad -.1, -rad-.22, -rad-.22], color="navy", legend="?", visible=False)
+    plot.line([vis['x'][2], vis['x'][2]+rad, vis['x'][2]+rad], [-rad -.22, -rad-.22, -rad-.1], color="navy", legend="?", visible=False)
+    plot.text(vis['x'][1], [-rad-.3], text=["Southern Sites"], text_color='navy', text_align='center', text_font_size='10px', legend="?", visible=False)
+    plot.line([vis['x'][3]-rad, vis['x'][3]-rad, vis['x'][3]], [-rad -.1, -rad-.22, -rad-.22], color="maroon", legend="?", visible=False)
+    plot.line([vis['x'][5], vis['x'][5]+rad, vis['x'][5]+rad], [-rad -.22, -rad-.22, -rad-.1], color="maroon", legend="?", visible=False)
+    plot.text(vis['x'][4], [-rad-.3], text=["Northern Sites"], text_color='maroon', text_align='center', text_font_size='10px', legend="?", visible=False)
+
+    plot.legend.click_policy = 'hide'
+    plot.legend.background_fill_alpha = 0
+    plot.legend.border_line_alpha = 0
+    plot.legend.margin = 0
+    plot.legend.glyph_width = 0
+    plot.legend.glyph_height = 0
+    plot.legend.label_width = 0
+    plot.legend.label_height = 0
 
     script, div = components(plot, CDN)
 
