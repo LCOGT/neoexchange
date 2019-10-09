@@ -645,7 +645,7 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
     ha_lowlimit, ha_hilimit, alt_limit = get_mountlimits(site_code)
     ha_limit = max(abs(ha_lowlimit), abs(ha_hilimit)) / 15.0
     should_skip_daylight = True
-    if len(site_code) >= 1 and site_code[0] = '-':
+    if len(site_code) >= 1 and site_code[0] == '-':
         # Radar site
         should_skip_daylight = False
     try:
