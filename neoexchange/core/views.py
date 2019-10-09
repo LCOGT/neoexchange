@@ -3131,7 +3131,7 @@ def datetime_to_radians(ref_time, input_time):
     return t_diff_radians
 
 
-def build_visibility_source(body, site_list, radius, site_code, color_list, d, alt_limit, step_size):
+def build_visibility_source(body, site_list, site_code, color_list, d, alt_limit, step_size):
     body_elements = model_to_dict(body)
     vis = {"x": [],
            "y": [],
@@ -3144,9 +3144,6 @@ def build_visibility_source(body, site_list, radius, site_code, color_list, d, a
            "moon_phase": [],
            "colors": [],
            "site": [],
-           "radius": [],
-           "inner": [],
-           "outer": [],
            "obj_vis": [],
            "max_alt": []
            }
@@ -3164,9 +3161,6 @@ def build_visibility_source(body, site_list, radius, site_code, color_list, d, a
         obj_set = datetime_to_radians(d, set_time)
         dark_and_up_time, max_alt = get_visibility(None, None, d + timedelta(hours=12), site, step_size, alt_limit, False, body_elements)
 
-        radius += 0.1
-        if i == 3:
-            radius += 0.05
         vis["x"].append(0)
         vis["y"].append(0)
         vis["sun_rise"].append(datetime_to_radians(d, dark_end))
@@ -3178,9 +3172,6 @@ def build_visibility_source(body, site_list, radius, site_code, color_list, d, a
         vis["moon_phase"].append(moon_phase)
         vis["colors"].append(color_list[i])
         vis["site"].append(site_code[i])
-        vis["radius"].append(radius)
-        vis["inner"].append(radius - 0.05)
-        vis["outer"].append(radius + 0.05)
         vis["obj_vis"].append(dark_and_up_time)
         vis["max_alt"].append(max_alt)
 
@@ -3189,14 +3180,13 @@ def build_visibility_source(body, site_list, radius, site_code, color_list, d, a
 
 def lin_vis_plot(body):
 
-    radius = .25
     site_code = ['LSC', 'CPT', 'COJ', 'ELP', 'TFN', 'OGG']
     site_list = ['W85', 'K91', 'Q63', 'V37', 'Z21', 'F65']
     color_list = ['darkviolet', 'forestgreen', 'saddlebrown', 'coral', 'darkslategray', 'dodgerblue']
     d = datetime.utcnow()
     step_size = '30 m'
     alt_limit = 30
-    vis, emp = build_visibility_source(body, site_list, radius, site_code, color_list, d, alt_limit, step_size)
+    vis, emp = build_visibility_source(body, site_list, site_code, color_list, d, alt_limit, step_size)
 
     new_x = []
     for i, l in enumerate(site_code):
@@ -3253,28 +3243,41 @@ def lin_vis_plot(body):
 
     # Build Help
     plot.wedge(x='x', y='y', radius=rad, start_angle=0.001, end_angle=2 * pi, color="white", source=source, alpha=0.75, legend="?", visible=False)
-    plot.text([new_x[0]], [rad+.1], text=["Now"], text_color='red', text_align='center', text_font_size='10px', legend="?", visible=False)
-    plot.ray([new_x[0]], [0], angle=pi/2, length=rad, color="red", alpha=.75, line_width=2, legend="?", visible=False)
-    plot.wedge(x=vis['x'][1], y=vis['y'][1], radius=rad, start_angle=vis["obj_rise"][1], end_angle=vis["obj_set"][1], fill_color=vis["colors"][1], line_color="black", legend="?", visible=False)
-    plot.text(vis['x'][1], [rad+.1], text=["Target"], text_color=vis["colors"][1], text_align='center', text_font_size='10px', legend="?", visible=False)
-    plot.wedge(x=vis['x'][2], y=vis['y'][2], radius=rad * .75, start_angle=vis["sun_rise"][2], end_angle=vis["sun_set"][2], fill_color="khaki", line_color="black", legend="?", visible=False)
-    plot.text(vis['x'][2], [rad+.1], text=["Sun"], text_color="darkgoldenrod", text_align='center', text_font_size='10px', legend="?", visible=False)
-    plot.wedge(x=vis['x'][3], y=vis['y'][3], radius=rad * .5, start_angle=vis["moon_rise"][3], end_angle=vis["moon_set"][3], fill_color="gray", line_color="black", fill_alpha=vis['moon_phase'][3], legend="?", visible=False)
-    plot.text(vis['x'][3], [rad + .1], text=["Moon"], text_color="dimgray", text_align='center', text_font_size='10px', legend="?", visible=False)
-    plot.arc(vis['x'][4], vis['y'][4], radius=rad * .6, start_angle=0, end_angle=pi, color="black", line_width=2, direction='clock', legend="?", visible=False)
-    plot.triangle(vis['x'][4]-(rad * .58), vis['y'][4], color="black", size=6, legend="?", visible=False)
-    plot.text(vis['x'][4], [rad+.1], text=["Time"], text_color='black', text_align='center', text_font_size='10px', legend="?", visible=False)
-    plot.ray(vis['x'][5], [0], angle=0, length=rad, color="black", legend="?", visible=False)
-    plot.ray(vis['x'][5], [0], angle=pi, length=rad, color="black", legend="?", visible=False)
-    plot.ray(vis['x'][5], [0], angle=3*pi/2, length=rad, color="black", legend="?", visible=False)
-    plot.text(vis['x'][5], [rad+.1], text=["6 hours"], text_color='black', text_align='center', text_font_size='10px', legend="?", visible=False)
+
+    up_index = [i for i, x in enumerate(vis['x']) if vis["obj_rise"][i] != 0 and vis["obj_set"][i] != 0][0]
+    if not up_index:
+        up_index = 1
+    plot.wedge(x=vis['x'][up_index], y=vis['y'][up_index], radius=rad, start_angle=vis["obj_rise"][up_index], end_angle=vis["obj_set"][up_index], fill_color=vis["colors"][up_index], line_color="black", legend="?", visible=False)
+    plot.text(vis['x'][up_index], [rad + .1], text=["Target"], text_color=vis["colors"][up_index], text_align='center', text_font_size='10px', legend="?", visible=False)
+    n = list(range(len(site_list)))
+    n.remove(up_index)
+
+    plot.text([vis['x'][n[0]]], [rad+.1], text=["Now"], text_color='red', text_align='center', text_font_size='10px', legend="?", visible=False)
+    plot.ray([vis['x'][n[0]]], [0], angle=pi/2, length=rad, color="red", alpha=.75, line_width=2, legend="?", visible=False)
+
+    plot.wedge(x=vis['x'][n[1]], y=vis['y'][n[1]], radius=rad * .75, start_angle=vis["sun_rise"][n[1]], end_angle=vis["sun_set"][n[1]], fill_color="khaki", line_color="black", legend="?", visible=False)
+    plot.text(vis['x'][n[1]], [rad+.1], text=["Sun"], text_color="darkgoldenrod", text_align='center', text_font_size='10px', legend="?", visible=False)
+
+    plot.wedge(x=vis['x'][n[2]], y=vis['y'][n[2]], radius=rad * .5, start_angle=vis["moon_rise"][n[2]], end_angle=vis["moon_set"][n[2]], fill_color="gray", line_color="black", fill_alpha=vis['moon_phase'][n[2]], legend="?", visible=False)
+    plot.text(vis['x'][n[2]], [rad + .1], text=["Moon"], text_color="dimgray", text_align='center', text_font_size='10px', legend="?", visible=False)
+
+    plot.arc(vis['x'][n[3]], vis['y'][n[3]], radius=rad * .6, start_angle=0, end_angle=pi, color="black", line_width=2, direction='clock', legend="?", visible=False)
+    plot.triangle(vis['x'][n[3]]-(rad * .58), vis['y'][n[3]], color="black", size=6, legend="?", visible=False)
+    plot.text(vis['x'][n[3]], [rad+.1], text=["Time"], text_color='black', text_align='center', text_font_size='10px', legend="?", visible=False)
+
+    plot.ray(vis['x'][n[4]], [0], angle=0, length=rad, color="black", legend="?", visible=False)
+    plot.ray(vis['x'][n[4]], [0], angle=pi, length=rad, color="black", legend="?", visible=False)
+    plot.ray(vis['x'][n[4]], [0], angle=3*pi/2, length=rad, color="black", legend="?", visible=False)
+    plot.text(vis['x'][n[4]], [rad+.1], text=["6 hours"], text_color='black', text_align='center', text_font_size='10px', legend="?", visible=False)
+
     plot.wedge('x', 'y', radius=rad * .25, start_angle=0, end_angle=2 * pi, color="white", source=source, legend="?", visible=False)
     plot.arc('x', 'y', radius=rad * .25, start_angle=0, end_angle=2 * pi, color="black", line_width=1, source=source, legend="?", visible=False)
-    plot.line([vis['x'][0]-rad, vis['x'][0]-rad, vis['x'][0]], [-rad -.1, -rad-.22, -rad-.22], color="navy", legend="?", visible=False)
-    plot.line([vis['x'][2], vis['x'][2]+rad, vis['x'][2]+rad], [-rad -.22, -rad-.22, -rad-.1], color="navy", legend="?", visible=False)
+
+    plot.line([vis['x'][0]-rad, vis['x'][0]-rad, vis['x'][0]], [-rad - .1, -rad - .22, -rad - .22], color="navy", legend="?", visible=False)
+    plot.line([vis['x'][2], vis['x'][2]+rad, vis['x'][2]+rad], [-rad - .22, -rad - .22, -rad - .1], color="navy", legend="?", visible=False)
     plot.text(vis['x'][1], [-rad-.3], text=["Southern Sites"], text_color='navy', text_align='center', text_font_size='10px', legend="?", visible=False)
-    plot.line([vis['x'][3]-rad, vis['x'][3]-rad, vis['x'][3]], [-rad -.1, -rad-.22, -rad-.22], color="maroon", legend="?", visible=False)
-    plot.line([vis['x'][5], vis['x'][5]+rad, vis['x'][5]+rad], [-rad -.22, -rad-.22, -rad-.1], color="maroon", legend="?", visible=False)
+    plot.line([vis['x'][3]-rad, vis['x'][3]-rad, vis['x'][3]], [-rad - .1, -rad - .22, -rad - .22], color="maroon", legend="?", visible=False)
+    plot.line([vis['x'][5], vis['x'][5]+rad, vis['x'][5]+rad], [-rad - .22, -rad - .22, -rad - .1], color="maroon", legend="?", visible=False)
     plot.text(vis['x'][4], [-rad-.3], text=["Northern Sites"], text_color='maroon', text_align='center', text_font_size='10px', legend="?", visible=False)
 
     plot.legend.click_policy = 'hide'
