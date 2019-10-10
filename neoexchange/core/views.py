@@ -82,6 +82,7 @@ from photometrics.gf_movie import make_gif
 from core.frames import create_frame, ingest_frames, measurements_from_block
 from core.mpc_submit import email_report_to_mpc
 from core.archive_subs import lco_api_call
+from core.utils import search
 from photometrics.SA_scatter import readSources, genGalPlane, plotScatter, \
     plotFormat
 
@@ -2943,7 +2944,6 @@ def find_spec(pk):
     """find directory of spectra for a certain block
     NOTE: Currently will only pull first spectrum of a superblock
     """
-    base_dir = settings.DATA_ROOT
     try:
         # block = list(Block.objects.filter(superblock=list(SuperBlock.objects.filter(pk=pk))[0]))[0]
         block = Block.objects.get(pk=pk)
@@ -2964,11 +2964,13 @@ def find_spec(pk):
         req = data['REQNUM'].lstrip("0")
     else:
         req = block.request_number
-    path = os.path.join(base_dir, date_obs, obj + '_' + req)
+    path = os.path.join(date_obs, obj + '_' + req)
     prop = block.superblock.proposal.code
-    if not glob(os.path.join(base_dir, date_obs, prop+'_*'+req+'*.tar.gz')):
+    matchpattern = "{}_.*.{}.tar.gz".format(prop,req)
+    files = search(path, matchpattern)
+    if not files:
         date_obs = str(int(date_obs)-1)
-        path = os.path.join(base_dir, date_obs, obj + '_' + req)
+        path = os.path.join(date_obs, obj + '_' + req)
 
     return date_obs, obj, req, path, prop
 
@@ -2981,7 +2983,7 @@ def find_analog(date_obs, site):
     time_diff = []
     for b in analog_blocks:
         d_out, obj, req, path, prop = find_spec(b.id)
-        filenames = glob(os.path.join(path, '*_2df_ex.fits'))
+        filenames = search(path, matchpattern='.*_2df_ex.fits', latest=False)
         for fn in filenames:
             star_list.append(fn)
             time_diff.append(abs(date_obs - b.when_observed))
@@ -2993,7 +2995,9 @@ def find_analog(date_obs, site):
 
 def plot_floyds_spec(block, obs_num=1):
     date_obs, obj, req, path, prop = find_spec(block.id)
-    filenames = glob(os.path.join(path, '*_2df_ex.fits'))
+    filenames = search(path, matchpattern='.*_2df_ex.fits', latest=False)
+    filenames = [os.path.join(path,f) for f in filenames]
+    print(filenames)
     analogs = find_analog(block.when_observed, block.site)
 
     raw_label, raw_spec, ast_wav = spectrum_plot(filenames[obs_num-1])
@@ -3300,9 +3304,10 @@ def display_spec(request, pk, obs_num):
     logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date_obs, req, prop))
     logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
 
-    spec_files = glob(os.path.join(path, obj+"*"+"spectra"+"*"+obs_num+"*"+".png"))
+    matchpattern = "{}.*.spectra.*.{}.*.png".format(obj, obs_num)
+    spec_files = search(path, matchpattern)
     if spec_files:
-        spec_file = spec_files[0]
+        spec_file = next(spec_files)
     else:
         spec_file = ''
     if not spec_file:
@@ -3321,13 +3326,14 @@ def display_calibspec(request, pk):
     except StaticSource.DoesNotExist:
         return HttpResponse()
 
-    base_dir = os.path.join(settings.DATA_ROOT, 'cdbs', 'ctiostan')  # new base_dir for method
+    base_dir = os.path.join('cdbs', 'ctiostan')  # new base_dir for method
 
     obj = calibsource.name.lower().replace(' ', '').replace('-', '_').replace('+', '')
     obs_num = '1'
-    spec_files = glob(os.path.join(base_dir, obj+"*"+"spectra"+"*"+obs_num+"*"+".png"))
+    matchpattern = "{}.*.spectra.*.{}.*.png".format(obj, obs_num)
+    spec_files = search(base_dir, matchpattern)
     if spec_files:
-        spec_file = spec_files[0]
+        spec_file = next(spec_files)
     else:
         spec_file = ''
     if not spec_file:

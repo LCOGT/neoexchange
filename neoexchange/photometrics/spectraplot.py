@@ -405,7 +405,7 @@ def plot_spectra(x, y, y_units, x_units, ax, title, ref=0, norm=0, log=False):
 
 def get_spec_plot(path, spectra, obs_num, log=False):
 
-    if not os.path.exists(os.path.join(path, spectra)):
+    if not default_storage.exists(name=os.path.join(path, spectra)):
         logger.error("Could not open: " + os.path.join(path, spectra))
         return None
 
