@@ -16,7 +16,7 @@ GNU General Public License for more details.
 from .base import FunctionalTest
 import os
 from selenium import webdriver
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from core.models import Body, Frame, SourceMeasurement
 
 class MeasurementsPageTests(FunctionalTest):

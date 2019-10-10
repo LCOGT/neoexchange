@@ -17,7 +17,7 @@ from datetime import datetime, timedelta, date
 from math import floor, ceil, degrees, radians, pi, acos
 from astropy import units as u
 import matplotlib
-matplotlib.use('TkAgg')
+#matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import json
 import urllib
@@ -29,7 +29,8 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
-from django.core.urlresolvers import reverse, reverse_lazy
+from django.core.files.storage import default_storage
+from django.urls import reverse, reverse_lazy
 from django.shortcuts import render, redirect
 from django.views.generic import DetailView, ListView, FormView, TemplateView, View
 from django.views.generic.edit import FormView
@@ -77,8 +78,8 @@ from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     determine_filenames, increment_red_level, update_ldac_catalog_wcs, FITSHdrException
 from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
-from photometrics.spectraplot import get_spec_plot
-from photometrics.gf_movie import make_gif
+from photometrics.spectraplot import get_spec_plot, make_spec
+from photometrics.gf_movie import make_gif, make_movie
 from core.frames import create_frame, ingest_frames, measurements_from_block
 from core.mpc_submit import email_report_to_mpc
 from core.archive_subs import lco_api_call
@@ -1620,7 +1621,8 @@ def check_for_block(form_data, params, new_body):
 
     # XXX Code smell, duplicated from sources_subs.configure_defaults()
     site_list = { 'V37' : 'ELP' ,
-                  'K92' : 'CPT' ,
+                  'V39' : 'ELP',
+                  'K92' : 'CPT',
                   'K93' : 'CPT',
                   'Q63' : 'COJ',
                   'W85' : 'LSC',
@@ -1631,8 +1633,7 @@ def check_for_block(form_data, params, new_body):
                   'Z21' : 'TFN',
                   'Q58' : 'COJ',
                   'Q59' : 'COJ',
-                  'T04' : 'OGG',
-                  'V99' : 'ELP'
+                  'T04' : 'OGG'
                   }
 
     try:
@@ -1690,6 +1691,14 @@ def record_block(tracking_number, params, form_data, target):
             # cut off json UTC timezone remnant
             no_timezone_blk_start = params['request_windows'][i][0]['start'][:-1]
             no_timezone_blk_end = params['request_windows'][i][0]['end'][:-1]
+            try:
+                dt_notz_blk_start = datetime.strptime(no_timezone_blk_start, '%Y-%m-%dT%H:%M:%S')
+            except ValueError:
+                dt_notz_blk_start = datetime.strptime(no_timezone_blk_start, '%Y-%m-%dT%H:%M:%S.%f')
+            try:
+                dt_notz_blk_end = datetime.strptime(no_timezone_blk_end, '%Y-%m-%dT%H:%M:%S')
+            except ValueError:
+                dt_notz_blk_end = datetime.strptime(no_timezone_blk_end, '%Y-%m-%dT%H:%M:%S.%f')
             obstype = Block.OPT_IMAGING
             if params.get('spectroscopy', False):
                 obstype = Block.OPT_SPECTRA
@@ -1715,8 +1724,8 @@ def record_block(tracking_number, params, form_data, target):
                              'telclass' : params['pondtelescope'].lower(),
                              'site'     : site,
                              'obstype'  : obstype,
-                             'block_start' : datetime.strptime(no_timezone_blk_start, '%Y-%m-%dT%H:%M:%S'),
-                             'block_end'   : datetime.strptime(no_timezone_blk_end, '%Y-%m-%dT%H:%M:%S'),
+                             'block_start' : dt_notz_blk_start,
+                             'block_end'   : dt_notz_blk_end,
                              'request_number'  : request,
                              'num_exposures'   : params['exp_count'],
                              'exp_length'      : params['exp_time'],
@@ -2071,6 +2080,9 @@ def update_crossids(astobj, dbg=False):
                     logger.warning("Found %d SuperBlocks and %d Blocks referring to this Body; not deleting" % (num_sblocks, num_blocks))
             else:
                 logger.info("Origin of Body is MPC, not removing")
+                # Set to inactive to prevent candidates hanging around
+                del_body.active = False
+                del_body.save()
 
     # Determine what type of new object it is and whether to keep it active
     kwargs = clean_crossid(astobj, dbg)
@@ -2974,6 +2986,19 @@ def find_spec(pk):
 
     return date_obs, obj, req, path, prop
 
+def find_spec_plots(path=None, obj=None, req=None, obs_num=None):
+
+    spec_files = None
+    if path and obj and obs_num:
+        if req:
+            if not obs_num.isdigit():
+                png_file = "{}/{}_{}_{}".format(path, obj, req, obs_num)
+            else:
+                png_file = "{}/{}_{}_spectra_{}.png".format(path, obj, req, obs_num)
+        else:
+            png_file = "{}/{}_spectra_{}.png".format(path, obj, obs_num)
+        spec_files = [png_file,]
+    return spec_files
 
 def find_analog(date_obs, site):
 
@@ -3300,7 +3325,7 @@ def lin_vis_plot(body):
 
 def display_spec(request, pk, obs_num):
     date_obs, obj, req, path, prop = find_spec(pk)
-    base_dir = os.path.join(settings.DATA_ROOT, date_obs)  # new base_dir for method
+    base_dir = str(date_obs)  # new base_dir for method
     logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date_obs, req, prop))
     logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
 
@@ -3314,7 +3339,7 @@ def display_spec(request, pk, obs_num):
         spec_file, spec_count = make_spec(date_obs, obj, req, base_dir, prop, obs_num)
     if spec_file:
         logger.debug('Spectroscopy Plot: {}'.format(spec_file))
-        spec_plot = open(spec_file, 'rb').read()
+        spec_plot = default_storage.open(spec_file, 'rb').read()
         return HttpResponse(spec_plot, content_type="Image/png")
     else:
         return HttpResponse()
@@ -3324,6 +3349,7 @@ def display_calibspec(request, pk):
     try:
         calibsource = StaticSource.objects.get(pk=pk)
     except StaticSource.DoesNotExist:
+        logger.debug("Source not found")
         return HttpResponse()
 
     base_dir = os.path.join('cdbs', 'ctiostan')  # new base_dir for method
@@ -3338,16 +3364,17 @@ def display_calibspec(request, pk):
         spec_file = ''
     if not spec_file:
         spec_file = "f" + obj + ".dat"
-        if os.path.exists(os.path.join(base_dir, spec_file)):
+        if default_storage.exists(os.path.join(base_dir, spec_file)):
             spec_file = get_spec_plot(base_dir, spec_file, obs_num, log=True)
         else:
             logger.warning("No flux file found for " + spec_file)
             spec_file = ''
-    if spec_file:
+    if spec_file and default_storage.exists(spec_file):
         logger.debug('Spectroscopy Plot: {}'.format(spec_file))
-        spec_plot = open(spec_file, 'rb').read()
+        spec_plot = default_storage.open(spec_file, 'rb').read()
         return HttpResponse(spec_plot, content_type="Image/png")
     else:
+        logger.debug("No spectrum found for: ", spec_file)
         import base64
         # Return a 1x1 pixel gif in the case of no spectra file
         PIXEL_GIF_DATA = base64.b64decode(
@@ -3431,78 +3458,17 @@ def display_movie(request, pk):
     logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date_obs, req, prop))
     logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
 
-    movie_files = glob(os.path.join(path, "Guide_frames", obj.replace(' ', '_') + "*guidemovie.gif"))
+    movie_files = find_spec_plots(os.path.join(path, "Guide_frames"), obj.replace(' ', '_'), req, "guidemovie.gif")
     if movie_files:
         movie_file = movie_files[0]
     else:
-        movie_file = ''
-    if not movie_file:
         movie_file = make_movie(date_obs, obj, req, base_dir, prop)
     if movie_file:
         logger.debug('MOVIE FILE: {}'.format(movie_file))
-        movie = open(movie_file, 'rb').read()
+        movie = default_storage.open(movie_file, 'rb').read()
         return HttpResponse(movie, content_type="Image/gif")
     else:
         return HttpResponse()
-
-
-def make_movie(date_obs, obj, req, base_dir, prop):
-    """Make gif of FLOYDS Guide Frames given the following:
-    <date_obs> -- Day of Observation (i.e. '20180910')
-    <obj> -- object name w/ spaces replaced by underscores (i.e. '144332' or '2018_EB1')
-    <req> -- Request number of the observation
-    <base_dir> -- Directory of data. This will be the DATA_ROOT/date_obs/
-    <prop> -- Proposal ID
-    NOTE: Can take a while to load if building new gif with many frames.
-    """
-
-    path = os.path.join(base_dir, obj + '_' + req)
-    logger.info('BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(obj, date_obs, req, prop))
-    logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
-
-    filename = glob(os.path.join(path, '*2df_ex.fits'))  # checking if unpacked
-    frames = []
-    if not filename:
-        unpack_path = os.path.join(base_dir, obj+'_'+req)
-        tar_files = glob(os.path.join(base_dir, prop+"*"+req+"*.tar.gz"))  # if file not found, looks for tarball
-        if tar_files:
-            tar_path = tar_files[0]
-            logger.info("Unpacking 1st tar")
-            spec_files = unpack_tarball(tar_path, unpack_path)  # unpacks tarball
-            filename = spec_files[0]
-        else:
-            logger.error("Could not find tarball for request: %s" % req)
-            return None
-    if filename:  # If first order tarball is unpacked
-        movie_dir = glob(os.path.join(path, "Guide_frames"))
-        if movie_dir:  # if 2nd order tarball is unpacked
-            frames = glob(os.path.join(movie_dir[0], "*.fits.fz"))
-            if not frames:
-                frames = glob(os.path.join(movie_dir[0], "*.fits"))
-        else:  # unpack 2nd tarball
-            tarintar = glob(os.path.join(path, "*.tar"))
-            if tarintar:
-                unpack_path = os.path.join(path, 'Guide_frames')
-                guide_files = unpack_tarball(tarintar[0], unpack_path)  # unpacks tar
-                logger.info("Unpacking tar in tar")
-                for file in guide_files:
-                    if '.fits.fz' in file:
-                        frames.append(file)
-            else:
-                logger.error("Could not find Guide Frames or Guide Frame tarball for request: %s" % req)
-                return None
-    else:
-        logger.error("Could not find spectrum data or tarball for request: %s" % req)
-        return None
-    if frames is not None and len(frames) > 0:
-        logger.debug("#Frames = {}".format(len(frames)))
-        logger.info("Making Movie...")
-        movie_file = make_gif(frames)
-        return movie_file
-    else:
-        logger.error("There must be at least 1 frame to make guide movie.")
-        return None
-
 
 class GuideMovie(View):
     # make logging required later

@@ -4,6 +4,18 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 3.0.2
+Minor bug fixes
+
+### 3.0.1
+Minor bug fixes
+
+### 3.0.0
+Support for deploying into Amazon Web Services (AWS) using Kubernetes and Helm
+
+### 2.8.9
+Add support for the ELP Dome B 1-meter telescope.
+
 ### 2.8.6
 Change URL scheme for new prefix
 

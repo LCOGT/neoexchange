@@ -302,7 +302,7 @@ class TestReadSpectra(TestCase):
         self.assertEqual(exp_y_len, len(smoothedy))
 
 class TestGetSpecPlot(TestCase):
-    
+
     def setUp(self):
         files_to_copy = ['fhr9087.dat', 'test_fits.fits', 'aaareadme.ctio', ]
         self.spectradir  = os.path.abspath(os.path.join('photometrics', 'tests', 'test_spectra'))
@@ -342,48 +342,49 @@ class TestGetSpecPlot(TestCase):
         self.assertEqual(expected_save_file, save_file)
 
     def test_fits_1(self):
+        with self.settings(MEDIA_ROOT=self.test_dir):
 
-        obs_num = '1'
-        expected_save_file = os.path.join(self.test_dir, '398188_1598411_spectra_' + obs_num + '.png')
+            obs_num = '1'
+            expected_save_file = os.path.join(self.test_dir, '398188_1598411_spectra_' + obs_num + '.png')
 
-        save_file = get_spec_plot(self.test_dir, self.fitsfile, obs_num)
+            save_file = get_spec_plot(self.test_dir, self.fitsfile, obs_num, basepath=self.test_dir)
 
-        self.assertEqual(expected_save_file, save_file)
+            self.assertEqual(expected_save_file, save_file)
 
     def test_fits_2(self):
+        with self.settings(MEDIA_ROOT=self.test_dir):
+            obs_num = '2'
+            expected_save_file = os.path.join(self.test_dir, '398188_1598411_spectra_' + obs_num + '.png')
 
-        obs_num = '2'
-        expected_save_file = os.path.join(self.test_dir, '398188_1598411_spectra_' + obs_num + '.png')
+            save_file = get_spec_plot(self.test_dir, self.fitsfile, obs_num, basepath=self.test_dir)
 
-        save_file = get_spec_plot(self.test_dir, self.fitsfile, obs_num)
-
-        self.assertEqual(expected_save_file, save_file)
+            self.assertEqual(expected_save_file, save_file)
 
     def test_ctiostan_1(self):
+        with self.settings(MEDIA_ROOT=self.test_dir):
+            obs_num = 1
+            expected_save_file = os.path.join(self.test_dir, 'hr9087_spectra_' + str(obs_num) + '.png')
 
-        obs_num = 1
-        expected_save_file = os.path.join(self.test_dir, 'hr9087_spectra_' + str(obs_num) + '.png')
+            save_file = get_spec_plot(self.test_dir, self.datfile, obs_num, basepath=self.test_dir)
 
-        save_file = get_spec_plot(self.test_dir, self.datfile, obs_num)
-
-        self.assertEqual(expected_save_file, save_file)
+            self.assertEqual(expected_save_file, save_file)
 
     def test_ctiostan_2(self):
+        with self.settings(MEDIA_ROOT=self.test_dir):
+            obs_num = 2
+            expected_save_file = os.path.join(self.test_dir, 'hr9087_spectra_' + str(obs_num) + '.png')
 
-        obs_num = 2
-        expected_save_file = os.path.join(self.test_dir, 'hr9087_spectra_' + str(obs_num) + '.png')
+            save_file = get_spec_plot(self.test_dir, self.datfile, obs_num, basepath=self.test_dir)
 
-        save_file = get_spec_plot(self.test_dir, self.datfile, obs_num)
-
-        self.assertEqual(expected_save_file, save_file)
+            self.assertEqual(expected_save_file, save_file)
 
     def test_ctiostan_feige(self):
+        with self.settings(MEDIA_ROOT=self.test_dir):
+            obs_num = 1
+            expected_save_file = os.path.join(self.test_dir, 'feige999_spectra_' + str(obs_num) + '.png')
 
-        obs_num = 1
-        expected_save_file = os.path.join(self.test_dir, 'feige999_spectra_' + str(obs_num) + '.png')
+            # Create symlink to existing CTIO standard file as a Feige standard
+            os.symlink(os.path.join(self.test_dir, self.datfile), os.path.join(self.test_dir, 'ffeige999.dat'))
+            save_file = get_spec_plot(self.test_dir, 'ffeige999.dat', obs_num, basepath=self.test_dir)
 
-        # Create symlink to existing CTIO standard file as a Feige standard
-        os.symlink(os.path.join(self.test_dir, self.datfile), os.path.join(self.test_dir, 'ffeige999.dat'))
-        save_file = get_spec_plot(self.test_dir, 'ffeige999.dat', obs_num)
-
-        self.assertEqual(expected_save_file, save_file)
+            self.assertEqual(expected_save_file, save_file)

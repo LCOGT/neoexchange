@@ -16,7 +16,7 @@ GNU General Public License for more details.
 from .base import FunctionalTest
 from datetime import datetime
 from django.test import TestCase, override_settings
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.contrib.auth.models import User
 from selenium import webdriver
 from mock import patch

@@ -83,11 +83,13 @@ mpc_positions.txt
 *.json
 environ.dat
 
+
 ingest/static/ingest/css/admin.css
 ingest/static/ingest/css/dashboard.css
 neoexchange/neox/local_settings.py
 *.db
 docker-compose.yml
+core/fixtures/
 
 *.clk
 *rinex*

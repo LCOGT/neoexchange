@@ -128,7 +128,9 @@ def create_frame(params, block=None, frameid=None):
     if params.get('photometric_catalog', None):
         frame.photometric_catalog = params.get('photometric_catalog')
     if params.get('L1FWHM', None):
-        frame.fwhm = params.get('L1FWHM')
+        fwhm = params.get('L1FWHM')
+        if fwhm != 'NaN':
+            frame.fwhm = fwhm
     frame.save()
 
     if frame_created:

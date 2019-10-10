@@ -119,6 +119,13 @@ class TestPackedToNormal(TestCase):
 
         self.assertEqual(expected, result)
 
+    def test_ast_Z4030(self):
+        expected = '354030'
+
+        result = packed_to_normal('Z4030')
+
+        self.assertEqual(expected, result)
+
     def test_ast_a0001(self):
         expected = '360001'
 
@@ -997,6 +1004,30 @@ class TestSubmitBlockToScheduler(TestCase):
         self.assertEqual(user_request['requests'][0]['location']['telescope_class'], '1m0')
         self.assertEqual(user_request['requests'][0]['location']['site'], 'lsc')
 
+    def test_1m_sinistro_elp_domb_userrequest(self):
+
+        site_code = 'V39'
+        utc_date = datetime.now()+timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 18,
+                    'exp_time' : 50.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'group_id' : self.body_elements['current_name'] + '_' + 'ELP' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson',
+                    'filter_pattern' : 'w'
+                 }
+
+        user_request = make_userrequest(self.body_elements, params)
+
+        self.assertEqual(user_request['submitter'], 'bsimpson')
+        self.assertEqual(user_request['requests'][0]['location']['telescope'], '1m0a')
+        self.assertEqual(user_request['requests'][0]['location']['observatory'], 'domb')
+        self.assertEqual(user_request['requests'][0]['location']['telescope_class'], '1m0')
+        self.assertEqual(user_request['requests'][0]['location']['site'], 'elp')
+
     def test_make_too_userrequest(self):
         body_elements = model_to_dict(self.body)
         body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
@@ -1677,6 +1708,15 @@ class TestPreviousNEOCPParser(TestCase):
     def test_remove_parentheses(self):
         items = [' (455176) = A10c9Hv (Feb. 15.79 UT)\n']
         expected = [u'A10c9Hv', '455176', '', '(Feb. 15.79 UT)']
+
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+    def test_was_not_confirmed_with_MPEC(self):
+        items = [' P10QYyp was not confirmed (Sept. 4.34 UT)   [see ',
+            BeautifulSoup('<a href="/mpec/K19/K19R24.html"><i>MPEC</i> 2019-R24</a>', "html.parser").a,
+            ']\n']
+        expected = [u'P10QYyp', 'wasnotconfirmed', '', u'(Sept. 4.34 UT)']
 
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
@@ -3648,6 +3688,25 @@ class TestConfigureDefaults(TestCase):
               'exp_count': 42,
               'exp_time': 42.0,
               'site_code': 'V37',
+              }
+
+        expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
+                            'pondtelescope': '1m0',
+                            'observatory': '',
+                            'exp_type': 'EXPOSE',
+                            'site': 'ELP',
+                            'binning': 1}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
+    def test_elp_num2_sinistro(self):
+        test_params = {
+              'exp_count': 42,
+              'exp_time': 42.0,
+              'site_code': 'V39',
               }
 
         expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
