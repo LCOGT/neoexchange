@@ -217,9 +217,9 @@ def read_spectra(path, spectra):
 
     elif spectra_file.endswith('.dat'):  # assuming origin is ESO spec standards
         data = open(spectra_file)  # read in data
-        filename = glob(os.path.join(path, '*readme.ctio'))
-        if filename:
-            ctio = filename[0]
+        filename = search(path, '*.readme.ctio')
+        try:
+            ctio = next(filename)
             ctiodata = open(ctio)
             x_data = np.array([])
             y_data = np.array([])
@@ -233,7 +233,7 @@ def read_spectra(path, spectra):
             y_units, y_factor = get_y_units(list(ctiodata.readlines()))
             # Strip off the 'f' for flux and extension
             obj_name = spectra[1:].replace('.dat', '')
-        else:
+        except StopIteration:
             raise ImportError("Could not find ctio readme file")
 
     elif spectra_file.endswith('.txt'):
@@ -448,13 +448,13 @@ def get_spec_plot(path, spectra, obs_num, basepath="", log=False):
 
     return fig_file.name
 
-def make_spec(date_obs, obj, req, indir, basepath, prop, obs_num):
+def make_spec(date_obs, obj, req, base_dir, prop, obs_num):
     """Creates plot of spectra data for spectra blocks
        <pk>: pk of block (not superblock)
     """
-    path = os.path.join(indir, obj + '_' + req)
-    filenames = glob(os.path.join(path, '*_2df_ex.fits'))  # checks for file in path
-    # filenames = [os.path.join(path,f) for f in default_storage.listdir(path)[1] if f.endswith("*_2df_ex.fits")]
+    path = obj + '_' + req
+    filenames = search(path, matchpattern='.*_2df_ex.fits')
+    filenames = [os.path.join(path,f) for f in filenames]
     spectra_path = None
     tar_path = unpack_path = None
     obs_num = str(obs_num)
@@ -462,27 +462,27 @@ def make_spec(date_obs, obj, req, indir, basepath, prop, obs_num):
         spectra_path = filenames[int(obs_num)-1]
         spec_count = len(filenames)
     else:
-        tar_files = glob(os.path.join(indir, prop+'_*'+req+'*.tar.gz'))  # if file not found, looks for tarball
-        if tar_files:
-            for tar in tar_files:
-                if req in tar:
-                    tar_path = tar
-                    unpack_path = os.path.join(indir, obj+'_'+req)
-            if not tar_path and not unpack_path:
-                logger.error("Could not find tarball for request: %s" % req)
-                return None, None
-            spec_files = unpack_tarball(tar_path, unpack_path)  # upacks tarball
-            spec_list = [spec for spec in spec_files if '_2df_ex.fits' in spec]
-            spectra_path = spec_list[int(obs_num)-1]
-            spec_count = len(spec_list)
-        else:
+        matchpattern="{}_.*.{}.*.tar.gz".format(prop, req)
+        tar_files = search(path, matchpattern)
+        for tar in tar_files:
+            if req in tar:
+                tar_path = tar
+                unpack_path = obj+'_'+req
+        if not tar_path and not unpack_path:
+            logger.error("Could not find tarball for request: %s" % req)
+            return None, None
+        spec_files = unpack_tarball(tar_path, unpack_path)  # upacks tarball
+        spec_list = [spec for spec in spec_files if '_2df_ex.fits' in spec]
+        spectra_path = spec_list[int(obs_num)-1]
+        spec_count = len(spec_list)
+        if not spectra_path:
             logger.error("Could not find spectrum data or tarball for request: %s" % req)
             return None, None
 
     if spectra_path:  # plots spectra
         spec_file = os.path.basename(spectra_path)
         spec_dir = os.path.dirname(spectra_path)
-        spec_plot = get_spec_plot(spec_dir, spec_file, obs_num, basepath=basepath)
+        spec_plot = get_spec_plot(spec_dir, spec_file, obs_num)
         return spec_plot, spec_count
 
     else:

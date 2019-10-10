@@ -2980,7 +2980,9 @@ def find_spec(pk):
     prop = block.superblock.proposal.code
     matchpattern = "{}_.*.{}.tar.gz".format(prop,req)
     files = search(path, matchpattern)
-    if not files:
+    try:
+        _ = next(files)
+    except StopIteration:
         date_obs = str(int(date_obs)-1)
         path = os.path.join(date_obs, obj + '_' + req)
 
@@ -3022,7 +3024,6 @@ def plot_floyds_spec(block, obs_num=1):
     date_obs, obj, req, path, prop = find_spec(block.id)
     filenames = search(path, matchpattern='.*_2df_ex.fits', latest=False)
     filenames = [os.path.join(path,f) for f in filenames]
-    print(filenames)
     analogs = find_analog(block.when_observed, block.site)
 
     raw_label, raw_spec, ast_wav = spectrum_plot(filenames[obs_num-1])
@@ -3330,12 +3331,10 @@ def display_spec(request, pk, obs_num):
     logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
 
     matchpattern = "{}.*.spectra.*.{}.*.png".format(obj, obs_num)
-    spec_files = search(path, matchpattern)
-    if spec_files:
+    spec_files = search(base_dir, matchpattern)
+    try:
         spec_file = next(spec_files)
-    else:
-        spec_file = ''
-    if not spec_file:
+    except StopIteration:
         spec_file, spec_count = make_spec(date_obs, obj, req, base_dir, prop, obs_num)
     if spec_file:
         logger.debug('Spectroscopy Plot: {}'.format(spec_file))
@@ -3358,11 +3357,9 @@ def display_calibspec(request, pk):
     obs_num = '1'
     matchpattern = "{}.*.spectra.*.{}.*.png".format(obj, obs_num)
     spec_files = search(base_dir, matchpattern)
-    if spec_files:
+    try:
         spec_file = next(spec_files)
-    else:
-        spec_file = ''
-    if not spec_file:
+    except StopIteration:
         spec_file = "f" + obj + ".dat"
         if default_storage.exists(os.path.join(base_dir, spec_file)):
             spec_file = get_spec_plot(base_dir, spec_file, obs_num, log=True)
@@ -3381,48 +3378,6 @@ def display_calibspec(request, pk):
             b"R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7")
 
         return HttpResponse(PIXEL_GIF_DATA, content_type='image/gif')
-
-
-def make_spec(date_obs, obj, req, base_dir, prop, obs_num):
-    """Creates plot of spectra data for spectra blocks
-       <pk>: pk of block (not superblock)
-    """
-    path = obj + '_' + req
-    filenames = search(path, matchpattern='.*_2df_ex.fits')
-    filenames = [os.path.join(path,f) for f in filenames]
-    spectra_path = None
-    tar_path = unpack_path = None
-    obs_num = str(obs_num)
-    if filenames:
-        spectra_path = filenames[int(obs_num)-1]
-        spec_count = len(filenames)
-    else:
-        matchpattern="{}_.*.{}.*.tar.gz".format(prop, req)
-        tar_files = search(path, matchpattern)
-        for tar in tar_files:
-            if req in tar:
-                tar_path = tar
-                unpack_path = obj+'_'+req
-        if not tar_path and not unpack_path:
-            logger.error("Could not find tarball for request: %s" % req)
-            return None, None
-        spec_files = unpack_tarball(tar_path, unpack_path)  # upacks tarball
-        spec_list = [spec for spec in spec_files if '_2df_ex.fits' in spec]
-        spectra_path = spec_list[int(obs_num)-1]
-        spec_count = len(spec_list)
-        if not spectra_path:
-            logger.error("Could not find spectrum data or tarball for request: %s" % req)
-            return None, None
-
-    if spectra_path:  # plots spectra
-        spec_file = os.path.basename(spectra_path)
-        spec_dir = os.path.dirname(spectra_path)
-        spec_plot = get_spec_plot(spec_dir, spec_file, obs_num)
-        return spec_plot, spec_count
-
-    else:
-        logger.error("Could not find spectrum data for request: %s" % req)
-        return None, None
 
 
 class BlockSpec(View):  # make loging required later
