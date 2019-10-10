@@ -3387,8 +3387,9 @@ def make_spec(date_obs, obj, req, base_dir, prop, obs_num):
     """Creates plot of spectra data for spectra blocks
        <pk>: pk of block (not superblock)
     """
-    path = os.path.join(base_dir, obj + '_' + req)
-    filenames = glob(os.path.join(path, '*_2df_ex.fits'))  # checks for file in path
+    path = obj + '_' + req
+    filenames = search(path, matchpattern='.*_2df_ex.fits')
+    filenames = [os.path.join(path,f) for f in filenames]
     spectra_path = None
     tar_path = unpack_path = None
     obs_num = str(obs_num)
@@ -3396,20 +3397,20 @@ def make_spec(date_obs, obj, req, base_dir, prop, obs_num):
         spectra_path = filenames[int(obs_num)-1]
         spec_count = len(filenames)
     else:
-        tar_files = glob(os.path.join(base_dir, prop+'_*'+req+'*.tar.gz'))  # if file not found, looks for tarball
-        if tar_files:
-            for tar in tar_files:
-                if req in tar:
-                    tar_path = tar
-                    unpack_path = os.path.join(base_dir, obj+'_'+req)
-            if not tar_path and not unpack_path:
-                logger.error("Could not find tarball for request: %s" % req)
-                return None, None
-            spec_files = unpack_tarball(tar_path, unpack_path)  # upacks tarball
-            spec_list = [spec for spec in spec_files if '_2df_ex.fits' in spec]
-            spectra_path = spec_list[int(obs_num)-1]
-            spec_count = len(spec_list)
-        else:
+        matchpattern="{}_.*.{}.*.tar.gz".format(prop, req)
+        tar_files = search(path, matchpattern)
+        for tar in tar_files:
+            if req in tar:
+                tar_path = tar
+                unpack_path = obj+'_'+req
+        if not tar_path and not unpack_path:
+            logger.error("Could not find tarball for request: %s" % req)
+            return None, None
+        spec_files = unpack_tarball(tar_path, unpack_path)  # upacks tarball
+        spec_list = [spec for spec in spec_files if '_2df_ex.fits' in spec]
+        spectra_path = spec_list[int(obs_num)-1]
+        spec_count = len(spec_list)
+        if not spectra_path:
             logger.error("Could not find spectrum data or tarball for request: %s" % req)
             return None, None
 
