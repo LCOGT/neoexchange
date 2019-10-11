@@ -448,6 +448,7 @@ def get_spec_plot(path, spectra, obs_num, basepath="", log=False):
 
     return fig_file.name
 
+
 def make_spec(date_obs, obj, req, base_dir, prop, obs_num):
     """Creates plot of spectra data for spectra blocks
        <pk>: pk of block (not superblock)

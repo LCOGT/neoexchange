@@ -2956,6 +2956,7 @@ def find_spec(pk):
     """find directory of spectra for a certain block
     NOTE: Currently will only pull first spectrum of a superblock
     """
+
     try:
         # block = list(Block.objects.filter(superblock=list(SuperBlock.objects.filter(pk=pk))[0]))[0]
         block = Block.objects.get(pk=pk)
@@ -2978,15 +2979,18 @@ def find_spec(pk):
         req = block.request_number
     path = os.path.join(date_obs, obj + '_' + req)
     prop = block.superblock.proposal.code
-    matchpattern = "{}_.*.{}.tar.gz".format(prop,req)
+    matchpattern = "{}_.*.{}.tar.gz".format(prop, req)
     files = search(path, matchpattern)
     try:
         _ = next(files)
     except StopIteration:
-        date_obs = str(int(date_obs)-1)
-        path = os.path.join(date_obs, obj + '_' + req)
+        pass
+        # date_obs = str(int(date_obs)-1)
+        # path = os.path.join(date_obs, obj + '_' + req)
 
+    path = settings.DATA_ROOT+path
     return date_obs, obj, req, path, prop
+
 
 def find_spec_plots(path=None, obj=None, req=None, obs_num=None):
 
@@ -3002,6 +3006,7 @@ def find_spec_plots(path=None, obj=None, req=None, obs_num=None):
         spec_files = [png_file,]
     return spec_files
 
+
 def find_analog(date_obs, site):
 
     analog_blocks = Block.objects.filter(obstype=3, site=site, when_observed__lte=date_obs+timedelta(days=10), when_observed__gte=date_obs-timedelta(days=10))
@@ -3011,6 +3016,7 @@ def find_analog(date_obs, site):
     for b in analog_blocks:
         d_out, obj, req, path, prop = find_spec(b.id)
         filenames = search(path, matchpattern='.*_2df_ex.fits', latest=False)
+        filenames = [os.path.join(path, f) for f in filenames]
         for fn in filenames:
             star_list.append(fn)
             time_diff.append(abs(date_obs - b.when_observed))
@@ -3023,8 +3029,9 @@ def find_analog(date_obs, site):
 def plot_floyds_spec(block, obs_num=1):
     date_obs, obj, req, path, prop = find_spec(block.id)
     filenames = search(path, matchpattern='.*_2df_ex.fits', latest=False)
-    filenames = [os.path.join(path,f) for f in filenames]
+    filenames = [os.path.join(path, f) for f in filenames]
     analogs = find_analog(block.when_observed, block.site)
+
 
     raw_label, raw_spec, ast_wav = spectrum_plot(filenames[obs_num-1])
     analog_label, analog_spec, star_wav = spectrum_plot(analogs[0], offset=2)
