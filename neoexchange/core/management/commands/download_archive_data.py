@@ -29,6 +29,7 @@ from core.archive_subs import archive_login, get_frame_data, get_catalog_data, \
 from core.views import determine_active_proposals
 from photometrics.spectraplot import make_spec
 from photometrics.gf_movie import make_movie
+from core.utils import search
 
 
 class Command(BaseCommand):
@@ -106,6 +107,11 @@ class Command(BaseCommand):
                         tar_path = make_data_dir(out_path, frame)
                         movie_file = make_movie(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, out_path, frame['PROPID'])
                         spec_plot, spec_count = make_spec(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, out_path, frame['PROPID'], 1)
+                        if settings.USE_S3:
+                            filenames = search(tar_path, matchpattern='.*_2df_ex.fits', latest=False)
+                            if filenames:
+                                for filename in filenames:
+                                    save_to_default(filename, tar_path)
                         if spec_count > 1:
                             for obs in range(2, spec_count+1):
                                 spec_plot, spec_count = make_spec(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, out_path, frame['PROPID'], obs)
