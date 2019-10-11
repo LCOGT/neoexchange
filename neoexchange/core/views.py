@@ -2981,10 +2981,10 @@ def find_spec(pk):
     prop = block.superblock.proposal.code
     matchpattern = "{}_.*.{}.tar.gz".format(prop, req)
     files = search(path, matchpattern)
-    try:
-        _ = next(files)
-    except StopIteration:
-        pass
+    # try:
+    #     _ = next(files)
+    # except StopIteration:
+    #     pass
         # date_obs = str(int(date_obs)-1)
         # path = os.path.join(date_obs, obj + '_' + req)
 
@@ -3016,6 +3016,8 @@ def find_analog(date_obs, site):
     for b in analog_blocks:
         d_out, obj, req, path, prop = find_spec(b.id)
         filenames = search(path, matchpattern='.*_2df_ex.fits', latest=False)
+        if filenames is False:
+            continue
         filenames = [os.path.join(path, f) for f in filenames]
         for fn in filenames:
             star_list.append(fn)
@@ -3029,9 +3031,10 @@ def find_analog(date_obs, site):
 def plot_floyds_spec(block, obs_num=1):
     date_obs, obj, req, path, prop = find_spec(block.id)
     filenames = search(path, matchpattern='.*_2df_ex.fits', latest=False)
+    if filenames is False:
+        return '', {"raw_spec": ''}
     filenames = [os.path.join(path, f) for f in filenames]
     analogs = find_analog(block.when_observed, block.site)
-
 
     raw_label, raw_spec, ast_wav = spectrum_plot(filenames[obs_num-1])
     analog_label, analog_spec, star_wav = spectrum_plot(analogs[0], offset=2)
@@ -3094,7 +3097,7 @@ def spec_plot(data_spec, analog_data, reflec=False):
         plot.yaxis.axis_label = 'Relative Spectra (Normalized at 5500 Å)'
         spec_plots["raw_spec"] = plot
 
-    if (data_spec != analog_data and analog_data) or reflec:
+    if reflec or (data_spec['label'] != analog_data['label'] and analog_data):
         if not reflec:
             plot.line(analog_data['wav'], analog_data['spec'], color="firebrick", legend=analog_data['label'],
                       muted=True, muted_alpha=0.25, muted_color="firebrick")

@@ -52,7 +52,11 @@
         {% endif %}
     {% endfor %}
 {% else %}
-Floyds Data
+    {% if raw_div %}
+        Floyds Data
+    {% else %}
+        Cannot find data. :(
+    {% endif %}
 {% endif %}
 </div>
 {% endblock %}
