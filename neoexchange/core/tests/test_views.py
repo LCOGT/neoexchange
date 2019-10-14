@@ -6469,11 +6469,6 @@ class TestFindSpecPlots(TestCase):
 
         self.assertEqual(None, spec_files)
 
-    def test_local_data_no_data(self):
-        spec_files = find_spec_plots(settings.DATA_ROOT, '1999KW4', '1234', '1')
-
-        self.assertEqual([], spec_files)
-
     def test_local_data_1plot(self):
         base_dir = os.path.join(self.day_dir, '1999KW4_1234')
         expected_files = [os.path.join(base_dir, '1999KW4_1234_spectra_1.png'),]
@@ -6502,6 +6497,7 @@ class TestFindSpecPlots(TestCase):
         spec_files = find_spec_plots(base_dir, '1999KW4', '1234', 'guidemovie.gif')
 
         self.assertEqual(expected_files, spec_files)
+
     def test_S3_1plot(self):
         settings.USE_S3 = True
         settings.DATA_ROOT = ''

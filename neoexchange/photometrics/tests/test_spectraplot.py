@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 # Disable anything below CRITICAL level
 logging.disable(logging.CRITICAL)
 
+
 class TestReadSpectra(TestCase):
 
     def setUp(self):
@@ -300,6 +301,7 @@ class TestReadSpectra(TestCase):
 
         self.assertEqual(exp_x_len, len(smoothedx))
         self.assertEqual(exp_y_len, len(smoothedy))
+
 
 class TestGetSpecPlot(TestCase):
 

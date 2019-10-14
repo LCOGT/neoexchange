@@ -2979,16 +2979,15 @@ def find_spec(pk):
         req = block.request_number
     path = os.path.join(date_obs, obj + '_' + req)
     prop = block.superblock.proposal.code
-    matchpattern = "{}_.*.{}.tar.gz".format(prop, req)
-    files = search(path, matchpattern)
+    # matchpattern = "{}_.*.{}.tar.gz".format(prop, req)
+    # files = search(path, matchpattern)
     # try:
     #     _ = next(files)
     # except StopIteration:
     #     pass
-        # date_obs = str(int(date_obs)-1)
-        # path = os.path.join(date_obs, obj + '_' + req)
+    #     date_obs = str(int(date_obs)-1)
+    #     path = os.path.join(date_obs, obj + '_' + req)
 
-    path = settings.DATA_ROOT+path
     return date_obs, obj, req, path, prop
 
 
@@ -3003,7 +3002,7 @@ def find_spec_plots(path=None, obj=None, req=None, obs_num=None):
                 png_file = "{}/{}_{}_spectra_{}.png".format(path, obj, req, obs_num)
         else:
             png_file = "{}/{}_spectra_{}.png".format(path, obj, obs_num)
-        spec_files = [png_file,]
+        spec_files = [png_file]
     return spec_files
 
 

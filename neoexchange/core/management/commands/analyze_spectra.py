@@ -15,6 +15,7 @@ GNU General Public License for more details.
 
 from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
+from django.core.files.storage import default_storage
 from astropy.io import fits
 from astropy.wcs import WCS
 import urllib
@@ -129,10 +130,11 @@ def smooth(x, window_len=11, window='hanning'):
 
 
 def pull_data_from_spectrum(spectra):
+    file = default_storage.open(spectra)
     try:
-        hdul = fits.open(spectra)
+        hdul = fits.open(file)
     except FileNotFoundError:
-        print("Cannot find file {}".format(spectra))
+        print("Cannot find file {}".format(file))
         return None, None, None
 
     data = hdul[0].data

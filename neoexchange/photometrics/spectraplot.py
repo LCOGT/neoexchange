@@ -31,6 +31,7 @@ import warnings
 import re
 
 from django.core.files.storage import default_storage
+from core.utils import search
 
 from photometrics.external_codes import unpack_tarball
 
@@ -217,10 +218,10 @@ def read_spectra(path, spectra):
 
     elif spectra_file.endswith('.dat'):  # assuming origin is ESO spec standards
         data = open(spectra_file)  # read in data
-        filename = search(path, '*.readme.ctio')
+        filename = search(path, '.*.readme.ctio')
         try:
             ctio = next(filename)
-            ctiodata = open(ctio)
+            ctiodata = default_storage.open(ctio, 'r').readlines()
             x_data = np.array([])
             y_data = np.array([])
             flux_error = np.array([])
@@ -230,7 +231,7 @@ def read_spectra(path, spectra):
                 flux_error = np.append(flux_error, np.nan)
 
             x_units = get_x_units(x_data)
-            y_units, y_factor = get_y_units(list(ctiodata.readlines()))
+            y_units, y_factor = get_y_units(ctiodata)
             # Strip off the 'f' for flux and extension
             obj_name = spectra[1:].replace('.dat', '')
         except StopIteration:

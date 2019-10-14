@@ -5,7 +5,7 @@ from django.core.files.storage import default_storage
 
 def search(base_dir, matchpattern, latest=False):
     try:
-        _, files = default_storage.listdir(path=base_dir)
+        _, files = default_storage.listdir(base_dir)
     except FileNotFoundError:
         return False
     if files:
