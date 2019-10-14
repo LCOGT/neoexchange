@@ -26,7 +26,7 @@
                 <img src="{% url 'visibility-plot' pk=body.pk plot_type='uncertainty' %}" id="id_uncertaintyplot">
                 <h5  class="section-title"><span class="">Hours Up</span></h5>
                 <img src="{% url 'visibility-plot' pk=body.pk plot_type='hoursup' %}" id="id_hoursupplot">
-                <img src="{% url 'visibility-plot' pk=body.pk plot_type='hoursup' site_code='F65' %}" id="id_hoursupplot">
-                <img src="{% url 'visibility-plot' pk=body.pk plot_type='hoursup' site_code='E10' %}" id="id_hoursupplot">
+                <img src="{% url 'visibility-plot-site' pk=body.pk plot_type='hoursup' site_code='F65' %}" id="id_hoursupplot">
+                <img src="{% url 'visibility-plot-site' pk=body.pk plot_type='hoursup' site_code='E10' %}" id="id_hoursupplot">
             </div>
 {% endblock %}
