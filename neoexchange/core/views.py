@@ -3254,7 +3254,7 @@ def lin_vis_plot(body):
             </div>
         """.format(emp[0][3])
 
-    hover = HoverTool(tooltips=TOOLTIPS, point_policy="follow_mouse", line_policy="none")
+    hover = HoverTool(tooltips=TOOLTIPS, point_policy="none", attachment='below', line_policy="none")
     plot = figure(toolbar_location=None, x_range=(-1.5, 1.5), y_range=(-.5, .5), tools=[hover], plot_width=300,
                   plot_height=75)
     plot.grid.visible = False
@@ -3262,7 +3262,7 @@ def lin_vis_plot(body):
     plot.axis.visible = False
 
     # base
-    plot.wedge(x='x', y='y', radius=rad, start_angle=0.001, end_angle=2 * pi, color="white", source=source)
+    plot.wedge(x='x', y='y', radius=rad, start_angle=0.001, end_angle=2 * pi, color="white", source=source, line_color="black", line_width=2)
     # object
     plot.wedge(x='x', y='y', radius=rad, start_angle="obj_rise", end_angle="obj_set", color="colors", line_color="black", source=source)
     # sun
@@ -3272,7 +3272,7 @@ def lin_vis_plot(body):
                fill_alpha='moon_phase', source=source)
 
     # Build Clock
-    plot.arc('x', 'y', radius=rad, start_angle=0, end_angle=2 * pi, color="black", line_width=2, source=source)
+    # plot.arc('x', 'y', radius=rad, start_angle=0, end_angle=2 * pi, color="black", line_width=2, source=source)
     plot.ray('x', 'y', angle=pi/2, length=rad, color="red", alpha=.75, line_width=2, source=source)
     plot.ray('x', 'y', angle=0, length=rad, color="gray", alpha=.75, source=source)
     plot.ray('x', 'y', angle=pi, length=rad, color="gray", alpha=.75, source=source)
@@ -3318,6 +3318,9 @@ def lin_vis_plot(body):
     plot.line([vis['x'][3]-rad, vis['x'][3]-rad, vis['x'][3]], [-rad - .1, -rad - .22, -rad - .22], color="maroon", legend="?", visible=False)
     plot.line([vis['x'][5], vis['x'][5]+rad, vis['x'][5]+rad], [-rad - .22, -rad - .22, -rad - .1], color="maroon", legend="?", visible=False)
     plot.text(vis['x'][4], [-rad-.3], text=["Northern Sites"], text_color='maroon', text_align='center', text_font_size='10px', legend="?", visible=False)
+
+    plot.wedge(x='x', y='y', radius=rad, start_angle=0.001, end_angle=2 * pi, color="white", source=source, alpha=0.01,
+               legend="?", visible=False)
 
     plot.legend.click_policy = 'hide'
     plot.legend.background_fill_alpha = 0
@@ -3434,6 +3437,7 @@ def display_movie(request, pk):
         return HttpResponse(movie, content_type="Image/gif")
     else:
         return HttpResponse()
+
 
 class GuideMovie(View):
     # make logging required later
