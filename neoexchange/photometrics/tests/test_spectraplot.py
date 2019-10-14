@@ -35,24 +35,48 @@ logging.disable(logging.CRITICAL)
 class TestReadSpectra(TestCase):
 
     def setUp(self):
-        self.fitsdir  = os.getcwd()+'/photometrics/tests/test_spectra/'
+
+        self.spectradir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_spectra'))
+
         self.fitsfile = 'test_fits.fits'
-        self.asciidir = os.getcwd()+'/photometrics/tests/test_spectra/'
-        self.asciifile= 'test_ascii.ascii'
-        self.txtdir   = os.getcwd()+'/photometrics/tests/test_spectra/'
-        self.txtfile  = 'a001981.4.txt'
-        self.datdir   = os.getcwd()+'/photometrics/tests/test_spectra/'
-        self.datfile  = 'fhr9087.dat'
+        self.asciifile = 'test_ascii.ascii'
+        self.txtfile = 'a001981.4.txt'
+        self.datfile = 'fhr9087.dat'
+
+        files_to_copy = [self.fitsfile, self.asciifile, self.txtfile, self.datfile, 'aaareadme.ctio']
 
         self.tolerance = 1
+
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+        for test_file in files_to_copy:
+            test_file_path = os.path.join(self.spectradir, test_file)
+            shutil.copy(test_file_path, self.test_dir)
+
+        self.remove = True
+        self.debug_print = False
+
+    def tearDown(self):
+        if self.remove:
+            try:
+                files_to_remove = glob(os.path.join(self.test_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.test_dir)
+            try:
+                os.rmdir(self.test_dir)
+                if self.debug_print:
+                    print("Removed", self.test_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.test_dir)
 
     def test_read_fits_x(self):
         exp_x = 3103.14013672
         exp_x_units = u.AA
         exp_x_len = 4560
 
-        x_data = read_spectra(self.fitsdir, self.fitsfile)[0].value
-        x_units = read_spectra(self.fitsdir, self.fitsfile)[3]
+        x_data = read_spectra(self.test_dir, self.fitsfile)[0].value
+        x_units = read_spectra(self.test_dir, self.fitsfile)[3]
 
         self.assertEqual(exp_x_len, len(x_data))
         self.assertAlmostEqual(exp_x, x_data[0], self.tolerance)
@@ -63,8 +87,8 @@ class TestReadSpectra(TestCase):
         exp_y_units = u.erg/(u.cm**2)/u.s/u.AA
         exp_y_len = 4560
 
-        y_data = read_spectra(self.fitsdir, self.fitsfile)[1].value
-        y_units = read_spectra(self.fitsdir, self.fitsfile)[4]
+        y_data = read_spectra(self.test_dir, self.fitsfile)[1].value
+        y_units = read_spectra(self.test_dir, self.fitsfile)[4]
 
         self.assertEqual(exp_y_len, len(y_data))
         self.assertAlmostEqual(exp_y, y_data[-1], self.tolerance)
@@ -73,7 +97,7 @@ class TestReadSpectra(TestCase):
     def test_read_fits_error(self):
         exp_y_err = 3.2439897
         exp_y_err_len = 4560
-        y_err = read_spectra(self.fitsdir, self.fitsfile)[2]
+        y_err = read_spectra(self.test_dir, self.fitsfile)[2]
 
         self.assertEqual(exp_y_err_len, len(y_err))
         self.assertAlmostEqual(exp_y_err, y_err[0], self.tolerance)
@@ -83,8 +107,8 @@ class TestReadSpectra(TestCase):
         exp_x_units = u.micron
         exp_x_len = 212
 
-        x_data = read_spectra(self.asciidir, self.asciifile)[0].value
-        x_units = read_spectra(self.asciidir, self.asciifile)[3]
+        x_data = read_spectra(self.test_dir, self.asciifile)[0].value
+        x_units = read_spectra(self.test_dir, self.asciifile)[3]
 
         self.assertEqual(exp_x_len, len(x_data))
         self.assertAlmostEqual(exp_x, x_data[0], self.tolerance)
@@ -95,8 +119,8 @@ class TestReadSpectra(TestCase):
         exp_y_units = u.dimensionless_unscaled
         exp_y_len = 212
 
-        y_data = read_spectra(self.asciidir, self.asciifile)[1].value
-        y_units = read_spectra(self.asciidir, self.asciifile)[4]
+        y_data = read_spectra(self.test_dir, self.asciifile)[1].value
+        y_units = read_spectra(self.test_dir, self.asciifile)[4]
 
         self.assertEqual(exp_y_len, len(y_data))
         self.assertAlmostEqual(exp_y, y_data[0], self.tolerance)
@@ -105,7 +129,7 @@ class TestReadSpectra(TestCase):
     def test_read_ascii_error(self):
         exp_y_err = 0.0116
         exp_y_err_len = 212
-        y_err = read_spectra(self.asciidir, self.asciifile)[2]
+        y_err = read_spectra(self.test_dir, self.asciifile)[2]
 
         self.assertEqual(exp_y_err_len, len(y_err))
         self.assertAlmostEqual(exp_y_err, y_err[0], self.tolerance)
@@ -115,8 +139,8 @@ class TestReadSpectra(TestCase):
         exp_x_units = u.micron
         exp_x_len = 257
 
-        x_data = read_spectra(self.txtdir, self.txtfile)[0].value
-        x_units = read_spectra(self.txtdir, self.txtfile)[3]
+        x_data = read_spectra(self.test_dir, self.txtfile)[0].value
+        x_units = read_spectra(self.test_dir, self.txtfile)[3]
 
         self.assertEqual(exp_x_len, len(x_data))
         self.assertAlmostEqual(exp_x, x_data[0], self.tolerance)
@@ -127,8 +151,8 @@ class TestReadSpectra(TestCase):
         exp_y_units = u.dimensionless_unscaled
         exp_y_len = 257
 
-        y_data = read_spectra(self.txtdir, self.txtfile)[1].value
-        y_units = read_spectra(self.txtdir, self.txtfile)[4]
+        y_data = read_spectra(self.test_dir, self.txtfile)[1].value
+        y_units = read_spectra(self.test_dir, self.txtfile)[4]
 
         self.assertEqual(exp_y_len, len(y_data))
         self.assertAlmostEqual(exp_y, y_data[0], self.tolerance)
@@ -137,61 +161,65 @@ class TestReadSpectra(TestCase):
     def test_read_txt_error(self):
         exp_y_err = .0046
         exp_y_err_len = 257
-        y_err = read_spectra(self.txtdir, self.txtfile)[2]
+        y_err = read_spectra(self.test_dir, self.txtfile)[2]
         self.assertEqual(exp_y_err_len, len(y_err))
         self.assertAlmostEqual(exp_y_err, y_err[0], self.tolerance)
 
     def test_read_dat_x(self):
-        exp_x = 3300
-        exp_x_units = u.AA
-        exp_x_len = 445
+        with self.settings(MEDIA_ROOT=self.test_dir):
+            exp_x = 3300
+            exp_x_units = u.AA
+            exp_x_len = 445
 
-        x_data = read_spectra(self.datdir, self.datfile)[0].value
-        x_units = read_spectra(self.datdir, self.datfile)[3]
+            x_data = read_spectra(self.test_dir, self.datfile)[0].value
+            x_units = read_spectra(self.test_dir, self.datfile)[3]
 
-        self.assertEqual(exp_x_len, len(x_data))
-        self.assertAlmostEqual(exp_x, x_data[0], self.tolerance)
-        self.assertEqual(exp_x_units, x_units)
+            self.assertEqual(exp_x_len, len(x_data))
+            self.assertAlmostEqual(exp_x, x_data[0], self.tolerance)
+            self.assertEqual(exp_x_units, x_units)
 
     def test_read_dat_y(self):
-        exp_y = 7.1022E+05/10**16
-        exp_y_units = u.erg/(u.cm**2)/u.s/u.AA
-        exp_y_len = 445
+        with self.settings(MEDIA_ROOT=self.test_dir):
+            exp_y = 7.1022E+05/10**16
+            exp_y_units = u.erg/(u.cm**2)/u.s/u.AA
+            exp_y_len = 445
 
-        y_data = read_spectra(self.datdir, self.datfile)[1].value
-        y_units = read_spectra(self.datdir, self.datfile)[4]
+            y_data = read_spectra(self.test_dir, self.datfile)[1].value
+            y_units = read_spectra(self.test_dir, self.datfile)[4]
 
-        self.assertEqual(exp_y_len, len(y_data))
-        self.assertAlmostEqual(exp_y, y_data[0], self.tolerance)
-        self.assertEqual(exp_y_units, y_units)
+            self.assertEqual(exp_y_len, len(y_data))
+            self.assertAlmostEqual(exp_y, y_data[0], self.tolerance)
+            self.assertEqual(exp_y_units, y_units)
 
     def test_read_dat_error(self):
-        exp_y_err_len = 445
-        y_err = read_spectra(self.datdir, self.datfile)[2]
+        with self.settings(MEDIA_ROOT=self.test_dir):
+            exp_y_err_len = 445
+            y_err = read_spectra(self.test_dir, self.datfile)[2]
 
-        self.assertTrue(exp_y_err_len, len(y_err))
-        self.assertTrue(np.isnan(y_err[0]))
+            self.assertTrue(exp_y_err_len, len(y_err))
+            self.assertTrue(np.isnan(y_err[0]))
 
     def test_read_fits_obj(self):
         exp_obj = '398188'
 
-        obj_name = read_spectra(self.fitsdir, self.fitsfile)[5]
+        obj_name = read_spectra(self.test_dir, self.fitsfile)[5]
 
         self.assertEqual(exp_obj, obj_name)
 
     def test_read_txt_obj(self):
         exp_obj = '1981'
 
-        obj_name = read_spectra(self.txtdir, self.txtfile)[5]
+        obj_name = read_spectra(self.test_dir, self.txtfile)[5]
 
         self.assertEqual(exp_obj, obj_name)
 
     def test_read_dat_obj(self):
-        exp_obj = 'hr9087'
+        with self.settings(MEDIA_ROOT=self.test_dir):
+            exp_obj = 'hr9087'
 
-        obj_name = read_spectra(self.datdir, self.datfile)[5]
+            obj_name = read_spectra(self.test_dir, self.datfile)[5]
 
-        self.assertEqual(exp_obj, obj_name)
+            self.assertEqual(exp_obj, obj_name)
 
     def test_get_fits_y_units1(self):
         test_hdr1 = Header()
@@ -293,7 +321,7 @@ class TestReadSpectra(TestCase):
         self.assertEqual(exp_x5, x5)
 
     def test_smoothing(self):
-        test_x_data, test_y_data = read_spectra(self.fitsdir, self.fitsfile)[:2]
+        test_x_data, test_y_data = read_spectra(self.test_dir, self.fitsfile)[:2]
         exp_x_len = len(test_x_data)-30
         exp_y_len = len(test_y_data)-30
 
@@ -307,9 +335,9 @@ class TestGetSpecPlot(TestCase):
 
     def setUp(self):
         files_to_copy = ['fhr9087.dat', 'test_fits.fits', 'aaareadme.ctio', ]
-        self.spectradir  = os.path.abspath(os.path.join('photometrics', 'tests', 'test_spectra'))
-        self.datfile  = files_to_copy[0]
-        self.fitsfile  = files_to_copy[1]
+        self.spectradir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_spectra'))
+        self.datfile = files_to_copy[0]
+        self.fitsfile = files_to_copy[1]
 
         self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
         for test_file in files_to_copy:
@@ -335,13 +363,13 @@ class TestGetSpecPlot(TestCase):
                 print("Error removing temporary test directory", self.test_dir)
 
     def test_no_file(self):
+        with self.settings(MEDIA_ROOT=self.test_dir):
+            obs_num = '1'
+            expected_save_file = None
 
-        obs_num = '1'
-        expected_save_file = None
+            save_file = get_spec_plot(self.test_dir, 'foo.fits', obs_num)
 
-        save_file = get_spec_plot(self.test_dir, 'foo.fits', obs_num)
-
-        self.assertEqual(expected_save_file, save_file)
+            self.assertEqual(expected_save_file, save_file)
 
     def test_fits_1(self):
         with self.settings(MEDIA_ROOT=self.test_dir):
