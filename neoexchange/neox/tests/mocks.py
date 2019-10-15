@@ -778,6 +778,7 @@ def mock_archive_frame_header(archive_headers):
                     "SITEID" : "lsc",
                     "TELID" : "1m0a",
                     "FILTER": "rp",
+                    "OBJECT": 'Test obj',
                     "INSTRUME" : "kb27",
                     "ORIGNAME" : "ogg0m406-kb27-20160531-0063-e00",
                     "EXPTIME" : "200.0",
@@ -786,6 +787,7 @@ def mock_archive_frame_header(archive_headers):
             }
         }
     return header
+
 
 def mock_archive_spectra_header(archive_headers):
     header = { "data": {
@@ -799,6 +801,7 @@ def mock_archive_spectra_header(archive_headers):
                         }
              }
     return header
+
 
 def mock_find_images_for_block(blockid):
     data = ([{'img': '1'}, {'img': '2'}, ], [{'coords': [{'y': 1086.004, 'x': 1278.912}, {'y': 1086.047, 'x': 1278.9821}], 'id': '15'}], 2028, 2028)
