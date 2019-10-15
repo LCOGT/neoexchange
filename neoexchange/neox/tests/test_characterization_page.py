@@ -15,7 +15,7 @@ GNU General Public License for more details.
 
 from .base import FunctionalTest
 from mock import patch
-from neox.tests.mocks import MockDateTime
+from neox.tests.mocks import MockDateTime, mock_build_visibility_source
 from datetime import datetime
 from core.models import Body, PreviousSpectra
 from django.urls import reverse
@@ -51,7 +51,7 @@ class CharacterizationPageTest(FunctionalTest):
 
         spectra_params = {'body'         : self.body,
                           'spec_wav'     : 'NIR',
-                          'spec_ir'     : 'sp233/a265962.sp233.txt',
+                          'spec_ir'     : 'http://smass.mit.edu/data/spex/sp17/au2002HK12.sp17.txt',
                           'spec_ref'     : 'sp[233]',
                           'spec_source'  : 'S',
                           'spec_date'    : '2017-09-25',
@@ -123,16 +123,16 @@ class CharacterizationPageTest(FunctionalTest):
         self.browser.get(characterization_page_url)
         self.assertNotIn('Home | LCO NEOx', self.browser.title)
         self.assertIn('Characterization Page | LCO NEOx', self.browser.title)
-        # self.check_for_header_in_table('characterization_targets',\
-        #    'Rank Target Name R.A. Dec. V Mag. Required Observations H Mag. Origin SMASS Obs MANOS Target? Observation Window Reported?')
 
         # Position below computed for 2015-07-01 17:00:00
-        testlines = [u'1 V38821zi 23 43 14.40 +19 59 08.2 18.7 1.27 LC 19.0 Goldstone Vis + NIR 08/15-09/15',
+        testlines = [u'1 V38821zi 23 43 14.40 +19 59 08.2 18.7 1.27 LC 19.0 Goldstone Vis+NIR 08/15-09/15',
                     u'2 q382918r 23 43 14.40 +19 59 08.2 20.7 1.27 Spec/LC 21.0 NASA NIR Yes ---']
         self.check_for_row_in_table('characterization_targets', testlines[0])
         self.check_for_row_in_table('characterization_targets', testlines[1])
 
         # He notices that they are ordered by window
+
+    @patch('core.views.build_visibility_source', mock_build_visibility_source)
     @patch('core.models.datetime', MockDateTime)
     def test_characterization_rank(self):
 
@@ -147,9 +147,9 @@ class CharacterizationPageTest(FunctionalTest):
         self.browser.get(characterization_page_url)
 
         # Position below computed for 2015-07-01 17:00:00
-        testlines = [u'2 V38821zi 23 43 14.40 +19 59 08.2 18.7 1.27 LC 19.0 Goldstone Vis + NIR 08/15-09/15',
+        testlines = [u'2 V38821zi 23 43 14.40 +19 59 08.2 18.7 1.27 LC 19.0 Goldstone Vis+NIR 08/15-09/15',
                     u'3 q382918r 23 43 14.40 +19 59 08.2 20.7 1.27 Spec/LC 21.0 NASA NIR Yes ---',
-                    u'1 N999r0q 23 43 14.40 +19 59 08.2 15.2 1.27 LC 15.5 NASA Vis + NIR NIR Now->']
+                    u'1 N999r0q 23 43 14.40 +19 59 08.2 15.2 1.27 LC 15.5 NASA Vis+NIR NIR Now->']
         for line in testlines:
             self.check_for_row_in_table('characterization_targets', line)
         
@@ -176,5 +176,12 @@ class CharacterizationPageTest(FunctionalTest):
                     ]
         for line in testlines:
             self.check_for_row_in_table('id_spectralinfo', line)
+
+        # He sees a link for plots that piques his curiosity.
+        plot_link = self.browser.find_element_by_link_text('(Plots)')
+        with self.wait_for_page_load(timeout=10):
+            plot_link.click()
+        new_url = self.browser.current_url
+        self.assertEqual(str(new_url), body_url+'spectra/')
 
         # Now knowing nothing shall impede his progress, Kildorn the Unstoppable takes a lunch break.
