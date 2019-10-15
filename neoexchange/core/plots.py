@@ -47,7 +47,12 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow(), s
     site = ''
     if plot_type == 'hoursup' and site_code != '-1':
         site = "_" + site_code + "_"
-    _, vis_files = default_storage.listdir(path=base_dir)
+    # Check if destination exists first. default_storage.listdir() will crash and
+    # burn on a non-existant path whereas the prior glob silently returns an
+    # empty list
+    vis_files = []
+    if default_storage.exists(base_dir):
+        _, vis_files = default_storage.listdir(path=base_dir)
     if vis_files:
         filematch = "{}.*.{}{}.*.png".format(obj, plot_type, site)
         regex = re.compile(filematch)
