@@ -6318,6 +6318,7 @@ class TestBestStandardsView(TestCase):
         self.assertAlmostEqual(expected_min_ra, min_ra, self.precision)
         self.assertAlmostEqual(expected_max_ra, max_ra, self.precision)
 
+
 class TestFindSpec(TestCase):
 
     def setUp(self):
@@ -6529,3 +6530,66 @@ class TestFindSpecPlots(TestCase):
         spec_files = find_spec_plots(base_dir, '1999KW4', '1234', 'guidemovie.gif')
 
         self.assertEqual(expected_files, spec_files)
+
+
+class TestBuildVisibilitySource(TestCase):
+
+    def setUp(self):
+        body_params = {
+                         'provisional_name': None,
+                         'provisional_packed': 'j5432',
+                         'name': '455432',
+                         'origin': 'A',
+                         'source_type': 'N',
+                         'elements_type': 'MPC_MINOR_PLANET',
+                         'active': True,
+                         'fast_moving': True,
+                         'urgency': None,
+                         'epochofel': datetime(2019, 7, 31, 0, 0),
+                         'orbit_rms': 0.46,
+                         'orbinc': 31.23094,
+                         'longascnode': 301.42266,
+                         'argofperih': 22.30793,
+                         'eccentricity': 0.3660154,
+                         'meandist': 1.7336673,
+                         'meananom': 352.55084,
+                         'perihdist': None,
+                         'epochofperih': None,
+                         'abs_mag': 18.54,
+                         'slope': 0.15,
+                         'score': None,
+                         'discovery_date': datetime(2003, 9, 7, 3, 7, 18),
+                         'num_obs': 130,
+                         'arc_length': 6209.0,
+                         'not_seen': 3.7969329574421296,
+                         'updated': True,
+                         'ingest': datetime(2019, 7, 4, 5, 28, 39),
+                         'update_time': datetime(2019, 7, 30, 19, 7, 35)
+                        }
+        self.test_body = Body.objects.create(**body_params)
+
+    def test_build_visibility_source(self):
+        site_code = ['LSC', 'CPT', 'COJ', 'ELP', 'TFN', 'OGG']
+        site_list = ['W85', 'K91', 'Q63', 'V37', 'Z21', 'F65']
+        color_list = ['darkviolet', 'forestgreen', 'saddlebrown', 'coral', 'darkslategray', 'dodgerblue']
+        d = datetime(2019, 10, 10, 0, 0, 0)
+        step_size = '30 m'
+        alt_limit = 30
+        vis, emp = build_visibility_source(self.test_body, site_list, site_code, color_list, d, alt_limit, step_size)
+
+        expected_vis = {'x': [0, 0, 0, 0, 0, 0],
+                        'y': [0, 0, 0, 0, 0, 0],
+                        'sun_rise': [3.9269908169872414, 2.3125612588924866, 6.370451769779303, 4.625122517784973, 3.097959422289935, 5.541420375081996],
+                        'sun_set': [1.5271630954950384, -0.04363323129985841, 3.9706240482870996, 1.9634954084936207, 0.43633231299858233, 2.879793265790644],
+                        'obj_rise': [0.0, 0.0, 0.0, 0.7853981633974487, 5.366887449882563, 1.5707963267948966],
+                        'obj_set': [0, 0, 0, 2.879793265790644, 7.592182246175334, 3.796091123087667],
+                        'moon_rise': [1.0471975511965979, -0.5235987755982989, 3.534291735288517, 1.7016960206944711, 0.13089969389957457, 2.4870941840919194],
+                        'moon_set': [3.4033920413889427, 1.7016960206944713, 5.759586531581287, 3.9269908169872414, 2.356194490192345, 4.974188368183839],
+                        'moon_phase': [0.8706345970199544, 0.8651789635607248, 0.8701262242502456, 0.8701177903593142, 0.8645091870127206, 0.8712568525897345],
+                        'colors': ['darkviolet', 'forestgreen', 'saddlebrown', 'coral', 'darkslategray', 'dodgerblue'],
+                        'site': ['LSC', 'CPT', 'COJ', 'ELP', 'TFN', 'OGG'],
+                        'obj_vis': [0, 0, 0, 3.5, 3.0, 3.5],
+                        'max_alt': [0, 0, 0, 60, 57, 50]}
+
+        for key in vis.keys():
+            self.assertEqual(expected_vis[key], vis[key])
