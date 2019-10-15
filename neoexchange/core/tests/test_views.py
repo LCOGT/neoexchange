@@ -6417,8 +6417,6 @@ class TestFindSpec(TestCase):
             expected_path = os.path.join(expected_date, self.test_body.current_name() + '_' + self.test_block.request_number)
             # os.makedirs(expected_date)
             fake_tar = os.path.join(expected_date, self.eng_proposal.code + '_' + self.test_block.request_number + '.tar.gz')
-            with open(fake_tar, 'a'):
-                pass
 
             date_obs, obj, req, path, prop = find_spec(self.test_block.pk)
 

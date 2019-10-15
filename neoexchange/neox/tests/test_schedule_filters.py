@@ -19,7 +19,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
 from selenium.common.exceptions import NoSuchElementException
 from mock import patch
-from neox.tests.mocks import MockDateTime, mock_lco_authenticate, mock_fetch_filter_list
+from neox.tests.mocks import MockDateTime, mock_lco_authenticate, mock_fetch_filter_list, mock_build_visibility_source
 from unittest import skipIf
 
 from datetime import datetime
@@ -63,6 +63,7 @@ class ScheduleObservations(FunctionalTest):
 # TAL: Need to patch the datetime in views also otherwise we will get the wrong
 # semester and window bounds.
 
+    @patch('core.views.build_visibility_source', mock_build_visibility_source)
     @patch('core.forms.datetime', MockDateTime)
     @patch('core.views.datetime', MockDateTime)
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
