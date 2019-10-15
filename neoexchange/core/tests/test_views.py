@@ -55,6 +55,7 @@ logger = logging.getLogger(__name__)
 # Disable anything below CRITICAL level
 logging.disable(logging.CRITICAL)
 
+
 class TestClean_NEOCP_Object(TestCase):
 
     def test_X33656(self):

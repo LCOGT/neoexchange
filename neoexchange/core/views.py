@@ -3188,7 +3188,6 @@ def build_visibility_source(body, site_list, site_code, color_list, d, alt_limit
            }
 
     for i, site in enumerate(site_list):
-
         dark_start, dark_end = determine_darkness_times(site, d)
         (site_name, site_long, site_lat, site_hgt) = get_sitepos(site)
         (moon_app_ra, moon_app_dec, diam) = moon_ra_dec(d, site_long, site_lat, site_hgt)

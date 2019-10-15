@@ -554,11 +554,6 @@ def call_compute_ephem(elements, dark_start, dark_end, site_code, ephem_step_siz
     by <ephem_step_size> seconds. The results are assembled into a list of tuples
     in the same format as returned by read_findorb_ephem()"""
 
-#    print
-#    formatted_elem_lines = mpc_8lineformat(elements)
-#    for line in formatted_elem_lines:
-#        print line
-
     slot_length = 0  # XXX temporary hack
     step_size_secs = 300
     if str(ephem_step_size)[-1] == 'm':
