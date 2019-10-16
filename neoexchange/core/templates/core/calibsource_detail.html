@@ -2,6 +2,15 @@
 {% load staticfiles basic_tags %}
 {% block header %}{{staticsource.current_name}} details{% endblock %}
 
+{% block last-css-content %}
+<link rel="stylesheet" href="http://cdn.pydata.org/bokeh/release/bokeh-1.3.4.min.css">
+{% endblock %}
+
+{% block script-content %}
+<script src="http://cdn.pydata.org/bokeh/release/bokeh-1.3.4.min.js"></script>
+{{ script|safe }}
+{% endblock %}
+
 {% block bodyclass %}page{% endblock %}
 
 {% block extramenu %}
@@ -55,7 +64,9 @@
                         </div>
                         <div class="four columns">
                             <h5 class="section-title">Spectra</h5>
-                            <img src="{% url 'display_calibspec' staticsource.pk %}" id="id_spectraplot">
+                            {% block graphic %}
+                                {{ div|safe }}
+                            {% endblock %}
                         </div>
                     </div>
                     <a class="button button-primary" href="{% url 'feasibility-calib' staticsource.id %}" id="check-feasibility">Check Spectroscopic Feasibility</a>

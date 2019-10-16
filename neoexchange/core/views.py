@@ -604,6 +604,9 @@ class StaticSourceDetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super(StaticSourceDetailView, self).get_context_data(**kwargs)
         context['blocks'] = Block.objects.filter(calibsource=self.object).order_by('block_start')
+        script, div, p_spec = plot_all_spec(self.object)
+        context['script'] = script
+        context['div'] = div["raw_spec"]
         return context
 
 
@@ -2958,7 +2961,6 @@ def find_spec(pk):
     """
 
     try:
-        # block = list(Block.objects.filter(superblock=list(SuperBlock.objects.filter(pk=pk))[0]))[0]
         block = Block.objects.get(pk=pk)
         url = settings.ARCHIVE_FRAMES_URL+str(Frame.objects.filter(block=block)[0].frameid)+'/headers'
     except IndexError:
@@ -2979,31 +2981,8 @@ def find_spec(pk):
         req = block.request_number
     path = os.path.join(date_obs, obj + '_' + req)
     prop = block.superblock.proposal.code
-    # matchpattern = "{}_.*.{}.tar.gz".format(prop, req)
-    # files = search(path, matchpattern)
-    # try:
-    #     _ = next(files)
-    # except StopIteration:
-    #     pass
-    #     date_obs = str(int(date_obs)-1)
-    #     path = os.path.join(date_obs, obj + '_' + req)
 
     return date_obs, obj, req, path, prop
-
-
-def find_spec_plots(path=None, obj=None, req=None, obs_num=None):
-
-    spec_files = None
-    if path and obj and obs_num:
-        if req:
-            if not obs_num.isdigit():
-                png_file = "{}/{}_{}_{}".format(path, obj, req, obs_num)
-            else:
-                png_file = "{}/{}_{}_spectra_{}.png".format(path, obj, req, obs_num)
-        else:
-            png_file = "{}/{}_spectra_{}.png".format(path, obj, obs_num)
-        spec_files = [png_file]
-    return spec_files
 
 
 def find_analog(date_obs, site):
@@ -3047,35 +3026,58 @@ def plot_floyds_spec(block, obs_num=1):
                    'wav': star_wav,
                    'filename': analogs[0]}
 
-    script, div = spec_plot(data_spec, analog_data)
+    script, div = spec_plot([data_spec], analog_data)
 
     return script, div
 
 
-def plot_all_spec(body):
-    p_spec = PreviousSpectra.objects.filter(body=body)
+def plot_all_spec(source):
     data_spec = []
-    for spec in p_spec:
-        if spec.spec_ir:
-            wav, flux, err = pull_data_from_text(spec.spec_ir)
-            label = "{} -- {}, {}(IR)".format(body.current_name(), spec.spec_date, spec.spec_source)
-            new_spec = {'label': label,
-                 'spec': flux,
-                 'wav': wav,
-                 'err': err,
-                 'filename': spec.spec_ir}
-            data_spec.append(new_spec)
-        if spec.spec_vis:
-            wav, flux, err = pull_data_from_text(spec.spec_vis)
-            label = "{} -- {}, {}(Vis)".format(body.current_name(), spec.spec_date, spec.spec_ref)
-            new_spec = {'label': label,
-                 'spec': flux,
-                 'wav': wav,
-                 'err': err,
-                 'filename': spec.spec_vis}
-            data_spec.append(new_spec)
+    p_spec = []
+    if isinstance(source, StaticSource):
+        calibsource = source
+        base_dir = os.path.join('cdbs', 'ctiostan')  # new base_dir for method
 
-    script, div = spec_plot(data_spec, None, reflec=True)
+        obj = calibsource.name.lower().replace(' ', '').replace('-', '_').replace('+', '')
+        spec_file = os.path.join(base_dir, "f{}.dat".format(obj))
+
+        wav, flux, err = pull_data_from_text(spec_file)
+        if wav:
+            label = calibsource.name
+            new_spec = {'label': label,
+                        'spec': flux,
+                        'wav': wav,
+                        'err': err,
+                        'filename': spec_file}
+            data_spec.append(new_spec)
+        else:
+            logger.warning("No flux file found for " + spec_file)
+        script, div = spec_plot(data_spec, None, reflec=False)
+
+    else:
+        body = source
+        p_spec = PreviousSpectra.objects.filter(body=body)
+        for spec in p_spec:
+            if spec.spec_ir:
+                wav, flux, err = pull_data_from_text(spec.spec_ir)
+                label = "{} -- {}, {}(IR)".format(body.current_name(), spec.spec_date, spec.spec_source)
+                new_spec = {'label': label,
+                     'spec': flux,
+                     'wav': wav,
+                     'err': err,
+                     'filename': spec.spec_ir}
+                data_spec.append(new_spec)
+            if spec.spec_vis:
+                wav, flux, err = pull_data_from_text(spec.spec_vis)
+                label = "{} -- {}, {}(Vis)".format(body.current_name(), spec.spec_date, spec.spec_ref)
+                new_spec = {'label': label,
+                     'spec': flux,
+                     'wav': wav,
+                     'err': err,
+                     'filename': spec.spec_vis}
+                data_spec.append(new_spec)
+
+        script, div = spec_plot(data_spec, None, reflec=True)
 
     return script, div, p_spec
 
@@ -3084,8 +3086,14 @@ def spec_plot(data_spec, analog_data, reflec=False):
 
     spec_plots = {}
     if not reflec:
-        plot = figure(x_range=(3500, 10500), y_range=(0, 1.75), plot_width=800, plot_height=400)
-        plot.line(data_spec['wav'], data_spec['spec'], legend=data_spec['label'], muted_alpha=0.25)
+        if np.median(data_spec[0]["spec"]) <= 2:
+            plot = figure(x_range=(3500, 10500), y_range=(0, 1.75), plot_width=800, plot_height=400)
+            plot.yaxis.axis_label = 'Relative Spectra (Normalized at 5500 Å)'
+        else:
+            plot = figure( plot_width=600, plot_height=400)
+            plot.yaxis.axis_label = 'Flux (Some Units)'
+        for spec in data_spec:
+            plot.line(spec['wav'], spec['spec'], legend=spec['label'], muted_alpha=0.25)
         plot.legend.click_policy = 'mute'
 
         # Set Axes
@@ -3093,10 +3101,9 @@ def spec_plot(data_spec, analog_data, reflec=False):
         plot.axis.axis_label_text_font_size = "12pt"
         plot.axis.major_tick_line_width = 2
         plot.xaxis.axis_label = "Wavelength (Å)"
-        plot.yaxis.axis_label = 'Relative Spectra (Normalized at 5500 Å)'
         spec_plots["raw_spec"] = plot
 
-    if reflec or (data_spec['label'] != analog_data['label'] and analog_data):
+    if reflec or (analog_data and data_spec[0]['label'] != analog_data['label']):
         if not reflec:
             plot.line(analog_data['wav'], analog_data['spec'], color="firebrick", legend=analog_data['label'],
                       muted=True, muted_alpha=0.25, muted_color="firebrick")
@@ -3126,9 +3133,10 @@ def spec_plot(data_spec, analog_data, reflec=False):
             plot2.patch(xs, ys, fill_alpha=.25, line_width=1, fill_color=colors[j], line_color="black", name=tax + "-Type", legend=tax, line_alpha=.25, visible=vis)
 
         if not reflec:
-            data_label_reflec, reflec_spec, reflec_ast_wav = spectrum_plot(data_spec['filename'], analog=analog_data['filename'])
-            plot2.line(reflec_ast_wav, reflec_spec, line_width=3, name=data_spec['label'])
-            plot2.title.text = 'Object: {}    Analog: {}'.format(data_spec['label'], analog_data['label'])
+            for spec in data_spec:
+                data_label_reflec, reflec_spec, reflec_ast_wav = spectrum_plot(spec['filename'], analog=analog_data['filename'])
+                plot2.line(reflec_ast_wav, reflec_spec, line_width=3, name=spec['label'])
+                plot2.title.text = 'Object: {}    Analog: {}'.format(spec['label'], analog_data['label'])
         else:
             for spec in data_spec:
                 plot2.circle(spec['wav'], spec['spec'], size=3, name=spec['label'])
@@ -3172,6 +3180,7 @@ def datetime_to_radians(ref_time, input_time):
 
 def build_visibility_source(body, site_list, site_code, color_list, d, alt_limit, step_size):
     body_elements = model_to_dict(body)
+    emp = []
     vis = {"x": [],
            "y": [],
            "sun_rise": [],
@@ -3335,62 +3344,6 @@ def lin_vis_plot(body):
     return script, div
 
 
-def display_spec(request, pk, obs_num):
-    date_obs, obj, req, path, prop = find_spec(pk)
-    base_dir = str(date_obs)  # new base_dir for method
-    logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date_obs, req, prop))
-    logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
-
-    matchpattern = "{}.*.spectra.*.{}.*.png".format(obj, obs_num)
-    spec_files = search(base_dir, matchpattern)
-    try:
-        spec_file = next(spec_files)
-    except StopIteration:
-        spec_file, spec_count = make_spec(date_obs, obj, req, base_dir, prop, obs_num)
-    if spec_file:
-        logger.debug('Spectroscopy Plot: {}'.format(spec_file))
-        spec_plot = default_storage.open(spec_file, 'rb').read()
-        return HttpResponse(spec_plot, content_type="Image/png")
-    else:
-        return HttpResponse()
-
-
-def display_calibspec(request, pk):
-    try:
-        calibsource = StaticSource.objects.get(pk=pk)
-    except StaticSource.DoesNotExist:
-        logger.debug("Source not found")
-        return HttpResponse()
-
-    base_dir = os.path.join('cdbs', 'ctiostan')  # new base_dir for method
-
-    obj = calibsource.name.lower().replace(' ', '').replace('-', '_').replace('+', '')
-    obs_num = '1'
-    matchpattern = "{}.*.spectra.*.{}.*.png".format(obj, obs_num)
-    spec_files = search(base_dir, matchpattern)
-    try:
-        spec_file = next(spec_files)
-    except StopIteration:
-        spec_file = "f" + obj + ".dat"
-        if default_storage.exists(os.path.join(base_dir, spec_file)):
-            spec_file = get_spec_plot(base_dir, spec_file, obs_num, log=True)
-        else:
-            logger.warning("No flux file found for " + spec_file)
-            spec_file = ''
-    if spec_file and default_storage.exists(spec_file):
-        logger.debug('Spectroscopy Plot: {}'.format(spec_file))
-        spec_plot = default_storage.open(spec_file, 'rb').read()
-        return HttpResponse(spec_plot, content_type="Image/png")
-    else:
-        logger.debug("No spectrum found for: ", spec_file)
-        import base64
-        # Return a 1x1 pixel gif in the case of no spectra file
-        PIXEL_GIF_DATA = base64.b64decode(
-            b"R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7")
-
-        return HttpResponse(PIXEL_GIF_DATA, content_type='image/gif')
-
-
 class BlockSpec(View):  # make loging required later
 
     template_name = 'core/plot_spec.html'
@@ -3421,15 +3374,14 @@ def display_movie(request, pk):
     """Display previously made guide movie, or make one if no movie found."""
 
     date_obs, obj, req, path, prop = find_spec(pk)
-    base_dir = os.path.join(settings.DATA_ROOT, date_obs)
+    base_dir = os.path.join(path, 'Guide_frames')
     logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date_obs, req, prop))
     logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
 
-    movie_files = find_spec_plots(os.path.join(path, "Guide_frames"), obj.replace(' ', '_'), req, "guidemovie.gif")
-    if movie_files:
-        movie_file = movie_files[0]
-    else:
-        movie_file = make_movie(date_obs, obj, req, base_dir, prop)
+    movie_file = "{}_{}_guidemovie.gif".format(obj, req)
+
+    movie_file = search(base_dir, movie_file, latest=True)
+
     if movie_file:
         logger.debug('MOVIE FILE: {}'.format(movie_file))
         movie = default_storage.open(movie_file, 'rb').read()

@@ -149,11 +149,14 @@ def pull_data_from_spectrum(spectra):
 
 def pull_data_from_text(spectra):
     try:
-        f = open(spectra)
+        f = default_storage.open(spectra, 'r')
         lines = f.readlines()
     except FileNotFoundError:
-        lines = urllib.request.urlopen(spectra).read()
-        lines = re.split('[\n\r]', str(lines, 'utf-8'))
+        try:
+            lines = urllib.request.urlopen(spectra).read()
+            lines = re.split('[\n\r]', str(lines, 'utf-8'))
+        except ValueError:
+            return [], [], []
     xxx = []
     yyy = []
     err = []
@@ -163,7 +166,7 @@ def pull_data_from_text(spectra):
             chunks = list(filter(None, chunks))
             if len(chunks) >= 2:
                 if float(chunks[1]) != -1:
-                    if float(chunks[0]) < 1000:
+                    if float(chunks[0]) < 800:
                         xxx.append(float(chunks[0])*10000)
                     else:
                         xxx.append(float(chunks[0]))
