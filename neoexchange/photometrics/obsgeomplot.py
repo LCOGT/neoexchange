@@ -47,16 +47,25 @@ def plot_ra_dec(ephem, title=None, base_dir=''):
     fig = Figure()
     ax = fig.subplots()
 
-    # Look for RA wraparound and plot in two parts
+    # Look for RA wraparound at RA=360/0 deg and plot in two parts
     if ephem['RA'].max() >= 359.0:
-        # Find index of max value
-        wrap_index = np.argmax(ephem['RA'])
-        if wrap_index < len(ephem['RA']) and ephem[wrap_index+1]['RA'] < ephem[wrap_index]['RA']:
+        # Find index of max, min value
+        wrap_index1 = np.argmin(ephem['RA'])
+        wrap_index2 = np.argmax(ephem['RA'])
+        if max(wrap_index1, wrap_index2) < len(ephem['RA']):
+            if wrap_index1 > wrap_index2:
+                # Max occurs before min so we are wrapping at 360 and RA is increasing
+                wrap_index = wrap_index2
+            elif  wrap_index1 < wrap_index2:
+                # Min occurs before max so we are wrapping at 0 and RA is decreasing
+                wrap_index = wrap_index1
             first_part = ephem[0:wrap_index+1]
             second_part = ephem[wrap_index+1:]
             lines = ax.plot(first_part['RA'], first_part['DEC'])
             line_color = lines[0].get_color()
             ax.plot(second_part['RA'], second_part['DEC'], color=line_color)
+        else:
+            ax.plot(ephem['RA'], ephem['DEC'])
     else:
         ax.plot(ephem['RA'], ephem['DEC'])
     ax.set_xlim(360.0, 0.0)
