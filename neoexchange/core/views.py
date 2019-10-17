@@ -2984,6 +2984,8 @@ def find_spec(pk):
 
 
 def find_analog(date_obs, site):
+    """Search for Calib Source blocks taken 10 days before or after a given date at a specific site.
+    Return a list of reduced fits files in order of temporal distance from given date."""
 
     analog_blocks = Block.objects.filter(obstype=3, site=site, when_observed__lte=date_obs+timedelta(days=10), when_observed__gte=date_obs-timedelta(days=10))
     star_list = []
@@ -3004,6 +3006,8 @@ def find_analog(date_obs, site):
 
 
 def plot_floyds_spec(block, obs_num=1):
+    """Get plots for requested blocks of FLOYDs data and subtract nearest solar analog."""
+
     date_obs, obj, req, path, prop = find_spec(block.id)
     filenames = search(path, matchpattern='.*_2df_ex.fits', latest=False)
     if filenames is False:
@@ -3036,6 +3040,10 @@ def plot_floyds_spec(block, obs_num=1):
 
 
 def plot_all_spec(source):
+    """Plot all non-FLOYDS data for given source.
+        Currently only checks if source is StaticSource or PreviousSpectra instance.
+    """
+
     data_spec = []
     p_spec = []
     if isinstance(source, StaticSource):
@@ -3053,7 +3061,7 @@ def plot_all_spec(source):
                         'err': err,
                         'filename': spec_file}
             data_spec.append(new_spec)
-            script, div = spec_plot(data_spec, None, reflec=False)
+            script, div = spec_plot(data_spec, {}, reflec=False)
         else:
             logger.warning("No flux file found for " + spec_file)
             script = ''
@@ -3082,12 +3090,18 @@ def plot_all_spec(source):
                      'filename': spec.spec_vis}
                 data_spec.append(new_spec)
 
-        script, div = spec_plot(data_spec, None, reflec=True)
+        script, div = spec_plot(data_spec, {}, reflec=True)
 
     return script, div, p_spec
 
 
 def spec_plot(data_spec, analog_data, reflec=False):
+    """Builds the actual Bokeh Plots for various spectra
+        INPUTS:
+            data_spec: Array of dictionaries containing 'wav', 'spec', 'err', 'label', and 'filename'
+            analog_data: single data_spec like dictionary containing Solar Analog Spectrum
+            reflec: Flag determinine if the data_spec data has already had the solar spectrum removed.
+    """
 
     spec_plots = {}
     if not reflec and data_spec[0]:
@@ -3182,6 +3196,8 @@ def spec_plot(data_spec, analog_data, reflec=False):
 
 
 def datetime_to_radians(ref_time, input_time):
+    """Function to convert the difference between two times into a difference in radians relative to a 24 hour clock."""
+
     if input_time:
         t_diff = input_time - ref_time
         t_diff_hours = t_diff.total_seconds()/3600
@@ -3192,6 +3208,8 @@ def datetime_to_radians(ref_time, input_time):
 
 
 def build_visibility_source(body, site_list, site_code, color_list, d, alt_limit, step_size):
+    """Builds the source dictionaries used by lin_vis_plot"""
+
     body_elements = model_to_dict(body)
     emp = []
     vis = {"x": [],
@@ -3239,6 +3257,9 @@ def build_visibility_source(body, site_list, site_code, color_list, d, alt_limit
 
 
 def lin_vis_plot(body):
+    """Creates a Bokeh plot showing the visibility for the given body over the next 24 hours compared to the
+        current time, the sun and the moon. Contains a help overview for first time viewers.
+    """
 
     site_code = ['LSC', 'CPT', 'COJ', 'ELP', 'TFN', 'OGG']
     site_list = ['W85', 'K91', 'Q63', 'V37', 'Z21', 'F65']
