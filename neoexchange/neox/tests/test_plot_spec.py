@@ -16,263 +16,333 @@ GNU General Public License for more details.
 from .base import FunctionalTest
 from django.test import TestCase
 from django.urls import reverse
+from django.core.files.storage import default_storage
+from datetime import datetime
 from django.contrib.auth.models import User
 from neox.auth_backend import update_proposal_permissions
 from selenium import webdriver
+from selenium.common.exceptions import NoSuchElementException
 from core.models import Block, SuperBlock, Frame
 from mock import patch
 from neox.tests.mocks import MockDateTime, mock_lco_authenticate, mock_fetch_archive_frames,\
-    mock_fetch_archive_frames_2spectra, mock_archive_frame_header
+    mock_fetch_archive_frames_2spectra, mock_archive_spectra_header
 from django.conf import settings
+
 import os
+import tempfile
+from shutil import copy2, rmtree
+from glob import glob
+
+
+def build_data_dir(path, base_path, filename):
+    if not default_storage.exists(name=path):
+        os.makedirs(path)
+        copy2(os.path.join(base_path, filename), path)
 
 
 class SpectraplotTest(FunctionalTest):
 
-        def setUp(self):
+    def setUp(self):
+        super(SpectraplotTest, self).setUp()
+        self.spectradir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_spectra'))
 
-            super(SpectraplotTest, self).setUp()
+        settings.MEDIA_ROOT = self.test_dir
+        build_data_dir(os.path.join(self.test_dir, '20190727', '455432_1878696'), self.spectradir,
+                       'target_2df_ex.fits')
+        build_data_dir(os.path.join(self.test_dir, '20190727', 'HD_30455_1878697'), self.spectradir,
+                       'analog_2df_ex.fits')
 
-            settings.DATA_ROOT = os.getcwd()+'/photometrics/tests/'
+        self.username = 'bart'
+        self.password = 'simpson'
+        self.email = 'bart@simpson.org'
+        self.bart = User.objects.create_user(username=self.username, password=self.password, email=self.email)
+        self.bart.first_name = 'Bart'
+        self.bart.last_name = 'Simpson'
+        self.bart.is_active = 1
+        self.bart.save()
 
-            self.username = 'bart'
-            self.password = 'simpson'
-            self.email = 'bart@simpson.org'
-            self.bart = User.objects.create_user(username=self.username, password=self.password, email=self.email)
-            self.bart.first_name = 'Bart'
-            self.bart.last_name = 'Simpson'
-            self.bart.is_active = 1
-            self.bart.save()
+        sblock_params = {
+             'cadence'         : False,
+             'body'            : self.body,
+             'proposal'        : self.test_proposal,
+             'block_start'     : '2015-04-20 13:00:00',
+             'block_end'       : '2015-04-24 03:00:00',
+             'tracking_number' : '4242',
+             'active'          : True
+           }
+        self.test_sblock = SuperBlock.objects.create(pk=3, **sblock_params)
 
-            sblock_params = {
-                 'cadence'         : False,
-                 'body'            : self.body,
-                 'proposal'        : self.test_proposal,
-                 'block_start'     : '2015-04-20 13:00:00',
-                 'block_end'       : '2015-04-24 03:00:00',
-                 'tracking_number' : '4242',
-                 'active'          : True
-               }
-            self.test_sblock = SuperBlock.objects.create(pk=3, **sblock_params)
+        block_params = {
+             'telclass'        : '2m0',
+             'site'            : 'coj',
+             'body'            : self.body,
+             'superblock'      : self.test_sblock,
+             'obstype'         : Block.OPT_SPECTRA,
+             'block_start'     : '2019-07-27 13:00:00',
+             'block_end'       : '2019-07-28 03:00:00',
+             'request_number' : '1878696',
+             'num_exposures'   : 1,
+             'exp_length'      : 1800.0,
+             'active'          : True,
+             'when_observed'   : datetime(2019, 7, 27, 16, 42, 51)
+           }
+        self.test_block = Block.objects.create(pk=3, **block_params)
 
-            block_params = {
-                 'telclass'        : '2m0',
-                 'site'            : 'ogg',
-                 'body'            : self.body,
-                 'superblock'      : self.test_sblock,
-                 'obstype'         : Block.OPT_SPECTRA,
-                 'block_start'     : '2015-04-20 13:00:00',
-                 'block_end'       : '2015-04-21 03:00:00',
-                 'request_number' : '12345',
-                 'num_exposures'   : 1,
-                 'exp_length'      : 1800.0,
-                 'active'          : True,
-               }
-            self.test_block = Block.objects.create(pk=3, **block_params)
-            fparams = {
-                'sitecode'      : 'F65',
-                'filename'      : 'sp233/a265962.sp233.txt',
-                'exptime'       : 1800.0,
-                'midpoint'      : '2015-04-21 00:00:00',
-                'frametype'     : Frame.SPECTRUM_FRAMETYPE,
-                'block'         : self.test_block,
-                'frameid'       : 1,
-               }
-            self.spec_frame = Frame.objects.create(**fparams)
+        analog_block_params = {
+             'telclass'        : '2m0',
+             'site'            : 'coj',
+             'body'            : self.body,
+             'calibsource'     : self.calib,
+             'superblock'      : self.test_sblock,
+             'obstype'         : Block.OPT_SPECTRA_CALIB,
+             'block_start'     : '2019-07-27 13:00:00',
+             'block_end'       : '2019-07-28 03:00:00',
+             'request_number' : '1878697',
+             'num_exposures'   : 1,
+             'exp_length'      : 1800.0,
+             'active'          : True,
+             'when_observed'   : datetime(2019, 7, 27, 18, 42, 51)
+           }
+        self.analog_block = Block.objects.create(pk=7, **analog_block_params)
 
-            sblock2_params = {
-                 'cadence'         : False,
-                 'body'            : self.body,
-                 'proposal'        : self.test_proposal,
-                 'block_start'     : '2015-04-20 13:00:00',
-                 'block_end'       : '2015-04-22 03:00:00',
-                 'tracking_number' : '4243',
-                 'active'          : False
-               }
-            self.test_sblock2 = SuperBlock.objects.create(pk=4, **sblock2_params)
+        fparams = {
+            'sitecode'      : 'E10',
+            'filename'      : 'sp233/a265962.sp233.txt',
+            'exptime'       : 1800.0,
+            'midpoint'      : '2015-04-21 00:00:00',
+            'frametype'     : Frame.SPECTRUM_FRAMETYPE,
+            'block'         : self.test_block,
+            'frameid'       : 1,
+           }
+        self.spec_frame = Frame.objects.create(**fparams)
 
-            block2_params = {
-                 'telclass'        : '2m0',
-                 'site'            : 'ogg',
-                 'body'            : self.body,
-                 'superblock'      : self.test_sblock2,
-                 'obstype'         : 0,
-                 'block_start'     : '2015-04-22 13:00:00',
-                 'block_end'       : '2015-04-24 03:00:00',
-                 'request_number' : '54321',
-                 'num_exposures'   : 1,
-                 'exp_length'      : 1800.0,
-                 'active'          : False,
-               }
-            self.test_block2 = Block.objects.create(pk=4, **block2_params)
+        afparams = {
+            'sitecode'      : 'E10',
+            'filename'      : 'sp233/a265962.sp233.txt',
+            'exptime'       : 1800.0,
+            'midpoint'      : '2015-04-21 00:00:00',
+            'frametype'     : Frame.SPECTRUM_FRAMETYPE,
+            'block'         : self.analog_block,
+            'frameid'       : 7,
+           }
+        self.analogspec_frame = Frame.objects.create(**afparams)
 
-            msblock_params = {
-                 'cadence'         : False,
-                 'body'            : self.body,
-                 'proposal'        : self.test_proposal,
-                 'block_start'     : '2018-01-01 00:00:00',
-                 'block_end'       : '2018-01-01 03:00:00',
-                 'tracking_number' : '4244',
-                 'active'          : True
-               }
-            self.test_msblock = SuperBlock.objects.create(pk=5, **msblock_params)
-            mblock1_params = {
-                 'telclass'        : '2m0',
-                 'site'            : 'ogg',
-                 'body'            : self.body,
-                 'superblock'      : self.test_msblock,
-                 'obstype'         : Block.OPT_SPECTRA,
-                 'block_start'     : '2018-01-01 00:00:00',
-                 'block_end'       : '2018-01-01 02:00:00',
-                 'request_number' : '54322',
-                 'num_exposures'   : 1,
-                 'num_observed'    : 1,
-                 'exp_length'      : 1800.0,
-                 'active'          : True,
-               }
-            self.test_mblock1 = Block.objects.create(pk=5, **mblock1_params)
-            mfparams1 = {
-                'sitecode'      : 'F65',
-                'filename'      : 'sp233/a265962.sp233.txt',
-                'exptime'       : 1800.0,
-                'midpoint'      : '2018-01-01 01:00:00',
-                'frametype'     : Frame.SPECTRUM_FRAMETYPE,
-                'block'         : self.test_mblock1,
-                'frameid'       : 1,
-               }
-            self.mspec_frame1 = Frame.objects.create(**mfparams1)
-            mblock2_params = {
-                 'telclass'        : '2m0',
-                 'site'            : 'ogg',
-                 'body'            : self.body,
-                 'superblock'      : self.test_msblock,
-                 'obstype'         : Block.OPT_SPECTRA,
-                 'block_start'     : '2018-01-01 01:00:00',
-                 'block_end'       : '2018-01-01 03:00:00',
-                 'request_number' : '54323',
-                 'num_exposures'   : 1,
-                 'num_observed'    : 1,
-                 'exp_length'      : 1800.0,
-                 'active'          : True,
-               }
-            self.test_mblock2 = Block.objects.create(pk=6, **mblock2_params)
-            mfparams2 = {
-                'sitecode'      : 'F65',
-                'filename'      : 'sp233/a265962.sp233.txt',
-                'exptime'       : 1800.0,
-                'midpoint'      : '2018-01-01 02:00:00',
-                'frametype'     : Frame.SPECTRUM_FRAMETYPE,
-                'block'         : self.test_mblock2,
-                'frameid'       : 1,
-               }
-            self.mspec_frame2 = Frame.objects.create(**mfparams2)
+        sblock2_params = {
+             'cadence'         : False,
+             'body'            : self.body,
+             'proposal'        : self.test_proposal,
+             'block_start'     : '2015-04-20 13:00:00',
+             'block_end'       : '2015-04-22 03:00:00',
+             'tracking_number' : '4243',
+             'active'          : False
+           }
+        self.test_sblock2 = SuperBlock.objects.create(pk=4, **sblock2_params)
 
-            update_proposal_permissions(self.bart, [{'code': self.neo_proposal.code}])
+        block2_params = {
+             'telclass'        : '2m0',
+             'site'            : 'ogg',
+             'body'            : self.body,
+             'superblock'      : self.test_sblock2,
+             'obstype'         : 0,
+             'block_start'     : '2015-04-22 13:00:00',
+             'block_end'       : '2015-04-24 03:00:00',
+             'request_number' : '54321',
+             'num_exposures'   : 1,
+             'exp_length'      : 1800.0,
+             'active'          : False,
+             'when_observed'   : datetime(2015, 7, 27, 16, 42, 51)
+           }
+        self.test_block2 = Block.objects.create(pk=4, **block2_params)
 
-        @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
-        def login(self):
-            self.browser.get('%s%s' % (self.live_server_url, '/accounts/login/'))
-            username_input = self.browser.find_element_by_id("username")
-            username_input.send_keys(self.username)
-            password_input = self.browser.find_element_by_id("password")
-            password_input.send_keys(self.password)
-            with self.wait_for_page_load(timeout=10):
-                self.browser.find_element_by_id("login-btn").click()
-            # Wait until response is recieved
-            self.wait_for_element_with_id('page')
+        msblock_params = {
+             'cadence'         : False,
+             'body'            : self.body,
+             'proposal'        : self.test_proposal,
+             'block_start'     : '2018-01-01 00:00:00',
+             'block_end'       : '2018-01-01 03:00:00',
+             'tracking_number' : '4244',
+             'active'          : True
+           }
+        self.test_msblock = SuperBlock.objects.create(pk=5, **msblock_params)
+        mblock1_params = {
+             'telclass'        : '2m0',
+             'site'            : 'coj',
+             'body'            : self.body,
+             'superblock'      : self.test_msblock,
+             'obstype'         : Block.OPT_SPECTRA,
+             'block_start'     : '2018-01-01 00:00:00',
+             'block_end'       : '2018-01-01 02:00:00',
+             'request_number' : '54322',
+             'num_exposures'   : 1,
+             'num_observed'    : 1,
+             'exp_length'      : 1800.0,
+             'active'          : True,
+             'when_observed'   : datetime(2019, 7, 27, 16, 42, 51)
+           }
+        self.test_mblock1 = Block.objects.create(pk=5, **mblock1_params)
+        mfparams1 = {
+            'sitecode'      : 'F65',
+            'filename'      : 'sp233/a265962.sp233.txt',
+            'exptime'       : 1800.0,
+            'midpoint'      : '2018-01-01 01:00:00',
+            'frametype'     : Frame.SPECTRUM_FRAMETYPE,
+            'block'         : self.test_mblock1,
+            'frameid'       : 1,
+           }
+        self.mspec_frame1 = Frame.objects.create(**mfparams1)
+        mblock2_params = {
+             'telclass'        : '2m0',
+             'site'            : 'ogg',
+             'body'            : self.body,
+             'superblock'      : self.test_msblock,
+             'obstype'         : Block.OPT_SPECTRA,
+             'block_start'     : '2018-01-01 01:00:00',
+             'block_end'       : '2018-01-01 03:00:00',
+             'request_number' : '54323',
+             'num_exposures'   : 1,
+             'num_observed'    : 1,
+             'exp_length'      : 1800.0,
+             'active'          : True,
+             'when_observed'   : datetime(2019, 7, 27, 16, 42, 51)
+           }
+        self.test_mblock2 = Block.objects.create(pk=6, **mblock2_params)
+        mfparams2 = {
+            'sitecode'      : 'F65',
+            'filename'      : 'sp233/a265962.sp233.txt',
+            'exptime'       : 1800.0,
+            'midpoint'      : '2018-01-01 02:00:00',
+            'frametype'     : Frame.SPECTRUM_FRAMETYPE,
+            'block'         : self.test_mblock2,
+            'frameid'       : 1,
+           }
+        self.mspec_frame2 = Frame.objects.create(**mfparams2)
 
-        @patch('core.views.lco_api_call', mock_archive_frame_header)
-        @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
-        @patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
-        def test_failed_block(self):
-            self.login()
-            blocks_url = reverse('blocklist')
-            self.browser.get(self.live_server_url + blocks_url)
-            with self.wait_for_page_load(timeout=10):
-                self.browser.find_element_by_link_text('4').click()
-            side_text = self.browser.find_element_by_class_name('block-status').text
-            block_lines = side_text.splitlines()
-            testlines = ['2015-04-22', '13:00 2015-04-24', '03:00']
-            for line in testlines:
-                self.assertIn(line, block_lines)
-            actual_url = self.browser.current_url
-            target_url = self.live_server_url+'/block/'+'4/'
-            self.assertIn('Block details | LCO NEOx', self.browser.title)
-            self.assertEqual(target_url, actual_url)
+        update_proposal_permissions(self.bart, [{'code': self.neo_proposal.code}])
 
-        @patch('core.views.lco_api_call', mock_archive_frame_header)
-        @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
-        @patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
-        def test_can_view_spectrum(self):   # test opening up a spectrum file associated with a block
-            self.login()
-            self.browser.get(self.live_server_url)
-            blocks_url = reverse('blocklist')
-            self.browser.get(self.live_server_url + blocks_url)
-            with self.wait_for_page_load(timeout=10):
-                self.browser.find_element_by_link_text(str(self.test_sblock.pk)).click()
-            with self.wait_for_page_load(timeout=10):
-                self.browser.find_element_by_link_text('Spectrum Plot').click()
-                # note: block and body do not match spectra.
-                # mismatch due to recycling and laziness
-            actual_url = self.browser.current_url
-            target_url = self.live_server_url+'/block/'+str(self.test_block.pk)+'/spectra/1/'
-            self.assertIn('Spectrum for block: '+str(self.test_block.pk)+' | LCO NEOx', self.browser.title)
-            self.assertEqual(target_url, actual_url)
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
+    def login(self):
+        self.browser.get('%s%s' % (self.live_server_url, '/accounts/login/'))
+        username_input = self.browser.find_element_by_id("username")
+        username_input.send_keys(self.username)
+        password_input = self.browser.find_element_by_id("password")
+        password_input.send_keys(self.password)
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("login-btn").click()
+        # Wait until response is recieved
+        self.wait_for_element_with_id('page')
 
-        @patch('core.views.lco_api_call', mock_archive_frame_header)
-        @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
-        @patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
-        def test_multi_request_block(self):    # test opening 2 different blocks in same superblock
-            self.login()
-            blocks_url = reverse('blocklist')
-            self.browser.get(self.live_server_url + blocks_url)
-            with self.wait_for_page_load(timeout=10):
-                self.browser.find_element_by_link_text('5').click()
-            with self.wait_for_page_load(timeout=10):
-                self.browser.find_elements_by_link_text('Spectrum Plot')[0].click()
-            actual_url = self.browser.current_url
-            target_url = self.live_server_url+'/block/'+str(self.test_mblock1.pk)+'/spectra/1/'
-            self.assertIn('Spectrum for block: '+str(self.test_mblock1.pk)+' | LCO NEOx', self.browser.title)
-            self.assertEqual(target_url, actual_url)
+    @patch('core.views.lco_api_call', mock_archive_spectra_header)
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
+    @patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
+    def test_failed_block(self):
+        self.login()
+        blocks_url = reverse('blocklist')
+        self.browser.get(self.live_server_url + blocks_url)
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_link_text('4').click()
+        side_text = self.browser.find_element_by_class_name('block-status').text
+        block_lines = side_text.splitlines()
+        testlines = ['2015-04-22', '13:00 2015-04-24', '03:00']
+        for line in testlines:
+            self.assertIn(line, block_lines)
+        actual_url = self.browser.current_url
+        target_url = self.live_server_url+'/block/'+'4/'
+        self.assertIn('Block details | LCO NEOx', self.browser.title)
+        self.assertEqual(target_url, actual_url)
 
-            self.wait_for_element_with_id('page')
-            with self.wait_for_page_load(timeout=10):
-                self.browser.back()
-            with self.wait_for_page_load(timeout=10):
-                self.browser.find_elements_by_link_text('Spectrum Plot')[1].click()
-            actual_url2 = self.browser.current_url
-            target_url2 = self.live_server_url+'/block/'+str(self.test_mblock2.pk)+'/spectra/1/'
-            self.assertIn('Spectrum for block: '+str(self.test_mblock2.pk)+' | LCO NEOx', self.browser.title)
-            self.assertEqual(target_url2, actual_url2)
+    @patch('core.views.lco_api_call', mock_archive_spectra_header)
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
+    @patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
+    def test_can_view_spectrum(self):   # test opening up a spectrum file associated with a block
+        self.login()
+        self.browser.get(self.live_server_url)
+        blocks_url = reverse('blocklist')
+        self.browser.get(self.live_server_url + blocks_url)
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_link_text(str(self.test_sblock.pk)).click()
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_link_text('Spectrum Plot').click()
+            # note: block and body do not match spectra.
+            # mismatch due to recycling and laziness
+        actual_url = self.browser.current_url
+        target_url = self.live_server_url+'/block/'+str(self.test_block.pk)+'/spectra/1/'
+        self.assertIn('Spectrum for block: '+str(self.test_block.pk)+' | LCO NEOx', self.browser.title)
+        self.assertEqual(target_url, actual_url)
 
-        @patch('core.views.lco_api_call', mock_archive_frame_header)
-        @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
-        @patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames_2spectra)
-        def test_multi_spectra_block(self):    # test opening 2 different spectra in same block
-            self.mspec_frame2.block = self.test_mblock1
-            self.mspec_frame2.save()
-            self.test_mblock1.num_observed = 2
-            self.test_mblock1.save()
+        spec_plot1 = self.browser.find_element_by_name("raw_spec")
 
-            self.login()
-            blocks_url = reverse('blocklist')
-            self.browser.get(self.live_server_url + blocks_url)
-            with self.wait_for_page_load(timeout=10):
-                self.browser.find_element_by_link_text('5').click()
-            with self.wait_for_page_load(timeout=10):
-                self.browser.find_element_by_link_text('Spectrum Plot 1').click()
-            actual_url = self.browser.current_url
-            target_url = self.live_server_url+'/block/'+str(self.test_mblock1.pk)+'/spectra/1/'
-            self.assertIn('Spectrum for block: '+str(self.test_mblock1.pk)+' | LCO NEOx', self.browser.title)
-            self.assertEqual(target_url, actual_url)
+        spec_plot2 = self.browser.find_element_by_name("reflec_spec")
 
-            self.wait_for_element_with_id('page')
-            with self.wait_for_page_load(timeout=10):
-                self.browser.back()
+    @patch('core.views.lco_api_call', mock_archive_spectra_header)
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
+    @patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
+    def test_multi_request_block(self):    # test opening 2 different blocks in same superblock
+        self.login()
+        blocks_url = reverse('blocklist')
+        self.browser.get(self.live_server_url + blocks_url)
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_link_text('5').click()
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_elements_by_link_text('Spectrum Plot')[0].click()
+        actual_url = self.browser.current_url
+        target_url = self.live_server_url+'/block/'+str(self.test_mblock1.pk)+'/spectra/1/'
+        self.assertIn('Spectrum for block: '+str(self.test_mblock1.pk)+' | LCO NEOx', self.browser.title)
+        self.assertEqual(target_url, actual_url)
 
-            with self.wait_for_page_load(timeout=10):
-                self.browser.find_element_by_link_text('Spectrum Plot 2').click()
-            actual_url2 = self.browser.current_url
-            target_url2 = self.live_server_url+'/block/'+str(self.test_mblock1.pk)+'/spectra/2/'
-            self.assertIn('Spectrum for block: '+str(self.test_mblock1.pk)+' | LCO NEOx', self.browser.title)
-            self.assertEqual(target_url2, actual_url2)
+        spec_plot1 = self.browser.find_element_by_name("raw_spec")
+
+        spec_plot2 = self.browser.find_element_by_name("reflec_spec")
+
+        self.wait_for_element_with_id('page')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.back()
+        print("plot2")
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_elements_by_link_text('Spectrum Plot')[1].click()
+        actual_url2 = self.browser.current_url
+        target_url2 = self.live_server_url+'/block/'+str(self.test_mblock2.pk)+'/spectra/1/'
+        self.assertIn('Spectrum for block: '+str(self.test_mblock2.pk)+' | LCO NEOx', self.browser.title)
+        self.assertEqual(target_url2, actual_url2)
+
+        spec_plot1 = self.browser.find_element_by_name("raw_spec")
+        try:
+            spec_plot2 = self.browser.find_element_by_name("reflec_spec")
+            raise ValueError('Wrong site, should not produce reflec_spec!')
+        except NoSuchElementException:
+            pass
+
+    @patch('core.views.lco_api_call', mock_archive_spectra_header)
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
+    @patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames_2spectra)
+    def test_multi_spectra_block(self):    # test opening 2 different spectra in same block
+        self.mspec_frame2.block = self.test_mblock1
+        self.mspec_frame2.save()
+        self.test_mblock1.num_observed = 2
+        self.test_mblock1.save()
+
+        self.login()
+        blocks_url = reverse('blocklist')
+        self.browser.get(self.live_server_url + blocks_url)
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_link_text('5').click()
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_link_text('Spectrum Plot 1').click()
+        actual_url = self.browser.current_url
+        target_url = self.live_server_url+'/block/'+str(self.test_mblock1.pk)+'/spectra/1/'
+        self.assertIn('Spectrum for block: '+str(self.test_mblock1.pk)+' | LCO NEOx', self.browser.title)
+        self.assertEqual(target_url, actual_url)
+
+        spec_plot1 = self.browser.find_element_by_name("raw_spec")
+
+        spec_plot2 = self.browser.find_element_by_name("reflec_spec")
+
+        self.wait_for_element_with_id('page')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.back()
+
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_link_text('Spectrum Plot 2').click()
+        actual_url2 = self.browser.current_url
+        target_url2 = self.live_server_url+'/block/'+str(self.test_mblock1.pk)+'/spectra/2/'
+        self.assertIn('Spectrum for block: '+str(self.test_mblock1.pk)+' | LCO NEOx', self.browser.title)
+        self.assertEqual(target_url2, actual_url2)

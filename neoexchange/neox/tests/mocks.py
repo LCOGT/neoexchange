@@ -790,16 +790,28 @@ def mock_archive_frame_header(archive_headers):
 
 
 def mock_archive_spectra_header(archive_headers):
-    header = { "data": {
-                    "DATE_OBS": "2019-07-27T15:52:19.512",
-                    "DAY_OBS" : "20190727",
-                    "ENCID" : "clma",
-                    "SITEID" : "coj",
-                    "TELID" : "2m0a",
-                    "OBJECT" : "455432",
-                    "REQNUM" : "1878696"
-                        }
-             }
+    if '/7/' in archive_headers:
+        header = {"data": {
+            "DATE_OBS": "2019-07-27T15:52:19.512",
+            "DAY_OBS": "20190727",
+            "ENCID": "clma",
+            "SITEID": "coj",
+            "TELID": "2m0a",
+            "OBJECT": "HD 30455",
+            "REQNUM": "1878697"
+                }
+            }
+    else:
+        header = { "data": {
+                        "DATE_OBS": "2019-07-27T15:52:19.512",
+                        "DAY_OBS" : "20190727",
+                        "ENCID" : "clma",
+                        "SITEID" : "coj",
+                        "TELID" : "2m0a",
+                        "OBJECT" : "455432",
+                        "REQNUM" : "1878696"
+                            }
+                 }
     return header
 
 

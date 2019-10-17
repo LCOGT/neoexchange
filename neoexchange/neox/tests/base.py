@@ -18,6 +18,7 @@ from datetime import datetime
 from glob import glob
 import tempfile
 import os
+import shutil
 
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.conf import settings
@@ -34,7 +35,7 @@ from core.models import Body, Proposal, Block, SuperBlock, SpectralInfo, Previou
 class FunctionalTest(StaticLiveServerTestCase):
     def __init__(self, *args, **kwargs):
         super(FunctionalTest, self).__init__(*args, **kwargs)
-
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
         if settings.DEBUG is False:
             settings.DEBUG = True
 
@@ -249,9 +250,6 @@ class FunctionalTest(StaticLiveServerTestCase):
         self.test_block2 = Block.objects.create(pk=2, **block_params2)
 
     def setUp(self):
-
-        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
-
         self.insert_test_body()
         self.insert_test_calib()
         self.insert_test_proposals()
@@ -289,22 +287,22 @@ class FunctionalTest(StaticLiveServerTestCase):
 
     def tearDown(self):
         self.browser.quit()
-
-        remove = True
-        debug_print = False
-        if remove:
-            try:
-                files_to_remove = glob(os.path.join(self.test_dir, '*'))
-                for file_to_rm in files_to_remove:
-                    os.remove(file_to_rm)
-            except OSError:
-                print("Error removing files in temporary test directory", self.test_dir)
-            try:
-                os.rmdir(self.test_dir)
-                if debug_print:
-                    print("Removed", self.test_dir)
-            except OSError:
-                print("Error removing temporary test directory", self.test_dir)
+        with self.settings(MEDIA_ROOT=self.test_dir):
+            remove = True
+            debug_print = False
+            if remove:
+                try:
+                    files_to_remove = glob(os.path.join(self.test_dir, '*'))
+                    for file_to_rm in files_to_remove:
+                        os.remove(file_to_rm)
+                except OSError:
+                    print("Error removing files in temporary test directory", self.test_dir)
+                try:
+                    os.rmdir(self.test_dir)
+                    if debug_print:
+                        print("Removed", self.test_dir)
+                except OSError:
+                    shutil.rmtree(self.test_dir)
 
     def check_for_row_in_table(self, table_id, row_text):
         table = self.browser.find_element_by_id(table_id)

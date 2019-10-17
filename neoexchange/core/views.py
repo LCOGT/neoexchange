@@ -78,7 +78,6 @@ from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     determine_filenames, increment_red_level, update_ldac_catalog_wcs, FITSHdrException
 from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
-from photometrics.spectraplot import get_spec_plot, make_spec
 from photometrics.gf_movie import make_gif, make_movie
 from core.frames import create_frame, ingest_frames, measurements_from_block
 from core.mpc_submit import email_report_to_mpc
@@ -2959,7 +2958,6 @@ def find_spec(pk):
     """find directory of spectra for a certain block
     NOTE: Currently will only pull first spectrum of a superblock
     """
-
     try:
         block = Block.objects.get(pk=pk)
         url = settings.ARCHIVE_FRAMES_URL+str(Frame.objects.filter(block=block)[0].frameid)+'/headers'
@@ -2988,7 +2986,6 @@ def find_spec(pk):
 def find_analog(date_obs, site):
 
     analog_blocks = Block.objects.filter(obstype=3, site=site, when_observed__lte=date_obs+timedelta(days=10), when_observed__gte=date_obs-timedelta(days=10))
-
     star_list = []
     time_diff = []
     for b in analog_blocks:
@@ -3012,19 +3009,26 @@ def plot_floyds_spec(block, obs_num=1):
     if filenames is False:
         return '', {"raw_spec": ''}
     filenames = [os.path.join(path, f) for f in filenames]
+
     analogs = find_analog(block.when_observed, block.site)
 
-    raw_label, raw_spec, ast_wav = spectrum_plot(filenames[obs_num-1])
-    analog_label, analog_spec, star_wav = spectrum_plot(analogs[0], offset=2)
+    try:
+        raw_label, raw_spec, ast_wav = spectrum_plot(filenames[obs_num-1])
+        data_spec = {'label': raw_label,
+                     'spec': raw_spec,
+                     'wav': ast_wav,
+                     'filename': filenames[obs_num-1]}
+    except IndexError:
+        data_spec = None
 
-    data_spec = {'label': raw_label,
-                 'spec': raw_spec,
-                 'wav': ast_wav,
-                 'filename': filenames[obs_num-1]}
-    analog_data = {'label': analog_label,
-                   'spec': analog_spec,
-                   'wav': star_wav,
-                   'filename': analogs[0]}
+    if analogs:
+        analog_label, analog_spec, star_wav = spectrum_plot(analogs[0], offset=2)
+        analog_data = {'label': analog_label,
+                       'spec': analog_spec,
+                       'wav': star_wav,
+                       'filename': analogs[0]}
+    else:
+        analog_data = None
 
     script, div = spec_plot([data_spec], analog_data)
 
@@ -3040,7 +3044,6 @@ def plot_all_spec(source):
 
         obj = calibsource.name.lower().replace(' ', '').replace('-', '_').replace('+', '')
         spec_file = os.path.join(base_dir, "f{}.dat".format(obj))
-
         wav, flux, err = pull_data_from_text(spec_file)
         if wav:
             label = calibsource.name
@@ -3050,9 +3053,11 @@ def plot_all_spec(source):
                         'err': err,
                         'filename': spec_file}
             data_spec.append(new_spec)
+            script, div = spec_plot(data_spec, None, reflec=False)
         else:
             logger.warning("No flux file found for " + spec_file)
-        script, div = spec_plot(data_spec, None, reflec=False)
+            script = ''
+            div = {"raw_spec": ''}
 
     else:
         body = source
@@ -3085,7 +3090,7 @@ def plot_all_spec(source):
 def spec_plot(data_spec, analog_data, reflec=False):
 
     spec_plots = {}
-    if not reflec:
+    if not reflec and data_spec[0]:
         if np.median(data_spec[0]["spec"]) <= 2:
             plot = figure(x_range=(3500, 10500), y_range=(0, 1.75), plot_width=800, plot_height=400)
             plot.yaxis.axis_label = 'Relative Spectra (Normalized at 5500 Å)'
@@ -3103,7 +3108,7 @@ def spec_plot(data_spec, analog_data, reflec=False):
         plot.xaxis.axis_label = "Wavelength (Å)"
         spec_plots["raw_spec"] = plot
 
-    if reflec or (analog_data and data_spec[0]['label'] != analog_data['label']):
+    if reflec or (data_spec[0] and analog_data and data_spec[0]['label'] != analog_data['label']):
         if not reflec:
             plot.line(analog_data['wav'], analog_data['spec'], color="firebrick", legend=analog_data['label'],
                       muted=True, muted_alpha=0.25, muted_color="firebrick")
@@ -3163,8 +3168,16 @@ def spec_plot(data_spec, analog_data, reflec=False):
         spec_plots["reflec_spec"] = plot2
 
     # Create script/div
-    script, div = components(spec_plots, CDN)
-
+    if spec_plots:
+        script, div = components(spec_plots, CDN)
+    else:
+        return '', {"raw_spec": ''}
+    try:
+        for key in div.keys():
+            b = div[key].index('>')
+            div[key] = '{} name={}{}'.format(div[key][:b], key, div[key][b:])
+    except ValueError:
+        pass
     return script, div
 
 
