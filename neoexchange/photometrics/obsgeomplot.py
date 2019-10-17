@@ -121,6 +121,8 @@ def plot_helio_geo_dist(ephem, title=None, base_dir=''):
     close_approach = dates[ephem['delta'].argmin()]
 
     ylim = ax.get_ylim()
+    ax.set_ylim(0, ylim[1]*1.05)
+    ylim = ax.get_ylim()
     # Only plot if the perihelion and close approach aren't at the ends of the ephemeris
     if perihelion != dates[0] and perihelion != dates[-1]:
         ax.vlines(perihelion, ylim[0], ylim[1], colors=peri_color)
@@ -129,7 +131,6 @@ def plot_helio_geo_dist(ephem, title=None, base_dir=''):
     if close_approach != dates[0] and close_approach != dates[-1]:
         ax.vlines(close_approach, ylim[0], ylim[1], colors=ca_color)
         ax.text(close_approach, 0.1*ylim[1], "C/A", rotation=90, color=ca_color, horizontalalignment='left')
-    ax.set_ylim(0, ylim[1])
     ax.set_xlabel('Date')
     ax.set_ylabel('Distance (AU)')
     fig.autofmt_xdate()
@@ -358,7 +359,7 @@ def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, add_rate=T
     if add_rate:
         ax = axes[1]
     ylim = ax.get_ylim()
-    ax.set_ylim(0, ylim[1])
+    ax.set_ylim(0, ylim[1]*1.05)
     ax.set_xlabel("Date")
     fig.autofmt_xdate()
 
@@ -411,7 +412,7 @@ def plot_uncertainty(ephem, title=None, base_dir=''):
     unc_line = ax.plot(ephem['datetime'], ephem['RSS_3sigma'], 'k-')
     unc_line = unc_line[0]
     ylim = ax.get_ylim()
-    ax.set_ylim(0, ylim[1])
+    ax.set_ylim(0, ylim[1]*1.05)
     if close_approach:
         ax.axvline(close_approach, color=ca_color)
         ax.text(close_approach, 0.1*ylim[1], "C/A", rotation=90, color=ca_color, horizontalalignment='left')
