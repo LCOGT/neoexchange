@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, timedelta
 import logging
 
@@ -38,7 +39,7 @@ def add_watermark(fig, text_size=6, text_color='gray'):
 
     return
 
-def plot_ra_dec(ephem, title=None):
+def plot_ra_dec(ephem, title=None, base_dir=''):
     """Plot RA against Dec"""
 
     # Generate the figure **without using pyplot**.
@@ -87,13 +88,14 @@ def plot_ra_dec(ephem, title=None):
 
     targetname = make_targetname(first['targetname'])
     save_file = "{}_radec_{}-{}.png".format(targetname, first_date.strftime("%Y%m%d"), last_date.strftime("%Y%m%d"))
+    save_file = os.path.join(base_dir, save_file)
     fig_file  = default_storage.open(save_file,"wb+")
     fig.savefig(fig_file, format='png')
     fig_file.close()
 
     return save_file
 
-def plot_helio_geo_dist(ephem, title=None):
+def plot_helio_geo_dist(ephem, title=None, base_dir=''):
     """Plot heliocentric distance (r) and geocentric distance (delta)
     against time
     """
@@ -148,13 +150,14 @@ def plot_helio_geo_dist(ephem, title=None):
 
     targetname = make_targetname(first['targetname'])
     save_file = "{}_dist_{}-{}.png".format(targetname, first_date.strftime("%Y%m%d"), last_date.strftime("%Y%m%d"))
+    save_file = os.path.join(base_dir, save_file)
     fig_file  = default_storage.open(save_file,"wb+")
     fig.savefig(fig_file, format='png')
     fig_file.close()
 
     return save_file
 
-def plot_brightness(ephem, title=None):
+def plot_brightness(ephem, title=None, base_dir=''):
     """Plot magnitude and elongation against time
     """
 
@@ -220,6 +223,7 @@ def plot_brightness(ephem, title=None):
 
     targetname = make_targetname(first['targetname'])
     save_file = "{}_mag_{}-{}.png".format(targetname, first_date.strftime("%Y%m%d"), last_date.strftime("%Y%m%d"))
+    save_file = os.path.join(base_dir, save_file)
     fig_file  = default_storage.open(save_file,"wb+")
     fig.savefig(fig_file, format='png')
     fig_file.close()
@@ -273,7 +277,7 @@ def determine_hours_up(ephem_ca, site_code, dbg=False):
 
     return visible_dates, hours_visible
 
-def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, add_rate=True, dbg=False, alt_limit=30):
+def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, add_rate=True, dbg=False, alt_limit=30, base_dir=''):
     """Calculate the number of hours an object is up at a site <site_code>
     from <ephem_ca> - a more closely spaced ephemeris (e.g. 5m) over a
     shorter range. If [add_rate]=True:
@@ -380,13 +384,14 @@ def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, add_rate=T
 
     targetname = make_targetname(first['targetname'])
     save_file = "{}_hoursup_{}_{}-{}.png".format(targetname, site_code, dates[0].strftime("%Y%m%d"), dates[-1].strftime("%Y%m%d"))
+    save_file = os.path.join(base_dir, save_file)
     fig_file  = default_storage.open(save_file,"wb+")
     fig.savefig(fig_file, format='png')
     fig_file.close()
 
     return save_file
 
-def plot_uncertainty(ephem, title=None):
+def plot_uncertainty(ephem, title=None, base_dir=''):
     """Plot uncertainty against time"""
 
     ca_color = '#4700c3'
@@ -441,6 +446,7 @@ def plot_uncertainty(ephem, title=None):
 
     targetname = make_targetname(first['targetname'])
     save_file = "{}_uncertainty_{}-{}.png".format(targetname, dates[0].strftime("%Y%m%d"), dates[-1].strftime("%Y%m%d"))
+    save_file = os.path.join(base_dir, save_file)
     fig_file  = default_storage.open(save_file,"wb+")
     fig.savefig(fig_file, format='png')
     fig_file.close()

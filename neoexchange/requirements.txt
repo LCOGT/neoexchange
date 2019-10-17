@@ -24,6 +24,7 @@ requests_oauthlib
 matplotlib>=3.1
 fits2image
 pillow
+aplpy
 gunicorn[gevent]~=19.9.0
 rollbar
 sty
