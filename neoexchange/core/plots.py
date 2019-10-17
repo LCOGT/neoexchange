@@ -70,13 +70,13 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow(), s
         end = start + timedelta(days=31)
         ephem = horizons_ephem(body.name, start, end, site_code)
         if plot_type == 'radec':
-            vis_file = plot_ra_dec(ephem)
+            vis_file = plot_ra_dec(ephem, base_dir=base_dir)
         elif plot_type == 'mag':
-            vis_file = plot_brightness(ephem)
+            vis_file = plot_brightness(ephem, base_dir=base_dir)
         elif plot_type == 'dist':
-            vis_file = plot_helio_geo_dist(ephem)
+            vis_file = plot_helio_geo_dist(ephem, base_dir=base_dir)
         elif plot_type == 'uncertainty':
-            vis_file = plot_uncertainty(ephem)
+            vis_file = plot_uncertainty(ephem, base_dir=base_dir)
         elif plot_type == 'hoursup':
             tel_alt_limit = 30
             to_add_rate = False
@@ -88,7 +88,7 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow(), s
                 tel_alt_limit = 20
                 to_add_rate=True
             ephem = horizons_ephem(body.name, start, end, site_code, '5m', alt_limit=tel_alt_limit)
-            vis_file = plot_hoursup(ephem, site_code, add_rate=to_add_rate, alt_limit=tel_alt_limit)
+            vis_file = plot_hoursup(ephem, site_code, add_rate=to_add_rate, alt_limit=tel_alt_limit, base_dir=base_dir)
     if vis_file:
         logger.debug('Visibility Plot: {}'.format(vis_file))
         with default_storage.open(vis_file,"rb") as vis_plot:
