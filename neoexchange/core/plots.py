@@ -66,6 +66,17 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow(), s
     else:
         vis_file = ''
     if not vis_file:
+        # Check if 'visibility' and per-object subdirectory exists and if not,
+        # create the directory. Otherwise this will fail in the plotting routines
+        # when doing default_storage.open() using local disk (but won't fail on
+        # S3 as directories are not really real there)
+        if not default_storage.exists(base_dir):
+            try:
+                os.makedirs(os.path.join(default_storage.base_location, base_dir))
+            except FileExistsError:
+                # Race condition exists between os.path.exists() and os.makedirs().
+                pass
+
         start = start_date.date()
         end = start + timedelta(days=31)
         ephem = horizons_ephem(body.name, start, end, site_code)
