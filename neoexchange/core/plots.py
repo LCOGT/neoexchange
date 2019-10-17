@@ -45,8 +45,10 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow(), s
 
     obj = body.name.replace(' ', '').replace('-', '_').replace('+', '')
     site = ''
-    if plot_type == 'hoursup' and site_code != '-1':
+    if plot_type == 'hoursup':
         site = "_" + site_code + "_"
+        if site_code == '-1':
+            site = "__W85|V37_"
     # Check if destination exists first. default_storage.listdir() will crash and
     # burn on a non-existant path whereas the prior glob silently returns an
     # empty list
