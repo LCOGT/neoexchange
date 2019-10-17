@@ -78,6 +78,9 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow(), s
             except FileExistsError:
                 # Race condition exists between os.path.exists() and os.makedirs().
                 pass
+            except AttributeError:
+                # 'PublicMediaStorage' (i.e. S3) doesn't have a `.base_location`...
+                pass
 
         start = start_date.date()
         end = start + timedelta(days=31)
