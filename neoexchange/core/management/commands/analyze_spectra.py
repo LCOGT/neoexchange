@@ -18,6 +18,7 @@ from django.conf import settings
 from django.core.files.storage import default_storage
 from astropy.io import fits
 from astropy.wcs import WCS
+from astropy import units as u
 import urllib
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -27,6 +28,9 @@ import csv
 import argparse
 import re
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def read_mean_tax():
@@ -144,7 +148,58 @@ def pull_data_from_spectrum(spectra):
     w = WCS(hdr, naxis=1, relax=False, fix=False)
     lam = w.wcs_pix2world(np.arange(len(yyy)), 0)[0]
 
-    return lam, yyy, hdr
+    wavelength = get_x_units(lam)
+    flux = get_y_units(yyy, spectra)
+    return wavelength, flux, hdr
+
+
+def get_x_units(x_data):
+    """finds wavelength units from x_data
+       inputs: <xdata>: unitless wavelength data
+       outputs: wavelength in Angstroms
+    """
+    x_mean = np.mean(x_data)
+
+    # assuming visible to NIR range (~3000-10000A)
+    if x_mean > 1000:
+        x_units = u.AA  # (Angstroms)
+    elif 100 < x_mean < 1000:
+        x_units = u.nm
+    elif .1 < x_mean < 10:
+        x_units = u.micron
+    else:
+        logger.warning("Could not parse wavelength units from file. Assuming Angstoms")
+        x_units = u.AA
+
+    xxx = np.array(x_data)
+    wavelength = (xxx * x_units).to(u.AA)
+    return wavelength
+
+
+def get_y_units(y_data, filename):
+    """finds flux/reflectance units
+       inputs: y_data, spectrum file
+       outputs: scaled flux with Units
+    """
+    y_factor = 1
+    if "ctiostan" in filename and '.dat' in filename:  # from ESO aaareadme.ctio
+        y_units = u.erg/(u.cm**2)/u.s/u.AA
+        y_factor = 10**16
+
+    elif .001 < np.median(y_data) < 10:  # Probably Normalized
+        y_units = u.def_unit("Normalized_Reflectance", u.dimensionless_unscaled)
+
+    elif '_2df_ex.fits' in filename:  # from FLOYDS
+        y_factor = 10**20
+        y_units = u.erg/(u.cm**2)/u.s/u.AA
+
+    else:
+        logger.warning("Could not parse flux units from file. Assuming erg/cm^2/s/A")
+        y_units = u.erg/(u.cm**2)/u.s/u.AA
+
+    yyy = np.array(y_data)
+    flux = ((yyy / y_factor) * y_units)
+    return flux
 
 
 def pull_data_from_text(spectra):
@@ -166,16 +221,16 @@ def pull_data_from_text(spectra):
             chunks = list(filter(None, chunks))
             if len(chunks) >= 2:
                 if float(chunks[1]) != -1:
-                    if float(chunks[0]) < 800:
-                        xxx.append(float(chunks[0])*10000)
-                    else:
-                        xxx.append(float(chunks[0]))
+                    xxx.append(float(chunks[0]))
                     yyy.append(float(chunks[1]))
                     if len(chunks) >= 3:
                         err.append(float(chunks[2]))
         except ValueError:
             continue
-    return xxx, yyy, err
+
+    wavelength = get_x_units(xxx)
+    flux = get_y_units(yyy, spectra)
+    return wavelength, flux, err
 
 
 def spectrum_plot(spectra, data_set='', analog=None, offset=0):
@@ -189,15 +244,16 @@ def spectrum_plot(spectra, data_set='', analog=None, offset=0):
     if analog:
         analog_x, analog_y, analog_header = pull_data_from_spectrum(analog)
         if analog_y is None:
-            spec_y = [x / (10 ** 20) for x in spec_y]
             yyy = spec_y
             analog = None
         else:
             spec_y_sm = smooth(spec_y, box, windows[1])
             analog_y_sm = smooth(analog_y, box, windows[1])
-            yyy = [s / a for s, a in zip(spec_y_sm, analog_y_sm)]
+            if len(spec_y_sm) >= len(analog_y_sm):
+                yyy = spec_y_sm[:len(analog_y_sm)] / analog_y_sm
+            else:
+                yyy = spec_y_sm / analog_y_sm[:len(spec_y_sm)]
     else:
-        spec_y = [x / (10 ** 20) for x in spec_y]
         yyy = spec_y
 
     if not data_set:
@@ -208,20 +264,24 @@ def spectrum_plot(spectra, data_set='', analog=None, offset=0):
     elif data_set.upper() == 'NONE':
         data_set = ''
 
-    xxx = spec_x[0:len(yyy)]
+    xxx = spec_x[:len(yyy)]
 
-    smoothy = np.array(yyy)
+    smoothy = yyy
 
+    upper_wav = 10000*u.AA
     if analog:
-        test = [j for j, x in enumerate(xxx) if 4000 < x < 10000]
+        lower_wave = 4000*u.AA
     else:
-        test = [j for j, x in enumerate(xxx) if 3100 < x < 10000]
+        lower_wave = 3100*u.AA
 
-    find_g = [j for j, x in enumerate(xxx) if 5400 < x < 5600]
-    smoothy /= np.mean(smoothy[find_g])
-    smoothy += 0.2*offset
+    y_clipped = np.take(smoothy, np.argwhere((lower_wave < xxx) & (xxx < upper_wav)).flatten())
+    x_clipped = np.take(xxx, np.argwhere((lower_wave < xxx) & (xxx < upper_wav)).flatten())
 
-    return data_set, smoothy[test], xxx[test]
+    find_g = np.take(smoothy, np.argwhere((5400*u.AA < xxx) & (xxx < 5600*u.AA)).flatten())
+    y_clipped /= np.mean(find_g)
+    y_clipped += 0.2*offset
+
+    return data_set, y_clipped, x_clipped
 
 
 class Command(BaseCommand):

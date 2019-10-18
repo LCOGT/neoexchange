@@ -3105,12 +3105,12 @@ def spec_plot(data_spec, analog_data, reflec=False):
 
     spec_plots = {}
     if not reflec and data_spec[0]:
-        if np.median(data_spec[0]["spec"]) <= 2:
+        if data_spec[0]["spec"].unit == u.dimensionless_unscaled:
             plot = figure(x_range=(3500, 10500), y_range=(0, 1.75), plot_width=800, plot_height=400)
             plot.yaxis.axis_label = 'Relative Spectra (Normalized at 5500 Å)'
         else:
             plot = figure( plot_width=600, plot_height=400)
-            plot.yaxis.axis_label = 'Flux (Some Units)'
+            plot.yaxis.axis_label = 'Flux ({})'.format(data_spec[0]["spec"].unit)
         for spec in data_spec:
             plot.line(spec['wav'], spec['spec'], legend=spec['label'], muted_alpha=0.25)
         plot.legend.click_policy = 'mute'
