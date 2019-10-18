@@ -16,6 +16,10 @@
 {% block main-content %}
             <!-- Main body -->
             <div class="container" id="main">
+                <div class="row">
+                    <a class="button button-primary" href="{% url 'schedule-body' body.pk %}" id="schedule-obs">Schedule Observations</a>
+                    <a class="button button-primary" href="{% url 'schedule-body-spectra' body.pk %}" id="schedule-spectro-obs">Schedule Spectroscopic Observations</a>
+                </div>                
                 <h5  class="section-title"><span class="">Right Ascension and Declination</span></h5>
                 <img src="{% url 'visibility-plot' pk=body.pk plot_type='radec' %}" id="id_radecplot">
                 <h5  class="section-title"><span class="">Heliocentric and Geocentric Distances</span></h5>
