@@ -3304,7 +3304,7 @@ def lin_vis_plot(body):
     plot.axis.visible = False
 
     # base
-    plot.wedge(x='x', y='y', radius=rad, start_angle=0.001, end_angle=2 * pi, color="white", source=source, line_color="black", line_width=2)
+    plot.circle(x='x', y='y', radius=rad, fill_color="white", source=source, line_color="black", line_width=2)
     # object
     plot.wedge(x='x', y='y', radius=rad, start_angle="obj_rise", end_angle="obj_set", color="colors", line_color="black", source=source)
     # sun
@@ -3314,17 +3314,17 @@ def lin_vis_plot(body):
                fill_alpha='moon_phase', source=source)
 
     # Build Clock
-    # plot.arc('x', 'y', radius=rad, start_angle=0, end_angle=2 * pi, color="black", line_width=2, source=source)
     plot.ray('x', 'y', angle=pi/2, length=rad, color="red", alpha=.75, line_width=2, source=source)
     plot.ray('x', 'y', angle=0, length=rad, color="gray", alpha=.75, source=source)
     plot.ray('x', 'y', angle=pi, length=rad, color="gray", alpha=.75, source=source)
     plot.ray('x', 'y', angle=3*pi/2, length=rad, color="gray", alpha=.75, source=source)
-    plot.wedge('x', 'y', radius=rad * .25, start_angle=0, end_angle=2 * pi, color="white", source=source)
-    plot.arc('x', 'y', radius=rad * .25, start_angle=0, end_angle=2 * pi, color="black", line_width=2, source=source)
+    plot.circle('x', 'y', radius=rad * .25, fill_color="white", line_width=1, line_color="black", source=source)
 
     # Build Help
-    plot.wedge(x='x', y='y', radius=rad, start_angle=0.001, end_angle=2 * pi, color="white", source=source, alpha=0.75, legend="?", visible=False)
+    # plot Base
+    plot.circle(x='x', y='y', radius=rad, color="white", source=source, alpha=0.75, legend="?", visible=False)
 
+    # Plot target help
     up_index = [i for i, x in enumerate(vis['x']) if vis["obj_rise"][i] != 0 and vis["obj_set"][i] != 0][0]
     if not up_index:
         up_index = 1
@@ -3333,27 +3333,33 @@ def lin_vis_plot(body):
     n = list(range(len(site_list)))
     n.remove(up_index)
 
+    # Plot Now help
     plot.text([vis['x'][n[0]]], [rad+.1], text=["Now"], text_color='red', text_align='center', text_font_size='10px', legend="?", visible=False)
     plot.ray([vis['x'][n[0]]], [0], angle=pi/2, length=rad, color="red", alpha=.75, line_width=2, legend="?", visible=False)
 
+    # Plot sun help
     plot.wedge(x=vis['x'][n[1]], y=vis['y'][n[1]], radius=rad * .75, start_angle=vis["sun_rise"][n[1]], end_angle=vis["sun_set"][n[1]], fill_color="khaki", line_color="black", legend="?", visible=False)
     plot.text(vis['x'][n[1]], [rad+.1], text=["Sun"], text_color="darkgoldenrod", text_align='center', text_font_size='10px', legend="?", visible=False)
 
+    # Plot moon help
     plot.wedge(x=vis['x'][n[2]], y=vis['y'][n[2]], radius=rad * .5, start_angle=vis["moon_rise"][n[2]], end_angle=vis["moon_set"][n[2]], fill_color="gray", line_color="black", fill_alpha=vis['moon_phase'][n[2]], legend="?", visible=False)
     plot.text(vis['x'][n[2]], [rad + .1], text=["Moon"], text_color="dimgray", text_align='center', text_font_size='10px', legend="?", visible=False)
 
+    # plot time direction
     plot.arc(vis['x'][n[3]], vis['y'][n[3]], radius=rad * .6, start_angle=0, end_angle=pi, color="black", line_width=2, direction='clock', legend="?", visible=False)
     plot.triangle(vis['x'][n[3]]-(rad * .58), vis['y'][n[3]], color="black", size=6, legend="?", visible=False)
     plot.text(vis['x'][n[3]], [rad+.1], text=["Time"], text_color='black', text_align='center', text_font_size='10px', legend="?", visible=False)
 
+    # plot hours help
     plot.ray(vis['x'][n[4]], [0], angle=0, length=rad, color="black", legend="?", visible=False)
     plot.ray(vis['x'][n[4]], [0], angle=pi, length=rad, color="black", legend="?", visible=False)
     plot.ray(vis['x'][n[4]], [0], angle=3*pi/2, length=rad, color="black", legend="?", visible=False)
     plot.text(vis['x'][n[4]], [rad+.1], text=["6 hours"], text_color='black', text_align='center', text_font_size='10px', legend="?", visible=False)
 
-    plot.wedge('x', 'y', radius=rad * .25, start_angle=0, end_angle=2 * pi, color="white", source=source, legend="?", visible=False)
-    plot.arc('x', 'y', radius=rad * .25, start_angle=0, end_angle=2 * pi, color="black", line_width=1, source=source, legend="?", visible=False)
+    # plot center help
+    plot.circle('x', 'y', radius=rad * .25, fill_color="white", line_width=1, line_color="black", source=source, legend="?", visible=False)
 
+    # plot site labels
     plot.line([vis['x'][0]-rad, vis['x'][0]-rad, vis['x'][0]], [-rad - .1, -rad - .22, -rad - .22], color="navy", legend="?", visible=False)
     plot.line([vis['x'][2], vis['x'][2]+rad, vis['x'][2]+rad], [-rad - .22, -rad - .22, -rad - .1], color="navy", legend="?", visible=False)
     plot.text(vis['x'][1], [-rad-.3], text=["Southern Sites"], text_color='navy', text_align='center', text_font_size='10px', legend="?", visible=False)
@@ -3361,8 +3367,8 @@ def lin_vis_plot(body):
     plot.line([vis['x'][5], vis['x'][5]+rad, vis['x'][5]+rad], [-rad - .22, -rad - .22, -rad - .1], color="maroon", legend="?", visible=False)
     plot.text(vis['x'][4], [-rad-.3], text=["Northern Sites"], text_color='maroon', text_align='center', text_font_size='10px', legend="?", visible=False)
 
-    plot.wedge(x='x', y='y', radius=rad, start_angle=0.001, end_angle=2 * pi, color="white", source=source, alpha=0.01,
-               legend="?", visible=False)
+    # Build over layer for smooth tooltips
+    plot.circle(x='x', y='y', radius=rad, color="white", source=source, alpha=0.01, legend="?", visible=False)
 
     plot.legend.click_policy = 'hide'
     plot.legend.background_fill_alpha = 0
