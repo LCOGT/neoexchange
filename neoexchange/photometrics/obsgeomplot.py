@@ -258,7 +258,7 @@ def determine_hours_up(ephem_ca, site_code, dbg=False):
     dark_start = dark_start - timedelta(hours=2)
     dark_end = dark_end + timedelta(hours=2)
     start_date = dates[0].replace(hour=dark_start.hour, minute=0, second=0, microsecond=0)
-    if start_date >= dark_start:
+    if start_date > dark_start:
         start_date = start_date - timedelta(days=1)
     end_date = dates[-1].replace(hour=dark_end.hour, minute=0, second=0, microsecond=0)
     if dates[-1] < end_date:
