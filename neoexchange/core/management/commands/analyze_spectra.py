@@ -204,7 +204,7 @@ def get_y_units(y_data, filename):
 
 def pull_data_from_text(spectra):
     if default_storage.exists(spectra):
-        f = default_storage.open(spectra, 'rt')
+        f = default_storage.open(spectra, mode='rt')
         lines = f.readlines()
     else:
         try:

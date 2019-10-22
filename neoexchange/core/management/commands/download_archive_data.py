@@ -108,7 +108,7 @@ class Command(BaseCommand):
                         movie_file = make_movie(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, out_path, frame['PROPID'])
                         spec_plot, spec_count = make_spec(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, out_path, frame['PROPID'], 1)
                         if settings.USE_S3:
-                            filenames = search(tar_path, matchpattern='.*_2df_ex.fits', latest=False)
+                            filenames = search(out_path, matchpattern='.*_2df_ex.fits', latest=False)
                             if filenames:
                                 for filename in filenames:
                                     save_to_default(filename, tar_path)
