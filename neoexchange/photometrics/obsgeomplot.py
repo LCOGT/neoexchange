@@ -199,6 +199,8 @@ def plot_brightness(ephem, title=None, base_dir=''):
     rhs_ylabel = 'Elongation (degrees)'
     if 'moon_sep' in ephem.colnames:
         line_moon = ax2.plot(dates, ephem['moon_sep'], color=moon_color, linestyle=':')
+        moon_curve = ephem['moon_sep'] + (ephem['moon_phase']*10.0)
+        ax2.fill_between(dates, ephem['moon_sep'],moon_curve, color=moon_color)
         lines.append(line_moon[0])
         labels.append('Moon-Obj Sep')
         rhs_ylabel = 'Separation/' + rhs_ylabel

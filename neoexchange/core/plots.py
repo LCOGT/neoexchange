@@ -50,7 +50,7 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow(), s
         if site_code == '-1':
             site = "__W85|V37_"
     # Check if destination exists first. default_storage.listdir() will crash and
-    # burn on a non-existant path whereas the prior glob silently returns an
+    # burn on a non-existent path whereas the prior glob silently returns an
     # empty list
     vis_files = []
     if default_storage.exists(base_dir):
@@ -84,7 +84,7 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow(), s
 
         start = start_date.date()
         end = start + timedelta(days=31)
-        ephem = horizons_ephem(body.name, start, end, site_code)
+        ephem = horizons_ephem(body.name, start, end, site_code, include_moon=True)
         if plot_type == 'radec':
             vis_file = plot_ra_dec(ephem, base_dir=base_dir)
         elif plot_type == 'mag':
