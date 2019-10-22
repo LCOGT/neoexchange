@@ -33,6 +33,9 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow(), s
         body = Body.objects.get(pk=pk)
     except Body.DoesNotExist:
         return HttpResponse()
+    if body.name is None or body.name == '':
+        # Body's without a name e.g. NEOCP candidates cannot be looked up in HORIZONS
+        return HttpResponse()
 
     if plot_type not in ['radec', 'mag', 'dist', 'hoursup', 'uncertainty']:
         logger.warning("Invalid plot_type= {}".format(plot_type))

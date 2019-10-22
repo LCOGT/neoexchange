@@ -180,7 +180,7 @@ def plot_brightness(ephem, title=None, base_dir=''):
     geo_color = "#0083ff" # A nice pale blue
     peri_color = '#ff5900' # Sort of orange
     ca_color = '#4700c3'
-    moon_color = '#504e42' # 'Moon Glow' (https://www.colorcombos.com/colors/FEFCD7)
+    moon_color = '#504e42' # sort of regolith from 'Moon Glow'... (https://www.colorcombos.com/colors/FEFCD7)
     mag_column = 'V'
     if 'Tmag' in ephem.colnames:
         # Switch to using comet Total magnitude
