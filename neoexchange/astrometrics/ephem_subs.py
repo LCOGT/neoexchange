@@ -674,7 +674,7 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
                 moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(date, radians(obj_ra), radians(obj_dec), '-1')
                 moon_seps.append(moon_obj_sep)
                 moon_phases.append(moon_phase)
-                ephem.add_columns(cols=(Column(moon_seps), Column(moon_phases)), names=('moon_sep', 'moon_phase'))
+            ephem.add_columns(cols=(Column(moon_seps), Column(moon_phases)), names=('moon_sep', 'moon_phase'))
     except ValueError as e:
         logger.warning("Error querying HORIZONS. Error message: ", e)
         ephem = None
