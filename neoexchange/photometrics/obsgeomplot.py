@@ -180,6 +180,7 @@ def plot_brightness(ephem, title=None, base_dir=''):
     geo_color = "#0083ff" # A nice pale blue
     peri_color = '#ff5900' # Sort of orange
     ca_color = '#4700c3'
+    moon_color = '#504e42' # 'Moon Glow' (https://www.colorcombos.com/colors/FEFCD7)
     mag_column = 'V'
     if 'Tmag' in ephem.colnames:
         # Switch to using comet Total magnitude
@@ -193,6 +194,14 @@ def plot_brightness(ephem, title=None, base_dir=''):
     dates = ephem['datetime']
     line_mag = ax.plot(dates, ephem[mag_column], color=hel_color, linestyle='-')
     line_elong = ax2.plot(dates, ephem['elong'], color=geo_color, linestyle='-')
+    lines = [line_mag[0], line_elong[0] ]
+    labels = ['Magnitude', 'Elongation']
+    rhs_ylabel = 'Elongation (degrees)'
+    if 'moon_sep' in ephem.colnames:
+        line_moon = ax2.plot(dates, ephem['moon_sep'], color=moon_color, linestyle=':')
+        lines.append(line_moon[0])
+        labels.append('Moon-Obj Sep')
+        rhs_ylabel = 'Separation/' + rhs_ylabel
 
     perihelion = dates[ephem['r'].argmin()]
     close_approach = dates[ephem['delta'].argmin()]
@@ -212,7 +221,7 @@ def plot_brightness(ephem, title=None, base_dir=''):
         ax.set_ylabel('Total magnitude', color=hel_color)
     else:
         ax.set_ylabel('V magnitude', color=hel_color)
-    ax2.set_ylabel('Elongation (degrees)', color=geo_color)
+    ax2.set_ylabel(rhs_ylabel, color=geo_color)
 
     fig.autofmt_xdate()
     ax.minorticks_on()
@@ -227,7 +236,7 @@ def plot_brightness(ephem, title=None, base_dir=''):
         title = "{} for {} to {}".format(first['targetname'], first_date.strftime("%Y-%m-%d"), last_date.strftime("%Y-%m-%d"))
     fig.suptitle(title)
     ax.set_title('Predicted brightness')
-    ax.legend((line_mag[0], line_elong[0]), ('Magnitude', 'Elongation'), loc='best', fontsize='x-small')
+    ax.legend(lines, labels, loc='best', fontsize='x-small')
     # Add watermark
     add_watermark(fig)
 
