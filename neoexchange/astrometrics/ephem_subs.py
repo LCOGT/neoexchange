@@ -596,7 +596,7 @@ def call_compute_ephem(elements, dark_start, dark_end, site_code, ephem_step_siz
 
     return emp
 
-def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_limit=0):
+def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_limit=0, include_moon=False):
     """Calls JPL HORIZONS for the specified <obj_name> producing an ephemeris
     from <start> to <end> for the MPC site code <site_code> with step size
     of [ephem_step_size] (defaults to '1h').
@@ -626,6 +626,9 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
      'RSS_3sigma',
      'hour_angle',
      'datetime']
+    If [include_moon] = True, 2 additional columns of the Moon-Object separation
+    ('moon_sep'; in degrees) and the Moon phase ('moon_phase'; 0..1) are added
+    to the table.
     """
 
     # Mapping of troublesome objects to JPL HORIZONS id's
@@ -664,6 +667,14 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
         mean_rate = np_sqrt(ephem['RA_rate']**2 + ephem['DEC_rate']**2)
         mean_rate.unit = rate_units
         ephem.add_column(mean_rate, name='mean_rate')
+        if include_moon is True:
+            moon_seps = []
+            moon_phases = []
+            for date, obj_ra, obj_dec  in ephem[('datetime','RA','DEC')]:
+                moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(date, radians(obj_ra), radians(obj_dec), '-1')
+                moon_seps.append(moon_obj_sep)
+                moon_phases.append(moon_phase)
+                ephem.add_columns(cols=(Column(moon_seps), Column(moon_phases)), names=('moon_sep', 'moon_phase'))
     except ValueError as e:
         logger.warning("Error querying HORIZONS. Error message: ", e)
         ephem = None
