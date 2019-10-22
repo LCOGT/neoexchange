@@ -1684,7 +1684,7 @@ def make_constraints(params):
 def make_single(params, ipp_value, request):
     """Create a user_request for a single observation"""
 
-    request = {group
+    requestgroup = {
                     'submitter' : params['user_id'],
                     'requests'  : [request],
                     'group_id'  : params['group_id'],
@@ -1696,7 +1696,7 @@ def make_single(params, ipp_value, request):
 
 # If the ToO mode is set, change the observation_type
     if params.get('too_mode', False) is True:
-        request['observation_type'] = 'TARGET_OF_OPPORTUNITY'group
+        requestgroup['observation_type'] = 'TARGET_OF_OPPORTUNITY'
 
     return requestgroup
 
@@ -1705,7 +1705,7 @@ def make_many(params, ipp_value, request, cal_request):
     """Create a request for a MANY observation of the asteroidgroup
     target (<request>) and calibration source (<cal_request>)"""
 
-    request = {group
+    requestgroup = {
                     'submitter' : params['user_id'],
                     'requests'  : [request, cal_request],
                     'group_id'  : params['group_id'],
@@ -1888,8 +1888,8 @@ def make_requestgroup(elements, params):
     submitter = ''
     submitter_id = params.get('submitter_id', '')
     if submitter_id != '':
-        submitter = '(by %s)' % submitter_ id
-    note = ('Submitted by NEOexchange {}'.format(submitter))
+        submitter = f'(by {submitter_id})'
+    note = (f'Submitted by NEOexchange {submitter}')
     note = note.rstrip()
 
     constraints = make_constraints(params)
