@@ -1505,14 +1505,13 @@ def make_target(params):
     dec_degs = params['dec_deg']
     # XXX Todo: Add in proper motion and parallax if present
     target = {
-               'type' : 'SIDEREAL',
+               'type' : 'ICRS',
                'name' : params['source_id'],
                'ra'   : ra_degs,
                'dec'  : dec_degs,
-               'rot_mode' : 'VFLOAT'
              }
-    if 'vmag' in params:
-        target['vmag'] = params['vmag']
+    # if 'vmag' in params:
+    #     target['vmag'] = params['vmag']
     if 'pm_ra' in params:
         target['proper_motion_ra'] = params['pm_ra']
     if 'pm_dec' in params:
@@ -1529,7 +1528,7 @@ def make_moving_target(elements):
     # Generate initial dictionary of things in common
     target = {
                   'name'                : elements['current_name'],
-                  'type'                : 'NON_SIDEREAL',
+                  'type'                : 'ORBITAL_ELEMENTS',
                   'scheme'              : elements['elements_type'],
                   # Moving object param
                   'epochofel'         : elements['epochofel_mjd'],
@@ -1568,52 +1567,76 @@ def make_window(params):
     return window
 
 
-def make_molecule(params, exp_filter):
-
+def make_config(params, exp_filter):
     # Common part of a molecule
     exp_count = exp_filter[1]
-    molecule = {
-                'type' : params['exp_type'],
+    conf = {
+        'type' : params['exp_type'],
+        'instrument_type'   : params['instrument'],
+        'target': params['target'],
+        'constraints': constraints,
+        'acquisition_config': {},
+        'guiding_config': {},
+        'instrument_configs': [
+            {
                 'exposure_count'  : exp_count,
                 'exposure_time' : params['exp_time'],
                 'bin_x'       : params['binning'],
                 'bin_y'       : params['binning'],
-                'instrument_name'   : params['instrument'],
+                'optical_elements': {
+                    'filter': exp_filter[0]
                 }
+            }
+        ]
+    }
 
-    if params.get('spectroscopy', False):
-        # Autoguider mode, one of ON, OFF, or OPTIONAL.
-        # Must be uppercase now and ON for spectra, and OFF for arcs and lamp flats
-        params['spectra_slit'] = exp_filter[0]
-        ag_mode = 'ON'
-        if params['exp_type'].upper() in ['ARC', 'LAMP_FLAT']:
-            ag_mode = 'OFF'
-            molecule['exposure_count'] = 1
-            molecule['exposure_time'] = 60.0
-            if params['exp_type'].upper() == 'LAMP_FLAT' and 'slit_6.0as' in params['spectra_slit']:
-                molecule['exposure_time'] = 20.0
-        molecule['spectra_slit'] = params['spectra_slit']
-        molecule['ag_mode'] = ag_mode
-        molecule['ag_name'] = ''
-        molecule['acquire_mode'] = 'BRIGHTEST'
-        molecule['ag_exp_time'] = params.get('ag_exp_time', 10)
-        molecule['acquire_exp_time'] = params.get('ag_exp_time', 10)
-        if 'source_type' in params:  # then Sidereal target (use smaller window)
-            molecule['acquire_radius_arcsec'] = 5.0
-        else:
-            molecule['acquire_radius_arcsec'] = 15.0  # NOTE: if this keyword exists, 'acquire_mode' is ignored, and will acquire on brightest
+def make_spect_config(params, exp_filter):
+    if 'source_type' in params:  # then Sidereal target (use smaller window)
+        acq_rad = 5.0
     else:
-        molecule['filter'] = exp_filter[0]
-        molecule['ag_mode'] = 'OPTIONAL'  # ON, OFF, or OPTIONAL. Must be uppercase now...
-        molecule['ag_name'] = ''
+        acq_rad = 15.0
 
-    return molecule
+    if params['exp_type'].upper() in ['ARC', 'LAMP_FLAT']:
+        ag_mode = 'OFF'
+        exp_count = 1
+        exp_time = 60.0
+        if params['exp_type'].upper() == 'LAMP_FLAT' and 'slit_6.0as' in params['spectra_slit']:
+            exp_time = 20.0
+
+    configurations = [{
+        'type': 'SPECTRUM',
+        'instrument_type': '2M0-FLOYDS-SCICAM',
+        'constraints': constraints,
+        'target': target,
+        'acquisition_config': {
+            'mode': 'BRIGHTEST',
+            "extra_params": {
+              "acquire_radius": acq_rad,
+            }
+        },
+        'guiding_config': {
+            'mode': 'ON',
+            'optional': False,
+            'exposure_time' : params.get('ag_exp_time', 10)
+        },
+        'instrument_configs': [
+            {
+                'exposure_time': exp_time,
+                'exposure_count': exp_count,
+                'rotator_mode': 'VFLOAT',
+                'optical_elements': {
+                    'slit': exp_filter[0]
+                }
+            }
+        ]
+    }]
+    return configurations
 
 
-def make_molecules(params):
+def make_configs(params):
     """Handles creating the potentially multiple molecules. Returns a list of the molecules.
     In imaging mode (`params['spectroscopy'] = False` or not present), this just calls
-    the regular make_molecule().
+    the regular make_config().
     In spectroscopy mode, this will produce 1, 3 or 5 molecules depending on whether
     `params['calibs']` is 'none, 'before'/'after' or 'both'."""
 
@@ -1623,26 +1646,26 @@ def make_molecules(params):
     if params.get('spectroscopy', False) is True:
         # Spectroscopy mode
         params['spectra_slit'] = params['filter_pattern']
-        spectrum_molecule = make_molecule(params, filt_list[0])
+        spectrum_molecule = make_spect_config(params, filt_list[0])
         if calib_mode != 'none':
             old_type = params['exp_type']
             params['exp_type'] = 'ARC'
-            arc_molecule = make_molecule(params, filt_list[0])
+            arc_molecule = make_spect_config(params, filt_list[0])
             params['exp_type'] = 'LAMP_FLAT'
-            flat_molecule = make_molecule(params, filt_list[0])
+            flat_molecule = make_spect_config(params, filt_list[0])
             params['exp_type'] = old_type
         if calib_mode == 'before':
-            molecules = [flat_molecule, arc_molecule, spectrum_molecule]
+            configs = [flat_molecule, arc_molecule, spectrum_molecule]
         elif calib_mode == 'after':
-            molecules = [spectrum_molecule, arc_molecule, flat_molecule]
+            configs = [spectrum_molecule, arc_molecule, flat_molecule]
         elif calib_mode == 'both':
-            molecules = [flat_molecule, arc_molecule, spectrum_molecule, arc_molecule, flat_molecule]
+            configs = [flat_molecule, arc_molecule, spectrum_molecule, arc_molecule, flat_molecule]
         else:
-            molecules = [spectrum_molecule, ]
+            configs = [spectrum_molecule, ]
     else:
-        molecules = [make_molecule(params, filt) for filt in filt_list]
+        configs = [make_config(params, filt) for filt in filt_list]
 
-    return molecules
+    return configs
 
 
 def make_constraints(params):
@@ -1661,7 +1684,7 @@ def make_constraints(params):
 def make_single(params, ipp_value, request):
     """Create a user_request for a single observation"""
 
-    user_request = {
+    request = {group
                     'submitter' : params['user_id'],
                     'requests'  : [request],
                     'group_id'  : params['group_id'],
@@ -1673,16 +1696,16 @@ def make_single(params, ipp_value, request):
 
 # If the ToO mode is set, change the observation_type
     if params.get('too_mode', False) is True:
-        user_request['observation_type'] = 'TARGET_OF_OPPORTUNITY'
+        request['observation_type'] = 'TARGET_OF_OPPORTUNITY'group
 
-    return user_request
+    return requestgroup
 
 
 def make_many(params, ipp_value, request, cal_request):
-    """Create a user_request for a MANY observation of the asteroid
+    """Create a request for a MANY observation of the asteroidgroup
     target (<request>) and calibration source (<cal_request>)"""
 
-    user_request = {
+    request = {group
                     'submitter' : params['user_id'],
                     'requests'  : [request, cal_request],
                     'group_id'  : params['group_id'],
@@ -1692,11 +1715,11 @@ def make_many(params, ipp_value, request, cal_request):
                     'proposal'  : params['proposal_id']
     }
 
-    return user_request
+    return requestgroup
 
 
 def make_proposal(params):
-    proposal = { 
+    proposal = {
                  'proposal_id' : params['proposal_id'],
                  'user_id' : params['user_id']
                }
@@ -1842,7 +1865,7 @@ def configure_defaults(params):
     return params
 
 
-def make_userrequest(elements, params):
+def make_requestgroup(elements, params):
 
     params = configure_defaults(params)
 # Create Location (site, observatory etc)
@@ -1860,26 +1883,26 @@ def make_userrequest(elements, params):
     window = make_window(params)
     logger.debug("Window=%s" % window)
 # Create Molecule(s)
-    molecule_list = make_molecules(params)
+    configurations = make_configs(params)
 
     submitter = ''
     submitter_id = params.get('submitter_id', '')
     if submitter_id != '':
-        submitter = '(by %s)' % submitter_id
+        submitter = '(by %s)' % submitter_ id
     note = ('Submitted by NEOexchange {}'.format(submitter))
     note = note.rstrip()
 
     constraints = make_constraints(params)
 
+
     request = {
-            "location": location,
-            "acceptability_threshold": params.get('acceptability_threshold', 90),
-            "constraints": constraints,
-            "target": target,
-            "molecules": molecule_list,
-            "windows": [window],
-            "observation_note": note,
-        }
+        'configurations': configurations,
+        "acceptability_threshold": params.get('acceptability_threshold', 90),
+        'windows': windows,
+        'location': location,
+        "observation_note": note,
+    }
+
     if params.get('solar_analog', False) and len(params.get('calibsource', {})) > 0:
         # Assemble solar analog request
         params['group_id'] += "+solstd"
@@ -1891,15 +1914,13 @@ def make_userrequest(elements, params):
         params['exp_time'] = params['calibsrc_exptime']
         ag_exptime = params.get('ag_exp_time', 10)
         params['ag_exp_time'] = 10
-        cal_molecule_list = make_molecules(params)
+        cal_configurations = make_configs(params)
         params['exp_time'] = exp_time
         params['ag_exp_time'] = ag_exptime
 
         cal_request = {
                         "location": location,
-                        "constraints": constraints,
-                        "target": cal_target,
-                        "molecules": cal_molecule_list,
+                        "configurations": cal_configurations,
                         "windows": [window],
                         "observation_note": note,
                     }
@@ -1923,7 +1944,7 @@ def make_userrequest(elements, params):
 
 def submit_block_to_scheduler(elements, params):
 
-    user_request = make_userrequest(elements, params)
+    user_request = make_requestgroup(elements, params)
 
 # Make an endpoint and submit the thing
     try:
@@ -1951,7 +1972,7 @@ def submit_block_to_scheduler(elements, params):
                 try:
                     msg = user_request['proposal'][0]
                 except KeyError:
-                    msg = "Unable to decode response from Valhalla"
+                    msg = "Unable to decode response from Observing Portal"
         params['error_msg'] = msg
         logger.error(msg)
         return False, params
