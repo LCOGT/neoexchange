@@ -1574,7 +1574,7 @@ def make_config(params, exp_filter):
         'type' : params['exp_type'],
         'instrument_type'   : params['instrument'],
         'target': params['target'],
-        'constraints': constraints,
+        'constraints': params['constraints'],
         'acquisition_config': {},
         'guiding_config': {},
         'instrument_configs': [
@@ -1589,6 +1589,7 @@ def make_config(params, exp_filter):
             }
         ]
     }
+    return conf
 
 def make_spect_config(params, exp_filter):
     if 'source_type' in params:  # then Sidereal target (use smaller window)
@@ -1602,12 +1603,15 @@ def make_spect_config(params, exp_filter):
         exp_time = 60.0
         if params['exp_type'].upper() == 'LAMP_FLAT' and 'slit_6.0as' in params['spectra_slit']:
             exp_time = 20.0
+    else:
+        exp_count = params['exp_count']
+        exp_time = params['exp_time']
 
-    configurations = [{
-        'type': 'SPECTRUM',
+    configurations = {
+        'type': params['exp_type'],
         'instrument_type': '2M0-FLOYDS-SCICAM',
-        'constraints': constraints,
-        'target': target,
+        'constraints': params['constraints'],
+        'target': params['target'],
         'acquisition_config': {
             'mode': 'BRIGHTEST',
             "extra_params": {
@@ -1629,7 +1633,7 @@ def make_spect_config(params, exp_filter):
                 }
             }
         ]
-    }]
+    }
     return configurations
 
 
@@ -1726,14 +1730,6 @@ def make_proposal(params):
     return proposal
 
 
-def make_cadence(elements, params, ipp_value, request=None):
-    """Generate a cadence user request from the <elements> and <params>."""
-
-    ur = make_cadence_valhalla(request, params, ipp_value)
-
-    return ur
-
-
 def expand_cadence(user_request):
 
     cadence_url = urljoin(settings.PORTAL_REQUEST_API, 'cadence/')
@@ -1761,22 +1757,27 @@ def expand_cadence(user_request):
     return True, cadence_user_request
 
 
-def make_cadence_valhalla(request, params, ipp_value, debug=False):
+def make_cadence(request, params, ipp_value, debug=False):
     """Create a user_request for a cadence observation"""
-
     # Add cadence parameters into Request
-    request['cadence'] = {
-                            'start' : datetime.strftime(params['start_time'], '%Y-%m-%dT%H:%M:%S'),
-                            'end'   : datetime.strftime(params['end_time'], '%Y-%m-%dT%H:%M:%S'),
-                            'period': params['period'],
-                            'jitter': params['jitter']
-                         }
-    del(request['windows'])
+    cadence = {
+                'start' : datetime.strftime(params['start_time'], '%Y-%m-%dT%H:%M:%S'),
+                'end'   : datetime.strftime(params['end_time'], '%Y-%m-%dT%H:%M:%S'),
+                'period': params['period'],
+                'jitter': params['jitter']
+             }
+    request = {
+                'requests': [{
+                'cadence': cadence,
+                'configurations': request['configurations'],
+                'windows': [],
+                'location': request['location'],
+                }]
+        }
 
     user_request = {
-                    'submitter': params['user_id'],
                     'requests' : [request],
-                    'group_id' : params['group_id'],
+                    'name' : params['group_id'],
                     'observation_type': "NORMAL",
                     'operator' : "SINGLE",
                     'ipp_value': ipp_value,
@@ -1874,15 +1875,16 @@ def make_requestgroup(elements, params):
 # Create Target (pointing)
     if len(elements) > 0:
         logger.debug("Making a moving object")
-        target = make_moving_target(elements)
+        params['target'] = make_moving_target(elements)
     else:
         logger.debug("Making a static object")
-        target = make_target(params)
-    logger.debug("Target=%s" % target)
+        params['target'] = make_target(params)
+    logger.debug(f"Target={params['target']}")
 # Create Window
     window = make_window(params)
     logger.debug("Window=%s" % window)
 # Create Molecule(s)
+    params['constraints'] = make_constraints(params)
     configurations = make_configs(params)
 
     submitter = ''
@@ -1892,13 +1894,12 @@ def make_requestgroup(elements, params):
     note = (f'Submitted by NEOexchange {submitter}')
     note = note.rstrip()
 
-    constraints = make_constraints(params)
 
 
     request = {
         'configurations': configurations,
         "acceptability_threshold": params.get('acceptability_threshold', 90),
-        'windows': windows,
+        'windows': [window],
         'location': location,
         "observation_note": note,
     }
@@ -1931,7 +1932,7 @@ def make_requestgroup(elements, params):
 
 # Add the Request to the outer User Request
     if 'period' in params.keys() and 'jitter' in params.keys():
-        user_request = make_cadence(elements, params, ipp_value, request)
+        user_request = make_cadence(request, params, ipp_value)
     elif len(cal_request) > 0:
         user_request = make_many(params, ipp_value, request, cal_request)
     else:
