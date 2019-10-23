@@ -12,7 +12,6 @@ from django.http import HttpResponse
 from django.conf import settings
 from django.core.files.storage import default_storage
 import matplotlib
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 from .models import Body, CatalogSources, StaticSource
