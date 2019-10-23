@@ -106,15 +106,11 @@ class Command(BaseCommand):
                     if "tar.gz" in frame['filename']:
                         tar_path = make_data_dir(out_path, frame)
                         movie_file = make_movie(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, out_path, frame['PROPID'])
-                        spec_plot, spec_count = make_spec(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, out_path, frame['PROPID'], 1)
                         if settings.USE_S3:
-                            filenames = search(out_path, matchpattern='.*_2df_ex.fits', latest=False)
+                            filenames = search(os.path.join(tar_path, frame['OBJECT'].replace(" ", "_") + '_' + str(frame['REQNUM'])), matchpattern='.*_2df_ex.fits', latest=False)
                             if filenames:
                                 for filename in filenames:
-                                    save_to_default(filename, tar_path)
-                        if spec_count > 1:
-                            for obs in range(2, spec_count+1):
-                                spec_plot, spec_count = make_spec(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, out_path, frame['PROPID'], obs)
+                                    save_to_default(filename, out_path)
         else:
             self.stdout.write("No token defined (set ARCHIVE_TOKEN environment variable)")
 
