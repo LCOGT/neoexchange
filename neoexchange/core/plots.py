@@ -24,6 +24,38 @@ from photometrics.spectraplot import get_spec_plot, make_spec
 
 logger = logging.getLogger(__name__)
 
+def find_existing_vis_file(base_dir, filematch):
+    """
+        Search for the most recent existing visibility file in <base_dir> that
+        matches the pattern in <filematch> (should be regex-compilable)
+        The filename is returned if matched or a empty string otherwise.
+    """
+
+    # Check if destination exists first. default_storage.listdir() will crash and
+    # burn on a non-existent path whereas the prior glob silently returns an
+    # empty list.
+    # Turns out listdir() works on non-existent directories on S3 but not on disk
+    # but exists() returns False where or not the "directory" exists or not with
+    # S3... So need to do this differently...
+    vis_files = []
+    try:
+        _, vis_files = default_storage.listdir(base_dir)
+    except FileNotFoundError:
+        pass
+
+    if vis_files:
+        regex = re.compile(filematch)
+        matchfiles = filter(regex.search, vis_files)
+        # Find most recent file
+        times = [(default_storage.get_modified_time(name=os.path.join(base_dir,i)),os.path.join(base_dir,i)) for i in matchfiles]
+        if times:
+            _, vis_file = max(times)
+        else:
+            vis_file = ''
+    else:
+        vis_file = ''
+
+    return vis_file
 
 def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow(), site_code='-1'):
 
@@ -51,24 +83,10 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow(), s
         site = "_" + site_code + "_"
         if site_code == '-1':
             site = "__W85|V37_"
-    # Check if destination exists first. default_storage.listdir() will crash and
-    # burn on a non-existent path whereas the prior glob silently returns an
-    # empty list
-    vis_files = []
-    if default_storage.exists(base_dir):
-        _, vis_files = default_storage.listdir(path=base_dir)
-    if vis_files:
-        filematch = "{}.*.{}{}.*.png".format(obj, plot_type, site)
-        regex = re.compile(filematch)
-        matchfiles = filter(regex.search, vis_files)
-        # Find most recent file
-        times = [(default_storage.get_modified_time(name=os.path.join(base_dir,i)),os.path.join(base_dir,i)) for i in matchfiles]
-        if times:
-            _, vis_file = max(times)
-        else:
-            vis_file = ''
-    else:
-        vis_file = ''
+
+    filematch = "{}.*.{}{}.*.png".format(obj, plot_type, site)
+    vis_file = find_existing_vis_file(base_dir, filematch)
+
     if not vis_file:
         # Check if 'visibility' and per-object subdirectory exists and if not,
         # create the directory. Otherwise this will fail in the plotting routines
