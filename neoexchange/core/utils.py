@@ -21,3 +21,12 @@ def search(base_dir, matchpattern, latest=False):
             latestfile = ''
         return latestfile
     return ''
+
+
+def save_to_default(filename, out_path):
+    filename_up = filename.replace(out_path, "")[1:]
+    file = default_storage.open(filename_up, 'wb+')
+    with open(filename, 'rb+') as f:
+        file.write(f.read())
+    file.close()
+    return

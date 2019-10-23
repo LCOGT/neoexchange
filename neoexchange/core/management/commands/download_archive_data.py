@@ -18,6 +18,7 @@ from sys import argv
 from datetime import datetime, timedelta
 from tempfile import mkdtemp, gettempdir
 import shutil
+from glob import glob
 
 from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
@@ -29,7 +30,7 @@ from core.archive_subs import archive_login, get_frame_data, get_catalog_data, \
 from core.views import determine_active_proposals
 from photometrics.spectraplot import make_spec
 from photometrics.gf_movie import make_movie
-from core.utils import search
+from core.utils import save_to_default
 
 
 class Command(BaseCommand):
@@ -105,18 +106,11 @@ class Command(BaseCommand):
                 for frame in all_frames.get('', []):
                     if "tar.gz" in frame['filename']:
                         tar_path = make_data_dir(out_path, frame)
-                        print("=============================")
-                        print(out_path)
-                        print(tar_path)
-                        print(os.path.join(tar_path, frame['OBJECT'].replace(" ", "_") + '_' + str(frame['REQNUM'])))
                         movie_file = make_movie(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, out_path, frame['PROPID'])
-                        print(movie_file)
-                        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
                         if settings.USE_S3:
-                            filenames = search(os.path.join(tar_path, frame['OBJECT'].replace(" ", "_") + '_' + str(frame['REQNUM'])), matchpattern='.*_2df_ex.fits', latest=False)
+                            filenames = glob(os.path.join(tar_path, frame['OBJECT'].replace(" ", "_") + '_' + str(frame['REQNUM']), '*_2df_ex.fits'))
                             if filenames:
                                 for filename in filenames:
-                                    print(filename)
                                     save_to_default(filename, out_path)
         else:
             self.stdout.write("No token defined (set ARCHIVE_TOKEN environment variable)")
@@ -124,11 +118,3 @@ class Command(BaseCommand):
         # Check if we're using a temp dir and then delete it
         if gettempdir() in out_path:
             shutil.rmtree(out_path)
-
-    def save_to_default(self, filename, out_path):
-        filename_up = filename.replace(out_path,"")[1:]
-        file = default_storage.open(filename_up, 'wb+')
-        with open(filename,'rb+') as f:
-            file.write(f.read())
-        file.close()
-        return
