@@ -57,6 +57,34 @@ def find_existing_vis_file(base_dir, filematch):
 
     return vis_file
 
+def determine_plot_valid(vis_file, now=datetime.utcnow()):
+    """
+        Determine if the passed <vis_file> is too old. If it is not too old,
+        the filename is returned unmodified, otherwise an empty string is returned.
+        The age determination is based on whether the start date (parsed from
+        the vis_file filename) is more than 15 days old (for all plot types
+        other than 'uncertainty' which uses a 1 day age)
+    """
+
+    valid_vis_file = ''
+    file_root, ext = os.path.splitext(os.path.basename(vis_file))
+    chunks = file_root.split('_')
+    if len(chunks) >=2:
+        date_range = chunks[-1]
+        plot_type = chunks[-2]
+        start_date, end_date = date_range.split('-')
+        try:
+            start_date_dt = datetime.strptime(start_date, "%Y%m%d")
+        except ValueError:
+            start_date_dt = datetime.min
+        age = now - start_date_dt
+        max_age = timedelta(days=15)
+        if plot_type == 'uncertainty':
+            max_age = timedelta(days=1)
+        if age < max_age:
+            valid_vis_file = vis_file
+    return valid_vis_file
+
 def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow(), site_code='-1'):
 
     logger.setLevel(logging.DEBUG)
@@ -75,18 +103,20 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow(), s
             b"R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7")
 
         return HttpResponse(PIXEL_GIF_DATA, content_type='image/gif')
-    base_dir = os.path.join('visibility', str(body.pk))  # new base_dir for method
 
+    base_dir = os.path.join('visibility', str(body.pk))  # new base_dir for method
     obj = body.name.replace(' ', '').replace('-', '_').replace('+', '')
     site = ''
     if plot_type == 'hoursup':
         site = "_" + site_code + "_"
         if site_code == '-1':
             site = "__W85|V37_"
-
     filematch = "{}.*.{}{}.*.png".format(obj, plot_type, site)
     vis_file = find_existing_vis_file(base_dir, filematch)
 
+    # Determine in existing visibility file is too old
+    if vis_file:
+        vis_file = determine_plot_valid(vis_file)
     if not vis_file:
         # Check if 'visibility' and per-object subdirectory exists and if not,
         # create the directory. Otherwise this will fail in the plotting routines
