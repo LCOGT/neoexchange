@@ -105,13 +105,14 @@ class Command(BaseCommand):
                 for frame in all_frames.get('', []):
                     if "tar.gz" in frame['filename']:
                         tar_path = make_data_dir(out_path, frame)
+                        print("=============================")
+                        print(out_path)
+                        print(tar_path)
+                        print(os.path.join(tar_path, frame['OBJECT'].replace(" ", "_") + '_' + str(frame['REQNUM'])))
                         movie_file = make_movie(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, out_path, frame['PROPID'])
                         print(movie_file)
+                        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
                         if settings.USE_S3:
-                            print("=============================")
-                            print(out_path)
-                            print(tar_path)
-                            print(os.path.join(tar_path, frame['OBJECT'].replace(" ", "_") + '_' + str(frame['REQNUM'])))
                             filenames = search(os.path.join(tar_path, frame['OBJECT'].replace(" ", "_") + '_' + str(frame['REQNUM'])), matchpattern='.*_2df_ex.fits', latest=False)
                             if filenames:
                                 for filename in filenames:
