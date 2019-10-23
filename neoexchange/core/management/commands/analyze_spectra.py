@@ -217,7 +217,6 @@ def pull_data_from_text(spectra):
     err = []
     for line in lines:
         try:
-            line = str(line)
             chunks = line.split(' ')
             chunks = list(filter(None, chunks))
             if len(chunks) >= 2:
