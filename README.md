@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 3.0.4
+Change to LCO Request V3 language
+
 ### 3.0.2
 Minor bug fixes
 
