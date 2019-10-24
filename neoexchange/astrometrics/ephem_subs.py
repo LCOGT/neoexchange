@@ -676,7 +676,7 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
                 moon_phases.append(moon_phase)
             ephem.add_columns(cols=(Column(moon_seps), Column(moon_phases)), names=('moon_sep', 'moon_phase'))
     except ValueError as e:
-        logger.warning("Error querying HORIZONS. Error message: ", e)
+        logger.warning("Error querying HORIZONS. Error message: {}".format(e))
         ephem = None
 
     return ephem

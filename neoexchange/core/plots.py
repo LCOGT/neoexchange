@@ -83,11 +83,12 @@ def determine_plot_valid(vis_file, now=datetime.utcnow()):
             max_age = timedelta(days=1)
         if age < max_age:
             valid_vis_file = vis_file
+        else:
+            logger.debug("File '{file}' too old: {start} {now} {age}".format(file=vis_file, start=start_date_dt, now=now, age=age.total_seconds()/86400.0))
     return valid_vis_file
 
 def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow(), site_code='-1'):
 
-    logger.setLevel(logging.DEBUG)
     try:
         body = Body.objects.get(pk=pk)
     except Body.DoesNotExist:
