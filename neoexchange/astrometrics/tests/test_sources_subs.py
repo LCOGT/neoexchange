@@ -4470,7 +4470,7 @@ class TestMakeconfigurations(TestCase):
 
         self.assertEqual(expected_num_configurations, len(configurations))
         self.assertEqual(expected_type, configurations[0]['type'])
-        self.assertEqual(expected_slit, configurations[0]['spectra_slit'])
+        self.assertEqual(expected_slit, configurations[0]['instrument_configs'][0]['optical_elements']['slit'])
 
     def test_2m_spectroscopy_nocalibs_1p6as_slit(self):
 
@@ -4484,7 +4484,7 @@ class TestMakeconfigurations(TestCase):
 
         self.assertEqual(expected_num_configurations, len(configurations))
         self.assertEqual(expected_type, configurations[0]['type'])
-        self.assertEqual(expected_slit, configurations[0]['spectra_slit'])
+        self.assertEqual(expected_slit, configurations[0]['instrument_configs'][0]['optical_elements']['slit'])
 
 
 class TestMakeCadence(TestCase):
@@ -4542,8 +4542,8 @@ class TestMakeCadence(TestCase):
                                         'end'   : datetime.strftime(self.params['end_time'], '%Y-%m-%dT%H:%M:%SZ')
                                         }]
                         }
-        self.request['target']['epochofel'] = self.request['target']['epochofel_mjd']
-        self.request['target']['scheme'] = self.request['target']['elements_type']
+        # self.request['target']['epochofel'] = self.request['target']['epochofel_mjd']
+        # self.request['target']['scheme'] = self.request['target']['elements_type']
 
         self.maxDiff = None
 
