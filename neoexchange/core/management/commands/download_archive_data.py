@@ -106,9 +106,11 @@ class Command(BaseCommand):
                 for frame in all_frames.get('', []):
                     if "tar.gz" in frame['filename']:
                         tar_path = make_data_dir(out_path, frame)
-                        movie_file = make_movie(frame['DATE_OBS'], frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), tar_path, out_path, frame['PROPID'])
+                        obj = frame['OBJECT'].replace(" ", "_")
+                        req_num = str(frame['REQNUM'])
+                        movie_file = make_movie(frame['DATE_OBS'], obj, req_num, tar_path, out_path, frame['PROPID'])
                         if settings.USE_S3:
-                            filenames = glob(os.path.join(tar_path, frame['OBJECT'].replace(" ", "_") + '_' + str(frame['REQNUM']), '*_2df_ex.fits'))
+                            filenames = glob(os.path.join(tar_path, obj + '_' + req_num, '*_2df_ex.fits'))
                             if filenames:
                                 for filename in filenames:
                                     save_to_default(filename, out_path)

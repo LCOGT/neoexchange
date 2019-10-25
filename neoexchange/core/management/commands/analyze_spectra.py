@@ -204,10 +204,12 @@ def get_y_units(y_data, filename):
 
 def pull_data_from_text(spectra):
     if default_storage.exists(spectra):
-        lines = default_storage.open(spectra, mode='rt').read()
+        with default_storage.open(spectra, mode='rb') as f:
+            lines = f.read()
     else:
         try:
-            lines = urllib.request.urlopen(spectra).read()
+            with urllib.request.urlopen(spectra) as f:
+                lines = f.read()
         except ValueError:
             return [], [], []
     lines = re.split('[\n\r]', str(lines, 'utf-8'))
