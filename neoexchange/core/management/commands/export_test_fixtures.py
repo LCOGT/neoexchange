@@ -33,11 +33,11 @@ class Command(BaseCommand):
 
     def handle(self, **options):
         # Export the smaller tables in full
-        buf = StringIO()
-        call_command('dumpdata', 'auth.user','core','-e', 'core.sourcemeasurement', '-e', 'core.frame', '-e','core.catalogsources', stdout=buf)
-        buf.seek(0)
-        with open('core/fixtures/partial.json', 'w') as f:
-            f.write(buf.read())
+        with StringIO() as buf:
+            call_command('dumpdata', 'auth.user','core','-e', 'core.sourcemeasurement', '-e', 'core.frame', '-e','core.catalogsources', stdout=buf)
+            buf.seek(0)
+            with open('core/fixtures/partial.json', 'w') as f:
+                f.write(buf.read())
 
         frame_content = {
             'sourcemeas' : SourceMeasurement,
