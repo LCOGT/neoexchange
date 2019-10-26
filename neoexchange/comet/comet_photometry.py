@@ -5,6 +5,7 @@ import os
 from sys import path, exit
 from glob import glob
 from math import log10, log, sqrt, pow
+from datetime import datetime, timedelta
 
 import numpy as np
 from astropy import units as u
@@ -23,13 +24,15 @@ import django
 from django.conf import settings
 django.setup()
 
-from astrometrics.ephem_subs import LCOGT_domes_to_site_codes
+from astrometrics.ephem_subs import LCOGT_domes_to_site_codes, horizons_ephem
 from comet_subs import *
 
 #comet = '67P'
 #comet = '243P'
 #comet_color = 0.56
-comet = '46P'
+#comet = '46P'
+comet = '29P'
+use_ephem_file = False
 
 datadir = os.path.join(os.getenv('HOME'), 'Asteroids', comet, 'Pipeline' ) #, 'Temp')
 datadir = os.path.join(os.path.abspath(datadir), '')
@@ -78,10 +81,6 @@ for fits_fpath in images:
         default_pixelscale = 0.1838220980370765
 
     #   Determine position of comet in this frame
-    ephem_file = comet + "_ephem_%s_%s_%s.txt" % ( siteid, instrument, sitecode.upper())
-    print("Reading ephemeris from", ephem_file)
-    ephem_file = os.path.join(os.getenv('HOME'), 'Asteroids', ephem_file)
-
     if 'mjdmid' in header:
         mjd_utc_mid = header['mjdmid']
         date_obs = Time(mjd_utc_mid, format='mjd', scale='utc')
@@ -93,7 +92,32 @@ for fits_fpath in images:
         date_obs.format = 'isot'
     jd_utc_mid = mjd_utc_mid + 2400000.5
     print("JD=", jd_utc_mid, date_obs, header['exptime'], header['exptime']/2.0/86400.0)
-    ra, dec, del_ra, del_dec, delta, phase = interpolate_ephemeris(ephem_file, jd_utc_mid, with_rdot=False)
+    if use_ephem_file is True:
+        ephem_file = comet + "_ephem_%s_%s_%s.txt" % ( siteid, instrument, sitecode.upper())
+        print("Reading ephemeris from", ephem_file)
+        ephem_file = os.path.join(os.getenv('HOME'), 'Asteroids', ephem_file)
+
+        ra, dec, del_ra, del_dec, delta, phase = interpolate_ephemeris(ephem_file, jd_utc_mid, with_rdot=False)
+    else:
+        start = date_obs-1
+        end = date_obs+1
+        ephem = horizons_ephem(comet, start.datetime, end.datetime, sitecode.upper())
+        # Find index closest to obs time
+        idx = (np.abs(ephem['datetime_jd'] - jd_utc_mid)).argmin()
+        if ephem[idx]['datetime_jd'] > jd_utc_mid:
+            idx = idx-1
+        if idx+1 < len(ephem['datetime_jd'])-1:
+            ejd1, ra1, dec1, delta = ephem[idx][('datetime_jd', 'RA', 'DEC', 'delta')]
+            ejd2, ra2, dec2 = ephem[idx+1][('datetime_jd', 'RA', 'DEC')]
+            ra_dec_2 = SkyCoord(ra2, dec2, unit=(u.deg, u.deg))
+            ra_dec_1 = SkyCoord(ra1, dec1, unit=(u.deg, u.deg))
+            frac = (jd_utc_mid - float(ejd1)) / (float(ejd2) - float(ejd1))
+            ra = ra_dec_1.ra + frac*(ra_dec_2.ra - ra_dec_1.ra)
+            dec = ra_dec_1.dec + frac*(ra_dec_2.dec - ra_dec_1.dec)
+            print (ra.to_string(unit=u.hour, sep=('h ', 'm ', 's')), dec.to_string(alwayssign=True, unit=u.degree, sep=('d ', "' ", '"')))
+        else:
+            print("Ephemeris doesn't cover observation time")
+            next
     sky_position = SkyCoord(ra, dec, unit='deg', frame='icrs')
     print("RA, Dec, delta for frame=", ra, dec, delta)
 
