@@ -1584,8 +1584,8 @@ def build_characterization_list(disp=None):
                         body_dict['obs_edate'] = obs_dates[1]
                 else:
                     body_dict['obs_sdate'] = body_dict['obs_edate'] = obs_dates[2]+timedelta(days=99)
-                    startdate = '-'
-                    enddate = '-'
+                    startdate = '[--'
+                    enddate = '--]'
                 days_to_start = body_dict['obs_sdate']-obs_dates[2]
                 days_to_end = body_dict['obs_edate']-obs_dates[2]
                 # Define a sorting Priority:
