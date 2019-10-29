@@ -237,7 +237,7 @@
       <div class="four columns">
         {% if form.errors%}
           {% if form.spectroscopy.value == 'True' %}
-            <a href="{% url 'calibsources' %}">Return to schedule calib spectra page</a>
+            <a href="{% url 'calibsource-view' %}">Return to schedule calib spectra page</a>
           {% else %}
             <a href="{% url 'schedule-calib-spectra' instrument_code=form.instrument_code.value %}">Return to schedule parameters page</a>
           {% endif %}

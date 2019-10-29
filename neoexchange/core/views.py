@@ -882,6 +882,12 @@ class ScheduleCalibSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
     form_class = ScheduleBlockForm
     model = StaticSource
 
+    def get_context_data(self, **kwargs):
+        context = super(ScheduleCalibSubmit, self).get_context_data(**kwargs)
+        context['calibrator'] = self.object
+
+        return context
+
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
         print(self.object)
