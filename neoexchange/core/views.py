@@ -12,12 +12,12 @@ GNU General Public License for more details.
 """
 
 import os
+from shutil import move
 from glob import glob
 from datetime import datetime, timedelta, date
 from math import floor, ceil, degrees, radians, pi, acos
 from astropy import units as u
 import matplotlib
-#matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import json
 import urllib
@@ -49,6 +49,7 @@ except ImportError:
     pass
 import io
 
+
 from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, \
     ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm
 from .models import *
@@ -59,7 +60,8 @@ from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
     MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes, \
     determine_spectro_slot_length, get_sitepos, read_findorb_ephem, accurate_astro_darkness,\
-    get_visibility, determine_exp_count, determine_star_trails, calc_moon_sep, get_alt_from_airmass
+    get_visibility, determine_exp_count, determine_star_trails, calc_moon_sep, \
+    get_alt_from_airmass
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs, validate_text,\
@@ -71,13 +73,13 @@ from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     determine_filenames, increment_red_level, update_ldac_catalog_wcs, FITSHdrException
 from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
-from photometrics.spectraplot import get_spec_plot, make_spec
 from photometrics.gf_movie import make_gif, make_movie
 from core.frames import create_frame, ingest_frames, measurements_from_block
 from core.mpc_submit import email_report_to_mpc
 from core.archive_subs import lco_api_call
 from photometrics.SA_scatter import readSources, genGalPlane, plotScatter, \
     plotFormat
+from core.plots import find_spec_plots
 
 logger = logging.getLogger(__name__)
 
@@ -222,6 +224,9 @@ class BodySearchView(ListView):
             object_list = self.model.objects.all()
         return object_list
 
+class BodyVisibilityView(DetailView):
+    template_name = 'core/body_visibility.html'
+    model = Body
 
 class BlockDetailView(DetailView):
     template_name = 'core/block_detail.html'
@@ -1582,8 +1587,8 @@ def build_characterization_list(disp=None):
                         body_dict['obs_edate'] = obs_dates[1]
                 else:
                     body_dict['obs_sdate'] = body_dict['obs_edate'] = obs_dates[2]+timedelta(days=99)
-                    startdate = '-'
-                    enddate = '-'
+                    startdate = '[--'
+                    enddate = '--]'
                 days_to_start = body_dict['obs_sdate']-obs_dates[2]
                 days_to_end = body_dict['obs_edate']-obs_dates[2]
                 # Define a sorting Priority:
@@ -1595,6 +1600,7 @@ def build_characterization_list(disp=None):
                 body_dict['dec'] = emp_line[1]
                 body_dict['v_mag'] = emp_line[2]
                 body_dict['motion'] = emp_line[4]
+                body_dict['radar_target'] = body.radar_target()
                 if disp:
                     if disp in body_dict['obs_needed']:
                         unranked.append(body_dict)
@@ -2923,34 +2929,6 @@ def store_detections(mtdsfile, dbg=False):
     return num_candidates
 
 
-def make_plot(request):
-
-    import aplpy
-
-    fits_file = 'cpt1m010-kb70-20160428-0148-e91.fits'
-    fits_filepath = os.path.join('/tmp', 'tmp_neox_9nahRl', fits_file)
-
-    sources = CatalogSources.objects.filter(frame__filename__contains=fits_file[0:28]).values_list('obs_ra', 'obs_dec')
-
-    fig = aplpy.FITSFigure(fits_filepath)
-    fig.show_grayscale(pmin=0.25, pmax=98.0)
-    ra = [X[0] for X in sources]
-    dec = [X[1] for X in sources]
-
-    fig.show_markers(ra, dec, edgecolor='green', facecolor='none', marker='o', s=15, alpha=0.5)
-
-    buffer = io.BytesIO()
-    fig.save(buffer, format='png')
-    fig.save(fits_filepath.replace('.fits', '.png'), format='png')
-
-    return HttpResponse(buffer.getvalue(), content_type="Image/png")
-
-
-def plotframe(request):
-
-    return render(request, 'core/frame_plot.html')
-
-
 def find_spec(pk):
     """find directory of spectra for a certain block
     NOTE: Currently will only pull first spectrum of a superblock
@@ -2981,20 +2959,6 @@ def find_spec(pk):
 
     return date_obs, obj, req, path, prop
 
-def find_spec_plots(path=None, obj=None, req=None, obs_num=None):
-
-    spec_files = None
-    if path and obj and obs_num:
-        if req:
-            if not obs_num.isdigit():
-                png_file = "{}/{}_{}_{}".format(path, obj, req, obs_num)
-            else:
-                png_file = "{}/{}_{}_spectra_{}.png".format(path, obj, req, obs_num)
-        else:
-            png_file = "{}/{}_spectra_{}.png".format(path, obj, obs_num)
-        spec_files = [png_file,]
-    return spec_files
-
 def display_spec(request, pk, obs_num):
     date_obs, obj, req, path, prop = find_spec(pk)
     base_dir = str(date_obs)  # new base_dir for method
@@ -3011,42 +2975,6 @@ def display_spec(request, pk, obs_num):
     else:
         return HttpResponse()
 
-
-def display_calibspec(request, pk):
-    try:
-        calibsource = StaticSource.objects.get(pk=pk)
-    except StaticSource.DoesNotExist:
-        logger.debug("Source not found")
-        return HttpResponse()
-
-    base_dir = os.path.join('cdbs', 'ctiostan')  # new base_dir for method
-
-    obj = calibsource.name.lower().replace(' ', '').replace('-', '_').replace('+', '')
-    obs_num = '1'
-    spec_files = find_spec_plots(base_dir, obj, None, obs_num)
-    if spec_files:
-        spec_file = spec_files[0]
-    else:
-        spec_file = ''
-    if not spec_file:
-        spec_file = "f" + obj + ".dat"
-        if default_storage.exists(os.path.join(base_dir, spec_file)):
-            spec_file = get_spec_plot(base_dir, spec_file, obs_num, log=True)
-        else:
-            logger.warning("No flux file found for " + spec_file)
-            spec_file = ''
-    if spec_file and default_storage.exists(spec_file):
-        logger.debug('Spectroscopy Plot: {}'.format(spec_file))
-        spec_plot = default_storage.open(spec_file, 'rb').read()
-        return HttpResponse(spec_plot, content_type="Image/png")
-    else:
-        logger.debug("No spectrum found for: ", spec_file)
-        import base64
-        # Return a 1x1 pixel gif in the case of no spectra file
-        PIXEL_GIF_DATA = base64.b64decode(
-            b"R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7")
-
-        return HttpResponse(PIXEL_GIF_DATA, content_type='image/gif')
 
 
 class PlotSpec(View):  # make loging required later
@@ -3090,37 +3018,6 @@ class GuideMovie(View):
         params = {'pk': kwargs['pk'], 'sb_id': block.superblock.id}
 
         return render(request, self.template_name, params)
-
-
-def make_standards_plot(request):
-    """creates stellar standards plot to be added to page"""
-
-    scoords = readSources('Solar')
-    fcoords = readSources('Flux')
-
-    ax = plt.figure().gca()
-    plotScatter(ax, scoords, 'b*')
-    plotScatter(ax, fcoords, 'g*')
-    plotFormat(ax, 0)
-    buffer = io.BytesIO()
-    plt.savefig(buffer, format='png')
-    plt.close()
-
-    return HttpResponse(buffer.getvalue(), content_type="Image/png")
-
-
-def make_solar_standards_plot(request):
-    """creates solar standards plot to be added to page"""
-
-    scoords = readSources('Solar')
-    ax = plt.figure().gca()
-    plotScatter(ax, scoords, 'b*')
-    plotFormat(ax, 1)
-    buffer = io.BytesIO()
-    plt.savefig(buffer, format='png')
-    plt.close()
-
-    return HttpResponse(buffer.getvalue(), content_type="Image/png")
 
 
 def update_taxonomy(body, tax_table, dbg=False):

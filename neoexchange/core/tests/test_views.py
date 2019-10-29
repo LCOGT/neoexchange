@@ -48,6 +48,7 @@ from core.frames import block_status, create_frame, frame_params_from_block
 from core.forms import EphemQuery
 # Import modules to test
 from core.views import *
+from core.plots import *
 
 # Disable logging during testing
 import logging
