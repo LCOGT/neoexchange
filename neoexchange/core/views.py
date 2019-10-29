@@ -890,11 +890,11 @@ class ScheduleCalibSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
-        print(self.object)
         form = self.get_form()
         if form.is_valid():
             return self.form_valid(form, request)
         else:
+            print(form)
             return self.form_invalid(form)
 
     def form_valid(self, form, request):
