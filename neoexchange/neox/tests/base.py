@@ -289,8 +289,8 @@ class FunctionalTest(StaticLiveServerTestCase):
                 self.browser = webdriver.Firefox(capabilities=firefox_capabilities, firefox_profile=fp)
         else:
             options = webdriver.chrome.options.Options()
-            # options.add_argument('--headless')
-            # options.add_argument('--no-sandbox')
+            options.add_argument('--headless')
+            options.add_argument('--no-sandbox')
             options.add_argument('--disable-gpu')
             self.browser = webdriver.Chrome(chrome_options=options)
         self.browser.implicitly_wait(5)

@@ -968,7 +968,7 @@ class TestRecordBlock(TestCase):
                               'exp_count': 1,
                               'exp_time': 180.0,
                               'exp_type': 'SPECTRUM',
-                              'name': '4_E10-20180316_spectra',
+                              'group_name': '4_E10-20180316_spectra',
                               'instrument': '2M0-FLOYDS-SCICAM',
                               'instrument_code': 'E10-FLOYDS',
                               'observatory': '',
@@ -987,7 +987,7 @@ class TestRecordBlock(TestCase):
         self.spectro_form = { 'start_time' : self.spectro_params['start_time'],
                               'end_time' : self.spectro_params['end_time'],
                               'proposal_code' : self.spectro_params['proposal_id'],
-                              'group_name' : self.spectro_params['name'],
+                              'group_name' : self.spectro_params['group_name'],
                               'exp_count' : self.spectro_params['exp_count'],
                               'exp_length' : self.spectro_params['exp_time'],
                             }
@@ -1251,7 +1251,7 @@ class TestSchedule_Check(TestCase):
                         'schedule_ok': True,
                         'site_code': data['site_code'],
                         'proposal_code': data['proposal_code'],
-                        'name': self.body_mp.current_name() + '_' + data['site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d'),
+                        'group_name': self.body_mp.current_name() + '_' + data['site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d'),
                         'utc_date': data['utc_date'].isoformat(),
                         'start_time': '2016-04-06T09:00:00',
                         'end_time': '2016-04-06T19:10:00',
@@ -1291,7 +1291,7 @@ class TestSchedule_Check(TestCase):
         resp = schedule_check(data, self.body_mp)
 
         self.assertEqual(expected_resp, resp)
-        self.assertLessEqual(len(resp['name']), 50)
+        self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
@@ -1321,7 +1321,7 @@ class TestSchedule_Check(TestCase):
                         'schedule_ok': True,
                         'site_code': data['instrument_code'][0:3],
                         'proposal_code': data['proposal_code'],
-                        'name': self.body_mp.current_name() + '_' + data['instrument_code'][0:3].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d') + '_spectra',
+                        'group_name': self.body_mp.current_name() + '_' + data['instrument_code'][0:3].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d') + '_spectra',
                         'utc_date': data['utc_date'].isoformat(),
                         'start_time': '2016-04-06T09:00:00',
                         'end_time': '2016-04-06T19:10:00',
@@ -1361,7 +1361,7 @@ class TestSchedule_Check(TestCase):
         resp = schedule_check(data, self.body_mp)
 
         self.assertEqual(expected_resp, resp)
-        self.assertLessEqual(len(resp['name']), 50)
+        self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
@@ -1391,7 +1391,7 @@ class TestSchedule_Check(TestCase):
                         'schedule_ok': True,
                         'site_code': data['instrument_code'][0:3],
                         'proposal_code': data['proposal_code'],
-                        'name': self.body_mp.current_name() + '_' + data['instrument_code'][0:3].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d') + '_spectra',
+                        'group_name': self.body_mp.current_name() + '_' + data['instrument_code'][0:3].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d') + '_spectra',
                         'utc_date': data['utc_date'].isoformat(),
                         'start_time': '2016-04-06T09:00:00',
                         'end_time': '2016-04-06T19:10:00',
@@ -1431,7 +1431,7 @@ class TestSchedule_Check(TestCase):
         resp = schedule_check(data, self.body_mp)
 
         self.assertEqual(expected_resp, resp)
-        self.assertLessEqual(len(resp['name']), 50)
+        self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
@@ -1462,7 +1462,7 @@ class TestSchedule_Check(TestCase):
                         'schedule_ok': True,
                         'site_code': data['site_code'],
                         'proposal_code': data['proposal_code'],
-                        'name': '2009 HA_Q63-cad-20160406-0406',
+                        'group_name': '2009 HA_Q63-cad-20160406-0406',
                         'utc_date': data['utc_date'].isoformat(),
                         'start_time': '2016-04-06T09:00:00',
                         'end_time': '2016-04-06T23:00:00',
@@ -1504,7 +1504,7 @@ class TestSchedule_Check(TestCase):
         resp = schedule_check(data, self.body_mp)
 
         self.assertEqual(expected_resp, resp)
-        self.assertLessEqual(len(resp['name']), 50)
+        self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
@@ -1535,7 +1535,7 @@ class TestSchedule_Check(TestCase):
                         'schedule_ok': True,
                         'site_code': data['site_code'],
                         'proposal_code': data['proposal_code'],
-                        'name': '2009 HA_Q63-cad-20160406-0406',
+                        'group_name': '2009 HA_Q63-cad-20160406-0406',
                         'utc_date': data['utc_date'].isoformat(),
                         'start_time': '2016-04-06T09:00:00',
                         'end_time': '2016-04-06T23:00:00',
@@ -1577,7 +1577,7 @@ class TestSchedule_Check(TestCase):
         resp = schedule_check(data, self.body_mp)
 
         self.assertEqual(expected_resp, resp)
-        self.assertLessEqual(len(resp['name']), 50)
+        self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
@@ -1606,7 +1606,7 @@ class TestSchedule_Check(TestCase):
                         'schedule_ok': True,
                         'site_code': data['site_code'],
                         'proposal_code': data['proposal_code'],
-                        'name': '2009 HA21_Q63-cad-20160406-0406',
+                        'group_name': '2009 HA21_Q63-cad-20160406-0406',
                         'utc_date': data['utc_date'].isoformat(),
                         'start_time': '2016-04-06T09:00:00',
                         'end_time': '2016-04-06T23:00:00',
@@ -1648,7 +1648,7 @@ class TestSchedule_Check(TestCase):
         resp = schedule_check(data, self.body_mp)
 
         self.assertEqual(expected_resp, resp)
-        self.assertLessEqual(len(resp['name']), 50)
+        self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)

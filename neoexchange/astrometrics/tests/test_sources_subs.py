@@ -686,7 +686,7 @@ class TestSubmitBlockToScheduler(TestCase):
                     'start_time' : dark_start,
                     'end_time' : dark_end,
                     'filter_pattern' : 'w',
-                    'name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                     'user_id'  : 'bsimpson'
                  }
 
@@ -726,7 +726,7 @@ class TestSubmitBlockToScheduler(TestCase):
                     'start_time' : dark_start,
                     'end_time' : dark_end,
                     'filter_pattern' : 'w',
-                    'name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                     'user_id'  : 'bsimpson'
                  }
 
@@ -769,7 +769,7 @@ class TestSubmitBlockToScheduler(TestCase):
                     'start_time' : dark_start,
                     'end_time' : dark_end,
                     'filter_pattern' : 'w',
-                    'name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                     'user_id'  : 'bsimpson',
                     'period'    : 2.0,
                     'jitter'    : 0.25
@@ -811,7 +811,7 @@ class TestSubmitBlockToScheduler(TestCase):
                     'start_time' : dark_start,
                     'end_time' : dark_end,
                     'filter_pattern' : 'slit_6.0as',
-                    'name' : body_elements['current_name'] + '_' + 'ogg' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'group_name' : body_elements['current_name'] + '_' + 'ogg' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                     'user_id'  : 'bsimpson',
                     'spectroscopy' : True,
                     'spectra_slit' : 'slit_6.0as'
@@ -871,7 +871,7 @@ class TestSubmitBlockToScheduler(TestCase):
                     'start_time' : dark_start,
                     'end_time' : dark_end,
                     'filter_pattern' : 'slit_6.0as',
-                    'name' : body_elements['current_name'] + '_' + 'ogg' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'group_name' : body_elements['current_name'] + '_' + 'ogg' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                     'user_id'  : 'bsimpson',
                     'solar_analog' : True,
                     'calibsource' : {'id' : 1, 'name' : 'SA107-684', 'ra_deg' : 234.3, 'dec_deg' : -0.16, 'calib_exptime' : 60},
@@ -968,7 +968,7 @@ class TestSubmitBlockToScheduler(TestCase):
                     'start_time' : dark_start,
                     'end_time' : dark_end,
                     'filter_pattern' : 'slit_6.0as',
-                    'name' : body_elements['current_name'] + '_' + 'OGG' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'group_name' : body_elements['current_name'] + '_' + 'OGG' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                     'user_id'  : 'bsimpson',
                     'spectroscopy' : True,
                     'spectra_slit' : 'slit_6.0as'
@@ -992,7 +992,7 @@ class TestSubmitBlockToScheduler(TestCase):
                     'site_code' : site_code,
                     'start_time' : dark_start,
                     'end_time' : dark_end,
-                    'name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                     'user_id'  : 'bsimpson',
                     'filter_pattern' : 'w'
                  }
@@ -1015,7 +1015,7 @@ class TestSubmitBlockToScheduler(TestCase):
                     'site_code' : site_code,
                     'start_time' : dark_start,
                     'end_time' : dark_end,
-                    'name' : self.body_elements['current_name'] + '_' + 'ELP' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'group_name' : self.body_elements['current_name'] + '_' + 'ELP' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                     'user_id'  : 'bsimpson',
                     'filter_pattern' : 'w'
                  }
@@ -1041,7 +1041,7 @@ class TestSubmitBlockToScheduler(TestCase):
                     'site_code' : site_code,
                     'start_time' : dark_start,
                     'end_time' : dark_end,
-                    'name' : body_elements['current_name'] + '_' + 'COJ' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'group_name' : body_elements['current_name'] + '_' + 'COJ' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                     'user_id'  : 'bsimpson',
                     'filter_pattern' : 'w',
                     'too_mode' : True
@@ -1066,7 +1066,7 @@ class TestSubmitBlockToScheduler(TestCase):
                         'site_code' : site_code,
                         'start_time' : dark_start,
                         'end_time' : dark_end,
-                        'name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                         'user_id'  : 'bsimpson',
                         'filter_pattern' : 'V,V,R,R,I,I'
                      }
@@ -1092,7 +1092,7 @@ class TestSubmitBlockToScheduler(TestCase):
                         'site_code' : site_code,
                         'start_time' : dark_start,
                         'end_time' : dark_end,
-                        'name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                         'user_id'  : 'bsimpson',
                         'filter_pattern' : 'V,V,R,I'
                      }
@@ -1118,7 +1118,7 @@ class TestSubmitBlockToScheduler(TestCase):
                         'site_code' : site_code,
                         'start_time' : dark_start,
                         'end_time' : dark_end,
-                        'name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                         'user_id'  : 'bsimpson',
                         'filter_pattern' : 'V'
                      }
@@ -1144,7 +1144,7 @@ class TestSubmitBlockToScheduler(TestCase):
                         'site_code' : site_code,
                         'start_time' : dark_start,
                         'end_time' : dark_end,
-                        'name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                         'user_id'  : 'bsimpson',
                         'filter_pattern' : 'V,V,R,R,I,I,V'
                      }
@@ -1170,7 +1170,7 @@ class TestSubmitBlockToScheduler(TestCase):
                         'site_code' : site_code,
                         'start_time' : dark_start,
                         'end_time' : dark_end,
-                        'name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                         'user_id'  : 'bsimpson',
                         'filter_pattern' : 'V,V,R,I,V'
                      }
@@ -1196,7 +1196,7 @@ class TestSubmitBlockToScheduler(TestCase):
                         'site_code' : site_code,
                         'start_time' : dark_start,
                         'end_time' : dark_end,
-                        'name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                         'user_id'  : 'bsimpson',
                         'filter_pattern' : 'V,V,V,V,V,V,R,R,R,R,R,I,I,I,I,I,I'
                      }
@@ -1222,7 +1222,7 @@ class TestSubmitBlockToScheduler(TestCase):
                         'site_code' : site_code,
                         'start_time' : dark_start,
                         'end_time' : dark_end,
-                        'name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                         'user_id'  : 'bsimpson',
                         'filter_pattern' : 'V,V,R,R,I,V'
                      }
@@ -1249,7 +1249,7 @@ class TestSubmitBlockToScheduler(TestCase):
                     'instrument_code' : 'F65-FLOYDS',
                     'site_code' : 'F65',
                     'filter_pattern' : 'slit_6.0as',
-                    'name' : self.body_elements['current_name'] + '_' + 'F65' + '-' + datetime.strftime(utc_date, '%Y%m%d') + "_spectra",
+                    'group_name' : self.body_elements['current_name'] + '_' + 'F65' + '-' + datetime.strftime(utc_date, '%Y%m%d') + "_spectra",
 
                     'start_time' :  utc_date + timedelta(hours=5),
                     'end_time'   :  utc_date + timedelta(hours=15),
@@ -1295,7 +1295,7 @@ class TestSubmitBlockToScheduler(TestCase):
                     'instrument_code' : 'F65-FLOYDS',
                     'site_code' : 'F65',
                     'filter_pattern' : 'slit_6.0as',
-                    'name' : 'SA107-684' + '_' + 'F65' + '-' + datetime.strftime(utc_date, '%Y%m%d') + "_spectra",
+                    'group_name' : 'SA107-684' + '_' + 'F65' + '-' + datetime.strftime(utc_date, '%Y%m%d') + "_spectra",
                     'start_time' :  utc_date + timedelta(hours=5),
                     'end_time'   :  utc_date + timedelta(hours=15),
                     'solar_analog' : False,
@@ -1310,7 +1310,7 @@ class TestSubmitBlockToScheduler(TestCase):
         expected_exp_count = 1
         expected_exptime = 300.0
         expected_filter = 'slit_6.0as'
-        expected_groupid = params['name']
+        expected_groupid = params['group_name']
 
         user_request = make_requestgroup(self.body_elements, params)
         requests = user_request['requests']

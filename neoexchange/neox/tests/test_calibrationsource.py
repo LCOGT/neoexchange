@@ -186,9 +186,7 @@ class TestCalibrationSources(FunctionalTest):
         button = self.browser.find_element_by_id('id_submit_button')
         with self.wait_for_page_load(timeout=10):
             button.click()
-        # print([s.id for s in StaticSource.objects.all()])
-        import time
-        time.sleep(5)
+
         target_url = "{0}{1}".format(self.live_server_url, reverse('home'))
         actual_url = self.browser.current_url
         self.assertEqual(actual_url, target_url)
