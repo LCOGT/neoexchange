@@ -962,7 +962,17 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
                 msg = "It was not possible to submit your request to the scheduler."
                 if sched_params.get('error_msg', None):
                     msg += "\nAdditional information:"
-                    error_msgs = sched_params['error_msg'].get('non_field_errors', [])
+                    try:
+                        error_msgs = sched_params['error_msg'].get('non_field_errors', [])
+                        if error_msgs == []:
+                            error_msgs = sched_params['error_msg'].get('errors', [])
+                            if type(error_msgs) == dict:
+                                requests = error_msgs.get('requests', [])
+                                error_msgs = []
+                                for request in requests:
+                                    error_msgs += request.get('non_field_errors', [])
+                    except AttributeError:
+                        error_msgs = [sched_params['error_msg'],]
                     msg += "\n".join(error_msgs)
                 messages.warning(self.request, msg)
             return super(ScheduleSubmit, self).form_valid(new_form)
