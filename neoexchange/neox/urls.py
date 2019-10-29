@@ -25,13 +25,13 @@ from core.models import Body, Block, SourceMeasurement, SuperBlock, StaticSource
 from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockListView, ScheduleParameters, \
     ScheduleSubmit, ephemeris, home, BlockReport, ranking, MeasurementViewBody, MeasurementViewBlock, \
     UploadReport, BlockTimeSummary, ScheduleParametersCadence, ScheduleParametersSpectra, \
-    plotframe, CandidatesViewBlock, BlockReportMPC, \
+    CandidatesViewBlock, BlockReportMPC, \
     MeasurementDownloadMPC, MeasurementDownloadADESPSV, \
     SuperBlockListView, SuperBlockDetailView, characterization, SpectroFeasibility, BlockSpec,\
     display_movie, GuideMovie, \
     StaticSourceView, StaticSourceDetailView, ScheduleCalibSpectra, ScheduleCalibSubmit, \
     CalibSpectroFeasibility, ScheduleCalibParameters, \
-    BestStandardsView, PlotSpec
+    BestStandardsView, PlotSpec, BodyVisibilityView
 from core.plots import make_plot, make_visibility_plot, \
     make_standards_plot, make_solar_standards_plot
 
