@@ -46,6 +46,7 @@ class Command(BaseCommand):
         parser.add_argument('--proposal', action="store", default=None, help="Proposal code to query for data (e.g. LCO2019B-023; default is for all active proposals)")
         parser.add_argument('--datadir', default=out_path, help='Place to save data (e.g. %s)' % out_path)
         parser.add_argument('--spectraonly', default=False, action='store_true', help='Whether to only download spectra')
+        parser.add_argument('--dlengimaging', default=False, action='store_true', help='Whether to download imaging for LCOEngineering')
 
     def handle(self, *args, **options):
         usage = "Incorrect usage. Usage: %s [YYYYMMDD] [proposal code]" % ( argv[1] )
@@ -74,7 +75,7 @@ class Command(BaseCommand):
             for proposal in proposals:
                 self.stdout.write("Looking for frames between %s->%s from %s" % ( start_date, end_date, proposal ))
                 obstypes = ['EXPOSE', 'ARC', 'LAMPFLAT', 'SPECTRUM']
-                if proposal == 'LCOEngineering' or options['spectraonly'] is True:
+                if (proposal == 'LCOEngineering' and options['dlengimaging'] is False) or options['spectraonly'] is True:
                     # Not interested in imaging frames
                     obstypes = ['ARC', 'LAMPFLAT', 'SPECTRUM']
                 all_frames = {}

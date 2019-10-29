@@ -12,12 +12,12 @@ GNU General Public License for more details.
 """
 
 import os
+from shutil import move
 from glob import glob
 from datetime import datetime, timedelta, date
 from math import floor, ceil, degrees, radians, pi, acos
 from astropy import units as u
 import matplotlib
-#matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import json
 import urllib
@@ -84,6 +84,7 @@ from core.archive_subs import lco_api_call
 from core.utils import search
 from photometrics.SA_scatter import readSources, genGalPlane, plotScatter, \
     plotFormat
+from core.plots import find_spec_plots
 
 logger = logging.getLogger(__name__)
 
@@ -231,6 +232,9 @@ class BodySearchView(ListView):
             object_list = self.model.objects.all()
         return object_list
 
+class BodyVisibilityView(DetailView):
+    template_name = 'core/body_visibility.html'
+    model = Body
 
 class BlockDetailView(DetailView):
     template_name = 'core/block_detail.html'
@@ -974,7 +978,17 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
                 msg = "It was not possible to submit your request to the scheduler."
                 if sched_params.get('error_msg', None):
                     msg += "\nAdditional information:"
-                    error_msgs = sched_params['error_msg'].get('non_field_errors', [])
+                    try:
+                        error_msgs = sched_params['error_msg'].get('non_field_errors', [])
+                        if error_msgs == []:
+                            error_msgs = sched_params['error_msg'].get('errors', [])
+                            if type(error_msgs) == dict:
+                                requests = error_msgs.get('requests', [])
+                                error_msgs = []
+                                for request in requests:
+                                    error_msgs += request.get('non_field_errors', [])
+                    except AttributeError:
+                        error_msgs = [sched_params['error_msg'],]
                     msg += "\n".join(error_msgs)
                 messages.warning(self.request, msg)
             return super(ScheduleSubmit, self).form_valid(new_form)
@@ -1584,8 +1598,8 @@ def build_characterization_list(disp=None):
                         body_dict['obs_edate'] = obs_dates[1]
                 else:
                     body_dict['obs_sdate'] = body_dict['obs_edate'] = obs_dates[2]+timedelta(days=99)
-                    startdate = '-'
-                    enddate = '-'
+                    startdate = '[--'
+                    enddate = '--]'
                 days_to_start = body_dict['obs_sdate']-obs_dates[2]
                 days_to_end = body_dict['obs_edate']-obs_dates[2]
                 # Define a sorting Priority:
@@ -1597,6 +1611,7 @@ def build_characterization_list(disp=None):
                 body_dict['dec'] = emp_line[1]
                 body_dict['v_mag'] = emp_line[2]
                 body_dict['motion'] = emp_line[4]
+                body_dict['radar_target'] = body.radar_target()
                 if disp:
                     if disp in body_dict['obs_needed']:
                         unranked.append(body_dict)
@@ -2925,34 +2940,6 @@ def store_detections(mtdsfile, dbg=False):
     return num_candidates
 
 
-def make_plot(request):
-
-    import aplpy
-
-    fits_file = 'cpt1m010-kb70-20160428-0148-e91.fits'
-    fits_filepath = os.path.join('/tmp', 'tmp_neox_9nahRl', fits_file)
-
-    sources = CatalogSources.objects.filter(frame__filename__contains=fits_file[0:28]).values_list('obs_ra', 'obs_dec')
-
-    fig = aplpy.FITSFigure(fits_filepath)
-    fig.show_grayscale(pmin=0.25, pmax=98.0)
-    ra = [X[0] for X in sources]
-    dec = [X[1] for X in sources]
-
-    fig.show_markers(ra, dec, edgecolor='green', facecolor='none', marker='o', s=15, alpha=0.5)
-
-    buffer = io.BytesIO()
-    fig.save(buffer, format='png')
-    fig.save(fits_filepath.replace('.fits', '.png'), format='png')
-
-    return HttpResponse(buffer.getvalue(), content_type="Image/png")
-
-
-def plotframe(request):
-
-    return render(request, 'core/frame_plot.html')
-
-
 def find_spec(pk):
     """find directory of spectra for a certain block
     NOTE: Currently will only pull first spectrum of a superblock
@@ -3002,6 +2989,7 @@ def find_analog(date_obs, site):
     analog_list = [calib for _, calib in sorted(zip(time_diff, star_list))]
 
     return analog_list
+
 
 
 def plot_floyds_spec(block, obs_num=1):
@@ -3439,37 +3427,6 @@ class GuideMovie(View):
         params = {'pk': kwargs['pk'], 'sb_id': block.superblock.id}
 
         return render(request, self.template_name, params)
-
-
-def make_standards_plot(request):
-    """creates stellar standards plot to be added to page"""
-
-    scoords = readSources('Solar')
-    fcoords = readSources('Flux')
-
-    ax = plt.figure().gca()
-    plotScatter(ax, scoords, 'b*')
-    plotScatter(ax, fcoords, 'g*')
-    plotFormat(ax, 0)
-    buffer = io.BytesIO()
-    plt.savefig(buffer, format='png')
-    plt.close()
-
-    return HttpResponse(buffer.getvalue(), content_type="Image/png")
-
-
-def make_solar_standards_plot(request):
-    """creates solar standards plot to be added to page"""
-
-    scoords = readSources('Solar')
-    ax = plt.figure().gca()
-    plotScatter(ax, scoords, 'b*')
-    plotFormat(ax, 1)
-    buffer = io.BytesIO()
-    plt.savefig(buffer, format='png')
-    plt.close()
-
-    return HttpResponse(buffer.getvalue(), content_type="Image/png")
 
 
 def update_taxonomy(body, tax_table, dbg=False):

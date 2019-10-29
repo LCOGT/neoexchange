@@ -125,8 +125,10 @@ class CharacterizationPageTest(FunctionalTest):
         self.assertIn('Characterization Page | LCO NEOx', self.browser.title)
 
         # Position below computed for 2015-07-01 17:00:00
+
         testlines = [u'1 V38821zi 23 43 14.40 +19 59 08.2 18.7 1.27 LC 19.0 Goldstone Vis+NIR 08/15-09/15',
-                    u'2 q382918r 23 43 14.40 +19 59 08.2 20.7 1.27 Spec/LC 21.0 NASA NIR Yes ---']
+                    u'2 q382918r 23 43 14.40 +19 59 08.2 20.7 1.27 Spec/LC 21.0 NASA NIR Yes [-----]']
+
         self.check_for_row_in_table('characterization_targets', testlines[0])
         self.check_for_row_in_table('characterization_targets', testlines[1])
 
@@ -147,9 +149,11 @@ class CharacterizationPageTest(FunctionalTest):
         self.browser.get(characterization_page_url)
 
         # Position below computed for 2015-07-01 17:00:00
+
         testlines = [u'2 V38821zi 23 43 14.40 +19 59 08.2 18.7 1.27 LC 19.0 Goldstone Vis+NIR 08/15-09/15',
-                    u'3 q382918r 23 43 14.40 +19 59 08.2 20.7 1.27 Spec/LC 21.0 NASA NIR Yes ---',
+                    u'3 q382918r 23 43 14.40 +19 59 08.2 20.7 1.27 Spec/LC 21.0 NASA NIR Yes [-----]',
                     u'1 N999r0q 23 43 14.40 +19 59 08.2 15.2 1.27 LC 15.5 NASA Vis+NIR NIR Now->']
+
         for line in testlines:
             self.check_for_row_in_table('characterization_targets', line)
         
@@ -159,7 +163,7 @@ class CharacterizationPageTest(FunctionalTest):
             button.click()
         self.check_for_row_not_in_table('characterization_targets', testlines[0])
         self.check_for_row_not_in_table('characterization_targets', testlines[2])
-        self.check_for_row_in_table('characterization_targets', u'1 q382918r 23 43 14.40 +19 59 08.2 20.7 1.27 Spec/LC 21.0 NASA NIR Yes ---')
+        self.check_for_row_in_table('characterization_targets', u'1 q382918r 23 43 14.40 +19 59 08.2 20.7 1.27 Spec/LC 21.0 NASA NIR Yes [-----]')
 
         # Kildorn notices a link to the body page
         link = self.browser.find_element_by_link_text('q382918r')
