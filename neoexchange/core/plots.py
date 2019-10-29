@@ -24,6 +24,7 @@ from photometrics.spectraplot import get_spec_plot, make_spec
 
 logger = logging.getLogger(__name__)
 
+
 def find_existing_vis_file(base_dir, filematch):
     """
         Search for the most recent existing visibility file in <base_dir> that
@@ -47,7 +48,7 @@ def find_existing_vis_file(base_dir, filematch):
         regex = re.compile(filematch)
         matchfiles = filter(regex.search, vis_files)
         # Find most recent file
-        times = [(default_storage.get_modified_time(name=os.path.join(base_dir,i)),os.path.join(base_dir,i)) for i in matchfiles]
+        times = [(default_storage.get_modified_time(name=os.path.join(base_dir, i)), os.path.join(base_dir, i)) for i in matchfiles]
         if times:
             _, vis_file = max(times)
         else:
@@ -56,6 +57,7 @@ def find_existing_vis_file(base_dir, filematch):
         vis_file = ''
 
     return vis_file
+
 
 def determine_plot_valid(vis_file, now=datetime.utcnow()):
     """
@@ -69,7 +71,7 @@ def determine_plot_valid(vis_file, now=datetime.utcnow()):
     valid_vis_file = ''
     file_root, ext = os.path.splitext(os.path.basename(vis_file))
     chunks = file_root.split('_')
-    if len(chunks) >=2:
+    if len(chunks) >= 2:
         date_range = chunks[-1]
         plot_type = chunks[-2]
         start_date, end_date = date_range.split('-')
@@ -86,6 +88,7 @@ def determine_plot_valid(vis_file, now=datetime.utcnow()):
         else:
             logger.debug("File '{file}' too old: {start} {now} {age}".format(file=vis_file, start=start_date_dt, now=now, age=age.total_seconds()/86400.0))
     return valid_vis_file
+
 
 def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow(), site_code='-1'):
 
@@ -153,7 +156,7 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow(), s
                     site_code = 'V37'
             if site_code == 'F65' or site_code == 'E10':
                 tel_alt_limit = 20
-                to_add_rate=True
+                to_add_rate = True
             ephem = horizons_ephem(body.name, start, end, site_code, '5m', alt_limit=tel_alt_limit)
             vis_file = plot_hoursup(ephem, site_code, add_rate=to_add_rate, alt_limit=tel_alt_limit, base_dir=base_dir)
     if vis_file:
@@ -167,25 +170,26 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow(), s
 
         return HttpResponse(PIXEL_GIF_DATA, content_type='image/gif')
 
-def make_plot(request):
 
-    fits_file = 'cpt1m010-kb70-20160428-0148-e91.fits'
-    fits_filepath = os.path.join('/tmp', 'tmp_neox_9nahRl', fits_file)
-
-    sources = CatalogSources.objects.filter(frame__filename__contains=fits_file[0:28]).values_list('obs_ra', 'obs_dec')
-
-    fig = aplpy.FITSFigure(fits_filepath)
-    fig.show_grayscale(pmin=0.25, pmax=98.0)
-    ra = [X[0] for X in sources]
-    dec = [X[1] for X in sources]
-
-    fig.show_markers(ra, dec, edgecolor='green', facecolor='none', marker='o', s=15, alpha=0.5)
-
-    buffer = io.BytesIO()
-    fig.save(buffer, format='png')
-    fig.save(fits_filepath.replace('.fits', '.png'), format='png')
-
-    return HttpResponse(buffer.getvalue(), content_type="Image/png")
+# def make_plot(request):
+#
+#     fits_file = 'cpt1m010-kb70-20160428-0148-e91.fits'
+#     fits_filepath = os.path.join('/tmp', 'tmp_neox_9nahRl', fits_file)
+#
+#     sources = CatalogSources.objects.filter(frame__filename__contains=fits_file[0:28]).values_list('obs_ra', 'obs_dec')
+#
+#     fig = aplpy.FITSFigure(fits_filepath)
+#     fig.show_grayscale(pmin=0.25, pmax=98.0)
+#     ra = [X[0] for X in sources]
+#     dec = [X[1] for X in sources]
+#
+#     fig.show_markers(ra, dec, edgecolor='green', facecolor='none', marker='o', s=15, alpha=0.5)
+#
+#     buffer = io.BytesIO()
+#     fig.save(buffer, format='png')
+#     fig.save(fits_filepath.replace('.fits', '.png'), format='png')
+#
+#     return HttpResponse(buffer.getvalue(), content_type="Image/png")
 
 
 def find_spec_plots(path=None, obj=None, req=None, obs_num=None):
@@ -199,8 +203,9 @@ def find_spec_plots(path=None, obj=None, req=None, obs_num=None):
                 png_file = "{}/{}_{}_spectra_{}.png".format(path, obj, req, obs_num)
         else:
             png_file = "{}/{}_spectra_{}.png".format(path, obj, obs_num)
-        spec_files = [png_file,]
+        spec_files = [png_file]
     return spec_files
+
 
 def display_calibspec(request, pk):
     try:
@@ -238,6 +243,7 @@ def display_calibspec(request, pk):
 
         return HttpResponse(PIXEL_GIF_DATA, content_type='image/gif')
 
+
 def make_standards_plot(request):
     """creates stellar standards plot to be added to page"""
 
@@ -267,3 +273,4 @@ def make_solar_standards_plot(request):
     plt.close()
 
     return HttpResponse(buffer.getvalue(), content_type="Image/png")
+

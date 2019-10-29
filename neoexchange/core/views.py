@@ -2991,7 +2991,6 @@ def find_analog(date_obs, site):
     return analog_list
 
 
-
 def plot_floyds_spec(block, obs_num=1):
     """Get plots for requested blocks of FLOYDs data and subtract nearest solar analog."""
 

@@ -42,8 +42,8 @@ admin.autodiscover()
 
 urlpatterns = [
     url(r'^$', home, name='home'),
-    url(r'^makeplot/$', make_plot, name='makeplot'),
-    url(r'^plotframe/$', TemplateView.as_view(template_name='core/frame_plot.html')),
+    # url(r'^makeplot/$', make_plot, name='makeplot'),
+    # url(r'^plotframe/$', TemplateView.as_view(template_name='core/frame_plot.html')),
     url(r'^make-standards-plot/$', make_standards_plot, name='make-standards-plot'),
     url(r'^make-solar-standards-plot/$', make_solar_standards_plot, name='make-solar-standards-plot'),
     url(r'^visibility_plot/(?P<pk>\d+)/(?P<plot_type>[a-z]*)/$', make_visibility_plot, name='visibility-plot'),
