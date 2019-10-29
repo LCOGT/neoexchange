@@ -73,7 +73,7 @@ def mock_fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.p
 
 def mock_check_request_status(tracking_num):
     status = { u'created' : u'2015-10-21T19:07:26.023049Z',
-                u'group_id' : u'Fake group',
+                u'name' : u'Fake group',
                 u'id': 42,
                 u'ipp_value': 1.05,
                 u'modified': u'2015-10-21T19:07:26.023049Z',
@@ -141,7 +141,7 @@ def mock_check_request_status(tracking_num):
 def mock_check_request_status_cadence(tracking_num):
 
     status = {u'created': u'2017-08-15T19:18:24.869792Z',
-             u'group_id': u'3122_COJ_cad_20170816-0819',
+             u'name': u'3122_COJ_cad_20170816-0819',
              u'id': 472636,
              u'ipp_value': 1.05,
              u'modified': u'2017-08-15T19:18:24.869822Z',

@@ -311,7 +311,7 @@ if 'test' in sys.argv:
     }
     USE_S3 = False
 
-
+USE_FIREFOXDRIVER = True
 
 ##################
 # LOCAL SETTINGS #

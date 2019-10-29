@@ -159,7 +159,7 @@ class ScheduleBlockForm(forms.Form):
     pattern_iterations = forms.FloatField(widget=forms.HiddenInput(), required=False)
     proposal_code = forms.CharField(max_length=20, widget=forms.HiddenInput())
     site_code = forms.CharField(max_length=5, widget=forms.HiddenInput())
-    group_id = forms.CharField(max_length=50, widget=forms.TextInput(attrs={'style': 'text-align: right; width: -webkit-fill-available; width: -moz-available;'}))
+    group_name = forms.CharField(max_length=50, widget=forms.TextInput(attrs={'style': 'text-align: right; width: -webkit-fill-available; width: -moz-available;'}))
     utc_date = forms.DateField(input_formats=['%Y-%m-%d', ], widget=forms.HiddenInput(), required=False)
     jitter = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}), required=False)
     period = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}), required=False)

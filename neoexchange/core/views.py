@@ -17,7 +17,7 @@ from datetime import datetime, timedelta, date
 from math import floor, ceil, degrees, radians, pi, acos
 from astropy import units as u
 import matplotlib
-#matplotlib.use('TkAgg')
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import json
 import urllib
@@ -716,6 +716,7 @@ class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
 
     def form_valid(self, form, request):
         data = schedule_check(form.cleaned_data, self.body, self.ok_to_schedule)
+        print(data)
         new_form = ScheduleBlockForm(data)
         return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.body})
 
@@ -883,6 +884,7 @@ class ScheduleCalibSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
+        print(self.object)
         form = self.get_form()
         if form.is_valid():
             return self.form_valid(form, request)
@@ -1181,9 +1183,9 @@ def schedule_check(data, body, ok_to_schedule=True):
         total_time = total_time.total_seconds()/3600.0
 
     # Create Group ID
-    name = validate_text(data.get('name', None))
+    group_name = validate_text(data.get('group_name', None))
 
-    if not name:
+    if not group_name:
         suffix = datetime.strftime(utc_date, '%Y%m%d')
         if period and jitter:
             suffix = "cad-%s-%s" % (datetime.strftime(data['start_time'], '%Y%m%d'), datetime.strftime(data['end_time'], '%m%d'))
@@ -1191,7 +1193,7 @@ def schedule_check(data, body, ok_to_schedule=True):
             suffix += "_spectra"
         if data.get('too_mode', False) is True:
             suffix += '_ToO'
-        name = body.current_name() + '_' + data['site_code'].upper() + '-' + suffix
+        group_name = body.current_name() + '_' + data['site_code'].upper() + '-' + suffix
 
     resp = {
         'target_name': body.current_name(),
@@ -1207,7 +1209,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'too_mode' : data.get('too_mode', False),
         'site_code': data['site_code'],
         'proposal_code': data['proposal_code'],
-        'name': name,
+        'group_name': group_name,
         'utc_date': utc_date.isoformat(),
         'start_time': dark_start.isoformat(),
         'end_time': dark_end.isoformat(),
@@ -1335,7 +1337,7 @@ def schedule_submit(data, body, username):
               'site_code': data['site_code'],
               'start_time': data['start_time'],
               'end_time': data['end_time'],
-              'name': data['name'],
+              'name': data['group_name'],
               'too_mode' : data.get('too_mode', False),
               'spectroscopy' : data.get('spectroscopy', False),
               'calibs' : data.get('calibs', ''),
@@ -1627,7 +1629,7 @@ def check_for_block(form_data, params, new_body):
 
     try:
         block_id = SuperBlock.objects.get(body=new_body.id,
-                                     groupid__contains=form_data['name'],
+                                     groupid__contains=form_data['group_name'],
                                      proposal=Proposal.objects.get(code=form_data['proposal_code'])
                                      )
 #                                         site=site_list[params['site_code']])
@@ -1656,7 +1658,7 @@ def record_block(tracking_number, params, form_data, target):
         proposal = Proposal.objects.get(code=form_data['proposal_code'])
         sblock_kwargs = {
                          'proposal' : proposal,
-                         'groupid'  : form_data['name'],
+                         'groupid'  : form_data['group_name'],
                          'block_start' : form_data['start_time'],
                          'block_end'   : form_data['end_time'],
                          'tracking_number' : tracking_number,
