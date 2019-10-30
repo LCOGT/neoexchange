@@ -917,7 +917,7 @@ class TestSubmitBlockToScheduler(TestCase):
                     'site_code' : site_code,
                     'start_time' : dark_start,
                     'end_time' : dark_end,
-                    'name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                     'user_id'  : 'bsimpson',
                     'filter_pattern' : 'w'
                  }
@@ -939,7 +939,7 @@ class TestSubmitBlockToScheduler(TestCase):
                     'site_code' : site_code,
                     'start_time' : dark_start,
                     'end_time' : dark_end,
-                    'name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                     'user_id'  : 'bsimpson',
                     'filter_pattern' : 'w'
                  }
@@ -1263,7 +1263,7 @@ class TestSubmitBlockToScheduler(TestCase):
         expected_ast_exptime = 300.0
         expected_cal_exptime = 60.0
         expected_filter = 'slit_6.0as'
-        expected_groupid = params['name'] + '+solstd'
+        expected_groupid = params['group_name'] + '+solstd'
 
         user_request = make_requestgroup(self.body_elements, params)
         requests = user_request['requests']
@@ -4508,7 +4508,7 @@ class TestMakeCadence(TestCase):
                         'end_time' : datetime(2017, 8, 20, 19, 40),
                         'period' : 2.0,
                         'jitter' : 0.25,
-                        'name' : "3122_Q59-20170815",
+                        'group_name' : "3122_Q59-20170815",
                         'proposal_id' : 'LCOSchedulerTest',
                         'user_id' : 'tlister@lcogt.net',
                         'exp_type' : 'EXPOSE',
@@ -4582,7 +4582,7 @@ class TestMakeCadence(TestCase):
                     'windows': [window],
                 })
         expected = {
-                     u'name': u'481394_Q59-20191101',
+                     u'group_name': u'481394_Q59-20191101',
                      u'ipp_value': 1.05,
                      u'observation_type': u'NORMAL',
                      u'operator': u'MANY',
@@ -4599,7 +4599,6 @@ class TestMakeCadence(TestCase):
         params['end_time'] = datetime(2019, 11, 2, 0, 0, 0)
         params['jitter'] = 1.0
         params['period'] = 2
-
         ur = make_cadence(self.request, params, self.ipp_value)
         for i, exrequest in enumerate(expected['requests']):
             self.assertEqual(exrequest, ur['requests'][i])

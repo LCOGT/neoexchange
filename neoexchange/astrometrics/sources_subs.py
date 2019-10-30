@@ -1691,7 +1691,7 @@ def make_single(params, ipp_value, request):
     requestgroup = {
                     'submitter' : params['user_id'],
                     'requests'  : [request],
-                    'name'  : params['name'],
+                    'name'  : params['group_name'],
                     'observation_type': "NORMAL",
                     'operator'  : "SINGLE",
                     'ipp_value' : ipp_value,
@@ -1712,7 +1712,7 @@ def make_many(params, ipp_value, request, cal_request):
     requestgroup = {
                     'submitter' : params['user_id'],
                     'requests'  : [request, cal_request],
-                    'name'  : params['name'],
+                    'name'  : params['group_name'],
                     'observation_type': "NORMAL",
                     'operator'  : "MANY",
                     'ipp_value' : ipp_value,
@@ -1777,7 +1777,7 @@ def make_cadence(request, params, ipp_value, debug=False):
 
     user_request = {
                     'requests' : [request],
-                    'name' : params['name'],
+                    'name' : params['group_name'],
                     'observation_type': "NORMAL",
                     'operator' : "SINGLE",
                     'ipp_value': ipp_value,
@@ -1906,7 +1906,7 @@ def make_requestgroup(elements, params):
 
     if params.get('solar_analog', False) and len(params.get('calibsource', {})) > 0:
         # Assemble solar analog request
-        params['name'] += "+solstd"
+        params['group_name'] += "+solstd"
         params['source_id'] = params['calibsource']['name']
         params['ra_deg'] = params['calibsource']['ra_deg']
         params['dec_deg'] = params['calibsource']['dec_deg']
