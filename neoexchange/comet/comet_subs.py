@@ -236,7 +236,7 @@ def read_and_filter_catalog(catfile, trim_limits, table_format='ascii.sextractor
 
     return phot, clean_phot
 
-def calibrate_catalog(catfile, cat_center, trim_limits, table_format='ascii.sextractor', radius=0.5, flux_column='FLUX_ISOCOR', fluxerr_column='FLUXERR_ISOCOR'):
+def calibrate_catalog(catfile, cat_center, trim_limits, table_format='ascii.sextractor', radius=0.5, flux_column='FLUX_ISOCOR', fluxerr_column='FLUXERR_ISOCOR', match_radius = 3.5*u.arcsec):
 
     FLUX2MAG = 2.5/np.log(10)
 
@@ -251,7 +251,6 @@ def calibrate_catalog(catfile, cat_center, trim_limits, table_format='ascii.sext
     lco_cut = clean_phot[great_circle_distance(cat_center.ra.deg, cat_center.dec.deg, clean_phot['RA'], clean_phot['DEC']) <= radius]
     lco_cut_coords = SkyCoord(lco_cut['RA'], lco_cut['DEC'], unit='deg')
 
-    match_radius = 3.5*u.arcsec
     object_cat = lco_cut[great_circle_distance(cat_center.ra.deg, cat_center.dec.deg, lco_cut['RA'], lco_cut['DEC']) <= match_radius.to(u.deg).value]
     if len(object_cat) == 1:
         logger.debug("Match at x={:.3f}, y={:.3f}".format(object_cat['XWIN_IMAGE'][0], object_cat['YWIN_IMAGE'][0]))

@@ -33,6 +33,7 @@ from comet_subs import *
 #comet = '46P'
 comet = '29P'
 comet_color=0.57
+match_radius = 5.0 * u.arcsec
 use_ephem_file = False
 
 datadir = os.path.join(os.getenv('HOME'), 'Asteroids', comet, 'Pipeline' ) #, 'Temp')
@@ -76,10 +77,20 @@ for fits_fpath in images:
         cat_type = 'CSS:ASCII_HEAD'
     else:
         sitecode = LCOGT_domes_to_site_codes(header['siteid'], header['encid'], header['telid'])
+        if sitecode == 'XXX':
+            print("Error: Unknown site")
+            next
         siteid = header['siteid'].upper()
         instrument = header['instrume'].lower()
-        cat_type = 'COMETCAM:ASCII_HEAD'
-        default_pixelscale = 0.1838220980370765
+        if '2m0' in header['telid']:
+            cat_type = 'COMETCAM:ASCII_HEAD'
+            default_pixelscale = 0.1838220980370765
+        elif '0m4' in header['telid']:
+            cat_type = 'COMET0M4:ASCII_HEAD'
+            default_pixelscale = 0.5707415206369826
+        else:
+            print("Unknown type")
+            next
 
     #   Determine position of comet in this frame
     if 'mjdmid' in header:
@@ -102,7 +113,7 @@ for fits_fpath in images:
     else:
         start = date_obs-1
         end = date_obs+1
-        ephem = horizons_ephem(comet, start.datetime.date(), end.datetime.date(), sitecode.upper())
+        ephem = horizons_ephem(comet, start.datetime.date(), end.datetime.date(), sitecode.upper(), ephem_step_size='10m')
         # Find index closest to obs time
         idx = (np.abs(ephem['datetime_jd'] - jd_utc_mid)).argmin()
         if ephem[idx]['datetime_jd'] > jd_utc_mid:
@@ -175,6 +186,7 @@ for fits_fpath in images:
     print("Pixel photometry:")
     print("X, Y, Radius (pixels, arcsec)= {:.3f} {:.3f} {:9.5f} {:9.5f}".format(x, y, radius, radius*pixscale))
 
+    # Perform forced aperture photometry at the predicted position
     if wcserr == 0:
 
         apertures = CircularAperture((x,y), r=radius)
@@ -220,7 +232,7 @@ for fits_fpath in images:
     status, catalog = make_CSS_catalogs(configs_dir, datadir, fits_fpath, catalog_type=cat_type, aperture=radius*2.0)
     if status == 0:
         if wcserr == 0:
-            zp_PS1, C_PS1, zp_err_PS1, r, gmr, gmi, obj_mag, obj_err = calibrate_catalog(catalog, sky_position, trim_limits, flux_column='FLUX_APER', fluxerr_column='FLUXERR_APER')
+            zp_PS1, C_PS1, zp_err_PS1, r, gmr, gmi, obj_mag, obj_err = calibrate_catalog(catalog, sky_position, trim_limits, flux_column='FLUX_APER', fluxerr_column='FLUXERR_APER', match_radius=match_radius)
             print("ZP, color slope, uncertainty= {:7.3f} {:.6f} {:.3f}".format(zp_PS1, C_PS1, zp_err_PS1))
             if C_PS1 and zp_PS1 and obj_mag:
                 rmag_cc = (C_PS1 * comet_color) + zp_PS1 + obj_mag
