@@ -1592,6 +1592,7 @@ def make_config(params, exp_filter):
     }
     return conf
 
+
 def make_spect_config(params, exp_filter):
     if 'source_type' in params:  # then Sidereal target (use smaller window)
         acq_rad = 5.0
@@ -1909,7 +1910,7 @@ def make_requestgroup(elements, params):
         params['source_id'] = params['calibsource']['name']
         params['ra_deg'] = params['calibsource']['ra_deg']
         params['dec_deg'] = params['calibsource']['dec_deg']
-        cal_target = make_target(params)
+        params['target'] = make_target(params)
         exp_time = params['exp_time']
         params['exp_time'] = params['calibsrc_exptime']
         ag_exptime = params.get('ag_exp_time', 10)
