@@ -1509,9 +1509,10 @@ def make_target(params):
                'name' : params['source_id'],
                'ra'   : ra_degs,
                'dec'  : dec_degs,
+               'extra_params' : {}
              }
-    # if 'vmag' in params:
-    #     target['vmag'] = params['vmag']
+    if 'vmag' in params:
+        target['extra_params']['v_magnitude'] = params['vmag']
     if 'pm_ra' in params:
         target['proper_motion_ra'] = params['pm_ra']
     if 'pm_dec' in params:
@@ -1524,7 +1525,6 @@ def make_target(params):
 def make_moving_target(elements):
     """Make a target dictionary for the request from an element set"""
 
-#    print(elements)
     # Generate initial dictionary of things in common
     target = {
                   'name'                : elements['current_name'],
@@ -1536,6 +1536,7 @@ def make_moving_target(elements):
                   'longascnode'       : elements['longascnode'],
                   'argofperih'        : elements['argofperih'],
                   'eccentricity'      : elements['eccentricity'],
+                  'extra_params'      : {}
             }
 
     if elements['elements_type'].upper() == 'MPC_COMET':
@@ -1545,7 +1546,7 @@ def make_moving_target(elements):
         target['meandist'] = elements['meandist']
         target['meananom'] = elements['meananom']
     if 'v_mag' in elements:
-        target['vmag'] = round(elements['v_mag'], 2)
+        target['extra_params']['v_magnitude'] = round(elements['v_mag'], 2)
     if 'sky_pa' in elements:
         target['rot_mode'] = 'SKY'
         target['rot_angle'] = round(elements['sky_pa'], 1)
