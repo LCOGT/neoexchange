@@ -190,6 +190,13 @@ class Body(models.Model):
         else:
             return False
 
+    def radar_target(self):
+        # Returns True if the object is a radar target
+        if self.active is True and (self.origin == 'A' or self.origin == 'G' or self.origin =='R'):
+            return True
+        else:
+            return False
+
     def diameter(self):
         m = self.abs_mag
         avg = 0.167
@@ -1293,7 +1300,7 @@ class CatalogSources(models.Model):
     def make_snr(self):
         snr = None
         if self.obs_mag > 0.0 and self.err_obs_mag > 0.0:
-            snr = self.err_obs_mag / self.obs_mag
+            snr = 1.0 / self.err_obs_mag
         return snr
 
     def map_numeric_to_mpc_flags(self):
