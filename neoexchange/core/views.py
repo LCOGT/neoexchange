@@ -1356,7 +1356,7 @@ def schedule_submit(data, body, username):
               'site_code': data['site_code'],
               'start_time': data['start_time'],
               'end_time': data['end_time'],
-              'name': data['group_name'],
+              'group_name': data['group_name'],
               'too_mode' : data.get('too_mode', False),
               'spectroscopy' : data.get('spectroscopy', False),
               'calibs' : data.get('calibs', ''),
@@ -1389,8 +1389,8 @@ def schedule_submit(data, body, username):
         # Append another suffix to allow 2 versions of the block. Must
         # do this to both `data` (so the next Block check works) and to
         # `params` so the correct name will go to the Valhalla/scheduler
-        data['name'] += '_2'
-        params['name'] = data['name']
+        data['group_name'] += '_2'
+        params['group_name'] = data['group_name']
     elif check_for_block(data, params, body) >= 2:
         # Multiple blocks found
         resp_params = {'error_msg' : 'Multiple Blocks for same day and site found'}

@@ -1891,10 +1891,8 @@ def make_requestgroup(elements, params):
     submitter_id = params.get('submitter_id', '')
     if submitter_id != '':
         submitter = f'(by {submitter_id})'
-    note = (f'Submitted by NEOexchange {submitter}')
+    note = f'Submitted by NEOexchange {submitter}'
     note = note.rstrip()
-
-
 
     request = {
         'configurations': configurations,
