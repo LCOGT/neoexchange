@@ -20,6 +20,7 @@ import os
 import re
 import shutil
 from math import pi
+import numpy as np
 from astropy import units as u
 
 import aplpy
@@ -41,9 +42,7 @@ from astrometrics.ephem_subs import horizons_ephem, call_compute_ephem, determin
 from photometrics.obsgeomplot import plot_ra_dec, plot_brightness, plot_helio_geo_dist, \
     plot_uncertainty, plot_hoursup
 from photometrics.SA_scatter import readSources, plotScatter, plotFormat
-from photometrics.spectraplot import get_spec_plot, make_spec
-from core.management.commands.analyze_spectra import *
-
+from photometrics.spectraplot import spectrum_plot, read_mean_tax
 
 logger = logging.getLogger(__name__)
 
