@@ -82,7 +82,7 @@ class ScheduleCadence(FunctionalTest):
 # TAL: Need to patch the datetime in views also otherwise we will get the wrong
 # semester and window bounds.
 
-    @patch('core.views.build_visibility_source', mock_build_visibility_source)
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.forms.datetime', MockDateTime)
     @patch('core.views.datetime', MockDateTime)
     def test_can_schedule_cadence(self):
@@ -203,7 +203,7 @@ class ScheduleCadence(FunctionalTest):
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
         self.assertIn('Schedule this Object', submit)
 
-    @patch('core.views.build_visibility_source', mock_build_visibility_source)
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     def test_cannot_schedule_observations(self):
         self.test_logout()
 
@@ -222,7 +222,7 @@ class ScheduleCadence(FunctionalTest):
         target_url = '/login/'
         self.assertIn(target_url, actual_url)
 
-    @patch('core.views.build_visibility_source', mock_build_visibility_source)
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.forms.datetime', MockDateTime)
     @patch('core.views.datetime', MockDateTime)
     def test_schedule_page_edit_block(self):
@@ -344,7 +344,7 @@ class ScheduleCadence(FunctionalTest):
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
         self.assertIn('Schedule this Object', submit)
 
-    @patch('core.views.build_visibility_source', mock_build_visibility_source)
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.forms.datetime', MockDateTime)
     @patch('core.views.datetime', MockDateTime)
     def test_schedule_page_short_block(self):

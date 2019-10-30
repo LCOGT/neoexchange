@@ -49,7 +49,7 @@ class NewVisitorTest(FunctionalTest):
 # patch the datetime used by models.Body.compute_position to give the same
 # consistent answer.
 
-    @patch('core.views.build_visibility_source', mock_build_visibility_source)
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.models.datetime', MockDateTime)
     def test_can_compute_ephemeris(self):
 
@@ -113,7 +113,7 @@ class NewVisitorTest(FunctionalTest):
 
         # Satisfied, he goes back to sleep
 
-    @patch('core.views.build_visibility_source', mock_build_visibility_source)
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     def test_can_compute_ephemeris_for_specific_site(self):
 
         # Eduardo has heard about a new website for NEOs. He goes to the
@@ -165,7 +165,7 @@ class NewVisitorTest(FunctionalTest):
             '2015 04 21 11:45 20 10 40.97 +29 56 52.8 20.4 2.44 89.0 +24 0.10 108 -49 -999 -04:54'
         )
 
-    @patch('core.views.build_visibility_source', mock_build_visibility_source)
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     def test_can_compute_ephemeris_for_specific_date(self):
 
         # Eduardo has heard about a new website for NEOs. He goes to the
@@ -224,7 +224,7 @@ class NewVisitorTest(FunctionalTest):
             '2015 04 28 10:30 20 40 38.12 +29 36 31.9 20.6 2.08 93.5 +55 0.72 136 -17 +060 -02:43'
         )
 
-    @patch('core.views.build_visibility_source', mock_build_visibility_source)
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     def test_can_compute_ephemeris_for_specific_alt_limit(self):
 
         # Eduardo has heard about a new website for NEOs. He goes to the

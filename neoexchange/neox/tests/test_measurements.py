@@ -172,7 +172,7 @@ class MeasurementsPageTests(FunctionalTest):
             measure_params['err_obs_dec'] = 90e-3/3600.0
         self.test_measure3 = SourceMeasurement.objects.create(pk=3, **measure_params)
 
-    @patch('core.views.build_visibility_source', mock_build_visibility_source)
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     def test_measurements_page(self):
 
         # Setup
@@ -247,7 +247,7 @@ class MeasurementsPageTests(FunctionalTest):
         # Satisfied that the planet is safe from this asteroid, he
         # leaves.
 
-    @patch('core.views.build_visibility_source', mock_build_visibility_source)
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     def test_measurements_mpc_format(self):
 
         # Setup
@@ -298,7 +298,7 @@ class MeasurementsPageTests(FunctionalTest):
         # Satisfied that the planet is safe from this asteroid, he
         # leaves.
 
-    @patch('core.views.build_visibility_source', mock_build_visibility_source)
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     def test_satellite_measurements_mpc_format(self):
 
         # Setup
@@ -350,7 +350,7 @@ class MeasurementsPageTests(FunctionalTest):
         # Satisfied that the planet is safe from this asteroid, he
         # leaves.
 
-    @patch('core.views.build_visibility_source', mock_build_visibility_source)
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     def test_precovery_measurements(self):
 
         self.insert_test_measurements()
@@ -395,7 +395,7 @@ class MeasurementsPageTests(FunctionalTest):
         # Satisfied that his newly reported precovery for this asteroid has
         # been recorded, he leaves.
 
-    @patch('core.views.build_visibility_source', mock_build_visibility_source)
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     def test_display_ADES_measurements(self):
 
         self.insert_test_measurements()
@@ -443,7 +443,7 @@ class MeasurementsPageTests(FunctionalTest):
         for test_text in testlines:
             self.assertIn(test_text, [row.replace('\n', ' ') for row in rows])
 
-    @patch('core.views.build_visibility_source', mock_build_visibility_source)
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     def test_display_ADES_measurements_withRMS(self):
 
         self.insert_test_measurements(rms=True)
@@ -492,7 +492,7 @@ class MeasurementsPageTests(FunctionalTest):
         for test_text in testlines:
             self.assertIn(test_text, [row.replace('\n', ' ') for row in rows])
 
-    @patch('core.views.build_visibility_source', mock_build_visibility_source)
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     def test_download_mpc_measurements(self):
 
         self.insert_test_measurements()
@@ -529,7 +529,7 @@ class MeasurementsPageTests(FunctionalTest):
         dl_filepath = os.path.join(self.test_dir, self.body.current_name() + "_mpc.dat")
         self.assertTrue(os.path.exists(dl_filepath))
 
-    @patch('core.views.build_visibility_source', mock_build_visibility_source)
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     def test_download_ades_measurements(self):
 
         self.insert_test_measurements(rms=True)

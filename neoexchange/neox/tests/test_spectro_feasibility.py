@@ -33,7 +33,7 @@ class SpectroscopicFeasibility(FunctionalTest):
         # Just quit otherwise alerts will pop-up on refresh
         self.browser.quit()
 
-    @patch('core.views.build_visibility_source', mock_build_visibility_source)
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.forms.fetch_sfu', mock_fetch_sfu)
     def test_feasibility(self):
         # Jose has heard about a new website for NEOs. He goes to the
@@ -144,7 +144,7 @@ class SpectroscopicFeasibility(FunctionalTest):
         # Satisfied that the observations will be possible no matter the Moon or altitude,
         # he goes ahead and schedules the observations
 
-    @patch('core.views.build_visibility_source', mock_build_visibility_source)
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('astrometrics.sources_subs.fetchpage_and_make_soup', mock_fetchpage_and_make_soup)
     def test_sfu_page_Down(self):
         # Jose has heard about a new website for NEOs. He goes to the

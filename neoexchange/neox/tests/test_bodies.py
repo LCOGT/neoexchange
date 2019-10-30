@@ -20,12 +20,12 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from mock import patch
 from core.models import Body
-from neox.tests.mocks import MockDateTime
+from neox.tests.mocks import MockDateTime, mock_build_visibility_source
 
 
 class BodyDetailsTest(FunctionalTest):
 
-    @patch('core.views.datetime', MockDateTime)
+    @patch('core.plots.datetime', MockDateTime)
     def test_can_view_body_details(self):
         MockDateTime.change_datetime(2015, 3, 19, 6, 00, 00)
         # A new user comes along to the site
@@ -77,7 +77,7 @@ class BodyDetailsTest(FunctionalTest):
         for line in testlines:
             self.check_for_row_in_table('id_followup', line)
 
-    @patch('core.views.datetime', MockDateTime)
+    @patch('core.plots.datetime', MockDateTime)
     def test_results_for_no_H(self):
         MockDateTime.change_datetime(2015, 3, 19, 6, 00, 00)
         self.body.abs_mag = None
@@ -103,7 +103,7 @@ class BodyDetailsTest(FunctionalTest):
         for line in testlines:
             self.check_for_row_in_table('id_orbelements', line)
 
-    @patch('core.views.datetime', MockDateTime)
+    @patch('core.plots.datetime', MockDateTime)
     def test_can_view_spectral_details(self):
         MockDateTime.change_datetime(2015, 3, 19, 6, 00, 00)
         # A new user comes along to the site
@@ -148,7 +148,7 @@ class BodyDetailsTest(FunctionalTest):
         for tool in tooltips:
             self.assertIn(tool, expected_tooltip)
 
-    @patch('core.views.datetime', MockDateTime)
+    @patch('core.plots.datetime', MockDateTime)
     def test_can_view_comet_details(self):
         MockDateTime.change_datetime(2019, 4, 3, 0, 00, 00)
         self.insert_test_comet()

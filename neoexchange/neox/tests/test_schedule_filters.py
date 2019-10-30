@@ -63,7 +63,7 @@ class ScheduleObservations(FunctionalTest):
 # TAL: Need to patch the datetime in views also otherwise we will get the wrong
 # semester and window bounds.
 
-    @patch('core.views.build_visibility_source', mock_build_visibility_source)
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.forms.datetime', MockDateTime)
     @patch('core.views.datetime', MockDateTime)
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)

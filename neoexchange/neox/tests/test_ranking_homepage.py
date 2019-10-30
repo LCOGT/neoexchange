@@ -89,7 +89,7 @@ class NewVisitorTest(FunctionalTest):
 
         self.body3, created = Body.objects.get_or_create(pk=3, **params)
 
-    @patch('core.views.build_visibility_source', mock_build_visibility_source)
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.models.datetime', MockDateTime)
     def test_homepage_has_ranking(self):
 
@@ -131,7 +131,7 @@ class NewVisitorTest(FunctionalTest):
         header_text = self.browser.find_element_by_class_name('headingleft').text
         self.assertIn('Object: ' + self.body.current_name(), header_text)
 
-    @patch('core.views.build_visibility_source', mock_build_visibility_source)
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.models.datetime', MockDateTime)
     def test_homepage_rounds_arc_notseen(self):
 

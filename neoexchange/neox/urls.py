@@ -32,7 +32,7 @@ from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockLis
     StaticSourceView, StaticSourceDetailView, ScheduleCalibSpectra, ScheduleCalibSubmit, \
     CalibSpectroFeasibility, ScheduleCalibParameters, \
     BestStandardsView, PlotSpec, BodyVisibilityView
-from core.plots import make_plot, make_visibility_plot, \
+from core.plots import make_visibility_plot, \
     make_standards_plot, make_solar_standards_plot
 
 from analyser.views import BlockFramesView, ProcessCandidates

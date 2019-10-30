@@ -40,11 +40,6 @@ from django.template.loader import get_template
 from http.client import HTTPSConnection
 from django.conf import settings
 from bs4 import BeautifulSoup
-from bokeh.plotting import figure, ColumnDataSource
-from bokeh.resources import CDN
-from bokeh.embed import components
-from bokeh.models import HoverTool, Label, CrosshairTool
-from bokeh.palettes import Category20
 import reversion
 import requests
 import numpy as np
@@ -54,7 +49,6 @@ except ImportError:
     pass
 import io
 
-from core.management.commands.analyze_spectra import *
 from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, \
     ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm
 from .models import *
@@ -63,10 +57,9 @@ from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_per
 import astrometrics.site_config as cfg
 from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
-    MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes, \
-    determine_spectro_slot_length, get_sitepos, read_findorb_ephem, accurate_astro_darkness,\
-    get_visibility, determine_exp_count, determine_star_trails, calc_moon_sep, get_alt_from_airmass,\
-    dark_and_object_up, compute_dark_and_up_time, moon_ra_dec, target_rise_set, moonphase
+    MagRangeError, determine_spectro_slot_length, get_sitepos, read_findorb_ephem,\
+    accurate_astro_darkness, get_visibility, determine_exp_count, determine_star_trails,\
+    calc_moon_sep, get_alt_from_airmass
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs, validate_text,\
@@ -80,11 +73,12 @@ from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
 from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
 from core.frames import create_frame, ingest_frames, measurements_from_block
 from core.mpc_submit import email_report_to_mpc
+from core.management.commands.analyze_spectra import *
 from core.archive_subs import lco_api_call
 from core.utils import search
 from photometrics.SA_scatter import readSources, genGalPlane, plotScatter, \
     plotFormat
-from core.plots import find_spec_plots
+from core.plots import spec_plot, lin_vis_plot
 
 logger = logging.getLogger(__name__)
 
@@ -232,9 +226,11 @@ class BodySearchView(ListView):
             object_list = self.model.objects.all()
         return object_list
 
+
 class BodyVisibilityView(DetailView):
     template_name = 'core/body_visibility.html'
     model = Body
+
 
 class BlockDetailView(DetailView):
     template_name = 'core/block_detail.html'
@@ -380,6 +376,7 @@ class MeasurementDownloadADESPSV(View):
         response = HttpResponse(self.template.render(data), content_type="text/plain")
         response['Content-Disposition'] = 'attachment; filename=' + filename
         return response
+
 
 def export_measurements(body_id, output_path=''):
 
@@ -2991,40 +2988,6 @@ def find_analog(date_obs, site):
     return analog_list
 
 
-def plot_floyds_spec(block, obs_num=1):
-    """Get plots for requested blocks of FLOYDs data and subtract nearest solar analog."""
-
-    date_obs, obj, req, path, prop = find_spec(block.id)
-    filenames = search(path, matchpattern='.*_2df_ex.fits', latest=False)
-    if filenames is False:
-        return '', {"raw_spec": ''}
-    filenames = [os.path.join(path, f) for f in filenames]
-
-    analogs = find_analog(block.when_observed, block.site)
-
-    try:
-        raw_label, raw_spec, ast_wav = spectrum_plot(filenames[obs_num-1])
-        data_spec = {'label': raw_label,
-                     'spec': raw_spec,
-                     'wav': ast_wav,
-                     'filename': filenames[obs_num-1]}
-    except IndexError:
-        data_spec = None
-
-    if analogs:
-        analog_label, analog_spec, star_wav = spectrum_plot(analogs[0], offset=2)
-        analog_data = {'label': analog_label,
-                       'spec': analog_spec,
-                       'wav': star_wav,
-                       'filename': analogs[0]}
-    else:
-        analog_data = None
-
-    script, div = spec_plot([data_spec], analog_data)
-
-    return script, div
-
-
 def plot_all_spec(source):
     """Plot all non-FLOYDS data for given source.
         Currently only checks if source is StaticSource or PreviousSpectra instance.
@@ -3081,293 +3044,39 @@ def plot_all_spec(source):
     return script, div, p_spec
 
 
-def spec_plot(data_spec, analog_data, reflec=False):
-    """Builds the actual Bokeh Plots for various spectra
-        INPUTS:
-            data_spec: Array of dictionaries containing 'wav', 'spec', 'err', 'label', and 'filename'
-            analog_data: single data_spec like dictionary containing Solar Analog Spectrum
-            reflec: Flag determinine if the data_spec data has already had the solar spectrum removed.
-    """
+def plot_floyds_spec(block, obs_num=1):
+    """Get plots for requested blocks of FLOYDs data and subtract nearest solar analog."""
 
-    spec_plots = {}
-    if not reflec and data_spec[0]:
-        if data_spec[0]["spec"].unit == u.dimensionless_unscaled:
-            plot = figure(x_range=(3500, 10500), y_range=(0, 1.75), plot_width=800, plot_height=400)
-            plot.yaxis.axis_label = 'Relative Spectra (Normalized at 5500 Å)'
-        else:
-            plot = figure( plot_width=600, plot_height=400)
-            plot.yaxis.axis_label = 'Flux ({})'.format(data_spec[0]["spec"].unit)
-        for spec in data_spec:
-            plot.line(spec['wav'], spec['spec'], legend=spec['label'], muted_alpha=0.25)
-        plot.legend.click_policy = 'mute'
-
-        # Set Axes
-        plot.axis.axis_line_width = 2
-        plot.axis.axis_label_text_font_size = "12pt"
-        plot.axis.major_tick_line_width = 2
-        plot.xaxis.axis_label = "Wavelength (Å)"
-        spec_plots["raw_spec"] = plot
-
-    if reflec or (data_spec[0] and analog_data and data_spec[0]['label'] != analog_data['label']):
-        if not reflec:
-            plot.line(analog_data['wav'], analog_data['spec'], color="firebrick", legend=analog_data['label'],
-                      muted=True, muted_alpha=0.25, muted_color="firebrick")
-        # Build Reflectance Plot
-        plot2 = figure(x_range=(3500, 10500), y_range=(0.5, 1.75), plot_width=800, plot_height=400)
-        spec_dict = read_mean_tax()
-        spec_dict["Wavelength"] = [l*10000 for l in spec_dict["Wavelength"]]
-
-        stand_list = ['A', 'B', 'C', 'D', 'L', 'Q', 'S', 'Sq', 'V', 'X', 'Xe']
-        init_stand = ['C', 'Q', 'S', 'X']
-        colors = Category20[len(stand_list)]
-        for j, tax in enumerate(stand_list):
-            lower = np.array([mean - spec_dict[tax + '_Sigma'][i] for i, mean in enumerate(spec_dict[tax + "_Mean"])])
-            upper = np.array([mean + spec_dict[tax + '_Sigma'][i] for i, mean in enumerate(spec_dict[tax + "_Mean"])])
-            wav_box = np.array(spec_dict["Wavelength"])
-            xs = np.concatenate([wav_box, wav_box[::-1]])
-            ys = np.concatenate([upper, lower[::-1]])
-
-            if tax in init_stand:
-                vis = True
-            else:
-                vis = False
-
-            source = ColumnDataSource(spec_dict)
-
-            plot2.line("Wavelength", tax+"_Mean", source=source, color=colors[j], name=tax + "-Type", line_width=2, line_dash='dashed', legend=tax, visible=vis)
-            plot2.patch(xs, ys, fill_alpha=.25, line_width=1, fill_color=colors[j], line_color="black", name=tax + "-Type", legend=tax, line_alpha=.25, visible=vis)
-
-        if not reflec:
-            for spec in data_spec:
-                data_label_reflec, reflec_spec, reflec_ast_wav = spectrum_plot(spec['filename'], analog=analog_data['filename'])
-                plot2.line(reflec_ast_wav, reflec_spec, line_width=3, name=spec['label'])
-                plot2.title.text = 'Object: {}    Analog: {}'.format(spec['label'], analog_data['label'])
-        else:
-            for spec in data_spec:
-                plot2.circle(spec['wav'], spec['spec'], size=3, name=spec['label'])
-            title = data_spec[0]['label']
-            for d in data_spec:
-                if d['label'] != title:
-                    chunks = d['label'].split("--")
-                    title += ' /' + chunks[1]
-            plot2.title.text = 'Object: {}'.format(title)
-
-        hover = HoverTool(tooltips="$name", point_policy="follow_mouse", line_policy="none")
-
-        plot2.add_tools(hover)
-        plot2.legend.click_policy = 'hide'
-        plot2.legend.orientation = 'horizontal'
-
-        # set axes
-        plot2.axis.axis_line_width = 2
-        plot2.axis.axis_label_text_font_size = "12pt"
-        plot2.axis.major_tick_line_width = 2
-        plot2.xaxis.axis_label = "Wavelength (Å)"
-        plot2.yaxis.axis_label = 'Reflectance Spectra (Normalized at 5500 Å)'
-
-        spec_plots["reflec_spec"] = plot2
-
-    # Create script/div
-    if spec_plots:
-        script, div = components(spec_plots, CDN)
-    else:
+    date_obs, obj, req, path, prop = find_spec(block.id)
+    filenames = search(path, matchpattern='.*_2df_ex.fits', latest=False)
+    if filenames is False:
         return '', {"raw_spec": ''}
+    filenames = [os.path.join(path, f) for f in filenames]
+
+    analogs = find_analog(block.when_observed, block.site)
+
     try:
-        for key in div.keys():
-            b = div[key].index('>')
-            div[key] = '{} name={}{}'.format(div[key][:b], key, div[key][b:])
-    except ValueError:
-        pass
-    return script, div
+        raw_label, raw_spec, ast_wav = spectrum_plot(filenames[obs_num-1])
+        data_spec = {'label': raw_label,
+                     'spec': raw_spec,
+                     'wav': ast_wav,
+                     'filename': filenames[obs_num-1]}
+    except IndexError:
+        data_spec = None
 
-
-def datetime_to_radians(ref_time, input_time):
-    """Function to convert the difference between two times into a difference in radians relative to a 24 hour clock."""
-
-    if input_time:
-        t_diff = input_time - ref_time
-        t_diff_hours = t_diff.total_seconds()/3600
-        t_diff_radians = t_diff_hours/24*2*pi + pi/2
+    if analogs:
+        analog_label, analog_spec, star_wav = spectrum_plot(analogs[0], offset=2)
+        analog_data = {'label': analog_label,
+                       'spec': analog_spec,
+                       'wav': star_wav,
+                       'filename': analogs[0]}
     else:
-        t_diff_radians = 0
-    return t_diff_radians
+        analog_data = None
 
-
-def build_visibility_source(body, site_list, site_code, color_list, d, alt_limit, step_size):
-    """Builds the source dictionaries used by lin_vis_plot"""
-
-    body_elements = model_to_dict(body)
-    emp = []
-    vis = {"x": [],
-           "y": [],
-           "sun_rise": [],
-           "sun_set": [],
-           "obj_rise": [],
-           "obj_set": [],
-           "moon_rise": [],
-           "moon_set": [],
-           "moon_phase": [],
-           "colors": [],
-           "site": [],
-           "obj_vis": [],
-           "max_alt": []
-           }
-
-    for i, site in enumerate(site_list):
-        dark_start, dark_end = determine_darkness_times(site, d)
-        (site_name, site_long, site_lat, site_hgt) = get_sitepos(site)
-        (moon_app_ra, moon_app_dec, diam) = moon_ra_dec(d, site_long, site_lat, site_hgt)
-        moon_rise, moon_set, moon_max_alt, moon_vis_time = target_rise_set(d, moon_app_ra, moon_app_dec, site, 10, step_size, sun=False)
-        moon_phase = moonphase(d, site_long, site_lat, site_hgt)
-        emp = call_compute_ephem(body_elements, d, d + timedelta(days=1), site, step_size)
-        obj_up_emp = dark_and_object_up(emp, d, d + timedelta(days=1), 0 , alt_limit=alt_limit)
-        vis_time, emp_obj_up, set_time = compute_dark_and_up_time(obj_up_emp, step_size)
-        obj_set = datetime_to_radians(d, set_time)
-        dark_and_up_time, max_alt = get_visibility(None, None, d + timedelta(hours=12), site, step_size, alt_limit, False, body_elements)
-
-        vis["x"].append(0)
-        vis["y"].append(0)
-        vis["sun_rise"].append(datetime_to_radians(d, dark_end))
-        vis["sun_set"].append(datetime_to_radians(d, dark_start))
-        vis["obj_rise"].append(obj_set-(vis_time/24*2*pi))
-        vis["obj_set"].append(obj_set)
-        vis["moon_rise"].append(datetime_to_radians(d, moon_set)-(moon_vis_time/24*2*pi))
-        vis["moon_set"].append(datetime_to_radians(d, moon_set))
-        vis["moon_phase"].append(moon_phase)
-        vis["colors"].append(color_list[i])
-        vis["site"].append(site_code[i])
-        vis["obj_vis"].append(dark_and_up_time)
-        vis["max_alt"].append(max_alt)
-
-    return vis, emp
-
-
-def lin_vis_plot(body):
-    """Creates a Bokeh plot showing the visibility for the given body over the next 24 hours compared to the
-        current time, the sun and the moon. Contains a help overview for first time viewers.
-    """
-
-    site_code = ['LSC', 'CPT', 'COJ', 'ELP', 'TFN', 'OGG']
-    site_list = ['W85', 'K91', 'Q63', 'V37', 'Z21', 'F65']
-    color_list = ['darkviolet', 'forestgreen', 'saddlebrown', 'coral', 'darkslategray', 'dodgerblue']
-    d = datetime.utcnow()
-    step_size = '30 m'
-    alt_limit = 30
-    vis, emp = build_visibility_source(body, site_list, site_code, color_list, d, alt_limit, step_size)
-
-    new_x = []
-    for i, l in enumerate(site_code):
-        new_x.append(-1 + i * ( 2 / (len(site_list)-1)))
-    vis['x'] = new_x
-    rad = ((2 / (len(site_list)-1))*.9)/2
-
-    source = ColumnDataSource(data=vis)
-
-    TOOLTIPS = """
-            <div>
-                <div>
-                    <span style="font-size: 17px; font-weight: bold; color: @colors;">@site</span>
-                </div>
-                <div>
-                    <span style="font-size: 15px;">Visibility:</span>
-                    <span style="font-size: 10px; color: #696;">@obj_vis{1.1} hours</span>
-                    <br>
-                    <span style="font-size: 15px;">Max Alt:</span>
-                    <span style="font-size: 10px; color: #696;">@max_alt deg</span>
-                    """+"""
-                    <br>
-                    <span style="font-size: 15px;">V Mag:</span>
-                    <span style="font-size: 10px; color: #696;">{}</span>
-                </div>
-            </div>
-        """.format(emp[0][3])
-
-    hover = HoverTool(tooltips=TOOLTIPS, point_policy="none", attachment='below', line_policy="none")
-    plot = figure(toolbar_location=None, x_range=(-1.5, 1.5), y_range=(-.5, .5), tools=[hover], plot_width=300,
-                  plot_height=75)
-    plot.grid.visible = False
-    plot.outline_line_color = None
-    plot.axis.visible = False
-
-    # base
-    plot.circle(x='x', y='y', radius=rad, fill_color="white", source=source, line_color="black", line_width=2)
-    # object
-    plot.wedge(x='x', y='y', radius=rad, start_angle="obj_rise", end_angle="obj_set", color="colors", line_color="black", source=source)
-    # sun
-    plot.wedge(x='x', y='y', radius=rad * .75, start_angle="sun_rise", end_angle="sun_set", color="khaki", line_color="black", source=source)
-    # moon
-    plot.wedge(x='x', y='y', radius=rad * .5, start_angle="moon_rise", end_angle="moon_set", color="gray", line_color="black",
-               fill_alpha='moon_phase', source=source)
-
-    # Build Clock
-    plot.ray('x', 'y', angle=pi/2, length=rad, color="red", alpha=.75, line_width=2, source=source)
-    plot.ray('x', 'y', angle=0, length=rad, color="gray", alpha=.75, source=source)
-    plot.ray('x', 'y', angle=pi, length=rad, color="gray", alpha=.75, source=source)
-    plot.ray('x', 'y', angle=3*pi/2, length=rad, color="gray", alpha=.75, source=source)
-    plot.circle('x', 'y', radius=rad * .25, fill_color="white", line_width=1, line_color="black", source=source)
-
-    # Build Help
-    # plot Base
-    plot.circle(x='x', y='y', radius=rad, color="white", source=source, alpha=0.75, legend="?", visible=False)
-
-    # Plot target help
-    up_index = [i for i, x in enumerate(vis['x']) if vis["obj_rise"][i] != 0 and vis["obj_set"][i] != 0][0]
-    if not up_index:
-        up_index = 1
-    plot.wedge(x=vis['x'][up_index], y=vis['y'][up_index], radius=rad, start_angle=vis["obj_rise"][up_index], end_angle=vis["obj_set"][up_index], fill_color=vis["colors"][up_index], line_color="black", legend="?", visible=False)
-    plot.text(vis['x'][up_index], [rad + .1], text=["Target"], text_color=vis["colors"][up_index], text_align='center', text_font_size='10px', legend="?", visible=False)
-    n = list(range(len(site_list)))
-    n.remove(up_index)
-
-    # Plot Now help
-    plot.text([vis['x'][n[0]]], [rad+.1], text=["Now"], text_color='red', text_align='center', text_font_size='10px', legend="?", visible=False)
-    plot.ray([vis['x'][n[0]]], [0], angle=pi/2, length=rad, color="red", alpha=.75, line_width=2, legend="?", visible=False)
-
-    # Plot sun help
-    plot.wedge(x=vis['x'][n[1]], y=vis['y'][n[1]], radius=rad * .75, start_angle=vis["sun_rise"][n[1]], end_angle=vis["sun_set"][n[1]], fill_color="khaki", line_color="black", legend="?", visible=False)
-    plot.text(vis['x'][n[1]], [rad+.1], text=["Sun"], text_color="darkgoldenrod", text_align='center', text_font_size='10px', legend="?", visible=False)
-
-    # Plot moon help
-    plot.wedge(x=vis['x'][n[2]], y=vis['y'][n[2]], radius=rad * .5, start_angle=vis["moon_rise"][n[2]], end_angle=vis["moon_set"][n[2]], fill_color="gray", line_color="black", fill_alpha=vis['moon_phase'][n[2]], legend="?", visible=False)
-    plot.text(vis['x'][n[2]], [rad + .1], text=["Moon"], text_color="dimgray", text_align='center', text_font_size='10px', legend="?", visible=False)
-
-    # plot time direction
-    plot.arc(vis['x'][n[3]], vis['y'][n[3]], radius=rad * .6, start_angle=0, end_angle=pi, color="black", line_width=2, direction='clock', legend="?", visible=False)
-    plot.triangle(vis['x'][n[3]]-(rad * .58), vis['y'][n[3]], color="black", size=6, legend="?", visible=False)
-    plot.text(vis['x'][n[3]], [rad+.1], text=["Time"], text_color='black', text_align='center', text_font_size='10px', legend="?", visible=False)
-
-    # plot hours help
-    plot.ray(vis['x'][n[4]], [0], angle=0, length=rad, color="black", legend="?", visible=False)
-    plot.ray(vis['x'][n[4]], [0], angle=pi, length=rad, color="black", legend="?", visible=False)
-    plot.ray(vis['x'][n[4]], [0], angle=3*pi/2, length=rad, color="black", legend="?", visible=False)
-    plot.text(vis['x'][n[4]], [rad+.1], text=["6 hours"], text_color='black', text_align='center', text_font_size='10px', legend="?", visible=False)
-
-    # plot center help
-    plot.circle('x', 'y', radius=rad * .25, fill_color="white", line_width=1, line_color="black", source=source, legend="?", visible=False)
-
-    # plot site labels
-    plot.line([vis['x'][0]-rad, vis['x'][0]-rad, vis['x'][0]], [-rad - .1, -rad - .22, -rad - .22], color="navy", legend="?", visible=False)
-    plot.line([vis['x'][2], vis['x'][2]+rad, vis['x'][2]+rad], [-rad - .22, -rad - .22, -rad - .1], color="navy", legend="?", visible=False)
-    plot.text(vis['x'][1], [-rad-.3], text=["Southern Sites"], text_color='navy', text_align='center', text_font_size='10px', legend="?", visible=False)
-    plot.line([vis['x'][3]-rad, vis['x'][3]-rad, vis['x'][3]], [-rad - .1, -rad - .22, -rad - .22], color="maroon", legend="?", visible=False)
-    plot.line([vis['x'][5], vis['x'][5]+rad, vis['x'][5]+rad], [-rad - .22, -rad - .22, -rad - .1], color="maroon", legend="?", visible=False)
-    plot.text(vis['x'][4], [-rad-.3], text=["Northern Sites"], text_color='maroon', text_align='center', text_font_size='10px', legend="?", visible=False)
-
-    # Build over layer for smooth tooltips
-    plot.circle(x='x', y='y', radius=rad, color="white", source=source, alpha=0.01, legend="?", visible=False)
-
-    plot.legend.click_policy = 'hide'
-    plot.legend.background_fill_alpha = 0
-    plot.legend.border_line_alpha = 0
-    plot.legend.margin = 0
-    plot.legend.glyph_width = 0
-    plot.legend.glyph_height = 0
-    plot.legend.label_width = 0
-    plot.legend.label_height = 0
-
-    script, div = components(plot, CDN)
+    script, div = spec_plot([data_spec], analog_data)
 
     return script, div
+
 
 
 class BlockSpec(View):  # make loging required later

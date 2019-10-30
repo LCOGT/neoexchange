@@ -134,7 +134,7 @@ class CharacterizationPageTest(FunctionalTest):
 
         # He notices that they are ordered by window
 
-    @patch('core.views.build_visibility_source', mock_build_visibility_source)
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.models.datetime', MockDateTime)
     def test_characterization_rank(self):
 
