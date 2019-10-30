@@ -32,6 +32,7 @@ from comet_subs import *
 #comet_color = 0.56
 #comet = '46P'
 comet = '29P'
+comet_color=0.57
 use_ephem_file = False
 
 datadir = os.path.join(os.getenv('HOME'), 'Asteroids', comet, 'Pipeline' ) #, 'Temp')
@@ -101,7 +102,7 @@ for fits_fpath in images:
     else:
         start = date_obs-1
         end = date_obs+1
-        ephem = horizons_ephem(comet, start.datetime, end.datetime, sitecode.upper())
+        ephem = horizons_ephem(comet, start.datetime.date(), end.datetime.date(), sitecode.upper())
         # Find index closest to obs time
         idx = (np.abs(ephem['datetime_jd'] - jd_utc_mid)).argmin()
         if ephem[idx]['datetime_jd'] > jd_utc_mid:
@@ -115,6 +116,8 @@ for fits_fpath in images:
             ra = ra_dec_1.ra + frac*(ra_dec_2.ra - ra_dec_1.ra)
             dec = ra_dec_1.dec + frac*(ra_dec_2.dec - ra_dec_1.dec)
             print (ra.to_string(unit=u.hour, sep=('h ', 'm ', 's')), dec.to_string(alwayssign=True, unit=u.degree, sep=('d ', "' ", '"')))
+            ra = ra.degree
+            dec = dec.degree
         else:
             print("Ephemeris doesn't cover observation time")
             next
@@ -219,8 +222,15 @@ for fits_fpath in images:
         if wcserr == 0:
             zp_PS1, C_PS1, zp_err_PS1, r, gmr, gmi, obj_mag, obj_err = calibrate_catalog(catalog, sky_position, trim_limits, flux_column='FLUX_APER', fluxerr_column='FLUXERR_APER')
             print("ZP, color slope, uncertainty= {:7.3f} {:.6f} {:.3f}".format(zp_PS1, C_PS1, zp_err_PS1))
-            rmag_cc = (C_PS1 * comet_color) + zp_PS1 + obj_mag
-            rmag_err_cc = sqrt(pow(obj_err, 2) + pow(zp_err_PS1, 2))
+            if C_PS1 and zp_PS1 and obj_mag:
+                rmag_cc = (C_PS1 * comet_color) + zp_PS1 + obj_mag
+                rmag_err_cc = sqrt(pow(obj_err, 2) + pow(zp_err_PS1, 2))
+            else:
+                obj_mag = obj_err = -99.0
+
+                rmag_cc = rmag_err_cc = -99.0
+                zp_PS1 = C_PS1 = zp_err_PS1 = -99.0
+
         else:
             mag = magerr = -99.0
             abs_mag = abs_mag_err = -99.0
