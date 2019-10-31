@@ -4534,34 +4534,24 @@ class TestMakeCadence(TestCase):
                         'exp_time' : 20.0,
                         'binning' : 2,
                         'instrument' : '0M4-SCICAM-SBIG',
-                        'filter' : 'w',
+                        'filter_pattern' : 'w',
                         'site' : 'COJ',
                         'pondtelescope' : '0m4a',
-                        'site_code' : 'Q59'
+                        'site_code' : 'Q59',
+                        'target' : self.elements,
+                        'constraints' : {'max_airmass': 2.0, 'min_lunar_distance': 15}
                         }
         self.ipp_value = 1.0
 
-        self.request = {  'constraints' : {'max_airmass': 2.0, 'min_lunar_distance': 15},
-                          'location' : { 'site' : self.params['site'].lower(),
+        configurations = make_configs(self.params)
+        self.request = {  'location' : { 'site' : self.params['site'].lower(),
                                          'telescope_class' : self.params['pondtelescope'][0:3]
                                        },
-                          'target' : self.elements,
-                          'configurations' : [{'ag_mode': 'OPTIONAL',
-                                            'ag_name': '',
-                                            'bin_x' : self.params['binning'],
-                                            'bin_y' : self.params['binning'],
-                                            'exposure_count' : self.params['exp_count'],
-                                            'exposure_time' : self.params['exp_time'],
-                                            'filter' : self.params['filter'],
-                                            'instrument_type' : self.params['instrument'],
-                                            'type' : self.params['exp_type']
-                                               }],
+                          'configurations' : configurations,
                           'windows' : [{'start' : datetime.strftime(self.params['start_time'], '%Y-%m-%dT%H:%M:%SZ'),
                                         'end'   : datetime.strftime(self.params['end_time'], '%Y-%m-%dT%H:%M:%SZ')
                                         }]
                         }
-        # self.request['target']['epochofel'] = self.request['target']['epochofel_mjd']
-        # self.request['target']['scheme'] = self.request['target']['elements_type']
 
         self.maxDiff = None
 
@@ -4596,8 +4586,8 @@ class TestMakeCadence(TestCase):
                     'windows': [window],
                 })
         expected = {
-                     u'group_name': u'481394_Q59-20191101',
-                     u'ipp_value': 1.05,
+                     u'name': u'3122_Q59-20170815',
+                     u'ipp_value': 1.0,
                      u'observation_type': u'NORMAL',
                      u'operator': u'MANY',
                      u'proposal': u'LCOSchedulerTest',
@@ -4608,14 +4598,19 @@ class TestMakeCadence(TestCase):
         self.request['configurations'][0]['exposure_count'] = 10
         self.request['configurations'][0]['exposure_time'] = 2.0
         self.request['configurations'][0]['max_airmass'] = 2.0
+
         params = self.params
         params['start_time'] = datetime(2019, 11, 1, 0, 0, 0)
         params['end_time'] = datetime(2019, 11, 2, 0, 0, 0)
         params['jitter'] = 1.0
         params['period'] = 2
         ur = make_cadence(self.request, params, self.ipp_value)
-        for i, exrequest in enumerate(expected['requests']):
-            self.assertEqual(exrequest, ur['requests'][i])
+        for key in expected.keys():
+            if key == 'requests':
+                for i, exrequest in enumerate(expected['requests']):
+                    self.assertEqual(exrequest, ur['requests'][i])
+            else:
+                self.assertEqual(expected[key], ur[key])
 
 
 class TestFetchTaxonomyData(TestCase):

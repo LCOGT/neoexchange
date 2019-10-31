@@ -925,131 +925,95 @@ def mock_fetch_filter_list_no2m(site, spec):
 
 def mock_expand_cadence(user_request):
 
-    cadence = {
-                'name': '481394_Q59-20191101',
+    location = user_request['requests'][0]['location']
+    cadence_params = user_request['requests'][0]['cadence']
+    config = user_request['requests'][0]['configurations']
+    target = config[0]['target']
+    ipp = user_request['ipp_value']
+    group_name = user_request['name']
+
+    cadence = { 'name': group_name,
                 'proposal': 'LCOSchedulerTest',
-                'ipp_value': 1.05,
+                'ipp_value': ipp,
                 'operator': 'MANY',
                 'observation_type': 'NORMAL',
                 'requests':  [{
-                'location': {
-                  'telescope_class': '0m4',
-                  'site': 'ogg'
+                    'location': location,
+                    'configurations': [{
+                        'constraints': {
+                            'max_airmass': 2.0,
+                            'min_lunar_distance': 30.0
+                        },
+                        'instrument_configs': [{
+                            'optical_elements': {
+                                'filter': 'w'
+                            },
+                            'exposure_time': 2.0,
+                            'exposure_count': 10,
+                            'bin_x': 1,
+                            'bin_y': 1
+                        }],
+                        'target': target,
+                        'instrument_type': '0M4-SCICAM-SBIG',
+                        'type': 'EXPOSE',
+                        'priority': 1
+                    }],
+                    'windows': [{
+                        'start': '2019-11-01T00:00:00Z',
+                        'end': '2019-11-01T00:30:00Z'
+                    }],
                 },
-                'configurations': [{
-                  'constraints': {
-                    'max_airmass': 2.0,
-                    'min_lunar_distance': 30.0
-                  },
-                  'instrument_configs': [{
-                    'optical_elements': {
-                      'filter': 'w'
-                    },
-                    'exposure_time': 2.0,
-                    'exposure_count': 10,
-                    'bin_x': 1,
-                    'bin_y': 1
-                  }],
-                  'target': {
-                    'name': '481394',
-                    'type': 'ORBITAL_ELEMENTS',
-                    'scheme': 'MPC_MINOR_PLANET',
-                    'epochofel': 58772.0,
-                    'orbinc': 5.86644,
-                    'longascnode': 228.05483,
-                    'argofperih': 305.65602,
-                    'meandist': 0.9493097,
-                    'eccentricity': 0.2805184,
-                    'meananom': 236.20921
-                  },
-                  'instrument_type': '0M4-SCICAM-SBIG',
-                  'type': 'EXPOSE',
-                  'priority': 1
-                }],
-                'windows': [{
-                  'start': '2019-11-01T00:00:00Z',
-                  'end': '2019-11-01T00:30:00Z'
-                }],
-              }, {
-                'location': {
-                  'telescope_class': '0m4',
-                  'site': 'ogg'
-                },
-                'configurations': [{
-                  'constraints': {
-                    'max_airmass': 2.0,
-                    'min_lunar_distance': 30.0
-                  },
-                  'instrument_configs': [{
-                    'optical_elements': {
-                      'filter': 'w'
-                    },
-                    'exposure_time': 2.0,
-                    'exposure_count': 10,
-                    'bin_x': 1,
-                    'bin_y': 1
-                  }],
-                  'target': {
-                    'name': '481394',
-                    'type': 'ORBITAL_ELEMENTS',
-                    'scheme': 'MPC_MINOR_PLANET',
-                    'epochofel': 58772.0,
-                    'orbinc': 5.86644,
-                    'longascnode': 228.05483,
-                    'argofperih': 305.65602,
-                    'meandist': 0.9493097,
-                    'eccentricity': 0.2805184,
-                    'meananom': 236.20921
-                  },
-                  'instrument_type': '0M4-SCICAM-SBIG',
-                  'type': 'EXPOSE',
-                  'priority': 1
-                }],
-                'windows': [{
-                  'start': '2019-11-01T01:30:00Z',
-                  'end': '2019-11-01T02:30:00Z'
-                }],
-              }, {
-                'location': {
-                  'telescope_class': '0m4',
-                  'site': 'ogg'
-                },
-                'configurations': [{
-                  'constraints': {
-                    'max_airmass': 2.0,
-                    'min_lunar_distance': 30.0
-                  },
-                  'instrument_configs': [{
-                    'optical_elements': {
-                      'filter': 'w'
-                    },
-                    'exposure_time': 2.0,
-                    'exposure_count': 10,
-                    'bin_x': 1,
-                    'bin_y': 1
-                  }],
-                  'target': {
-                    'name': '481394',
-                    'type': 'ORBITAL_ELEMENTS',
-                    'scheme': 'MPC_MINOR_PLANET',
-                    'epochofel': 58772.0,
-                    'orbinc': 5.86644,
-                    'longascnode': 228.05483,
-                    'argofperih': 305.65602,
-                    'meandist': 0.9493097,
-                    'eccentricity': 0.2805184,
-                    'meananom': 236.20921
-                  },
-                  'instrument_type': '0M4-SCICAM-SBIG',
-                  'type': 'EXPOSE',
-                  'priority': 1
-                }],
-                'windows': [{
-                  'start': '2019-11-01T03:30:00Z',
-                  'end': '2019-11-01T04:30:00Z'
-                }],
-              }]
-        }
+                    {'location': location,
+                        'configurations': [{
+                            'constraints': {
+                                'max_airmass': 2.0,
+                                'min_lunar_distance': 30.0
+                            },
+                            'instrument_configs': [{
+                                'optical_elements': {
+                                    'filter': 'w'
+                                },
+                                'exposure_time': 2.0,
+                                'exposure_count': 10,
+                                'bin_x': 1,
+                                'bin_y': 1
+                              }],
+                            'target': target,
+                            'instrument_type': '0M4-SCICAM-SBIG',
+                            'type': 'EXPOSE',
+                            'priority': 1
+                        }],
+                        'windows': [{
+                            'start': '2019-11-01T01:30:00Z',
+                            'end': '2019-11-01T02:30:00Z'
+                            }],
+                    }, {
+                        'location': location,
+                        'configurations': [{
+                            'constraints': {
+                                'max_airmass': 2.0,
+                                'min_lunar_distance': 30.0
+                            },
+                            'instrument_configs': [{
+                                'optical_elements': {
+                                    'filter': 'w'
+                                },
+                                'exposure_time': 2.0,
+                                'exposure_count': 10,
+                                'bin_x': 1,
+                                'bin_y': 1
+                            }],
+                            'target': target,
+                            'instrument_type': '0M4-SCICAM-SBIG',
+                            'type': 'EXPOSE',
+                            'priority': 1
+                        }],
+                        'windows': [{
+                            'start': '2019-11-01T03:30:00Z',
+                            'end': '2019-11-01T04:30:00Z'
+                        }],
+                    }]
+                }
     return True, cadence
 
 
