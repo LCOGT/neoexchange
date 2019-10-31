@@ -1524,7 +1524,7 @@ def make_target(params):
 
 def make_moving_target(elements):
     """Make a target dictionary for the request from an element set"""
-
+    print(elements)
     # Generate initial dictionary of things in common
     target = {
                   'name'                : elements['current_name'],
@@ -1547,9 +1547,6 @@ def make_moving_target(elements):
         target['meananom'] = elements['meananom']
     if 'v_mag' in elements:
         target['extra_params']['v_magnitude'] = round(elements['v_mag'], 2)
-    if 'sky_pa' in elements:
-        target['rot_mode'] = 'SKY'
-        target['rot_angle'] = round(elements['sky_pa'], 1)
 
     return target
 
@@ -1594,10 +1591,11 @@ def make_config(params, exp_filter):
 
 
 def make_spect_config(params, exp_filter):
-    if 'source_type' in params:  # then Sidereal target (use smaller window)
-        acq_rad = 5.0
-    else:
+
+    if 'ORBITAL_ELEMENTS' in params['target']['type']:  # then non-sidereal target (use larger window)
         acq_rad = 15.0
+    else:
+        acq_rad = 5.0
 
     if params['exp_type'].upper() in ['ARC', 'LAMP_FLAT']:
         ag_mode = 'OFF'
@@ -1609,6 +1607,11 @@ def make_spect_config(params, exp_filter):
         exp_count = params['exp_count']
         exp_time = params['exp_time']
 
+    if params.get('rot_mode', 'VFLOAT') == 'SKY':
+        inst_extra = {'rotator_angle': params.get('rot_angle', 0)}
+    else:
+        inst_extra = {}
+
     configurations = {
         'type': params['exp_type'],
         'instrument_type': '2M0-FLOYDS-SCICAM',
@@ -1616,6 +1619,7 @@ def make_spect_config(params, exp_filter):
         'target': params['target'],
         'acquisition_config': {
             'mode': 'BRIGHTEST',
+            'exposure_time' : params.get('ag_exp_time', 10),
             "extra_params": {
               "acquire_radius": acq_rad,
             }
@@ -1629,10 +1633,11 @@ def make_spect_config(params, exp_filter):
             {
                 'exposure_time': exp_time,
                 'exposure_count': exp_count,
-                'rotator_mode': 'VFLOAT',
+                'rotator_mode': params.get('rot_mode', 'VFLOAT'),
                 'optical_elements': {
                     'slit': exp_filter[0]
-                }
+                },
+                'extra_params' : inst_extra
             }
         ]
     }
@@ -1878,6 +1883,9 @@ def make_requestgroup(elements, params):
     if len(elements) > 0:
         logger.debug("Making a moving object")
         params['target'] = make_moving_target(elements)
+        if 'sky_pa' in elements:
+            params['rot_mode'] = 'SKY'
+            params['rot_angle'] = round(elements['sky_pa'], 1)
     else:
         logger.debug("Making a static object")
         params['target'] = make_target(params)
@@ -1915,6 +1923,7 @@ def make_requestgroup(elements, params):
         params['exp_time'] = params['calibsrc_exptime']
         ag_exptime = params.get('ag_exp_time', 10)
         params['ag_exp_time'] = 10
+        params['rot_mode'] = 'VFLOAT'
         cal_configurations = make_configs(params)
         params['exp_time'] = exp_time
         params['ag_exp_time'] = ag_exptime
