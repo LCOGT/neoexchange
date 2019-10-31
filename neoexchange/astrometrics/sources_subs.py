@@ -1764,6 +1764,7 @@ def expand_cadence(user_request):
 
 
 def make_cadence(request, params, ipp_value, debug=False):
+
     """Create a user_request for a cadence observation"""
     # Add cadence parameters into Request
     cadence = {
@@ -1772,23 +1773,21 @@ def make_cadence(request, params, ipp_value, debug=False):
                 'period': params['period'],
                 'jitter': params['jitter']
              }
-    request = {
-                'requests': [{
-                'cadence': cadence,
+    request = [{'cadence': cadence,
                 'configurations': request['configurations'],
                 'windows': [],
                 'location': request['location'],
                 }]
-        }
 
     user_request = {
-                    'requests' : [request],
+                    'requests' : request,
                     'name' : params['group_name'],
                     'observation_type': "NORMAL",
                     'operator' : "SINGLE",
                     'ipp_value': ipp_value,
                     'proposal' : params['proposal_id']
                    }
+
 # Submit the UserRequest with the cadence
     status, cadence_user_request = expand_cadence(user_request)
 

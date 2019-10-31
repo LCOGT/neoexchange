@@ -4546,7 +4546,7 @@ class TestMakeCadence(TestCase):
                                          'telescope_class' : self.params['pondtelescope'][0:3]
                                        },
                           'target' : self.elements,
-                          'configurations' : [{  'ag_mode': 'OPTIONAL',
+                          'configurations' : [{'ag_mode': 'OPTIONAL',
                                             'ag_name': '',
                                             'bin_x' : self.params['binning'],
                                             'bin_y' : self.params['binning'],
@@ -4555,7 +4555,7 @@ class TestMakeCadence(TestCase):
                                             'filter' : self.params['filter'],
                                             'instrument_type' : self.params['instrument'],
                                             'type' : self.params['exp_type']
-                                        }],
+                                               }],
                           'windows' : [{'start' : datetime.strftime(self.params['start_time'], '%Y-%m-%dT%H:%M:%SZ'),
                                         'end'   : datetime.strftime(self.params['end_time'], '%Y-%m-%dT%H:%M:%SZ')
                                         }]
@@ -4565,33 +4565,29 @@ class TestMakeCadence(TestCase):
 
         self.maxDiff = None
 
-
     @patch('astrometrics.sources_subs.expand_cadence', mock_expand_cadence)
     def test_cadence_wrapper(self):
-        inst_confs  =  [{
-                          u'bin_x': 1,
-                          u'bin_y': 1,
-                          u'exposure_count': 10,
-                          u'exposure_time': 2.0,
-                          'optical_elements': {
-                           'filter': 'w'
-                         }
-                  }]
-        configs =  [{
-                             u'instrument_type': u'0M4-SCICAM-SBIG',
-                             u'priority': 1,
-                             u'type': u'EXPOSE',
-                             u'target': self.elements,
-                             u'constraints': {u'max_airmass': 2.0, 'min_lunar_distance': 30.0},
-                             'instrument_configs' : inst_confs
-                        }]
+        inst_confs = [{u'bin_x': 1,
+                       u'bin_y': 1,
+                       u'exposure_count': 10,
+                       u'exposure_time': 2.0,
+                       'optical_elements': {'filter': 'w'}
+                       }]
+        configs = [{u'instrument_type': u'0M4-SCICAM-SBIG',
+                    u'priority': 1,
+                    u'type': u'EXPOSE',
+                    u'target': self.elements,
+                    u'constraints': {u'max_airmass': 2.0,
+                                     'min_lunar_distance': 30.0},
+                    'instrument_configs' : inst_confs
+                    }]
 
         windows = [{'start': '2019-11-01T00:00:00Z',
                     'end': '2019-11-01T00:30:00Z'},
-                  {'start': '2019-11-01T01:30:00Z',
-                  'end': '2019-11-01T02:30:00Z'},
-                {'start': '2019-11-01T03:30:00Z',
-                'end': '2019-11-01T04:30:00Z'}]
+                   {'start': '2019-11-01T01:30:00Z',
+                    'end': '2019-11-01T02:30:00Z'},
+                   {'start': '2019-11-01T03:30:00Z',
+                    'end': '2019-11-01T04:30:00Z'}]
         requests = []
         for window in windows:
             requests.append({
@@ -4620,6 +4616,7 @@ class TestMakeCadence(TestCase):
         ur = make_cadence(self.request, params, self.ipp_value)
         for i, exrequest in enumerate(expected['requests']):
             self.assertEqual(exrequest, ur['requests'][i])
+
 
 class TestFetchTaxonomyData(TestCase):
 
