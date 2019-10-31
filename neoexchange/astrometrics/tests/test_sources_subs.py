@@ -978,10 +978,9 @@ class TestSubmitBlockToScheduler(TestCase):
 
         body_elements = compute_vmag_pa(body_elements, params)
         user_request = make_requestgroup(body_elements, params)
-
-        self.assertAlmostEqual(user_request['requests'][0]['configurations'][0]['target']['vmag'], 20.88, 2)
-        self.assertAlmostEqual(user_request['requests'][0]['configurations'][0]['target']['rot_angle'], 107.53, 1)
-        self.assertEqual(user_request['requests'][0]['configurations'][0]['target']['rot_mode'], 'SKY')
+        self.assertAlmostEqual(user_request['requests'][0]['configurations'][0]['target']['extra_params']['v_magnitude'], 20.88, 2)
+        self.assertAlmostEqual(user_request['requests'][0]['configurations'][0]['instrument_configs'][0]['extra_params']['rotator_angle'], 107.53, 1)
+        self.assertEqual(user_request['requests'][0]['configurations'][0]['instrument_configs'][0]['rotator_mode'], 'SKY')
 
     def test_1m_sinistro_lsc_doma_requestgroup(self):
 
@@ -4102,8 +4101,9 @@ class TestMakeconfiguration(TestCase):
                               },
                               'acquisition_config': {
                                 'mode': 'BRIGHTEST',
+                                'exposure_time': 10,
                                 'extra_params': {
-                                  'acquire_radius': 15.0
+                                  'acquire_radius': 5.0
                                 }
                               },
                               'guiding_config': {
@@ -4117,7 +4117,8 @@ class TestMakeconfiguration(TestCase):
                                 'rotator_mode': 'VFLOAT',
                                 'optical_elements': {
                                   'slit': 'slit_6.0as'
-                                }
+                                },
+                                'extra_params': {}
                               }]
                             }
 
@@ -4129,38 +4130,40 @@ class TestMakeconfiguration(TestCase):
         self.params_2m0_spectroscopy['exp_type'] = 'ARC'
 
         expected_configuration = {
-                              'type': 'ARC',
-                              'instrument_type': '2M0-FLOYDS-SCICAM',
-                              'constraints': {
-                                'max_airmass': 2.0,
-                                'min_lunar_distance': 30.0
-                              },
-                              'target': {
-                                'type': 'ICRS',
-                                'name': 'SA107-684',
-                                'ra': 234.3,
-                                'dec': -0.16
-                              },
-                              'acquisition_config': {
-                                'mode': 'BRIGHTEST',
-                                'extra_params': {
-                                  'acquire_radius': 15.0
-                                }
-                              },
-                              'guiding_config': {
-                                'mode': 'ON',
-                                'optional': False,
-                                'exposure_time': 10
-                              },
-                              'instrument_configs': [{
-                                'exposure_time': 60.0,
-                                'exposure_count': 1,
-                                'rotator_mode': 'VFLOAT',
-                                'optical_elements': {
-                                  'slit': 'slit_6.0as'
-                                }
-                              }]
+                          'type': 'ARC',
+                          'instrument_type': '2M0-FLOYDS-SCICAM',
+                          'constraints': {
+                            'max_airmass': 2.0,
+                            'min_lunar_distance': 30.0
+                          },
+                          'target': {
+                            'type': 'ICRS',
+                            'name': 'SA107-684',
+                            'ra': 234.3,
+                            'dec': -0.16
+                          },
+                          'acquisition_config': {
+                            'mode': 'BRIGHTEST',
+                            'exposure_time': 10,
+                            'extra_params': {
+                              'acquire_radius': 5.0
                             }
+                          },
+                          'guiding_config': {
+                            'mode': 'ON',
+                            'optional': False,
+                            'exposure_time': 10
+                          },
+                          'instrument_configs': [{
+                            'exposure_time': 60.0,
+                            'exposure_count': 1,
+                            'rotator_mode': 'VFLOAT',
+                            'optical_elements': {
+                              'slit': 'slit_6.0as'
+                            },
+                            'extra_params': {}
+                          }]
+                        }
 
         configuration = make_spect_config(self.params_2m0_spectroscopy, self.filt_2m0_spectroscopy)
         self.assertEqual(expected_configuration, configuration)
@@ -4171,38 +4174,40 @@ class TestMakeconfiguration(TestCase):
         self.params_2m0_spectroscopy['exp_count'] = 2
 
         expected_configuration = {
-                              'type': 'ARC',
-                              'instrument_type': '2M0-FLOYDS-SCICAM',
-                              'constraints': {
-                                'max_airmass': 2.0,
-                                'min_lunar_distance': 30.0
-                              },
-                              'target': {
-                                'type': 'ICRS',
-                                'name': 'SA107-684',
-                                'ra': 234.3,
-                                'dec': -0.16
-                              },
-                              'acquisition_config': {
-                                'mode': 'BRIGHTEST',
-                                'extra_params': {
-                                  'acquire_radius': 15.0
-                                }
-                              },
-                              'guiding_config': {
-                                'mode': 'ON',
-                                'optional': False,
-                                'exposure_time': 10
-                              },
-                              'instrument_configs': [{
-                                'exposure_time': 60.0,
-                                'exposure_count': 1,
-                                'rotator_mode': 'VFLOAT',
-                                'optical_elements': {
-                                  'slit': 'slit_6.0as'
-                                }
-                              }]
+                          'type': 'ARC',
+                          'instrument_type': '2M0-FLOYDS-SCICAM',
+                          'constraints': {
+                            'max_airmass': 2.0,
+                            'min_lunar_distance': 30.0
+                          },
+                          'target': {
+                            'type': 'ICRS',
+                            'name': 'SA107-684',
+                            'ra': 234.3,
+                            'dec': -0.16
+                          },
+                          'acquisition_config': {
+                            'mode': 'BRIGHTEST',
+                            'exposure_time': 10,
+                            'extra_params': {
+                              'acquire_radius': 5.0
                             }
+                          },
+                          'guiding_config': {
+                            'mode': 'ON',
+                            'optional': False,
+                            'exposure_time': 10
+                          },
+                          'instrument_configs': [{
+                            'exposure_time': 60.0,
+                            'exposure_count': 1,
+                            'rotator_mode': 'VFLOAT',
+                            'optical_elements': {
+                              'slit': 'slit_6.0as'
+                            },
+                            'extra_params': {}
+                          }]
+                        }
 
         configuration = make_spect_config(self.params_2m0_spectroscopy, self.filt_2m0_spectroscopy)
         self.assertEqual(expected_configuration, configuration)
@@ -4226,8 +4231,9 @@ class TestMakeconfiguration(TestCase):
                           },
                           'acquisition_config': {
                             'mode': 'BRIGHTEST',
+                            'exposure_time': 10,
                             'extra_params': {
-                              'acquire_radius': 15.0
+                              'acquire_radius': 5.0
                             }
                           },
                           'guiding_config': {
@@ -4241,12 +4247,12 @@ class TestMakeconfiguration(TestCase):
                             'rotator_mode': 'VFLOAT',
                             'optical_elements': {
                               'slit': 'slit_6.0as'
-                            }
+                            },
+                            'extra_params': {}
                           }]
                         }
 
         configuration = make_spect_config(self.params_2m0_spectroscopy, self.filt_2m0_spectroscopy)
-
         self.assertEqual(expected_configuration, configuration)
 
     def test_2m_spectroscopy_lampflat_multiple_spectra(self):
@@ -4269,8 +4275,9 @@ class TestMakeconfiguration(TestCase):
                                   },
                                   'acquisition_config': {
                                     'mode': 'BRIGHTEST',
+                                    'exposure_time': 10,
                                     'extra_params': {
-                                      'acquire_radius': 15.0
+                                      'acquire_radius': 5.0
                                     }
                                   },
                                   'guiding_config': {
@@ -4284,7 +4291,8 @@ class TestMakeconfiguration(TestCase):
                                     'rotator_mode': 'VFLOAT',
                                     'optical_elements': {
                                       'slit': 'slit_6.0as'
-                                    }
+                                    },
+                                'extra_params': {}
                                   }]
                                 }
 
@@ -4309,8 +4317,9 @@ class TestMakeconfiguration(TestCase):
                                   },
                                   'acquisition_config': {
                                     'mode': 'BRIGHTEST',
+                                    'exposure_time': 10,
                                     'extra_params': {
-                                      'acquire_radius': 15.0
+                                      'acquire_radius': 5.0
                                     }
                                   },
                                   'guiding_config': {
@@ -4324,7 +4333,8 @@ class TestMakeconfiguration(TestCase):
                                     'rotator_mode': 'VFLOAT',
                                     'optical_elements': {
                                       'slit': 'slit_2.0as'
-                                    }
+                                    },
+                                    'extra_params': {}
                                   }]
                                 }
 

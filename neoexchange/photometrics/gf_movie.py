@@ -16,7 +16,7 @@ GNU General Public License for more details.
 import sys
 import numpy as np
 import matplotlib
-#matplotlib.use('TkAgg')
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from astropy.io import fits

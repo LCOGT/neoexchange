@@ -1524,7 +1524,6 @@ def make_target(params):
 
 def make_moving_target(elements):
     """Make a target dictionary for the request from an element set"""
-    print(elements)
     # Generate initial dictionary of things in common
     target = {
                   'name'                : elements['current_name'],

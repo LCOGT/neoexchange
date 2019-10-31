@@ -20,6 +20,8 @@ from astropy.convolution import convolve, Box1DKernel  # Gaussian1DKernel
 from astropy.wcs import WCS
 from astropy import units as u
 from datetime import datetime
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import os
 import io
