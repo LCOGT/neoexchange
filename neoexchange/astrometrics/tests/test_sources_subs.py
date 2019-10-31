@@ -634,6 +634,7 @@ class TestFetchYarkovskyTargets(TestCase):
 
         self.assertEqual(expected_targets, target_list)
 
+
 class TestSubmitBlockToScheduler(TestCase):
 
     def setUp(self):
@@ -656,6 +657,7 @@ class TestSubmitBlockToScheduler(TestCase):
         self.body_elements = model_to_dict(self.body)
         self.body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
         self.body_elements['current_name'] = self.body.current_name()
+        self.body_elements['v_mag'] = 16.6777676
 
         neo_proposal_params = { 'code'  : 'LCO2015A-009',
                                 'title' : 'LCOGT NEO Follow-up Network'
@@ -1250,7 +1252,6 @@ class TestSubmitBlockToScheduler(TestCase):
                     'site_code' : 'F65',
                     'filter_pattern' : 'slit_6.0as',
                     'group_name' : self.body_elements['current_name'] + '_' + 'F65' + '-' + datetime.strftime(utc_date, '%Y%m%d') + "_spectra",
-
                     'start_time' :  utc_date + timedelta(hours=5),
                     'end_time'   :  utc_date + timedelta(hours=15),
                     'solar_analog' : True,
@@ -1264,6 +1265,11 @@ class TestSubmitBlockToScheduler(TestCase):
         expected_cal_exptime = 60.0
         expected_filter = 'slit_6.0as'
         expected_groupid = params['group_name'] + '+solstd'
+        expected_ast_target = {'name': 'N999r0q', 'type': 'ORBITAL_ELEMENTS', 'scheme': 'MPC_MINOR_PLANET',
+                               'epochofel': 57100.0, 'orbinc': 8.34739, 'longascnode': 147.81325,
+                               'argofperih': 85.19251, 'eccentricity': 0.1896865, 'extra_params': {'v_magnitude': 16.68},
+                               'meandist': 1.2176312, 'meananom': 325.2636}
+        expected_cal_target = {'type': 'ICRS', 'name': 'SA107-684', 'ra': 234.3254167, 'dec': -0.163889, 'extra_params': {}}
 
         user_request = make_requestgroup(self.body_elements, params)
         requests = user_request['requests']
@@ -1273,6 +1279,7 @@ class TestSubmitBlockToScheduler(TestCase):
 
         ast_configurations = user_request['requests'][0]['configurations']
         self.assertEqual(len(ast_configurations), expected_configuration_num)
+        self.assertEqual(ast_configurations[2]['target'], expected_ast_target)
         self.assertEqual(ast_configurations[2]['instrument_configs'][0]['exposure_count'], expected_exp_count)
         self.assertEqual(ast_configurations[2]['instrument_configs'][0]['exposure_time'], expected_ast_exptime)
         self.assertEqual(ast_configurations[2]['instrument_configs'][0]['optical_elements']['slit'], expected_filter)
@@ -1280,6 +1287,7 @@ class TestSubmitBlockToScheduler(TestCase):
         cal_configurations = user_request['requests'][1]['configurations']
         self.assertEqual(len(cal_configurations), expected_configuration_num)
         self.assertEqual(cal_configurations[2]['instrument_configs'][0]['exposure_count'], expected_exp_count)
+        self.assertEqual(cal_configurations[2]['target'], expected_cal_target)
         self.assertEqual(cal_configurations[2]['instrument_configs'][0]['exposure_time'], expected_cal_exptime)
         self.assertEqual(cal_configurations[2]['instrument_configs'][0]['optical_elements']['slit'], expected_filter)
 
