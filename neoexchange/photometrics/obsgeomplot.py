@@ -4,6 +4,8 @@ import logging
 
 import numpy as np
 from astropy.table import Column
+import matplotlib
+matplotlib.use('Agg')
 from matplotlib.figure import Figure
 import matplotlib.dates as mdates
 from matplotlib.ticker import FormatStrFormatter

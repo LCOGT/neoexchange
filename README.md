@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 3.0.4
+Change to LCO Request V3 language
+
 ### 3.0.3
 Add long-term planning plots showing how the sky position, helio/geocentric distance, magnitude, elongation, Moon-object separation and Moon phase, positional uncertainty and visibility and on-sky rate of motion change with time.
 
