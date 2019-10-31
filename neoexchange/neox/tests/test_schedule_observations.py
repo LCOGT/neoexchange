@@ -22,7 +22,7 @@ from neox.tests.mocks import MockDateTime, mock_lco_authenticate, mock_fetch_fil
 
 from datetime import datetime
 from django.test.client import Client
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.contrib.auth.models import User
 from core.models import Body, Proposal
 
@@ -449,10 +449,6 @@ class ScheduleObservations(FunctionalTest):
 
         site_choices.select_by_visible_text('Siding Spring, Aust. (FTS - E10)')
 
-        # select the Solar Analog Option
-        sa_box = self.browser.find_element_by_id('id_solar_analog')
-        sa_box.click()
-
         MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
         datebox.clear()
@@ -566,10 +562,6 @@ class ScheduleObservations(FunctionalTest):
         self.assertIn('Maui, Hawaii (FTN - F65)', [option.text for option in site_choices.options])
 
         site_choices.select_by_visible_text('Maui, Hawaii (FTN - F65)')
-
-        # select the Solar Analog Option
-        sa_box = self.browser.find_element_by_id('id_solar_analog')
-        sa_box.click()
 
         MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')

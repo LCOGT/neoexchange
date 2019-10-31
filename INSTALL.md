@@ -127,3 +127,26 @@ To prepare the local SQLite DB for use, you should follow these steps:
 
 1. `cd neoexchange\neoexchange`
 2. Run `python manage.py syncdb`. This will perform migrations as necessary.
+
+## Downloading dev data
+
+Sometimes it is useful to have a representative snapshot of the live database. There are 2 parts: 1) on the deployed pod, export data, 2) on your local machine import data
+
+To log in to a shell on the deployed pod:
+
+```
+kubectl -n prod exec <NAME OF POD> -c backend -it /bin/sh
+```
+
+When in the shell run:
+```
+% ./manage.py export_test_fixtures
+```
+
+On your local machine:
+```
+% kubectl -n prod cp <NAME OF POD>:/var/www/apps/neoexchange/core/fixtures <PATH TO NEOX>/neoexchange/core/fixtures -c backend
+% ./manage.py import_test_fixtures
+```
+
+If you encounter an `error: unexpected EOF`, try copying the files individually from `/core/fixtures/`

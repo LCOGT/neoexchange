@@ -18,7 +18,7 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
 
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from mock import patch
 
 from neox.tests.mocks import mock_fetch_sfu, mock_fetchpage_and_make_soup

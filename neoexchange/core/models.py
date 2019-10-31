@@ -20,6 +20,7 @@ import logging
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import models
+from django.db.models import Sum
 from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
 from django.utils.encoding import force_text, python_2_unicode_compatible
@@ -247,6 +248,13 @@ class Body(models.Model):
         else:
             return False
 
+    def radar_target(self):
+        # Returns True if the object is a radar target
+        if self.active is True and (self.origin == 'A' or self.origin == 'G' or self.origin =='R'):
+            return True
+        else:
+            return False
+
     def diameter(self):
         m = self.abs_mag
         avg = 0.167
@@ -321,8 +329,11 @@ class Body(models.Model):
             orbelems = model_to_dict(self)
             sitecode = '500'
             emp_line = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
+            if not emp_line:
+                return False
+            else:
             # Return just numerical values
-            return emp_line['ra'], emp_line['dec'], emp_line['mag'], emp_line['southpole_sep'], emp_line['sky_motion'], emp_line['sky_motion_pa']
+                return emp_line['ra'], emp_line['dec'], emp_line['mag'], emp_line['southpole_sep'], emp_line['sky_motion'], emp_line['sky_motion_pa']
         else:
             # Catch the case where there is no Epoch
             return False
@@ -715,9 +726,9 @@ class SuperBlock(models.Model):
 
     cadence         = models.BooleanField(default=False)
     rapid_response  = models.BooleanField('Is this a ToO/Rapid Response observation?', default=False)
-    body            = models.ForeignKey(Body, null=True, blank=True)
-    calibsource     = models.ForeignKey('StaticSource', null=True, blank=True)
-    proposal        = models.ForeignKey(Proposal)
+    body            = models.ForeignKey(Body, null=True, blank=True, on_delete=models.CASCADE)
+    calibsource     = models.ForeignKey('StaticSource', null=True, blank=True, on_delete=models.CASCADE)
+    proposal        = models.ForeignKey(Proposal, on_delete=models.CASCADE)
     block_start     = models.DateTimeField(null=True, blank=True)
     block_end       = models.DateTimeField(null=True, blank=True)
     groupid         = models.CharField(max_length=55, null=True, blank=True)
@@ -780,7 +791,12 @@ class SuperBlock(models.Model):
     def get_num_observed(self):
         qs = Block.objects.filter(superblock=self.id)
 
-        return qs.filter(num_observed__gte=1).count(), qs.count()
+        num_obs_dict = qs.filter(num_observed__gte=1).aggregate(num_observed=Sum('num_observed'))
+        if num_obs_dict.get('num_observed', None) is None:
+            num_obs = 0
+        else:
+            num_obs = num_obs_dict.get('num_observed', 0)
+        return num_obs, qs.count()
 
     def get_num_reported(self):
         qs = Block.objects.filter(superblock=self.id)
@@ -839,9 +855,9 @@ class Block(models.Model):
 
     telclass        = models.CharField(max_length=3, null=False, blank=False, default='1m0', choices=TELESCOPE_CHOICES)
     site            = models.CharField(max_length=3, choices=SITE_CHOICES, null=True)
-    body            = models.ForeignKey(Body, null=True, blank=True)
-    calibsource     = models.ForeignKey('StaticSource', null=True, blank=True)
-    superblock      = models.ForeignKey(SuperBlock, null=True, blank=True)
+    body            = models.ForeignKey(Body, null=True, blank=True, on_delete=models.CASCADE)
+    calibsource     = models.ForeignKey('StaticSource', null=True, blank=True, on_delete=models.CASCADE)
+    superblock      = models.ForeignKey(SuperBlock, null=True, blank=True, on_delete=models.CASCADE)
     obstype         = models.SmallIntegerField('Observation Type', null=False, blank=False, default=0, choices=OBSTYPE_CHOICES)
     block_start     = models.DateTimeField(null=True, blank=True)
     block_end       = models.DateTimeField(null=True, blank=True)
@@ -1047,7 +1063,7 @@ class Frame(models.Model):
     filename    = models.CharField('FITS filename', max_length=50, blank=True, null=True)
     exptime     = models.FloatField('Exposure time in seconds', null=True, blank=True)
     midpoint    = models.DateTimeField('UTC date/time of frame midpoint', null=False, blank=False, db_index=True)
-    block       = models.ForeignKey(Block, null=True, blank=True)
+    block       = models.ForeignKey(Block, null=True, blank=True, on_delete=models.CASCADE)
     quality     = models.CharField('Frame Quality flags', help_text='Comma separated list of frame/condition flags', max_length=40, blank=True, default=' ')
     zeropoint   = models.FloatField('Frame zeropoint (mag.)', null=True, blank=True)
     zeropoint_err = models.FloatField('Error on Frame zeropoint (mag.)', null=True, blank=True)
@@ -1227,8 +1243,8 @@ class SourceMeasurement(models.Model):
     any new measurements performed on data from the LCOGT NEO Follow-up Network
     """
 
-    body = models.ForeignKey(Body)
-    frame = models.ForeignKey(Frame)
+    body = models.ForeignKey(Body, on_delete=models.CASCADE)
+    frame = models.ForeignKey(Frame, on_delete=models.CASCADE)
     obs_ra = models.FloatField('Observed RA', blank=True, null=True)
     obs_dec = models.FloatField('Observed Dec', blank=True, null=True)
     obs_mag = models.FloatField('Observed Magnitude', blank=True, null=True)
@@ -1452,7 +1468,7 @@ class CatalogSources(models.Model):
     of objects.
     """
 
-    frame = models.ForeignKey(Frame)
+    frame = models.ForeignKey(Frame, on_delete=models.CASCADE)
     obs_x = models.FloatField('CCD X co-ordinate')
     obs_y = models.FloatField('CCD Y co-ordinate')
     obs_ra = models.FloatField('Observed RA')
@@ -1509,7 +1525,7 @@ class CatalogSources(models.Model):
     def make_snr(self):
         snr = None
         if self.obs_mag > 0.0 and self.err_obs_mag > 0.0:
-            snr = self.err_obs_mag / self.obs_mag
+            snr = 1.0 / self.err_obs_mag
         return snr
 
     def map_numeric_to_mpc_flags(self):
@@ -1554,7 +1570,7 @@ class Candidate(models.Model):
     """Class to hold candidate moving object detections found by the moving
     object code"""
 
-    block = models.ForeignKey(Block)
+    block = models.ForeignKey(Block, on_delete=models.CASCADE)
     cand_id = models.PositiveIntegerField('Candidate Id')
     score = models.FloatField('Candidate Score')
     avg_midpoint = models.DateTimeField('Average UTC midpoint')
@@ -1608,8 +1624,8 @@ class ProposalPermission(models.Model):
     """
     Linking a user to proposals in NEOx to control their access
     """
-    proposal = models.ForeignKey(Proposal)
-    user = models.ForeignKey(User)
+    proposal = models.ForeignKey(Proposal, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
 
     class Meta:
         verbose_name = _('Proposal Permission')
@@ -1623,12 +1639,12 @@ class PanoptesReport(models.Model):
     """
     Status of block
     """
-    block = models.ForeignKey(Block)
+    block = models.ForeignKey(Block, on_delete=models.CASCADE)
     when_submitted = models.DateTimeField('Date sent to Zooniverse', blank=True, null=True)
     last_check = models.DateTimeField(blank=True, null=True)
     active = models.BooleanField(default=False)
     subject_id = models.IntegerField('Subject ID', blank=True, null=True)
-    candidate = models.ForeignKey(Candidate)
+    candidate = models.ForeignKey(Candidate, on_delete=models.CASCADE)
     verifications = models.IntegerField(default=0)
     classifiers = models.TextField(help_text='Volunteers usernames who found NEOs', blank=True, null=True)
 

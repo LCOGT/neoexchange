@@ -15,7 +15,7 @@ GNU General Public License for more details.
 
 from mock import patch
 from django.test import TestCase
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 
 from neox.tests.mocks import MockCandidate
 #Import module to test

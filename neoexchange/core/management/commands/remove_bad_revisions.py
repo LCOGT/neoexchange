@@ -42,7 +42,7 @@ class Command(BaseCommand):
             try:
                 logger.debug('*** Inspecting Body ID {} ***'.format(body['object_id']))
                 versions = Version.objects.filter(object_id=body['object_id']).order_by('revision__date_created')
-            except Exception, e:
+            except Exception as e:
                 logger.error("Problem with body: {}".format(e))
                 continue
             if versions.count() <= 2:
@@ -54,7 +54,7 @@ class Command(BaseCommand):
                 try:
                     vers_dict = version.field_dict
                     orig_dict = original.field_dict
-                except Exception, e:
+                except Exception as e:
                     logger.error("Problem with body: {}".format(e))
                     continue
                 # Check if the values in the original are the same as the revision
@@ -62,7 +62,7 @@ class Command(BaseCommand):
                     try:
                         if vers_dict[k] != orig_dict[k]:
                             update = True
-                    except KeyError, e:
+                    except KeyError as e:
                         logger.debug('Error with {}'.format(e))
                 if update:
                     original = version

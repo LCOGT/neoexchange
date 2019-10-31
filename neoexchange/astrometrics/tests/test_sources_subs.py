@@ -118,6 +118,13 @@ class TestPackedToNormal(TestCase):
 
         self.assertEqual(expected, result)
 
+    def test_ast_Z4030(self):
+        expected = '354030'
+
+        result = packed_to_normal('Z4030')
+
+        self.assertEqual(expected, result)
+
     def test_ast_a0001(self):
         expected = '360001'
 
@@ -1701,6 +1708,15 @@ class TestPreviousNEOCPParser(TestCase):
     def test_remove_parentheses(self):
         items = [' (455176) = A10c9Hv (Feb. 15.79 UT)\n']
         expected = [u'A10c9Hv', '455176', '', '(Feb. 15.79 UT)']
+
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+    def test_was_not_confirmed_with_MPEC(self):
+        items = [' P10QYyp was not confirmed (Sept. 4.34 UT)   [see ',
+            BeautifulSoup('<a href="/mpec/K19/K19R24.html"><i>MPEC</i> 2019-R24</a>', "html.parser").a,
+            ']\n']
+        expected = [u'P10QYyp', 'wasnotconfirmed', '', u'(Sept. 4.34 UT)']
 
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
