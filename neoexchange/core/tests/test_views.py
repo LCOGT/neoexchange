@@ -767,7 +767,7 @@ class TestCheck_for_block(TestCase):
         params = { 'site_code' : 'K92'
                  }
         form_data = { 'proposal_code' : self.neo_proposal.code,
-                      'group_id' : self.body_with_provname.current_name() + '_CPT-20150422'
+                      'group_name' : self.body_with_provname.current_name() + '_CPT-20150422'
                     }
         expected_state = 0
 
@@ -781,7 +781,7 @@ class TestCheck_for_block(TestCase):
         params = { 'site_code' : 'W86'
                  }
         form_data = { 'proposal_code' : self.neo_proposal.code,
-                      'group_id' : self.body_with_provname.current_name() + '_LSC-20150421'
+                      'group_name' : self.body_with_provname.current_name() + '_LSC-20150421'
                     }
         expected_state = 1
 
@@ -795,7 +795,7 @@ class TestCheck_for_block(TestCase):
         params = { 'site_code' : 'K92'
                  }
         form_data = { 'proposal_code' : self.neo_proposal.code,
-                      'group_id' : self.body_with_provname.current_name() + '_CPT-20150420'
+                      'group_name' : self.body_with_provname.current_name() + '_CPT-20150420'
                     }
         expected_state = 2
 
@@ -809,7 +809,7 @@ class TestCheck_for_block(TestCase):
         params = { 'site_code' : 'K92'
                  }
         form_data = { 'proposal_code' : self.neo_proposal.code,
-                      'group_id' : self.body_no_provname1.current_name() + '_CPT-20150422'
+                      'group_name' : self.body_no_provname1.current_name() + '_CPT-20150422'
                     }
         expected_state = 0
 
@@ -823,7 +823,7 @@ class TestCheck_for_block(TestCase):
         params = { 'site_code' : 'K93'
                  }
         form_data = { 'proposal_code' : self.neo_proposal.code,
-                      'group_id' : self.body_no_provname1.current_name() + '_CPT-20150422'
+                      'group_name' : self.body_no_provname1.current_name() + '_CPT-20150422'
                     }
         expected_state = 0
 
@@ -837,7 +837,7 @@ class TestCheck_for_block(TestCase):
         params = { 'site_code' : 'W86'
                  }
         form_data = { 'proposal_code' : self.neo_proposal.code,
-                      'group_id' : self.body_no_provname1.current_name() + '_LSC-20150421'
+                      'group_name' : self.body_no_provname1.current_name() + '_LSC-20150421'
                     }
         expected_state = 1
 
@@ -851,7 +851,7 @@ class TestCheck_for_block(TestCase):
         params = { 'site_code' : 'V37'
                  }
         form_data = { 'proposal_code' : self.neo_proposal.code,
-                      'group_id' : self.body_no_provname2.current_name() + '_ELP-20141121'
+                      'group_name' : self.body_no_provname2.current_name() + '_ELP-20141121'
                     }
         expected_state = 2
 
@@ -865,7 +865,7 @@ class TestCheck_for_block(TestCase):
         params = { 'site_code' : 'K92'
                  }
         form_data = { 'proposal_code' : self.neo_proposal.code,
-                      'group_id' : self.body_with_uppername2.current_name() + '_CPT-20150420'
+                      'group_name' : self.body_with_uppername2.current_name() + '_CPT-20150420'
                     }
         expected_state = 0
 
@@ -970,7 +970,7 @@ class TestRecordBlock(TestCase):
                               'exp_count': 1,
                               'exp_time': 180.0,
                               'exp_type': 'SPECTRUM',
-                              'group_id': '4_E10-20180316_spectra',
+                              'group_name': '4_E10-20180316_spectra',
                               'instrument': '2M0-FLOYDS-SCICAM',
                               'instrument_code': 'E10-FLOYDS',
                               'observatory': '',
@@ -989,7 +989,7 @@ class TestRecordBlock(TestCase):
         self.spectro_form = { 'start_time' : self.spectro_params['start_time'],
                               'end_time' : self.spectro_params['end_time'],
                               'proposal_code' : self.spectro_params['proposal_id'],
-                              'group_id' : self.spectro_params['group_id'],
+                              'group_name' : self.spectro_params['group_name'],
                               'exp_count' : self.spectro_params['exp_count'],
                               'exp_length' : self.spectro_params['exp_time'],
                             }
@@ -1011,7 +1011,7 @@ class TestRecordBlock(TestCase):
                               'exp_count': 12,
                               'exp_time': 42.0,
                               'exp_type': 'EXPOSE',
-                              'group_id': 'N999r0q_K91-20180316',
+                              'group_name': 'N999r0q_K91-20180316',
                               'instrument': '1M0-SCICAM-SINISTRO',
                               'observatory': '',
                               'pondtelescope': '1m0',
@@ -1027,7 +1027,7 @@ class TestRecordBlock(TestCase):
         self.imaging_form = { 'start_time' : self.imaging_params['start_time'],
                               'end_time' : self.imaging_params['end_time'],
                               'proposal_code' : self.imaging_params['proposal_id'],
-                              'group_id' : self.imaging_params['group_id'],
+                              'group_name' : self.imaging_params['group_name'],
                               'exp_count' : self.imaging_params['exp_count'],
                               'exp_length' : self.imaging_params['exp_time'],
                             }
@@ -1123,7 +1123,7 @@ class TestRecordBlock(TestCase):
                         'solar_analog' : True
                         }
         spectro_params = {**new_params, **self.spectro_params}
-        spectro_params['group_id'] = self.spectro_params['group_id'] + '+solstd'
+        spectro_params['group_name'] = self.spectro_params['group_name'] + '+solstd'
         spectro_params['request_numbers'] = {1450339: 'NON_SIDEREAL', 1450340: 'SIDEREAL'}
         spectro_params['request_windows'] = [[{'end': '2018-03-16T18:30:00', 'start': '2018-03-16T11:20:00'}],
                                             [{'end': '2018-03-16T18:30:00', 'start': '2018-03-16T11:20:00'}]
@@ -1159,8 +1159,8 @@ class TestRecordBlock(TestCase):
     def test_solo_solar_spectro_block(self):
         # adjust parameters for sidereal target
         self.spectro_params['request_numbers'] = {1450339: 'SIDEREAL'}
-        self.spectro_params['group_id'] = 'Landolt SA107-684_E10-20180316_spectra'
-        self.spectro_form['group_id'] = self.spectro_params['group_id']
+        self.spectro_params['group_name'] = 'Landolt SA107-684_E10-20180316_spectra'
+        self.spectro_form['group_name'] = self.spectro_params['group_name']
         block_resp = record_block(self.spectro_tracknum, self.spectro_params, self.spectro_form, self.solar_analog)
 
         self.assertTrue(block_resp)
@@ -1253,7 +1253,7 @@ class TestSchedule_Check(TestCase):
                         'schedule_ok': True,
                         'site_code': data['site_code'],
                         'proposal_code': data['proposal_code'],
-                        'group_id': self.body_mp.current_name() + '_' + data['site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d'),
+                        'group_name': self.body_mp.current_name() + '_' + data['site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d'),
                         'utc_date': data['utc_date'].isoformat(),
                         'start_time': '2016-04-06T09:00:00',
                         'end_time': '2016-04-06T19:10:00',
@@ -1293,7 +1293,7 @@ class TestSchedule_Check(TestCase):
         resp = schedule_check(data, self.body_mp)
 
         self.assertEqual(expected_resp, resp)
-        self.assertLessEqual(len(resp['group_id']), 50)
+        self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
@@ -1323,7 +1323,7 @@ class TestSchedule_Check(TestCase):
                         'schedule_ok': True,
                         'site_code': data['instrument_code'][0:3],
                         'proposal_code': data['proposal_code'],
-                        'group_id': self.body_mp.current_name() + '_' + data['instrument_code'][0:3].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d') + '_spectra',
+                        'group_name': self.body_mp.current_name() + '_' + data['instrument_code'][0:3].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d') + '_spectra',
                         'utc_date': data['utc_date'].isoformat(),
                         'start_time': '2016-04-06T09:00:00',
                         'end_time': '2016-04-06T19:10:00',
@@ -1363,7 +1363,7 @@ class TestSchedule_Check(TestCase):
         resp = schedule_check(data, self.body_mp)
 
         self.assertEqual(expected_resp, resp)
-        self.assertLessEqual(len(resp['group_id']), 50)
+        self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
@@ -1393,7 +1393,7 @@ class TestSchedule_Check(TestCase):
                         'schedule_ok': True,
                         'site_code': data['instrument_code'][0:3],
                         'proposal_code': data['proposal_code'],
-                        'group_id': self.body_mp.current_name() + '_' + data['instrument_code'][0:3].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d') + '_spectra',
+                        'group_name': self.body_mp.current_name() + '_' + data['instrument_code'][0:3].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d') + '_spectra',
                         'utc_date': data['utc_date'].isoformat(),
                         'start_time': '2016-04-06T09:00:00',
                         'end_time': '2016-04-06T19:10:00',
@@ -1433,7 +1433,7 @@ class TestSchedule_Check(TestCase):
         resp = schedule_check(data, self.body_mp)
 
         self.assertEqual(expected_resp, resp)
-        self.assertLessEqual(len(resp['group_id']), 50)
+        self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
@@ -1464,7 +1464,7 @@ class TestSchedule_Check(TestCase):
                         'schedule_ok': True,
                         'site_code': data['site_code'],
                         'proposal_code': data['proposal_code'],
-                        'group_id': '2009 HA_Q63-cad-20160406-0406',
+                        'group_name': '2009 HA_Q63-cad-20160406-0406',
                         'utc_date': data['utc_date'].isoformat(),
                         'start_time': '2016-04-06T09:00:00',
                         'end_time': '2016-04-06T23:00:00',
@@ -1506,7 +1506,7 @@ class TestSchedule_Check(TestCase):
         resp = schedule_check(data, self.body_mp)
 
         self.assertEqual(expected_resp, resp)
-        self.assertLessEqual(len(resp['group_id']), 50)
+        self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
@@ -1537,7 +1537,7 @@ class TestSchedule_Check(TestCase):
                         'schedule_ok': True,
                         'site_code': data['site_code'],
                         'proposal_code': data['proposal_code'],
-                        'group_id': '2009 HA_Q63-cad-20160406-0406',
+                        'group_name': '2009 HA_Q63-cad-20160406-0406',
                         'utc_date': data['utc_date'].isoformat(),
                         'start_time': '2016-04-06T09:00:00',
                         'end_time': '2016-04-06T23:00:00',
@@ -1579,7 +1579,7 @@ class TestSchedule_Check(TestCase):
         resp = schedule_check(data, self.body_mp)
 
         self.assertEqual(expected_resp, resp)
-        self.assertLessEqual(len(resp['group_id']), 50)
+        self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
@@ -1608,7 +1608,7 @@ class TestSchedule_Check(TestCase):
                         'schedule_ok': True,
                         'site_code': data['site_code'],
                         'proposal_code': data['proposal_code'],
-                        'group_id': '2009 HA21_Q63-cad-20160406-0406',
+                        'group_name': '2009 HA21_Q63-cad-20160406-0406',
                         'utc_date': data['utc_date'].isoformat(),
                         'start_time': '2016-04-06T09:00:00',
                         'end_time': '2016-04-06T23:00:00',
@@ -1650,7 +1650,7 @@ class TestSchedule_Check(TestCase):
         resp = schedule_check(data, self.body_mp)
 
         self.assertEqual(expected_resp, resp)
-        self.assertLessEqual(len(resp['group_id']), 50)
+        self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)

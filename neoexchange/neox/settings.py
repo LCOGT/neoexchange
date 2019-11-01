@@ -7,7 +7,7 @@ from django.utils.crypto import get_random_string
 import rollbar
 
 
-VERSION = '3.0.4'
+VERSION = '3.0.5a'
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
@@ -261,7 +261,7 @@ ARCHIVE_TOKEN_URL = ARCHIVE_API_URL + 'api-token-auth/'
 ARCHIVE_TOKEN = os.environ.get('ARCHIVE_TOKEN', '')
 
 PORTAL_API_URL = 'https://observe.lco.global/api/'
-PORTAL_REQUEST_API = PORTAL_API_URL + 'userrequests/'
+PORTAL_REQUEST_API = PORTAL_API_URL + 'requestgroups/'
 PORTAL_USERREQUEST_URL = 'https://observe.lco.global/requestgroups/'
 PORTAL_REQUEST_URL = 'https://observe.lco.global/requests/'
 PORTAL_TOKEN_URL = PORTAL_API_URL + 'api-token-auth/'
@@ -311,7 +311,7 @@ if 'test' in sys.argv:
     }
     USE_S3 = False
 
-
+USE_FIREFOXDRIVER = True
 
 ##################
 # LOCAL SETTINGS #

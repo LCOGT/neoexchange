@@ -21,6 +21,8 @@ from astropy.coordinates import SkyCoord, Galactic
 from astropy import coordinates
 from astropy import units as u
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from core.models import StaticSource

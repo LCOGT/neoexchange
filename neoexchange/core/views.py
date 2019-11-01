@@ -17,8 +17,6 @@ from glob import glob
 from datetime import datetime, timedelta, date
 from math import floor, ceil, degrees, radians, pi, acos
 from astropy import units as u
-import matplotlib
-import matplotlib.pyplot as plt
 import json
 import urllib
 import logging
@@ -729,6 +727,7 @@ class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
 
     def form_valid(self, form, request):
         data = schedule_check(form.cleaned_data, self.body, self.ok_to_schedule)
+        print(data)
         new_form = ScheduleBlockForm(data)
         return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.body})
 
@@ -894,12 +893,19 @@ class ScheduleCalibSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
     form_class = ScheduleBlockForm
     model = StaticSource
 
+    def get_context_data(self, **kwargs):
+        context = super(ScheduleCalibSubmit, self).get_context_data(**kwargs)
+        context['calibrator'] = self.object
+
+        return context
+
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
         form = self.get_form()
         if form.is_valid():
             return self.form_valid(form, request)
         else:
+            print(form)
             return self.form_invalid(form)
 
     def form_valid(self, form, request):
@@ -1204,9 +1210,9 @@ def schedule_check(data, body, ok_to_schedule=True):
         total_time = total_time.total_seconds()/3600.0
 
     # Create Group ID
-    group_id = validate_text(data.get('group_id', None))
+    group_name = validate_text(data.get('group_name', None))
 
-    if not group_id:
+    if not group_name:
         suffix = datetime.strftime(utc_date, '%Y%m%d')
         if period and jitter:
             suffix = "cad-%s-%s" % (datetime.strftime(data['start_time'], '%Y%m%d'), datetime.strftime(data['end_time'], '%m%d'))
@@ -1214,7 +1220,7 @@ def schedule_check(data, body, ok_to_schedule=True):
             suffix += "_spectra"
         if data.get('too_mode', False) is True:
             suffix += '_ToO'
-        group_id = body.current_name() + '_' + data['site_code'].upper() + '-' + suffix
+        group_name = body.current_name() + '_' + data['site_code'].upper() + '-' + suffix
 
     resp = {
         'target_name': body.current_name(),
@@ -1230,7 +1236,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'too_mode' : data.get('too_mode', False),
         'site_code': data['site_code'],
         'proposal_code': data['proposal_code'],
-        'group_id': group_id,
+        'group_name': group_name,
         'utc_date': utc_date.isoformat(),
         'start_time': dark_start.isoformat(),
         'end_time': dark_end.isoformat(),
@@ -1358,7 +1364,7 @@ def schedule_submit(data, body, username):
               'site_code': data['site_code'],
               'start_time': data['start_time'],
               'end_time': data['end_time'],
-              'group_id': data['group_id'],
+              'group_name': data['group_name'],
               'too_mode' : data.get('too_mode', False),
               'spectroscopy' : data.get('spectroscopy', False),
               'calibs' : data.get('calibs', ''),
@@ -1390,9 +1396,9 @@ def schedule_submit(data, body, username):
     if check_for_block(data, params, body) == 1:
         # Append another suffix to allow 2 versions of the block. Must
         # do this to both `data` (so the next Block check works) and to
-        # `params` so the correct group_id will go to the Valhalla/scheduler
-        data['group_id'] += '_2'
-        params['group_id'] = data['group_id']
+        # `params` so the correct name will go to the Valhalla/scheduler
+        data['group_name'] += '_2'
+        params['group_name'] = data['group_name']
     elif check_for_block(data, params, body) >= 2:
         # Multiple blocks found
         resp_params = {'error_msg' : 'Multiple Blocks for same day and site found'}
@@ -1651,7 +1657,7 @@ def check_for_block(form_data, params, new_body):
 
     try:
         block_id = SuperBlock.objects.get(body=new_body.id,
-                                     groupid__contains=form_data['group_id'],
+                                     groupid__contains=form_data['group_name'],
                                      proposal=Proposal.objects.get(code=form_data['proposal_code'])
                                      )
 #                                         site=site_list[params['site_code']])
@@ -1680,7 +1686,7 @@ def record_block(tracking_number, params, form_data, target):
         proposal = Proposal.objects.get(code=form_data['proposal_code'])
         sblock_kwargs = {
                          'proposal' : proposal,
-                         'groupid'  : form_data['group_id'],
+                         'groupid'  : form_data['group_name'],
                          'block_start' : form_data['start_time'],
                          'block_end'   : form_data['end_time'],
                          'tracking_number' : tracking_number,

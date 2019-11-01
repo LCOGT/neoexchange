@@ -693,21 +693,21 @@ class ScheduleObservations(FunctionalTest):
         self.assertIn('Target Not Visible', vis)
 
         # Bart wants to be a little &^%$ and stress test our group ID input
-        group_id_box = self.browser.find_element_by_name("group_id")
+        group_id_box = self.browser.find_element_by_name("group_name")
         group_id_box.clear()
         bs_string = 'ຢູ່ໃກ້Γη小惑星‽'
         group_id_box.send_keys(bs_string)
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_id("id_edit_button").click()
-        group_id = self.browser.find_element_by_id('id_group_id').get_attribute('value')
+        group_id = self.browser.find_element_by_id('id_group_name').get_attribute('value')
         self.assertEqual('N999r0q_V37-20150421', group_id)
-        group_id_box = self.browser.find_element_by_name("group_id")
+        group_id_box = self.browser.find_element_by_name("group_name")
         group_id_box.clear()
         bs_string = 'rcoivny3q5r@@yciht8ycv9njcrnc87vy b0y98uxm9cyh8ycvn0fh 80hfcubfuh87yc 0nhfhxmhf7g 70h'
         group_id_box.send_keys(bs_string)
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_id("id_edit_button").click()
-        group_id = self.browser.find_element_by_id('id_group_id').get_attribute('value')
+        group_id = self.browser.find_element_by_id('id_group_name').get_attribute('value')
         self.assertEqual(bs_string[:50], group_id)
 
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")

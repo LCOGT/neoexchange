@@ -257,32 +257,40 @@ class FunctionalTest(StaticLiveServerTestCase):
         self.insert_test_taxonomy()
         self.insert_previous_spectra()
 
-        fp = webdriver.FirefoxProfile()
-        fp.set_preference("browser.startup.homepage", "about:blank")
-        fp.set_preference("startup.homepage_welcome_url", "about:blank")
-        fp.set_preference("startup.homepage_welcome_url.additional", "about:blank")
-        # Don't ask where to save downloaded files
-        fp.set_preference("browser.download.folderList", 2);
-        fp.set_preference("browser.download.manager.showWhenStarting", False);
-        fp.set_preference("browser.download.dir", self.test_dir);
-        fp.set_preference("browser.helperApps.neverAsk.saveToDisk", "text/plain");
+        if settings.USE_FIREFOXDRIVER:
+            fp = webdriver.FirefoxProfile()
+            # fp = webdriver.Chrome()
+            fp.set_preference("browser.startup.homepage", "about:blank")
+            fp.set_preference("startup.homepage_welcome_url", "about:blank")
+            fp.set_preference("startup.homepage_welcome_url.additional", "about:blank")
+            # Don't ask where to save downloaded files
+            fp.set_preference("browser.download.folderList", 2);
+            fp.set_preference("browser.download.manager.showWhenStarting", False);
+            fp.set_preference("browser.download.dir", self.test_dir);
+            fp.set_preference("browser.helperApps.neverAsk.saveToDisk", "text/plain");
 
-        if not hasattr(self, 'browser'):
-            firefox_capabilities = DesiredCapabilities.FIREFOX
-            # Marionette does not work on Firefox ~< 57. Try and determine the
-            # version and check it. Hopefully this code is robust and platform-
-            # independent...
-            try:
-                version = check_output(["firefox", "--version"], universal_newlines=True)
-            except (OSError, CalledProcessError):
-                version = None
-            if version and 'Firefox' in version:
-                version_num = version.rstrip().split(' ')[-1]
-                major_version = version_num.split('.')[0]
-                if major_version.isdigit() and int(major_version) <= 52:
-                    firefox_capabilities['marionette'] = False
+            if not hasattr(self, 'browser'):
+                firefox_capabilities = DesiredCapabilities.FIREFOX
+                # Marionette does not work on Firefox ~< 57. Try and determine the
+                # version and check it. Hopefully this code is robust and platform-
+                # independent...
+                try:
+                    version = check_output(["firefox", "--version"], universal_newlines=True)
+                except (OSError, CalledProcessError):
+                    version = None
+                if version and 'Firefox' in version:
+                    version_num = version.rstrip().split(' ')[-1]
+                    major_version = version_num.split('.')[0]
+                    if major_version.isdigit() and int(major_version) <= 52:
+                        firefox_capabilities['marionette'] = False
 
-            self.browser = webdriver.Firefox(capabilities=firefox_capabilities, firefox_profile=fp)
+                self.browser = webdriver.Firefox(capabilities=firefox_capabilities, firefox_profile=fp)
+        else:
+            options = webdriver.chrome.options.Options()
+            options.add_argument('--headless')
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-gpu')
+            self.browser = webdriver.Chrome(chrome_options=options)
         self.browser.implicitly_wait(5)
 
     def tearDown(self):
