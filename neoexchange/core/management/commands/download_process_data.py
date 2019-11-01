@@ -93,7 +93,6 @@ class Command(BaseCommand):
         dataroot = os.path.join(dataroot, obs_date)
 
 # Step 2: Sort data into directories per-object
-
         fits_files = get_fits_files(dataroot)
         self.stdout.write("Found %d FITS files in %s" % (len(fits_files), dataroot) )
         objects = sort_rocks(fits_files)

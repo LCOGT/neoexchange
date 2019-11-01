@@ -36,6 +36,7 @@ from photometrics.external_codes import unpack_tarball
 
 logger = logging.getLogger(__name__)
 
+
 def print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█', time_in=None):
     """
     Call in a loop to create terminal progress bar
@@ -72,7 +73,7 @@ def print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, lengt
         print()
 
 
-def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=False, out_path=""):
+def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=False, out_path="", tr=False, center=False):
     """
     takes in list of .fits guide frames and turns them into a moving gif.
     <frames> = list of .fits frame paths
@@ -80,6 +81,8 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=False
     <sort> = [optional] bool to sort frames by title (Which usually corresponds to date)
     <fr> = frame rate for output gif in ms/frame [default = 100 ms/frame or 10fps]
     <init_fr> = frame rate for first 5 frames in ms/frame [default = 1000 ms/frame or 1fps]
+    <tr> = Bool to determine if reticle present for all guide frames.
+    <center> = Bool to clip to central quarter of frame.
     output = savefile (path of gif)
     """
     if sort is True:
@@ -152,6 +155,13 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=False
                 except KeyError:
                     header_n = hdul[0].header
                     data = hdul[0].data
+        if center:
+            shape = data.shape
+            x_frac = int(shape[0]/2.5)
+            y_frac = int(shape[1]/2.5)
+            data = data[x_frac:-x_frac, y_frac:-y_frac]
+            header_n['CRPIX1'] -= x_frac
+            header_n['CRPIX2'] -= y_frac
         # pull Date from Header
         try:
             date_obs = header_n['DATE-OBS']
@@ -189,7 +199,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=False
         plt.imshow(data, cmap='gray', vmin=z_interval[0], vmax=z_interval[1])
 
         # If first few frames, add 5" and 15" reticle
-        if current_count < 6 and fr != init_fr:
+        if current_count < 6 and fr != init_fr or tr:
             circle_5arcsec = plt.Circle((header_n['CRPIX1'], header_n['CRPIX2']), 5/header_n['PIXSCALE'], fill=False, color='limegreen', linewidth=1.5)
             circle_15arcsec = plt.Circle((header_n['CRPIX1'], header_n['CRPIX2']), 15/header_n['PIXSCALE'], fill=False, color='lime', linewidth=1.5)
             ax.add_artist(circle_5arcsec)
@@ -209,13 +219,14 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=False
     anim.save(filename, dpi=90, writer='imagemagick')
 
     # Save to default location because Matplotlib wants a string filename not File object
-    daydir = path.replace(out_path,"").lstrip("/")
+    daydir = path.replace(out_path, "").lstrip("/")
     movie_filename = os.path.join(daydir, obj.replace(' ', '_') + '_' + rn + '_guidemovie.gif')
-    movie_file = default_storage.open(movie_filename,"wb+")
-    with open(filename,'rb+') as f:
+    movie_file = default_storage.open(movie_filename, "wb+")
+    with open(filename, 'rb+') as f:
         movie_file.write(f.read())
     movie_file.close()
     return movie_file.name
+
 
 def make_movie(date_obs, obj, req, base_dir, out_path, prop):
     """Make gif of FLOYDS Guide Frames given the following:
@@ -274,15 +285,20 @@ def make_movie(date_obs, obj, req, base_dir, out_path, prop):
         logger.error("There must be at least 1 frame to make guide movie.")
         return None
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("path", help="Path to directory containing .fits or .fits.fz files", type=str)
     parser.add_argument("--fr", help="Frame rate in ms/frame (Defaults to 100 ms/frame or 10 frames/second", default=100, type=float)
     parser.add_argument("--ir", help="Frame rate in ms/frame for first 5 frames (Defaults to 1000 ms/frame or 1 frames/second", default=1000, type=float)
+    parser.add_argument("--tr", help="Add target circle at crpix values?", default=False, action="store_true")
+    parser.add_argument("--C", help="Only include Center Snapshot", default=False, action="store_true")
     args = parser.parse_args()
     path = args.path
     fr = args.fr
     ir = args.ir
+    tr = args.tr
+    center = args.C
     logger.debug("Base Framerate: {}".format(fr))
     if path[-1] != '/':
         path += '/'
@@ -290,7 +306,7 @@ if __name__ == '__main__':
     if len(files) < 1:
         files = np.sort(glob(path+'*.fits'))
     if len(files) >= 1:
-        gif_file = make_gif(files, fr=fr, init_fr=ir, progress=True)
+        gif_file = make_gif(files, fr=fr, init_fr=ir, tr=tr, center=center, progress=True)
         logger.info("New gif created: {}".format(gif_file))
     else:
         logger.info("No files found.")
