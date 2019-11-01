@@ -22,7 +22,7 @@ from neox.tests.mocks import MockDateTime, mock_lco_authenticate, mock_fetch_fil
 
 from datetime import datetime
 from django.test.client import Client
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.contrib.auth.models import User
 from core.models import Body, Proposal
 import time
@@ -335,21 +335,21 @@ class ScheduleObservations(FunctionalTest):
         self.assertIn('Target Not Visible', vis)
 
         # Bart wants to be a little &^%$ and stress test our group ID input
-        group_id_box = self.browser.find_element_by_name("group_id")
+        group_id_box = self.browser.find_element_by_name("group_name")
         group_id_box.clear()
         bs_string = 'ຢູ່ໃກ້Γη小惑星‽'
         group_id_box.send_keys(bs_string)
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_id("id_edit_button").click()
-        group_id = self.browser.find_element_by_id('id_group_id').get_attribute('value')
+        group_id = self.browser.find_element_by_id('id_group_name').get_attribute('value')
         self.assertEqual('HD 30455_E10-20151221_spectra', group_id)
-        group_id_box = self.browser.find_element_by_name("group_id")
+        group_id_box = self.browser.find_element_by_name("group_name")
         group_id_box.clear()
         bs_string = 'rcoivny3q5r@@yciht8ycv9njcrnc87vy b0y98uxm9cyh8ycvn0fh 80hfcubfuh87yc 0nhfhxmhf7g 70h'
         group_id_box.send_keys(bs_string)
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_id("id_edit_button").click()
-        group_id = self.browser.find_element_by_id('id_group_id').get_attribute('value')
+        group_id = self.browser.find_element_by_id('id_group_name').get_attribute('value')
         self.assertEqual(bs_string[:50], group_id)
 
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
@@ -366,22 +366,22 @@ class ScheduleObservations(FunctionalTest):
 
         # Bart has heard about a new website for NEOs. He goes to the
         # page for a calib source, but the best case telescope is missing
-        start_url = reverse('calibsource', kwargs={'pk': 2})
+        start_url = reverse('calibsource-view')
         self.browser.get(self.live_server_url + start_url)
+        link = self.browser.find_element_by_link_text('CD-34d241')
+        with self.wait_for_page_load(timeout=10):
+            link.click()
 
         # He sees a Schedule Observations button
         link = self.browser.find_element_by_id('schedule-spectro-obs')
-        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-calib-spectra',
-                                                                   kwargs={'instrument_code': 'E10-FLOYDS', 'pk': 2}))
         actual_url = link.get_attribute('href')
-        self.assertEqual(actual_url, target_url)
+        self.assertIn('E10-FLOYDS', actual_url)
 
         # He clicks the link to go to the Schedule Observations page
         with self.wait_for_page_load(timeout=10):
             link.click()
-        self.browser.implicitly_wait(10)
         new_url = self.browser.current_url
-        self.assertEqual(str(new_url), target_url)
+        self.assertEqual(str(new_url), actual_url)
 
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_id('verify-scheduling').click()
@@ -407,7 +407,6 @@ class ScheduleObservations(FunctionalTest):
         # He clicks the link to go to the Schedule Observations page
         with self.wait_for_page_load(timeout=10):
             link.click()
-        self.browser.implicitly_wait(10)
         new_url = self.browser.current_url
         self.assertEqual(str(new_url), target_url)
 

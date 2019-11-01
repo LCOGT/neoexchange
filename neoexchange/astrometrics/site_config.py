@@ -44,6 +44,7 @@ inst_overhead = {   'onemsbig_exp_overhead'         : 15.5,
 
 # Telescope sites
 valid_site_codes = { 'ELP-DOMA-1M0A' : 'V37',
+                     'ELP-DOMB-1M0A' : 'V39',
                      'LSC-DOMA-1M0A' : 'W85',
                      'LSC-DOMB-1M0A' : 'W86',
                      'LSC-DOMC-1M0A' : 'W87',
@@ -101,4 +102,10 @@ spec_filters = [    "slit_1.2as",
                     "slit_1.6as",
                     "slit_2.0as",
                     "slit_6.0as"
+                ]
+
+science_cams = [    "1m0-SciCam-Sinistro",
+                    "2m0-FLOYDS-SciCam",
+                    "2m0-SciCam-Spectral",
+                    "0m4-SciCam-SBIG"
                 ]

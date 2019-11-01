@@ -75,7 +75,7 @@
                                                 <span class="block-status-item"><i class="fa fa-long-arrow-right"></i></span>
                                                 <span class="block-status-item">{{b.block_end|date:"c"}}</span>
                                                 <span class="block-status-item">{{b.site|upper}}</span>
-                                                <span class="block-status-item">Req: {{b.tracking_number}}</span>
+                                                <span class="block-status-item">Req: {{b.request_number}}</span>
                                             </span>
                                             </a>
                                     </li>
@@ -88,6 +88,9 @@
                         <a href="{% url 'measurement' body.id %}" class="button button-primary" id="show-measurements">Show Measurements</a>
                             </div>
                         <div class="four columns rightsidebar">
+                            {% if body.name %}
+                                <a href="{% url 'visibility' body.id %}" class="button button-primary" id="visibility">Plot Visibility</a>
+                            {% endif %}
                             <div class="section-title">Last Update: {{body.ingest|date:"Y-M-d H:i"}}</div>
                             <h5 class="section-title">Orbital Elements</h5>
                             <table class="keyvalue-table" id="id_orbelements">

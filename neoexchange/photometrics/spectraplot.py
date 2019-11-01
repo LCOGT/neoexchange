@@ -20,6 +20,8 @@ from astropy.convolution import convolve, Box1DKernel  # Gaussian1DKernel
 from astropy.wcs import WCS
 from astropy import units as u
 from datetime import datetime
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import os
 import io
@@ -29,6 +31,10 @@ import numpy as np
 import collections
 import warnings
 import re
+
+from django.core.files.storage import default_storage
+
+from photometrics.external_codes import unpack_tarball
 
 logger = logging.getLogger(__name__)
 
@@ -403,7 +409,7 @@ def plot_spectra(x, y, y_units, x_units, ax, title, ref=0, norm=0, log=False):
         pass
 
 
-def get_spec_plot(path, spectra, obs_num, log=False):
+def get_spec_plot(path, spectra, obs_num, basepath="", log=False):
 
     if not os.path.exists(os.path.join(path, spectra)):
         logger.error("Could not open: " + os.path.join(path, spectra))
@@ -429,11 +435,58 @@ def get_spec_plot(path, spectra, obs_num, log=False):
         xsmooth, ysmooth = smooth(x, y)
     plot_spectra(xsmooth, ysmooth, yunits, xunits, ax, title, log=log)
 
-    save_file = os.path.join(path, name.replace(' ', '_') + obs_details + "_spectra_" + str(obs_num) + ".png")
-    fig.savefig(save_file, format='png')
+    path = path.replace(basepath,"").lstrip("/")
+    plot_filename = os.path.join(path, name.replace(' ', '_') + obs_details + "_spectra_" + str(obs_num) + ".png")
+
+    fig_file  = default_storage.open(plot_filename,"wb+")
+    fig.savefig(fig_file, format='png')
     plt.close()
+    fig_file.close()
 
     # Write raw data to ascii file
-    ascii.write([x, y, yerr], save_file.replace('.png', '.ascii'), names=['Wavelength ({})'.format(xunits), 'Flux ({})'.format(yunits), 'Flux_error'], overwrite=True)
+    ascii_file = default_storage.open(plot_filename.replace('.png', '.ascii'), "w")
+    ascii.write([x, y, yerr], ascii_file, names=['Wavelength ({})'.format(xunits), 'Flux ({})'.format(yunits), 'Flux_error'], overwrite=True)
+    ascii_file.close()
 
-    return save_file
+    return fig_file.name
+
+def make_spec(date_obs, obj, req, indir, basepath, prop, obs_num):
+    """Creates plot of spectra data for spectra blocks
+       <pk>: pk of block (not superblock)
+    """
+    path = os.path.join(indir, obj + '_' + req)
+    filenames = glob(os.path.join(path, '*_2df_ex.fits'))  # checks for file in path
+    # filenames = [os.path.join(path,f) for f in default_storage.listdir(path)[1] if f.endswith("*_2df_ex.fits")]
+    spectra_path = None
+    tar_path = unpack_path = None
+    obs_num = str(obs_num)
+    if filenames:
+        spectra_path = filenames[int(obs_num)-1]
+        spec_count = len(filenames)
+    else:
+        tar_files = glob(os.path.join(indir, prop+'_*'+req+'*.tar.gz'))  # if file not found, looks for tarball
+        if tar_files:
+            for tar in tar_files:
+                if req in tar:
+                    tar_path = tar
+                    unpack_path = os.path.join(indir, obj+'_'+req)
+            if not tar_path and not unpack_path:
+                logger.error("Could not find tarball for request: %s" % req)
+                return None, None
+            spec_files = unpack_tarball(tar_path, unpack_path)  # upacks tarball
+            spec_list = [spec for spec in spec_files if '_2df_ex.fits' in spec]
+            spectra_path = spec_list[int(obs_num)-1]
+            spec_count = len(spec_list)
+        else:
+            logger.error("Could not find spectrum data or tarball for request: %s" % req)
+            return None, None
+
+    if spectra_path:  # plots spectra
+        spec_file = os.path.basename(spectra_path)
+        spec_dir = os.path.dirname(spectra_path)
+        spec_plot = get_spec_plot(spec_dir, spec_file, obs_num, basepath=basepath)
+        return spec_plot, spec_count
+
+    else:
+        logger.error("Could not find spectrum data for request: %s" % req)
+        return None, None

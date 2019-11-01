@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 SITES = (('1M0', '------------ Any 1.0m ------------'),
          ('W86', 'LSC 1.0m - W85-87; (CTIO, Chile)'),
-         ('V37', 'ELP 1.0m - V37; (McDonald, Texas)'),
+         ('V37', 'ELP 1.0m - V37,V39; (McDonald, Texas)'),
          ('Q63', 'COJ 1.0m - Q63-64; (Siding Spring, Aust.)'),
          ('K92', 'CPT 1.0m - K91-93; (Sutherland, S. Africa)'),
          ('0M4', '------------ Any 0.4m ------------'),
@@ -159,7 +159,7 @@ class ScheduleBlockForm(forms.Form):
     pattern_iterations = forms.FloatField(widget=forms.HiddenInput(), required=False)
     proposal_code = forms.CharField(max_length=20, widget=forms.HiddenInput())
     site_code = forms.CharField(max_length=5, widget=forms.HiddenInput())
-    group_id = forms.CharField(max_length=50, widget=forms.TextInput(attrs={'style': 'text-align: right; width: -webkit-fill-available; width: -moz-available;'}))
+    group_name = forms.CharField(max_length=50, widget=forms.TextInput(attrs={'style': 'text-align: right; width: -webkit-fill-available; width: -moz-available;'}))
     utc_date = forms.DateField(input_formats=['%Y-%m-%d', ], widget=forms.HiddenInput(), required=False)
     jitter = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}), required=False)
     period = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}), required=False)
@@ -288,7 +288,7 @@ class ScheduleSpectraForm(forms.Form):
     exp_count = forms.IntegerField(initial=1, widget=forms.NumberInput(attrs={'size': '5'}), required=True)
     exp_length = forms.FloatField(initial=1800.0, required=True)
     calibs = forms.ChoiceField(required=True, choices=CALIBS)
-    solar_analog = forms.BooleanField(initial=False, required=False)
+    solar_analog = forms.BooleanField(initial=True, required=False)
     spectroscopy = forms.BooleanField(initial=True, widget=forms.HiddenInput(), required=False)
 
     def clean_utc_date(self):

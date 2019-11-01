@@ -22,7 +22,7 @@ from neox.tests.mocks import MockDateTime, mock_lco_authenticate, mock_fetch_fil
 
 from datetime import datetime
 from django.test.client import Client
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.contrib.auth.models import User
 from core.models import Body, Proposal
 
@@ -116,9 +116,9 @@ class ScheduleObservations(FunctionalTest):
         proposal_choices.select_by_visible_text(self.neo_proposal.title)
 
         site_choices = Select(self.browser.find_element_by_id('id_site_code'))
-        self.assertIn('ELP 1.0m - V37; (McDonald, Texas)', [option.text for option in site_choices.options])
+        self.assertIn('ELP 1.0m - V37,V39; (McDonald, Texas)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('ELP 1.0m - V37; (McDonald, Texas)')
+        site_choices.select_by_visible_text('ELP 1.0m - V37,V39; (McDonald, Texas)')
 
         MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
@@ -199,9 +199,9 @@ class ScheduleObservations(FunctionalTest):
         proposal_choices.select_by_visible_text(self.neo_proposal.title)
 
         site_choices = Select(self.browser.find_element_by_id('id_site_code'))
-        self.assertIn('ELP 1.0m - V37; (McDonald, Texas)', [option.text for option in site_choices.options])
+        self.assertIn('ELP 1.0m - V37,V39; (McDonald, Texas)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('ELP 1.0m - V37; (McDonald, Texas)')
+        site_choices.select_by_visible_text('ELP 1.0m - V37,V39; (McDonald, Texas)')
 
         MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
@@ -249,9 +249,9 @@ class ScheduleObservations(FunctionalTest):
         proposal_choices.select_by_visible_text(self.neo_proposal.title)
 
         site_choices = Select(self.browser.find_element_by_id('id_site_code'))
-        self.assertIn('ELP 1.0m - V37; (McDonald, Texas)', [option.text for option in site_choices.options])
+        self.assertIn('ELP 1.0m - V37,V39; (McDonald, Texas)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('ELP 1.0m - V37; (McDonald, Texas)')
+        site_choices.select_by_visible_text('ELP 1.0m - V37,V39; (McDonald, Texas)')
 
         MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
@@ -320,9 +320,9 @@ class ScheduleObservations(FunctionalTest):
         proposal_choices.select_by_visible_text(self.neo_proposal.title)
 
         site_choices = Select(self.browser.find_element_by_id('id_site_code'))
-        self.assertIn('ELP 1.0m - V37; (McDonald, Texas)', [option.text for option in site_choices.options])
+        self.assertIn('ELP 1.0m - V37,V39; (McDonald, Texas)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('ELP 1.0m - V37; (McDonald, Texas)')
+        site_choices.select_by_visible_text('ELP 1.0m - V37,V39; (McDonald, Texas)')
 
         MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
@@ -357,8 +357,8 @@ class ScheduleObservations(FunctionalTest):
         warn_num = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('warning').text
         self.assertIn('1', warn_num)
 
-    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
-    @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list_no2m)
+    @patch('core.forms.fetch_filter_list', mock_fetch_filter_list_no2m)
     @patch('core.forms.datetime', MockDateTime)
     @patch('core.views.datetime', MockDateTime)
     def test_schedule_missing_telescope(self):
@@ -448,10 +448,6 @@ class ScheduleObservations(FunctionalTest):
         self.assertIn('Siding Spring, Aust. (FTS - E10)', [option.text for option in site_choices.options])
 
         site_choices.select_by_visible_text('Siding Spring, Aust. (FTS - E10)')
-
-        # select the Solar Analog Option
-        sa_box = self.browser.find_element_by_id('id_solar_analog')
-        sa_box.click()
 
         MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
@@ -567,10 +563,6 @@ class ScheduleObservations(FunctionalTest):
 
         site_choices.select_by_visible_text('Maui, Hawaii (FTN - F65)')
 
-        # select the Solar Analog Option
-        sa_box = self.browser.find_element_by_id('id_solar_analog')
-        sa_box.click()
-
         MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
         datebox.clear()
@@ -619,9 +611,9 @@ class ScheduleObservations(FunctionalTest):
         proposal_choices.select_by_visible_text(self.neo_proposal.title)
 
         site_choices = Select(self.browser.find_element_by_id('id_site_code'))
-        self.assertIn('ELP 1.0m - V37; (McDonald, Texas)', [option.text for option in site_choices.options])
+        self.assertIn('ELP 1.0m - V37,V39; (McDonald, Texas)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('ELP 1.0m - V37; (McDonald, Texas)')
+        site_choices.select_by_visible_text('ELP 1.0m - V37,V39; (McDonald, Texas)')
 
         MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
@@ -690,21 +682,21 @@ class ScheduleObservations(FunctionalTest):
         self.assertIn('Target Not Visible', vis)
 
         # Bart wants to be a little &^%$ and stress test our group ID input
-        group_id_box = self.browser.find_element_by_name("group_id")
+        group_id_box = self.browser.find_element_by_name("group_name")
         group_id_box.clear()
         bs_string = 'ຢູ່ໃກ້Γη小惑星‽'
         group_id_box.send_keys(bs_string)
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_id("id_edit_button").click()
-        group_id = self.browser.find_element_by_id('id_group_id').get_attribute('value')
+        group_id = self.browser.find_element_by_id('id_group_name').get_attribute('value')
         self.assertEqual('N999r0q_V37-20150421', group_id)
-        group_id_box = self.browser.find_element_by_name("group_id")
+        group_id_box = self.browser.find_element_by_name("group_name")
         group_id_box.clear()
         bs_string = 'rcoivny3q5r@@yciht8ycv9njcrnc87vy b0y98uxm9cyh8ycvn0fh 80hfcubfuh87yc 0nhfhxmhf7g 70h'
         group_id_box.send_keys(bs_string)
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_id("id_edit_button").click()
-        group_id = self.browser.find_element_by_id('id_group_id').get_attribute('value')
+        group_id = self.browser.find_element_by_id('id_group_name').get_attribute('value')
         self.assertEqual(bs_string[:50], group_id)
 
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")

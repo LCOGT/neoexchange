@@ -16,7 +16,7 @@ GNU General Public License for more details.
 from datetime import datetime
 from django.test import TestCase
 from django.http import HttpRequest
-from django.core.urlresolvers import resolve, reverse
+from django.urls import resolve, reverse
 from django.template.loader import render_to_string
 from django.views.generic import ListView
 from django.forms.models import model_to_dict
@@ -26,7 +26,7 @@ from mock import patch
 
 # Import module to test
 from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
-from core.models import Body, Proposal, Block
+from core.models import Body, Proposal, SuperBlock, Block
 from neox.settings import VERSION
 from neox.tests.mocks import mock_lco_authenticate
 
@@ -247,33 +247,51 @@ class BlocksPageTest(TestCase):
                                }
         self.test_proposal, created = Proposal.objects.get_or_create(**test_proposal_params)
         # Create test blocks
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'cpt',
+        sblock_params = {
                          'body'     : self.body,
                          'proposal' : self.neo_proposal,
                          'block_start' : '2015-04-20 13:00:00',
                          'block_end'   : '2015-04-21 03:00:00',
                          'tracking_number' : '00042',
+                         'active'   : True
+                       }
+        self.test_sblock, created = SuperBlock.objects.get_or_create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'cpt',
+                         'body'     : self.body,
+                         'superblock' : self.test_sblock,
+                         'block_start' : '2015-04-20 13:00:00',
+                         'block_end'   : '2015-04-21 03:00:00',
+                         'request_number' : '10042',
                          'num_exposures' : 5,
                          'exp_length' : 42.0,
                          'active'   : True
                        }
-        self.test_block = Block.objects.get_or_create(**block_params)
+        self.test_block, created = Block.objects.get_or_create(**block_params)
 
-        block_params2 = { 'telclass' : '2m0',
-                         'site'     : 'coj',
+        sblock_params2 = {
                          'body'     : self.body,
                          'proposal' : self.test_proposal,
                          'block_start' : '2015-04-20 03:00:00',
                          'block_end'   : '2015-04-20 13:00:00',
                          'tracking_number' : '00043',
+                         'active'   : False,
+                       }
+        self.test_sblock2, created = SuperBlock.objects.get_or_create(**sblock_params2)
+        block_params2 = { 'telclass' : '2m0',
+                         'site'     : 'coj',
+                         'body'     : self.body,
+                         'superblock' : self.test_sblock2,
+                         'block_start' : '2015-04-20 03:00:00',
+                         'block_end'   : '2015-04-20 13:00:00',
+                         'request_number' : '10043',
                          'num_exposures' : 7,
                          'exp_length' : 30.0,
                          'active'   : False,
                          'num_observed' : 1,
                          'reported' : True
                        }
-        self.test_block2 = Block.objects.get_or_create(**block_params2)
+        self.test_block2, created = Block.objects.get_or_create(**block_params2)
 
     def test_block_url_resolves_to_blocks_view(self):
         found = reverse('blocklist')

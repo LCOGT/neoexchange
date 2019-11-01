@@ -181,7 +181,7 @@ class Command(BaseCommand):
                          'AllowSharing': 'TRUE',
                          'MPCCode'     : site,
                          'Delimiter'   : 'PIPE',
-                         'ContactInfo' : '[{}]'.format(block.proposal.pi),
+                         'ContactInfo' : '[{}]'.format(block.superblock.proposal.pi),
                          'ContactName' : 'T. Lister',
                          'DifferMags'  : 'FALSE',
                          'Facility'    : 'Las Cumbres Observatory',
@@ -374,7 +374,7 @@ class Command(BaseCommand):
                 time_jd = datetime2mjd_utc(time)
                 time_jd_truncated = time_jd - mjd_offset
                 if i == 0:
-                    lightcurve_file.write('Object: %s\n' % start_super_block.body.current_name())
+                    lightcurve_file.write('#Object: %s\n' % start_super_block.body.current_name())
                     lightcurve_file.write("#MJD-%.1f Mag. Mag. error\n" % mjd_offset)
                 lightcurve_file.write("%7.5lf %6.3lf %5.3lf\n" % (time_jd_truncated, mags[i], mag_errs[i]))
                 i += 1

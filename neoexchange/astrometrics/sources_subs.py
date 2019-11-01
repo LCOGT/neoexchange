@@ -157,8 +157,15 @@ def parse_previous_NEOCP_id(items, dbg=False):
         crossmatch = [body, none_id, '', ' '.join(chunks[-3:])]
     elif len(items) == 3:
         if dbg: print("3 items found")
-        # Is of the form "<foo> = <bar>(<date> UT)"
-        if items[0].find('Comet') != 1 and len(ast.findall(items[0])) != 1:
+        if items[0].lower().find('was not confirmed') != -1:
+            # Is an odd case of not confirmed but with an MPEC...
+            chunks = items[0].split()
+            newid = 'wasnotconfirmed'
+            provid = chunks[0]
+            mpec = ''
+            date = ' '.join(chunks[-4:-1])
+        elif items[0].find('Comet') != 1 and len(ast.findall(items[0])) != 1:
+            # Is of the form "<foo> = <bar>(<date> UT)"
             if items[1].string is not None:
                 newid = str(items[0]).lstrip()+items[1].string.strip()
                 provid_date = items[2].split('(')
@@ -942,7 +949,7 @@ def cycle_mpc_character_code(char):
     cycle = ord(char)
     if cycle >= ord('a'):
         cycle = cycle - 61
-    elif ord('A') <= cycle < ord('Z'):
+    elif ord('A') <= cycle <= ord('Z'):
         cycle = cycle - 55
     else:
         cycle = cycle - ord('0')
@@ -1308,7 +1315,9 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
     list_address = '"small-bodies-observations@lists.nasa.gov"'
     list_authors = [ '"paul.a.abell@nasa.gov"',
                         '"paul.w.chodas@jpl.nasa.gov"',
-                        '"brent.w.barbee@nasa.gov"']
+                        '"brent.w.barbee@nasa.gov"',
+                        '"Barbee, Brent W. (GSFC-5950) via small-bodies-observations"']
+
     list_prefix = '[' + list_address.replace('"', '').split('@')[0] + ']'
     list_suffix = 'Observations Requested'
 
@@ -1482,6 +1491,9 @@ def make_location(params):
     elif params['site_code'] == 'W87':
         location['telescope'] = '1m0a'
         location['observatory'] = 'domc'
+    elif params['site_code'] == 'V39':
+        location['telescope'] = '1m0a'
+        location['observatory'] = 'domb'
     return location
 
 
@@ -1493,14 +1505,14 @@ def make_target(params):
     dec_degs = params['dec_deg']
     # XXX Todo: Add in proper motion and parallax if present
     target = {
-               'type' : 'SIDEREAL',
+               'type' : 'ICRS',
                'name' : params['source_id'],
                'ra'   : ra_degs,
                'dec'  : dec_degs,
-               'rot_mode' : 'VFLOAT'
+               'extra_params' : {}
              }
     if 'vmag' in params:
-        target['vmag'] = params['vmag']
+        target['extra_params']['v_magnitude'] = params['vmag']
     if 'pm_ra' in params:
         target['proper_motion_ra'] = params['pm_ra']
     if 'pm_dec' in params:
@@ -1512,12 +1524,10 @@ def make_target(params):
 
 def make_moving_target(elements):
     """Make a target dictionary for the request from an element set"""
-
-#    print(elements)
     # Generate initial dictionary of things in common
     target = {
                   'name'                : elements['current_name'],
-                  'type'                : 'NON_SIDEREAL',
+                  'type'                : 'ORBITAL_ELEMENTS',
                   'scheme'              : elements['elements_type'],
                   # Moving object param
                   'epochofel'         : elements['epochofel_mjd'],
@@ -1525,6 +1535,7 @@ def make_moving_target(elements):
                   'longascnode'       : elements['longascnode'],
                   'argofperih'        : elements['argofperih'],
                   'eccentricity'      : elements['eccentricity'],
+                  'extra_params'      : {}
             }
 
     if elements['elements_type'].upper() == 'MPC_COMET':
@@ -1534,10 +1545,7 @@ def make_moving_target(elements):
         target['meandist'] = elements['meandist']
         target['meananom'] = elements['meananom']
     if 'v_mag' in elements:
-        target['vmag'] = round(elements['v_mag'], 2)
-    if 'sky_pa' in elements:
-        target['rot_mode'] = 'SKY'
-        target['rot_angle'] = round(elements['sky_pa'], 1)
+        target['extra_params']['v_magnitude'] = round(elements['v_mag'], 2)
 
     return target
 
@@ -1556,52 +1564,89 @@ def make_window(params):
     return window
 
 
-def make_molecule(params, exp_filter):
-
+def make_config(params, exp_filter):
     # Common part of a molecule
     exp_count = exp_filter[1]
-    molecule = {
-                'type' : params['exp_type'],
+    conf = {
+        'type' : params['exp_type'],
+        'instrument_type'   : params['instrument'],
+        'target': params['target'],
+        'constraints': params['constraints'],
+        'acquisition_config': {},
+        'guiding_config': {},
+        'instrument_configs': [
+            {
                 'exposure_count'  : exp_count,
                 'exposure_time' : params['exp_time'],
                 'bin_x'       : params['binning'],
                 'bin_y'       : params['binning'],
-                'instrument_name'   : params['instrument'],
+                'optical_elements': {
+                    'filter': exp_filter[0]
                 }
+            }
+        ]
+    }
+    return conf
 
-    if params.get('spectroscopy', False):
-        # Autoguider mode, one of ON, OFF, or OPTIONAL.
-        # Must be uppercase now and ON for spectra, and OFF for arcs and lamp flats
-        params['spectra_slit'] = exp_filter[0]
-        ag_mode = 'ON'
-        if params['exp_type'].upper() in ['ARC', 'LAMP_FLAT']:
-            ag_mode = 'OFF'
-            molecule['exposure_count'] = 1
-            molecule['exposure_time'] = 60.0
-            if params['exp_type'].upper() == 'LAMP_FLAT' and 'slit_6.0as' in params['spectra_slit']:
-                molecule['exposure_time'] = 20.0
-        molecule['spectra_slit'] = params['spectra_slit']
-        molecule['ag_mode'] = ag_mode
-        molecule['ag_name'] = ''
-        molecule['acquire_mode'] = 'BRIGHTEST'
-        molecule['ag_exp_time'] = params.get('ag_exp_time', 10)
-        molecule['acquire_exp_time'] = params.get('ag_exp_time', 10)
-        if 'source_type' in params:  # then Sidereal target (use smaller window)
-            molecule['acquire_radius_arcsec'] = 5.0
-        else:
-            molecule['acquire_radius_arcsec'] = 15.0  # NOTE: if this keyword exists, 'acquire_mode' is ignored, and will acquire on brightest
+
+def make_spect_config(params, exp_filter):
+
+    if 'ORBITAL_ELEMENTS' in params['target']['type']:  # then non-sidereal target (use larger window)
+        acq_rad = 15.0
     else:
-        molecule['filter'] = exp_filter[0]
-        molecule['ag_mode'] = 'OPTIONAL'  # ON, OFF, or OPTIONAL. Must be uppercase now...
-        molecule['ag_name'] = ''
+        acq_rad = 5.0
 
-    return molecule
+    if params['exp_type'].upper() in ['ARC', 'LAMP_FLAT']:
+        ag_mode = 'OFF'
+        exp_count = 1
+        exp_time = 60.0
+        if params['exp_type'].upper() == 'LAMP_FLAT' and 'slit_6.0as' in params['spectra_slit']:
+            exp_time = 20.0
+    else:
+        exp_count = params['exp_count']
+        exp_time = params['exp_time']
+
+    if params.get('rot_mode', 'VFLOAT') == 'SKY':
+        inst_extra = {'rotator_angle': params.get('rot_angle', 0)}
+    else:
+        inst_extra = {}
+
+    configurations = {
+        'type': params['exp_type'],
+        'instrument_type': '2M0-FLOYDS-SCICAM',
+        'constraints': params['constraints'],
+        'target': params['target'],
+        'acquisition_config': {
+            'mode': 'BRIGHTEST',
+            'exposure_time' : params.get('ag_exp_time', 10),
+            "extra_params": {
+              "acquire_radius": acq_rad,
+            }
+        },
+        'guiding_config': {
+            'mode': 'ON',
+            'optional': False,
+            'exposure_time' : params.get('ag_exp_time', 10)
+        },
+        'instrument_configs': [
+            {
+                'exposure_time': exp_time,
+                'exposure_count': exp_count,
+                'rotator_mode': params.get('rot_mode', 'VFLOAT'),
+                'optical_elements': {
+                    'slit': exp_filter[0]
+                },
+                'extra_params' : inst_extra
+            }
+        ]
+    }
+    return configurations
 
 
-def make_molecules(params):
+def make_configs(params):
     """Handles creating the potentially multiple molecules. Returns a list of the molecules.
     In imaging mode (`params['spectroscopy'] = False` or not present), this just calls
-    the regular make_molecule().
+    the regular make_config().
     In spectroscopy mode, this will produce 1, 3 or 5 molecules depending on whether
     `params['calibs']` is 'none, 'before'/'after' or 'both'."""
 
@@ -1611,26 +1656,26 @@ def make_molecules(params):
     if params.get('spectroscopy', False) is True:
         # Spectroscopy mode
         params['spectra_slit'] = params['filter_pattern']
-        spectrum_molecule = make_molecule(params, filt_list[0])
+        spectrum_molecule = make_spect_config(params, filt_list[0])
         if calib_mode != 'none':
             old_type = params['exp_type']
             params['exp_type'] = 'ARC'
-            arc_molecule = make_molecule(params, filt_list[0])
+            arc_molecule = make_spect_config(params, filt_list[0])
             params['exp_type'] = 'LAMP_FLAT'
-            flat_molecule = make_molecule(params, filt_list[0])
+            flat_molecule = make_spect_config(params, filt_list[0])
             params['exp_type'] = old_type
         if calib_mode == 'before':
-            molecules = [flat_molecule, arc_molecule, spectrum_molecule]
+            configs = [flat_molecule, arc_molecule, spectrum_molecule]
         elif calib_mode == 'after':
-            molecules = [spectrum_molecule, arc_molecule, flat_molecule]
+            configs = [spectrum_molecule, arc_molecule, flat_molecule]
         elif calib_mode == 'both':
-            molecules = [flat_molecule, arc_molecule, spectrum_molecule, arc_molecule, flat_molecule]
+            configs = [flat_molecule, arc_molecule, spectrum_molecule, arc_molecule, flat_molecule]
         else:
-            molecules = [spectrum_molecule, ]
+            configs = [spectrum_molecule, ]
     else:
-        molecules = [make_molecule(params, filt) for filt in filt_list]
+        configs = [make_config(params, filt) for filt in filt_list]
 
-    return molecules
+    return configs
 
 
 def make_constraints(params):
@@ -1649,10 +1694,10 @@ def make_constraints(params):
 def make_single(params, ipp_value, request):
     """Create a user_request for a single observation"""
 
-    user_request = {
+    requestgroup = {
                     'submitter' : params['user_id'],
                     'requests'  : [request],
-                    'group_id'  : params['group_id'],
+                    'name'  : params['group_name'],
                     'observation_type': "NORMAL",
                     'operator'  : "SINGLE",
                     'ipp_value' : ipp_value,
@@ -1661,42 +1706,34 @@ def make_single(params, ipp_value, request):
 
 # If the ToO mode is set, change the observation_type
     if params.get('too_mode', False) is True:
-        user_request['observation_type'] = 'TARGET_OF_OPPORTUNITY'
+        requestgroup['observation_type'] = 'TARGET_OF_OPPORTUNITY'
 
-    return user_request
+    return requestgroup
 
 
 def make_many(params, ipp_value, request, cal_request):
-    """Create a user_request for a MANY observation of the asteroid
+    """Create a request for a MANY observation of the asteroidgroup
     target (<request>) and calibration source (<cal_request>)"""
 
-    user_request = {
+    requestgroup = {
                     'submitter' : params['user_id'],
                     'requests'  : [request, cal_request],
-                    'group_id'  : params['group_id'],
+                    'name'  : params['group_name'],
                     'observation_type': "NORMAL",
                     'operator'  : "MANY",
                     'ipp_value' : ipp_value,
                     'proposal'  : params['proposal_id']
     }
 
-    return user_request
+    return requestgroup
 
 
 def make_proposal(params):
-    proposal = { 
+    proposal = {
                  'proposal_id' : params['proposal_id'],
                  'user_id' : params['user_id']
                }
     return proposal
-
-
-def make_cadence(elements, params, ipp_value, request=None):
-    """Generate a cadence user request from the <elements> and <params>."""
-
-    ur = make_cadence_valhalla(request, params, ipp_value)
-
-    return ur
 
 
 def expand_cadence(user_request):
@@ -1708,7 +1745,7 @@ def expand_cadence(user_request):
             cadence_url,
             json=user_request,
             headers={'Authorization': 'Token {}'.format(settings.PORTAL_TOKEN)},
-            timeout=20.0
+            timeout=120.0
          )
     except requests.exceptions.Timeout:
         msg = "Observing portal API timed out"
@@ -1726,27 +1763,31 @@ def expand_cadence(user_request):
     return True, cadence_user_request
 
 
-def make_cadence_valhalla(request, params, ipp_value, debug=False):
-    """Create a user_request for a cadence observation"""
+def make_cadence(request, params, ipp_value, debug=False):
 
+    """Create a user_request for a cadence observation"""
     # Add cadence parameters into Request
-    request['cadence'] = {
-                            'start' : datetime.strftime(params['start_time'], '%Y-%m-%dT%H:%M:%S'),
-                            'end'   : datetime.strftime(params['end_time'], '%Y-%m-%dT%H:%M:%S'),
-                            'period': params['period'],
-                            'jitter': params['jitter']
-                         }
-    del(request['windows'])
+    cadence = {
+                'start' : datetime.strftime(params['start_time'], '%Y-%m-%dT%H:%M:%S'),
+                'end'   : datetime.strftime(params['end_time'], '%Y-%m-%dT%H:%M:%S'),
+                'period': params['period'],
+                'jitter': params['jitter']
+             }
+    request = [{'cadence': cadence,
+                'configurations': request['configurations'],
+                'windows': [],
+                'location': request['location'],
+                }]
 
     user_request = {
-                    'submitter': params['user_id'],
-                    'requests' : [request],
-                    'group_id' : params['group_id'],
+                    'requests' : request,
+                    'name' : params['group_name'],
                     'observation_type': "NORMAL",
                     'operator' : "SINGLE",
                     'ipp_value': ipp_value,
                     'proposal' : params['proposal_id']
                    }
+
 # Submit the UserRequest with the cadence
     status, cadence_user_request = expand_cadence(user_request)
 
@@ -1765,6 +1806,7 @@ def make_cadence_valhalla(request, params, ipp_value, debug=False):
 def configure_defaults(params):
 
     site_list = { 'V37' : 'ELP',
+                  'V39' : 'ELP',
                   'K91' : 'CPT',
                   'K92' : 'CPT',
                   'K93' : 'CPT',
@@ -1829,7 +1871,7 @@ def configure_defaults(params):
     return params
 
 
-def make_userrequest(elements, params):
+def make_requestgroup(elements, params):
 
     params = configure_defaults(params)
 # Create Location (site, observatory etc)
@@ -1838,55 +1880,55 @@ def make_userrequest(elements, params):
 # Create Target (pointing)
     if len(elements) > 0:
         logger.debug("Making a moving object")
-        target = make_moving_target(elements)
+        params['target'] = make_moving_target(elements)
+        if 'sky_pa' in elements:
+            params['rot_mode'] = 'SKY'
+            params['rot_angle'] = round(elements['sky_pa'], 1)
     else:
         logger.debug("Making a static object")
-        target = make_target(params)
-    logger.debug("Target=%s" % target)
+        params['target'] = make_target(params)
+    logger.debug(f"Target={params['target']}")
 # Create Window
     window = make_window(params)
     logger.debug("Window=%s" % window)
 # Create Molecule(s)
-    molecule_list = make_molecules(params)
+    params['constraints'] = make_constraints(params)
+    configurations = make_configs(params)
 
     submitter = ''
     submitter_id = params.get('submitter_id', '')
     if submitter_id != '':
-        submitter = '(by %s)' % submitter_id
-    note = ('Submitted by NEOexchange {}'.format(submitter))
+        submitter = f'(by {submitter_id})'
+    note = f'Submitted by NEOexchange {submitter}'
     note = note.rstrip()
 
-    constraints = make_constraints(params)
-
     request = {
-            "location": location,
-            "acceptability_threshold": params.get('acceptability_threshold', 90),
-            "constraints": constraints,
-            "target": target,
-            "molecules": molecule_list,
-            "windows": [window],
-            "observation_note": note,
-        }
+        'configurations': configurations,
+        "acceptability_threshold": params.get('acceptability_threshold', 90),
+        'windows': [window],
+        'location': location,
+        "observation_note": note,
+    }
+
     if params.get('solar_analog', False) and len(params.get('calibsource', {})) > 0:
         # Assemble solar analog request
-        params['group_id'] += "+solstd"
+        params['group_name'] += "+solstd"
         params['source_id'] = params['calibsource']['name']
         params['ra_deg'] = params['calibsource']['ra_deg']
         params['dec_deg'] = params['calibsource']['dec_deg']
-        cal_target = make_target(params)
+        params['target'] = make_target(params)
         exp_time = params['exp_time']
         params['exp_time'] = params['calibsrc_exptime']
         ag_exptime = params.get('ag_exp_time', 10)
         params['ag_exp_time'] = 10
-        cal_molecule_list = make_molecules(params)
+        params['rot_mode'] = 'VFLOAT'
+        cal_configurations = make_configs(params)
         params['exp_time'] = exp_time
         params['ag_exp_time'] = ag_exptime
 
         cal_request = {
                         "location": location,
-                        "constraints": constraints,
-                        "target": cal_target,
-                        "molecules": cal_molecule_list,
+                        "configurations": cal_configurations,
                         "windows": [window],
                         "observation_note": note,
                     }
@@ -1897,7 +1939,7 @@ def make_userrequest(elements, params):
 
 # Add the Request to the outer User Request
     if 'period' in params.keys() and 'jitter' in params.keys():
-        user_request = make_cadence(elements, params, ipp_value, request)
+        user_request = make_cadence(request, params, ipp_value)
     elif len(cal_request) > 0:
         user_request = make_many(params, ipp_value, request, cal_request)
     else:
@@ -1910,7 +1952,7 @@ def make_userrequest(elements, params):
 
 def submit_block_to_scheduler(elements, params):
 
-    user_request = make_userrequest(elements, params)
+    user_request = make_requestgroup(elements, params)
 
 # Make an endpoint and submit the thing
     try:
@@ -1918,7 +1960,7 @@ def submit_block_to_scheduler(elements, params):
             settings.PORTAL_REQUEST_API,
             json=user_request,
             headers={'Authorization': 'Token {}'.format(settings.PORTAL_TOKEN)},
-            timeout=20.0
+            timeout=120.0
          )
     except requests.exceptions.Timeout:
         msg = "Observing portal API timed out"
@@ -1930,14 +1972,7 @@ def submit_block_to_scheduler(elements, params):
         logger.error(resp.json())
         msg = "Parsing error"
         try:
-            error_json = resp.json()
-            error_msg = error_json.get('requests', msg)
-            if len(error_msg) >= 1:
-                error_msg = error_msg[0].get('non_field_errors', msg)
-                msg = error_msg[0]
-            elif error_json.get('non_field_errors', None) is not None:
-                error_msg = error_json.get('non_field_errors', msg)
-                msg = error_msg[0]
+            msg = resp.json()
         except AttributeError:
             try:
                 msg = user_request['errors']
@@ -1945,13 +1980,13 @@ def submit_block_to_scheduler(elements, params):
                 try:
                     msg = user_request['proposal'][0]
                 except KeyError:
-                    msg = "Unable to decode response from Valhalla"
+                    msg = "Unable to decode response from Observing Portal"
         params['error_msg'] = msg
         logger.error(msg)
         return False, params
 
     response = resp.json()
-    tracking_number = response.get('id', '')
+    tracking_number = str(response.get('id', ''))
 
     request_items = response.get('requests', '')
 
@@ -1963,7 +1998,12 @@ def submit_block_to_scheduler(elements, params):
         params['error_msg'] = msg
         return False, params
 
-    request_types = dict([(r['id'], r['target']['type']) for r in request_items])
+    if len(request_items) > 0:
+        request_types = {}
+        if 'configurations' in request_items[0]:
+            request_types = dict([(str(r['id']), r['configurations'][0]['target']['type']) for r in request_items])
+        else:
+            request_types = dict([(r['id'], r['target']['type']) for r in request_items])
     request_windows = [r['windows'] for r in user_request['requests']]
 
     params['block_duration'] = sum([float(_['duration']) for _ in request_items])
@@ -1976,47 +2016,54 @@ def submit_block_to_scheduler(elements, params):
     return tracking_number, params
 
 
-def fetch_filter_list(site, spec, page=None):
-    """Fetches the camera mappings page"""
+def fetch_filter_list(site, spec):
+    """Fetches the filter list from the configdb"""
 
-    if page is None:
-        camera_mappings = 'http://configdb.lco.gtn/camera_mappings/'
-        data_file = fetchpage_and_make_soup(camera_mappings)
-        data_out = parse_filter_file(site, spec, data_file)
+    siteid, encid, telid = MPC_site_code_to_domes(site)
+    if '1m0' in telid.lower():
+        camid = "1m0-SciCam-Sinistro"
+    elif '0m4' in telid.lower():
+        camid = "0m4-SciCam-SBIG"
+    elif '2m0' in telid.lower():
+        if spec:
+            camid = "2m0-FLOYDS-SciCam"
+        else:
+            camid = "2m0-SciCam-Spectral"
     else:
-        with open(page, 'r') as input_file:
-            data_out = parse_filter_file(site, spec, input_file.read())
+        camid = ''
+
+    if siteid == 'xxx':
+        siteid = encid = telid = ''
+
+    # Disable specific telescope check, use all telescopes of appropriate class at a site.
+    encid = telid = ''
+
+    request_url = settings.CONFIGDB_API_URL + 'instruments/'
+    request_url += '?telescope={}&science_camera=&autoguider_camera=&camera_type={}&site={}&enclosure={}&state=SCHEDULABLE'.format(telid.lower(), camid, siteid.lower(), encid.lower())
+    resp = requests.get(request_url, timeout=20, verify=True).json()
+
+    data_out = parse_filter_file(resp, spec)
+    if not data_out:
+        logger.error('Could not find any filters for {}'.format(site))
     return data_out
 
 
-def parse_filter_file(site, spec, camera_list=None):
-    """Parses the camera mappings page and sends back a list of filters at the given site code.
+def parse_filter_file(resp, spec):
+    """Parses the returned json dictionary and pull out the list of approved filters
     """
     if spec is not True:
         filter_list = cfg.phot_filters
     else:
         filter_list = cfg.spec_filters
 
-    siteid, encid, telid = MPC_site_code_to_domes(site)
-
-    camera_list = str(camera_list).split("\n")
     site_filters = []
-    try:
-        for line in camera_list:
-            chunks = line.split(' ')
-            chunks = list(filter(None, chunks))
-            if len(chunks) == 13:
-                if (chunks[0] == siteid or siteid == 'xxx') and chunks[2][:-1] == telid[:-1]:
-                    filt_list = chunks[12].split(',')
-                    for filt in filter_list:
-                        if filt in filt_list and filt not in site_filters:
-                            site_filters.append(filt)
-    except Exception as e:
-        msg = "Could not read camera mappings file"
-        logger.error(msg)
-        logger.error(e)
-    if not site_filters:
-        logger.error('Could not find any filters for {}'.format(site))
+    for result in resp['results']:
+        filters_1tel = result['science_camera']['filters']
+        filt_list = filters_1tel.split(',')
+        for filt in filter_list:
+            if filt in filt_list and filt not in site_filters:
+                site_filters.append(filt)
+
     return site_filters
 
 

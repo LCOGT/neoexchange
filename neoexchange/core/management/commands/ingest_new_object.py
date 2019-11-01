@@ -35,6 +35,6 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         for new_rock in options['rockfile']:
 
-            body, created, msg = ingest_new_object(new_rock)
+            body, created, msg = ingest_new_object(os.path.expanduser(new_rock))
 
             self.stdout.write(msg)

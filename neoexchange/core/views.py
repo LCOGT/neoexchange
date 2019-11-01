@@ -12,13 +12,11 @@ GNU General Public License for more details.
 """
 
 import os
+from shutil import move
 from glob import glob
 from datetime import datetime, timedelta, date
 from math import floor, ceil, degrees, radians, pi, acos
 from astropy import units as u
-import matplotlib
-matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
 import json
 import urllib
 import logging
@@ -29,7 +27,8 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
-from django.core.urlresolvers import reverse, reverse_lazy
+from django.core.files.storage import default_storage
+from django.urls import reverse, reverse_lazy
 from django.shortcuts import render, redirect
 from django.views.generic import DetailView, ListView, FormView, TemplateView, View
 from django.views.generic.edit import FormView
@@ -48,6 +47,7 @@ except ImportError:
     pass
 import io
 
+
 from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, \
     ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm
 from .models import *
@@ -58,7 +58,8 @@ from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
     MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes, \
     determine_spectro_slot_length, get_sitepos, read_findorb_ephem, accurate_astro_darkness,\
-    get_visibility, determine_exp_count, determine_star_trails, calc_moon_sep, get_alt_from_airmass
+    get_visibility, determine_exp_count, determine_star_trails, calc_moon_sep, \
+    get_alt_from_airmass
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs, validate_text,\
@@ -70,13 +71,13 @@ from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     determine_filenames, increment_red_level, update_ldac_catalog_wcs, FITSHdrException
 from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
-from photometrics.spectraplot import get_spec_plot
-from photometrics.gf_movie import make_gif
+from photometrics.gf_movie import make_gif, make_movie
 from core.frames import create_frame, ingest_frames, measurements_from_block
 from core.mpc_submit import email_report_to_mpc
 from core.archive_subs import lco_api_call
 from photometrics.SA_scatter import readSources, genGalPlane, plotScatter, \
     plotFormat
+from core.plots import find_spec_plots
 
 logger = logging.getLogger(__name__)
 
@@ -157,7 +158,7 @@ def summarise_block_efficiency(block_filter=0):
     summary = []
     proposals = Proposal.objects.all()
     for proposal in proposals:
-        blocks = Block.objects.filter(proposal=proposal)
+        blocks = Block.objects.filter(superblock__proposal=proposal)
         observed = blocks.filter(num_observed__isnull=False)
         if len(blocks) > block_filter:
             proposal_summary = {
@@ -221,6 +222,9 @@ class BodySearchView(ListView):
             object_list = self.model.objects.all()
         return object_list
 
+class BodyVisibilityView(DetailView):
+    template_name = 'core/body_visibility.html'
+    model = Body
 
 class BlockDetailView(DetailView):
     template_name = 'core/block_detail.html'
@@ -715,6 +719,7 @@ class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
 
     def form_valid(self, form, request):
         data = schedule_check(form.cleaned_data, self.body, self.ok_to_schedule)
+        print(data)
         new_form = ScheduleBlockForm(data)
         return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.body})
 
@@ -880,12 +885,19 @@ class ScheduleCalibSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
     form_class = ScheduleBlockForm
     model = StaticSource
 
+    def get_context_data(self, **kwargs):
+        context = super(ScheduleCalibSubmit, self).get_context_data(**kwargs)
+        context['calibrator'] = self.object
+
+        return context
+
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
         form = self.get_form()
         if form.is_valid():
             return self.form_valid(form, request)
         else:
+            print(form)
             return self.form_invalid(form)
 
     def form_valid(self, form, request):
@@ -960,7 +972,19 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
                 self.success = False
                 msg = "It was not possible to submit your request to the scheduler."
                 if sched_params.get('error_msg', None):
-                    msg += "\nAdditional information:" + sched_params['error_msg']
+                    msg += "\nAdditional information:"
+                    try:
+                        error_msgs = sched_params['error_msg'].get('non_field_errors', [])
+                        if error_msgs == []:
+                            error_msgs = sched_params['error_msg'].get('errors', [])
+                            if type(error_msgs) == dict:
+                                requests = error_msgs.get('requests', [])
+                                error_msgs = []
+                                for request in requests:
+                                    error_msgs += request.get('non_field_errors', [])
+                    except AttributeError:
+                        error_msgs = [sched_params['error_msg'],]
+                    msg += "\n".join(error_msgs)
                 messages.warning(self.request, msg)
             return super(ScheduleSubmit, self).form_valid(new_form)
 
@@ -1178,9 +1202,9 @@ def schedule_check(data, body, ok_to_schedule=True):
         total_time = total_time.total_seconds()/3600.0
 
     # Create Group ID
-    group_id = validate_text(data.get('group_id', None))
+    group_name = validate_text(data.get('group_name', None))
 
-    if not group_id:
+    if not group_name:
         suffix = datetime.strftime(utc_date, '%Y%m%d')
         if period and jitter:
             suffix = "cad-%s-%s" % (datetime.strftime(data['start_time'], '%Y%m%d'), datetime.strftime(data['end_time'], '%m%d'))
@@ -1188,7 +1212,7 @@ def schedule_check(data, body, ok_to_schedule=True):
             suffix += "_spectra"
         if data.get('too_mode', False) is True:
             suffix += '_ToO'
-        group_id = body.current_name() + '_' + data['site_code'].upper() + '-' + suffix
+        group_name = body.current_name() + '_' + data['site_code'].upper() + '-' + suffix
 
     resp = {
         'target_name': body.current_name(),
@@ -1204,7 +1228,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'too_mode' : data.get('too_mode', False),
         'site_code': data['site_code'],
         'proposal_code': data['proposal_code'],
-        'group_id': group_id,
+        'group_name': group_name,
         'utc_date': utc_date.isoformat(),
         'start_time': dark_start.isoformat(),
         'end_time': dark_end.isoformat(),
@@ -1332,7 +1356,7 @@ def schedule_submit(data, body, username):
               'site_code': data['site_code'],
               'start_time': data['start_time'],
               'end_time': data['end_time'],
-              'group_id': data['group_id'],
+              'group_name': data['group_name'],
               'too_mode' : data.get('too_mode', False),
               'spectroscopy' : data.get('spectroscopy', False),
               'calibs' : data.get('calibs', ''),
@@ -1364,9 +1388,9 @@ def schedule_submit(data, body, username):
     if check_for_block(data, params, body) == 1:
         # Append another suffix to allow 2 versions of the block. Must
         # do this to both `data` (so the next Block check works) and to
-        # `params` so the correct group_id will go to the Valhalla/scheduler
-        data['group_id'] += '_2'
-        params['group_id'] = data['group_id']
+        # `params` so the correct name will go to the Valhalla/scheduler
+        data['group_name'] += '_2'
+        params['group_name'] = data['group_name']
     elif check_for_block(data, params, body) >= 2:
         # Multiple blocks found
         resp_params = {'error_msg' : 'Multiple Blocks for same day and site found'}
@@ -1569,8 +1593,8 @@ def build_characterization_list(disp=None):
                         body_dict['obs_edate'] = obs_dates[1]
                 else:
                     body_dict['obs_sdate'] = body_dict['obs_edate'] = obs_dates[2]+timedelta(days=99)
-                    startdate = '-'
-                    enddate = '-'
+                    startdate = '[--'
+                    enddate = '--]'
                 days_to_start = body_dict['obs_sdate']-obs_dates[2]
                 days_to_end = body_dict['obs_edate']-obs_dates[2]
                 # Define a sorting Priority:
@@ -1582,6 +1606,7 @@ def build_characterization_list(disp=None):
                 body_dict['dec'] = emp_line[1]
                 body_dict['v_mag'] = emp_line[2]
                 body_dict['motion'] = emp_line[4]
+                body_dict['radar_target'] = body.radar_target()
                 if disp:
                     if disp in body_dict['obs_needed']:
                         unranked.append(body_dict)
@@ -1607,7 +1632,8 @@ def check_for_block(form_data, params, new_body):
 
     # XXX Code smell, duplicated from sources_subs.configure_defaults()
     site_list = { 'V37' : 'ELP' ,
-                  'K92' : 'CPT' ,
+                  'V39' : 'ELP',
+                  'K92' : 'CPT',
                   'K93' : 'CPT',
                   'Q63' : 'COJ',
                   'W85' : 'LSC',
@@ -1618,13 +1644,12 @@ def check_for_block(form_data, params, new_body):
                   'Z21' : 'TFN',
                   'Q58' : 'COJ',
                   'Q59' : 'COJ',
-                  'T04' : 'OGG',
-                  'V99' : 'ELP'
+                  'T04' : 'OGG'
                   }
 
     try:
         block_id = SuperBlock.objects.get(body=new_body.id,
-                                     groupid__contains=form_data['group_id'],
+                                     groupid__contains=form_data['group_name'],
                                      proposal=Proposal.objects.get(code=form_data['proposal_code'])
                                      )
 #                                         site=site_list[params['site_code']])
@@ -1653,7 +1678,7 @@ def record_block(tracking_number, params, form_data, target):
         proposal = Proposal.objects.get(code=form_data['proposal_code'])
         sblock_kwargs = {
                          'proposal' : proposal,
-                         'groupid'  : form_data['group_id'],
+                         'groupid'  : form_data['group_name'],
                          'block_start' : form_data['start_time'],
                          'block_end'   : form_data['end_time'],
                          'tracking_number' : tracking_number,
@@ -1677,10 +1702,18 @@ def record_block(tracking_number, params, form_data, target):
             # cut off json UTC timezone remnant
             no_timezone_blk_start = params['request_windows'][i][0]['start'][:-1]
             no_timezone_blk_end = params['request_windows'][i][0]['end'][:-1]
+            try:
+                dt_notz_blk_start = datetime.strptime(no_timezone_blk_start, '%Y-%m-%dT%H:%M:%S')
+            except ValueError:
+                dt_notz_blk_start = datetime.strptime(no_timezone_blk_start, '%Y-%m-%dT%H:%M:%S.%f')
+            try:
+                dt_notz_blk_end = datetime.strptime(no_timezone_blk_end, '%Y-%m-%dT%H:%M:%S')
+            except ValueError:
+                dt_notz_blk_end = datetime.strptime(no_timezone_blk_end, '%Y-%m-%dT%H:%M:%S.%f')
             obstype = Block.OPT_IMAGING
             if params.get('spectroscopy', False):
                 obstype = Block.OPT_SPECTRA
-                if request_type == 'SIDEREAL':
+                if request_type == 'SIDEREAL' or request_type == 'ICRS':
                     obstype = Block.OPT_SPECTRA_CALIB
 
             # sort site vs camera
@@ -1701,17 +1734,15 @@ def record_block(tracking_number, params, form_data, target):
             block_kwargs = { 'superblock' : sblock_pk,
                              'telclass' : params['pondtelescope'].lower(),
                              'site'     : site,
-                             'proposal' : Proposal.objects.get(code=form_data['proposal_code']),
                              'obstype'  : obstype,
-                             'groupid'  : params['group_id'],
-                             'block_start' : datetime.strptime(no_timezone_blk_start, '%Y-%m-%dT%H:%M:%S'),
-                             'block_end'   : datetime.strptime(no_timezone_blk_end, '%Y-%m-%dT%H:%M:%S'),
-                             'tracking_number' : request,
+                             'block_start' : dt_notz_blk_start,
+                             'block_end'   : dt_notz_blk_end,
+                             'request_number'  : request,
                              'num_exposures'   : params['exp_count'],
                              'exp_length'      : params['exp_time'],
                              'active'   : True
                            }
-            if request_type == 'SIDEREAL' and params.get('solar_analog', False) is True and len(params.get('calibsource', {})) > 0:
+            if (request_type == 'SIDEREAL' or request_type == 'ICRS') and params.get('solar_analog', False) is True and len(params.get('calibsource', {})) > 0:
                 try:
                     calib_source = StaticSource.objects.get(pk=params['calibsource']['id'])
                 except StaticSource.DoesNotExist:
@@ -1720,7 +1751,7 @@ def record_block(tracking_number, params, form_data, target):
                 block_kwargs['body'] = None
                 block_kwargs['calibsource'] = calib_source
                 block_kwargs['exp_length'] = params['calibsrc_exptime']
-            elif request_type == 'SIDEREAL':
+            elif request_type == 'SIDEREAL' or request_type == 'ICRS':
                 block_kwargs['body'] = None
                 block_kwargs['calibsource'] = target
             else:
@@ -2060,6 +2091,9 @@ def update_crossids(astobj, dbg=False):
                     logger.warning("Found %d SuperBlocks and %d Blocks referring to this Body; not deleting" % (num_sblocks, num_blocks))
             else:
                 logger.info("Origin of Body is MPC, not removing")
+                # Set to inactive to prevent candidates hanging around
+                del_body.active = False
+                del_body.save()
 
     # Determine what type of new object it is and whether to keep it active
     kwargs = clean_crossid(astobj, dbg)
@@ -2350,6 +2384,10 @@ def ingest_new_object(orbit_file, obs_file=None, dbg=False):
     if obs_file is None:
         obs_file = orbit_file.replace('neocp', 'dat')
 
+    # If not found, try new-style obs file name
+    if os.path.exists(obs_file) is False:
+        obs_file = orbit_file.replace('.neocp', '_mpc.dat')
+
     local_discovery = False
     try:
         obsfile_fh = open(obs_file, 'r')
@@ -2612,7 +2650,7 @@ def create_source_measurement(obs_lines, block=None):
                                 logger.warning("Multiple matching satellite frames for %s from %s on %s found" % (params['body'], params['obs_date'], params['site_code']))
                                 continue
                     else:
-                        # If no satelites, check for existing frames, and create new ones
+                        # If no satellites, check for existing frames, and create new ones
                         if frame_list:
                             frame = next((frm for frm in frame_list if frm.sitecode == params['site_code'] and params['obs_date'] == frm.midpoint), None)
                             if not frame:
@@ -2897,39 +2935,11 @@ def store_detections(mtdsfile, dbg=False):
     return num_candidates
 
 
-def make_plot(request):
-
-    import aplpy
-
-    fits_file = 'cpt1m010-kb70-20160428-0148-e91.fits'
-    fits_filepath = os.path.join('/tmp', 'tmp_neox_9nahRl', fits_file)
-
-    sources = CatalogSources.objects.filter(frame__filename__contains=fits_file[0:28]).values_list('obs_ra', 'obs_dec')
-
-    fig = aplpy.FITSFigure(fits_filepath)
-    fig.show_grayscale(pmin=0.25, pmax=98.0)
-    ra = [X[0] for X in sources]
-    dec = [X[1] for X in sources]
-
-    fig.show_markers(ra, dec, edgecolor='green', facecolor='none', marker='o', s=15, alpha=0.5)
-
-    buffer = io.BytesIO()
-    fig.save(buffer, format='png')
-    fig.save(fits_filepath.replace('.fits', '.png'), format='png')
-
-    return HttpResponse(buffer.getvalue(), content_type="Image/png")
-
-
-def plotframe(request):
-
-    return render(request, 'core/frame_plot.html')
-
-
 def find_spec(pk):
     """find directory of spectra for a certain block
     NOTE: Currently will only pull first spectrum of a superblock
     """
-    base_dir = settings.DATA_ROOT
+
     try:
         # block = list(Block.objects.filter(superblock=list(SuperBlock.objects.filter(pk=pk))[0]))[0]
         block = Block.objects.get(pk=pk)
@@ -2949,111 +2959,28 @@ def find_spec(pk):
     if 'REQNUM' in data:
         req = data['REQNUM'].lstrip("0")
     else:
-        req = block.tracking_number
-    path = os.path.join(base_dir, date_obs, obj + '_' + req)
-    prop = block.proposal.code
-    if not glob(os.path.join(base_dir, date_obs, prop+'_*'+req+'*.tar.gz')):
-        date_obs = str(int(date_obs)-1)
-        path = os.path.join(base_dir, date_obs, obj + '_' + req)
+        req = block.request_number
+    path = os.path.join(date_obs, obj + '_' + req).lstrip('/')
+    prop = block.superblock.proposal.code
 
     return date_obs, obj, req, path, prop
 
-
 def display_spec(request, pk, obs_num):
     date_obs, obj, req, path, prop = find_spec(pk)
-    base_dir = os.path.join(settings.DATA_ROOT, date_obs)  # new base_dir for method
+    base_dir = str(date_obs)  # new base_dir for method
     logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date_obs, req, prop))
     logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
 
-    spec_files = glob(os.path.join(path, obj+"*"+"spectra"+"*"+obs_num+"*"+".png"))
+    spec_files = find_spec_plots(path, obj, req, obs_num)
+
     if spec_files:
         spec_file = spec_files[0]
-    else:
-        spec_file = ''
-    if not spec_file:
-        spec_file, spec_count = make_spec(date_obs, obj, req, base_dir, prop, obs_num)
-    if spec_file:
         logger.debug('Spectroscopy Plot: {}'.format(spec_file))
-        spec_plot = open(spec_file, 'rb').read()
+        spec_plot = default_storage.open(spec_file, 'rb').read()
         return HttpResponse(spec_plot, content_type="Image/png")
     else:
         return HttpResponse()
 
-
-def display_calibspec(request, pk):
-    try:
-        calibsource = StaticSource.objects.get(pk=pk)
-    except StaticSource.DoesNotExist:
-        return HttpResponse()
-
-    base_dir = os.path.join(settings.DATA_ROOT, 'cdbs', 'ctiostan')  # new base_dir for method
-
-    obj = calibsource.name.lower().replace(' ', '').replace('-', '_').replace('+', '')
-    obs_num = '1'
-    spec_files = glob(os.path.join(base_dir, obj+"*"+"spectra"+"*"+obs_num+"*"+".png"))
-    if spec_files:
-        spec_file = spec_files[0]
-    else:
-        spec_file = ''
-    if not spec_file:
-        spec_file = "f" + obj + ".dat"
-        if os.path.exists(os.path.join(base_dir, spec_file)):
-            spec_file = get_spec_plot(base_dir, spec_file, obs_num, log=True)
-        else:
-            logger.warning("No flux file found for " + spec_file)
-            spec_file = ''
-    if spec_file:
-        logger.debug('Spectroscopy Plot: {}'.format(spec_file))
-        spec_plot = open(spec_file, 'rb').read()
-        return HttpResponse(spec_plot, content_type="Image/png")
-    else:
-        import base64
-        # Return a 1x1 pixel gif in the case of no spectra file
-        PIXEL_GIF_DATA = base64.b64decode(
-            b"R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7")
-
-        return HttpResponse(PIXEL_GIF_DATA, content_type='image/gif')
-
-
-def make_spec(date_obs, obj, req, base_dir, prop, obs_num):
-    """Creates plot of spectra data for spectra blocks
-       <pk>: pk of block (not superblock)
-    """
-    path = os.path.join(base_dir, obj + '_' + req)
-    filenames = glob(os.path.join(path, '*_2df_ex.fits'))  # checks for file in path
-    spectra_path = None
-    tar_path = unpack_path = None
-    obs_num = str(obs_num)
-    if filenames:
-        spectra_path = filenames[int(obs_num)-1]
-        spec_count = len(filenames)
-    else:
-        tar_files = glob(os.path.join(base_dir, prop+'_*'+req+'*.tar.gz'))  # if file not found, looks for tarball
-        if tar_files:
-            for tar in tar_files:
-                if req in tar:
-                    tar_path = tar
-                    unpack_path = os.path.join(base_dir, obj+'_'+req)
-            if not tar_path and not unpack_path:
-                logger.error("Could not find tarball for request: %s" % req)
-                return None, None
-            spec_files = unpack_tarball(tar_path, unpack_path)  # upacks tarball
-            spec_list = [spec for spec in spec_files if '_2df_ex.fits' in spec]
-            spectra_path = spec_list[int(obs_num)-1]
-            spec_count = len(spec_list)
-        else:
-            logger.error("Could not find spectrum data or tarball for request: %s" % req)
-            return None, None
-
-    if spectra_path:  # plots spectra
-        spec_file = os.path.basename(spectra_path)
-        spec_dir = os.path.dirname(spectra_path)
-        spec_plot = get_spec_plot(spec_dir, spec_file, obs_num)
-        return spec_plot, spec_count
-
-    else:
-        logger.error("Could not find spectrum data for request: %s" % req)
-        return None, None
 
 
 class PlotSpec(View):  # make loging required later
@@ -3075,78 +3002,17 @@ def display_movie(request, pk):
     logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date_obs, req, prop))
     logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
 
-    movie_files = glob(os.path.join(path, "Guide_frames", obj.replace(' ', '_') + "*guidemovie.gif"))
+    movie_files = find_spec_plots(os.path.join(path, "Guide_frames"), obj.replace(' ', '_'), req, "guidemovie.gif")
     if movie_files:
         movie_file = movie_files[0]
     else:
-        movie_file = ''
-    if not movie_file:
         movie_file = make_movie(date_obs, obj, req, base_dir, prop)
     if movie_file:
         logger.debug('MOVIE FILE: {}'.format(movie_file))
-        movie = open(movie_file, 'rb').read()
+        movie = default_storage.open(movie_file, 'rb').read()
         return HttpResponse(movie, content_type="Image/gif")
     else:
         return HttpResponse()
-
-
-def make_movie(date_obs, obj, req, base_dir, prop):
-    """Make gif of FLOYDS Guide Frames given the following:
-    <date_obs> -- Day of Observation (i.e. '20180910')
-    <obj> -- object name w/ spaces replaced by underscores (i.e. '144332' or '2018_EB1')
-    <req> -- Request number of the observation
-    <base_dir> -- Directory of data. This will be the DATA_ROOT/date_obs/
-    <prop> -- Proposal ID
-    NOTE: Can take a while to load if building new gif with many frames.
-    """
-
-    path = os.path.join(base_dir, obj + '_' + req)
-    logger.info('BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(obj, date_obs, req, prop))
-    logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
-
-    filename = glob(os.path.join(path, '*2df_ex.fits'))  # checking if unpacked
-    frames = []
-    if not filename:
-        unpack_path = os.path.join(base_dir, obj+'_'+req)
-        tar_files = glob(os.path.join(base_dir, prop+"*"+req+"*.tar.gz"))  # if file not found, looks for tarball
-        if tar_files:
-            tar_path = tar_files[0]
-            logger.info("Unpacking 1st tar")
-            spec_files = unpack_tarball(tar_path, unpack_path)  # unpacks tarball
-            filename = spec_files[0]
-        else:
-            logger.error("Could not find tarball for request: %s" % req)
-            return None
-    if filename:  # If first order tarball is unpacked
-        movie_dir = glob(os.path.join(path, "Guide_frames"))
-        if movie_dir:  # if 2nd order tarball is unpacked
-            frames = glob(os.path.join(movie_dir[0], "*.fits.fz"))
-            if not frames:
-                frames = glob(os.path.join(movie_dir[0], "*.fits"))
-        else:  # unpack 2nd tarball
-            tarintar = glob(os.path.join(path, "*.tar"))
-            if tarintar:
-                unpack_path = os.path.join(path, 'Guide_frames')
-                guide_files = unpack_tarball(tarintar[0], unpack_path)  # unpacks tar
-                logger.info("Unpacking tar in tar")
-                for file in guide_files:
-                    if '.fits.fz' in file:
-                        frames.append(file)
-            else:
-                logger.error("Could not find Guide Frames or Guide Frame tarball for request: %s" % req)
-                return None
-    else:
-        logger.error("Could not find spectrum data or tarball for request: %s" % req)
-        return None
-    if frames is not None and len(frames) > 0:
-        logger.debug("#Frames = {}".format(len(frames)))
-        logger.info("Making Movie...")
-        movie_file = make_gif(frames)
-        return movie_file
-    else:
-        logger.error("There must be at least 1 frame to make guide movie.")
-        return None
-
 
 class GuideMovie(View):
     # make logging required later
@@ -3158,37 +3024,6 @@ class GuideMovie(View):
         params = {'pk': kwargs['pk'], 'sb_id': block.superblock.id}
 
         return render(request, self.template_name, params)
-
-
-def make_standards_plot(request):
-    """creates stellar standards plot to be added to page"""
-
-    scoords = readSources('Solar')
-    fcoords = readSources('Flux')
-
-    ax = plt.figure().gca()
-    plotScatter(ax, scoords, 'b*')
-    plotScatter(ax, fcoords, 'g*')
-    plotFormat(ax, 0)
-    buffer = io.BytesIO()
-    plt.savefig(buffer, format='png')
-    plt.close()
-
-    return HttpResponse(buffer.getvalue(), content_type="Image/png")
-
-
-def make_solar_standards_plot(request):
-    """creates solar standards plot to be added to page"""
-
-    scoords = readSources('Solar')
-    ax = plt.figure().gca()
-    plotScatter(ax, scoords, 'b*')
-    plotFormat(ax, 1)
-    buffer = io.BytesIO()
-    plt.savefig(buffer, format='png')
-    plt.close()
-
-    return HttpResponse(buffer.getvalue(), content_type="Image/png")
 
 
 def update_taxonomy(body, tax_table, dbg=False):
