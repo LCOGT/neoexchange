@@ -350,8 +350,9 @@ def block_status(block_id):
             images, num_archive_frames = check_for_archive_images(request_id=r['id'], obstype=obstype)
             logger.info('Request no. %s x %s images (%s total all red. levels)' % (r['id'], len(images), num_archive_frames))
             if images:
-                exposure_count = sum([x['exposure_count'] for x in r['molecules']])
-                obs_types = [x['type'] for x in r['molecules']]
+                inst_configs = [x['instrument_configs'] for x in r['configurations']]
+                exposure_count = sum([x[0]['exposure_count'] for x in inst_configs])
+                obs_types = [x['type'] for x in r['configurations']]
                 # Look in the archive at the header of the most recent frame for a timestamp of the observation
                 last_image_dict = images[0]
                 last_image_header = lco_api_call(last_image_dict.get('headers', None))
