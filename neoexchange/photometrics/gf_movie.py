@@ -127,6 +127,10 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=False
             inst = header['INSTRUME'].upper()
         except KeyError:
             inst = ' '
+        if header['OBSTYPE'] in 'GUIDE':
+            guide_frames = True
+        else:
+            guide_frames = False
 
     if title is None:
         title = 'Request Number {} -- {} at {} ({})'.format(rn, obj, site, inst)
@@ -220,7 +224,10 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=False
 
     # Save to default location because Matplotlib wants a string filename not File object
     daydir = path.replace(out_path, "").lstrip("/")
-    movie_filename = os.path.join(daydir, obj.replace(' ', '_') + '_' + rn + '_guidemovie.gif')
+    if guide_frames:
+        movie_filename = os.path.join(daydir, obj.replace(' ', '_') + '_' + rn + '_guidemovie.gif')
+    else:
+        movie_filename = os.path.join(daydir, obj.replace(' ', '_') + '_' + rn + '_framemovie.gif')
     movie_file = default_storage.open(movie_filename, "wb+")
     with open(filename, 'rb+') as f:
         movie_file.write(f.read())
