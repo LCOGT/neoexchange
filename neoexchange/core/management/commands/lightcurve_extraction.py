@@ -131,8 +131,6 @@ class Command(BaseCommand):
         ax2.legend()
         fig2.savefig(os.path.join(datadir, filename + 'lightcurve_cond.png'))
 
-        plt.show()
-
         return
 
     def format_date(self, dates):

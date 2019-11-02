@@ -28,7 +28,7 @@ from core.archive_subs import archive_login, get_frame_data, get_catalog_data, \
     determine_archive_start_end, download_files, make_data_dir
 from core.views import determine_active_proposals
 from photometrics.spectraplot import make_spec
-from photometrics.gf_movie import make_movie
+from photometrics.gf_movie import make_movie, make_gif
 
 
 class Command(BaseCommand):
@@ -101,6 +101,18 @@ class Command(BaseCommand):
                 out_path = options['datadir']
                 dl_frames = download_files(all_frames, out_path, verbose)
                 self.stdout.write("Downloaded %d frames" % ( len(dl_frames) ))
+                # Create postage stamp movie for non_spectra images
+                block_lists = {}
+                save_paths = {}
+                for frame in all_frames.get('91', []):
+                    if frame['REQNUM'] in block_lists.keys():
+                        block_lists[frame['REQNUM']].append(os.path.join(save_paths[frame['REQNUM']], frame['filename']))
+                    else:
+                        save_paths[frame['REQNUM']] = make_data_dir(out_path, frame)
+                        block_lists[frame['REQNUM']] = [os.path.join(save_paths[frame['REQNUM']], frame['filename'])]
+                for rn in block_lists.keys():
+                    movie_file = make_gif(block_lists[rn], init_fr=100, center=.01, out_path=out_path)
+
                 # unpack tarballs and make movie.
                 for frame in all_frames.get('', []):
                     if "tar.gz" in frame['filename']:

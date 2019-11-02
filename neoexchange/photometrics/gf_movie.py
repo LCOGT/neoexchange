@@ -73,7 +73,7 @@ def print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, lengt
         print()
 
 
-def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=False, out_path="", tr=False, center=False):
+def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=False, out_path="", tr=False, center=None):
     """
     takes in list of .fits guide frames and turns them into a moving gif.
     <frames> = list of .fits frame paths
@@ -82,7 +82,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=False
     <fr> = frame rate for output gif in ms/frame [default = 100 ms/frame or 10fps]
     <init_fr> = frame rate for first 5 frames in ms/frame [default = 1000 ms/frame or 1fps]
     <tr> = Bool to determine if reticle present for all guide frames.
-    <center> = Bool to clip to central quarter of frame.
+    <center> = fraction of area for central portion of frame.
     output = savefile (path of gif)
     """
     if sort is True:
@@ -155,11 +155,11 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=False
                 except KeyError:
                     header_n = hdul[0].header
                     data = hdul[0].data
-        if center:
+        if center is not None:
             shape = data.shape
-            x_frac = int(shape[0]/2.5)
-            y_frac = int(shape[1]/2.5)
-            data = data[x_frac:-x_frac, y_frac:-y_frac]
+            x_frac = int(shape[0]*(1-np.sqrt(center))/2)
+            y_frac = int(shape[1]*(1-np.sqrt(center))/2)
+            data = data[x_frac:-(x_frac+1), y_frac:-(y_frac+1)]
             header_n['CRPIX1'] -= x_frac
             header_n['CRPIX2'] -= y_frac
         # pull Date from Header
@@ -292,7 +292,7 @@ if __name__ == '__main__':
     parser.add_argument("--fr", help="Frame rate in ms/frame (Defaults to 100 ms/frame or 10 frames/second", default=100, type=float)
     parser.add_argument("--ir", help="Frame rate in ms/frame for first 5 frames (Defaults to 1000 ms/frame or 1 frames/second", default=1000, type=float)
     parser.add_argument("--tr", help="Add target circle at crpix values?", default=False, action="store_true")
-    parser.add_argument("--C", help="Only include Center Snapshot", default=False, action="store_true")
+    parser.add_argument("--C", help="Only include Center Snapshot", default=None, type=float)
     args = parser.parse_args()
     path = args.path
     fr = args.fr
