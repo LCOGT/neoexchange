@@ -2939,11 +2939,14 @@ def find_spec(pk):
     """find directory of spectra for a certain block
     NOTE: Currently will only pull first spectrum of a superblock
     """
-
+    block = Block.objects.get(pk=pk)
+    frames = Frame.objects.filter(block=block)
+    for frame in frames:
+        if frame.frameid:
+            first_frame = frame
+            continue
     try:
-        # block = list(Block.objects.filter(superblock=list(SuperBlock.objects.filter(pk=pk))[0]))[0]
-        block = Block.objects.get(pk=pk)
-        url = settings.ARCHIVE_FRAMES_URL+str(Frame.objects.filter(block=block)[0].frameid)+'/headers'
+        url = settings.ARCHIVE_FRAMES_URL + str(first_frame.frameid) + '/headers'
     except IndexError:
         return '', '', '', '', ''
     data = lco_api_call(url)['data']
