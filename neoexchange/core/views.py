@@ -2976,7 +2976,7 @@ def find_analog(date_obs, site):
     """Search for Calib Source blocks taken 10 days before or after a given date at a specific site.
     Return a list of reduced fits files in order of temporal distance from given date."""
 
-    analog_blocks = Block.objects.filter(obstype=3, site=site, when_observed__lte=date_obs+timedelta(days=10), when_observed__gte=date_obs-timedelta(days=10))
+    analog_blocks = Block.objects.filter(obstype=Block.OPT_SPECTRA_CALIB, site=site, when_observed__lte=date_obs+timedelta(days=10), when_observed__gte=date_obs-timedelta(days=10))
     star_list = []
     time_diff = []
     for b in analog_blocks:
@@ -3084,17 +3084,16 @@ def plot_floyds_spec(block, obs_num=1):
     return script, div
 
 
-
-class BlockSpec(View):  # make loging required later
+class BlockSpec(View):  # make logging required later
 
     template_name = 'core/plot_spec.html'
 
     def get(self, request, *args, **kwargs):
         block = Block.objects.get(pk=kwargs['pk'])
         script, div = plot_floyds_spec(block, int(kwargs['obs_num']))
-        try:
+        if 'reflec_spec' in div:
             params = {'pk': kwargs['pk'], 'obs_num': kwargs['obs_num'], 'sb_id': block.superblock.id, "the_script": script, "raw_div": div["raw_spec"], "reflec_div": div["reflec_spec"]}
-        except KeyError:
+        else:
             params = {'pk': kwargs['pk'], 'obs_num': kwargs['obs_num'], 'sb_id': block.superblock.id, "the_script": script, "raw_div": div["raw_spec"]}
         return render(request, self.template_name, params)
 

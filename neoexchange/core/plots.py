@@ -1,7 +1,7 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2016-2019 LCO
-archive_subs.py -- Routines for downloading data from the LCO Archive
+Copyright (C) 2019-2019 LCO
+plots.py -- plotting functions for Neoexchange
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
@@ -11,6 +11,7 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
+
 import base64
 from datetime import datetime, timedelta
 from glob import glob

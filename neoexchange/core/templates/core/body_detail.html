@@ -3,10 +3,11 @@
 
 {% block header %}{{body.current_name}} details{% endblock %}
 
+<!-- Import Bokeh CSS for plotting (UPDATE RELEASE NUMBER IF BOKEH IS UPDATED) -->
 {% block last-css-content %}
 <link rel="stylesheet" href="http://cdn.pydata.org/bokeh/release/bokeh-1.3.4.min.css">
 {% endblock %}
-
+<!-- Import Bokeh Script for plotting (UPDATE RELEASE NUMBER IF BOKEH IS UPDATED) -->
 {% block script-content %}
 <script src="http://cdn.pydata.org/bokeh/release/bokeh-1.3.4.min.js"></script>
 {% endblock %}
@@ -98,6 +99,7 @@
                             </div>
                         <div class="four columns rightsidebar">
                             <div align="center">
+                                <!-- Import the javascript and div created by Bokeh for circle plots -->
                             {% block lin_plot %}
                             {{ lin_div|safe }}
                             {{ lin_script|safe }}

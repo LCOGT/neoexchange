@@ -2,10 +2,11 @@
 {% load staticfiles basic_tags %}
 {% block header %}{{staticsource.current_name}} details{% endblock %}
 
+<!-- Import Bokeh CSS for plotting (UPDATE RELEASE NUMBER IF BOKEH IS UPDATED) -->
 {% block last-css-content %}
 <link rel="stylesheet" href="http://cdn.pydata.org/bokeh/release/bokeh-1.3.4.min.css">
 {% endblock %}
-
+<!-- Import Bokeh Script for plotting (UPDATE RELEASE NUMBER IF BOKEH IS UPDATED) -->
 {% block script-content %}
 <script src="http://cdn.pydata.org/bokeh/release/bokeh-1.3.4.min.js"></script>
 {{ script|safe }}
@@ -64,6 +65,7 @@
                         </div>
                         <div class="four columns">
                             <h5 class="section-title">Spectra</h5>
+                            <!-- Import the div created by Bokeh for spectra plot -->
                             {% block graphic %}
                                 {{ div|safe }}
                             {% endblock %}

@@ -143,7 +143,7 @@ class SpectraplotTest(FunctionalTest):
              'site'            : 'ogg',
              'body'            : self.body,
              'superblock'      : self.test_sblock2,
-             'obstype'         : 0,
+             'obstype'         : Block.OPT_IMAGING,
              'block_start'     : '2015-04-22 13:00:00',
              'block_end'       : '2015-04-24 03:00:00',
              'request_number' : '54321',
