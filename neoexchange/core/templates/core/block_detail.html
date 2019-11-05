@@ -132,6 +132,9 @@
                                   <div class="block-control"><a href="{% url 'guidemovie' blk.pk %}">Guide Movie</a></div>
                                 {% endif %}
                               {% else %}
+                                  {% if blk.num_observed > 0 %}
+                                  <li class="block-control"><a href="{% url 'guidemovie' blk.pk %}">Preview Movie</a></li>
+                                  {% endif %}
                                   {% if blk.num_observed > 0 and blk.num_unique_red_frames < 10 and blk.num_candidates > 0 %}
                                   <li class="block-control"><a href="{% url 'block-ast' blk.id %}" id="analyse-btn">Analyse Images</a></li>
                                   {% if not blk.reported %}

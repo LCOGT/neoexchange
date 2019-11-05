@@ -159,6 +159,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=False
                 except KeyError:
                     header_n = hdul[0].header
                     data = hdul[0].data
+
         if center is not None:
             shape = data.shape
             x_frac = int(shape[0]*(1-np.sqrt(center))/2)

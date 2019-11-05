@@ -3002,7 +3002,12 @@ def display_movie(request, pk):
     logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date_obs, req, prop))
     logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
 
-    movie_files = find_spec_plots(os.path.join(path, "Guide_frames"), obj.replace(' ', '_'), req, "guidemovie.gif")
+    block = Block.objects.get(pk=pk)
+    if block.obstype in [0, 2]:
+        movie_files = find_spec_plots(date_obs, obj.replace(' ', '_'), req, "framemovie.gif")
+    elif block.obstype in [1, 3]:
+        movie_files = find_spec_plots(os.path.join(path, "Guide_frames"), obj.replace(' ', '_'), req, "guidemovie.gif")
+
     if movie_files:
         movie_file = movie_files[0]
     else:
@@ -3013,6 +3018,7 @@ def display_movie(request, pk):
         return HttpResponse(movie, content_type="Image/gif")
     else:
         return HttpResponse()
+
 
 class GuideMovie(View):
     # make logging required later
