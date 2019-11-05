@@ -2941,14 +2941,13 @@ def find_spec(pk):
     """
     block = Block.objects.get(pk=pk)
     frames = Frame.objects.filter(block=block)
+    if not frames:
+        return '', '', '', '', ''
     for frame in frames:
         if frame.frameid:
             first_frame = frame
             continue
-    try:
-        url = settings.ARCHIVE_FRAMES_URL + str(first_frame.frameid) + '/headers'
-    except IndexError:
-        return '', '', '', '', ''
+    url = settings.ARCHIVE_FRAMES_URL + str(first_frame.frameid) + '/headers'
     data = lco_api_call(url)['data']
     if 'DAY_OBS' in data:
         date_obs = data['DAY_OBS']
