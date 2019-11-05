@@ -26,6 +26,8 @@ try:
     import pyslalib.slalib as S
 except:
     pass
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.dates import HourLocator, DateFormatter
 from astropy.stats import LombScargle
@@ -130,7 +132,9 @@ class Command(BaseCommand):
         fig2.autofmt_xdate()
         ax2.legend()
         fig2.savefig(os.path.join(datadir, filename + 'lightcurve_cond.png'))
-
+        # Switch backend for GUI windows
+        matplotlib.use('TkAgg')
+        plt.ion()
         plt.show()
 
         return

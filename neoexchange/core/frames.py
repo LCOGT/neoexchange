@@ -15,10 +15,11 @@ GNU General Public License for more details.
 from datetime import datetime, timedelta
 from math import ceil
 import sys
+import warnings
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
-from astropy.wcs import WCS
+from astropy.wcs import WCS, FITSFixedWarning
 from urllib.parse import urljoin
 
 from core.models import Block, Frame, Candidate, SourceMeasurement, Body
@@ -218,6 +219,11 @@ def frame_params_from_header(params, block):
     # params
     wcs = None
     try:
+        # Suppress warnings from newer astropy versions which raise
+        # FITSFixedWarning on the lack of OBSGEO-L,-B,-H keywords even
+        # though we have OBSGEO-X,-Y,-Z as recommended by the FITS
+        # Paper VII standard...
+        warnings.simplefilter('ignore', category = FITSFixedWarning)
         wcs = WCS(params)
         frame_params['wcs'] = wcs
     except ValueError:
@@ -350,8 +356,9 @@ def block_status(block_id):
             images, num_archive_frames = check_for_archive_images(request_id=r['id'], obstype=obstype)
             logger.info('Request no. %s x %s images (%s total all red. levels)' % (r['id'], len(images), num_archive_frames))
             if images:
-                exposure_count = sum([x['exposure_count'] for x in r['molecules']])
-                obs_types = [x['type'] for x in r['molecules']]
+                inst_configs = [x['instrument_configs'] for x in r['configurations']]
+                exposure_count = sum([x[0]['exposure_count'] for x in inst_configs])
+                obs_types = [x['type'] for x in r['configurations']]
                 # Look in the archive at the header of the most recent frame for a timestamp of the observation
                 last_image_dict = images[0]
                 last_image_header = lco_api_call(last_image_dict.get('headers', None))
