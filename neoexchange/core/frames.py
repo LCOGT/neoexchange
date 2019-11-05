@@ -15,10 +15,11 @@ GNU General Public License for more details.
 from datetime import datetime, timedelta
 from math import ceil
 import sys
+import warnings
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
-from astropy.wcs import WCS
+from astropy.wcs import WCS, FITSFixedWarning
 from urllib.parse import urljoin
 
 from core.models import Block, Frame, Candidate, SourceMeasurement, Body
@@ -218,6 +219,11 @@ def frame_params_from_header(params, block):
     # params
     wcs = None
     try:
+        # Suppress warnings from newer astropy versions which raise
+        # FITSFixedWarning on the lack of OBSGEO-L,-B,-H keywords even
+        # though we have OBSGEO-X,-Y,-Z as recommended by the FITS
+        # Paper VII standard...
+        warnings.simplefilter('ignore', category = FITSFixedWarning)
         wcs = WCS(params)
         frame_params['wcs'] = wcs
     except ValueError:
