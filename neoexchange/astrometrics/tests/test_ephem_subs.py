@@ -928,7 +928,7 @@ class TestLongTermScheduling(TestCase):
 
         dark_start, dark_end = determine_darkness_times(site_code, utc_date=datetime(2017, 1, 6, 0, 0, 00))
         emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size='5 m', alt_limit=30)
-        dark_and_up_time, emp_dark_and_up = compute_dark_and_up_time(emp)
+        dark_and_up_time, emp_dark_and_up, set_time = compute_dark_and_up_time(emp)
 
         self.assertEqual(expected_dark_and_up_time, dark_and_up_time)
         self.assertEqual(expected_emp_dark_and_up, emp_dark_and_up)
@@ -942,7 +942,7 @@ class TestLongTermScheduling(TestCase):
 
         dark_start, dark_end = determine_darkness_times(site_code, utc_date=datetime(2017, 1, 6, 0, 0, 00))
         emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size='5 m', alt_limit=30)
-        dark_and_up_time, emp_dark_and_up = compute_dark_and_up_time(emp)
+        dark_and_up_time, emp_dark_and_up, set_time = compute_dark_and_up_time(emp)
 
         self.assertEqual(expected_dark_and_up_time, dark_and_up_time)
         self.assertEqual(expected_emp_dark_and_up_first_line, emp_dark_and_up[0])
@@ -955,7 +955,6 @@ class TestLongTermScheduling(TestCase):
 
         dark_start, dark_end = determine_darkness_times(site_code, utc_date=datetime(2017, 1, 6, 0, 0, 00))
         emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size='5 m', alt_limit=30)
-        dark_and_up_time = compute_dark_and_up_time(emp)
 
         max_alt = compute_max_altitude(emp)
 
@@ -969,7 +968,6 @@ class TestLongTermScheduling(TestCase):
 
         dark_start, dark_end = determine_darkness_times(site_code, utc_date=datetime(2017, 1, 6, 0, 0, 00))
         emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size='5 m', alt_limit=30)
-        dark_and_up_time = compute_dark_and_up_time(emp)
 
         max_alt = compute_max_altitude(emp)
 
@@ -987,7 +985,7 @@ class TestLongTermScheduling(TestCase):
         app_ra = emp_line['ra']
         app_dec = emp_line['dec']
         min_alt = 30
-        rise_time, set_time, max_alt = target_rise_set(mid_time, app_ra, app_dec, site_code, min_alt, step_size='1m')
+        rise_time, set_time, max_alt, vis_time = target_rise_set(mid_time, app_ra, app_dec, site_code, min_alt, step_size='1m')
 
         self.assertAlmostEqual(expected_max_alt, max_alt, 1)
         self.assertEqual(expected_rise_time, rise_time)

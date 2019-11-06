@@ -407,9 +407,7 @@ class TestCalibrationSources(FunctionalTest):
         self.assertIn('B7III', table_text)
         self.assertIn('Spectrophotometric standard', self.browser.find_element_by_class_name("section-title").text)
 
-        img_src = self.browser.find_element_by_id("id_spectraplot").get_attribute("src")
-        target_url = "{0}{1}".format(self.live_server_url, reverse('display_calibspec' , kwargs={'pk': target.pk}))
-        self.assertEqual(target_url, img_src)
+        spec_plot = self.browser.find_element_by_name("raw_spec")
 
     @patch('core.views.datetime', MockDateTime)
     def test_can_view_best_calibsources(self):

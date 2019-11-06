@@ -25,14 +25,14 @@ from core.models import Body, Block, SourceMeasurement, SuperBlock, StaticSource
 from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockListView, ScheduleParameters, \
     ScheduleSubmit, ephemeris, home, BlockReport, ranking, MeasurementViewBody, MeasurementViewBlock, \
     UploadReport, BlockTimeSummary, ScheduleParametersCadence, ScheduleParametersSpectra, \
-    CandidatesViewBlock, BlockReportMPC, MeasurementDownloadMPC, MeasurementDownloadADESPSV, \
-    SuperBlockListView, SuperBlockDetailView, characterization, SpectroFeasibility, \
-    PlotSpec, display_movie, GuideMovie, \
+    CandidatesViewBlock, BlockReportMPC, \
+    MeasurementDownloadMPC, MeasurementDownloadADESPSV, \
+    SuperBlockListView, SuperBlockDetailView, characterization, SpectroFeasibility, BlockSpec,\
+    display_movie, GuideMovie, \
     StaticSourceView, StaticSourceDetailView, ScheduleCalibSpectra, ScheduleCalibSubmit, \
     CalibSpectroFeasibility, ScheduleCalibParameters, \
-    BestStandardsView, BodyVisibilityView, display_spec
-
-from core.plots import make_plot, make_visibility_plot, display_calibspec, \
+    BestStandardsView, PlotSpec, BodyVisibilityView
+from core.plots import make_visibility_plot, \
     make_standards_plot, make_solar_standards_plot
 
 from analyser.views import BlockFramesView, ProcessCandidates
@@ -42,16 +42,15 @@ admin.autodiscover()
 
 urlpatterns = [
     url(r'^$', home, name='home'),
-    url(r'^makeplot/$', make_plot, name='makeplot'),
-    url(r'^plotframe/$', TemplateView.as_view(template_name='core/frame_plot.html')),
+    # url(r'^makeplot/$', make_plot, name='makeplot'),
+    # url(r'^plotframe/$', TemplateView.as_view(template_name='core/frame_plot.html')),
     url(r'^make-standards-plot/$', make_standards_plot, name='make-standards-plot'),
     url(r'^make-solar-standards-plot/$', make_solar_standards_plot, name='make-solar-standards-plot'),
     url(r'^visibility_plot/(?P<pk>\d+)/(?P<plot_type>[a-z]*)/$', make_visibility_plot, name='visibility-plot'),
     url(r'^visibility_plot/(?P<pk>\d+)/(?P<plot_type>[a-z]*)/(?P<site_code>[A-Z,0-9]{3})/$', make_visibility_plot, name='visibility-plot-site'),
     url(r'^block/summary/$', BlockTimeSummary.as_view(), name='block-summary'),
     url(r'^block/list/$', SuperBlockListView.as_view(model=SuperBlock, queryset=SuperBlock.objects.order_by('-block_start'), context_object_name="block_list"), name='blocklist'),
-    url(r'^block/(?P<pk>\d+)/spectra/(?P<obs_num>\d+)/spectra.png$', display_spec, name='display_spec'),
-    url(r'^block/(?P<pk>\d+)/spectra/(?P<obs_num>\d+)/$', PlotSpec.as_view(), name='plotspec'),
+    url(r'^block/(?P<pk>\d+)/spectra/(?P<obs_num>\d+)/$', BlockSpec.as_view(), name='blockspec'),
     url(r'^block/(?P<pk>\d+)/guidemovie/$', GuideMovie.as_view(), name='guidemovie'),
     url(r'^block/(?P<pk>\d+)/spectra/guidemovie.gif$', display_movie, name='display_movie'),
     url(r'^block/(?P<pk>\d+)/source/(?P<source>\d+)/report/submit/$', BlockReportMPC.as_view(), name='block-submit-mpc'),
@@ -71,6 +70,7 @@ urlpatterns = [
     url(r'^target/(?P<pk>\d+)/measurements/$', MeasurementViewBody.as_view(), name='measurement'),
     url(r'^target/(?P<pk>\d+)/visibility/$', BodyVisibilityView.as_view(model=Body), name='visibility'),
     url(r'^target/(?P<pk>\d+)/$', BodyDetailView.as_view(model=Body), name='target'),
+    url(r'^target/(?P<pk>\d+)/spectra/$', PlotSpec.as_view(), name='plotspec'),
     url(r'^search/$', BodySearchView.as_view(context_object_name="target_list"), name='search'),
     url(r'^ephemeris/$', ephemeris, name='ephemeris'),
     url(r'^ranking/$', ranking, name='ranking'),
@@ -78,7 +78,6 @@ urlpatterns = [
     url(r'^calibsources/best/$', BestStandardsView.as_view(), name='beststandards-view'),
     url(r'^calibsources/solar/$', StaticSourceView.as_view(queryset=StaticSource.objects.filter(source_type=StaticSource.SOLAR_STANDARD).order_by('ra')), name='solarstandard-view'),
     url(r'^calibsources/(?P<pk>\d+)/$', StaticSourceDetailView.as_view(model=StaticSource), name='calibsource'),
-    url(r'^calibsources/(?P<pk>\d+)/spectra/spectra.png$', display_calibspec, name='display_calibspec'),
     url(r'^characterization/$', characterization, name='characterization'),
     url(r'^feasibility/(?P<pk>\d+)/$', SpectroFeasibility.as_view(), name='feasibility'),
     url(r'^feasibility/calib/(?P<pk>\d+)/$', CalibSpectroFeasibility.as_view(), name='feasibility-calib'),
