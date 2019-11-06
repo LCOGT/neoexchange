@@ -73,7 +73,7 @@ def print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, lengt
         print()
 
 
-def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=False, out_path="", tr=False, center=None):
+def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True, out_path="", tr=False, center=None):
     """
     takes in list of .fits guide frames and turns them into a moving gif.
     <frames> = list of .fits frame paths

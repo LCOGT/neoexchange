@@ -106,7 +106,8 @@ class Command(BaseCommand):
                 save_paths = {}
                 for frame in all_frames.get('91', []):
                     if frame['REQNUM'] in block_lists.keys():
-                        block_lists[frame['REQNUM']].append(os.path.join(save_paths[frame['REQNUM']], frame['filename']))
+                        if os.path.exists(os.path.join(save_paths[frame['REQNUM']], frame['filename'])):
+                            block_lists[frame['REQNUM']].append(os.path.join(save_paths[frame['REQNUM']], frame['filename']))
                     else:
                         save_paths[frame['REQNUM']] = make_data_dir(out_path, frame)
                         block_lists[frame['REQNUM']] = [os.path.join(save_paths[frame['REQNUM']], frame['filename'])]
