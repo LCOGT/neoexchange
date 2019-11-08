@@ -262,7 +262,7 @@ def spec_plot(data_spec, analog_data, reflec=False):
             plot = figure( plot_width=600, plot_height=400)
             plot.yaxis.axis_label = 'Flux ({})'.format(data_spec[0]["spec"].unit)
         for spec in data_spec:
-            plot.line(spec['wav'], spec['spec'], legend=spec['label'], muted_alpha=0.25)
+            plot.line(spec['wav'], spec['spec'], legend_label=spec['label'], muted_alpha=0.25)
         plot.legend.click_policy = 'mute'
 
         # Set Axes
@@ -274,7 +274,7 @@ def spec_plot(data_spec, analog_data, reflec=False):
 
     if reflec or (data_spec[0] and analog_data and data_spec[0]['label'] != analog_data['label']):
         if not reflec:
-            plot.line(analog_data['wav'], analog_data['spec'], color="firebrick", legend=analog_data['label'],
+            plot.line(analog_data['wav'], analog_data['spec'], color="firebrick", legend_label=analog_data['label'],
                       muted=True, muted_alpha=0.25, muted_color="firebrick")
         # Build Reflectance Plot
         plot2 = figure(x_range=(3500, 10500), y_range=(0.5, 1.75), plot_width=800, plot_height=400)
@@ -298,8 +298,8 @@ def spec_plot(data_spec, analog_data, reflec=False):
 
             source = ColumnDataSource(spec_dict)
 
-            plot2.line("Wavelength", tax+"_Mean", source=source, color=colors[j], name=tax + "-Type", line_width=2, line_dash='dashed', legend=tax, visible=vis)
-            plot2.patch(xs, ys, fill_alpha=.25, line_width=1, fill_color=colors[j], line_color="black", name=tax + "-Type", legend=tax, line_alpha=.25, visible=vis)
+            plot2.line("Wavelength", tax+"_Mean", source=source, color=colors[j], name=tax + "-Type", line_width=2, line_dash='dashed', legend_label=tax, visible=vis)
+            plot2.patch(xs, ys, fill_alpha=.25, line_width=1, fill_color=colors[j], line_color="black", name=tax + "-Type", legend_label=tax, line_alpha=.25, visible=vis)
 
         if not reflec:
             for spec in data_spec:
@@ -472,53 +472,53 @@ def lin_vis_plot(body):
 
     # Build Help
     # plot Base
-    plot.circle(x='x', y='y', radius=rad, color="white", source=source, alpha=0.75, legend="?", visible=False)
+    plot.circle(x='x', y='y', radius=rad, color="white", source=source, alpha=0.75, legend_label="?", visible=False)
 
     # Plot target help
     up_index = [i for i, x in enumerate(vis['x']) if vis["obj_rise"][i] != 0 and vis["obj_set"][i] != 0][0]
     if not up_index:
         up_index = 1
     plot.wedge(x=vis['x'][up_index], y=vis['y'][up_index], radius=rad, start_angle=vis["obj_rise"][up_index], end_angle=vis["obj_set"][up_index], fill_color=vis["colors"][up_index], line_color="black", legend="?", visible=False)
-    plot.text(vis['x'][up_index], [rad + .1], text=["Target"], text_color=vis["colors"][up_index], text_align='center', text_font_size='10px', legend="?", visible=False)
+    plot.text(vis['x'][up_index], [rad + .1], text=["Target"], text_color=vis["colors"][up_index], text_align='center', text_font_size='10px', legend_label="?", visible=False)
     n = list(range(len(site_list)))
     n.remove(up_index)
 
     # Plot Now help
-    plot.text([vis['x'][n[0]]], [rad+.1], text=["Now"], text_color='red', text_align='center', text_font_size='10px', legend="?", visible=False)
-    plot.ray([vis['x'][n[0]]], [0], angle=pi/2, length=rad, color="red", alpha=.75, line_width=2, legend="?", visible=False)
+    plot.text([vis['x'][n[0]]], [rad+.1], text=["Now"], text_color='red', text_align='center', text_font_size='10px', legend_label="?", visible=False)
+    plot.ray([vis['x'][n[0]]], [0], angle=pi/2, length=rad, color="red", alpha=.75, line_width=2, legend_label="?", visible=False)
 
     # Plot sun help
     plot.wedge(x=vis['x'][n[1]], y=vis['y'][n[1]], radius=rad * .75, start_angle=vis["sun_rise"][n[1]], end_angle=vis["sun_set"][n[1]], fill_color="khaki", line_color="black", legend="?", visible=False)
-    plot.text(vis['x'][n[1]], [rad+.1], text=["Sun"], text_color="darkgoldenrod", text_align='center', text_font_size='10px', legend="?", visible=False)
+    plot.text(vis['x'][n[1]], [rad+.1], text=["Sun"], text_color="darkgoldenrod", text_align='center', text_font_size='10px', legend_label="?", visible=False)
 
     # Plot moon help
     plot.wedge(x=vis['x'][n[2]], y=vis['y'][n[2]], radius=rad * .5, start_angle=vis["moon_rise"][n[2]], end_angle=vis["moon_set"][n[2]], fill_color="gray", line_color="black", fill_alpha=vis['moon_phase'][n[2]], legend="?", visible=False)
-    plot.text(vis['x'][n[2]], [rad + .1], text=["Moon"], text_color="dimgray", text_align='center', text_font_size='10px', legend="?", visible=False)
+    plot.text(vis['x'][n[2]], [rad + .1], text=["Moon"], text_color="dimgray", text_align='center', text_font_size='10px', legend_label="?", visible=False)
 
     # plot time direction
-    plot.arc(vis['x'][n[3]], vis['y'][n[3]], radius=rad * .6, start_angle=0, end_angle=pi, color="black", line_width=2, direction='clock', legend="?", visible=False)
-    plot.triangle(vis['x'][n[3]]-(rad * .58), vis['y'][n[3]], color="black", size=6, legend="?", visible=False)
-    plot.text(vis['x'][n[3]], [rad+.1], text=["Time"], text_color='black', text_align='center', text_font_size='10px', legend="?", visible=False)
+    plot.arc(vis['x'][n[3]], vis['y'][n[3]], radius=rad * .6, start_angle=0, end_angle=pi, color="black", line_width=2, direction='clock', legend_label="?", visible=False)
+    plot.triangle(vis['x'][n[3]]-(rad * .58), vis['y'][n[3]], color="black", size=6, legend_label="?", visible=False)
+    plot.text(vis['x'][n[3]], [rad+.1], text=["Time"], text_color='black', text_align='center', text_font_size='10px', legend_label="?", visible=False)
 
     # plot hours help
-    plot.ray(vis['x'][n[4]], [0], angle=0, length=rad, color="black", legend="?", visible=False)
-    plot.ray(vis['x'][n[4]], [0], angle=pi, length=rad, color="black", legend="?", visible=False)
-    plot.ray(vis['x'][n[4]], [0], angle=3*pi/2, length=rad, color="black", legend="?", visible=False)
-    plot.text(vis['x'][n[4]], [rad+.1], text=["6 hours"], text_color='black', text_align='center', text_font_size='10px', legend="?", visible=False)
+    plot.ray(vis['x'][n[4]], [0], angle=0, length=rad, color="black", legend_label="?", visible=False)
+    plot.ray(vis['x'][n[4]], [0], angle=pi, length=rad, color="black", legend_label="?", visible=False)
+    plot.ray(vis['x'][n[4]], [0], angle=3*pi/2, length=rad, color="black", legend_label="?", visible=False)
+    plot.text(vis['x'][n[4]], [rad+.1], text=["6 hours"], text_color='black', text_align='center', text_font_size='10px', legend_label="?", visible=False)
 
     # plot center help
-    plot.circle('x', 'y', radius=rad * .25, fill_color="white", line_width=1, line_color="black", source=source, legend="?", visible=False)
+    plot.circle('x', 'y', radius=rad * .25, fill_color="white", line_width=1, line_color="black", source=source, legend_label="?", visible=False)
 
     # plot site labels
-    plot.line([vis['x'][0]-rad, vis['x'][0]-rad, vis['x'][0]], [-rad - .1, -rad - .22, -rad - .22], color="navy", legend="?", visible=False)
-    plot.line([vis['x'][2], vis['x'][2]+rad, vis['x'][2]+rad], [-rad - .22, -rad - .22, -rad - .1], color="navy", legend="?", visible=False)
-    plot.text(vis['x'][1], [-rad-.3], text=["Southern Sites"], text_color='navy', text_align='center', text_font_size='10px', legend="?", visible=False)
-    plot.line([vis['x'][3]-rad, vis['x'][3]-rad, vis['x'][3]], [-rad - .1, -rad - .22, -rad - .22], color="maroon", legend="?", visible=False)
-    plot.line([vis['x'][5], vis['x'][5]+rad, vis['x'][5]+rad], [-rad - .22, -rad - .22, -rad - .1], color="maroon", legend="?", visible=False)
-    plot.text(vis['x'][4], [-rad-.3], text=["Northern Sites"], text_color='maroon', text_align='center', text_font_size='10px', legend="?", visible=False)
+    plot.line([vis['x'][0]-rad, vis['x'][0]-rad, vis['x'][0]], [-rad - .1, -rad - .22, -rad - .22], color="navy", legend_label="?", visible=False)
+    plot.line([vis['x'][2], vis['x'][2]+rad, vis['x'][2]+rad], [-rad - .22, -rad - .22, -rad - .1], color="navy", legend_label="?", visible=False)
+    plot.text(vis['x'][1], [-rad-.3], text=["Southern Sites"], text_color='navy', text_align='center', text_font_size='10px', legend_label="?", visible=False)
+    plot.line([vis['x'][3]-rad, vis['x'][3]-rad, vis['x'][3]], [-rad - .1, -rad - .22, -rad - .22], color="maroon", legend_label="?", visible=False)
+    plot.line([vis['x'][5], vis['x'][5]+rad, vis['x'][5]+rad], [-rad - .22, -rad - .22, -rad - .1], color="maroon", legend_label="?", visible=False)
+    plot.text(vis['x'][4], [-rad-.3], text=["Northern Sites"], text_color='maroon', text_align='center', text_font_size='10px', legend_label="?", visible=False)
 
     # Build over layer for smooth tooltips
-    plot.circle(x='x', y='y', radius=rad, color="white", source=source, alpha=0.01, legend="?", visible=False)
+    plot.circle(x='x', y='y', radius=rad, color="white", source=source, alpha=0.01, legend_label="?", visible=False)
 
     plot.legend.click_policy = 'hide'
     plot.legend.background_fill_alpha = 0
