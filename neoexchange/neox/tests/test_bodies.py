@@ -18,13 +18,16 @@ from django.test import TestCase
 from django.urls import reverse
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
+from mock import patch
 from core.models import Body
+from neox.tests.mocks import MockDateTime, mock_build_visibility_source
 
 
 class BodyDetailsTest(FunctionalTest):
 
+    @patch('core.plots.datetime', MockDateTime)
     def test_can_view_body_details(self):
-
+        MockDateTime.change_datetime(2015, 3, 19, 6, 00, 00)
         # A new user comes along to the site
         self.browser.get(self.live_server_url)
 
@@ -74,7 +77,9 @@ class BodyDetailsTest(FunctionalTest):
         for line in testlines:
             self.check_for_row_in_table('id_followup', line)
 
+    @patch('core.plots.datetime', MockDateTime)
     def test_results_for_no_H(self):
+        MockDateTime.change_datetime(2015, 3, 19, 6, 00, 00)
         self.body.abs_mag = None
         self.body.save()
         # A new user comes along to the site
@@ -98,8 +103,9 @@ class BodyDetailsTest(FunctionalTest):
         for line in testlines:
             self.check_for_row_in_table('id_orbelements', line)
 
+    @patch('core.plots.datetime', MockDateTime)
     def test_can_view_spectral_details(self):
-
+        MockDateTime.change_datetime(2015, 3, 19, 6, 00, 00)
         # A new user comes along to the site
         self.browser.get(self.live_server_url)
 
@@ -142,7 +148,9 @@ class BodyDetailsTest(FunctionalTest):
         for tool in tooltips:
             self.assertIn(tool, expected_tooltip)
 
+    @patch('core.plots.datetime', MockDateTime)
     def test_can_view_comet_details(self):
+        MockDateTime.change_datetime(2019, 4, 3, 0, 00, 00)
         self.insert_test_comet()
 
         # A new user comes along to the site who likes comets
@@ -164,7 +172,7 @@ class BodyDetailsTest(FunctionalTest):
         # the comet with just the right amount of precision.
 
         testlines = [ 'EPOCH OF PERIHELION (MJD) ' + str(round(self.comet.epochofperih_mjd(), 5)),
-                      'PERIHELION DISTANCE (AU) ' + str(round(self.comet.perihdist,7)),
+                      'PERIHELION DISTANCE (AU) ' + str(round(self.comet.perihdist, 7)),
                       'TOTAL MAGNITUDE (M1) ' + str(self.comet.abs_mag),
                       'SLOPE PARAMETER (K1) ' + str(self.comet.slope*2.5)]
         for line in testlines:

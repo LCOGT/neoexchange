@@ -18,7 +18,7 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
 from mock import patch
-from neox.tests.mocks import MockDateTime
+from neox.tests.mocks import MockDateTime, mock_build_visibility_source
 # from datetime import datetime as real_datetime
 from datetime import datetime
 from core.models import Body
@@ -49,6 +49,7 @@ class NewVisitorTest(FunctionalTest):
 # patch the datetime used by models.Body.compute_position to give the same
 # consistent answer.
 
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.models.datetime', MockDateTime)
     def test_can_compute_ephemeris(self):
 
@@ -67,7 +68,7 @@ class NewVisitorTest(FunctionalTest):
         self.check_for_header_in_table('id_neo_targets',
             'Rank Target Name Type R.A. Dec. Mag. Num.Obs. Arc Not Seen (days) NEOCP Score Updated?')
         # Position below computed for 2015-07-01 17:00:00
-        testlines =[u'1 N999r0q Candidate 23 43 14.40 +19 59 08.2 20.7 None None None None', ]
+        testlines = [u'1 N999r0q Candidate 23 43 14.40 +19 59 08.2 20.7 None None None None', ]
         self.check_for_row_in_table('id_neo_targets', testlines[0])
 
         # he goes to the page from N999r0q and computes the ephemeris
@@ -112,6 +113,7 @@ class NewVisitorTest(FunctionalTest):
 
         # Satisfied, he goes back to sleep
 
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     def test_can_compute_ephemeris_for_specific_site(self):
 
         # Eduardo has heard about a new website for NEOs. He goes to the
@@ -163,6 +165,7 @@ class NewVisitorTest(FunctionalTest):
             '2015 04 21 11:45 20 10 40.97 +29 56 52.8 20.4 2.44 89.0 +24 0.10 108 -49 -999 -04:54'
         )
 
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     def test_can_compute_ephemeris_for_specific_date(self):
 
         # Eduardo has heard about a new website for NEOs. He goes to the
@@ -221,6 +224,7 @@ class NewVisitorTest(FunctionalTest):
             '2015 04 28 10:30 20 40 38.12 +29 36 31.9 20.6 2.08 93.5 +55 0.72 136 -17 +060 -02:43'
         )
 
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     def test_can_compute_ephemeris_for_specific_alt_limit(self):
 
         # Eduardo has heard about a new website for NEOs. He goes to the

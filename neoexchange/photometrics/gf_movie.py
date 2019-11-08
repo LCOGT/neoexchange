@@ -255,6 +255,7 @@ def make_movie(date_obs, obj, req, base_dir, out_path, prop):
     if not filename:
         unpack_path = os.path.join(base_dir, obj+'_'+req)
         tar_files = glob(os.path.join(base_dir, prop+"*"+req+"*.tar.gz"))  # if file not found, looks for tarball
+
         if tar_files:
             tar_path = tar_files[0]
             logger.info("Unpacking 1st tar")

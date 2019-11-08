@@ -47,7 +47,6 @@ except ImportError:
     pass
 import io
 
-
 from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, \
     ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm
 from .models import *
@@ -56,10 +55,9 @@ from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_per
 import astrometrics.site_config as cfg
 from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
-    MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes, \
-    determine_spectro_slot_length, get_sitepos, read_findorb_ephem, accurate_astro_darkness,\
-    get_visibility, determine_exp_count, determine_star_trails, calc_moon_sep, \
-    get_alt_from_airmass
+    MagRangeError, determine_spectro_slot_length, get_sitepos, read_findorb_ephem,\
+    accurate_astro_darkness, get_visibility, determine_exp_count, determine_star_trails,\
+    calc_moon_sep, get_alt_from_airmass
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs, validate_text,\
@@ -71,13 +69,14 @@ from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     determine_filenames, increment_red_level, update_ldac_catalog_wcs, FITSHdrException
 from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
-from photometrics.gf_movie import make_gif, make_movie
+from photometrics.spectraplot import pull_data_from_spectrum, pull_data_from_text, spectrum_plot
 from core.frames import create_frame, ingest_frames, measurements_from_block
 from core.mpc_submit import email_report_to_mpc
 from core.archive_subs import lco_api_call
+from core.utils import search
 from photometrics.SA_scatter import readSources, genGalPlane, plotScatter, \
     plotFormat
-from core.plots import find_spec_plots
+from core.plots import spec_plot, lin_vis_plot
 
 logger = logging.getLogger(__name__)
 
@@ -180,6 +179,9 @@ class BodyDetailView(DetailView):
         context['blocks'] = Block.objects.filter(body=self.object).order_by('block_start')
         context['taxonomies'] = SpectralInfo.objects.filter(body=self.object)
         context['spectra'] = sort_previous_spectra(self)
+        lin_script, lin_div = lin_vis_plot(self.object)
+        context['lin_script'] = lin_script
+        context['lin_div'] = lin_div
         return context
 
 
@@ -222,9 +224,11 @@ class BodySearchView(ListView):
             object_list = self.model.objects.all()
         return object_list
 
+
 class BodyVisibilityView(DetailView):
     template_name = 'core/body_visibility.html'
     model = Body
+
 
 class BlockDetailView(DetailView):
     template_name = 'core/block_detail.html'
@@ -370,6 +374,7 @@ class MeasurementDownloadADESPSV(View):
         response = HttpResponse(self.template.render(data), content_type="text/plain")
         response['Content-Disposition'] = 'attachment; filename=' + filename
         return response
+
 
 def export_measurements(body_id, output_path=''):
 
@@ -596,6 +601,9 @@ class StaticSourceDetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super(StaticSourceDetailView, self).get_context_data(**kwargs)
         context['blocks'] = Block.objects.filter(calibsource=self.object).order_by('block_start')
+        script, div, p_spec = plot_all_spec(self.object)
+        context['script'] = script
+        context['div'] = div["raw_spec"]
         return context
 
 
@@ -2962,36 +2970,146 @@ def find_spec(pk):
         req = data['REQNUM'].lstrip("0")
     else:
         req = block.request_number
-    path = os.path.join(date_obs, obj + '_' + req).lstrip('/')
+    path = os.path.join(date_obs, obj + '_' + req)
     prop = block.superblock.proposal.code
 
     return date_obs, obj, req, path, prop
 
-def display_spec(request, pk, obs_num):
-    date_obs, obj, req, path, prop = find_spec(pk)
-    base_dir = str(date_obs)  # new base_dir for method
-    logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date_obs, req, prop))
-    logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
 
-    spec_files = find_spec_plots(path, obj, req, obs_num)
+def find_analog(date_obs, site):
+    """Search for Calib Source blocks taken 10 days before or after a given date at a specific site.
+    Return a list of reduced fits files in order of temporal distance from given date."""
 
-    if spec_files:
-        spec_file = spec_files[0]
-        logger.debug('Spectroscopy Plot: {}'.format(spec_file))
-        spec_plot = default_storage.open(spec_file, 'rb').read()
-        return HttpResponse(spec_plot, content_type="Image/png")
+    analog_blocks = Block.objects.filter(obstype=Block.OPT_SPECTRA_CALIB, site=site, when_observed__lte=date_obs+timedelta(days=10), when_observed__gte=date_obs-timedelta(days=10))
+    star_list = []
+    time_diff = []
+    for b in analog_blocks:
+        d_out, obj, req, path, prop = find_spec(b.id)
+        filenames = search(path, matchpattern='.*_2df_ex.fits', latest=False)
+        if filenames is False:
+            continue
+        filenames = [os.path.join(path, f) for f in filenames]
+        for fn in filenames:
+            star_list.append(fn)
+            time_diff.append(abs(date_obs - b.when_observed))
+
+    analog_list = [calib for _, calib in sorted(zip(time_diff, star_list))]
+
+    return analog_list
+
+
+def plot_all_spec(source):
+    """Plot all non-FLOYDS data for given source.
+        Currently only checks if source is StaticSource or PreviousSpectra instance.
+    """
+
+    data_spec = []
+    p_spec = []
+    if isinstance(source, StaticSource):
+        calibsource = source
+        base_dir = os.path.join('cdbs', 'ctiostan')  # new base_dir for method
+
+        obj = calibsource.name.lower().replace(' ', '').replace('-', '_').replace('+', '')
+        spec_file = os.path.join(base_dir, "f{}.dat".format(obj))
+        wav, flux, err = pull_data_from_text(spec_file)
+        if wav:
+            label = calibsource.name
+            new_spec = {'label': label,
+                        'spec': flux,
+                        'wav': wav,
+                        'err': err,
+                        'filename': spec_file}
+            data_spec.append(new_spec)
+            script, div = spec_plot(data_spec, {}, reflec=False)
+        else:
+            logger.warning("No flux file found for " + spec_file)
+            script = ''
+            div = {"raw_spec": ''}
+
     else:
-        return HttpResponse()
+        body = source
+        p_spec = PreviousSpectra.objects.filter(body=body)
+        for spec in p_spec:
+            if spec.spec_ir:
+                wav, flux, err = pull_data_from_text(spec.spec_ir)
+                label = "{} -- {}, {}(IR)".format(body.current_name(), spec.spec_date, spec.spec_source)
+                new_spec = {'label': label,
+                     'spec': flux,
+                     'wav': wav,
+                     'err': err,
+                     'filename': spec.spec_ir}
+                data_spec.append(new_spec)
+            if spec.spec_vis:
+                wav, flux, err = pull_data_from_text(spec.spec_vis)
+                label = "{} -- {}, {}(Vis)".format(body.current_name(), spec.spec_date, spec.spec_ref)
+                new_spec = {'label': label,
+                     'spec': flux,
+                     'wav': wav,
+                     'err': err,
+                     'filename': spec.spec_vis}
+                data_spec.append(new_spec)
+
+        script, div = spec_plot(data_spec, {}, reflec=True)
+
+    return script, div, p_spec
 
 
+def plot_floyds_spec(block, obs_num=1):
+    """Get plots for requested blocks of FLOYDs data and subtract nearest solar analog."""
 
-class PlotSpec(View):  # make loging required later
+    date_obs, obj, req, path, prop = find_spec(block.id)
+    filenames = search(path, matchpattern='.*_2df_ex.fits', latest=False)
+    if filenames is False:
+        return '', {"raw_spec": ''}
+    filenames = [os.path.join(path, f) for f in filenames]
+
+    analogs = find_analog(block.when_observed, block.site)
+
+    try:
+        raw_label, raw_spec, ast_wav = spectrum_plot(filenames[obs_num-1])
+        data_spec = {'label': raw_label,
+                     'spec': raw_spec,
+                     'wav': ast_wav,
+                     'filename': filenames[obs_num-1]}
+    except IndexError:
+        data_spec = None
+
+    if analogs:
+        analog_label, analog_spec, star_wav = spectrum_plot(analogs[0], offset=2)
+        analog_data = {'label': analog_label,
+                       'spec': analog_spec,
+                       'wav': star_wav,
+                       'filename': analogs[0]}
+    else:
+        analog_data = None
+
+    script, div = spec_plot([data_spec], analog_data)
+
+    return script, div
+
+
+class BlockSpec(View):  # make logging required later
 
     template_name = 'core/plot_spec.html'
 
     def get(self, request, *args, **kwargs):
         block = Block.objects.get(pk=kwargs['pk'])
-        params = {'pk': kwargs['pk'], 'obs_num': kwargs['obs_num'], 'sb_id': block.superblock.id}
+        script, div = plot_floyds_spec(block, int(kwargs['obs_num']))
+        if 'reflec_spec' in div:
+            params = {'pk': kwargs['pk'], 'obs_num': kwargs['obs_num'], 'sb_id': block.superblock.id, "the_script": script, "raw_div": div["raw_spec"], "reflec_div": div["reflec_spec"]}
+        else:
+            params = {'pk': kwargs['pk'], 'obs_num': kwargs['obs_num'], 'sb_id': block.superblock.id, "the_script": script, "raw_div": div["raw_spec"]}
+        return render(request, self.template_name, params)
+
+
+class PlotSpec(View):
+
+    template_name = 'core/plot_spec.html'
+
+    def get(self, request, *args, **kwargs):
+        body = Body.objects.get(pk=kwargs['pk'])
+        script, div, p_spec = plot_all_spec(body)
+        params = {'body': body, 'floyds': False, "the_script": script, "reflec_div": div["reflec_spec"], "p_spec": p_spec}
 
         return render(request, self.template_name, params)
 
@@ -3000,7 +3118,7 @@ def display_movie(request, pk):
     """Display previously made guide movie, or make one if no movie found."""
 
     date_obs, obj, req, path, prop = find_spec(pk)
-    base_dir = os.path.join(settings.DATA_ROOT, date_obs)
+    base_dir = os.path.join(path, 'Guide_frames')
     logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date_obs, req, prop))
     logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
 
@@ -3014,6 +3132,9 @@ def display_movie(request, pk):
         movie_file = movie_files[0]
     else:
         movie_file = make_movie(date_obs, obj, req, base_dir, prop)
+
+    movie_file = search(base_dir, movie_file, latest=True)
+
     if movie_file:
         logger.debug('MOVIE FILE: {}'.format(movie_file))
         movie = default_storage.open(movie_file, 'rb').read()
