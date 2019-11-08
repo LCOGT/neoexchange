@@ -81,6 +81,7 @@ from core.plots import spec_plot, lin_vis_plot
 
 logger = logging.getLogger(__name__)
 
+BOKEH_URL = "https://cdn.bokeh.org/bokeh/release/bokeh-{}.min."
 
 class LoginRequiredMixin(object):
 
@@ -183,7 +184,7 @@ class BodyDetailView(DetailView):
         lin_script, lin_div = lin_vis_plot(self.object)
         context['lin_script'] = lin_script
         context['lin_div'] = lin_div
-        base_path = "http://cdn.pydata.org/bokeh/release/bokeh-{}.min.".format(bokeh.__version__)
+        base_path = BOKEH_URL.format(bokeh.__version__)
         context['css_path'] = base_path + 'css'
         context['js_path'] = base_path + 'js'
         return context
@@ -608,7 +609,7 @@ class StaticSourceDetailView(DetailView):
         script, div, p_spec = plot_all_spec(self.object)
         context['script'] = script
         context['div'] = div["raw_spec"]
-        base_path = "http://cdn.pydata.org/bokeh/release/bokeh-{}.min.".format(bokeh.__version__)
+        base_path = BOKEH_URL.format(bokeh.__version__)
         context['css_path'] = base_path + 'css'
         context['js_path'] = base_path + 'js'
         return context
@@ -3102,7 +3103,7 @@ class BlockSpec(View):  # make logging required later
             params = {'pk': kwargs['pk'], 'obs_num': kwargs['obs_num'], 'sb_id': block.superblock.id, "the_script": script, "raw_div": div["raw_spec"], "reflec_div": div["reflec_spec"]}
         else:
             params = {'pk': kwargs['pk'], 'obs_num': kwargs['obs_num'], 'sb_id': block.superblock.id, "the_script": script, "raw_div": div["raw_spec"]}
-        base_path = "http://cdn.pydata.org/bokeh/release/bokeh-{}.min.".format(bokeh.__version__)
+        base_path = BOKEH_URL.format(bokeh.__version__)
         params['css_path'] = base_path + 'css'
         params['js_path'] = base_path + 'js'
         return render(request, self.template_name, params)
@@ -3116,7 +3117,7 @@ class PlotSpec(View):
         body = Body.objects.get(pk=kwargs['pk'])
         script, div, p_spec = plot_all_spec(body)
         params = {'body': body, 'floyds': False, "the_script": script, "reflec_div": div["reflec_spec"], "p_spec": p_spec}
-        base_path = "http://cdn.pydata.org/bokeh/release/bokeh-{}.min.".format(bokeh.__version__)
+        base_path = BOKEH_URL.format(bokeh.__version__)
         params['css_path'] = base_path + 'css'
         params['js_path'] = base_path + 'js'
 
