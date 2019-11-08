@@ -438,13 +438,19 @@ def lin_vis_plot(body):
                     <br>
                     <span style="font-size: 15px;">Max Alt:</span>
                     <span style="font-size: 10px; color: #696;">@max_alt deg</span>
-                    """+"""
+                    """
+
+    # Add vmag from emp.
+    try:
+        TOOLTIPS += """
                     <br>
                     <span style="font-size: 15px;">V Mag:</span>
                     <span style="font-size: 10px; color: #696;">{}</span>
                 </div>
             </div>
         """.format(emp[0][3])
+    except IndexError:
+        pass
 
     hover = HoverTool(tooltips=TOOLTIPS, point_policy="none", attachment='below', line_policy="none")
     plot = figure(toolbar_location=None, x_range=(-1.5, 1.5), y_range=(-.5, .5), tools=[hover], plot_width=300,
