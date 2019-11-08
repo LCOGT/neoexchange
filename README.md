@@ -4,7 +4,7 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
-### 3.1.0
+### 3.1.1
 Convert Spectroscopy plots into Bokeh for added interactivity.
 
 ### 3.0.5
