@@ -361,7 +361,7 @@ def build_visibility_source(body, site_list, site_code, color_list, d, alt_limit
     """Builds the source dictionaries used by lin_vis_plot"""
 
     body_elements = model_to_dict(body)
-    emp = []
+    mag = None
     vis = {"x": [],
            "y": [],
            "sun_rise": [],
@@ -372,23 +372,27 @@ def build_visibility_source(body, site_list, site_code, color_list, d, alt_limit
            "moon_set": [],
            "moon_phase": [],
            "colors": [],
+           "line_alpha": [],
            "site": [],
            "obj_vis": [],
            "max_alt": []
            }
 
     for i, site in enumerate(site_list):
+        bonus_day = 0
         dark_start, dark_end = determine_darkness_times(site, d)
+        while dark_start < d:
+            bonus_day += 1
+            dark_start, dark_end = determine_darkness_times(site, d + timedelta(days=bonus_day))
         (site_name, site_long, site_lat, site_hgt) = get_sitepos(site)
         (moon_app_ra, moon_app_dec, diam) = moon_ra_dec(d, site_long, site_lat, site_hgt)
         moon_rise, moon_set, moon_max_alt, moon_vis_time = target_rise_set(d, moon_app_ra, moon_app_dec, site, 10, step_size, sun=False)
         moon_phase = moonphase(d, site_long, site_lat, site_hgt)
-        emp = call_compute_ephem(body_elements, d, d + timedelta(days=1), site, step_size)
+        emp = call_compute_ephem(body_elements, d, d + timedelta(days=1), site, step_size, perturb=False)
         obj_up_emp = dark_and_object_up(emp, d, d + timedelta(days=1), 0 , alt_limit=alt_limit)
         vis_time, emp_obj_up, set_time = compute_dark_and_up_time(obj_up_emp, step_size)
         obj_set = datetime_to_radians(d, set_time)
-        dark_and_up_time, max_alt = get_visibility(None, None, d + timedelta(hours=12), site, step_size, alt_limit, False, body_elements)
-
+        dark_and_up_time, max_alt = get_visibility(None, None, d + timedelta(days=bonus_day), site, step_size, alt_limit, False, body_elements)
         vis["x"].append(0)
         vis["y"].append(0)
         vis["sun_rise"].append(datetime_to_radians(d, dark_end))
@@ -399,11 +403,17 @@ def build_visibility_source(body, site_list, site_code, color_list, d, alt_limit
         vis["moon_set"].append(datetime_to_radians(d, moon_set))
         vis["moon_phase"].append(moon_phase)
         vis["colors"].append(color_list[i])
+        if vis_time > 0:
+            vis["line_alpha"].append(1)
+        else:
+            vis["line_alpha"].append(0)
         vis["site"].append(site_code[i])
         vis["obj_vis"].append(dark_and_up_time)
         vis["max_alt"].append(max_alt)
+        if emp:
+            mag = emp[0][3]
 
-    return vis, emp
+    return vis, mag
 
 
 def lin_vis_plot(body):
@@ -417,8 +427,8 @@ def lin_vis_plot(body):
     d = datetime.utcnow()
     step_size = '30 m'
     alt_limit = 30
-    vis, emp = build_visibility_source(body, site_list, site_code, color_list, d, alt_limit, step_size)
 
+    vis, mag = build_visibility_source(body, site_list, site_code, color_list, d, alt_limit, step_size)
     new_x = []
     for i, l in enumerate(site_code):
         new_x.append(-1 + i * ( 2 / (len(site_list)-1)))
@@ -440,17 +450,15 @@ def lin_vis_plot(body):
                     <span style="font-size: 10px; color: #696;">@max_alt deg</span>
                     """
 
-    # Add vmag from emp.
-    try:
+    # Add vmag
+    if mag:
         TOOLTIPS += """
                     <br>
                     <span style="font-size: 15px;">V Mag:</span>
                     <span style="font-size: 10px; color: #696;">{}</span>
                 </div>
             </div>
-        """.format(emp[0][3])
-    except IndexError:
-        pass
+        """.format(mag)
 
     hover = HoverTool(tooltips=TOOLTIPS, point_policy="none", attachment='below', line_policy="none")
     plot = figure(toolbar_location=None, x_range=(-1.5, 1.5), y_range=(-.5, .5), tools=[hover], plot_width=300,
@@ -462,7 +470,7 @@ def lin_vis_plot(body):
     # base
     plot.circle(x='x', y='y', radius=rad, fill_color="white", source=source, line_color="black", line_width=2)
     # object
-    plot.wedge(x='x', y='y', radius=rad, start_angle="obj_rise", end_angle="obj_set", color="colors", line_color="black", source=source)
+    plot.wedge(x='x', y='y', radius=rad, start_angle="obj_rise", end_angle="obj_set", color="colors", line_color="black",line_alpha="line_alpha", source=source)
     # sun
     plot.wedge(x='x', y='y', radius=rad * .75, start_angle="sun_rise", end_angle="sun_set", color="khaki", line_color="black", source=source)
     # moon
