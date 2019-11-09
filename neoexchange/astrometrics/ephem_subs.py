@@ -555,12 +555,13 @@ def format_emp_line(emp_line, site_code):
     return line_as_list
 
 
-def call_compute_ephem(elements, dark_start, dark_end, site_code, ephem_step_size, alt_limit=0):
+def call_compute_ephem(elements, dark_start, dark_end, site_code, ephem_step_size, alt_limit=0, perturb=True):
     """Wrapper for compute_ephem to enable use within plan_obs (or other codes)
     by making repeated calls for datetimes from <dark_start> -> <dark_end> spaced
     by <ephem_step_size> seconds. The results are assembled into a list of tuples
-    in the same format as returned by read_findorb_ephem()"""
-
+    in the same format as returned by read_findorb_ephem()
+    Returns [[ DATE, RA, Dec, Mag, Motion, P.A, Alt, MoonPhase, MoonSep, MoonAlt, Score, HA ]]
+    """
     slot_length = 0  # XXX temporary hack
     step_size_secs = 300
     if str(ephem_step_size)[-1] == 'm':
@@ -575,7 +576,7 @@ def call_compute_ephem(elements, dark_start, dark_end, site_code, ephem_step_siz
     full_emp = []
     while ephem_time < dark_end:
         if 'epochofel' in elements:
-            emp_line = compute_ephem(ephem_time, elements, site_code, dbg=False, perturb=True, display=False)
+            emp_line = compute_ephem(ephem_time, elements, site_code, dbg=False, perturb=perturb, display=False)
         elif 'ra' in elements and 'dec' in elements:
             emp_line = compute_sidereal_ephem(ephem_time, elements, site_code)
         else:
@@ -590,6 +591,7 @@ def call_compute_ephem(elements, dark_start, dark_end, site_code, ephem_step_siz
         emp.append(format_emp_line(line, site_code))
 
     return emp
+
 
 def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_limit=0, include_moon=False):
     """Calls JPL HORIZONS for the specified <obj_name> producing an ephemeris
@@ -2085,7 +2087,7 @@ def get_visibility(ra, dec, date, site_code, step_size='30 m', alt_limit=30, qui
                 vis_time = 0
         else:
             dark_start, dark_end = determine_darkness_times(site, date)
-            emp = call_compute_ephem(body_elements, dark_start, dark_end, site, step_size)
+            emp = call_compute_ephem(body_elements, dark_start, dark_end, site, step_size, perturb=False)
             emp_dark_and_up = dark_and_object_up(emp, dark_start, dark_end, 0, alt_limit=alt_limit)
             vis_time, emp_dark_and_up, set_time = compute_dark_and_up_time(emp_dark_and_up, step_size)
             try:
