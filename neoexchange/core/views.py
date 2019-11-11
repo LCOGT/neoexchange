@@ -3078,14 +3078,15 @@ def plot_floyds_spec(block, obs_num=1):
     except IndexError:
         data_spec = None
 
-    if analogs:
-        analog_label, analog_spec, star_wav = spectrum_plot(analogs[0], offset=2)
-        analog_data = {'label': analog_label,
+    analog_data = []
+    offset = 0
+    for analog in analogs:
+        offset += 2
+        analog_label, analog_spec, star_wav = spectrum_plot(analog, offset=offset)
+        analog_data.append({'label': analog_label,
                        'spec': analog_spec,
                        'wav': star_wav,
-                       'filename': analogs[0]}
-    else:
-        analog_data = None
+                       'filename': analog})
 
     script, div = spec_plot([data_spec], analog_data)
 

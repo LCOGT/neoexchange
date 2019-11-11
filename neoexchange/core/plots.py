@@ -272,10 +272,16 @@ def spec_plot(data_spec, analog_data, reflec=False):
         plot.xaxis.axis_label = "Wavelength (Å)"
         spec_plots["raw_spec"] = plot
 
-    if reflec or (data_spec[0] and analog_data and data_spec[0]['label'] != analog_data['label']):
+    if reflec or (data_spec[0] and analog_data and data_spec[0]['label'] != analog_data[0]['label']):
         if not reflec:
-            plot.line(analog_data['wav'], analog_data['spec'], color="firebrick", legend_label=analog_data['label'],
-                      muted=True, muted_alpha=0.25, muted_color="firebrick")
+            first = True
+            for analog in analog_data:
+                if first:
+                    muted_alpha = 0.25
+                    first = False
+                else:
+                    muted_alpha = 0
+                plot.line(analog['wav'], analog['spec'], color="firebrick", legend_label=analog['label'], muted=True, muted_alpha=muted_alpha, muted_color="firebrick")
         # Build Reflectance Plot
         plot2 = figure(x_range=(3500, 10500), y_range=(0.5, 1.75), plot_width=800, plot_height=400)
         spec_dict = read_mean_tax()
@@ -303,9 +309,9 @@ def spec_plot(data_spec, analog_data, reflec=False):
 
         if not reflec:
             for spec in data_spec:
-                data_label_reflec, reflec_spec, reflec_ast_wav = spectrum_plot(spec['filename'], analog=analog_data['filename'])
+                data_label_reflec, reflec_spec, reflec_ast_wav = spectrum_plot(spec['filename'], analog=analog_data[0]['filename'])
                 plot2.line(reflec_ast_wav, reflec_spec, line_width=3, name=spec['label'])
-                plot2.title.text = 'Object: {}    Analog: {}'.format(spec['label'], analog_data['label'])
+                plot2.title.text = 'Object: {}    Analog: {}'.format(spec['label'], analog_data[0]['label'])
         else:
             for spec in data_spec:
                 plot2.circle(spec['wav'], spec['spec'], size=3, name=spec['label'])
