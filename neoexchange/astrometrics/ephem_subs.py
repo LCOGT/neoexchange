@@ -132,6 +132,11 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
 # Light travel time for 1 AU (in sec)
     tau = 499.004783806
 
+# Check if we even have a non-blank set of elements before proceeding
+    if orbelems.get('epochofel', None) is None:
+        logger.warning("No epoch of elements (epochofel) found in orbelems, cannot compute ephemeris")
+        return {}
+
 # Compute MJD for UTC
     mjd_utc = datetime2mjd_utc(d)
 

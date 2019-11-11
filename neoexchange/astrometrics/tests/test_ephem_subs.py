@@ -528,6 +528,46 @@ class TestComputeEphemerides(TestCase):
 
         self.assertEqual({}, emp_line)
 
+    def test_call_compute_empty_elements(self):
+        body_elements = { 'id': 241,
+                          'provisional_name': 'WD3FB24',
+                          'provisional_packed': None,
+                          'name': '2015 DP53',
+                          'origin': 'M',
+                          'source_type': 'N',
+                          'elements_type': None,
+                          'active': False,
+                          'fast_moving': False,
+                          'urgency': None,
+                          'epochofel': None,
+                          'orbit_rms': 99.0,
+                          'orbinc': None,
+                          'longascnode': None,
+                          'argofperih': None,
+                          'eccentricity': None,
+                          'meandist': None,
+                          'meananom': None,
+                          'perihdist': None,
+                          'epochofperih': None,
+                          'abs_mag': None,
+                          'slope': None,
+                          'score': None,
+                          'discovery_date': None,
+                          'num_obs': None,
+                          'arc_length': None,
+                          'not_seen': None,
+                          'updated': False,
+                          'ingest': datetime(2015, 3, 7, 1, 22, 34),
+                          'update_time': None
+                        }
+        start = datetime(2019, 11, 11, 15)
+        site_code = '500'
+
+        emp_line = compute_ephem(start, body_elements, site_code, perturb=False)
+
+        self.assertEqual({}, emp_line)
+
+
 class TestDarkAndObjectUp(TestCase):
 
     @classmethod

@@ -489,9 +489,14 @@ def lin_vis_plot(body):
     plot.circle(x='x', y='y', radius=rad, color="white", source=source, alpha=0.75, legend_label="?", visible=False)
 
     # Plot target help
-    up_index = [i for i, x in enumerate(vis['x']) if vis["obj_rise"][i] != 0 and vis["obj_set"][i] != 0][0]
-    if not up_index:
+    up_index_list = [i for i, x in enumerate(vis['x']) if vis["obj_rise"][i] != 0 and vis["obj_set"][i] != 0]
+    if 1 in up_index_list or not up_index_list:
         up_index = 1
+    elif len(up_index_list) > 1 and not up_index_list[0]:
+        up_index = up_index_list[1]
+    else:
+        up_index = up_index_list[0]
+
     plot.wedge(x=vis['x'][up_index], y=vis['y'][up_index], radius=rad, start_angle=vis["obj_rise"][up_index], end_angle=vis["obj_set"][up_index], fill_color=vis["colors"][up_index], line_color="black", legend="?", visible=False)
     plot.text(vis['x'][up_index], [rad + .1], text=["Target"], text_color=vis["colors"][up_index], text_align='center', text_font_size='10px', legend_label="?", visible=False)
     n = list(range(len(site_list)))
