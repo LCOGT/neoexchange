@@ -45,9 +45,9 @@
                         <td class="kv-key">Proposal</td>
                         <td class="kv-value">{{ data.proposal_code }}</td>
                     </tr>
-                    <tr id="id_group_id_row">
-                        <td class="kv-key">Group ID</td>
-                        <td class="kv-value">{{ form.group_id }}</td>
+                    <tr id="id_group_name_row">
+                        <td class="kv-key">Group Name</td>
+                        <td class="kv-value">{{ form.group_name }}</td>
                     </tr>
                     {% if data.instrument_code %}
                         <tr id="id_site_row">
@@ -237,7 +237,7 @@
       <div class="four columns">
         {% if form.errors%}
           {% if form.spectroscopy.value == 'True' %}
-            <a href="{% url 'calibsources' %}">Return to schedule calib spectra page</a>
+            <a href="{% url 'calibsource-view' %}">Return to schedule calib spectra page</a>
           {% else %}
             <a href="{% url 'schedule-calib-spectra' instrument_code=form.instrument_code.value %}">Return to schedule parameters page</a>
           {% endif %}

@@ -16,7 +16,7 @@ GNU General Public License for more details.
 import sys
 import numpy as np
 import matplotlib
-#matplotlib.use('TkAgg')
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from astropy.io import fits
@@ -35,6 +35,7 @@ from django.core.files.storage import default_storage
 from photometrics.external_codes import unpack_tarball
 
 logger = logging.getLogger(__name__)
+
 
 def print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█', time_in=None):
     """
@@ -209,13 +210,14 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=False
     anim.save(filename, dpi=90, writer='imagemagick')
 
     # Save to default location because Matplotlib wants a string filename not File object
-    daydir = path.replace(out_path,"").lstrip("/")
+    daydir = path.replace(out_path, "").lstrip("/")
     movie_filename = os.path.join(daydir, obj.replace(' ', '_') + '_' + rn + '_guidemovie.gif')
-    movie_file = default_storage.open(movie_filename,"wb+")
-    with open(filename,'rb+') as f:
+    movie_file = default_storage.open(movie_filename, "wb+")
+    with open(filename, 'rb+') as f:
         movie_file.write(f.read())
     movie_file.close()
     return movie_file.name
+
 
 def make_movie(date_obs, obj, req, base_dir, out_path, prop):
     """Make gif of FLOYDS Guide Frames given the following:
@@ -236,6 +238,7 @@ def make_movie(date_obs, obj, req, base_dir, out_path, prop):
     if not filename:
         unpack_path = os.path.join(base_dir, obj+'_'+req)
         tar_files = glob(os.path.join(base_dir, prop+"*"+req+"*.tar.gz"))  # if file not found, looks for tarball
+
         if tar_files:
             tar_path = tar_files[0]
             logger.info("Unpacking 1st tar")
@@ -273,6 +276,7 @@ def make_movie(date_obs, obj, req, base_dir, out_path, prop):
     else:
         logger.error("There must be at least 1 frame to make guide movie.")
         return None
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

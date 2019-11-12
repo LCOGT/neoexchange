@@ -763,7 +763,7 @@ class TestCheckForBlock(TestCase):
         params = { 'site_code' : 'K92'
                  }
         form_data = { 'proposal_code' : self.neo_proposal.code,
-                      'group_id' : self.body_with_provname.current_name() + '_CPT-20150422'
+                      'group_name' : self.body_with_provname.current_name() + '_CPT-20150422'
                     }
         expected_state = 0
 
@@ -777,7 +777,7 @@ class TestCheckForBlock(TestCase):
         params = { 'site_code' : 'W86'
                  }
         form_data = { 'proposal_code' : self.neo_proposal.code,
-                      'group_id' : self.body_with_provname.current_name() + '_LSC-20150421'
+                      'group_name' : self.body_with_provname.current_name() + '_LSC-20150421'
                     }
         expected_state = 1
 
@@ -791,7 +791,7 @@ class TestCheckForBlock(TestCase):
         params = { 'site_code' : 'K92'
                  }
         form_data = { 'proposal_code' : self.neo_proposal.code,
-                      'group_id' : self.body_with_provname.current_name() + '_CPT-20150420'
+                      'group_name' : self.body_with_provname.current_name() + '_CPT-20150420'
                     }
         expected_state = 2
 
@@ -805,7 +805,7 @@ class TestCheckForBlock(TestCase):
         params = { 'site_code' : 'K92'
                  }
         form_data = { 'proposal_code' : self.neo_proposal.code,
-                      'group_id' : self.body_no_provname1.current_name() + '_CPT-20150422'
+                      'group_name' : self.body_no_provname1.current_name() + '_CPT-20150422'
                     }
         expected_state = 0
 
@@ -819,7 +819,7 @@ class TestCheckForBlock(TestCase):
         params = { 'site_code' : 'K93'
                  }
         form_data = { 'proposal_code' : self.neo_proposal.code,
-                      'group_id' : self.body_no_provname1.current_name() + '_CPT-20150422'
+                      'group_name' : self.body_no_provname1.current_name() + '_CPT-20150422'
                     }
         expected_state = 0
 
@@ -833,7 +833,7 @@ class TestCheckForBlock(TestCase):
         params = { 'site_code' : 'W86'
                  }
         form_data = { 'proposal_code' : self.neo_proposal.code,
-                      'group_id' : self.body_no_provname1.current_name() + '_LSC-20150421'
+                      'group_name' : self.body_no_provname1.current_name() + '_LSC-20150421'
                     }
         expected_state = 1
 
@@ -847,7 +847,7 @@ class TestCheckForBlock(TestCase):
         params = { 'site_code' : 'V37'
                  }
         form_data = { 'proposal_code' : self.neo_proposal.code,
-                      'group_id' : self.body_no_provname2.current_name() + '_ELP-20141121'
+                      'group_name' : self.body_no_provname2.current_name() + '_ELP-20141121'
                     }
         expected_state = 2
 
@@ -861,7 +861,7 @@ class TestCheckForBlock(TestCase):
         params = { 'site_code' : 'K92'
                  }
         form_data = { 'proposal_code' : self.neo_proposal.code,
-                      'group_id' : self.body_with_uppername2.current_name() + '_CPT-20150420'
+                      'group_name' : self.body_with_uppername2.current_name() + '_CPT-20150420'
                     }
         expected_state = 0
 
@@ -966,7 +966,7 @@ class TestRecordBlock(TestCase):
                               'exp_count': 1,
                               'exp_time': 180.0,
                               'exp_type': 'SPECTRUM',
-                              'group_id': '4_E10-20180316_spectra',
+                              'group_name': '4_E10-20180316_spectra',
                               'instrument': '2M0-FLOYDS-SCICAM',
                               'instrument_code': 'E10-FLOYDS',
                               'observatory': '',
@@ -985,7 +985,7 @@ class TestRecordBlock(TestCase):
         self.spectro_form = { 'start_time' : self.spectro_params['start_time'],
                               'end_time' : self.spectro_params['end_time'],
                               'proposal_code' : self.spectro_params['proposal_id'],
-                              'group_id' : self.spectro_params['group_id'],
+                              'group_name' : self.spectro_params['group_name'],
                               'exp_count' : self.spectro_params['exp_count'],
                               'exp_length' : self.spectro_params['exp_time'],
                             }
@@ -1007,7 +1007,7 @@ class TestRecordBlock(TestCase):
                               'exp_count': 12,
                               'exp_time': 42.0,
                               'exp_type': 'EXPOSE',
-                              'group_id': 'N999r0q_K91-20180316',
+                              'group_name': 'N999r0q_K91-20180316',
                               'instrument': '1M0-SCICAM-SINISTRO',
                               'observatory': '',
                               'pondtelescope': '1m0',
@@ -1023,7 +1023,7 @@ class TestRecordBlock(TestCase):
         self.imaging_form = { 'start_time' : self.imaging_params['start_time'],
                               'end_time' : self.imaging_params['end_time'],
                               'proposal_code' : self.imaging_params['proposal_id'],
-                              'group_id' : self.imaging_params['group_id'],
+                              'group_name' : self.imaging_params['group_name'],
                               'exp_count' : self.imaging_params['exp_count'],
                               'exp_length' : self.imaging_params['exp_time'],
                             }
@@ -1119,7 +1119,7 @@ class TestRecordBlock(TestCase):
                         'solar_analog' : True
                         }
         spectro_params = {**new_params, **self.spectro_params}
-        spectro_params['group_id'] = self.spectro_params['group_id'] + '+solstd'
+        spectro_params['group_name'] = self.spectro_params['group_name'] + '+solstd'
         spectro_params['request_numbers'] = {1450339: 'NON_SIDEREAL', 1450340: 'SIDEREAL'}
         spectro_params['request_windows'] = [[{'end': '2018-03-16T18:30:00', 'start': '2018-03-16T11:20:00'}],
                                             [{'end': '2018-03-16T18:30:00', 'start': '2018-03-16T11:20:00'}]
@@ -1155,8 +1155,8 @@ class TestRecordBlock(TestCase):
     def test_solo_solar_spectro_block(self):
         # adjust parameters for sidereal target
         self.spectro_params['request_numbers'] = {1450339: 'SIDEREAL'}
-        self.spectro_params['group_id'] = 'Landolt SA107-684_E10-20180316_spectra'
-        self.spectro_form['group_id'] = self.spectro_params['group_id']
+        self.spectro_params['group_name'] = 'Landolt SA107-684_E10-20180316_spectra'
+        self.spectro_form['group_name'] = self.spectro_params['group_name']
         block_resp = record_block(self.spectro_tracknum, self.spectro_params, self.spectro_form, self.solar_analog)
 
         self.assertTrue(block_resp)
@@ -1249,7 +1249,7 @@ class TestScheduleCheck(TestCase):
                         'schedule_ok': True,
                         'site_code': data['site_code'],
                         'proposal_code': data['proposal_code'],
-                        'group_id': self.body_mp.current_name() + '_' + data['site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d'),
+                        'group_name': self.body_mp.current_name() + '_' + data['site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d'),
                         'utc_date': data['utc_date'].isoformat(),
                         'start_time': '2016-04-06T09:00:00',
                         'end_time': '2016-04-06T19:10:00',
@@ -1289,7 +1289,7 @@ class TestScheduleCheck(TestCase):
         resp = schedule_check(data, self.body_mp)
 
         self.assertEqual(expected_resp, resp)
-        self.assertLessEqual(len(resp['group_id']), 50)
+        self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
@@ -1319,7 +1319,7 @@ class TestScheduleCheck(TestCase):
                         'schedule_ok': True,
                         'site_code': data['instrument_code'][0:3],
                         'proposal_code': data['proposal_code'],
-                        'group_id': self.body_mp.current_name() + '_' + data['instrument_code'][0:3].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d') + '_spectra',
+                        'group_name': self.body_mp.current_name() + '_' + data['instrument_code'][0:3].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d') + '_spectra',
                         'utc_date': data['utc_date'].isoformat(),
                         'start_time': '2016-04-06T09:00:00',
                         'end_time': '2016-04-06T19:10:00',
@@ -1359,7 +1359,7 @@ class TestScheduleCheck(TestCase):
         resp = schedule_check(data, self.body_mp)
 
         self.assertEqual(expected_resp, resp)
-        self.assertLessEqual(len(resp['group_id']), 50)
+        self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
@@ -1389,7 +1389,7 @@ class TestScheduleCheck(TestCase):
                         'schedule_ok': True,
                         'site_code': data['instrument_code'][0:3],
                         'proposal_code': data['proposal_code'],
-                        'group_id': self.body_mp.current_name() + '_' + data['instrument_code'][0:3].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d') + '_spectra',
+                        'group_name': self.body_mp.current_name() + '_' + data['instrument_code'][0:3].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d') + '_spectra',
                         'utc_date': data['utc_date'].isoformat(),
                         'start_time': '2016-04-06T09:00:00',
                         'end_time': '2016-04-06T19:10:00',
@@ -1429,7 +1429,7 @@ class TestScheduleCheck(TestCase):
         resp = schedule_check(data, self.body_mp)
 
         self.assertEqual(expected_resp, resp)
-        self.assertLessEqual(len(resp['group_id']), 50)
+        self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
@@ -1460,7 +1460,7 @@ class TestScheduleCheck(TestCase):
                         'schedule_ok': True,
                         'site_code': data['site_code'],
                         'proposal_code': data['proposal_code'],
-                        'group_id': '2009 HA_Q63-cad-20160406-0406',
+                        'group_name': '2009 HA_Q63-cad-20160406-0406',
                         'utc_date': data['utc_date'].isoformat(),
                         'start_time': '2016-04-06T09:00:00',
                         'end_time': '2016-04-06T23:00:00',
@@ -1502,7 +1502,7 @@ class TestScheduleCheck(TestCase):
         resp = schedule_check(data, self.body_mp)
 
         self.assertEqual(expected_resp, resp)
-        self.assertLessEqual(len(resp['group_id']), 50)
+        self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
@@ -1533,7 +1533,7 @@ class TestScheduleCheck(TestCase):
                         'schedule_ok': True,
                         'site_code': data['site_code'],
                         'proposal_code': data['proposal_code'],
-                        'group_id': '2009 HA_Q63-cad-20160406-0406',
+                        'group_name': '2009 HA_Q63-cad-20160406-0406',
                         'utc_date': data['utc_date'].isoformat(),
                         'start_time': '2016-04-06T09:00:00',
                         'end_time': '2016-04-06T23:00:00',
@@ -1575,7 +1575,7 @@ class TestScheduleCheck(TestCase):
         resp = schedule_check(data, self.body_mp)
 
         self.assertEqual(expected_resp, resp)
-        self.assertLessEqual(len(resp['group_id']), 50)
+        self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
@@ -1604,7 +1604,7 @@ class TestScheduleCheck(TestCase):
                         'schedule_ok': True,
                         'site_code': data['site_code'],
                         'proposal_code': data['proposal_code'],
-                        'group_id': '2009 HA21_Q63-cad-20160406-0406',
+                        'group_name': '2009 HA21_Q63-cad-20160406-0406',
                         'utc_date': data['utc_date'].isoformat(),
                         'start_time': '2016-04-06T09:00:00',
                         'end_time': '2016-04-06T23:00:00',
@@ -1646,7 +1646,7 @@ class TestScheduleCheck(TestCase):
         resp = schedule_check(data, self.body_mp)
 
         self.assertEqual(expected_resp, resp)
-        self.assertLessEqual(len(resp['group_id']), 50)
+        self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
@@ -6688,6 +6688,7 @@ class TestBestStandardsView(TestCase):
         self.assertAlmostEqual(expected_min_ra, min_ra, self.precision)
         self.assertAlmostEqual(expected_max_ra, max_ra, self.precision)
 
+
 class TestFindSpec(TestCase):
 
     def setUp(self):
@@ -6787,8 +6788,6 @@ class TestFindSpec(TestCase):
             expected_path = os.path.join(expected_date, self.test_body.current_name() + '_' + self.test_block.request_number)
             # os.makedirs(expected_date)
             fake_tar = os.path.join(expected_date, self.eng_proposal.code + '_' + self.test_block.request_number + '.tar.gz')
-            with open(fake_tar, 'a'):
-                pass
 
             date_obs, obj, req, path, prop = find_spec(self.test_block.pk)
 
@@ -6815,93 +6814,65 @@ class TestFindSpec(TestCase):
         self.assertEqual(self.eng_proposal.code, prop)
 
 
-class TestFindSpecPlots(TestCase):
+class TestBuildVisibilitySource(TestCase):
 
     def setUp(self):
-        # Disable S3 by default for tests
-        settings.USE_S3 = False
-        self.tmp_dir = tempfile.mkdtemp()
-        settings.DATA_ROOT = self.tmp_dir
-        self.day_dir = os.path.join(settings.DATA_ROOT, '20190727')
-        self.remove = True
+        body_params = {
+                         'provisional_name': None,
+                         'provisional_packed': 'j5432',
+                         'name': '455432',
+                         'origin': 'A',
+                         'source_type': 'N',
+                         'elements_type': 'MPC_MINOR_PLANET',
+                         'active': True,
+                         'fast_moving': True,
+                         'urgency': None,
+                         'epochofel': datetime(2019, 7, 31, 0, 0),
+                         'orbit_rms': 0.46,
+                         'orbinc': 31.23094,
+                         'longascnode': 301.42266,
+                         'argofperih': 22.30793,
+                         'eccentricity': 0.3660154,
+                         'meandist': 1.7336673,
+                         'meananom': 352.55084,
+                         'perihdist': None,
+                         'epochofperih': None,
+                         'abs_mag': 18.54,
+                         'slope': 0.15,
+                         'score': None,
+                         'discovery_date': datetime(2003, 9, 7, 3, 7, 18),
+                         'num_obs': 130,
+                         'arc_length': 6209.0,
+                         'not_seen': 3.7969329574421296,
+                         'updated': True,
+                         'ingest': datetime(2019, 7, 4, 5, 28, 39),
+                         'update_time': datetime(2019, 7, 30, 19, 7, 35)
+                        }
+        self.test_body = Body.objects.create(**body_params)
 
-    def tearDown(self):
-        if self.remove is True:
-            shutil.rmtree(self.tmp_dir)
+    def test_build_visibility_source(self):
+        site_code = ['LSC', 'CPT', 'COJ', 'ELP', 'TFN', 'OGG']
+        site_list = ['W85', 'K91', 'Q63', 'V37', 'Z21', 'F65']
+        color_list = ['darkviolet', 'forestgreen', 'saddlebrown', 'coral', 'darkslategray', 'dodgerblue']
+        d = datetime(2019, 10, 10, 0, 0, 0)
+        step_size = '30 m'
+        alt_limit = 30
+        vis, emp = build_visibility_source(self.test_body, site_list, site_code, color_list, d, alt_limit, step_size)
 
-    def touch_file(self, path):
-        if not os.path.exists(os.path.dirname(path)):
-            os.makedirs(os.path.dirname(path))
-        with open(path, 'a'):
-            pass
+        expected_vis = {'x': [0, 0, 0, 0, 0, 0],
+                        'y': [0, 0, 0, 0, 0, 0],
+                        'sun_rise': [10.210176124166827, 8.595746566072073, 6.370451769779303, 4.625122517784973, 9.381144729469522, 5.541420375081996],
+                        'sun_set': [7.810348402674624, 6.239552075879727, 3.9706240482870996, 1.9634954084936207, 6.719517620178169, 2.879793265790644],
+                        'obj_rise': [0.0, 0.0, 0.0, 0.7853981633974487, 5.366887449882563, 1.5707963267948966],
+                        'obj_set': [0, 0, 0, 2.879793265790644, 7.592182246175334, 3.796091123087667],
+                        'moon_rise': [1.0471975511965979, -0.5235987755982989, 3.534291735288517, 1.7016960206944711, 0.13089969389957457, 2.4870941840919194],
+                        'moon_set': [3.4033920413889427, 1.7016960206944713, 5.759586531581287, 3.9269908169872414, 2.356194490192345, 4.974188368183839],
+                        'moon_phase': [0.8706345970199544, 0.8651789635607248, 0.8701262242502456, 0.8701177903593142, 0.8645091870127206, 0.8712568525897345],
+                        'colors': ['darkviolet', 'forestgreen', 'saddlebrown', 'coral', 'darkslategray', 'dodgerblue'],
+                        'site': ['LSC', 'CPT', 'COJ', 'ELP', 'TFN', 'OGG'],
+                        'obj_vis': [0, 0, 0, 3.5, 3.0, 3.5],
+                        'max_alt': [0, 0, 0, 60, 57, 50],
+                        'line_alpha': [0, 0, 0, 1, 1, 1]}
 
-    def test_local_data_missing(self):
-        spec_files = find_spec_plots(None, None, None, None)
-
-        self.assertEqual(None, spec_files)
-
-    def test_local_data_no_data(self):
-        spec_files = find_spec_plots(settings.DATA_ROOT, '1999KW4', '1234', '1')
-
-        self.assertEqual([], spec_files)
-
-    def test_local_data_1plot(self):
-        base_dir = os.path.join(self.day_dir, '1999KW4_1234')
-        expected_files = [os.path.join(base_dir, '1999KW4_1234_spectra_1.png'),]
-        self.touch_file(expected_files[0])
-
-        spec_files = find_spec_plots(base_dir, '1999KW4', '1234', '1')
-
-        self.assertEqual(expected_files, spec_files)
-
-    def test_local_data_2plot(self):
-        base_dir = os.path.join(self.day_dir, '1999KW4_1234')
-        expected_files = [os.path.join(base_dir, '1999KW4_1234_spectra_1.png'),
-                          os.path.join(base_dir, '1999KW4_1234_spectra_2.png'),]
-        self.touch_file(expected_files[0])
-        self.touch_file(expected_files[1])
-
-        spec_files = find_spec_plots(base_dir, '1999KW4', '1234', '1')
-
-        self.assertEqual([expected_files[0],], spec_files)
-
-    def test_local_guidemovie(self):
-        base_dir = os.path.join(self.day_dir, '1999KW4_1234', 'Guide_frames')
-        expected_files = [os.path.join(base_dir, '1999KW4_1234_guidemovie.gif'),]
-        self.touch_file(expected_files[0])
-
-        spec_files = find_spec_plots(base_dir, '1999KW4', '1234', 'guidemovie.gif')
-
-        self.assertEqual(expected_files, spec_files)
-    def test_S3_1plot(self):
-        settings.USE_S3 = True
-        settings.DATA_ROOT = ''
-        base_dir = os.path.join('data', '1999KW4_1234')
-        expected_files = [os.path.join(base_dir, '1999KW4_1234_spectra_1.png'),]
-        self.touch_file(expected_files[0])
-
-        spec_files = find_spec_plots(base_dir, '1999KW4', '1234', '1')
-
-        self.assertEqual(expected_files, spec_files)
-
-    def test_S3_calibplot(self):
-        settings.USE_S3 = True
-        settings.DATA_ROOT = ''
-        base_dir = os.path.join('data', 'cdbs', 'ctiostan')
-        expected_files = [os.path.join(base_dir, 'LTT1078_spectra_1.png'),]
-        self.touch_file(expected_files[0])
-
-        spec_files = find_spec_plots(base_dir, 'LTT1078', None, '1')
-
-        self.assertEqual(expected_files, spec_files)
-
-    def test_S3_guidemovie(self):
-        settings.USE_S3 = True
-        settings.DATA_ROOT = ''
-        base_dir = os.path.join('data', '1999KW4_1234', 'Guide_frames')
-        expected_files = [os.path.join(base_dir, '1999KW4_1234_guidemovie.gif'),]
-        self.touch_file(expected_files[0])
-
-        spec_files = find_spec_plots(base_dir, '1999KW4', '1234', 'guidemovie.gif')
-
-        self.assertEqual(expected_files, spec_files)
+        for key in vis.keys():
+            self.assertEqual(expected_vis[key], vis[key])

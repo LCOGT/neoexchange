@@ -3,6 +3,15 @@
 
 {% block header %}{{body.current_name}} details{% endblock %}
 
+<!-- Import Bokeh CSS for plotting (UPDATE RELEASE NUMBER IF BOKEH IS UPDATED) -->
+{% block last-css-content %}
+<link rel="stylesheet" href={{css_path}}>
+{% endblock %}
+<!-- Import Bokeh Script for plotting (UPDATE RELEASE NUMBER IF BOKEH IS UPDATED) -->
+{% block script-content %}
+<script src={{js_path}}></script>
+{% endblock %}
+
 {% block bodyclass %}page{% endblock %}
 
 {% block extramenu %}
@@ -15,11 +24,11 @@
             <!-- Main body -->
             <div class="container" id="main">
                     <div class="row">
+                        <div class="eight columns">
+                            <div class="row">
                         <a class="button button-primary" href="{% url 'schedule-body' body.id %}" id="schedule-obs">Schedule Observations</a>
                         <a class="button button-primary" href="{% url 'schedule-body-spectra' body.id %}" id="schedule-spectro-obs">Schedule Spectroscopic Observations</a>
-                    </div>
-                    <div class="row">
-                        <div class="eight columns">
+                            </div>
                             {% if body.old_name %}
                             <h5  class="section-title"><span class="">Name</span><span class="msgpadded">{{body.old_name}} &rarr; {{body.name}}</span></h5>
                             {% endif %}
@@ -96,9 +105,16 @@
                         <a href="{% url 'measurement' body.id %}" class="button button-primary" id="show-measurements">Show Measurements</a>
                             </div>
                         <div class="four columns rightsidebar">
+                            <div align="center">
+                                <!-- Import the javascript and div created by Bokeh for circle plots -->
+                            {% block lin_plot %}
+                            {{ lin_div|safe }}
+                            {{ lin_script|safe }}
+                            {% endblock %}
                             {% if body.name %}
                                 <a href="{% url 'visibility' body.id %}" class="button button-primary" id="visibility">Plot Visibility</a>
                             {% endif %}
+                            </div>
                             <div class="section-title">Last Update: {{body.ingest|date:"Y-M-d H:i"}}</div>
                             <h5 class="section-title">Orbital Elements</h5>
                             <table class="keyvalue-table" id="id_orbelements">
@@ -126,7 +142,29 @@
                                         <td class="kv-key">Eccentricity</td>
                                         <td class="kv-value">{{body.eccentricity}}</td>
                                     </tr>
-                                    {% if body.elements_type  == 'MPC_MINOR_PLANET' %}
+                                    {% if body.elements_type  == 'MPC_COMET' %}
+                                    <!-- Comets -->
+                                    <tr>
+                                        <td class="kv-key">Perihelion distance (AU)</td>
+                                        <td class="kv-value">{{body.perihdist|floatformat:7}}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="kv-key">Epoch of perihelion</td>
+                                        <td class="kv-value">{{body.epochofperih}}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="kv-key">Epoch of perihelion (MJD)</td>
+                                        <td class="kv-value">{{body.epochofperih_mjd|floatformat:5}}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="kv-key">Total Magnitude (M1)</td>
+                                        <td class="kv-value">{{body.abs_mag}}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="kv-key">Slope Parameter (k1)</td>
+                                        <td class="kv-value">{{body.slope|multiply:2.5}}</td>
+                                    </tr>
+                                    {% else %}
                                     <tr>
                                         <td class="kv-key">Mean distance (AU)</td>
                                         <td class="kv-value">{{body.meandist}}</td>
@@ -158,28 +196,6 @@
                                     <tr>
                                         <td class="kv-key">Diameter in meters<br/>(range)</td>
                                         <td class="kv-value">{{body.diameter_range.0|floatformat:0}} - {{body.diameter_range.1|floatformat:0}}</td>
-                                    </tr>
-                                    {% else %}
-                                    <!-- Comets -->
-                                    <tr>
-                                        <td class="kv-key">Perihelion distance (AU)</td>
-                                        <td class="kv-value">{{body.perihdist|floatformat:7}}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="kv-key">Epoch of perihelion</td>
-                                        <td class="kv-value">{{body.epochofperih}}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="kv-key">Epoch of perihelion (MJD)</td>
-                                        <td class="kv-value">{{body.epochofperih_mjd|floatformat:5}}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="kv-key">Total Magnitude (M1)</td>
-                                        <td class="kv-value">{{body.abs_mag}}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="kv-key">Slope Parameter (k1)</td>
-                                        <td class="kv-value">{{body.slope|multiply:2.5}}</td>
                                     </tr>
                                     {% endif %}
                                 </tbody>
@@ -267,7 +283,11 @@
                                                                         {% endif %}
 								</tbody>
 							</table>
-							<h5 class="section-title">Spectroscopy Details</h5>
+							<h5 class="section-title">Spectroscopy Details
+                                {% if spectra %}
+                                <a href="{% url 'plotspec' body.pk %}" style="font-size: small;">(Plots)</a>
+                                {% endif %}
+                            </h5>
 							<table class="keyvalue-table" id="id_spectralinfo">
 								<tbody>
 								    {% for s in spectra %}

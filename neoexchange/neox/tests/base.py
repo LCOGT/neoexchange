@@ -18,6 +18,7 @@ from datetime import datetime
 from glob import glob
 import tempfile
 import os
+import shutil
 
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.conf import settings
@@ -34,7 +35,7 @@ from core.models import Body, Proposal, Block, SuperBlock, SpectralInfo, Previou
 class FunctionalTest(StaticLiveServerTestCase):
     def __init__(self, *args, **kwargs):
         super(FunctionalTest, self).__init__(*args, **kwargs)
-
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
         if settings.DEBUG is False:
             settings.DEBUG = True
 
@@ -249,9 +250,6 @@ class FunctionalTest(StaticLiveServerTestCase):
         self.test_block2 = Block.objects.create(pk=2, **block_params2)
 
     def setUp(self):
-
-        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
-
         self.insert_test_body()
         self.insert_test_calib()
         self.insert_test_proposals()
@@ -259,52 +257,60 @@ class FunctionalTest(StaticLiveServerTestCase):
         self.insert_test_taxonomy()
         self.insert_previous_spectra()
 
-        fp = webdriver.FirefoxProfile()
-        fp.set_preference("browser.startup.homepage", "about:blank")
-        fp.set_preference("startup.homepage_welcome_url", "about:blank")
-        fp.set_preference("startup.homepage_welcome_url.additional", "about:blank")
-        # Don't ask where to save downloaded files
-        fp.set_preference("browser.download.folderList", 2);
-        fp.set_preference("browser.download.manager.showWhenStarting", False);
-        fp.set_preference("browser.download.dir", self.test_dir);
-        fp.set_preference("browser.helperApps.neverAsk.saveToDisk", "text/plain");
+        if settings.USE_FIREFOXDRIVER:
+            fp = webdriver.FirefoxProfile()
+            # fp = webdriver.Chrome()
+            fp.set_preference("browser.startup.homepage", "about:blank")
+            fp.set_preference("startup.homepage_welcome_url", "about:blank")
+            fp.set_preference("startup.homepage_welcome_url.additional", "about:blank")
+            # Don't ask where to save downloaded files
+            fp.set_preference("browser.download.folderList", 2);
+            fp.set_preference("browser.download.manager.showWhenStarting", False);
+            fp.set_preference("browser.download.dir", self.test_dir);
+            fp.set_preference("browser.helperApps.neverAsk.saveToDisk", "text/plain");
 
-        if not hasattr(self, 'browser'):
-            firefox_capabilities = DesiredCapabilities.FIREFOX
-            # Marionette does not work on Firefox ~< 57. Try and determine the
-            # version and check it. Hopefully this code is robust and platform-
-            # independent...
-            try:
-                version = check_output(["firefox", "--version"], universal_newlines=True)
-            except (OSError, CalledProcessError):
-                version = None
-            if version and 'Firefox' in version:
-                version_num = version.rstrip().split(' ')[-1]
-                major_version = version_num.split('.')[0]
-                if major_version.isdigit() and int(major_version) <= 52:
-                    firefox_capabilities['marionette'] = False
+            if not hasattr(self, 'browser'):
+                firefox_capabilities = DesiredCapabilities.FIREFOX
+                # Marionette does not work on Firefox ~< 57. Try and determine the
+                # version and check it. Hopefully this code is robust and platform-
+                # independent...
+                try:
+                    version = check_output(["firefox", "--version"], universal_newlines=True)
+                except (OSError, CalledProcessError):
+                    version = None
+                if version and 'Firefox' in version:
+                    version_num = version.rstrip().split(' ')[-1]
+                    major_version = version_num.split('.')[0]
+                    if major_version.isdigit() and int(major_version) <= 52:
+                        firefox_capabilities['marionette'] = False
 
-            self.browser = webdriver.Firefox(capabilities=firefox_capabilities, firefox_profile=fp)
+                self.browser = webdriver.Firefox(capabilities=firefox_capabilities, firefox_profile=fp)
+        else:
+            options = webdriver.chrome.options.Options()
+            options.add_argument('--headless')
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-gpu')
+            self.browser = webdriver.Chrome(chrome_options=options)
         self.browser.implicitly_wait(5)
 
     def tearDown(self):
         self.browser.quit()
-
-        remove = True
-        debug_print = False
-        if remove:
-            try:
-                files_to_remove = glob(os.path.join(self.test_dir, '*'))
-                for file_to_rm in files_to_remove:
-                    os.remove(file_to_rm)
-            except OSError:
-                print("Error removing files in temporary test directory", self.test_dir)
-            try:
-                os.rmdir(self.test_dir)
-                if debug_print:
-                    print("Removed", self.test_dir)
-            except OSError:
-                print("Error removing temporary test directory", self.test_dir)
+        with self.settings(MEDIA_ROOT=self.test_dir):
+            remove = True
+            debug_print = False
+            if remove:
+                try:
+                    files_to_remove = glob(os.path.join(self.test_dir, '*'))
+                    for file_to_rm in files_to_remove:
+                        os.remove(file_to_rm)
+                except OSError:
+                    print("Error removing files in temporary test directory", self.test_dir)
+                try:
+                    os.rmdir(self.test_dir)
+                    if debug_print:
+                        print("Removed", self.test_dir)
+                except OSError:
+                    shutil.rmtree(self.test_dir)
 
     def check_for_row_in_table(self, table_id, row_text):
         table = self.browser.find_element_by_id(table_id)

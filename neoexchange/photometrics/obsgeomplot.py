@@ -4,6 +4,8 @@ import logging
 
 import numpy as np
 from astropy.table import Column
+import matplotlib
+matplotlib.use('Agg')
 from matplotlib.figure import Figure
 import matplotlib.dates as mdates
 from matplotlib.ticker import FormatStrFormatter
@@ -48,7 +50,7 @@ def plot_ra_dec(ephem, title=None, base_dir=''):
     ax = fig.subplots()
 
     # Look for RA wraparound at RA=360/0 deg and plot in two parts
-    if ephem['RA'].max() >= 359.0:
+    if ephem['RA'].max() >= 358.0:
         # Find index of max, min value
         wrap_index1 = np.argmin(ephem['RA'])
         wrap_index2 = np.argmax(ephem['RA'])
@@ -69,9 +71,12 @@ def plot_ra_dec(ephem, title=None, base_dir=''):
     else:
         ax.plot(ephem['RA'], ephem['DEC'])
     ax.set_xlim(360.0, 0.0)
-    ax.set_ylim(-90, 90)
+    ax.set_ylim(-95, 95)
     ax.set_xlabel('RA (deg)')
     ax.set_ylabel('Dec (deg)')
+    # Set the Dec tick labels from -80 to +80 in steps of 20
+    labels = np.arange(-80,90,20)
+    ax.yaxis.set_ticks(labels)
     ax.minorticks_on()
     ax.xaxis.set_ticks_position('both')
     ax.yaxis.set_ticks_position('both')
@@ -86,10 +91,21 @@ def plot_ra_dec(ephem, title=None, base_dir=''):
     fig.suptitle(title)
     ax.set_title("Sky position")
 
-
-    ax.annotate(first_date.strftime("%Y-%m-%d"), xy=(first['RA'], first['DEC']), xytext=(first['RA'], first['DEC']+10),
+    dec_offset = +10
+    if first['DEC'] >= 75:
+        dec_offset = -15
+    ra_offset = 0
+    if first['RA'] <= 40:
+        ra_offset = +60
+    ax.annotate(first_date.strftime("%Y-%m-%d"), xy=(first['RA'], first['DEC']), xytext=(first['RA']+ra_offset, first['DEC']+dec_offset),
             arrowprops=dict(facecolor='black', arrowstyle='->'))
-    ax.annotate(last_date.strftime("%Y-%m-%d"), xy=(last['RA'], last['DEC']), xytext=(last['RA'], last['DEC']+10),
+    dec_offset = +10
+    if last['DEC'] >= 75:
+        dec_offset = -15
+    ra_offset = 0
+    if last['RA'] <= 40:
+        ra_offset = +60
+    ax.annotate(last_date.strftime("%Y-%m-%d"), xy=(last['RA'], last['DEC']), xytext=(last['RA']+ra_offset, last['DEC']+dec_offset),
             arrowprops=dict(arrowstyle='->'))
 
     # Add watermark

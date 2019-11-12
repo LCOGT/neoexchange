@@ -132,6 +132,11 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
 # Light travel time for 1 AU (in sec)
     tau = 499.004783806
 
+# Check if we even have a non-blank set of elements before proceeding
+    if orbelems.get('epochofel', None) is None:
+        logger.warning("No epoch of elements (epochofel) found in orbelems, cannot compute ephemeris")
+        return {}
+
 # Compute MJD for UTC
     mjd_utc = datetime2mjd_utc(d)
 
@@ -555,17 +560,13 @@ def format_emp_line(emp_line, site_code):
     return line_as_list
 
 
-def call_compute_ephem(elements, dark_start, dark_end, site_code, ephem_step_size, alt_limit=0):
+def call_compute_ephem(elements, dark_start, dark_end, site_code, ephem_step_size, alt_limit=0, perturb=True):
     """Wrapper for compute_ephem to enable use within plan_obs (or other codes)
     by making repeated calls for datetimes from <dark_start> -> <dark_end> spaced
     by <ephem_step_size> seconds. The results are assembled into a list of tuples
-    in the same format as returned by read_findorb_ephem()"""
-
-#    print
-#    formatted_elem_lines = mpc_8lineformat(elements)
-#    for line in formatted_elem_lines:
-#        print line
-
+    in the same format as returned by read_findorb_ephem()
+    Returns [[ DATE, RA, Dec, Mag, Motion, P.A, Alt, MoonPhase, MoonSep, MoonAlt, Score, HA ]]
+    """
     slot_length = 0  # XXX temporary hack
     step_size_secs = 300
     if str(ephem_step_size)[-1] == 'm':
@@ -580,7 +581,7 @@ def call_compute_ephem(elements, dark_start, dark_end, site_code, ephem_step_siz
     full_emp = []
     while ephem_time < dark_end:
         if 'epochofel' in elements:
-            emp_line = compute_ephem(ephem_time, elements, site_code, dbg=False, perturb=True, display=False)
+            emp_line = compute_ephem(ephem_time, elements, site_code, dbg=False, perturb=perturb, display=False)
         elif 'ra' in elements and 'dec' in elements:
             emp_line = compute_sidereal_ephem(ephem_time, elements, site_code)
         else:
@@ -595,6 +596,7 @@ def call_compute_ephem(elements, dark_start, dark_end, site_code, ephem_step_siz
         emp.append(format_emp_line(line, site_code))
 
     return emp
+
 
 def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_limit=0, include_moon=False):
     """Calls JPL HORIZONS for the specified <obj_name> producing an ephemeris
@@ -1624,7 +1626,7 @@ def moonphase(date, obsvr_long, obsvr_lat, obsvr_hgt, dbg=False):
     return mphase
 
 
-def target_rise_set(date, app_ra, app_dec, sitecode, min_alt, step_size='30m'):
+def target_rise_set(date, app_ra, app_dec, sitecode, min_alt, step_size='30m', sun=True):
     """Calculate the visibility start/end time of a given RA/DEC for a particular site on a particular day."""
 
     step_size_secs = 300
@@ -1636,7 +1638,11 @@ def target_rise_set(date, app_ra, app_dec, sitecode, min_alt, step_size='30m'):
     else:
         step_size_secs = step_size
 
-    ephem_time, sun_set = determine_darkness_times(sitecode, date)
+    if sun:
+        ephem_time, sun_set = determine_darkness_times(sitecode, date)
+    else:
+        ephem_time = date
+        sun_set = date + timedelta(days=1)
 
     # Get site and mount parameters
     (site_name, site_long, site_lat, site_hgt) = get_sitepos(sitecode)
@@ -1645,6 +1651,7 @@ def target_rise_set(date, app_ra, app_dec, sitecode, min_alt, step_size='30m'):
     rise_time = None
     set_time = None
     max_alt = None
+    vis_time = 0
     while ephem_time < sun_set:
         obs_az, obs_alt = moon_alt_az(ephem_time, app_ra, app_dec, site_long, site_lat, site_hgt)
         hour_angle = compute_hourangle(ephem_time, site_long, site_lat, site_hgt, app_ra, app_dec, dbg=False)
@@ -1663,14 +1670,20 @@ def target_rise_set(date, app_ra, app_dec, sitecode, min_alt, step_size='30m'):
 
         if obs_alt > min_alt and not ha_limit and rise_time is None:
             rise_time = ephem_time
+        elif obs_alt > min_alt and not ha_limit:
+            vis_time += step_size_secs
         elif (obs_alt < min_alt or ha_limit) and rise_time is not None:
-            break
+            if sun:
+                break
+            elif set_time is None:
+                set_time = ephem_time
+
         ephem_time = ephem_time + timedelta(seconds=step_size_secs)
 
-    if rise_time is not None:
+    if rise_time is not None and set_time is None:
         set_time = ephem_time - timedelta(seconds=step_size_secs)
 
-    return rise_time, set_time, max_alt
+    return rise_time, set_time, max_alt, vis_time/3600
 
 
 def compute_hourangle(date, obsvr_long, obsvr_lat, obsvr_hgt, mean_ra, mean_dec, dbg=False):
@@ -1936,7 +1949,7 @@ def monitor_long_term_scheduling(site_code, orbelems, utc_date=datetime.utcnow()
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
         emp = call_compute_ephem(orbelems, dark_start, dark_end, site_code, ephem_step_size, alt_limit=30)
 
-        dark_and_up_time, emp_dark_and_up = compute_dark_and_up_time(emp)
+        dark_and_up_time, emp_dark_and_up, set_time = compute_dark_and_up_time(emp)
 
         if emp_dark_and_up != []:
 
@@ -1978,6 +1991,7 @@ def compute_dark_and_up_time(emp, step_size='180 m'):
     dark_and_up_time = 0
     dark_and_up_time_start = None
     dark_and_up_time_end = None
+    set_time = None
     emp_dark_and_up = []
     start = None
 
@@ -2004,10 +2018,15 @@ def compute_dark_and_up_time(emp, step_size='180 m'):
                 additional_time = dark_and_up_time_end-dark_and_up_time_start
                 if additional_time.total_seconds() <= step_size_secs * 2:
                     dark_and_up_time += additional_time
+                else:
+                    set_time = dark_and_up_time_start
         if dark_and_up_time_start is not None and dark_and_up_time_end is not None:
             dark_and_up_time = dark_and_up_time.total_seconds()/3600.0  # in hrs
 
-    return dark_and_up_time, emp_dark_and_up
+        if not set_time:
+            set_time = dark_and_up_time_end
+
+    return dark_and_up_time, emp_dark_and_up, set_time
 
 
 def compute_max_altitude(emp_dark_and_up):
@@ -2066,16 +2085,16 @@ def get_visibility(ra, dec, date, site_code, step_size='30 m', alt_limit=30, qui
     max_alt = 0
     for site in site_list:
         if quick_n_dirty:
-            start_time, end_time, test_alt = target_rise_set(date, ra, dec, site, alt_limit, step_size)
+            start_time, end_time, test_alt, vis = target_rise_set(date, ra, dec, site, alt_limit, step_size)
             if start_time and end_time:
                 vis_time = (end_time-start_time).total_seconds()/3600.0
             else:
                 vis_time = 0
         else:
             dark_start, dark_end = determine_darkness_times(site, date)
-            emp = call_compute_ephem(body_elements, dark_start, dark_end, site, step_size)
+            emp = call_compute_ephem(body_elements, dark_start, dark_end, site, step_size, perturb=False)
             emp_dark_and_up = dark_and_object_up(emp, dark_start, dark_end, 0, alt_limit=alt_limit)
-            vis_time, emp_dark_and_up = compute_dark_and_up_time(emp_dark_and_up, step_size)
+            vis_time, emp_dark_and_up, set_time = compute_dark_and_up_time(emp_dark_and_up, step_size)
             try:
                 test_alt = compute_max_altitude(emp)
             except ValueError:

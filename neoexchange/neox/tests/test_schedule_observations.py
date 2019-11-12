@@ -18,7 +18,8 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
 from mock import patch
-from neox.tests.mocks import MockDateTime, mock_lco_authenticate, mock_fetch_filter_list, mock_fetch_filter_list_no2m
+from neox.tests.mocks import MockDateTime, mock_lco_authenticate, mock_fetch_filter_list, mock_fetch_filter_list_no2m,\
+    mock_build_visibility_source
 
 from datetime import datetime
 from django.test.client import Client
@@ -79,6 +80,7 @@ class ScheduleObservations(FunctionalTest):
 # Monkey patch the datetime used by forms otherwise it fails with 'window in the past'
 # TAL: Need to patch the datetime in views also otherwise we will get the wrong
 # semester and window bounds.
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.datetime', MockDateTime)
@@ -144,6 +146,7 @@ class ScheduleObservations(FunctionalTest):
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
         self.assertIn('Schedule this Object', submit)
 
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     def test_cannot_schedule_observations(self):
         self.test_logout()
 
@@ -162,6 +165,7 @@ class ScheduleObservations(FunctionalTest):
         target_url = '/login/'
         self.assertIn(target_url, actual_url)
 
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.datetime', MockDateTime)
@@ -214,6 +218,7 @@ class ScheduleObservations(FunctionalTest):
         error_msg = self.browser.find_element_by_class_name('errorlist').text
         self.assertIn("Window cannot start in the past", error_msg)
 
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.datetime', MockDateTime)
@@ -285,6 +290,7 @@ class ScheduleObservations(FunctionalTest):
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
         self.assertIn('Schedule this Object', submit)
 
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.datetime', MockDateTime)
@@ -357,6 +363,7 @@ class ScheduleObservations(FunctionalTest):
         warn_num = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('warning').text
         self.assertIn('1', warn_num)
 
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list_no2m)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list_no2m)
     @patch('core.forms.datetime', MockDateTime)
@@ -407,6 +414,7 @@ class ScheduleObservations(FunctionalTest):
         error_msg = self.browser.find_element_by_class_name('errorlist').text
         self.assertIn('This Site/Telescope combination is not currently available.', error_msg)
 
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.datetime', MockDateTime)
@@ -464,6 +472,7 @@ class ScheduleObservations(FunctionalTest):
         analog_exptime = self.browser.find_element_by_id('id_calibsource_exptime').get_attribute('value')
         self.assertIn('45', analog_exptime)
 
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list_no2m)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list_no2m)
     @patch('core.forms.datetime', MockDateTime)
@@ -521,6 +530,7 @@ class ScheduleObservations(FunctionalTest):
         error_msg = self.browser.find_element_by_class_name('errorlist').text
         self.assertIn('This Site/Instrument combination is not currently available.', error_msg)
 
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.datetime', MockDateTime)
@@ -576,6 +586,7 @@ class ScheduleObservations(FunctionalTest):
         analog_warn = self.browser.find_element_by_id('id_no_solaranalog_row').find_element_by_class_name('warning').text
         self.assertIn('No Valid Solar Analog Found!'.upper(), analog_warn)
 
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.datetime', MockDateTime)
@@ -682,26 +693,27 @@ class ScheduleObservations(FunctionalTest):
         self.assertIn('Target Not Visible', vis)
 
         # Bart wants to be a little &^%$ and stress test our group ID input
-        group_id_box = self.browser.find_element_by_name("group_id")
+        group_id_box = self.browser.find_element_by_name("group_name")
         group_id_box.clear()
         bs_string = 'ຢູ່ໃກ້Γη小惑星‽'
         group_id_box.send_keys(bs_string)
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_id("id_edit_button").click()
-        group_id = self.browser.find_element_by_id('id_group_id').get_attribute('value')
+        group_id = self.browser.find_element_by_id('id_group_name').get_attribute('value')
         self.assertEqual('N999r0q_V37-20150421', group_id)
-        group_id_box = self.browser.find_element_by_name("group_id")
+        group_id_box = self.browser.find_element_by_name("group_name")
         group_id_box.clear()
         bs_string = 'rcoivny3q5r@@yciht8ycv9njcrnc87vy b0y98uxm9cyh8ycvn0fh 80hfcubfuh87yc 0nhfhxmhf7g 70h'
         group_id_box.send_keys(bs_string)
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_id("id_edit_button").click()
-        group_id = self.browser.find_element_by_id('id_group_id').get_attribute('value')
+        group_id = self.browser.find_element_by_id('id_group_name').get_attribute('value')
         self.assertEqual(bs_string[:50], group_id)
 
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
         self.assertIn('Schedule this Object', submit)
 
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.datetime', MockDateTime)
@@ -792,6 +804,7 @@ class ScheduleObservations(FunctionalTest):
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
         self.assertIn('Schedule this Object', submit)
 
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.datetime', MockDateTime)
@@ -882,6 +895,7 @@ class ScheduleObservations(FunctionalTest):
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
         self.assertIn('Schedule this Object', submit)
 
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.datetime', MockDateTime)

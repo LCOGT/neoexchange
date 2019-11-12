@@ -528,6 +528,46 @@ class TestComputeEphemerides(TestCase):
 
         self.assertEqual({}, emp_line)
 
+    def test_call_compute_empty_elements(self):
+        body_elements = { 'id': 241,
+                          'provisional_name': 'WD3FB24',
+                          'provisional_packed': None,
+                          'name': '2015 DP53',
+                          'origin': 'M',
+                          'source_type': 'N',
+                          'elements_type': None,
+                          'active': False,
+                          'fast_moving': False,
+                          'urgency': None,
+                          'epochofel': None,
+                          'orbit_rms': 99.0,
+                          'orbinc': None,
+                          'longascnode': None,
+                          'argofperih': None,
+                          'eccentricity': None,
+                          'meandist': None,
+                          'meananom': None,
+                          'perihdist': None,
+                          'epochofperih': None,
+                          'abs_mag': None,
+                          'slope': None,
+                          'score': None,
+                          'discovery_date': None,
+                          'num_obs': None,
+                          'arc_length': None,
+                          'not_seen': None,
+                          'updated': False,
+                          'ingest': datetime(2015, 3, 7, 1, 22, 34),
+                          'update_time': None
+                        }
+        start = datetime(2019, 11, 11, 15)
+        site_code = '500'
+
+        emp_line = compute_ephem(start, body_elements, site_code, perturb=False)
+
+        self.assertEqual({}, emp_line)
+
+
 class TestDarkAndObjectUp(TestCase):
 
     @classmethod
@@ -928,7 +968,7 @@ class TestLongTermScheduling(TestCase):
 
         dark_start, dark_end = determine_darkness_times(site_code, utc_date=datetime(2017, 1, 6, 0, 0, 00))
         emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size='5 m', alt_limit=30)
-        dark_and_up_time, emp_dark_and_up = compute_dark_and_up_time(emp)
+        dark_and_up_time, emp_dark_and_up, set_time = compute_dark_and_up_time(emp)
 
         self.assertEqual(expected_dark_and_up_time, dark_and_up_time)
         self.assertEqual(expected_emp_dark_and_up, emp_dark_and_up)
@@ -942,7 +982,7 @@ class TestLongTermScheduling(TestCase):
 
         dark_start, dark_end = determine_darkness_times(site_code, utc_date=datetime(2017, 1, 6, 0, 0, 00))
         emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size='5 m', alt_limit=30)
-        dark_and_up_time, emp_dark_and_up = compute_dark_and_up_time(emp)
+        dark_and_up_time, emp_dark_and_up, set_time = compute_dark_and_up_time(emp)
 
         self.assertEqual(expected_dark_and_up_time, dark_and_up_time)
         self.assertEqual(expected_emp_dark_and_up_first_line, emp_dark_and_up[0])
@@ -955,7 +995,6 @@ class TestLongTermScheduling(TestCase):
 
         dark_start, dark_end = determine_darkness_times(site_code, utc_date=datetime(2017, 1, 6, 0, 0, 00))
         emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size='5 m', alt_limit=30)
-        dark_and_up_time = compute_dark_and_up_time(emp)
 
         max_alt = compute_max_altitude(emp)
 
@@ -969,7 +1008,6 @@ class TestLongTermScheduling(TestCase):
 
         dark_start, dark_end = determine_darkness_times(site_code, utc_date=datetime(2017, 1, 6, 0, 0, 00))
         emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size='5 m', alt_limit=30)
-        dark_and_up_time = compute_dark_and_up_time(emp)
 
         max_alt = compute_max_altitude(emp)
 
@@ -987,7 +1025,7 @@ class TestLongTermScheduling(TestCase):
         app_ra = emp_line['ra']
         app_dec = emp_line['dec']
         min_alt = 30
-        rise_time, set_time, max_alt = target_rise_set(mid_time, app_ra, app_dec, site_code, min_alt, step_size='1m')
+        rise_time, set_time, max_alt, vis_time = target_rise_set(mid_time, app_ra, app_dec, site_code, min_alt, step_size='1m')
 
         self.assertAlmostEqual(expected_max_alt, max_alt, 1)
         self.assertEqual(expected_rise_time, rise_time)
