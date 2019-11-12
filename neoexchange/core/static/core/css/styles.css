@@ -135,6 +135,7 @@ table.datatable  tr:hover {
     margin-left: -60px;
     opacity: 0;
     transition: opacity 0.5s;
+    overflow-wrap: break-word;
     text-transform: none !important;
 }
 
