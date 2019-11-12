@@ -135,7 +135,29 @@
                                         <td class="kv-key">Eccentricity</td>
                                         <td class="kv-value">{{body.eccentricity}}</td>
                                     </tr>
-                                    {% if body.elements_type  == 'MPC_MINOR_PLANET' %}
+                                    {% if body.elements_type  == 'MPC_COMET' %}
+                                    <!-- Comets -->
+                                    <tr>
+                                        <td class="kv-key">Perihelion distance (AU)</td>
+                                        <td class="kv-value">{{body.perihdist|floatformat:7}}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="kv-key">Epoch of perihelion</td>
+                                        <td class="kv-value">{{body.epochofperih}}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="kv-key">Epoch of perihelion (MJD)</td>
+                                        <td class="kv-value">{{body.epochofperih_mjd|floatformat:5}}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="kv-key">Total Magnitude (M1)</td>
+                                        <td class="kv-value">{{body.abs_mag}}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="kv-key">Slope Parameter (k1)</td>
+                                        <td class="kv-value">{{body.slope|multiply:2.5}}</td>
+                                    </tr>
+                                    {% else %}
                                     <tr>
                                         <td class="kv-key">Mean distance (AU)</td>
                                         <td class="kv-value">{{body.meandist}}</td>
@@ -167,28 +189,6 @@
                                     <tr>
                                         <td class="kv-key">Diameter in meters<br/>(range)</td>
                                         <td class="kv-value">{{body.diameter_range.0|floatformat:0}} - {{body.diameter_range.1|floatformat:0}}</td>
-                                    </tr>
-                                    {% else %}
-                                    <!-- Comets -->
-                                    <tr>
-                                        <td class="kv-key">Perihelion distance (AU)</td>
-                                        <td class="kv-value">{{body.perihdist|floatformat:7}}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="kv-key">Epoch of perihelion</td>
-                                        <td class="kv-value">{{body.epochofperih}}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="kv-key">Epoch of perihelion (MJD)</td>
-                                        <td class="kv-value">{{body.epochofperih_mjd|floatformat:5}}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="kv-key">Total Magnitude (M1)</td>
-                                        <td class="kv-value">{{body.abs_mag}}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="kv-key">Slope Parameter (k1)</td>
-                                        <td class="kv-value">{{body.slope|multiply:2.5}}</td>
                                     </tr>
                                     {% endif %}
                                 </tbody>

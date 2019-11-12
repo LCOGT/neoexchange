@@ -272,10 +272,16 @@ def spec_plot(data_spec, analog_data, reflec=False):
         plot.xaxis.axis_label = "Wavelength (Å)"
         spec_plots["raw_spec"] = plot
 
-    if reflec or (data_spec[0] and analog_data and data_spec[0]['label'] != analog_data['label']):
+    if reflec or (data_spec[0] and analog_data and data_spec[0]['label'] != analog_data[0]['label']):
         if not reflec:
-            plot.line(analog_data['wav'], analog_data['spec'], color="firebrick", legend_label=analog_data['label'],
-                      muted=True, muted_alpha=0.25, muted_color="firebrick")
+            first = True
+            for analog in analog_data:
+                if first:
+                    muted_alpha = 0.25
+                    first = False
+                else:
+                    muted_alpha = 0
+                plot.line(analog['wav'], analog['spec'], color="firebrick", legend_label=analog['label'], muted=True, muted_alpha=muted_alpha, muted_color="firebrick")
         # Build Reflectance Plot
         plot2 = figure(x_range=(3500, 10500), y_range=(0.5, 1.75), plot_width=800, plot_height=400)
         spec_dict = read_mean_tax()
@@ -303,9 +309,9 @@ def spec_plot(data_spec, analog_data, reflec=False):
 
         if not reflec:
             for spec in data_spec:
-                data_label_reflec, reflec_spec, reflec_ast_wav = spectrum_plot(spec['filename'], analog=analog_data['filename'])
+                data_label_reflec, reflec_spec, reflec_ast_wav = spectrum_plot(spec['filename'], analog=analog_data[0]['filename'])
                 plot2.line(reflec_ast_wav, reflec_spec, line_width=3, name=spec['label'])
-                plot2.title.text = 'Object: {}    Analog: {}'.format(spec['label'], analog_data['label'])
+                plot2.title.text = 'Object: {}    Analog: {}'.format(spec['label'], analog_data[0]['label'])
         else:
             for spec in data_spec:
                 plot2.circle(spec['wav'], spec['spec'], size=3, name=spec['label'])
@@ -361,7 +367,7 @@ def build_visibility_source(body, site_list, site_code, color_list, d, alt_limit
     """Builds the source dictionaries used by lin_vis_plot"""
 
     body_elements = model_to_dict(body)
-    emp = []
+    mag = None
     vis = {"x": [],
            "y": [],
            "sun_rise": [],
@@ -372,23 +378,27 @@ def build_visibility_source(body, site_list, site_code, color_list, d, alt_limit
            "moon_set": [],
            "moon_phase": [],
            "colors": [],
+           "line_alpha": [],
            "site": [],
            "obj_vis": [],
            "max_alt": []
            }
 
     for i, site in enumerate(site_list):
+        bonus_day = 0
         dark_start, dark_end = determine_darkness_times(site, d)
+        while dark_start < d:
+            bonus_day += 1
+            dark_start, dark_end = determine_darkness_times(site, d + timedelta(days=bonus_day))
         (site_name, site_long, site_lat, site_hgt) = get_sitepos(site)
         (moon_app_ra, moon_app_dec, diam) = moon_ra_dec(d, site_long, site_lat, site_hgt)
         moon_rise, moon_set, moon_max_alt, moon_vis_time = target_rise_set(d, moon_app_ra, moon_app_dec, site, 10, step_size, sun=False)
         moon_phase = moonphase(d, site_long, site_lat, site_hgt)
-        emp = call_compute_ephem(body_elements, d, d + timedelta(days=1), site, step_size)
+        emp = call_compute_ephem(body_elements, d, d + timedelta(days=1), site, step_size, perturb=False)
         obj_up_emp = dark_and_object_up(emp, d, d + timedelta(days=1), 0 , alt_limit=alt_limit)
         vis_time, emp_obj_up, set_time = compute_dark_and_up_time(obj_up_emp, step_size)
         obj_set = datetime_to_radians(d, set_time)
-        dark_and_up_time, max_alt = get_visibility(None, None, d + timedelta(hours=12), site, step_size, alt_limit, False, body_elements)
-
+        dark_and_up_time, max_alt = get_visibility(None, None, d + timedelta(days=bonus_day), site, step_size, alt_limit, False, body_elements)
         vis["x"].append(0)
         vis["y"].append(0)
         vis["sun_rise"].append(datetime_to_radians(d, dark_end))
@@ -399,11 +409,17 @@ def build_visibility_source(body, site_list, site_code, color_list, d, alt_limit
         vis["moon_set"].append(datetime_to_radians(d, moon_set))
         vis["moon_phase"].append(moon_phase)
         vis["colors"].append(color_list[i])
+        if vis_time > 0:
+            vis["line_alpha"].append(1)
+        else:
+            vis["line_alpha"].append(0)
         vis["site"].append(site_code[i])
         vis["obj_vis"].append(dark_and_up_time)
         vis["max_alt"].append(max_alt)
+        if emp:
+            mag = emp[0][3]
 
-    return vis, emp
+    return vis, mag
 
 
 def lin_vis_plot(body):
@@ -417,8 +433,8 @@ def lin_vis_plot(body):
     d = datetime.utcnow()
     step_size = '30 m'
     alt_limit = 30
-    vis, emp = build_visibility_source(body, site_list, site_code, color_list, d, alt_limit, step_size)
 
+    vis, mag = build_visibility_source(body, site_list, site_code, color_list, d, alt_limit, step_size)
     new_x = []
     for i, l in enumerate(site_code):
         new_x.append(-1 + i * ( 2 / (len(site_list)-1)))
@@ -438,13 +454,17 @@ def lin_vis_plot(body):
                     <br>
                     <span style="font-size: 15px;">Max Alt:</span>
                     <span style="font-size: 10px; color: #696;">@max_alt deg</span>
-                    """+"""
+                    """
+
+    # Add vmag
+    if mag:
+        TOOLTIPS += """
                     <br>
                     <span style="font-size: 15px;">V Mag:</span>
                     <span style="font-size: 10px; color: #696;">{}</span>
                 </div>
             </div>
-        """.format(emp[0][3])
+        """.format(mag)
 
     hover = HoverTool(tooltips=TOOLTIPS, point_policy="none", attachment='below', line_policy="none")
     plot = figure(toolbar_location=None, x_range=(-1.5, 1.5), y_range=(-.5, .5), tools=[hover], plot_width=300,
@@ -456,7 +476,7 @@ def lin_vis_plot(body):
     # base
     plot.circle(x='x', y='y', radius=rad, fill_color="white", source=source, line_color="black", line_width=2)
     # object
-    plot.wedge(x='x', y='y', radius=rad, start_angle="obj_rise", end_angle="obj_set", color="colors", line_color="black", source=source)
+    plot.wedge(x='x', y='y', radius=rad, start_angle="obj_rise", end_angle="obj_set", color="colors", line_color="black",line_alpha="line_alpha", source=source)
     # sun
     plot.wedge(x='x', y='y', radius=rad * .75, start_angle="sun_rise", end_angle="sun_set", color="khaki", line_color="black", source=source)
     # moon
@@ -475,10 +495,16 @@ def lin_vis_plot(body):
     plot.circle(x='x', y='y', radius=rad, color="white", source=source, alpha=0.75, legend_label="?", visible=False)
 
     # Plot target help
-    up_index = [i for i, x in enumerate(vis['x']) if vis["obj_rise"][i] != 0 and vis["obj_set"][i] != 0][0]
-    if not up_index:
+    up_index_list = [i for i, x in enumerate(vis['x']) if vis["obj_rise"][i] != 0 and vis["obj_set"][i] != 0]
+    if 1 in up_index_list or not up_index_list:
         up_index = 1
-    plot.wedge(x=vis['x'][up_index], y=vis['y'][up_index], radius=rad, start_angle=vis["obj_rise"][up_index], end_angle=vis["obj_set"][up_index], fill_color=vis["colors"][up_index], line_color="black", legend="?", visible=False)
+    elif len(up_index_list) > 1 and not up_index_list[0]:
+        up_index = up_index_list[1]
+    else:
+        up_index = up_index_list[0]
+
+    plot.wedge(x=vis['x'][up_index], y=vis['y'][up_index], radius=rad, start_angle=vis["obj_rise"][up_index], end_angle=vis["obj_set"][up_index], fill_color=vis["colors"][up_index], line_color="black", legend_label="?", visible=False)
+
     plot.text(vis['x'][up_index], [rad + .1], text=["Target"], text_color=vis["colors"][up_index], text_align='center', text_font_size='10px', legend_label="?", visible=False)
     n = list(range(len(site_list)))
     n.remove(up_index)
@@ -488,11 +514,11 @@ def lin_vis_plot(body):
     plot.ray([vis['x'][n[0]]], [0], angle=pi/2, length=rad, color="red", alpha=.75, line_width=2, legend_label="?", visible=False)
 
     # Plot sun help
-    plot.wedge(x=vis['x'][n[1]], y=vis['y'][n[1]], radius=rad * .75, start_angle=vis["sun_rise"][n[1]], end_angle=vis["sun_set"][n[1]], fill_color="khaki", line_color="black", legend="?", visible=False)
+    plot.wedge(x=vis['x'][n[1]], y=vis['y'][n[1]], radius=rad * .75, start_angle=vis["sun_rise"][n[1]], end_angle=vis["sun_set"][n[1]], fill_color="khaki", line_color="black", legend_label="?", visible=False)
     plot.text(vis['x'][n[1]], [rad+.1], text=["Sun"], text_color="darkgoldenrod", text_align='center', text_font_size='10px', legend_label="?", visible=False)
 
     # Plot moon help
-    plot.wedge(x=vis['x'][n[2]], y=vis['y'][n[2]], radius=rad * .5, start_angle=vis["moon_rise"][n[2]], end_angle=vis["moon_set"][n[2]], fill_color="gray", line_color="black", fill_alpha=vis['moon_phase'][n[2]], legend="?", visible=False)
+    plot.wedge(x=vis['x'][n[2]], y=vis['y'][n[2]], radius=rad * .5, start_angle=vis["moon_rise"][n[2]], end_angle=vis["moon_set"][n[2]], fill_color="gray", line_color="black", fill_alpha=vis['moon_phase'][n[2]], legend_label="?", visible=False)
     plot.text(vis['x'][n[2]], [rad + .1], text=["Moon"], text_color="dimgray", text_align='center', text_font_size='10px', legend_label="?", visible=False)
 
     # plot time direction
