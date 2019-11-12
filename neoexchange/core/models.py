@@ -569,7 +569,7 @@ class Designations(models.Model):
     desig_type  = models.CharField('Designation Type', blank=True, choices=DESIG_CHOICES, null=True, max_length=1)
     preferred    = models.BooleanField('Is this the preferred designation of this type?', default=False)
     packed      = models.BooleanField('Is this a packed designation?', default=False)
-    notes = models.CharField('Notes on Nomenclature', max_length=30, blank=True, null=True)
+    notes       = models.CharField('Notes on Nomenclature', max_length=30, blank=True, null=True)
 
     class Meta:
         verbose_name = _('Object Designation')
@@ -591,8 +591,8 @@ class PhysicalParameters(models.Model):
     units          = models.CharField('Physical Parameter Units', blank=True, null=True, max_length=30)
     quality        = models.CharField('Physical Parameter Quality Designation', blank=True, null=True, max_length=10)
     preferred      = models.BooleanField('Is this the preferred value for this type of parameter?', default=False)
-    reference      = models.CharField('Reference for this value', max_length=50, blank=True, null=True)
-    notes          = models.CharField('Notes on this value', max_length=50, blank=True, null=True)
+    reference      = models.TextField('Reference for this value', max_length=50, blank=True, null=True)
+    notes          = models.TextField('Notes on this value', blank=True, null=True)
 
     class Meta:
         verbose_name = _('Physical Parameter')
@@ -615,8 +615,8 @@ class ColorValues(models.Model):
     units         = models.CharField('Color Units', blank=True, null=True, max_length=30)
     quality       = models.CharField('Color Quality Designation', blank=True, null=True, max_length=10)
     preferred     = models.BooleanField('Is this the preferred value for this color band?', default=False)
-    reference     = models.CharField('Reference for this value', max_length=50, blank=True, null=True)
-    notes         = models.CharField('Notes on this value', max_length=50, blank=True, null=True)
+    reference     = models.TextField('Reference for this value', max_length=50, blank=True, null=True)
+    notes         = models.TextField('Notes on this value', max_length=50, blank=True, null=True)
 
     class Meta:
         verbose_name = _('Color Value')
