@@ -332,7 +332,7 @@ class Body(models.Model):
             if not emp_line:
                 return False
             else:
-            # Return just numerical values
+                # Return just numerical values
                 return emp_line['ra'], emp_line['dec'], emp_line['mag'], emp_line['southpole_sep'], emp_line['sky_motion'], emp_line['sky_motion_pa']
         else:
             # Catch the case where there is no Epoch
@@ -591,7 +591,7 @@ class PhysicalParameters(models.Model):
     units          = models.CharField('Physical Parameter Units', blank=True, null=True, max_length=30)
     quality        = models.CharField('Physical Parameter Quality Designation', blank=True, null=True, max_length=10)
     preferred      = models.BooleanField('Is this the preferred value for this type of parameter?', default=False)
-    reference      = models.TextField('Reference for this value', max_length=50, blank=True, null=True)
+    reference      = models.TextField('Reference for this value', blank=True, null=True)
     notes          = models.TextField('Notes on this value', blank=True, null=True)
 
     class Meta:
@@ -615,8 +615,8 @@ class ColorValues(models.Model):
     units         = models.CharField('Color Units', blank=True, null=True, max_length=30)
     quality       = models.CharField('Color Quality Designation', blank=True, null=True, max_length=10)
     preferred     = models.BooleanField('Is this the preferred value for this color band?', default=False)
-    reference     = models.TextField('Reference for this value', max_length=50, blank=True, null=True)
-    notes         = models.TextField('Notes on this value', max_length=50, blank=True, null=True)
+    reference     = models.TextField('Reference for this value', blank=True, null=True)
+    notes         = models.TextField('Notes on this value', blank=True, null=True)
 
     class Meta:
         verbose_name = _('Color Value')
