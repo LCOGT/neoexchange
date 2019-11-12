@@ -272,10 +272,16 @@ def spec_plot(data_spec, analog_data, reflec=False):
         plot.xaxis.axis_label = "Wavelength (Å)"
         spec_plots["raw_spec"] = plot
 
-    if reflec or (data_spec[0] and analog_data and data_spec[0]['label'] != analog_data['label']):
+    if reflec or (data_spec[0] and analog_data and data_spec[0]['label'] != analog_data[0]['label']):
         if not reflec:
-            plot.line(analog_data['wav'], analog_data['spec'], color="firebrick", legend_label=analog_data['label'],
-                      muted=True, muted_alpha=0.25, muted_color="firebrick")
+            first = True
+            for analog in analog_data:
+                if first:
+                    muted_alpha = 0.25
+                    first = False
+                else:
+                    muted_alpha = 0
+                plot.line(analog['wav'], analog['spec'], color="firebrick", legend_label=analog['label'], muted=True, muted_alpha=muted_alpha, muted_color="firebrick")
         # Build Reflectance Plot
         plot2 = figure(x_range=(3500, 10500), y_range=(0.5, 1.75), plot_width=800, plot_height=400)
         spec_dict = read_mean_tax()
@@ -303,9 +309,9 @@ def spec_plot(data_spec, analog_data, reflec=False):
 
         if not reflec:
             for spec in data_spec:
-                data_label_reflec, reflec_spec, reflec_ast_wav = spectrum_plot(spec['filename'], analog=analog_data['filename'])
+                data_label_reflec, reflec_spec, reflec_ast_wav = spectrum_plot(spec['filename'], analog=analog_data[0]['filename'])
                 plot2.line(reflec_ast_wav, reflec_spec, line_width=3, name=spec['label'])
-                plot2.title.text = 'Object: {}    Analog: {}'.format(spec['label'], analog_data['label'])
+                plot2.title.text = 'Object: {}    Analog: {}'.format(spec['label'], analog_data[0]['label'])
         else:
             for spec in data_spec:
                 plot2.circle(spec['wav'], spec['spec'], size=3, name=spec['label'])
@@ -497,7 +503,8 @@ def lin_vis_plot(body):
     else:
         up_index = up_index_list[0]
 
-    plot.wedge(x=vis['x'][up_index], y=vis['y'][up_index], radius=rad, start_angle=vis["obj_rise"][up_index], end_angle=vis["obj_set"][up_index], fill_color=vis["colors"][up_index], line_color="black", legend="?", visible=False)
+    plot.wedge(x=vis['x'][up_index], y=vis['y'][up_index], radius=rad, start_angle=vis["obj_rise"][up_index], end_angle=vis["obj_set"][up_index], fill_color=vis["colors"][up_index], line_color="black", legend_label="?", visible=False)
+
     plot.text(vis['x'][up_index], [rad + .1], text=["Target"], text_color=vis["colors"][up_index], text_align='center', text_font_size='10px', legend_label="?", visible=False)
     n = list(range(len(site_list)))
     n.remove(up_index)
@@ -507,11 +514,11 @@ def lin_vis_plot(body):
     plot.ray([vis['x'][n[0]]], [0], angle=pi/2, length=rad, color="red", alpha=.75, line_width=2, legend_label="?", visible=False)
 
     # Plot sun help
-    plot.wedge(x=vis['x'][n[1]], y=vis['y'][n[1]], radius=rad * .75, start_angle=vis["sun_rise"][n[1]], end_angle=vis["sun_set"][n[1]], fill_color="khaki", line_color="black", legend="?", visible=False)
+    plot.wedge(x=vis['x'][n[1]], y=vis['y'][n[1]], radius=rad * .75, start_angle=vis["sun_rise"][n[1]], end_angle=vis["sun_set"][n[1]], fill_color="khaki", line_color="black", legend_label="?", visible=False)
     plot.text(vis['x'][n[1]], [rad+.1], text=["Sun"], text_color="darkgoldenrod", text_align='center', text_font_size='10px', legend_label="?", visible=False)
 
     # Plot moon help
-    plot.wedge(x=vis['x'][n[2]], y=vis['y'][n[2]], radius=rad * .5, start_angle=vis["moon_rise"][n[2]], end_angle=vis["moon_set"][n[2]], fill_color="gray", line_color="black", fill_alpha=vis['moon_phase'][n[2]], legend="?", visible=False)
+    plot.wedge(x=vis['x'][n[2]], y=vis['y'][n[2]], radius=rad * .5, start_angle=vis["moon_rise"][n[2]], end_angle=vis["moon_set"][n[2]], fill_color="gray", line_color="black", fill_alpha=vis['moon_phase'][n[2]], legend_label="?", visible=False)
     plot.text(vis['x'][n[2]], [rad + .1], text=["Moon"], text_color="dimgray", text_align='center', text_font_size='10px', legend_label="?", visible=False)
 
     # plot time direction
