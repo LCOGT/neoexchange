@@ -148,17 +148,22 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
         """
 
         # get data/Header from Fits
-        with fits.open(fits_files[n], ignore_missing_end=True) as hdul:
-            try:
-                header_n = hdul['SCI'].header
-                data = hdul['SCI'].data
-            except KeyError:
+        try:
+            with fits.open(fits_files[n], ignore_missing_end=True) as hdul:
                 try:
-                    header_n = hdul['COMPRESSED_IMAGE'].header
-                    data = hdul['COMPRESSED_IMAGE'].data
+                    header_n = hdul['SCI'].header
+                    data = hdul['SCI'].data
                 except KeyError:
-                    header_n = hdul[0].header
-                    data = hdul[0].data
+                    try:
+                        header_n = hdul['COMPRESSED_IMAGE'].header
+                        data = hdul['COMPRESSED_IMAGE'].data
+                    except KeyError:
+                        header_n = hdul[0].header
+                        data = hdul[0].data
+        except FileNotFoundError:
+            if progress:
+                print_progress_bar(n+1, len(fits_files), prefix='Creating Gif: Frame {}'.format(current_count), time_in=time_in)
+            return ax
 
         if center is not None:
             shape = data.shape
