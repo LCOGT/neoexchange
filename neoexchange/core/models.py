@@ -602,8 +602,10 @@ class PhysicalParameters(models.Model):
     def __str__(self):
         if self.value2:
             return "({}, {}) is the {} for {} (pk={})".format(self.value, self.value2, self.get_parameter_type_display(), self.body.full_name(), self.body.id)
-        else:
+        elif self.units:
             return "{}{} is the {} for {} (pk={})".format(self.value, self.units, self.get_parameter_type_display(), self.body.full_name(), self.body.id)
+        else:
+            return "{} is the {} for {} (pk={})".format(self.value, self.get_parameter_type_display(), self.body.full_name(), self.body.id)
 
 
 @python_2_unicode_compatible

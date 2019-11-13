@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2017-2019 LCO
+Copyright (C) 2019-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -16,8 +16,7 @@ GNU General Public License for more details.
 from django.core.management.base import BaseCommand, CommandError
 from datetime import datetime, timedelta
 from core.models import Body
-from astrometrics.sources_subs import fetch_jpl_physparams_altdes, store_jpl_sourcetypes, store_jpl_desigs,\
-    store_jpl_physparams
+from core.views import update_phys_params
 import logging
 logger = logging.getLogger(__name__)
 
@@ -40,9 +39,5 @@ class Command(BaseCommand):
         for body in bodies:
             self.stdout.write("{} ==== Updating {} ==== ({} of {}) ".format(datetime.now().strftime('%Y-%m-%d %H:%M'), body.current_name(), i+1, len(bodies)))
 
-            resp = fetch_jpl_physparams_altdes(body)
-
-            store_jpl_physparams(resp['phys_par'], body)
-            store_jpl_desigs(resp['object'], body)
-            store_jpl_sourcetypes(resp['object']['orbit_class']['code'], resp['object'], body)
+            update_phys_params(body)
             i += 1

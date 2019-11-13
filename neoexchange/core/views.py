@@ -64,7 +64,8 @@ from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs, validate_text,\
-    read_mpcorbit_file
+    read_mpcorbit_file, fetch_jpl_physparams_altdes, store_jpl_sourcetypes, store_jpl_desigs,\
+    store_jpl_physparams
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
@@ -2480,7 +2481,18 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
         body.origin = origin
         body.save()
         logger.info("More recent elements already stored for %s" % obj_id)
+    # Update Physical Parameters
+    update_phys_params(body)
     return True
+
+
+def update_phys_params(body):
+    """Fetch physical parameters, names, and object type from JPL SB database and store in Neoexchange DB"""
+    resp = fetch_jpl_physparams_altdes(body)
+
+    store_jpl_physparams(resp['phys_par'], body)
+    store_jpl_desigs(resp['object'], body)
+    store_jpl_sourcetypes(resp['object']['orbit_class']['code'], resp['object'], body)
 
 
 def ingest_new_object(orbit_file, obs_file=None, dbg=False):
