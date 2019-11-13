@@ -482,6 +482,8 @@ class Body(models.Model):
 
     def save_physical_parameters(self, kwargs):
         """Takes a dictionary of arguments. Dictionary specifics depend on what parameters are being added."""
+
+        overwrite = False
         if 'color_band' in kwargs.keys():
             model = ColorValues
             type_key = 'color_band'
@@ -494,6 +496,8 @@ class Body(models.Model):
         else:
             model = PhysicalParameters
             type_key = 'parameter_type'
+            if kwargs['reference'] == 'MPC Default':
+                overwrite = True
 
         # Don't save empty values
         if not kwargs['value']:
@@ -502,40 +506,46 @@ class Body(models.Model):
             kwargs['preferred'] = False
 
         current_params = model.objects.filter(body=self.id)
+        print(current_params)
 
         new_param = True
         new_type = True
         if current_params:
             for param in current_params:
                 param_dict = model_to_dict(param)
-                diff_values = {k: kwargs[k] for k in kwargs if k in param_dict and kwargs[k] != param_dict[k]}
-                if len(diff_values) == 0:
-                    new_param = False
-                elif len(diff_values) == 1 and 'preferred' in diff_values:
-                    param.preferred = kwargs['preferred']
-                    param.save()
-                    new_param = False
-                elif len(diff_values) == 1 and 'body' in diff_values:
-                    new_param = False
-                elif param_dict[type_key] == kwargs[type_key] and param_dict['value'] == kwargs['value']:
-                    for value in diff_values:
-                        if isinstance(param_dict[value], str):
-                            if isinstance(kwargs[value], str):
-                                kwargs[value] += ('/' + param_dict[value])
-                            else:
-                                kwargs[value] = param_dict[value]
-                    param.delete()
-                else:
-                    if param_dict[type_key] == kwargs[type_key] and kwargs['preferred'] and param_dict['preferred']:
-                        param.preferred = False
+                if param_dict[type_key] == kwargs[type_key]:
+                    diff_values = {k: kwargs[k] for k in kwargs if k in param_dict and kwargs[k] != param_dict[k]}
+                    if len(diff_values) == 0:
+                        new_param = False
+                    elif len(diff_values) == 1 and 'preferred' in diff_values:
+                        param.preferred = kwargs['preferred']
                         param.save()
-                if param_dict[type_key] == kwargs[type_key] and ( kwargs['preferred'] or param_dict['preferred']):
-                    new_type = False
+                        new_param = False
+                    elif len(diff_values) == 1 and 'body' in diff_values:
+                        new_param = False
+                    elif param_dict[type_key] == kwargs[type_key] and param_dict['value'] == kwargs['value']:
+                        for value in diff_values:
+                            if isinstance(param_dict[value], str):
+                                if isinstance(kwargs[value], str):
+                                    kwargs[value] += ('/' + param_dict[value])
+                                elif kwargs[value] is None:
+                                    kwargs[value] = param_dict[value]
+                        param.delete()
+                    elif param_dict[type_key] == kwargs[type_key] and overwrite:
+                        if param_dict['reference'] == 'MPC Default':
+                            param.delete()
+                    else:
+                        if param_dict[type_key] == kwargs[type_key] and kwargs['preferred'] and param_dict['preferred']:
+                            param.preferred = False
+                            param.save()
+                    if param_dict[type_key] == kwargs[type_key] and ( kwargs['preferred'] or param_dict['preferred']):
+                        new_type = False
 
         if new_type is True:
             kwargs['preferred'] = True
         if new_param is True:
             kwargs['body'] = self
+            kwargs['update_time'] = datetime.utcnow()
             try:
                 model.objects.create(**kwargs)
             except TypeError:
@@ -570,6 +580,7 @@ class Designations(models.Model):
     preferred    = models.BooleanField('Is this the preferred designation of this type?', default=False)
     packed      = models.BooleanField('Is this a packed designation?', default=False)
     notes       = models.CharField('Notes on Nomenclature', max_length=30, blank=True, null=True)
+    update_time = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         verbose_name = _('Object Designation')
@@ -593,6 +604,7 @@ class PhysicalParameters(models.Model):
     preferred      = models.BooleanField('Is this the preferred value for this type of parameter?', default=False)
     reference      = models.TextField('Reference for this value', blank=True, null=True)
     notes          = models.TextField('Notes on this value', blank=True, null=True)
+    update_time    = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         verbose_name = _('Physical Parameter')
@@ -619,6 +631,7 @@ class ColorValues(models.Model):
     preferred     = models.BooleanField('Is this the preferred value for this color band?', default=False)
     reference     = models.TextField('Reference for this value', blank=True, null=True)
     notes         = models.TextField('Notes on this value', blank=True, null=True)
+    update_time   = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         verbose_name = _('Color Value')

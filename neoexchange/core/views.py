@@ -1856,8 +1856,7 @@ def save_and_make_revision(body, kwargs):
                 p_dict = {'value': v,
                           'parameter_type': param_code,
                           'preferred': False,
-                          'reference': 'MPC Default',
-                          'notes': 'Updated: {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M'))
+                          'reference': 'MPC Default'
                           }
             phys_update = body.save_physical_parameters(p_dict)
             if k == 'abs_mag' and phys_update:
