@@ -297,6 +297,22 @@ class StaticSourceAdmin(admin.ModelAdmin):
     search_fields = ('name',)
 
 
+class PhysicalParametersAdmin(admin.ModelAdmin):
+
+    def body_name(self, obj):
+        name = ''
+        if obj.body is not None:
+            name = obj.body.full_name()
+        elif obj.calibsource is not None:
+            name = obj.calibsource.name
+        return name
+
+    search_fields = ('body__name', 'body__provisional_name')
+    list_display = ('id', 'body_name', 'parameter_type', 'value', 'error', 'units', 'preferred')
+    list_filter = ('parameter_type', 'preferred')
+    ordering = [ 'body__name', 'parameter_type', '-preferred']
+
+
 admin.site.register(Proposal, ProposalAdmin)
 admin.site.register(SourceMeasurement, SourceMeasurementAdmin)
 admin.site.register(ProposalPermission)
@@ -304,5 +320,5 @@ admin.site.register(CatalogSources, CatalogSourcesAdmin)
 admin.site.register(Candidate, CandidateAdmin)
 admin.site.register(PanoptesReport)
 admin.site.register(StaticSource, StaticSourceAdmin)
-admin.site.register(PhysicalParameters)
+admin.site.register(PhysicalParameters, PhysicalParametersAdmin)
 admin.site.register(Designations)
