@@ -1879,7 +1879,7 @@ def save_and_make_revision(body, kwargs):
                              'parameter_type': 'D',
                              'units': 'm',
                              'preferred': False,
-                             'reference': 'Default',
+                             'reference': 'MPC Default',
                              'notes': 'Initial Diameter Guess using H={} and albedo={} ({} to {})'.format(v, round(albedo_mid,2), round(albedo_low,2), round(albedo_high,2))
                             }
                 body.save_physical_parameters(diam_dict)

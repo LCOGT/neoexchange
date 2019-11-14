@@ -38,6 +38,5 @@ class Command(BaseCommand):
         i = 0
         for body in bodies:
             self.stdout.write("{} ==== Updating {} ==== ({} of {}) ".format(datetime.now().strftime('%Y-%m-%d %H:%M'), body.current_name(), i+1, len(bodies)))
-
             update_phys_params(body)
             i += 1
