@@ -2481,11 +2481,12 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
         body.save()
         logger.info("More recent elements already stored for %s" % obj_id)
     # Update Physical Parameters
-    update_phys_params(body)
+    if body.characterization_target():
+        update_jpl_phys_params(body)
     return True
 
 
-def update_phys_params(body):
+def update_jpl_phys_params(body):
     """Fetch physical parameters, names, and object type from JPL SB database and store in Neoexchange DB"""
     resp = fetch_jpl_physparams_altdes(body)
 

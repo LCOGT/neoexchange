@@ -495,8 +495,8 @@ class Body(models.Model):
         else:
             model = PhysicalParameters
             type_key = 'parameter_type'
-            if kwargs['reference'] == 'MPC Default':
-                overwrite = True
+        if 'reference' in kwargs.keys() and kwargs['reference'] == 'MPC Default':
+            overwrite = True
 
         # Don't save empty values
         if not kwargs['value']:

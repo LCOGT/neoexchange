@@ -2084,8 +2084,9 @@ class TestUpdateMPCOrbit(TestCase):
             expected_params.remove(test_list)
         self.assertEqual(expected_params, [])
 
+    @patch('core.views.update_jpl_phys_params')
     @patch('core.views.datetime', MockDateTime)
-    def test_2014UR_Goldstone(self):
+    def test_2014UR_Goldstone(self, mock_class):
 
         expected_elements = self.expected_elements
         expected_elements['origin'] = 'G'
@@ -2102,8 +2103,9 @@ class TestUpdateMPCOrbit(TestCase):
             if key not in self.nocheck_keys and key != 'id':
                 self.assertEqual(expected_elements[key], new_body_elements[key])
 
+    @patch('core.views.update_jpl_phys_params')
     @patch('core.views.datetime', MockDateTime)
-    def test_2014UR_Arecibo(self):
+    def test_2014UR_Arecibo(self, mock_class):
 
         expected_elements = self.expected_elements
         expected_elements['origin'] = 'A'
@@ -2155,8 +2157,9 @@ class TestUpdateMPCOrbit(TestCase):
         for key in test_elements:
             self.assertNotEqual(expected_elements[key], new_body_elements[key])
 
+    @patch('core.views.update_jpl_phys_params')
     @patch('core.views.datetime', MockDateTime)
-    def test_physparams_given_albedo(self):
+    def test_physparams_given_albedo(self, mock_class):
         params = {'name': '2014 UR',
                   'abs_mag': 21.0,
                   'slope': 0.1,
@@ -2197,15 +2200,16 @@ class TestUpdateMPCOrbit(TestCase):
         status = update_MPC_orbit(self.test_mpcdb_page, origin='A')
         self.assertEqual(True, status)
 
-        #test diameter uses only updated albedo and not default or old albedo
+        # test diameter uses only updated albedo and not default or old albedo
         for param in phys_params(return_all=False):
             test_list = (param['parameter_type'], param['value'])
             self.assertIn(test_list, expected_params)
             expected_params.remove(test_list)
         self.assertEqual(expected_params, [])
 
+    @patch('core.views.update_jpl_phys_params')
     @patch('core.views.datetime', MockDateTime)
-    def test_2014UR_Arecibo_older_exists(self):
+    def test_2014UR_Arecibo_older_exists(self, mock_class):
         params = {'name': '2014 UR',
                   'abs_mag': 26.6,
                   'slope': 0.1,
@@ -2239,8 +2243,9 @@ class TestUpdateMPCOrbit(TestCase):
             if key not in self.nocheck_keys and key != 'id':
                 self.assertEqual(expected_elements[key], new_body_elements[key])
 
+    @patch('core.views.update_jpl_phys_params')
     @patch('core.views.datetime', MockDateTime)
-    def test_2014UR_goldstone_then_arecibo(self):
+    def test_2014UR_goldstone_then_arecibo(self, mock_class):
 
         expected_elements = self.expected_elements
         expected_elements['origin'] = 'R'
@@ -2261,8 +2266,9 @@ class TestUpdateMPCOrbit(TestCase):
             if key not in self.nocheck_keys and key != 'id':
                 self.assertEqual(expected_elements[key], new_body_elements[key])
 
+    @patch('core.views.update_jpl_phys_params')
     @patch('core.views.datetime', MockDateTime)
-    def test_2014UR_arecibo_then_goldstone(self):
+    def test_2014UR_arecibo_then_goldstone(self, mock_class):
 
         expected_elements = self.expected_elements
         expected_elements['origin'] = 'R'
@@ -2283,8 +2289,9 @@ class TestUpdateMPCOrbit(TestCase):
             if key not in self.nocheck_keys and key != 'id':
                 self.assertEqual(expected_elements[key], new_body_elements[key])
 
+    @patch('core.views.update_jpl_phys_params')
     @patch('core.views.datetime', MockDateTime)
-    def test_2014UR_arecibo_then_NASA(self):
+    def test_2014UR_arecibo_then_NASA(self, mock_class):
 
         expected_elements = self.expected_elements
         expected_elements['origin'] = 'N'

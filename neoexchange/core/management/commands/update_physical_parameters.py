@@ -16,7 +16,7 @@ GNU General Public License for more details.
 from django.core.management.base import BaseCommand, CommandError
 from datetime import datetime, timedelta
 from core.models import Body
-from core.views import update_phys_params
+from core.views import update_jpl_phys_params
 import logging
 logger = logging.getLogger(__name__)
 
@@ -38,5 +38,5 @@ class Command(BaseCommand):
         i = 0
         for body in bodies:
             self.stdout.write("{} ==== Updating {} ==== ({} of {}) ".format(datetime.now().strftime('%Y-%m-%d %H:%M'), body.current_name(), i+1, len(bodies)))
-            update_phys_params(body)
+            update_jpl_phys_params(body)
             i += 1
