@@ -531,6 +531,88 @@ class TestSavePhysicalParameters(TestCase):
         self.assertFalse(get_db[1]['preferred'])
         self.assertTrue(get_db[2]['preferred'])
 
+    def test_ingest_not_preferred(self):
+        phys3 = {'parameter_type': 'D',
+                 'value': 8.7,
+                 'error': 0.5,
+                 'units': 'm',
+                 'reference': "Bob and Friends, 2019",
+                 'notes': 'This is a fake entry'}
+        # save 1st diameter (not preferred)
+        self.body.save_physical_parameters(phys3)
+        d1 = self.body.get_physical_parameters(param_type='D')
+        self.assertTrue(d1[0]['preferred'])
+
+        # save new diameter (also not preferred)
+        phys3['value'] = 10.5
+        phys3.pop('preferred')
+        self.body.save_physical_parameters(phys3)
+        d2 = self.body.get_physical_parameters(param_type='D')
+        self.assertTrue(d2[0]['preferred'])
+        self.assertFalse(d2[1]['preferred'])
+
+        # change so there is no preferred diameter
+        phys3['preferred'] = False
+        phys3['value'] = 8.7
+        self.body.save_physical_parameters(phys3)
+        d3 = self.body.get_physical_parameters(param_type='D')
+        self.assertFalse(d3[0]['preferred'])
+        self.assertFalse(d3[1]['preferred'])
+
+        # re-save original diameter
+        self.body.save_physical_parameters(phys3)
+        d4 = self.body.get_physical_parameters(param_type='D')
+        self.assertFalse(d4[0]['preferred'])
+        self.assertFalse(d4[1]['preferred'])
+
+        # save new diameter while none are preferred. (make sure units work)
+        phys3['units'] = 'km'
+        self.body.save_physical_parameters(phys3)
+        d5 = self.body.get_physical_parameters(param_type='D')
+        self.assertFalse(d5[0]['preferred'])
+        self.assertFalse(d5[1]['preferred'])
+        self.assertTrue(d5[2]['preferred'])
+        self.assertEqual(d5[2]['units'], 'km')
+
+    def test_mpc_default(self):
+        phys3 = {'parameter_type': 'D',
+                 'value': 8.7,
+                 'error': 0.5,
+                 'units': 'm',
+                 'reference': "MPC Default",
+                 'notes': 'This is a fake entry',
+                 'preferred': True}
+        # Save MPC Default entry
+        self.body.save_physical_parameters(phys3)
+        phys3['value'] = 12.5
+        # test Overwrite of MPC Default
+        self.body.save_physical_parameters(phys3)
+        d1 = self.body.get_physical_parameters(param_type='D')
+        self.assertEqual(len(d1), 1)
+        self.assertEqual(d1[0]['value'], 12.5)
+
+        # Add non MPC Default
+        phys3['value'] = 15.4
+        phys3['reference'] = 'Some Guy'
+        self.body.save_physical_parameters(phys3)
+        d2 = self.body.get_physical_parameters(param_type='D')
+        self.assertEqual(len(d2), 2)
+        self.assertEqual(d2[0]['value'], 12.5)
+        self.assertEqual(d2[1]['value'], 15.4)
+        self.assertFalse(d2[0]['preferred'])
+        self.assertTrue(d2[1]['preferred'])
+
+        # Overwrite MPC Default, and leave other entry as preferred.
+        phys3['value'] = 10.1
+        phys3['reference'] = 'MPC Default'
+        self.body.save_physical_parameters(phys3)
+        d3 = self.body.get_physical_parameters(param_type='D')
+        self.assertEqual(len(d3), 2)
+        self.assertEqual(d3[1]['value'], 10.1)
+        self.assertEqual(d3[0]['value'], 15.4)
+        self.assertFalse(d3[1]['preferred'])
+        self.assertTrue(d3[0]['preferred'])
+
 
 class TestGetPhysicalParameters(TestCase):
 

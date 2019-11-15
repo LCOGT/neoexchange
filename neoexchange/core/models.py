@@ -505,37 +505,37 @@ class Body(models.Model):
             kwargs['preferred'] = False
 
         current_params = model.objects.filter(body=self.id)
-
         new_param = True
         new_type = True
         if current_params:
             for param in current_params:
                 param_dict = model_to_dict(param)
                 if param_dict[type_key] == kwargs[type_key]:
-                    new_type = False
-                    diff_values = {k: kwargs[k] for k in kwargs if k in param_dict and kwargs[k] != param_dict[k]}
+                    if param_dict['preferred'] is not False:
+                        new_type = False
+                    diff_values = {k: kwargs[k] for k in kwargs if k in param_dict and kwargs[k] != param_dict[k] and k not in ['body', 'update_time']}
                     if len(diff_values) == 0:
                         new_param = False
                     elif len(diff_values) == 1 and 'preferred' in diff_values:
                         param.preferred = kwargs['preferred']
                         param.save()
                         new_param = False
-                    elif len(diff_values) == 1 and 'body' in diff_values:
-                        new_param = False
                     elif param_dict['value'] == kwargs['value']:
                         for value in diff_values:
-                            if isinstance(param_dict[value], str):
+                            if isinstance(param_dict[value], str) and 'units' not in value:
                                 if isinstance(kwargs[value], str):
                                     kwargs[value] += ('/' + param_dict[value])
                                 elif kwargs[value] is None:
                                     kwargs[value] = param_dict[value]
-                        param.delete()
+                                param.delete()
                     elif overwrite:
                         if param_dict['reference'] == 'MPC Default':
                             param.delete()
+                        else:
+                            kwargs['preferred'] = False
                     elif kwargs['preferred'] and param_dict['preferred']:
-                            param.preferred = False
-                            param.save()
+                        param.preferred = False
+                        param.save()
 
         if new_type is True:
             kwargs['preferred'] = True
