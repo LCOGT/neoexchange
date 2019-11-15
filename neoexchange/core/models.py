@@ -522,8 +522,8 @@ class Body(models.Model):
                         new_param = False
                     elif param_dict['value'] == kwargs['value']:
                         for value in diff_values:
-                            if isinstance(param_dict[value], str) and 'units' not in value:
-                                if isinstance(kwargs[value], str):
+                            if (isinstance(param_dict[value], str) or param_dict[value] is None) and 'units' not in value:
+                                if isinstance(kwargs[value], str) and param_dict[value]:
                                     kwargs[value] += ('/' + param_dict[value])
                                 elif kwargs[value] is None:
                                     kwargs[value] = param_dict[value]
