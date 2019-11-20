@@ -527,8 +527,8 @@ class TestSavePhysicalParameters(TestCase):
 
         get_db = self.body.get_physical_parameters()
 
-        self.assertTrue(get_db[0]['preferred'])
-        self.assertFalse(get_db[1]['preferred'])
+        self.assertFalse(get_db[0]['preferred'])
+        self.assertTrue(get_db[1]['preferred'])
         self.assertTrue(get_db[2]['preferred'])
 
     def test_ingest_not_preferred(self):

@@ -516,26 +516,21 @@ class Body(models.Model):
                     diff_values = {k: kwargs[k] for k in kwargs if k in param_dict and kwargs[k] != param_dict[k] and k not in ['body', 'update_time']}
                     if len(diff_values) == 0:
                         new_param = False
-                    elif len(diff_values) == 1 and 'preferred' in diff_values:
-                        param.preferred = kwargs['preferred']
+                        break
+                    if kwargs['preferred'] and param_dict['preferred'] and not overwrite:
+                        param.preferred = False
                         param.save()
-                        new_param = False
-                    elif param_dict['value'] == kwargs['value']:
-                        for value in diff_values:
-                            if (isinstance(param_dict[value], str) or param_dict[value] is None) and 'units' not in value:
-                                if isinstance(kwargs[value], str) and param_dict[value]:
-                                    kwargs[value] += ('/' + param_dict[value])
-                                elif kwargs[value] is None:
-                                    kwargs[value] = param_dict[value]
-                                param.delete()
-                    elif overwrite:
+                    if overwrite:
                         if param_dict['reference'] == 'MPC Default':
                             param.delete()
                         else:
                             kwargs['preferred'] = False
-                    elif kwargs['preferred'] and param_dict['preferred']:
-                        param.preferred = False
-                        param.save()
+                    elif param_dict['value'] == kwargs['value']:
+                        if "units" not in diff_values:
+                            for value in diff_values:
+                                if kwargs[value] is None:
+                                    kwargs[value] = param_dict[value]
+                            param.delete()
 
         if new_type is True:
             kwargs['preferred'] = True
