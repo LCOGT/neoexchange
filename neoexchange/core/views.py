@@ -41,6 +41,7 @@ from django.conf import settings
 from bs4 import BeautifulSoup
 import reversion
 import requests
+import re
 import numpy as np
 try:
     import pyslalib.slalib as S
@@ -54,6 +55,7 @@ from .models import *
 from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih, \
     convert_ast_to_comet
 import astrometrics.site_config as cfg
+from astrometrics.albedo import asteroid_diameter
 from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
     MagRangeError, determine_spectro_slot_length, get_sitepos, read_findorb_ephem,\
@@ -62,7 +64,8 @@ from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs, validate_text,\
-    read_mpcorbit_file
+    read_mpcorbit_file, fetch_jpl_physparams_altdes, store_jpl_sourcetypes, store_jpl_desigs,\
+    store_jpl_physparams
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
@@ -220,14 +223,15 @@ class BodySearchView(ListView):
     def get_queryset(self):
         name = self.request.GET.get("q", "")
         name = name.strip()
+        object_list = []
         if name != '':
             if name.isdigit():
-                object_list = self.model.objects.filter(name=name)
-            else:
-                object_list = self.model.objects.filter(Q(provisional_name__icontains=name) | Q(provisional_packed__icontains=name) | Q(name__icontains=name))
+                object_list = self.model.objects.filter(designations__value=name).filter(designations__desig_type='#')
+            if not object_list:
+                object_list = self.model.objects.filter(Q(designations__value__icontains=name) | Q(provisional_name__icontains=name) | Q(provisional_packed__icontains=name) | Q(name__icontains=name))
         else:
             object_list = self.model.objects.all()
-        return object_list
+        return list(set(object_list))
 
 
 class BodyVisibilityView(DetailView):
@@ -1335,7 +1339,7 @@ def schedule_submit(data, body, username):
             # Update MPC observations assuming too many updates have not been done recently and target is not a comet
             cut_off_time = timedelta(minutes=1)
             now = datetime.utcnow()
-            recent_updates = Body.objects.exclude(source_type='u').filter(update_time__gte=now-cut_off_time)
+            recent_updates = Body.objects.exclude(source_type='U').filter(update_time__gte=now-cut_off_time)
             if len(recent_updates) < 1:
                 update_MPC_obs(body.current_name())
 
@@ -1780,16 +1784,38 @@ def record_block(tracking_number, params, form_data, target):
         return False
 
 
+def sort_des_type(name, default='T'):
+    # Guess name type based on structure
+    n = name.strip()
+    if not n:
+        return ''
+    if n.isdigit():
+        dtype = '#'
+    elif ' ' in n or '_' in n:
+        dtype = 'P'
+    elif n[-1] in ['P', 'C', 'D'] and n[:-1].isdigit():
+        dtype = '#'
+    elif bool(re.search('\d', n)) or (not n.isupper() and sum(1 for c in n if c.isupper()) > 1):
+        dtype = 'C'
+    elif n.replace('-', '').replace("'", "").isalpha() and not n.isupper():
+        dtype = 'N'
+    else:
+        dtype = default
+    return dtype
+
+
 def return_fields_for_saving():
     """Returns a list of fields that should be checked before saving a revision.
     Split out from save_and_make_revision() so it can be consistently used by the
     remove_bad_revisions management command."""
 
-    fields = ['provisional_name', 'provisional_packed', 'name', 'origin', 'source_type',  'elements_type',
+    body_fields = ['provisional_name', 'provisional_packed', 'name', 'origin', 'source_type',  'elements_type',
               'epochofel', 'abs_mag', 'slope', 'orbinc', 'longascnode', 'eccentricity', 'argofperih', 'meandist', 'meananom',
               'score', 'discovery_date', 'num_obs', 'arc_length']
 
-    return fields
+    param_fields = ['abs_mag', 'slope', 'provisional_name', 'name']
+
+    return body_fields, param_fields
 
 
 def save_and_make_revision(body, kwargs):
@@ -1801,7 +1827,9 @@ def save_and_make_revision(body, kwargs):
     so use the type of original to convert and then compare.
     """
 
-    fields = return_fields_for_saving()
+    b_fields, p_fields = return_fields_for_saving()
+
+    p_field_to_p_code = {'abs_mag': 'H', 'slope': 'G', 'provisional_name': 'C', 'name': 'P'}
 
     update = False
 
@@ -1812,8 +1840,50 @@ def save_and_make_revision(body, kwargs):
             v = float(v)
         if v != param:
             setattr(body, k, v)
-            if k in fields:
+            if k in b_fields:
                 update = True
+        if k in p_fields:
+            param_code = p_field_to_p_code[k]
+            if 'name' in k:
+                if k == 'name':
+                    param_code = sort_des_type(str(v))
+                p_dict = {'desig_type': param_code,
+                              'value': v,
+                              'notes': 'MPC Default',
+                              'preferred': True,
+                              }
+            else:
+                p_dict = {'value': v,
+                          'parameter_type': param_code,
+                          'preferred': False,
+                          'reference': 'MPC Default'
+                          }
+            phys_update = body.save_physical_parameters(p_dict)
+            if k == 'abs_mag' and phys_update:
+                albedo = body.get_physical_parameters(param_type='ab', return_all=False)
+                if not albedo:
+                    albedo = [{'value': 0.14, 'error': 0.5-0.14, 'error2': 0.14-0.01}]
+                albedo_mid = albedo[0]['value']
+                if albedo[0]['error']:
+                    albedo_high = albedo_mid + albedo[0]['error']
+                    if albedo[0]['error2']:
+                        albedo_low = albedo_mid - albedo[0]['error2']
+                    else:
+                        albedo_low = albedo_mid - albedo[0]['error']
+                else:
+                    albedo_high = albedo_mid + 0.01
+                    albedo_low = albedo_mid - 0.01
+                diam_dict = {'value': round(asteroid_diameter(albedo_mid, v), 2),
+                             'error': round(asteroid_diameter(albedo_low, v) - asteroid_diameter(albedo_mid, v)),
+                             'error2': round(asteroid_diameter(albedo_mid, v) - asteroid_diameter(albedo_high, v)),
+                             'parameter_type': 'D',
+                             'units': 'm',
+                             'preferred': True,
+                             'reference': 'MPC Default',
+                             'notes': 'Initial Diameter Guess using H={} and albedo={} ({} to {})'.format(v, round(albedo_mid, 2), round(albedo_low, 2), round(albedo_high, 2))
+                            }
+                body.save_physical_parameters(diam_dict)
+
     if update:
         with reversion.create_revision():
             body.save()
@@ -1973,7 +2043,7 @@ def clean_NEOCP_object(page_list):
 
         elif 21 <= len(current) <= 25:
             # The first 20 characters can get very messy if there is a temporary
-            # and permanent desigination as the absolute magntiude and slope gets
+            # and permanent designation as the absolute magnitude and slope gets
             # pushed up and partially overwritten. Sort this mess out and then the
             # rest obeys the documentation on the MPC site:
             # https://www.minorplanetcenter.net/iau/info/MPOrbitFormat.html)
@@ -1993,7 +2063,7 @@ def clean_NEOCP_object(page_list):
                 readable_desig = line[166:194].strip()
             elements_type = 'MPC_MINOR_PLANET'
             source_type = 'U'
-            if readable_desig and readable_desig[0:2] =='P/':
+            if readable_desig and readable_desig[0:2] == 'P/':
                 elements_type = 'MPC_COMET'
                 source_type = 'C'
 
@@ -2096,6 +2166,12 @@ def update_crossids(astobj, dbg=False):
         body = sorted_bodies[0]
         logger.info("Taking %s (id=%d) as canonical Body" % (body.current_name(), body.pk))
         for del_body in sorted_bodies[1:]:
+            del_names = Designations.objects.filter(body=del_body)
+            for name in del_names:
+                des_dict = model_to_dict(name)
+                del des_dict['id']
+                del des_dict['body']
+                body.save_physical_parameters(des_dict)
             logger.info("Trying to remove %s (id=%d) duplicate Body" % (del_body.current_name(), del_body.pk))
             num_sblocks = SuperBlock.objects.filter(body=del_body).count()
             num_blocks = Block.objects.filter(body=del_body).count()
@@ -2119,21 +2195,23 @@ def update_crossids(astobj, dbg=False):
         # Find out if the details have changed, if they have, save a revision
         # But first check if it is a comet or NEO and came from somewhere other
         # than the MPC. In this case, leave it active.
-        if body.source_type in ['N', 'C', 'H'] and body.origin != 'M':
+        if (body.source_type in ['N', 'C'] or body.source_subtype_1 == 'H') and body.origin != 'M':
             kwargs['active'] = True
         # Check if we are trying to "downgrade" a NEO or other target type
         # to an asteroid
         if body.source_type != 'A' and body.origin != 'M' and kwargs['source_type'] == 'A':
             logger.warning("Not downgrading type for %s from %s to %s" % (body.current_name(), body.source_type, kwargs['source_type']))
             kwargs['source_type'] = body.source_type
-        if kwargs['source_type'] in ['C', 'H']:
-            if dbg: print("Converting to comet")
+        if kwargs['source_type'] == 'C' or (kwargs['source_type'] == 'A' and kwargs['source_subtype_1'] == 'H'):
+            if dbg:
+                print("Converting to comet")
             kwargs = convert_ast_to_comet(kwargs, body)
         if dbg:
             print(kwargs)
         check_body = Body.objects.filter(provisional_name=temp_id, **kwargs)
         if check_body.count() == 0:
             save_and_make_revision(body, kwargs)
+            body.save_physical_parameters({'value': temp_id, 'desig_type': sort_des_type(temp_id, default='C'), 'notes': 'MPC Default'})
             logger.info("Updated cross identification for %s" % body.current_name())
     elif kwargs != {}:
         # Didn't know about this object before so create but make inactive
@@ -2170,53 +2248,66 @@ def clean_crossid(astobj, dbg=False):
 
     active = True
     objtype = ''
+    sub1 = ''
     if obj_id != '' and desig == 'wasnotconfirmed':
-        if dbg: print("Case 1")
+        if dbg:
+            print("Case 1")
         # Unconfirmed, no longer interesting so set inactive
         objtype = 'U'
         desig = ''
         active = False
     elif obj_id != '' and desig == 'doesnotexist':
         # Did not exist, no longer interesting so set inactive
-        if dbg: print("Case 2")
+        if dbg:
+            print("Case 2")
         objtype = 'X'
         desig = ''
         active = False
     elif obj_id != '' and desig == 'wasnotminorplanet':
         # "was not a minor planet"; set to satellite and no longer interesting
-        if dbg: print("Case 3")
+        if dbg:
+            print("Case 3")
         objtype = 'J'
         desig = ''
         active = False
     elif obj_id != '' and desig == '' and reference == '':
         # "Was not interesting" (normally a satellite), no longer interesting
         # so set inactive
-        if dbg: print("Case 4")
+        if dbg:
+            print("Case 4")
         objtype = 'W'
         desig = ''
         active = False
     elif obj_id != '' and desig != '':
         # Confirmed
         if ('CBET' in reference or 'IAUC' in reference or 'MPEC' in reference) and 'C/' in desig:
-            # There is a reference to an CBET or IAUC so we assume it's "very
+            # There is a reference to a CBET or IAUC so we assume it's "very
             # interesting" i.e. a comet
-            if dbg: print("Case 5a")
+            if dbg:
+                print("Case 5a")
             objtype = 'C'
             if time_from_confirm > interesting_cutoff:
                 active = False
         elif 'MPEC' in reference:
             # There is a reference to an MPEC so we assume it's
             # "interesting" i.e. an NEO
-            if dbg: print("Case 5b")
+            if dbg:
+                print("Case 5b")
             objtype = 'N'
             if 'A/' in desig:
+                # Check if it is an active (Comet-like) asteroid
+                objtype = 'A'
+                sub1 = 'A'
+            if 'I/' in desig:
                 # Check if it is an inactive hyperbolic asteroid
-                objtype = 'H'
+                objtype = 'A'
+                sub1 = 'H'
             if time_from_confirm > interesting_cutoff:
                 active = False
         elif desig[-1] == 'P' and desig[0:-1].isdigit():
             # Crossid from NEO candidate to comet
-            if dbg: print("Case 5c")
+            if dbg:
+                print("Case 5c")
             objtype = 'C'
             try:
                 desig = str(int(desig[0:-1]))
@@ -2226,17 +2317,29 @@ def clean_crossid(astobj, dbg=False):
             if time_from_confirm > interesting_cutoff:
                 active = False
         else:
-            if dbg: print("Case 5z")
-            objtype = 'A'
-            active = False
+            chunks = desig.split()
+            for i, planet in enumerate(['Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto']):
+                if chunks[0] == planet and ('I' in chunks[1] or 'V' in chunks[1] or 'X' in chunks[1]):
+                    if dbg:
+                        print("Case 5d")
+                    objtype = 'M'
+                    sub1 = 'P' + str(i+1)
+                    active = False
+                    break
+            if objtype == '':
+                if dbg:
+                    print("Case 5z")
+                objtype = 'A'
+                active = False
 
     if objtype != '':
         params = {'source_type': objtype,
+                  'source_subtype_1': sub1,
                   'name': desig,
                   'active': active
                   }
         if dbg:
-            print("%07s->%s (%s) %s" % (obj_id, params['name'], params['source_type'], params['active']))
+            print("%07s->%s (%s/%s) %s" % (obj_id, params['name'], params['source_type'], params['source_subtype_1'], params['active']))
     else:
         logger.warning("Unparseable cross-identification: %s" % astobj)
         params = {}
@@ -2349,7 +2452,7 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
         # When the crossid happens we end up with multiple versions of the body.
         # Need to pick the one has been most recently updated
         bodies = Body.objects.filter(
-            name=obj_id, provisional_name__isnull=False).order_by('-ingest')
+            name=obj_id, update_MPC_orbit=False).order_by('-ingest')
         created = False
         if not bodies:
             bodies = Body.objects.filter(name=obj_id).order_by('-ingest')
@@ -2377,7 +2480,19 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
         body.origin = origin
         body.save()
         logger.info("More recent elements already stored for %s" % obj_id)
+    # Update Physical Parameters
+    if body.characterization_target():
+        update_jpl_phys_params(body)
     return True
+
+
+def update_jpl_phys_params(body):
+    """Fetch physical parameters, names, and object type from JPL SB database and store in Neoexchange DB"""
+    resp = fetch_jpl_physparams_altdes(body)
+
+    store_jpl_physparams(resp['phys_par'], body)
+    store_jpl_desigs(resp['object'], body)
+    store_jpl_sourcetypes(resp['object']['orbit_class']['code'], resp['object'], body)
 
 
 def ingest_new_object(orbit_file, obs_file=None, dbg=False):
@@ -2437,20 +2552,22 @@ def ingest_new_object(orbit_file, obs_file=None, dbg=False):
                     name = None
                 kwargs['name'] = name
                 kwargs['provisional_packed'] = kwargs['provisional_name']
-                if name is not None and obj_id.strip() == name.replace(' ', '') and name.strip().count(' ') == 1:
+                if name is not None and obj_id.strip() == name.replace(' ', ''):
                     kwargs['provisional_name'] = None
                     kwargs['origin'] = 'M'
                 else:
                     kwargs['provisional_name'] = obj_id
                 # Determine perihelion distance and asteroid type
                 if kwargs.get('eccentricity', None) is not None and kwargs.get('eccentricity', 2.0) < 1.0\
-                    and kwargs.get('meandist', None) is not None:
+                        and kwargs.get('meandist', None) is not None:
                     perihdist = kwargs['meandist'] * (1.0 - kwargs['eccentricity'])
                     source_type = determine_asteroid_type(perihdist, kwargs['eccentricity'])
-                    if dbg: print("New source type", source_type)
+                    if dbg:
+                        print("New source type", source_type)
                     kwargs['source_type'] = source_type
                 if local_discovery:
-                    if dbg: print("Setting to local origin")
+                    if dbg:
+                        print("Setting to local origin")
                     kwargs['origin'] = 'L'
                     kwargs['source_type'] = 'D'
         else:
@@ -2460,10 +2577,11 @@ def ingest_new_object(orbit_file, obs_file=None, dbg=False):
         kwargs['discovery_date'] = discovery_date
         # Needs to be __exact (and the correct database collation set on Body)
         # to perform case-sensitive lookup on the provisional name.
-        if dbg: print("Looking in the DB for ", obj_id)
+        if dbg:
+            print("Looking in the DB for ", obj_id)
         query = Q(provisional_name__exact=obj_id)
         if name is not None:
-            query = query | Q(name__exact=name)
+            query |= Q(name__exact=name)
         bodies = Body.objects.filter(query)
         if bodies.count() == 0:
             body, created = Body.objects.get_or_create(provisional_name__exact=obj_id)
