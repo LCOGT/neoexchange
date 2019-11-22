@@ -112,6 +112,7 @@ class BodyDetailsTest(FunctionalTest):
         # She sees a link from the targets' name on the front page to a more
         # detailed view.
         self.body.origin = 'N'     # This target is from NASA
+        self.body.source_type = 'N'
         self.body.save()
 
         link = self.browser.find_element_by_link_text('N999r0q')

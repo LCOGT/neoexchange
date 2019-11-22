@@ -22,6 +22,7 @@ from bs4 import BeautifulSoup
 import logging
 from astrometrics.sources_subs import random_delay, fetch_mpcobs, packed_to_normal, parse_mpcobs
 from core.models import Body, Frame, SourceMeasurement
+from core.views import get_characterization_targets
 logger = logging.getLogger(__name__)
 
 
@@ -36,7 +37,7 @@ class Command(BaseCommand):
             obj_id = str(options['target']).replace('_', ' ')
             bodies = Body.objects.filter(name=obj_id)
         else:
-            bodies = Body.objects.filter(active=True).exclude(origin='M')
+            bodies = get_characterization_targets()
         i = f = 0
         for body in bodies:
             self.stdout.write("{} ==== Updating {} ==== ({} of {}) ".format(datetime.now().strftime('%Y-%m-%d %H:%M'), body.current_name(), i+1, len(bodies)))
