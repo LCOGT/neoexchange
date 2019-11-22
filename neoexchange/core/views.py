@@ -244,6 +244,27 @@ class SuperBlockDetailView(DetailView):
     template_name = 'core/block_detail.html'
     model = SuperBlock
 
+class SuperBlockTimeline(DetailView):
+    template_name = 'core/block_timeline.html'
+    model = SuperBlock
+
+    def get_context_data(self, **kwargs):
+        context = super(SuperBlockTimeline, self).get_context_data(**kwargs)
+        blks = []
+        for blk in self.object.block_set.all():
+            if blk.when_observed:
+                date = blk.when_observed.isoformat(' ')
+            else:
+                date = blk.block_start.isoformat(' ')
+            data = {
+                'date' : date,
+                'num'  : blk.num_observed if blk.num_observed else 0,
+                'type' : blk.get_obstype_display(),
+                'duration' : (blk.block_end - blk.block_start).seconds
+                }
+            blks.append(data)
+        context['blocks'] = json.dumps(blks)
+        return context
 
 class BlockListView(ListView):
     model = Block
