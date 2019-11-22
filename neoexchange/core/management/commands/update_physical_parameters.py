@@ -17,7 +17,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
 from datetime import datetime, timedelta
 from core.models import Body
-from core.views import update_jpl_phys_params
+from core.views import update_jpl_phys_params, get_characterization_targets()
 import logging
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ class Command(BaseCommand):
             obj_id = str(options['target']).replace('_', ' ')
             bodies = Body.objects.filter(Q(name=obj_id) | Q(provisional_name=obj_id))
         else:
-            bodies = Body.objects.filter(active=True).exclude(origin='M')
+            bodies = get_characterization_targets()
 
         i = 0
         for body in bodies:

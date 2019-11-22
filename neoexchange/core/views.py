@@ -1540,13 +1540,21 @@ def characterization(request):
     return render(request, 'core/characterization.html', params)
 
 
+def get_characterization_targets():
+    """Function to return the list of Characterization targets.
+    If we change this, also change models.Body.characterization_target"""
+
+    characterization_list = Body.objects.filter(active=True).exclude(origin='M').exclude(source_type='U')
+    return characterization_list
+
+
 def build_characterization_list(disp=None):
     params = {}
     # If we don't have any Body instances, return None instead of breaking
     try:
         # If we change the definition of Characterization Target,
         # also update models.Body.characterization_target()
-        char_targets = Body.objects.filter(active=True).exclude(origin='M')
+        char_targets = get_characterization_targets()
         unranked = []
         for body in char_targets:
             try:
@@ -3333,7 +3341,7 @@ def update_previous_spectra(specobj, source='U', dbg=False):
         return False
 
     obj_id = specobj[0].rstrip()
-    body_char = Body.objects.filter(active=True).exclude(origin='M')
+    body_char = get_characterization_targets()
     try:
         body = body_char.get(name=obj_id)
     except:

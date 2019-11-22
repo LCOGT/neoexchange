@@ -242,8 +242,8 @@ class Body(models.Model):
 
     def characterization_target(self):
         # If we change the definition of Characterization Target,
-        # also update views.build_characterization_list
-        if self.active is True and self.origin != 'M':
+        # also update views.get_characterization_targets
+        if self.active is True and self.origin != 'M' and self.source_type != 'U':
             return True
         else:
             return False
