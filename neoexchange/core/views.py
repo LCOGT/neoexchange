@@ -2490,9 +2490,15 @@ def update_jpl_phys_params(body):
     """Fetch physical parameters, names, and object type from JPL SB database and store in Neoexchange DB"""
     resp = fetch_jpl_physparams_altdes(body)
 
-    store_jpl_physparams(resp['phys_par'], body)
-    store_jpl_desigs(resp['object'], body)
-    store_jpl_sourcetypes(resp['object']['orbit_class']['code'], resp['object'], body)
+    try:
+        store_jpl_physparams(resp['phys_par'], body)
+        store_jpl_desigs(resp['object'], body)
+        store_jpl_sourcetypes(resp['object']['orbit_class']['code'], resp['object'], body)
+    except KeyError:
+        if 'message' in resp.keys():
+            logger.warning(resp['message'])
+        else:
+            logger.warning("Error getting physical parameters from JPL DB")
 
 
 def ingest_new_object(orbit_file, obs_file=None, dbg=False):

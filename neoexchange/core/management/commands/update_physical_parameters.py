@@ -14,6 +14,7 @@ GNU General Public License for more details.
 """
 
 from django.core.management.base import BaseCommand, CommandError
+from django.db.models import Q
 from datetime import datetime, timedelta
 from core.models import Body
 from core.views import update_jpl_phys_params
@@ -31,7 +32,7 @@ class Command(BaseCommand):
 
         if options['target']:
             obj_id = str(options['target']).replace('_', ' ')
-            bodies = Body.objects.filter(name=obj_id)
+            bodies = Body.objects.filter(Q(name=obj_id) | Q(provisional_name=obj_id))
         else:
             bodies = Body.objects.filter(active=True).exclude(origin='M')
 
