@@ -2452,7 +2452,7 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
         # When the crossid happens we end up with multiple versions of the body.
         # Need to pick the one has been most recently updated
         bodies = Body.objects.filter(
-            name=obj_id, update_MPC_orbit=False).order_by('-ingest')
+            name=obj_id, provisional_name__isnull=False).order_by('-ingest')
         created = False
         if not bodies:
             bodies = Body.objects.filter(name=obj_id).order_by('-ingest')
