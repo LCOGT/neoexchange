@@ -87,6 +87,7 @@ class ScheduleForm(forms.Form):
     site_code = forms.ChoiceField(required=True, choices=SITES)
     utc_date = forms.DateField(input_formats=['%Y-%m-%d', ], initial=date.today, required=True, widget=forms.TextInput(attrs={'size': '10'}),
                                error_messages={'required': _(u'UTC date is required')})
+    too_mode = forms.BooleanField(initial=False, required=False)
 
     def clean_utc_date(self):
         start = self.cleaned_data['utc_date']
@@ -111,6 +112,7 @@ class ScheduleCadenceForm(forms.Form):
                                    initial=tomorrow, required=True, error_messages={'required': _(u'UTC end date is required')})
     period = forms.FloatField(initial=2.0, required=True, widget=forms.TextInput(attrs={'size': '10'}), error_messages={'required': _(u'Period is required')})
     jitter = forms.FloatField(initial=0.25, required=True, widget=forms.TextInput(attrs={'size': '10'}), error_messages={'required': _(u'Jitter is required')})
+    too_mode = forms.BooleanField(initial=False, required=False)
 
     # def clean_start_time(self):
     #     start = self.cleaned_data['start_time']
