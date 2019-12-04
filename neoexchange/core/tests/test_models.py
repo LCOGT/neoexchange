@@ -417,6 +417,445 @@ class TestComputeFOM(TestCase):
 
         self.assertEqual(expected_FOM, FOM)
 
+
+class TestSavePhysicalParameters(TestCase):
+
+    def setUp(self):
+        params = {  'name' : '21545',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    'not_seen'      : 2.3942,
+                    'arc_length'    : 0.4859,
+                    'score'         : 83,
+                    'abs_mag'       : 19.8
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+
+        self.phys1 = {'parameter_type': 'H',
+                 'value': 24.56,
+                 'error': 0.05,
+                 'units': 'mag',
+                 'reference' : "Bob and Friends, 2019",
+                 'notes': 'This is a fake entry',
+                 'preferred': True
+                 }
+
+        self.phys2 = {'parameter_type': 'P',
+                 'value': 8.7,
+                 'error': 0.5,
+                 'units': 'h',
+                 'reference': "Bob and Friends, 2019",
+                 'notes': 'This is a fake entry',
+                 'preferred': True
+                 }
+
+        self.col1 = {'color_band': 'V-R',
+                 'value': .87,
+                 'error': 0.05,
+                 'units': 'mag',
+                 'reference': "Bob and Friends, 2019",
+                 'notes': 'This is a fake entry',
+                 'preferred': True
+                 }
+
+        self.des1 = {'desig_type': 'N',
+                 'value': 'Rock&Roll',
+                 'notes': 'This is a fake entry',
+                 'preferred': True
+                 }
+
+    def test_save_get_param(self):
+        self.body.save_physical_parameters(self.phys1)
+        self.body.save_physical_parameters(self.phys2)
+
+        get_db = self.body.get_physical_parameters()
+
+        self.assertEqual(self.phys1['value'], get_db[0]['value'])
+        self.assertEqual(self.phys2['value'], get_db[1]['value'])
+        self.assertEqual('Absolute Magnitude', get_db[0]['type_display'])
+
+    def test_wont_save_same_data_twice(self):
+        self.body.save_physical_parameters(self.phys1)
+        self.body.save_physical_parameters(self.phys1)
+        self.body.save_physical_parameters(self.phys2)
+        self.body.save_physical_parameters(self.phys1)
+        self.body.save_physical_parameters(self.phys2)
+
+        get_db = self.body.get_physical_parameters()
+
+        self.assertEqual(len(get_db), 2)
+
+    def test_overwrite_priority(self):
+        self.body.save_physical_parameters(self.phys1)
+        self.body.save_physical_parameters(self.phys2)
+
+        new_data = self.phys1
+        new_data['value'] = 12.5
+        self.body.save_physical_parameters(new_data)
+
+        get_db = self.body.get_physical_parameters()
+
+        self.assertFalse(get_db[0]['preferred'])
+        self.assertTrue(get_db[1]['preferred'])
+        self.assertTrue(get_db[2]['preferred'])
+
+    def test_change_priority(self):
+
+        new_data1 = self.phys1.copy()
+        new_data_old = self.phys1.copy()
+        self.body.save_physical_parameters(self.phys1)
+
+        new_data1['value'] = 12.5
+        self.body.save_physical_parameters(new_data1)
+
+        self.body.save_physical_parameters(self.phys2)
+
+        new_data_old['preferred'] = True
+
+        self.body.save_physical_parameters(new_data_old)
+
+        get_db = self.body.get_physical_parameters()
+
+        self.assertFalse(get_db[0]['preferred'])
+        self.assertTrue(get_db[1]['preferred'])
+        self.assertTrue(get_db[2]['preferred'])
+
+    def test_ingest_not_preferred(self):
+        phys3 = {'parameter_type': 'D',
+                 'value': 8.7,
+                 'error': 0.5,
+                 'units': 'm',
+                 'reference': "Bob and Friends, 2019",
+                 'notes': 'This is a fake entry'}
+        # save 1st diameter (not preferred)
+        self.body.save_physical_parameters(phys3)
+        d1 = self.body.get_physical_parameters(param_type='D')
+        self.assertTrue(d1[0]['preferred'])
+
+        # save new diameter (also not preferred)
+        phys3['value'] = 10.5
+        phys3.pop('preferred')
+        self.body.save_physical_parameters(phys3)
+        d2 = self.body.get_physical_parameters(param_type='D')
+        self.assertTrue(d2[0]['preferred'])
+        self.assertFalse(d2[1]['preferred'])
+
+        # change so there is no preferred diameter
+        phys3['preferred'] = False
+        phys3['value'] = 8.7
+        self.body.save_physical_parameters(phys3)
+        d3 = self.body.get_physical_parameters(param_type='D')
+        self.assertFalse(d3[0]['preferred'])
+        self.assertFalse(d3[1]['preferred'])
+
+        # re-save original diameter
+        self.body.save_physical_parameters(phys3)
+        d4 = self.body.get_physical_parameters(param_type='D')
+        self.assertFalse(d4[0]['preferred'])
+        self.assertFalse(d4[1]['preferred'])
+
+        # save new diameter while none are preferred. (make sure units work)
+        phys3['units'] = 'km'
+        self.body.save_physical_parameters(phys3)
+        d5 = self.body.get_physical_parameters(param_type='D')
+        self.assertFalse(d5[0]['preferred'])
+        self.assertFalse(d5[1]['preferred'])
+        self.assertTrue(d5[2]['preferred'])
+        self.assertEqual(d5[2]['units'], 'km')
+
+    def test_mpc_default(self):
+        phys3 = {'parameter_type': 'D',
+                 'value': 8.7,
+                 'error': 0.5,
+                 'units': 'm',
+                 'reference': "MPC Default",
+                 'notes': 'This is a fake entry',
+                 'preferred': True}
+        # Save MPC Default entry
+        self.body.save_physical_parameters(phys3)
+        phys3['value'] = 12.5
+        # test Overwrite of MPC Default
+        self.body.save_physical_parameters(phys3)
+        d1 = self.body.get_physical_parameters(param_type='D')
+        self.assertEqual(len(d1), 1)
+        self.assertEqual(d1[0]['value'], 12.5)
+
+        # Add non MPC Default
+        phys3['value'] = 15.4
+        phys3['reference'] = 'Some Guy'
+        self.body.save_physical_parameters(phys3)
+        d2 = self.body.get_physical_parameters(param_type='D')
+        self.assertEqual(len(d2), 2)
+        self.assertEqual(d2[0]['value'], 12.5)
+        self.assertEqual(d2[1]['value'], 15.4)
+        self.assertFalse(d2[0]['preferred'])
+        self.assertTrue(d2[1]['preferred'])
+
+        # Overwrite MPC Default, and leave other entry as preferred.
+        phys3['value'] = 10.1
+        phys3['reference'] = 'MPC Default'
+        self.body.save_physical_parameters(phys3)
+        d3 = self.body.get_physical_parameters(param_type='D')
+        self.assertEqual(len(d3), 2)
+        self.assertEqual(d3[1]['value'], 10.1)
+        self.assertEqual(d3[0]['value'], 15.4)
+        self.assertFalse(d3[1]['preferred'])
+        self.assertTrue(d3[0]['preferred'])
+
+
+class TestGetPhysicalParameters(TestCase):
+
+    def setUp(self):
+        params = {  'name' : 'nameless',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    'not_seen'      : 2.3942,
+                    'arc_length'    : 0.4859,
+                    'score'         : 83,
+                    'abs_mag'       : 19.8
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+
+        phys1 = {'parameter_type': 'H',
+                 'value': 24.56,
+                 'error': 0.05,
+                 'units': 'mag',
+                 'reference' : "Bob and Friends, 2019",
+                 'notes': 'This is a fake entry',
+                 'preferred': True
+                 }
+        self.body.save_physical_parameters(phys1)
+
+        phys2 = {'parameter_type': 'P',
+                 'value': 8.7,
+                 'error': 0.5,
+                 'units': 'h',
+                 'reference': "Bob and Friends, 2019",
+                 'notes': 'This is a fake entry',
+                 'preferred': True
+                 }
+        self.body.save_physical_parameters(phys2)
+
+        phys3 = {'parameter_type': 'P',
+                 'value': 82,
+                 'error': 5,
+                 'units': 'h',
+                 'reference': "Bob and Friends, 2014",
+                 'notes': 'This is a fake entry',
+                 'preferred': False
+                 }
+        self.body.save_physical_parameters(phys3)
+
+        col1 = {'color_band': 'V-R',
+                 'value': .87,
+                 'error': 0.05,
+                 'units': 'mag',
+                 'reference': "Bob and Friends, 2019",
+                 'notes': 'This is a fake entry',
+                 'preferred': True
+                 }
+        self.body.save_physical_parameters(col1)
+
+        col2 = {'color_band': 'B-V',
+                 'value': .24,
+                 'error': 0.05,
+                 'units': 'mag',
+                 'reference': "Bob and Friends, 2019",
+                 'notes': 'This is a fake entry',
+                 'preferred': True
+                 }
+        self.body.save_physical_parameters(col2)
+
+    def test_get_everything(self):
+        expected_returns = [(24.56, 'Absolute Magnitude'), (8.7, 'Rotation Period'), (82, 'Rotation Period'), (.87, 'V-R'), (.24, 'B-V')]
+        get_db = self.body.get_physical_parameters()
+        for param in get_db:
+            test_param = (param['value'], param['type_display'])
+            self.assertIn(test_param, expected_returns)
+            expected_returns.remove(test_param)
+        self.assertEqual(expected_returns, [])
+
+    def test_get_preferred(self):
+        expected_returns = [(24.56, 'Absolute Magnitude'), (8.7, 'Rotation Period'), (.87, 'V-R'), (.24, 'B-V')]
+        get_db = self.body.get_physical_parameters(return_all=False)
+        for param in get_db:
+            test_param = (param['value'], param['type_display'])
+            self.assertIn(test_param, expected_returns)
+            expected_returns.remove(test_param)
+        self.assertEqual(expected_returns, [])
+
+    def test_get_abs_mag(self):
+        expected_returns = [(24.56, 'Absolute Magnitude')]
+        get_db = self.body.get_physical_parameters(param_type='H')
+        for param in get_db:
+            test_param = (param['value'], param['type_display'])
+            self.assertIn(test_param, expected_returns)
+            expected_returns.remove(test_param)
+        self.assertEqual(expected_returns, [])
+
+    def test_get_prefered_period(self):
+        expected_returns = [(8.7, 'Rotation Period')]
+        get_db = self.body.get_physical_parameters(param_type='P', return_all=False)
+        for param in get_db:
+            test_param = (param['value'], param['type_display'])
+            self.assertIn(test_param, expected_returns)
+            expected_returns.remove(test_param)
+        self.assertEqual(expected_returns, [])
+
+    def test_get_colors(self):
+        expected_returns = [(.87, 'V-R'), (.24, 'B-V')]
+        get_db = self.body.get_physical_parameters(param_type='Colors')
+        for param in get_db:
+            test_param = (param['value'], param['type_display'])
+            self.assertIn(test_param, expected_returns)
+            expected_returns.remove(test_param)
+        self.assertEqual(expected_returns, [])
+
+    def test_get_specific_color(self):
+        expected_returns = [(.87, 'V-R')]
+        get_db = self.body.get_physical_parameters(param_type='V-R')
+        for param in get_db:
+            test_param = (param['value'], param['type_display'])
+            self.assertIn(test_param, expected_returns)
+            expected_returns.remove(test_param)
+        self.assertEqual(expected_returns, [])
+
+    def test_get_mag_by_name(self):
+        expected_returns = [(24.56, 'Absolute Magnitude')]
+        get_db = self.body.get_physical_parameters(param_type='absolute magnitude')
+        for param in get_db:
+            test_param = (param['value'], param['type_display'])
+            self.assertIn(test_param, expected_returns)
+            expected_returns.remove(test_param)
+        self.assertEqual(expected_returns, [])
+
+
+class TestGetFullName(TestCase):
+
+    def setUp(self):
+        params = {  'name' : 'nameless',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    'not_seen'      : 2.3942,
+                    'arc_length'    : 0.4859,
+                    'score'         : 83,
+                    'abs_mag'       : 19.8
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+
+        self.des1 = {'desig_type': 'N',
+                     'value': 'Rock&Roll',
+                     'notes': 'This is a fake entry',
+                     'preferred': True
+                     }
+
+        self.des2 = {'desig_type': '#',
+                     'value': '4224',
+                     'notes': 'This is a fake entry',
+                     'preferred': True
+                     }
+
+        self.des3 = {'desig_type': 'P',
+                     'value': '1969 QQ3',
+                     'notes': 'This is a fake entry',
+                     'preferred': True
+                     }
+
+        self.des4 = {'desig_type': 'P',
+                     'value': '1888 UT3',
+                     'notes': 'This is a fake entry',
+                     'preferred': False
+                     }
+
+    def test_full_name_no_entries(self):
+        expected_name = 'nameless'
+        full_name = self.body.full_name()
+        self.assertEqual(full_name, expected_name)
+
+    def test_full_name_prov_only(self):
+        expected_name = '1969 QQ3'
+        self.body.save_physical_parameters(self.des4)
+        self.body.save_physical_parameters(self.des3)
+        full_name = self.body.full_name()
+        self.assertEqual(full_name, expected_name)
+
+    def test_full_name_provnum_only(self):
+        expected_name = '4224 (1969 QQ3)'
+        self.body.save_physical_parameters(self.des3)
+        self.body.save_physical_parameters(self.des4)
+        self.body.save_physical_parameters(self.des2)
+        full_name = self.body.full_name()
+        self.assertEqual(full_name, expected_name)
+
+    def test_full_name_all(self):
+        expected_name = '4224 Rock&Roll (1969 QQ3)'
+        self.body.save_physical_parameters(self.des3)
+        self.body.save_physical_parameters(self.des4)
+        self.body.save_physical_parameters(self.des2)
+        self.body.save_physical_parameters(self.des1)
+        full_name = self.body.full_name()
+        self.assertEqual(full_name, expected_name)
+
+    def test_full_namenum_only(self):
+        expected_name = '4224 Rock&Roll'
+        self.body.save_physical_parameters(self.des2)
+        self.body.save_physical_parameters(self.des1)
+        full_name = self.body.full_name()
+        self.assertEqual(full_name, expected_name)
+
+    def test_comet_num(self):
+        expected_name = '4224P/Rock&Roll'
+        self.des2['value'] += 'P'
+        self.body.save_physical_parameters(self.des2)
+        self.body.save_physical_parameters(self.des1)
+        full_name = self.body.full_name()
+        self.assertEqual(full_name, expected_name)
+
+    def test_comet_num_old(self):
+        expected_name = 'P/1876 W2 (New)'
+        self.des2['value'] = 'P'
+        self.des1['value'] = '1876 W2'
+        self.des3['value'] = 'New'
+        self.body.save_physical_parameters(self.des2)
+        self.body.save_physical_parameters(self.des1)
+        self.body.save_physical_parameters(self.des3)
+        full_name = self.body.full_name()
+        self.assertEqual(full_name, expected_name)
+
+
 class TestSuperBlock(TestCase):
 
     def setUp(self):

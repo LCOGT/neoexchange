@@ -22,7 +22,8 @@ from math import degrees
 
 from astrometrics.sources_subs import random_delay
 from astrometrics.ephem_subs import compute_ephem
-from core.views import update_MPC_orbit, update_MPC_obs, refit_with_findorb, save_and_make_revision
+from core.views import update_MPC_orbit, update_MPC_obs, refit_with_findorb, save_and_make_revision,\
+    get_characterization_targets
 from core.models import Body
 
 
@@ -38,7 +39,7 @@ class Command(BaseCommand):
             obj_id = str(options['target']).replace('_', ' ')
             bodies = Body.objects.filter(name=obj_id)
         else:
-            bodies = Body.objects.filter(active=True).exclude(origin='M')
+            bodies = get_characterization_targets()
         if type(options['date']) != datetime:
             try:
                 start_date = datetime.strptime(options['date'], '%Y%m%d')
