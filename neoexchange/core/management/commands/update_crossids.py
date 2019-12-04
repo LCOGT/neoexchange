@@ -20,6 +20,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
 from datetime import datetime
 
+
 class Command(BaseCommand):
     help = 'Update objects for new cross-identifications from the Previous NEO Confirmation Page Objects page'
 

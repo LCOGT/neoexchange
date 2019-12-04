@@ -4,6 +4,12 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 3.2.0
+Add models for physical parameters and Designations
+*Includes specific model for colors
+*Search includes any of a body's several designations
+*Does not remove anything from the Body model
+
 ### 3.1.1
 Convert Spectroscopy plots into Bokeh for added interactivity.
 
