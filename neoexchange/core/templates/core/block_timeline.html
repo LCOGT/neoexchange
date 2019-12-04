@@ -37,7 +37,7 @@ $(document).ready(function(){
 
 {% block extramenu %}
     <div class="headingleft">
-        <h1>Timeline for Block: {{object.pk}}</h1>
+        <h1>Timeline for Block: <a href="{% url 'block-view' object.pk %}">{{object.pk}}</a></h1>
     </div>
 {% endblock%}
 

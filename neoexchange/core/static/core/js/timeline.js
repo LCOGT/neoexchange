@@ -25,7 +25,6 @@ function makeCircles() {
     $("#mainCont").append(mainContent(0, dates[0]));
 
     //Loop through middle dates
-    console.log(dates);
     for (i = 1; i < dates.length -1 ; i++) {
 
       var thisDate = Date.parse(dates[i]['date']);
