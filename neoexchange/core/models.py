@@ -500,7 +500,7 @@ class SuperBlock(models.Model):
     block_start     = models.DateTimeField(null=True, blank=True)
     block_end       = models.DateTimeField(null=True, blank=True)
     groupid         = models.CharField(max_length=55, null=True, blank=True)
-    tracking_number = models.CharField(max_length=10, null=True, blank=True)
+    tracking_number = models.CharField('Tracking/RequestGroup number', max_length=10, null=True, blank=True)
     period          = models.FloatField('Spacing between cadence observations (hours)', null=True, blank=True)
     jitter          = models.FloatField('Acceptable deviation before or after strict period (hours)', null=True, blank=True)
     timeused        = models.FloatField('Time used (seconds)', null=True, blank=True)
