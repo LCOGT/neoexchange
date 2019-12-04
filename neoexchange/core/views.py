@@ -1031,8 +1031,13 @@ def schedule_check(data, body, ok_to_schedule=True):
         logger.warning("Preventing attempt to schedule high eccentricity non-Comet")
         ok_to_schedule = False
 
-    # Check for valid proposal
-    # validate_proposal_time(data['proposal_code'])
+    # If ToO mode is set, check for valid proposal
+    too_mode = data.get('too_mode', False)
+    if too_mode is True:
+        proposal = Proposal.objects.get(code=data['proposal_code'])
+        if proposal and proposal.time_critical is False:
+            logger.warning("ToO/TC observations not possible with this proposal")
+            too_mode = False
 
     if data.get('start_time') and data.get('end_time'):
         dark_start = data.get('start_time')
@@ -1230,7 +1235,7 @@ def schedule_check(data, body, ok_to_schedule=True):
             suffix = "cad-%s-%s" % (datetime.strftime(data['start_time'], '%Y%m%d'), datetime.strftime(data['end_time'], '%m%d'))
         elif spectroscopy:
             suffix += "_spectra"
-        if data.get('too_mode', False) is True:
+        if too_mode is True:
             suffix += '_ToO'
         group_name = body.current_name() + '_' + data['site_code'].upper() + '-' + suffix
 
@@ -1245,7 +1250,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'exp_count': exp_count,
         'exp_length': exp_length,
         'schedule_ok': ok_to_schedule,
-        'too_mode' : data.get('too_mode', False),
+        'too_mode' : too_mode,
         'site_code': data['site_code'],
         'proposal_code': data['proposal_code'],
         'group_name': group_name,

@@ -166,6 +166,7 @@ class ScheduleBlockForm(forms.Form):
     jitter = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}), required=False)
     period = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}), required=False)
     spectroscopy = forms.BooleanField(required=False, widget=forms.HiddenInput())
+    too_mode = forms.BooleanField(required=False, widget=forms.HiddenInput())
     calibs = forms.ChoiceField(required=False, widget=forms.HiddenInput(), choices=CALIBS)
     instrument_code = forms.CharField(max_length=10, widget=forms.HiddenInput(), required=False)
     solar_analog = forms.BooleanField(initial=True, widget=forms.HiddenInput(), required=False)

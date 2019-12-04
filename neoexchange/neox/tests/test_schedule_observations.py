@@ -994,6 +994,11 @@ class ScheduleObservations(FunctionalTest):
         MockDateTime.change_date(2015, 4, 20)
         self.test_login()
 
+        # Set the proposal to have Time Critical time available (only technically
+        # possible from 2020A onwards but tests ~reality...)
+        self.neo_proposal.time_critical = True
+        self.neo_proposal.save()
+
         # Bart has heard about a new website for NEOs. He goes to the
         # page of the first target
         # (XXX semi-hardwired but the targets link should be being tested in
@@ -1040,6 +1045,11 @@ class ScheduleObservations(FunctionalTest):
 
         # The page refreshes and a series of values for magnitude, speed, slot
         # length, number and length of exposures appear
+        # He notes at the top that the proposal has now indicated that this will
+        # be Time Critical (TC) time
+        proposal = self.browser.find_element_by_id('id_proposal_row').find_element_by_class_name('kv-value').text
+        self.assertIn('LCO2015A-009 (TC)', proposal)
+
         magnitude = self.browser.find_element_by_id('id_magnitude_row').find_element_by_class_name('kv-value').text
         self.assertIn('20.40', magnitude)
         speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text

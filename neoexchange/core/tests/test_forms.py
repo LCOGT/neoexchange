@@ -264,10 +264,6 @@ class TestScheduleForm(TestCase):
         self.assertFalse(form.is_valid())
         self.assertEqual(form.errors['utc_date'], ['Enter a valid date.'])
 
-    def test_form_has_rr_tc_button(self):
-        form = ScheduleForm()
-        self.assertIsInstance(form, ScheduleForm)
-        self.assertIn('Use RR/TC time?', form.as_p())
 
 class TestScheduleCadenceForm(TestCase):
 
@@ -377,8 +373,3 @@ class TestScheduleCadenceForm(TestCase):
         form = ScheduleCadenceForm(data={'end_time' : 'pudding'})
         self.assertFalse(form.is_valid())
         self.assertEqual(form.errors['end_time'], ['Enter a valid date/time.'])
-
-    def test_form_has_rr_tc_button(self):
-        form = ScheduleCadenceForm()
-        self.assertIsInstance(form, ScheduleCadenceForm)
-        self.assertIn('Use RR/TC time?', form.as_p())
