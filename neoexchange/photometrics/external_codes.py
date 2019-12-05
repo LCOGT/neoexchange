@@ -71,6 +71,9 @@ def default_sextractor_config_files(catalog_type='ASCII'):
     elif catalog_type == 'COMET0M4:ASCII_HEAD':
         config_files = ['sextractor_Comet_0m4_ascii.conf',
                         'sextractor_CSS_ascii.params']
+    elif catalog_type == 'COMET1M0:ASCII_HEAD':
+        config_files = ['sextractor_Comet_1m0_ascii.conf',
+                        'sextractor_CSS_ascii.params']
     config_files = config_files + common_config_files
     return config_files
 

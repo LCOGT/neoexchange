@@ -88,6 +88,9 @@ for fits_fpath in images:
         elif '0m4' in header['telid']:
             cat_type = 'COMET0M4:ASCII_HEAD'
             default_pixelscale = 0.5707415206369826
+        elif '1m0' in header['telid']:
+            cat_type = 'COMET1M0:ASCII_HEAD'
+            default_pixelscale = 0.3895571134618663
         else:
             print("Unknown type")
             next
