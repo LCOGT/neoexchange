@@ -16,6 +16,7 @@ from math import pi, log10, sqrt, cos, degrees, ceil, sqrt
 from collections import Counter, OrderedDict
 import reversion
 import logging
+import warnings
 
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -26,7 +27,8 @@ from django.utils.translation import ugettext_lazy as _
 from django.utils.encoding import force_text, python_2_unicode_compatible
 from django.forms.models import model_to_dict
 from astropy.time import Time
-from astropy.wcs import WCS
+from astropy.wcs import WCS, FITSFixedWarning
+warnings.simplefilter('ignore', category = FITSFixedWarning)
 from numpy import fromstring
 from requests.compat import urljoin
 try:
