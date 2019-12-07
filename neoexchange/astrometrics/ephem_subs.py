@@ -634,7 +634,9 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
 
     # Mapping of troublesome objects to JPL HORIZONS id's
     obj_mapping = { '46P' : 90000544,
-                    '29P' : 90000392
+                    '29P' : 90000392,
+                    '2I'  : 90004424,
+                    'C_2019Q4' : 90004424
                   }
     id_type = 'smallbody'
     if obj_name in obj_mapping:

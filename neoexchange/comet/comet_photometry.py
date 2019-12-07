@@ -31,8 +31,10 @@ from comet_subs import *
 #comet = '243P'
 #comet_color = 0.56
 #comet = '46P'
-comet = '29P'
-comet_color=0.57
+#comet = '29P'
+#comet_color=0.57
+comet = 'C_2019Q4'
+comet_color = 0.63
 match_radius = 5.0 * u.arcsec
 use_ephem_file = False
 
@@ -79,7 +81,7 @@ for fits_fpath in images:
         sitecode = LCOGT_domes_to_site_codes(header['siteid'], header['encid'], header['telid'])
         if sitecode == 'XXX':
             print("Error: Unknown site")
-            next
+            continue
         siteid = header['siteid'].upper()
         instrument = header['instrume'].lower()
         if '2m0' in header['telid']:
@@ -92,8 +94,8 @@ for fits_fpath in images:
             cat_type = 'COMET1M0:ASCII_HEAD'
             default_pixelscale = 0.3895571134618663
         else:
-            print("Unknown type")
-            next
+            print("Unknown type of telescope")
+            continue
 
     #   Determine position of comet in this frame
     if 'mjdmid' in header:
@@ -117,6 +119,9 @@ for fits_fpath in images:
         start = date_obs-1
         end = date_obs+1
         ephem = horizons_ephem(comet, start.datetime.date(), end.datetime.date(), sitecode.upper(), ephem_step_size='10m')
+        if not ephem:
+            print("Did not obtain an ephemeris for object, skipping")
+            continue
         # Find index closest to obs time
         idx = (np.abs(ephem['datetime_jd'] - jd_utc_mid)).argmin()
         if ephem[idx]['datetime_jd'] > jd_utc_mid:
@@ -134,7 +139,7 @@ for fits_fpath in images:
             dec = dec.degree
         else:
             print("Ephemeris doesn't cover observation time")
-            next
+            continue
     sky_position = SkyCoord(ra, dec, unit='deg', frame='icrs')
     print("RA, Dec, delta for frame=", ra, dec, delta)
 
@@ -190,7 +195,7 @@ for fits_fpath in images:
     print("X, Y, Radius (pixels, arcsec)= {:.3f} {:.3f} {:9.5f} {:9.5f}".format(x, y, radius, radius*pixscale))
 
     # Perform forced aperture photometry at the predicted position
-    if wcserr == 0:
+    if wcserr == 0 and np.isnan(x) is False and np.isnan(y) is False:
 
         apertures = CircularAperture((x,y), r=radius)
         phot_table = aperture_photometry(image_sub, apertures, mask=mask, method='exact', error=error)
@@ -233,6 +238,14 @@ for fits_fpath in images:
 
     # Make SExtractor catalog
     status, catalog = make_CSS_catalogs(configs_dir, datadir, fits_fpath, catalog_type=cat_type, aperture=radius*2.0)
+
+    mag = magerr = -99.0
+    abs_mag = abs_mag_err = -99.0
+    abs_skypos_mag = abs_skypos_mag_err = -99.0
+    skypos_mag = skypos_magerr = -99.0
+    obj_mag = obj_err = -99.0
+    rmag_cc = rmag_err_cc = -99.0
+    zp_PS1 = C_PS1 = zp_err_PS1 = -99.0
     if status == 0:
         if wcserr == 0:
             zp_PS1, C_PS1, zp_err_PS1, r, gmr, gmi, obj_mag, obj_err = calibrate_catalog(catalog, sky_position, trim_limits, flux_column='FLUX_APER', fluxerr_column='FLUXERR_APER', match_radius=match_radius)
@@ -247,13 +260,7 @@ for fits_fpath in images:
                 zp_PS1 = C_PS1 = zp_err_PS1 = -99.0
 
         else:
-            mag = magerr = -99.0
-            abs_mag = abs_mag_err = -99.0
-            abs_skypos_mag = abs_skypos_mag_err = -99.0
-            skypos_mag = skypos_magerr = -99.0
-            obj_mag = obj_err = -99.0
-            rmag_cc = rmag_err_cc = -99.0
-            zp_PS1 = C_PS1 = zp_err_PS1 = -99.0
+
 
             # Read in SExtractor catalog and we'll try to find the comet in there
             phot, clean_phot = read_and_filter_catalog(catalog, trim_limits)
