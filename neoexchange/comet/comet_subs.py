@@ -90,8 +90,12 @@ def subtract_background(header, image, mask, bkg_map):
         sky_sigma = bkg.background_rms
         print("Background & rms=", bkg.background_median, bkg.background_rms_median)
         effective_gain = header['gain'] * header['exptime']
-        print("Gain=", effective_gain)
-        error = calc_total_error(image, sky_sigma, effective_gain)
+        print("Gain=", effective_gain, header['gain'], header['exptime'])
+        if effective_gain <= 0:
+            print("effective gain is negative")
+            error = None
+        else:
+            error = calc_total_error(image, sky_sigma, effective_gain)
         image_sub = image - sky_level
     else:
         mean, median, std = sigma_clipped_stats(image, sigma=3.0, iters=3, mask=mask)

@@ -50,6 +50,7 @@ FLUX2MAG = 2.5/log(10)
 
 # Find all images
 images, catalogs = determine_images_and_catalogs(datadir)
+images.sort(reverse=True)
 
 # Create log file, write header
 log_file = os.path.join(datadir, comet + '_phot.log')
@@ -156,6 +157,9 @@ for fits_fpath in images:
     mask = make_mask(image, sat_level, low_clip)
 
     image_sub, error = subtract_background(header, image, mask, bkg_map)
+    if error is None:
+        print("Bad background determination - blank image ?")
+        continue
 
     try:
         fits_wcs = WCS(header)
