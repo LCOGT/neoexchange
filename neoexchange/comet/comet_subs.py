@@ -270,12 +270,16 @@ def calibrate_catalog(catfile, cat_center, trim_limits, table_format='ascii.sext
     else:
         logger.info("Fetching PS1 catalog around {} with radius {} deg".format(cat_center.to_string('decimal'), radius))
         ps1 = fetch_ps1_field(cat_center, radius)
-    objids, distances = ps1.xmatch(lco_cut_coords)
-    r_inst = -2.5 * np.log10(lco_cut[flux_column])
-    r_err = lco_cut[fluxerr_column] / lco_cut[flux_column] * FLUX2MAG
-    zp, C, unc, r, gmr, gmi = ps1.cal_color(objids, r_inst, 'r', 'g-r',  mlim=[11, 18], gmi_lim=[0.2, 1.4])
-    plotfile = catfile.replace('cat.ascii', 'ps1_cc.png')
-    plot_color_correction(C, zp, r, gmr, r_inst, filename=plotfile, filter_name='r')
+    results = ps1.xmatch(lco_cut_coords)
+    if results is not None:
+        objids, distances = results
+        r_inst = -2.5 * np.log10(lco_cut[flux_column])
+        r_err = lco_cut[fluxerr_column] / lco_cut[flux_column] * FLUX2MAG
+        zp, C, unc, r, gmr, gmi = ps1.cal_color(objids, r_inst, 'r', 'g-r',  mlim=[11, 18], gmi_lim=[0.2, 1.4])
+        plotfile = catfile.replace('cat.ascii', 'ps1_cc.png')
+        plot_color_correction(C, zp, r, gmr, r_inst, filename=plotfile, filter_name='r')
+    else:
+        zp = C = unc = r = gmr = gmi = obj_mag = obj_err = -99
 
     return zp, C, unc, r, gmr, gmi, obj_mag, obj_err
 
