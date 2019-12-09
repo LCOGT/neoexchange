@@ -1,0 +1,4 @@
+Designation (and name)   | Prov. Des. |   q  |    Q  |   H  |  Epoch    | M   |Peri. |Node | Incl|  e  |   a   |  Opps.  |  Ref.     |Designation (and name) again           |Discovery date, site and discoverer(s)
+                           2019 UH12    7.903  97.213   10.7   20200531    1.7  304.0  55.5  47.0 0.850  52.558  ( 53d)   E2019-WG3                             2019 UH12     2019 10 27  F52  Pan-STARRS 2
+                           2019 TG3    10.073  31.693   11.9   20190427    6.3  199.6 135.3  10.8 0.518  20.883     6     MPO492745                             2019 TG3      2019 10 05  F51  Pan-STARRS 1
+  (2060) Chiron            1977 UB      8.469  18.870    5.8   20190427  165.1  339.8 209.2   6.9 0.380  13.669    50     MPO502173    (2060) Chiron            1977 UB       1977 10 18  675  C. T. Kowal

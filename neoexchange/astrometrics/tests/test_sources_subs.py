@@ -4881,3 +4881,102 @@ class TestReadSolarStandards(TestCase):
                     self.assertAlmostEqual(expected_standards[solstd][key], standards[solstd][key], places=self.precision, msg="Mismatch for {} on {}".format(solstd, key))
                 else:
                     self.assertEqual(expected_standards[solstd][key], standards[solstd][key])
+
+
+class TestConvertCentaursToBody(TestCase):
+
+    def setUp(self):
+        self.test_file = os.path.join('astrometrics', 'tests', 'test_centaurs.txt')
+        self.test_table = read_centaur_file(self.test_file)
+
+        self.maxDiff = None
+
+    def test_2019UH12(self):
+
+        expected_params = { 'provisional_name': '2019 UH12',
+                            'name': '',
+                            'origin': 'M',
+                            'source_type': 'E',
+                            'elements_type': 'MPC_MINOR_PLANET',
+                            'active': False,
+                            'fast_moving': False,
+                            'urgency': None,
+                            'epochofel': datetime(2020, 5, 31, 0, 0),
+                            'orbinc': 47.0,
+                            'longascnode': 55.5,
+                            'argofperih': 304.0,
+                            'eccentricity': 0.85,
+                            'meandist': 52.558,
+                            'meananom': 1.7,
+                            'perihdist': 7.903,
+                            'epochofperih': None,
+                            'abs_mag': 10.7,
+                            'slope': 0.15,
+                            'score': None,
+                            'discovery_date': datetime(2019, 10, 27, 0, 0),
+                            'num_obs': None,
+                            'arc_length': None}
+
+        params = convert_centaurs_to_body(self.test_table[0])
+
+        self.assertEqual(expected_params, params)
+
+    def test_2019TG3(self):
+
+        expected_params = { 'provisional_name': '2019 TG3',
+                            'name': '',
+                            'origin': 'M',
+                            'source_type': 'E',
+                            'elements_type': 'MPC_MINOR_PLANET',
+                            'active': False,
+                            'fast_moving': False,
+                            'urgency': None,
+                            'epochofel': datetime(2019, 4, 27, 0, 0),
+                            'orbinc': 10.8,
+                            'longascnode': 135.3,
+                            'argofperih': 199.6,
+                            'eccentricity': 0.518,
+                            'meandist': 20.883,
+                            'meananom': 6.3,
+                            'perihdist': 10.073,
+                            'epochofperih': None,
+                            'abs_mag': 11.9,
+                            'slope': 0.15,
+                            'score': None,
+                            'discovery_date': datetime(2019, 10, 5, 0, 0),
+                            'num_obs': None,
+                            'arc_length': None}
+
+        params = convert_centaurs_to_body(self.test_table[1])
+
+        self.assertEqual(expected_params, params)
+
+    def test_Chiron(self):
+
+        expected_params = { 'provisional_name': '1977 UB',
+                            'name': '2060 Chiron',
+                            'origin': 'M',
+                            'source_type': 'E',
+                            'elements_type': 'MPC_MINOR_PLANET',
+                            'active': False,
+                            'fast_moving': False,
+                            'urgency': None,
+                            'epochofel': datetime(2019, 4, 27, 0, 0),
+                            'orbinc':  6.9,
+                            'longascnode': 209.2,
+                            'argofperih': 339.8,
+                            'eccentricity': 0.380,
+                            'meandist': 13.669,
+                            'meananom': 165.1,
+                            'perihdist':  8.469,
+                            'epochofperih': None,
+                            'abs_mag':  5.8,
+                            'slope': 0.15,
+                            'score': None,
+                            'discovery_date': datetime(1977, 10, 18, 0, 0),
+                            'num_obs': None,
+                            'arc_length': None}
+
+        params = convert_centaurs_to_body(self.test_table[-1])
+
+        self.assertEqual(expected_params, params)
