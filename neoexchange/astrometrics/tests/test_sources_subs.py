@@ -1053,7 +1053,7 @@ class TestSubmitBlockToScheduler(TestCase):
         self.assertEqual(user_request['requests'][0]['windows'][0]['start'], dark_start.strftime('%Y-%m-%dT%H:%M:%S'))
         self.assertEqual(user_request['requests'][0]['location'].get('telescope', None), None)
         self.assertEqual(user_request['requests'][0].get('observation_type', None), None)
-        self.assertEqual(user_request['observation_type'], 'TARGET_OF_OPPORTUNITY')
+        self.assertEqual(user_request['observation_type'], 'TIME_CRITICAL')
 
     def test_multi_filter_requestgroup(self):
 

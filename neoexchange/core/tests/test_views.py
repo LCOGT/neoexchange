@@ -1293,6 +1293,141 @@ class TestScheduleCheck(TestCase):
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
+    def test_mp_good_too(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+        # Turn on ToO mode on proposal
+        self.neo_proposal.time_critical = True
+        self.neo_proposal.save()
+
+        data = { 'site_code' : 'Q63',
+                 'utc_date' : datetime(2016, 4, 6),
+                 'proposal_code' : self.neo_proposal.code,
+                 'too_mode' : True
+               }
+
+        expected_resp = {
+                        'target_name': self.body_mp.current_name(),
+                        'magnitude': 19.099441743160916,
+                        'speed': 2.9012947050834836,
+                        'slot_length': 20.0,
+                        'filter_pattern': 'w',
+                        'pattern_iterations': 14.0,
+                        'available_filters': 'air, ND, U, B, V, R, I, up, gp, rp, ip, zs, Y, w',
+                        'exp_count': 14,
+                        'exp_length': 50.0,
+                        'schedule_ok': True,
+                        'site_code': data['site_code'],
+                        'proposal_code': data['proposal_code'],
+                        'group_name': self.body_mp.current_name() + '_' + data['site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d' + '_ToO'),
+                        'utc_date': data['utc_date'].isoformat(),
+                        'start_time': '2016-04-06T09:00:00',
+                        'end_time': '2016-04-06T19:10:00',
+                        'mid_time': '2016-04-06T14:05:00',
+                        'ra_midpoint': 3.312248725288052,
+                        'dec_midpoint': -0.1605498546995108,
+                        'period' : None,
+                        'jitter' : None,
+                        'instrument_code' : '',
+                        'saturated': None,
+                        'snr' : None,
+                        'too_mode': True,
+                        'calibs' : '',
+                        'spectroscopy' : False,
+                        'calibsource' : {},
+                        'calibsource_id' : -1,
+                        'calibsource_exptime' : 60,
+                        'solar_analog' : False,
+                        'vis_time': 7.2,
+                        'lco_enc': 'DOMA',
+                        'lco_site': 'COJ',
+                        'lco_tel': '1M0',
+                        'max_alt': 67.92580631422568,
+                        'moon_alt': -58.300710434796706,
+                        'moon_phase': 1.1439155504957221,
+                        'moon_sep': 170.66180769265674,
+                        'trail_len': 2.41774558756957,
+                        'typical_seeing': 2.0,
+                        'ipp_value': 1.0,
+                        'ag_exp_time': None,
+                        'max_airmass': 1.74,
+                        'max_alt_airmass': 1.0789381246330223,
+                        'min_lunar_dist': 30,
+                        'acceptability_threshold': 90
+                        }
+
+        resp = schedule_check(data, self.body_mp)
+
+        self.assertEqual(expected_resp, resp)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_mp_bad_too(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = { 'site_code' : 'Q63',
+                 'utc_date' : datetime(2016, 4, 6),
+                 'proposal_code' : self.neo_proposal.code,
+                 'too_mode' : True
+               }
+
+        expected_resp = {
+                        'target_name': self.body_mp.current_name(),
+                        'magnitude': 19.099441743160916,
+                        'speed': 2.9012947050834836,
+                        'slot_length': 20.0,
+                        'filter_pattern': 'w',
+                        'pattern_iterations': 14.0,
+                        'available_filters': 'air, ND, U, B, V, R, I, up, gp, rp, ip, zs, Y, w',
+                        'exp_count': 14,
+                        'exp_length': 50.0,
+                        'schedule_ok': True,
+                        'site_code': data['site_code'],
+                        'proposal_code': data['proposal_code'],
+                        'group_name': self.body_mp.current_name() + '_' + data['site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d'),
+                        'utc_date': data['utc_date'].isoformat(),
+                        'start_time': '2016-04-06T09:00:00',
+                        'end_time': '2016-04-06T19:10:00',
+                        'mid_time': '2016-04-06T14:05:00',
+                        'ra_midpoint': 3.312248725288052,
+                        'dec_midpoint': -0.1605498546995108,
+                        'period' : None,
+                        'jitter' : None,
+                        'instrument_code' : '',
+                        'saturated': None,
+                        'snr' : None,
+                        'too_mode': False,
+                        'calibs' : '',
+                        'spectroscopy' : False,
+                        'calibsource' : {},
+                        'calibsource_id' : -1,
+                        'calibsource_exptime' : 60,
+                        'solar_analog' : False,
+                        'vis_time': 7.2,
+                        'lco_enc': 'DOMA',
+                        'lco_site': 'COJ',
+                        'lco_tel': '1M0',
+                        'max_alt': 67.92580631422568,
+                        'moon_alt': -58.300710434796706,
+                        'moon_phase': 1.1439155504957221,
+                        'moon_sep': 170.66180769265674,
+                        'trail_len': 2.41774558756957,
+                        'typical_seeing': 2.0,
+                        'ipp_value': 1.0,
+                        'ag_exp_time': None,
+                        'max_airmass': 1.74,
+                        'max_alt_airmass': 1.0789381246330223,
+                        'min_lunar_dist': 30,
+                        'acceptability_threshold': 90
+                        }
+
+        resp = schedule_check(data, self.body_mp)
+
+        self.assertEqual(expected_resp, resp)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
     def test_mp_good_spectro(self):
         MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
 
