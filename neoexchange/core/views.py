@@ -63,7 +63,7 @@ from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs, validate_text,\
-    read_mpcorbit_file
+    read_mpcorbit_file, read_centaur_file, convert_centaurs_to_body
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
@@ -2347,6 +2347,37 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
         logger.info("More recent elements already stored for %s" % obj_id)
     return True
 
+
+def ingest_centaurs(centaur_file):
+    """Ingests a file of Centaurs and creates Body's corresponding to the
+    entries if they don't already exist.
+
+    The input <centaur_file> is a modified version of the `Centaurs.txt` file
+    from the MPC (from https://www.minorplanetcenter.net/iau/lists/Centaurs.html).
+    The file needs vertical bars ('|') putting between the columns and the
+    second copy of the 'Designation (and name)' column (who knows...) needs
+    renaming (it will be ignored)
+    """
+
+    table = read_centaur_file(centaur_file)
+    num_created = 0
+    if table:
+        for row in table:
+            body_params = convert_centaurs_to_body(row)
+            if body_params != {}:
+                if body_params['name'] == '':
+                    bodies = Body.objects.filter(provisional_name=body_params['provisional_name'])
+                else:
+                    bodies = Body.objects.filter(Q(provisional_name=body_params['provisional_name']) | Q(name=body_params['name']))
+                name = body_params['name'] or body_params['provisional_name']
+                if bodies.count() == 0:
+                    body= Body.objects.create(**body_params)
+                    logger.info("Created new Body: " + name)
+                    num_created += 1
+                else:
+                    logger.info("Body " + name + " already exists")
+
+    return num_created
 
 def ingest_new_object(orbit_file, obs_file=None, dbg=False):
     """Ingests a new object or updates an existing one from the <orbit_file>

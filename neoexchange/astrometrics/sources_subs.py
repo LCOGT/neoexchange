@@ -2397,7 +2397,7 @@ def read_centaur_file(centaur_file):
     """Reads in a modified version of the `Centaurs.txt` file from the MPC (from
     https://www.minorplanetcenter.net/iau/lists/Centaurs.html). The file needs
     vertical bars ('|') putting between the columns and the second copy of the
-    'Designation (and name)' column needs renaming (it will be ignored"""
+    'Designation (and name)' column needs renaming (it will be ignored)"""
 
     try:
         table = ascii.read(centaur_file, format='fixed_width')
@@ -2414,28 +2414,32 @@ def convert_centaurs_to_body(row):
     to Body's and ingests them (if they don't exist)
     """
 
-    body_params = {  'provisional_name': row['Prov. Des.'].strip(),
-                     'name': row['Designation (and name)'].strip().replace('(','').replace(')',''),
-                     'origin': 'M',
-                     'source_type': 'E',
-                     'elements_type': 'MPC_MINOR_PLANET',
-                     'active': False,
-                     'fast_moving': False,
-                     'urgency': None,
-                     'epochofel': datetime.strptime(str(row['Epoch']), '%Y%m%d'),
-                     'orbinc': row['Incl'],
-                     'longascnode': row['Node'],
-                     'argofperih': row['Peri.'],
-                     'eccentricity': row['e'],
-                     'meandist': row['a'],
-                     'meananom': row['M'],
-                     'perihdist': row['q'],
-                     'epochofperih': None,
-                     'abs_mag': row['H'],
-                     'slope': 0.15,
-                     'score': None,
-                     'discovery_date': datetime.strptime(row['Discovery date, site and discoverer(s)'][0:10], '%Y %m %d'),
-                     'num_obs': None,
-                     'arc_length': None}
+    body_params = {}
+    try:
+        body_params = {  'provisional_name': row['Prov. Des.'].strip(),
+                         'name': row['Designation (and name)'].strip().replace('(','').replace(')',''),
+                         'origin': 'M',
+                         'source_type': 'E',
+                         'elements_type': 'MPC_MINOR_PLANET',
+                         'active': False,
+                         'fast_moving': False,
+                         'urgency': None,
+                         'epochofel': datetime.strptime(str(row['Epoch']), '%Y%m%d'),
+                         'orbinc': row['Incl'],
+                         'longascnode': row['Node'],
+                         'argofperih': row['Peri.'],
+                         'eccentricity': row['e'],
+                         'meandist': row['a'],
+                         'meananom': row['M'],
+                         'perihdist': row['q'],
+                         'epochofperih': None,
+                         'abs_mag': row['H'],
+                         'slope': 0.15,
+                         'score': None,
+                         'discovery_date': datetime.strptime(row['Discovery date, site and discoverer(s)'][0:10], '%Y %m %d'),
+                         'num_obs': None,
+                         'arc_length': None}
+    except:
+        logger.warning("Couldn't convert row to a Body")
 
     return body_params
