@@ -31,7 +31,7 @@ from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockLis
     display_movie, GuideMovie, \
     StaticSourceView, StaticSourceDetailView, ScheduleCalibSpectra, ScheduleCalibSubmit, \
     CalibSpectroFeasibility, ScheduleCalibParameters, \
-    BestStandardsView, PlotSpec, BodyVisibilityView
+    BestStandardsView, PlotSpec, BodyVisibilityView, SuperBlockTimeline
 from core.plots import make_visibility_plot, \
     make_standards_plot, make_solar_standards_plot
 
@@ -61,6 +61,7 @@ urlpatterns = [
     url(r'^block/(?P<pk>\d+)/analyser/$', BlockFramesView.as_view(), name='block-ast'),
     url(r'^block/(?P<pk>\d+)/analyser/submit/$', ProcessCandidates.as_view(), name='submit-candidates'),
     url(r'^block/(?P<pk>\d+)/candidates/$', CandidatesViewBlock.as_view(), name='view-candidates'),
+    url(r'^block/(?P<pk>\d+)/timeline/$', SuperBlockTimeline.as_view(), name='view-timeline'),
     url(r'^block/(?P<pk>\d+)/$', SuperBlockDetailView.as_view(model=SuperBlock), name='block-view'),
     url(r'^target/$', ListView.as_view(model=Body, queryset=Body.objects.filter(active=True).order_by('-origin', '-ingest'), context_object_name="target_list"), name='targetlist'),
     url(r'^target/(?P<pk>\d+)/measurements/ades/download/$', MeasurementDownloadADESPSV.as_view(), name='download-ades'),
