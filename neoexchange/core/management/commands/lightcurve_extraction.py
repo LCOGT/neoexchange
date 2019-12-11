@@ -38,7 +38,7 @@ from django.conf import settings
 from core.models import Block, Frame, SuperBlock, SourceMeasurement, CatalogSources
 from astrometrics.ephem_subs import compute_ephem, radec2strings, moon_alt_az, get_sitepos
 from astrometrics.time_subs import datetime2mjd_utc
-from photometrics.catalog_subs import search_box
+from photometrics.catalog_subs import search_box, open_fits_catalog
 from photometrics.photometry_subs import compute_fwhm, map_filter_to_wavelength
 
 
@@ -56,6 +56,7 @@ class Command(BaseCommand):
         parser.add_argument('--single', action="store_true", default=False, help='Whether to only analyze a single SuperBlock')
         base_dir = os.path.join(settings.DATA_ROOT, 'Reduction')
         parser.add_argument('--datadir', default=base_dir, help='Place to save data (e.g. %s)' % base_dir)
+        parser.add_argument('--tempkey', type=str, default='FOCTEMP', help='FITS keyword to extract for temperature')
 
     def generate_expected_fwhm(self, times, airmasses, fwhm_0=2.0, obs_filter='w', tel_diameter=0.4*u.m):
         """Compute the expected FWHM and the variation with airmass and observing
@@ -83,8 +84,8 @@ class Command(BaseCommand):
 
         return expected_fwhm
 
-    def plot_timeseries(self, times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, colors='r', title='', sub_title='', datadir='./', filename='tmp_', diameter=0.4*u.m):
-        fig, (ax0, ax1) = plt.subplots(nrows=2, sharex=True, gridspec_kw={'height_ratios': [15, 4]})
+    def plot_timeseries(self, times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, temps, colors='r', title='', sub_title='', datadir='./', filename='tmp_', diameter=0.4*u.m, temp_keyword='FOCTEMP'):
+        fig, (ax0, ax1) = plt.subplots(nrows=2, sharex=True, figsize=(10,7.5), gridspec_kw={'height_ratios': [15, 4]})
         ax0.errorbar(times, mags, yerr=mag_errs, marker='.', color=colors, linestyle=' ')
         ax1.errorbar(times, zps, yerr=zp_errs, marker='.', color=colors, linestyle=' ')
         ax0.invert_yaxis()
@@ -107,7 +108,8 @@ class Command(BaseCommand):
 
         fig.savefig(os.path.join(datadir, filename + 'lightcurve.png'))
 
-        fig2, (ax2, ax3) = plt.subplots(nrows=2, sharex=True)
+        fig2, (ax2, ax3) = plt.subplots(nrows=2, figsize=(10,7.5), sharex=True)
+        ax4 = ax3.twinx()
         ax2.plot(alltimes, fwhm, marker='.', color=colors, linestyle=' ')
         expected_fwhm = self.generate_expected_fwhm(alltimes, air_mass, fwhm_0=fwhm[0], tel_diameter=diameter)
         if (times[-1] - times[0]) < timedelta(hours=12):
@@ -115,6 +117,11 @@ class Command(BaseCommand):
         else:
             ax2.plot(alltimes, expected_fwhm, color='black', linestyle=' ', marker='+', markersize=2, label="Predicted")
 
+        temp_lines = []
+        for temp in temps:
+            temp_line = ax4.plot(alltimes, temps[temp], linewidth=0.66, marker='.', linestyle='-', label=temp)
+            temp_lines.append(temp_line[0])
+        ax4.legend(temp_lines, temp_keyword, loc='best', fontsize='xx-small')
         ax2.set_ylabel('FWHM (")')
         # ax2.set_title('FWHM')
         fig2.suptitle('Conditions for obs: '+title)
@@ -122,8 +129,13 @@ class Command(BaseCommand):
         ax3.set_xlabel('Time')
         ax3.set_ylabel('Airmass')
         # ax3.set_title('Airmass')
+        temp_label = "Temp"
+        if temp_keyword is not None and temp_keyword != '' and type(temp_keyword) != list:
+            temp_label = temp_label + "(" + temp_keyword.strip() + ")"
+        ax4.set_ylabel(temp_label)
         ax2.minorticks_on()
         ax3.minorticks_on()
+        ax4.minorticks_on()
         ax3.invert_yaxis()
         ax2.xaxis.set_major_formatter(DateFormatter(date_string))
         ax2.fmt_xdata = DateFormatter(date_string)
@@ -131,7 +143,7 @@ class Command(BaseCommand):
         ax3.fmt_xdata = DateFormatter(date_string)
         fig2.autofmt_xdate()
         ax2.legend()
-        fig2.savefig(os.path.join(datadir, filename + 'lightcurve_cond.png'))
+        fig2.savefig(os.path.join(datadir, filename + 'lightcurve_focus.png'))
         # Switch backend for GUI windows
         matplotlib.use('TkAgg')
         plt.ion()
@@ -229,6 +241,7 @@ class Command(BaseCommand):
         else:
             super_blocks = SuperBlock.objects.filter(body=start_super_block.body, block_start__gte=start_super_block.block_start-timedelta(days=options['timespan']))
 
+        temp_keywords = ['WMSTEMP', 'TUBETEMP', 'FOCTEMP', 'REFTEMP']
         times = []
         alltimes = []
         mags = []
@@ -241,6 +254,7 @@ class Command(BaseCommand):
         mpc_site = []
         fwhm = []
         air_mass = []
+        focus_temps = {}
         obj_name = start_super_block.body.current_name().replace(' ', '_')
         datadir = os.path.join(options['datadir'], obj_name)
         rw_permissions = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH
@@ -340,10 +354,23 @@ class Command(BaseCommand):
                         # so we can plot conditions for all frames
                         alltimes.append(frame.midpoint)
                         fwhm.append(frame.fwhm)
+                        # Open frame and get focus temperature (if able)
+                        filename_chunks = frame.filename.split('-')
+                        if len(filename_chunks) == 5:
+                            dayobs = filename_chunks[2]
+                            frame_fpath = os.path.join(settings.DATA_ROOT, dayobs, frame.filename)
+                            header, table, cattype = open_fits_catalog(frame_fpath)
+                            for tempkey in temp_keywords:
+                                foc_temp = header.get(tempkey, None)
+                                print("Value of {key:8s}={val:.2f}".format(key=tempkey, val=foc_temp))
+                                if tempkey not in focus_temps:
+                                    focus_temps[tempkey] = [foc_temp,]
+                                else:
+                                    focus_temps[tempkey].append(foc_temp)
                         azimuth, altitude = moon_alt_az(frame.midpoint, ra, dec, *get_sitepos(frame.sitecode)[1:])
                         zenith_distance = radians(90) - altitude
                         air_mass.append(S.sla_airmas(zenith_distance))
-                        obs_site = frame.sitecode
+                        obs_site = header.get('telid', frame.sitecode) + '-' + header.get('instrume', frame.instrument)
                         catalog = frame.photometric_catalog
                         if catalog == 'GAIA-DR2':
                             outmag = 'GG'
@@ -418,7 +445,7 @@ class Command(BaseCommand):
                 plot_title = options['title']
                 subtitle = ''
 
-            self.plot_timeseries(times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, title=plot_title, sub_title=subtitle, datadir=datadir, filename=base_name, diameter=tel_diameter)
+            self.plot_timeseries(times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, focus_temps, title=plot_title, sub_title=subtitle, datadir=datadir, filename=base_name, diameter=tel_diameter, temp_keyword=temp_keywords)
             os.chmod(os.path.join(datadir, base_name + 'lightcurve_cond.png'), rw_permissions)
             os.chmod(os.path.join(datadir, base_name + 'lightcurve.png'), rw_permissions)
         else:
