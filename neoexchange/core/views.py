@@ -2282,6 +2282,187 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
     return params
 
 
+def clean_MPC_object(orbit_line):
+
+    current = orbit_line.rstrip()
+
+    if current[4] == 'S':
+        # Natural satellite, not handled
+        params = {}
+    elif current[4] in 'PCAI' and (current[0:3].isdigit() or current[0:3] == '   '):
+        # Comet
+        if current[0:4].isdigit():
+            # Numbered comet
+            packed_or_num = str(int(current[0:4])) + current[4]
+        else:
+            # Un-numbered comet e.g. C/1995 O1
+            number_or_desig = current[4:12].rstrip()
+            packed_or_num = packed_to_normal(number_or_desig)
+        name = packed_or_num
+        provisional_name = ''
+        provisional_packed = ''
+
+        try:
+            abs_mag = float(current[91:95])
+        except ValueError:
+            abs_mag = None
+        try:
+            slope = float(current[96:100])
+        except ValueError:
+            slope = 4.0
+
+        try:
+            year = int(current[81:85])
+            month = int(current[85:87])
+            day = int(current[87:89])
+            elements_epoch = datetime(year, month, day)
+        except ValueError:
+            elements_epoch = None
+        perihelion_epoch = parse_neocp_decimal_date(current[14:29])
+        params = {
+            'abs_mag': abs_mag,
+            'slope': slope,
+            'epochofperih': perihelion_epoch,
+            'argofperih': float(current[51:59]),
+            'longascnode': float(current[61:69]),
+            'orbinc': float(current[71:79]),
+            'eccentricity': float(current[41:49]),
+            'perihdist': float(current[30:39]),
+            'epochofel': elements_epoch,
+            'source_type': 'C',
+            'elements_type': 'MPC_COMET',
+            'active': True,
+            'origin': 'M',
+            'provisional_packed' : provisional_packed,
+            'provisional_name' : provisional_name,
+            'name' : name,
+            'not_seen' : None,
+            'arc_length' : None,
+            'num_obs' : None
+        }
+    else:
+        number_or_desig = current[0:7].rstrip()
+        packed_or_num = packed_to_normal(number_or_desig)
+        if packed_or_num.isdigit():
+            name = packed_or_num
+            provisional_name = ''
+            provisional_packed = ''
+        else:
+            provisional_name = packed_or_num
+            provisional_packed = number_or_desig
+            name = ''
+
+        try:
+            abs_mag = float(current[8:13])
+        except ValueError:
+            abs_mag = None
+        try:
+            slope = float(current[15:19])
+        except ValueError:
+            slope = 0.15
+
+        num_opps = int(current[123:126])
+        if num_opps == 1:
+            arc_length = float(current[127:131])
+        else:
+            arc_length = (float(current[132:136]) - float(current[127:131])) * 365.25
+
+        try:
+            last_obs = datetime.strptime(current[194:202].strip(), '%Y%m%d')
+            not_seen = timezone.now() - last_obs
+            not_seen = not_seen.total_seconds() / 86400.0 # Leap seconds can go to hell...
+        except:
+            not_seen = None
+
+        try:
+            num_obs = int(current[117:122])
+        except ValueError:
+            num_obs = None
+
+        params = {
+            'abs_mag': abs_mag,
+            'slope': slope,
+            'epochofel': extract_mpc_epoch(current[20:25]),
+            'meananom': float(current[26:35]),
+            'argofperih': float(current[37:46]),
+            'longascnode': float(current[48:57]),
+            'orbinc': float(current[59:68]),
+            'eccentricity': float(current[70:79]),
+            'meandist': float(current[92:103]),
+            'source_type': 'U',
+            'elements_type': 'MPC_MINOR_PLANET',
+            'active': True,
+            'origin': 'M',
+            'provisional_packed' : provisional_packed,
+            'provisional_name' : provisional_name,
+            'name' : name,
+            'num_obs' : num_obs,
+    #        'update_time' : timezone.now(),
+            'arc_length' : arc_length,
+            'not_seen' : None
+        }
+        if params != {}:
+            perihdist = params['meandist'] * (1.0 - params['eccentricity'])
+            # Check for objects that should be treated as comets (e>0.9)
+            if params['eccentricity'] > 0.9:
+
+                if params['slope'] == 0.15:
+                    params['slope'] = 4.0
+                params['elements_type'] = 'MPC_COMET'
+                params['perihdist'] = perihdist
+                params['epochofperih'] = determine_time_of_perih(params['meandist'], params['meananom'], params['epochofel'])
+                params['meananom'] = None
+
+            params['source_type'] = determine_asteroid_type(perihdist, params['eccentricity'])
+        else:
+            params = {}
+
+    return params
+
+
+def populate_bodies(orbit_lines):
+    '''Create or update Body's based on the passed <orbit_lines>'''
+
+    num_created = 0
+    num_updated = 0
+    for line in orbit_lines:
+        try:
+            elements = clean_MPC_object(line)
+        except ValueError:
+            logger.error("Error decoding line:\n%s\n" % line)
+            raise
+
+        if len(elements) != 0:
+            if elements['name'] != '':
+                bodies_qs = Body.objects.filter(name__startswith = elements['name'])
+            elif elements['provisional_name'] != '' and elements['provisional_packed'] != '':
+                bodies_qs = Body.objects.filter(Q(provisional_name__startswith = elements['provisional_name'])|Q(provisional_packed__startswith = elements['provisional_packed']))
+            else:
+                logger.warn("No means to query for Body represented by:\n%s\n" % line)
+                return num_created, num_updated
+            if len(bodies_qs) == 0:
+                new_body = Body.objects.create(**elements)
+                logger.debug("Created %s" % new_body.current_name())
+                num_created += 1
+                if num_created % 100 == 0:
+                    logger.info("%d: created %s" % (num_created, new_body.current_name()))
+            elif len(bodies_qs) == 1:
+                rows_matched = bodies_qs.update(**elements)
+                if rows_matched != 1:
+                    logger.error("Updated more rows (%d) than expected" % rows_matched)
+                new_body = bodies_qs[0]
+                logger.debug("Updated %s" % new_body.current_name())
+                num_updated += 1
+                if num_updated % 100 == 0:
+                    logger.info("%d: Updated %s" % (num_updated, new_body.current_name()))
+            elif len(bodies_qs) > 1:
+                name = elements['name']
+                if elements['name'] == '':
+                    name = elements['provisional_packed']
+                logger.warn("Multiple Bodies found for %s" % name)
+    return num_created, num_updated
+
+
 def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
     """
     Performs remote look up of orbital elements for object with id obj_id_or_page,

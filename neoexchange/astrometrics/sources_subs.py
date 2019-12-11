@@ -821,6 +821,47 @@ def parse_mpcorbit(page, epoch_now=None, dbg=False):
 
     return best_elements
 
+def read_mpcorb_dbfile(mpcorb_file, skip_header=True):
+    '''Read a copy of the Minor Planet Center (MPC)'s MPCOrb.dat file, returning
+    the orbit lines in three lists.
+    The file consists of a header (with no comment characters), a line of hyphens,
+    followed by three sections separated by blank lines.  The first section
+    contains the numbered objects, the second section contains the unnumbered
+    objects with perturbed orbit solutions and the third contains the recent
+    1-opposition objects with unperturbed orbit solutions. The three sections are
+    returned in three separate lists.
+    Format of each line is described at:
+    http://www.minorplanetcenter.org/iau/info/MPOrbitFormat.html
+    At the time of writing (March 2017) the size of the three lists are
+    (488449, 134387, 112855) lines each.'''
+
+    numbered_obj_lines = []
+    multiopp_obj_lines = []
+    singleopp_obj_lines = []
+
+    with open(mpcorb_file) as input_data:
+        if skip_header:
+            # Skip header
+            for line in input_data:
+                if line.strip()[0:10] == '----------':
+                    break
+        # Read numbered objects until blank line
+        for line in input_data:
+            if line.strip() == '':
+                break
+            numbered_obj_lines.append(line.rstrip())
+        # Read multi-opposition objects until blank line
+        for line in input_data:
+            if line.strip() == '':
+                break
+            multiopp_obj_lines.append(line.rstrip())
+        # Read single-opposition objects until blank line
+        for line in input_data:
+            if line.strip() == '':
+                break
+            singleopp_obj_lines.append(line.rstrip())
+
+    return numbered_obj_lines, multiopp_obj_lines, singleopp_obj_lines
 
 def read_mpcorbit_file(orbit_file):
 
@@ -893,7 +934,7 @@ def validate_text(text_string):
 
 def packed_to_normal(packcode):
     """Converts MPC packed provisional designations e.g. K10V01F to unpacked
-    normal desigination i.e. 2010 VF1 including packed 5 digit number designations
+    normal designation i.e. 2010 VF1 including packed 5 digit number designations
     i.e. L5426 to 215426"""
 
 # Convert initial letter to century
@@ -1696,7 +1737,7 @@ def make_many(params, ipp_value, request, cal_request):
 
 
 def make_proposal(params):
-    proposal = { 
+    proposal = {
                  'proposal_id' : params['proposal_id'],
                  'user_id' : params['user_id']
                }
