@@ -136,9 +136,12 @@ def parse_neocp_decimal_date(neocp_datestr, dbg=False):
     chunks = neocp_datestr.split(' ')
     if dbg:
         print(chunks)
-    if len(chunks) != 3:
+    if len(chunks) != 3 and (len(chunks) == 4 and chunks[2] != ''):
         return None
-    day_chunks = chunks[2].split('.')
+    day_idx = 2
+    if len(chunks) == 4:
+        day_idx = 3
+    day_chunks = chunks[day_idx].split('.')
     if dbg:
         print(day_chunks)
     neocp_datetime = datetime(year=int(chunks[0]), month=int(chunks[1]), day=int(day_chunks[0]))
