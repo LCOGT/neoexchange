@@ -29,3 +29,4 @@ rollbar
 photutils>=0.3
 sty
 awscli
+sbpy

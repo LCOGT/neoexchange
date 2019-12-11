@@ -261,8 +261,15 @@ def calibrate_catalog(catfile, cat_center, trim_limits, table_format='ascii.sext
         obj_mag = -2.5 * np.log10(object_cat[flux_column])
         obj_err = object_cat[fluxerr_column] / object_cat[flux_column] * FLUX2MAG
     else:
+        dist = great_circle_distance(cat_center.ra.deg, cat_center.dec.deg, object_cat['RA'], object_cat['DEC'])
         logger.warn("Found unexpected number of target match ({})".format(len(object_cat)))
-        obj_mag = obj_err = None
+        if len(object_cat) >=2:
+            idx = np.argmin(dist)
+            print("Taking row",object_cat[idx],"\nas object")
+            obj_mag = -2.5 * np.log10(object_cat[idx][flux_column])
+            obj_err = object_cat[idx][fluxerr_column] / object_cat[idx][flux_column] * FLUX2MAG
+        else:
+            obj_mag = obj_err = None
     ps1_db_file = catfile.replace('.ascii', '.db')
     if os.path.exists(ps1_db_file):
         logger.info("Using existing PS1 DB")
