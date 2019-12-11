@@ -132,6 +132,12 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
 # Light travel time for 1 AU (in sec)
     tau = 499.004783806
 
+    if dbg:
+        old_level = logger.level
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.WARNING)
+
 # Compute MJD for UTC
     mjd_utc = datetime2mjd_utc(d)
 
@@ -235,6 +241,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
 
     if j != 0:
         logger.error("Perturbing error=%s" % j)
+        if dbg: logger.setLevel(old_level)
         return {}
 
     # Check we have everything we need before computing positions
@@ -242,6 +249,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
         or p_orbelems['SemiAxisOrQ'] is None or p_orbelems['Ecc'] is None:
             logger.error("Missing parameter for %s (%s)" % (orbelems['name'], orbelems['provisional_name']))
             logger.error(p_orbelems)
+            if dbg: logger.setLevel(old_level)
             return {}
 
     r3 = -100.
@@ -252,7 +260,8 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     vel = zeros(3)
     # rel_pos= [0.0, 0.0, 0.0]
 
-    while fabs(delta - r3) > .01:
+    iterations = 0
+    while fabs(delta - r3) > .01 and iterations<100:
         r3 = delta
         if comet is True:
             (pv, status) = S.sla_planel(mjd_tt - (ltt/86400.0), jform, p_epoch_mjd,
@@ -285,6 +294,10 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
 # Light travel time to asteroid
         ltt = tau * delta
         logger.debug("Light travel time (sec, min, days)=%s %s %s" % (ltt, ltt/60.0, ltt/86400.0))
+        iterations += 1
+
+    if iterations == 100:
+        logger.warning("Hit iteration limit!")
 
 # Correct position for planetary aberration
     for i, a_pos in enumerate(pos):
@@ -325,7 +338,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
 
     total_motion, sky_pa, ra_motion, dec_motion = compute_sky_motion(sky_vel, delta, dbg)
 
-    mag = -99
+    mag = 99
     mag_dot = 0
     beta = 0
     separation = 0
@@ -336,7 +349,8 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
         # For JPL HORIZONS, we have:
         #   T(otal)-mag = M1 + 5*log10(delta) + k1*log10(r)
         # N(uclear)-mag = M2 + 5*log10(delta) + k2*log10(r) + phcof*beta (not implemented)
-        if p_orbelems['H'] and p_orbelems['G']:
+        if p_orbelems['H'] and p_orbelems['G'] and delta>0.0 and r>0.0:
+            if dbg: print(delta,r)
             mag = p_orbelems['H'] + 5.0 * log10(delta) + 2.5 * p_orbelems['G'] * log10(r)
             mag_dot = 5.0 * delta_dot / log(10) / delta + 2.5 * p_orbelems['G'] * r_dot / log(10) / r
 
@@ -423,6 +437,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
                 'sun_obj_dist'  : r
                 }
 
+    if dbg: logger.setLevel(old_level)
     return emp_dict
 
 
