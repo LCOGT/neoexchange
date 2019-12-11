@@ -141,7 +141,7 @@ def interpolate_ephemeris(ephem_file, jd, with_rdot=True):
         lastline = line
     ephem_fh.close()
 
-    # Read last two lines (one after the passed JD and the one before) and 
+    # Read last two lines (one after the passed JD and the one before) and
     # interpolate RA, Dec between the two.
     # XXX TODO Interpolate other values also
     if with_rdot is True:
@@ -347,3 +347,52 @@ def plot_color_correction(C, zp, mag, color_index, mag_inst, filename='lco-ps1-c
     filename_clip = os.path.splitext(filename)[0] + '_clip' + os.path.splitext(filename)[1]
     plt.savefig(filename_clip, dpi=150)
     return
+
+def compute_days_visible(bodies, sem_start=datetime(2020,6,1), sem_end=datetime(2023,6,1)):
+    num_bodies = 0
+    days_visible = {}
+    for body in bodies:
+        print(body.name, body.provisional_name)
+        if body.current_name() in days_visible:
+            print("Already done")
+            continue
+        if body.epochofel is None or body.epochofperih is None:
+            print("No epoch, skipping")
+            continue
+        num_bodies += 1
+        elements = model_to_dict(body)
+        ephem_start = sem_start
+        num_visible = 0
+        while ephem_start <= sem_end:
+            emp = compute_ephem(ephem_start, elements, '500', dbg=False, perturb=True)
+            if debug: print(ephem_start, emp['mag'])
+            if emp['mag'] <= 22.0:
+                num_visible += 1
+            ephem_start += timedelta(days=5)
+        days_visible[body.current_name()] = num_visible*5.0
+
+def compute_targets_visible(bodies, sem_start=datetime(2020,6,1), sem_end=datetime(2023,6,1)):
+    num_bodies = 0
+    targets_visible = {}
+    ephem_start = sem_start
+    while ephem_start <= sem_end:
+        num_visible = 0
+        targets = []
+        print(ephem_start)
+        for body in bodies:
+    #        print(body.name, body.provisional_name)
+            if body.current_name() in targets:
+    #            print("Already done")
+                continue
+            if body.epochofel is None or body.epochofperih is None:
+    #            print("No epoch, skipping")
+                continue
+            num_bodies += 1
+            targets.append(body.current_name())
+            elements = model_to_dict(body)
+            emp = compute_ephem(ephem_start, elements, '500', dbg=False, perturb=True)
+            if debug: print(ephem_start, emp['mag'])
+            if emp['mag'] <= 22.0:
+                num_visible += 1
+        targets_visible[ephem_start] = num_visible
+        ephem_start += timedelta(days=5)
