@@ -288,10 +288,12 @@ class Command(BaseCommand):
         filename = os.path.join(datadir, base_name + 'ALCDEF.txt')
         alcdef_file = open(filename, 'w')
         for super_block in super_blocks:
-            block_list = Block.objects.filter(superblock=super_block.id)
+            block_list = Block.objects.filter(superblock=super_block.id, num_observed__gte=1)
             self.stdout.write("Analyzing SuperblockBlock# %s for %s" % (super_block.tracking_number, super_block.body.current_name()))
 
             for block in block_list:
+                base_name = '{}_{}_{}_{}_{}_'.format(obj_name, sb_site, sb_day, start_super_block.tracking_number, block.request_number)
+
                 block_mags = []
                 block_mag_errs = []
                 block_times = []
@@ -446,7 +448,7 @@ class Command(BaseCommand):
                 subtitle = ''
 
             self.plot_timeseries(times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, focus_temps, title=plot_title, sub_title=subtitle, datadir=datadir, filename=base_name, diameter=tel_diameter, temp_keyword=temp_keywords)
-            os.chmod(os.path.join(datadir, base_name + 'lightcurve_cond.png'), rw_permissions)
+            os.chmod(os.path.join(datadir, base_name + 'lightcurve_focus.png'), rw_permissions)
             os.chmod(os.path.join(datadir, base_name + 'lightcurve.png'), rw_permissions)
         else:
             self.stdout.write("No sources matched.")
