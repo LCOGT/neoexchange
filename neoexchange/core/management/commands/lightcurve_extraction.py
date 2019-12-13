@@ -36,7 +36,8 @@ from astropy.time import Time
 from django.conf import settings
 
 from core.models import Block, Frame, SuperBlock, SourceMeasurement, CatalogSources
-from astrometrics.ephem_subs import compute_ephem, radec2strings, moon_alt_az, get_sitepos
+from core.urlsubs import QueryTelemetry, convert_temps_to_table
+from astrometrics.ephem_subs import compute_ephem, radec2strings, moon_alt_az, get_sitepos, MPC_site_code_to_domes
 from astrometrics.time_subs import datetime2mjd_utc
 from photometrics.catalog_subs import search_box, open_fits_catalog
 from photometrics.photometry_subs import compute_fwhm, map_filter_to_wavelength
@@ -84,7 +85,15 @@ class Command(BaseCommand):
 
         return expected_fwhm
 
-    def plot_timeseries(self, times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, temps, colors='r', title='', sub_title='', datadir='./', filename='tmp_', diameter=0.4*u.m, temp_keyword='FOCTEMP'):
+    def fetch_dimm_seeing(self, sitecode, date):
+        fwhm = QueryTelemetry(start_time=date+timedelta(days=1))
+        site, encid, telid = MPC_site_code_to_domes(sitecode)
+        dimm_data = fwhm.get_seeing_for_site(site)
+        tables = convert_temps_to_table(dimm_data, time_field='measure_time', datum_name='seeing', data_field='seeing')
+
+        return tables[0]
+
+    def plot_timeseries(self, times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, temps, seeing, colors='r', title='', sub_title='', datadir='./', filename='tmp_', diameter=0.4*u.m, temp_keyword='FOCTEMP'):
         fig, (ax0, ax1) = plt.subplots(nrows=2, sharex=True, figsize=(10,7.5), gridspec_kw={'height_ratios': [15, 4]})
         ax0.errorbar(times, mags, yerr=mag_errs, marker='.', color=colors, linestyle=' ')
         ax1.errorbar(times, zps, yerr=zp_errs, marker='.', color=colors, linestyle=' ')
@@ -116,6 +125,13 @@ class Command(BaseCommand):
             ax2.plot(alltimes, expected_fwhm, color='black', linestyle='--', linewidth=0.75, label="Predicted")
         else:
             ax2.plot(alltimes, expected_fwhm, color='black', linestyle=' ', marker='+', markersize=2, label="Predicted")
+
+        # Cut down DIMM results to span of Block
+        mask1 = seeing['UTC Datetime'] >= alltimes[0]
+        mask2 = seeing['UTC Datetime'] <= alltimes[-1]
+        mask = mask1 & mask2
+        block_seeing = seeing[mask]
+        ax2.plot(block_seeing['UTC Datetime'], block_seeing['seeing'], color='DodgerBlue', linestyle='-', label='DIMM')
 
         temp_lines = []
         for temp in temps:
@@ -446,8 +462,8 @@ class Command(BaseCommand):
             else:
                 plot_title = options['title']
                 subtitle = ''
-
-            self.plot_timeseries(times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, focus_temps, title=plot_title, sub_title=subtitle, datadir=datadir, filename=base_name, diameter=tel_diameter, temp_keyword=temp_keywords)
+            seeing = self.fetch_dimm_seeing(frames_all_zp[0].sitecode, frames_all_zp[0].midpoint)
+            self.plot_timeseries(times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, focus_temps, seeing, title=plot_title, sub_title=subtitle, datadir=datadir, filename=base_name, diameter=tel_diameter, temp_keyword=temp_keywords)
             os.chmod(os.path.join(datadir, base_name + 'lightcurve_focus.png'), rw_permissions)
             os.chmod(os.path.join(datadir, base_name + 'lightcurve.png'), rw_permissions)
         else:
