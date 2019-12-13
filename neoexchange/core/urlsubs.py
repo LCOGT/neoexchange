@@ -14,9 +14,20 @@ GNU General Public License for more details.
 """
 import requests
 import sys
+import os
+from datetime import datetime, timedelta
+import logging
 
+from astropy import units as u
+from astropy.table import QTable
 from django.conf import settings
+from elasticsearch import Elasticsearch
 
+from astrometrics.ephem_subs import determine_darkness_times
+
+ELASTICSEARCH_URLS = os.getenv('ELASTICSEARCH_URLS', 'http://elasticsearch:9200,http://es-dev.lco.gtn:80').split(',')
+
+logger = logging.getLogger(__name__)
 ssl_verify = True
 # Check if Python version is less than 2.7.9. If so, disable SSL warnings and SNI verification
 if sys.version_info < (2, 7, 9):
@@ -59,3 +70,135 @@ def get_telescope_states(telstates_url='http://observe.lco.global/api/telescope_
         response = {}
 
     return response
+
+
+class ESMetricsSource(object):
+    '''
+        Base class for elasticsearch based metrics. Right now just records the es_urls and the index name.
+    '''
+
+    def __init__(self, es_urls, es_index, start_time=datetime.utcnow()-timedelta(days=1),
+                 end_time=datetime.utcnow()):
+        self.es_urls = es_urls
+        self.es_index = es_index
+        self.start_time = start_time
+        self.end_time = end_time
+
+
+class QueryTelemetry(ESMetricsSource):
+    '''
+        Gets sets of telemetry from the FITS header index in elasticsearch.
+    '''
+
+    def __init__(self, start_time=datetime.utcnow()-timedelta(days=1),
+                 end_time=datetime.utcnow()):
+        ESMetricsSource.__init__(self, es_urls=ELASTICSEARCH_URLS[0], es_index='fitsheaders',
+                                 start_time=start_time, end_time=end_time)
+
+    def get_site_names():
+        '''
+            Sites that have accesible DIMM data
+        '''
+        return ['cpt', 'lsc', 'elp']
+
+    def map_LCOsite_to_sitecode(self, site):
+        """
+            Map LCO site names (e.g. 'cpt') MPC site codes (e.g. 'K92'). If no match
+            is found, '500' (geocenter) is returned
+        """
+
+        site_mapping = { 'cpt' : 'K92',
+                         'lsc' : 'W86',
+                         'tfn' : 'Z21',
+                         'elp' : 'V37'
+                       }
+
+        site_code = site_mapping.get(site.lower(), '500')
+
+        return site_code
+
+    def get_seeing_for_site(self, site):
+
+        site_code = self.map_LCOsite_to_sitecode(site)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date=self.start_time, sun_zd=96)
+        print(dark_start, dark_end)
+
+        # Setup ElasticSearch query
+        es = Elasticsearch(self.es_urls)
+        formatter = "%Y-%m-%d %H:%M:%S"
+        dimm_query = {
+              "query": {
+                "bool": {
+                    "filter": [
+                        {
+                            "range": {
+                                "measure_time" : {
+                                    "gte" : dark_start.strftime(formatter),
+                                    "lte" : dark_end.strftime(formatter),
+                                    "format" : "yyyy-MM-dd HH:mm:ss"
+                                }
+                            }
+                        },
+                        {
+                            "match": {
+                                "site": site
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+        seeing_results = es.search(index='dimm', request_timeout=60, body=dimm_query,
+                             size=10000, sort=['measure_time:asc'])
+        if seeing_results['hits']['total'] > 0:
+            results = seeing_results['hits']['hits']
+        else:
+            results = []
+
+        return results
+
+
+def convert_temps_to_table(temps_data, time_field='timestampmeasured', datum_name='datumname', data_field='seeing'):
+    """
+        Convert a list of temperature measurements read from ES (via
+        get_temps_for_site_telescope()) in <temps_data> into an Astropy Table
+    """
+
+    times = {}
+    temps = {}
+
+    for temp in temps_data:
+        temp_data = temp.get('_source', {})
+        try:
+            temp_time = datetime.strptime(temp_data.get(time_field, ''), "%Y-%m-%dT%H:%M:%S.%fZ")
+        except ValueError:
+            try:
+                temp_time = datetime.strptime(temp_data.get(time_field, ''), "%Y-%m-%dT%H:%M:%S")
+            except ValueError:
+                logger.warning("Could not parse datetime:" + temp_data.get(time_field, ''))
+                temp_time = None
+        units = temp_data.get('units', None)
+        if not units:
+            logger.debug("Unknown units found, assuming degrees C")
+            units = 'degC'
+        datum = temp_data.get('datumname', datum_name)
+        temp_value = temp_data.get(data_field, None)
+        if temp_value and temp_time and datum:
+            if datum in times.keys() and datum in temps.keys():
+                # Already known datum, add to list
+                times[datum].append(temp_time)
+                temps[datum].append(temp_value)
+            else:
+                times[datum] = [temp_time, ]
+                temps[datum] = [temp_value, ]
+    tables = []
+    if units == 'degC':
+        units = u.deg_C
+    else:
+        units = u.dimensionless_unscaled
+    for datum in times.keys():
+        foo = u.Quantity([x*units for x in temps[datum]])
+        temp_table = QTable([times[datum],foo], names=('UTC Datetime', datum))
+        tables.append(temp_table)
+
+    return tables
