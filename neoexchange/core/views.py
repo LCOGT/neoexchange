@@ -632,8 +632,9 @@ class StaticSourceDetailView(DetailView):
         context = super(StaticSourceDetailView, self).get_context_data(**kwargs)
         context['blocks'] = Block.objects.filter(calibsource=self.object).order_by('block_start')
         script, div, p_spec = plot_all_spec(self.object)
-        context['script'] = script
-        context['div'] = div["raw_spec"]
+        if script and div:
+            context['script'] = script
+            context['div'] = div["raw_spec"]
         base_path = BOKEH_URL.format(bokeh.__version__)
         context['css_path'] = base_path + 'css'
         context['js_path'] = base_path + 'js'
@@ -3211,7 +3212,10 @@ def plot_all_spec(source):
                      'filename': spec.spec_vis}
                 data_spec.append(new_spec)
 
-        script, div = spec_plot(data_spec, {}, reflec=True)
+        if data_spec:
+            script, div = spec_plot(data_spec, {}, reflec=True)
+        else:
+            script = div = None
 
     return script, div, p_spec
 
@@ -3258,10 +3262,12 @@ class BlockSpec(View):  # make logging required later
     def get(self, request, *args, **kwargs):
         block = Block.objects.get(pk=kwargs['pk'])
         script, div = plot_floyds_spec(block, int(kwargs['obs_num']))
-        if 'reflec_spec' in div:
-            params = {'pk': kwargs['pk'], 'obs_num': kwargs['obs_num'], 'sb_id': block.superblock.id, "the_script": script, "raw_div": div["raw_spec"], "reflec_div": div["reflec_spec"]}
-        else:
-            params = {'pk': kwargs['pk'], 'obs_num': kwargs['obs_num'], 'sb_id': block.superblock.id, "the_script": script, "raw_div": div["raw_spec"]}
+        params = {'pk': kwargs['pk'], 'obs_num': kwargs['obs_num'], 'sb_id': block.superblock.id}
+        if div:
+            params["the_script"] = script
+            params["raw_div"] = div["raw_spec"]
+            if 'reflec_spec' in div:
+                params["reflec_div"] = div["reflec_spec"]
         base_path = BOKEH_URL.format(bokeh.__version__)
         params['css_path'] = base_path + 'css'
         params['js_path'] = base_path + 'js'
@@ -3275,7 +3281,11 @@ class PlotSpec(View):
     def get(self, request, *args, **kwargs):
         body = Body.objects.get(pk=kwargs['pk'])
         script, div, p_spec = plot_all_spec(body)
-        params = {'body': body, 'floyds': False, "the_script": script, "reflec_div": div["reflec_spec"], "p_spec": p_spec}
+        params = {'body': body, 'floyds': False}
+        if div:
+            params["the_script"] = script,
+            params["reflec_div"] = div["reflec_spec"]
+            params["p_spec"] = p_spec
         base_path = BOKEH_URL.format(bokeh.__version__)
         params['css_path'] = base_path + 'css'
         params['js_path'] = base_path + 'js'
