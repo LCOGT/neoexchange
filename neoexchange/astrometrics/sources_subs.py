@@ -1708,7 +1708,7 @@ def make_single(params, ipp_value, request):
 
 # If the ToO mode is set, change the observation_type
     if params.get('too_mode', False) is True:
-        requestgroup['observation_type'] = 'TARGET_OF_OPPORTUNITY'
+        requestgroup['observation_type'] = 'TIME_CRITICAL'
 
     return requestgroup
 
@@ -1789,6 +1789,10 @@ def make_cadence(request, params, ipp_value, debug=False):
                     'ipp_value': ipp_value,
                     'proposal' : params['proposal_id']
                    }
+
+# If the ToO mode is set, change the observation_type
+    if params.get('too_mode', False) is True:
+        user_request['observation_type'] = 'TIME_CRITICAL'
 
 # Submit the UserRequest with the cadence
     status, cadence_user_request = expand_cadence(user_request)
