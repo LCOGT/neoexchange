@@ -672,7 +672,7 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
         if include_moon is True:
             moon_seps = []
             moon_phases = []
-            for date, obj_ra, obj_dec  in ephem[('datetime','RA','DEC')]:
+            for date, obj_ra, obj_dec in ephem[('datetime', 'RA', 'DEC')]:
                 moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(date, radians(obj_ra), radians(obj_dec), '-1')
                 moon_seps.append(moon_obj_sep)
                 moon_phases.append(moon_phase)
@@ -682,6 +682,7 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
         ephem = None
 
     return ephem
+
 
 def read_findorb_ephem(empfile):
     """Routine to read find_orb produced ephemeris.emp files from non-interactive
