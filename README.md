@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 3.2.4
+Fix a few rare bugs.
+
 ### 3.2.3
 Allow Time Critical observations within the same proposal and allow selection of this from the scheduling form.
 
