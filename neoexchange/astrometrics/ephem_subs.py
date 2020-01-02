@@ -69,7 +69,7 @@ def perturb_elements(orbelems, epoch_mjd, mjd_tt, comet, perturb):
     Return Perturbed elements if requested.
     """
 
-    if comet is True:
+    if comet is True and orbelems['epochofperih']:
         jform = 3
         p_orbelems = {'LongNode' : radians(orbelems['longascnode']),
                       'Inc' : radians(orbelems['orbinc']),
