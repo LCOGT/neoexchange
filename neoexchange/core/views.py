@@ -3302,20 +3302,18 @@ def display_movie(request, pk):
     """Display previously made guide movie, or make one if no movie found."""
 
     date_obs, obj, req, path, prop = find_spec(pk)
-    base_dir = os.path.join(path, 'Guide_frames')
+    base_dir = date_obs
     logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date_obs, req, prop))
     logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
 
     block = Block.objects.get(pk=pk)
     if block.obstype in [0, 2]:
-        movie_files = find_spec_plots(date_obs, obj.replace(' ', '_'), req, "framemovie.gif")
+        movie_file = "{}_{}_framemovie.gif".format(obj.replace(' ', '_'), req)
     elif block.obstype in [1, 3]:
-        movie_files = find_spec_plots(os.path.join(path, "Guide_frames"), obj.replace(' ', '_'), req, "guidemovie.gif")
-
-    if movie_files:
-        movie_file = movie_files[0]
+        movie_file = "{}_{}_guidemovie.gif".format(obj.replace(' ', '_'), req)
+        base_dir = os.path.join(path, "Guide_frames")
     else:
-        movie_file = make_movie(date_obs, obj, req, base_dir, prop)
+        return HttpResponse()
 
     movie_file = search(base_dir, movie_file, latest=True)
 
