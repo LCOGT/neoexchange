@@ -136,6 +136,9 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     if orbelems.get('epochofel', None) is None:
         logger.warning("No epoch of elements (epochofel) found in orbelems, cannot compute ephemeris")
         return {}
+    if orbelems.get('epochofperih', None) is None and orbelems.get('elements_type', None) == 'MPC_COMET':
+        logger.warning("No epoch of perihelion (epochofperih) found for this comet, cannot compute ephemeris")
+        return {}
 
 # Compute MJD for UTC
     mjd_utc = datetime2mjd_utc(d)
@@ -672,7 +675,7 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
         if include_moon is True:
             moon_seps = []
             moon_phases = []
-            for date, obj_ra, obj_dec  in ephem[('datetime','RA','DEC')]:
+            for date, obj_ra, obj_dec in ephem[('datetime', 'RA', 'DEC')]:
                 moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(date, radians(obj_ra), radians(obj_dec), '-1')
                 moon_seps.append(moon_obj_sep)
                 moon_phases.append(moon_phase)
@@ -682,6 +685,7 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
         ephem = None
 
     return ephem
+
 
 def read_findorb_ephem(empfile):
     """Routine to read find_orb produced ephemeris.emp files from non-interactive

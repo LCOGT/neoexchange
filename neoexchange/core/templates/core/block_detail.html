@@ -98,6 +98,9 @@
                 <div class="four columns">
                     <h5 class="section-title">{% if object.block_set.all%}Observation Blocks{% else%}Controls{% endif %}</h5>
                         {% if request.user.is_authenticated %}
+                        {% if object.block_set.all|length > 1 %}
+                        <a href="{% url 'view-timeline' object.id %}" class="button button-primary">Observation timeline</a>
+                        {% endif %}
                         <ul class="block-status">
                         {% for blk in object.block_set.all %}
                         <li class="{% cycle 'odd' 'even' %}">

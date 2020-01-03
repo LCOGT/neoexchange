@@ -47,7 +47,7 @@ class BodyDetailsTest(FunctionalTest):
         # mentions the current target
         self.assertIn(self.body.current_name() + ' details | LCO NEOx', self.browser.title)
         header_text = self.browser.find_element_by_class_name('headingleft').text
-        self.assertIn('Object: ' + self.body.current_name(), header_text)
+        self.assertIn(self.body.full_name(), header_text)
         title_text = self.browser.find_element_by_class_name('container').text
         self.assertNotIn('Characterization Target', title_text)
 
@@ -112,6 +112,7 @@ class BodyDetailsTest(FunctionalTest):
         # She sees a link from the targets' name on the front page to a more
         # detailed view.
         self.body.origin = 'N'     # This target is from NASA
+        self.body.source_type = 'N'
         self.body.save()
 
         link = self.browser.find_element_by_link_text('N999r0q')
@@ -128,7 +129,7 @@ class BodyDetailsTest(FunctionalTest):
         # mentions the current target
         self.assertIn(self.body.current_name() + ' details | LCO NEOx', self.browser.title)
         header_text = self.browser.find_element_by_class_name('headingleft').text
-        self.assertIn('Object: ' + self.body.current_name(), header_text)
+        self.assertIn(self.body.full_name(), header_text)
         title_text = self.browser.find_element_by_class_name('container').text
         self.assertIn('Characterization Target', title_text)
 

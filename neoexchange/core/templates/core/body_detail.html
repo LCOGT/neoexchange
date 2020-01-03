@@ -16,7 +16,7 @@
 
 {% block extramenu %}
                     <div class="headingleft">
-                        <h1>Object: {{body.current_name}}</h1>
+                        <h1>{{body.full_name}}</h1>
                     </div>
 {% endblock%}
 
@@ -32,13 +32,20 @@
                             {% if body.old_name %}
                             <h5  class="section-title"><span class="">Name</span><span class="msgpadded">{{body.old_name}} &rarr; {{body.name}}</span></h5>
                             {% endif %}
-                            <h5  class="section-title"><span class="">Type</span><span class="msgpadded">{{body.get_source_type_display}}</span></h5>
-
-                                        <h5  class="section-title"><span class="">Status</span> <span class="">{% if body.active %}<span class="warning msgpadded">Actively Following</span>{% else %}Not Following{% endif %}</span>
-                                            {% if body.characterization_target %}
-                                                <br><span style="font-size:75%;padding-left:100px;font-style:italic;">Characterization Target</span>
-                                            {% endif %}
-                                        </h5>
+                            <h5  class="section-title"><span class="">Type</span>
+                                <span class="msgpadded">{{body.get_source_type_display}}
+                                    {% if body.source_subtype_1 %}
+                                        ({{body.get_source_subtype_1_display}})
+                                    {% endif %}
+                                    {% if body.source_subtype_2 %}
+                                        [{{body.get_source_subtype_2_display}}]
+                                    {% endif %}
+                                </span></h5>
+                            <h5  class="section-title"><span class="">Status</span> <span class="">{% if body.active %}<span class="warning msgpadded">Actively Following</span>{% else %}Not Following{% endif %}</span>
+                                {% if body.characterization_target %}
+                                    <br><span style="font-size:75%;padding-left:100px;font-style:italic;">Characterization Target</span>
+                                {% endif %}
+                            </h5>
                             <h5  class="section-title"><span class="">Source</span> <span class="msgpadded">{{body.get_origin_display}}</span></h5>
                             <div class="section-title">
                             <form action="{% url 'ephemeris' %}" method="GET" style="display:inline-block;">
@@ -191,6 +198,60 @@
                                         <td class="kv-value">{{body.diameter_range.0|floatformat:0}} - {{body.diameter_range.1|floatformat:0}}</td>
                                     </tr>
                                     {% endif %}
+                                </tbody>
+                            </table>
+                            <h5 class="section-title">Physical Parameters</h5>
+                            <table class="keyvalue-table" id="id_physparams">
+                                <tbody>
+                                    {% for p in body.get_physical_parameters %}
+                                    {% if p.preferred %}
+                                    <tr><td ><table align="left"  style="margin: 0px"><tr>
+                                            <td class="kv-key">
+                                                <div class="tooltip">{{p.type_display}}
+                                                    <span class="tooltiptext" style="left:30%">
+                                                        {% if p.notes %}
+                                                            {{p.notes}}
+                                                        <br>
+                                                        <br>
+                                                        {% endif %}
+                                                        {{p.reference}}
+                                                    </span>
+                                                </div>
+                                            </td><td></td></tr></table>
+                                        </td>
+                                        <td ><table align="right"  style="margin: 0px"><tr>
+                                            <td class="kv-value">
+                                                    {% if p.error %}
+                                                <div class="tooltip">
+                                                    {% endif %}
+                                                    {% if p.units %}
+                                                        {{p.value}} {{p.units}}
+                                                    {% else %}
+                                                        {% if p.value2 %}
+                                                            {{p.value}}/{{p.value2}}
+                                                        {% else %}
+                                                            {{p.value}}
+                                                        {% endif %}
+                                                    {% endif %}
+                                                    {% if p.error %}
+                                                    <span class="tooltiptext" style="width:fit-content;left:75%;width:-moz-fit-content;">
+                                                        {% if p.error2 %}
+                                                            {% if p.value2 %}
+                                                                +/- {{p.error}} <br> +/- {{p.error2}}
+                                                            {% else %}
+                                                                +{{p.error}} / -{{p.error2}}
+                                                            {% endif %}
+                                                        {% else %}
+                                                            +/- {{p.error}}
+                                                        {% endif %}
+                                                    </span>
+                                                </div>
+                                                {% endif %}
+                                            </td><td></td></tr></table>
+                                        </td>
+                                    </tr>
+                                    {% endif %}
+                                    {% endfor %}
                                 </tbody>
                             </table>
                             <h5 class="section-title">Follow-up Details</h5>

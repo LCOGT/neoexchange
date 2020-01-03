@@ -57,7 +57,7 @@ logger = logging.getLogger(__name__)
 logging.disable(logging.CRITICAL)
 
 
-class TestClean_NEOCP_Object(TestCase):
+class TestCleanNEOCPObject(TestCase):
 
     def test_X33656(self):
         obs_page = [u'X33656  23.9  0.15  K1548 330.99052  282.94050   31.81272   13.02458  0.7021329  0.45261672   1.6800247                  3   1    0 days 0.21         NEOCPNomin',
@@ -311,7 +311,7 @@ class TestClean_NEOCP_Object(TestCase):
         expected_elements = { 'provisional_name' : 'LSCTLGj',
                               'abs_mag'     : 16.54,
                               'slope'       : 0.15,
-                              'epochofel'   : datetime(2016,11,  8, 0, 0, 0),
+                              'epochofel'   : datetime(2016, 11,  8, 0, 0, 0),
                               'meananom'    : 258.25752,
                               'argofperih'  :  52.27105,
                               'longascnode' : 101.57581,
@@ -375,7 +375,7 @@ class TestClean_NEOCP_Object(TestCase):
         self.assertEqual(False, created)
         resp = save_and_make_revision(body, elements)
         # Saving the new elements
-        self.assertEqual(True,resp)
+        self.assertEqual(True, resp)
 
     def test_update_MPC_duplicate(self):
         self.save_N007riz()
@@ -383,7 +383,7 @@ class TestClean_NEOCP_Object(TestCase):
         update_MPC_orbit(obj_id)
 
     def test_create_discovered_object(self):
-        obj_id ='LSCTLF8'
+        obj_id = 'LSCTLF8'
         elements = { 'abs_mag'     : 16.2,
                       'slope'       : 0.15,
                       'epochofel'   : datetime(2015, 6, 23, 0, 0, 0),
@@ -400,7 +400,7 @@ class TestClean_NEOCP_Object(TestCase):
                     }
         body, created = Body.objects.get_or_create(provisional_name=obj_id)
         # We are creating this object
-        self.assertEqual(True,created)
+        self.assertEqual(True, created)
         resp = save_and_make_revision(body, elements)
         # Need to call full_clean() to validate the fields as this is not
         # done on save() (called by get_or_create() or save_and_make_revision())
@@ -528,7 +528,7 @@ class TestClean_NEOCP_Object(TestCase):
             self.assertEqual(expected_elements[element], elements[element])
 
 
-class TestCheck_for_block(TestCase):
+class TestCheckForBlock(TestCase):
 
     def setUp(self):
         # Initialise with three test bodies a test proposal and several blocks.
@@ -622,8 +622,7 @@ class TestCheck_for_block(TestCase):
         sblock_params3 = {
                          'body'     : self.body_with_provname,
                          'proposal' : self.neo_proposal,
-                         'groupid'  : self.body_with_provname.current_name() + \
-                            '_LSC-20150421',
+                         'groupid'  : self.body_with_provname.current_name() + '_LSC-20150421',
                          'block_start' : '2015-04-21 23:00:00',
                          'block_end'   : '2015-04-22 03:00:00',
                          'tracking_number' : '00044',
@@ -648,8 +647,7 @@ class TestCheck_for_block(TestCase):
         sblock_params4 = {
                          'body'     : self.body_no_provname1,
                          'proposal' : self.neo_proposal,
-                         'groupid'  : self.body_no_provname1.current_name() + \
-                            '_LSC-20150421',
+                         'groupid'  : self.body_no_provname1.current_name() + '_LSC-20150421',
                          'block_start' : '2015-04-21 23:00:00',
                          'block_end'   : '2015-04-22 03:00:00',
                          'tracking_number' : '00045',
@@ -674,8 +672,7 @@ class TestCheck_for_block(TestCase):
         sblock_params5 = {
                          'body'     : self.body_no_provname2,
                          'proposal' : self.neo_proposal,
-                         'groupid'  : self.body_no_provname2.current_name() + \
-                            '_ELP-20141121_lc',
+                         'groupid'  : self.body_no_provname2.current_name() + '_ELP-20141121_lc',
                          'block_start' : '2014-11-21 03:00:00',
                          'block_end'   : '2014-11-21 13:00:00',
                          'tracking_number' : '00006',
@@ -700,8 +697,7 @@ class TestCheck_for_block(TestCase):
         sblock_params6 = {
                          'body'     : self.body_no_provname2,
                          'proposal' : self.neo_proposal,
-                         'groupid'  : self.body_no_provname2.current_name() + \
-                            '_ELP-20141121',
+                         'groupid'  : self.body_no_provname2.current_name() + '_ELP-20141121',
                          'block_start' : '2014-11-21 03:00:00',
                          'block_end'   : '2014-11-21 13:00:00',
                          'tracking_number' : '00007',
@@ -948,7 +944,7 @@ class TestCheck_for_block(TestCase):
         bid = 1
         resp = block_status(block_id=bid)
         blk = Block.objects.get(id=bid)
-        self.assertEqual(blk.num_observed,1)
+        self.assertEqual(blk.num_observed, 1)
 
     @patch('core.frames.check_request_status', mock_check_request_status_notfound)
     def test_block_not_found(self):
@@ -993,7 +989,7 @@ class TestRecordBlock(TestCase):
                               'exp_count' : self.spectro_params['exp_count'],
                               'exp_length' : self.spectro_params['exp_time'],
                             }
-        body_params = { 'name' : '4' }
+        body_params = {'name' : '4'}
         self.spectro_body = Body.objects.create(**body_params)
 
         proposal_params = { 'code' : self.spectro_params['proposal_id'], }
@@ -1109,13 +1105,13 @@ class TestRecordBlock(TestCase):
         self.assertEqual(True, sblocks[0].rapid_response)
 
     def test_spectro_and_solar_block(self):
-        new_params =  { 'calibsource' : {  'id': 1,
-                                           'name': 'Landolt SA107-684',
-                                           'ra_deg': 234.325,
-                                           'dec_deg': -0.164,
-                                           'pm_ra': 0.0,
-                                           'pm_dec': 0.0,
-                                           'parallax': 0.0
+        new_params = { 'calibsource' : {'id': 1,
+                                        'name': 'Landolt SA107-684',
+                                        'ra_deg': 234.325,
+                                        'dec_deg': -0.164,
+                                        'pm_ra': 0.0,
+                                        'pm_dec': 0.0,
+                                        'parallax': 0.0
                                         },
                         'calibsrc_exptime' : 60.0,
                         'dec_deg' : -0.164,
@@ -1180,7 +1176,7 @@ class TestRecordBlock(TestCase):
         self.assertEqual(self.spectro_params['block_duration'], sblocks[0].timeused)
 
 
-class TestSchedule_Check(TestCase):
+class TestScheduleCheck(TestCase):
 
     def setUp(self):
         # Initialise with three test bodies a test proposal and several blocks.
@@ -1238,6 +1234,141 @@ class TestSchedule_Check(TestCase):
         data = { 'site_code' : 'Q63',
                  'utc_date' : datetime(2016, 4, 6),
                  'proposal_code' : self.neo_proposal.code
+               }
+
+        expected_resp = {
+                        'target_name': self.body_mp.current_name(),
+                        'magnitude': 19.099441743160916,
+                        'speed': 2.9012947050834836,
+                        'slot_length': 20.0,
+                        'filter_pattern': 'w',
+                        'pattern_iterations': 14.0,
+                        'available_filters': 'air, ND, U, B, V, R, I, up, gp, rp, ip, zs, Y, w',
+                        'exp_count': 14,
+                        'exp_length': 50.0,
+                        'schedule_ok': True,
+                        'site_code': data['site_code'],
+                        'proposal_code': data['proposal_code'],
+                        'group_name': self.body_mp.current_name() + '_' + data['site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d'),
+                        'utc_date': data['utc_date'].isoformat(),
+                        'start_time': '2016-04-06T09:00:00',
+                        'end_time': '2016-04-06T19:10:00',
+                        'mid_time': '2016-04-06T14:05:00',
+                        'ra_midpoint': 3.312248725288052,
+                        'dec_midpoint': -0.1605498546995108,
+                        'period' : None,
+                        'jitter' : None,
+                        'instrument_code' : '',
+                        'saturated': None,
+                        'snr' : None,
+                        'too_mode': False,
+                        'calibs' : '',
+                        'spectroscopy' : False,
+                        'calibsource' : {},
+                        'calibsource_id' : -1,
+                        'calibsource_exptime' : 60,
+                        'solar_analog' : False,
+                        'vis_time': 7.2,
+                        'lco_enc': 'DOMA',
+                        'lco_site': 'COJ',
+                        'lco_tel': '1M0',
+                        'max_alt': 67.92580631422568,
+                        'moon_alt': -58.300710434796706,
+                        'moon_phase': 1.1439155504957221,
+                        'moon_sep': 170.66180769265674,
+                        'trail_len': 2.41774558756957,
+                        'typical_seeing': 2.0,
+                        'ipp_value': 1.0,
+                        'ag_exp_time': None,
+                        'max_airmass': 1.74,
+                        'max_alt_airmass': 1.0789381246330223,
+                        'min_lunar_dist': 30,
+                        'acceptability_threshold': 90
+                        }
+
+        resp = schedule_check(data, self.body_mp)
+
+        self.assertEqual(expected_resp, resp)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_mp_good_too(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+        # Turn on ToO mode on proposal
+        self.neo_proposal.time_critical = True
+        self.neo_proposal.save()
+
+        data = { 'site_code' : 'Q63',
+                 'utc_date' : datetime(2016, 4, 6),
+                 'proposal_code' : self.neo_proposal.code,
+                 'too_mode' : True
+               }
+
+        expected_resp = {
+                        'target_name': self.body_mp.current_name(),
+                        'magnitude': 19.099441743160916,
+                        'speed': 2.9012947050834836,
+                        'slot_length': 20.0,
+                        'filter_pattern': 'w',
+                        'pattern_iterations': 14.0,
+                        'available_filters': 'air, ND, U, B, V, R, I, up, gp, rp, ip, zs, Y, w',
+                        'exp_count': 14,
+                        'exp_length': 50.0,
+                        'schedule_ok': True,
+                        'site_code': data['site_code'],
+                        'proposal_code': data['proposal_code'],
+                        'group_name': self.body_mp.current_name() + '_' + data['site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d' + '_ToO'),
+                        'utc_date': data['utc_date'].isoformat(),
+                        'start_time': '2016-04-06T09:00:00',
+                        'end_time': '2016-04-06T19:10:00',
+                        'mid_time': '2016-04-06T14:05:00',
+                        'ra_midpoint': 3.312248725288052,
+                        'dec_midpoint': -0.1605498546995108,
+                        'period' : None,
+                        'jitter' : None,
+                        'instrument_code' : '',
+                        'saturated': None,
+                        'snr' : None,
+                        'too_mode': True,
+                        'calibs' : '',
+                        'spectroscopy' : False,
+                        'calibsource' : {},
+                        'calibsource_id' : -1,
+                        'calibsource_exptime' : 60,
+                        'solar_analog' : False,
+                        'vis_time': 7.2,
+                        'lco_enc': 'DOMA',
+                        'lco_site': 'COJ',
+                        'lco_tel': '1M0',
+                        'max_alt': 67.92580631422568,
+                        'moon_alt': -58.300710434796706,
+                        'moon_phase': 1.1439155504957221,
+                        'moon_sep': 170.66180769265674,
+                        'trail_len': 2.41774558756957,
+                        'typical_seeing': 2.0,
+                        'ipp_value': 1.0,
+                        'ag_exp_time': None,
+                        'max_airmass': 1.74,
+                        'max_alt_airmass': 1.0789381246330223,
+                        'min_lunar_dist': 30,
+                        'acceptability_threshold': 90
+                        }
+
+        resp = schedule_check(data, self.body_mp)
+
+        self.assertEqual(expected_resp, resp)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_mp_bad_too(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = { 'site_code' : 'Q63',
+                 'utc_date' : datetime(2016, 4, 6),
+                 'proposal_code' : self.neo_proposal.code,
+                 'too_mode' : True
                }
 
         expected_resp = {
@@ -1998,7 +2129,7 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
 
-class TestUpdate_MPC_orbit(TestCase):
+class TestUpdateMPCOrbit(TestCase):
 
     def setUp(self):
 
@@ -2024,7 +2155,6 @@ class TestUpdate_MPC_orbit(TestCase):
                              'meandist': 0.9967710,
                              'orbinc': 8.25708,
                              'meananom': 221.74204,
-                             'num_obs': None ,  # '147',
                              'epochofperih': None,
                              'perihdist': None,
                              'slope': 0.15,
@@ -2037,6 +2167,8 @@ class TestUpdate_MPC_orbit(TestCase):
                              'fast_moving' : False,
                              'score' : None,
                              'source_type' : 'N',
+                             'source_subtype_1' : None,
+                             'source_subtype_2': None,
                              'update_time' : datetime(2015, 10, 9, 0),
                              'updated' : True,
                              'urgency' : None
@@ -2068,7 +2200,28 @@ class TestUpdate_MPC_orbit(TestCase):
                 self.assertEqual(self.expected_elements[key], new_body_elements[key])
 
     @patch('core.views.datetime', MockDateTime)
-    def test_2014UR_Goldstone(self):
+    def test_2014UR_MPC_physparams(self):
+
+        expected_types = ['H', 'D', 'G']
+        expected_values = [26.6, 17.0, 0.15]
+        expected_params = list(zip(expected_types, expected_values))
+
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
+        status = update_MPC_orbit(self.test_mpcdb_page, origin='M')
+        self.assertEqual(True, status)
+
+        body = Body.objects.last()
+        phys_params = body.get_physical_parameters
+
+        for param in phys_params():
+            test_list = (param['parameter_type'], param['value'])
+            self.assertIn(test_list, expected_params)
+            expected_params.remove(test_list)
+        self.assertEqual(expected_params, [])
+
+    @patch('core.views.update_jpl_phys_params')
+    @patch('core.views.datetime', MockDateTime)
+    def test_2014UR_Goldstone(self, mock_class):
 
         expected_elements = self.expected_elements
         expected_elements['origin'] = 'G'
@@ -2085,8 +2238,9 @@ class TestUpdate_MPC_orbit(TestCase):
             if key not in self.nocheck_keys and key != 'id':
                 self.assertEqual(expected_elements[key], new_body_elements[key])
 
+    @patch('core.views.update_jpl_phys_params')
     @patch('core.views.datetime', MockDateTime)
-    def test_2014UR_Arecibo(self):
+    def test_2014UR_Arecibo(self, mock_class):
 
         expected_elements = self.expected_elements
         expected_elements['origin'] = 'A'
@@ -2138,8 +2292,59 @@ class TestUpdate_MPC_orbit(TestCase):
         for key in test_elements:
             self.assertNotEqual(expected_elements[key], new_body_elements[key])
 
+    @patch('core.views.update_jpl_phys_params')
     @patch('core.views.datetime', MockDateTime)
-    def test_2014UR_Arecibo_older_exists(self):
+    def test_physparams_given_albedo(self, mock_class):
+        params = {'name': '2014 UR',
+                  'abs_mag': 21.0,
+                  'slope': 0.1,
+                  'epochofel': '2012-03-19 00:00:00',
+                  'elements_type': u'MPC_MINOR_PLANET',
+                  'meananom': 325.2636,
+                  'argofperih': 85.19251,
+                  'longascnode': 147.81325,
+                  'orbinc': 8.34739,
+                  'eccentricity': 0.1896865,
+                  'meandist': 1.2176312,
+                  'source_type': 'U',
+                  'num_obs': 1596,
+                  'origin': 'M',
+                  }
+
+        self.body, created = Body.objects.get_or_create(**params)
+
+        expected_types = ['H', 'D', 'G', 'ab']
+        expected_values = [26.6, 28.45, 0.15, 0.05]
+        expected_params = list(zip(expected_types, expected_values))
+
+        body = Body.objects.last()
+        phys_params = body.get_physical_parameters
+        albedo_dict = {'value': 0.2,
+                       'parameter_type': 'ab',
+                       'preferred': True
+                       }
+
+        # Save first albedo
+        body.save_physical_parameters(albedo_dict)
+
+        # update albedo
+        albedo_dict['value'] = 0.05
+        body.save_physical_parameters(albedo_dict)
+
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
+        status = update_MPC_orbit(self.test_mpcdb_page, origin='A')
+        self.assertEqual(True, status)
+
+        # test diameter uses only updated albedo and not default or old albedo
+        for param in phys_params(return_all=False):
+            test_list = (param['parameter_type'], param['value'])
+            self.assertIn(test_list, expected_params)
+            expected_params.remove(test_list)
+        self.assertEqual(expected_params, [])
+
+    @patch('core.views.update_jpl_phys_params')
+    @patch('core.views.datetime', MockDateTime)
+    def test_2014UR_Arecibo_older_exists(self, mock_class):
         params = {'name': '2014 UR',
                   'abs_mag': 26.6,
                   'slope': 0.1,
@@ -2173,8 +2378,9 @@ class TestUpdate_MPC_orbit(TestCase):
             if key not in self.nocheck_keys and key != 'id':
                 self.assertEqual(expected_elements[key], new_body_elements[key])
 
+    @patch('core.views.update_jpl_phys_params')
     @patch('core.views.datetime', MockDateTime)
-    def test_2014UR_goldstone_then_arecibo(self):
+    def test_2014UR_goldstone_then_arecibo(self, mock_class):
 
         expected_elements = self.expected_elements
         expected_elements['origin'] = 'R'
@@ -2195,8 +2401,9 @@ class TestUpdate_MPC_orbit(TestCase):
             if key not in self.nocheck_keys and key != 'id':
                 self.assertEqual(expected_elements[key], new_body_elements[key])
 
+    @patch('core.views.update_jpl_phys_params')
     @patch('core.views.datetime', MockDateTime)
-    def test_2014UR_arecibo_then_goldstone(self):
+    def test_2014UR_arecibo_then_goldstone(self, mock_class):
 
         expected_elements = self.expected_elements
         expected_elements['origin'] = 'R'
@@ -2217,8 +2424,9 @@ class TestUpdate_MPC_orbit(TestCase):
             if key not in self.nocheck_keys and key != 'id':
                 self.assertEqual(expected_elements[key], new_body_elements[key])
 
+    @patch('core.views.update_jpl_phys_params')
     @patch('core.views.datetime', MockDateTime)
-    def test_2014UR_arecibo_then_NASA(self):
+    def test_2014UR_arecibo_then_NASA(self, mock_class):
 
         expected_elements = self.expected_elements
         expected_elements['origin'] = 'N'
@@ -2309,13 +2517,13 @@ class TestIngestNewObject(TestCase):
         self.body_LSCTLZZ = Body(**self.params_LSCTLZZ)
 
         self.eros_params = { 'id' : 1,
-                        'provisional_name' : '433',
+                        'provisional_name' : None,
                         'provisional_packed' : '00433',
                         'name' : '433',
                         'source_type' : 'N',
                         'abs_mag': 10.59,
                         'slope'  : 0.15,
-                        'epochofel' : datetime(2019, 2,10, 0, 0),
+                        'epochofel' : datetime(2019, 2, 10, 0, 0),
                         'meananom'  :   4.70349,
                         'argofperih' : 178.80773,
                         'longascnode' : 304.30790,
@@ -2340,7 +2548,7 @@ class TestIngestNewObject(TestCase):
                         'source_type' : 'N',
                         'abs_mag': 22.23,
                         'slope'  : 0.15,
-                        'epochofel' : datetime(2011,10, 1, 0, 0),
+                        'epochofel' : datetime(2011, 10, 1, 0, 0),
                         'meananom'  :  37.31731,
                         'argofperih' :  45.96308,
                         'longascnode' : 229.74785,
@@ -2382,7 +2590,7 @@ class TestIngestNewObject(TestCase):
 
     def _compare_bodies(self, body1, body2, excluded_keys={'_state', 'not_seen', 'ingest', 'update_time'}):
         d1, d2 = body1.__dict__, body2.__dict__
-        for key,value in d1.items():
+        for key, value in d1.items():
             if key in excluded_keys:
                 continue
             self.assertEqual(value, d2[key], "Compare failure on " + key)
@@ -2408,6 +2616,37 @@ class TestIngestNewObject(TestCase):
         self.assertTrue(created)
         self.assertEqual(expected_msg, msg)
 
+    def test_phys_params_new_body(self):
+        body = self.body_LSCTLZZ
+        self.assertEqual(body.get_physical_parameters(), [])
+
+        expected_types = ['H', 'D', 'G']
+        expected_values = [21.17, 207.23, 0.15]
+        expected_params = list(zip(expected_types, expected_values))
+        expected_diam_range = [568, 98]
+
+        expected_names = [['C', 'LSCTLZZ']]
+
+        ingest_new_object(self.disc_orbit_file)
+
+        phys_params = body.get_physical_parameters()
+        names = Designations.objects.filter(body=body)
+
+        for param in phys_params:
+            test_list = (param['parameter_type'], param['value'])
+            self.assertIn(test_list, expected_params)
+            expected_params.remove(test_list)
+            if param['parameter_type'] == 'D':
+                self.assertEqual(param['error'], expected_diam_range[0])
+                self.assertEqual(param['error2'], expected_diam_range[1])
+        self.assertEqual(expected_params, [])
+
+        for name in names:
+            test_list = [name.desig_type, name.value]
+            self.assertIn(test_list, expected_names)
+            expected_names.remove(test_list)
+        self.assertEqual(expected_names, [])
+
     def test_discovery_existing_no_changes(self):
 
         expected_body = self.body_LSCTLZZ
@@ -2425,6 +2664,24 @@ class TestIngestNewObject(TestCase):
         self._compare_bodies(expected_body, body)
         self.assertFalse(created)
         self.assertEqual(expected_msg, msg)
+
+    def test_phys_params_no_changes(self):
+        body = self.body_LSCTLZZ
+        expected_params = 3
+        expected_names = 1
+
+        ingest_new_object(self.disc_orbit_file)
+
+        phys_params = body.get_physical_parameters
+        names = Designations.objects.filter(body=body)
+
+        self.assertEqual(len(phys_params()), expected_params)
+        self.assertEqual(len(names), expected_names)
+
+        ingest_new_object(self.disc_orbit_file)
+
+        self.assertEqual(len(phys_params()), expected_params)
+        self.assertEqual(len(names), expected_names)
 
     def test_discovery_existing_new_provname(self):
 
@@ -2457,6 +2714,29 @@ class TestIngestNewObject(TestCase):
         self.assertFalse(created)
         self.assertEqual(expected_msg, msg)
 
+    def test_designation_new_provname(self):
+        body = self.body_LSCTLZZ
+        expected_types = ['C', 'P']
+        expected_desigs = ['LSCTLZZ', '2019 EN']
+        expected_names = list(zip(expected_types, expected_desigs))
+
+        ingest_new_object(self.disc_orbit_file)
+
+        names = Designations.objects.filter(body=body)
+
+        # Remove symlink to LSCTLZZ.neocp orbit file and re-symlink to the 2019EN.neocp one
+        # so desigination inside the file changes but it stays as LSCTLZZ.neocp
+        os.unlink(self.disc_orbit_file)
+        os.symlink(self.orig_orbit_file, self.disc_orbit_file)
+
+        ingest_new_object(self.disc_orbit_file)
+
+        for name in names:
+            test_list = (name.desig_type, name.value)
+            self.assertIn(test_list, expected_names)
+            expected_names.remove(test_list)
+        self.assertEqual(expected_names, [])
+
     def test_knownNEO_not_existing(self):
 
         expected_body = self.body_2019EN
@@ -2474,6 +2754,22 @@ class TestIngestNewObject(TestCase):
         self._compare_bodies(expected_body, body)
         self.assertTrue(created)
         self.assertEqual(expected_msg, msg)
+
+    def test_designation_knownNEO(self):
+        body = self.body_2019EN
+        expected_types = ['P']
+        expected_desigs = ['2019 EN']
+        expected_names = list(zip(expected_types, expected_desigs))
+
+        ingest_new_object(self.orbit_file)
+
+        names = Designations.objects.filter(body=body)
+
+        for name in names:
+            test_list = (name.desig_type, name.value)
+            self.assertIn(test_list, expected_names)
+            expected_names.remove(test_list)
+        self.assertEqual(expected_names, [])
 
     def test_knownNEO_not_existing_no_obsfile(self):
 
@@ -2558,6 +2854,22 @@ class TestIngestNewObject(TestCase):
         self.assertFalse(created)
         self.assertEqual(expected_msg, msg)
 
+    def test_designation_known_num_NEO(self):
+        body = self.body_433
+        expected_types = ['#']
+        expected_desigs = ['433']
+        expected_names = list(zip(expected_types, expected_desigs))
+
+        ingest_new_object(self.eros_orbit_file)
+
+        names = Designations.objects.filter(body=body)
+
+        for name in names:
+            test_list = (name.desig_type, name.value)
+            self.assertIn(test_list, expected_names)
+            expected_names.remove(test_list)
+        self.assertEqual(expected_names, [])
+
     def test_known_provNEO_not_existing(self):
 
         expected_body = self.body_K11H00P
@@ -2598,7 +2910,8 @@ class TestIngestNewObject(TestCase):
         self.assertFalse(created)
         self.assertEqual(expected_msg, msg)
 
-class TestUpdate_MPC_obs(TestCase):
+
+class TestUpdateMPCObs(TestCase):
     def setUp(self):
         self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
 
@@ -2728,7 +3041,7 @@ class TestUpdate_MPC_obs(TestCase):
         self.assertEqual(num_lines, len(lines)-1)
 
 
-class TestClean_mpcorbit(TestCase):
+class TestCleanMPCOrbit(TestCase):
 
     def setUp(self):
         # Read and make soup from a static version of the HTML table/page for
@@ -2748,8 +3061,8 @@ class TestClean_mpcorbit(TestCase):
         test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcdb_Comet243P.html'), 'r')
         self.test_multiple_epochs_page = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
-        self.test_comet_elements_2018Aug_epoch = parse_mpcorbit(self.test_multiple_epochs_page, epoch_now=datetime(2018,9,25))
-        self.test_comet_elements_2018Mar_epoch = parse_mpcorbit(self.test_multiple_epochs_page, epoch_now=datetime(2018,2,14))
+        self.test_comet_elements_2018Aug_epoch = parse_mpcorbit(self.test_multiple_epochs_page, epoch_now=datetime(2018, 9, 25))
+        self.test_comet_elements_2018Mar_epoch = parse_mpcorbit(self.test_multiple_epochs_page, epoch_now=datetime(2018, 2, 14))
 
         self.test_hyperbolic_elements = {
                                          'argument of perihelion': '325.96205',
@@ -2887,7 +3200,7 @@ class TestClean_mpcorbit(TestCase):
                                         'discovery_date': datetime(2003, 8, 1, 0),
                                         'num_obs': '334',
                                         'arc_length': '5528',
-                                        'not_seen' :  -216.87383101851853,
+                                        'not_seen' : -216.87383101851853,
                                         'update_time' : datetime(2018, 9, 19, 0),
                                         'updated' : True
                                     }
@@ -3845,7 +4158,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_spec_block)
         frames = Frame.objects.filter(sitecode='E10')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.SPECTRUM_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'E10')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -3909,7 +4222,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_spec_block)
         frames = Frame.objects.filter(sitecode='E10')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.SPECTRUM_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'E10')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -3939,7 +4252,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_spec_block)
         frames = Frame.objects.filter(sitecode='E10')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.SPECTRUM_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'E10')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -3970,7 +4283,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_spec_block)
         frames = Frame.objects.filter(sitecode='E10')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.SPECTRUM_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'E10')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -4000,7 +4313,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_spec_block)
         frames = Frame.objects.filter(sitecode='E10')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.SPECTRUM_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'E10')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -4033,7 +4346,7 @@ class TestFrames(TestCase):
 
 @patch('core.views.datetime', MockDateTime)
 @patch('astrometrics.time_subs.datetime', MockDateTime)
-class TestClean_crossid(TestCase):
+class TestCleanCrossid(TestCase):
 
     def setUp(self):
         MockDateTime.change_datetime(2015, 11, 5, 18, 0, 0)
@@ -4042,7 +4355,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'P10p9py', u'2015 VV1', '', u'(Nov. 5.30 UT)']
         expected_params = { 'active' : False,
                             'name' : '2015 VV1',
-                            'source_type' : 'A'
+                            'source_type' : 'A',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4053,7 +4367,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'WV82468', u'2015 VB2', u'MPEC 2015-V51', u'(Nov. 5.60 UT)']
         expected_params = { 'active' : True,
                             'name' : '2015 VB2',
-                            'source_type' : 'N'
+                            'source_type' : 'N',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4064,7 +4379,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'P10o0Ha', u'2015 SE20', u'MPEC 2015-T29', u'(Oct. 8.59 UT)']
         expected_params = { 'active' : False,
                             'name' : '2015 SE20',
-                            'source_type' : 'N'
+                            'source_type' : 'N',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4075,7 +4391,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'WTB842B', 'doesnotexist', '', u'(Oct. 9.19 UT)']
         expected_params = { 'active' : False,
                             'name' : '',
-                            'source_type' : 'X'
+                            'source_type' : 'X',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4086,7 +4403,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'P10oYZI', 'wasnotconfirmed', '', u'(Nov. 4.81 UT)']
         expected_params = { 'active' : False,
                             'name' : '',
-                            'source_type' : 'U'
+                            'source_type' : 'U',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4097,7 +4415,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'P10oYZI', '', '', u'(Nov. 4.81 UT)']
         expected_params = { 'active' : False,
                             'name' : '',
-                            'source_type' : 'W'
+                            'source_type' : 'W',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4108,7 +4427,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'A10422t', 'wasnotminorplanet', '', u'(Sept. 20.89 UT)']
         expected_params = { 'active' : False,
                             'name' : '',
-                            'source_type' : 'J'
+                            'source_type' : 'J',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4119,7 +4439,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'WV2B5A8', u'C/2015 V2', u'CBET 5432', u'(Nov. 5.49 UT)']
         expected_params = { 'active' : True,
                             'name' : 'C/2015 V2',
-                            'source_type' : 'C'
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4130,7 +4451,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'WV2B5A8', u'C/2015 V2', u'CBET 5432', u'(Nov. 1.49 UT)']
         expected_params = { 'active' : False,
                             'name' : 'C/2015 V2',
-                            'source_type' : 'C'
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4141,7 +4463,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'WV2B5A8', u'C/2015 V2', u'IAUC-', u'(Nov. 5.49 UT)']
         expected_params = { 'active' : True,
                             'name' : 'C/2015 V2',
-                            'source_type' : 'C'
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4152,7 +4475,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'WV2B5A8', u'C/2015 V2', u'IAUC-', u'(Nov. 1.49 UT)']
         expected_params = { 'active' : False,
                             'name' : 'C/2015 V2',
-                            'source_type' : 'C'
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4163,7 +4487,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'LM02L2J', u'C/2015 TQ209', u'IAUC 2015-', u'(Oct. 24.07 UT)']
         expected_params = { 'active' : False,
                             'name' : 'C/2015 TQ209',
-                            'source_type' : 'C'
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4174,7 +4499,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'NM0015a', u'C/2015 X8', u'MPEC 2015-Y20', u'(Nov. 3.63 UT)']
         expected_params = { 'active' : True,
                             'name' : 'C/2015 X8',
-                            'source_type' : 'C'
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4185,7 +4511,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'NM0015a', u'C/2015 X8', u'MPEC 2015-Y20', u'(Oct. 18.63 UT)']
         expected_params = { 'active' : False,
                             'name' : 'C/2015 X8',
-                            'source_type' : 'C'
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4198,7 +4525,8 @@ class TestClean_crossid(TestCase):
         crossid = ['ZS9E891 ', '0046P  ', '', '(Sept. 16.62 UT)']
         expected_params = { 'active' : True,
                             'name' : '46P',
-                            'source_type' : 'C'
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4211,18 +4539,20 @@ class TestClean_crossid(TestCase):
         crossid = ['ZS9E891 ', '0046P  ', '', '(Sept. 16.62 UT)']
         expected_params = { 'active' : False,
                             'name' : '46P',
-                            'source_type' : 'C'
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
 
         self.assertEqual(expected_params, params)
 
-    def test_hyperbolic_asteroid1(self):
+    def test_active_asteroid1(self):
         crossid = [u'ZC82561', u'A/2018 C2', u'MPEC 2018-E18', u'(Nov. 4.95 UT)']
         expected_params = { 'active' : True,
                             'name' : 'A/2018 C2',
-                            'source_type' : 'H'
+                            'source_type' : 'A',
+                            'source_subtype_1': 'A'
                           }
 
         params = clean_crossid(crossid)
@@ -4230,10 +4560,11 @@ class TestClean_crossid(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_hyperbolic_asteroid2(self):
-        crossid = [u'P10EwQh', u'A/2017 U7', u'MPEC 2018-E17', u'(Nov. 4.94 UT)']
+        crossid = [u'P10EwQh', u'I/2017 U7', u'MPEC 2018-E17', u'(Nov. 4.94 UT)']
         expected_params = { 'active' : True,
-                            'name' : 'A/2017 U7',
-                            'source_type' : 'H'
+                            'name' : 'I/2017 U7',
+                            'source_type' : 'A',
+                            'source_subtype_1': 'H'
                           }
 
         params = clean_crossid(crossid)
@@ -4245,7 +4576,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'NM0015a', u'C/2015 X8', u'MPEC 2015-Y20', u'(Oct. 18.63 UT)']
         expected_params = { 'active' : False,
                             'name' : 'C/2015 X8',
-                            'source_type' : 'C'
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4257,7 +4589,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'P10sKEk', u'2016 CP264', '', u'(Feb. 30.00 UT)']
         expected_params = { 'active' : False,
                             'name' : '2016 CP264',
-                            'source_type' : 'A'
+                            'source_type' : 'A',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4269,7 +4602,21 @@ class TestClean_crossid(TestCase):
         crossid = [u'P10tmAL ', u'2013 AM76', '', u'(Mar.  9.97 UT)']
         expected_params = { 'active' : False,
                             'name' : '2013 AM76',
-                            'source_type' : 'A'
+                            'source_type' : 'A',
+                            'source_subtype_1': ''
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_moon(self):
+        MockDateTime.change_datetime(2016, 4, 8, 0, 30, 0)
+        crossid = [u'P10tmAL ', u'Mars II', '', u'(Mar.  9.97 UT)']
+        expected_params = { 'active' : False,
+                            'name' : 'Mars II',
+                            'source_type' : 'M',
+                            'source_subtype_1': 'P4'
                           }
 
         params = clean_crossid(crossid)
@@ -4277,7 +4624,7 @@ class TestClean_crossid(TestCase):
         self.assertEqual(expected_params, params)
 
 
-class TestSummarise_Block_Efficiency(TestCase):
+class TestSummariseBlockEfficiency(TestCase):
 
     def setUp(self):
         # Initialise with a test body, three test proposals and several blocks.
@@ -4563,7 +4910,7 @@ class TestCheckCatalogAndRefitNew(TestCase):
 
         proposal_params = { 'code': 'test',
                             'title': 'test',
-                            'pi':'sgreenstreet@lcogt.net',
+                            'pi': 'sgreenstreet@lcogt.net',
                             'tag': 'LCOGT',
                             'active': True
                           }
@@ -4871,7 +5218,7 @@ class TestCheckCatalogAndRefitNew(TestCase):
         self.assertEqual(expected_num_new_frames, num_new_frames)
 
 
-class TestUpdate_Crossids(TestCase):
+class TestUpdateCrossids(TestCase):
 
     @classmethod
     def setUpTestData(cls):
@@ -4891,6 +5238,13 @@ class TestUpdate_Crossids(TestCase):
                     'origin'        : 'G',
                     }
         cls.body, created = Body.objects.get_or_create(**params)
+
+        des_dict = {'desig_type': 'C',
+                    'value': params['provisional_name'],
+                    'notes': 'Test_candidate',
+                    'preferred': True,
+                    }
+        cls.body.save_physical_parameters(des_dict)
 
         params = {  'provisional_name': 'ZC82561',
                     'provisional_packed': None,
@@ -4922,6 +5276,9 @@ class TestUpdate_Crossids(TestCase):
                     }
         cls.blank_body, created = Body.objects.get_or_create(**params)
 
+        des_dict['value'] = params['provisional_name']
+        cls.blank_body.save_physical_parameters(des_dict)
+
         neo_proposal_params = { 'code'  : 'LCO2015B-005',
                                 'title' : 'LCOGT NEO Follow-up Network'
                               }
@@ -4929,6 +5286,29 @@ class TestUpdate_Crossids(TestCase):
 
     def setUp(self):
         self.body.refresh_from_db()
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_crossids_update_designations_to_prov_des(self):
+        expected_types = ['C', 'P']
+        expected_desigs = ['LM05OFG', '2016 JD18']
+        expected_names = list(zip(expected_types, expected_desigs))
+
+        # Set Mock time to more than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2016, 5, 13, 10, 40, 0)
+
+        crossid_info = [u'LM05OFG', u'2016 JD18', u'MPEC 2016-J96', u'(May 9.64 UT)']
+
+        update_crossids(crossid_info, dbg=False)
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+        names = Designations.objects.filter(body=body)
+
+        for name in names:
+            test_list = (name.desig_type, name.value)
+            self.assertIn(test_list, expected_names)
+            expected_names.remove(test_list)
+        self.assertEqual(expected_names, [])
 
     @patch('core.views.datetime', MockDateTime)
     @patch('astrometrics.time_subs.datetime', MockDateTime)
@@ -4971,6 +5351,29 @@ class TestUpdate_Crossids(TestCase):
         self.assertEqual('C', body.source_type)
         self.assertEqual('A', body.origin)
         self.assertEqual('C/2016 JD18', body.name)
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_crossids_update_designations_to_comet_des(self):
+        expected_types = ['C', 'P']
+        expected_desigs = ['LM05OFG', 'C/2016 JD18']
+        expected_names = list(zip(expected_types, expected_desigs))
+
+        # Set Mock time to more than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2016, 5, 13, 10, 40, 0)
+
+        crossid_info = [u'LM05OFG', u'C/2016 JD18', u'MPEC 2016-J96', u'(May 9.64 UT)']
+
+        update_crossids(crossid_info, dbg=False)
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+        names = Designations.objects.filter(body=body)
+
+        for name in names:
+            test_list = (name.desig_type, name.value)
+            self.assertIn(test_list, expected_names)
+            expected_names.remove(test_list)
+        self.assertEqual(expected_names, [])
 
     @patch('core.views.datetime', MockDateTime)
     @patch('astrometrics.time_subs.datetime', MockDateTime)
@@ -5070,6 +5473,32 @@ class TestUpdate_Crossids(TestCase):
         # Set Mock time to less than 3 days past the time of the cross ident.
         MockDateTime.change_datetime(2017, 9, 21, 10, 40, 0)
 
+        crossid_info = [u'ZC99999', u'I/2018 C2', u'MPEC 2018-E18', u'(Mar. 4.95 UT)']
+
+        self.body.origin = u'M'
+        self.body.source_type = u'U'
+        self.body.provisional_name = 'ZC99999'
+        self.body.save()
+
+        status = update_crossids(crossid_info, dbg=False)
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+
+        self.assertEqual(True, status)
+        self.assertEqual(False, body.active)
+        self.assertEqual('A', body.source_type)
+        self.assertEqual('H', body.source_subtype_1)
+        self.assertEqual('M', body.origin)
+        self.assertEqual('I/2018 C2', body.name)
+        self.assertEqual('MPC_COMET', body.elements_type)
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_check_active_ast(self):
+
+        # Set Mock time to less than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2017, 9, 21, 10, 40, 0)
+
         crossid_info = [u'ZC99999', u'A/2018 C2', u'MPEC 2018-E18', u'(Mar. 4.95 UT)']
 
         self.body.origin = u'M'
@@ -5083,10 +5512,37 @@ class TestUpdate_Crossids(TestCase):
 
         self.assertEqual(True, status)
         self.assertEqual(False, body.active)
-        self.assertEqual('H', body.source_type)
+        self.assertEqual('A', body.source_type)
+        self.assertEqual('A', body.source_subtype_1)
         self.assertEqual('M', body.origin)
         self.assertEqual('A/2018 C2', body.name)
-        self.assertEqual('MPC_COMET', body.elements_type)
+        self.assertEqual('MPC_MINOR_PLANET', body.elements_type)
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_check_moon(self):
+
+        # Set Mock time to less than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2017, 9, 21, 10, 40, 0)
+
+        crossid_info = [u'ZC99999', u'Saturn XIV', '', u'(Mar. 4.95 UT)']
+
+        self.body.origin = u'M'
+        self.body.source_type = u'U'
+        self.body.provisional_name = 'ZC99999'
+        self.body.save()
+
+        status = update_crossids(crossid_info, dbg=False)
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+
+        self.assertEqual(True, status)
+        self.assertEqual(False, body.active)
+        self.assertEqual('M', body.source_type)
+        self.assertEqual('P6', body.source_subtype_1)
+        self.assertEqual('M', body.origin)
+        self.assertEqual('Saturn XIV', body.name)
+        self.assertEqual('MPC_MINOR_PLANET', body.elements_type)
 
     @patch('core.views.datetime', MockDateTime)
     @patch('astrometrics.time_subs.datetime', MockDateTime)
@@ -5129,12 +5585,12 @@ class TestUpdate_Crossids(TestCase):
 
     @patch('core.views.datetime', MockDateTime)
     @patch('astrometrics.time_subs.datetime', MockDateTime)
-    def test_check_hyperbolic_ast_blank_body(self):
+    def test_check_Hyperbolic_ast_blank_body(self):
 
         # Set Mock time to more than 3 days past the time of the cross ident.
         MockDateTime.change_datetime(2017, 3,  8, 10, 40, 0)
 
-        crossid_info = [u'ZC82561', u'A/2018 C2', u'MPEC 2018-E18', u'(Mar. 4.95 UT)']
+        crossid_info = [u'ZC82561', u'I/2018 C2', u'MPEC 2018-E18', u'(Mar. 4.95 UT)']
 
         status = update_crossids(crossid_info, dbg=False)
 
@@ -5142,9 +5598,10 @@ class TestUpdate_Crossids(TestCase):
 
         self.assertEqual(True, status)
         self.assertEqual(False, body.active)
-        self.assertEqual('H', body.source_type)
+        self.assertEqual('A', body.source_type)
+        self.assertEqual('H', body.source_subtype_1)
         self.assertEqual('M', body.origin)
-        self.assertEqual('A/2018 C2', body.name)
+        self.assertEqual('I/2018 C2', body.name)
         self.assertEqual('MPC_COMET', body.elements_type)
 
     @patch('core.views.datetime', MockDateTime)
@@ -5228,6 +5685,58 @@ class TestUpdate_Crossids(TestCase):
 
     @patch('core.views.datetime', MockDateTime)
     @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_crossids_update_multiple_designations(self):
+        expected_types = ['C', 'P', 'C', 'C']
+        expected_desigs = ['LM05OFG', '2015 FP118', 'ZTF00Y8', 'A9999']
+        expected_names = list(zip(expected_types, expected_desigs))
+
+        # Set Mock time to less than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2018, 9, 5, 10, 40, 0)
+
+        crossid_info = ['ZTF00Y8 ', '2015 FP118', '', '(Sept. 3.50 UT)']
+
+        self.body.origin = u'A'
+        self.body.source_type = u'N'
+        self.body.name = '2015 FP118'
+        self.body.epochofel = datetime(2018, 9, 5, 0, 0)
+        self.body.eccentricity = 0.5415182
+        self.body.meandist = 5.8291288
+        self.body.meananom = 7.63767
+        self.body.perihdist = None
+        self.body.epochofperih = None
+        self.body.ingest = datetime(2018, 9, 1, 1, 2, 3)
+        self.body.save()
+
+        # Create duplicate with different info
+        body = Body.objects.get(pk=self.body.pk)
+        body.pk = None
+        body.provisional_name = 'A9999'
+        body.origin = 'N'
+        body.ingest = datetime(2018, 9, 2, 12, 13, 14)
+        body.save()
+
+        des_dicts = [{'desig_type': 'C', 'value': 'A9999'},
+                     {'desig_type': 'P', 'value': '2015 FP118'}
+                     ]
+        for des in des_dicts:
+            body.save_physical_parameters(des)
+
+        self.assertEqual(3, Body.objects.count(), msg="Before update_crossids; should be 3 Bodies")
+
+        update_crossids(crossid_info, dbg=False)
+        self.assertEqual(2, Body.objects.count(), msg="After update_crossids; should be 2 Bodies")
+
+        body = Body.objects.get(name='2015 FP118')
+        names = Designations.objects.filter(body=body)
+
+        for name in names:
+            test_list = (name.desig_type, name.value)
+            self.assertIn(test_list, expected_names)
+            expected_names.remove(test_list)
+        self.assertEqual(expected_names, [])
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
     def test_same_obj_multiple_copies_different_provids_from_MPC(self):
 
         # Set Mock time to less than 3 days past the time of the cross ident.
@@ -5300,7 +5809,7 @@ class TestUpdate_Crossids(TestCase):
         body.ingest = datetime(2018, 9, 2, 12, 13, 14)
         body.save()
 
-        block,created = Block.objects.get_or_create(body=body)
+        block, created = Block.objects.get_or_create(body=body)
         self.assertEqual(3, Body.objects.count(), msg="Before update_crossids; should be 3 Bodies")
 
         status = update_crossids(crossid_info, dbg=False)
@@ -5336,7 +5845,7 @@ class TestUpdate_Crossids(TestCase):
         body.ingest = datetime(2018, 9, 2, 12, 13, 14)
         body.save()
 
-        sblock,created = SuperBlock.objects.get_or_create(body=body, proposal=self.neo_proposal)
+        sblock, created = SuperBlock.objects.get_or_create(body=body, proposal=self.neo_proposal)
         self.assertEqual(3, Body.objects.count(), msg="Before update_crossids; should be 3 Bodies")
 
         status = update_crossids(crossid_info, dbg=False)
@@ -5488,7 +5997,7 @@ class TestStoreDetections(TestCase):
         self.assertEqual(expected_num_cands, len(cands))
 
 
-class Test_Generate_New_Candidate_Id_Blank(TestCase):
+class TestGenerateNewCandidateIdBlank(TestCase):
 
     def test_no_discoveries(self):
         expected_id = 'LNX0001'
@@ -5518,7 +6027,7 @@ class Test_Generate_New_Candidate_Id_Blank(TestCase):
         self.assertEqual(expected_id, new_id)
 
 
-class Test_Generate_New_Candidate_Id(TestCase):
+class TestGenerateNewCandidateId(TestCase):
 
     def setUp(self):
 
@@ -5565,7 +6074,7 @@ class Test_Generate_New_Candidate_Id(TestCase):
         self.assertEqual(3, Body.objects.count())
 
 
-class Test_Add_New_Taxonomy_Data(TestCase):
+class TestAddNewTaxonomyData(TestCase):
 
     def setUp(self):
 
@@ -5903,7 +6412,8 @@ class TestExportMeasurements(TestCase):
                 print("Error removing files in temporary test directory", self.test_dir)
             try:
                 os.rmdir(self.test_dir)
-                if self.debug_print: print("Removed", self.test_dir)
+                if self.debug_print:
+                    print("Removed", self.test_dir)
             except OSError:
                 print("Error removing temporary test directory", self.test_dir)
 
@@ -6064,7 +6574,7 @@ class TestRefitWithFindOrb(TestCase):
         expected_ephem_length = 4
         expected_num_srcmeas = SourceMeasurement.objects.filter(body=self.test_body).count()
         expected_meananom = 272.51789
-        expected_eccentricity =  0.3006186
+        expected_eccentricity = 0.3006186
         expected_epoch = datetime(2015, 11, 20)
         expected_src_type = 'U'
         expected_origin = 'M'
@@ -6271,6 +6781,7 @@ class TestDetermineActiveProposals(TestCase):
 
         self.assertEqual(expected_num, len(proposals))
         self.assertEqual(expected_code_1, proposals[0])
+
 
 class TestBestStandardsView(TestCase):
 

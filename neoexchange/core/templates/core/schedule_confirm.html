@@ -44,7 +44,11 @@
                 <tbody>
                     <tr id="id_proposal_row">
                         <td class="kv-key">Proposal</td>
-                        <td class="kv-value">{{ data.proposal_code }}</td>
+                        {% if data.too_mode %}
+                            <td class="kv-value">{{ data.proposal_code }} (TC)</td>
+                        {% else %}
+                            <td class="kv-value">{{ data.proposal_code }}</td>
+                        {% endif %}
                     </tr>
                     <tr id="id_group_id_row">
                         <td class="kv-key">Group Name</td>

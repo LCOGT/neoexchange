@@ -162,29 +162,30 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow(), s
         start = start_date.date()
         end = start + timedelta(days=31)
         ephem = horizons_ephem(body.name, start, end, site_code, include_moon=True)
-        if plot_type == 'radec':
-            vis_file = plot_ra_dec(ephem, base_dir=base_dir)
-        elif plot_type == 'mag':
-            vis_file = plot_brightness(ephem, base_dir=base_dir)
-        elif plot_type == 'dist':
-            vis_file = plot_helio_geo_dist(ephem, base_dir=base_dir)
-        elif plot_type == 'uncertainty':
-            vis_file = plot_uncertainty(ephem, base_dir=base_dir)
-        elif plot_type == 'hoursup':
-            tel_alt_limit = 30
-            to_add_rate = False
-            if site_code == '-1':
-                site_code = 'W85'
-                if ephem['DEC'].mean() > 5:
-                    site_code = 'V37'
-            if site_code == 'F65' or site_code == 'E10':
-                tel_alt_limit = 20
-                to_add_rate = True
-            ephem = horizons_ephem(body.name, start, end, site_code, '5m', alt_limit=tel_alt_limit)
-            vis_file = plot_hoursup(ephem, site_code, add_rate=to_add_rate, alt_limit=tel_alt_limit, base_dir=base_dir)
+        if ephem:
+            if plot_type == 'radec':
+                vis_file = plot_ra_dec(ephem, base_dir=base_dir)
+            elif plot_type == 'mag':
+                vis_file = plot_brightness(ephem, base_dir=base_dir)
+            elif plot_type == 'dist':
+                vis_file = plot_helio_geo_dist(ephem, base_dir=base_dir)
+            elif plot_type == 'uncertainty':
+                vis_file = plot_uncertainty(ephem, base_dir=base_dir)
+            elif plot_type == 'hoursup':
+                tel_alt_limit = 30
+                to_add_rate = False
+                if site_code == '-1':
+                    site_code = 'W85'
+                    if ephem['DEC'].mean() > 5:
+                        site_code = 'V37'
+                if site_code == 'F65' or site_code == 'E10':
+                    tel_alt_limit = 20
+                    to_add_rate = True
+                ephem = horizons_ephem(body.name, start, end, site_code, '5m', alt_limit=tel_alt_limit)
+                vis_file = plot_hoursup(ephem, site_code, add_rate=to_add_rate, alt_limit=tel_alt_limit, base_dir=base_dir)
     if vis_file:
         logger.debug('Visibility Plot: {}'.format(vis_file))
-        with default_storage.open(vis_file,"rb") as vis_plot:
+        with default_storage.open(vis_file, "rb") as vis_plot:
             return HttpResponse(vis_plot.read(), content_type="Image/png")
     else:
         # Return a 1x1 pixel gif in the case of no visibility file

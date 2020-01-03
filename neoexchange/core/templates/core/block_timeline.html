@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% load staticfiles %}
+
+{% block header %}
+    Block Timeline
+{% endblock %}
+
+{% block script-content %}
+<link rel="stylesheet" href="{% static "core/css/timeline.css" %}">
+<script src="{% static "core/js/timeline.js" %}"  type="text/javascript" ></script>
+<script>
+  //Sample dates
+var dates = {{blocks|safe}};
+
+
+$(document).ready(function(){
+  makeCircles();
+
+  $(".circle").mouseenter(function() {
+    $(this).addClass("hover");
+  });
+
+  $(".circle").mouseleave(function() {
+    $(this).removeClass("hover");
+  });
+
+  $(".circle").click(function() {
+    var spanNum = $(this).attr("id");
+    selectDate(spanNum);
+  });
+});
+
+</script>
+{% endblock %}
+
+{% block bodyclass %}page{% endblock %}
+
+{% block extramenu %}
+    <div class="headingleft">
+        <h1>Timeline for Block: <a href="{% url 'block-view' object.pk %}">{{object.pk}}</a></h1>
+    </div>
+{% endblock%}
+
+{% block main-content %}
+    <!-- Main body -->
+    <div class="fullwidth">
+        <div id="lineCont">
+          <div id="line"></div>
+          <div id="span">Date Placeholder</div>
+        </div>
+        <div id="mainCont">
+        </div>
+    </div>
+{% endblock %}

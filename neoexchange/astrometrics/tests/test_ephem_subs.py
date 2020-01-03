@@ -288,11 +288,11 @@ class TestComputeEphemerides(TestCase):
 
     def test_compute_ephem_with_elements(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
-        expected_ra  = 5.28722753669144
+        expected_ra = 5.28722753669144
         expected_dec = 0.522637696108887
         expected_mag = 20.408525362626005
         expected_motion = 2.4825093417658186
-        expected_alt =  -58.658929026981895
+        expected_alt = -58.658929026981895
         expected_spd = 119.94694444444444
         expected_pa = 91.35793788996334
 
@@ -311,13 +311,13 @@ class TestComputeEphemerides(TestCase):
 
     def test_compute_ephem_with_body(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
-        expected_ra  = 5.28722753669144
+        expected_ra = 5.28722753669144
         expected_dec = 0.522637696108887
         expected_mag = 20.408525362626005
         expected_motion = 2.4825093417658186
-        expected_alt =  -58.658929026981895
+        expected_alt = -58.658929026981895
         expected_spd = 119.94694444444444
-        expected_pa  = 91.35793788996334
+        expected_pa = 91.35793788996334
 
         body_elements = model_to_dict(self.body)
         emp_line = compute_ephem(d, body_elements, '500', dbg=False, perturb=True, display=False)
@@ -516,6 +516,35 @@ class TestComputeEphemerides(TestCase):
                          'meananom': None,
                          'perihdist': None,
                          'epochofperih': datetime(2019, 8, 21, 0, 0),
+                         'abs_mag': 14.9,
+                         'slope': 4.0,
+                         'num_obs': 7,
+                         'arc_length': 0.2,
+                        }
+        start = datetime(2019, 8, 21, 15)
+        site_code = '500'
+
+        emp_line = compute_ephem(start, body_elements, site_code, perturb=False)
+
+        self.assertEqual({}, emp_line)
+
+    def test_call_compute_comet_missing_qdate(self):
+        body_elements = {
+                         'provisional_name': 'C0TUUZ2',
+                         'name': None,
+                         'origin': 'M',
+                         'source_type': 'U',
+                         'elements_type': 'MPC_COMET',
+                         'epochofel': datetime(2019, 8, 21, 0, 0),
+                         'orbit_rms': 0.28,
+                         'orbinc': 105.5272,
+                         'longascnode': 323.82141,
+                         'argofperih': 74.17643,
+                         'eccentricity': 1.0,
+                         'meandist': 351375868.8,
+                         'meananom': None,
+                         'perihdist': None,
+                         'epochofperih': None,
                          'abs_mag': 14.9,
                          'slope': 4.0,
                          'num_obs': 7,
