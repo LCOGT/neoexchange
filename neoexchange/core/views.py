@@ -86,6 +86,7 @@ logger = logging.getLogger(__name__)
 
 BOKEH_URL = "https://cdn.bokeh.org/bokeh/release/bokeh-{}.min."
 
+
 class LoginRequiredMixin(object):
 
     # login_url = reverse('auth_login')

@@ -136,6 +136,9 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     if orbelems.get('epochofel', None) is None:
         logger.warning("No epoch of elements (epochofel) found in orbelems, cannot compute ephemeris")
         return {}
+    if orbelems.get('epochofperih', None) is None and orbelems.get('elements_type', None) == 'MPC_COMET':
+        logger.warning("No epoch of perihelion (epochofperih) found for this comet, cannot compute ephemeris")
+        return {}
 
 # Compute MJD for UTC
     mjd_utc = datetime2mjd_utc(d)
