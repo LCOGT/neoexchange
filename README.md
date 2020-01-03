@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 3.2.5
+Fix a rare comet bug.
+
 ### 3.2.4
 Fix a few rare bugs.
 
