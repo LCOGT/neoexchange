@@ -69,7 +69,7 @@ def perturb_elements(orbelems, epoch_mjd, mjd_tt, comet, perturb):
     Return Perturbed elements if requested.
     """
 
-    if comet is True and orbelems['epochofperih']:
+    if comet is True:
         jform = 3
         p_orbelems = {'LongNode' : radians(orbelems['longascnode']),
                       'Inc' : radians(orbelems['orbinc']),
@@ -135,6 +135,9 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
 # Check if we even have a non-blank set of elements before proceeding
     if orbelems.get('epochofel', None) is None:
         logger.warning("No epoch of elements (epochofel) found in orbelems, cannot compute ephemeris")
+        return {}
+    if orbelems.get('epochofperih', None) is None and orbelems.get('elements_type', None) == 'MPC_COMET':
+        logger.warning("No epoch of perihelion (epochofperih) found for this comet, cannot compute ephemeris")
         return {}
 
 # Compute MJD for UTC
