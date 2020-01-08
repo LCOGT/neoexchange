@@ -1066,7 +1066,7 @@ class Frame(models.Model):
     sitecode    = models.CharField('MPC site code', max_length=4, blank=False)
     instrument  = models.CharField('instrument code', max_length=4, blank=True, null=True)
     filter      = models.CharField('filter class', max_length=15, blank=False, default="B")
-    filename    = models.CharField('FITS filename', max_length=50, blank=True, null=True)
+    filename    = models.CharField('FITS filename', max_length=50, blank=True, null=True, db_index=True)
     exptime     = models.FloatField('Exposure time in seconds', null=True, blank=True)
     midpoint    = models.DateTimeField('UTC date/time of frame midpoint', null=False, blank=False, db_index=True)
     block       = models.ForeignKey(Block, null=True, blank=True, on_delete=models.CASCADE)
@@ -1475,10 +1475,10 @@ class CatalogSources(models.Model):
     """
 
     frame = models.ForeignKey(Frame, on_delete=models.CASCADE)
-    obs_x = models.FloatField('CCD X co-ordinate')
-    obs_y = models.FloatField('CCD Y co-ordinate')
-    obs_ra = models.FloatField('Observed RA')
-    obs_dec = models.FloatField('Observed Dec')
+    obs_x = models.FloatField('CCD X co-ordinate', db_index=True)
+    obs_y = models.FloatField('CCD Y co-ordinate', db_index=True)
+    obs_ra = models.FloatField('Observed RA', db_index=True)
+    obs_dec = models.FloatField('Observed Dec', db_index=True)
     obs_mag = models.FloatField('Observed Magnitude', blank=True, null=True)
     err_obs_ra = models.FloatField('Error on Observed RA', blank=True, null=True)
     err_obs_dec = models.FloatField('Error on Observed Dec', blank=True, null=True)

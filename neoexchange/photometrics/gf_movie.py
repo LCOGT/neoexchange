@@ -33,6 +33,7 @@ import logging
 from django.core.files.storage import default_storage
 
 from photometrics.external_codes import unpack_tarball
+from core.models import Frame, CatalogSources
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +74,7 @@ def print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, lengt
         print()
 
 
-def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True, out_path="", tr=False, center=None):
+def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True, out_path="", tr=False, center=None, plot_source=False):
     """
     takes in list of .fits guide frames and turns them into a moving gif.
     <frames> = list of .fits frame paths
@@ -165,8 +166,10 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
                 print_progress_bar(n+1, len(fits_files), prefix='Creating Gif: Frame {}'.format(current_count), time_in=time_in)
             return ax
 
+        shape = data.shape
+        x_frac = 0
+        y_frac = 0
         if center is not None:
-            shape = data.shape
             x_frac = int(shape[0]*(1-np.sqrt(center))/2)
             y_frac = int(shape[1]*(1-np.sqrt(center))/2)
             data = data[x_frac:-(x_frac+1), y_frac:-(y_frac+1)]
@@ -214,6 +217,14 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
             circle_15arcsec = plt.Circle((header_n['CRPIX1'], header_n['CRPIX2']), 15/header_n['PIXSCALE'], fill=False, color='lime', linewidth=1.5)
             ax.add_artist(circle_5arcsec)
             ax.add_artist(circle_15arcsec)
+
+        # add sources
+        if plot_source:
+            frame_obj = Frame.objects.get(filename=os.path.basename(fits_files[n]))
+            sources = CatalogSources.objects.filter(frame=frame_obj, obs_x__range=(x_frac, shape[0]-x_frac), obs_y__range=(y_frac, shape[1]-y_frac))
+            for source in sources:
+                circle_source = plt.Circle((source.obs_x - x_frac, source.obs_y - y_frac), 3/header_n['PIXSCALE'], fill=False, color='red', linewidth=1, alpha=.5)
+                ax.add_artist(circle_source)
 
         if progress:
             print_progress_bar(n+1, len(fits_files), prefix='Creating Gif: Frame {}'.format(current_count), time_in=time_in)
