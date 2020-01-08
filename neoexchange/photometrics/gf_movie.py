@@ -220,11 +220,14 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
 
         # add sources
         if plot_source:
-            frame_obj = Frame.objects.get(filename=os.path.basename(fits_files[n]))
-            sources = CatalogSources.objects.filter(frame=frame_obj, obs_x__range=(x_frac, shape[0]-x_frac), obs_y__range=(y_frac, shape[1]-y_frac))
-            for source in sources:
-                circle_source = plt.Circle((source.obs_x - x_frac, source.obs_y - y_frac), 3/header_n['PIXSCALE'], fill=False, color='red', linewidth=1, alpha=.5)
-                ax.add_artist(circle_source)
+            try:
+                frame_obj = Frame.objects.get(filename=os.path.basename(fits_files[n]))
+                sources = CatalogSources.objects.filter(frame=frame_obj, obs_x__range=(x_frac, shape[0]-x_frac), obs_y__range=(y_frac, shape[1]-y_frac))
+                for source in sources:
+                    circle_source = plt.Circle((source.obs_x - x_frac, source.obs_y - y_frac), 3/header_n['PIXSCALE'], fill=False, color='red', linewidth=1, alpha=.5)
+                    ax.add_artist(circle_source)
+            except Frame.DoesNotExist:
+                pass
 
         if progress:
             print_progress_bar(n+1, len(fits_files), prefix='Creating Gif: Frame {}'.format(current_count), time_in=time_in)
