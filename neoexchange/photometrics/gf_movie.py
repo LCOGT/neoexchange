@@ -15,6 +15,7 @@ GNU General Public License for more details.
 
 import sys
 import numpy as np
+from math import degrees
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -74,7 +75,7 @@ def print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, lengt
         print()
 
 
-def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True, out_path="", tr=False, center=None, plot_source=False):
+def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True, out_path="", tr=False, center=None, plot_source=False, target_data=None):
     """
     takes in list of .fits guide frames and turns them into a moving gif.
     <frames> = list of .fits frame paths
@@ -228,6 +229,19 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
                     ax.add_artist(circle_source)
             except Frame.DoesNotExist:
                 pass
+
+        if target_data:
+            td = target_data[n]
+            target_source = td['best_source']
+            if target_source:
+                target_circle = plt.Circle((target_source.obs_x - x_frac, target_source.obs_y - y_frac), 3/header_n['PIXSCALE'], fill=False, color='limegreen', linewidth=1)
+                ax.add_artist(target_circle)
+            bw = td['bw']
+            bw /= header_n['PIXSCALE']
+            x_off = (((degrees(td['ra']) - header_n['CRVAL1']) * 3600) / header_n['PIXSCALE']) * np.sign(header_n['CD1_1'])
+            y_off = (((degrees(td['dec']) - header_n['CRVAL2']) * 3600) / header_n['PIXSCALE']) * np.sign(header_n['CD2_2'])
+            box_width = plt.Rectangle((header_n['CRPIX1']+x_off-bw, header_n['CRPIX2']+y_off-bw), width=bw*2, height=bw*2, fill=False, color='yellow', linewidth=1, alpha=.5)
+            ax.add_artist(box_width)
 
         if progress:
             print_progress_bar(n+1, len(fits_files), prefix='Creating Gif: Frame {}'.format(current_count), time_in=time_in)

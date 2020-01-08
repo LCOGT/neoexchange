@@ -39,7 +39,9 @@ from core.models import Block, Frame, SuperBlock, SourceMeasurement, CatalogSour
 from astrometrics.ephem_subs import compute_ephem, radec2strings, moon_alt_az, get_sitepos
 from astrometrics.time_subs import datetime2mjd_utc
 from photometrics.catalog_subs import search_box
+from photometrics.gf_movie import make_gif
 from photometrics.photometry_subs import compute_fwhm, map_filter_to_wavelength
+from core.archive_subs import make_data_dir
 
 
 class Command(BaseCommand):
@@ -276,7 +278,6 @@ class Command(BaseCommand):
         for super_block in super_blocks:
             block_list = Block.objects.filter(superblock=super_block.id)
             self.stdout.write("Analyzing SuperblockBlock# %s for %s" % (super_block.tracking_number, super_block.body.current_name()))
-
             for block in block_list:
                 block_mags = []
                 block_mag_errs = []
@@ -295,6 +296,7 @@ class Command(BaseCommand):
                 self.stdout.write("Found %d frames (of %d total) for Block# %d with good ZPs" % (frames.count(), frames_all_zp.count(), block.id))
                 self.stdout.write("Searching within %.1f arcseconds and +/-%.2f delta magnitudes" % (options['boxwidth'], options['deltamag']))
                 total_frame_count += frames.count()
+                frame_data = []
                 if frames_all_zp.count() != 0:
                     elements = model_to_dict(block.body)
                     filter_list = []
@@ -336,6 +338,12 @@ class Command(BaseCommand):
                                 filter_list.append(frame.ALCDEF_filter_format())
                                 zps.append(frame.zeropoint)
                                 zp_errs.append(frame.zeropoint_err)
+                        frame_data.append({'ra': ra,
+                                           'dec': dec,
+                                           'mag': mag_estimate,
+                                           'bw': options['boxwidth'],
+                                           'dm': options['deltamag'],
+                                           'best_source': best_source})
                         # We append these even if we don't have a matching source or zeropoint
                         # so we can plot conditions for all frames
                         alltimes.append(frame.midpoint)
@@ -361,6 +369,12 @@ class Command(BaseCommand):
                     mags += block_mags
                     mag_errs += block_mag_errs
                     times += block_times
+
+                out_path = settings.DATA_ROOT
+                data_path = make_data_dir(out_path, model_to_dict(frames_all_zp[0]))
+                frames_list = [os.path.join(data_path, f.filename) for f in frames_all_zp]
+                movie_file = make_gif(frames_list, init_fr=100, center=.01, out_path=out_path,
+                                      plot_source=True, target_data=frame_data, progress=True)
         alcdef_file.close()
         os.chmod(filename, rw_permissions)
         self.stdout.write("Found matches in %d of %d frames" % ( len(times), total_frame_count))

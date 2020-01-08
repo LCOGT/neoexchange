@@ -32,7 +32,7 @@ import re
 import warnings
 
 from astropy.utils.exceptions import AstropyDeprecationWarning
-warnings.simplefilter('ignore', category = AstropyDeprecationWarning)
+warnings.simplefilter('ignore', category=AstropyDeprecationWarning)
 from astroquery.jplhorizons import Horizons
 from astropy.table import Column
 
