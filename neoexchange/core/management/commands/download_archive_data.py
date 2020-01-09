@@ -29,7 +29,7 @@ from core.archive_subs import archive_login, get_frame_data, get_catalog_data, \
     determine_archive_start_end, download_files, make_data_dir
 from core.views import determine_active_proposals
 from photometrics.gf_movie import make_movie, make_gif
-from core.utils import save_to_default
+from core.utils import save_to_default, search
 
 
 class Command(BaseCommand):
@@ -113,7 +113,11 @@ class Command(BaseCommand):
                         save_paths[frame['REQNUM']] = make_data_dir(out_path, frame)
                         block_lists[frame['REQNUM']] = [os.path.join(save_paths[frame['REQNUM']], frame['filename'])]
                 for rn in block_lists.keys():
-                    movie_file = make_gif(block_lists[rn], init_fr=100, center=.01, out_path=out_path)
+                    movie_file = search(save_paths[rn].replace(out_path, "").lstrip("/"), '.*{}_framemovie.gif'.format(rn), latest=True)
+                    if not movie_file:
+                        self.stdout.write("No frame movie found for request number: {}".format(rn))
+                        movie_file = make_gif(block_lists[rn], init_fr=100, center=.01, out_path=out_path)
+                        self.stdout.write("New gif created: {}".format(movie_file))
 
                 # unpack tarballs and make movie.
                 for frame in all_frames.get('', []):
