@@ -245,7 +245,7 @@ class Command(BaseCommand):
         air_mass = []
         obj_name = start_super_block.body.current_name().replace(' ', '_')
         datadir = os.path.join(options['datadir'], obj_name)
-        rw_permissions = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH
+        rw_permissions = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH | stat.S_IWOTH
         if not os.path.exists(datadir):
             try:
                 os.makedirs(datadir)
@@ -375,6 +375,7 @@ class Command(BaseCommand):
                 frames_list = [os.path.join(data_path, f.filename) for f in frames_all_zp]
                 movie_file = make_gif(frames_list, init_fr=100, center=.01, out_path=out_path,
                                       plot_source=True, target_data=frame_data, progress=True)
+                self.stdout.write("New gif created: {}".format(movie_file))
         alcdef_file.close()
         os.chmod(filename, rw_permissions)
         self.stdout.write("Found matches in %d of %d frames" % ( len(times), total_frame_count))
@@ -405,13 +406,19 @@ class Command(BaseCommand):
             for mpc_line in mpc_lines:
                 mpc_file.write(mpc_line + '\n')
             mpc_file.close()
-            os.chmod(os.path.join(datadir, base_name + 'mpc_positions.txt'), rw_permissions)
+            try:
+                os.chmod(os.path.join(datadir, base_name + 'mpc_positions.txt'), rw_permissions)
+            except PermissionError:
+                pass
 
             # Write out ADES Pipe Separated Value file
             for psv_line in psv_lines:
                 psv_file.write(psv_line + '\n')
             psv_file.close()
-            os.chmod(os.path.join(datadir, base_name + 'ades_positions.psv'), rw_permissions)
+            try:
+                os.chmod(os.path.join(datadir, base_name + 'ades_positions.psv'), rw_permissions)
+            except PermissionError:
+                pass
 
             if options['title'] is None:
                 sites = ', '.join(mpc_site)
@@ -433,7 +440,13 @@ class Command(BaseCommand):
                 subtitle = ''
 
             self.plot_timeseries(times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, title=plot_title, sub_title=subtitle, datadir=datadir, filename=base_name, diameter=tel_diameter)
-            os.chmod(os.path.join(datadir, base_name + 'lightcurve_cond.png'), rw_permissions)
-            os.chmod(os.path.join(datadir, base_name + 'lightcurve.png'), rw_permissions)
+            try:
+                os.chmod(os.path.join(datadir, base_name + 'lightcurve_cond.png'), rw_permissions)
+            except PermissionError:
+                pass
+            try:
+                os.chmod(os.path.join(datadir, base_name + 'lightcurve.png'), rw_permissions)
+            except PermissionError:
+                pass
         else:
             self.stdout.write("No sources matched.")

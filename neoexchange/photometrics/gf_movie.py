@@ -15,7 +15,7 @@ GNU General Public License for more details.
 
 import sys
 import numpy as np
-from math import degrees
+from math import degrees, cos
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -238,10 +238,12 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
                 ax.add_artist(target_circle)
             bw = td['bw']
             bw /= header_n['PIXSCALE']
-            x_off = (((degrees(td['ra']) - header_n['CRVAL1']) * 3600) / header_n['PIXSCALE']) * np.sign(header_n['CD1_1'])
+            x_off = (((degrees(td['ra']) - header_n['CRVAL1']) * cos(td['dec']) * 3600) / header_n['PIXSCALE']) * np.sign(header_n['CD1_1'])
             y_off = (((degrees(td['dec']) - header_n['CRVAL2']) * 3600) / header_n['PIXSCALE']) * np.sign(header_n['CD2_2'])
             box_width = plt.Rectangle((header_n['CRPIX1']+x_off-bw, header_n['CRPIX2']+y_off-bw), width=bw*2, height=bw*2, fill=False, color='yellow', linewidth=1, alpha=.5)
             ax.add_artist(box_width)
+            # c1 = plt.Circle((header_n['CRPIX1'], header_n['CRPIX2']), 1/header_n['PIXSCALE'], fill=False, color='blue', linewidth=1)
+            # ax.add_artist(c1)
 
         if progress:
             print_progress_bar(n+1, len(fits_files), prefix='Creating Gif: Frame {}'.format(current_count), time_in=time_in)

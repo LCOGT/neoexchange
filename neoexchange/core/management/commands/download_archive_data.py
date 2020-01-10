@@ -98,10 +98,10 @@ class Command(BaseCommand):
                             else:
                                 all_frames[red_lvl] = catalogs[red_lvl]
                 for red_lvl in all_frames.keys():
-                    self.stdout.write("Found %d frames for reduction level: %s" % ( len(all_frames[red_lvl]), red_lvl ))
+                    self.stdout.write("Found %d frames for reduction level: %s" % ( len(all_frames[red_lvl]), red_lvl))
                 out_path = options['datadir']
                 dl_frames = download_files(all_frames, out_path, verbose)
-                self.stdout.write("Downloaded %d frames" % ( len(dl_frames) ))
+                self.stdout.write("Downloaded %d frames" % ( len(dl_frames)))
                 # Create postage stamp movie for non_spectra images
                 block_lists = {}
                 save_paths = {}
