@@ -15,16 +15,18 @@ GNU General Public License for more details.
 
 import sys
 import numpy as np
-from math import degrees, cos
+from math import degrees, cos, radians
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+import pyslalib.slalib as S
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.wcs._wcs import InvalidTransformError
 from astropy.visualization import ZScaleInterval
-from datetime import datetime
+from datetime import datetime, timedelta
+import calendar
 import os
 from glob import glob
 import argparse
@@ -35,6 +37,7 @@ from django.core.files.storage import default_storage
 
 from photometrics.external_codes import unpack_tarball
 from core.models import Frame, CatalogSources
+from astrometrics.ephem_subs import horizons_ephem
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +78,7 @@ def print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, lengt
         print()
 
 
-def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True, out_path="", tr=False, center=None, plot_source=False, target_data=None):
+def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True, out_path="", tr=False, center=None, plot_source=False, target_data=None, horizons_comp=False):
     """
     takes in list of .fits guide frames and turns them into a moving gif.
     <frames> = list of .fits frame paths
@@ -140,6 +143,17 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
     fig = plt.figure()
     if title:
         fig.suptitle(title)
+
+    if horizons_comp:
+        # Get predicted JPL position of target in first frame
+        frame_obj = Frame.objects.get(filename=os.path.basename(fits_files[0]))
+        end_frame = Frame.objects.get(filename=os.path.basename(fits_files[-1]))
+        start = frame_obj.midpoint - timedelta(minutes=1)
+        end = end_frame.midpoint + timedelta(minutes=1)
+        sitecode = frame_obj.sitecode
+        obj_name = frame_obj.block.body.name
+        ephem = horizons_ephem(obj_name, start, end, sitecode, ephem_step_size='1m')
+        date_array = np.array([calendar.timegm(d.timetuple()) for d in ephem['datetime']])
 
     time_in = datetime.now()
 
@@ -230,6 +244,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
             except Frame.DoesNotExist:
                 pass
 
+        # Highlight best target and search box
         if target_data:
             td = target_data[n]
             target_source = td['best_source']
@@ -240,10 +255,28 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
             bw /= header_n['PIXSCALE']
             x_off = (((degrees(td['ra']) - header_n['CRVAL1']) * cos(td['dec']) * 3600) / header_n['PIXSCALE']) * np.sign(header_n['CD1_1'])
             y_off = (((degrees(td['dec']) - header_n['CRVAL2']) * 3600) / header_n['PIXSCALE']) * np.sign(header_n['CD2_2'])
-            box_width = plt.Rectangle((header_n['CRPIX1']+x_off-bw, header_n['CRPIX2']+y_off-bw), width=bw*2, height=bw*2, fill=False, color='yellow', linewidth=1, alpha=.5)
+            x_pix = header_n['CRPIX1']+x_off
+            y_pix = header_n['CRPIX2']+y_off
+            box_width = plt.Rectangle((x_pix-bw, y_pix-bw), width=bw*2, height=bw*2, fill=False, color='yellow', linewidth=1, alpha=.5)
             ax.add_artist(box_width)
-            # c1 = plt.Circle((header_n['CRPIX1'], header_n['CRPIX2']), 1/header_n['PIXSCALE'], fill=False, color='blue', linewidth=1)
-            # ax.add_artist(c1)
+
+        # show the position of the JPL Horizons prediction relative to CRPIX if no target data.
+        if horizons_comp:
+            jpl_ra = np.interp(calendar.timegm(date.timetuple()), date_array, ephem['RA'])
+            jpl_dec = np.interp(calendar.timegm(date.timetuple()), date_array, ephem['DEC'])
+            if target_data:
+                jpl_dist = degrees(S.sla_dsep(td['ra'], td['dec'], radians(jpl_ra), radians(jpl_dec))) * 3600
+            else:
+                jpl_dist = degrees(S.sla_dsep(radians(header_n['CRVAL1']), radians(header_n['CRVAL2']), radians(jpl_ra), radians(jpl_dec))) * 3600
+                x_pix = header_n['CRPIX1']
+                y_pix = header_n['CRPIX2']
+            if jpl_dist > 3:
+                jpl_x_off = (((jpl_ra - header_n['CRVAL1']) * cos(radians(jpl_dec)) * 3600) / header_n['PIXSCALE']) * np.sign(header_n['CD1_1'])
+                jpl_y_off = (((jpl_dec - header_n['CRVAL2']) * 3600) / header_n['PIXSCALE']) * np.sign(header_n['CD2_2'])
+                jpl_x_pix = header_n['CRPIX1']+jpl_x_off
+                jpl_y_pix = header_n['CRPIX2']+jpl_y_off
+                plt.plot([x_pix, jpl_x_pix], [y_pix, jpl_y_pix], color='lightblue', linestyle='-', linewidth=1, alpha=.5)
+                plt.plot([jpl_x_pix], [jpl_y_pix], color='blue', marker='x', linestyle=' ', label="JPL Prediction")
 
         if progress:
             print_progress_bar(n+1, len(fits_files), prefix='Creating Gif: Frame {}'.format(current_count), time_in=time_in)

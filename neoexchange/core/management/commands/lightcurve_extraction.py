@@ -374,7 +374,7 @@ class Command(BaseCommand):
                 data_path = make_data_dir(out_path, model_to_dict(frames_all_zp[0]))
                 frames_list = [os.path.join(data_path, f.filename) for f in frames_all_zp]
                 movie_file = make_gif(frames_list, init_fr=100, center=.01, out_path=out_path,
-                                      plot_source=True, target_data=frame_data, progress=True)
+                                      plot_source=True, target_data=frame_data, horizons_comp=True, progress=True)
                 self.stdout.write("New gif created: {}".format(movie_file))
         alcdef_file.close()
         os.chmod(filename, rw_permissions)
