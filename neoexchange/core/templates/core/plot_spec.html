@@ -1,20 +1,64 @@
 {% extends 'base.html' %}
 
-{% block header %}Spectrum for block: {{pk}}{% endblock %}
+{% block header %}
+{% if floyds is False %}
+    Spectrum for object: {{body.current_name}}
+{% else %}
+    Spectrum for block: {{pk}}
+{% endif %}
+{% endblock %}
+
+<!-- Import Bokeh CSS for plotting (UPDATE RELEASE NUMBER IF BOKEH IS UPDATED) -->
+{% block last-css-content %}
+<link rel="stylesheet" href={{css_path}}>
+{% endblock %}
+<!-- Import Bokeh Script for plotting (UPDATE RELEASE NUMBER IF BOKEH IS UPDATED) -->
+{% block script-content %}
+<script src={{js_path}}></script>
+{{ the_script|safe }}
+{% endblock %}
 
 {% block bodyclass %}page{% endblock %}
 
+
 {% block extramenu %}
     <div class="headingleft">
-        <h1>Block: {{pk}}</h1>
+        {% if floyds is False %}
+        <h1>Object: <a href="{% url 'target' body.pk %}">{{body.current_name}}</a></h1>
+        {% else %}
+        <h1>Block: <a href="{% url 'block-view' sb_id %}">{{pk}}</a></h1>
+        {% endif %}
     </div>
 {% endblock%}
+
 
 {% block main-content %}
 <!-- Main body -->
 <div class="container" id="main">
+    <!-- Import the javascript and div created by Bokeh for spectra plots -->
     {% block graphic %}
-        <img src="{% url 'display_spec' pk %}" alt="Could not find or create spectra file to plot."> <!-- TO DO: Make alternate when image not found-->
+        {{ reflec_div|safe }}
+        {{ raw_div|safe }}
     {% endblock %}
+
+
+<h5 class="section-title">Spectroscopy Sources</h5>
+{% if p_spec %}
+    {% for p in p_spec %}
+        {% if p.spec_vis %}
+            <a href={{p.spec_vis}}>{{p.spec_wav}} {{ p.get_spec_source_display }} Spectra from {{ p.spec_date }}</a> <br>
+        {% else %}
+            {% if p.spec_ir %}
+                <a href={{p.spec_ir}}>{{p.spec_wav}} {{ p.get_spec_source_display }} Spectra from {{ p.spec_date }}</a> <br>
+            {% endif %}
+        {% endif %}
+    {% endfor %}
+{% else %}
+    {% if raw_div %}
+        FLOYDS Data
+    {% else %}
+        Cannot find data. :(
+    {% endif %}
+{% endif %}
 </div>
 {% endblock %}

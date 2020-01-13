@@ -1,11 +1,11 @@
 
 
-#Field of view is in arcmin, pixel scale is in arcsec
+# Field of view is in arcmin, pixel scale is in arcsec
 tel_field = {   'onem_fov'              : 15.5,
                 'onem_pixscale'         : 0.464,
                 'onem_sinistro_fov'     : 26.4,
                 'onem_sinistro_pixscale' : 0.389,
-                'point4m_pixscale'      : 1.139,        # bin 2, from average kb29 values
+                'point4m_pixscale'      : 0.571,        # bin 2, from average kb29 values = 1.139/ 1x1 nominal = 0.58 / 1x1 from average of kb27 = 0.571
                 'point4m_fov'           : 29.1,
                 'twom_pixscale'         : 0.304,
                 'twom_fov'              : 10.0,
@@ -13,15 +13,15 @@ tel_field = {   'onem_fov'              : 15.5,
                 'twom_floyds_fov'       : 2.0
             }
 
-#altitude limits
+# altitude limits
 tel_alt = { 'normal_alt_limit'  : 30.0,
             'twom_alt_limit'    : 20.0,
             'point4m_alt_limit' : 15.0
           }
 
-#molecule overheads (s)
-molecule_overhead = {   'filter_change'     : 2.0,                         #time required to change filter
-                        'per_molecule_time' : 5.0 + 11.0                   #per molecule gap + Molecule start up time
+# molecule overheads (s)
+molecule_overhead = {   'filter_change'     : 2.0,                         # time required to change filter
+                        'per_molecule_time' : 5.0 + 11.0                   # per molecule gap + Molecule start up time
                     }
 
 # Per-Telescope overheads (s)
@@ -33,10 +33,10 @@ tel_overhead = { 'onem_setup_overhead'      : 90.0,                  # front pad
 # Per-Instrument overheads (s)
 inst_overhead = {   'onemsbig_exp_overhead'         : 15.5,
                     'point4m_exp_overhead'          : 13.0 + 1.0,       # readout + fixed overhead/exposure
-                    'sinistro_exp_overhead'         : 37.0 + 1.0,      # readout + fixed overhead/exposure
-                    'twom_exp_overhead'             : 10.5 + 8.5,          # readout + fixed overhead/exposure
-                    'floyds_exp_overhead'           : 25.0 + 0.5,        # readout + fixed overhead/exposure
-                    'floyds_config_change_overhead' : 30.0,
+                    'sinistro_exp_overhead'         : 27.0 + 1.0,       # readout + fixed overhead/exposure
+                    'twom_exp_overhead'             : 10.5 + 8.5,       # readout + fixed overhead/exposure
+                    'floyds_exp_overhead'           : 25.0 + 0.5,       # readout + fixed overhead/exposure
+                    'floyds_config_change_overhead' : 60.0,
                     'floyds_acq_proc_overhead'      : 60.0,
                     'floyds_acq_exp_time'           : 30.0,
                     'floyds_calib_exp_time'         : 60.0
@@ -65,7 +65,10 @@ valid_site_codes = { 'ELP-DOMA-1M0A' : 'V37',
                      'LSC-AQWB-0M4A' : 'W79',
                      'ELP-AQWA-0M4A' : 'V38',
                      'CPT-AQWA-0M4A' : 'L09',
-                     'SQA-DOMA-0M8A' : 'G51'}
+                     'SQA-DOMA-0M8A' : 'G51',
+                     'XXX-XXXX-1M0X' : '1M0',
+                     'XXX-XXXX-0M4X' : '0M4',
+                     'XXX-XXXX-2M0X' : '2M0'}
 
 # Reverse site code dictionary
 valid_telescope_codes = {v: k for k, v in valid_site_codes.items()}
@@ -99,4 +102,10 @@ spec_filters = [    "slit_1.2as",
                     "slit_1.6as",
                     "slit_2.0as",
                     "slit_6.0as"
+                ]
+
+science_cams = [    "1m0-SciCam-Sinistro",
+                    "2m0-FLOYDS-SciCam",
+                    "2m0-SciCam-Spectral",
+                    "0m4-SciCam-SBIG"
                 ]

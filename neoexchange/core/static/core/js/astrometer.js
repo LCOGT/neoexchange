@@ -384,36 +384,34 @@ function changeImage(ind, cand_index=0, allcandidates=false) {
 }
 
 function loadThumbnails(frames){
-  var requests = Array();
-  for(var i in frames)
-   {
-     var frame = frames[i];
-     requests.push($.get("https://thumbnails.lco.global/" + frame.img +"/" +img_params));
-    }
-  // Package and display the images once all the AJAX requests have finished
-  var defer = $.when.apply($, requests);
-  defer.done(function(){
-    $.each(arguments, function(index, data){
+
+    console.log("Starting image stuff")
+    for(i=0; i<frames.length; i++){
       // Add the URL of each image to the frames array
-      var resp = data[0].url;
-      frames[index]['url'] = resp;
+      var resp = frames[i]['url'];
       // Preload the image
-      var image = new Image()
+      var image = new Image();
       image.src = resp;
-    });
+    };
     // Once all URLs are stored change to the first image
     changeImage(0, candids[0],allcandidates=true);
-  });
-  return
+
 }
 
-function fetch_thumbnail(frame, options=''){
-  var url = "https://thumbnails.lco.global/" + frame.img +"/" +options;
-  $.get(url, function(data){
-      var resp = data.url;
-      frame['url'] = resp;
-      // Preload the image
-      var image = new Image()
-      image.src = resp;
-  });
-}
+
+function get_images(frame, options=''){
+
+    $.get({url:'https://thumbnails.lco.global/'+frame.img+'/'+options,
+          headers: {'Authorization': 'Token '+archive_token},
+          dataType: 'json',
+          contentType: 'application/json'}
+        )
+      .success(function(data){
+        frame['url'] = data['url'];
+      })
+      .fail(function(data){
+        console.log("FAILED to get thumbnail");
+      })
+
+    return frame
+  }

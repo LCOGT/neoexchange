@@ -1,29 +1,27 @@
 # -*- coding: utf-8 -*-
 # Django settings for neox project.
 
-import os, sys
+import os, ast
+import sys
 from django.utils.crypto import get_random_string
 import rollbar
 
-VERSION = '2.4.1'
+
+VERSION = '3.2.5'
+
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
 DEBUG = False
-BRANCH = os.environ.get('BRANCH',None)
+BRANCH = os.environ.get('BRANCH', None)
 if BRANCH:
     BRANCH = '-' + BRANCH
 else:
     BRANCH = ''
 
-PREFIX = os.environ.get('PREFIX', '')
-
-if PREFIX != '':
-    FORCE_SCRIPT_NAME = '/neoexchange'
-
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-SESSION_COOKIE_NAME='neox.sessionid'
+SESSION_COOKIE_NAME = 'neox.sessionid'
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
@@ -63,6 +61,9 @@ USE_L10N = True
 # If you set this to False, Django will not use timezone-aware datetimes.
 USE_TZ = False
 
+# This determines if you use the Amazon S3 bucket or a local directory.
+USE_S3 = ast.literal_eval(os.environ.get('USE_S3', 'False'))
+
 # Absolute filesystem path to the directory that will hold user-uploaded files.
 # Example: "/home/media/media.lawrence.com/media/"
 MEDIA_ROOT = '/var/www/html/media/'
@@ -73,8 +74,8 @@ MEDIA_ROOT = '/var/www/html/media/'
 MEDIA_URL = '/media/'
 
 STATIC_ROOT = '/var/www/html/static/'
-STATIC_URL = PREFIX + '/static/'
-STATICFILES_DIRS = [os.path.join(BASE_DIR,'core'),]
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'core'), ]
 
 # List of finder classes that know how to find static files in
 # various locations.
@@ -135,9 +136,9 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-LOGIN_URL = PREFIX +'/accounts/login/'
+LOGIN_URL = '/accounts/login/'
 
-LOGIN_REDIRECT_URL = PREFIX + '/'
+LOGIN_REDIRECT_URL = '/'
 
 # GRAPPELLI_INDEX_DASHBOARD = 'neox.dashboard.CustomIndexDashboard'
 
@@ -154,9 +155,10 @@ INSTALLED_APPS = (
     'analyser.apps.AstrometerConfig',
 )
 
+rollbar_default_env = 'development' if DEBUG else 'production'
 ROLLBAR = {
     'access_token': os.environ.get('ROLLBAR_TOKEN',''),
-    'environment': 'development' if DEBUG else 'production',
+    'environment' : os.environ.get('ROLLBAR_ENVIRONMENT', rollbar_default_env),
     'root': BASE_DIR,
 }
 rollbar.init(**ROLLBAR)
@@ -183,13 +185,6 @@ LOGGING = {
             'level': 'ERROR',
             'filters': ['require_debug_false'],
             'class': 'django.utils.log.AdminEmailHandler'
-        },
-        'file': {
-            'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': 'neox.log',
-            'formatter': 'verbose',
-            'filters': ['require_debug_false']
         },
         'console': {
             'level': 'DEBUG',
@@ -221,7 +216,7 @@ LOGGING = {
             'level'    : 'ERROR',
         },
         'neox': {
-            'handlers':['console'],
+            'handlers': ['console'],
             'level' : 'ERROR'
         }
     }
@@ -238,8 +233,9 @@ DATABASES = {
         "USER": os.environ.get('NEOX_DB_USER',''),
         "PASSWORD": os.environ.get('NEOX_DB_PASSWD',''),
         "HOST": os.environ.get('NEOX_DB_HOST',''),
-        "CONN_MAX_AGE" : 300,
-        "OPTIONS"   : {'init_command': 'SET storage_engine=INNODB'},
+        "OPTIONS": {
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+        },
 
     }
 }
@@ -250,7 +246,7 @@ DATABASES = {
 
 EMAIL_USE_TLS       = True
 EMAIL_HOST          = 'smtp.gmail.com'
-EMAIL_PORT          =  587
+EMAIL_PORT          = 587
 DEFAULT_FROM_EMAIL  = 'NEO Exchange <neox@lco.global>'
 EMAIL_HOST_USER = os.environ.get('NEOX_EMAIL_USERNAME', '')
 EMAIL_HOST_PASSWORD = os.environ.get('NEOX_EMAIL_PASSWORD', '')
@@ -259,25 +255,25 @@ EMAIL_HOST_PASSWORD = os.environ.get('NEOX_EMAIL_PASSWORD', '')
 # LCO Api settings #
 ####################
 
-NEO_ODIN_USER = os.environ.get('NEOX_ODIN_USER', '')
-NEO_ODIN_PASSWD = os.environ.get('NEOX_ODIN_PASSWD', '')
-
 THUMBNAIL_URL = 'https://thumbnails.lco.global/'
+
+CONFIGDB_API_URL = 'http://configdb.lco.gtn/'
 
 ARCHIVE_API_URL = 'https://archive-api.lco.global/'
 ARCHIVE_FRAMES_URL = ARCHIVE_API_URL + 'frames/'
 ARCHIVE_TOKEN_URL = ARCHIVE_API_URL + 'api-token-auth/'
-ARCHIVE_TOKEN = os.environ.get('ARCHIVE_TOKEN','')
+ARCHIVE_TOKEN = os.environ.get('ARCHIVE_TOKEN', '')
 
 PORTAL_API_URL = 'https://observe.lco.global/api/'
-PORTAL_REQUEST_API = PORTAL_API_URL + 'userrequests/'
-PORTAL_REQUEST_URL = 'https://observe.lco.global/userrequests/'
+PORTAL_REQUEST_API = PORTAL_API_URL + 'requestgroups/'
+PORTAL_USERREQUEST_URL = 'https://observe.lco.global/requestgroups/'
+PORTAL_REQUEST_URL = 'https://observe.lco.global/requests/'
 PORTAL_TOKEN_URL = PORTAL_API_URL + 'api-token-auth/'
-PORTAL_TOKEN = os.environ.get('VALHALLA_TOKEN','')
+PORTAL_TOKEN = os.environ.get('VALHALLA_TOKEN', '')
 PORTAL_PROFILE_URL = PORTAL_API_URL + 'profile/'
 
-ZOONIVERSE_USER = os.environ.get('ZOONIVERSE_USER','')
-ZOONIVERSE_PASSWD = os.environ.get('ZOONIVERSE_PASSWD','')
+ZOONIVERSE_USER = os.environ.get('ZOONIVERSE_USER', '')
+ZOONIVERSE_PASSWD = os.environ.get('ZOONIVERSE_PASSWD', '')
 
 #######################
 # Test Database setup #
@@ -292,11 +288,35 @@ if 'test' in sys.argv:
     DATABASES = { 'default':
         {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'test_db', # Add the name of your SQLite3 database file here.
+        'NAME': 'test.db', # Add the name of your SQLite3 database file here.
         },
     }
+    USE_S3 = False
 
+USE_FIREFOXDRIVER = True
 
+##############################
+# Use AWS S3 for Media Files #
+##############################
+
+if USE_S3:
+    # aws settings
+    AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
+    AWS_S3_REGION_NAME = os.getenv('AWS_DEFAULT_REGION', 'us-west-2')
+    AWS_DEFAULT_ACL = None
+    AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
+    AWS_S3_SIGNATURE_VERSION = 's3v4'
+    # s3 public media settings
+    PUBLIC_MEDIA_LOCATION = 'data'
+    MEDIA_URL = f'https://s3-{AWS_S3_REGION_NAME}.amazonaws.com/{AWS_STORAGE_BUCKET_NAME}/{PUBLIC_MEDIA_LOCATION}/'
+    DEFAULT_FILE_STORAGE = 'neox.storage_backends.PublicMediaStorage'
+    DATA_ROOT = ''
+else:
+    # For local use
+    MEDIA_ROOT = os.getenv('DATA_ROOT', '/apophis/eng/rocks/')
+    DATA_ROOT = MEDIA_ROOT
 
 ##################
 # LOCAL SETTINGS #
@@ -305,10 +325,9 @@ if 'test' in sys.argv:
 # Allow any settings to be defined in local_settings.py which should be
 # ignored in your version control system allowing for settings to be
 # defined per machine.
-if not CURRENT_PATH.startswith('/var/www'):
+if not CURRENT_PATH.startswith('/app'):
     try:
         from .local_settings import *
     except ImportError as e:
         if "local_settings" not in str(e):
             raise e
-

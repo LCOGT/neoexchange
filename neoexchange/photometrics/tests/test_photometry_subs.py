@@ -1,6 +1,6 @@
-'''
+"""
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2017-2017 LCO
+Copyright (C) 2017-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -11,15 +11,16 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-'''
+"""
 
 from math import acos
 from django.test import TestCase
 from astropy import units as u
 from astropy.tests.helper import assert_quantity_allclose
 
-#Import module to test
+# Import module to test
 from photometrics.photometry_subs import *
+
 
 class TestTransformVmag(TestCase):
 
@@ -658,11 +659,12 @@ class TestTransformVmag(TestCase):
 
         self.assertEqual(expected_mag, new_mag)
 
+
 class TestSkyBrightness(TestCase):
 
     def setUp(self):
-        self.dark_sky_mags = { 'U': 22.0, 'B': 22.7, 'V' : 21.9, 'R' : 21.0, 'I' : 20.0, 'Z' : 18.8,
-                    'gp' : 21.9, 'rp' : 20.8, 'ip' : 19.8, 'zp' : 19.2, 'w' : 20.6 }
+        self.dark_sky_mags = {'U': 22.0, 'B': 22.7, 'V' : 21.9, 'R' : 21.0, 'I' : 20.0, 'Z' : 18.8,
+                              'gp' : 21.9, 'rp' : 20.8, 'ip' : 19.8, 'zp' : 19.2, 'w' : 20.6}
 
         self.precision = 4
 
@@ -749,6 +751,7 @@ class TestSkyBrightness(TestCase):
         sky_mag = calc_sky_brightness('ip', 'B')
 
         self.assertAlmostEqual(expected_mag, sky_mag, self.precision)
+
 
 class TestSkyBrightnessModel(TestCase):
 
@@ -944,7 +947,7 @@ class TestSkyBrightnessModel(TestCase):
 
         expected_sky_mag = 19.0301094
 
-        self.params['sfu'] = 1.6 * u.MJy # 160 sfu (approx. value at last maximum)
+        self.params['sfu'] = 1.6 * u.MJy  # 160 sfu (approx. value at last maximum)
         self.params['moon_zd'] = 80
         self.params['moon_phase_angle'] = 170.0
         self.params['moon_target_sep'] = 120
@@ -955,6 +958,7 @@ class TestSkyBrightnessModel(TestCase):
         sky_mag, moon_delta = sky_brightness_model(self.params)
 
         self.assertAlmostEqual(expected_sky_mag, sky_mag, self.precision)
+
 
 class TestComputeMoonBrightness(TestCase):
 
@@ -1014,6 +1018,7 @@ class TestComputeMoonBrightness(TestCase):
 
         self.assertAlmostEqual(expected_bkgd, moon_bkgd, self.precision)
 
+
 class SNRTestCase(TestCase):
     def __init__(self, *args, **kwargs):
         super(SNRTestCase, self).__init__(*args, **kwargs)
@@ -1038,6 +1043,7 @@ class SNRTestCase(TestCase):
                                 'wave_scale' : 3.51*(u.angstrom/u.pixel),
                                 'fwhm' : 1.0 * u.arcsec,
                                 'slit_width' : 2.0 * u.arcsec,
+                                'gain'       : 2.0 * u.photon / u.count,
                               }
         self.wht_tic_params = { 
                                 'sky_mag'   : 20.0,
@@ -1053,15 +1059,17 @@ class SNRTestCase(TestCase):
                                 'wave_scale' : 121.0*(u.angstrom/u.mm)*(15*u.micron).to(u.mm)/u.pixel,
                                 'fwhm' : 1.0 * u.arcsec,
                                 'slit_width' : 3.0 * u.arcsec,
+                                'gain'       : 2.0 * u.photon / u.count,
                               }
+
 
 class TestComputePhotonRate(SNRTestCase):
 
     def test_I_mag0(self):
 
-        mag_I = 0.0
+        mag_i = 0.0
         expected_rate = 469.321344
-        rate = compute_photon_rate(mag_I, self.wht_tic_params)
+        rate = compute_photon_rate(mag_i, self.wht_tic_params)
 
         self.assertAlmostEqual(expected_rate, rate.to_value(), self.precision)
         self.assertEqual(self.expected_units, rate.unit)
@@ -1077,9 +1085,9 @@ class TestComputePhotonRate(SNRTestCase):
 
     def test_I_mag0_signal(self):
 
-        mag_I = 0.0
+        mag_i = 0.0
         expected_rate = 471.1752
-        rate = compute_photon_rate(mag_I, self.wht_tic_params, emulate_signal=True)
+        rate = compute_photon_rate(mag_i, self.wht_tic_params, emulate_signal=True)
 
         self.assertAlmostEqual(expected_rate, rate.to_value(), self.precision)
         self.assertEqual(self.expected_units, rate.unit)
@@ -1095,9 +1103,9 @@ class TestComputePhotonRate(SNRTestCase):
 
     def test_I_mag18_signal(self):
 
-        mag_I = 18.0
+        mag_i = 18.0
         expected_rate = 2.972914340482041e-05
-        rate = compute_photon_rate(mag_I, self.wht_tic_params, emulate_signal=True)
+        rate = compute_photon_rate(mag_i, self.wht_tic_params, emulate_signal=True)
 
         self.assertAlmostEqual(expected_rate, rate.to_value(), self.precision)
         self.assertEqual(self.expected_units, rate.unit)
@@ -1115,9 +1123,9 @@ class TestComputePhotonRate(SNRTestCase):
         self.ftn_tic_params['flux_mag0'] = 3640.0*u.Jy
         self.ftn_tic_params['wavelength'] = 0.55*u.micron
 
-        mag_V = 0.0
+        mag_v = 0.0
         expected_rate = 1002.75482
-        rate = compute_photon_rate(mag_V, self.ftn_tic_params, emulate_signal=True)
+        rate = compute_photon_rate(mag_v, self.ftn_tic_params, emulate_signal=True)
 
         self.assertAlmostEqual(expected_rate, rate.to_value(), self.precision)
         self.assertEqual(self.expected_units, rate.unit)
@@ -1126,12 +1134,13 @@ class TestComputePhotonRate(SNRTestCase):
         self.ftn_tic_params['flux_mag0'] = 3640.0*u.Jy
         self.ftn_tic_params['wavelength'] = 0.55*u.micron
 
-        mag_V = 0.0
+        mag_v = 0.0
         expected_rate = 998.80951728995279
-        rate = compute_photon_rate(mag_V, self.ftn_tic_params)
+        rate = compute_photon_rate(mag_v, self.ftn_tic_params)
 
         self.assertAlmostEqual(expected_rate, rate.to_value(), self.precision)
         self.assertEqual(self.expected_units, rate.unit)
+
 
 class TestExtinctionInBand(SNRTestCase):
 
@@ -1197,6 +1206,7 @@ class TestExtinctionInBand(SNRTestCase):
 
         self.assertEqual(expected_k, k)
 
+
 class TestCalcEffectiveArea(SNRTestCase):
 
     def test_wht_I(self):
@@ -1247,6 +1257,7 @@ class TestCalcEffectiveArea(SNRTestCase):
         self.assertAlmostEqual(expected_area.to_value(u.m**2), area.to_value(u.m**2), 6)
         self.assertEqual(expected_area.unit, area.unit)
 
+
 class TestInstThroughput(SNRTestCase):
 
     def test_floyds_defaults(self):
@@ -1269,35 +1280,36 @@ class TestInstThroughput(SNRTestCase):
 
         self.assertEqual(expected_throughput, throughput)
 
+
 class TestComputeFloydsSNR(SNRTestCase):
 
-
     def test_wht_I_signal(self):
+        """
+        Setup to replicate value in SIGNAL:
+        I Instrument = WHT ISIS
+        E Extinction per airmass (mag)   0.00
+        G Grating                     R158R
+        D Detector                     RED+
+        B Band I  = wavelength (A)    8200
+        M Apparent magnitude            18.0
+        T Integration time (sec)       100.0
+        F FWHM (object*seeing, arcsec)   1.0
+        K Sky brightness mag/sq.arcsec  20.00
+        S Slit width (arcsec)            3.0
+        A Airmass                        1.0
+        (rest at defaults)
+        """
 
-# Setup to replicate value in SIGNAL:
-# I Instrument = WHT ISIS
-# E Extinction per airmass (mag)   0.00
-# G Grating                     R158R
-# D Detector                     RED+
-# B Band I  = wavelength (A)    8200
-# M Apparent magnitude            18.0
-# T Integration time (sec)       100.0
-# F FWHM (object*seeing, arcsec)   1.0
-# K Sky brightness mag/sq.arcsec  20.00
-# S Slit width (arcsec)            3.0
-# A Airmass                        1.0
-# (rest at defaults)
+        mag_i = 18.0
+        exp_time = 100.0
+        # Override extinction
+        self.wht_tic_params['extinction'] = 0.0
 
-       mag_I = 18.0
-       exp_time = 100.0
-       # Override extinction
-       self.wht_tic_params['extinction'] = 0.0
+        expected_snr = 5.41718245
 
-       expected_snr = 5.41718245
+        snr, sat = compute_floyds_snr(mag_i, exp_time, self.wht_tic_params, emulate_signal=True)
 
-       snr = compute_floyds_snr(mag_I, exp_time, self.wht_tic_params, emulate_signal=True)
-
-       self.assertAlmostEqual(expected_snr, snr, self.precision)
+        self.assertAlmostEqual(expected_snr, snr, self.precision)
 
     def test_faint_ftn1(self):
 
@@ -1305,49 +1317,49 @@ class TestComputeFloydsSNR(SNRTestCase):
         exp_time = 100.0
         # Override defaults
         self.ftn_tic_params['slit_width'] = 3.0 * u.arcsec
-        self.ftn_tic_params['grating_eff']= 0.87
+        self.ftn_tic_params['grating_eff'] = 0.87
 
         expected_snr = 4.47669678294
 
-        snr =  compute_floyds_snr(mag_i, exp_time, self.ftn_tic_params)
+        snr, sat = compute_floyds_snr(mag_i, exp_time, self.ftn_tic_params)
 
         self.assertAlmostEqual(expected_snr, snr, self.precision)
 
     def test_signal_ftn_I(self):
 
-        mag_I = 15.5
+        mag_i = 15.5
         exp_time = 100.0
         # Override defaults
-        self.ftn_tic_params['flux_mag0']  = 2550.0*u.Jy
+        self.ftn_tic_params['flux_mag0'] = 2550.0*u.Jy
         self.ftn_tic_params['wavelength'] = 820.0*u.nm
-        self.ftn_tic_params['sky_mag']    = 19.6
-        self.ftn_tic_params['filter']     = 'I'
-        self.ftn_tic_params['ccd_qe']     = 0.56
+        self.ftn_tic_params['sky_mag'] = 19.6
+        self.ftn_tic_params['filter'] = 'I'
+        self.ftn_tic_params['ccd_qe'] = 0.56
         self.ftn_tic_params['slit_width'] = 3.0 * u.arcsec
 
         expected_snr = 12.84996700
 
-        snr =  compute_floyds_snr(mag_I, exp_time, self.ftn_tic_params, emulate_signal=True)
+        snr, sat = compute_floyds_snr(mag_i, exp_time, self.ftn_tic_params, emulate_signal=True)
 
         self.assertAlmostEqual(expected_snr, snr, self.precision)
 
     def test_signal_ftn_ip(self):
 
-        mag_I = 15.5
+        mag_i = 15.5
         exp_time = 100.0
         # Override defaults
         self.ftn_tic_params['slit_width'] = 3.0 * u.arcsec
-        self.ftn_tic_params['grating_eff']= 0.87
+        self.ftn_tic_params['grating_eff'] = 0.87
 
         expected_snr = 23.37279701
 
-        snr =  compute_floyds_snr(mag_I, exp_time, self.ftn_tic_params, emulate_signal=True)
+        snr, sat = compute_floyds_snr(mag_i, exp_time, self.ftn_tic_params, emulate_signal=True)
 
         self.assertAlmostEqual(expected_snr, snr, self.precision)
 
     def test_signal_ftn_ip_bad_seeing(self):
 
-        mag_I = 15.5
+        mag_i = 15.5
         exp_time = 100.0
         # Override defaults
         self.ftn_tic_params['slit_width'] = 2.0 * u.arcsec
@@ -1356,9 +1368,10 @@ class TestComputeFloydsSNR(SNRTestCase):
 
         expected_snr = 20.62739182
 
-        snr =  compute_floyds_snr(mag_I, exp_time, self.ftn_tic_params, emulate_signal=True)
+        snr, sat = compute_floyds_snr(mag_i, exp_time, self.ftn_tic_params, emulate_signal=True)
 
         self.assertAlmostEqual(expected_snr, snr, self.precision)
+
 
 class TestSlitVignette(SNRTestCase):
 
@@ -1442,6 +1455,7 @@ class TestSlitVignette(SNRTestCase):
 
         self.assertAlmostEqual(expected_vign, vign.value, self.precision)
 
+
 class TestComputeFWHMTel(SNRTestCase):
 
     def __init__(self, *args, **kwargs):
@@ -1496,6 +1510,7 @@ class TestComputeFWHMTel(SNRTestCase):
 
         assert_quantity_allclose(fwhm, expected_fwhm, self.tolerance)
 
+
 class TestComputeFWHM(SNRTestCase):
 
     def __init__(self, *args, **kwargs):
@@ -1541,74 +1556,145 @@ class TestComputeFWHM(SNRTestCase):
 
         assert_quantity_allclose(fwhm, expected_fwhm, self.tolerance)
 
+
 class TestCalcAsteroidSNR(SNRTestCase):
 
     def test_Vmag_default_taxon_FLOYDS(self):
 
-        mag_V = 12.0
+        mag_v = 12.0
         passband = 'V'
         exp_time = 300
         spectrograph = 'F65-FLOYDS'
 
-        expected_mag = mag_V - 0.39
-        expected_passband = 'ip'
-        expected_snr = 324.5039962191117
+        expected_mag = mag_v
+        expected_passband = 'V'
+        expected_snr = 273.31114168039534
+        expected_saturated = False
 
-        mag, new_passband, snr = calc_asteroid_snr(mag_V, passband, exp_time, instrument=spectrograph)
+        mag, new_passband, snr, saturated = calc_asteroid_snr(mag_v, passband, exp_time, instrument=spectrograph)
 
         self.assertEqual(expected_mag, mag)
+        self.assertEqual(expected_saturated, saturated)
         self.assertEqual(expected_passband, new_passband)
         self.assertAlmostEqual(expected_snr, snr, self.precision)
 
     def test_Vmag_default_taxon_FTS_FLOYDS(self):
 
-        mag_V = 12.0
+        mag_v = 12.0
         passband = 'V'
         exp_time = 300
         spectrograph = 'E10-FLOYDS'
 
-        expected_mag = mag_V - 0.39
-        expected_passband = 'ip'
-        expected_snr = 216.37029315891593
+        expected_mag = mag_v
+        expected_passband = 'V'
+        expected_snr = 273.11891966088837
+        expected_saturated = False
 
-        mag, new_passband, snr = calc_asteroid_snr(mag_V, passband, exp_time, instrument=spectrograph)
+        mag, new_passband, snr, saturated = calc_asteroid_snr(mag_v, passband, exp_time, instrument=spectrograph)
 
         self.assertEqual(expected_mag, mag)
+        self.assertEqual(expected_saturated, saturated)
         self.assertEqual(expected_passband, new_passband)
         self.assertAlmostEqual(expected_snr, snr, self.precision)
 
     def test_Vmag_default_taxon_FLOYDS_Gray(self):
 
-        mag_V = 16.0
+        mag_v = 16.0
         passband = 'V'
         exp_time = 300
         spectrograph = 'F65-FLOYDS'
-        params = { 'moon_phase' : 'G' }
+        params = {'moon_phase' : 'G'}
 
-        expected_mag = mag_V - 0.39
-        expected_passband = 'ip'
-        expected_snr = 43.1044168884843
+        expected_mag = mag_v
+        expected_passband = 'V'
+        expected_snr = 34.85353763673913
+        expected_saturated = False
 
-        mag, new_passband, snr = calc_asteroid_snr(mag_V, passband, exp_time, instrument=spectrograph, params=params)
+        mag, new_passband, snr, saturated = calc_asteroid_snr(mag_v, passband, exp_time, instrument=spectrograph, params=params)
 
         self.assertEqual(expected_mag, mag)
+        self.assertEqual(expected_saturated, saturated)
         self.assertEqual(expected_passband, new_passband)
         self.assertAlmostEqual(expected_snr, snr, self.precision)
 
     def test_Vmag_default_taxon_FLOYDS_Gray_high_airmass(self):
 
-        mag_V = 16.0
+        mag_v = 16.0
         passband = 'V'
         exp_time = 300
         spectrograph = 'F65-FLOYDS'
-        params = { 'moon_phase' : 'G', 'airmass' : 2.0 }
+        params = {'moon_phase' : 'G', 'airmass' : 2.0}
 
-        expected_mag = mag_V - 0.39
-        expected_passband = 'ip'
-        expected_snr = 41.8965892271482
+        expected_mag = mag_v
+        expected_passband = 'V'
+        expected_snr = 32.91013392758556
+        expected_saturated = False
 
-        mag, new_passband, snr = calc_asteroid_snr(mag_V, passband, exp_time, instrument=spectrograph, params=params)
+        mag, new_passband, snr, saturated = calc_asteroid_snr(mag_v, passband, exp_time, instrument=spectrograph, params=params)
 
         self.assertEqual(expected_mag, mag)
+        self.assertEqual(expected_saturated, saturated)
         self.assertEqual(expected_passband, new_passband)
         self.assertAlmostEqual(expected_snr, snr, self.precision)
+
+    def test_Vmag_default_taxon_FLOYDS_BRIGHT(self):
+
+        mag_v = 6.0
+        passband = 'V'
+        exp_time = 300
+        spectrograph = 'F65-FLOYDS'
+        params = {'moon_phase' : 'G'}
+
+        expected_mag = mag_v
+        expected_passband = 'V'
+        expected_snr = 4338.323146055366
+        expected_saturated = True
+
+        mag, new_passband, snr, saturated = calc_asteroid_snr(mag_v, passband, exp_time, instrument=spectrograph, params=params)
+
+        self.assertEqual(expected_mag, mag)
+        self.assertEqual(expected_saturated, saturated)
+        self.assertEqual(expected_passband, new_passband)
+        self.assertAlmostEqual(expected_snr, snr, self.precision)
+
+
+class TestOptimizeExposureTime(SNRTestCase):
+
+    def test_default_exptime_ok(self):
+
+        mag_v = 12.0
+        passband = 'V'
+        exp_time = 300
+        spectrograph = 'F65-FLOYDS'
+
+        expected_exptime = 300
+
+        exptime = calc_asteroid_snr(mag_v, passband, exp_time, instrument=spectrograph, optimize=True)
+
+        self.assertEqual(expected_exptime, exptime)
+
+    def test_default_exptime_too_long(self):
+
+        mag_v = 8.0
+        passband = 'V'
+        exp_time = 100
+        spectrograph = 'F65-FLOYDS'
+
+        expected_exptime = 90
+
+        exptime = calc_asteroid_snr(mag_v, passband, exp_time, instrument=spectrograph, optimize=True)
+
+        self.assertEqual(expected_exptime, exptime)
+
+    def test_default_exptime_way_too_long(self):
+
+        mag_v = 5.0
+        passband = 'V'
+        exp_time = 100
+        spectrograph = 'F65-FLOYDS'
+
+        expected_exptime = 5
+
+        exptime = calc_asteroid_snr(mag_v, passband, exp_time, instrument=spectrograph, optimize=True)
+
+        self.assertEqual(expected_exptime, exptime)

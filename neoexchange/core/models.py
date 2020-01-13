@@ -1,26 +1,26 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2014-2018 LCO
-
+Copyright (C) 2014-2019 LCO
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
-
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 from __future__ import unicode_literals
-from datetime import datetime
-from math import pi, log10
-from collections import Counter
+from datetime import datetime, timedelta, date
+from math import pi, log10, sqrt, cos, degrees, ceil, sqrt
+from collections import Counter, OrderedDict
 import reversion
+import logging
 
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import models
+from django.db.models import Sum
 from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
 from django.utils.encoding import force_text, python_2_unicode_compatible
@@ -38,16 +38,19 @@ from base64 import b64decode, b64encode
 
 from astrometrics.ast_subs import normal_to_packed
 from astrometrics.ephem_subs import compute_ephem, comp_FOM, get_sitecam_params, comp_sep
-from astrometrics.sources_subs import translate_catalog_code
+from astrometrics.sources_subs import translate_catalog_code, psv_padding
 from astrometrics.time_subs import dttodecimalday, degreestohms, degreestodms
-from astrometrics.albedo import asteroid_albedo, asteroid_diameter
+from astrometrics.albedo import asteroid_diameter
+from core.archive_subs import check_for_archive_images
+
+logger = logging.getLogger(__name__)
 
 
 OBJECT_TYPES = (
                 ('N', 'NEO'),
                 ('A', 'Asteroid'),
                 ('C', 'Comet'),
-                ('K', 'KBO'),
+                ('K', 'TNO'),
                 ('E', 'Centaur'),
                 ('T', 'Trojan'),
                 ('U', 'Candidate'),
@@ -55,8 +58,42 @@ OBJECT_TYPES = (
                 ('W', 'Was not interesting'),
                 ('D', 'Discovery, non NEO'),
                 ('J', 'Artificial satellite'),
-                ('H', 'Hyperbolic asteroids')
+                ('M', 'Natural Satellite'),
+                ('P', 'Major Planet')
             )
+
+OBJECT_SUBTYPES = (
+                ('N', 'NEO'),
+                ('N1', 'Atira'),             # Q<1AU
+                ('N2', 'Aten'),              # a<1AU<Q
+                ('N3', 'Apollo'),            # q<1AU<a
+                ('N4', 'Amor'),              # 1AU<q<1.3AU
+                ('PH', 'PHA'),
+                ('MI', 'Inner Main-Belt'),   # a < 2.0 au; q > 1.666 au
+                ('M', 'Main-Belt'),
+                ('MO', 'Outer Main-Belt'),   # 3.2 au < a < 4.6 au
+                ('A', 'Active'),
+                ('MH', 'Hilda'),             # 3/2 resonance w/ Jupiter
+                ('T4', 'L4'),
+                ('T5', 'L5'),
+                ('P1', 'Mercury'),
+                ('P2', 'Venus'),
+                ('P3', 'Earth'),
+                ('P4', 'Mars'),
+                ('P5', 'Jupiter'),
+                ('P6', 'Saturn'),
+                ('P7', 'Uranus'),
+                ('P8', 'Neptune'),
+                ('P9', 'Pluto'),
+                ('PL', 'Plutino'),
+                ('K', 'Classical KBO'),
+                ('S', 'SDO'),
+                ('H', 'Hyperbolic'),
+                ('PA', 'Parabolic'),
+                ('JF', 'Jupiter Family'),   # P < 20
+                ('HT', 'Halley-Type'),      # 20 y < P < 200 y
+            )
+
 
 ELEMENTS_TYPES = (('MPC_MINOR_PLANET', 'MPC Minor Planet'), ('MPC_COMET', 'MPC Comet'))
 
@@ -87,7 +124,8 @@ SITE_CHOICES = (
                     ('cpt', 'Sutherland'),
                     ('tfn', 'Tenerife'),
                     ('sbg', 'SBIG cameras'),
-                    ('sin', 'Sinistro cameras')
+                    ('sin', 'Sinistro cameras'),
+                    ('spc', 'Spectral cameras')
     )
 
 TAX_SCHEME_CHOICES = (
@@ -99,13 +137,51 @@ TAX_SCHEME_CHOICES = (
                         ('B', 'Bus'),
                         ('3T', 'S3OS2_TH'),
                         ('3B', 'S3OS2_BB'),
-                        ('BD', 'Bus-DeMeo')
+                        ('BD', 'Bus-DeMeo'),
+                        ('Sd', 'SDSS')
                      )
 
 TAX_REFERENCE_CHOICES = (
-                        ('PDS6', 'Neese, Asteroid Taxonomy V6.0. (2010).'),
+                        ('PDS6', 'Neese, Asteroid Taxonomy V6.0, (2010).'),
                         ('BZ04', 'Binzel, et al. (2004).'),
+                        ('SDSS', 'Hasselmann, et al. Asteroid Taxonomy V1.1, (2012).')
                      )
+
+SPECTRAL_WAV_CHOICES = (
+                        ('Vis', 'Visible'),
+                        ('NIR', 'Near Infrared'),
+                        ('Vis+NIR', 'Both Visible and Near IR'),
+                        ('NA', 'None Yet.'),
+                     )
+
+SPECTRAL_SOURCE_CHOICES = (
+                        ('S', 'SMASS'),
+                        ('M', 'MANOS'),
+                        ('U', 'Unknown'),
+                        ('O', 'Other')
+                     )
+
+DESIG_CHOICES = (
+                ('N', 'Name'),
+                ('#', 'Number'),
+                ('P', 'Provisional Designation'),
+                ('C', 'NEO Candidate Designation'),
+                ('T', 'Temporary Designation')
+                )
+
+PARAM_CHOICES = (
+                ('H', 'Absolute Magnitude'),
+                ('G', 'Phase Slope'),
+                ('D', 'Diameter'),
+                ('R', 'Density'),
+                ('P', 'Rotation Period'),
+                ('A', 'LC Amplitude'),
+                ('O', 'Pole Orientation'),
+                ('ab', 'Albedo'),
+                ('Y', 'Yarkovsky Drift'),
+                ('E', 'Coma Extent'),
+                ('M', 'Mass')
+                )
 
 
 @python_2_unicode_compatible
@@ -115,6 +191,8 @@ class Proposal(models.Model):
     pi = models.CharField("PI", max_length=50, default='', help_text='Principal Investigator (PI)')
     tag = models.CharField(max_length=10, default='LCOGT')
     active = models.BooleanField('Proposal active?', default=True)
+    time_critical = models.BooleanField('Time Critical/ToO proposal?', default=False)
+    download = models.BooleanField('Auto download data?', default=True)
 
     class Meta:
         db_table = 'ingest_proposal'
@@ -135,11 +213,14 @@ class Body(models.Model):
     name                = models.CharField('Designation', max_length=15, blank=True, null=True)
     origin              = models.CharField('Where did this target come from?', max_length=1, choices=ORIGINS, default="M", blank=True, null=True)
     source_type         = models.CharField('Type of object', max_length=1, choices=OBJECT_TYPES, blank=True, null=True)
+    source_subtype_1    = models.CharField('Subtype of object', max_length=2, choices=OBJECT_SUBTYPES, blank=True, null=True)
+    source_subtype_2    = models.CharField('Subtype of object', max_length=2, choices=OBJECT_SUBTYPES, blank=True, null=True)
     elements_type       = models.CharField('Elements type', max_length=16, choices=ELEMENTS_TYPES, blank=True, null=True)
     active              = models.BooleanField('Actively following?', default=False)
     fast_moving         = models.BooleanField('Is this object fast?', default=False)
     urgency             = models.IntegerField(help_text='how urgent is this?', blank=True, null=True)
     epochofel           = models.DateTimeField('Epoch of elements', blank=True, null=True)
+    orbit_rms           = models.FloatField('Orbit quality of fit', blank=True, null=True, default=99.0)
     orbinc              = models.FloatField('Orbital inclination in deg', blank=True, null=True)
     longascnode         = models.FloatField('Longitude of Ascending Node (deg)', blank=True, null=True)
     argofperih          = models.FloatField('Arg of perihelion (deg)', blank=True, null=True)
@@ -159,20 +240,35 @@ class Body(models.Model):
     ingest              = models.DateTimeField(default=now)
     update_time         = models.DateTimeField(blank=True, null=True)
 
-    def diameter(self):        
+    def characterization_target(self):
+        # If we change the definition of Characterization Target,
+        # also update views.get_characterization_targets
+        if self.active is True and self.origin != 'M' and self.source_type != 'U':
+            return True
+        else:
+            return False
+
+    def radar_target(self):
+        # Returns True if the object is a radar target
+        if self.active is True and (self.origin == 'A' or self.origin == 'G' or self.origin == 'R'):
+            return True
+        else:
+            return False
+
+    def diameter(self):
         m = self.abs_mag
         avg = 0.167
         d_avg = asteroid_diameter(avg, m)
         return d_avg
-        
+
     def diameter_range(self):
         m = self.abs_mag
         mn = 0.01
-        mx = 0.6       
+        mx = 0.6
         d_max = asteroid_diameter(mn, m)
         d_min = asteroid_diameter(mx, m)
         return d_min, d_max
-        
+
     def epochofel_mjd(self):
         mjd = None
         try:
@@ -199,6 +295,28 @@ class Body(models.Model):
         else:
             return "Unknown"
 
+    def full_name(self):
+        name = Designations.objects.filter(body=self.id).filter(desig_type='N').filter(preferred=True)
+        num = Designations.objects.filter(body=self.id).filter(desig_type='#').filter(preferred=True)
+        prov_dev = Designations.objects.filter(body=self.id).filter(desig_type='P').filter(preferred=True)
+        fname = ''
+        if num:
+            fname += num[0].value
+            if not fname.isdigit():
+                fname += '/'
+        if name:
+            if fname and fname.isdigit():
+                fname += ' '
+            fname += name[0].value
+        if fname and prov_dev:
+            fname += ' ({})'.format(prov_dev[0].value)
+        elif prov_dev:
+            fname += prov_dev[0].value
+        if not fname:
+            fname = self.current_name()
+
+        return fname
+
     def old_name(self):
         if self.provisional_name and self.name:
             return self.provisional_name
@@ -211,8 +329,109 @@ class Body(models.Model):
             orbelems = model_to_dict(self)
             sitecode = '500'
             emp_line = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
-            # Return just numerical values
-            return emp_line[1], emp_line[2], emp_line[3], emp_line[6]
+            if not emp_line:
+                return False
+            else:
+                # Return just numerical values
+                return emp_line['ra'], emp_line['dec'], emp_line['mag'], emp_line['southpole_sep'], emp_line['sky_motion'], emp_line['sky_motion_pa']
+        else:
+            # Catch the case where there is no Epoch
+            return False
+
+    def compute_obs_window(self, d=None, dbg=False):
+        """
+        Compute rough window during which target may be observable based on when it is brighter than a
+        given mag_limit amd further from the sun than sep_limit.
+        """
+        if not isinstance(d, datetime):
+            d = datetime.utcnow()
+        d0 = d
+        df = 90  # days to look forward
+        delta_t = 10  # size of steps in days
+        mag_limit = 18
+        sep_limit = 45  # degrees away from Sun
+        i = 0
+        dstart = ''
+        dend = ''
+        if self.epochofel:
+            if dbg:
+                logger.debug('Body: {}'.format(self.name))
+            orbelems = model_to_dict(self)
+            sitecode = '500'
+            # calculate the ephemeris for each step (delta_t) within the time span df.
+            while i <= df / delta_t + 1:
+
+                ephem_out = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
+                mag_dot = ephem_out['mag_dot']
+                separation = ephem_out['sun_sep']
+                vmag = ephem_out['mag']
+
+                # Eliminate bad magnitudes
+                if vmag < 0:
+                    return dstart, dend, d0
+
+                # Calculate time since/until reaching Magnitude limit
+                t_diff = (mag_limit - vmag) / mag_dot
+                if abs(t_diff) > 10000:
+                    t_diff = 10000*t_diff/abs(t_diff)
+
+                # create separation test.
+                sep_test = degrees(separation) > sep_limit
+
+                # Filter likely results based on Mag/mag_dot to speed results.
+                # Cuts load time by 60% will occasionally and temporarily miss
+                # objects with either really short windows or unusual behavior
+                # at the edges. These objects will be found as the date changes.
+
+                # Check first and last dates first
+                if d == d0 + timedelta(days=df) and i == 1:
+                    # if Valid for beginning and end of window, assume valid for window
+                    if vmag <= mag_limit and dstart and sep_test:
+                        if dbg:
+                            logger.debug("good at begining and end, mag: {}, sep {}".format(vmag, sep_test))
+                        return dstart, dend, d0
+                    elif not dstart:
+                        # If not valid for beginning of window or end of window, check if Change in mag implies it will ever be good.
+                        if d + timedelta(days=t_diff) < d0 or d + timedelta(days=t_diff) > d0 + timedelta(days=df):
+                            if dbg:
+                                logger.debug("bad at begining and end, Delta Mag no good, mag:{}, sep: {}".format(vmag, sep_test))
+                            return dstart, dend, d0
+                        else:
+                            d = d0 + timedelta(days=delta_t)
+                    else:
+                        d = d0 + timedelta(days=delta_t)
+                # if a valid start has been found, check if we are now invalid. Exit if so.
+                elif (vmag > mag_limit or not sep_test) and dstart:
+                    dend = d
+                    if dbg:
+                        logger.debug("Ended at {}, mag: {}, sep: {}".format(i, vmag, sep_test))
+                    return dstart, dend, d0
+                # If no start date, and we are valid, set start date
+                elif vmag <= mag_limit and not dstart and sep_test:
+                    dstart = d
+                    if dbg:
+                        logger.debug("started at {}, mag: {}, sep: {}".format(i, vmag, sep_test))
+                    # if this is our first iteration (i.e. we started valid) test end date
+                    if i == 0:
+                        d += timedelta(days=df)
+                    # otherwise step forward
+                    else:
+                        d += timedelta(days=delta_t)
+                # if we are not valid from the start, check if we might be valid in middle. Otherwise, check end.
+                elif vmag > mag_limit and i == 0:
+                    if d + timedelta(days=t_diff) < d0 or d + timedelta(days=t_diff) > d0 + timedelta(days=df):
+                        d += timedelta(days=df)
+                    else:
+                        d += timedelta(days=delta_t)
+                # if nothing has changed, step forward.
+                else:
+                    d += timedelta(days=delta_t)
+#                d += timedelta(days=delta_t)
+                i += 1
+            # Return dates
+            if dbg:
+                logger.debug("no end change, mag: {}, sep: {}".format(vmag, sep_test))
+            return dstart, dend, d0
         else:
             # Catch the case where there is no Epoch
             return False
@@ -245,6 +464,87 @@ class Body(models.Model):
             reported = 'Not yet'
         return observed, reported
 
+    def get_physical_parameters(self, param_type=None, return_all=True):
+        phys_params = PhysicalParameters.objects.filter(body=self.id)
+        color_params = ColorValues.objects.filter(body=self.id)
+        out_params = []
+        for param in phys_params:
+            if (param.preferred or return_all) and (not param_type or param.parameter_type == param_type or param.get_parameter_type_display().upper() == param_type.upper()):
+                param_dict = model_to_dict(param)
+                param_dict['type_display'] = param.get_parameter_type_display()
+                out_params.append(param_dict)
+        for param in color_params:
+            if (param.preferred or return_all) and (not param_type or param.color_band == param_type or 'COLOR' in param_type.upper()):
+                param_dict = model_to_dict(param)
+                param_dict['type_display'] = param.color_band
+                out_params.append(param_dict)
+        return out_params
+
+    def save_physical_parameters(self, kwargs):
+        """Takes a dictionary of arguments. Dictionary specifics depend on what parameters are being added."""
+        overwrite = False
+        if 'color_band' in kwargs.keys():
+            model = ColorValues
+            type_key = 'color_band'
+        elif 'desig_type' in kwargs.keys():
+            model = Designations
+            type_key = 'desig_type'
+        elif 'tax_scheme' in kwargs.keys():
+            model = SpectralInfo
+            type_key = 'tax_scheme'
+        else:
+            model = PhysicalParameters
+            type_key = 'parameter_type'
+        if 'reference' in kwargs.keys() and kwargs['reference'] == 'MPC Default':
+            overwrite = True
+
+        # Don't save empty values
+        if not kwargs['value']:
+            return False
+        if 'preferred' not in kwargs:
+            kwargs['preferred'] = False
+
+        current_params = model.objects.filter(body=self.id)
+        new_param = True
+        new_type = True
+        if current_params:
+            for param in current_params:
+                param_dict = model_to_dict(param)
+                if param_dict[type_key] == kwargs[type_key]:
+                    if param_dict['preferred'] is not False:
+                        new_type = False
+                    diff_values = {k: kwargs[k] for k in kwargs if k in param_dict and kwargs[k] != param_dict[k] and k not in ['body', 'update_time']}
+                    if len(diff_values) == 0:
+                        new_param = False
+                        break
+                    if kwargs['preferred'] and param_dict['preferred'] and not overwrite:
+                        param.preferred = False
+                        param.save()
+                    if overwrite:
+                        if param_dict['reference'] == 'MPC Default':
+                            param.delete()
+                        else:
+                            kwargs['preferred'] = False
+                    elif param_dict['value'] == kwargs['value']:
+                        if "units" not in diff_values:
+                            for value in diff_values:
+                                if kwargs[value] is None:
+                                    kwargs[value] = param_dict[value]
+                            param.delete()
+
+        if new_type is True:
+            kwargs['preferred'] = True
+        if new_param is True:
+            kwargs['body'] = self
+            kwargs['update_time'] = datetime.utcnow()
+            try:
+                model.objects.create(**kwargs)
+            except TypeError:
+                logger.warning("Input dictionary contains invalid keywords")
+                new_param = False
+
+        return new_param
+
     class Meta:
         verbose_name = _('Minor Body')
         verbose_name_plural = _('Minor Bodies')
@@ -261,6 +561,76 @@ class Body(models.Model):
                 and self.name is not None and self.name != u'':
             return_name = self.name
         return u'%s is %sactive' % (return_name, text)
+
+
+@python_2_unicode_compatible
+class Designations(models.Model):
+    body        = models.ForeignKey(Body, on_delete=models.CASCADE)
+    value       = models.CharField('Designation', blank=True, null=True, max_length=30)
+    desig_type  = models.CharField('Designation Type', blank=True, choices=DESIG_CHOICES, null=True, max_length=1)
+    preferred    = models.BooleanField('Is this the preferred designation of this type?', default=False)
+    packed      = models.BooleanField('Is this a packed designation?', default=False)
+    notes       = models.CharField('Notes on Nomenclature', max_length=30, blank=True, null=True)
+    update_time = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        verbose_name = _('Object Designation')
+        verbose_name_plural = _('Object Designations')
+        db_table = 'ingest_names'
+
+    def __str__(self):
+        return "%s is a designation for %s (pk=%s)" % (self.value, self.body.full_name(), self.body.id)
+
+
+@python_2_unicode_compatible
+class PhysicalParameters(models.Model):
+    body           = models.ForeignKey(Body, on_delete=models.CASCADE)
+    parameter_type = models.CharField('Physical Parameter Type', blank=True, null=True, choices=PARAM_CHOICES, max_length=2)
+    value          = models.FloatField('Physical Parameter Value', blank=True, null=True)
+    error          = models.FloatField('Physical Parameter Error', blank=True, null=True)
+    value2         = models.FloatField('2nd component of Physical Parameter', blank=True, null=True)
+    error2         = models.FloatField('Error for 2nd component of Physical Parameter', blank=True, null=True)
+    units          = models.CharField('Physical Parameter Units', blank=True, null=True, max_length=30)
+    quality        = models.CharField('Physical Parameter Quality Designation', blank=True, null=True, max_length=10)
+    preferred      = models.BooleanField('Is this the preferred value for this type of parameter?', default=False)
+    reference      = models.TextField('Reference for this value', blank=True, null=True)
+    notes          = models.TextField('Notes on this value', blank=True, null=True)
+    update_time    = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        verbose_name = _('Physical Parameter')
+        verbose_name_plural = _('Physical Parameters')
+        db_table = 'ingest_physical_parameters'
+
+    def __str__(self):
+        if self.value2:
+            return "({}, {}) is the {} for {} (pk={})".format(self.value, self.value2, self.get_parameter_type_display(), self.body.full_name(), self.body.id)
+        elif self.units:
+            return "{}{} is the {} for {} (pk={})".format(self.value, self.units, self.get_parameter_type_display(), self.body.full_name(), self.body.id)
+        else:
+            return "{} is the {} for {} (pk={})".format(self.value, self.get_parameter_type_display(), self.body.full_name(), self.body.id)
+
+
+@python_2_unicode_compatible
+class ColorValues(models.Model):
+    body          = models.ForeignKey(Body, on_delete=models.CASCADE)
+    color_band    = models.CharField('X-X filter combination', blank=True, null=True, max_length=30)
+    value         = models.FloatField('Color Value', blank=True, null=True)
+    error         = models.FloatField('Color error', blank=True, null=True)
+    units         = models.CharField('Color Units', blank=True, null=True, max_length=30)
+    quality       = models.CharField('Color Quality Designation', blank=True, null=True, max_length=10)
+    preferred     = models.BooleanField('Is this the preferred value for this color band?', default=False)
+    reference     = models.TextField('Reference for this value', blank=True, null=True)
+    notes         = models.TextField('Notes on this value', blank=True, null=True)
+    update_time   = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        verbose_name = _('Color Value')
+        verbose_name_plural = _('Color Values')
+        db_table = 'ingest_colors'
+
+    def __str__(self):
+        return "{} is the {} color for {} (pk={})".format(self.value, self.color_band, self.body.name, self.body.id)
 
 
 @python_2_unicode_compatible
@@ -290,34 +660,43 @@ class SpectralInfo(models.Model):
                     else:
                         text_out = text_out + ' %s color indices were used.\n' % (text[0])
                 if "G" in text:
-                    text_out = text_out + ' Used groundbased radiometric albedo.'
+                    text_out += ' Used groundbased radiometric albedo.'
                 if "I" in text:
-                    text_out = text_out + ' Used IRAS radiometric albedo.'
+                    text_out += ' Used IRAS radiometric albedo.'
                 if "A" in text:
-                    text_out = text_out + ' An Unspecified albedo was used to eliminate Taxonomic degeneracy.'
+                    text_out += ' An Unspecified albedo was used to eliminate Taxonomic degeneracy.'
                 if "S" in text:
-                    text_out = text_out + ' Used medium-resolution spectrum by Chapman and Gaffey (1979).'
+                    text_out += ' Used medium-resolution spectrum by Chapman and Gaffey (1979).'
                 if "s" in text:
-                    text_out = text_out + ' Used high-resolution spectrum by Xu et al (1995) or Bus and Binzel (2002).'
+                    text_out += ' Used high-resolution spectrum by Xu et al (1995) or Bus and Binzel (2002).'
             elif self.tax_scheme == "BD":
                 if "a" in text:
-                    text_out = text_out + ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b). NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b). NIR: DeMeo et al. (2009).'
                 if "b" in text:
-                    text_out = text_out + ' Visible: Xu (1994), Xu et al. (1995). NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible: Xu (1994), Xu et al. (1995). NIR: DeMeo et al. (2009).'
                 if "c" in text:
-                    text_out = text_out + ' Visible: Burbine (2000), Burbine and Binzel (2002). NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible: Burbine (2000), Burbine and Binzel (2002). NIR: DeMeo et al. (2009).'
                 if "d" in text:
-                    text_out = text_out + ' Visible: Binzel et al. (2004c). NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible: Binzel et al. (2004c). NIR: DeMeo et al. (2009).'
                 if "e" in text:
-                    text_out = text_out + ' Visible and NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible and NIR: DeMeo et al. (2009).'
                 if "f" in text:
-                    text_out = text_out + ' Visible: Binzel et al. (2004b).  NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible: Binzel et al. (2004b).  NIR: DeMeo et al. (2009).'
                 if "g" in text:
-                    text_out = text_out + ' Visible: Binzel et al. (2001).  NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible: Binzel et al. (2001).  NIR: DeMeo et al. (2009).'
                 if "h" in text:
-                    text_out = text_out + ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b).  NIR: Binzel et al. (2004a).'
+                    text_out += ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b).  NIR: Binzel et al. (2004a).'
                 if "i" in text:
-                    text_out = text_out + ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b).  NIR: Rivkin et al. (2005).'
+                    text_out += ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b).  NIR: Rivkin et al. (2005).'
+        elif self.tax_reference == 'SDSS':
+            chunks = text.split('|')
+            if int(chunks[1]) > 1:
+                plural = 's'
+            else:
+                plural = ''
+            text_out = 'Probability score of {} found using {} observation{}.'.format(chunks[0], chunks[1], plural)
+            if chunks[2] != '-' and chunks[2] != self.taxonomic_class:
+                text_out += ' | Other less likely taxonomies also found ({})'.format(chunks[2].replace(self.taxonomic_class, ''))
         text_out = text_out+end
         return text_out
 
@@ -330,13 +709,32 @@ class SpectralInfo(models.Model):
         return "%s is a %s-Type Asteroid" % (self.body.name, self.taxonomic_class)
 
 
+class PreviousSpectra(models.Model):
+    body                = models.ForeignKey(Body, on_delete=models.CASCADE)
+    spec_wav            = models.CharField('Wavelength', blank=True, null=True, max_length=7, choices=SPECTRAL_WAV_CHOICES)
+    spec_vis            = models.URLField('Visible Spectra Link', blank=True, null=True)
+    spec_ir             = models.URLField('IR Spectra Link', blank=True, null=True)
+    spec_ref            = models.CharField('Spectra Reference', max_length=10, blank=True, null=True)
+    spec_source         = models.CharField('Source', max_length=1, blank=True, null=True, choices=SPECTRAL_SOURCE_CHOICES)
+    spec_date           = models.DateField(blank=True, null=True)
+
+    class Meta:
+        verbose_name = _('External Spectroscopy')
+        verbose_name_plural = _('External Spectroscopy')
+        db_table = 'ingest_previous_spectra'
+
+    def __unicode__(self):
+        return "%s has %s spectra of %s" % (self.spec_source, self.spec_wav, self.body.name)
+
+
 @python_2_unicode_compatible
 class SuperBlock(models.Model):
 
     cadence         = models.BooleanField(default=False)
     rapid_response  = models.BooleanField('Is this a ToO/Rapid Response observation?', default=False)
-    body            = models.ForeignKey(Body)
-    proposal        = models.ForeignKey(Proposal)
+    body            = models.ForeignKey(Body, null=True, blank=True, on_delete=models.CASCADE)
+    calibsource     = models.ForeignKey('StaticSource', null=True, blank=True, on_delete=models.CASCADE)
+    proposal        = models.ForeignKey(Proposal, on_delete=models.CASCADE)
     block_start     = models.DateTimeField(null=True, blank=True)
     block_end       = models.DateTimeField(null=True, blank=True)
     groupid         = models.CharField(max_length=55, null=True, blank=True)
@@ -346,23 +744,39 @@ class SuperBlock(models.Model):
     timeused        = models.FloatField('Time used (seconds)', null=True, blank=True)
     active          = models.BooleanField(default=False)
 
+    def current_name(self):
+        name = ''
+        if self.body is not None:
+            name = self.body.current_name()
+        elif self.calibsource is not None:
+            name = self.calibsource.current_name()
+        return name
+
     def make_obsblock_link(self):
         url = ''
         if self.tracking_number is not None and self.tracking_number != '':
-            url = urljoin(settings.PORTAL_REQUEST_URL, self.tracking_number)
+            url = urljoin(settings.PORTAL_USERREQUEST_URL, self.tracking_number)
         return url
 
     def get_sites(self):
         qs = Block.objects.filter(superblock=self.id).values_list('site', flat=True).distinct()
-
-        return ", ".join(qs)
+        qs = [q for q in qs if q is not None]
+        if qs:
+            return ", ".join(qs)
+        else:
+            return None
 
     def get_telclass(self):
-        qs = Block.objects.filter(superblock=self.id).values_list('telclass', flat=True).distinct()
+        qs = Block.objects.filter(superblock=self.id).values_list('telclass', 'obstype').distinct()
 
-        return ", ".join(qs)
+        # Convert obstypes into "(S)" suffix for spectra, nothing for imaging
+        class_obstype = [x[0]+str(x[1]).replace(str(Block.OPT_SPECTRA),'(S)').replace(str(Block.OPT_SPECTRA_CALIB),'(SC)').replace(str(Block.OPT_IMAGING), '') for x in qs]
+
+        return ", ".join(class_obstype)
 
     def get_obsdetails(self):
+        obs_details_str = ""
+
         qs = Block.objects.filter(superblock=self.id).values_list('num_exposures', 'exp_length')
 
         # Count number of unique N exposure x Y exposure length combinations
@@ -374,7 +788,7 @@ class SuperBlock(models.Model):
                 obs_details.append("%d of %dx%.1f secs" % (c[1], c[0][0], c[0][1]))
 
             obs_details_str = ", ".join(obs_details)
-        else:
+        elif len(counts) == 1:
             c = list(counts)
             obs_details_str = "%dx%.1f secs" % (c[0][0], c[0][1])
 
@@ -383,7 +797,12 @@ class SuperBlock(models.Model):
     def get_num_observed(self):
         qs = Block.objects.filter(superblock=self.id)
 
-        return qs.filter(num_observed__gte=1).count(), qs.count()
+        num_obs_dict = qs.filter(num_observed__gte=1).aggregate(num_observed=Sum('num_observed'))
+        if num_obs_dict.get('num_observed', None) is None:
+            num_obs = 0
+        else:
+            num_obs = num_obs_dict.get('num_observed', 0)
+        return num_obs, qs.count()
 
     def get_num_reported(self):
         qs = Block.objects.filter(superblock=self.id)
@@ -405,6 +824,12 @@ class SuperBlock(models.Model):
             last_reported = qs.latest('when_reported').when_reported
 
         return last_reported
+
+    def get_obstypes(self):
+        obstype = []
+        obstypes = Block.objects.filter(superblock=self.id).values_list('obstype', flat=True).distinct()
+
+        return ",".join([str(x) for x in obstypes])
 
     class Meta:
         verbose_name = _('SuperBlock')
@@ -436,9 +861,9 @@ class Block(models.Model):
 
     telclass        = models.CharField(max_length=3, null=False, blank=False, default='1m0', choices=TELESCOPE_CHOICES)
     site            = models.CharField(max_length=3, choices=SITE_CHOICES, null=True)
-    body            = models.ForeignKey(Body, null=True, blank=True)
-    calibsource     = models.ForeignKey('StaticSource', null=True, blank=True)
-    superblock      = models.ForeignKey(SuperBlock, null=True, blank=True)
+    body            = models.ForeignKey(Body, null=True, blank=True, on_delete=models.CASCADE)
+    calibsource     = models.ForeignKey('StaticSource', null=True, blank=True, on_delete=models.CASCADE)
+    superblock      = models.ForeignKey(SuperBlock, null=True, blank=True, on_delete=models.CASCADE)
     obstype         = models.SmallIntegerField('Observation Type', null=False, blank=False, default=0, choices=OBSTYPE_CHOICES)
     block_start     = models.DateTimeField(null=True, blank=True)
     block_end       = models.DateTimeField(null=True, blank=True)
@@ -643,8 +1068,8 @@ class Frame(models.Model):
     filter      = models.CharField('filter class', max_length=15, blank=False, default="B")
     filename    = models.CharField('FITS filename', max_length=50, blank=True, null=True)
     exptime     = models.FloatField('Exposure time in seconds', null=True, blank=True)
-    midpoint    = models.DateTimeField('UTC date/time of frame midpoint', null=False, blank=False)
-    block       = models.ForeignKey(Block, null=True, blank=True)
+    midpoint    = models.DateTimeField('UTC date/time of frame midpoint', null=False, blank=False, db_index=True)
+    block       = models.ForeignKey(Block, null=True, blank=True, on_delete=models.CASCADE)
     quality     = models.CharField('Frame Quality flags', help_text='Comma separated list of frame/condition flags', max_length=40, blank=True, default=' ')
     zeropoint   = models.FloatField('Frame zeropoint (mag.)', null=True, blank=True)
     zeropoint_err = models.FloatField('Error on Frame zeropoint (mag.)', null=True, blank=True)
@@ -734,34 +1159,54 @@ class Frame(models.Model):
 
     def return_tel_string(self):
 
-        point4m_string = '0.4-m f/8 Schmidt-Cassegrain + CCD'
-        onem_string = '1.0-m f/8 Ritchey-Chretien + CCD'
-        twom_string = '2.0-m f/10 Ritchey-Chretien + CCD'
+        detector = 'CCD'
+        point4m_aperture = 0.4
+        point4m_fRatio = 8.0
+        point4m_design = 'Schmidt-Cassegrain'
+        point4m_string = '{:.1f}-m f/{:1d} {} + {}'.format(point4m_aperture, int(point4m_fRatio), point4m_design, detector)
+        point4m_dict = {'full' : point4m_string, 'design' : point4m_design,
+                     'aperture' : point4m_aperture, 'fRatio' : point4m_fRatio, 'detector' : detector }
+
+        onem_aperture = 1.0
+        onem_fRatio = 8.0
+        onem_design = 'Ritchey-Chretien'
+        onem_string = '{:.1f}-m f/{:1d} {} + {}'.format(onem_aperture, int(onem_fRatio), onem_design, detector)
+        onem_dict = {'full' : onem_string, 'design' : onem_design,
+                     'aperture' : onem_aperture, 'fRatio' : onem_fRatio, 'detector' : detector }
+
+        twom_aperture = 2.0
+        twom_fRatio = 10.0
+        twom_design = 'Ritchey-Chretien'
+        twom_string = '{:.1f}-m f/{:2d} {} + {}'.format(twom_aperture, int(twom_fRatio), twom_design, detector)
+        twom_dict = {'full' : twom_string, 'design' : twom_design,
+                     'aperture' : twom_aperture, 'fRatio' : twom_fRatio, 'detector' : detector }
 
         tels_strings = {
-                        'K91' : onem_string,
-                        'K92' : onem_string,
-                        'K93' : onem_string,
-                        'W85' : onem_string,
-                        'W86' : onem_string,
-                        'W87' : onem_string,
-                        'V37' : onem_string,
-                        'Z21' : point4m_string,
-                        'Z17' : point4m_string,
-                        'Q58' : point4m_string,
-                        'Q59' : point4m_string,
-                        'Q63' : onem_string,
-                        'Q64' : onem_string,
-                        'E10' : twom_string,
-                        'F65' : twom_string,
-                        'T04' : point4m_string,
-                        'T03' : point4m_string,
-                        'W89' : point4m_string,
-                        'W79' : point4m_string,
-                        'V38' : point4m_string,
-                        'L09' : point4m_string,
+                        'K91' : onem_dict,
+                        'K92' : onem_dict,
+                        'K93' : onem_dict,
+                        'W85' : onem_dict,
+                        'W86' : onem_dict,
+                        'W87' : onem_dict,
+                        'V37' : onem_dict,
+                        'Z21' : point4m_dict,
+                        'Z17' : point4m_dict,
+                        'Q58' : point4m_dict,
+                        'Q59' : point4m_dict,
+                        'Q63' : onem_dict,
+                        'Q64' : onem_dict,
+                        'E10' : twom_dict,
+                        'F65' : twom_dict,
+                        'T04' : point4m_dict,
+                        'T03' : point4m_dict,
+                        'W89' : point4m_dict,
+                        'W79' : point4m_dict,
+                        'V38' : point4m_dict,
+                        'L09' : point4m_dict,
                         }
-        return tels_strings.get(self.sitecode, 'Unknown LCO telescope')
+        tel_string = tels_strings.get(self.sitecode, {'full:' : 'Unknown LCO telescope'})
+
+        return tel_string
 
     def map_filter(self):
         """Maps somewhat odd observed filters (e.g. 'solar') into the filter
@@ -770,11 +1215,18 @@ class Frame(models.Model):
         new_filter = self.filter
         # Don't perform any mapping if it's not LCO data
         if self.frametype not in [self.NONLCO_FRAMETYPE, self.SATELLITE_FRAMETYPE]:
-            if self.filter == 'solar' or self.filter == 'w':
+            if self.filter == 'solar' or self.filter == 'w' or self.filter == 'LL':
                 new_filter = 'R'
             if self.photometric_catalog in ['GAIA-DR1', 'GAIA-DR2']:
                 new_filter = 'G'
         return new_filter
+
+    def ALCDEF_filter_format(self):
+        """Formats current filter into acceptable name for printing in ALCDEF output."""
+        new_filt = self.filter
+        if len(new_filt) > 1 and new_filt[1] == 'p':
+            new_filt = 's'+new_filt[0]
+        return new_filt.upper()
 
     class Meta:
         verbose_name = _('Observed Frame')
@@ -797,8 +1249,8 @@ class SourceMeasurement(models.Model):
     any new measurements performed on data from the LCOGT NEO Follow-up Network
     """
 
-    body = models.ForeignKey(Body)
-    frame = models.ForeignKey(Frame)
+    body = models.ForeignKey(Body, on_delete=models.CASCADE)
+    frame = models.ForeignKey(Frame, on_delete=models.CASCADE)
     obs_ra = models.FloatField('Observed RA', blank=True, null=True)
     obs_dec = models.FloatField('Observed Dec', blank=True, null=True)
     obs_mag = models.FloatField('Observed Magnitude', blank=True, null=True)
@@ -832,21 +1284,40 @@ class SourceMeasurement(models.Model):
         except TypeError:
             mag = "    "
 
-        obs_type = 'C'
         microday = True
+
+        if self.frame.extrainfo:
+            obs_type = self.frame.extrainfo
+            if obs_type == 'A':
+                microday = False
+        else:
+            obs_type = 'C'
+
         if self.frame.frametype == Frame.SATELLITE_FRAMETYPE:
             obs_type = 'S'
             microday = False
         flags = self.flags
-        if len(self.flags) == 1:
-            if self.flags == '*':
+        num_flags = flags.split(',')
+        if len(num_flags) == 1:
+            if num_flags[0] == '*':
                 # Discovery asterisk needs to go into column 13
                 flags = '* '
             else:
-                flags = ' ' + self.flags
-        elif len(self.flags) > 2:
-            logger.warn("Flags longer than will fit into field - needs mapper")
-            flags = self.flags[0:2]
+                flags = ' ' + num_flags[0]
+        elif len(num_flags) == 2:
+            if '*' in num_flags:
+                asterisk_index = num_flags.index('*')
+                flags = '*' + num_flags[1-asterisk_index]
+            else:
+                logger.warning("Flags longer than will fit into field - needs mapper")
+                flags = ' ' + num_flags[0]
+        else:
+            logger.warning("Flags longer than will fit into field - needs mapper")
+            if '*' in num_flags:
+                num_flags.remove('*')
+                flags = '*' + num_flags[0]
+            else:
+                flags = ' ' + num_flags[0]
 
         # Catalog code for column 72 (if desired)
         catalog_code = ' '
@@ -858,12 +1329,135 @@ class SourceMeasurement(models.Model):
             mag, self.frame.map_filter(), catalog_code, self.frame.sitecode)
         if self.frame.frametype == Frame.SATELLITE_FRAMETYPE:
             extrainfo = self.frame.extrainfo
-            if self.body.name:
-                name, status = normal_to_packed(self.body.name)
-                if status == 0:
-                    extrainfo = name + extrainfo[12:]
+            if extrainfo:
+                if self.body.name:
+                    name, status = normal_to_packed(self.body.name)
+                    if status == 0:
+                        extrainfo = name + extrainfo[12:]
+            else:
+                extrainfo = ''
             mpc_line = mpc_line + '\n' + extrainfo
         return mpc_line
+
+    def _numdp(self, value):
+        """Calculate number of d.p. following prescription in Figure 1 of
+        ADES description (https://github.com/IAU-ADES/ADES-Master/blob/master/ADES_Description.pdf)
+        """
+
+        num_dp = 1
+        if value is not None and value > 0:
+            num_dp = ceil(1-log10(value))
+        return num_dp
+
+    def format_psv_header(self):
+
+        tbl_hdr = ""
+        rms_available = False
+        if self.err_obs_ra and self.err_obs_dec and self.err_obs_mag:
+            rms_available = True
+            rms_tbl_fmt = '%7s|%-11s|%8s|%4s|%-4s|%-23s|%11s|%11s|%5s|%6s|%8s|%-5s|%6s|%4s|%8s|%6s|%6s|%6s|%-5s|%-s'
+            tbl_hdr = rms_tbl_fmt % ('permID ', 'provID', 'trkSub  ', 'mode', 'stn', 'obsTime', \
+                'ra', 'dec', 'rmsRA', 'rmsDec', 'astCat', 'mag', 'rmsMag', 'band', 'photCat', \
+                'photAp', 'logSNR', 'seeing', 'notes', 'remarks')
+        else:
+            tbl_fmt = '%7s|%-11s|%8s|%4s|%-4s|%-23s|%11s|%11s|%8s|%-5s|%4s|%8s|%-5s|%-s'
+            tbl_hdr = tbl_fmt % ('permID ', 'provID', 'trkSub  ', 'mode', 'stn', 'obsTime', \
+                'ra'.ljust(11), 'dec'.ljust(11), 'astCat', 'mag', 'band', 'photCat', 'notes', 'remarks')
+        return tbl_hdr
+
+    def format_psv_line(self):
+        psv_line = ""
+
+        rms_available = False
+        if self.err_obs_ra and self.err_obs_dec and self.err_obs_mag:
+            rms_available = True
+            # Add RMS of Frame astrometric fit (in arcsec) to stored source
+            # standard deviations (in deg; already converted from SExtractor
+            # variances->standard deviations in get_catalog_items() & convert_value())
+            if self.frame.rms_of_fit:
+                err_obs_ra = sqrt(self.err_obs_ra**2 + ((self.frame.rms_of_fit/3600.0)**2))
+                err_obs_dec = sqrt(self.err_obs_dec**2 + ((self.frame.rms_of_fit/3600.0)**2))
+            else:
+                err_obs_ra = self.err_obs_ra
+                err_obs_dec = self.err_obs_dec
+
+        if self.body.name:
+            if len(self.body.name) > 4 and self.body.name[0:4].isdigit():
+                provisional_name = self.body.name
+                body_name = ''
+            else:
+                body_name = self.body.name
+                provisional_name = ''
+            tracklet_name = ''
+        else:
+            tracklet_name = self.body.provisional_name
+            provisional_name = ''
+            body_name = ''
+        obs_type = 'CCD'
+        remarks = ''
+
+        obsTime = self.frame.midpoint
+        obsTime = obsTime.strftime("%Y-%m-%dT%H:%M:%S")
+        frac_time = "{:.2f}Z".format(self.frame.midpoint.microsecond / 1e6)
+        obsTime += frac_time[1:]
+        ast_catalog_code = translate_catalog_code(self.frame.astrometric_catalog, ades_code=True)
+        if (self.frame.astrometric_catalog is None or self.frame.astrometric_catalog.strip() == '')\
+            and self.astrometric_catalog is not None:
+            ast_catalog_code = translate_catalog_code(self.astrometric_catalog, ades_code=True)
+        phot_catalog_code = translate_catalog_code(self.frame.photometric_catalog, ades_code=True)
+        if (self.frame.photometric_catalog is None or self.frame.photometric_catalog.strip() == '')\
+            and self.photometric_catalog is not None:
+            phot_catalog_code = translate_catalog_code(self.photometric_catalog, ades_code=True)
+        if phot_catalog_code == '' and ast_catalog_code != '':
+            phot_catalog_code = ast_catalog_code
+
+        prec = 6
+        if self.err_obs_ra:
+            prec = self._numdp(err_obs_ra)
+        fmt_ra = "{ra:.{prec}f}".format(prec=prec, ra=self.obs_ra)
+        fmt_ra, width, dpos = psv_padding(fmt_ra, 11, 'D', 4)
+        prec = 6
+        if self.err_obs_dec:
+            prec = self._numdp(err_obs_dec)
+        fmt_dec = "{dec:.{prec}f}".format(prec=prec, dec=self.obs_dec)
+        fmt_dec, width, dpos = psv_padding(fmt_dec, 11, 'D', 4)
+        fmt_filter = " "
+        if self.obs_mag is not None:
+            fmt_mag = "{:4.1f}".format(float(self.obs_mag))
+            fmt_filter = self.frame.map_filter()
+        else:
+            fmt_mag = " "*5
+            phot_catalog_code = " "
+
+        tbl_fmt     = '%7s|%-11s|%8s|%4s|%-4s|%-23s|%11s|%11s|%8s|%-5s|%4s|%8s|%-5s|%-s'
+        rms_tbl_fmt = '%7s|%-11s|%8s|%4s|%-4s|%-23s|%11s|%11s|%5s|%6s|%8s|%-5s|%6s|%4s|%8s|%6s|%6s|%6s|%-5s|%-s'
+        if rms_available:
+            rms_ra = "{value:.{prec}f}".format(prec=self._numdp(err_obs_ra * 3600.0), value=err_obs_ra * 3600.0)
+            rms_dec = "{value:.{prec}f}".format(prec=self._numdp(err_obs_dec * 3600.0), value=err_obs_dec * 3600.0)
+            if self.obs_mag is not None:
+                rms_mag = "{value:.{prec}f}".format(prec=self._numdp(self.err_obs_mag), value=self.err_obs_mag)
+                rms_mag, width, dpos = psv_padding(rms_mag, 6, 'D', 2)
+            else:
+                rms_mag = " "
+
+            phot_ap = " "*6
+            if self.aperture_size:
+                phot_ap = "{:6.2f}".format(self.aperture_size)
+            log_snr = " "*6
+            if self.snr and self.snr > 0:
+                log_snr = "{:6.4f}".format(log10(self.snr))
+            fwhm = " "*6
+            if self.frame.fwhm:
+                fwhm = "{:6.4f}".format(self.frame.fwhm)
+
+            psv_line = rms_tbl_fmt % (body_name, provisional_name, tracklet_name, obs_type, self.frame.sitecode,
+                                      obsTime, fmt_ra, fmt_dec, rms_ra, rms_dec, ast_catalog_code, fmt_mag, rms_mag,
+                                      fmt_filter, phot_catalog_code, phot_ap, log_snr, fwhm, self.flags, remarks)
+        else:
+            psv_line = tbl_fmt % (body_name, provisional_name, tracklet_name, obs_type, self.frame.sitecode, obsTime,
+                                  fmt_ra, fmt_dec, ast_catalog_code, fmt_mag, fmt_filter, phot_catalog_code,
+                                  self.flags, remarks)
+        return psv_line
 
     class Meta:
         verbose_name = _('Source Measurement')
@@ -879,7 +1473,7 @@ class CatalogSources(models.Model):
     of objects.
     """
 
-    frame = models.ForeignKey(Frame)
+    frame = models.ForeignKey(Frame, on_delete=models.CASCADE)
     obs_x = models.FloatField('CCD X co-ordinate')
     obs_y = models.FloatField('CCD Y co-ordinate')
     obs_ra = models.FloatField('Observed RA')
@@ -949,20 +1543,21 @@ class CatalogSources(models.Model):
         2:  The object was originally blended with another one,
         4:  At least one pixel of the object is saturated (or very close to),
         8:  The object is truncated (too close to an image boundary),
-        16: Object’s aperture data are incomplete or corrupted,
-        32: Object’s isophotal data are incomplete or corrupted (SExtractor V1 compat; no consequence),
+        16: Object's aperture data are incomplete or corrupted,
+        32: Object's isophotal data are incomplete or corrupted (SExtractor V1 compat; no consequence),
         64: A memory overflow occurred during deblending,
         128:A memory overflow occurred during extraction.
         """
 
         flag = ' '
-        if self.flags >= 1 and self.flags <=3:
+        if 1 <= self.flags <= 3:
             # Set 'Involved with star'
             flag = 'I'
         elif self.flags >= 8:
             # Set 'close to Edge'
             flag = 'E'
         return flag
+
 
 def detections_array_dtypes():
     """Declare the columns and types of the structured numpy array for holding
@@ -980,7 +1575,7 @@ class Candidate(models.Model):
     """Class to hold candidate moving object detections found by the moving
     object code"""
 
-    block = models.ForeignKey(Block)
+    block = models.ForeignKey(Block, on_delete=models.CASCADE)
     cand_id = models.PositiveIntegerField('Candidate Id')
     score = models.FloatField('Candidate Score')
     avg_midpoint = models.DateTimeField('Average UTC midpoint')
@@ -1016,7 +1611,7 @@ class Candidate(models.Model):
         try:
             elements = model_to_dict(body)
             emp_line = compute_ephem(time, elements, self.block.site, perturb=False)
-            separation = comp_sep(self.avg_ra, self.avg_dec, emp_line[1], emp_line[2])
+            separation = comp_sep(self.avg_ra, self.avg_dec, emp_line['ra'], emp_line['dec'])
         except AttributeError:
             separation = None
 
@@ -1026,7 +1621,7 @@ class Candidate(models.Model):
         verbose_name = _('Candidate')
 
     def __str__(self):
-        return "%s#%04d" % (self.block.tracking_number, self.cand_id)
+        return "%s#%04d" % (self.block.request_number, self.cand_id)
 
 
 @python_2_unicode_compatible
@@ -1034,8 +1629,8 @@ class ProposalPermission(models.Model):
     """
     Linking a user to proposals in NEOx to control their access
     """
-    proposal = models.ForeignKey(Proposal)
-    user = models.ForeignKey(User)
+    proposal = models.ForeignKey(Proposal, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
 
     class Meta:
         verbose_name = _('Proposal Permission')
@@ -1049,12 +1644,12 @@ class PanoptesReport(models.Model):
     """
     Status of block
     """
-    block = models.ForeignKey(Block)
+    block = models.ForeignKey(Block, on_delete=models.CASCADE)
     when_submitted = models.DateTimeField('Date sent to Zooniverse', blank=True, null=True)
     last_check = models.DateTimeField(blank=True, null=True)
     active = models.BooleanField(default=False)
     subject_id = models.IntegerField('Subject ID', blank=True, null=True)
-    candidate = models.ForeignKey(Candidate)
+    candidate = models.ForeignKey(Candidate, on_delete=models.CASCADE)
     verifications = models.IntegerField(default=0)
     classifiers = models.TextField(help_text='Volunteers usernames who found NEOs', blank=True, null=True)
 

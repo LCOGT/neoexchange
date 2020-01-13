@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2016-2018 LCO
+Copyright (C) 2016-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@ from astropy.coordinates import Angle
 import astropy.units as u
 from numpy import where
 
-from core.models import Body, Proposal, Block, CatalogSources
+from core.models import Body, Proposal, SuperBlock, Block, CatalogSources
 from .test_catalog_subs import FITSUnitTest
 
 # Import module to test
@@ -71,14 +71,25 @@ class StoreCatalogSourcesTest(FITSUnitTest):
                           }
         self.test_proposal, created = Proposal.objects.get_or_create(**proposal_params)
 
-        block_params = {   'telclass': '1m0',
-                            'site': 'K92',
+        sblock_params = {   'cadence': False,
+                            'rapid_response': False,
                             'body': self.test_body,
-                            'proposal': self.test_proposal,
+                            'proposal' : self.test_proposal,
                             'groupid': None,
                             'block_start': datetime(2016, 5, 5, 19),
                             'block_end': datetime(2016, 5, 5, 21),
                             'tracking_number': '0009',
+                            'active': False,
+                        }
+        self.test_sblock, created = SuperBlock.objects.get_or_create(**sblock_params)
+
+        block_params = {   'telclass': '1m0',
+                            'site': 'K92',
+                            'body': self.test_body,
+                            'block_start': datetime(2016, 5, 5, 19),
+                            'block_end': datetime(2016, 5, 5, 21),
+                            'superblock' : self.test_sblock,
+                            'request_number': '0009',
                             'num_exposures': 6,
                             'exp_length': 60.0,
                             'num_observed': 1,

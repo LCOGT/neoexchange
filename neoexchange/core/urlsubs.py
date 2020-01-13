@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2014-2018 LCO
+Copyright (C) 2014-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -50,3 +50,12 @@ def get_lcogt_headers(auth_url, username, password):
     headers = {'Authorization': 'Token ' + token}
 
     return headers
+
+def get_telescope_states(telstates_url='http://observe.lco.global/api/telescope_states/'):
+
+    try:
+        response = requests.get(telstates_url).json()
+    except ValueError:
+        response = {}
+
+    return response

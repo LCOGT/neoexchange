@@ -1,6 +1,6 @@
-'''
+"""
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2014-2018 LCO
+Copyright (C) 2014-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -11,18 +11,18 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-'''
+"""
 
 from datetime import datetime, timedelta
 from django.test import TestCase
 
 from core.models import Body
-#Import module to test
+# Import module to test
 from astrometrics.ast_subs import *
 
 
 class TestIntToMutantHexChar(TestCase):
-    '''Unit tests for the int_to_mutant_hex_char() method'''
+    """Unit tests for the int_to_mutant_hex_char() method"""
 
 # EricS says to run without the exception handler in place first to check it works as expected
 # This is the simple test version where we only care if we get an exception (any exception)
@@ -38,7 +38,7 @@ class TestIntToMutantHexChar(TestCase):
             int_to_mutant_hex_char(-1)
             assert False
         except MutantError as e:
-            expected_msg = ("Number out of range 0...61")
+            expected_msg = "Number out of range 0...61"
             self.assertEqual(e.__str__(), expected_msg)
 
     def test_bad_mutant_too_large(self):
@@ -46,7 +46,7 @@ class TestIntToMutantHexChar(TestCase):
             int_to_mutant_hex_char(62)
             assert False
         except MutantError as e:
-            expected_msg = ("Number out of range 0...61")
+            expected_msg = "Number out of range 0...61"
             self.assertEqual(e.__str__(), expected_msg)
 
     def test_bad_mutant_not_number1(self):
@@ -54,7 +54,7 @@ class TestIntToMutantHexChar(TestCase):
             int_to_mutant_hex_char('9')
             assert False
         except MutantError as e:
-            expected_msg = ("Not an integer")
+            expected_msg = "Not an integer"
             self.assertEqual(e.__str__(), expected_msg)
 
     def test_bad_mutant_not_number2(self):
@@ -62,7 +62,7 @@ class TestIntToMutantHexChar(TestCase):
             int_to_mutant_hex_char('FOO')
             assert False
         except MutantError as e:
-            expected_msg = ("Not an integer")
+            expected_msg = "Not an integer"
             self.assertEqual(e.__str__(), expected_msg)
 
     def test_num_less_than_ten(self):
@@ -112,7 +112,7 @@ class TestIntToMutantHexChar(TestCase):
 
 
 class TestNormalToPacked(TestCase):
-    '''Unit tests for normal_to_packed() method'''
+    """Unit tests for normal_to_packed() method"""
 
     def test_number_t0(self):
         expected_desig = '00001       '
@@ -177,6 +177,12 @@ class TestNormalToPacked(TestCase):
     def test_comet_t5(self):
         expected_desig = '    CJ83Z150'
         packed_desig, ret_code = normal_to_packed('C/1983 Z15')
+        self.assertEqual(packed_desig, expected_desig)
+        self.assertEqual(ret_code, 0)
+
+    def test_comet_packed1(self):
+        expected_desig = '0060P       '
+        packed_desig, ret_code = normal_to_packed('0060P  ')
         self.assertEqual(packed_desig, expected_desig)
         self.assertEqual(ret_code, 0)
 
@@ -346,6 +352,7 @@ class TestDetermineAsteroidType(TestCase):
         obj_type = determine_asteroid_type(5.05, 0.0561)
         self.assertEqual(obj_type, expected_type)
 
+
 class TestDetermineTimeOfPerihelion(TestCase):
 
     def test_perihelion_in_future(self):
@@ -369,6 +376,7 @@ class TestDetermineTimeOfPerihelion(TestCase):
         time_of_perih = determine_time_of_perih(meandist, meananom, epochofel)
 
         self.assertEqual(expected_time_of_perih, time_of_perih)
+
 
 class TestConvertAstToComet(TestCase):
 
@@ -406,7 +414,7 @@ class TestConvertAstToComet(TestCase):
         self.body = Body.objects.create(**self.params)
 
     def test_asteroid(self):
-        kwargs = {'source_type': 'A', 'name': '2018 AA5', 'active': False}
+        kwargs = {'source_type': 'A', 'name': '2018 AA5', 'active': False, 'source_subtype_1': ''}
 
         new_kwargs = convert_ast_to_comet(kwargs, self.body)
 
@@ -432,7 +440,7 @@ class TestConvertAstToComet(TestCase):
         self.assertEqual(expected_kwargs, new_kwargs)
 
     def test_new_body(self):
-        kwargs = {'source_type' : 'A', 'name' : '2018 ZZ99', 'active' : False}
+        kwargs = {'source_type': 'A', 'name': '2018 ZZ99', 'active': False, 'source_subtype_1': ''}
         expected_kwargs = kwargs
 
         blank_body, created = Body.objects.get_or_create(provisional_name='Wibble')
@@ -456,11 +464,11 @@ class TestConvertAstToComet(TestCase):
                             'slope' : 4.0,
                             'eccentricity' : self.body.eccentricity,
                             'epochofel' : self.body.epochofel,
-                            'meandist' : self.body.meandist
+                            'meandist' : self.body.meandist,
+                            'source_subtype_1': ''
                           }
 
-
-        kwargs = {'source_type': 'C', 'name': 'C/2018 A5', 'active': True}
+        kwargs = {'source_type': 'C', 'name': 'C/2018 A5', 'active': True, 'source_subtype_1': ''}
 
         new_kwargs = convert_ast_to_comet(kwargs, self.body)
 

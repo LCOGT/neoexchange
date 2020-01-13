@@ -1,6 +1,6 @@
 '''
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2014-2018 LCO
+Copyright (C) 2014-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -13,21 +13,13 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 import os
-#import sys
-#print("Python version=",sys.version)
 
 # Astropy needs to write config and cache files into its home directory. When
-# running under nginx+gunicorn and the nginx user, it doesn't have a home (aaah). Need
-# to set environment variables to give these files somewhere to go.
-
-try:
-    envvars = {    
-        'XDG_CONFIG_HOME': '/var/www/apps/astropyconfig',
-        'XDG_CACHE_HOME' : '/var/www/apps/astropycache'
-    }
-    os.environ.update(envvars)
-except:
-    pass
+# running under gunicorn as an unprivileged user, it doesn't have a home
+# directory (aaah). Need to set the XDG_* environment variables to give these
+# files somewhere to go.
+os.environ.setdefault("XDG_CONFIG_HOME", "/var/www/apps/astropyconfig")
+os.environ.setdefault("XDG_CACHE_HOME", "/var/www/apps/astropycache")
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "neox.settings")
 
@@ -36,7 +28,3 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "neox.settings")
 # setting points here.
 from django.core.wsgi import get_wsgi_application
 application = get_wsgi_application()
-
-# Apply WSGI middleware here.
-# from helloworld.wsgi import HelloWorldApplication
-# application = HelloWorldApplication(application)

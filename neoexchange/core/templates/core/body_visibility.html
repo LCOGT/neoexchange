@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% load staticfiles basic_tags %}
+
+{% block css-content %}<link rel="stylesheet" href="{% static "core/css/forms.css" %}">{% endblock %}
+
+{% block header %}Visibility Page{% endblock %}
+
+{% block bodyclass %}page{% endblock %}
+
+{% block extramenu %}
+    <div class="headingleft">
+        <h1>Visibility for {{body.current_name}}</h1>
+    </div>
+{% endblock%}
+
+{% block main-content %}
+            <!-- Main body -->
+            <div class="container" id="main">
+                <div class="row">
+                    <a class="button button-primary" href="{% url 'schedule-body' body.pk %}" id="schedule-obs">Schedule Observations</a>
+                    <a class="button button-primary" href="{% url 'schedule-body-spectra' body.pk %}" id="schedule-spectro-obs">Schedule Spectroscopic Observations</a>
+                </div>                
+                <h5  class="section-title"><span class="">Right Ascension and Declination</span></h5>
+                <img src="{% url 'visibility-plot' pk=body.pk plot_type='radec' %}" id="id_radecplot">
+                <h5  class="section-title"><span class="">Heliocentric and Geocentric Distances</span></h5>
+                <img src="{% url 'visibility-plot' pk=body.pk plot_type='dist' %}" id="id_distanceplot">
+                <h5  class="section-title"><span class="">Predicted Brightness</span></h5>
+                <img src="{% url 'visibility-plot' pk=body.pk plot_type='mag' %}" id="id_magplot">
+                <h5  class="section-title"><span class="">Positional Uncertainty</span></h5>
+                <img src="{% url 'visibility-plot' pk=body.pk plot_type='uncertainty' %}" id="id_uncertaintyplot">
+                <h5  class="section-title"><span class="">Hours Up</span></h5>
+                <img src="{% url 'visibility-plot' pk=body.pk plot_type='hoursup' %}" id="id_hoursupplot">
+                <img src="{% url 'visibility-plot-site' pk=body.pk plot_type='hoursup' site_code='F65' %}" id="id_hoursupplot">
+                <img src="{% url 'visibility-plot-site' pk=body.pk plot_type='hoursup' site_code='E10' %}" id="id_hoursupplot">
+            </div>
+{% endblock %}

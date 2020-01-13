@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2016-2018 LCO
+Copyright (C) 2016-2019 LCO
 
 catalog_subs.py -- Code to retrieve source detection infomation from FITS catalogs.
 
@@ -109,7 +109,7 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
             query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit}, columns=['RAJ2000', 'DEJ2000','e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup'])
         else:
             query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
-        query_service.VIZIER_SERVER ='vizier.hia.nrc.ca' #  'vizier.cfa.harvard.edu' #
+        query_service.VIZIER_SERVER = 'vizier.hia.nrc.ca'  # 'vizier.cfa.harvard.edu'
         query_service.TIMEOUT = 60
         try:
             result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=cat_mapping[cat_name])
@@ -139,8 +139,8 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
                 if len(result) > 0:
                     cat_table = result[0]
                 else:
-                    zeros_list = list(0.0 for i in range(0, 100000))
-                    zeros_int_list = list(0 for i in range(0, 100000))
+                    zeros_list = [0.0] * 100000
+                    zeros_int_list = [0] * 100000
                     cat_table = Table([zeros_list, zeros_list, zeros_list, zeros_int_list, zeros_int_list], names=('RAJ2000', 'DEJ2000', 'rmag', 'flags', 'e_rmag'))
             else:
                 cat_name = "PPMXL"
@@ -149,8 +149,8 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
                 if len(result) > 0:
                     cat_table = result[0]
                 else:
-                    zeros_list = list(0.0 for i in range(0, 100000))
-                    zeros_int_list = list(0 for i in range(0, 100000))
+                    zeros_list = [0.0] * 100000
+                    zeros_int_list = [0] * 100000
                     cat_table = Table([zeros_list, zeros_list, zeros_list, zeros_int_list], names=('RAJ2000', 'DEJ2000', 'r2mag', 'fl'))
         # if the resulting table is neither empty nor missing columns values, set the cat_table
         else:
@@ -1754,7 +1754,9 @@ def sort_rocks(fits_files):
                 objects.append(object_directory)
             object_directory = os.path.join(os.path.dirname(fits_filepath), object_directory)
             if not os.path.exists(object_directory):
+                oldumask = os.umask(0o002)
                 os.makedirs(object_directory)
+                os.umask(oldumask)
             dest_filepath = os.path.join(object_directory, os.path.basename(fits_filepath))
             # if the file is an e91 and an e11 exists in the working directory, remove the link to the e11 and link the e91
             if 'e91' in fits_filepath:

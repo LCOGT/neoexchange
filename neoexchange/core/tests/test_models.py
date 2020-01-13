@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2015-2018 LCO
+Copyright (C) 2015-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.test import TestCase
 from django.forms.models import model_to_dict
 from django.db import connection
@@ -26,10 +26,10 @@ from unittest import skipIf
 from mock import patch
 from neox.tests.mocks import MockDateTime
 
-#Import module to test
-from core.models import Body, Proposal, Block, Frame, SourceMeasurement, \
-    CatalogSources, Candidate, WCSField
-from astrometrics.ephem_subs import compute_ephem
+# Import module to test
+from core.models import Body, Proposal, SuperBlock, Block, Frame, \
+    SourceMeasurement, CatalogSources, Candidate, WCSField, PreviousSpectra,\
+    StaticSource
 
 
 class TestBody(TestCase):
@@ -71,13 +71,22 @@ class TestBody(TestCase):
         self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
 
         # Create test blocks
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'cpt',
+        sblock_params = {
                          'body'     : self.body,
                          'proposal' : self.neo_proposal,
                          'block_start' : '2015-04-20 13:00:00',
                          'block_end'   : '2015-04-21 03:00:00',
                          'tracking_number' : '00042',
+                         'active'   : True,
+                       }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'cpt',
+                         'body'     : self.body,
+                         'superblock' : self.test_sblock,
+                         'block_start' : '2015-04-20 13:00:00',
+                         'block_end'   : '2015-04-21 03:00:00',
+                         'request_number' : '10042',
                          'num_exposures' : 5,
                          'exp_length' : 42.0,
                          'active'   : True,
@@ -86,13 +95,22 @@ class TestBody(TestCase):
                        }
         self.test_block = Block.objects.create(**block_params)
 
-        block_params2 = { 'telclass' : '2m0',
-                         'site'     : 'coj',
+        sblock_params2 = {
                          'body'     : self.body3,
                          'proposal' : self.neo_proposal,
                          'block_start' : '2015-04-20 03:00:00',
                          'block_end'   : '2015-04-20 13:00:00',
                          'tracking_number' : '00043',
+                         'active'   : False,
+                       }
+        self.test_sblock2 = SuperBlock.objects.create(**sblock_params2)
+        block_params2 = { 'telclass' : '2m0',
+                         'site'     : 'coj',
+                         'body'     : self.body3,
+                         'superblock' : self.test_sblock2,
+                         'block_start' : '2015-04-20 03:00:00',
+                         'block_end'   : '2015-04-20 13:00:00',
+                         'request_number' : '10043',
                          'num_exposures' : 7,
                          'exp_length' : 30.0,
                          'active'   : False,
@@ -101,13 +119,22 @@ class TestBody(TestCase):
                        }
         self.test_block2 = Block.objects.create(**block_params2)
 
-        block_params3 = { 'telclass' : '2m0',
-                         'site'     : 'coj',
+        sblock_params3 = {
                          'body'     : self.body4,
                          'proposal' : self.neo_proposal,
                          'block_start' : '2015-04-20 03:00:00',
                          'block_end'   : '2015-04-20 13:00:00',
                          'tracking_number' : '00044',
+                         'active'   : False,
+                       }
+        self.test_sblock3 = SuperBlock.objects.create(**sblock_params3)
+        block_params3 = { 'telclass' : '2m0',
+                         'site'     : 'coj',
+                         'body'     : self.body4,
+                         'superblock' : self.test_sblock3,
+                         'block_start' : '2015-04-20 03:00:00',
+                         'block_end'   : '2015-04-20 13:00:00',
+                         'request_number' : '10044',
                          'num_exposures' : 7,
                          'exp_length' : 30.0,
                          'active'   : False,
@@ -116,13 +143,22 @@ class TestBody(TestCase):
                        }
         self.test_block3 = Block.objects.create(**block_params3)
 
-        block_params5a = { 'telclass' : '2m0',
-                         'site'     : 'coj',
+        sblock_params5a = {
                          'body'     : self.body5,
                          'proposal' : self.neo_proposal,
                          'block_start' : '2015-04-20 03:00:00',
                          'block_end'   : '2015-04-20 13:00:00',
                          'tracking_number' : '00045',
+                         'active'   : False,
+                       }
+        self.test_sblock5a = SuperBlock.objects.create(**sblock_params5a)
+        block_params5a = { 'telclass' : '2m0',
+                         'site'     : 'coj',
+                         'body'     : self.body5,
+                         'superblock' : self.test_sblock5a,
+                         'block_start' : '2015-04-20 03:00:00',
+                         'block_end'   : '2015-04-20 13:00:00',
+                         'request_number' : '10045',
                          'num_exposures' : 7,
                          'exp_length' : 30.0,
                          'active'   : False,
@@ -131,13 +167,22 @@ class TestBody(TestCase):
                        }
         self.test_block5a = Block.objects.create(**block_params5a)
 
-        block_params5b = { 'telclass' : '2m0',
-                         'site'     : 'coj',
+        sblock_params5b = {
                          'body'     : self.body5,
                          'proposal' : self.neo_proposal,
                          'block_start' : '2015-04-20 03:00:00',
                          'block_end'   : '2015-04-20 13:00:00',
                          'tracking_number' : '00045',
+                         'active'   : False,
+                       }
+        self.test_sblock5b = SuperBlock.objects.create(**sblock_params5b)
+        block_params5b = { 'telclass' : '2m0',
+                         'site'     : 'coj',
+                         'body'     : self.body5,
+                         'superblock' : self.test_sblock5b,
+                         'block_start' : '2015-04-20 03:00:00',
+                         'block_end'   : '2015-04-20 13:00:00',
+                         'request_number' : '10045',
                          'num_exposures' : 7,
                          'exp_length' : 30.0,
                          'active'   : False,
@@ -145,6 +190,15 @@ class TestBody(TestCase):
                          'reported' : False
                        }
         self.test_block5b = Block.objects.create(**block_params5b)
+
+        spectra_params = {'body'         : self.body,
+                          'spec_wav'     : 'Vis',
+                          'spec_vis'     : 'sp233/a265962.sp233.txt',
+                          'spec_ref'     : 'sp[233]',
+                          'spec_source'  : 'S',
+                          'spec_date'    : '2017-09-25',
+                          }
+        self.test_spectra = PreviousSpectra.objects.create(pk=1, **spectra_params)
 
     def test_get_block_info_NoBlock(self):
         expected = ('Not yet', 'Not yet')
@@ -182,7 +236,7 @@ class TestBody(TestCase):
         self.assertEqual(expected, result)
 
     def test_no_absmag(self):
-        test_body=self.body
+        test_body = self.body
         test_body.abs_mag = None
         test_body.save()
 
@@ -190,12 +244,56 @@ class TestBody(TestCase):
         self.assertEqual(None, diameter)
 
     def test_bad_absmag(self):
-        test_body=self.body
+        test_body = self.body
         test_body.abs_mag = -99
         test_body.save()
 
         diameter = test_body.diameter()
         self.assertEqual(None, diameter)
+
+    def test_compute_obs_window_mid(self):
+        test_body = self.body
+        test_body.abs_mag = 19.0
+        test_body.save()
+
+        expected_start = datetime(2015, 8, 10, 17, 0)
+        expected_end = datetime(2015, 9, 29, 17, 0)
+        obs_window = test_body.compute_obs_window(d=datetime(2015, 7, 1, 17, 0, 0))
+        self.assertEqual(obs_window[0], expected_start)
+        self.assertEqual(obs_window[1], expected_end)
+
+    def test_compute_obs_window_full(self):
+        test_body = self.body
+        test_body.abs_mag = 17.0
+        test_body.save()
+
+        expected_start = datetime(2015, 7, 1, 17, 0, )
+        expected_end = ''
+        obs_window = test_body.compute_obs_window(d=datetime(2015, 7, 1, 17, 0, 0))
+        self.assertEqual(obs_window[0], expected_start)
+        self.assertEqual(obs_window[1], expected_end)
+
+    def test_compute_obs_window_none(self):
+        test_body = self.body
+        test_body.save()
+
+        expected_start = ''
+        expected_end = ''
+        obs_window = test_body.compute_obs_window(d=datetime(2015, 7, 1, 17, 0, 0))
+        self.assertEqual(obs_window[0], expected_start)
+        self.assertEqual(obs_window[1], expected_end)
+
+    def test_compute_obs_window_sun(self):
+        test_body = self.body
+        test_body.abs_mag = 8.0
+        test_body.meananom = 180
+        test_body.save()
+
+        expected_start = ''
+        expected_end = ''
+        obs_window = test_body.compute_obs_window(d=datetime(2015, 7, 1, 17, 0, 0))
+        self.assertEqual(obs_window[0], expected_start)
+        self.assertEqual(obs_window[1], expected_end)
 
 
 @patch('core.models.datetime', MockDateTime)
@@ -204,7 +302,6 @@ class TestComputeFOM(TestCase):
     def setUp(self):
         # Initialise with a test body and two test proposals
         params = {  'provisional_name' : 'N999r0q',
-                    'abs_mag'       : 21.0,
                     'slope'         : 0.15,
                     'epochofel'     : '2015-03-19 00:00:00',
                     'meananom'      : 325.2636,
@@ -225,7 +322,6 @@ class TestComputeFOM(TestCase):
         self.body, created = Body.objects.get_or_create(**params)
 
         params = {  'provisional_name' : '29182875',
-                    'abs_mag'       : 21.0,
                     'slope'         : 0.15,
                     'epochofel'     : '2015-03-19 00:00:00',
                     'meananom'      : 325.2636,
@@ -246,7 +342,6 @@ class TestComputeFOM(TestCase):
         self.body2, created = Body.objects.get_or_create(**params)
 
         params = {  'provisional_name' : 'C94028',
-                    'abs_mag'       : 21.0,
                     'slope'         : 0.15,
                     'epochofel'     : '2015-03-19 00:00:00',
                     'meananom'      : 325.2636,
@@ -267,7 +362,6 @@ class TestComputeFOM(TestCase):
         self.body3, created = Body.objects.get_or_create(**params)
 
         params = {  'provisional_name' : 't392019fci',
-                    'abs_mag'       : 21.0,
                     'slope'         : 0.15,
                     'epochofel'     : '2015-03-19 00:00:00',
                     'meananom'      : 325.2636,
@@ -320,6 +414,673 @@ class TestComputeFOM(TestCase):
         self.assertEqual(expected_FOM, FOM)
 
 
+class TestSavePhysicalParameters(TestCase):
+
+    def setUp(self):
+        params = {  'name' : '21545',
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    'not_seen'      : 2.3942,
+                    'arc_length'    : 0.4859,
+                    'score'         : 83,
+                    'abs_mag'       : 19.8
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+
+        self.phys1 = {'parameter_type': 'H',
+                 'value': 24.56,
+                 'error': 0.05,
+                 'units': 'mag',
+                 'reference' : "Bob and Friends, 2019",
+                 'notes': 'This is a fake entry',
+                 'preferred': True
+                 }
+
+        self.phys2 = {'parameter_type': 'P',
+                 'value': 8.7,
+                 'error': 0.5,
+                 'units': 'h',
+                 'reference': "Bob and Friends, 2019",
+                 'notes': 'This is a fake entry',
+                 'preferred': True
+                 }
+
+        self.col1 = {'color_band': 'V-R',
+                 'value': .87,
+                 'error': 0.05,
+                 'units': 'mag',
+                 'reference': "Bob and Friends, 2019",
+                 'notes': 'This is a fake entry',
+                 'preferred': True
+                 }
+
+        self.des1 = {'desig_type': 'N',
+                 'value': 'Rock&Roll',
+                 'notes': 'This is a fake entry',
+                 'preferred': True
+                 }
+
+    def test_save_get_param(self):
+        self.body.save_physical_parameters(self.phys1)
+        self.body.save_physical_parameters(self.phys2)
+
+        get_db = self.body.get_physical_parameters()
+
+        self.assertEqual(self.phys1['value'], get_db[0]['value'])
+        self.assertEqual(self.phys2['value'], get_db[1]['value'])
+        self.assertEqual('Absolute Magnitude', get_db[0]['type_display'])
+
+    def test_wont_save_same_data_twice(self):
+        self.body.save_physical_parameters(self.phys1)
+        self.body.save_physical_parameters(self.phys1)
+        self.body.save_physical_parameters(self.phys2)
+        self.body.save_physical_parameters(self.phys1)
+        self.body.save_physical_parameters(self.phys2)
+
+        get_db = self.body.get_physical_parameters()
+
+        self.assertEqual(len(get_db), 2)
+
+    def test_overwrite_priority(self):
+        self.body.save_physical_parameters(self.phys1)
+        self.body.save_physical_parameters(self.phys2)
+
+        new_data = self.phys1
+        new_data['value'] = 12.5
+        self.body.save_physical_parameters(new_data)
+
+        get_db = self.body.get_physical_parameters()
+
+        self.assertFalse(get_db[0]['preferred'])
+        self.assertTrue(get_db[1]['preferred'])
+        self.assertTrue(get_db[2]['preferred'])
+
+    def test_change_priority(self):
+
+        new_data1 = self.phys1.copy()
+        new_data_old = self.phys1.copy()
+        self.body.save_physical_parameters(self.phys1)
+
+        new_data1['value'] = 12.5
+        self.body.save_physical_parameters(new_data1)
+
+        self.body.save_physical_parameters(self.phys2)
+
+        new_data_old['preferred'] = True
+
+        self.body.save_physical_parameters(new_data_old)
+
+        get_db = self.body.get_physical_parameters()
+
+        self.assertFalse(get_db[0]['preferred'])
+        self.assertTrue(get_db[1]['preferred'])
+        self.assertTrue(get_db[2]['preferred'])
+
+    def test_ingest_not_preferred(self):
+        phys3 = {'parameter_type': 'D',
+                 'value': 8.7,
+                 'error': 0.5,
+                 'units': 'm',
+                 'reference': "Bob and Friends, 2019",
+                 'notes': 'This is a fake entry'}
+        # save 1st diameter (not preferred)
+        self.body.save_physical_parameters(phys3)
+        d1 = self.body.get_physical_parameters(param_type='D')
+        self.assertTrue(d1[0]['preferred'])
+
+        # save new diameter (also not preferred)
+        phys3['value'] = 10.5
+        phys3.pop('preferred')
+        self.body.save_physical_parameters(phys3)
+        d2 = self.body.get_physical_parameters(param_type='D')
+        self.assertTrue(d2[0]['preferred'])
+        self.assertFalse(d2[1]['preferred'])
+
+        # change so there is no preferred diameter
+        phys3['preferred'] = False
+        phys3['value'] = 8.7
+        self.body.save_physical_parameters(phys3)
+        d3 = self.body.get_physical_parameters(param_type='D')
+        self.assertFalse(d3[0]['preferred'])
+        self.assertFalse(d3[1]['preferred'])
+
+        # re-save original diameter
+        self.body.save_physical_parameters(phys3)
+        d4 = self.body.get_physical_parameters(param_type='D')
+        self.assertFalse(d4[0]['preferred'])
+        self.assertFalse(d4[1]['preferred'])
+
+        # save new diameter while none are preferred. (make sure units work)
+        phys3['units'] = 'km'
+        self.body.save_physical_parameters(phys3)
+        d5 = self.body.get_physical_parameters(param_type='D')
+        self.assertFalse(d5[0]['preferred'])
+        self.assertFalse(d5[1]['preferred'])
+        self.assertTrue(d5[2]['preferred'])
+        self.assertEqual(d5[2]['units'], 'km')
+
+    def test_mpc_default(self):
+        phys3 = {'parameter_type': 'D',
+                 'value': 8.7,
+                 'error': 0.5,
+                 'units': 'm',
+                 'reference': "MPC Default",
+                 'notes': 'This is a fake entry',
+                 'preferred': True}
+        # Save MPC Default entry
+        self.body.save_physical_parameters(phys3)
+        phys3['value'] = 12.5
+        # test Overwrite of MPC Default
+        self.body.save_physical_parameters(phys3)
+        d1 = self.body.get_physical_parameters(param_type='D')
+        self.assertEqual(len(d1), 1)
+        self.assertEqual(d1[0]['value'], 12.5)
+
+        # Add non MPC Default
+        phys3['value'] = 15.4
+        phys3['reference'] = 'Some Guy'
+        self.body.save_physical_parameters(phys3)
+        d2 = self.body.get_physical_parameters(param_type='D')
+        self.assertEqual(len(d2), 2)
+        self.assertEqual(d2[0]['value'], 12.5)
+        self.assertEqual(d2[1]['value'], 15.4)
+        self.assertFalse(d2[0]['preferred'])
+        self.assertTrue(d2[1]['preferred'])
+
+        # Overwrite MPC Default, and leave other entry as preferred.
+        phys3['value'] = 10.1
+        phys3['reference'] = 'MPC Default'
+        self.body.save_physical_parameters(phys3)
+        d3 = self.body.get_physical_parameters(param_type='D')
+        self.assertEqual(len(d3), 2)
+        self.assertEqual(d3[1]['value'], 10.1)
+        self.assertEqual(d3[0]['value'], 15.4)
+        self.assertFalse(d3[1]['preferred'])
+        self.assertTrue(d3[0]['preferred'])
+
+
+class TestGetPhysicalParameters(TestCase):
+
+    def setUp(self):
+        params = {  'name' : 'nameless',
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    'not_seen'      : 2.3942,
+                    'arc_length'    : 0.4859,
+                    'score'         : 83,
+                    'abs_mag'       : 19.8
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+
+        phys1 = {'parameter_type': 'H',
+                 'value': 24.56,
+                 'error': 0.05,
+                 'units': 'mag',
+                 'reference' : "Bob and Friends, 2019",
+                 'notes': 'This is a fake entry',
+                 'preferred': True
+                 }
+        self.body.save_physical_parameters(phys1)
+
+        phys2 = {'parameter_type': 'P',
+                 'value': 8.7,
+                 'error': 0.5,
+                 'units': 'h',
+                 'reference': "Bob and Friends, 2019",
+                 'notes': 'This is a fake entry',
+                 'preferred': True
+                 }
+        self.body.save_physical_parameters(phys2)
+
+        phys3 = {'parameter_type': 'P',
+                 'value': 82,
+                 'error': 5,
+                 'units': 'h',
+                 'reference': "Bob and Friends, 2014",
+                 'notes': 'This is a fake entry',
+                 'preferred': False
+                 }
+        self.body.save_physical_parameters(phys3)
+
+        col1 = {'color_band': 'V-R',
+                 'value': .87,
+                 'error': 0.05,
+                 'units': 'mag',
+                 'reference': "Bob and Friends, 2019",
+                 'notes': 'This is a fake entry',
+                 'preferred': True
+                 }
+        self.body.save_physical_parameters(col1)
+
+        col2 = {'color_band': 'B-V',
+                 'value': .24,
+                 'error': 0.05,
+                 'units': 'mag',
+                 'reference': "Bob and Friends, 2019",
+                 'notes': 'This is a fake entry',
+                 'preferred': True
+                 }
+        self.body.save_physical_parameters(col2)
+
+    def test_get_everything(self):
+        expected_returns = [(24.56, 'Absolute Magnitude'), (8.7, 'Rotation Period'), (82, 'Rotation Period'), (.87, 'V-R'), (.24, 'B-V')]
+        get_db = self.body.get_physical_parameters()
+        for param in get_db:
+            test_param = (param['value'], param['type_display'])
+            self.assertIn(test_param, expected_returns)
+            expected_returns.remove(test_param)
+        self.assertEqual(expected_returns, [])
+
+    def test_get_preferred(self):
+        expected_returns = [(24.56, 'Absolute Magnitude'), (8.7, 'Rotation Period'), (.87, 'V-R'), (.24, 'B-V')]
+        get_db = self.body.get_physical_parameters(return_all=False)
+        for param in get_db:
+            test_param = (param['value'], param['type_display'])
+            self.assertIn(test_param, expected_returns)
+            expected_returns.remove(test_param)
+        self.assertEqual(expected_returns, [])
+
+    def test_get_abs_mag(self):
+        expected_returns = [(24.56, 'Absolute Magnitude')]
+        get_db = self.body.get_physical_parameters(param_type='H')
+        for param in get_db:
+            test_param = (param['value'], param['type_display'])
+            self.assertIn(test_param, expected_returns)
+            expected_returns.remove(test_param)
+        self.assertEqual(expected_returns, [])
+
+    def test_get_prefered_period(self):
+        expected_returns = [(8.7, 'Rotation Period')]
+        get_db = self.body.get_physical_parameters(param_type='P', return_all=False)
+        for param in get_db:
+            test_param = (param['value'], param['type_display'])
+            self.assertIn(test_param, expected_returns)
+            expected_returns.remove(test_param)
+        self.assertEqual(expected_returns, [])
+
+    def test_get_colors(self):
+        expected_returns = [(.87, 'V-R'), (.24, 'B-V')]
+        get_db = self.body.get_physical_parameters(param_type='Colors')
+        for param in get_db:
+            test_param = (param['value'], param['type_display'])
+            self.assertIn(test_param, expected_returns)
+            expected_returns.remove(test_param)
+        self.assertEqual(expected_returns, [])
+
+    def test_get_specific_color(self):
+        expected_returns = [(.87, 'V-R')]
+        get_db = self.body.get_physical_parameters(param_type='V-R')
+        for param in get_db:
+            test_param = (param['value'], param['type_display'])
+            self.assertIn(test_param, expected_returns)
+            expected_returns.remove(test_param)
+        self.assertEqual(expected_returns, [])
+
+    def test_get_mag_by_name(self):
+        expected_returns = [(24.56, 'Absolute Magnitude')]
+        get_db = self.body.get_physical_parameters(param_type='absolute magnitude')
+        for param in get_db:
+            test_param = (param['value'], param['type_display'])
+            self.assertIn(test_param, expected_returns)
+            expected_returns.remove(test_param)
+        self.assertEqual(expected_returns, [])
+
+
+class TestGetFullName(TestCase):
+
+    def setUp(self):
+        params = {  'name' : 'nameless',
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    'not_seen'      : 2.3942,
+                    'arc_length'    : 0.4859,
+                    'score'         : 83,
+                    'abs_mag'       : 19.8
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+
+        self.des1 = {'desig_type': 'N',
+                     'value': 'Rock&Roll',
+                     'notes': 'This is a fake entry',
+                     'preferred': True
+                     }
+
+        self.des2 = {'desig_type': '#',
+                     'value': '4224',
+                     'notes': 'This is a fake entry',
+                     'preferred': True
+                     }
+
+        self.des3 = {'desig_type': 'P',
+                     'value': '1969 QQ3',
+                     'notes': 'This is a fake entry',
+                     'preferred': True
+                     }
+
+        self.des4 = {'desig_type': 'P',
+                     'value': '1888 UT3',
+                     'notes': 'This is a fake entry',
+                     'preferred': False
+                     }
+
+    def test_full_name_no_entries(self):
+        expected_name = 'nameless'
+        full_name = self.body.full_name()
+        self.assertEqual(full_name, expected_name)
+
+    def test_full_name_prov_only(self):
+        expected_name = '1969 QQ3'
+        self.body.save_physical_parameters(self.des4)
+        self.body.save_physical_parameters(self.des3)
+        full_name = self.body.full_name()
+        self.assertEqual(full_name, expected_name)
+
+    def test_full_name_provnum_only(self):
+        expected_name = '4224 (1969 QQ3)'
+        self.body.save_physical_parameters(self.des3)
+        self.body.save_physical_parameters(self.des4)
+        self.body.save_physical_parameters(self.des2)
+        full_name = self.body.full_name()
+        self.assertEqual(full_name, expected_name)
+
+    def test_full_name_all(self):
+        expected_name = '4224 Rock&Roll (1969 QQ3)'
+        self.body.save_physical_parameters(self.des3)
+        self.body.save_physical_parameters(self.des4)
+        self.body.save_physical_parameters(self.des2)
+        self.body.save_physical_parameters(self.des1)
+        full_name = self.body.full_name()
+        self.assertEqual(full_name, expected_name)
+
+    def test_full_namenum_only(self):
+        expected_name = '4224 Rock&Roll'
+        self.body.save_physical_parameters(self.des2)
+        self.body.save_physical_parameters(self.des1)
+        full_name = self.body.full_name()
+        self.assertEqual(full_name, expected_name)
+
+    def test_comet_num(self):
+        expected_name = '4224P/Rock&Roll'
+        self.des2['value'] += 'P'
+        self.body.save_physical_parameters(self.des2)
+        self.body.save_physical_parameters(self.des1)
+        full_name = self.body.full_name()
+        self.assertEqual(full_name, expected_name)
+
+    def test_comet_num_old(self):
+        expected_name = 'P/1876 W2 (New)'
+        self.des2['value'] = 'P'
+        self.des1['value'] = '1876 W2'
+        self.des3['value'] = 'New'
+        self.body.save_physical_parameters(self.des2)
+        self.body.save_physical_parameters(self.des1)
+        self.body.save_physical_parameters(self.des3)
+        full_name = self.body.full_name()
+        self.assertEqual(full_name, expected_name)
+
+
+class TestSuperBlock(TestCase):
+
+    def setUp(self):
+        params = {  'provisional_name' : 'N999r0q',
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    'not_seen'      : 2.3942,
+                    'arc_length'    : 0.4859,
+                    'score'         : 83,
+                    'abs_mag'       : 19.8
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+
+        params = { 'code' : 'LCOEngineering',
+                   'title' : 'Engineering proposal'
+                 }
+        self.proposal = Proposal.objects.create(**params)
+
+        sblock_params = {   'cadence' : False,
+                            'body' : self.body,
+                            'proposal' : self.proposal,
+                            'block_start' : datetime(2015, 4, 20, 3),
+                            'block_end' : datetime(2015, 4, 20, 23),
+                            'active' : True
+                        }
+        self.sblock = SuperBlock.objects.create(**sblock_params)
+
+        params1 = { 'telclass' : '2m0',
+                    'site' : 'coj',
+                    'body' : self.body,
+                    'superblock' : self.sblock,
+                    'obstype' : Block.OPT_SPECTRA,
+                    'block_start' : datetime(2015, 4, 20, 4, 0),
+                    'block_end' : datetime(2015, 4, 20, 5, 15),
+                    'request_number' : '1',
+                    'num_exposures' : 1,
+                    'exp_length' : 1800
+                  }
+        self.block1 = Block.objects.create(**params1)
+
+        params2 = { 'telclass' : '1m0',
+                    'site' : 'coj',
+                    'body' : self.body,
+                    'superblock' : self.sblock,
+                    'obstype' : Block.OPT_IMAGING,
+                    'block_start' : datetime(2015, 4, 20, 6, 15),
+                    'block_end' : datetime(2015, 4, 20, 6, 30),
+                    'request_number' : '2',
+                    'num_exposures' : 4,
+                    'exp_length' : 120.0
+                  }
+        self.block2 = Block.objects.create(**params2)
+
+        params3 = { 'telclass' : '1m0',
+                    'site' : 'coj',
+                    'body' : self.body,
+                    'superblock' : self.sblock,
+                    'obstype' : Block.OPT_IMAGING,
+                    'block_start' : datetime(2015, 4, 20, 8, 0),
+                    'block_end' : datetime(2015, 4, 20, 10, 15),
+                    'request_number' : '3',
+                    'num_exposures' : 120,
+                    'exp_length' : 60.0
+                  }
+        self.block3 = Block.objects.create(**params3)
+
+    def test_telclass(self):
+        expected_telclass = "2m0(S), 1m0"
+
+        tel_class = self.sblock.get_telclass()
+
+        self.assertEqual(expected_telclass, tel_class)
+
+    def test_telclass_spectro_only(self):
+        # Remove non spectroscopic blocks
+        self.block2.delete()
+        self.block3.delete()
+
+        expected_telclass = "2m0(S)"
+
+        tel_class = self.sblock.get_telclass()
+
+        self.assertEqual(expected_telclass, tel_class)
+
+    def test_obstypes(self):
+        expected_obstypes = "1,0"
+
+        obs_types = self.sblock.get_obstypes()
+
+        self.assertEqual(expected_obstypes, obs_types)
+
+    def test_obstypes_noblocks(self):
+        expected_obstypes = ''
+
+        # Create new SuperBlock for the next day and assert that there are
+        # no Block's associated with it.
+        new_sblock = SuperBlock(body = self.body,
+                                proposal = self.proposal,
+                                block_start = self.sblock.block_start + timedelta(days=1, seconds=300),
+                                block_end   = self.sblock.block_end + timedelta(days=1, seconds=300)
+                               )
+        new_sblock.save()
+
+        self.assertEqual(2, SuperBlock.objects.count())
+        num_assoc_blocks = Block.objects.filter(superblock=new_sblock.id).count()
+
+        self.assertEqual(0, num_assoc_blocks)
+
+        obs_types = new_sblock.get_obstypes()
+
+        self.assertEqual(expected_obstypes, obs_types)
+
+
+class TestBlock(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        params = {  'provisional_name' : 'N999r0q',
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    'not_seen'      : 2.3942,
+                    'arc_length'    : 0.4859,
+                    'score'         : 83,
+                    'abs_mag'       : 19.8
+                    }
+        cls.body, created = Body.objects.get_or_create(**params)
+
+        params = { 'code' : 'LCOEngineering',
+                   'title' : 'Engineering proposal'
+                 }
+        cls.proposal = Proposal.objects.create(**params)
+
+        sblock_params = {   'cadence' : False,
+                            'body' : cls.body,
+                            'proposal' : cls.proposal,
+                            'block_start' : datetime(2015, 4, 20, 3),
+                            'block_end' : datetime(2015, 4, 20, 23),
+                            'active' : True
+                        }
+        cls.sblock = SuperBlock.objects.create(**sblock_params)
+
+        staticsrc_params = { 'name' : 'Landolt SA107-684',
+                             'ra'   : 234.325,
+                             'dec'  : -0.164,
+                             'vmag' : 8.2,
+                             'source_type' : StaticSource.SOLAR_STANDARD,
+                             'spectral_type' : 'G2V'
+                           }
+        cls.staticsrc = StaticSource.objects.create(**staticsrc_params)
+
+        cls.params_spectro = { 'telclass' : '2m0',
+                    'site' : 'coj',
+                    'body' : cls.body,
+                    'calibsource' : None,
+                    'superblock' : cls.sblock,
+                    'obstype' : Block.OPT_SPECTRA,
+                    'block_start' : datetime(2015, 4, 20, 4, 0),
+                    'block_end' : datetime(2015, 4, 20, 5, 15),
+                    'request_number' : '1',
+                    'num_exposures' : 1,
+                    'exp_length' : 1800
+                  }
+        cls.params_imaging1 = { 'telclass' : '1m0',
+                    'site' : 'coj',
+                    'body' : cls.body,
+                    'calibsource' : None,
+                    'superblock' : cls.sblock,
+                    'obstype' : Block.OPT_IMAGING,
+                    'block_start' : datetime(2015, 4, 20, 6, 15),
+                    'block_end' : datetime(2015, 4, 20, 6, 30),
+                    'request_number' : '2',
+                    'num_exposures' : 4,
+                    'exp_length' : 120.0
+                  }
+
+        cls.params_imaging2 = { 'telclass' : '1m0',
+                    'site' : 'coj',
+                    'body' : cls.body,
+                    'calibsource' : None,
+                    'superblock' : cls.sblock,
+                    'obstype' : Block.OPT_IMAGING,
+                    'block_start' : datetime(2015, 4, 20, 8, 0),
+                    'block_end' : datetime(2015, 4, 20, 10, 15),
+                    'request_number' : '3',
+                    'num_exposures' : 120,
+                    'exp_length' : 60.0
+                  }
+
+        cls.params_calib = { 'telclass' : '2m0',
+                    'site' : 'coj',
+                    'body' : None,
+                    'calibsource' : cls.staticsrc,
+                    'superblock' : cls.sblock,
+                    'obstype' : Block.OPT_SPECTRA,
+                    'block_start' : datetime(2015, 4, 20, 4, 0),
+                    'block_end' : datetime(2015, 4, 20, 5, 15),
+                    'request_number' : '4',
+                    'num_exposures' : 1,
+                    'exp_length' : 300.0
+                  }
+
+    def test_spectro_block(self):
+
+        block = Block.objects.create(**self.params_spectro)
+
+        self.assertEqual(self.body.current_name(), block.current_name())
+
+    def test_solar_analog_block(self):
+
+        block = Block.objects.create(**self.params_calib)
+
+        self.assertEqual(self.staticsrc.current_name(), block.current_name())
+
 class TestFrame(TestCase):
 
     def setUp(self):
@@ -359,13 +1120,22 @@ class TestFrame(TestCase):
         self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
 
         # Create test blocks
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'cpt',
+        sblock_params = {
                          'body'     : self.body,
                          'proposal' : self.neo_proposal,
                          'block_start' : '2015-07-13 18:00:00',
                          'block_end'   : '2015-07-14 03:00:00',
                          'tracking_number' : '00042',
+                         'active'   : True,
+                       }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'cpt',
+                         'body'     : self.body,
+                         'superblock' : self.test_sblock,
+                         'block_start' : '2015-07-13 18:00:00',
+                         'block_end'   : '2015-07-14 03:00:00',
+                         'request_number' : '10042',
                          'num_exposures' : 5,
                          'exp_length' : 40.0,
                          'active'   : True,
@@ -663,6 +1433,7 @@ class TestFrame(TestCase):
         self.assertEqual(self.w.pixel_shape[0], frame.wcs.pixel_shape[0])
         self.assertEqual(self.w.pixel_shape[1], frame.wcs.pixel_shape[1])
 
+
 class TestWCSField(TestCase):
 
     def setUp(self):
@@ -687,6 +1458,7 @@ class TestWCSField(TestCase):
     def test_db_parameters_respects_db_type(self):
         f = WCSField()
         self.assertEqual(f.db_parameters(connection)['type'], 'text')
+
 
 class TestSourceMeasurement(TestCase):
 
@@ -733,13 +1505,22 @@ class TestSourceMeasurement(TestCase):
         self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
 
         # Create test blocks
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'cpt',
+        sblock_params = {
                          'body'     : self.body,
                          'proposal' : self.neo_proposal,
                          'block_start' : '2015-07-13 18:00:00',
                          'block_end'   : '2015-07-14 03:00:00',
                          'tracking_number' : '00042',
+                         'active'   : True,
+                       }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'cpt',
+                         'body'     : self.body,
+                         'superblock' : self.test_sblock,
+                         'block_start' : '2015-07-13 18:00:00',
+                         'block_end'   : '2015-07-14 03:00:00',
+                         'request_number' : '10042',
                          'num_exposures' : 5,
                          'exp_length' : 40.0,
                          'active'   : True,
@@ -749,13 +1530,22 @@ class TestSourceMeasurement(TestCase):
                        }
         self.test_block = Block.objects.create(**block_params)
 
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'lsc',
+        sblock_params = {
                          'body'     : self.body2,
                          'proposal' : self.neo_proposal,
                          'block_start' : '2015-12-04 00:40:00',
                          'block_end'   : '2015-12-04 08:10:00',
                          'tracking_number' : '0000117781',
+                         'active'   : False,
+                       }
+        self.test_sblock2 = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'lsc',
+                         'body'     : self.body2,
+                         'superblock' : self.test_sblock2,
+                         'block_start' : '2015-12-04 00:40:00',
+                         'block_end'   : '2015-12-04 08:10:00',
+                         'request_number' : '0010117781',
                          'num_exposures' : 15,
                          'exp_length' : 95.0,
                          'active'   : False,
@@ -772,6 +1562,7 @@ class TestSourceMeasurement(TestCase):
                     'exptime'       : 40.0,
                     'midpoint'      : datetime(2015, 7, 13, 21, 9, 51),
                     'block'         : self.test_block,
+                    'fwhm'          : 1.0
                  }
         self.test_frame = Frame.objects.create(**frame_params)
 
@@ -811,6 +1602,8 @@ class TestSourceMeasurement(TestCase):
                          'zeropoint_err': None}
         self.test_frame_nonLCO_F51 = Frame.objects.create(**frame_params)
 
+        self.maxDiff = None
+
     def test_mpc_1(self):
         measure_params = {  'body' : self.body,
                             'frame' : self.test_frame,
@@ -819,7 +1612,7 @@ class TestSourceMeasurement(TestCase):
                             'obs_mag' : 21.5,
                             'astrometric_catalog' : "UCAC-4",
                          }
-                                 
+
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '     N999r0q  C2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 Rq     K93'
         mpc_line = measure.format_mpc_line(include_catcode=True)
@@ -833,7 +1626,7 @@ class TestSourceMeasurement(TestCase):
                             'obs_mag' : 21.5,
                             'astrometric_catalog' : "UCAC-4",
                          }
-                                 
+
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '     N999r0q  C2015 07 13.88184000 30 00.00 -00 30 00.0          21.5 Rq     K93'
         mpc_line = measure.format_mpc_line(include_catcode=True)
@@ -993,7 +1786,7 @@ class TestSourceMeasurement(TestCase):
                             'obs_ra' : 157.5,
                             'obs_dec' : -32.75,
                             'obs_mag' : 21.5,
-                            'flags' : '*K',
+                            'flags' : '*,K',
                             'astrometric_catalog' : "UCAC-4",
                          }
 
@@ -1001,6 +1794,241 @@ class TestSourceMeasurement(TestCase):
         expected_mpcline = '     N999r0q*KC2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 Rq     K93'
         mpc_line = measure.format_mpc_line(include_catcode=True)
         self.assertEqual(expected_mpcline, mpc_line)
+
+    def test_discovery_on_starlover(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 157.5,
+                            'obs_dec' : -32.75,
+                            'obs_mag' : 21.5,
+                            'flags' : '*,I',
+                            'astrometric_catalog' : "UCAC-4",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_mpcline = '     N999r0q*IC2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 Rq     K93'
+        mpc_line = measure.format_mpc_line(include_catcode=True)
+        self.assertEqual(expected_mpcline, mpc_line)
+
+    def test_discovery_on_starlover_reversed_order(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 157.5,
+                            'obs_dec' : -32.75,
+                            'obs_mag' : 21.5,
+                            'flags' : 'I,*',
+                            'astrometric_catalog' : "UCAC-4",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_mpcline = '     N999r0q*IC2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 Rq     K93'
+        mpc_line = measure.format_mpc_line(include_catcode=True)
+        self.assertEqual(expected_mpcline, mpc_line)
+
+    def test_discovery_on_twoflags(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 157.5,
+                            'obs_dec' : -32.75,
+                            'obs_mag' : 21.5,
+                            'flags' : '*,K,I',
+                            'astrometric_catalog' : "UCAC-4",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_mpcline = '     N999r0q*KC2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 Rq     K93'
+        mpc_line = measure.format_mpc_line(include_catcode=True)
+        self.assertEqual(expected_mpcline, mpc_line)
+
+    def test_too_many_flags(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 157.5,
+                            'obs_dec' : -32.75,
+                            'obs_mag' : 21.5,
+                            'flags' : 'K,I',
+                            'astrometric_catalog' : "UCAC-4",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_mpcline = '     N999r0q KC2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 Rq     K93'
+        mpc_line = measure.format_mpc_line(include_catcode=True)
+        self.assertEqual(expected_mpcline, mpc_line)
+
+    def test_discovery_and_too_many_flags(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 157.5,
+                            'obs_dec' : -32.75,
+                            'obs_mag' : 21.5,
+                            'flags' : 'K,I,*',
+                            'astrometric_catalog' : "UCAC-4",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_mpcline = '     N999r0q*KC2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 Rq     K93'
+        mpc_line = measure.format_mpc_line(include_catcode=True)
+        self.assertEqual(expected_mpcline, mpc_line)
+
+    def test_psv_1(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 157.5,
+                            'obs_dec' : -32.75,
+                            'obs_mag' : 21.5,
+                            'astrometric_catalog' : "UCAC-4",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_psvline = '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|157.500000 |-32.750000 |   UCAC4|21.5 |   R|   UCAC4|     |'
+        psv_line = measure.format_psv_line()
+        self.assertEqual(expected_psvline, psv_line)
+
+    def test_psv_2(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 7.5,
+                            'obs_dec' : -00.5,
+                            'obs_mag' : 21.5,
+                            'astrometric_catalog' : "UCAC-4",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_psvline = '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|  7.500000 | -0.500000 |   UCAC4|21.5 |   R|   UCAC4|     |'
+        psv_line = measure.format_psv_line()
+        self.assertEqual(expected_psvline, psv_line)
+
+    def test_psv_3(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 7.5,
+                            'obs_dec' : -00.5,
+                            'obs_mag' : 21.5,
+                            'astrometric_catalog' : "GAIA-DR1",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_psvline = '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|  7.500000 | -0.500000 |   Gaia1|21.5 |   R|   Gaia1|     |'
+        psv_line = measure.format_psv_line()
+        self.assertEqual(expected_psvline, psv_line)
+
+    def test_psv_4(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 7.5,
+                            'obs_dec' : -00.5,
+                            'obs_mag' : 21.5,
+                            'astrometric_catalog' : "GAIA-DR2",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_psvline = '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|  7.500000 | -0.500000 |   Gaia2|21.5 |   R|   Gaia2|     |'
+        psv_line = measure.format_psv_line()
+        self.assertEqual(expected_psvline, psv_line)
+
+    def test_psv_nomag_1(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 220.5224583333333,
+                            'obs_dec' : -13.814777777777778,
+                            'obs_mag' : None,
+                            'astrometric_catalog' : "GAIA-DR2",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_psvline = '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|220.522458 |-13.814778 |   Gaia2|     |    |        |     |'
+        psv_line = measure.format_psv_line()
+        self.assertEqual(expected_psvline, psv_line)
+
+    def test_psv_rms_nomag_1(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 220.5224583333333,
+                            'obs_dec' : -13.814777777777778,
+                            'obs_mag' : None,
+                            'err_obs_ra' : 0.14/3600.0,
+                            'err_obs_dec': 0.16/3600.0,
+                            'err_obs_mag' : 0.12,
+                            'astrometric_catalog' : "GAIA-DR2",
+                            'photometric_catalog' : "GAIA-DR2",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_psvline = '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|220.522458 |-13.814778 | 0.14|  0.16|   Gaia2|     |      |    |        |      |      |1.0000|     |'
+
+        psv_line = measure.format_psv_line()
+        self.assertEqual(expected_psvline, psv_line)
+
+    def test_psv_rms_1(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 7.5,
+                            'obs_dec' : -00.5,
+                            'obs_mag' : 21.5,
+                            'err_obs_ra' : 0.14/3600.0,
+                            'err_obs_dec': 0.16/3600.0,
+                            'err_obs_mag' : 0.12,
+                            'astrometric_catalog' : "GAIA-DR2",
+                            'photometric_catalog' : "GAIA-DR2",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        """
+                                   |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|     7.50000|    -0.50000|   Gaia2|21.5 |     R|   Gaia2|     |'
+                                   |2019 GC6   |        | CCD|K91 |2019-04-17T17:20:52.34Z|  174.304775|  -44.161550| 0.14|  0.16|   Gaia2|13.9 |  0.01|   G|   Gaia2|  1.56|1.3945|1.0000|     |
+        """
+        expected_psvline = '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|  7.500000 | -0.500000 | 0.14|  0.16|   Gaia2|21.5 |0.12  |   R|   Gaia2|      |      |1.0000|     |'
+        psv_line = measure.format_psv_line()
+        self.assertEqual(expected_psvline, psv_line)
+
+    def test_psv_rms_2(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 7.5,
+                            'obs_dec' : -00.5,
+                            'obs_mag' : 21.5,
+                            'err_obs_ra' : 0.14/3600.0,
+                            'err_obs_dec': 0.16/3600.0,
+                            'err_obs_mag' : 0.12,
+                            'aperture_size' : 1.56,
+                            'snr' : 24.8,
+                            'astrometric_catalog' : "GAIA-DR2",
+                            'photometric_catalog' : "GAIA-DR2",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        """
+                                   |           | N999r0q| CCD|K93 |    |2015-07-13T21:09:51.00Z|     7.50000|    -0.50000|   Gaia2|21.5 |     R|   Gaia2|     |'
+                                   |2019 GC6   |        | CCD|K91 |    |2019-04-17T17:20:52.34Z|  174.304775|  -44.161550| 0.14|  0.16|   Gaia2|13.9 |  0.01|   G|   Gaia2|  1.56|1.3945|1.0000|     |
+        """
+        expected_psvline = '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|  7.500000 | -0.500000 | 0.14|  0.16|   Gaia2|21.5 |0.12  |   R|   Gaia2|  1.56|1.3945|1.0000|     |'
+        psv_line = measure.format_psv_line()
+        self.assertEqual(expected_psvline, psv_line)
+
+    def test_psv_rms_3(self):
+
+        # Add an astrometric fit RMS to the Frame.
+        self.test_frame.rms_of_fit = 0.3
+        self.test_frame.save()
+
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 7.5,
+                            'obs_dec' : -00.5,
+                            'obs_mag' : 21.5,
+                            'err_obs_ra' : 0.14/3600.0,
+                            'err_obs_dec': 0.16/3600.0,
+                            'err_obs_mag' : 0.12,
+                            'aperture_size' : 1.56,
+                            'snr' : 24.8,
+                            'astrometric_catalog' : "2MASS",
+                            'photometric_catalog' : "UCAC-4",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_psvline = '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|  7.500000 | -0.500000 | 0.33|  0.34|   2MASS|21.5 |0.12  |   R|   UCAC4|  1.56|1.3945|1.0000|     |'
+        psv_line = measure.format_psv_line()
+        self.assertEqual(expected_psvline, psv_line)
 
 
 class TestCatalogSources(TestCase):
@@ -1030,13 +2058,22 @@ class TestCatalogSources(TestCase):
         self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
 
         # Create test blocks
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'cpt',
+        sblock_params = {
                          'body'     : self.body,
                          'proposal' : self.neo_proposal,
                          'block_start' : '2015-07-13 18:00:00',
                          'block_end'   : '2015-07-14 03:00:00',
                          'tracking_number' : '00042',
+                         'active'   : True,
+                       }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'cpt',
+                         'body'     : self.body,
+                         'superblock' : self.test_sblock,
+                         'block_start' : '2015-07-13 18:00:00',
+                         'block_end'   : '2015-07-14 03:00:00',
+                         'request_number' : '10042',
                          'num_exposures' : 5,
                          'exp_length' : 40.0,
                          'active'   : True,
@@ -1110,13 +2147,22 @@ class TestCandidate(TestCase):
         self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
 
         # Create test blocks
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'cpt',
+        sblock_params = {
                          'body'     : self.body,
                          'proposal' : self.neo_proposal,
                          'block_start' : '2015-07-13 18:00:00',
                          'block_end'   : '2015-07-14 03:00:00',
                          'tracking_number' : '00042',
+                         'active'   : True,
+                       }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'cpt',
+                         'body'     : self.body,
+                         'superblock' : self.test_sblock,
+                         'block_start' : '2015-07-13 18:00:00',
+                         'block_end'   : '2015-07-14 03:00:00',
+                         'request_number' : '10042',
                          'num_exposures' : 5,
                          'exp_length' : 40.0,
                          'active'   : True,
@@ -1183,3 +2229,4 @@ class TestCandidate(TestCase):
         for frame in arange(self.dets_array.shape[0]):
             for column in self.dets_array.dtype.names:
                 self.assertAlmostEqual(self.dets_array[column][frame], new_dets_array[column][frame], 7)
+

@@ -1,8 +1,180 @@
-# NEO Exchange
+## NEO Exchange
 
 Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
+
+### 3.2.5
+Fix a rare comet bug.
+
+### 3.2.4
+Fix a few rare bugs.
+
+### 3.2.3
+Allow Time Critical observations within the same proposal and allow selection of this from the scheduling form.
+
+### 3.2.2
+Add observation timeline.
+
+### 3.2.0
+Add models for physical parameters and Designations
+*Includes specific model for colors
+*Search includes any of a body's several designations
+*Does not remove anything from the Body model
+
+### 3.1.1
+Convert Spectroscopy plots into Bokeh for added interactivity.
+
+### 3.0.5
+Fix lingering tests for the LCO Request V3 language change
+
+### 3.0.4
+Change to LCO Request V3 language
+
+### 3.0.3
+Add long-term planning plots showing how the sky position, helio/geocentric distance, magnitude, elongation, Moon-object separation and Moon phase, positional uncertainty and visibility and on-sky rate of motion change with time.
+
+### 3.0.2
+Minor bug fixes
+
+### 3.0.1
+Minor bug fixes
+
+### 3.0.0
+Support for deploying into Amazon Web Services (AWS) using Kubernetes and Helm
+
+### 2.8.9
+Add support for the ELP Dome B 1-meter telescope.
+
+### 2.8.6
+Change URL scheme for new prefix
+
+### 2.8.5
+Modifications to scheme on refitting elements.
+
+### 2.8.4
+Add support for displaying log Flux plots of spectrophotometric standards with CTIO/HST/Oke spectra. Add view to show best calibration sources for the telescopes for the current night.
+
+### 2.8.3
+* Enhance guide movie creation.
+* Allow for graceful failure when outside web endpoints are down.
+
+### 2.8.2
+Add ADES PSV export and MPC1992 and ADES PSV download options.
+
+### 2.8.1
+Several small updates and fixes
+* Improve tests for updated firefox
+* Remove gaps between RADAR target ingest & orbit update
+* Add error handling for spectroscopy when a 2m isn't available
+
+### 2.8.0
+Improve Static Source Scheduling
+* Add features to Calib Scheduling Confirmation page to bring it up to date with standard version.
+* Add warning for potentially saturated targets.
+* Add Tests for Calib scheduling confirmation page
+* Add Solar Analog details to NEO scheduling confirmation page
+* Make exposure time calculator for Spectroscopic observations of Solar Analogs
+
+### 2.7.13
+Calculate frame midpoint based on UTSTOP rather than EXPTIME. Improve ingestion of new objects and record and output discovery asterisks.
+
+### 2.7.12
+Output of compute_ephem is now a dictionary.
+
+### 2.7.11
+Allow for automatic updating of targets.
+* Update observations from MPC daily.
+* Update orbits with FindOrb or from MPC daily.
+* Be smarter about when and how FindOrb updates an orbit.
+* Update taxonomy daily.
+* Update external spectroscopy weekly.
+
+### 2.7.10
+Several bug fixes
+* Allow Download for all Programs
+* Allow for no visible ephemeris for very close objects
+* Fix data pull from Arecibo page
+
+### 2.7.9
+Improve Cadence scheduling
+* Default end-date is current date + 24 hours
+* Adjust jitter/Period from the confirmation page
+* Handle bad dates rather than crashing
+* Various warnings and tips to help with scheduling
+
+### 2.7.8
+Comet elements are now selected based on nearest in time.
+
+### 2.7.7
+Several patches for tests and minor issue fixes
+
+### 2.7.6
+Add Generic Telescope Classes
+
+### 2.7.5
+Update the scheduling interface to allow for more options
+* Display UT time on website
+* Display Site/Telescope class on Confirmation page
+* Display Visibility of requested target
+* Allow for Exposure time Adjustment
+* Display Moon info
+* Adjust Max Airmass
+* Adjust IPP
+* Adjust Minimum Moon Distance
+* Adjust Acceptability Threshold
+
+### 2.7.4
+
+Improve the cross-identification code for multiply desiginated objects and periodic comets.
+
+### 2.7.3
+
+Fix issues with interactions between FindOrb and candidates/comets
+* Remove Perturbation Code
+
+
+### 2.7.2
+
+Spectroscopic Graphical tools
+* Create and display a gif of the guidefreames during an observation
+* Create and display a spectroscopic trace based on the reduced data
+
+### 2.7.1
+
+Add latitude, longitude, height for 0m4b at Tenerife (Z17). Update find_orb build procedure.
+
+### 2.7.0
+
+Flux Standards
+* Add Static Source Model to hold flux, spectral, solar and RV standards.
+* Add Calibrations List page.
+* Add Calibration detail descriptions.
+* Allow for sorting out and scheduling spectra for Solar analogs.
+
+### 2.6.0
+
+Calculate and forward more precise orbital elements for spectroscopic observations.
+
+### 2.5.3
+
+Update light curve extraction.
+* Pull from Tracking Number rather than block number
+* Capable of incorporating any number of blocks for a given target within a given time frame.
+Add motion details to characterization page.
+
+### 2.5.2
+
+Robotic scheduler and low-level ToO support.
+
+### 2.5.1
+Add block record keeping for spectroscopy.
+
+### 2.5.0
+Create a characterization page for spectroscopy support
+* Pull out targets of interest.
+* Check of previous spectroscopy from SMASS and MANOS.
+* Calculate observing window for the next 3 months for each target.
 
 ### 2.4.1
 
@@ -22,7 +194,7 @@ Bite the Bullet and Update to Python 3.6
 
 ### 2.2.0
 
-Added capability of requesting multiple filters when making a user request. 
+Added capability of requesting multiple filters when making a user request.
 
 ### 2.1.6
 
@@ -59,7 +231,7 @@ Add cadence support.
 ### 1.8.3
 
 Add check for and marking of 'was not a minor planet' in the Previous NEOCP page
-as spacecraft. 
+as spacecraft.
 Fixes for POND submitted blocks and lightcurve extraction.
 Changes for the new semester boundaries.
 

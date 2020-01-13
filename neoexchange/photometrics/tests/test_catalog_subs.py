@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2016-2018 LCO
+Copyright (C) 2016-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@ import astropy.units as u
 from numpy import where, array
 from numpy.testing import assert_allclose
 
-from core.models import Body, Proposal, Block, Frame
+from core.models import Body, Proposal, Block, Frame, SuperBlock
 from neox.tests.mocks import mock_get_vizier_catalog_table
 
 # Import module to test
@@ -43,6 +43,7 @@ import logging
 logger = logging.getLogger(__name__)
 # Disable anything below CRITICAL level
 logging.disable(logging.CRITICAL)
+
 
 class ZeropointUnitTest(TestCase):
 
@@ -57,7 +58,6 @@ class ZeropointUnitTest(TestCase):
     def compare_tables(self, expected_table, table, column, num_to_check=6, precision=6):
 
         for i in range(0, num_to_check+1):
-#           print(i,num_to_check+1)
             self.assertAlmostEqual(expected_table[column][i], table[column][i], precision)
 
     # @patch('photometrics.catalog_subs.Vizier')
@@ -66,13 +66,13 @@ class ZeropointUnitTest(TestCase):
         # test getting a single ra, dec, and rmag out of the default UCAC4 catalog
         # test_data = __file__.replace('.py', '_UCAC4.dat') #test_data_file captured with cat_table.write('test_catalog_subs_UCAC4.dat', format='csv')
         #        test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
-        ## test_query_result = []
-        ## test_query_result.append(Table.read(test_data, format='csv'))
-        ## mock_vizier().query_region().__getitem__.return_value=test_query_result
-        ## print mock_vizier().query_region().__getitem__.return_value#['_RAJ2000'][0]
-        ## print len(mock_vizier().query_region().__getitem__.return_value)
-        ## print mock_vizier().query_region().__getitem__(0)
-        ## print test_query_result.__getitem__(0)
+        # test_query_result = []
+        # test_query_result.append(Table.read(test_data, format='csv'))
+        # mock_vizier().query_region().__getitem__.return_value=test_query_result
+        # print mock_vizier().query_region().__getitem__.return_value#['_RAJ2000'][0]
+        # print len(mock_vizier().query_region().__getitem__.return_value)
+        # print mock_vizier().query_region().__getitem__(0)
+        # print test_query_result.__getitem__(0)
         # print test_query_result[0]
         # print len(test_query_result)
         # mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
@@ -88,9 +88,9 @@ class ZeropointUnitTest(TestCase):
         expected_len_cat_table = 1607
 
         cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", "UCAC4")
-#        print cat_table['_RAJ2000'][0], cat_table['_DEJ2000'][0]#, cat_table['rmag'][2]
-#        print cat_name
-#        print cat_table
+        # print(cat_table['_RAJ2000'][0], cat_table['_DEJ2000'][0]#, cat_table['rmag'][2])
+        # print(cat_name)
+        # print(cat_table)
 
         ra_first_source = cat_table['RAJ2000'][0]
 
@@ -103,8 +103,8 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_rmag_third_source, rmag_third_source, 2)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
-#    @patch('photometrics.catalog_subs.Vizier')
-#    def test_no_cat(self, mock_vizier):
+    # @patch('photometrics.catalog_subs.Vizier')
+    # def test_no_cat(self, mock_vizier):
     def test_no_cat(self):
 
         expected_ra_first_source = 299.29474599999998
@@ -908,10 +908,10 @@ class ZeropointUnitTest(TestCase):
         self.fail("write test for no internet")
 
 
-class Test_GetReferenceCatalog(TestCase):
+class TestGetReferenceCatalog(TestCase):
 
     def setUp(self):
-        self.temp_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
+        self.temp_dir = tempfile.mkdtemp(prefix='tmp_neox_')
 
         self.header = { 'ra' : 228.33284875,
                         'dec': 38.395874166666665,
@@ -933,7 +933,8 @@ class Test_GetReferenceCatalog(TestCase):
                 print("Error removing files in temporary test directory", self.temp_dir)
             try:
                 os.rmdir(self.temp_dir)
-                if self.debug_print: print("Removed", self.temp_dir)
+                if self.debug_print:
+                    print("Removed", self.temp_dir)
             except OSError:
                 print("Error removing temporary test directory", self.temp_dir)
         else:
@@ -1046,7 +1047,7 @@ class Test_GetReferenceCatalog(TestCase):
 class TestExistingCatalogCoverage(TestCase):
 
     def setUp(self):
-        self.temp_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
+        self.temp_dir = tempfile.mkdtemp(prefix='tmp_neox_')
 
         self.header = { 'ra' : 228.25,
                         'dec': 38.40,
@@ -1068,7 +1069,8 @@ class TestExistingCatalogCoverage(TestCase):
                 print("Error removing files in temporary test directory", self.temp_dir)
             try:
                 os.rmdir(self.temp_dir)
-                if self.debug_print: print("Removed", self.temp_dir)
+                if self.debug_print:
+                    print("Removed", self.temp_dir)
             except OSError:
                 print("Error removing temporary test directory", self.temp_dir)
         else:
@@ -1152,7 +1154,8 @@ class TestExistingCatalogCoverage(TestCase):
 
         self.assertEqual(ref_catalog, existing_catalog)
 
-class Test_Convert_Catfile_To_Corners(TestCase):
+
+class TestConvertCatfileToCorners(TestCase):
 
     def test_nopath1(self):
         expected_tl = (228.5, 38.65)
@@ -1497,7 +1500,7 @@ class OpenFITSCatalog(FITSUnitTest):
         self.assertAlmostEqual(expected_y, tbl[-1]['YWIN'], self.precision)
 
 
-class Test_Convert_Values(FITSUnitTest):
+class TestConvertValues(FITSUnitTest):
 
     def test_dateobs_conversion(self):
 
@@ -2166,7 +2169,6 @@ class FITSReadCatalog(FITSUnitTest):
 
         self.compare_tables(expected_catalog, catalog_items, 9)
 
-
     def test_first_item_with_bad_zeropoint(self):
 
         expected_catalog = self.basic_table
@@ -2226,7 +2228,7 @@ class FITSReadCatalog(FITSUnitTest):
                                    'major_axis'  : 1.87925231,
                                    'minor_axis'  : 1.74675643,
                                    'ccd_pa'      : -79.38792419,
-                                   'obs_ra'  :  86.868051829832439,
+                                   'obs_ra'  : 86.868051829832439,
                                    'obs_dec' : -27.575127242664802,
                                    'obs_ra_err'  : 7.464116913258858e-06,
                                    'obs_dec_err' : 7.516842315248245e-06,
@@ -2251,7 +2253,7 @@ class FITSReadCatalog(FITSUnitTest):
                                    'minor_axis'  : 1.73628092,
                                    'ccd_pa'      : 7.76751757,
                                    'obs_ra'  :  219.7877046646191,
-                                   'obs_dec' :  -9.6401399241501036,
+                                   'obs_dec' : -9.6401399241501036,
                                    'obs_ra_err'  : 8.92232262319e-06,
                                    'obs_dec_err' : 8.12455029148e-06,
                                    'obs_mag'      : -2.5*log10(206447.5625) + 00.00,
@@ -2525,14 +2527,23 @@ class UpdateFrameZeropointTest(FITSUnitTest):
         self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
 
         # Create test block
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'LSC',
+        sblock_params = {
                          'body'     : self.body_with_provname,
                          'proposal' : self.neo_proposal,
                          'groupid'  : self.body_with_provname.current_name() + '_CPT-20150420',
                          'block_start' : '2017-03-08 05:05:00',
                          'block_end'   : '2017-03-08 05:22:36',
                          'tracking_number' : '0000358587',
+                         'active'   : False
+                       }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'LSC',
+                         'body'     : self.body_with_provname,
+                         'superblock' : self.test_sblock,
+                         'block_start' : '2017-03-08 05:05:00',
+                         'block_end'   : '2017-03-08 05:22:36',
+                         'request_number' : '0001358587',
                          'num_exposures' : 6,
                          'exp_length' : 120.0,
                          'active'   : False

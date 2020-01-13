@@ -1,3 +1,18 @@
+"""
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2016-2019 LCO
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+"""
+
 from datetime import datetime
 
 from django.core.management.base import BaseCommand, CommandError
@@ -27,7 +42,7 @@ class Command(BaseCommand):
             try:
                 logger.debug('*** Inspecting Body ID {} ***'.format(body['object_id']))
                 versions = Version.objects.filter(object_id=body['object_id']).order_by('revision__date_created')
-            except Exception, e:
+            except Exception as e:
                 logger.error("Problem with body: {}".format(e))
                 continue
             if versions.count() <= 2:
@@ -39,7 +54,7 @@ class Command(BaseCommand):
                 try:
                     vers_dict = version.field_dict
                     orig_dict = original.field_dict
-                except Exception, e:
+                except Exception as e:
                     logger.error("Problem with body: {}".format(e))
                     continue
                 # Check if the values in the original are the same as the revision
@@ -47,7 +62,7 @@ class Command(BaseCommand):
                     try:
                         if vers_dict[k] != orig_dict[k]:
                             update = True
-                    except KeyError, e:
+                    except KeyError as e:
                         logger.debug('Error with {}'.format(e))
                 if update:
                     original = version

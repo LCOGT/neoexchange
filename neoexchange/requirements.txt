@@ -1,8 +1,8 @@
 --extra-index-url=http://buildsba.lco.gtn/python/
 --trusted-host buildsba.lco.gtn
-Django>=1.11,<2.0
-mysqlclient
-astropy>=3.1
+Django>=1.11.23,<2.0
+mysqlclient~=1.4.2
+astropy>=3.1,<3.2.2
 astroquery>=0.3.8
 pyslalib
 beautifulsoup4
@@ -12,17 +12,21 @@ ipython
 nose
 pytz
 six>=1.10.0
-#wsgiref
 pycparser
 requests[security]
 selenium>=3.8,<4.0
 pytest-django
 mock
-django-oauth-toolkit
+django-oauth-toolkit<1.2.0
+django-storages
+boto3
 requests_oauthlib
 matplotlib
+bokeh==1.4.0
 fits2image
-panoptes-client
 pillow
-gunicorn
+aplpy
+gunicorn[gevent]~=19.9.0
 rollbar
+sty
+awscli

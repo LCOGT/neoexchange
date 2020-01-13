@@ -1,4 +1,25 @@
-from subprocess import check_output
+"""
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2015-2019 LCO
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+"""
+
+from subprocess import check_output, CalledProcessError
+from datetime import datetime
+from glob import glob
+import tempfile
+import os
+import shutil
+
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.conf import settings
 from contextlib import contextmanager
@@ -8,13 +29,13 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.expected_conditions import staleness_of
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
-from core.models import Body, Proposal, Block, SuperBlock, SpectralInfo
+from core.models import Body, Proposal, Block, SuperBlock, SpectralInfo, PreviousSpectra, StaticSource
 
 
 class FunctionalTest(StaticLiveServerTestCase):
     def __init__(self, *args, **kwargs):
         super(FunctionalTest, self).__init__(*args, **kwargs)
-
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
         if settings.DEBUG is False:
             settings.DEBUG = True
 
@@ -46,45 +67,121 @@ class FunctionalTest(StaticLiveServerTestCase):
                     'discovery_date': '2015-05-10 12:00:00',
                     'update_time'   : '2015-05-18 05:00:00',
                     'num_obs'       : 17,
-                    'arc_length'    : 3.0,
-                    'not_seen'      : 0.42,
+                    'arc_length'    : 3.123456789,
+                    'not_seen'      : 0.423456789,
                     'updated'       : True,
                     }
         self.body, created = Body.objects.get_or_create(pk=1, **params)
 
-    def insert_test_spectra(self):
+    def insert_test_calib(self):
+        params = {   'name'         : 'HD 30455',
+                     'ra'           : 72.1754166666667,
+                     'dec'          : 18.7094444444444,
+                     'pm_ra'        : 0.0,
+                     'pm_dec'       : 0.0,
+                     'parallax'     : 0.0,
+                     'vmag'         : 7.0,
+                     'spectral_type': 'G2V',
+                     'source_type'  : 4,
+                     'notes'        : '',
+                     'quality'      : 0,
+                     'reference'    : ''
+                     }
+        self.calib, created = StaticSource.objects.get_or_create(pk=1, **params)
 
-        spectra_params = {'body'          : self.body,
+    def insert_test_comet(self):
+        params = {
+                     'provisional_name': 'P10MsRM',
+                     'provisional_packed': None,
+                     'name': 'C/2006 F4',
+                     'origin': 'M',
+                     'source_type': 'C',
+                     'elements_type': 'MPC_COMET',
+                     'active': True,
+                     'fast_moving': False,
+                     'urgency': None,
+                     'epochofel': datetime(2019, 4, 3, 0, 0),
+                     'orbit_rms': 0.03,
+                     'orbinc': 3.76939,
+                     'longascnode': 195.84794,
+                     'argofperih': 241.31051,
+                     'eccentricity': 0.5418256,
+                     'meandist': 1.8391873,
+                     'meananom': None,
+                     'perihdist': 0.84266853766512,
+                     'epochofperih': datetime(2018, 12, 15, 8, 24, 15),
+                     'abs_mag': 19.4,
+                     'slope': 4.0,
+                     'score': 11,
+                     'discovery_date': datetime(2019, 4, 3, 7, 12),
+                     'num_obs': 4,
+                     'arc_length': 0.03,
+                     'not_seen': 0.372,
+                     'updated': False,
+                     'ingest': datetime(2019, 4, 3, 15, 20, 42),
+                     'update_time': datetime(2019, 4, 3, 14, 50, 28)
+                }
+        self.comet, created = Body.objects.get_or_create(pk=2, **params)
+
+    def insert_test_taxonomy(self):
+
+        taxonomy_params = {'body'          : self.body,
                           'taxonomic_class' : 'Sq',
                           'tax_scheme'    :   'BD',
                           'tax_reference' : 'PDS6',
                           'tax_notes'     : 'b',
                           }
-        self.test_spectra = SpectralInfo.objects.create(pk=1, **spectra_params)
+        self.test_taxonomy = SpectralInfo.objects.create(pk=1, **taxonomy_params)
 
-        spectra_params2 = {'body'          : self.body,
+        taxonomy_params2 = {'body'          : self.body,
                           'taxonomic_class' : 'T',
                           'tax_scheme'    :   'H',
                           'tax_reference' : 'PDS6',
                           'tax_notes'     : '7 | Other notes maybe.',
                           }
-        self.test_spectra2 = SpectralInfo.objects.create(pk=2, **spectra_params2)
+        self.test_taxonomy2 = SpectralInfo.objects.create(pk=2, **taxonomy_params2)
 
-        spectra_params3 = {'body'          : self.body,
+        taxonomy_params3 = {'body'          : self.body,
                           'taxonomic_class' : 'Sa',
                           'tax_scheme'    :   'T',
                           'tax_reference' : 'PDS6',
                           'tax_notes'     : '2G',
                           }
-        self.test_spectra3 = SpectralInfo.objects.create(pk=3, **spectra_params3)
+        self.test_taxonomy3 = SpectralInfo.objects.create(pk=3, **taxonomy_params3)
 
-        spectra_params4 = {'body'          : self.body,
+        taxonomy_params4 = {'body'          : self.body,
                           'taxonomic_class' : 'L',
                           'tax_scheme'    :   'B',
                           'tax_reference' : 'PDS6',
                           'tax_notes'     : 'S',
                           }
-        self.test_spectra4 = SpectralInfo.objects.create(pk=4, **spectra_params4)
+        self.test_taxonomy4 = SpectralInfo.objects.create(pk=4, **taxonomy_params4)
+
+    def insert_previous_spectra(self):
+        spectra_params = {'body'         : self.body,
+                          'spec_wav'     : 'Vis+NIR',
+                          'spec_vis'     : 'sp233/a265962.sp233.txt',
+                          'spec_ir'      : 'sp233/a265962.sp233.txt',
+                          'spec_source'  : 'S',
+                          'spec_date'    : '2017-09-25',
+                          }
+        self.test_spectra = PreviousSpectra.objects.create(pk=1, **spectra_params)
+
+        spectra_params2 = {'body'         : self.body,
+                          'spec_wav'     : 'NIR',
+                          'spec_source'  : 'M',
+                          'spec_ir'     : '2014/09/1999sh10.png',
+                          'spec_date'    : '2017-08-25',
+                          }
+        self.test_spectra2 = PreviousSpectra.objects.create(pk=2, **spectra_params2)
+
+        spectra_params3 = {'body'         : self.body,
+                          'spec_wav'     : 'Vis',
+                          'spec_vis'     : 'sp233/a265962.sp233.txt',
+                          'spec_source'  : 'S',
+                          'spec_date'    : '2010-10-25',
+                          }
+        self.test_spectra3 = PreviousSpectra.objects.create(pk=3, **spectra_params3)
 
     def insert_test_proposals(self):
 
@@ -114,10 +211,9 @@ class FunctionalTest(StaticLiveServerTestCase):
         block_params = { 'telclass' : '1m0',
                          'site'     : 'cpt',
                          'body'     : self.body,
-                         'proposal' : self.neo_proposal,
                          'block_start' : '2015-04-20 13:00:00',
                          'block_end'   : '2015-04-21 03:00:00',
-                         'tracking_number' : '00042',
+                         'request_number' : '10042',
                          'num_exposures' : 5,
                          'exp_length' : 42.0,
                          'active'   : True,
@@ -139,10 +235,9 @@ class FunctionalTest(StaticLiveServerTestCase):
         block_params2 = { 'telclass' : '2m0',
                          'site'     : 'coj',
                          'body'     : self.body,
-                         'proposal' : self.test_proposal,
                          'block_start' : '2015-04-20 03:00:00',
                          'block_end'   : '2015-04-20 13:00:00',
-                         'tracking_number' : '00043',
+                         'request_number' : '10043',
                          'num_exposures' : 7,
                          'exp_length' : 30.0,
                          'active'   : False,
@@ -155,38 +250,67 @@ class FunctionalTest(StaticLiveServerTestCase):
         self.test_block2 = Block.objects.create(pk=2, **block_params2)
 
     def setUp(self):
-
-        fp = webdriver.FirefoxProfile()
-        fp.set_preference("browser.startup.homepage", "about:blank")
-        fp.set_preference("startup.homepage_welcome_url", "about:blank")
-        fp.set_preference("startup.homepage_welcome_url.additional", "about:blank")
-
-        if not hasattr(self, 'browser'):
-            firefox_capabilities = DesiredCapabilities.FIREFOX
-            # Marionette does not work on Firefox ~< 57. Try and determine the
-            # version and check it. Hopefully this code is robust and platform-
-            # independent...
-            try:
-                version = check_output(["firefox", "--version"], universal_newlines=True)
-            except (OSError, subprocess.CalledProcessError):
-                version = None
-            if version and 'Firefox' in version:
-                version_num = version.rstrip().split(' ')[-1]
-                major_version = version_num.split('.')[0]
-                if major_version.isdigit() and int(major_version) <= 52:
-                    firefox_capabilities['marionette'] = False
-
-            self.browser = webdriver.Firefox(capabilities=firefox_capabilities, firefox_profile=fp)
-        self.browser.implicitly_wait(5)
         self.insert_test_body()
+        self.insert_test_calib()
         self.insert_test_proposals()
         self.insert_test_blocks()
-        self.insert_test_spectra()
+        self.insert_test_taxonomy()
+        self.insert_previous_spectra()
+
+        if settings.USE_FIREFOXDRIVER:
+            fp = webdriver.FirefoxProfile()
+            # fp = webdriver.Chrome()
+            fp.set_preference("browser.startup.homepage", "about:blank")
+            fp.set_preference("startup.homepage_welcome_url", "about:blank")
+            fp.set_preference("startup.homepage_welcome_url.additional", "about:blank")
+            # Don't ask where to save downloaded files
+            fp.set_preference("browser.download.folderList", 2);
+            fp.set_preference("browser.download.manager.showWhenStarting", False);
+            fp.set_preference("browser.download.dir", self.test_dir);
+            fp.set_preference("browser.helperApps.neverAsk.saveToDisk", "text/plain");
+
+            if not hasattr(self, 'browser'):
+                firefox_capabilities = DesiredCapabilities.FIREFOX
+                # Marionette does not work on Firefox ~< 57. Try and determine the
+                # version and check it. Hopefully this code is robust and platform-
+                # independent...
+                try:
+                    version = check_output(["firefox", "--version"], universal_newlines=True)
+                except (OSError, CalledProcessError):
+                    version = None
+                if version and 'Firefox' in version:
+                    version_num = version.rstrip().split(' ')[-1]
+                    major_version = version_num.split('.')[0]
+                    if major_version.isdigit() and int(major_version) <= 52:
+                        firefox_capabilities['marionette'] = False
+
+                self.browser = webdriver.Firefox(capabilities=firefox_capabilities, firefox_profile=fp)
+        else:
+            options = webdriver.chrome.options.Options()
+            options.add_argument('--headless')
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-gpu')
+            self.browser = webdriver.Chrome(chrome_options=options)
+        self.browser.implicitly_wait(5)
 
     def tearDown(self):
-        self.browser.refresh()
-#        self.browser.implicitly_wait(5)
         self.browser.quit()
+        with self.settings(MEDIA_ROOT=self.test_dir):
+            remove = True
+            debug_print = False
+            if remove:
+                try:
+                    files_to_remove = glob(os.path.join(self.test_dir, '*'))
+                    for file_to_rm in files_to_remove:
+                        os.remove(file_to_rm)
+                except OSError:
+                    print("Error removing files in temporary test directory", self.test_dir)
+                try:
+                    os.rmdir(self.test_dir)
+                    if debug_print:
+                        print("Removed", self.test_dir)
+                except OSError:
+                    shutil.rmtree(self.test_dir)
 
     def check_for_row_in_table(self, table_id, row_text):
         table = self.browser.find_element_by_id(table_id)

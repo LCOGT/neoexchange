@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% load staticfiles basic_tags %}
+{% block header %}Calibration Sources{% endblock %}
+
+{% block bodyclass %}page{% endblock %}
+
+
+{% block extramenu %}
+    <div class="headingleft">
+        <h1>Calibration Sources</h1>
+    </div>
+{% endblock%}
+
+{% block main-content %}
+    <div id="main" class="fill-height">
+        <div class="container">
+            <div class="row">
+                {% if "solar" in request.get_full_path %}
+                    <a class="button button-primary" href="{% url 'schedule-calib-spectra' 'F65-FLOYDS' '-' %}" id="schedule-solar-ftn-obs">Schedule FTN Calib Observations</a>
+                    <a class="button button-primary" href="{% url 'schedule-calib-spectra' 'E10-FLOYDS' '-' %}" id="schedule-solar-fts-obs">Schedule FTS Calib Observations</a>
+                    <a class="button button-primary" href="{% url 'calibsource-view' %}" id="show-all-calibsources">Show all Calibration Sources</a>
+                    <a class="button button-primary" href="{% url 'beststandards-view' %}" id="show-best-standards">Show best standards</a>
+                {% else %}
+                    <a class="button button-primary" href="{% url 'schedule-calib-spectra' 'F65-FLOYDS' '-' %}" id="schedule-calib-ftn-obs">Schedule FTN Calib Observations</a>
+                    <a class="button button-primary" href="{% url 'schedule-calib-spectra' 'E10-FLOYDS' '-' %}" id="schedule-calib-fts-obs">Schedule FTS Calib Observations</a>
+                    <a class="button button-primary" href="{% url 'solarstandard-view' %}" id="show-solar-standards">Show only Solar Analogs</a>
+                    <a class="button button-primary" href="{% url 'beststandards-view' %}" id="show-best-standards">Show best standards</a>
+                {% endif %}
+            </div>
+            <span id="anti_solar_point"> <b> Current Anti-Solar Point: RA = {{night.ra}} / Dec = {{night.dec}} </b></span>
+            <div class="row">
+                <table class="datatable u-full-width" id="id_calibsources">
+                    <thead>
+                        <tr>
+                            <th class="list_title">
+                                <span class="sortable" id="name_id">Name</span>
+                            </th>
+                            <th>
+                                <span class="sortable" id="ra">R.A.</span>
+                            </th>
+                            <th>
+                                <span class="sortable" id="dec">Dec.</span>
+                            </th>
+                            <th>
+                                <span class="sortable" id="v_mag">V Mag.</span>
+                            </th>
+                            <th>
+                                <span class="sortable" id="sp_type">Spectral Type</span>
+                            </th>
+                            <th>
+                                <span class="sortable" id="src_type">Source Type</span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for src in calibsources %}
+                        <tr>
+                            <td><a href="{% url 'calibsource' src.pk %}">{{src.name}}</a></td>
+                            <td>{{src.ra|degreestohms:":"}}</td>
+                            <td>{{src.dec|degreestodms:":"}}</td>
+                            <td>{{src.vmag|floatformat:2}}</td>
+                            <td>{{src.spectral_type}}</td>
+                            <td>{{src.return_source_type}}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="row">
+                {% if is_paginated %}
+                    <div class="pagination">
+                        <span class="page-links">
+                            {% if "solar" in request.get_full_path %}
+                                {% if page_obj.has_previous %}
+                                    <a href="{% url 'solarstandard-view' %}?page={{ page_obj.previous_page_number }}"><i class="fa fa-arrow-left fa-2x"></i></a>
+                                {% endif %}
+                                <span class="page-current">
+                                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                                </span>
+                                {% if page_obj.has_next %}
+                                    <a href="{% url 'solarstandard-view' %}?page={{ page_obj.next_page_number }}"><i class="fa fa-arrow-right fa-2x"></i></a>
+                                {% endif %}
+                            {% else %}
+                                {% if page_obj.has_previous %}
+                                    <a href="{% url 'calibsource-view' %}?page={{ page_obj.previous_page_number }}"><i class="fa fa-arrow-left fa-2x"></i></a>
+                                {% endif %}
+                                <span class="page-current">
+                                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                                </span>
+                                {% if page_obj.has_next %}
+                                    <a href="{% url 'calibsource-view' %}?page={{ page_obj.next_page_number }}"><i class="fa fa-arrow-right fa-2x"></i></a>
+                                {% endif %}
+                            {% endif %}
+                            </span>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="row">
+                {% if "solar" in request.get_full_path %}
+                    <img src="{% url 'make-solar-standards-plot' %}" class="pic_center">
+                {% else %}
+                    <img src="{% url 'make-standards-plot' %}" class="pic_center">
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% endblock %}

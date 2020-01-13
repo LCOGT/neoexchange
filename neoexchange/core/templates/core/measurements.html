@@ -5,7 +5,7 @@
 {% block bodyclass %}page{% endblock %}
 {% block extramenu %}
 					<div class="headingleft">
-						<h1>Source Measurements: {{body.current_name}}{% if slot %} in block <a href="{% url 'block-view' pk=slot.id %}">&#35;{{slot.id}}</a>{% endif %}</h1>
+						<h1>Source Measurements: <a href="{% url 'target' body.id %}">{{body.current_name}}</a>{% if slot %} in block <a href="{% url 'block-view' pk=slot.id %}">&#35;{{slot.id}}</a>{% endif %}</h1>
 					</div>
 {% endblock%}
 {% block main-content %}
@@ -19,7 +19,10 @@
 					{% endif %}
 				</div>
 				<div class="row">
-					<a href="{% if slot %}{% url 'block-report-mpc' slot.id %}{% else %}{% url 'measurement-mpc' body.id %}{%endif%}">[ View in MPC format ]</a></p>
+					<a href="{% if slot %}{% url 'block-report-mpc' slot.id %}{% else %}{% url 'measurement-mpc' body.id %}{%endif%}">[ View in MPC format ]</a>
+					<a href="{% url 'measurement-ades' body.id %}">[ View in ADES format ]</a>
+                    <a href="{% url 'download-mpc' body.id %}">[ Download in MPC format ]</a>
+                    <a href="{% url 'download-ades' body.id %}">[ Download in ADES format ]</a></p>
 				</div>
 			</div>
 				<div class="fullwidth">

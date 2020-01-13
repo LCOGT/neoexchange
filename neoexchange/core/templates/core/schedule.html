@@ -5,10 +5,21 @@
 
 {% block script-content %}
 <script type="text/javascript">
+  const urlParams = new URLSearchParams(window.location.search);
+  const is_cadence = urlParams.get('cadence');
   $(document).ready(function(){
     // Initially hide the cadence form
-    $('#cadence-switch').hide();
-    $('#cadence_request').hide();
+
+
+    if (is_cadence){
+      $('#single-switch').hide();
+      $('#single_request').hide();
+      $('#cadence-switch').show();
+      $('#cadence_request').show();
+    } else {
+      $('#cadence-switch').hide();
+      $('#cadence_request').hide();
+    }
 
     $('a.mode-switch').click(function(event){
       $('.mode-switch').toggle();
@@ -30,12 +41,20 @@
     <div class="container">
         <div id="main">
             {% if body.id  and form %}
-            <h5 class="section-title">Parameters for: <a href="{% url 'target' body.id %}">{{body.current_name}}</a></h5>
+            {% if body.ingest %}
+                <h5 class="section-title">Parameters for: <a href="{% url 'target' body.id %}">{{body.current_name}}</a></h5>
+            {% else %}
+                <h5 class="section-title">Parameters for: <a href="{% url 'calibsource' body.id %}">{{body.current_name}}</a></h5>
+            {% endif %}
             <div class="section-title">
               <a class="button mode-switch" href="#" id="single-switch">Switch to cadence observations</a>
               <a class="button mode-switch" href="#" id="cadence-switch">Switch to single observation</a>
             <div  id="single_request" class="mode-container">
-            <form action="{% url 'schedule-body' body.id %}" method="POST" style="display:inline-block;">
+            {% if body.ingest %}
+                <form action="{% url 'schedule-body' body.id %}" method="POST" style="display:inline-block;">
+            {% else %}
+                <form action="{% url 'schedule-calib' body.id %}" method="POST" style="display:inline-block;">
+            {% endif %}
             <div class="row">
               {% csrf_token %}
               <div class="inline-fields">
@@ -47,6 +66,9 @@
                 </div>
                 <div class="compact-field">
                   {{ form.proposal_code }}<label for="id_proposal_code">Proposal</label>
+                </div>
+                <div class="compact-field">
+                    {{ form.too_mode }}<label for="id_too_mode">Use RR/TC time?</label>
                 </div>
               </div>
               {% for key, error in form.errors.items %}
@@ -83,6 +105,9 @@
                   </div>
                   <div class="compact-field">
                     {{ cad_form.proposal_code }}<label for="id_proposal_code">Proposal</label>
+                  </div>
+                  <div class="compact-field">
+                    {{ form.too_mode }}<label for="id_too_mode">Use RR/TC time?</label>
                   </div>
                 </div>
                 {% for key, error in cad_form.errors.items %}

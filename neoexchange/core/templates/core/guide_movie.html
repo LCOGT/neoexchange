@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block header %}Guide Movie for block: {{pk}}{% endblock %}
+
+{% block bodyclass %}page{% endblock %}
+
+{% block extramenu %}
+    <div class="headingleft">
+        <h1>Block: <a href="{% url 'block-view' sb_id %}">{{pk}}</a></h1>
+    </div>
+{% endblock%}
+
+{% block main-content %}
+<!-- Main body -->
+<div class="container" id="main">
+    {% block graphic %}
+      <img src="{% url 'display_movie' pk %}" alt="Could not find or create guide movie to show.">
+    {% endblock %}
+</div>
+{% endblock %}

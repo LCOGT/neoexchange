@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2014-2018 LCO
+Copyright (C) 2014-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -27,6 +27,13 @@ def generate_message(blockid, bodyid):
     # Strip off last double newline but put one back again
     return message.rstrip() + '\n'
 
+def generate_ades_psv_message(blockid, bodyid):
+    t = get_template('core/mpc_ades_psv.txt')
+    data = measurements_from_block(blockid, bodyid)
+    message = t.render(data)
+
+    # Strip off last double newline but put one back again
+    return message.rstrip() + '\n'
 
 def email_report_to_mpc(blockid, bodyid, email_sender=None, receipients=['egomez@lco.global', 'tlister@lco.global']):
     if not bodyid:

@@ -1,14 +1,29 @@
+"""
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2015-2019 LCO
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+"""
+
 from .base import FunctionalTest
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.common.by import By
 from mock import patch
-from neox.tests.mocks import MockDateTime
+from neox.tests.mocks import MockDateTime, mock_build_visibility_source
 # from datetime import datetime as real_datetime
 from datetime import datetime
 from core.models import Body
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 
 
 class NewVisitorTest(FunctionalTest):
@@ -74,6 +89,7 @@ class NewVisitorTest(FunctionalTest):
 
         self.body3, created = Body.objects.get_or_create(pk=3, **params)
 
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.models.datetime', MockDateTime)
     def test_homepage_has_ranking(self):
 
@@ -88,7 +104,7 @@ class NewVisitorTest(FunctionalTest):
         self.check_for_header_in_table('id_neo_targets',
             'Rank Target Name Type R.A. Dec. Mag. Num.Obs. Arc Not Seen (days) NEOCP Score Updated?')
         # Position below computed for 2015-07-01 17:00:00
-        testlines = [u'1 N999r0q Candidate 23 43 14.40 +19 59 08.2 20.7 17 3.00 0.420 90',
+        testlines = [u'1 N999r0q Candidate 23 43 14.40 +19 59 08.2 20.7 17 3.12 0.423 90',
                     u'2 1995 YR1 NEO 23 43 14.40 +19 59 08.2 20.7 35 42.00 2.220 None']
         self.check_for_row_in_table('id_neo_targets', testlines[0])
         self.check_for_row_in_table('id_neo_targets', testlines[1])
@@ -113,8 +129,9 @@ class NewVisitorTest(FunctionalTest):
         # mentions the current target
         self.assertIn(self.body.current_name() + ' details | LCO NEOx', self.browser.title)
         header_text = self.browser.find_element_by_class_name('headingleft').text
-        self.assertIn('Object: ' + self.body.current_name(), header_text)
+        self.assertIn(self.body.full_name(), header_text)
 
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.models.datetime', MockDateTime)
     def test_homepage_rounds_arc_notseen(self):
 
@@ -153,4 +170,4 @@ class NewVisitorTest(FunctionalTest):
         # mentions the current target
         self.assertIn(self.body3.current_name() + ' details | LCO NEOx', self.browser.title)
         header_text = self.browser.find_element_by_class_name('headingleft').text
-        self.assertIn('Object: ' + self.body3.current_name(), header_text)
+        self.assertIn(self.body3.full_name(), header_text)
