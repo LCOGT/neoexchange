@@ -1181,10 +1181,10 @@ def get_catalog_items_new(header_items, table, catalog_type='LCOGT', flag_filter
 
     # Filter on flags first
     if 'flags' in tbl_mapping:
-         size_before = len(new_table)
-         new_table = new_table[new_table['flags'] <= flag_filter]
-         size_after = len(new_table)
-         logger.debug("Filtered table. Number of sources {}->{}".format(size_before, size_after))
+        size_before = len(new_table)
+        new_table = new_table[new_table['flags'] <= flag_filter]
+        size_after = len(new_table)
+        logger.debug("Filtered table. Number of sources {}->{}".format(size_before, size_after))
 
     # Filter out -ve fluxes
     if neg_flux_mask:
