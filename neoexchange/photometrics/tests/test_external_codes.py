@@ -385,7 +385,7 @@ class TestSCAMPRunner(ExternalCodeUnitTest):
 
         expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat -DISTORT_DEGREES 3 -PROJECTION_TYPE TPV'
 
-        options = determine_scamp_options('foo_1m0.ldac')
+        options = determine_scamp_options('test1m0-fa##-date.ldac')
 
         self.assertEqual(expected_options, options)
 
@@ -393,7 +393,7 @@ class TestSCAMPRunner(ExternalCodeUnitTest):
 
         expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat -DISTORT_DEGREES 4 -PROJECTION_TYPE TPV'
 
-        options = determine_scamp_options('foo_1m0.ldac', distort_degrees=4)
+        options = determine_scamp_options('test1m0-fa##-date.ldac', distort_degrees=4)
 
         self.assertEqual(expected_options, options)
 
@@ -401,7 +401,7 @@ class TestSCAMPRunner(ExternalCodeUnitTest):
 
         expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat -DISTORT_DEGREES 5 -PROJECTION_TYPE TPV'
 
-        options = determine_scamp_options('foo_0m4.ldac', distort_degrees=5)
+        options = determine_scamp_options('test1m0-fa##-date.ldac', distort_degrees=5)
 
         self.assertEqual(expected_options, options)
 
@@ -409,7 +409,7 @@ class TestSCAMPRunner(ExternalCodeUnitTest):
 
         expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat'
 
-        options = determine_scamp_options('foo_1m0.ldac', distort_degrees=1)
+        options = determine_scamp_options('test1m0-fa##-date.ldac', distort_degrees=1)
 
         self.assertEqual(expected_options, options)
 
