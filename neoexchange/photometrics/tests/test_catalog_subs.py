@@ -2109,7 +2109,7 @@ class FITSReadCatalog(FITSUnitTest):
                                    'threshold' : 43.438805,
                                  })
 
-        catalog_items = get_catalog_items(self.test_header, self.table_firstitem)
+        catalog_items = get_catalog_items_old(self.test_header, self.table_firstitem)
 
         self.assertEqual(expected_catalog, catalog_items)
 
@@ -2133,7 +2133,7 @@ class FITSReadCatalog(FITSUnitTest):
                                    'threshold' : 43.438805,
                                  })
 
-        catalog_items = get_catalog_items(self.test_header, self.table_lastitem)
+        catalog_items = get_catalog_items_old(self.test_header, self.table_lastitem)
 
         self.assertEqual(expected_catalog, catalog_items)
 
@@ -2141,7 +2141,7 @@ class FITSReadCatalog(FITSUnitTest):
 
         expected_catalog = self.basic_table
 
-        catalog_items = get_catalog_items(self.test_header, self.table_item_flags24)
+        catalog_items = get_catalog_items_old(self.test_header, self.table_item_flags24)
 
         self.assertEqual(len(expected_catalog), len(catalog_items))
 
@@ -2165,7 +2165,7 @@ class FITSReadCatalog(FITSUnitTest):
                                    'threshold' : 43.438805,
                                  })
 
-        catalog_items = get_catalog_items(self.test_header, self.table_item_flags24, flag_filter=24)
+        catalog_items = get_catalog_items_old(self.test_header, self.table_item_flags24, flag_filter=24)
 
         self.compare_tables(expected_catalog, catalog_items, 9)
 
@@ -2190,7 +2190,7 @@ class FITSReadCatalog(FITSUnitTest):
                                  })
 
         header_items = {'zeropoint' : -99}
-        catalog_items = get_catalog_items(header_items, self.table_firstitem)
+        catalog_items = get_catalog_items_old(header_items, self.table_firstitem)
 
         self.assertEqual(expected_catalog, catalog_items)
 
@@ -2215,7 +2215,7 @@ class FITSReadCatalog(FITSUnitTest):
                                    'threshold' : 43.438805,
                                  })
 
-        catalog_items = get_catalog_items(header_items, self.table_firstitem)
+        catalog_items = get_catalog_items_old(header_items, self.table_firstitem)
 
         self.assertEqual(expected_catalog, catalog_items)
 
@@ -2240,7 +2240,7 @@ class FITSReadCatalog(FITSUnitTest):
                                    'threshold' : 43.438805,
                                  })
 
-        catalog_items = get_catalog_items(header_items, self.table_firstitem)
+        catalog_items = get_catalog_items_old(header_items, self.table_firstitem)
 
         self.assertEqual(expected_catalog, catalog_items)
 
@@ -2266,7 +2266,7 @@ class FITSReadCatalog(FITSUnitTest):
 
         header, table, cattype = open_fits_catalog(self.test_ldacfilename)
         header_items = get_catalog_header(header, cattype)
-        catalog_items = get_catalog_items(header_items, self.ldac_table_firstitem, "FITS_LDAC")
+        catalog_items = get_catalog_items_old(header_items, self.ldac_table_firstitem, "FITS_LDAC")
         self.compare_tables(expected_catalog, catalog_items, 4)
 
 

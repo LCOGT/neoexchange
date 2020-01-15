@@ -4890,9 +4890,9 @@ class TestCheckCatalogAndRefitNew(TestCase):
         self.test_banzai_fits = os.path.abspath(os.path.join(self.temp_dir, 'banzai_test_frame.fits'))
         self.test_cat_bad_wcs = os.path.abspath(os.path.join(self.temp_dir, 'oracdr_test_catalog.fits'))
 
-        self.test_externscamp_headfile  = os.path.join('photometrics', 'tests', 'example_externcat_scamp.head')
+        self.test_externscamp_headfile = os.path.join('photometrics', 'tests', 'example_externcat_scamp.head')
         self.test_externcat_xml = os.path.join('photometrics', 'tests', 'example_externcat_scamp.xml')
-        self.test_externscamp_TPV_headfile  = os.path.join('photometrics', 'tests', 'example_externcat_scamp_tpv.head')
+        self.test_externscamp_TPV_headfile = os.path.join('photometrics', 'tests', 'example_externcat_scamp_tpv.head')
         self.test_externcat_TPV_xml = os.path.join('photometrics', 'tests', 'example_externcat_scamp_tpv.xml')
 
         shutil.copyfile(original_test_banzai_fits, self.test_banzai_fits)
@@ -5273,6 +5273,7 @@ class TestCheckCatalogAndRefitNew(TestCase):
         assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
         assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
         assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
+
 
 class TestUpdateCrossids(TestCase):
 

@@ -655,11 +655,11 @@ class TestUpdateFITSWCS(TestCase):
         self.test_banzai_file = os.path.abspath(os.path.join('photometrics', 'tests', 'banzai_test_frame.fits'))
         self.test_scamp_headfile = os.path.abspath(os.path.join('photometrics', 'tests', 'example_scamp.head'))
         self.test_scamp_xml = os.path.join('photometrics', 'tests', 'example_scamp.xml')
-        self.test_externscamp_headfile  = os.path.join('photometrics', 'tests', 'example_externcat_scamp.head')
+        self.test_externscamp_headfile = os.path.join('photometrics', 'tests', 'example_externcat_scamp.head')
         self.test_externcat_xml = os.path.join('photometrics', 'tests', 'example_externcat_scamp.xml')
-        self.test_externscamp_TPV_headfile  = os.path.join('photometrics', 'tests', 'example_externcat_scamp_tpv.head')
+        self.test_externscamp_TPV_headfile = os.path.join('photometrics', 'tests', 'example_externcat_scamp_tpv.head')
         self.test_externcat_TPV_xml = os.path.join('photometrics', 'tests', 'example_externcat_scamp_tpv.xml')        
-        self.test_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
         self.fits_file_output = os.path.abspath(os.path.join(self.test_dir, 'example-sbig-e10_output.fits'))
         self.banzai_file_output = os.path.abspath(os.path.join(self.test_dir, 'example-banzai-e92_output.fits'))
 
@@ -880,54 +880,6 @@ class TestUpdateFITSWCS(TestCase):
                     self.assertEqual(expected_pv_comment, new_header.comments[key])
                 else:
                     self.assertNotEqual(expected_pv_comment, new_header.comments[key])
-        header = fits.getheader(fits_file_output, hdu_number)
-        cunit1 = header['CUNIT1']
-        cunit2 = header['CUNIT2']
-        crval1 = header['CRVAL1']
-        crval2 = header['CRVAL2']
-        crpix1 = header['CRPIX1']
-        crpix2 = header['CRPIX2']
-        cd1_1 = header['CD1_1']
-        cd1_2 = header['CD1_2']
-        cd2_1 = header['CD2_1']
-        cd2_2 = header['CD2_2']
-        secpix   = header['SECPIX']
-        wcssolvr = header['WCSSOLVR']
-        wcsrfcat = header['WCSRFCAT']
-        wcsimcat = header['WCSIMCAT']
-        wcsnref  = header['WCSNREF']
-        wcsmatch = header['WCSMATCH']
-        wccattyp = header['WCCATTYP']
-        wcsrdres = header['WCSRDRES']
-        wcsdelra = header['WCSDELRA']
-        wcsdelde = header['WCSDELDE']
-        wcserr   = header['WCSERR']
-
-        self.assertEqual(expected_units, cunit1)
-        self.assertEqual(expected_units, cunit2)
-        self.assertEqual(expected_crval1, crval1)
-        self.assertEqual(expected_crval2, crval2)
-        self.assertEqual(expected_crpix1, crpix1)
-        self.assertEqual(expected_crpix2, crpix2)
-        self.assertEqual(expected_cd1_1, cd1_1)
-        self.assertEqual(expected_cd1_2, cd1_2)
-        self.assertEqual(expected_cd2_1, cd2_1)
-        self.assertEqual(expected_cd2_2, cd2_2)
-        self.assertAlmostEqual(expected_secpix, secpix, self.precision)
-        self.assertEqual(expected_wcssolvr, wcssolvr)
-        self.assertEqual(expected_wcsrfcat, wcsrfcat)
-        self.assertEqual(expected_wcsimcat, wcsimcat)
-        self.assertEqual(expected_wcsnref, wcsnref)
-        self.assertEqual(expected_wcsmatch, wcsmatch)
-        self.assertEqual(expected_wccattyp, wccattyp)
-        self.assertEqual(expected_wcsrdres, wcsrdres)
-        self.assertAlmostEqual(expected_wcsdelra, wcsdelra, 3)
-        self.assertAlmostEqual(expected_wcsdelde, wcsdelde, 3)
-        self.assertEqual(expected_wcserr, wcserr)
-
-        # Clean up outputfile
-        os.remove(fits_file_output)
-
 
 
 class TestGetSCAMPXMLInfo(TestCase):

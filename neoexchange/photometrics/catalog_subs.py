@@ -1204,6 +1204,7 @@ def get_catalog_items_new(header_items, table, catalog_type='LCOGT', flag_filter
 
     return new_table
 
+
 def update_ldac_catalog_wcs(fits_image_file, fits_catalog, overwrite=True):
     """Updates the world co-ordinates (ALPHA_J2000, DELTA_J2000) in a FITS LDAC
     catalog <fits_catalog> with a new WCS read from a FITS image
@@ -1260,7 +1261,7 @@ def update_ldac_catalog_wcs(fits_image_file, fits_catalog, overwrite=True):
     new_fits_catalog = fits_catalog
     to_overwrite = True
     if overwrite is not True:
-        new_fits_catalog = new_fits_catalog + '.new'
+        new_fits_catalog += '.new'
         to_overwrite = False
     hdulist.writeto(new_fits_catalog, checksum=True, overwrite=to_overwrite)
     return status
@@ -1423,7 +1424,7 @@ def get_or_create_CatalogSources(table, frame):
                                         position_angle=source['ccd_pa'], ellipticity=1.0-(source['minor_axis']/source['major_axis']), 
                                         aperture_size=3.0, flags=source['flags'], flux_max=source['flux_max'], threshold=source['threshold'])
             new_sources.append(new_source)
-        CatalogSources.objects.bulk_create(new_sources, batch_size=5000)
+        CatalogSources.objects.bulk_create(new_sources)
         num_sources_created = len(new_sources)
     elif num_in_table != num_cat_sources:
         for source in table:

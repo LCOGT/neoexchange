@@ -100,8 +100,6 @@ class TestGenerateMessage(TestCase):
         block_params['request_number'] = '10043'
         block_params['superblock'] = self.test_sblock_gaia
         self.test_block_gaia = Block.objects.create(**block_params)
-        block_params['tracking_number'] = '00243'
-        self.test_block_gaiadr2 = Block.objects.create(**block_params)
 
         sblock_params['tracking_number'] = '00243'
         self.test_sblock_gaiadr2 = SuperBlock.objects.create(**sblock_params)
