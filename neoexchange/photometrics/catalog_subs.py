@@ -1009,7 +1009,7 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
                 # FITSFixedWarning on the lack of OBSGEO-L,-B,-H keywords even
                 # though we have OBSGEO-X,-Y,-Z as recommended by the FITS
                 # Paper VII standard...
-                warnings.simplefilter('ignore', category = FITSFixedWarning)
+                warnings.simplefilter('ignore', category=FITSFixedWarning)
                 fits_wcs = WCS(catalog_header)
                 pixscale = proj_plane_pixel_scales(fits_wcs).mean()*3600.0
                 header_item = {item: round(pixscale, 5), 'wcs' : fits_wcs}
@@ -1030,7 +1030,7 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
                             # This now needs special handling as the value
                             # is BANZAI version dependent...
                             pipever = catalog_header.get("PIPEVER", None)
-                            if pipever:
+                            if pipever is not None:
                                 # Determine major and minor version
                                 pipe_versions = pipever.split('.')
                                 try:
@@ -1040,10 +1040,10 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
                                     if major >= 1 or (major == 0 and minor >= 20):
                                         # BANZAI versions after 0.20.0 use GAIA-DR2
                                         astrom_catalog = 'GAIA-DR2'
-                                    header_item = {item: astrom_catalog }
+                                    header_item = {item: astrom_catalog}
                                 except ValueError:
                                     filename = catalog_header['origname'].replace('00.fits', str(catalog_header['rlevel']) + '.fits')
-                                    logger.warn("Could not extract a pipeline version from " + filename)
+                                    logger.warning("Could not extract a pipeline version from " + filename)
                                     header_item = {item: fixed_values_map[fits_keyword]}
                         else:
                             header_item = {item: fixed_values_map[fits_keyword]}
