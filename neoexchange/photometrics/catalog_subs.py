@@ -106,7 +106,7 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
         if "UCAC4" in cat_name:
             query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'rmag', 'e_rmag'])
         elif "GAIA-DR2" in cat_name:
-            query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit}, columns=['RAJ2000', 'DEJ2000','e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup'])
+            query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup'])
         else:
             query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
         query_service.VIZIER_SERVER = 'vizier.hia.nrc.ca'  # 'vizier.cfa.harvard.edu'
@@ -308,6 +308,7 @@ def get_zeropoint(cross_match_table, std_zeropoint_tolerance):
     num_iter = 0
     num_in_calc = 0
     r_mag_diff_threshold = 40.0
+    count = 0
 
     while num_iter < 800:
 
@@ -353,6 +354,7 @@ def get_zeropoint(cross_match_table, std_zeropoint_tolerance):
 
     return avg_zeropoint, std_zeropoint, count, num_in_calc
 
+
 def write_ldac(table, output_file):
     """
     write out a reference catalog table in new FITS_LDAC file (mainly for use in SCAMP)
@@ -367,7 +369,7 @@ def write_ldac(table, output_file):
     hdr_col = fits.Column(name='Field Header Card', format='1680A',
                           array=["obtained through Vizier"])
     hdrhdu = fits.BinTableHDU.from_columns(fits.ColDefs([hdr_col]))
-    hdrhdu.header['EXTNAME'] = ('LDAC_IMHEAD')
+    hdrhdu.header['EXTNAME'] = 'LDAC_IMHEAD'
     # hdrhdu.header['TDIM1'] = ('(80, 36)') # remove?
 
     # create data table
@@ -402,7 +404,7 @@ def write_ldac(table, output_file):
 
     data_cols = []
     for col_name in table.columns:
-        if not col_name in list(colname_dict.keys()):
+        if col_name not in list(colname_dict.keys()):
             continue
         data_cols.append(fits.Column(name=colname_dict[col_name],
                                      format=format_dict[col_name],
@@ -417,7 +419,7 @@ def write_ldac(table, output_file):
                                  array=np.ones(len(table))*2015.5))
 
     datahdu = fits.BinTableHDU.from_columns(fits.ColDefs(data_cols))
-    datahdu.header['EXTNAME'] = ('LDAC_OBJECTS')
+    datahdu.header['EXTNAME'] = 'LDAC_OBJECTS'
 
     num_sources = len(table)
 
@@ -433,6 +435,7 @@ def write_ldac(table, output_file):
     logger.info('wrote {:d} sources from {} to LDAC file'.format(num_sources, output_file))
 
     return num_sources
+
 
 def convert_catfile_to_corners(cat_file):
     regex = re.compile(r"([a-zA-Z0-9-]+)_(\d{0,3}.\d*)([+-]\d*.\d*)_(\d*.\d*)mx(\d*.\d*)m.cat")
@@ -450,6 +453,7 @@ def convert_catfile_to_corners(cat_file):
             bottom_right = (ra-width, dec-height)
     return top_left, bottom_right
 
+
 def existing_catalog_coverage(dest_dir, ra, dec, width, height, cat_name="GAIA-DR2", dbg=False):
     """Search in <dest_dir> for catalogs of type [cat_name] that cover the
     pointing specified by <ra, dec> and with area <width, height>. The first
@@ -462,34 +466,41 @@ def existing_catalog_coverage(dest_dir, ra, dec, width, height, cat_name="GAIA-D
         if len(cat_files) >= 1:
             unit = width[-1]
             if unit == 'm':
-                half_width = float(width[0:-1]) / 60.0 /2.0
+                half_width = float(width[0:-1]) / 60.0 / 2.0
             elif unit == 'd':
-                half_width = float(width[0:-1]) /2.0
+                half_width = float(width[0:-1]) / 2.0
             else:
                 logger.error("Unrecognized unit")
+                half_width = float(width) / 2.0
             unit = height[-1]
             if unit == 'm':
-                half_height = float(height[0:-1]) / 60.0 /2.0
+                half_height = float(height[0:-1]) / 60.0 / 2.0
             elif unit == 'd':
                 half_height = float(height[0:-1]) / 2.0
             else:
                 logger.error("Unrecognized unit")
-
+                half_height = float(height) / 2.0
             top_left = (ra + half_width, dec + half_height)
             bottom_right = (ra - half_width, dec - half_height)
-            if dbg: print("Frame=",top_left, bottom_right)
+            if dbg:
+                print("Frame=", top_left, bottom_right)
             for test_file in cat_files:
-                if dbg: print("catalog=", test_file)
+                if dbg:
+                    print("catalog=", test_file)
                 cat_top_left, cat_bottom_right = convert_catfile_to_corners(test_file)
-                if dbg: print("Catalog=",cat_top_left, cat_bottom_right)
+                if dbg:
+                    print("Catalog=", cat_top_left, cat_bottom_right)
                 if cat_top_left is not None and cat_bottom_right is not None:
                     if cat_top_left[0] >= top_left[0] and cat_bottom_right[0] <= bottom_right[0] and\
-                        cat_top_left[1] >= top_left[1] and cat_bottom_right[1] <= bottom_right[1]:
+                            cat_top_left[1] >= top_left[1] and cat_bottom_right[1] <= bottom_right[1]:
                         cat_file = test_file
-                        if dbg: print(" Inside bounds")
+                        if dbg:
+                            print(" Inside bounds")
                     else:
-                        if dbg: print("Outside bounds")
+                        if dbg:
+                            print("Outside bounds")
     return cat_file
+
 
 def get_reference_catalog(dest_dir, ra, dec, set_width, set_height, cat_name="GAIA-DR2", set_row_limit=10000, rmag_limit="<=18.0", dbg=False):
     """Download and save a catalog from [cat_name] (defaults to 'GAIA-DR2') into
@@ -504,7 +515,8 @@ def get_reference_catalog(dest_dir, ra, dec, set_width, set_height, cat_name="GA
 
     # Check for existing reference catalog
     refcat = existing_catalog_coverage(dest_dir, ra, dec, set_width, set_height, cat_name, dbg)
-    if dbg: print("refcat=", refcat)
+    if dbg:
+        print("refcat=", refcat)
     if refcat is not None and os.path.exists(refcat):
         logger.debug("Reference catalog {} already exists".format(refcat))
         return refcat, -1
@@ -544,6 +556,7 @@ def get_reference_catalog(dest_dir, ra, dec, set_width, set_height, cat_name="GA
         cat_table['e_DEJ2000'] = cat_table['e_DEJ2000'].to(u.deg)
         num_sources = write_ldac(cat_table, refcat)
     return refcat, num_sources
+
 
 class FITSHdrException(Exception):
     """Raised when a required FITS header keyword is missing"""
@@ -1108,7 +1121,6 @@ def get_catalog_items_old(header_items, table, catalog_type='LCOGT', flag_filter
     for column in tbl_mapping.values():
         if column not in table.names:
             raise FITSTblException(column)
-            return None
 
     new_table = subset_catalog_table(table, tbl_mapping)
     # Rename columns
@@ -1172,7 +1184,6 @@ def get_catalog_items_new(header_items, table, catalog_type='LCOGT', flag_filter
     for column in tbl_mapping.values():
         if column not in table.names:
             raise FITSTblException(column)
-            return None
 
     new_table = subset_catalog_table(table, tbl_mapping)
     # Rename columns
@@ -1246,7 +1257,6 @@ def update_ldac_catalog_wcs(fits_image_file, fits_catalog, overwrite=True):
     for column in needed_cols:
         if tbl_mapping[column] not in tbl_table.names:
             raise FITSTblException(column)
-            return None
 
     # Pull out columns as arrays
     ccd_x = tbl_table[tbl_mapping['ccd_x']]
@@ -1489,6 +1499,7 @@ def make_sext_file_line(sext_params):
 
     return sext_line
 
+
 def determine_image_for_catalog(new_catalog):
     """Determines the originating FITS filename for the passed catalog name,
     allowing correct naming for the corresponding .sext file"""
@@ -1506,6 +1517,7 @@ def determine_image_for_catalog(new_catalog):
         fits_filename_path = new_catalog
 
     return real_fits_filename, fits_filename_path
+
 
 def make_sext_dict_list(new_catalog, catalog_type, edge_trim_limit=75.0):
     """create a list of dictionary entries for
