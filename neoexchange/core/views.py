@@ -3058,7 +3058,7 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False, desired_c
     # If desired catalog is GAIA-DR2, need to grab it ourselves as SCAMP does
     # not support it
     if desired_catalog == 'GAIA-DR2':
-        refcat, num_ref_srcs =  get_reference_catalog(dest_dir, header['field_center_ra'],
+        refcat, num_ref_srcs = get_reference_catalog(dest_dir, header['field_center_ra'],
             header['field_center_dec'], header['field_width'], header['field_height'],
             cat_name=desired_catalog)
         if refcat is None or num_ref_srcs is None:
@@ -3072,7 +3072,7 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False, desired_c
             scamp_file = os.path.basename(new_ldac_catalog).replace('.fits', '.head' )
             scamp_file = os.path.join(dest_dir, scamp_file)
             scamp_xml_file = os.path.join(dest_dir, 'scamp.xml')
-            ## Update WCS in image file
+            # Update WCS in image file
             # Strip off now unneeded FITS extension
             fits_file = fits_file.replace('[SCI]', '')
             # Get new output filename

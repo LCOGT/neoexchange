@@ -81,9 +81,9 @@ class Command(BaseCommand):
             # Single proposal specified
             proposal_text = " from" + proposals[0]
         if options['skip_download']:
-            self.stdout.write("Skipping download data for %s%s" % ( obs_date, proposal_text))
+            self.stdout.write("Skipping download data for %s%s" % (obs_date, proposal_text))
         else:
-            self.stdout.write("Downloading data for %s%s" % ( obs_date, proposal_text ))
+            self.stdout.write("Downloading data for %s%s" % (obs_date, proposal_text))
             if len(proposals) == 1:
                 call_command('download_archive_data', '--date', obs_date, '--proposal', proposals[0], '--datadir', dataroot)
             else:
