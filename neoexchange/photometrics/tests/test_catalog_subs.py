@@ -31,7 +31,7 @@ import astropy.units as u
 from numpy import where, array
 from numpy.testing import assert_allclose
 
-from core.models import Body, Proposal, Block, Frame
+from core.models import Body, Proposal, Block, Frame, SuperBlock
 from neox.tests.mocks import mock_get_vizier_catalog_table
 
 # Import module to test
