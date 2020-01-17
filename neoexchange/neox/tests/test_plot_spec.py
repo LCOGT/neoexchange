@@ -409,14 +409,10 @@ class SMASSPlotTest(FunctionalTest):
         # She sees a link from the targets' name on the front page to a more
         # detailed view.
         link = self.browser.find_element_by_link_text('66146')
-        body_url = self.live_server_url + reverse('target', kwargs={'pk': 2})
-        self.assertIn(link.get_attribute('href'), body_url)
 
         # She clicks the link and is taken to a page with the targets' details.
         with self.wait_for_page_load(timeout=10):
             link.click()
-        new_url = self.browser.current_url
-        self.assertEqual(str(new_url), body_url)
 
         # She clicks a link to view external spectra for this target
         link = self.browser.find_element_by_link_text('(Plots)')
