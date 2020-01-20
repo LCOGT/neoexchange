@@ -29,6 +29,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.files.storage import default_storage
+from django.core.paginator import Paginator
 from django.urls import reverse, reverse_lazy
 from django.shortcuts import render, redirect
 from django.views.generic import DetailView, ListView, FormView, TemplateView, View
@@ -249,6 +250,7 @@ class SuperBlockDetailView(DetailView):
     template_name = 'core/block_detail.html'
     model = SuperBlock
 
+
 class SuperBlockTimeline(DetailView):
     template_name = 'core/block_timeline.html'
     model = SuperBlock
@@ -270,6 +272,7 @@ class SuperBlockTimeline(DetailView):
             blks.append(data)
         context['blocks'] = json.dumps(blks)
         return context
+
 
 class BlockListView(ListView):
     model = Block
@@ -360,11 +363,22 @@ class MeasurementViewBlock(LoginRequiredMixin, View):
 
 class MeasurementViewBody(View):
     template = 'core/measurements.html'
+    paginate_by = 20
 
     def get(self, request, *args, **kwargs):
         body = Body.objects.get(pk=kwargs['pk'])
-        measures = SourceMeasurement.objects.filter(body=body).order_by('frame__midpoint')
-        return render(request, self.template, {'body': body, 'measures' : measures})
+        measurements = SourceMeasurement.objects.filter(body=body).order_by('frame__midpoint')
+        paginator = Paginator(measurements, self.paginate_by)
+        page = request.GET.get('page')
+        if page is None:
+            page = 1
+        page_obj = paginator.page(page)
+        measures = paginator.page(page)
+        if paginator.num_pages > 1:
+            is_paginated = True
+        else:
+            is_paginated = False
+        return render(request, self.template, {'body': body, 'measures' : measures, 'is_paginated': is_paginated, 'page_obj': page_obj})
 
 
 class MeasurementDownloadMPC(View):
