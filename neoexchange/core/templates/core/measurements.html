@@ -16,7 +16,8 @@
                             {% if slot %}
                             <h5>Report to MPC</h5>
                             {% for b in extra_bodies %} <a class="button button-primary" href="{% url 'block-submit-mpc' slot.id b.id %}">{{b.current_name}}</a>{% endfor%}
-                            {% endif %}</p>
+                            {% endif %}
+                        </p>
                     </div>
                     <div class="row">
                         <a href="{% if slot %}{% url 'block-report-mpc' slot.id %}{% else %}{% url 'measurement-mpc' body.id %}{%endif%}">[ View in MPC format ]</a>

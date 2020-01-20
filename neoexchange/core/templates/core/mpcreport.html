@@ -22,7 +22,8 @@
               {% endif %}
 
               {% if measures %}
-              <p><a href="{% if slot %}{% url 'block-report' slot.id %}{% else %}{% url 'measurement' body.id %}{%endif%}">[View in HTML format]</a></p>
+              <p><a href="{% if slot %}{% url 'block-report' slot.id %}{% else %}{% url 'measurement' body.id %}{%endif%}">[View in HTML format]</a>
+                <a href="{% url 'measurement-ades' body.id %}">[ View in ADES format ]</a></p>
 {% comment %} Do not fiddle with/adjust the "incorrect" indentation below. The
 MPC report is in a strictly defined 80 character format and stray spaces/blank
 lines matter. A Lot.
@@ -35,6 +36,13 @@ lines matter. A Lot.
               <h3>No report has been made for this block.</h3>
               {% endif %}
             </div>
+        </div>
+        <div class="row">
+                {% if is_paginated %}
+                    <!-- start -->
+                            {% include '_pagination.html' with items=items %}
+                    <!-- end -->
+                {% endif %}
         </div>
     </div>
 {% endblock %}
