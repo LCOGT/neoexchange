@@ -368,10 +368,12 @@ class MeasurementViewBody(View):
     def get(self, request, *args, **kwargs):
         body = Body.objects.get(pk=kwargs['pk'])
         measurements = SourceMeasurement.objects.filter(body=body).order_by('frame__midpoint')
-        paginator = Paginator(measurements, self.paginate_by)
+        paginator = Paginator(measurements, self.paginate_by, orphans=3)
         page = request.GET.get('page')
-        if page is None:
+        if page is None or int(page) < 1:
             page = 1
+        elif int(page) > paginator.num_pages:
+            page = pagiinator.num_pages
         page_obj = paginator.page(page)
         measures = paginator.page(page)
         if paginator.num_pages > 1:

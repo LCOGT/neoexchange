@@ -1,0 +1,21 @@
+        <div class="pagination">
+          <span class="page-links">
+              {% if page_obj.has_previous %}
+                  <a href="?page=1"><i class="fa fa-angle-double-left fa-2x"></i></a>
+                    {% if page_obj.number|add:'-10' >= 1 %}
+                        <a href="?page={{ page_obj.number|add:'-10' }}"><i class="fa fa-angle-left fa-2x" aria-hidden="true"></i>10</a>
+                    {% endif %}
+                  <a href="?page={{ page_obj.previous_page_number }}"><i class="fa fa-angle-left fa-2x"></i></a>
+              {% endif %}
+              <span class="page-current">
+                  Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+              </span>
+              {% if page_obj.has_next %}
+                  <a href="?page={{ page_obj.next_page_number }}"><i class="fa fa-angle-right fa-2x"></i></a>
+                    {% if page_obj.number|add:'10' <= page_obj.paginator.num_pages %}
+                        <a href="?page={{ page_obj.number|add:'10' }}">10<i class="fa fa-angle-right fa-2x" aria-hidden="true"></i></a>
+                    {% endif %}
+                  <a href="?page={{ page_obj.paginator.num_pages }}"><i class="fa fa-angle-double-right fa-2x" aria-hidden="true"></i></a>
+              {% endif %}
+          </span>
+        </div>

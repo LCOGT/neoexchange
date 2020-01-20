@@ -72,21 +72,11 @@
 					</table>
 				</div>
 				<div class="row">
-                  {% if is_paginated %}
-                  <div class="pagination">
-                      <span class="page-links">
-                          {% if page_obj.has_previous %}
-                              <a href="{% url 'measurement' body.id %}?page={{ page_obj.previous_page_number }}"><i class="fa fa-arrow-left fa-2x"></i></a>
-                          {% endif %}
-                          <span class="page-current">
-                              Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-                          </span>
-                          {% if page_obj.has_next %}
-                              <a href="{% url 'measurement' body.id %}?page={{ page_obj.next_page_number }}"><i class="fa fa-arrow-right fa-2x"></i></a>
-                          {% endif %}
-                      </span>
-                  </div>
-                {% endif %}
+                    {% if is_paginated %}
+                        <!-- start -->
+                            {% include '_pagination.html' with items=items %}
+                        <!-- end -->
+                    {% endif %}
               </div>
 			</div>
 {% endblock %}
