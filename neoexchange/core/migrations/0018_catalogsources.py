@@ -30,7 +30,7 @@ class Migration(migrations.Migration):
                 ('ellipticity', models.FloatField(verbose_name=b'Ellipticity')),
                 ('aperture_size', models.FloatField(null=True, verbose_name=b'Size of aperture (arcsec)', blank=True)),
                 ('flags', models.IntegerField(default=0, help_text=b'Bitmask of flags', verbose_name=b'Source flags')),
-                ('frame', models.ForeignKey(to='core.Frame')),
+                ('frame', models.ForeignKey(to='core.Frame', on_delete=models.deletion.CASCADE)),
             ],
             options={
                 'db_table': 'catalog_source',
