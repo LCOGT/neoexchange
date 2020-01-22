@@ -24,6 +24,8 @@ import pyslalib.slalib as S
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.wcs._wcs import InvalidTransformError
+from astropy.wcs.utils import skycoord_to_pixel
+from astropy.coordinates import SkyCoord
 from astropy.visualization import ZScaleInterval
 from datetime import datetime, timedelta
 import calendar
@@ -185,9 +187,10 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
         x_frac = 0
         y_frac = 0
         if center is not None:
-            x_frac = int(shape[0]*(1-np.sqrt(center))/2)
-            y_frac = int(shape[1]*(1-np.sqrt(center))/2)
-            data = data[x_frac:-(x_frac+1), y_frac:-(y_frac+1)]
+            y_frac = int(shape[0]*(1-np.sqrt(center))/2)
+            x_frac = int(shape[1]*(1-np.sqrt(center))/2)
+            data = data[y_frac:-(y_frac+1), x_frac:-(x_frac+1)]
+            # Set new coordinates for Reference Pixel w/in smaller window
             header_n['CRPIX1'] -= x_frac
             header_n['CRPIX2'] -= y_frac
         # pull Date from Header
@@ -237,7 +240,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
         if plot_source:
             try:
                 frame_obj = Frame.objects.get(filename=os.path.basename(fits_files[n]))
-                sources = CatalogSources.objects.filter(frame=frame_obj, obs_x__range=(x_frac, shape[0]-x_frac), obs_y__range=(y_frac, shape[1]-y_frac))
+                sources = CatalogSources.objects.filter(frame=frame_obj, obs_y__range=(y_frac, shape[0]-y_frac), obs_x__range=(x_frac, shape[1]-x_frac))
                 for source in sources:
                     circle_source = plt.Circle((source.obs_x - x_frac, source.obs_y - y_frac), 3/header_n['PIXSCALE'], fill=False, color='red', linewidth=1, alpha=.5)
                     ax.add_artist(circle_source)
@@ -245,6 +248,8 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
                 pass
 
         # Highlight best target and search box
+        x_pix = header_n['CRPIX1']
+        y_pix = header_n['CRPIX2']
         if target_data:
             td = target_data[n]
             target_source = td['best_source']
@@ -253,10 +258,8 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
                 ax.add_artist(target_circle)
             bw = td['bw']
             bw /= header_n['PIXSCALE']
-            x_off = (((degrees(td['ra']) - header_n['CRVAL1']) * cos(td['dec']) * 3600) / header_n['PIXSCALE']) * np.sign(header_n['CD1_1'])
-            y_off = (((degrees(td['dec']) - header_n['CRVAL2']) * 3600) / header_n['PIXSCALE']) * np.sign(header_n['CD2_2'])
-            x_pix = header_n['CRPIX1']+x_off
-            y_pix = header_n['CRPIX2']+y_off
+            coord = SkyCoord(td['ra'], td['dec'], unit="rad")
+            x_pix, y_pix = skycoord_to_pixel(coord, wcs)
             box_width = plt.Rectangle((x_pix-bw, y_pix-bw), width=bw*2, height=bw*2, fill=False, color='yellow', linewidth=1, alpha=.5)
             ax.add_artist(box_width)
 
@@ -264,18 +267,12 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
         if horizons_comp:
             jpl_ra = np.interp(calendar.timegm(date.timetuple()), date_array, ephem['RA'])
             jpl_dec = np.interp(calendar.timegm(date.timetuple()), date_array, ephem['DEC'])
-            if target_data:
-                jpl_dist = degrees(S.sla_dsep(td['ra'], td['dec'], radians(jpl_ra), radians(jpl_dec))) * 3600
-            else:
-                jpl_dist = degrees(S.sla_dsep(radians(header_n['CRVAL1']), radians(header_n['CRVAL2']), radians(jpl_ra), radians(jpl_dec))) * 3600
-                x_pix = header_n['CRPIX1']
-                y_pix = header_n['CRPIX2']
-            if jpl_dist > 3:
-                jpl_x_off = (((jpl_ra - header_n['CRVAL1']) * cos(radians(jpl_dec)) * 3600) / header_n['PIXSCALE']) * np.sign(header_n['CD1_1'])
-                jpl_y_off = (((jpl_dec - header_n['CRVAL2']) * 3600) / header_n['PIXSCALE']) * np.sign(header_n['CD2_2'])
-                jpl_x_pix = header_n['CRPIX1']+jpl_x_off
-                jpl_y_pix = header_n['CRPIX2']+jpl_y_off
+            jpl_coord = SkyCoord(jpl_ra, jpl_dec, unit="deg")
+            jpl_x_pix, jpl_y_pix = skycoord_to_pixel(jpl_coord, wcs)
+            if target_data and jpl_coord.separation(coord).arcsec > td['bw']:
                 plt.plot([x_pix, jpl_x_pix], [y_pix, jpl_y_pix], color='lightblue', linestyle='-', linewidth=1, alpha=.5)
+                plt.plot([jpl_x_pix], [jpl_y_pix], color='blue', marker='x', linestyle=' ', label="JPL Prediction")
+            elif not target_data:
                 plt.plot([jpl_x_pix], [jpl_y_pix], color='blue', marker='x', linestyle=' ', label="JPL Prediction")
 
         if progress:
