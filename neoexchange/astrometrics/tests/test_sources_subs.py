@@ -283,6 +283,10 @@ class TestFetchAreciboTargets(TestCase):
         self.test_arecibo_page_v3 = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
 
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_arecibo_page_v4.html'), 'r')
+        self.test_arecibo_page_v4 = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
         self.maxDiff = None
 
     def test_basics(self):
@@ -380,6 +384,24 @@ class TestFetchAreciboTargets(TestCase):
                              u'2018 VX8']
 
         targets = fetch_arecibo_targets(self.test_arecibo_page_v3)
+
+        self.assertEqual(expected_targets, targets)
+
+    def test_targets_v4(self):
+        # Includes Comet target [Issue #387]
+        expected_targets = [ u'289P',
+                             u'137924',
+                             u'250577',
+                             u'163379',
+                             u'35107',
+                             u'2017 BM123',
+                             u'2015 BK509',
+                             u'4581',
+                             u'2013 BA74',
+                             u'2003 OC3',
+                             u'2019 UO9']
+
+        targets = fetch_arecibo_targets(self.test_arecibo_page_v4)
 
         self.assertEqual(expected_targets, targets)
 
