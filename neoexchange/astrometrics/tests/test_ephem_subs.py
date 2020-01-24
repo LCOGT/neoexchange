@@ -3002,3 +3002,19 @@ class TestDetermineHorizonsId(TestCase):
         horizons_id = determine_horizons_id(lines)
 
         self.assertEqual(expected_id, horizons_id)
+
+    def test_bad_object(self):
+        expected_id = None
+        lines = ['Unknown target (20000P). Maybe try different id_type?']
+
+        horizons_id = determine_horizons_id(lines)
+
+        self.assertEqual(expected_id, horizons_id)
+
+    def test_bad_object2(self):
+        expected_id = None
+        lines = []
+
+        horizons_id = determine_horizons_id(lines)
+
+        self.assertEqual(expected_id, horizons_id)
