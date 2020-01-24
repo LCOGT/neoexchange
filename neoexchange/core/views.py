@@ -124,7 +124,7 @@ def determine_active_proposals(proposal_code=None, filter_proposals=True):
     if proposal_code is not None:
         try:
             proposal = Proposal.objects.get(code=proposal_code.upper())
-            proposals = [proposal.code,]
+            proposals = [proposal.code, ]
         except Proposal.DoesNotExist:
             logger.warning("Proposal {} does not exist".format(proposal_code))
             proposals = []
@@ -392,7 +392,7 @@ def download_measurements_file(template, body, m_format, request):
     measures = SourceMeasurement.objects.filter(body=body.id).order_by('frame__midpoint')
     measures = measures.prefetch_related(Prefetch('frame'), Prefetch('body'))
     data = { 'measures' : measures}
-    filename = "{}_{}".format(body.current_name().replace(' ', '').replace('/', '_'), m_format)
+    filename = "{}{}".format(body.current_name().replace(' ', '').replace('/', '_'), m_format)
 
     response = HttpResponse(template.render(data), content_type="text/plain")
     response['Content-Disposition'] = 'attachment; filename=' + filename
@@ -409,7 +409,7 @@ class MeasurementDownloadMPC(View):
             logger.warning("Could not find Body with pk={}".format(kwargs['pk']))
             raise Http404("Body does not exist")
 
-        response = download_measurements_file(self.template, body, 'mpc.dat', request)
+        response = download_measurements_file(self.template, body, '_mpc.dat', request)
         return response
 
 
