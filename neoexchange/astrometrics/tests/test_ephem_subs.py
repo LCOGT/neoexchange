@@ -2962,3 +2962,43 @@ class TestReadFindorbEphem(TestCase):
         empinfo, emp = read_findorb_ephem(outfile)
 
         self.compare_ephemeris((expected_empinfo, expected_emp), (empinfo, emp))
+
+
+class TestDetermineHorizonsId(TestCase):
+
+    def test_289P(self):
+        expected_id = 90001196
+        lines = ['Ambiguous target name; provide unique id:',
+                 '    Record #  Epoch-yr  >MATCH DESIG<  Primary Desig  Name  ',
+                 '    --------  --------  -------------  -------------  -------------------------',
+                 '    90001195    2005    289P           289P            Blanpain',
+                 '    90001196    2018    289P           289P            Blanpain',
+                 '']
+
+        horizons_id = determine_horizons_id(lines)
+
+        self.assertEqual(expected_id, horizons_id)
+
+    def test_46P(self):
+        expected_id = 90000544
+        lines = ['Ambiguous target name; provide unique id:',
+                 '    Record #  Epoch-yr  >MATCH DESIG<  Primary Desig  Name  ',
+                 '    --------  --------  -------------  -------------  -------------------------',
+                 '    90000532    1947    46P            46P             Wirtanen',
+                 '    90000533    1954    46P            46P             Wirtanen',
+                 '    90000534    1961    46P            46P             Wirtanen',
+                 '    90000535    1967    46P            46P             Wirtanen',
+                 '    90000536    1974    46P            46P             Wirtanen',
+                 '    90000537    1986    46P            46P             Wirtanen',
+                 '    90000538    1991    46P            46P             Wirtanen',
+                 '    90000539    1997    46P            46P             Wirtanen',
+                 '    90000540    1999    46P            46P             Wirtanen',
+                 '    90000541    2006    46P            46P             Wirtanen',
+                 '    90000542    2007    46P            46P             Wirtanen',
+                 '    90000543    2018    46P            46P             Wirtanen',
+                 '    90000544    2018    46P            46P             Wirtanen',
+                 '']
+
+        horizons_id = determine_horizons_id(lines)
+
+        self.assertEqual(expected_id, horizons_id)

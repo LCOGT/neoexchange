@@ -687,6 +687,27 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
     return ephem
 
 
+def determine_horizons_id(lines, now=None):
+    """Attempts to determine the HORIZONS id of a target body that has multiple
+    possibilities"""
+
+    now = now or datetime.utcnow()
+    timespan = timedelta.max
+    horizons_id = None
+    for line in lines:
+        chunks = line.split()
+        if len(chunks) == 5 and chunks[0].isdigit() is True and chunks[1].isdigit() is True:
+            try:
+                epoch_yr = datetime.strptime(chunks[1], "%Y")
+                if now-epoch_yr <= timespan:
+                    # New closer match to "now"
+                    horizons_id = int(chunks[0])
+                    timespan = now-epoch_yr
+            except ValueError:
+                logger.warning("Unable to parse year of epoch from", line)
+    return horizons_id
+
+
 def read_findorb_ephem(empfile):
     """Routine to read find_orb produced ephemeris.emp files from non-interactive
     mode.
