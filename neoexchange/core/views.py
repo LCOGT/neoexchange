@@ -22,7 +22,7 @@ import urllib
 import logging
 import tempfile
 import bokeh
-from django.db.models import Q
+from django.db.models import Q, Prefetch
 from django.forms.models import model_to_dict
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -369,6 +369,7 @@ class MeasurementViewBody(View):
     def get(self, request, *args, **kwargs):
         body = Body.objects.get(pk=kwargs['pk'])
         measurements = SourceMeasurement.objects.filter(body=body).order_by('frame__midpoint')
+        measurements = measurements.prefetch_related(Prefetch('frame'), Prefetch('body'))
         # Set up pagination
         # add more rows for denser formats
         if 'mpc' in request.path or 'ades' in request.path:
@@ -387,8 +388,18 @@ class MeasurementViewBody(View):
         return render(request, self.template, {'body': body, 'measures' : page_obj, 'is_paginated': is_paginated, 'page_obj': page_obj})
 
 
-class MeasurementDownloadMPC(View):
+def download_measurements_file(template, body, m_format, request):
+    measures = SourceMeasurement.objects.filter(body=body.id).order_by('frame__midpoint')
+    measures = measures.prefetch_related(Prefetch('frame'), Prefetch('body'))
+    data = { 'measures' : measures}
+    filename = "{}_{}".format(body.current_name().replace(' ', '').replace('/', '_'), m_format)
 
+    response = HttpResponse(template.render(data), content_type="text/plain")
+    response['Content-Disposition'] = 'attachment; filename=' + filename
+    return response
+
+
+class MeasurementDownloadMPC(View):
     template = get_template('core/mpc_outputfile.txt')
 
     def get(self, request, *args, **kwargs):
@@ -398,12 +409,7 @@ class MeasurementDownloadMPC(View):
             logger.warning("Could not find Body with pk={}".format(kwargs['pk']))
             raise Http404("Body does not exist")
 
-        measures = SourceMeasurement.objects.filter(body=body).order_by('frame__midpoint')
-        data = { 'measures' : measures}
-        filename = "{}_mpc.dat".format(body.current_name().replace(' ', '').replace('/', '_'))
-
-        response = HttpResponse(self.template.render(data), content_type="text/plain")
-        response['Content-Disposition'] = 'attachment; filename=' + filename
+        response = download_measurements_file(self.template, body, 'mpc.dat', request)
         return response
 
 
@@ -418,12 +424,7 @@ class MeasurementDownloadADESPSV(View):
             logger.warning("Could not find Body with pk={}".format(kwargs['pk']))
             raise Http404("Body does not exist")
 
-        measures = SourceMeasurement.objects.filter(body=body).order_by('frame__midpoint')
-        data = { 'measures' : measures}
-        filename = "{}.psv".format(body.current_name().replace(' ', '').replace('/', '_'))
-
-        response = HttpResponse(self.template.render(data), content_type="text/plain")
-        response['Content-Disposition'] = 'attachment; filename=' + filename
+        response = download_measurements_file(self.template, body, '.psv', request)
         return response
 
 
@@ -436,6 +437,7 @@ def export_measurements(body_id, output_path=''):
         logger.warning("Could not find Body with pk={}".format(body_id))
         return None, -1
     measures = SourceMeasurement.objects.filter(body=body).exclude(frame__frametype=Frame.SATELLITE_FRAMETYPE).exclude(frame__midpoint__lt=datetime(1993, 1, 1, 0, 0, 0, 0)).order_by('frame__midpoint')
+    measures = measures.prefetch_related(Prefetch('frame'), Prefetch('body'))
     data = { 'measures' : measures}
 
     filename = "{}.mpc".format(body.current_name().replace(' ', '').replace('/', '_'))
