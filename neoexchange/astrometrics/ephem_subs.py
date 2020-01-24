@@ -708,7 +708,9 @@ def convert_horizons_table(ephem, include_moon=False):
 
 def determine_horizons_id(lines, now=None):
     """Attempts to determine the HORIZONS id of a target body that has multiple
-    possibilities"""
+    possibilities. The passed [lines] (from the .args attribute of the exception)
+    are searched for the HORIZONS id (column 1) whose 'epoch year' (column 2)
+    which is closest to [now] (a passed-in datetime or defaulting to datetime.utcnow()"""
 
     now = now or datetime.utcnow()
     timespan = timedelta.max
@@ -718,7 +720,7 @@ def determine_horizons_id(lines, now=None):
         if len(chunks) == 5 and chunks[0].isdigit() is True and chunks[1].isdigit() is True:
             try:
                 epoch_yr = datetime.strptime(chunks[1], "%Y")
-                if now-epoch_yr <= timespan:
+                if abs(now-epoch_yr) <= timespan:
                     # New closer match to "now"
                     horizons_id = int(chunks[0])
                     timespan = now-epoch_yr

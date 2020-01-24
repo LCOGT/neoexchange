@@ -3003,6 +3003,31 @@ class TestDetermineHorizonsId(TestCase):
 
         self.assertEqual(expected_id, horizons_id)
 
+    def test_46P_prior_apparition(self):
+        expected_id = 90000542
+        lines = ['Ambiguous target name; provide unique id:',
+                 '    Record #  Epoch-yr  >MATCH DESIG<  Primary Desig  Name  ',
+                 '    --------  --------  -------------  -------------  -------------------------',
+                 '    90000532    1947    46P            46P             Wirtanen',
+                 '    90000533    1954    46P            46P             Wirtanen',
+                 '    90000534    1961    46P            46P             Wirtanen',
+                 '    90000535    1967    46P            46P             Wirtanen',
+                 '    90000536    1974    46P            46P             Wirtanen',
+                 '    90000537    1986    46P            46P             Wirtanen',
+                 '    90000538    1991    46P            46P             Wirtanen',
+                 '    90000539    1997    46P            46P             Wirtanen',
+                 '    90000540    1999    46P            46P             Wirtanen',
+                 '    90000541    2006    46P            46P             Wirtanen',
+                 '    90000542    2007    46P            46P             Wirtanen',
+                 '    90000543    2018    46P            46P             Wirtanen',
+                 '    90000544    2018    46P            46P             Wirtanen',
+                 '']
+        now = datetime(2008, 5, 11, 17, 20, 42)
+
+        horizons_id = determine_horizons_id(lines, now)
+
+        self.assertEqual(expected_id, horizons_id)
+
     def test_bad_object(self):
         expected_id = None
         lines = ['Unknown target (20000P). Maybe try different id_type?']
