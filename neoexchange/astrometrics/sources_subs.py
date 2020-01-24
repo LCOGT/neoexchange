@@ -1274,6 +1274,8 @@ def fetch_arecibo_targets(page=None):
                                 else:
                                     if chunks[1].replace('-', '').isalpha() and len(chunks[1]) != 2:
                                         target_object = chunks[0]
+                                    elif 'Comet' in chunks[0] and '/P' in chunks[1].rstrip()[-2:]:
+                                        target_object = chunks[1].replace('/', '')
                                     else:
                                         target_object = chunks[0] + " " + chunks[1]
                             else:
