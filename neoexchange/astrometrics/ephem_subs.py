@@ -661,31 +661,41 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
         ephem = eph.ephemerides(quantities='1,3,4,9,19,20,23,24,38,42',
             skip_daylight=should_skip_daylight, airmass_lessthan=airmass_limit,
             max_hour_angle=ha_limit)
-        dates = Column([datetime.strptime(d, "%Y-%b-%d %H:%M") for d in ephem['datetime_str']])
-        if 'datetime' not in ephem.colnames:
-            ephem.add_column(dates, name='datetime')
-        # Convert units of RA/Dec rate from arcsec/hr to arcsec/min and compute
-        # mean rate
-        ephem['RA_rate'].convert_unit_to('arcsec/min')
-        ephem['DEC_rate'].convert_unit_to('arcsec/min')
-        rate_units = ephem['DEC_rate'].unit
-        mean_rate = np_sqrt(ephem['RA_rate']**2 + ephem['DEC_rate']**2)
-        mean_rate.unit = rate_units
-        ephem.add_column(mean_rate, name='mean_rate')
-        if include_moon is True:
-            moon_seps = []
-            moon_phases = []
-            for date, obj_ra, obj_dec in ephem[('datetime', 'RA', 'DEC')]:
-                moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(date, radians(obj_ra), radians(obj_dec), '-1')
-                moon_seps.append(moon_obj_sep)
-                moon_phases.append(moon_phase)
-            ephem.add_columns(cols=(Column(moon_seps), Column(moon_phases)), names=('moon_sep', 'moon_phase'))
+        ephem = convert_horizons_table(ephem, include_moon)
     except ValueError as e:
         logger.warning("Error querying HORIZONS. Error message: {}".format(e))
         ephem = None
 
     return ephem
 
+
+def convert_horizons_table(ephem, include_moon=False):
+    """Modifies a passed table <ephem> from the `astroquery.jplhorizons.ephemerides()
+    to add a 'datetime' column, rate columns and adss moon phase and separation
+    columns (if [include_moon] is True).
+    The modified Astropy Table is returned"""
+
+    dates = Column([datetime.strptime(d, "%Y-%b-%d %H:%M") for d in ephem['datetime_str']])
+    if 'datetime' not in ephem.colnames:
+        ephem.add_column(dates, name='datetime')
+    # Convert units of RA/Dec rate from arcsec/hr to arcsec/min and compute
+    # mean rate
+    ephem['RA_rate'].convert_unit_to('arcsec/min')
+    ephem['DEC_rate'].convert_unit_to('arcsec/min')
+    rate_units = ephem['DEC_rate'].unit
+    mean_rate = np_sqrt(ephem['RA_rate']**2 + ephem['DEC_rate']**2)
+    mean_rate.unit = rate_units
+    ephem.add_column(mean_rate, name='mean_rate')
+    if include_moon is True:
+        moon_seps = []
+        moon_phases = []
+        for date, obj_ra, obj_dec in ephem[('datetime', 'RA', 'DEC')]:
+            moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(date, radians(obj_ra), radians(obj_dec), '-1')
+            moon_seps.append(moon_obj_sep)
+            moon_phases.append(moon_phase)
+        ephem.add_columns(cols=(Column(moon_seps), Column(moon_phases)), names=('moon_sep', 'moon_phase'))
+
+    return ephem
 
 def determine_horizons_id(lines, now=None):
     """Attempts to determine the HORIZONS id of a target body that has multiple
