@@ -2751,11 +2751,15 @@ def create_source_measurement(obs_lines, block=None):
     if obs_body:
         # initialize DB products
         frame_list = Frame.objects.filter(sourcemeasurement__body=obs_body)
-        source_list = SourceMeasurement.objects.filter(body=obs_body)
+        source_list = SourceMeasurement.objects.filter(body=obs_body).prefetch_related('frame')
         block_list = Block.objects.filter(body=obs_body)
         measure_count = len(source_list)
 
         for obs_line in reversed(obs_lines):
+            # End loop when measurements are in the DB for all MPC lines
+            logger.info('Previously recorded {} of {} total MPC obs'.format(measure_count, useful_obs))
+            if measure_count >= useful_obs:
+                break
             frame = None
             logger.debug(obs_line.rstrip())
             params = parse_mpcobs(obs_line)
@@ -2872,10 +2876,7 @@ def create_source_measurement(obs_lines, block=None):
                         if measure_created:
                             measures.append(measure)
                             measure_count += 1
-                        # End loop when measurements are in the DB for all MPC lines
-                        logger.info('Previously recorded {} of {} total MPC obs'.format(measure_count, useful_obs))
-                        if measure_count >= useful_obs:
-                            break
+
 
         # Set updated to True for the target with the current datetime
         update_params = { 'updated' : True,
