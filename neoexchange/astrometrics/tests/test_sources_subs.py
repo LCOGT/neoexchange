@@ -2976,7 +2976,7 @@ class TestParseMPCObsFormat(TestCase):
         self.compare_dict(expected_params, params)
 
     def test_cp_plingC_h(self):
-        expected_params = { 'body'  : '0315P',
+        expected_params = { 'body'  : '315P',
                             'flags' : '!',
                             'obs_type'  : 'C',
                             'obs_date'  : datetime(2013, 11,  6, 3, 30, 18, int(0.3744*1e6)),
@@ -3014,7 +3014,7 @@ class TestParseMPCObsFormat(TestCase):
 
     def test_cp_A_l(self):
         """Test for comet with number and provisional designation, old-style A-observation"""
-        expected_params = { 'body'  : '0289P',
+        expected_params = { 'body'  : '289P',
                             'flags' : ' ',
                             'obs_type'  : 'A',
                             'obs_date'  : datetime(1819, 12, 14,  5, 29, 55, int(0.1040*1e6)),
@@ -3033,7 +3033,7 @@ class TestParseMPCObsFormat(TestCase):
 
     def test_cp_C_l(self):
         """Test for comet with number and provisional designation, new-style (C)CD observation"""
-        expected_params = { 'body'  : '0289P',
+        expected_params = { 'body'  : '289P',
                             'flags' : ' ',
                             'obs_type'  : 'C',
                             'obs_date'  : datetime(2003, 10, 25,  4,  4, 25, int(0.536*1e6)),
@@ -3052,7 +3052,7 @@ class TestParseMPCObsFormat(TestCase):
 
     def test_c_C_l(self):
         """Test for comet with number only, new-style (C)CD observation"""
-        expected_params = { 'body'  : '0289P',
+        expected_params = { 'body'  : '289P',
                             'flags' : ' ',
                             'obs_type'  : 'C',
                             'obs_date'  : datetime(2015,  5, 18,  4, 36, 53, int(0.856*1e6)),
@@ -3078,7 +3078,7 @@ class TestParseMPCObsFormat(TestCase):
 
     def test_c_A_l_2P(self):
         """Test for comet 2P with number only, old-style A-observation"""
-        expected_params = { 'body'  : '0002P',
+        expected_params = { 'body'  : '2P',
                             'flags' : ' ',
                             'obs_type'  : 'A',
                             'obs_date'  : datetime(1957,  7, 28,  9, 37,  4, int(0.8*1e6)),
@@ -3097,7 +3097,7 @@ class TestParseMPCObsFormat(TestCase):
 
     def test_c_KC_l_2P(self):
         """Test for comet 2P with number only, new-style (C)CD observation"""
-        expected_params = { 'body'  : '0002P',
+        expected_params = { 'body'  : '2P',
                             'flags' : 'K',
                             'obs_type'  : 'C',
                             'obs_date'  : datetime(2019, 10,  4, 14, 58, 33, int(0.6*1e6)),
@@ -3116,7 +3116,7 @@ class TestParseMPCObsFormat(TestCase):
 
     def test_c_A_l_46P(self):
         """Test for comet 46P with number and provisional desigination, old-style A-observation"""
-        expected_params = { 'body'  : '0046P',
+        expected_params = { 'body'  : '46P',
                             'flags' : ' ',
                             'obs_type'  : 'A',
                             'obs_date'  : datetime(1954, 10, 28, 12, 43, 53, int(0.472*1e6)),

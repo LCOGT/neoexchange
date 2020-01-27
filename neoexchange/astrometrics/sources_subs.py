@@ -666,6 +666,9 @@ def parse_mpcobs(line):
         body = number
 
     body = body.rstrip()
+    # Strip leading zeros off comets
+    if body[-1] == 'P' and body[:-1].isdigit():
+        body = body.lstrip('0')
     obs_type = str(line[14])
     flag_char = str(line[13])
 
