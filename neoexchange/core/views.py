@@ -370,21 +370,28 @@ class MeasurementViewBody(View):
         body = Body.objects.get(pk=kwargs['pk'])
         measurements = SourceMeasurement.objects.filter(body=body).order_by('frame__midpoint')
         measurements = measurements.prefetch_related(Prefetch('frame'), Prefetch('body'))
+
+        page = request.GET.get('page', None)
         # Set up pagination
+        # Toggle Pagination
+        if page == '0':
+            self.paginate_by = len(measurements)
         # add more rows for denser formats
-        if 'mpc' in request.path or 'ades' in request.path:
-            self.paginate_by = 35
+        elif 'mpc' in request.path or 'ades' in request.path:
+            self.paginate_by = 30
         paginator = Paginator(measurements, self.paginate_by, orphans=self.orphans)
-        page = request.GET.get('page')
+
+        if paginator.num_pages > 1:
+            is_paginated = True
+        else:
+            is_paginated = False
+
         if page is None or int(page) < 1:
             page = 1
         elif int(page) > paginator.num_pages:
             page = pagiinator.num_pages
         page_obj = paginator.page(page)
-        if paginator.num_pages > 1:
-            is_paginated = True
-        else:
-            is_paginated = False
+
         return render(request, self.template, {'body': body, 'measures' : page_obj, 'is_paginated': is_paginated, 'page_obj': page_obj})
 
 

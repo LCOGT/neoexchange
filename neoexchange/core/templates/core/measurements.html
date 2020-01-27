@@ -20,6 +20,7 @@
                         </p>
                     </div>
                     <div class="row">
+                        <a class="button mode-switch" href="{% if is_paginated %} ?page=0 {% else %} ?page=1 {% endif %}" id="page-switch">Toggle Pages</a>
                         <a href="{% if slot %}{% url 'block-report-mpc' slot.id %}{% else %}{% url 'measurement-mpc' body.id %}{%endif%}">[ View in MPC format ]</a>
                         <a href="{% url 'measurement-ades' body.id %}">[ View in ADES format ]</a>
                         <a href="{% url 'download-mpc' body.id %}">[ Download in MPC format ]</a>
