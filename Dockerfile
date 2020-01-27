@@ -78,6 +78,7 @@ RUN yum -y install epel-release \
             libpng-devel \
             mariadb-devel \
             plplot-devel \
+            git \
         && yum -y clean all
 
 # Copy Python dependencies manifest
@@ -91,6 +92,9 @@ COPY neoexchange/requirements.txt .
 RUN pip3 --no-cache-dir install --upgrade pip \
     && pip3 --no-cache-dir install --upgrade numpy \
     && pip3 --no-cache-dir install --trusted-host buildsba.lco.gtn -r requirements.txt
+
+# Temporary install of a specific version of astroquery to fix breakage in jplhorizons
+RUN pip3 --no-cache-dir install git+git://github.com/astropy/astroquery.git@7b4e614702e4c2c2a1830e6cc5739dd9770da6a6
 
 ################################################################################
 # Production Container
