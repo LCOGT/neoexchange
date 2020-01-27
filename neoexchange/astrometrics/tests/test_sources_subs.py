@@ -2691,6 +2691,13 @@ class TestParseMPCObsFormat(TestCase):
                             't_* C_l' : u'     LSCTLZZ* C2018 10 19.36445 04 16 45.66 -02 06 29.9          18.7 Rq     W85',
                             't_*KC_l' : u'     LSCTLZZ*KC2018 10 18.42125 04 16 20.07 -02 07 27.5          19.2 Vq     W86',
                             't_*IC_l' : u'     CPTTLAZ*IC2018 10 18.92125 04 16 20.07 -02 07 27.5          19.2 rV     L09',
+                            'cp_ A_l' : u'0289PI19W010  A1819 12 14.22911 12 47 12.8  +06 18 32                   BJ824007',
+                            'cp_ C_l' : u'0289PK03W25Y  C2003 10 25.16974 00 25 15.12 -19 59 45.5          18.8 Toj1989699',
+                            'c_ C_l'  : u'0289P         C2015 05 18.19229 13 15 46.04 -02 26 41.9          17.3 Nu94436G30',
+                            'c_ M_l2P': u'0002P         M1881 08 26.07540 04 02 14.37 +33 31 38.5                pAN114522',
+                            'c_ A_l2P': u'0002P         A1957 07 28.40075 03 42 44.76 +28 38 23.3          19.3 N AJ070689',
+                            'c_KC_l2P': u'0002P        KC2019 10 04.62400 23 25 58.25 +04 03 54.3          18.2 Tq~01Y1Q11',
+                            'c_ A_l46P':u'0046PJ54R020  A1954 10 28.53048 09 53 23.37 +18 44 42.1                 AJ060662',
                           }
         self.maxDiff = None
 
@@ -3002,6 +3009,127 @@ class TestParseMPCObsFormat(TestCase):
                             'lco_discovery' : False
                           }
         params = parse_mpcobs(self.test_lines['cp_C_h'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_cp_A_l(self):
+        """Test for comet with number and provisional designation, old-style A-observation"""
+        expected_params = { 'body'  : '0289P',
+                            'flags' : ' ',
+                            'obs_type'  : 'A',
+                            'obs_date'  : datetime(1819, 12, 14,  5, 29, 55, int(0.1040*1e6)),
+                            'obs_ra'    : 191.803333333,
+                            'obs_dec'   : 6.30888888889,
+                            'obs_mag'   : None,
+                            'filter'    : ' ',
+                            'astrometric_catalog' : '',
+                            'site_code' : '007',
+                            'discovery' : False,
+                            'lco_discovery' : False
+                          }
+        params = parse_mpcobs(self.test_lines['cp_ A_l'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_cp_C_l(self):
+        """Test for comet with number and provisional designation, new-style (C)CD observation"""
+        expected_params = { 'body'  : '0289P',
+                            'flags' : ' ',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2003, 10, 25,  4,  4, 25, int(0.536*1e6)),
+                            'obs_ra'    : 6.313,
+                            'obs_dec'   : -19.9959722222,
+                            'obs_mag'   : 18.8,
+                            'filter'    : 'T',
+                            'astrometric_catalog' : 'USNO-B1',
+                            'site_code' : '699',
+                            'discovery' : False,
+                            'lco_discovery' : False
+                          }
+        params = parse_mpcobs(self.test_lines['cp_ C_l'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_c_C_l(self):
+        """Test for comet with number only, new-style (C)CD observation"""
+        expected_params = { 'body'  : '0289P',
+                            'flags' : ' ',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2015,  5, 18,  4, 36, 53, int(0.856*1e6)),
+                            'obs_ra'    : 198.941833333,
+                            'obs_dec'   : -2.44497222222,
+                            'obs_mag'   : 17.3,
+                            'filter'    : 'N',
+                            'astrometric_catalog' : 'UCAC-3',
+                            'site_code' : 'G30',
+                            'discovery' : False,
+                            'lco_discovery' : False
+                          }
+        params = parse_mpcobs(self.test_lines['c_ C_l'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_c_M_l_2P(self):
+        """Test for comet 2P with number only, really old-style (M)icrometer observation (to be ignored)"""
+        expected_params = {}
+        params = parse_mpcobs(self.test_lines['c_ M_l2P'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_c_A_l_2P(self):
+        """Test for comet 2P with number only, old-style A-observation"""
+        expected_params = { 'body'  : '0002P',
+                            'flags' : ' ',
+                            'obs_type'  : 'A',
+                            'obs_date'  : datetime(1957,  7, 28,  9, 37,  4, int(0.8*1e6)),
+                            'obs_ra'    : 55.6865,
+                            'obs_dec'   : 28.6398055556,
+                            'obs_mag'   : 19.3,
+                            'filter'    : 'N',
+                            'astrometric_catalog' : '',
+                            'site_code' : '689',
+                            'discovery' : False,
+                            'lco_discovery' : False
+                          }
+        params = parse_mpcobs(self.test_lines['c_ A_l2P'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_c_KC_l_2P(self):
+        """Test for comet 2P with number only, new-style (C)CD observation"""
+        expected_params = { 'body'  : '0002P',
+                            'flags' : 'K',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2019, 10,  4, 14, 58, 33, int(0.6*1e6)),
+                            'obs_ra'    : 351.492708333,
+                            'obs_dec'   : 4.06508333333,
+                            'obs_mag'   : 18.2,
+                            'filter'    : 'T',
+                            'astrometric_catalog' : 'UCAC-4',
+                            'site_code' : 'Q11',
+                            'discovery' : False,
+                            'lco_discovery' : False
+                          }
+        params = parse_mpcobs(self.test_lines['c_KC_l2P'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_c_A_l_46P(self):
+        """Test for comet 46P with number and provisional desigination, old-style A-observation"""
+        expected_params = { 'body'  : '0046P',
+                            'flags' : ' ',
+                            'obs_type'  : 'A',
+                            'obs_date'  : datetime(1954, 10, 28, 12, 43, 53, int(0.472*1e6)),
+                            'obs_ra'    : 148.347375,
+                            'obs_dec'   : 18.7450277778,
+                            'obs_mag'   : None,
+                            'filter'    : ' ',
+                            'astrometric_catalog' : '',
+                            'site_code' : '662',
+                            'discovery' : False,
+                            'lco_discovery' : False
+                          }
+        params = parse_mpcobs(self.test_lines['c_ A_l46P'])
 
         self.compare_dict(expected_params, params)
 
