@@ -3361,7 +3361,7 @@ class PlotSpec(View):
         script, div, p_spec = plot_all_spec(body)
         params = {'body': body, 'floyds': False}
         if div:
-            params["the_script"] = script,
+            params["the_script"] = script
             params["reflec_div"] = div["reflec_spec"]
             params["p_spec"] = p_spec
         base_path = BOKEH_URL.format(bokeh.__version__)

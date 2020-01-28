@@ -17,12 +17,12 @@ from .base import FunctionalTest
 from django.test import TestCase
 from django.urls import reverse
 from django.core.files.storage import default_storage
-from datetime import datetime
+from datetime import datetime, date
 from django.contrib.auth.models import User
 from neox.auth_backend import update_proposal_permissions
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
-from core.models import Block, SuperBlock, Frame
+from core.models import Block, SuperBlock, Frame, Body, PreviousSpectra
 from mock import patch
 from neox.tests.mocks import MockDateTime, mock_lco_authenticate, mock_fetch_archive_frames,\
     mock_fetch_archive_frames_2spectra, mock_archive_spectra_header
@@ -269,9 +269,8 @@ class SpectraplotTest(FunctionalTest):
         self.assertIn('Spectrum for block: '+str(self.test_block.pk)+' | LCO NEOx', self.browser.title)
         self.assertEqual(target_url, actual_url)
 
-        spec_plot1 = self.browser.find_element_by_name("raw_spec")
-
-        spec_plot2 = self.browser.find_element_by_name("reflec_spec")
+        spec_plot1 = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='reflec_spec']/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
+        spec_plot2 = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='raw_spec']/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
 
     @patch('core.views.lco_api_call', mock_archive_spectra_header)
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
@@ -289,14 +288,13 @@ class SpectraplotTest(FunctionalTest):
         self.assertIn('Spectrum for block: '+str(self.test_mblock1.pk)+' | LCO NEOx', self.browser.title)
         self.assertEqual(target_url, actual_url)
 
-        spec_plot1 = self.browser.find_element_by_name("raw_spec")
-
-        spec_plot2 = self.browser.find_element_by_name("reflec_spec")
+        spec_plot1 = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='reflec_spec']/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
+        spec_plot2 = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='raw_spec']/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
 
         self.wait_for_element_with_id('page')
         with self.wait_for_page_load(timeout=10):
             self.browser.back()
-        print("plot2")
+
         with self.wait_for_page_load(timeout=10):
             self.browser.find_elements_by_link_text('Spectrum Plot')[1].click()
         actual_url2 = self.browser.current_url
@@ -304,9 +302,10 @@ class SpectraplotTest(FunctionalTest):
         self.assertIn('Spectrum for block: '+str(self.test_mblock2.pk)+' | LCO NEOx', self.browser.title)
         self.assertEqual(target_url2, actual_url2)
 
-        spec_plot1 = self.browser.find_element_by_name("raw_spec")
+        spec_plot2 = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='raw_spec']/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
         try:
-            spec_plot2 = self.browser.find_element_by_name("reflec_spec")
+            spec_plot1 = self.browser.find_element_by_xpath(
+                "/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='reflec_spec']/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
             raise ValueError('Wrong site, should not produce reflec_spec!')
         except NoSuchElementException:
             pass
@@ -332,9 +331,8 @@ class SpectraplotTest(FunctionalTest):
         self.assertIn('Spectrum for block: '+str(self.test_mblock1.pk)+' | LCO NEOx', self.browser.title)
         self.assertEqual(target_url, actual_url)
 
-        spec_plot1 = self.browser.find_element_by_name("raw_spec")
-
-        spec_plot2 = self.browser.find_element_by_name("reflec_spec")
+        spec_plot1 = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='reflec_spec']/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
+        spec_plot2 = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='raw_spec']/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
 
         self.wait_for_element_with_id('page')
         with self.wait_for_page_load(timeout=10):
@@ -346,3 +344,79 @@ class SpectraplotTest(FunctionalTest):
         target_url2 = self.live_server_url+'/block/'+str(self.test_mblock1.pk)+'/spectra/2/'
         self.assertIn('Spectrum for block: '+str(self.test_mblock1.pk)+' | LCO NEOx', self.browser.title)
         self.assertEqual(target_url2, actual_url2)
+
+
+class SMASSPlotTest(FunctionalTest):
+
+    def setUp(self):
+        super(SMASSPlotTest, self).setUp()
+        self.spectradir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_spectra'))
+
+        settings.MEDIA_ROOT = self.spectradir
+        self.filename = 'test_ascii.ascii'
+
+        # Create test body
+        params = {   'provisional_name': None,
+                     'provisional_packed': None,
+                     'name': '66146',
+                     'origin': 'G',
+                     'source_type': 'N',
+                     'source_subtype_1': 'N2',
+                     'source_subtype_2': None,
+                     'elements_type': 'MPC_MINOR_PLANET',
+                     'active': True,
+                     'fast_moving': False,
+                     'urgency': None,
+                     'epochofel': datetime(2020, 1, 9, 0, 0),
+                     'orbit_rms': 0.0,
+                     'orbinc': 5.40597,
+                     'longascnode': 102.01922,
+                     'argofperih': 84.84692,
+                     'eccentricity': 0.4836881,
+                     'meandist': 0.7872702,
+                     'meananom': 292.23025,
+                     'perihdist': None,
+                     'epochofperih': None,
+                     'abs_mag': 14.34,
+                     'slope': 0.15,
+                     'score': None,
+                     'discovery_date': datetime(1982, 12, 4, 0, 0),
+                     'num_obs': 119,
+                     'arc_length': 74.0,
+                     'not_seen': 809.8523994142245,
+                     'updated': True,
+                     'ingest': datetime(2017, 8, 2, 5, 3, 24),
+                     'update_time': datetime(2020, 1, 16, 20, 25, 28)
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+
+        params2 = {  'body' : self.body,
+                     'spec_wav': 'Vis+NIR',
+                     'spec_vis': self.filename,
+                     'spec_ir': self.filename,
+                     'spec_ref': 'sp[025]',
+                     'spec_source': 'S',
+                     'spec_date': date(2012, 11, 6)
+                     }
+        self.spec_data, created = PreviousSpectra.objects.get_or_create(**params2)
+
+    @patch('core.plots.datetime', MockDateTime)
+    def test_can_view_previous_spectra(self):
+        MockDateTime.change_datetime(2015, 3, 19, 6, 00, 00)
+        # A new user comes along to the site
+        self.browser.get(self.live_server_url)
+
+        # She sees a link from the targets' name on the front page to a more
+        # detailed view.
+        link = self.browser.find_element_by_link_text('66146')
+
+        # She clicks the link and is taken to a page with the targets' details.
+        with self.wait_for_page_load(timeout=10):
+            link.click()
+
+        # She clicks a link to view external spectra for this target
+        link = self.browser.find_element_by_link_text('(Plots)')
+        with self.wait_for_page_load(timeout=10):
+            link.click()
+
+        spec_plot = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='reflec_spec']/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
