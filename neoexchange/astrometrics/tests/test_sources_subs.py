@@ -2702,6 +2702,7 @@ class TestParseMPCObsFormat(TestCase):
                             'c_aC_l73P':u'0073P      a  C1995 12 23.12177 22 04 58.78 -21 21 19.8                 26444693',
                            'c_btC_l73P':u'0073P     bt  C2017 09 27.20655 03 00 10.55 +05 17 00.6          17.0 Tq@6559J22',
                             'cp_bKC_l': u'    CK15E61b KC2017 12 17.94440 02 44 22.10 +15 55 27.3          18.5 Nq@7755160',
+                            'cp_cKC_l': u'0332PK10V01c KC2016 02 19.06978 08 49 10.77 +34 23 21.4          18.1 Nq97706I81',
                           }
         self.maxDiff = None
 
@@ -3194,7 +3195,7 @@ class TestParseMPCObsFormat(TestCase):
 
         self.compare_dict(expected_params, params)
 
-    def test_cP_bKC_l(self):
+    def test_cp_bKC_l(self):
         """Test for comet C/2015-E61-B ('b' fragment) with provisional desigination only, new-style (C)CD observation"""
         expected_params = { 'body'  : 'CK15E61b',
                             'flags' : 'K',
@@ -3210,6 +3211,25 @@ class TestParseMPCObsFormat(TestCase):
                             'lco_discovery' : False
                           }
         params = parse_mpcobs(self.test_lines['cp_bKC_l'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_cp_cKC_l(self):
+        """Test for comet 332P-C = P/2010 V1-C (332P 'c' fragment) with number and provisional desigination only, new-style (C)CD observation"""
+        expected_params = { 'body'  : '332P-C',
+                            'flags' : 'K',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2016,  2, 19,  1, 40, 28, int(0.992*1e6)),
+                            'obs_ra'    : 132.294875,
+                            'obs_dec'   : 34.3892777778,
+                            'obs_mag'   : 18.1,
+                            'filter'    : 'N',
+                            'astrometric_catalog' : 'UCAC-4',
+                            'site_code' : 'I81',
+                            'discovery' : False,
+                            'lco_discovery' : False
+                          }
+        params = parse_mpcobs(self.test_lines['cp_cKC_l'])
 
         self.compare_dict(expected_params, params)
 
