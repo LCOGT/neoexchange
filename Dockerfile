@@ -78,7 +78,6 @@ RUN yum -y install epel-release \
             libpng-devel \
             mariadb-devel \
             plplot-devel \
-            git \
         && yum -y clean all
 
 # Copy Python dependencies manifest
