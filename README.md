@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 3.2.6.1
+Index frequently used model fields.
+
 ### 3.2.6
 Fix broken spectra plot
 Update Minimum Django Requirements
