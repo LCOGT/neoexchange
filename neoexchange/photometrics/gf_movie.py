@@ -259,6 +259,8 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
             bw = td['bw']
             bw /= header_n['PIXSCALE']
             coord = SkyCoord(td['ra'], td['dec'], unit="rad")
+            # if target_source:
+            #     print(coord.separation(SkyCoord(target_source.obs_ra, target_source.obs_dec, unit="deg")).arcsec)
             x_pix, y_pix = skycoord_to_pixel(coord, wcs)
             box_width = plt.Rectangle((x_pix-bw, y_pix-bw), width=bw*2, height=bw*2, fill=False, color='yellow', linewidth=1, alpha=.5)
             ax.add_artist(box_width)
@@ -269,7 +271,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
             jpl_dec = np.interp(calendar.timegm(date.timetuple()), date_array, ephem['DEC'])
             jpl_coord = SkyCoord(jpl_ra, jpl_dec, unit="deg")
             jpl_x_pix, jpl_y_pix = skycoord_to_pixel(jpl_coord, wcs)
-            if target_data and jpl_coord.separation(coord).arcsec > td['bw']:
+            if target_data and jpl_coord.separation(coord).arcsec > 3:
                 plt.plot([x_pix, jpl_x_pix], [y_pix, jpl_y_pix], color='lightblue', linestyle='-', linewidth=1, alpha=.5)
                 plt.plot([jpl_x_pix], [jpl_y_pix], color='blue', marker='x', linestyle=' ', label="JPL Prediction")
             elif not target_data:
