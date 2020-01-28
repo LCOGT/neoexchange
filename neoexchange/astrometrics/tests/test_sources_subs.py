@@ -2700,6 +2700,7 @@ class TestParseMPCObsFormat(TestCase):
                             'c_ A_l46P':u'0046PJ54R020  A1954 10 28.53048 09 53 23.37 +18 44 42.1                 AJ060662',
                             'c_ C_l73P':u'0073P         C1995 12 22.36597 22 02 32.30 -21 36 12.0                 26211897',
                             'c_aC_l73P':u'0073P      a  C1995 12 23.12177 22 04 58.78 -21 21 19.8                 26444693',
+                           'c_btC_l73P':u'0073P     bt  C2017 09 27.20655 03 00 10.55 +05 17 00.6          17.0 Tq@6559J22',
                             'cp_bKC_l': u'    CK15E61b KC2017 12 17.94440 02 44 22.10 +15 55 27.3          18.5 Nq@7755160',
                           }
         self.maxDiff = None
@@ -3171,6 +3172,25 @@ class TestParseMPCObsFormat(TestCase):
                             'lco_discovery' : False
                           }
         params = parse_mpcobs(self.test_lines['c_aC_l73P'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_c_btC_l_73P(self):
+        """Test for comet 73P ('bt' fragment) with number only, new-style (C)CD observation"""
+        expected_params = { 'body'  : '73P-BT',
+                            'flags' : ' ',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2017,  9, 27,  4, 57, 25, int(0.92*1e6)),
+                            'obs_ra'    : 45.0439583333,
+                            'obs_dec'   : 5.2835,
+                            'obs_mag'   : 17.0,
+                            'filter'    : 'T',
+                            'astrometric_catalog' : 'UCAC-4',
+                            'site_code' : 'J22',
+                            'discovery' : False,
+                            'lco_discovery' : False
+                          }
+        params = parse_mpcobs(self.test_lines['c_btC_l73P'])
 
         self.compare_dict(expected_params, params)
 
