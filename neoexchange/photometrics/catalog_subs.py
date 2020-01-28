@@ -20,7 +20,7 @@ import os
 from glob import glob
 import numpy as np
 from datetime import datetime, timedelta
-from math import sqrt, log10, log, degrees
+from math import sqrt, log10, log, degrees, cos
 from collections import OrderedDict
 import time
 from requests.exceptions import ReadTimeout, ConnectTimeout, ConnectionError
@@ -1385,8 +1385,8 @@ def search_box(frame, ra, dec, box_halfwidth=3.0, dbg=False):
     box_halfwidth_deg = box_halfwidth / 3600.0
     ra_deg = degrees(ra)
     dec_deg = degrees(dec)
-    ra_min = ra_deg - box_halfwidth_deg
-    ra_max = ra_deg + box_halfwidth_deg
+    ra_min = ra_deg - box_halfwidth_deg / cos(dec)
+    ra_max = ra_deg + box_halfwidth_deg / cos(dec)
     box_dec_min = dec_deg - box_halfwidth_deg
     box_dec_max = dec_deg + box_halfwidth_deg
     dec_min = min(box_dec_min, box_dec_max)

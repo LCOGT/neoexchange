@@ -51,7 +51,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('supblock', type=int, help='SuperBlock (tracking number) to analyze')
         parser.add_argument('-ts', '--timespan', type=float, default=0.0, help='Days prior to referenced SuperBlock that should be included')
-        parser.add_argument('-bw', '--boxwidth', type=float, default=5.0, help='Boxwidth in arcsec to search')
+        parser.add_argument('-bw', '--boxwidth', type=float, default=5.0, help='Box half-width in arcsec to search')
         parser.add_argument('-dm', '--deltamag', type=float, default=0.5, help='delta magnitude tolerance for multiple matches')
         parser.add_argument('--title', type=str, default=None, help='plot title')
         parser.add_argument('--persist', action="store_true", default=False, help='Whether to store cross-matches as SourceMeasurements for the body')
