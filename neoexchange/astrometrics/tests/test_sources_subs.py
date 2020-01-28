@@ -2698,6 +2698,8 @@ class TestParseMPCObsFormat(TestCase):
                             'c_ A_l2P': u'0002P         A1957 07 28.40075 03 42 44.76 +28 38 23.3          19.3 N AJ070689',
                             'c_KC_l2P': u'0002P        KC2019 10 04.62400 23 25 58.25 +04 03 54.3          18.2 Tq~01Y1Q11',
                             'c_ A_l46P':u'0046PJ54R020  A1954 10 28.53048 09 53 23.37 +18 44 42.1                 AJ060662',
+                            'c_ C_l73P':u'0073P         C1995 12 22.36597 22 02 32.30 -21 36 12.0                 26211897',
+                            'c_aC_l73P':u'0073P      a  C1995 12 23.12177 22 04 58.78 -21 21 19.8                 26444693',
                           }
         self.maxDiff = None
 
@@ -3130,6 +3132,44 @@ class TestParseMPCObsFormat(TestCase):
                             'lco_discovery' : False
                           }
         params = parse_mpcobs(self.test_lines['c_ A_l46P'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_c_C_l_73P(self):
+        """Test for comet 73P (whole comet) with number only, new-style (C)CD observation"""
+        expected_params = { 'body'  : '73P',
+                            'flags' : ' ',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(1995, 12, 22,  8, 46, 59, int(0.808*1e6)),
+                            'obs_ra'    : 330.634583333,
+                            'obs_dec'   : -21.6033333333,
+                            'obs_mag'   : None,
+                            'filter'    : ' ',
+                            'astrometric_catalog' : '',
+                            'site_code' : '897',
+                            'discovery' : False,
+                            'lco_discovery' : False
+                          }
+        params = parse_mpcobs(self.test_lines['c_ C_l73P'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_c_aC_l_73P(self):
+        """Test for comet 73P ('a' fragment) with number only, new-style (C)CD observation"""
+        expected_params = { 'body'  : '73P-A',
+                            'flags' : ' ',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(1995, 12, 23,  2, 55, 20, int(0.928*1e6)),
+                            'obs_ra'    : 331.244916667,
+                            'obs_dec'   : -21.3555,
+                            'obs_mag'   : None,
+                            'filter'    : ' ',
+                            'astrometric_catalog' : '',
+                            'site_code' : '693',
+                            'discovery' : False,
+                            'lco_discovery' : False
+                          }
+        params = parse_mpcobs(self.test_lines['c_aC_l73P'])
 
         self.compare_dict(expected_params, params)
 
