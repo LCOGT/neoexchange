@@ -363,7 +363,9 @@ class MeasurementViewBlock(LoginRequiredMixin, View):
 
 class MeasurementViewBody(View):
     template = 'core/measurements.html'
+    # Set default pagination (number of objects per page)
     paginate_by = 20
+    # Set minimum number of orphans (objects allowed on last page)
     orphans = 3
 
     def get(self, request, *args, **kwargs):
@@ -371,8 +373,9 @@ class MeasurementViewBody(View):
         measurements = SourceMeasurement.objects.filter(body=body).order_by('frame__midpoint')
         measurements = measurements.prefetch_related(Prefetch('frame'), Prefetch('body'))
 
-        page = request.GET.get('page', None)
         # Set up pagination
+        page = request.GET.get('page', None)
+
         # Toggle Pagination
         if page == '0':
             self.paginate_by = len(measurements)
@@ -389,7 +392,7 @@ class MeasurementViewBody(View):
         if page is None or int(page) < 1:
             page = 1
         elif int(page) > paginator.num_pages:
-            page = pagiinator.num_pages
+            page = paginator.num_pages
         page_obj = paginator.page(page)
 
         return render(request, self.template, {'body': body, 'measures' : page_obj, 'is_paginated': is_paginated, 'page_obj': page_obj})
