@@ -4325,19 +4325,16 @@ class TestFrames(TestCase):
     def test_add_source_measurements(self):
         # Test we don't get duplicate frames when adding new source measurements
         # if the sources are in the same frame
-        for line in self.test_obslines:
-            resp = create_source_measurement(line, self.test_block)
+        resp = create_source_measurement(self.test_obslines, self.test_block)
         frames = Frame.objects.filter(sitecode='K93', block__isnull=False)
         self.assertEqual(3, frames.count())
 
     def test_add_source_measurements_twice(self):
         # Test we don't get duplicate frames when adding new source measurements
         # if the sources are in the same frame
-        for line in self.test_obslines:
-            resp = create_source_measurement(line, self.test_block)
+        resp = create_source_measurement(self.test_obslines, self.test_block)
         # And we forgot that we've already done this, so we do it again
-        for line in self.test_obslines:
-            resp = create_source_measurement(line, self.test_block)
+        resp = create_source_measurement(self.test_obslines, self.test_block)
         frames = Frame.objects.filter(sitecode='K93', block__isnull=False)
         # We should get the same number in the previous test,
         # i.e. on the second run the frames are not created
