@@ -150,8 +150,8 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
         # Get predicted JPL position of target in first frame
         frame_obj = Frame.objects.get(filename=os.path.basename(fits_files[0]))
         end_frame = Frame.objects.get(filename=os.path.basename(fits_files[-1]))
-        start = frame_obj.midpoint - timedelta(minutes=1)
-        end = end_frame.midpoint + timedelta(minutes=1)
+        start = frame_obj.midpoint - timedelta(minutes=5)
+        end = end_frame.midpoint + timedelta(minutes=5)
         sitecode = frame_obj.sitecode
         obj_name = frame_obj.block.body.name
         ephem = horizons_ephem(obj_name, start, end, sitecode, ephem_step_size='1m')
