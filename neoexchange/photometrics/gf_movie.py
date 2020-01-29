@@ -40,6 +40,7 @@ from django.core.files.storage import default_storage
 from photometrics.external_codes import unpack_tarball
 from core.models import Frame, CatalogSources
 from astrometrics.ephem_subs import horizons_ephem
+from astrometrics.time_subs import timeit
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +93,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
     <center> = fraction of area for central portion of frame.
     output = savefile (path of gif)
     """
+
     if sort is True:
         fits_files = np.sort(frames)
     else:
@@ -146,16 +148,22 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
     if title:
         fig.suptitle(title)
 
+    base_name_list = [os.path.basename(f) for f in fits_files]
+    frame_query = Frame.objects.filter(filename__in=base_name_list).order_by('midpoint').prefetch_related('catalogsources_set')
+
     if horizons_comp:
         # Get predicted JPL position of target in first frame
-        frame_obj = Frame.objects.get(filename=os.path.basename(fits_files[0]))
-        end_frame = Frame.objects.get(filename=os.path.basename(fits_files[-1]))
+        frame_obj = frame_query[0]
+        end_frame = frame_query.last()
         start = frame_obj.midpoint - timedelta(minutes=5)
         end = end_frame.midpoint + timedelta(minutes=5)
         sitecode = frame_obj.sitecode
         obj_name = frame_obj.block.body.name
-        ephem = horizons_ephem(obj_name, start, end, sitecode, ephem_step_size='1m')
-        date_array = np.array([calendar.timegm(d.timetuple()) for d in ephem['datetime']])
+        try:
+            ephem = horizons_ephem(obj_name, start, end, sitecode, ephem_step_size='1m')
+            date_array = np.array([calendar.timegm(d.timetuple()) for d in ephem['datetime']])
+        except TypeError:
+            date_array = []
 
     time_in = datetime.now()
 
@@ -266,7 +274,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
             ax.add_artist(box_width)
 
         # show the position of the JPL Horizons prediction relative to CRPIX if no target data.
-        if horizons_comp:
+        if horizons_comp and date_array:
             jpl_ra = np.interp(calendar.timegm(date.timetuple()), date_array, ephem['RA'])
             jpl_dec = np.interp(calendar.timegm(date.timetuple()), date_array, ephem['DEC'])
             jpl_coord = SkyCoord(jpl_ra, jpl_dec, unit="deg")
