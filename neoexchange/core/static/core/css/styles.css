@@ -629,7 +629,26 @@ body.view #main-holder #sidebar { box-shadow: none; }
 #main-holder.without-sidebar #main { display: block; }
 #main-holder.without-sidebar #sidebar { display: none; }
 
-.pagination {text-align: center; }
+.pagination {
+    text-align: center;
+    margin-top: 1em;}
+
+.pagination a {
+    text-decoration: none;
+    color: #fff;
+    }
+
+.pagination-number {
+    padding: 0.5em 0.8em;
+    border-radius: 2px;
+    color: #fff;
+    background-color: #6D85C7;}
+
+.pagination-number:hover,
+.page-current {
+    background-color: #3354AA;
+    padding: 0.2em 0.5em;
+    font-size: 2em}
 
 body.inbox #main table { margin: 0px; padding: 0px; background-color: white; width: 100%!important; border-collapse: collapse; table-layout: fixed; }
 body.inbox #main th, body.inbox #main td { text-align: left; padding: 8px; border: 0px; font-weight: normal; }

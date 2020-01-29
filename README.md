@@ -4,6 +4,14 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 3.2.7
+* Allow ingestion of numbered comet and comet fragment observations.
+* Fix various time out issues with prefetching
+* Update pagination format
+
+### 3.2.6.1
+Index frequently used model fields.
+
 ### 3.2.6
 Fix broken spectra plot
 Update Minimum Django Requirements

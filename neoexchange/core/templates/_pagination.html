@@ -1,0 +1,34 @@
+        <div class="pagination">
+          <span class="page-links">
+              {% if page_obj.has_previous %}
+                {% if page_obj.number|add:'-1' >= 2 %}
+                  <a class="pagination-number" href="?page=1">1</a>
+              <i class="fa fa-circle" style="font-size:.1em;"></i>
+              <i class="fa fa-circle" style="font-size:.1em;"></i>
+              <i class="fa fa-circle" style="font-size:.1em;"></i>
+                {% endif %}
+                    {% if page_obj.number|add:'-10' >= 2 %}
+                        <a class="pagination-number" href="?page={{ page_obj.number|add:'-10' }}">{{ page_obj.number|add:'-10' }}</a>
+                        <i class="fa fa-circle" style="font-size:.1em;"></i>
+                        <i class="fa fa-circle" style="font-size:.1em;"></i>
+                    {% endif %}
+                <a class="pagination-number" href="?page={{ page_obj.previous_page_number }}">{{ page_obj.previous_page_number }}</a>
+              {% endif %}
+              <span class="pagination-number page-current">{{ page_obj.number }}</span>
+              {% if page_obj.has_next %}
+                  <a class="pagination-number" href="?page={{ page_obj.next_page_number }}">{{ page_obj.next_page_number }}</a>
+
+                    {% if page_obj.number|add:'10' <= page_obj.paginator.num_pages %}
+                        <i class="fa fa-circle" style="font-size:.1em;"></i>
+                        <i class="fa fa-circle" style="font-size:.1em;"></i>
+                        <a class="pagination-number" href="?page={{ page_obj.number|add:'10' }}">{{ page_obj.number|add:'10' }}</a>
+                    {% endif %}
+                    {% if page_obj.number|add:'1' < page_obj.paginator.num_pages %}
+                        <i class="fa fa-circle" style="font-size:.1em;"></i>
+                        <i class="fa fa-circle" style="font-size:.1em;"></i>
+                        <i class="fa fa-circle" style="font-size:.1em;"></i>
+                        <a class="pagination-number" href="?page={{ page_obj.paginator.num_pages }}">{{ page_obj.paginator.num_pages }}</a>
+                    {% endif %}
+              {% endif %}
+          </span>
+        </div>
