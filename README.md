@@ -6,8 +6,10 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ### 3.2.7
 * Allow ingestion of numbered comet and comet fragment observations.
-* Fix various time out issues with prefetching
-* Update pagination format
+* Fix various time out issues with prefetching.
+* Update pagination format.
+* Fix parsing of comets in Arecibo target lists.
+* Add ability to query HORIZONS for comets which have multiple element sets/target bodies available.
 
 ### 3.2.6.1
 Index frequently used model fields.
