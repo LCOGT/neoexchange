@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block header %}
+
+Spectrum for object: {{body.current_name}}
+
+{% endblock %}
+
+<!-- Import Bokeh CSS for plotting (UPDATE RELEASE NUMBER IF BOKEH IS UPDATED) -->
+{% block last-css-content %}
+<link rel="stylesheet" href={{css_path}}>
+{% endblock %}
+<!-- Import Bokeh Script for plotting (UPDATE RELEASE NUMBER IF BOKEH IS UPDATED) -->
+{% block script-content %}
+<script src={{js_path}}></script>
+{{ the_script|safe }}
+{% endblock %}
+
+{% block bodyclass %}page{% endblock %}
+
+
+{% block extramenu %}
+    <div class="headingleft">
+        <h1>Object: <a href="{% url 'target' body.pk %}">{{body.current_name}}</a></h1>
+    </div>
+{% endblock%}
+
+
+{% block main-content %}
+<!-- Main body -->
+<div class="container" id="main">
+    <!-- Import the javascript and div created by Bokeh for spectra plots -->
+    {% block graphic %}
+        {{ lc_div|safe }}
+    {% endblock %}
+
+
+<h5 class="section-title">LC Dates</h5>
+
+</div>
+{% endblock %}

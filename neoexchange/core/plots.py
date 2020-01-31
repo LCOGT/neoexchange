@@ -20,7 +20,8 @@ import logging
 import os
 import re
 import shutil
-from math import pi
+import itertools
+from math import pi, floor
 import numpy as np
 from astropy import units as u
 
@@ -34,8 +35,8 @@ import matplotlib.pyplot as plt
 from bokeh.plotting import figure, ColumnDataSource
 from bokeh.resources import CDN
 from bokeh.embed import components
-from bokeh.models import HoverTool, Label, CrosshairTool
-from bokeh.palettes import Category20
+from bokeh.models import HoverTool, Label, CrosshairTool, Whisker, TeeHead
+from bokeh.palettes import Category20, Category10
 
 from .models import Body, CatalogSources, StaticSource, Block, model_to_dict, PreviousSpectra
 from astrometrics.ephem_subs import horizons_ephem, call_compute_ephem, determine_darkness_times, get_sitepos,\
@@ -555,6 +556,70 @@ def lin_vis_plot(body):
     plot.legend.glyph_height = 0
     plot.legend.label_width = 0
     plot.legend.label_height = 0
+
+    script, div = components(plot, CDN)
+
+    return script, div
+
+
+def get_name(meta_dat):
+    name = meta_dat['OBJECTNAME']
+    number = meta_dat['OBJECTNUMBER']
+    desig = meta_dat['MPCDESIG']
+    if name != 'False' and (number != 'False' and number != '0'):
+        out_string = '{} ({})'.format(name, number)
+    elif name != 'False':
+        out_string = '{}'.format(name)
+    elif number != 'False' and desig != 'False' and number != '0':
+        out_string = '{} ({})'.format(number, desig)
+    elif number != 'False' and number != '0':
+        out_string = '{}'.format(number)
+    elif desig != 'False':
+        out_string = '{}'.format(desig)
+    else:
+        out_string = 'UNKNOWN OBJECT'
+    return out_string, name, number
+
+
+def lc_plot(lc_list, meta_list, filt_list):
+
+    plot = figure(plot_width=900, plot_height=400)
+
+    filt_unique = list(set(filt_list))
+    filt_sets = {}
+    for filt_u in filt_unique:
+        filt_sets[filt_u] = []
+        for i, filt in enumerate(filt_list):
+            if filt == filt_u:
+                filt_sets[filt_u].append(i)
+
+    obj, name, num = get_name(meta_list[0])
+    date_range = meta_list[0]['SESSIONDATE'].replace('-', '')+'-'+meta_list[-1]['SESSIONDATE'].replace('-', '')
+    base_date = floor(min(sorted([jd for lc in lc_list for jd in lc['date']])))
+    colors = itertools.cycle(Category10[10])
+
+    for f, filt in enumerate(filt_unique):
+        lc_filt_list = [lc_list[k] for k in filt_sets[filt]]
+        meta_filt_list = [meta_list[k] for k in filt_sets[filt]]
+
+        # plot.circle(lc_filt_list['date'], lc_filt_list['mags'], size=3)
+
+        for i, lc in enumerate(lc_filt_list):
+            plot_col = next(colors)
+
+            # Build Error Bars
+            err_up = np.array(lc['mags']) + np.array(lc['mag_errs'])
+            err_low = np.array(lc['mags']) - np.array(lc['mag_errs'])
+            source_error = ColumnDataSource(data=dict(base=lc['date'], lower=err_low, upper=err_up))
+            error_cap = TeeHead(line_alpha=.5, line_color=plot_col, size=1)
+            plot.add_layout(Whisker(source=source_error, base="base", upper="upper", lower="lower", line_color=plot_col, line_alpha=.5, lower_head=error_cap, upper_head=error_cap))
+
+            # Plot Data
+            plot.circle(lc['date'], lc['mags'], size=3, color=plot_col)
+
+            # xxx = [(d - base_date) * 24 for d in lc['date']]
+            # yyy = lc['mags']
+            # plot.circle(xxx, yyy, size=3)
 
     script, div = components(plot, CDN)
 

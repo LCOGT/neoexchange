@@ -274,7 +274,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
             ax.add_artist(box_width)
 
         # show the position of the JPL Horizons prediction relative to CRPIX if no target data.
-        if horizons_comp and date_array:
+        if horizons_comp and date_array.any():
             jpl_ra = np.interp(calendar.timegm(date.timetuple()), date_array, ephem['RA'])
             jpl_dec = np.interp(calendar.timegm(date.timetuple()), date_array, ephem['DEC'])
             jpl_coord = SkyCoord(jpl_ra, jpl_dec, unit="deg")

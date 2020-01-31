@@ -80,7 +80,7 @@ from core.archive_subs import lco_api_call
 from core.utils import search
 from photometrics.SA_scatter import readSources, genGalPlane, plotScatter, \
     plotFormat
-from core.plots import spec_plot, lin_vis_plot
+from core.plots import spec_plot, lin_vis_plot, lc_plot
 
 logger = logging.getLogger(__name__)
 
@@ -3296,6 +3296,96 @@ class PlotSpec(View):
         params['js_path'] = base_path + 'js'
 
         return render(request, self.template_name, params)
+
+
+class LCPlot(View):
+
+    template_name = 'core/plot_lc.html'
+
+    def get(self, request, *args, **kwargs):
+        body = Body.objects.get(pk=kwargs['pk'])
+        script, div = get_lc_plot(body)
+        params = {'body': body}
+        if div:
+            params["the_script"] = script
+            params["lc_div"] = div
+        base_path = BOKEH_URL.format(bokeh.__version__)
+        params['css_path'] = base_path + 'css'
+        params['js_path'] = base_path + 'js'
+
+        return render(request, self.template_name, params)
+
+
+def import_alcdef(file, meta_list, lc_list):
+    lc_file = open(file)
+    lines = lc_file.readlines()
+
+    metadata = {}
+    dates = []
+    mags = []
+    mag_errs = []
+    met_dat = False
+
+    for line in lines:
+        if line[0] == '#':
+            continue
+        if '=' in line:
+            if 'DATA=' in line and met_dat is False:
+                chunks = line[5:].split('|')
+                jd = float(chunks[0])
+                mag = float(chunks[1])
+                mag_err = float(chunks[2])
+                dates.append(jd)
+                mags.append(mag)
+                mag_errs.append(mag_err)
+            else:
+                chunks = line.split('=')
+                metadata[chunks[0]] = chunks[1].replace('\n', '')
+        elif 'ENDDATA' in line:
+            if metadata not in meta_list:
+                print(metadata)
+                meta_list.append(metadata)
+                lc_data = {
+                    'date': dates,
+                    'mags': mags,
+                    'mag_errs': mag_errs,
+                    }
+                lc_list.append(lc_data)
+            dates = []
+            mags = []
+            mag_errs = []
+            metadata = {}
+        elif 'STARTMETADATA' in line:
+            met_dat = True
+        elif 'ENDMETADATA' in line:
+            met_dat = False
+
+    return meta_list, lc_list
+
+
+def get_lc_plot(body):
+    """Plot all lightcurve data for given source.
+    """
+
+    base_dir = os.path.join(settings.DATA_ROOT, 'Reduction')
+    obj_name = body.current_name().replace(' ', '_')
+    datadir = os.path.join(base_dir, obj_name)
+    filenames = search(datadir, '.*.ALCDEF.txt')
+    meta_list = []
+    lc_list = []
+    filt_list = []
+    for file in filenames:
+        meta_list, lc_list = import_alcdef(os.path.join(datadir, file), meta_list, lc_list)
+
+    for meta in meta_list:
+        filt_list.append(meta['FILTER'])
+
+    if lc_list:
+        script, div = lc_plot(lc_list, meta_list, filt_list)
+    else:
+        script = div = None
+
+    return script, div
 
 
 def display_movie(request, pk):

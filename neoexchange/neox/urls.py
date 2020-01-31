@@ -28,7 +28,7 @@ from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockLis
     CandidatesViewBlock, BlockReportMPC, \
     MeasurementDownloadMPC, MeasurementDownloadADESPSV, \
     SuperBlockListView, SuperBlockDetailView, characterization, SpectroFeasibility, BlockSpec,\
-    display_movie, GuideMovie, \
+    display_movie, GuideMovie, LCPlot,\
     StaticSourceView, StaticSourceDetailView, ScheduleCalibSpectra, ScheduleCalibSubmit, \
     CalibSpectroFeasibility, ScheduleCalibParameters, \
     BestStandardsView, PlotSpec, BodyVisibilityView, SuperBlockTimeline
@@ -72,6 +72,7 @@ urlpatterns = [
     url(r'^target/(?P<pk>\d+)/visibility/$', BodyVisibilityView.as_view(model=Body), name='visibility'),
     url(r'^target/(?P<pk>\d+)/$', BodyDetailView.as_view(model=Body), name='target'),
     url(r'^target/(?P<pk>\d+)/spectra/$', PlotSpec.as_view(), name='plotspec'),
+    url(r'^target/(?P<pk>\d+)/lc/$', LCPlot.as_view(), name='lc_plot'),
     url(r'^search/$', BodySearchView.as_view(context_object_name="target_list"), name='search'),
     url(r'^ephemeris/$', ephemeris, name='ephemeris'),
     url(r'^ranking/$', ranking, name='ranking'),
