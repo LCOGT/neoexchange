@@ -354,7 +354,7 @@ class SpectroFeasibilityForm(forms.Form):
 
 class LCPlotForm(forms.Form):
     phase_flag = forms.BooleanField(initial=False, required=False, widget=forms.CheckboxInput(attrs={'onchange': 'this.form.submit();'}))
-    period = forms.FloatField(required=False, widget=forms.NumberInput(attrs={'onchange': 'this.form.submit();'}))
+    period = forms.FloatField(required=False, widget=forms.NumberInput(attrs={'onchange': 'this.form.submit();', 'min': '0'}))
 
     def __init__(self, *args, **kwargs):
         body = kwargs.pop('body', None)
@@ -365,3 +365,9 @@ class LCPlotForm(forms.Form):
                 self.fields['period'].initial = period_param[0].get('value', None)
             else:
                 self.fields['period'].initial = 1.0
+
+    def clean_period(self):
+        if self.cleaned_data['period'] is not None and self.cleaned_data['period'] < 0:
+            return 0.0
+        else:
+            return self.cleaned_data['period']
