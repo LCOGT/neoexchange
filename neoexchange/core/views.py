@@ -50,7 +50,7 @@ except ImportError:
 import io
 
 from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, \
-    ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm
+    ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm, LCPlotForm
 from .models import *
 from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih, \
     convert_ast_to_comet
@@ -3298,22 +3298,54 @@ class PlotSpec(View):
         return render(request, self.template_name, params)
 
 
-class LCPlot(View):
+class LCPlot(LookUpBodyMixin, FormView):
 
     template_name = 'core/plot_lc.html'
+    form_class = LCPlotForm
 
     def get(self, request, *args, **kwargs):
-        body = Body.objects.get(pk=kwargs['pk'])
-        script, div = get_lc_plot(body)
-        params = {'body': body}
-        if div:
-            params["the_script"] = script
-            params["lc_div"] = div
+        script, div = get_lc_plot(self.body, {})
+
+        form = LCPlotForm(body=self.body)
+
+        return self.render_to_response(self.get_context_data(form=form, body=self.body, script=script, div=div))
+
+    def form_valid(self, form, request):
+
+        form_data = form.cleaned_data
+        new_form = LCPlotForm(form_data, body=self.body)
+        script, div = get_lc_plot(self.body, form_data)
+
+        params = self.get_context_data(script=script, div=div)
+        params['form'] = new_form
+
+        return render(request, self.template_name, params)
+
+    def post(self, request, *args, **kwargs):
+        form = LCPlotForm(request.POST, body=self.body)
+        if form.is_valid():
+            return self.form_valid(form, request)
+        else:
+            return self.render_to_response(self.get_context_data(form=form, body=self.body))
+
+    def get_context_data(self, **kwargs):
+        """
+        Only show proposals the current user is a member of
+        """
+        params = kwargs
+        params['body'] = self.body
+        if kwargs['div']:
+            params["the_script"] = kwargs['script']
+            params["lc_div"] = kwargs['div']
         base_path = BOKEH_URL.format(bokeh.__version__)
         params['css_path'] = base_path + 'css'
         params['js_path'] = base_path + 'js'
-
-        return render(request, self.template_name, params)
+        best_period = self.body.get_physical_parameters('P', False)
+        if best_period:
+            params['best_period'] = best_period[0].get('value', None)
+        else:
+            params['best_period'] = None
+        return params
 
 
 def import_alcdef(file, meta_list, lc_list):
@@ -3343,7 +3375,6 @@ def import_alcdef(file, meta_list, lc_list):
                 metadata[chunks[0]] = chunks[1].replace('\n', '')
         elif 'ENDDATA' in line:
             if metadata not in meta_list:
-                print(metadata)
                 meta_list.append(metadata)
                 lc_data = {
                     'date': dates,
@@ -3363,7 +3394,7 @@ def import_alcdef(file, meta_list, lc_list):
     return meta_list, lc_list
 
 
-def get_lc_plot(body):
+def get_lc_plot(body, data):
     """Plot all lightcurve data for given source.
     """
 
@@ -3371,6 +3402,11 @@ def get_lc_plot(body):
     obj_name = body.current_name().replace(' ', '_')
     datadir = os.path.join(base_dir, obj_name)
     filenames = search(datadir, '.*.ALCDEF.txt')
+    if data.get('period', None) and data.get('phase_flag', None):
+        period = data['period']
+    else:
+        period=None
+
     meta_list = []
     lc_list = []
     filt_list = []
@@ -3381,7 +3417,7 @@ def get_lc_plot(body):
         filt_list.append(meta['FILTER'])
 
     if lc_list:
-        script, div = lc_plot(lc_list, meta_list, filt_list)
+        script, div = lc_plot(lc_list, meta_list, filt_list, period)
     else:
         script = div = None
 

@@ -34,6 +34,19 @@ Spectrum for object: {{body.current_name}}
         {{ lc_div|safe }}
     {% endblock %}
 
+    <div class="section-title">
+                <form action="{% url 'lc_plot' body.id %}" method="POST" style="display:inline-block;">{% csrf_token %}
+                    <div class="inline-fields">
+                        <div class="compact-field">
+                            {{ form.phase_flag }}<label for="id_phase">Phase Data?</label>
+                        </div>
+                        <div class="compact-field">
+                            {{ form.period }}<label for="id_period">Period {% if best_period %} (Default: {{best_period}}h) {% else %} Unknown. {% endif %}</label>
+                        </div>
+                    </div>
+                </form>
+    </div>
+
 
 <h5 class="section-title">LC Dates</h5>
 

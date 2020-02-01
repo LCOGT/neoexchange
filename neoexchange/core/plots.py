@@ -35,7 +35,7 @@ import matplotlib.pyplot as plt
 from bokeh.plotting import figure, ColumnDataSource
 from bokeh.resources import CDN
 from bokeh.embed import components
-from bokeh.models import HoverTool, Label, CrosshairTool, Whisker, TeeHead
+from bokeh.models import HoverTool, Label, CrosshairTool, Whisker, TeeHead, Range1d
 from bokeh.palettes import Category20, Category10
 
 from .models import Body, CatalogSources, StaticSource, Block, model_to_dict, PreviousSpectra
@@ -581,9 +581,10 @@ def get_name(meta_dat):
     return out_string, name, number
 
 
-def lc_plot(lc_list, meta_list, filt_list):
+def lc_plot(lc_list, meta_list, filt_list, period=None):
 
     plot = figure(plot_width=900, plot_height=400)
+    plot.y_range.flipped = True
 
     filt_unique = list(set(filt_list))
     filt_sets = {}
@@ -597,12 +598,29 @@ def lc_plot(lc_list, meta_list, filt_list):
     date_range = meta_list[0]['SESSIONDATE'].replace('-', '')+'-'+meta_list[-1]['SESSIONDATE'].replace('-', '')
     base_date = floor(min(sorted([jd for lc in lc_list for jd in lc['date']])))
     colors = itertools.cycle(Category10[10])
+    plot.yaxis.axis_label = 'Apparent Magnitude'
+    plot.title.text = 'LC for {} ({})'.format(obj, date_range)
+    if period:
+        plot.xaxis.axis_label = 'Phase (Period = {}h)'.format(period)
+        plot.x_range = Range1d(0, 1.1, bounds=(-.2, 1.2))
+    else:
+        plot.xaxis.axis_label = 'Date (Hours from {}.0)'.format(base_date)
 
     for f, filt in enumerate(filt_unique):
         lc_filt_list = [lc_list[k] for k in filt_sets[filt]]
         meta_filt_list = [meta_list[k] for k in filt_sets[filt]]
-
-        # plot.circle(lc_filt_list['date'], lc_filt_list['mags'], size=3)
+        lc_filt_list = phase_lc(lc_filt_list, period, base_date)
+        if period:
+            for lc in lc_filt_list:
+                for i, phase in enumerate(lc['date']):
+                    if 0 < phase < .25:
+                        lc['date'].append(phase+1)
+                        lc['mags'].append(lc['mags'][i])
+                        lc['mag_errs'].append(lc['mag_errs'][i])
+                    elif 0.75 < phase < 1:
+                        lc['date'].append(phase-1)
+                        lc['mags'].append(lc['mags'][i])
+                        lc['mag_errs'].append(lc['mag_errs'][i])
 
         for i, lc in enumerate(lc_filt_list):
             plot_col = next(colors)
@@ -624,3 +642,19 @@ def lc_plot(lc_list, meta_list, filt_list):
     script, div = components(plot, CDN)
 
     return script, div
+
+
+def phase_lc(lc_data, period, base_date):
+    """Remove base JD, convert to hours, and fold LC around period.
+        If Period=None, Just remove Base JD and convert to Hours.
+    """
+    phase_list = []
+    for lc in lc_data:
+        if period:
+            phase = [(x - base_date) * 24 / period for x in lc['date']]
+            phase = [x - x // 1 for x in phase]
+        else:
+            phase = [(x - base_date) * 24 for x in lc['date']]
+        lc['date'] = phase
+        phase_list.append(lc)
+    return phase_list
