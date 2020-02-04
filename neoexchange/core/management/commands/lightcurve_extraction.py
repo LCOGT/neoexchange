@@ -376,11 +376,11 @@ class Command(BaseCommand):
                 if "1m0" in frames_list[0]:
                     cent = .01
                 elif "0m4" in frames_list[0]:
-                    cent = .05
+                    cent = .03
                 else:
                     cent = None
                 movie_file = make_gif(frames_list, init_fr=100, center=cent, out_path=out_path,
-                                      plot_source=True, target_data=frame_data, horizons_comp=True, progress=True)
+                                      plot_source=True, target_data=frame_data, horizons_comp=False, progress=True)
                 self.stdout.write("New gif created: {}".format(movie_file))
         alcdef_file.close()
         os.chmod(filename, rw_permissions)

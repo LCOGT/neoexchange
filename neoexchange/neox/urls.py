@@ -28,7 +28,7 @@ from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockLis
     CandidatesViewBlock, BlockReportMPC, \
     MeasurementDownloadMPC, MeasurementDownloadADESPSV, \
     SuperBlockListView, SuperBlockDetailView, characterization, SpectroFeasibility, BlockSpec,\
-    display_movie, GuideMovie, LCPlot,\
+    display_movie, GuideMovie, LCPlot, \
     StaticSourceView, StaticSourceDetailView, ScheduleCalibSpectra, ScheduleCalibSubmit, \
     CalibSpectroFeasibility, ScheduleCalibParameters, \
     BestStandardsView, PlotSpec, BodyVisibilityView, SuperBlockTimeline

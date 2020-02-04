@@ -32,10 +32,13 @@ from django.core.files.storage import default_storage
 import matplotlib
 import matplotlib.pyplot as plt
 
+from bokeh.io import curdoc
+from bokeh.layouts import layout, column
 from bokeh.plotting import figure, ColumnDataSource
-from bokeh.resources import CDN
-from bokeh.embed import components
-from bokeh.models import HoverTool, Label, CrosshairTool, Whisker, TeeHead, Range1d
+from bokeh.resources import CDN, INLINE
+from bokeh.embed import components, file_html
+from bokeh.models import HoverTool, Label, CrosshairTool, Whisker, TeeHead, Range1d, CustomJS
+from bokeh.models.widgets import CheckboxGroup, Slider
 from bokeh.palettes import Category20, Category10
 
 from .models import Body, CatalogSources, StaticSource, Block, model_to_dict, PreviousSpectra
@@ -586,6 +589,20 @@ def lc_plot(lc_list, meta_list, filt_list, period=None):
     plot = figure(plot_width=900, plot_height=400)
     plot.y_range.flipped = True
 
+    # Create Column Data Source that will be used by the plot
+    source = ColumnDataSource(data=dict(time=[], mag=[], color=[], title=[], err_high=[], err_low=[]))
+
+    # Create Input controls
+    phase_shift = Slider(title="Phase Offset", value=0, start=-1, end=1, step=.01)
+    dataset_check = CheckboxGroup(labels=[], active=[])
+
+    # Create plot
+    error_cap = TeeHead(line_alpha=0)
+    plot.add_layout(
+        Whisker(source=source, base="time", upper="err_high", lower="err_low", line_color="color", line_alpha=.5,
+                lower_head=error_cap, upper_head=error_cap))
+    plot.circle(x="time", y="mag", source=source, size=3, color="color")
+
     filt_unique = list(set(filt_list))
     filt_sets = {}
     for filt_u in filt_unique:
@@ -600,46 +617,82 @@ def lc_plot(lc_list, meta_list, filt_list, period=None):
     colors = itertools.cycle(Category10[10])
     plot.yaxis.axis_label = 'Apparent Magnitude'
     plot.title.text = 'LC for {} ({})'.format(obj, date_range)
+
     if period:
         plot.xaxis.axis_label = 'Phase (Period = {}h)'.format(period)
         plot.x_range = Range1d(0, 1.1, bounds=(-.2, 1.2))
     else:
         plot.xaxis.axis_label = 'Date (Hours from {}.0)'.format(base_date)
 
-    for f, filt in enumerate(filt_unique):
-        lc_filt_list = [lc_list[k] for k in filt_sets[filt]]
-        meta_filt_list = [meta_list[k] for k in filt_sets[filt]]
-        lc_filt_list = phase_lc(lc_filt_list, period, base_date)
-        if period:
-            for lc in lc_filt_list:
-                for i, phase in enumerate(lc['date']):
-                    if 0 < phase < .25:
-                        lc['date'].append(phase+1)
-                        lc['mags'].append(lc['mags'][i])
-                        lc['mag_errs'].append(lc['mag_errs'][i])
-                    elif 0.75 < phase < 1:
-                        lc['date'].append(phase-1)
-                        lc['mags'].append(lc['mags'][i])
-                        lc['mag_errs'].append(lc['mag_errs'][i])
+    def update():
+        x_times = []
+        y_mags = []
+        hi_errs = []
+        low_errs = []
+        dat_colors = []
+        data_title = []
+        for f, filt in enumerate(filt_unique):
+            lc_filt_list = [lc_list[k] for k in filt_sets[filt]]
+            meta_filt_list = [meta_list[k] for k in filt_sets[filt]]
+            lc_filt_list = phase_lc(lc_filt_list, period, base_date)
+            if period:
+                for lc in lc_filt_list:
+                    for k, phase in enumerate(lc['date']):
+                        if 0 < phase < 0.5:
+                            lc['date'].append(phase+1)
+                            lc['mags'].append(lc['mags'][k])
+                            lc['mag_errs'].append(lc['mag_errs'][k])
+                        elif 0.5 < phase < 1:
+                            lc['date'].append(phase-1)
+                            lc['mags'].append(lc['mags'][k])
+                            lc['mag_errs'].append(lc['mag_errs'][k])
 
-        for i, lc in enumerate(lc_filt_list):
-            plot_col = next(colors)
+            for c, lc in enumerate(lc_filt_list):
+                plot_col = next(colors)
+                # Build Error Bars
+                err_up = np.array(lc['mags']) + np.array(lc['mag_errs'])
+                err_low = np.array(lc['mags']) - np.array(lc['mag_errs'])
 
-            # Build Error Bars
-            err_up = np.array(lc['mags']) + np.array(lc['mag_errs'])
-            err_low = np.array(lc['mags']) - np.array(lc['mag_errs'])
-            source_error = ColumnDataSource(data=dict(base=lc['date'], lower=err_low, upper=err_up))
-            error_cap = TeeHead(line_alpha=.5, line_color=plot_col, size=1)
-            plot.add_layout(Whisker(source=source_error, base="base", upper="upper", lower="lower", line_color=plot_col, line_alpha=.5, lower_head=error_cap, upper_head=error_cap))
+                # build source data
+                x_times += lc['date']
+                y_mags += lc['mags']
+                hi_errs += list(err_up)
+                low_errs += list(err_low)
+                dat_colors += [plot_col]*len(lc['date'])
 
-            # Plot Data
-            plot.circle(lc['date'], lc['mags'], size=3, color=plot_col)
+                # Build dataset_title
+                md = meta_filt_list[c]
+                dataset_title = "{}T{} -- Filter:{} -- Site:{}".format(md['SESSIONDATE'], md['SESSIONTIME'], md['FILTER'], md['MPCCODE'])
+                data_title += [dataset_title]*len(lc['date'])
+        source.data = dict(time=x_times, base_time=x_times, mag=y_mags, color=dat_colors, title=data_title, err_high=hi_errs, err_low=low_errs)
 
-            # xxx = [(d - base_date) * 24 for d in lc['date']]
-            # yyy = lc['mags']
-            # plot.circle(xxx, yyy, size=3)
+    update()  # initial load of the data
 
-    script, div = components(plot, CDN)
+    dataset_check.labels = list(set(source.data['title']))
+    dataset_check.active = list(range(len(dataset_check.labels)))
+
+    callback = CustomJS(args=dict(source=source, offset=phase_shift, period=period),
+                        code="""const data = source.data;
+                                const B = offset.value;
+                                const x = data['time'];
+                                const d = data['base_time'];
+                                if (period > 0){
+                                    for (var i = 0; i < x.length; i++) {
+                                        x[i] = d[i] + B;
+                                        if (x[i] > 1.5){
+                                            x[i] = x[i] - 2.0;
+                                        }
+                                        if (x[i] < -.5){
+                                            x[i] = x[i] + 2.0;
+                                        }
+                                    }
+                                }
+                                source.change.emit();
+                                """)
+
+    phase_shift.js_on_change('value', callback)
+
+    script, div = components({'plot': plot, 'slider': phase_shift, 'cbox': dataset_check}, CDN)
 
     return script, div
 

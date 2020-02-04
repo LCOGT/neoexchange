@@ -3304,19 +3304,19 @@ class LCPlot(LookUpBodyMixin, FormView):
     form_class = LCPlotForm
 
     def get(self, request, *args, **kwargs):
-        script, div = get_lc_plot(self.body, {})
+        script, div, meta_list = get_lc_plot(self.body, {})
 
         form = LCPlotForm(body=self.body)
 
-        return self.render_to_response(self.get_context_data(form=form, body=self.body, script=script, div=div))
+        return self.render_to_response(self.get_context_data(form=form, body=self.body, script=script, div=div, meta_list=meta_list))
 
     def form_valid(self, form, request):
 
         form_data = form.cleaned_data
         new_form = LCPlotForm(form_data, body=self.body)
-        script, div = get_lc_plot(self.body, form_data)
+        script, div, meta_list = get_lc_plot(self.body, form_data)
 
-        params = self.get_context_data(script=script, div=div)
+        params = self.get_context_data(script=script, div=div, meta_list=meta_list)
         params['form'] = new_form
 
         return render(request, self.template_name, params)
@@ -3336,10 +3336,13 @@ class LCPlot(LookUpBodyMixin, FormView):
         params['body'] = self.body
         if kwargs['div']:
             params["the_script"] = kwargs['script']
-            params["lc_div"] = kwargs['div']
+            params["lc_div"] = kwargs['div']['plot']
+            params["slider_div"] = kwargs['div']['slider']
+            params["check_div"] = kwargs['div']['cbox']
         base_path = BOKEH_URL.format(bokeh.__version__)
         params['css_path'] = base_path + 'css'
         params['js_path'] = base_path + 'js'
+        params['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
         best_period = self.body.get_physical_parameters('P', False)
         if best_period:
             params['best_period'] = best_period[0].get('value', None)
@@ -3405,13 +3408,16 @@ def get_lc_plot(body, data):
     if data.get('period', None) and data.get('phase_flag', None):
         period = data['period']
     else:
-        period=None
+        period = None
 
     meta_list = []
     lc_list = []
     filt_list = []
     for file in filenames:
         meta_list, lc_list = import_alcdef(os.path.join(datadir, file), meta_list, lc_list)
+
+    meta_list = [x for _, x in sorted(zip(lc_list, meta_list), key=lambda i: i[0]['date'][0])]
+    lc_list = sorted(lc_list, key=lambda i: i['date'][0])
 
     for meta in meta_list:
         filt_list.append(meta['FILTER'])
@@ -3421,7 +3427,7 @@ def get_lc_plot(body, data):
     else:
         script = div = None
 
-    return script, div
+    return script, div, meta_list
 
 
 def display_movie(request, pk):
