@@ -3338,11 +3338,12 @@ class LCPlot(LookUpBodyMixin, FormView):
             params["the_script"] = kwargs['script']
             params["lc_div"] = kwargs['div']['plot']
             params["slider_div"] = kwargs['div']['slider']
-            params["check_div"] = kwargs['div']['cbox']
+            params["table_div"] = kwargs['div']['table']
         base_path = BOKEH_URL.format(bokeh.__version__)
         params['css_path'] = base_path + 'css'
         params['js_path'] = base_path + 'js'
         params['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
+        params['table_path'] = BOKEH_URL.format('tables-'+bokeh.__version__) + 'js'
         best_period = self.body.get_physical_parameters('P', False)
         if best_period:
             params['best_period'] = best_period[0].get('value', None)

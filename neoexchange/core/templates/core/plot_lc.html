@@ -14,6 +14,7 @@ Spectrum for object: {{body.current_name}}
 {% block script-content %}
 <script src={{js_path}}></script>
 <script src={{widget_path}}></script>
+<script src={{table_path}}></script>
 {{ the_script|safe }}
 {% endblock %}
 
@@ -52,41 +53,7 @@ Spectrum for object: {{body.current_name}}
 
 
 <h5 class="section-title">LC Dates</h5>
-    {{ check_div|safe }}
-    <div class="fullwidth">
-        <table class="datatable" id="id_measurements">
-            <thead>
-            <tr>
-                <th class="list_title">
-                    <span class="sortable" id="name_id">Date</span>
-                </th>
-                <th class="list_project">
-                    <span class="sortable" id="datetime">Time</span>
-                </th>
-                <th>
-                    <span class="sortable" id="ra">Site</span>
-                </th>
-                <th>
-                    <span class="sortable" id="dec">Filter</span>
-                </th>
-            </tr>
-            </thead>
-            <tbody>
-            {% for meta in meta_list %}
-            <tr>
-                <td>{{meta.SESSIONDATE}}</td>
-                <td>{{meta.SESSIONTIME}}</td>
-                <td>{{meta.MPCCODE}}</td>
-                <td>{{meta.FILTER}}</td>
-            </tr>
-              {% empty %}
-              <tr>
-                <td colspan=4>No measurements have been made yet</td>
-              </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-    </div>
+    {{ table_div|safe }}
 
 </div>
 {% endblock %}
