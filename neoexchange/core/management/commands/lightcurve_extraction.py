@@ -86,12 +86,15 @@ class Command(BaseCommand):
         return expected_fwhm
 
     def fetch_dimm_seeing(self, sitecode, date):
+
+        seeing = []
         fwhm = QueryTelemetry(start_time=date+timedelta(days=1))
         site, encid, telid = MPC_site_code_to_domes(sitecode)
         dimm_data = fwhm.get_seeing_for_site(site)
-        tables = convert_temps_to_table(dimm_data, time_field='measure_time', datum_name='seeing', data_field='seeing')
-
-        return tables[0]
+        if len(dimm_data) > 0:
+            tables = convert_temps_to_table(dimm_data, time_field='measure_time', datum_name='seeing', data_field='seeing')
+            seeing = tables[0]
+        return seeing
 
     def plot_timeseries(self, times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, temps, seeing, colors='r', title='', sub_title='', datadir='./', filename='tmp_', diameter=0.4*u.m, temp_keyword='FOCTEMP'):
         fig, (ax0, ax1) = plt.subplots(nrows=2, sharex=True, figsize=(10,7.5), gridspec_kw={'height_ratios': [15, 4]})
@@ -127,11 +130,12 @@ class Command(BaseCommand):
             ax2.plot(alltimes, expected_fwhm, color='black', linestyle=' ', marker='+', markersize=2, label="Predicted")
 
         # Cut down DIMM results to span of Block
-        mask1 = seeing['UTC Datetime'] >= alltimes[0]
-        mask2 = seeing['UTC Datetime'] <= alltimes[-1]
-        mask = mask1 & mask2
-        block_seeing = seeing[mask]
-        ax2.plot(block_seeing['UTC Datetime'], block_seeing['seeing'], color='DodgerBlue', linestyle='-', label='DIMM')
+        if len(seeing) > 0:
+            mask1 = seeing['UTC Datetime'] >= alltimes[0]
+            mask2 = seeing['UTC Datetime'] <= alltimes[-1]
+            mask = mask1 & mask2
+            block_seeing = seeing[mask]
+            ax2.plot(block_seeing['UTC Datetime'], block_seeing['seeing'], color='DodgerBlue', linestyle='-', label='DIMM')
 
         temp_lines = []
         for temp in temps:
