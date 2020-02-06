@@ -33,12 +33,12 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 from bokeh.io import curdoc
-from bokeh.layouts import layout, column
+from bokeh.layouts import layout, column, row
 from bokeh.plotting import figure, ColumnDataSource
 from bokeh.resources import CDN, INLINE
 from bokeh.embed import components, file_html
 from bokeh.models import HoverTool, Label, CrosshairTool, Whisker, TeeHead, Range1d, CustomJS
-from bokeh.models.widgets import CheckboxGroup, Slider, TableColumn, DataTable, HTMLTemplateFormatter, NumberEditor, NumberFormatter
+from bokeh.models.widgets import CheckboxGroup, Slider, TableColumn, DataTable, HTMLTemplateFormatter, NumberEditor, NumberFormatter, Spinner, Toggle
 from bokeh.palettes import Category20, Category10
 
 from .models import Body, CatalogSources, StaticSource, Block, model_to_dict, PreviousSpectra
@@ -595,6 +595,18 @@ def lc_plot(lc_list, meta_list, filt_list, period=None):
 
     # Create Input controls
     phase_shift = Slider(title="Phase Offset", value=0, start=-1, end=1, step=.01)
+    if period:
+        default_period = period
+    else:
+        default_period = 1.0
+    max_period = 10 * default_period
+    min_period = 0.0
+    step = (max_period - min_period)/1000
+    period_slider = Slider(title=None, value=default_period, start=min_period, end=max_period, step=step)
+    period_box = Spinner(value=default_period, low=0, step=step, title="Period", width=200)
+    p_slider_min = Spinner(value=min_period, low=0, step=.01, title="min", width=100)
+    p_slider_max = Spinner(value=max_period, low=0, step=.01, title="max", width=100)
+    phase_toggle = Toggle(label="Phase", button_type="primary", width=100, align='end')
 
     # Create plot
     error_cap = TeeHead(line_alpha=0)
@@ -768,9 +780,58 @@ def lc_plot(lc_list, meta_list, filt_list, period=None):
 
     phase_shift.js_on_change('value', callback)
     dataset_source.selected.js_on_change('indices', callback)
-    # data_table.source.js_on_change('data', callback)
 
-    script, div = components({'plot': plot, 'slider': phase_shift, 'table': data_table}, CDN)
+    period_bounds_callback = CustomJS(args=dict(period_box=period_box, period_slider=period_slider, p_max=p_slider_max, p_min=p_slider_min),
+                        code="""
+                        if (p_min.value < 0){
+                            p_min.value = 0;
+                        }
+                        if (p_max.value <= p_min.value){
+                            p_max.value = p_min.value + 1;
+                        }
+                        period_slider.end = p_max.value;
+                        period_slider.start = p_min.value;
+                        if (period_slider.value < p_min.value){
+                            period_slider.value = p_min.value;
+                        }
+                        if (period_slider.value > p_max.value){
+                            period_slider.value = p_max.value;
+                        }
+                        period_slider.step = ((p_max.value - p_min.value) / 1000 );
+                        period_box.step = ((p_max.value - p_min.value) / 1000 );
+                        """)
+    p_slider_max.js_on_change('value', period_bounds_callback)
+    p_slider_min.js_on_change('value', period_bounds_callback)
+
+    period_callback = CustomJS(args=dict(period_box=period_box, period_slider=period_slider, p_max=p_slider_max, p_min=p_slider_min),
+                        code="""
+                        period_box.value = period_slider.value;
+                        """)
+    period_slider.js_on_change('value', period_callback)
+
+    period_box_callback = CustomJS(args=dict(period_box=period_box, period_slider=period_slider, p_max=p_slider_max, p_min=p_slider_min),
+                        code="""
+                        if (period_box.value <= 0){
+                            period_box.value = 0;
+                        }
+                        period_slider.value = period_box.value;
+                        """)
+    period_box.js_on_change('value', period_box_callback)
+
+    phased_callback = CustomJS(args=dict(phase_toggle=phase_toggle, source=source),
+                        code="""
+                        const data = source.data;
+                        if (phase_toggle.active){
+                            phase_toggle.label = 'Un-Phase';
+                        } else {
+                            phase_toggle.label = 'Phase';
+                        }
+                        """)
+    phase_toggle.js_on_click(phased_callback)
+
+    period_layout = row( column( row(phase_toggle, period_box), period_slider, phase_shift), column(p_slider_min, p_slider_max))
+
+    script, div = components({'plot': plot, 'table': data_table, 'period': period_layout}, CDN)
 
     return script, div
 

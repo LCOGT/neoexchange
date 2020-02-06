@@ -3337,8 +3337,8 @@ class LCPlot(LookUpBodyMixin, FormView):
         if kwargs['div']:
             params["the_script"] = kwargs['script']
             params["lc_div"] = kwargs['div']['plot']
-            params["slider_div"] = kwargs['div']['slider']
             params["table_div"] = kwargs['div']['table']
+            params["period_div"] = kwargs['div']['period']
         base_path = BOKEH_URL.format(bokeh.__version__)
         params['css_path'] = base_path + 'css'
         params['js_path'] = base_path + 'js'

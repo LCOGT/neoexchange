@@ -46,9 +46,9 @@ Spectrum for object: {{body.current_name}}
                         <div class="compact-field">
                             {{ form.period }}<label for="id_period">Period {% if best_period %} (Default: {{best_period}}h) {% else %} Unknown. {% endif %}</label>
                         </div>
+                        {{ period_div|safe }}
                     </div>
                 </form>
-        {{ slider_div|safe }}
     </div>
 
 
