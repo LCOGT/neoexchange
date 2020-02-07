@@ -528,7 +528,7 @@ def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_di
                 else:
                     time_to_current_epoch = abs(datetime.min - comp_time)
                 time_to_new_epoch = abs(new_elements['epochofel'] - comp_time)
-                if time_to_new_epoch <= time_to_current_epoch and new_elements['orbit_rms'] < 1.0:
+                if time_to_new_epoch <= time_to_current_epoch and new_elements['orbit_rms'] > 0.0 and new_elements['orbit_rms'] < 1.0:
                     # Reset some fields to avoid overwriting
 
                     new_elements['provisional_name'] = body.provisional_name
@@ -545,6 +545,8 @@ def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_di
                         message = "Epoch of elements was too old"
                     if new_elements['orbit_rms'] >= 1.0:
                         message += " and rms was too high"
+                    elif new_elements['orbit_rms'] < 0.001:
+                        message += " and rms was suspicously low"
                     message += ". Did not update"
                 logger.info("%s Body #%d (%s) with FindOrb" % (message, body.pk, body.current_name()))
 
