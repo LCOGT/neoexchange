@@ -288,7 +288,7 @@ def spec_plot(data_spec, analog_data, reflec=False):
         spec_dict = read_mean_tax()
         spec_dict["Wavelength"] = [l*10000 for l in spec_dict["Wavelength"]]
 
-        stand_list = ['A', 'B', 'C', 'D', 'L', 'Q', 'S', 'Sq', 'V', 'X', 'Xe']
+        stand_list = ['A', 'B', 'C', 'D', 'K', 'L', 'O', 'Q', 'S', 'Sq', 'T', 'V', 'X', 'Xe']
         init_stand = ['C', 'Q', 'S', 'X']
         colors = Category20[len(stand_list)]
         for j, tax in enumerate(stand_list):
@@ -306,7 +306,8 @@ def spec_plot(data_spec, analog_data, reflec=False):
             source = ColumnDataSource(spec_dict)
 
             plot2.line("Wavelength", tax+"_Mean", source=source, color=colors[j], name=tax + "-Type", line_width=2, line_dash='dashed', legend_label=tax, visible=vis)
-            plot2.patch(xs, ys, fill_alpha=.25, line_width=1, fill_color=colors[j], line_color="black", name=tax + "-Type", legend_label=tax, line_alpha=.25, visible=vis)
+            if np.mean(spec_dict[tax + '_Sigma']) > 0:
+                plot2.patch(xs, ys, fill_alpha=.25, line_width=1, fill_color=colors[j], line_color="black", name=tax + "-Type", legend_label=tax, line_alpha=.25, visible=vis)
 
         if not reflec:
             for spec in data_spec:
