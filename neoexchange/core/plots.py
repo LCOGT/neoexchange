@@ -590,7 +590,8 @@ def lc_plot(lc_list, meta_list, filt_list, period=None):
     plot.y_range.flipped = True
 
     # Create Column Data Source that will be used by the plot
-    source = ColumnDataSource(data=dict(time=[], mag=[], mag_err=[], color=[], title=[], err_high=[], err_low=[], alpha=[]))
+    source = ColumnDataSource(data=dict(time=[], mag=[], color=[], title=[], err_high=[], err_low=[], alpha=[]))
+    orig_source = ColumnDataSource(data=dict(time=[], mag=[], mag_err=[], color=[], title=[], err_high=[], err_low=[], alpha=[]))
     dataset_source = ColumnDataSource(data=dict(symbol=[], date=[], time=[], site=[], filter=[], color=[], title=[], offset=[]))
 
     # Create Input controls
@@ -629,12 +630,6 @@ def lc_plot(lc_list, meta_list, filt_list, period=None):
     colors = itertools.cycle(Category10[10])
     plot.yaxis.axis_label = 'Apparent Magnitude'
     plot.title.text = 'LC for {} ({})'.format(obj, date_range)
-
-    if period:
-        plot.xaxis.axis_label = 'Phase (Period = {}h)'.format(period)
-        plot.x_range = Range1d(0, 1.1, bounds=(-.2, 1.2))
-    else:
-        plot.xaxis.axis_label = 'Date (Hours from {}.0)'.format(base_date)
 
     def update():
         x_times = []
@@ -692,7 +687,8 @@ def lc_plot(lc_list, meta_list, filt_list, period=None):
         sess_sym = ['&#10739;']*len(sess_date)
         offset = [0]*len(sess_date)
         dataset_source.data = dict(symbol=sess_sym, date=sess_date, time=sess_time, site=sess_site, filter=sess_filt, color=sess_color, title=sess_title, offset=offset)
-        source.data = dict(time=x_times, base_time=x_times, mag=y_mags, base_mag=y_mags, mag_err=mag_err, color=dat_colors, title=data_title, err_high=hi_errs, err_low=low_errs, alpha=dat_alphas)
+        source.data = dict(time=x_times, mag=y_mags, color=dat_colors, title=data_title, err_high=hi_errs, err_low=low_errs, alpha=dat_alphas)
+        orig_source.data = dict(time=x_times, mag=y_mags, color=dat_colors, title=data_title, err_high=hi_errs, err_low=low_errs, alpha=dat_alphas, mag_err=mag_err)
 
     update()  # initial load of the data
 
@@ -718,8 +714,9 @@ def lc_plot(lc_list, meta_list, filt_list, period=None):
     dataset_source.selected.indices = list(range(len(dataset_source.data['date'])))
     data_table = DataTable(source=dataset_source, columns=columns, width=600, height=300, selectable='checkbox', index_position=None, editable=True)
 
-    callback = CustomJS(args=dict(source=source, phase_shift=phase_shift, period=period, dataset_source=dataset_source),
+    callback = CustomJS(args=dict(source=source, phase_shift=phase_shift, period=period, dataset_source=dataset_source, osource=orig_source),
                         code="""const data = source.data;
+                                const base = osource.data;
                                 const B = phase_shift.value;
                                 const I = dataset_source.selected.indices;
                                 const T = dataset_source.data['title'];
@@ -728,9 +725,9 @@ def lc_plot(lc_list, meta_list, filt_list, period=None):
                                 const y = data['mag'];
                                 const el = data['err_low'];
                                 const eh = data['err_high'];
-                                const d = data['base_time'];
-                                const m = data['base_mag'];
-                                const me = data['mag_err'];
+                                const d = base['time'];
+                                const m = base['mag'];
+                                const me = base['mag_err'];
                                 const t = data['title'];
                                 const a = data['alpha'];
                                 var selected = [];
@@ -803,31 +800,82 @@ def lc_plot(lc_list, meta_list, filt_list, period=None):
     p_slider_max.js_on_change('value', period_bounds_callback)
     p_slider_min.js_on_change('value', period_bounds_callback)
 
-    period_callback = CustomJS(args=dict(period_box=period_box, period_slider=period_slider, p_max=p_slider_max, p_min=p_slider_min),
-                        code="""
-                        period_box.value = period_slider.value;
-                        """)
-    period_slider.js_on_change('value', period_callback)
+    period_slider.js_link('value', period_box, 'value')
 
-    period_box_callback = CustomJS(args=dict(period_box=period_box, period_slider=period_slider, p_max=p_slider_max, p_min=p_slider_min),
+    if period:
+        plot.xaxis.axis_label = 'Phase (Period = {}h)'.format(period)
+        plot.x_range = Range1d(0, 1.1, bounds=(-.2, 1.2))
+    else:
+        plot.xaxis.axis_label = 'Date (Hours from {}.0)'.format(base_date)
+    phased_callback = CustomJS(args=dict(phase_toggle=phase_toggle, source=source, period_box=period_box, period_slider=period_slider, plot=plot, osource=orig_source, x_axis=plot.xaxis),
                         code="""
                         if (period_box.value <= 0){
                             period_box.value = 0;
                         }
-                        period_slider.value = period_box.value;
-                        """)
-    period_box.js_on_change('value', period_box_callback)
-
-    phased_callback = CustomJS(args=dict(phase_toggle=phase_toggle, source=source),
-                        code="""
                         const data = source.data;
+                        const base = osource.data;
+                        const x = data['time'];
+                        const d = base['time'];
+                        const y = data['mag'];
+                        const m = base['mag'];
+                        const el = data['err_low'];
+                        const eh = data['err_high'];
+                        const me = base['mag_err'];
+                        const t = data['title'];
+                        const a = data['alpha'];
+                        const c = data['color'];
+                        const period = period_box.value;
+                        period_slider.value = period_box.value;
+                        let pos = d.length - 1;
+                        let n = x.length - d.length;
+                        x.splice(pos,n);
+                        y.splice(pos,n);
+                        el.splice(pos,n);
+                        eh.splice(pos,n);
+                        a.splice(pos,n);
+                        t.splice(pos,n);
+                        c.splice(pos,n);
+                        if ((period > 0) && (phase_toggle.active)) {
+                            for (var i = 0; i < d.length; i++){
+                                x[i] = (d[i] / period);
+                                x[i] = x[i] - Math.floor(x[i]);
+                                if ((x[i] > 0.0) && (x[i] < 0.5)){
+                                    x.push(x[i] + 1.0);
+                                } else if ((x[i] < 1.0) && (x[i] > 0.5)){
+                                    x.push(x[i] - 1.0);
+                                }
+                                y.push(y[i]);
+                                el.push(el[i]);
+                                eh.push(eh[i]);
+                                a.push(a[i]);
+                                t.push(t[i]);
+                                c.push(c[i]);
+                            }
+                            x_axis.axis_label = 'Phase (Period = ' + String(period) + 'h)';
+                        } else{
+                            for (var i = 0; i < d.length; i++){
+                                if (i <= (d.length - 1)){
+                                    x[i] = d[i];
+                                }
+                            }
+                        x_axis.axis_label = 'Date (Hours from Basedate)';
+                        }
                         if (phase_toggle.active){
                             phase_toggle.label = 'Un-Phase';
                         } else {
                             phase_toggle.label = 'Phase';
                         }
+                        source.change.emit();
+                        plot.x_range['start'] = 0;
+                        plot.x_range['end'] = 1.2;
+                        console.log(plot.x_range.min);
+                        console.log(plot.x_range.start);
+                        console.log(plot.x_range.max);
+                        console.log(plot.x_range.end);
+                        console.log(plot.x_range);
                         """)
     phase_toggle.js_on_click(phased_callback)
+    period_box.js_on_change('value', phased_callback)
 
     period_layout = row( column( row(phase_toggle, period_box), period_slider, phase_shift), column(p_slider_min, p_slider_max))
 
