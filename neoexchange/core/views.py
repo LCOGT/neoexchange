@@ -50,7 +50,7 @@ except ImportError:
 import io
 
 from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, \
-    ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm, LCPlotForm
+    ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm
 from .models import *
 from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih, \
     convert_ast_to_comet
@@ -3301,32 +3301,16 @@ class PlotSpec(View):
 class LCPlot(LookUpBodyMixin, FormView):
 
     template_name = 'core/plot_lc.html'
-    form_class = LCPlotForm
 
     def get(self, request, *args, **kwargs):
-        script, div, meta_list = get_lc_plot(self.body, {})
-
-        form = LCPlotForm(body=self.body)
-
-        return self.render_to_response(self.get_context_data(form=form, body=self.body, script=script, div=div, meta_list=meta_list))
-
-    def form_valid(self, form, request):
-
-        form_data = form.cleaned_data
-        new_form = LCPlotForm(form_data, body=self.body)
-        script, div, meta_list = get_lc_plot(self.body, form_data)
-
-        params = self.get_context_data(script=script, div=div, meta_list=meta_list)
-        params['form'] = new_form
-
-        return render(request, self.template_name, params)
-
-    def post(self, request, *args, **kwargs):
-        form = LCPlotForm(request.POST, body=self.body)
-        if form.is_valid():
-            return self.form_valid(form, request)
+        best_period = self.body.get_physical_parameters('P', False)
+        if best_period:
+            period = best_period[0].get('value', None)
         else:
-            return self.render_to_response(self.get_context_data(form=form, body=self.body))
+            period = None
+        script, div, meta_list = get_lc_plot(self.body, {'period': period})
+
+        return self.render_to_response(self.get_context_data(body=self.body, script=script, div=div, meta_list=meta_list))
 
     def get_context_data(self, **kwargs):
         """
@@ -3337,18 +3321,12 @@ class LCPlot(LookUpBodyMixin, FormView):
         if kwargs['div']:
             params["the_script"] = kwargs['script']
             params["lc_div"] = kwargs['div']['plot']
-            params["table_div"] = kwargs['div']['table']
-            params["period_div"] = kwargs['div']['period']
         base_path = BOKEH_URL.format(bokeh.__version__)
         params['css_path'] = base_path + 'css'
         params['js_path'] = base_path + 'js'
         params['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
         params['table_path'] = BOKEH_URL.format('tables-'+bokeh.__version__) + 'js'
         best_period = self.body.get_physical_parameters('P', False)
-        if best_period:
-            params['best_period'] = best_period[0].get('value', None)
-        else:
-            params['best_period'] = None
         return params
 
 
@@ -3406,10 +3384,10 @@ def get_lc_plot(body, data):
     obj_name = body.current_name().replace(' ', '_')
     datadir = os.path.join(base_dir, obj_name)
     filenames = search(datadir, '.*.ALCDEF.txt')
-    if data.get('period', None) and data.get('phase_flag', None):
+    if data.get('period', None):
         period = data['period']
     else:
-        period = None
+        period = 1.0
 
     meta_list = []
     lc_list = []

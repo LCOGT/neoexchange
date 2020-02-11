@@ -374,7 +374,7 @@ class Command(BaseCommand):
                 data_path = make_data_dir(out_path, model_to_dict(frames_all_zp[0]))
                 frames_list = [os.path.join(data_path, f.filename) for f in frames_all_zp]
                 if "1m0" in frames_list[0]:
-                    cent = .01
+                    cent = .03
                 elif "0m4" in frames_list[0]:
                     cent = .03
                 else:

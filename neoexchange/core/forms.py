@@ -350,24 +350,3 @@ class SpectroFeasibilityForm(forms.Form):
         # Set default SFU value of 70; replace with value from fetch if it isn't None
         self.fields['sfu'].initial = 70.0
         self.fields['sfu'].initial = self.fields['sfu'].initial if sfu_values[1] is None else sfu_values[1].value
-
-
-class LCPlotForm(forms.Form):
-    phase_flag = forms.BooleanField(initial=False, required=False, widget=forms.CheckboxInput(attrs={'onchange': 'this.form.submit();'}))
-    period = forms.FloatField(required=False, widget=forms.NumberInput(attrs={'onchange': 'this.form.submit();', 'min': '0'}))
-
-    def __init__(self, *args, **kwargs):
-        body = kwargs.pop('body', None)
-        super(LCPlotForm, self).__init__(*args, **kwargs)
-        if body and isinstance(body, Body):
-            period_param = body.get_physical_parameters('P', False)
-            if period_param:
-                self.fields['period'].initial = period_param[0].get('value', None)
-            else:
-                self.fields['period'].initial = 1.0
-
-    def clean_period(self):
-        if self.cleaned_data['period'] is not None and self.cleaned_data['period'] < 0:
-            return 0.0
-        else:
-            return self.cleaned_data['period']

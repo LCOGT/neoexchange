@@ -13,6 +13,7 @@ GNU General Public License for more details.
 """
 
 import base64
+import copy
 from datetime import datetime, timedelta
 from glob import glob
 import io
@@ -37,8 +38,9 @@ from bokeh.layouts import layout, column, row
 from bokeh.plotting import figure, ColumnDataSource
 from bokeh.resources import CDN, INLINE
 from bokeh.embed import components, file_html
-from bokeh.models import HoverTool, Label, CrosshairTool, Whisker, TeeHead, Range1d, CustomJS
-from bokeh.models.widgets import CheckboxGroup, Slider, TableColumn, DataTable, HTMLTemplateFormatter, NumberEditor, NumberFormatter, Spinner, Toggle
+from bokeh.models import HoverTool, Label, CrosshairTool, Whisker, TeeHead, Range1d, CustomJS, Title
+from bokeh.models.widgets import CheckboxGroup, Slider, TableColumn, DataTable, HTMLTemplateFormatter, NumberEditor,\
+    NumberFormatter, Spinner, Button, Panel, Tabs, Div
 from bokeh.palettes import Category20, Category10
 
 from .models import Body, CatalogSources, StaticSource, Block, model_to_dict, PreviousSpectra
@@ -584,37 +586,49 @@ def get_name(meta_dat):
     return out_string, name, number
 
 
-def lc_plot(lc_list, meta_list, filt_list, period=None):
+def lc_plot(lc_list, meta_list, filt_list, period=1):
 
-    plot = figure(plot_width=900, plot_height=400)
-    plot.y_range.flipped = True
+    plot_u = figure(plot_width=900, plot_height=400)
+    plot_p = figure(plot_width=900, plot_height=400)
+    plot_u.y_range.flipped = True
+    plot_p.y_range.flipped = True
 
     # Create Column Data Source that will be used by the plot
     source = ColumnDataSource(data=dict(time=[], mag=[], color=[], title=[], err_high=[], err_low=[], alpha=[]))
     orig_source = ColumnDataSource(data=dict(time=[], mag=[], mag_err=[], color=[], title=[], err_high=[], err_low=[], alpha=[]))
     dataset_source = ColumnDataSource(data=dict(symbol=[], date=[], time=[], site=[], filter=[], color=[], title=[], offset=[]))
+    fit_source = ColumnDataSource(data=dict(B=[], A=[], k=[], phi=[]))
+    linx = np.linspace(0, 1, 100)
+    liny = np.sin(linx)
+    fit_line = ColumnDataSource(data=dict(x=linx, y=liny))
 
     # Create Input controls
-    phase_shift = Slider(title="Phase Offset", value=0, start=-1, end=1, step=.01)
-    if period:
-        default_period = period
-    else:
-        default_period = 1.0
-    max_period = 10 * default_period
+    phase_shift = Slider(title="Phase Offset", value=0, start=-1, end=1, step=.01, width=200)
+    max_period = round(10 * period)
     min_period = 0.0
     step = (max_period - min_period)/1000
-    period_slider = Slider(title=None, value=default_period, start=min_period, end=max_period, step=step)
-    period_box = Spinner(value=default_period, low=0, step=step, title="Period", width=200)
+    period_slider = Slider(title=None, value=period, start=min_period, end=max_period, step=step, width=200)
+    if period != 1:
+        p_box_title = 'Period (Default: {}h)'.format(period)
+    else:
+        p_box_title = 'Period (Unknown)'
+    period_box = Spinner(value=period, low=0, step=step, title=p_box_title, width=200)
     p_slider_min = Spinner(value=min_period, low=0, step=.01, title="min", width=100)
     p_slider_max = Spinner(value=max_period, low=0, step=.01, title="max", width=100)
-    phase_toggle = Toggle(label="Phase", button_type="primary", width=100, align='end')
+    draw_button = Button(label="Plot", button_type="default", width=50)
+    refresh_button = Button(label="Reset", button_type="default", width=50)
 
-    # Create plot
+    # Create plots
     error_cap = TeeHead(line_alpha=0)
-    plot.add_layout(
+    plot_u.add_layout(
+        Whisker(source=orig_source, base="time", upper="err_high", lower="err_low", line_color="color", line_alpha="alpha",
+                lower_head=error_cap, upper_head=error_cap))
+    plot_u.circle(x="time", y="mag", source=orig_source, size=3, color="color", alpha="alpha")
+    plot_p.add_layout(
         Whisker(source=source, base="time", upper="err_high", lower="err_low", line_color="color", line_alpha="alpha",
                 lower_head=error_cap, upper_head=error_cap))
-    plot.circle(x="time", y="mag", source=source, size=3, color="color", alpha="alpha")
+    plot_p.circle(x="time", y="mag", source=source, size=3, color="color", alpha="alpha")
+    plot_p.line('x', 'y', source=fit_line, line_width=3, line_alpha=0.6)
 
     filt_unique = list(set(filt_list))
     filt_sets = {}
@@ -627,54 +641,30 @@ def lc_plot(lc_list, meta_list, filt_list, period=None):
     obj, name, num = get_name(meta_list[0])
     date_range = meta_list[0]['SESSIONDATE'].replace('-', '')+'-'+meta_list[-1]['SESSIONDATE'].replace('-', '')
     base_date = floor(min(sorted([jd for lc in lc_list for jd in lc['date']])))
-    colors = itertools.cycle(Category10[10])
-    plot.yaxis.axis_label = 'Apparent Magnitude'
-    plot.title.text = 'LC for {} ({})'.format(obj, date_range)
+
+    plot_u.yaxis.axis_label = 'Apparent Magnitude'
+    plot_u.title.text = 'LC for {} ({})'.format(obj, date_range)
+    plot_u.xaxis.axis_label = 'Date (Hours from {}.0)'.format(base_date)
+    plot_p.yaxis.axis_label = 'Apparent Magnitude'
+    plot_p.title.text = 'LC for {} ({})'.format(obj, date_range)
+    plot_p.xaxis.axis_label = 'Phase (Period = {}h / Epoch = {})'.format(period, base_date)
+    plot_p.x_range = Range1d(0, 1.1, bounds=(-.2, 1.2))
 
     def update():
-        x_times = []
-        y_mags = []
-        mag_err = []
-        hi_errs = []
-        low_errs = []
-        dat_colors = []
-        dat_alphas = []
-        data_title = []
         sess_date = []
         sess_time = []
         sess_filt = []
         sess_site = []
         sess_title = []
         sess_color = []
-        phased_lc_list = phase_lc(lc_list, period, base_date)
-        if period:
-            for lc in phased_lc_list:
-                for k, phase in enumerate(lc['date']):
-                    if 0 < phase < 0.5:
-                        lc['date'].append(phase+1)
-                        lc['mags'].append(lc['mags'][k])
-                        lc['mag_errs'].append(lc['mag_errs'][k])
-                    elif 0.5 < phase < 1:
-                        lc['date'].append(phase-1)
-                        lc['mags'].append(lc['mags'][k])
-                        lc['mag_errs'].append(lc['mag_errs'][k])
-
+        span = []
+        phased_lc_list = phase_lc(copy.deepcopy(lc_list), period, base_date)
+        unphased_lc_list = phase_lc(copy.deepcopy(lc_list), None, base_date)
+        colors = itertools.cycle(Category10[10])
         for c, lc in enumerate(phased_lc_list):
             plot_col = next(colors)
-            # Build Error Bars
-            err_up = np.array(lc['mags']) + np.array(lc['mag_errs'])
-            err_low = np.array(lc['mags']) - np.array(lc['mag_errs'])
-
-            # build source data
-            x_times += lc['date']
-            y_mags += lc['mags']
-            mag_err += lc['mag_errs']
-            hi_errs += list(err_up)
-            low_errs += list(err_low)
-            dat_colors += [plot_col]*len(lc['date'])
-            dat_alphas += [1]*len(lc['date'])
-
             # Build dataset_title
+            span.append(round((unphased_lc_list[c]['date'][-1] - unphased_lc_list[c]['date'][0])*24, 2))
             md = meta_list[c]
             sess_date.append(md['SESSIONDATE'])
             sess_time.append(md['SESSIONTIME'])
@@ -683,12 +673,23 @@ def lc_plot(lc_list, meta_list, filt_list, period=None):
             sess_color.append(plot_col)
             dataset_title = "{}T{} -- Filter:{} -- Site:{}".format(md['SESSIONDATE'], md['SESSIONTIME'], md['FILTER'], md['MPCCODE'])
             sess_title.append(dataset_title)
-            data_title += [dataset_title]*len(lc['date'])
         sess_sym = ['&#10739;']*len(sess_date)
         offset = [0]*len(sess_date)
-        dataset_source.data = dict(symbol=sess_sym, date=sess_date, time=sess_time, site=sess_site, filter=sess_filt, color=sess_color, title=sess_title, offset=offset)
-        source.data = dict(time=x_times, mag=y_mags, color=dat_colors, title=data_title, err_high=hi_errs, err_low=low_errs, alpha=dat_alphas)
-        orig_source.data = dict(time=x_times, mag=y_mags, color=dat_colors, title=data_title, err_high=hi_errs, err_low=low_errs, alpha=dat_alphas, mag_err=mag_err)
+        dataset_source.data = dict(symbol=sess_sym, date=sess_date, time=sess_time, site=sess_site, filter=sess_filt, color=sess_color, title=sess_title, offset=offset, span=span)
+
+        phased_dict = build_data_sets(phased_lc_list, sess_title)
+        for k, phase in enumerate(phased_dict['time']):
+            if 0 < phase < 1 :
+                for key in phased_dict.keys():
+                    if key == 'time':
+                        if 0 < phase < 0.5:
+                            phased_dict['time'].append(phase + 1)
+                        elif 0.5 < phase < 1:
+                            phased_dict['time'].append(phase - 1)
+                    else:
+                        phased_dict[key].append(phased_dict[key][k])
+        source.data = phased_dict
+        orig_source.data = build_data_sets(unphased_lc_list, sess_title)
 
     update()  # initial load of the data
 
@@ -706,6 +707,7 @@ def lc_plot(lc_list, meta_list, filt_list, period=None):
         TableColumn(field="symbol", title='', formatter=formatter, width=3),
         TableColumn(field="date", title="Date"),
         TableColumn(field="time", title="Time"),
+        TableColumn(field="span", title="Span (h)"),
         TableColumn(field="site", title="Site"),
         TableColumn(field="filter", title="Filter"),
         TableColumn(field="offset", title="Mag Offset", editor=NumberEditor(step=.1), formatter=NumberFormatter(format="0.0"))
@@ -713,23 +715,72 @@ def lc_plot(lc_list, meta_list, filt_list, period=None):
 
     dataset_source.selected.indices = list(range(len(dataset_source.data['date'])))
     data_table = DataTable(source=dataset_source, columns=columns, width=600, height=300, selectable='checkbox', index_position=None, editable=True)
+    table_title = Div(text='<b>LC Data</b>', width=450)
 
-    callback = CustomJS(args=dict(source=source, phase_shift=phase_shift, period=period, dataset_source=dataset_source, osource=orig_source),
+    amp_slider = Slider(start=0.1, end=10, value=1, step=.1, title="Amplitude")
+    freq_slider = Slider(start=0.1, end=100, value=1, step=.1, title="Frequency")
+    phase_slider = Slider(start=0, end=6.4, value=0, step=.1, title="Phase")
+    offset_slider = Slider(start=0, end=10, value=0, step=.1, title="Offset")
+    fit_callback = CustomJS(args=dict(source=source, fit_source=fit_source, line_source=fit_line),
+                        code="""const data = source.data;
+                                const fit = fit_source.data;
+                                const line = line_source.data;
+                                const mag = data['mag']
+                                const time = data['time']
+                                const a = fit['A'];
+                                const b = fit['B'];
+                                const k = fit['k'];
+                                const phi = fit['phi'];
+                                const x = line['x'];
+                                const y = line['y'];
+                                const t = [];
+                                let average = (array) => array.reduce((all, one) => all + one) / array.length;
+                                let max = (array) => array.reduce((all, one) => Math.max(all, one));
+                                let min = (array) => array.reduce((all, one) => Math.min(all, one));
+                                // initialize fit
+                                if (a.length < 1){
+                                    a[0] = (max(data['mag']) - min(data['mag'])) / 2;
+                                    b[0] = average(data['mag']);
+                                    k[0] = 12.4;
+                                    phi[0] = 3;
+                                }
+                                for (var i = 0; i < x.length; i++) {
+                                    y[i] = b[0];
+                                    for (var c = 0; c < a.length; c++){
+                                        y[i] = y[i] + a[c]*Math.sin(k[c]*x[i]+phi[c]);
+                                    }
+                                }
+                                for (var i = 0; i < mag.length; i++) {
+                                    t[i] = b[0];
+                                    for (var c = 0; c < a.length; c++){
+                                        t[i] = t[i] + a[c]*Math.sin(k[c]*time[i]+phi[c]);
+                                    }
+                                    console.log(mag[i] - t[i]);
+                                }
+                                console.log(fit)
+                                line_source.change.emit();
+                                fit_source.change.emit();
+                            """)
+    amp_slider.js_on_change('value', fit_callback)
+    freq_slider.js_on_change('value', fit_callback)
+    phase_slider.js_on_change('value', fit_callback)
+    offset_slider.js_on_change('value', fit_callback)
+
+    callback = CustomJS(args=dict(source=source, dataset_source=dataset_source, osource=orig_source),
                         code="""const data = source.data;
                                 const base = osource.data;
-                                const B = phase_shift.value;
                                 const I = dataset_source.selected.indices;
                                 const T = dataset_source.data['title'];
                                 const O = dataset_source.data['offset'];
-                                const x = data['time'];
                                 const y = data['mag'];
                                 const el = data['err_low'];
                                 const eh = data['err_high'];
-                                const d = base['time'];
                                 const m = base['mag'];
                                 const me = base['mag_err'];
                                 const t = data['title'];
+                                const t2 = base['title'];
                                 const a = data['alpha'];
+                                const a2 = base['alpha']
                                 var selected = [];
                                 var offy = [];
                                 for (var i = 0; i < I.length; i++) {
@@ -738,16 +789,14 @@ def lc_plot(lc_list, meta_list, filt_list, period=None):
                                         offy.push(I[i]);
                                     }
                                 }
-                                for (var i = 0; i < x.length; i++) {
-                                    if (period > 0){
-                                        x[i] = d[i] + B;
-                                        if (x[i] > 1.5){
-                                            x[i] = x[i] - 2.0;
-                                        }
-                                        if (x[i] < -.5){
-                                            x[i] = x[i] + 2.0;
-                                        }
+                                for (var i = 0; i < a2.length; i++) {
+                                    if (selected.includes(t2[i])){
+                                        a2[i] = 1;
+                                    } else {
+                                        a2[i] = 0;
                                     }
+                                }
+                                for (var i = 0; i < a.length; i++) {
                                     if (selected.includes(t[i])){
                                         a[i] = 1;
                                     } else {
@@ -773,10 +822,11 @@ def lc_plot(lc_list, meta_list, filt_list, period=None):
                                     }
                                 }
                                 source.change.emit();
+                                osource.change.emit();
                                 """)
 
-    phase_shift.js_on_change('value', callback)
     dataset_source.selected.js_on_change('indices', callback)
+    dataset_source.js_on_change('data', callback)
 
     period_bounds_callback = CustomJS(args=dict(period_box=period_box, period_slider=period_slider, p_max=p_slider_max, p_min=p_slider_min),
                         code="""
@@ -802,16 +852,12 @@ def lc_plot(lc_list, meta_list, filt_list, period=None):
 
     period_slider.js_link('value', period_box, 'value')
 
-    if period:
-        plot.xaxis.axis_label = 'Phase (Period = {}h)'.format(period)
-        plot.x_range = Range1d(0, 1.1, bounds=(-.2, 1.2))
-    else:
-        plot.xaxis.axis_label = 'Date (Hours from {}.0)'.format(base_date)
-    phased_callback = CustomJS(args=dict(phase_toggle=phase_toggle, source=source, period_box=period_box, period_slider=period_slider, plot=plot, osource=orig_source, x_axis=plot.xaxis),
+    phased_callback = CustomJS(args=dict(source=source, period_box=period_box, period_slider=period_slider, plot=plot_p, osource=orig_source, phase_shift=phase_shift, base_date=base_date),
                         code="""
                         if (period_box.value <= 0){
                             period_box.value = 0;
                         }
+                        const B = phase_shift.value;
                         const data = source.data;
                         const base = osource.data;
                         const x = data['time'];
@@ -820,7 +866,7 @@ def lc_plot(lc_list, meta_list, filt_list, period=None):
                         const m = base['mag'];
                         const el = data['err_low'];
                         const eh = data['err_high'];
-                        const me = base['mag_err'];
+                        const me = data['mag_err'];
                         const t = data['title'];
                         const a = data['alpha'];
                         const c = data['color'];
@@ -835,10 +881,17 @@ def lc_plot(lc_list, meta_list, filt_list, period=None):
                         a.splice(pos,n);
                         t.splice(pos,n);
                         c.splice(pos,n);
-                        if ((period > 0) && (phase_toggle.active)) {
+                        me.splice(pos,n);
+                        if (period > 0) {
                             for (var i = 0; i < d.length; i++){
                                 x[i] = (d[i] / period);
                                 x[i] = x[i] - Math.floor(x[i]);
+                                x[i] = x[i] + B;
+                                if (x[i] > 1.0){
+                                    x[i] = x[i] - 1.0;
+                                } else if (x[i] < 0.0){
+                                    x[i] = x[i] + 1.0;
+                                }
                                 if ((x[i] > 0.0) && (x[i] < 0.5)){
                                     x.push(x[i] + 1.0);
                                 } else if ((x[i] < 1.0) && (x[i] > 0.5)){
@@ -850,38 +903,64 @@ def lc_plot(lc_list, meta_list, filt_list, period=None):
                                 a.push(a[i]);
                                 t.push(t[i]);
                                 c.push(c[i]);
+                                me.push(c[i]);
                             }
-                            x_axis.axis_label = 'Phase (Period = ' + String(period) + 'h)';
                         } else{
                             for (var i = 0; i < d.length; i++){
                                 if (i <= (d.length - 1)){
                                     x[i] = d[i];
                                 }
                             }
-                        x_axis.axis_label = 'Date (Hours from Basedate)';
                         }
-                        if (phase_toggle.active){
-                            phase_toggle.label = 'Un-Phase';
-                        } else {
-                            phase_toggle.label = 'Phase';
-                        }
+                        let epoch = base_date + (B * period / 24);
+                        plot.below[0].axis_label = 'Phase (Period = ' + period + 'h / Epoch = '+ epoch + ')';
                         source.change.emit();
-                        plot.x_range['start'] = 0;
-                        plot.x_range['end'] = 1.2;
-                        console.log(plot.x_range.min);
-                        console.log(plot.x_range.start);
-                        console.log(plot.x_range.max);
-                        console.log(plot.x_range.end);
-                        console.log(plot.x_range);
                         """)
-    phase_toggle.js_on_click(phased_callback)
     period_box.js_on_change('value', phased_callback)
+    phase_shift.js_on_change('value', phased_callback)
 
-    period_layout = row( column( row(phase_toggle, period_box), period_slider, phase_shift), column(p_slider_min, p_slider_max))
+    phased_layout = column(plot_p, row(column(row(table_title), data_table), column(row(column(row(period_box), period_slider, phase_shift), column(p_slider_min, p_slider_max)), column(amp_slider, freq_slider, phase_slider, offset_slider))))
+    unphased_layout = column(plot_u, row(column(row(table_title), data_table)))
+    tabu = Panel(child=unphased_layout, title="Unphased")
+    tabp = Panel(child=phased_layout, title="Phased")
+    tabs = Tabs(tabs=[tabu, tabp])
 
-    script, div = components({'plot': plot, 'table': data_table, 'period': period_layout}, CDN)
+    script, div = components({'plot': tabs}, CDN)
 
     return script, div
+
+
+def build_data_sets(lc_list, title_list):
+    x_times = []
+    y_mags = []
+    mag_err = []
+    hi_errs = []
+    low_errs = []
+    dat_colors = []
+    dat_alphas = []
+    data_title = []
+    colors = itertools.cycle(Category10[10])
+    for c, lc in enumerate(lc_list):
+        plot_col = next(colors)
+        # Build Error Bars
+        err_up = np.array(lc['mags']) + np.array(lc['mag_errs'])
+        err_low = np.array(lc['mags']) - np.array(lc['mag_errs'])
+
+        # build source data
+        x_times += lc['date']
+        y_mags += lc['mags']
+        mag_err += lc['mag_errs']
+        hi_errs += list(err_up)
+        low_errs += list(err_low)
+        dat_colors += [plot_col]*len(lc['date'])
+        dat_alphas += [1]*len(lc['date'])
+
+        # Build dataset_title
+        dataset_title = title_list[c]
+        data_title += [dataset_title]*len(lc['date'])
+    data = dict(time=x_times, mag=y_mags, color=dat_colors, title=data_title, err_high=hi_errs,
+                            err_low=low_errs, alpha=dat_alphas, mag_err=mag_err)
+    return data
 
 
 def phase_lc(lc_data, period, base_date):
