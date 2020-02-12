@@ -40,7 +40,7 @@ from bokeh.resources import CDN, INLINE
 from bokeh.embed import components, file_html
 from bokeh.models import HoverTool, Label, CrosshairTool, Whisker, TeeHead, Range1d, CustomJS, Title
 from bokeh.models.widgets import CheckboxGroup, Slider, TableColumn, DataTable, HTMLTemplateFormatter, NumberEditor,\
-    NumberFormatter, Spinner, Button, Panel, Tabs, Div
+    NumberFormatter, Spinner, Button, Panel, Tabs, Div, Toggle
 from bokeh.palettes import Category20, Category10
 
 from .models import Body, CatalogSources, StaticSource, Block, model_to_dict, PreviousSpectra
@@ -586,7 +586,7 @@ def get_name(meta_dat):
     return out_string, name, number
 
 
-def lc_plot(lc_list, meta_list, filt_list, period=1):
+def lc_plot(lc_list, meta_list, filt_list, period=1, jpl_ephem=None):
 
     plot_u = figure(plot_width=900, plot_height=400)
     plot_p = figure(plot_width=900, plot_height=400)
@@ -597,10 +597,7 @@ def lc_plot(lc_list, meta_list, filt_list, period=1):
     source = ColumnDataSource(data=dict(time=[], mag=[], color=[], title=[], err_high=[], err_low=[], alpha=[]))
     orig_source = ColumnDataSource(data=dict(time=[], mag=[], mag_err=[], color=[], title=[], err_high=[], err_low=[], alpha=[]))
     dataset_source = ColumnDataSource(data=dict(symbol=[], date=[], time=[], site=[], filter=[], color=[], title=[], offset=[]))
-    fit_source = ColumnDataSource(data=dict(B=[], A=[], k=[], phi=[]))
-    linx = np.linspace(0, 1, 100)
-    liny = np.sin(linx)
-    fit_line = ColumnDataSource(data=dict(x=linx, y=liny))
+    horizons_source = ColumnDataSource(data=dict(date=[], v_mag=[]))
 
     # Create Input controls
     phase_shift = Slider(title="Phase Offset", value=0, start=-1, end=1, step=.01, width=200)
@@ -615,11 +612,12 @@ def lc_plot(lc_list, meta_list, filt_list, period=1):
     period_box = Spinner(value=period, low=0, step=step, title=p_box_title, width=200)
     p_slider_min = Spinner(value=min_period, low=0, step=.01, title="min", width=100)
     p_slider_max = Spinner(value=max_period, low=0, step=.01, title="max", width=100)
-    draw_button = Button(label="Plot", button_type="default", width=50)
-    refresh_button = Button(label="Reset", button_type="default", width=50)
+    v_offset_button = Toggle(label="Apply Predicted Offset", button_type="default")
+    draw_button = Button(label="Re-Draw", button_type="default", width=50)
 
     # Create plots
     error_cap = TeeHead(line_alpha=0)
+    plot_u.line(x="date", y="v_mag", source=horizons_source, line_color='black', line_width=3, line_alpha=.5, legend_label="Horizons V-mag", visible=False)
     plot_u.add_layout(
         Whisker(source=orig_source, base="time", upper="err_high", lower="err_low", line_color="color", line_alpha="alpha",
                 lower_head=error_cap, upper_head=error_cap))
@@ -628,7 +626,7 @@ def lc_plot(lc_list, meta_list, filt_list, period=1):
         Whisker(source=source, base="time", upper="err_high", lower="err_low", line_color="color", line_alpha="alpha",
                 lower_head=error_cap, upper_head=error_cap))
     plot_p.circle(x="time", y="mag", source=source, size=3, color="color", alpha="alpha")
-    plot_p.line('x', 'y', source=fit_line, line_width=3, line_alpha=0.6)
+    plot_u.legend.click_policy = 'hide'
 
     filt_unique = list(set(filt_list))
     filt_sets = {}
@@ -658,13 +656,18 @@ def lc_plot(lc_list, meta_list, filt_list, period=1):
         sess_title = []
         sess_color = []
         span = []
+        jpl_v_mid = []
         phased_lc_list = phase_lc(copy.deepcopy(lc_list), period, base_date)
         unphased_lc_list = phase_lc(copy.deepcopy(lc_list), None, base_date)
+        jpl_date = (jpl_ephem['datetime_jd'] - base_date) * 24
+        horizons_source.data = dict(date=jpl_date, v_mag=jpl_ephem['V'])
         colors = itertools.cycle(Category10[10])
         for c, lc in enumerate(phased_lc_list):
             plot_col = next(colors)
             # Build dataset_title
-            span.append(round((unphased_lc_list[c]['date'][-1] - unphased_lc_list[c]['date'][0])*24, 2))
+            sess_mid = (unphased_lc_list[c]['date'][-1] + unphased_lc_list[c]['date'][0]) / 2
+            jpl_v_mid.append(np.interp(sess_mid, jpl_date, jpl_ephem['V']))
+            span.append(round((unphased_lc_list[c]['date'][-1] - unphased_lc_list[c]['date'][0]), 2))
             md = meta_list[c]
             sess_date.append(md['SESSIONDATE'])
             sess_time.append(md['SESSIONTIME'])
@@ -675,7 +678,7 @@ def lc_plot(lc_list, meta_list, filt_list, period=1):
             sess_title.append(dataset_title)
         sess_sym = ['&#10739;']*len(sess_date)
         offset = [0]*len(sess_date)
-        dataset_source.data = dict(symbol=sess_sym, date=sess_date, time=sess_time, site=sess_site, filter=sess_filt, color=sess_color, title=sess_title, offset=offset, span=span)
+        dataset_source.data = dict(symbol=sess_sym, date=sess_date, time=sess_time, site=sess_site, filter=sess_filt, color=sess_color, title=sess_title, offset=offset, span=span, v_mid=jpl_v_mid)
 
         phased_dict = build_data_sets(phased_lc_list, sess_title)
         for k, phase in enumerate(phased_dict['time']):
@@ -707,64 +710,33 @@ def lc_plot(lc_list, meta_list, filt_list, period=1):
         TableColumn(field="symbol", title='', formatter=formatter, width=3),
         TableColumn(field="date", title="Date"),
         TableColumn(field="time", title="Time"),
-        TableColumn(field="span", title="Span (h)"),
+        TableColumn(field="span", title="Span (h)", formatter=NumberFormatter(format="0.00")),
         TableColumn(field="site", title="Site"),
         TableColumn(field="filter", title="Filter"),
-        TableColumn(field="offset", title="Mag Offset", editor=NumberEditor(step=.1), formatter=NumberFormatter(format="0.0"))
+        TableColumn(field="offset", title="Mag Offset", editor=NumberEditor(step=.1), formatter=NumberFormatter(format="0.00"))
     ]
 
     dataset_source.selected.indices = list(range(len(dataset_source.data['date'])))
     data_table = DataTable(source=dataset_source, columns=columns, width=600, height=300, selectable='checkbox', index_position=None, editable=True)
     table_title = Div(text='<b>LC Data</b>', width=450)
 
-    amp_slider = Slider(start=0.1, end=10, value=1, step=.1, title="Amplitude")
-    freq_slider = Slider(start=0.1, end=100, value=1, step=.1, title="Frequency")
-    phase_slider = Slider(start=0, end=6.4, value=0, step=.1, title="Phase")
-    offset_slider = Slider(start=0, end=10, value=0, step=.1, title="Offset")
-    fit_callback = CustomJS(args=dict(source=source, fit_source=fit_source, line_source=fit_line),
-                        code="""const data = source.data;
-                                const fit = fit_source.data;
-                                const line = line_source.data;
-                                const mag = data['mag']
-                                const time = data['time']
-                                const a = fit['A'];
-                                const b = fit['B'];
-                                const k = fit['k'];
-                                const phi = fit['phi'];
-                                const x = line['x'];
-                                const y = line['y'];
-                                const t = [];
-                                let average = (array) => array.reduce((all, one) => all + one) / array.length;
-                                let max = (array) => array.reduce((all, one) => Math.max(all, one));
-                                let min = (array) => array.reduce((all, one) => Math.min(all, one));
-                                // initialize fit
-                                if (a.length < 1){
-                                    a[0] = (max(data['mag']) - min(data['mag'])) / 2;
-                                    b[0] = average(data['mag']);
-                                    k[0] = 12.4;
-                                    phi[0] = 3;
-                                }
-                                for (var i = 0; i < x.length; i++) {
-                                    y[i] = b[0];
-                                    for (var c = 0; c < a.length; c++){
-                                        y[i] = y[i] + a[c]*Math.sin(k[c]*x[i]+phi[c]);
+    v_offset_callback = CustomJS(args=dict(dataset_source=dataset_source, toggle=v_offset_button),
+                        code="""const dataset = dataset_source.data;
+                                const O = dataset['offset'];
+                                const V = dataset['v_mid']
+                                if (toggle.active){
+                                    for (var i = 0; i < O.length; i++) {
+                                        O[i] = V[0] - V[i];
                                     }
-                                }
-                                for (var i = 0; i < mag.length; i++) {
-                                    t[i] = b[0];
-                                    for (var c = 0; c < a.length; c++){
-                                        t[i] = t[i] + a[c]*Math.sin(k[c]*time[i]+phi[c]);
+                                    toggle.label = 'Reset Offsets';
+                                } else {
+                                    for (var i = 0; i < O.length; i++) {
+                                        O[i] = 0;
                                     }
-                                    console.log(mag[i] - t[i]);
+                                    toggle.label = 'Apply Predicted Offset';
                                 }
-                                console.log(fit)
-                                line_source.change.emit();
-                                fit_source.change.emit();
+                                dataset_source.change.emit();
                             """)
-    amp_slider.js_on_change('value', fit_callback)
-    freq_slider.js_on_change('value', fit_callback)
-    phase_slider.js_on_change('value', fit_callback)
-    offset_slider.js_on_change('value', fit_callback)
 
     callback = CustomJS(args=dict(source=source, dataset_source=dataset_source, osource=orig_source),
                         code="""const data = source.data;
@@ -785,9 +757,7 @@ def lc_plot(lc_list, meta_list, filt_list, period=1):
                                 var offy = [];
                                 for (var i = 0; i < I.length; i++) {
                                     selected[i] = T[I[i]];
-                                    if (O[I[i]] != 0) {
-                                        offy.push(I[i]);
-                                    }
+                                    offy.push(I[i]);
                                 }
                                 for (var i = 0; i < a2.length; i++) {
                                     if (selected.includes(t2[i])){
@@ -918,8 +888,10 @@ def lc_plot(lc_list, meta_list, filt_list, period=1):
                         """)
     period_box.js_on_change('value', phased_callback)
     phase_shift.js_on_change('value', phased_callback)
+    draw_button.js_on_click(callback)
+    v_offset_button.js_on_click(v_offset_callback)
 
-    phased_layout = column(plot_p, row(column(row(table_title), data_table), column(row(column(row(period_box), period_slider, phase_shift), column(p_slider_min, p_slider_max)), column(amp_slider, freq_slider, phase_slider, offset_slider))))
+    phased_layout = column(plot_p, row(column(row(table_title), data_table, row(v_offset_button, draw_button)), column(row(column(row(period_box), period_slider, phase_shift), column(p_slider_min, p_slider_max)))))
     unphased_layout = column(plot_u, row(column(row(table_title), data_table)))
     tabu = Panel(child=unphased_layout, title="Unphased")
     tabp = Panel(child=phased_layout, title="Phased")

@@ -60,7 +60,7 @@ from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
     MagRangeError, determine_spectro_slot_length, get_sitepos, read_findorb_ephem,\
     accurate_astro_darkness, get_visibility, determine_exp_count, determine_star_trails,\
-    calc_moon_sep, get_alt_from_airmass
+    calc_moon_sep, get_alt_from_airmass, horizons_ephem
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs, validate_text,\
@@ -3401,8 +3401,17 @@ def get_lc_plot(body, data):
     for meta in meta_list:
         filt_list.append(meta['FILTER'])
 
+    # Get predicted JPL position of target during obs
+    start = datetime.strptime(meta_list[0]['SESSIONDATE']+'T'+meta_list[0]['SESSIONTIME'], '%Y-%m-%dT%H:%M:%S') - timedelta(days=1)
+    end = datetime.strptime(meta_list[-1]['SESSIONDATE']+'T'+meta_list[1]['SESSIONTIME'], '%Y-%m-%dT%H:%M:%S') + timedelta(days=1)
+    total_time = end-start
+    step_size = round(total_time.total_seconds()/60/100)
+    sitecode = '500'
+    obj_name = body.name
+    ephem = horizons_ephem(obj_name, start, end, sitecode, ephem_step_size='{}m'.format(step_size))
+
     if lc_list:
-        script, div = lc_plot(lc_list, meta_list, filt_list, period)
+        script, div = lc_plot(lc_list, meta_list, filt_list, period, jpl_ephem=ephem)
     else:
         script = div = None
 
