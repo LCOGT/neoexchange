@@ -115,6 +115,9 @@ def fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser
         else:
             logger.warning("Page retrieval failed with HTTP Error: %s" % (e.reason,))
         return None
+    except (BrokenPipeError, ConnectionAbortedError, ConnectionRefusedError, ConnectionResetError) as sock_e:
+        logger.warning("Page retrieval failed with socket Error %d: %s" % (sock_e.errno, sock_e.strerror))
+        return None
 
     # Suck the HTML down
     neo_page = response.read()
@@ -653,12 +656,22 @@ def parse_mpcobs(line):
     prov_or_temp = str(line[5:12])
     comet_desig = ['C', 'P', 'D', 'X', 'A']
 
+    fragment = None
     if number.strip() in comet_desig and len(prov_or_temp.strip()) != 0:
         # Comet with no number
         body = number.strip() + prov_or_temp.strip()
     elif len(number.strip()) != 0 and len(prov_or_temp.strip()) != 0:
         # Number and provisional/temp. designation
         body = number
+        if prov_or_temp.lstrip(' ').islower():
+            # If the last characters of the provisional desigination is a
+            # lowercase letter (with spaces to the left) OR
+            # the last letter only of the provisional desigination is lowecase,
+            # with everything uppercase (or numbers):
+            #   it is a comet fragment (probably...)
+            fragment = prov_or_temp.lstrip(' ')
+        elif (prov_or_temp[-1] != '0' and prov_or_temp[-1].islower() and prov_or_temp[:-1].isupper()):
+            fragment = prov_or_temp[-1]
     elif len(number.strip()) == 0 or len(prov_or_temp.strip()) != 0:
         # No number but provisional/temp. designation
         body = prov_or_temp
@@ -666,6 +679,11 @@ def parse_mpcobs(line):
         body = number
 
     body = body.rstrip()
+    # Strip leading zeros off comets
+    if body[-1] == 'P' and body[:-1].isdigit():
+        body = body.lstrip('0')
+        if fragment is not None:
+            body += '-' + fragment.upper()
     obs_type = str(line[14])
     flag_char = str(line[13])
 
@@ -1274,6 +1292,8 @@ def fetch_arecibo_targets(page=None):
                                 else:
                                     if chunks[1].replace('-', '').isalpha() and len(chunks[1]) != 2:
                                         target_object = chunks[0]
+                                    elif 'Comet' in chunks[0] and '/P' in chunks[1].rstrip()[-2:]:
+                                        target_object = chunks[1].replace('/', '')
                                     else:
                                         target_object = chunks[0] + " " + chunks[1]
                             else:

@@ -22,13 +22,14 @@ import urllib
 import logging
 import tempfile
 import bokeh
-from django.db.models import Q
+from django.db.models import Q, Prefetch
 from django.forms.models import model_to_dict
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.files.storage import default_storage
+from django.core.paginator import Paginator
 from django.urls import reverse, reverse_lazy
 from django.shortcuts import render, redirect
 from django.views.generic import DetailView, ListView, FormView, TemplateView, View
@@ -123,7 +124,7 @@ def determine_active_proposals(proposal_code=None, filter_proposals=True):
     if proposal_code is not None:
         try:
             proposal = Proposal.objects.get(code=proposal_code.upper())
-            proposals = [proposal.code,]
+            proposals = [proposal.code, ]
         except Proposal.DoesNotExist:
             logger.warning("Proposal {} does not exist".format(proposal_code))
             proposals = []
@@ -249,6 +250,7 @@ class SuperBlockDetailView(DetailView):
     template_name = 'core/block_detail.html'
     model = SuperBlock
 
+
 class SuperBlockTimeline(DetailView):
     template_name = 'core/block_timeline.html'
     model = SuperBlock
@@ -270,6 +272,7 @@ class SuperBlockTimeline(DetailView):
             blks.append(data)
         context['blocks'] = json.dumps(blks)
         return context
+
 
 class BlockListView(ListView):
     model = Block
@@ -360,15 +363,53 @@ class MeasurementViewBlock(LoginRequiredMixin, View):
 
 class MeasurementViewBody(View):
     template = 'core/measurements.html'
+    # Set default pagination (number of objects per page)
+    paginate_by = 20
+    # Set minimum number of orphans (objects allowed on last page)
+    orphans = 3
 
     def get(self, request, *args, **kwargs):
         body = Body.objects.get(pk=kwargs['pk'])
-        measures = SourceMeasurement.objects.filter(body=body).order_by('frame__midpoint')
-        return render(request, self.template, {'body': body, 'measures' : measures})
+        measurements = SourceMeasurement.objects.filter(body=body).order_by('frame__midpoint')
+        measurements = measurements.prefetch_related(Prefetch('frame'), Prefetch('body'))
+
+        # Set up pagination
+        page = request.GET.get('page', None)
+
+        # Toggle Pagination
+        if page == '0':
+            self.paginate_by = len(measurements)
+        # add more rows for denser formats
+        elif 'mpc' in request.path or 'ades' in request.path:
+            self.paginate_by = 30
+        paginator = Paginator(measurements, self.paginate_by, orphans=self.orphans)
+
+        if paginator.num_pages > 1:
+            is_paginated = True
+        else:
+            is_paginated = False
+
+        if page is None or int(page) < 1:
+            page = 1
+        elif int(page) > paginator.num_pages:
+            page = paginator.num_pages
+        page_obj = paginator.page(page)
+
+        return render(request, self.template, {'body': body, 'measures' : page_obj, 'is_paginated': is_paginated, 'page_obj': page_obj})
+
+
+def download_measurements_file(template, body, m_format, request):
+    measures = SourceMeasurement.objects.filter(body=body.id).order_by('frame__midpoint')
+    measures = measures.prefetch_related(Prefetch('frame'), Prefetch('body'))
+    data = { 'measures' : measures}
+    filename = "{}{}".format(body.current_name().replace(' ', '').replace('/', '_'), m_format)
+
+    response = HttpResponse(template.render(data), content_type="text/plain")
+    response['Content-Disposition'] = 'attachment; filename=' + filename
+    return response
 
 
 class MeasurementDownloadMPC(View):
-
     template = get_template('core/mpc_outputfile.txt')
 
     def get(self, request, *args, **kwargs):
@@ -378,12 +419,7 @@ class MeasurementDownloadMPC(View):
             logger.warning("Could not find Body with pk={}".format(kwargs['pk']))
             raise Http404("Body does not exist")
 
-        measures = SourceMeasurement.objects.filter(body=body).order_by('frame__midpoint')
-        data = { 'measures' : measures}
-        filename = "{}_mpc.dat".format(body.current_name().replace(' ', '').replace('/', '_'))
-
-        response = HttpResponse(self.template.render(data), content_type="text/plain")
-        response['Content-Disposition'] = 'attachment; filename=' + filename
+        response = download_measurements_file(self.template, body, '_mpc.dat', request)
         return response
 
 
@@ -398,12 +434,7 @@ class MeasurementDownloadADESPSV(View):
             logger.warning("Could not find Body with pk={}".format(kwargs['pk']))
             raise Http404("Body does not exist")
 
-        measures = SourceMeasurement.objects.filter(body=body).order_by('frame__midpoint')
-        data = { 'measures' : measures}
-        filename = "{}.psv".format(body.current_name().replace(' ', '').replace('/', '_'))
-
-        response = HttpResponse(self.template.render(data), content_type="text/plain")
-        response['Content-Disposition'] = 'attachment; filename=' + filename
+        response = download_measurements_file(self.template, body, '.psv', request)
         return response
 
 
@@ -416,6 +447,7 @@ def export_measurements(body_id, output_path=''):
         logger.warning("Could not find Body with pk={}".format(body_id))
         return None, -1
     measures = SourceMeasurement.objects.filter(body=body).exclude(frame__frametype=Frame.SATELLITE_FRAMETYPE).exclude(frame__midpoint__lt=datetime(1993, 1, 1, 0, 0, 0, 0)).order_by('frame__midpoint')
+    measures = measures.prefetch_related(Prefetch('frame'), Prefetch('body'))
     data = { 'measures' : measures}
 
     filename = "{}.mpc".format(body.current_name().replace(' ', '').replace('/', '_'))
@@ -496,7 +528,7 @@ def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_di
                 else:
                     time_to_current_epoch = abs(datetime.min - comp_time)
                 time_to_new_epoch = abs(new_elements['epochofel'] - comp_time)
-                if time_to_new_epoch <= time_to_current_epoch and new_elements['orbit_rms'] < 1.0:
+                if time_to_new_epoch <= time_to_current_epoch and new_elements['orbit_rms'] > 0.0 and new_elements['orbit_rms'] < 1.0:
                     # Reset some fields to avoid overwriting
 
                     new_elements['provisional_name'] = body.provisional_name
@@ -513,6 +545,8 @@ def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_di
                         message = "Epoch of elements was too old"
                     if new_elements['orbit_rms'] >= 1.0:
                         message += " and rms was too high"
+                    elif new_elements['orbit_rms'] < 0.001:
+                        message += " and rms was suspicously low"
                     message += ". Did not update"
                 logger.info("%s Body #%d (%s) with FindOrb" % (message, body.pk, body.current_name()))
 
@@ -2729,11 +2763,15 @@ def create_source_measurement(obs_lines, block=None):
     if obs_body:
         # initialize DB products
         frame_list = Frame.objects.filter(sourcemeasurement__body=obs_body)
-        source_list = SourceMeasurement.objects.filter(body=obs_body)
+        source_list = SourceMeasurement.objects.filter(body=obs_body).prefetch_related('frame')
         block_list = Block.objects.filter(body=obs_body)
         measure_count = len(source_list)
 
         for obs_line in reversed(obs_lines):
+            # End loop when measurements are in the DB for all MPC lines
+            logger.info('Previously recorded {} of {} total MPC obs'.format(measure_count, useful_obs))
+            if measure_count >= useful_obs:
+                break
             frame = None
             logger.debug(obs_line.rstrip())
             params = parse_mpcobs(obs_line)
@@ -2850,10 +2888,7 @@ def create_source_measurement(obs_lines, block=None):
                         if measure_created:
                             measures.append(measure)
                             measure_count += 1
-                        # End loop when measurements are in the DB for all MPC lines
-                        logger.info('Previously recorded {} of {} total MPC obs'.format(measure_count, useful_obs))
-                        if measure_count >= useful_obs:
-                            break
+
 
         # Set updated to True for the target with the current datetime
         update_params = { 'updated' : True,
