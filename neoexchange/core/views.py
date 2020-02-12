@@ -3318,9 +3318,11 @@ class LCPlot(LookUpBodyMixin, FormView):
         """
         params = kwargs
         params['body'] = self.body
-        if kwargs['div']:
+        if kwargs['script']:
             params["the_script"] = kwargs['script']
             params["lc_div"] = kwargs['div']['plot']
+        else:
+            params["lc_div"] = kwargs['div']
         base_path = BOKEH_URL.format(bokeh.__version__)
         params['css_path'] = base_path + 'css'
         params['js_path'] = base_path + 'js'
@@ -3392,8 +3394,11 @@ def get_lc_plot(body, data):
     meta_list = []
     lc_list = []
     filt_list = []
-    for file in filenames:
-        meta_list, lc_list = import_alcdef(os.path.join(datadir, file), meta_list, lc_list)
+    if filenames:
+        for file in filenames:
+            meta_list, lc_list = import_alcdef(os.path.join(datadir, file), meta_list, lc_list)
+    else:
+        meta_list = lc_list = []
 
     meta_list = [x for _, x in sorted(zip(lc_list, meta_list), key=lambda i: i[0]['date'][0])]
     lc_list = sorted(lc_list, key=lambda i: i['date'][0])
@@ -3402,18 +3407,24 @@ def get_lc_plot(body, data):
         filt_list.append(meta['FILTER'])
 
     # Get predicted JPL position of target during obs
-    start = datetime.strptime(meta_list[0]['SESSIONDATE']+'T'+meta_list[0]['SESSIONTIME'], '%Y-%m-%dT%H:%M:%S') - timedelta(days=1)
-    end = datetime.strptime(meta_list[-1]['SESSIONDATE']+'T'+meta_list[1]['SESSIONTIME'], '%Y-%m-%dT%H:%M:%S') + timedelta(days=1)
-    total_time = end-start
-    step_size = round(total_time.total_seconds()/60/100)
-    sitecode = '500'
-    obj_name = body.name
-    ephem = horizons_ephem(obj_name, start, end, sitecode, ephem_step_size='{}m'.format(step_size))
+    if meta_list:
+        start = datetime.strptime(meta_list[0]['SESSIONDATE']+'T'+meta_list[0]['SESSIONTIME'], '%Y-%m-%dT%H:%M:%S') - timedelta(days=1)
+        end = datetime.strptime(meta_list[-1]['SESSIONDATE']+'T'+meta_list[1]['SESSIONTIME'], '%Y-%m-%dT%H:%M:%S') + timedelta(days=1)
+        total_time = end-start
+        step_size = round(total_time.total_seconds()/60/100)
+        sitecode = '500'
+        obj_name = body.name
+        ephem = horizons_ephem(obj_name, start, end, sitecode, ephem_step_size='{}m'.format(step_size))
+    else:
+        ephem = []
 
     if lc_list:
         script, div = lc_plot(lc_list, meta_list, filt_list, period, jpl_ephem=ephem)
     else:
-        script = div = None
+        script = None
+        div = """
+            <div class='warning msgpadded'>Could not find any LC data for {}</div>
+        """.format(body.full_name())
 
     return script, div, meta_list
 
