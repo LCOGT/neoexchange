@@ -656,9 +656,9 @@ def lc_plot(lc_list, meta_list, filt_list, period=1, jpl_ephem=None):
                                         """)
 
     hover1 = HoverTool(tooltips=[('Phase', '$x{0.000}'), ('Mag', '$y{0.000}'), ('To Next', '@y{custom}')],
-                       formatters=dict(y=next_time), point_policy="none",
-                       line_policy="none", show_arrow=False, mode="vline", renderers=[base_line])
-    hover2 = HoverTool(tooltips='@title', renderers=[data_plot], point_policy="snap_to_data")
+                       formatters=dict(y=next_time), point_policy="none", line_policy="none", show_arrow=False,
+                       mode="vline", renderers=[base_line], attachment='above')
+    hover2 = HoverTool(tooltips='@title', renderers=[data_plot], point_policy="snap_to_data", attachment='below')
     crosshair = CrosshairTool()
     plot_p.add_tools(hover1, crosshair, hover2)
 
