@@ -3450,6 +3450,7 @@ def get_lc_plot(body, data):
         sitecode = '500'
         obj_name = body.name
         ephem = horizons_ephem(obj_name, start, end, sitecode, ephem_step_size='{}m'.format(step_size))
+        print(ephem)
     else:
         ephem = []
 

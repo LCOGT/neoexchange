@@ -636,8 +636,8 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
     to the table.
     """
 
-    eph = Horizons(id=obj_name, id_type='smallbody', epochs={'start' : start.strftime("%Y-%m-%d %H:%M:%S"),
-            'stop' : end.strftime("%Y-%m-%d %H:%M:%S"), 'step' : ephem_step_size}, location=site_code)
+    eph = Horizons(id=obj_name, id_type='smallbody', epochs={'start' : start.strftime("%Y-%m-%d %H:%M"),
+            'stop' : end.strftime("%Y-%m-%d %H:%M"), 'step' : ephem_step_size}, location=site_code)
 
     airmass_limit = 99
     if alt_limit > 0:
