@@ -38,7 +38,7 @@ from bokeh.layouts import layout, column, row
 from bokeh.plotting import figure, ColumnDataSource
 from bokeh.resources import CDN, INLINE
 from bokeh.embed import components, file_html
-from bokeh.models import HoverTool, Label, CrosshairTool, Whisker, TeeHead, Range1d, CustomJS, Title
+from bokeh.models import HoverTool, Label, CrosshairTool, Whisker, TeeHead, Range1d, CustomJS, Title, CustomJSHover, DataRange1d
 from bokeh.models.widgets import CheckboxGroup, Slider, TableColumn, DataTable, HTMLTemplateFormatter, NumberEditor,\
     NumberFormatter, Spinner, Button, Panel, Tabs, Div, Toggle
 from bokeh.palettes import Category20, Category10
@@ -588,10 +588,15 @@ def get_name(meta_dat):
 
 def lc_plot(lc_list, meta_list, filt_list, period=1, jpl_ephem=None):
 
+    obj, name, num = get_name(meta_list[0])
+    date_range = meta_list[0]['SESSIONDATE'].replace('-', '') + '-' + meta_list[-1]['SESSIONDATE'].replace('-', '')
+    base_date = floor(min(sorted([jd for lc in lc_list for jd in lc['date']])))
+
     plot_u = figure(plot_width=900, plot_height=400)
     plot_p = figure(plot_width=900, plot_height=400)
     plot_u.y_range.flipped = True
-    plot_p.y_range.flipped = True
+    plot_p.x_range = Range1d(0, 1.1, bounds=(-.2, 1.2))
+    plot_p.y_range = DataRange1d(names=['mags'], flipped=True)
 
     # Create Column Data Source that will be used by the plot
     source = ColumnDataSource(data=dict(time=[], mag=[], color=[], title=[], err_high=[], err_low=[], alpha=[]))
@@ -622,23 +627,40 @@ def lc_plot(lc_list, meta_list, filt_list, period=1, jpl_ephem=None):
         Whisker(source=orig_source, base="time", upper="err_high", lower="err_low", line_color="color", line_alpha="alpha",
                 lower_head=error_cap, upper_head=error_cap))
     plot_u.circle(x="time", y="mag", source=orig_source, size=3, color="color", alpha="alpha")
+    plot_u.legend.click_policy = 'hide'
     plot_p.add_layout(
         Whisker(source=source, base="time", upper="err_high", lower="err_low", line_color="color", line_alpha="alpha",
                 lower_head=error_cap, upper_head=error_cap))
-    plot_p.circle(x="time", y="mag", source=source, size=3, color="color", alpha="alpha")
-    plot_u.legend.click_policy = 'hide'
+    data_plot = plot_p.circle(x="time", y="mag", source=source, size=3, color="color", alpha="alpha", name='mags')
+    base_line = plot_p.line([-2, 2], [base_date, base_date], alpha=0, name="phase_line")
 
-    filt_unique = list(set(filt_list))
-    filt_sets = {}
-    for filt_u in filt_unique:
-        filt_sets[filt_u] = []
-        for i, filt in enumerate(filt_list):
-            if filt == filt_u:
-                filt_sets[filt_u].append(i)
+    next_time = CustomJSHover(args=dict(period_box=period_box, phase_shift=phase_shift),
+                              code="""
+                                            const P = period_box.value;
+                                            const B = phase_shift.value;
+                                            var x = special_vars.x;
+                                            var base_date = special_vars.data_y;
+                                            var JD = new Date().getTime()/86400000 + 2440587.5;
+                                            let hours = JD - base_date * 24;
+                                            let current_phase = (hours / P);
+                                            current_phase = current_phase - Math.floor(current_phase) + B;
+                                            let phase_diff = x - current_phase;
+                                            if (phase_diff < 0){
+                                                phase_diff = phase_diff + 1;
+                                                if (phase_diff < 0){
+                                                    phase_diff = phase_diff + 1;
+                                                }
+                                            }
+                                            let hours_diff = phase_diff * P
+                                            return "" + hours_diff.toFixed(2) + "h";
+                                        """)
 
-    obj, name, num = get_name(meta_list[0])
-    date_range = meta_list[0]['SESSIONDATE'].replace('-', '')+'-'+meta_list[-1]['SESSIONDATE'].replace('-', '')
-    base_date = floor(min(sorted([jd for lc in lc_list for jd in lc['date']])))
+    hover1 = HoverTool(tooltips=[('Phase', '$x{0.000}'), ('Mag', '$y{0.000}'), ('To Next', '@y{custom}')],
+                       formatters=dict(y=next_time), point_policy="none",
+                       line_policy="none", show_arrow=False, mode="vline", renderers=[base_line])
+    hover2 = HoverTool(tooltips='@title', renderers=[data_plot], point_policy="snap_to_data")
+    crosshair = CrosshairTool()
+    plot_p.add_tools(hover1, crosshair, hover2)
 
     plot_u.yaxis.axis_label = 'Apparent Magnitude'
     plot_u.title.text = 'LC for {} ({})'.format(obj, date_range)
@@ -646,7 +668,6 @@ def lc_plot(lc_list, meta_list, filt_list, period=1, jpl_ephem=None):
     plot_p.yaxis.axis_label = 'Apparent Magnitude'
     plot_p.title.text = 'LC for {} ({})'.format(obj, date_range)
     plot_p.xaxis.axis_label = 'Phase (Period = {}h / Epoch = {})'.format(period, base_date)
-    plot_p.x_range = Range1d(0, 1.1, bounds=(-.2, 1.2))
 
     def update():
         sess_date = []
