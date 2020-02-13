@@ -3444,7 +3444,7 @@ def get_lc_plot(body, data):
     # Get predicted JPL position of target during obs
     if meta_list:
         start = datetime.strptime(meta_list[0]['SESSIONDATE']+'T'+meta_list[0]['SESSIONTIME'], '%Y-%m-%dT%H:%M:%S') - timedelta(days=1)
-        end = datetime.strptime(meta_list[-1]['SESSIONDATE']+'T'+meta_list[1]['SESSIONTIME'], '%Y-%m-%dT%H:%M:%S') + timedelta(days=1)
+        end = datetime.strptime(meta_list[-1]['SESSIONDATE']+'T'+meta_list[-1]['SESSIONTIME'], '%Y-%m-%dT%H:%M:%S') + timedelta(days=1)
         total_time = end-start
         step_size = round(total_time.total_seconds()/60/100)
         sitecode = '500'
