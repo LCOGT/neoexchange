@@ -88,7 +88,10 @@ class Command(BaseCommand):
     def plot_timeseries(self, times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, colors='r', title='', sub_title='', datadir='./', filename='tmp_', diameter=0.4*u.m):
         fig, (ax0, ax1) = plt.subplots(nrows=2, sharex=True, gridspec_kw={'height_ratios': [15, 4]})
         ax0.errorbar(times, mags, yerr=mag_errs, marker='.', color=colors, linestyle=' ')
-        ax1.errorbar(times, zps, yerr=zp_errs, marker='.', color=colors, linestyle=' ')
+        zp_times = [alltimes[i] for i, zp in enumerate(zps) if zp and zp_errs[i]]
+        zps_good = [zp for i, zp in enumerate(zps) if zp and zp_errs[i]]
+        zp_errs_good = [zp_errs[i] for i, zp in enumerate(zps) if zp and zp_errs[i]]
+        ax1.errorbar(zp_times, zps_good, yerr=zp_errs_good, marker='.', color=colors, linestyle=' ')
         ax0.invert_yaxis()
         ax1.invert_yaxis()
         ax1.set_xlabel('Time')
@@ -336,8 +339,8 @@ class Command(BaseCommand):
                                 block_mags.append(best_source.obs_mag)
                                 block_mag_errs.append(best_source.err_obs_mag)
                                 filter_list.append(frame.ALCDEF_filter_format())
-                                zps.append(frame.zeropoint)
-                                zp_errs.append(frame.zeropoint_err)
+                        zps.append(frame.zeropoint)
+                        zp_errs.append(frame.zeropoint_err)
                         frame_data.append({'ra': ra,
                                            'dec': dec,
                                            'mag': mag_estimate,
@@ -379,11 +382,14 @@ class Command(BaseCommand):
                     cent = .03
                 else:
                     cent = None
-                movie_file = make_gif(frames_list, init_fr=100, center=cent, out_path=out_path,
-                                      plot_source=True, target_data=frame_data, horizons_comp=False, progress=True)
-                self.stdout.write("New gif created: {}".format(movie_file))
+                # movie_file = make_gif(frames_list, init_fr=100, center=cent, out_path=out_path,
+                #                       plot_source=True, target_data=frame_data, horizons_comp=False, progress=True)
+                # self.stdout.write("New gif created: {}".format(movie_file))
         alcdef_file.close()
-        os.chmod(filename, rw_permissions)
+        try:
+            os.chmod(filename, rw_permissions)
+        except PermissionError:
+            pass
         self.stdout.write("Found matches in %d of %d frames" % ( len(times), total_frame_count))
 
         # Write light curve data out in similar format to Make_lc.csh
@@ -406,7 +412,10 @@ class Command(BaseCommand):
                 lightcurve_file.write("%7.5lf %6.3lf %5.3lf\n" % (time_jd_truncated, mags[i], mag_errs[i]))
                 i += 1
             lightcurve_file.close()
-            os.chmod(os.path.join(datadir, base_name + 'lightcurve_data.txt'), rw_permissions)
+            try:
+                os.chmod(os.path.join(datadir, base_name + 'lightcurve_data.txt'), rw_permissions)
+            except PermissionError:
+                pass
 
             # Write out MPC1992 80 column file
             for mpc_line in mpc_lines:
