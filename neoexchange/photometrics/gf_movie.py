@@ -81,6 +81,36 @@ def print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, lengt
         print()
 
 
+def get_header_info(fits_file):
+    with fits.open(fits_file, ignore_missing_end=True) as hdul:
+        try:
+            header = hdul['SCI'].header
+        except KeyError:
+            try:
+                header = hdul['COMPRESSED_IMAGE'].header
+            except KeyError:
+                header = hdul[0].header
+        # create title
+        obj = header['OBJECT']
+        try:
+            rn = header['REQNUM'].lstrip('0')
+        except KeyError:
+            rn = 'UNKNOWN'
+        try:
+            site = header['SITEID'].upper()
+        except KeyError:
+            site = ' '
+        try:
+            inst = header['INSTRUME'].upper()
+        except KeyError:
+            inst = ' '
+        if header['OBSTYPE'] in 'GUIDE':
+            guide_frames = True
+        else:
+            guide_frames = False
+    return obj, rn, site, inst, guide_frames
+
+
 def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True, out_path="", tr=False, center=None, plot_source=False, target_data=None, horizons_comp=False):
     """
     takes in list of .fits guide frames and turns them into a moving gif.
@@ -114,32 +144,15 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
             i += 1
 
     # pull header information from first fits file
-    with fits.open(fits_files[0], ignore_missing_end=True) as hdul:
+    for file in fits_files:
         try:
-            header = hdul['SCI'].header
-        except KeyError:
-            try:
-                header = hdul['COMPRESSED_IMAGE'].header
-            except KeyError:
-                header = hdul[0].header
-        # create title
-        obj = header['OBJECT']
-        try:
-            rn = header['REQNUM'].lstrip('0')
-        except KeyError:
-            rn = 'UNKNOWN'
-        try:
-            site = header['SITEID'].upper()
-        except KeyError:
-            site = ' '
-        try:
-            inst = header['INSTRUME'].upper()
-        except KeyError:
-            inst = ' '
-        if header['OBSTYPE'] in 'GUIDE':
-            guide_frames = True
-        else:
-            guide_frames = False
+            obj, rn, site, inst, guide_frames = get_header_info(file)
+            break
+        except FileNotFoundError:
+            obj = rn = site = inst = None
+            continue
+    if not obj and not rn and not site and not inst:
+        return "WARNING: COULD NOT FIND FITS FILES"
 
     if title is None:
         title = 'Request Number {} -- {} at {} ({})'.format(rn, obj, site, inst)
@@ -188,8 +201,8 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
                         data = hdul[0].data
         except FileNotFoundError:
             if progress:
-                print_progress_bar(n+1, len(fits_files), prefix='Creating Gif: Frame {}'.format(current_count), time_in=time_in)
-            return ax
+                print('Could not find Frame {}'.format(fits_files[n]))
+            return None
 
         shape = data.shape
         x_frac = 0
