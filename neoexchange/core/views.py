@@ -3348,9 +3348,6 @@ class LCPlot(LookUpBodyMixin, FormView):
         return self.render_to_response(self.get_context_data(body=self.body, script=script, div=div, meta_list=meta_list))
 
     def get_context_data(self, **kwargs):
-        """
-        Only show proposals the current user is a member of
-        """
         params = kwargs
         params['body'] = self.body
         if kwargs['script']:
@@ -3363,11 +3360,12 @@ class LCPlot(LookUpBodyMixin, FormView):
         params['js_path'] = base_path + 'js'
         params['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
         params['table_path'] = BOKEH_URL.format('tables-'+bokeh.__version__) + 'js'
-        best_period = self.body.get_physical_parameters('P', False)
         return params
 
 
 def import_alcdef(file, meta_list, lc_list):
+    """Pull LC data from ALCDEF text files."""
+
     lc_file = open(file)
     lines = lc_file.readlines()
 
@@ -3428,7 +3426,6 @@ def get_lc_plot(body, data):
 
     meta_list = []
     lc_list = []
-    filt_list = []
     if filenames:
         for file in filenames:
             meta_list, lc_list = import_alcdef(os.path.join(datadir, file), meta_list, lc_list)
@@ -3437,9 +3434,6 @@ def get_lc_plot(body, data):
 
     meta_list = [x for _, x in sorted(zip(lc_list, meta_list), key=lambda i: i[0]['date'][0])]
     lc_list = sorted(lc_list, key=lambda i: i['date'][0])
-
-    for meta in meta_list:
-        filt_list.append(meta['FILTER'])
 
     # Get predicted JPL position of target during obs
     if meta_list:
@@ -3455,7 +3449,7 @@ def get_lc_plot(body, data):
         ephem = []
 
     if lc_list:
-        script, div = lc_plot(lc_list, meta_list, filt_list, period, jpl_ephem=ephem)
+        script, div = lc_plot(lc_list, meta_list, period, jpl_ephem=ephem)
     else:
         script = None
         div = """

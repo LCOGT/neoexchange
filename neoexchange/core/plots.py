@@ -587,54 +587,78 @@ def get_name(meta_dat):
     return out_string, name, number
 
 
-def lc_plot(lc_list, meta_list, filt_list, period=1, jpl_ephem=None):
+def lc_plot(lc_list, meta_list, period=1, jpl_ephem=None):
+    """Creates an interactive Bokeh LC plot:
+    Inputs:
+    [lc_list] --- A list of LC dictionaries, each one containing the following keys:
+            ['date'] --- A list of Julian Dates corresponding to each observation
+            ['mags'] --- a list of magnitudes corresponding to each date
+            ['mag_errs'] --- a list of magnitude errors corresponding to each magnitude
+    [meta_list] --- a list of dictionaries with the same length as [lc_list] each containing at leas the following keys:
+            ['SESSIONDATE'] --- Date string with the format '%Y-%m-%d' corresponding to the UT day of observation block
+            ['SESSIONTIME'] --- Time string with the format 'H:%M:%S' corresponding to the UT time of observation block
+            ['OBJECTNAME'] --- Name of target
+            ['OBJECTNUMBER'] --- Number of target
+            ['MPCDESIG'] --- Provisional Designation of target
+            ['FILTER'] --- Filter of Observation
+            ['MPCCODE'] --- Sitecode of observation
+    period --- length in hours of the predicted period (float)
+    jpl_ephem --- AstroPy Table containing at least the following keys:
+            ['datetime_jd'] --- Julian dates
+            ['V'] --- predicted V magnitude for given Julian dates
+    """
 
+    # Pull general info from metadata
     obj, name, num = get_name(meta_list[0])
     date_range = meta_list[0]['SESSIONDATE'].replace('-', '') + '-' + meta_list[-1]['SESSIONDATE'].replace('-', '')
     base_date = floor(min(sorted([jd for lc in lc_list for jd in lc['date']])))
 
+    # Initialize plots
     plot_u = figure(plot_width=900, plot_height=400)
     plot_p = figure(plot_width=900, plot_height=400)
     plot_u.y_range.flipped = True
     plot_p.x_range = Range1d(0, 1.1, bounds=(-.2, 1.2))
     plot_p.y_range = DataRange1d(names=['mags'], flipped=True)
 
-    # Create Column Data Source that will be used by the plot
-    source = ColumnDataSource(data=dict(time=[], mag=[], color=[], title=[], err_high=[], err_low=[], alpha=[]))
-    orig_source = ColumnDataSource(data=dict(time=[], mag=[], mag_err=[], color=[], title=[], err_high=[], err_low=[], alpha=[]))
-    dataset_source = ColumnDataSource(data=dict(symbol=[], date=[], time=[], site=[], filter=[], color=[], title=[], offset=[]))
-    horizons_source = ColumnDataSource(data=dict(date=[], v_mag=[]))
+    # Create Column Data Source that will be used by the plots
+    source = ColumnDataSource(data=dict(time=[], mag=[], color=[], title=[], err_high=[], err_low=[], alpha=[]))  # phased LC data Source
+    orig_source = ColumnDataSource(data=dict(time=[], mag=[], mag_err=[], color=[], title=[], err_high=[], err_low=[], alpha=[]))  # unphased LC data source
+    dataset_source = ColumnDataSource(data=dict(symbol=[], date=[], time=[], site=[], filter=[], color=[], title=[], offset=[]))  # dataset info
+    horizons_source = ColumnDataSource(data=dict(date=[], v_mag=[]))  # V-mag info
 
     # Create Input controls
-    phase_shift = Slider(title="Phase Offset", value=0, start=-1, end=1, step=.01, width=200)
+    phase_shift = Slider(title="Phase Offset", value=0, start=-1, end=1, step=.01, width=200, tooltips=False)  # Slider bar to change base_date by +/- 1 period
     max_period = round(10 * period)
     min_period = 0.0
     step = (max_period - min_period)/1000
-    period_slider = Slider(title=None, value=period, start=min_period, end=max_period, step=step, width=200)
+    period_slider = Slider(title=None, value=period, start=min_period, end=max_period, step=step, width=200, tooltips=False)  # Slider bar to change period
     if period != 1:
         p_box_title = 'Period (Default: {}h)'.format(period)
     else:
         p_box_title = 'Period (Unknown)'
-    period_box = Spinner(value=period, low=0, step=step, title=p_box_title, width=200)
-    p_slider_min = Spinner(value=min_period, low=0, step=.01, title="min", width=100)
-    p_slider_max = Spinner(value=max_period, low=0, step=.01, title="max", width=100)
-    v_offset_button = Toggle(label="Apply Predicted Offset", button_type="default")
-    draw_button = Button(label="Re-Draw", button_type="default", width=50)
+    period_box = Spinner(value=period, low=0, step=step, title=p_box_title, width=200)  # Number Box for typing in period
+    p_slider_min = Spinner(value=min_period, low=0, step=.01, title="min", width=100)  # Number box for setting period constraints
+    p_slider_max = Spinner(value=max_period, low=0, step=.01, title="max", width=100)  # Number box for setting period constraints
+    v_offset_button = Toggle(label="Apply Predicted Offset", button_type="default")  # Button to add/remove Horizons predicted offset
+    draw_button = Button(label="Re-Draw", button_type="default", width=50)  # Button to re-draw mags.
 
     # Create plots
     error_cap = TeeHead(line_alpha=0)
+    # Build unphased plot:
     plot_u.line(x="date", y="v_mag", source=horizons_source, line_color='black', line_width=3, line_alpha=.5, legend_label="Horizons V-mag", visible=False)
     plot_u.add_layout(
         Whisker(source=orig_source, base="time", upper="err_high", lower="err_low", line_color="color", line_alpha="alpha",
                 lower_head=error_cap, upper_head=error_cap))
     plot_u.circle(x="time", y="mag", source=orig_source, size=3, color="color", alpha="alpha")
     plot_u.legend.click_policy = 'hide'
+    # Build Phased PLot:
     plot_p.add_layout(
         Whisker(source=source, base="time", upper="err_high", lower="err_low", line_color="color", line_alpha="alpha",
                 lower_head=error_cap, upper_head=error_cap))
     data_plot = plot_p.circle(x="time", y="mag", source=source, size=3, color="color", alpha="alpha", name='mags')
     base_line = plot_p.line([-2, 2], [base_date, base_date], alpha=0, name="phase_line")
 
+    # Write custom JavaScript Code to print the time to the next iteration of the given phase in a HoverTool
     next_time = CustomJSHover(args=dict(period_box=period_box, phase_shift=phase_shift),
                               code="""
                                             const P = period_box.value;
@@ -655,7 +679,7 @@ def lc_plot(lc_list, meta_list, filt_list, period=1, jpl_ephem=None):
                                             let hours_diff = phase_diff * P
                                             return "" + hours_diff.toFixed(2) + "h";
                                         """)
-
+    # Build Hovertools
     hover1 = HoverTool(tooltips=[('Phase', '$x{0.000}'), ('Mag', '$y{0.000}'), ('To Next', '@y{custom}')],
                        formatters=dict(y=next_time), point_policy="none", line_policy="none", show_arrow=False,
                        mode="vline", renderers=[base_line], attachment='above')
@@ -663,6 +687,7 @@ def lc_plot(lc_list, meta_list, filt_list, period=1, jpl_ephem=None):
     crosshair = CrosshairTool()
     plot_p.add_tools(hover1, crosshair, hover2)
 
+    # Set Axis and Title Text
     plot_u.yaxis.axis_label = 'Apparent Magnitude'
     plot_u.title.text = 'LC for {} ({})'.format(obj, date_range)
     plot_u.xaxis.axis_label = 'Date (Hours from {}.0)'.format(base_date)
@@ -670,6 +695,8 @@ def lc_plot(lc_list, meta_list, filt_list, period=1, jpl_ephem=None):
     plot_p.title.text = 'LC for {} ({})'.format(obj, date_range)
     plot_p.xaxis.axis_label = 'Phase (Period = {}h / Epoch = {})'.format(period, base_date)
 
+    # Create update function to fill datasets. This is currently unnecessary, but could be used if we ever got a
+    # Bokeh Server up and running. Then we would run this function instead of all of the JS below
     def update():
         sess_date = []
         sess_time = []
@@ -718,6 +745,7 @@ def lc_plot(lc_list, meta_list, filt_list, period=1, jpl_ephem=None):
 
     update()  # initial load of the data
 
+    # Create HTML template format that allows printing of data symbol
     template = """
                 <p style="color:<%=
                     (function colorfromint(){
@@ -728,6 +756,7 @@ def lc_plot(lc_list, meta_list, filt_list, period=1, jpl_ephem=None):
                 """
     formatter = HTMLTemplateFormatter(template=template)
 
+    # Establish Columns for DataTable
     columns = [
         TableColumn(field="symbol", title='', formatter=formatter, width=3),
         TableColumn(field="date", title="Date"),
@@ -738,10 +767,12 @@ def lc_plot(lc_list, meta_list, filt_list, period=1, jpl_ephem=None):
         TableColumn(field="offset", title="Mag Offset", editor=NumberEditor(step=.1), formatter=NumberFormatter(format="0.00"))
     ]
 
+    # Build Datatable and Title
     dataset_source.selected.indices = list(range(len(dataset_source.data['date'])))
     data_table = DataTable(source=dataset_source, columns=columns, width=600, height=300, selectable='checkbox', index_position=None, editable=True)
-    table_title = Div(text='<b>LC Data</b>', width=450)
+    table_title = Div(text='<b>LC Data</b>', width=450)  # No way to set title for Table, Have to build HTML Div and put above it...
 
+    # JS Callback to set Dataset Mag offset to relative Horizons v-mag differences
     v_offset_callback = CustomJS(args=dict(dataset_source=dataset_source, toggle=v_offset_button),
                         code="""const dataset = dataset_source.data;
                                 const O = dataset['offset'];
@@ -759,7 +790,10 @@ def lc_plot(lc_list, meta_list, filt_list, period=1, jpl_ephem=None):
                                 }
                                 dataset_source.change.emit();
                             """)
+    v_offset_button.js_on_click(v_offset_callback)
 
+    # JS Callback to update phased data when datasets are removed, and mag offsets are made.
+    # Note: Data just hidden (set to alpha=0). Not actually removed.
     callback = CustomJS(args=dict(source=source, dataset_source=dataset_source, osource=orig_source),
                         code="""const data = source.data;
                                 const base = osource.data;
@@ -816,10 +850,12 @@ def lc_plot(lc_list, meta_list, filt_list, period=1, jpl_ephem=None):
                                 source.change.emit();
                                 osource.change.emit();
                                 """)
-
     dataset_source.selected.js_on_change('indices', callback)
-    dataset_source.js_on_change('data', callback)
+    draw_button.js_on_click(callback)
+    dataset_source.js_on_change('data', callback)  # Does not seem to work. Not sure why.
 
+    # JS Call back to handle period max and min changes to both the period_box and the period_slider
+    # Self validation (min < 0, for instance) does not seem to work properly.
     period_bounds_callback = CustomJS(args=dict(period_box=period_box, period_slider=period_slider, p_max=p_slider_max, p_min=p_slider_min),
                         code="""
                         if (p_min.value < 0){
@@ -842,8 +878,10 @@ def lc_plot(lc_list, meta_list, filt_list, period=1, jpl_ephem=None):
     p_slider_max.js_on_change('value', period_bounds_callback)
     p_slider_min.js_on_change('value', period_bounds_callback)
 
+    # Link period_slider to period_box
     period_slider.js_link('value', period_box, 'value')
 
+    # JS call back to handle phasing of data to given period/epoch
     phased_callback = CustomJS(args=dict(source=source, period_box=period_box, period_slider=period_slider, plot=plot_p, osource=orig_source, phase_shift=phase_shift, base_date=base_date),
                         code="""
                         if (period_box.value <= 0){
@@ -910,11 +948,22 @@ def lc_plot(lc_list, meta_list, filt_list, period=1, jpl_ephem=None):
                         """)
     period_box.js_on_change('value', phased_callback)
     phase_shift.js_on_change('value', phased_callback)
-    draw_button.js_on_click(callback)
-    v_offset_button.js_on_click(v_offset_callback)
 
-    phased_layout = column(plot_p, row(column(row(table_title), data_table, row(v_offset_button, draw_button)), column(row(column(row(period_box), period_slider, phase_shift), column(p_slider_min, p_slider_max)))))
-    unphased_layout = column(plot_u, row(column(row(table_title), data_table)))
+    # Build layout tables:
+    phased_layout = column(plot_p,
+                           row(column(row(table_title),
+                                      data_table,
+                                      row(v_offset_button, draw_button)),
+                               column(row(column(row(period_box),
+                                                 period_slider,
+                                                 phase_shift),
+                                          column(p_slider_min,
+                                                 p_slider_max)))))
+    unphased_layout = column(plot_u,
+                             row(column(row(table_title),
+                                        data_table)))
+
+    # Set Tabs
     tabu = Panel(child=unphased_layout, title="Unphased")
     tabp = Panel(child=phased_layout, title="Phased")
     tabs = Tabs(tabs=[tabu, tabp])
@@ -925,6 +974,7 @@ def lc_plot(lc_list, meta_list, filt_list, period=1, jpl_ephem=None):
 
 
 def build_data_sets(lc_list, title_list):
+    """Buld initial datasources"""
     x_times = []
     y_mags = []
     mag_err = []
@@ -940,7 +990,7 @@ def build_data_sets(lc_list, title_list):
         err_up = np.array(lc['mags']) + np.array(lc['mag_errs'])
         err_low = np.array(lc['mags']) - np.array(lc['mag_errs'])
 
-        # build source data
+        # Build source data
         x_times += lc['date']
         y_mags += lc['mags']
         mag_err += lc['mag_errs']
