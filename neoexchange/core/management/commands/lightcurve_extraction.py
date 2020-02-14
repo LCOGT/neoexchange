@@ -56,6 +56,7 @@ class Command(BaseCommand):
         parser.add_argument('--title', type=str, default=None, help='plot title')
         parser.add_argument('--persist', action="store_true", default=False, help='Whether to store cross-matches as SourceMeasurements for the body')
         parser.add_argument('--single', action="store_true", default=False, help='Whether to only analyze a single SuperBlock')
+        parser.add_argument('--nogif', action="store_true", default=False, help='Whether to create a gif movie of the extraction')
         base_dir = os.path.join(settings.DATA_ROOT, 'Reduction')
         parser.add_argument('--datadir', default=base_dir, help='Place to save data (e.g. %s)' % base_dir)
 
@@ -377,14 +378,15 @@ class Command(BaseCommand):
                 data_path = make_data_dir(out_path, model_to_dict(frames_all_zp[0]))
                 frames_list = [os.path.join(data_path, f.filename) for f in frames_all_zp]
                 if "1m0" in frames_list[0]:
-                    cent = .03
+                    cent = .01
                 elif "0m4" in frames_list[0]:
                     cent = .03
                 else:
                     cent = None
-                movie_file = make_gif(frames_list, init_fr=100, center=cent, out_path=out_path,
-                                      plot_source=True, target_data=frame_data, horizons_comp=False, progress=True)
-                self.stdout.write("New gif created: {}".format(movie_file))
+                if not options['nogif']:
+                    movie_file = make_gif(frames_list, init_fr=100, center=cent, out_path=out_path,
+                                          plot_source=True, target_data=frame_data, horizons_comp=False, progress=True)
+                    self.stdout.write("New gif created: {}".format(movie_file))
         alcdef_file.close()
         try:
             os.chmod(filename, rw_permissions)
