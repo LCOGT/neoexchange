@@ -34,6 +34,7 @@ tel_overhead = { 'onem_setup_overhead'      : 90.0,                  # front pad
 inst_overhead = {   'onemsbig_exp_overhead'         : 15.5,
                     'point4m_exp_overhead'          : 13.0 + 1.0,       # readout + fixed overhead/exposure
                     'sinistro_exp_overhead'         : 27.0 + 1.0,       # readout + fixed overhead/exposure
+                    'sinistro_2x2_exp_overhead'     : 8.0 + 1.0,        # readout + fixed overhead/exposure
                     'twom_exp_overhead'             : 10.5 + 8.5,       # readout + fixed overhead/exposure
                     'floyds_exp_overhead'           : 25.0 + 0.5,       # readout + fixed overhead/exposure
                     'floyds_config_change_overhead' : 60.0,

@@ -135,6 +135,8 @@ class ScheduleObservations(FunctionalTest):
         self.assertIn('20.39', magnitude)
         speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
         self.assertIn('2.52 "/min', speed)
+        binning = self.browser.find_element_by_id('id_bin_mode').find_element_by_class_name('kv-value').text
+        self.assertIn('Full Chip, 1x1', binning)
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text

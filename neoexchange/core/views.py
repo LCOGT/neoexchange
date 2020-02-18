@@ -1164,6 +1164,9 @@ def schedule_check(data, body, ok_to_schedule=True):
         available_filters = available_filters + filt + ', '
     available_filters = available_filters[:-2]
 
+    # Check for binning
+    bin_mode = data.get('bin_mode', None)
+
     # Get maximum airmass
     max_airmass = data.get('max_airmass', 1.74)
     alt_limit = get_alt_from_airmass(max_airmass)
@@ -1224,10 +1227,10 @@ def schedule_check(data, body, ok_to_schedule=True):
         # Determine exposure length and count
         if data.get('exp_length', None):
             exp_length = data.get('exp_length')
-            slot_length, exp_count = determine_exp_count(slot_length, exp_length, data['site_code'], filter_pattern)
+            slot_length, exp_count = determine_exp_count(slot_length, exp_length, data['site_code'], filter_pattern, bin_mode=bin_mode)
         else:
-            exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length, magnitude, filter_pattern)
-            slot_length, exp_count = determine_exp_count(slot_length, exp_length, data['site_code'], filter_pattern, exp_count)
+            exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length, magnitude, filter_pattern, bin_mode=bin_mode)
+            slot_length, exp_count = determine_exp_count(slot_length, exp_length, data['site_code'], filter_pattern, exp_count, bin_mode=bin_mode)
         if exp_length is None or exp_count is None:
             ok_to_schedule = False
 
@@ -1318,7 +1321,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'dec_midpoint': dec,
         'period' : period,
         'jitter' : jitter,
-        'bin_mode' : data.get('bin_mode', None),
+        'bin_mode' : bin_mode,
         'snr' : snr,
         'saturated' : saturated,
         'spectroscopy' : spectroscopy,

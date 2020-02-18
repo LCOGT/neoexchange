@@ -1191,12 +1191,12 @@ def determine_exptime(speed, pixel_scale, max_exp_time=300.0):
     return round_exptime
 
 
-def determine_exp_time_count(speed, site_code, slot_length_in_mins, mag, filter_pattern):
+def determine_exp_time_count(speed, site_code, slot_length_in_mins, mag, filter_pattern, bin_mode=None):
     exp_time = None
     exp_count = None
     min_exp_count = 4
 
-    (chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, site_max_exp_time, alt_limit) = get_sitecam_params(site_code)
+    (chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, site_max_exp_time, alt_limit) = get_sitecam_params(site_code, bin_mode)
 
     slot_length = slot_length_in_mins * 60.0
 
@@ -1231,10 +1231,10 @@ def determine_exp_time_count(speed, site_code, slot_length_in_mins, mag, filter_
     return exp_time, exp_count
 
 
-def determine_exp_count(slot_length_in_mins, exp_time, site_code, filter_pattern, min_exp_count=1):
+def determine_exp_count(slot_length_in_mins, exp_time, site_code, filter_pattern, min_exp_count=1, bin_mode=None):
     exp_count = None
 
-    (chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, site_max_exp_time, alt_limit) = get_sitecam_params(site_code)
+    (chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, site_max_exp_time, alt_limit) = get_sitecam_params(site_code, bin_mode)
 
     slot_length = slot_length_in_mins * 60.0
 
@@ -1839,7 +1839,7 @@ def MPC_site_code_to_domes(site):
     return siteid, encid, telid
 
 
-def get_sitecam_params(site):
+def get_sitecam_params(site, bin_mode=None):
     """Translates <site> (e.g. 'FTN') to MPC site code, pixel scale, maximum
     exposure time, setup and exposure overheads.
     site_code is set to 'XXX' and the others are set to -1 in the event of an
@@ -1897,7 +1897,10 @@ def get_sitecam_params(site):
         alt_limit = cfg.tel_alt['point4m_alt_limit']
     elif site in valid_site_codes or site == '1M0':
         setup_overhead = cfg.tel_overhead['onem_setup_overhead']
-        exp_overhead = cfg.inst_overhead['sinistro_exp_overhead']
+        if bin_mode == '2k_2x2':
+            exp_overhead = cfg.inst_overhead['sinistro_2x2_exp_overhead']
+        else:
+            exp_overhead = cfg.inst_overhead['sinistro_exp_overhead']
         pixel_scale = cfg.tel_field['onem_sinistro_pixscale']
         fov = arcmins_to_radians(cfg.tel_field['onem_sinistro_fov'])
         max_exp_length = 300.0
