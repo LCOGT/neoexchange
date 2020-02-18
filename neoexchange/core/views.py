@@ -796,7 +796,6 @@ class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
 
     def form_valid(self, form, request):
         data = schedule_check(form.cleaned_data, self.body, self.ok_to_schedule)
-        print(data)
         new_form = ScheduleBlockForm(data)
         return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.body})
 
@@ -1319,6 +1318,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'dec_midpoint': dec,
         'period' : period,
         'jitter' : jitter,
+        'bin_mode' : data.get('bin_mode', None),
         'snr' : snr,
         'saturated' : saturated,
         'spectroscopy' : spectroscopy,
@@ -1431,7 +1431,7 @@ def schedule_submit(data, body, username):
               'tag_id': proposal.tag,
               'priority': data.get('priority', 15),
               'submitter_id': username,
-
+              'bin_mode': data['bin_mode'],
               'filter_pattern': data['filter_pattern'],
               'exp_count': data['exp_count'],
               'exp_time': data['exp_length'],

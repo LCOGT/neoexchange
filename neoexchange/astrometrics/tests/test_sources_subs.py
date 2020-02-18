@@ -1077,6 +1077,137 @@ class TestSubmitBlockToScheduler(TestCase):
         self.assertEqual(user_request['requests'][0].get('observation_type', None), None)
         self.assertEqual(user_request['observation_type'], 'TIME_CRITICAL')
 
+    def test_1m_binning_requestgroup(self):
+
+        site_code = '1M0'
+        utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 18,
+                    'exp_time' : 50.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson',
+                    'filter_pattern' : 'w',
+                    'bin_mode' : '2k_2x2'
+                 }
+
+        user_request = make_requestgroup(self.body_elements, params)
+
+        instrument_configs = user_request['requests'][0]['configurations'][0]['instrument_configs'][0]
+
+        self.assertEqual(user_request['submitter'], 'bsimpson')
+        self.assertEqual(instrument_configs['bin_x'], 2)
+        self.assertEqual(instrument_configs['bin_y'], 2)
+        self.assertEqual(instrument_configs['mode'], 'central_2k_2x2')
+        self.assertEqual(user_request['requests'][0]['location'].get('telescope', None), None)
+
+    def test_ELP_1m_binning_requestgroup(self):
+
+        site_code = 'V39'
+        utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 18,
+                    'exp_time' : 50.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'group_name' : self.body_elements['current_name'] + '_' + 'ELP' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson',
+                    'filter_pattern' : 'w',
+                    'bin_mode' : '2k_2x2'
+                 }
+
+        user_request = make_requestgroup(self.body_elements, params)
+
+        instrument_configs = user_request['requests'][0]['configurations'][0]['instrument_configs'][0]
+
+        self.assertEqual(user_request['submitter'], 'bsimpson')
+        self.assertEqual(instrument_configs['bin_x'], 2)
+        self.assertEqual(instrument_configs['bin_y'], 2)
+        self.assertEqual(instrument_configs['mode'], 'central_2k_2x2')
+
+    def test_1m_no_binning_requestgroup(self):
+
+        site_code = 'V39'
+        utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 18,
+                    'exp_time' : 50.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'group_name' : self.body_elements['current_name'] + '_' + 'ELP' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson',
+                    'filter_pattern' : 'w',
+                    'bin_mode' : 'full_chip'
+                 }
+
+        user_request = make_requestgroup(self.body_elements, params)
+
+        instrument_configs = user_request['requests'][0]['configurations'][0]['instrument_configs'][0]
+
+        self.assertEqual(user_request['submitter'], 'bsimpson')
+        self.assertEqual(instrument_configs['bin_x'], 1)
+        self.assertEqual(instrument_configs['bin_y'], 1)
+        self.assertNotIn('mode', instrument_configs.keys())
+
+    def test_2m_no_binning_requestgroup(self):
+
+        site_code = '2M0'
+        utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 18,
+                    'exp_time' : 50.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'group_name' : self.body_elements['current_name'] + '_' + 'ELP' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson',
+                    'filter_pattern' : 'w',
+                    'bin_mode' : '2k_2x2'
+                 }
+
+        user_request = make_requestgroup(self.body_elements, params)
+
+        instrument_configs = user_request['requests'][0]['configurations'][0]['instrument_configs'][0]
+
+        self.assertEqual(user_request['submitter'], 'bsimpson')
+        self.assertEqual(instrument_configs['bin_x'], 2)
+        self.assertEqual(instrument_configs['bin_y'], 2)
+        self.assertNotIn('mode', instrument_configs.keys())
+
+    def test_0m4_no_binning_requestgroup(self):
+
+        site_code = 'L09'
+        utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 18,
+                    'exp_time' : 50.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'group_name' : self.body_elements['current_name'] + '_' + 'ELP' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson',
+                    'filter_pattern' : 'w',
+                    'bin_mode' : '2k_2x2'
+                 }
+
+        user_request = make_requestgroup(self.body_elements, params)
+
+        instrument_configs = user_request['requests'][0]['configurations'][0]['instrument_configs'][0]
+
+        self.assertEqual(user_request['submitter'], 'bsimpson')
+        self.assertEqual(instrument_configs['bin_x'], 1)
+        self.assertEqual(instrument_configs['bin_y'], 1)
+        self.assertNotIn('mode', instrument_configs.keys())
+
     def test_multi_filter_requestgroup(self):
 
             site_code = 'W85'
