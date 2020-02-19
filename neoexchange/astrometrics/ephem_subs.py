@@ -1898,11 +1898,13 @@ def get_sitecam_params(site, bin_mode=None):
     elif site in valid_site_codes or site == '1M0':
         setup_overhead = cfg.tel_overhead['onem_setup_overhead']
         if bin_mode == '2k_2x2':
+            pixel_scale = cfg.tel_field['onem_2x2_sin_pixscale']
             exp_overhead = cfg.inst_overhead['sinistro_2x2_exp_overhead']
+            fov = arcmins_to_radians(cfg.tel_field['onem_2x2_sinistro_fov'])
         else:
             exp_overhead = cfg.inst_overhead['sinistro_exp_overhead']
-        pixel_scale = cfg.tel_field['onem_sinistro_pixscale']
-        fov = arcmins_to_radians(cfg.tel_field['onem_sinistro_fov'])
+            pixel_scale = cfg.tel_field['onem_sinistro_pixscale']
+            fov = arcmins_to_radians(cfg.tel_field['onem_sinistro_fov'])
         max_exp_length = 300.0
         alt_limit = cfg.tel_alt['normal_alt_limit']
         site_code = site
