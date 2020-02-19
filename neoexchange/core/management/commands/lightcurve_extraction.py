@@ -87,12 +87,49 @@ class Command(BaseCommand):
         return expected_fwhm
 
     def plot_timeseries(self, times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, colors='r', title='', sub_title='', datadir='./', filename='tmp_', diameter=0.4*u.m):
+        """Uses matplotlib to create and save a quick LC plot png as well as a sky conditions plot png.
+
+        Parameters
+        ----------
+        times : [DateTime]
+            Times of frames with properly extracted source for target
+        alltimes: [DateTime]
+            Complete list of times for all frames
+        mags : [Float]
+            Extracted magnitudes for target (Same Length as `times`)
+        mag_errs : [Float]
+            Extracted magnitude errors for target (Same Length as `times`)
+        zps : [Float]
+            Total list of zero points for all frames (Same Length as `alltimes`)
+        zps_errs : [Float]
+            Total list of zero point errors for all frames (Same Length as `alltimes`)
+        fwhm : [Float]
+            Total list of mean fwhm for all frames (Same Length as `alltimes`)
+        air_mass : [Float]
+            Total list of airmass for all frames (Same Length as `alltimes`)
+        colors : str
+            text representing color recognizable to matplotlib --> changes default color of all plots.
+        title : str
+            text of plot titles
+        sub_title : str
+            text of plot subtitle
+        datadir : str
+            path in which to save the plots
+        filename : str
+            basename for plots
+        diameter : Float * Units.length
+            Telescope diameter
+        """
+        # Build Figure
         fig, (ax0, ax1) = plt.subplots(nrows=2, sharex=True, gridspec_kw={'height_ratios': [15, 4]})
+        # Plot LC
         ax0.errorbar(times, mags, yerr=mag_errs, marker='.', color=colors, linestyle=' ')
+        # Sort out/Plot good Zero Points
         zp_times = [alltimes[i] for i, zp in enumerate(zps) if zp and zp_errs[i]]
         zps_good = [zp for i, zp in enumerate(zps) if zp and zp_errs[i]]
         zp_errs_good = [zp_errs[i] for i, zp in enumerate(zps) if zp and zp_errs[i]]
         ax1.errorbar(zp_times, zps_good, yerr=zp_errs_good, marker='.', color=colors, linestyle=' ')
+        # Set up Axes/Titles
         ax0.invert_yaxis()
         ax1.invert_yaxis()
         ax1.set_xlabel('Time')
@@ -113,6 +150,7 @@ class Command(BaseCommand):
 
         fig.savefig(os.path.join(datadir, filename + 'lightcurve.png'))
 
+        # Build Conditions plot
         fig2, (ax2, ax3) = plt.subplots(nrows=2, sharex=True)
         ax2.plot(alltimes, fwhm, marker='.', color=colors, linestyle=' ')
         expected_fwhm = self.generate_expected_fwhm(alltimes, air_mass, fwhm_0=fwhm[0], tel_diameter=diameter)
@@ -121,6 +159,7 @@ class Command(BaseCommand):
         else:
             ax2.plot(alltimes, expected_fwhm, color='black', linestyle=' ', marker='+', markersize=2, label="Predicted")
 
+        # Set up Axes/Titles
         ax2.set_ylabel('FWHM (")')
         # ax2.set_title('FWHM')
         fig2.suptitle('Conditions for obs: '+title)
@@ -146,6 +185,12 @@ class Command(BaseCommand):
         return
 
     def format_date(self, dates):
+        """
+        Adjust Date format based on length of timeseries
+
+        :param dates: [DateTime]
+        :return: str -- DateTime format
+        """
         start = dates[0]
         end = dates[-1]
         time_diff = end - start
@@ -159,6 +204,15 @@ class Command(BaseCommand):
             return "%H:%M:%S"
 
     def make_source_measurement(self, body, frame, cat_source, persist=False):
+        """
+        Save Source measurement to DB and create corresponding MPC and ADES outputs.
+
+        :param body: Body object
+        :param frame: Frame Object
+        :param cat_source: CatalogSource Object -- Target (hopefully)
+        :param persist: bool -- Whether to keep or destroy source once created.
+        :return: mpc_line, ades_psv_line -- properly formatted text lines for the source measurement
+        """
         source_params = { 'body' : body,
                           'frame' : frame,
                           'obs_ra' : cat_source.obs_ra,
@@ -181,6 +235,19 @@ class Command(BaseCommand):
         return mpc_line, ades_psv_line
 
     def output_alcdef(self, lightcurve_file, block, site, dates, mags, mag_errors, filt, outmag):
+        """
+        Create a standardized ALCDEF formatted text file for LC data
+
+        :param lightcurve_file: Open file object
+        :param block: Block object
+        :param site: str -- MPC Site code
+        :param dates: [DateTime] -- times of obs
+        :param mags: [Float] -- Magnitudes from obs
+        :param mag_errors: [Float] -- Magnitude Errors
+        :param filt: str -- Filter used during observation
+        :param outmag: str -- Filter converted to during reduction
+        :return: None
+        """
         obj_name = block.body.current_name()
 
         mid_time = (dates[-1] - dates[0])/2 + dates[0]
@@ -235,6 +302,7 @@ class Command(BaseCommand):
         else:
             super_blocks = SuperBlock.objects.filter(body=start_super_block.body, block_start__gte=start_super_block.block_start-timedelta(days=options['timespan']))
 
+        # Initialize lists
         times = []
         alltimes = []
         mags = []
@@ -247,6 +315,8 @@ class Command(BaseCommand):
         mpc_site = []
         fwhm = []
         air_mass = []
+
+        # build directory path / set permissions
         obj_name = start_super_block.body.current_name().replace(' ', '_')
         datadir = os.path.join(options['datadir'], obj_name)
         rw_permissions = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH | stat.S_IWOTH
@@ -276,6 +346,7 @@ class Command(BaseCommand):
             self.stdout.write("Error determining telescope diameter, assuming 0.4m")
             tel_diameter = 0.4*u.m
 
+        # Create, name, open ALCDEF file.
         base_name = '{}_{}_{}_{}_'.format(obj_name, sb_site, sb_day, start_super_block.tracking_number)
         filename = os.path.join(datadir, base_name + 'ALCDEF.txt')
         alcdef_file = open(filename, 'w')
@@ -290,6 +361,7 @@ class Command(BaseCommand):
                 self.stdout.write("Analyzing Block# %d" % block.id)
 
                 obs_site = block.site
+                # Get all Useful frames from each block
                 frames_red = Frame.objects.filter(block=block.id, frametype__in=[Frame.BANZAI_RED_FRAMETYPE]).order_by('midpoint')
                 frames_ql = Frame.objects.filter(block=block.id, frametype__in=[Frame.BANZAI_QL_FRAMETYPE]).order_by('midpoint')
                 if len(frames_red) >= len(frames_ql):
@@ -305,19 +377,22 @@ class Command(BaseCommand):
                     elements = model_to_dict(block.body)
                     filter_list = []
                     for frame in frames_all_zp:
+                        # get predicted position and magnitude of target during time of each frame
                         emp_line = compute_ephem(frame.midpoint, elements, frame.sitecode)
                         ra = emp_line['ra']
                         dec = emp_line['dec']
                         mag_estimate = emp_line['mag']
                         (ra_string, dec_string) = radec2strings(ra, dec, ' ')
+                        # Find list of frame sources within search region of predicted coordinates
                         sources = search_box(frame, ra, dec, options['boxwidth'])
                         midpoint_string = frame.midpoint.strftime('%Y-%m-%d %H:%M:%S')
                         self.stdout.write("%s %s %s V=%.1f %s (%d) %s" % (midpoint_string, ra_string, dec_string, mag_estimate, frame.sitecode, len(sources), frame.filename))
                         best_source = None
+                        # Find source most likely to be target (Could Use Some Work)
                         if len(sources) != 0 and frame.zeropoint is not None:
                             if len(sources) == 1:
                                 best_source = sources[0]
-                            elif len(sources) > 1:
+                            elif len(sources) > 1:  # If more than 1 source, pick closest within deltamag
                                 min_sep = options['boxwidth'] * options['boxwidth']
                                 for source in sources:
                                     sep = S.sla_dsep(ra, dec, radians(source.obs_ra), radians(source.obs_dec))
@@ -332,6 +407,7 @@ class Command(BaseCommand):
                                         min_sep = sep
                                         best_source = source
 
+                            # Save target source and add to output files.
                             if best_source and best_source.obs_mag > 0.0 and abs(mag_estimate - best_source.obs_mag) <= 3 * options['deltamag']:
                                 block_times.append(frame.midpoint)
                                 mpc_line, psv_line = self.make_source_measurement(block.body, frame, best_source, persist=options['persist'])
@@ -340,6 +416,9 @@ class Command(BaseCommand):
                                 block_mags.append(best_source.obs_mag)
                                 block_mag_errs.append(best_source.err_obs_mag)
                                 filter_list.append(frame.ALCDEF_filter_format())
+
+                        # We append these even if we don't have a matching source or zeropoint
+                        # so we can plot conditions for all frames
                         zps.append(frame.zeropoint)
                         zp_errs.append(frame.zeropoint_err)
                         frame_data.append({'ra': ra,
@@ -348,8 +427,6 @@ class Command(BaseCommand):
                                            'bw': options['boxwidth'],
                                            'dm': options['deltamag'],
                                            'best_source': best_source})
-                        # We append these even if we don't have a matching source or zeropoint
-                        # so we can plot conditions for all frames
                         alltimes.append(frame.midpoint)
                         fwhm.append(frame.fwhm)
                         azimuth, altitude = moon_alt_az(frame.midpoint, ra, dec, *get_sitepos(frame.sitecode)[1:])
@@ -374,6 +451,7 @@ class Command(BaseCommand):
                     mag_errs += block_mag_errs
                     times += block_times
 
+                # Create gif of fits files used for LC extraction
                 out_path = settings.DATA_ROOT
                 data_path = make_data_dir(out_path, model_to_dict(frames_all_zp[0]))
                 frames_list = [os.path.join(data_path, f.filename) for f in frames_all_zp]
@@ -437,6 +515,7 @@ class Command(BaseCommand):
             except PermissionError:
                 pass
 
+            # Create Default Plot Title
             if options['title'] is None:
                 sites = ', '.join(mpc_site)
                 try:
@@ -456,6 +535,7 @@ class Command(BaseCommand):
                 plot_title = options['title']
                 subtitle = ''
 
+            # Make plots
             self.plot_timeseries(times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, title=plot_title, sub_title=subtitle, datadir=datadir, filename=base_name, diameter=tel_diameter)
             try:
                 os.chmod(os.path.join(datadir, base_name + 'lightcurve_cond.png'), rw_permissions)
