@@ -35,7 +35,7 @@ def generate_ades_psv_message(blockid, bodyid):
     # Strip off last double newline but put one back again
     return message.rstrip() + '\n'
 
-def email_report_to_mpc(blockid, bodyid, email_sender=None, receipients=['egomez@lco.global', 'tlister@lco.global']):
+def email_report_to_mpc(blockid, bodyid, email_sender=None, recipients=settings.EMAIL_MPC_RECIPIENTS):
     if not bodyid:
         return False
 
@@ -48,7 +48,7 @@ def email_report_to_mpc(blockid, bodyid, email_sender=None, receipients=['egomez
             subject = 'MPC submission test',
             message = mpc_report,
             from_email = email_sender,
-            recipient_list = receipients,
+            recipient_list = recipients,
             fail_silently = False,
         )
     except Exception as e:
