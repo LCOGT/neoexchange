@@ -120,7 +120,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
     <fr> = frame rate for output gif in ms/frame [default = 100 ms/frame or 10fps]
     <init_fr> = frame rate for first 5 frames in ms/frame [default = 1000 ms/frame or 1fps]
     <tr> = Bool to determine if reticle present for all guide frames.
-    <center> = fraction of area for central portion of frame.
+    <center> = Central portion of frame in arcmin.
     output = savefile (path of gif)
     """
 
@@ -185,7 +185,6 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
         <file> = frame currently being iterated
         output: return plot.
         """
-
         # get data/Header from Fits
         try:
             with fits.open(fits_files[n], ignore_missing_end=True) as hdul:
@@ -204,12 +203,13 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
                 print('Could not find Frame {}'.format(fits_files[n]))
             return None
 
+        # Set frame to be center of chip in arcmin
         shape = data.shape
         x_frac = 0
         y_frac = 0
         if center is not None:
-            y_frac = int(shape[0]*(1-np.sqrt(center))/2)
-            x_frac = int(shape[1]*(1-np.sqrt(center))/2)
+            y_frac = np.max(int((shape[0] - (center * 60)/header_n['PIXSCALE']) / 2), 0)
+            x_frac = np.max(int((shape[1] - (center * 60)/header_n['PIXSCALE']) / 2), 0)
             data = data[y_frac:-(y_frac+1), x_frac:-(x_frac+1)]
             # Set new coordinates for Reference Pixel w/in smaller window
             header_n['CRPIX1'] -= x_frac
@@ -224,7 +224,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
         ax = plt.gca()
         ax.clear()
         ax.axis('off')
-        z_interval = ZScaleInterval().get_limits(data)  # set z-scale
+        z_interval = ZScaleInterval().get_limits(data)  # set z-scale: responsible for vast majority of compute time
         try:
             # set wcs grid/axes
             with warnings.catch_warnings():
@@ -389,7 +389,7 @@ if __name__ == '__main__':
     parser.add_argument("--fr", help="Frame rate in ms/frame (Defaults to 100 ms/frame or 10 frames/second", default=100, type=float)
     parser.add_argument("--ir", help="Frame rate in ms/frame for first 5 frames (Defaults to 1000 ms/frame or 1 frames/second", default=1000, type=float)
     parser.add_argument("--tr", help="Add target circle at crpix values?", default=False, action="store_true")
-    parser.add_argument("--C", help="Only include Center Snapshot", default=None, type=float)
+    parser.add_argument("--C", help="Only include Center Snapshot (Value= new FOV in in Arcmin)", default=None, type=float)
     args = parser.parse_args()
     path = args.path
     fr = args.fr
