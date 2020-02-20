@@ -1288,15 +1288,19 @@ def schedule_check(data, body, ok_to_schedule=True):
     # Create Group ID
     group_name = validate_text(data.get('group_name', None))
 
+    suffix = datetime.strftime(utc_date, '%Y%m%d')
+    if period and jitter:
+        suffix = "cad-%s-%s" % (datetime.strftime(data['start_time'], '%Y%m%d'), datetime.strftime(data['end_time'], '%m%d'))
+    elif spectroscopy:
+        suffix += "_spectra"
+    if too_mode is True:
+        suffix += '_ToO'
+    default_group_name = body.current_name() + '_' + data['site_code'].upper() + '-' + suffix
     if not group_name:
-        suffix = datetime.strftime(utc_date, '%Y%m%d')
-        if period and jitter:
-            suffix = "cad-%s-%s" % (datetime.strftime(data['start_time'], '%Y%m%d'), datetime.strftime(data['end_time'], '%m%d'))
-        elif spectroscopy:
-            suffix += "_spectra"
-        if too_mode is True:
-            suffix += '_ToO'
-        group_name = body.current_name() + '_' + data['site_code'].upper() + '-' + suffix
+        group_name = default_group_name
+    elif group_name == default_group_name:
+        if bin_mode == '2k_2x2':
+            group_name += '_bin2x2'
 
     resp = {
         'target_name': body.current_name(),
