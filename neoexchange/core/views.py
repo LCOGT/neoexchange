@@ -1296,7 +1296,7 @@ def schedule_check(data, body, ok_to_schedule=True):
     if too_mode is True:
         suffix += '_ToO'
     default_group_name = body.current_name() + '_' + data['site_code'].upper() + '-' + suffix
-    if not group_name:
+    if not group_name or (group_name == default_group_name + '_bin2x2' and bin_mode != '2k_2x2'):
         group_name = default_group_name
     elif group_name == default_group_name:
         if bin_mode == '2k_2x2':
