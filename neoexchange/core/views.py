@@ -1118,14 +1118,30 @@ def schedule_check(data, body, ok_to_schedule=True):
 
     dark_midpoint = dark_start + (dark_end - dark_start) / 2
 
+    # Get maximum airmass
+    max_airmass = data.get('max_airmass', 1.74)
+    alt_limit = get_alt_from_airmass(max_airmass)
+
+    # Pull out LCO Site, Telescope Class using site_config.py
+    lco_site_code = next(key for key, value in cfg.valid_site_codes.items() if value == data['site_code'])
+
+    # calculate visibility
+    dark_and_up_time, max_alt, rise_time, set_time = get_visibility(None, None, dark_midpoint, data['site_code'], '2 m', alt_limit, False, body_elements)
+    mid_dark_up_time = rise_time + (set_time - rise_time) / 2
+    if max_alt is not None:
+        max_alt_airmass = S.sla_airmas((pi/2.0)-radians(max_alt))
+    else:
+        max_alt_airmass = 13
+        dark_and_up_time = 0
+
     solar_analog_id = -1
     solar_analog_params = {}
     solar_analog_exptime = 60
     if type(body) == Body:
-        emp = compute_ephem(dark_midpoint, body_elements, data['site_code'],
+        emp = compute_ephem(mid_dark_up_time, body_elements, data['site_code'],
             dbg=False, perturb=False, display=False)
         if emp == {}:
-            emp['date'] = dark_midpoint
+            emp['date'] = mid_dark_up_time
             emp['ra'] = -99
             emp['dec'] = -99
             emp['mag'] = -99
@@ -1165,21 +1181,6 @@ def schedule_check(data, body, ok_to_schedule=True):
         available_filters = available_filters + filt + ', '
     available_filters = available_filters[:-2]
 
-    # Get maximum airmass
-    max_airmass = data.get('max_airmass', 1.74)
-    alt_limit = get_alt_from_airmass(max_airmass)
-
-    # Pull out LCO Site, Telescope Class using site_config.py
-    lco_site_code = next(key for key, value in cfg.valid_site_codes.items() if value == data['site_code'])
-
-    # calculate visibility
-    dark_and_up_time, max_alt = get_visibility(ra, dec, dark_midpoint, data['site_code'], '2 m', alt_limit, True, body_elements)
-    if max_alt is not None:
-        max_alt_airmass = S.sla_airmas((pi/2.0)-radians(max_alt))
-    else:
-        max_alt_airmass = 13
-        dark_and_up_time = 0
-
     # Determine slot length
     if data.get('slot_length', None):
         slot_length = data.get('slot_length')
@@ -1191,7 +1192,7 @@ def schedule_check(data, body, ok_to_schedule=True):
             ok_to_schedule = False
 
     # determine lunar position
-    moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(dark_midpoint, ra, dec, data['site_code'])
+    moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(mid_dark_up_time, ra, dec, data['site_code'])
     min_lunar_dist = data.get('min_lunar_dist', 30)
     if moon_phase <= .25:
         moon_phase_code = 'D'
@@ -1312,9 +1313,9 @@ def schedule_check(data, body, ok_to_schedule=True):
         'proposal_code': data['proposal_code'],
         'group_name': group_name,
         'utc_date': utc_date.isoformat(),
-        'start_time': dark_start.isoformat(),
-        'end_time': dark_end.isoformat(),
-        'mid_time': dark_midpoint.isoformat(),
+        'start_time': rise_time.isoformat(),
+        'end_time': set_time.isoformat(),
+        'mid_time': mid_dark_up_time.isoformat(),
         'ra_midpoint': ra,
         'dec_midpoint': dec,
         'period' : period,

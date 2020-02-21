@@ -1686,6 +1686,8 @@ def target_rise_set(date, app_ra, app_dec, sitecode, min_alt, step_size='30m', s
 
     if sun:
         ephem_time, sun_set = determine_darkness_times(sitecode, date)
+        if sun_set <= date:
+            ephem_time, sun_set = determine_darkness_times(sitecode, date + timedelta(days=1))
     else:
         ephem_time = date
         sun_set = date + timedelta(days=1)
@@ -2131,9 +2133,9 @@ def get_visibility(ra, dec, date, site_code, step_size='30 m', alt_limit=30, qui
     max_alt = 0
     for site in site_list:
         if quick_n_dirty:
-            start_time, end_time, test_alt, vis = target_rise_set(date, ra, dec, site, alt_limit, step_size)
-            if start_time and end_time:
-                vis_time = (end_time-start_time).total_seconds()/3600.0
+            rise_time, set_time, test_alt, vis = target_rise_set(date, ra, dec, site, alt_limit, step_size)
+            if rise_time and set_time:
+                vis_time = (set_time-rise_time).total_seconds()/3600.0
             else:
                 vis_time = 0
         else:
@@ -2141,6 +2143,10 @@ def get_visibility(ra, dec, date, site_code, step_size='30 m', alt_limit=30, qui
             emp = call_compute_ephem(body_elements, dark_start, dark_end, site, step_size, perturb=False)
             emp_dark_and_up = dark_and_object_up(emp, dark_start, dark_end, 0, alt_limit=alt_limit)
             vis_time, emp_dark_and_up, set_time = compute_dark_and_up_time(emp_dark_and_up, step_size)
+            if emp_dark_and_up:
+                rise_time = datetime.strptime(emp_dark_and_up[0][0], '%Y %m %d %H:%M')
+            else:
+                rise_time = None
             try:
                 test_alt = compute_max_altitude(emp)
             except ValueError:
@@ -2149,4 +2155,4 @@ def get_visibility(ra, dec, date, site_code, step_size='30 m', alt_limit=30, qui
             dark_and_up_time = vis_time
         if test_alt > max_alt:
             max_alt = test_alt
-    return dark_and_up_time, max_alt
+    return dark_and_up_time, max_alt, rise_time, set_time
