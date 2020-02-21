@@ -136,6 +136,9 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     if orbelems.get('epochofel', None) is None:
         logger.warning("No epoch of elements (epochofel) found in orbelems, cannot compute ephemeris")
         return {}
+    if orbelems.get('epochofperih', None) is None and orbelems.get('elements_type', None) == 'MPC_COMET':
+        logger.warning("No epoch of perihelion (epochofperih) found for this comet, cannot compute ephemeris")
+        return {}
 
 # Compute MJD for UTC
     mjd_utc = datetime2mjd_utc(d)
@@ -633,15 +636,7 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
     to the table.
     """
 
-    # Mapping of troublesome objects to JPL HORIZONS id's
-    obj_mapping = { '46P' : 90000544,
-                    '29P' : 90000392
-                  }
-    id_type = 'smallbody'
-    if obj_name in obj_mapping:
-        obj_name = obj_mapping[obj_name]
-        id_type = 'id'
-    eph = Horizons(id=obj_name, id_type=id_type, epochs={'start' : start.strftime("%Y-%m-%d %H:%M:%S"),
+    eph = Horizons(id=obj_name, id_type= 'smallbody', epochs={'start' : start.strftime("%Y-%m-%d %H:%M:%S"),
             'stop' : end.strftime("%Y-%m-%d %H:%M:%S"), 'step' : ephem_step_size}, location=site_code)
 
     airmass_limit = 99
@@ -658,30 +653,81 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
         ephem = eph.ephemerides(quantities='1,3,4,9,19,20,23,24,38,42',
             skip_daylight=should_skip_daylight, airmass_lessthan=airmass_limit,
             max_hour_angle=ha_limit)
-        dates = Column([datetime.strptime(d, "%Y-%b-%d %H:%M") for d in ephem['datetime_str']])
-        if 'datetime' not in ephem.colnames:
-            ephem.add_column(dates, name='datetime')
-        # Convert units of RA/Dec rate from arcsec/hr to arcsec/min and compute
-        # mean rate
-        ephem['RA_rate'].convert_unit_to('arcsec/min')
-        ephem['DEC_rate'].convert_unit_to('arcsec/min')
-        rate_units = ephem['DEC_rate'].unit
-        mean_rate = np_sqrt(ephem['RA_rate']**2 + ephem['DEC_rate']**2)
-        mean_rate.unit = rate_units
-        ephem.add_column(mean_rate, name='mean_rate')
-        if include_moon is True:
-            moon_seps = []
-            moon_phases = []
-            for date, obj_ra, obj_dec  in ephem[('datetime','RA','DEC')]:
-                moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(date, radians(obj_ra), radians(obj_dec), '-1')
-                moon_seps.append(moon_obj_sep)
-                moon_phases.append(moon_phase)
-            ephem.add_columns(cols=(Column(moon_seps), Column(moon_phases)), names=('moon_sep', 'moon_phase'))
+        ephem = convert_horizons_table(ephem, include_moon)
     except ValueError as e:
-        logger.warning("Error querying HORIZONS. Error message: {}".format(e))
+        logger.debug("Ambiguous object, trying to determine HORIZONS id")
         ephem = None
+        if e.args and len(e.args) > 0:
+            choices = e.args[0].split('\n')
+            horizons_id = determine_horizons_id(choices)
+            logger.debug("HORIZONS id=", horizons_id)
+            if horizons_id:
+                try:
+                    eph = Horizons(id=horizons_id, id_type= 'id', epochs={'start' : start.strftime("%Y-%m-%d %H:%M:%S"),
+                        'stop' : end.strftime("%Y-%m-%d %H:%M:%S"), 'step' : ephem_step_size}, location=site_code)
+                    ephem = eph.ephemerides(quantities='1,3,4,9,19,20,23,24,38,42',
+                        skip_daylight=should_skip_daylight, airmass_lessthan=airmass_limit,
+                        max_hour_angle=ha_limit)
+                    ephem = convert_horizons_table(ephem, include_moon)
+                except ValueError as e:
+                    logger.warning("Error querying HORIZONS. Error message: {}".format(e))
+            else:
+                logger.warning("Unable to determine the HORIZONS id")
+        else:
+            logger.warning("Error querying HORIZONS. Error message: {}".format(e))
+    return ephem
+
+
+def convert_horizons_table(ephem, include_moon=False):
+    """Modifies a passed table <ephem> from the `astroquery.jplhorizons.ephemerides()
+    to add a 'datetime' column, rate columns and adss moon phase and separation
+    columns (if [include_moon] is True).
+    The modified Astropy Table is returned"""
+
+    dates = Column([datetime.strptime(d, "%Y-%b-%d %H:%M") for d in ephem['datetime_str']])
+    if 'datetime' not in ephem.colnames:
+        ephem.add_column(dates, name='datetime')
+    # Convert units of RA/Dec rate from arcsec/hr to arcsec/min and compute
+    # mean rate
+    ephem['RA_rate'].convert_unit_to('arcsec/min')
+    ephem['DEC_rate'].convert_unit_to('arcsec/min')
+    rate_units = ephem['DEC_rate'].unit
+    mean_rate = np_sqrt(ephem['RA_rate']**2 + ephem['DEC_rate']**2)
+    mean_rate.unit = rate_units
+    ephem.add_column(mean_rate, name='mean_rate')
+    if include_moon is True:
+        moon_seps = []
+        moon_phases = []
+        for date, obj_ra, obj_dec in ephem[('datetime', 'RA', 'DEC')]:
+            moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(date, radians(obj_ra), radians(obj_dec), '-1')
+            moon_seps.append(moon_obj_sep)
+            moon_phases.append(moon_phase)
+        ephem.add_columns(cols=(Column(moon_seps), Column(moon_phases)), names=('moon_sep', 'moon_phase'))
 
     return ephem
+
+def determine_horizons_id(lines, now=None):
+    """Attempts to determine the HORIZONS id of a target body that has multiple
+    possibilities. The passed [lines] (from the .args attribute of the exception)
+    are searched for the HORIZONS id (column 1) whose 'epoch year' (column 2)
+    which is closest to [now] (a passed-in datetime or defaulting to datetime.utcnow()"""
+
+    now = now or datetime.utcnow()
+    timespan = timedelta.max
+    horizons_id = None
+    for line in lines:
+        chunks = line.split()
+        if len(chunks) == 5 and chunks[0].isdigit() is True and chunks[1].isdigit() is True:
+            try:
+                epoch_yr = datetime.strptime(chunks[1], "%Y")
+                if abs(now-epoch_yr) <= timespan:
+                    # New closer match to "now"
+                    horizons_id = int(chunks[0])
+                    timespan = now-epoch_yr
+            except ValueError:
+                logger.warning("Unable to parse year of epoch from", line)
+    return horizons_id
+
 
 def read_findorb_ephem(empfile):
     """Routine to read find_orb produced ephemeris.emp files from non-interactive

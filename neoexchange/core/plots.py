@@ -162,29 +162,30 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow(), s
         start = start_date.date()
         end = start + timedelta(days=31)
         ephem = horizons_ephem(body.name, start, end, site_code, include_moon=True)
-        if plot_type == 'radec':
-            vis_file = plot_ra_dec(ephem, base_dir=base_dir)
-        elif plot_type == 'mag':
-            vis_file = plot_brightness(ephem, base_dir=base_dir)
-        elif plot_type == 'dist':
-            vis_file = plot_helio_geo_dist(ephem, base_dir=base_dir)
-        elif plot_type == 'uncertainty':
-            vis_file = plot_uncertainty(ephem, base_dir=base_dir)
-        elif plot_type == 'hoursup':
-            tel_alt_limit = 30
-            to_add_rate = False
-            if site_code == '-1':
-                site_code = 'W85'
-                if ephem['DEC'].mean() > 5:
-                    site_code = 'V37'
-            if site_code == 'F65' or site_code == 'E10':
-                tel_alt_limit = 20
-                to_add_rate = True
-            ephem = horizons_ephem(body.name, start, end, site_code, '5m', alt_limit=tel_alt_limit)
-            vis_file = plot_hoursup(ephem, site_code, add_rate=to_add_rate, alt_limit=tel_alt_limit, base_dir=base_dir)
+        if ephem:
+            if plot_type == 'radec':
+                vis_file = plot_ra_dec(ephem, base_dir=base_dir)
+            elif plot_type == 'mag':
+                vis_file = plot_brightness(ephem, base_dir=base_dir)
+            elif plot_type == 'dist':
+                vis_file = plot_helio_geo_dist(ephem, base_dir=base_dir)
+            elif plot_type == 'uncertainty':
+                vis_file = plot_uncertainty(ephem, base_dir=base_dir)
+            elif plot_type == 'hoursup':
+                tel_alt_limit = 30
+                to_add_rate = False
+                if site_code == '-1':
+                    site_code = 'W85'
+                    if ephem['DEC'].mean() > 5:
+                        site_code = 'V37'
+                if site_code == 'F65' or site_code == 'E10':
+                    tel_alt_limit = 20
+                    to_add_rate = True
+                ephem = horizons_ephem(body.name, start, end, site_code, '5m', alt_limit=tel_alt_limit)
+                vis_file = plot_hoursup(ephem, site_code, add_rate=to_add_rate, alt_limit=tel_alt_limit, base_dir=base_dir)
     if vis_file:
         logger.debug('Visibility Plot: {}'.format(vis_file))
-        with default_storage.open(vis_file,"rb") as vis_plot:
+        with default_storage.open(vis_file, "rb") as vis_plot:
             return HttpResponse(vis_plot.read(), content_type="Image/png")
     else:
         # Return a 1x1 pixel gif in the case of no visibility file
@@ -287,7 +288,7 @@ def spec_plot(data_spec, analog_data, reflec=False):
         spec_dict = read_mean_tax()
         spec_dict["Wavelength"] = [l*10000 for l in spec_dict["Wavelength"]]
 
-        stand_list = ['A', 'B', 'C', 'D', 'L', 'Q', 'S', 'Sq', 'V', 'X', 'Xe']
+        stand_list = ['A', 'B', 'C', 'D', 'K', 'L', 'O', 'Q', 'S', 'Sq', 'T', 'V', 'X', 'Xe']
         init_stand = ['C', 'Q', 'S', 'X']
         colors = Category20[len(stand_list)]
         for j, tax in enumerate(stand_list):
@@ -305,7 +306,8 @@ def spec_plot(data_spec, analog_data, reflec=False):
             source = ColumnDataSource(spec_dict)
 
             plot2.line("Wavelength", tax+"_Mean", source=source, color=colors[j], name=tax + "-Type", line_width=2, line_dash='dashed', legend_label=tax, visible=vis)
-            plot2.patch(xs, ys, fill_alpha=.25, line_width=1, fill_color=colors[j], line_color="black", name=tax + "-Type", legend_label=tax, line_alpha=.25, visible=vis)
+            if np.mean(spec_dict[tax + '_Sigma']) > 0:
+                plot2.patch(xs, ys, fill_alpha=.25, line_width=1, fill_color=colors[j], line_color="black", name=tax + "-Type", legend_label=tax, line_alpha=.25, visible=vis)
 
         if not reflec:
             for spec in data_spec:

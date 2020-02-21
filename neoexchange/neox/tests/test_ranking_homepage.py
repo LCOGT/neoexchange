@@ -129,7 +129,7 @@ class NewVisitorTest(FunctionalTest):
         # mentions the current target
         self.assertIn(self.body.current_name() + ' details | LCO NEOx', self.browser.title)
         header_text = self.browser.find_element_by_class_name('headingleft').text
-        self.assertIn('Object: ' + self.body.current_name(), header_text)
+        self.assertIn(self.body.full_name(), header_text)
 
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.models.datetime', MockDateTime)
@@ -170,4 +170,4 @@ class NewVisitorTest(FunctionalTest):
         # mentions the current target
         self.assertIn(self.body3.current_name() + ' details | LCO NEOx', self.browser.title)
         header_text = self.browser.find_element_by_class_name('headingleft').text
-        self.assertIn('Object: ' + self.body3.current_name(), header_text)
+        self.assertIn(self.body3.full_name(), header_text)

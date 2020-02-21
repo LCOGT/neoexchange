@@ -7,8 +7,7 @@ from django.utils.crypto import get_random_string
 import rollbar
 
 
-VERSION = '3.1.2'
-
+VERSION = '3.3.hack'
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
@@ -60,6 +59,9 @@ USE_L10N = True
 
 # If you set this to False, Django will not use timezone-aware datetimes.
 USE_TZ = False
+
+# This determines if you use the Amazon S3 bucket or a local directory.
+USE_S3 = ast.literal_eval(os.environ.get('USE_S3', 'False'))
 
 # Absolute filesystem path to the directory that will hold user-uploaded files.
 # Example: "/home/media/media.lawrence.com/media/"
@@ -247,6 +249,7 @@ EMAIL_PORT          = 587
 DEFAULT_FROM_EMAIL  = 'NEO Exchange <neox@lco.global>'
 EMAIL_HOST_USER = os.environ.get('NEOX_EMAIL_USERNAME', '')
 EMAIL_HOST_PASSWORD = os.environ.get('NEOX_EMAIL_PASSWORD', '')
+EMAIL_MPC_RECIPIENTS = ['tlister@lco.global', 'jchatelain@lco.global']
 
 ####################
 # LCO Api settings #
@@ -272,28 +275,6 @@ PORTAL_PROFILE_URL = PORTAL_API_URL + 'profile/'
 ZOONIVERSE_USER = os.environ.get('ZOONIVERSE_USER', '')
 ZOONIVERSE_PASSWD = os.environ.get('ZOONIVERSE_PASSWD', '')
 
-# Use AWS S3 for Media Files
-USE_S3 = ast.literal_eval(os.environ.get('USE_S3', 'False'))
-if USE_S3:
-    # aws settings
-    AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
-    AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
-    AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
-    AWS_S3_REGION_NAME = os.getenv('AWS_DEFAULT_REGION', 'us-west-2')
-    AWS_DEFAULT_ACL = None
-    AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
-    AWS_S3_SIGNATURE_VERSION = 's3v4'
-    # s3 public media settings
-    PUBLIC_MEDIA_LOCATION = 'data'
-    MEDIA_URL = f'https://s3-{AWS_S3_REGION_NAME}.amazonaws.com/{AWS_STORAGE_BUCKET_NAME}/{PUBLIC_MEDIA_LOCATION}/'
-    DEFAULT_FILE_STORAGE = 'neox.storage_backends.PublicMediaStorage'
-    DATA_ROOT = ''
-else:
-    # For local use
-    MEDIA_ROOT = os.getenv('DATA_ROOT', '/apophis/eng/rocks/')
-    DATA_ROOT = MEDIA_ROOT
-
-
 #######################
 # Test Database setup #
 #######################
@@ -313,6 +294,29 @@ if 'test' in sys.argv:
     USE_S3 = False
 
 USE_FIREFOXDRIVER = True
+
+##############################
+# Use AWS S3 for Media Files #
+##############################
+
+if USE_S3:
+    # aws settings
+    AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
+    AWS_S3_REGION_NAME = os.getenv('AWS_DEFAULT_REGION', 'us-west-2')
+    AWS_DEFAULT_ACL = None
+    AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
+    AWS_S3_SIGNATURE_VERSION = 's3v4'
+    # s3 public media settings
+    PUBLIC_MEDIA_LOCATION = 'data'
+    MEDIA_URL = f'https://s3-{AWS_S3_REGION_NAME}.amazonaws.com/{AWS_STORAGE_BUCKET_NAME}/{PUBLIC_MEDIA_LOCATION}/'
+    DEFAULT_FILE_STORAGE = 'neox.storage_backends.PublicMediaStorage'
+    DATA_ROOT = ''
+else:
+    # For local use
+    MEDIA_ROOT = os.getenv('DATA_ROOT', '/apophis/eng/rocks/')
+    DATA_ROOT = MEDIA_ROOT
 
 ##################
 # LOCAL SETTINGS #

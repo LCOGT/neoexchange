@@ -4,6 +4,38 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 3.2.7
+* Allow ingestion of numbered comet and comet fragment observations.
+* Fix various time out issues with prefetching.
+* Update pagination format.
+* Fix parsing of comets in Arecibo target lists.
+* Add ability to query HORIZONS for comets which have multiple element sets/target bodies available.
+
+### 3.2.6.1
+Index frequently used model fields.
+
+### 3.2.6
+Fix broken spectra plot
+Update Minimum Django Requirements
+
+### 3.2.5
+Fix a rare comet bug.
+
+### 3.2.4
+Fix a few rare bugs.
+
+### 3.2.3
+Allow Time Critical observations within the same proposal and allow selection of this from the scheduling form.
+
+### 3.2.2
+Add observation timeline.
+
+### 3.2.0
+Add models for physical parameters and Designations
+*Includes specific model for colors
+*Search includes any of a body's several designations
+*Does not remove anything from the Body model
+
 ### 3.1.1
 Convert Spectroscopy plots into Bokeh for added interactivity.
 

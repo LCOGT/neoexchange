@@ -40,7 +40,7 @@ from astrometrics.ast_subs import normal_to_packed
 from astrometrics.ephem_subs import compute_ephem, comp_FOM, get_sitecam_params, comp_sep
 from astrometrics.sources_subs import translate_catalog_code, psv_padding
 from astrometrics.time_subs import dttodecimalday, degreestohms, degreestodms
-from astrometrics.albedo import asteroid_albedo, asteroid_diameter
+from astrometrics.albedo import asteroid_diameter
 from core.archive_subs import check_for_archive_images
 
 logger = logging.getLogger(__name__)
@@ -50,7 +50,7 @@ OBJECT_TYPES = (
                 ('N', 'NEO'),
                 ('A', 'Asteroid'),
                 ('C', 'Comet'),
-                ('K', 'KBO'),
+                ('K', 'TNO'),
                 ('E', 'Centaur'),
                 ('T', 'Trojan'),
                 ('U', 'Candidate'),
@@ -58,8 +58,42 @@ OBJECT_TYPES = (
                 ('W', 'Was not interesting'),
                 ('D', 'Discovery, non NEO'),
                 ('J', 'Artificial satellite'),
-                ('H', 'Hyperbolic asteroids')
+                ('M', 'Natural Satellite'),
+                ('P', 'Major Planet')
             )
+
+OBJECT_SUBTYPES = (
+                ('N', 'NEO'),
+                ('N1', 'Atira'),             # Q<1AU
+                ('N2', 'Aten'),              # a<1AU<Q
+                ('N3', 'Apollo'),            # q<1AU<a
+                ('N4', 'Amor'),              # 1AU<q<1.3AU
+                ('PH', 'PHA'),
+                ('MI', 'Inner Main-Belt'),   # a < 2.0 au; q > 1.666 au
+                ('M', 'Main-Belt'),
+                ('MO', 'Outer Main-Belt'),   # 3.2 au < a < 4.6 au
+                ('A', 'Active'),
+                ('MH', 'Hilda'),             # 3/2 resonance w/ Jupiter
+                ('T4', 'L4'),
+                ('T5', 'L5'),
+                ('P1', 'Mercury'),
+                ('P2', 'Venus'),
+                ('P3', 'Earth'),
+                ('P4', 'Mars'),
+                ('P5', 'Jupiter'),
+                ('P6', 'Saturn'),
+                ('P7', 'Uranus'),
+                ('P8', 'Neptune'),
+                ('P9', 'Pluto'),
+                ('PL', 'Plutino'),
+                ('K', 'Classical KBO'),
+                ('S', 'SDO'),
+                ('H', 'Hyperbolic'),
+                ('PA', 'Parabolic'),
+                ('JF', 'Jupiter Family'),   # P < 20
+                ('HT', 'Halley-Type'),      # 20 y < P < 200 y
+            )
+
 
 ELEMENTS_TYPES = (('MPC_MINOR_PLANET', 'MPC Minor Planet'), ('MPC_COMET', 'MPC Comet'))
 
@@ -127,6 +161,28 @@ SPECTRAL_SOURCE_CHOICES = (
                         ('O', 'Other')
                      )
 
+DESIG_CHOICES = (
+                ('N', 'Name'),
+                ('#', 'Number'),
+                ('P', 'Provisional Designation'),
+                ('C', 'NEO Candidate Designation'),
+                ('T', 'Temporary Designation')
+                )
+
+PARAM_CHOICES = (
+                ('H', 'Absolute Magnitude'),
+                ('G', 'Phase Slope'),
+                ('D', 'Diameter'),
+                ('R', 'Density'),
+                ('P', 'Rotation Period'),
+                ('A', 'LC Amplitude'),
+                ('O', 'Pole Orientation'),
+                ('ab', 'Albedo'),
+                ('Y', 'Yarkovsky Drift'),
+                ('E', 'Coma Extent'),
+                ('M', 'Mass')
+                )
+
 
 @python_2_unicode_compatible
 class Proposal(models.Model):
@@ -152,11 +208,13 @@ class Proposal(models.Model):
 
 @python_2_unicode_compatible
 class Body(models.Model):
-    provisional_name    = models.CharField('Provisional MPC designation', max_length=15, blank=True, null=True)
-    provisional_packed  = models.CharField('MPC name in packed format', max_length=7, blank=True, null=True)
-    name                = models.CharField('Designation', max_length=15, blank=True, null=True)
+    provisional_name    = models.CharField('Provisional MPC designation', max_length=15, blank=True, null=True, db_index=True)
+    provisional_packed  = models.CharField('MPC name in packed format', max_length=7, blank=True, null=True, db_index=True)
+    name                = models.CharField('Designation', max_length=15, blank=True, null=True, db_index=True)
     origin              = models.CharField('Where did this target come from?', max_length=1, choices=ORIGINS, default="M", blank=True, null=True)
     source_type         = models.CharField('Type of object', max_length=1, choices=OBJECT_TYPES, blank=True, null=True)
+    source_subtype_1    = models.CharField('Subtype of object', max_length=2, choices=OBJECT_SUBTYPES, blank=True, null=True)
+    source_subtype_2    = models.CharField('Subtype of object', max_length=2, choices=OBJECT_SUBTYPES, blank=True, null=True)
     elements_type       = models.CharField('Elements type', max_length=16, choices=ELEMENTS_TYPES, blank=True, null=True)
     active              = models.BooleanField('Actively following?', default=False)
     fast_moving         = models.BooleanField('Is this object fast?', default=False)
@@ -179,20 +237,20 @@ class Body(models.Model):
     arc_length          = models.FloatField('Length of observed arc (days)', blank=True, null=True)
     not_seen            = models.FloatField('Time since last observation (days)', blank=True, null=True)
     updated             = models.BooleanField('Has this object been updated?', default=False)
-    ingest              = models.DateTimeField(default=now)
-    update_time         = models.DateTimeField(blank=True, null=True)
+    ingest              = models.DateTimeField(default=now, db_index=True)
+    update_time         = models.DateTimeField(blank=True, null=True, db_index=True)
 
     def characterization_target(self):
         # If we change the definition of Characterization Target,
-        # also update views.build_characterization_list
-        if self.active is True and self.origin != 'M':
+        # also update views.get_characterization_targets
+        if self.active is True and self.origin != 'M' and self.source_type != 'U':
             return True
         else:
             return False
 
     def radar_target(self):
         # Returns True if the object is a radar target
-        if self.active is True and (self.origin == 'A' or self.origin == 'G' or self.origin =='R'):
+        if self.active is True and (self.origin == 'A' or self.origin == 'G' or self.origin == 'R'):
             return True
         else:
             return False
@@ -237,6 +295,28 @@ class Body(models.Model):
         else:
             return "Unknown"
 
+    def full_name(self):
+        name = Designations.objects.filter(body=self.id).filter(desig_type='N').filter(preferred=True)
+        num = Designations.objects.filter(body=self.id).filter(desig_type='#').filter(preferred=True)
+        prov_dev = Designations.objects.filter(body=self.id).filter(desig_type='P').filter(preferred=True)
+        fname = ''
+        if num:
+            fname += num[0].value
+            if not fname.isdigit():
+                fname += '/'
+        if name:
+            if fname and fname.isdigit():
+                fname += ' '
+            fname += name[0].value
+        if fname and prov_dev:
+            fname += ' ({})'.format(prov_dev[0].value)
+        elif prov_dev:
+            fname += prov_dev[0].value
+        if not fname:
+            fname = self.current_name()
+
+        return fname
+
     def old_name(self):
         if self.provisional_name and self.name:
             return self.provisional_name
@@ -252,7 +332,7 @@ class Body(models.Model):
             if not emp_line:
                 return False
             else:
-            # Return just numerical values
+                # Return just numerical values
                 return emp_line['ra'], emp_line['dec'], emp_line['mag'], emp_line['southpole_sep'], emp_line['sky_motion'], emp_line['sky_motion_pa']
         else:
             # Catch the case where there is no Epoch
@@ -384,6 +464,87 @@ class Body(models.Model):
             reported = 'Not yet'
         return observed, reported
 
+    def get_physical_parameters(self, param_type=None, return_all=True):
+        phys_params = PhysicalParameters.objects.filter(body=self.id)
+        color_params = ColorValues.objects.filter(body=self.id)
+        out_params = []
+        for param in phys_params:
+            if (param.preferred or return_all) and (not param_type or param.parameter_type == param_type or param.get_parameter_type_display().upper() == param_type.upper()):
+                param_dict = model_to_dict(param)
+                param_dict['type_display'] = param.get_parameter_type_display()
+                out_params.append(param_dict)
+        for param in color_params:
+            if (param.preferred or return_all) and (not param_type or param.color_band == param_type or 'COLOR' in param_type.upper()):
+                param_dict = model_to_dict(param)
+                param_dict['type_display'] = param.color_band
+                out_params.append(param_dict)
+        return out_params
+
+    def save_physical_parameters(self, kwargs):
+        """Takes a dictionary of arguments. Dictionary specifics depend on what parameters are being added."""
+        overwrite = False
+        if 'color_band' in kwargs.keys():
+            model = ColorValues
+            type_key = 'color_band'
+        elif 'desig_type' in kwargs.keys():
+            model = Designations
+            type_key = 'desig_type'
+        elif 'tax_scheme' in kwargs.keys():
+            model = SpectralInfo
+            type_key = 'tax_scheme'
+        else:
+            model = PhysicalParameters
+            type_key = 'parameter_type'
+        if 'reference' in kwargs.keys() and kwargs['reference'] == 'MPC Default':
+            overwrite = True
+
+        # Don't save empty values
+        if not kwargs['value']:
+            return False
+        if 'preferred' not in kwargs:
+            kwargs['preferred'] = False
+
+        current_params = model.objects.filter(body=self.id)
+        new_param = True
+        new_type = True
+        if current_params:
+            for param in current_params:
+                param_dict = model_to_dict(param)
+                if param_dict[type_key] == kwargs[type_key]:
+                    if param_dict['preferred'] is not False:
+                        new_type = False
+                    diff_values = {k: kwargs[k] for k in kwargs if k in param_dict and kwargs[k] != param_dict[k] and k not in ['body', 'update_time']}
+                    if len(diff_values) == 0:
+                        new_param = False
+                        break
+                    if kwargs['preferred'] and param_dict['preferred'] and not overwrite:
+                        param.preferred = False
+                        param.save()
+                    if overwrite:
+                        if param_dict['reference'] == 'MPC Default':
+                            param.delete()
+                        else:
+                            kwargs['preferred'] = False
+                    elif param_dict['value'] == kwargs['value']:
+                        if "units" not in diff_values:
+                            for value in diff_values:
+                                if kwargs[value] is None:
+                                    kwargs[value] = param_dict[value]
+                            param.delete()
+
+        if new_type is True:
+            kwargs['preferred'] = True
+        if new_param is True:
+            kwargs['body'] = self
+            kwargs['update_time'] = datetime.utcnow()
+            try:
+                model.objects.create(**kwargs)
+            except TypeError:
+                logger.warning("Input dictionary contains invalid keywords")
+                new_param = False
+
+        return new_param
+
     class Meta:
         verbose_name = _('Minor Body')
         verbose_name_plural = _('Minor Bodies')
@@ -400,6 +561,76 @@ class Body(models.Model):
                 and self.name is not None and self.name != u'':
             return_name = self.name
         return u'%s is %sactive' % (return_name, text)
+
+
+@python_2_unicode_compatible
+class Designations(models.Model):
+    body        = models.ForeignKey(Body, on_delete=models.CASCADE)
+    value       = models.CharField('Designation', blank=True, null=True, max_length=30, db_index=True)
+    desig_type  = models.CharField('Designation Type', blank=True, choices=DESIG_CHOICES, null=True, max_length=1)
+    preferred    = models.BooleanField('Is this the preferred designation of this type?', default=False)
+    packed      = models.BooleanField('Is this a packed designation?', default=False)
+    notes       = models.CharField('Notes on Nomenclature', max_length=30, blank=True, null=True)
+    update_time = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        verbose_name = _('Object Designation')
+        verbose_name_plural = _('Object Designations')
+        db_table = 'ingest_names'
+
+    def __str__(self):
+        return "%s is a designation for %s (pk=%s)" % (self.value, self.body.full_name(), self.body.id)
+
+
+@python_2_unicode_compatible
+class PhysicalParameters(models.Model):
+    body           = models.ForeignKey(Body, on_delete=models.CASCADE)
+    parameter_type = models.CharField('Physical Parameter Type', blank=True, null=True, choices=PARAM_CHOICES, max_length=2)
+    value          = models.FloatField('Physical Parameter Value', blank=True, null=True, db_index=True)
+    error          = models.FloatField('Physical Parameter Error', blank=True, null=True)
+    value2         = models.FloatField('2nd component of Physical Parameter', blank=True, null=True)
+    error2         = models.FloatField('Error for 2nd component of Physical Parameter', blank=True, null=True)
+    units          = models.CharField('Physical Parameter Units', blank=True, null=True, max_length=30)
+    quality        = models.CharField('Physical Parameter Quality Designation', blank=True, null=True, max_length=10)
+    preferred      = models.BooleanField('Is this the preferred value for this type of parameter?', default=False)
+    reference      = models.TextField('Reference for this value', blank=True, null=True)
+    notes          = models.TextField('Notes on this value', blank=True, null=True)
+    update_time    = models.DateTimeField(blank=True, null=True, db_index=True)
+
+    class Meta:
+        verbose_name = _('Physical Parameter')
+        verbose_name_plural = _('Physical Parameters')
+        db_table = 'ingest_physical_parameters'
+
+    def __str__(self):
+        if self.value2:
+            return "({}, {}) is the {} for {} (pk={})".format(self.value, self.value2, self.get_parameter_type_display(), self.body.full_name(), self.body.id)
+        elif self.units:
+            return "{}{} is the {} for {} (pk={})".format(self.value, self.units, self.get_parameter_type_display(), self.body.full_name(), self.body.id)
+        else:
+            return "{} is the {} for {} (pk={})".format(self.value, self.get_parameter_type_display(), self.body.full_name(), self.body.id)
+
+
+@python_2_unicode_compatible
+class ColorValues(models.Model):
+    body          = models.ForeignKey(Body, on_delete=models.CASCADE)
+    color_band    = models.CharField('X-X filter combination', blank=True, null=True, max_length=30)
+    value         = models.FloatField('Color Value', blank=True, null=True, db_index=True)
+    error         = models.FloatField('Color error', blank=True, null=True)
+    units         = models.CharField('Color Units', blank=True, null=True, max_length=30)
+    quality       = models.CharField('Color Quality Designation', blank=True, null=True, max_length=10)
+    preferred     = models.BooleanField('Is this the preferred value for this color band?', default=False)
+    reference     = models.TextField('Reference for this value', blank=True, null=True)
+    notes         = models.TextField('Notes on this value', blank=True, null=True)
+    update_time   = models.DateTimeField(blank=True, null=True, db_index=True)
+
+    class Meta:
+        verbose_name = _('Color Value')
+        verbose_name_plural = _('Color Values')
+        db_table = 'ingest_colors'
+
+    def __str__(self):
+        return "{} is the {} color for {} (pk={})".format(self.value, self.color_band, self.body.name, self.body.id)
 
 
 @python_2_unicode_compatible
@@ -479,13 +710,13 @@ class SpectralInfo(models.Model):
 
 
 class PreviousSpectra(models.Model):
-    body                = models.ForeignKey(Body, on_delete=models.CASCADE)
-    spec_wav            = models.CharField('Wavelength', blank=True, null=True, max_length=7, choices=SPECTRAL_WAV_CHOICES)
-    spec_vis            = models.URLField('Visible Spectra Link', blank=True, null=True)
-    spec_ir             = models.URLField('IR Spectra Link', blank=True, null=True)
-    spec_ref            = models.CharField('Spectra Reference', max_length=10, blank=True, null=True)
-    spec_source         = models.CharField('Source', max_length=1, blank=True, null=True, choices=SPECTRAL_SOURCE_CHOICES)
-    spec_date           = models.DateField(blank=True, null=True)
+    body        = models.ForeignKey(Body, on_delete=models.CASCADE)
+    spec_wav    = models.CharField('Wavelength', blank=True, null=True, max_length=7, choices=SPECTRAL_WAV_CHOICES)
+    spec_vis    = models.URLField('Visible Spectra Link', blank=True, null=True)
+    spec_ir     = models.URLField('IR Spectra Link', blank=True, null=True)
+    spec_ref    = models.CharField('Spectra Reference', max_length=10, blank=True, null=True)
+    spec_source = models.CharField('Source', max_length=1, blank=True, null=True, choices=SPECTRAL_SOURCE_CHOICES)
+    spec_date   = models.DateField(blank=True, null=True)
 
     class Meta:
         verbose_name = _('External Spectroscopy')
@@ -504,10 +735,10 @@ class SuperBlock(models.Model):
     body            = models.ForeignKey(Body, null=True, blank=True, on_delete=models.CASCADE)
     calibsource     = models.ForeignKey('StaticSource', null=True, blank=True, on_delete=models.CASCADE)
     proposal        = models.ForeignKey(Proposal, on_delete=models.CASCADE)
-    block_start     = models.DateTimeField(null=True, blank=True)
-    block_end       = models.DateTimeField(null=True, blank=True)
+    block_start     = models.DateTimeField(null=True, blank=True, db_index=True)
+    block_end       = models.DateTimeField(null=True, blank=True, db_index=True)
     groupid         = models.CharField(max_length=55, null=True, blank=True)
-    tracking_number = models.CharField(max_length=10, null=True, blank=True)
+    tracking_number = models.CharField(max_length=10, null=True, blank=True, db_index=True)
     period          = models.FloatField('Spacing between cadence observations (hours)', null=True, blank=True)
     jitter          = models.FloatField('Acceptable deviation before or after strict period (hours)', null=True, blank=True)
     timeused        = models.FloatField('Time used (seconds)', null=True, blank=True)
@@ -634,9 +865,9 @@ class Block(models.Model):
     calibsource     = models.ForeignKey('StaticSource', null=True, blank=True, on_delete=models.CASCADE)
     superblock      = models.ForeignKey(SuperBlock, null=True, blank=True, on_delete=models.CASCADE)
     obstype         = models.SmallIntegerField('Observation Type', null=False, blank=False, default=0, choices=OBSTYPE_CHOICES)
-    block_start     = models.DateTimeField(null=True, blank=True)
-    block_end       = models.DateTimeField(null=True, blank=True)
-    request_number  = models.CharField(max_length=10, null=True, blank=True)
+    block_start     = models.DateTimeField(null=True, blank=True, db_index=True)
+    block_end       = models.DateTimeField(null=True, blank=True, db_index=True)
+    request_number  = models.CharField(max_length=10, null=True, blank=True, db_index=True)
     num_exposures   = models.IntegerField(null=True, blank=True)
     exp_length      = models.FloatField('Exposure length in seconds', null=True, blank=True)
     num_observed    = models.IntegerField(help_text='No. of scheduler blocks executed', null=True, blank=True)
@@ -835,7 +1066,7 @@ class Frame(models.Model):
     sitecode    = models.CharField('MPC site code', max_length=4, blank=False)
     instrument  = models.CharField('instrument code', max_length=4, blank=True, null=True)
     filter      = models.CharField('filter class', max_length=15, blank=False, default="B")
-    filename    = models.CharField('FITS filename', max_length=50, blank=True, null=True)
+    filename    = models.CharField('FITS filename', max_length=50, blank=True, null=True, db_index=True)
     exptime     = models.FloatField('Exposure time in seconds', null=True, blank=True)
     midpoint    = models.DateTimeField('UTC date/time of frame midpoint', null=False, blank=False, db_index=True)
     block       = models.ForeignKey(Block, null=True, blank=True, on_delete=models.CASCADE)
@@ -1020,9 +1251,9 @@ class SourceMeasurement(models.Model):
 
     body = models.ForeignKey(Body, on_delete=models.CASCADE)
     frame = models.ForeignKey(Frame, on_delete=models.CASCADE)
-    obs_ra = models.FloatField('Observed RA', blank=True, null=True)
-    obs_dec = models.FloatField('Observed Dec', blank=True, null=True)
-    obs_mag = models.FloatField('Observed Magnitude', blank=True, null=True)
+    obs_ra = models.FloatField('Observed RA', blank=True, null=True, db_index=True)
+    obs_dec = models.FloatField('Observed Dec', blank=True, null=True, db_index=True)
+    obs_mag = models.FloatField('Observed Magnitude', blank=True, null=True, db_index=True)
     err_obs_ra = models.FloatField('Error on Observed RA', blank=True, null=True)
     err_obs_dec = models.FloatField('Error on Observed Dec', blank=True, null=True)
     err_obs_mag = models.FloatField('Error on Observed Magnitude', blank=True, null=True)
@@ -1244,10 +1475,10 @@ class CatalogSources(models.Model):
     """
 
     frame = models.ForeignKey(Frame, on_delete=models.CASCADE)
-    obs_x = models.FloatField('CCD X co-ordinate')
-    obs_y = models.FloatField('CCD Y co-ordinate')
-    obs_ra = models.FloatField('Observed RA')
-    obs_dec = models.FloatField('Observed Dec')
+    obs_x = models.FloatField('CCD X co-ordinate', db_index=True)
+    obs_y = models.FloatField('CCD Y co-ordinate', db_index=True)
+    obs_ra = models.FloatField('Observed RA', db_index=True)
+    obs_dec = models.FloatField('Observed Dec', db_index=True)
     obs_mag = models.FloatField('Observed Magnitude', blank=True, null=True)
     err_obs_ra = models.FloatField('Error on Observed RA', blank=True, null=True)
     err_obs_dec = models.FloatField('Error on Observed Dec', blank=True, null=True)
@@ -1347,8 +1578,8 @@ class Candidate(models.Model):
 
     block = models.ForeignKey(Block, on_delete=models.CASCADE)
     cand_id = models.PositiveIntegerField('Candidate Id')
-    score = models.FloatField('Candidate Score')
-    avg_midpoint = models.DateTimeField('Average UTC midpoint')
+    score = models.FloatField('Candidate Score', db_index=True)
+    avg_midpoint = models.DateTimeField('Average UTC midpoint', db_index=True)
     avg_x = models.FloatField('Average CCD X co-ordinate')
     avg_y = models.FloatField('Average CCD Y co-ordinate')
     avg_ra = models.FloatField('Average Observed RA (degrees)')
@@ -1449,9 +1680,9 @@ class StaticSource(models.Model):
                             (SPECTRAL_STANDARD, 'Spectral standard')
                          ]
 
-    name = models.CharField('Name of calibration source', max_length=55)
-    ra = models.FloatField('RA of source (degrees)')
-    dec = models.FloatField('Dec of source (degrees)')
+    name = models.CharField('Name of calibration source', max_length=55, db_index=True)
+    ra = models.FloatField('RA of source (degrees)', db_index=True)
+    dec = models.FloatField('Dec of source (degrees)', db_index=True)
     pm_ra = models.FloatField('Proper motion in RA of source (pmra*cos(dec); mas/yr)', default=0.0)
     pm_dec = models.FloatField('Proper motion in Dec of source (mas/yr)', default=0.0)
     parallax = models.FloatField('Parallax (mas)', default=0.0)

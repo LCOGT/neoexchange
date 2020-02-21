@@ -30,8 +30,15 @@
 						<tbody>
 						{% for body in target_list %}
 							<tr class="{% cycle 'odd' 'even' %}">
-								<td class="list_title" data-label="Name"><a href="{% url 'target' body.pk %}">{{body.current_name}}</a></td>
-								<td data-label="Type">{{body.get_source_type_display}}</td>
+								<td class="list_title" data-label="Name"><a href="{% url 'target' body.pk %}">{{body.full_name}}</a></td>
+								<td data-label="Type">{{body.get_source_type_display}}
+									{% if body.source_subtype_1 %}
+                                        ({{body.get_source_subtype_1_display}})
+                                    {% endif %}
+                                    {% if body.source_subtype_2 %}
+                                        [{{body.get_source_subtype_2_display}}]
+                                    {% endif %}
+								</td>
 								<td data-label="Origin">{{body.get_origin_display}}</td>
 								<td  data-label="Ingest date">
 									<time class="datestamp nicedate" datetime="{{ body.ingest|date:'c' }}">

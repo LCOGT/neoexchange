@@ -160,7 +160,13 @@
 			<div id="show-messages-inner">
 			<div id="show-messages-close">×</div>
 			{% for m in messages %}
-			<li class="{{m.tags}}">{{m}}</li>
+			<li class="{{m.tags}}">
+				{% if 'safe' in m.tags %}
+					{{m|safe}}
+				{% else %}
+					{{m}}
+				{% endif %}
+			</li>
 			{% empty %}
 			<li>No messages.</li>
 			{% endfor %}

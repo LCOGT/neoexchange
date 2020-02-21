@@ -22,13 +22,14 @@ import urllib
 import logging
 import tempfile
 import bokeh
-from django.db.models import Q
+from django.db.models import Q, Prefetch
 from django.forms.models import model_to_dict
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.files.storage import default_storage
+from django.core.paginator import Paginator
 from django.urls import reverse, reverse_lazy
 from django.shortcuts import render, redirect
 from django.views.generic import DetailView, ListView, FormView, TemplateView, View
@@ -41,6 +42,7 @@ from django.conf import settings
 from bs4 import BeautifulSoup
 import reversion
 import requests
+import re
 import numpy as np
 try:
     import pyslalib.slalib as S
@@ -54,6 +56,7 @@ from .models import *
 from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih, \
     convert_ast_to_comet
 import astrometrics.site_config as cfg
+from astrometrics.albedo import asteroid_diameter
 from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
     MagRangeError, determine_spectro_slot_length, get_sitepos, read_findorb_ephem,\
@@ -62,7 +65,8 @@ from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs, validate_text,\
-    read_mpcorbit_file
+    read_mpcorbit_file, fetch_jpl_physparams_altdes, store_jpl_sourcetypes, store_jpl_desigs,\
+    store_jpl_physparams
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
@@ -82,6 +86,7 @@ from core.plots import spec_plot, lin_vis_plot
 logger = logging.getLogger(__name__)
 
 BOKEH_URL = "https://cdn.bokeh.org/bokeh/release/bokeh-{}.min."
+
 
 class LoginRequiredMixin(object):
 
@@ -119,7 +124,7 @@ def determine_active_proposals(proposal_code=None, filter_proposals=True):
     if proposal_code is not None:
         try:
             proposal = Proposal.objects.get(code=proposal_code.upper())
-            proposals = [proposal.code,]
+            proposals = [proposal.code, ]
         except Proposal.DoesNotExist:
             logger.warning("Proposal {} does not exist".format(proposal_code))
             proposals = []
@@ -220,14 +225,15 @@ class BodySearchView(ListView):
     def get_queryset(self):
         name = self.request.GET.get("q", "")
         name = name.strip()
+        object_list = []
         if name != '':
             if name.isdigit():
-                object_list = self.model.objects.filter(name=name)
-            else:
-                object_list = self.model.objects.filter(Q(provisional_name__icontains=name) | Q(provisional_packed__icontains=name) | Q(name__icontains=name))
+                object_list = self.model.objects.filter(designations__value=name).filter(designations__desig_type='#')
+            if not object_list:
+                object_list = self.model.objects.filter(Q(designations__value__icontains=name) | Q(provisional_name__icontains=name) | Q(provisional_packed__icontains=name) | Q(name__icontains=name))
         else:
             object_list = self.model.objects.all()
-        return object_list
+        return list(set(object_list))
 
 
 class BodyVisibilityView(DetailView):
@@ -243,6 +249,29 @@ class BlockDetailView(DetailView):
 class SuperBlockDetailView(DetailView):
     template_name = 'core/block_detail.html'
     model = SuperBlock
+
+
+class SuperBlockTimeline(DetailView):
+    template_name = 'core/block_timeline.html'
+    model = SuperBlock
+
+    def get_context_data(self, **kwargs):
+        context = super(SuperBlockTimeline, self).get_context_data(**kwargs)
+        blks = []
+        for blk in self.object.block_set.all():
+            if blk.when_observed:
+                date = blk.when_observed.isoformat(' ')
+            else:
+                date = blk.block_start.isoformat(' ')
+            data = {
+                'date' : date,
+                'num'  : blk.num_observed if blk.num_observed else 0,
+                'type' : blk.get_obstype_display(),
+                'duration' : (blk.block_end - blk.block_start).seconds
+                }
+            blks.append(data)
+        context['blocks'] = json.dumps(blks)
+        return context
 
 
 class BlockListView(ListView):
@@ -334,15 +363,53 @@ class MeasurementViewBlock(LoginRequiredMixin, View):
 
 class MeasurementViewBody(View):
     template = 'core/measurements.html'
+    # Set default pagination (number of objects per page)
+    paginate_by = 20
+    # Set minimum number of orphans (objects allowed on last page)
+    orphans = 3
 
     def get(self, request, *args, **kwargs):
         body = Body.objects.get(pk=kwargs['pk'])
-        measures = SourceMeasurement.objects.filter(body=body).order_by('frame__midpoint')
-        return render(request, self.template, {'body': body, 'measures' : measures})
+        measurements = SourceMeasurement.objects.filter(body=body).order_by('frame__midpoint')
+        measurements = measurements.prefetch_related(Prefetch('frame'), Prefetch('body'))
+
+        # Set up pagination
+        page = request.GET.get('page', None)
+
+        # Toggle Pagination
+        if page == '0':
+            self.paginate_by = len(measurements)
+        # add more rows for denser formats
+        elif 'mpc' in request.path or 'ades' in request.path:
+            self.paginate_by = 30
+        paginator = Paginator(measurements, self.paginate_by, orphans=self.orphans)
+
+        if paginator.num_pages > 1:
+            is_paginated = True
+        else:
+            is_paginated = False
+
+        if page is None or int(page) < 1:
+            page = 1
+        elif int(page) > paginator.num_pages:
+            page = paginator.num_pages
+        page_obj = paginator.page(page)
+
+        return render(request, self.template, {'body': body, 'measures' : page_obj, 'is_paginated': is_paginated, 'page_obj': page_obj})
+
+
+def download_measurements_file(template, body, m_format, request):
+    measures = SourceMeasurement.objects.filter(body=body.id).order_by('frame__midpoint')
+    measures = measures.prefetch_related(Prefetch('frame'), Prefetch('body'))
+    data = { 'measures' : measures}
+    filename = "{}{}".format(body.current_name().replace(' ', '').replace('/', '_'), m_format)
+
+    response = HttpResponse(template.render(data), content_type="text/plain")
+    response['Content-Disposition'] = 'attachment; filename=' + filename
+    return response
 
 
 class MeasurementDownloadMPC(View):
-
     template = get_template('core/mpc_outputfile.txt')
 
     def get(self, request, *args, **kwargs):
@@ -352,12 +419,7 @@ class MeasurementDownloadMPC(View):
             logger.warning("Could not find Body with pk={}".format(kwargs['pk']))
             raise Http404("Body does not exist")
 
-        measures = SourceMeasurement.objects.filter(body=body).order_by('frame__midpoint')
-        data = { 'measures' : measures}
-        filename = "{}_mpc.dat".format(body.current_name().replace(' ', '').replace('/', '_'))
-
-        response = HttpResponse(self.template.render(data), content_type="text/plain")
-        response['Content-Disposition'] = 'attachment; filename=' + filename
+        response = download_measurements_file(self.template, body, '_mpc.dat', request)
         return response
 
 
@@ -372,12 +434,7 @@ class MeasurementDownloadADESPSV(View):
             logger.warning("Could not find Body with pk={}".format(kwargs['pk']))
             raise Http404("Body does not exist")
 
-        measures = SourceMeasurement.objects.filter(body=body).order_by('frame__midpoint')
-        data = { 'measures' : measures}
-        filename = "{}.psv".format(body.current_name().replace(' ', '').replace('/', '_'))
-
-        response = HttpResponse(self.template.render(data), content_type="text/plain")
-        response['Content-Disposition'] = 'attachment; filename=' + filename
+        response = download_measurements_file(self.template, body, '.psv', request)
         return response
 
 
@@ -390,6 +447,7 @@ def export_measurements(body_id, output_path=''):
         logger.warning("Could not find Body with pk={}".format(body_id))
         return None, -1
     measures = SourceMeasurement.objects.filter(body=body).exclude(frame__frametype=Frame.SATELLITE_FRAMETYPE).exclude(frame__midpoint__lt=datetime(1993, 1, 1, 0, 0, 0, 0)).order_by('frame__midpoint')
+    measures = measures.prefetch_related(Prefetch('frame'), Prefetch('body'))
     data = { 'measures' : measures}
 
     filename = "{}.mpc".format(body.current_name().replace(' ', '').replace('/', '_'))
@@ -470,7 +528,7 @@ def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_di
                 else:
                     time_to_current_epoch = abs(datetime.min - comp_time)
                 time_to_new_epoch = abs(new_elements['epochofel'] - comp_time)
-                if time_to_new_epoch <= time_to_current_epoch and new_elements['orbit_rms'] < 1.0:
+                if time_to_new_epoch <= time_to_current_epoch and new_elements['orbit_rms'] > 0.0 and new_elements['orbit_rms'] < 1.0:
                     # Reset some fields to avoid overwriting
 
                     new_elements['provisional_name'] = body.provisional_name
@@ -487,6 +545,8 @@ def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_di
                         message = "Epoch of elements was too old"
                     if new_elements['orbit_rms'] >= 1.0:
                         message += " and rms was too high"
+                    elif new_elements['orbit_rms'] < 0.001:
+                        message += " and rms was suspicously low"
                     message += ". Did not update"
                 logger.info("%s Body #%d (%s) with FindOrb" % (message, body.pk, body.current_name()))
 
@@ -607,8 +667,9 @@ class StaticSourceDetailView(DetailView):
         context = super(StaticSourceDetailView, self).get_context_data(**kwargs)
         context['blocks'] = Block.objects.filter(calibsource=self.object).order_by('block_start')
         script, div, p_spec = plot_all_spec(self.object)
-        context['script'] = script
-        context['div'] = div["raw_spec"]
+        if script and div:
+            context['script'] = script
+            context['div'] = div["raw_spec"]
         base_path = BOKEH_URL.format(bokeh.__version__)
         context['css_path'] = base_path + 'css'
         context['js_path'] = base_path + 'js'
@@ -1027,8 +1088,13 @@ def schedule_check(data, body, ok_to_schedule=True):
         logger.warning("Preventing attempt to schedule high eccentricity non-Comet")
         ok_to_schedule = False
 
-    # Check for valid proposal
-    # validate_proposal_time(data['proposal_code'])
+    # If ToO mode is set, check for valid proposal
+    too_mode = data.get('too_mode', False)
+    if too_mode is True:
+        proposal = Proposal.objects.get(code=data['proposal_code'])
+        if proposal and proposal.time_critical is False:
+            logger.warning("ToO/TC observations not possible with this proposal")
+            too_mode = False
 
     if data.get('start_time') and data.get('end_time'):
         dark_start = data.get('start_time')
@@ -1226,7 +1292,7 @@ def schedule_check(data, body, ok_to_schedule=True):
             suffix = "cad-%s-%s" % (datetime.strftime(data['start_time'], '%Y%m%d'), datetime.strftime(data['end_time'], '%m%d'))
         elif spectroscopy:
             suffix += "_spectra"
-        if data.get('too_mode', False) is True:
+        if too_mode is True:
             suffix += '_ToO'
         group_name = body.current_name() + '_' + data['site_code'].upper() + '-' + suffix
 
@@ -1241,7 +1307,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'exp_count': exp_count,
         'exp_length': exp_length,
         'schedule_ok': ok_to_schedule,
-        'too_mode' : data.get('too_mode', False),
+        'too_mode' : too_mode,
         'site_code': data['site_code'],
         'proposal_code': data['proposal_code'],
         'group_name': group_name,
@@ -1335,7 +1401,7 @@ def schedule_submit(data, body, username):
             # Update MPC observations assuming too many updates have not been done recently and target is not a comet
             cut_off_time = timedelta(minutes=1)
             now = datetime.utcnow()
-            recent_updates = Body.objects.exclude(source_type='u').filter(update_time__gte=now-cut_off_time)
+            recent_updates = Body.objects.exclude(source_type='U').filter(update_time__gte=now-cut_off_time)
             if len(recent_updates) < 1:
                 update_MPC_obs(body.current_name())
 
@@ -1536,13 +1602,21 @@ def characterization(request):
     return render(request, 'core/characterization.html', params)
 
 
+def get_characterization_targets():
+    """Function to return the list of Characterization targets.
+    If we change this, also change models.Body.characterization_target"""
+
+    characterization_list = Body.objects.filter(active=True).exclude(origin='M').exclude(source_type='U')
+    return characterization_list
+
+
 def build_characterization_list(disp=None):
     params = {}
     # If we don't have any Body instances, return None instead of breaking
     try:
         # If we change the definition of Characterization Target,
         # also update models.Body.characterization_target()
-        char_targets = Body.objects.filter(active=True).exclude(origin='M')
+        char_targets = get_characterization_targets()
         unranked = []
         for body in char_targets:
             try:
@@ -1780,16 +1854,38 @@ def record_block(tracking_number, params, form_data, target):
         return False
 
 
+def sort_des_type(name, default='T'):
+    # Guess name type based on structure
+    n = name.strip()
+    if not n:
+        return ''
+    if n.isdigit():
+        dtype = '#'
+    elif ' ' in n or '_' in n:
+        dtype = 'P'
+    elif n[-1] in ['P', 'C', 'D'] and n[:-1].isdigit():
+        dtype = '#'
+    elif bool(re.search('\d', n)) or (not n.isupper() and sum(1 for c in n if c.isupper()) > 1):
+        dtype = 'C'
+    elif n.replace('-', '').replace("'", "").isalpha() and not n.isupper():
+        dtype = 'N'
+    else:
+        dtype = default
+    return dtype
+
+
 def return_fields_for_saving():
     """Returns a list of fields that should be checked before saving a revision.
     Split out from save_and_make_revision() so it can be consistently used by the
     remove_bad_revisions management command."""
 
-    fields = ['provisional_name', 'provisional_packed', 'name', 'origin', 'source_type',  'elements_type',
+    body_fields = ['provisional_name', 'provisional_packed', 'name', 'origin', 'source_type',  'elements_type',
               'epochofel', 'abs_mag', 'slope', 'orbinc', 'longascnode', 'eccentricity', 'argofperih', 'meandist', 'meananom',
               'score', 'discovery_date', 'num_obs', 'arc_length']
 
-    return fields
+    param_fields = ['abs_mag', 'slope', 'provisional_name', 'name']
+
+    return body_fields, param_fields
 
 
 def save_and_make_revision(body, kwargs):
@@ -1801,7 +1897,9 @@ def save_and_make_revision(body, kwargs):
     so use the type of original to convert and then compare.
     """
 
-    fields = return_fields_for_saving()
+    b_fields, p_fields = return_fields_for_saving()
+
+    p_field_to_p_code = {'abs_mag': 'H', 'slope': 'G', 'provisional_name': 'C', 'name': 'P'}
 
     update = False
 
@@ -1812,8 +1910,50 @@ def save_and_make_revision(body, kwargs):
             v = float(v)
         if v != param:
             setattr(body, k, v)
-            if k in fields:
+            if k in b_fields:
                 update = True
+        if k in p_fields:
+            param_code = p_field_to_p_code[k]
+            if 'name' in k:
+                if k == 'name':
+                    param_code = sort_des_type(str(v))
+                p_dict = {'desig_type': param_code,
+                              'value': v,
+                              'notes': 'MPC Default',
+                              'preferred': True,
+                              }
+            else:
+                p_dict = {'value': v,
+                          'parameter_type': param_code,
+                          'preferred': False,
+                          'reference': 'MPC Default'
+                          }
+            phys_update = body.save_physical_parameters(p_dict)
+            if k == 'abs_mag' and phys_update:
+                albedo = body.get_physical_parameters(param_type='ab', return_all=False)
+                if not albedo:
+                    albedo = [{'value': 0.14, 'error': 0.5-0.14, 'error2': 0.14-0.01}]
+                albedo_mid = albedo[0]['value']
+                if albedo[0]['error']:
+                    albedo_high = albedo_mid + albedo[0]['error']
+                    if albedo[0]['error2']:
+                        albedo_low = albedo_mid - albedo[0]['error2']
+                    else:
+                        albedo_low = albedo_mid - albedo[0]['error']
+                else:
+                    albedo_high = albedo_mid + 0.01
+                    albedo_low = albedo_mid - 0.01
+                diam_dict = {'value': round(asteroid_diameter(albedo_mid, v), 2),
+                             'error': round(asteroid_diameter(albedo_low, v) - asteroid_diameter(albedo_mid, v)),
+                             'error2': round(asteroid_diameter(albedo_mid, v) - asteroid_diameter(albedo_high, v)),
+                             'parameter_type': 'D',
+                             'units': 'm',
+                             'preferred': True,
+                             'reference': 'MPC Default',
+                             'notes': 'Initial Diameter Guess using H={} and albedo={} ({} to {})'.format(v, round(albedo_mid, 2), round(albedo_low, 2), round(albedo_high, 2))
+                            }
+                body.save_physical_parameters(diam_dict)
+
     if update:
         with reversion.create_revision():
             body.save()
@@ -1973,7 +2113,7 @@ def clean_NEOCP_object(page_list):
 
         elif 21 <= len(current) <= 25:
             # The first 20 characters can get very messy if there is a temporary
-            # and permanent desigination as the absolute magntiude and slope gets
+            # and permanent designation as the absolute magnitude and slope gets
             # pushed up and partially overwritten. Sort this mess out and then the
             # rest obeys the documentation on the MPC site:
             # https://www.minorplanetcenter.net/iau/info/MPOrbitFormat.html)
@@ -1993,7 +2133,7 @@ def clean_NEOCP_object(page_list):
                 readable_desig = line[166:194].strip()
             elements_type = 'MPC_MINOR_PLANET'
             source_type = 'U'
-            if readable_desig and readable_desig[0:2] =='P/':
+            if readable_desig and readable_desig[0:2] == 'P/':
                 elements_type = 'MPC_COMET'
                 source_type = 'C'
 
@@ -2096,6 +2236,12 @@ def update_crossids(astobj, dbg=False):
         body = sorted_bodies[0]
         logger.info("Taking %s (id=%d) as canonical Body" % (body.current_name(), body.pk))
         for del_body in sorted_bodies[1:]:
+            del_names = Designations.objects.filter(body=del_body)
+            for name in del_names:
+                des_dict = model_to_dict(name)
+                del des_dict['id']
+                del des_dict['body']
+                body.save_physical_parameters(des_dict)
             logger.info("Trying to remove %s (id=%d) duplicate Body" % (del_body.current_name(), del_body.pk))
             num_sblocks = SuperBlock.objects.filter(body=del_body).count()
             num_blocks = Block.objects.filter(body=del_body).count()
@@ -2119,21 +2265,23 @@ def update_crossids(astobj, dbg=False):
         # Find out if the details have changed, if they have, save a revision
         # But first check if it is a comet or NEO and came from somewhere other
         # than the MPC. In this case, leave it active.
-        if body.source_type in ['N', 'C', 'H'] and body.origin != 'M':
+        if (body.source_type in ['N', 'C'] or body.source_subtype_1 == 'H') and body.origin != 'M':
             kwargs['active'] = True
         # Check if we are trying to "downgrade" a NEO or other target type
         # to an asteroid
         if body.source_type != 'A' and body.origin != 'M' and kwargs['source_type'] == 'A':
             logger.warning("Not downgrading type for %s from %s to %s" % (body.current_name(), body.source_type, kwargs['source_type']))
             kwargs['source_type'] = body.source_type
-        if kwargs['source_type'] in ['C', 'H']:
-            if dbg: print("Converting to comet")
+        if kwargs['source_type'] == 'C' or (kwargs['source_type'] == 'A' and kwargs['source_subtype_1'] == 'H'):
+            if dbg:
+                print("Converting to comet")
             kwargs = convert_ast_to_comet(kwargs, body)
         if dbg:
             print(kwargs)
         check_body = Body.objects.filter(provisional_name=temp_id, **kwargs)
         if check_body.count() == 0:
             save_and_make_revision(body, kwargs)
+            body.save_physical_parameters({'value': temp_id, 'desig_type': sort_des_type(temp_id, default='C'), 'notes': 'MPC Default'})
             logger.info("Updated cross identification for %s" % body.current_name())
     elif kwargs != {}:
         # Didn't know about this object before so create but make inactive
@@ -2170,53 +2318,66 @@ def clean_crossid(astobj, dbg=False):
 
     active = True
     objtype = ''
+    sub1 = ''
     if obj_id != '' and desig == 'wasnotconfirmed':
-        if dbg: print("Case 1")
+        if dbg:
+            print("Case 1")
         # Unconfirmed, no longer interesting so set inactive
         objtype = 'U'
         desig = ''
         active = False
     elif obj_id != '' and desig == 'doesnotexist':
         # Did not exist, no longer interesting so set inactive
-        if dbg: print("Case 2")
+        if dbg:
+            print("Case 2")
         objtype = 'X'
         desig = ''
         active = False
     elif obj_id != '' and desig == 'wasnotminorplanet':
         # "was not a minor planet"; set to satellite and no longer interesting
-        if dbg: print("Case 3")
+        if dbg:
+            print("Case 3")
         objtype = 'J'
         desig = ''
         active = False
     elif obj_id != '' and desig == '' and reference == '':
         # "Was not interesting" (normally a satellite), no longer interesting
         # so set inactive
-        if dbg: print("Case 4")
+        if dbg:
+            print("Case 4")
         objtype = 'W'
         desig = ''
         active = False
     elif obj_id != '' and desig != '':
         # Confirmed
         if ('CBET' in reference or 'IAUC' in reference or 'MPEC' in reference) and 'C/' in desig:
-            # There is a reference to an CBET or IAUC so we assume it's "very
+            # There is a reference to a CBET or IAUC so we assume it's "very
             # interesting" i.e. a comet
-            if dbg: print("Case 5a")
+            if dbg:
+                print("Case 5a")
             objtype = 'C'
             if time_from_confirm > interesting_cutoff:
                 active = False
         elif 'MPEC' in reference:
             # There is a reference to an MPEC so we assume it's
             # "interesting" i.e. an NEO
-            if dbg: print("Case 5b")
+            if dbg:
+                print("Case 5b")
             objtype = 'N'
             if 'A/' in desig:
+                # Check if it is an active (Comet-like) asteroid
+                objtype = 'A'
+                sub1 = 'A'
+            if 'I/' in desig:
                 # Check if it is an inactive hyperbolic asteroid
-                objtype = 'H'
+                objtype = 'A'
+                sub1 = 'H'
             if time_from_confirm > interesting_cutoff:
                 active = False
         elif desig[-1] == 'P' and desig[0:-1].isdigit():
             # Crossid from NEO candidate to comet
-            if dbg: print("Case 5c")
+            if dbg:
+                print("Case 5c")
             objtype = 'C'
             try:
                 desig = str(int(desig[0:-1]))
@@ -2226,17 +2387,29 @@ def clean_crossid(astobj, dbg=False):
             if time_from_confirm > interesting_cutoff:
                 active = False
         else:
-            if dbg: print("Case 5z")
-            objtype = 'A'
-            active = False
+            chunks = desig.split()
+            for i, planet in enumerate(['Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto']):
+                if chunks[0] == planet and ('I' in chunks[1] or 'V' in chunks[1] or 'X' in chunks[1]):
+                    if dbg:
+                        print("Case 5d")
+                    objtype = 'M'
+                    sub1 = 'P' + str(i+1)
+                    active = False
+                    break
+            if objtype == '':
+                if dbg:
+                    print("Case 5z")
+                objtype = 'A'
+                active = False
 
     if objtype != '':
         params = {'source_type': objtype,
+                  'source_subtype_1': sub1,
                   'name': desig,
                   'active': active
                   }
         if dbg:
-            print("%07s->%s (%s) %s" % (obj_id, params['name'], params['source_type'], params['active']))
+            print("%07s->%s (%s/%s) %s" % (obj_id, params['name'], params['source_type'], params['source_subtype_1'], params['active']))
     else:
         logger.warning("Unparseable cross-identification: %s" % astobj)
         params = {}
@@ -2377,7 +2550,25 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
         body.origin = origin
         body.save()
         logger.info("More recent elements already stored for %s" % obj_id)
+    # Update Physical Parameters
+    if body.characterization_target():
+        update_jpl_phys_params(body)
     return True
+
+
+def update_jpl_phys_params(body):
+    """Fetch physical parameters, names, and object type from JPL SB database and store in Neoexchange DB"""
+    resp = fetch_jpl_physparams_altdes(body)
+
+    try:
+        store_jpl_physparams(resp['phys_par'], body)
+        store_jpl_desigs(resp['object'], body)
+        store_jpl_sourcetypes(resp['object']['orbit_class']['code'], resp['object'], body)
+    except KeyError:
+        if 'message' in resp.keys():
+            logger.warning(resp['message'])
+        else:
+            logger.warning("Error getting physical parameters from JPL DB")
 
 
 def ingest_new_object(orbit_file, obs_file=None, dbg=False):
@@ -2437,20 +2628,22 @@ def ingest_new_object(orbit_file, obs_file=None, dbg=False):
                     name = None
                 kwargs['name'] = name
                 kwargs['provisional_packed'] = kwargs['provisional_name']
-                if name is not None and obj_id.strip() == name.replace(' ', '') and name.strip().count(' ') == 1:
+                if name is not None and obj_id.strip() == name.replace(' ', ''):
                     kwargs['provisional_name'] = None
                     kwargs['origin'] = 'M'
                 else:
                     kwargs['provisional_name'] = obj_id
                 # Determine perihelion distance and asteroid type
                 if kwargs.get('eccentricity', None) is not None and kwargs.get('eccentricity', 2.0) < 1.0\
-                    and kwargs.get('meandist', None) is not None:
+                        and kwargs.get('meandist', None) is not None:
                     perihdist = kwargs['meandist'] * (1.0 - kwargs['eccentricity'])
                     source_type = determine_asteroid_type(perihdist, kwargs['eccentricity'])
-                    if dbg: print("New source type", source_type)
+                    if dbg:
+                        print("New source type", source_type)
                     kwargs['source_type'] = source_type
                 if local_discovery:
-                    if dbg: print("Setting to local origin")
+                    if dbg:
+                        print("Setting to local origin")
                     kwargs['origin'] = 'L'
                     kwargs['source_type'] = 'D'
         else:
@@ -2460,10 +2653,11 @@ def ingest_new_object(orbit_file, obs_file=None, dbg=False):
         kwargs['discovery_date'] = discovery_date
         # Needs to be __exact (and the correct database collation set on Body)
         # to perform case-sensitive lookup on the provisional name.
-        if dbg: print("Looking in the DB for ", obj_id)
+        if dbg:
+            print("Looking in the DB for ", obj_id)
         query = Q(provisional_name__exact=obj_id)
         if name is not None:
-            query = query | Q(name__exact=name)
+            query |= Q(name__exact=name)
         bodies = Body.objects.filter(query)
         if bodies.count() == 0:
             body, created = Body.objects.get_or_create(provisional_name__exact=obj_id)
@@ -2569,11 +2763,15 @@ def create_source_measurement(obs_lines, block=None):
     if obs_body:
         # initialize DB products
         frame_list = Frame.objects.filter(sourcemeasurement__body=obs_body)
-        source_list = SourceMeasurement.objects.filter(body=obs_body)
+        source_list = SourceMeasurement.objects.filter(body=obs_body).prefetch_related('frame')
         block_list = Block.objects.filter(body=obs_body)
         measure_count = len(source_list)
 
         for obs_line in reversed(obs_lines):
+            # End loop when measurements are in the DB for all MPC lines
+            logger.info('Previously recorded {} of {} total MPC obs'.format(measure_count, useful_obs))
+            if measure_count >= useful_obs:
+                break
             frame = None
             logger.debug(obs_line.rstrip())
             params = parse_mpcobs(obs_line)
@@ -2690,10 +2888,7 @@ def create_source_measurement(obs_lines, block=None):
                         if measure_created:
                             measures.append(measure)
                             measure_count += 1
-                        # End loop when measurements are in the DB for all MPC lines
-                        logger.info('Previously recorded {} of {} total MPC obs'.format(measure_count, useful_obs))
-                        if measure_count >= useful_obs:
-                            break
+
 
         # Set updated to True for the target with the current datetime
         update_params = { 'updated' : True,
@@ -3053,7 +3248,10 @@ def plot_all_spec(source):
                      'filename': spec.spec_vis}
                 data_spec.append(new_spec)
 
-        script, div = spec_plot(data_spec, {}, reflec=True)
+        if data_spec:
+            script, div = spec_plot(data_spec, {}, reflec=True)
+        else:
+            script = div = None
 
     return script, div, p_spec
 
@@ -3100,10 +3298,12 @@ class BlockSpec(View):  # make logging required later
     def get(self, request, *args, **kwargs):
         block = Block.objects.get(pk=kwargs['pk'])
         script, div = plot_floyds_spec(block, int(kwargs['obs_num']))
-        if 'reflec_spec' in div:
-            params = {'pk': kwargs['pk'], 'obs_num': kwargs['obs_num'], 'sb_id': block.superblock.id, "the_script": script, "raw_div": div["raw_spec"], "reflec_div": div["reflec_spec"]}
-        else:
-            params = {'pk': kwargs['pk'], 'obs_num': kwargs['obs_num'], 'sb_id': block.superblock.id, "the_script": script, "raw_div": div["raw_spec"]}
+        params = {'pk': kwargs['pk'], 'obs_num': kwargs['obs_num'], 'sb_id': block.superblock.id}
+        if div:
+            params["the_script"] = script
+            params["raw_div"] = div["raw_spec"]
+            if 'reflec_spec' in div:
+                params["reflec_div"] = div["reflec_spec"]
         base_path = BOKEH_URL.format(bokeh.__version__)
         params['css_path'] = base_path + 'css'
         params['js_path'] = base_path + 'js'
@@ -3117,7 +3317,11 @@ class PlotSpec(View):
     def get(self, request, *args, **kwargs):
         body = Body.objects.get(pk=kwargs['pk'])
         script, div, p_spec = plot_all_spec(body)
-        params = {'body': body, 'floyds': False, "the_script": script, "reflec_div": div["reflec_spec"], "p_spec": p_spec}
+        params = {'body': body, 'floyds': False}
+        if div:
+            params["the_script"] = script
+            params["reflec_div"] = div["reflec_spec"]
+            params["p_spec"] = p_spec
         base_path = BOKEH_URL.format(bokeh.__version__)
         params['css_path'] = base_path + 'css'
         params['js_path'] = base_path + 'js'
@@ -3209,7 +3413,7 @@ def update_previous_spectra(specobj, source='U', dbg=False):
         return False
 
     obj_id = specobj[0].rstrip()
-    body_char = Body.objects.filter(active=True).exclude(origin='M')
+    body_char = get_characterization_targets()
     try:
         body = body_char.get(name=obj_id)
     except:

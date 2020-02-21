@@ -288,11 +288,11 @@ class TestComputeEphemerides(TestCase):
 
     def test_compute_ephem_with_elements(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
-        expected_ra  = 5.28722753669144
+        expected_ra = 5.28722753669144
         expected_dec = 0.522637696108887
         expected_mag = 20.408525362626005
         expected_motion = 2.4825093417658186
-        expected_alt =  -58.658929026981895
+        expected_alt = -58.658929026981895
         expected_spd = 119.94694444444444
         expected_pa = 91.35793788996334
 
@@ -311,13 +311,13 @@ class TestComputeEphemerides(TestCase):
 
     def test_compute_ephem_with_body(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
-        expected_ra  = 5.28722753669144
+        expected_ra = 5.28722753669144
         expected_dec = 0.522637696108887
         expected_mag = 20.408525362626005
         expected_motion = 2.4825093417658186
-        expected_alt =  -58.658929026981895
+        expected_alt = -58.658929026981895
         expected_spd = 119.94694444444444
-        expected_pa  = 91.35793788996334
+        expected_pa = 91.35793788996334
 
         body_elements = model_to_dict(self.body)
         emp_line = compute_ephem(d, body_elements, '500', dbg=False, perturb=True, display=False)
@@ -516,6 +516,35 @@ class TestComputeEphemerides(TestCase):
                          'meananom': None,
                          'perihdist': None,
                          'epochofperih': datetime(2019, 8, 21, 0, 0),
+                         'abs_mag': 14.9,
+                         'slope': 4.0,
+                         'num_obs': 7,
+                         'arc_length': 0.2,
+                        }
+        start = datetime(2019, 8, 21, 15)
+        site_code = '500'
+
+        emp_line = compute_ephem(start, body_elements, site_code, perturb=False)
+
+        self.assertEqual({}, emp_line)
+
+    def test_call_compute_comet_missing_qdate(self):
+        body_elements = {
+                         'provisional_name': 'C0TUUZ2',
+                         'name': None,
+                         'origin': 'M',
+                         'source_type': 'U',
+                         'elements_type': 'MPC_COMET',
+                         'epochofel': datetime(2019, 8, 21, 0, 0),
+                         'orbit_rms': 0.28,
+                         'orbinc': 105.5272,
+                         'longascnode': 323.82141,
+                         'argofperih': 74.17643,
+                         'eccentricity': 1.0,
+                         'meandist': 351375868.8,
+                         'meananom': None,
+                         'perihdist': None,
+                         'epochofperih': None,
                          'abs_mag': 14.9,
                          'slope': 4.0,
                          'num_obs': 7,
@@ -2933,3 +2962,84 @@ class TestReadFindorbEphem(TestCase):
         empinfo, emp = read_findorb_ephem(outfile)
 
         self.compare_ephemeris((expected_empinfo, expected_emp), (empinfo, emp))
+
+
+class TestDetermineHorizonsId(TestCase):
+
+    def test_289P(self):
+        expected_id = 90001196
+        lines = ['Ambiguous target name; provide unique id:',
+                 '    Record #  Epoch-yr  >MATCH DESIG<  Primary Desig  Name  ',
+                 '    --------  --------  -------------  -------------  -------------------------',
+                 '    90001195    2005    289P           289P            Blanpain',
+                 '    90001196    2018    289P           289P            Blanpain',
+                 '']
+
+        horizons_id = determine_horizons_id(lines)
+
+        self.assertEqual(expected_id, horizons_id)
+
+    def test_46P(self):
+        expected_id = 90000544
+        lines = ['Ambiguous target name; provide unique id:',
+                 '    Record #  Epoch-yr  >MATCH DESIG<  Primary Desig  Name  ',
+                 '    --------  --------  -------------  -------------  -------------------------',
+                 '    90000532    1947    46P            46P             Wirtanen',
+                 '    90000533    1954    46P            46P             Wirtanen',
+                 '    90000534    1961    46P            46P             Wirtanen',
+                 '    90000535    1967    46P            46P             Wirtanen',
+                 '    90000536    1974    46P            46P             Wirtanen',
+                 '    90000537    1986    46P            46P             Wirtanen',
+                 '    90000538    1991    46P            46P             Wirtanen',
+                 '    90000539    1997    46P            46P             Wirtanen',
+                 '    90000540    1999    46P            46P             Wirtanen',
+                 '    90000541    2006    46P            46P             Wirtanen',
+                 '    90000542    2007    46P            46P             Wirtanen',
+                 '    90000543    2018    46P            46P             Wirtanen',
+                 '    90000544    2018    46P            46P             Wirtanen',
+                 '']
+
+        horizons_id = determine_horizons_id(lines)
+
+        self.assertEqual(expected_id, horizons_id)
+
+    def test_46P_prior_apparition(self):
+        expected_id = 90000542
+        lines = ['Ambiguous target name; provide unique id:',
+                 '    Record #  Epoch-yr  >MATCH DESIG<  Primary Desig  Name  ',
+                 '    --------  --------  -------------  -------------  -------------------------',
+                 '    90000532    1947    46P            46P             Wirtanen',
+                 '    90000533    1954    46P            46P             Wirtanen',
+                 '    90000534    1961    46P            46P             Wirtanen',
+                 '    90000535    1967    46P            46P             Wirtanen',
+                 '    90000536    1974    46P            46P             Wirtanen',
+                 '    90000537    1986    46P            46P             Wirtanen',
+                 '    90000538    1991    46P            46P             Wirtanen',
+                 '    90000539    1997    46P            46P             Wirtanen',
+                 '    90000540    1999    46P            46P             Wirtanen',
+                 '    90000541    2006    46P            46P             Wirtanen',
+                 '    90000542    2007    46P            46P             Wirtanen',
+                 '    90000543    2018    46P            46P             Wirtanen',
+                 '    90000544    2018    46P            46P             Wirtanen',
+                 '']
+        now = datetime(2008, 5, 11, 17, 20, 42)
+
+        horizons_id = determine_horizons_id(lines, now)
+
+        self.assertEqual(expected_id, horizons_id)
+
+    def test_bad_object(self):
+        expected_id = None
+        lines = ['Unknown target (20000P). Maybe try different id_type?']
+
+        horizons_id = determine_horizons_id(lines)
+
+        self.assertEqual(expected_id, horizons_id)
+
+    def test_bad_object2(self):
+        expected_id = None
+        lines = []
+
+        horizons_id = determine_horizons_id(lines)
+
+        self.assertEqual(expected_id, horizons_id)
