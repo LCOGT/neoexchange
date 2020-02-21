@@ -1331,6 +1331,7 @@ class TestSubmitBlockToScheduler(TestCase):
                     'ra_deg' : 234.3254167,
                     'dec_deg' : -0.163889,
                     'vmag' : 12.4,
+                    'source_id' : 'SA107-684',
                     'source_type' : 4
                   }
         expected_num_requests = 1
@@ -1340,8 +1341,10 @@ class TestSubmitBlockToScheduler(TestCase):
         expected_exptime = 300.0
         expected_filter = 'slit_6.0as'
         expected_groupid = params['group_name']
+        expected_target = {'type': 'ICRS', 'name': 'SA107-684', 'ra': 234.3254167, 'dec': -0.163889,
+                                'extra_params': { 'v_magnitude' : 12.4} }
 
-        user_request = make_requestgroup(self.body_elements, params)
+        user_request = make_requestgroup({}, params)
         requests = user_request['requests']
         self.assertEqual(expected_num_requests, len(requests))
         self.assertEqual(expected_operator, user_request['operator'])
@@ -1352,6 +1355,7 @@ class TestSubmitBlockToScheduler(TestCase):
         self.assertEqual(sol_configurations[2]['instrument_configs'][0]['exposure_count'], expected_exp_count)
         self.assertEqual(sol_configurations[2]['instrument_configs'][0]['exposure_time'], expected_exptime)
         self.assertEqual(sol_configurations[2]['instrument_configs'][0]['optical_elements']['slit'], expected_filter)
+        self.assertEqual(sol_configurations[2]['target'], expected_target)
 
     def test_spectro_with_solar_analog_pm(self):
 
@@ -1446,8 +1450,11 @@ class TestSubmitBlockToScheduler(TestCase):
         expected_exptime = 300.0
         expected_filter = 'slit_6.0as'
         expected_groupid = params['group_name']
+        expected_target = {'type': 'ICRS', 'name': 'SA107-684', 'ra': 234.3254167, 'dec': -0.163889,
+                                'proper_motion_ra' : 60.313, 'proper_motion_dec' : -35.584, 'parallax' : 10.5664,
+                                'extra_params': { 'v_magnitude' : 12.4} }
 
-        user_request = make_requestgroup(self.body_elements, params)
+        user_request = make_requestgroup({}, params)
         requests = user_request['requests']
         self.assertEqual(expected_num_requests, len(requests))
         self.assertEqual(expected_operator, user_request['operator'])
@@ -1458,6 +1465,7 @@ class TestSubmitBlockToScheduler(TestCase):
         self.assertEqual(sol_configurations[2]['instrument_configs'][0]['exposure_count'], expected_exp_count)
         self.assertEqual(sol_configurations[2]['instrument_configs'][0]['exposure_time'], expected_exptime)
         self.assertEqual(sol_configurations[2]['instrument_configs'][0]['optical_elements']['slit'], expected_filter)
+        self.assertEqual(sol_configurations[2]['target'], expected_target)
 
 
 class TestFetchFilterList(TestCase):
