@@ -20,6 +20,7 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from unittest import skipIf
 from math import radians
+from copy import deepcopy
 
 import astropy.units as u
 from bs4 import BeautifulSoup
@@ -4860,6 +4861,84 @@ class TestMakeCadence(TestCase):
                     self.assertEqual(exrequest, ur['requests'][i])
             else:
                 self.assertEqual(expected[key], ur[key])
+
+
+class TestMakeTarget(TestCase):
+
+    def setUp(self):
+        self.params = { 'utc_date' : datetime(2017, 8, 20, 0, 0),
+                        'start_time' : datetime(2017, 8, 20, 8, 40),
+                        'end_time' : datetime(2017, 8, 20, 19, 40),
+                        'period' : 2.0,
+                        'jitter' : 0.25,
+                        'group_name' : "3122_Q59-20170815" + "+solstd",
+                        'proposal_id' : 'LCOSchedulerTest',
+                        'user_id' : 'tlister@lcogt.net',
+                        'exp_type' : 'EXPOSE',
+                        'exp_count' : 105,
+                        'exp_time' : 20.0,
+                        'binning' : 2,
+                        'instrument' : '0M4-SCICAM-SBIG',
+                        'filter_pattern' : 'w',
+                        'site' : 'COJ',
+                        'pondtelescope' : '0m4a',
+                        'site_code' : 'Q59',
+                        'source_id' : 'LTT9999',
+                        'ra_deg'  : 359.07507666666663,
+                        'dec_deg' : 4.626489444444445,
+                        'constraints' : {'max_airmass': 2.0, 'min_lunar_distance': 15}
+                        }
+        self.ipp_value = 1.0
+
+    def test_nopm(self):
+        expected_target = { 'type' : 'ICRS',
+                            'name' : 'LTT9999',
+                            'ra'   : self.params['ra_deg'],
+                            'dec'  : self.params['dec_deg'],
+                            'extra_params' : {}
+                          }
+        target = make_target(self.params)
+
+        self.assertEqual(expected_target, target)
+
+    def test_pm_no_parallax(self):
+        expected_target = { 'type' : 'ICRS',
+                            'name' : 'LTT9999',
+                            'ra'   : self.params['ra_deg'],
+                            'dec'  : self.params['dec_deg'],
+                            'proper_motion_ra': 10.0,
+                            'proper_motion_dec': -10.0,
+                            'extra_params' : {}
+                          }
+
+        params_pm = deepcopy(self.params)
+        params_pm['pm_ra'] = 10.0
+        params_pm['pm_dec'] = -10.0
+
+        target = make_target(params_pm)
+
+        self.assertEqual(expected_target, target)
+
+    def test_pm_parallax_vmag(self):
+        expected_target = { 'type' : 'ICRS',
+                            'name' : 'LTT9999',
+                            'ra'   : self.params['ra_deg'],
+                            'dec'  : self.params['dec_deg'],
+                            'proper_motion_ra': 10.0,
+                            'proper_motion_dec': -10.0,
+                            'parallax' : 7.9985,
+                            'extra_params' : { 'v_magnitude' : 9.08}
+                          }
+
+        params_pm = deepcopy(self.params)
+        params_pm['pm_ra'] = 10.0
+        params_pm['pm_dec'] = -10.0
+        params_pm['parallax'] = 7.9985
+        params_pm['vmag'] = 9.08
+
+        target = make_target(params_pm)
+
+        self.assertEqual(expected_target, target)
 
 
 class TestFetchTaxonomyData(TestCase):
