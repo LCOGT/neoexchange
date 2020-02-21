@@ -1436,7 +1436,8 @@ class TestSubmitBlockToScheduler(TestCase):
                     'pm_dec' : -35.584,
                     'parallax' : 10.5664,
                     'vmag' : 12.4,
-                    'source_type' : 4
+                    'source_type' : 4,
+                    'source_id' : 'SA107-684',
                   }
         expected_num_requests = 1
         expected_operator = 'SINGLE'
