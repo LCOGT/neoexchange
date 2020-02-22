@@ -2131,9 +2131,10 @@ def get_visibility(ra, dec, date, site_code, step_size='30 m', alt_limit=30, qui
 
     dark_and_up_time = 0
     max_alt = 0
-    start_time = date
-    stop_time = date
+    start_time = None
+    stop_time = None
     for site in site_list:
+        dark_start, dark_end = determine_darkness_times(site, date)
         if quick_n_dirty:
             rise_time, set_time, test_alt, vis = target_rise_set(date, ra, dec, site, alt_limit, step_size)
             if rise_time and set_time:
@@ -2141,7 +2142,6 @@ def get_visibility(ra, dec, date, site_code, step_size='30 m', alt_limit=30, qui
             else:
                 vis_time = 0
         else:
-            dark_start, dark_end = determine_darkness_times(site, date)
             emp = call_compute_ephem(body_elements, dark_start, dark_end, site, step_size, perturb=False)
             emp_dark_and_up = dark_and_object_up(emp, dark_start, dark_end, 0, alt_limit=alt_limit)
             vis_time, emp_dark_and_up, set_time = compute_dark_and_up_time(emp_dark_and_up, step_size)
@@ -2158,9 +2158,9 @@ def get_visibility(ra, dec, date, site_code, step_size='30 m', alt_limit=30, qui
         if test_alt > max_alt:
             max_alt = test_alt
         if len(site_list) > 1:
-            if dark_start < start_time:
+            if start_time is None or dark_start < start_time:
                 start_time = dark_start
-            if dark_end > stop_time:
+            if stop_time is None or dark_end > stop_time:
                 stop_time = dark_end
         else:
             start_time = rise_time
