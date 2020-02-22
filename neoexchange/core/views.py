@@ -1106,16 +1106,8 @@ def schedule_check(data, body, ok_to_schedule=True):
         if dark_end <= datetime.utcnow():
             dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'] + timedelta(days=1))
             utc_date = data['utc_date'] + timedelta(days=1)
-    # Determine the semester boundaries for the current time and truncate the dark time and
-    # therefore the windows appropriately.
     semester_date = max(datetime.utcnow(), datetime.combine(utc_date, datetime.min.time()))
     semester_start, semester_end = get_semester_dates(semester_date)
-    if dark_start.day != dark_end.day and semester_start < dark_start:
-        semester_date = max(datetime.utcnow(), datetime.combine(utc_date, datetime.min.time()) - timedelta(days=1))
-        semester_start, semester_end = get_semester_dates(semester_date)
-    dark_start = max(dark_start, semester_start)
-    dark_end = min(dark_end, semester_end)
-
     dark_midpoint = dark_start + (dark_end - dark_start) / 2
 
     # Get maximum airmass
@@ -1126,8 +1118,19 @@ def schedule_check(data, body, ok_to_schedule=True):
     lco_site_code = next(key for key, value in cfg.valid_site_codes.items() if value == data['site_code'])
 
     # calculate visibility
+    # Determine the semester boundaries for the current time and truncate the visibility time and
+    # therefore the windows appropriately.
     dark_and_up_time, max_alt, rise_time, set_time = get_visibility(None, None, dark_midpoint, data['site_code'], '2 m', alt_limit, False, body_elements)
     if rise_time and set_time:
+        if set_time < dark_start:
+            dark_and_up_time, max_alt, rise_time, set_time = get_visibility(None, None, dark_midpoint+timedelta(days=1), data['site_code'], '2 m', alt_limit, False, body_elements)
+        if rise_time.day != set_time.day and semester_start < rise_time:
+            semester_date = max(datetime.utcnow(), datetime.combine(utc_date, datetime.min.time()) - timedelta(days=1))
+            semester_start, semester_end = get_semester_dates(semester_date)
+        rise_time = max(rise_time, semester_start)
+        set_time = min(set_time, semester_end)
+        if set_time < rise_time:
+            set_time = rise_time
         mid_dark_up_time = rise_time + (set_time - rise_time) / 2
     else:
         mid_dark_up_time = rise_time = set_time = dark_midpoint

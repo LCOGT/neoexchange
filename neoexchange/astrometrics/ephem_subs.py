@@ -2121,16 +2121,18 @@ def get_visibility(ra, dec, date, site_code, step_size='30 m', alt_limit=30, qui
 
     # For generic sites, include northern and southern site for visibility calculation
     if site_code == '1M0':
-        site_list = ['V37', 'W85']
+        site_list = ['V37', 'K91']
     elif site_code == '2M0':
         site_list = ['F65', 'E10']
     elif site_code == '0M4':
-        site_list = ['V38', 'W89']
+        site_list = ['V38', 'L09']
     else:
         site_list = [site_code]
 
     dark_and_up_time = 0
     max_alt = 0
+    start_time = date
+    stop_time = date
     for site in site_list:
         if quick_n_dirty:
             rise_time, set_time, test_alt, vis = target_rise_set(date, ra, dec, site, alt_limit, step_size)
@@ -2155,4 +2157,13 @@ def get_visibility(ra, dec, date, site_code, step_size='30 m', alt_limit=30, qui
             dark_and_up_time = vis_time
         if test_alt > max_alt:
             max_alt = test_alt
-    return dark_and_up_time, max_alt, rise_time, set_time
+        if len(site_list) > 1:
+            if dark_start < start_time:
+                start_time = dark_start
+            if dark_end > stop_time:
+                stop_time = dark_end
+        else:
+            start_time = rise_time
+            stop_time = set_time
+
+    return dark_and_up_time, max_alt, start_time, stop_time
