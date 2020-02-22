@@ -283,8 +283,9 @@ class FunctionalTest(StaticLiveServerTestCase):
                     major_version = version_num.split('.')[0]
                     if major_version.isdigit() and int(major_version) <= 52:
                         firefox_capabilities['marionette'] = False
-
-                self.browser = webdriver.Firefox(capabilities=firefox_capabilities, firefox_profile=fp)
+                options = webdriver.firefox.options.Options()
+                options.add_argument('--headless')
+                self.browser = webdriver.Firefox(capabilities=firefox_capabilities, firefox_profile=fp, firefox_options=options)
         else:
             options = webdriver.chrome.options.Options()
             options.add_argument('--headless')
