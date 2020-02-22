@@ -1127,7 +1127,11 @@ def schedule_check(data, body, ok_to_schedule=True):
 
     # calculate visibility
     dark_and_up_time, max_alt, rise_time, set_time = get_visibility(None, None, dark_midpoint, data['site_code'], '2 m', alt_limit, False, body_elements)
-    mid_dark_up_time = rise_time + (set_time - rise_time) / 2
+    if rise_time and set_time:
+        mid_dark_up_time = rise_time + (set_time - rise_time) / 2
+    else:
+        mid_dark_up_time = rise_time = set_time = dark_midpoint
+
     if max_alt is not None:
         max_alt_airmass = S.sla_airmas((pi/2.0)-radians(max_alt))
     else:

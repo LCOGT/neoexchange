@@ -1226,6 +1226,33 @@ class TestScheduleCheck(TestCase):
         self.solar_analog, created = StaticSource.objects.get_or_create(pk=1, **src_params)
         self.maxDiff = None
 
+    def make_visible_obj(self, test_date):
+        """
+        Create Test Body named "over_there" that will always be visible on the given date.
+        Assumes Ecliptic is always visible. Will not work from poles during winter.
+        :param test_date: datetime upon which the object must be visible
+        :return: body object
+        """
+        sun_ra, sun_dec = accurate_astro_darkness('500', test_date, solar_pos=True)
+        params = {  'provisional_name' : 'vis',
+                    'name'          : 'over_there',
+                    'abs_mag'       : 20.7,
+                    'slope'         : 0.15,
+                    'epochofel'     : test_date,
+                    'meananom'      : 0,
+                    'argofperih'    : 0,
+                    'longascnode'   : degrees(sun_ra - pi),
+                    'orbinc'        : 0,
+                    'eccentricity'  : 0,
+                    'meandist'      : 1.4607441,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    }
+        vis_body, created = Body.objects.get_or_create(**params)
+        return vis_body
+
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_good(self):
@@ -1903,14 +1930,16 @@ class TestScheduleCheck(TestCase):
                  'proposal_code' : self.neo_proposal.code
                }
 
+        body = self.make_visible_obj(datetime.utcnow())
+
         expected_resp = {
-                        'target_name': self.body_mp.current_name(),
+                        'target_name': body.current_name(),
                         'start_time' : '2016-09-30T17:40:00',
                         'end_time'   : '2016-09-30T23:59:59',
                         'mid_time': '2016-09-30T20:49:59.500000',
 
                         }
-        resp = schedule_check(data, self.body_mp)
+        resp = schedule_check(data, body)
 #        self.assertEqual(expected_resp, resp)
 
         self.assertEqual(expected_resp['start_time'], resp['start_time'])
@@ -1976,14 +2005,16 @@ class TestScheduleCheck(TestCase):
                  'proposal_code' : self.neo_proposal.code
                }
 
+        body = self.make_visible_obj(datetime.utcnow())
+
         expected_resp = {
-                        'target_name': self.body_mp.current_name(),
+                        'target_name': body.current_name(),
                         'start_time' : '2016-10-01T00:00:00',
                         'end_time'   : '2016-10-01T03:00:00',
                         'mid_time': '2016-10-01T01:30:00',
 
                         }
-        resp = schedule_check(data, self.body_mp)
+        resp = schedule_check(data, body)
 #        self.assertEqual(expected_resp, resp)
 
         self.assertEqual(expected_resp['start_time'], resp['start_time'])
@@ -2000,14 +2031,16 @@ class TestScheduleCheck(TestCase):
                  'proposal_code' : self.neo_proposal.code
                }
 
+        body = self.make_visible_obj(datetime.utcnow())
+
         expected_resp = {
-                        'target_name': self.body_mp.current_name(),
-                        'start_time' : '2017-09-30T19:50:00',
-                        'end_time'   : '2017-10-01T05:50:00',
-                        'mid_time': '2017-10-01T00:50:00',
+                        'target_name': body.current_name(),
+                        'start_time' : '2017-10-01T00:20:00',
+                        'end_time'   : '2017-10-01T05:48:00',
+                        'mid_time': '2017-10-01T03:04:00',
 
                         }
-        resp = schedule_check(data, self.body_mp)
+        resp = schedule_check(data, body)
 
         self.assertEqual(expected_resp['start_time'], resp['start_time'])
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
@@ -2023,14 +2056,16 @@ class TestScheduleCheck(TestCase):
                  'proposal_code' : self.neo_proposal.code
                }
 
+        body = self.make_visible_obj(datetime.utcnow())
+
         expected_resp = {
-                        'target_name': self.body_mp.current_name(),
+                        'target_name': body.current_name(),
                         'start_time' : '2017-11-30T19:10:00',
                         'end_time'   : '2017-11-30T23:59:59',
                         'mid_time': '2017-11-30T21:34:59.500000',
 
                         }
-        resp = schedule_check(data, self.body_mp)
+        resp = schedule_check(data, body)
 
         self.assertEqual(expected_resp['start_time'], resp['start_time'])
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
@@ -2046,14 +2081,16 @@ class TestScheduleCheck(TestCase):
                  'proposal_code' : self.neo_proposal.code
                }
 
+        body = self.make_visible_obj(datetime.utcnow())
+
         expected_resp = {
-                        'target_name': self.body_mp.current_name(),
+                        'target_name': body.current_name(),
                         'start_time' : '2017-12-01T00:00:00',
                         'end_time'   : '2017-12-01T02:00:00',
                         'mid_time': '2017-12-01T01:00:00',
 
                         }
-        resp = schedule_check(data, self.body_mp)
+        resp = schedule_check(data, body)
 
         self.assertEqual(expected_resp['start_time'], resp['start_time'])
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
@@ -2115,14 +2152,16 @@ class TestScheduleCheck(TestCase):
                  'proposal_code' : self.neo_proposal.code
                }
 
+        body = self.make_visible_obj(datetime.utcnow())
+
         expected_resp = {
-                        'target_name': self.body_mp.current_name(),
+                        'target_name': body.current_name(),
                         'start_time' : '2018-11-30T18:40:00',
                         'end_time'   : '2018-11-30T23:59:59',
                         'mid_time': '2018-11-30T21:19:59.500000',
 
                         }
-        resp = schedule_check(data, self.body_mp)
+        resp = schedule_check(data, body)
 
         self.assertEqual(expected_resp['start_time'], resp['start_time'])
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
