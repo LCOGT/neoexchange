@@ -1418,6 +1418,19 @@ def get_fits_files(fits_path):
     return sorted_fits_files
 
 
+def make_object_directory(filepath, object_name, block_id):
+
+    object_directory = object_name.replace(' ', '').replace('/', '')
+    if block_id != '':
+        object_directory = object_directory + '_' + str(block_id)
+    object_directory = os.path.join(os.path.dirname(filepath), object_directory)
+    if not os.path.exists(object_directory):
+        oldumask = os.umask(0o002)
+        os.makedirs(object_directory)
+        os.umask(oldumask)
+    return object_directory
+
+
 def sort_rocks(fits_files):
     """Takes a list of FITS files and creates directories for each asteroid
     object and unique block number (i.e. if an object is observed more than
@@ -1432,16 +1445,9 @@ def sort_rocks(fits_files):
         object_name = fits_header.get('OBJECT', None)
         block_id = fits_header.get('BLKUID', '').replace('/', '')
         if object_name:
-            object_directory = object_name.replace(' ', '').replace('/', '')
-            if block_id != '':
-                object_directory = object_directory + '_' + str(block_id)
-            if object_directory not in objects:
-                objects.append(object_directory)
-            object_directory = os.path.join(os.path.dirname(fits_filepath), object_directory)
-            if not os.path.exists(object_directory):
-                oldumask = os.umask(0o002)
-                os.makedirs(object_directory)
-                os.umask(oldumask)
+            object_directory = make_object_directory(fits_filepath, object_name, block_id)
+            if os.path.basename(object_directory) not in objects:
+                objects.append(os.path.basename(object_directory))
             dest_filepath = os.path.join(object_directory, os.path.basename(fits_filepath))
             # if the file is an e91 and an e11 exists in the working directory, remove the link to the e11 and link the e91
             if 'e91' in fits_filepath:

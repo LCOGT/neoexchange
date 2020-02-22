@@ -2121,7 +2121,8 @@ class TestIncrementRedLevel(TestCase):
 
 class ExternalCodeUnitTest(TestCase):
 
-    def setUp(self):
+    def __init__(self, *args, **kwargs):
+        super(ExternalCodeUnitTest, self).__init__(*args, **kwargs)
         self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
 
         self.debug_print = False
@@ -2802,3 +2803,62 @@ class MakeSEXTFileTest(FITSUnitTest):
         self.assertEqual(len(sext_line_list), 2)
         self.assertEqual(sext_line_list[0], test_line_list[0])
         self.assertEqual(sext_line_list[-1], test_line_list[1])
+
+
+class TestMakeObjectDirectory(ExternalCodeUnitTest):
+
+    def __init__(self, *args, **kwargs):
+        super(TestMakeObjectDirectory, self).__init__(*args, **kwargs)
+
+        self.test_filepath = os.path.join(self.test_dir, 'lsc1m004-fa03-20200212-0088-e91.fits')
+
+    def tearDown(self):
+        remove = True
+        if remove:
+            try:
+                files_to_remove = glob(os.path.join(self.test_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.rmdir(file_to_rm)
+            except OSError:
+                print("Error removing directories in temporary test directory", self.test_dir)
+            try:
+                os.rmdir(self.test_dir)
+                if self.debug_print:
+                    print("Removed", self.test_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.test_dir)
+
+    def test_regular_object_noblock(self):
+        object_name = 'N999q0q'
+        expected_object_dir = os.path.join(self.test_dir, object_name)
+
+        object_dir = make_object_directory(self.test_filepath, object_name, '')
+
+        self.assertEqual(expected_object_dir, object_dir)
+
+    def test_regular_object(self):
+        object_name = 'N999q0q'
+        block_id = '12345'
+        expected_object_dir = os.path.join(self.test_dir, object_name+'_'+block_id)
+
+        object_dir = make_object_directory(self.test_filepath, object_name, block_id)
+
+        self.assertEqual(expected_object_dir, object_dir)
+
+    def test_object_with_space(self):
+        object_name = '2020 BR10'
+        block_id = '12345'
+        expected_object_dir = os.path.join(self.test_dir, object_name.replace(' ', '')+'_'+block_id)
+
+        object_dir = make_object_directory(self.test_filepath, object_name, block_id)
+
+        self.assertEqual(expected_object_dir, object_dir)
+
+    def test_comet(self):
+        object_name = 'C/2019 Y4'
+        block_id = '12345'
+        expected_object_dir = os.path.join(self.test_dir, object_name.replace(' ', '').replace('/', '')+'_'+block_id)
+
+        object_dir = make_object_directory(self.test_filepath, object_name, block_id)
+
+        self.assertEqual(expected_object_dir, object_dir)
