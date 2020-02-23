@@ -1418,6 +1418,15 @@ def get_fits_files(fits_path):
     return sorted_fits_files
 
 
+def sanitize_object_name(object_name):
+    """Remove problematic characters (space, slash) from object names so it
+    can be used for e.g. directory names"""
+
+    clean_object_name = None
+    if type(object_name) == str:
+        clean_object_name = object_name.replace(' ', '').replace('(', '').replace(')', '').replace('/', '')
+    return clean_object_name
+
 def make_object_directory(filepath, object_name, block_id):
 
     object_directory = object_name.replace(' ', '').replace('/', '')

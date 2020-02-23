@@ -2805,6 +2805,58 @@ class MakeSEXTFileTest(FITSUnitTest):
         self.assertEqual(sext_line_list[-1], test_line_list[1])
 
 
+class TestSanitizeObjectName(TestCase):
+
+    def test_none(self):
+        expected_obj_name = None
+
+        object_name = sanitize_object_name(None)
+
+        self.assertEqual(expected_obj_name, object_name)
+
+    def test_nonstring(self):
+        expected_obj_name = None
+
+        object_name = sanitize_object_name(12345)
+
+        self.assertEqual(expected_obj_name, object_name)
+
+    def test_regular_asteroid(self):
+        expected_obj_name = '12345'
+
+        object_name = sanitize_object_name('12345')
+
+        self.assertEqual(expected_obj_name, object_name)
+
+    def test_asteroid_with_space(self):
+        expected_obj_name = '2020BR10'
+
+        object_name = sanitize_object_name('2020 BR10')
+
+        self.assertEqual(expected_obj_name, object_name)
+
+    def test_asteroid_with_brackets(self):
+        expected_obj_name = '123456'
+
+        object_name = sanitize_object_name('(123456)')
+
+        self.assertEqual(expected_obj_name, object_name)
+
+    def test_comet_periodic(self):
+        expected_obj_name = '46P'
+
+        object_name = sanitize_object_name('46/P')
+
+        self.assertEqual(expected_obj_name, object_name)
+
+    def test_comet_nonperiodic(self):
+        expected_obj_name = 'C2019Y4'
+
+        object_name = sanitize_object_name('C/2019 Y4')
+
+        self.assertEqual(expected_obj_name, object_name)
+
+
 class TestMakeObjectDirectory(ExternalCodeUnitTest):
 
     def __init__(self, *args, **kwargs):
