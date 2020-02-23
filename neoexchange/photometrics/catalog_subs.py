@@ -1424,7 +1424,8 @@ def sanitize_object_name(object_name):
 
     clean_object_name = None
     if type(object_name) == str:
-        clean_object_name = object_name.replace(' ', '').replace('(', '').replace(')', '').replace('/', '')
+        clean_object_name = object_name.replace(' ', '_').replace('(', '').replace(')', '')
+        clean_object_name = clean_object_name.replace('/P', 'P').replace('/', '_')
     return clean_object_name
 
 def make_object_directory(filepath, object_name, block_id):

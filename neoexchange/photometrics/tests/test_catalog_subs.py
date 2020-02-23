@@ -2829,7 +2829,7 @@ class TestSanitizeObjectName(TestCase):
         self.assertEqual(expected_obj_name, object_name)
 
     def test_asteroid_with_space(self):
-        expected_obj_name = '2020BR10'
+        expected_obj_name = '2020_BR10'
 
         object_name = sanitize_object_name('2020 BR10')
 
@@ -2850,7 +2850,7 @@ class TestSanitizeObjectName(TestCase):
         self.assertEqual(expected_obj_name, object_name)
 
     def test_comet_nonperiodic(self):
-        expected_obj_name = 'C2019Y4'
+        expected_obj_name = 'C_2019_Y4'
 
         object_name = sanitize_object_name('C/2019 Y4')
 
