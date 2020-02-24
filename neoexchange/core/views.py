@@ -1277,8 +1277,8 @@ def schedule_check(data, body, ok_to_schedule=True):
             period = 0.02
 
         # Number of times the cadence request will run between start and end date
-        cadence_start = dark_start
-        cadence_end = dark_end
+        cadence_start = rise_time = dark_start
+        cadence_end = set_time = dark_end
         total_run_time = cadence_end - cadence_start
         cadence_period = timedelta(seconds=data['period']*3600.0)
         total_requests = 1 + int(floor(total_run_time.total_seconds() / cadence_period.total_seconds()))

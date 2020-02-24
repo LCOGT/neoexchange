@@ -1532,6 +1532,8 @@ class TestScheduleCheck(TestCase):
         expected_resp1['utc_date'] = data['utc_date'].isoformat()
         expected_resp1['jitter'] = data['jitter']
         expected_resp1['period'] = data['period']
+        expected_resp1['start_time'] = datetime(2016, 4, 6, 9, 0, 0).isoformat()
+        expected_resp1['end_time'] = datetime(2016, 4, 6, 23, 0, 0).isoformat()
         expected_resp1['num_times'] = 3
         expected_resp1['total_time'] = 1.0
         expected_resp1['target_name'] = self.body_mp.name
@@ -1564,6 +1566,8 @@ class TestScheduleCheck(TestCase):
         expected_resp1['utc_date'] = data['utc_date'].isoformat()
         expected_resp1['jitter'] = .34
         expected_resp1['period'] = data['period']
+        expected_resp1['start_time'] = datetime(2016, 4, 6, 9, 0, 0).isoformat()
+        expected_resp1['end_time'] = datetime(2016, 4, 6, 23, 0, 0).isoformat()
         expected_resp1['num_times'] = 3
         expected_resp1['total_time'] = 1.0
         expected_resp1['target_name'] = self.body_mp.name
@@ -1592,6 +1596,8 @@ class TestScheduleCheck(TestCase):
         expected_resp1['proposal_code'] = data['proposal_code']
         expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data['site_code'].upper() + '-cad-' + datetime.strftime(data['start_time'], '%Y%m%d') + '-' + datetime.strftime(data['end_time'], '%m%d')
         expected_resp1['utc_date'] = data['utc_date'].isoformat()
+        expected_resp1['start_time'] = datetime(2016, 4, 6, 9, 0, 0).isoformat()
+        expected_resp1['end_time'] = datetime(2016, 4, 6, 23, 0, 0).isoformat()
         expected_resp1['jitter'] = data['jitter']
         expected_resp1['period'] = data['period']
         expected_resp1['num_times'] = 3
