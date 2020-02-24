@@ -142,7 +142,7 @@ class ScheduleObservations(FunctionalTest):
         magnitude = self.browser.find_element_by_id('id_magnitude_row').find_element_by_class_name('kv-value').text
         self.assertIn('7.0', magnitude)
         vis = self.browser.find_element_by_id('id_visibility_row').find_element_by_class_name('kv-value').text
-        self.assertIn('7.8 hrs / 88°', vis)
+        self.assertIn('7.6 hrs / 87°', vis)
         slot_length = self.browser.find_element_by_id('id_slot_length_row').find_element_by_class_name('kv-value').text
         self.assertIn('21', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
@@ -150,7 +150,7 @@ class ScheduleObservations(FunctionalTest):
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
         self.assertIn('180.0', exp_length)
         snr = self.browser.find_element_by_id('id_snr_row').find_element_by_class_name('kv-value').text
-        self.assertIn('2149.3', snr)
+        self.assertIn('2149.2', snr)
 
         # At this point, a 'Schedule this object' button appears
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
@@ -282,7 +282,7 @@ class ScheduleObservations(FunctionalTest):
         magnitude = self.browser.find_element_by_id('id_magnitude_row').find_element_by_class_name('kv-value').text
         self.assertIn('7.0', magnitude)
         vis = self.browser.find_element_by_id('id_visibility_row').find_element_by_class_name('kv-value').text
-        self.assertIn('3.1 hrs / 40°', vis)
+        self.assertIn('2.8 hrs / 40°', vis)
         slot_length = self.browser.find_element_by_id('id_slot_length_row').find_element_by_class_name('kv-value').text
         self.assertIn('21', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
@@ -290,7 +290,7 @@ class ScheduleObservations(FunctionalTest):
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
         self.assertIn('180.0', exp_length)
         snr = self.browser.find_element_by_id('id_snr_row').find_element_by_class_name('kv-value').text
-        self.assertIn('2068.7', snr)
+        self.assertIn('2068.6', snr)
 
         # Bart wants to change the exposure time and recalculate snr
         slot_length_box = self.browser.find_element_by_id('id_exp_length')
@@ -322,7 +322,7 @@ class ScheduleObservations(FunctionalTest):
         vis = self.browser.find_element_by_id('id_visibility_row').find_element_by_class_name('kv-value').text
         self.assertIn('4.6 hrs', vis)
         moon_warn = self.browser.find_element_by_id('id_moon_row').find_element_by_class_name('warning').text
-        self.assertIn('35.3', moon_warn)
+        self.assertIn('35.8', moon_warn)
 
         # Bart wants to change the max airmass to 1.1 and gets a warning
         self.browser.find_element_by_id("advanced-switch").click()
