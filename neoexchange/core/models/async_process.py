@@ -25,8 +25,6 @@ class AsyncProcess(models.Model):
     # Time at which the processes entered a terminal state
     terminal_timestamp = models.DateTimeField(null=True, blank=True)
     failure_message = models.CharField(max_length=255, blank=True)
-    # Process may optionally be associated with a target
-    target = models.ForeignKey(Body, on_delete=models.CASCADE, null=True, blank=True)
 
     def clean(self):
         self.process_type = self.__class__.__name__

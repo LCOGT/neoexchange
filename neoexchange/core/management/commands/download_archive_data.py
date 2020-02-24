@@ -67,56 +67,5 @@ class Command(BaseCommand):
         if options['verbosity'] < 1:
             verbose = False
 
-        archive_token = settings.ARCHIVE_TOKEN
-        if archive_token is not None:
-            auth_headers = archive_login()
-            start_date, end_date = determine_archive_start_end(obs_date)
-            for proposal in proposals:
-                self.stdout.write("Looking for frames between %s->%s from %s" % ( start_date, end_date, proposal ))
-                obstypes = ['EXPOSE', 'ARC', 'LAMPFLAT', 'SPECTRUM']
-                if (proposal == 'LCOEngineering' and options['dlengimaging'] is False) or options['spectraonly'] is True:
-                    # Not interested in imaging frames
-                    obstypes = ['ARC', 'LAMPFLAT', 'SPECTRUM']
-                all_frames = {}
-                for obstype in obstypes:
-                    if obstype == 'EXPOSE':
-                        redlevel = ['91', ]
-                    else:
-                        # '' seems to be needed to get the tarball of FLOYDS products
-                        redlevel = ['0', '']
-                    frames = get_frame_data(start_date, end_date, auth_headers, obstype, proposal, red_lvls=redlevel)
-                    for red_lvl in frames.keys():
-                        if red_lvl in all_frames:
-                            all_frames[red_lvl] = all_frames[red_lvl] + frames[red_lvl]
-                        else:
-                            all_frames[red_lvl] = frames[red_lvl]
-                    if 'CATALOG' in obstype or obstype == '':
-                        catalogs = get_catalog_data(frames, auth_headers)
-                        for red_lvl in frames.keys():
-                            if red_lvl in all_frames:
-                                all_frames[red_lvl] = all_frames[red_lvl] + catalogs[red_lvl]
-                            else:
-                                all_frames[red_lvl] = catalogs[red_lvl]
-                for red_lvl in all_frames.keys():
-                    self.stdout.write("Found %d frames for reduction level: %s" % ( len(all_frames[red_lvl]), red_lvl ))
-                out_path = options['datadir']
-                dl_frames = download_files(all_frames, out_path, verbose)
-                self.stdout.write("Downloaded %d frames" % ( len(dl_frames) ))
-                # unpack tarballs and make movie.
-                for frame in all_frames.get('', []):
-                    if "tar.gz" in frame['filename']:
-                        tar_path = make_data_dir(out_path, frame)
-                        obj = frame['OBJECT'].replace(" ", "_")
-                        req_num = str(frame['REQNUM'])
-                        movie_file = make_movie(frame['DATE_OBS'], obj, req_num, tar_path, out_path, frame['PROPID'])
-                        if settings.USE_S3:
-                            filenames = glob(os.path.join(tar_path, obj + '_' + req_num, '*_2df_ex.fits'))
-                            if filenames:
-                                for filename in filenames:
-                                    save_to_default(filename, out_path)
-        else:
-            self.stdout.write("No token defined (set ARCHIVE_TOKEN environment variable)")
-
-        # Check if we're using a temp dir and then delete it
-        if gettempdir() in out_path:
-            shutil.rmtree(out_path)
+        pipe = DownloadProcessPipeline()
+        pipe.download()
