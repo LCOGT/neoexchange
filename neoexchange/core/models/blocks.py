@@ -13,6 +13,7 @@ GNU General Public License for more details.
 from collections import Counter, OrderedDict
 
 from django.conf import settings
+from django.forms.models import model_to_dict
 from django.db import models
 from django.db.models import Sum
 from django.utils.translation import ugettext_lazy as _
@@ -20,6 +21,7 @@ from django.utils.encoding import python_2_unicode_compatible
 from requests.compat import urljoin
 from numpy import fromstring
 
+from astrometrics.ephem_subs import compute_ephem, comp_sep
 from core.archive_subs import check_for_archive_images
 
 from core.models.body import Body
@@ -208,12 +210,12 @@ class Block(models.Model):
 
     def num_red_frames(self):
         """Returns the total number of reduced frames (quicklook and fully reduced)"""
-        return Frame.objects.filter(block=self.id, frametype__in=Frame.reduced_frames(Frame())).count()
+        return self.frame_set.filter(frametype__in=[11,91]).count()
 
     def num_unique_red_frames(self):
         """Returns the number of *unique* reduced frames (quicklook OR fully reduced)"""
-        reduced_frames = Frame.objects.filter(block=self.id, frametype=Frame.BANZAI_RED_FRAMETYPE)
-        ql_frames = Frame.objects.filter(block=self.id, frametype=Frame.BANZAI_QL_FRAMETYPE)
+        reduced_frames = self.frame_set.filter(frametype=91)
+        ql_frames = self.frame_set.filter(frametype=11)
         if reduced_frames.count() >= ql_frames.count():
             total_exposure_number = reduced_frames.count()
         else:

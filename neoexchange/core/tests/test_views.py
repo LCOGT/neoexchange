@@ -37,6 +37,8 @@ from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check
     mock_update_elements_with_findorb, mock_update_elements_with_findorb_badrms, \
     mock_update_elements_with_findorb_badepoch
 
+from neox.tests.base import assertDeepAlmostEqual
+
 from astrometrics.ephem_subs import compute_ephem, determine_darkness_times
 from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs, \
     fetch_flux_standards, read_solar_standards
@@ -1288,7 +1290,7 @@ class TestScheduleCheck(TestCase):
 
         resp = schedule_check(data, self.body_mp)
 
-        self.assertEqual(expected_resp, resp)
+        assertDeepAlmostEqual(self, expected_resp, resp)
         self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
@@ -1357,7 +1359,7 @@ class TestScheduleCheck(TestCase):
 
         resp = schedule_check(data, self.body_mp)
 
-        self.assertEqual(expected_resp, resp)
+        assertDeepAlmostEqual(self, expected_resp, resp)
         self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
@@ -1423,7 +1425,7 @@ class TestScheduleCheck(TestCase):
 
         resp = schedule_check(data, self.body_mp)
 
-        self.assertEqual(expected_resp, resp)
+        assertDeepAlmostEqual(self,expected_resp, resp)
         self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
@@ -7014,4 +7016,4 @@ class TestBuildVisibilitySource(TestCase):
                         'line_alpha': [0, 0, 0, 1, 1, 1]}
 
         for key in vis.keys():
-            self.assertEqual(expected_vis[key], vis[key])
+            assertDeepAlmostEqual(self, expected_vis[key], vis[key])
