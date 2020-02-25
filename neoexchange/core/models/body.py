@@ -144,7 +144,7 @@ class Body(models.Model):
     arc_length          = models.FloatField('Length of observed arc (days)', blank=True, null=True)
     not_seen            = models.FloatField('Time since last observation (days)', blank=True, null=True)
     updated             = models.BooleanField('Has this object been updated?', default=False)
-    ingest              = models.DateTimeField(default=datetime.utcnow(), db_index=True)
+    ingest              = models.DateTimeField(default=datetime.utcnow, db_index=True)
     update_time         = models.DateTimeField(blank=True, null=True, db_index=True)
 
     def characterization_target(self):
