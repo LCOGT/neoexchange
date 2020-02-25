@@ -21,9 +21,9 @@ logger = logging.getLogger(__name__)
 
 class DownloadProcessPipeline(PipelineProcess):
     """
-    Pipeline process to make a timelapse from a sequence of FITS images
+    Download and process FITS image and spectra data
     """
-    short_name = 'dl'
+    short_name = 'dlp'
     allowed_suffixes = ['.gz', '.fz']
     flags = {
         'skip_download': {

@@ -25,11 +25,7 @@ from django.conf import settings
 from django.core.files import File
 from django.core.files.storage import default_storage
 
-from core.archive_subs import archive_login, get_frame_data, get_catalog_data, \
-    determine_archive_start_end, download_files, make_data_dir
-from core.views import determine_active_proposals
-from photometrics.gf_movie import make_movie
-from core.utils import save_to_default
+from core.models import DownloadProcessPipeline
 
 
 class Command(BaseCommand):
@@ -59,13 +55,5 @@ class Command(BaseCommand):
         else:
             obs_date = options['date']
 
-        proposals = determine_active_proposals(options['proposal'])
-        if len(proposals) == 0:
-            raise CommandError("No valid proposals found")
-
-        verbose = True
-        if options['verbosity'] < 1:
-            verbose = False
-
         pipe = DownloadProcessPipeline()
-        pipe.download()
+        pipe.download(date=obs_date,proposals=options['proposal'])
