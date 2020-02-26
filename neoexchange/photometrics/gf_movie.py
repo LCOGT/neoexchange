@@ -200,7 +200,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
                         data = hdul[0].data
         except FileNotFoundError:
             if progress:
-                print('Could not find Frame {}'.format(fits_files[n]))
+                logger.warning('Could not find Frame {}'.format(fits_files[n]))
             return None
 
         # Set frame to be center of chip in arcmin
