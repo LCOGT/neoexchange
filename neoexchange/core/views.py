@@ -617,7 +617,8 @@ class BestStandardsView(ListView):
         night_ra = degrees(sun_ra - pi)
         if night_ra < 0:
             night_ra += 360
-        if dbg: print(utc_dt, degreestohms(night_ra, ':'), HA_hours*15)
+        if dbg:
+            print(utc_dt, degreestohms(night_ra, ':'), HA_hours*15)
 
         min_ra = night_ra - (HA_hours * 15)
         if min_ra < 0:
@@ -625,7 +626,8 @@ class BestStandardsView(ListView):
         max_ra = night_ra + (HA_hours * 15)
         if max_ra > 360:
             max_ra -= 360
-        if dbg: print("RA range=", min_ra, max_ra)
+        if dbg:
+            print("RA range=", min_ra, max_ra)
 
         return min_ra, max_ra
 
@@ -639,7 +641,7 @@ class BestStandardsView(ListView):
             ra_filter = Q(ra__gte=min_ra) & Q(ra__lte=max_ra)
         ftn_standards = StaticSource.objects.filter(ra_filter, source_type=StaticSource.FLUX_STANDARD, dec__gte=0).order_by('ra')
         fts_standards = StaticSource.objects.filter(ra_filter, source_type=StaticSource.FLUX_STANDARD, dec__lte=0).order_by('ra')
-        if dbg: print(ftn_standards,fts_standards)
+        if dbg: print(ftn_standards, fts_standards)
 
         return ftn_standards, fts_standards
 
@@ -3444,7 +3446,6 @@ def get_lc_plot(body, data):
         sitecode = '500'
         obj_name = body.name
         ephem = horizons_ephem(obj_name, start, end, sitecode, ephem_step_size='{}m'.format(step_size))
-        print(ephem)
     else:
         ephem = []
 
