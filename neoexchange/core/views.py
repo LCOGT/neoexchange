@@ -1047,21 +1047,7 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
                     messages.warning(self.request, "Record not created")
             else:
                 self.success = False
-                msg = "It was not possible to submit your request to the scheduler."
-                if sched_params.get('error_msg', None):
-                    msg += "\nAdditional information:"
-                    try:
-                        error_msgs = sched_params['error_msg'].get('non_field_errors', [])
-                        if error_msgs == []:
-                            error_msgs = sched_params['error_msg'].get('errors', [])
-                            if type(error_msgs) == dict:
-                                requests = error_msgs.get('requests', [])
-                                error_msgs = []
-                                for request in requests:
-                                    error_msgs += request.get('non_field_errors', [])
-                    except AttributeError:
-                        error_msgs = [sched_params['error_msg'],]
-                    msg += "\n".join(error_msgs)
+                msg = parse_portal_errors(sched_params)
                 messages.warning(self.request, msg)
             return super(ScheduleSubmit, self).form_valid(new_form)
 
@@ -1071,6 +1057,25 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
         else:
             return reverse('target', kwargs={'pk': self.object.id})
 
+
+def parse_portal_errors(sched_params):
+    """Parse a passed <sched_params> response from the LCO Observing Portal via
+    schedule_submit() and try to extract an error message
+    """
+
+    msg = "It was not possible to submit your request to the scheduler."
+    if sched_params.get('error_msg', None):
+        msg += "\nAdditional information:"
+        error_groups = sched_params['error_msg']
+        for error_type in error_groups.keys():
+            error_msgs = error_groups[error_type]
+            for errors in error_msgs:
+                if type(errors) == str:
+                    msg += "\n{err_type}: {error}".format(err_type=error_type, error=errors)
+                elif type(errors) == dict:
+                    for key in errors:
+                        msg += "\n".join(errors[key])
+    return msg
 
 def schedule_check(data, body, ok_to_schedule=True):
 

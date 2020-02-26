@@ -6882,3 +6882,52 @@ class TestBuildVisibilitySource(TestCase):
 
         for key in vis.keys():
             self.assertEqual(expected_vis[key], vis[key])
+
+
+class TestParsePortalErrors(TestCase):
+
+    def setUp(self):
+        self.no_parse_msg= "It was not possible to submit your request to the scheduler."
+        self.no_extrainfo_msg = self.no_parse_msg + "\nAdditional information:"
+
+        self.maxDiff = None
+
+    def test_no_response(self):
+        params = {}
+        msg = parse_portal_errors(params)
+
+        self.assertEqual(self.no_parse_msg, msg)
+
+    def test_empty_response(self):
+        params = {'error_msg' : {} }
+        msg = parse_portal_errors(params)
+
+        self.assertEqual(self.no_parse_msg, msg)
+
+    def test_bad_proposal(self):
+        expected_msg = self.no_extrainfo_msg + '\nproposal: Invalid pk "foo" - object does not exist.'
+        params = {'error_msg' : {'proposal': ['Invalid pk "foo" - object does not exist.']}}
+
+        msg = parse_portal_errors(params)
+
+        self.assertEqual(expected_msg, msg)
+
+    def test_no_visibility(self):
+        expected_msg = self.no_extrainfo_msg + "According to the constraints of the request, the target is never visible within the time window. Check that the target is in the nighttime sky. Consider modifying the time window or loosening the airmass or lunar separation constraints. If the target is non sidereal, double check that the provided elements are correct."
+        params = {'error_msg' : {'requests': [{'non_field_errors': ['According to the constraints of the request, the target is never visible within the time window. Check that the target is in the nighttime sky. Consider modifying the time window or loosening the airmass or lunar separation constraints. If the target is non sidereal, double check that the provided elements are correct.']}]} }
+
+        msg = parse_portal_errors(params)
+
+        self.assertEqual(expected_msg, msg)
+
+    def test_no_visibility_bad_proposal(self):
+        expected_msg = self.no_extrainfo_msg + "According to the constraints of the request, the target is never visible within the time window. Check that the target is in the nighttime sky. Consider modifying the time window or loosening the airmass or lunar separation constraints. If the target is non sidereal, double check that the provided elements are correct."
+        expected_msg += '\nproposal: Invalid pk "foo" - object does not exist.'
+
+        params = {'error_msg' : {'requests': [{'non_field_errors': ['According to the constraints of the request, the target is never visible within the time window. Check that the target is in the nighttime sky. Consider modifying the time window or loosening the airmass or lunar separation constraints. If the target is non sidereal, double check that the provided elements are correct.']}],\
+                                 'proposal': ['Invalid pk "foo" - object does not exist.']}
+                 }
+
+        msg = parse_portal_errors(params)
+
+        self.assertEqual(expected_msg, msg)

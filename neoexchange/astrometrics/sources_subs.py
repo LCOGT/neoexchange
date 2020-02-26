@@ -1942,6 +1942,10 @@ def make_requestgroup(elements, params):
         params['source_id'] = params['calibsource']['name']
         params['ra_deg'] = params['calibsource']['ra_deg']
         params['dec_deg'] = params['calibsource']['dec_deg']
+        if 'pm_ra' in params['calibsource']:
+            params['pm_ra'] = params['calibsource']['pm_ra']
+        if 'pm_dec' in params['calibsource']:
+            params['pm_dec'] = params['calibsource']['pm_dec']
         params['target'] = make_target(params)
         exp_time = params['exp_time']
         params['exp_time'] = params['calibsrc_exptime']
