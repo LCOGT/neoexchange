@@ -22,7 +22,7 @@ from django.views.generic.base import TemplateView
 from django.urls import reverse_lazy
 
 from core.models import Body, Block, SourceMeasurement, SuperBlock, StaticSource
-from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockListView, ScheduleParameters, \
+from core.views import BodySearchView, BodyDetailView, BlockDetailView, ScheduleParameters, \
     ScheduleSubmit, ephemeris, home, BlockReport, ranking, MeasurementViewBody, MeasurementViewBlock, \
     UploadReport, BlockTimeSummary, ScheduleParametersCadence, ScheduleParametersSpectra, \
     CandidatesViewBlock, BlockReportMPC, \
