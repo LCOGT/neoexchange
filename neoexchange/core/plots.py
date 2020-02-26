@@ -794,7 +794,7 @@ def lc_plot(lc_list, meta_list, period=1, jpl_ephem=None):
 
     # JS Callback to update phased data when datasets are removed, and mag offsets are made.
     # Note: Data just hidden (set to alpha=0). Not actually removed.
-    callback = CustomJS(args=dict(source=source, dataset_source=dataset_source, osource=orig_source),
+    callback = CustomJS(args=dict(source=source, dataset_source=dataset_source, osource=orig_source, plot=plot_p),
                         code="""const data = source.data;
                                 const base = osource.data;
                                 const I = dataset_source.selected.indices;
@@ -849,6 +849,11 @@ def lc_plot(lc_list, meta_list, period=1, jpl_ephem=None):
                                 }
                                 source.change.emit();
                                 osource.change.emit();
+                                if (O.some(item => item != 0)){
+                                    plot.left[0].axis_label = 'Apparent Magnitude (Adjusted)';
+                                } else {
+                                    plot.left[0].axis_label = 'Apparent Magnitude';
+                                }
                                 """)
     dataset_source.selected.js_on_change('indices', callback)
     draw_button.js_on_click(callback)
