@@ -3417,7 +3417,7 @@ def get_lc_plot(body, data):
     """Plot all lightcurve data for given source.
     """
 
-    base_dir = os.path.join(settings.DATA_ROOT, 'Reduction')
+    base_dir = os.path.join(settings.MEDIA_ROOT, 'Reduction')
     obj_name = body.current_name().replace(' ', '_')
     datadir = os.path.join(base_dir, obj_name)
     filenames = search(datadir, '.*.ALCDEF.txt')
