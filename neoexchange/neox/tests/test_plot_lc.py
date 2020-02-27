@@ -43,7 +43,7 @@ class LighCurvePlotTest(FunctionalTest):
     def setUp(self):
         super(LighCurvePlotTest, self).setUp()
         self.lcdir = os.path.abspath(os.path.join('photometrics', 'tests'))
-
+        settings.DATA_ROOT = self.test_dir
         settings.MEDIA_ROOT = self.test_dir
         build_data_dir(os.path.join(self.test_dir, 'Reduction', '433'), self.lcdir, '433_738215_ALCDEF.txt')
 
