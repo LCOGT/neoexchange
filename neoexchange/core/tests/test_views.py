@@ -41,10 +41,9 @@ from astrometrics.ephem_subs import compute_ephem, determine_darkness_times
 from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs, \
     fetch_flux_standards, read_solar_standards
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header
-from core.frames import block_status, create_frame, frame_params_from_block
+from core.frames import block_status, create_frame
 from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate,\
     SuperBlock, SpectralInfo, PreviousSpectra, StaticSource
-from core.frames import block_status, create_frame, frame_params_from_block
 from core.forms import EphemQuery
 # Import modules to test
 from core.views import *
@@ -3724,23 +3723,6 @@ class TestFrames(TestCase):
         frames = Frame.objects.filter(sitecode='K93', block__isnull=False)
         # Although there are 4 sources in the file 2 are in the same frame
         self.assertEqual(3, frames.count())
-
-    def test_add_frames_block(self):
-        params = {
-                    'date_obs': "2015-04-20 21:41:05",
-                    'siteid': 'cpt',
-                    'encid': 'doma',
-                    'telid': '1m0a',
-                    'filter_name': 'R',
-                    'instrume': "kb70",
-                    'origname': "cpt1m010-kb70-20150420-0001-e00.fits",
-                    'exptime': '30'
-                 }
-        frame_params = frame_params_from_block(params, self.test_block)
-        frame, frame_created = Frame.objects.get_or_create(**frame_params)
-        frames = Frame.objects.filter(sitecode='K91')
-        self.assertEqual(1, frames.count())
-        self.assertEqual(frames[0].frametype, Frame.SINGLE_FRAMETYPE)
 
     def test_ingest_frames_block(self):
         params = {

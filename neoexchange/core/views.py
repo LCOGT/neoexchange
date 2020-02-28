@@ -2895,7 +2895,6 @@ def create_source_measurement(obs_lines, block=None):
                             measures.append(measure)
                             measure_count += 1
 
-
         # Set updated to True for the target with the current datetime
         update_params = { 'updated' : True,
                           'update_time' : datetime.utcnow()
@@ -3007,7 +3006,7 @@ def make_new_catalog_entry(new_ldac_catalog, header, block):
                        'zeropoint_err': header['zeropoint_err'],
                                 'fwhm': header['fwhm'],
                            'frametype': Frame.BANZAI_LDAC_CATALOG,
-                           'astrometric_catalog' : header.get('astrometric_catalog', None),
+                'astrometric_catalog' : header.get('astrometric_catalog', None),
                           'rms_of_fit': header['astrometric_fit_rms'],
                        'nstars_in_fit': header['astrometric_fit_nstars'],
                                 'wcs' : header.get('wcs', None),

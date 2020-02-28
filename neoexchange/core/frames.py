@@ -152,7 +152,7 @@ def frame_params_from_header(params, block):
     try:
         rlevel = int(rlevel)
     except ValueError:
-        logger.warning("Error converting RLEVEL to integer in frame " + frame_params['filename'])
+        logger.warning("Error converting RLEVEL to integer in frame " + params.get('ORIGNAME', None))
         rlevel = 0
 
     frame_params = { 'midpoint' : params.get('DATE_OBS', None),
@@ -163,6 +163,7 @@ def frame_params_from_header(params, block):
                      'instrument': params.get('INSTRUME', None),
                      'filename'  : params.get('ORIGNAME', None),
                      'exptime'   : params.get('EXPTIME', None),
+                     'extrainfo' : params.get('CONFMODE', None)
                  }
 
     # correct exptime to actual shutter open duration
@@ -243,21 +244,6 @@ def frame_params_from_header(params, block):
 
         midpoint = midpoint + timedelta(seconds=float(frame_params['exptime']) / 2.0)
         frame_params['midpoint'] = midpoint
-    return frame_params
-
-
-def frame_params_from_block(params, block):
-    # In these cases we are parsing the Block info
-    sitecode = LCOGT_domes_to_site_codes(params.get('siteid', None), params.get('encid', None), params.get('telid', None))
-    frame_params = { 'midpoint' : params.get('date_obs', None),
-                     'sitecode' : sitecode,
-                     'filter'   : params.get('filter_name', "B"),
-                     'frametype': Frame.SINGLE_FRAMETYPE,
-                     'block'    : block,
-                     'instrument': params.get('instrume', None),
-                     'filename'  : params.get('origname', None),
-                     'exptime'   : params.get('exptime', None),
-                 }
     return frame_params
 
 
