@@ -296,7 +296,7 @@ class TestBody(TestCase):
         self.assertEqual(obs_window[1], expected_end)
 
 
-@patch('core.models.datetime', MockDateTime)
+@patch('core.models.body.datetime', MockDateTime)
 class TestComputeFOM(TestCase):
 
     def setUp(self):
@@ -1692,7 +1692,7 @@ class TestSourceMeasurement(TestCase):
                             'astrometric_catalog' : "PPMXL",
                             'flags' : 'K'
                          }
-                                 
+
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '     N999r0q KC2015 07 13.88184010 30 00.00 -32 45 00.0          20.7 Rt     K93'
         mpc_line = measure.format_mpc_line(include_catcode=True)
@@ -1706,7 +1706,7 @@ class TestSourceMeasurement(TestCase):
                             'obs_mag' : 21.6,
                             'flags' : 'K'
                          }
-                                 
+
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '     K15X54S KC2015 12 05.04918923 04 04.12 -03 50 35.1          21.6 R      W86'
         mpc_line = measure.format_mpc_line()
@@ -1726,7 +1726,7 @@ class TestSourceMeasurement(TestCase):
                             'obs_ra': 106.933,
                             'photometric_catalog': u'UCAC4',
                             'snr': None}
-                                 
+
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '     K15X54S KC2015 12 05.04918907 07 43.92 -29 30 01.1               R      W86'
         mpc_line = measure.format_mpc_line()
@@ -1746,7 +1746,7 @@ class TestSourceMeasurement(TestCase):
                             'obs_ra': 228.6245,
                             'photometric_catalog': u'2MASS',
                             'snr': None}
-                                 
+
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '     N999r0q  S2016 02 08.89193 15 14 29.88 -09 50 03.0          19.0 RL     C51' +\
                           '\n' + '     N999r0q  s2016 02 08.89193 1 - 3471.6659 - 5748.3475 - 1442.3263        C51'
@@ -1767,7 +1767,7 @@ class TestSourceMeasurement(TestCase):
                             'obs_ra': 228.6245,
                             'photometric_catalog': u'2MASS',
                             'snr': None}
-                                 
+
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '    CK16C020  S2016 02 08.89193 15 14 29.88 -09 50 03.0          19.0 RL     C51' +\
                           '\n' + '    CK16C020  s2016 02 08.89193 1 - 3471.6659 - 5748.3475 - 1442.3263        C51'
@@ -2238,4 +2238,3 @@ class TestCandidate(TestCase):
         for frame in arange(self.dets_array.shape[0]):
             for column in self.dets_array.dtype.names:
                 self.assertAlmostEqual(self.dets_array[column][frame], new_dets_array[column][frame], 7)
-

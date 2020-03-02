@@ -104,7 +104,7 @@ class RankingPageTest(FunctionalTest):
 # patch the datetime used by models.Body.compute_position to give the same
 # consistent answer.
 
-    @patch('core.models.datetime', MockDateTime)
+    @patch('core.models.body.datetime', MockDateTime)
     def test_ranking_page(self):
 
         MockDateTime.change_datetime(2015, 7, 1, 17, 0, 0)
