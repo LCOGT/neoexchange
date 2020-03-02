@@ -50,7 +50,7 @@ class NewVisitorTest(FunctionalTest):
 # consistent answer.
 
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
-    @patch('core.models.datetime', MockDateTime)
+    @patch('core.models.body.datetime', MockDateTime)
     def test_can_compute_ephemeris(self):
 
         MockDateTime.change_datetime(2015, 7, 1, 17, 0, 0)

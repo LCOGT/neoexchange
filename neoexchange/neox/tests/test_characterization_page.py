@@ -137,7 +137,7 @@ class CharacterizationPageTest(FunctionalTest):
 # patch the datetime used by models.Body.compute_position to give the same
 # consistent answer.
 
-    @patch('core.models.datetime', MockDateTime)
+    @patch('core.models.body.datetime', MockDateTime)
     def test_characterization_page(self):
 
         MockDateTime.change_datetime(2015, 7, 1, 17, 0, 0)
@@ -162,7 +162,7 @@ class CharacterizationPageTest(FunctionalTest):
         # He notices that they are ordered by window
 
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
-    @patch('core.models.datetime', MockDateTime)
+    @patch('core.models.body.datetime', MockDateTime)
     def test_characterization_rank(self):
 
         MockDateTime.change_datetime(2015, 7, 1, 17, 0, 0)
@@ -185,7 +185,7 @@ class CharacterizationPageTest(FunctionalTest):
 
         for line in testlines:
             self.check_for_row_in_table('characterization_targets', line)
-        
+
         # Kildorn cares not for ALL Characterization targets. He wants to see only spectroscopy targets!
         button = self.browser.find_element_by_id('filter_spec')
         with self.wait_for_page_load(timeout=10):
@@ -202,7 +202,7 @@ class CharacterizationPageTest(FunctionalTest):
             link.click()
         new_url = self.browser.current_url
         self.assertEqual(str(new_url), body_url)
-        
+
         # He then sees that there is information from other surveys that have already gotten spectra for his targets
         testlines = ['SMASS SPECTRA NIR',
                     'MANOS TARGET (No Data Yet)',
