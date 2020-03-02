@@ -56,7 +56,6 @@ class BodyDetailsTest(FunctionalTest):
         sidebar_text = self.browser.find_element_by_class_name('rightsidebar').text
         self.assertIn("Last Update: " + self.body.update_time.strftime("%Y-%b-%d %H:%M"), sidebar_text)
 
-
         testlines = [ 'ECCENTRICITY ' + str(self.body.eccentricity),
                       'MEAN DISTANCE (AU) ' + str(self.body.meandist),
                       'ABSOLUTE MAGNITUDE (H) ' + str(self.body.abs_mag),
@@ -114,7 +113,6 @@ class BodyDetailsTest(FunctionalTest):
         # the Body.
         sidebar_text = self.browser.find_element_by_class_name('rightsidebar').text
         self.assertIn("Ingest Time: " + self.body.ingest.strftime("%Y-%b-%d %H:%M"), sidebar_text)
-
 
         testlines = [ 'ECCENTRICITY ' + str(self.body.eccentricity),
                       'MEAN DISTANCE (AU) ' + str(self.body.meandist),
@@ -204,12 +202,18 @@ class BodyDetailsTest(FunctionalTest):
         for line in testlines:
             self.check_for_row_in_table('id_spectralinfo', line)
 
-        expected_tooltip = self.browser.find_element_by_class_name("tooltiptext").get_attribute('innerHTML')
-        tooltips = ['Neese, Asteroid Taxonomy V6.0, (2010).',
-                    'Visible: Xu (1994), Xu et al. (1995). NIR: DeMeo et al. (2009).'
+        expected_tooltips = self.browser.find_elements_by_class_name("tooltiptext")
+        expected_tt_text = ''
+        for tip in expected_tooltips:
+            expected_tt_text += tip.get_attribute('innerHTML')
+        tooltips = ['March 19, 2015',
+                    'Neese, Asteroid Taxonomy V6.0, (2010).',
+                    'Visible: Xu (1994), Xu et al. (1995). NIR: DeMeo et al. (2009).',
+                    '7 color indices were used.',
+                    'Used medium-resolution spectrum by Chapman and Gaffey (1979).'
                     ]
         for tool in tooltips:
-            self.assertIn(tool, expected_tooltip)
+            self.assertIn(tool, expected_tt_text)
 
     @patch('core.plots.datetime', MockDateTime)
     def test_can_view_comet_details(self):
