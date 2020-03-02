@@ -2900,7 +2900,7 @@ class TestMakeObjectDirectory(ExternalCodeUnitTest):
     def test_object_with_space(self):
         object_name = '2020 BR10'
         block_id = '12345'
-        expected_object_dir = os.path.join(self.test_dir, object_name.replace(' ', '')+'_'+block_id)
+        expected_object_dir = os.path.join(self.test_dir, object_name.replace(' ', '_')+'_'+block_id)
 
         object_dir = make_object_directory(self.test_filepath, object_name, block_id)
 
@@ -2909,7 +2909,7 @@ class TestMakeObjectDirectory(ExternalCodeUnitTest):
     def test_comet(self):
         object_name = 'C/2019 Y4'
         block_id = '12345'
-        expected_object_dir = os.path.join(self.test_dir, object_name.replace(' ', '').replace('/', '')+'_'+block_id)
+        expected_object_dir = os.path.join(self.test_dir, object_name.replace(' ', '_').replace('/', '_')+'_'+block_id)
 
         object_dir = make_object_directory(self.test_filepath, object_name, block_id)
 

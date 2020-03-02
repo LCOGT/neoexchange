@@ -1430,7 +1430,7 @@ def sanitize_object_name(object_name):
 
 def make_object_directory(filepath, object_name, block_id):
 
-    object_directory = object_name.replace(' ', '').replace('/', '')
+    object_directory = sanitize_object_name(object_name)
     if block_id != '':
         object_directory = object_directory + '_' + str(block_id)
     object_directory = os.path.join(os.path.dirname(filepath), object_directory)

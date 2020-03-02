@@ -40,7 +40,7 @@ class Command(BaseCommand):
         parser.add_argument('--datadir', action="store", default=out_path, help='Path for processed data (e.g. %s)' % out_path)
         parser.add_argument('--mtdlink_file_limit', action="store", type=int, default=9, help='Maximum number of images for running mtdlink')
         parser.add_argument('--keep-temp-dir', action="store_true", help='Whether to remove the temporary directories')
-        parser.add_argument('--object', action="store", help="Which object to analyze")
+        parser.add_argument('--object', action="store", help="Which object to analyze (replace spaces with underscores)")
         parser.add_argument('--skip-download', action="store_true", help='Whether to skip downloading data')
 
     def handle(self, *args, **options):
