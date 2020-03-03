@@ -115,11 +115,7 @@
                                 <a href="{% url 'visibility' body.id %}" class="button button-primary" id="visibility">Plot Visibility</a>
                             {% endif %}
                             </div>
-                            {% if body.update_time > body.ingest %}
-                                <div class="section-title">Last Update: {{body.update_time|date:"Y-M-d H:i"}}</div>
-                            {% else %}
-                                <div class="section-title">Ingest Time: {{body.ingest|date:"Y-M-d H:i"}}</div>
-                            {% endif %}
+                            <div class="section-title">{{body.get_latest_update.0}}: {{body.get_latest_update.1|date:"Y-M-d H:i"}}</div>
                             <h5 class="section-title">Orbital Elements</h5>
                             <table class="keyvalue-table" id="id_orbelements">
                                 <tbody>
