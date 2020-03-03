@@ -72,7 +72,7 @@ from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
     read_mtds_file, unpack_tarball, run_findorb
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
-    determine_filenames, increment_red_level, update_ldac_catalog_wcs, FITSHdrException
+    determine_filenames, increment_red_level, update_ldac_catalog_wcs, FITSHdrException, sanitize_object_name
 from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
 from photometrics.spectraplot import pull_data_from_spectrum, pull_data_from_text, spectrum_plot
 from core.frames import create_frame, ingest_frames, measurements_from_block
@@ -3168,7 +3168,7 @@ def find_spec(pk):
     else:
         date_obs = str(int(block.block_start.strftime('%Y%m%d'))-1)
 
-    obj = data['OBJECT'].replace(' ', '_')
+    obj = sanitize_object_name(data['OBJECT'])
 
     if 'REQNUM' in data:
         req = data['REQNUM'].lstrip("0")
