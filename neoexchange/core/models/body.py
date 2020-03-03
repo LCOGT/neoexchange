@@ -452,6 +452,16 @@ class Body(models.Model):
 
         return new_param
 
+    def get_latest_update(self):
+
+        update_type = 'Ingest Time'
+        update_time = self.ingest
+        if self.update_time and (self.update_time > self.ingest):
+            update_type = 'Last Update'
+            update_time = self.update_time
+
+        return update_type, update_time
+
     class Meta:
         verbose_name = _('Minor Body')
         verbose_name_plural = _('Minor Bodies')
