@@ -3858,6 +3858,7 @@ class TestFrames(TestCase):
                         "GROUPID"  : "TEMP",
                         "RLEVEL"   : 91,
                         "L1FWHM"   : "2.42433",
+                        "CONFMODE" : "full_frame",
                         "UTSTOP"   : "00:01:53.067"
                 }
         midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
@@ -3872,6 +3873,37 @@ class TestFrames(TestCase):
         self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
         self.assertEqual(frames[0].instrument, params['INSTRUME'])
         self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e91.fits'))
+        self.assertEqual(frames[0].extrainfo, None)
+
+    def test_ingest_frames_2x2_red(self):
+        params = {
+                        "DATE_OBS": "2015-12-31T23:59:28.067",
+                        "ENCID": "doma",
+                        "SITEID": "cpt",
+                        "TELID": "1m0a",
+                        "FILTER": "R",
+                        "INSTRUME" : "kb70",
+                        "ORIGNAME" : "cpt1m010-kb70-20150420-0001-e00",
+                        "EXPTIME"  : "145",
+                        "GROUPID"  : "TEMP",
+                        "RLEVEL"   : 91,
+                        "L1FWHM"   : "2.42433",
+                        "CONFMODE" : "central_2k_2x2",
+                        "UTSTOP"   : "00:01:53.067"
+                }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) / 2.0)
+
+        frame = create_frame(params, self.test_block)
+        frames = Frame.objects.filter(sitecode='K91')
+        self.assertEqual(1, frames.count())
+        self.assertEqual(frames[0].frametype, Frame.BANZAI_RED_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'K91')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].instrument, params['INSTRUME'])
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e91.fits'))
+        self.assertEqual(frames[0].extrainfo, params['CONFMODE'])
 
     def test_ingest_frames_banzai_red_badexptime(self):
         """Test that we preferentially take midpoint from UTSTOP over EXPTIME"""
@@ -4050,6 +4082,7 @@ class TestFrames(TestCase):
                         "EXPTIME"  : "145",
                         "GROUPID"  : "TEMP",
                         "RLEVEL"   : 91,
+                        "CONFMODE" : 'default',
                         "L1FWHM"   : "2.42433"
                 }
         midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
@@ -4064,6 +4097,7 @@ class TestFrames(TestCase):
         self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
         self.assertEqual(frames[0].instrument, params['INSTRUME'])
         self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e91.fits'))
+        self.assertEqual(frames[0].extrainfo, None)
 
     def test_ingest_frames_spectro_spectrum(self):
         params = {
