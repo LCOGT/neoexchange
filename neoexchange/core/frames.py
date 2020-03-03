@@ -163,8 +163,11 @@ def frame_params_from_header(params, block):
                      'instrument': params.get('INSTRUME', None),
                      'filename'  : params.get('ORIGNAME', None),
                      'exptime'   : params.get('EXPTIME', None),
-                     'extrainfo' : params.get('CONFMODE', None)
                  }
+
+    inst_mode = params.get('CONFMODE', None)
+    if inst_mode and inst_mode not in ['default', 'full_frame']:
+        frame_params['extrainfo'] = inst_mode
 
     # correct exptime to actual shutter open duration
     shutter_open = params.get('DATE_OBS', None)
