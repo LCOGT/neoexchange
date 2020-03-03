@@ -135,6 +135,8 @@ class ScheduleObservations(FunctionalTest):
         self.assertIn('20.39', magnitude)
         speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
         self.assertIn('2.52 "/min', speed)
+        binning = self.browser.find_element_by_id('id_bin_mode_row').find_element_by_class_name('kv-value').text
+        self.assertIn('Full Chip, 1x1', binning)
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
@@ -778,6 +780,16 @@ class ScheduleObservations(FunctionalTest):
         moon_sep = self.browser.find_element_by_id('id_moon_row').find_element_by_class_name('kv-value').text
         self.assertIn('108.4', moon_sep)
 
+        # Bart wants to use 2x2 binning for fast readout.
+        bin_box = Select(self.browser.find_element_by_id('id_bin_mode'))
+        bin_box.select_by_visible_text('Central 2k, 2x2')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
+
+        # The page refreshes and we get correct exp_count
+        num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
+        self.assertIn('18', num_exp)
+
         # Bart wants to change the slot length to less than 1 exposure.
         slot_length_box = self.browser.find_element_by_id('id_slot_length')
         slot_length_box.clear()
@@ -787,7 +799,7 @@ class ScheduleObservations(FunctionalTest):
 
         # The page refreshes and we get correct slot length
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
-        self.assertIn('3.5', slot_length)
+        self.assertIn('3.0', slot_length)
 
         # Bart wants to change the min moon dist to 160.
         self.browser.find_element_by_id("advanced-switch").click()

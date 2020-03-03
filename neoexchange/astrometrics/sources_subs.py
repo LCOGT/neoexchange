@@ -1608,6 +1608,8 @@ def make_config(params, exp_filter):
             }
         ]
     }
+    if params.get('bin_mode', None) == '2k_2x2' and params['pondtelescope'] == '1m0':
+        conf['instrument_configs'][0]['mode'] = 'central_2k_2x2'
     return conf
 
 
@@ -1893,6 +1895,8 @@ def configure_defaults(params):
         if params['site_code'] == 'V38':
             # elp-aqwa-0m4a kb80
             params['observatory'] = 'aqwa'
+    elif params.get('bin_mode', None) == '2k_2x2':
+        params['binning'] = 2
 
     return params
 

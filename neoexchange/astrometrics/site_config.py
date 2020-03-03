@@ -5,6 +5,8 @@ tel_field = {   'onem_fov'              : 15.5,
                 'onem_pixscale'         : 0.464,
                 'onem_sinistro_fov'     : 26.4,
                 'onem_sinistro_pixscale' : 0.389,
+                'onem_2x2_sinistro_fov' : 13.2,
+                'onem_2x2_sin_pixscale' : 0.778,
                 'point4m_pixscale'      : 0.571,        # bin 2, from average kb29 values = 1.139/ 1x1 nominal = 0.58 / 1x1 from average of kb27 = 0.571
                 'point4m_fov'           : 29.1,
                 'twom_pixscale'         : 0.304,
@@ -34,6 +36,7 @@ tel_overhead = { 'onem_setup_overhead'      : 90.0,                  # front pad
 inst_overhead = {   'onemsbig_exp_overhead'         : 15.5,
                     'point4m_exp_overhead'          : 13.0 + 1.0,       # readout + fixed overhead/exposure
                     'sinistro_exp_overhead'         : 27.0 + 1.0,       # readout + fixed overhead/exposure
+                    'sinistro_2x2_exp_overhead'     : 8.0 + 1.0,        # readout + fixed overhead/exposure
                     'twom_exp_overhead'             : 10.5 + 8.5,       # readout + fixed overhead/exposure
                     'floyds_exp_overhead'           : 25.0 + 0.5,       # readout + fixed overhead/exposure
                     'floyds_config_change_overhead' : 60.0,

@@ -796,7 +796,6 @@ class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
 
     def form_valid(self, form, request):
         data = schedule_check(form.cleaned_data, self.body, self.ok_to_schedule)
-        print(data)
         new_form = ScheduleBlockForm(data)
         return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.body})
 
@@ -1165,6 +1164,9 @@ def schedule_check(data, body, ok_to_schedule=True):
         available_filters = available_filters + filt + ', '
     available_filters = available_filters[:-2]
 
+    # Check for binning
+    bin_mode = data.get('bin_mode', None)
+
     # Get maximum airmass
     max_airmass = data.get('max_airmass', 1.74)
     alt_limit = get_alt_from_airmass(max_airmass)
@@ -1225,10 +1227,10 @@ def schedule_check(data, body, ok_to_schedule=True):
         # Determine exposure length and count
         if data.get('exp_length', None):
             exp_length = data.get('exp_length')
-            slot_length, exp_count = determine_exp_count(slot_length, exp_length, data['site_code'], filter_pattern)
+            slot_length, exp_count = determine_exp_count(slot_length, exp_length, data['site_code'], filter_pattern, bin_mode=bin_mode)
         else:
-            exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length, magnitude, filter_pattern)
-            slot_length, exp_count = determine_exp_count(slot_length, exp_length, data['site_code'], filter_pattern, exp_count)
+            exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length, magnitude, filter_pattern, bin_mode=bin_mode)
+            slot_length, exp_count = determine_exp_count(slot_length, exp_length, data['site_code'], filter_pattern, exp_count, bin_mode=bin_mode)
         if exp_length is None or exp_count is None:
             ok_to_schedule = False
 
@@ -1286,15 +1288,18 @@ def schedule_check(data, body, ok_to_schedule=True):
     # Create Group ID
     group_name = validate_text(data.get('group_name', None))
 
-    if not group_name:
-        suffix = datetime.strftime(utc_date, '%Y%m%d')
-        if period and jitter:
-            suffix = "cad-%s-%s" % (datetime.strftime(data['start_time'], '%Y%m%d'), datetime.strftime(data['end_time'], '%m%d'))
-        elif spectroscopy:
-            suffix += "_spectra"
-        if too_mode is True:
-            suffix += '_ToO'
-        group_name = body.current_name() + '_' + data['site_code'].upper() + '-' + suffix
+    suffix = datetime.strftime(utc_date, '%Y%m%d')
+    if period and jitter:
+        suffix = "cad-%s-%s" % (datetime.strftime(data['start_time'], '%Y%m%d'), datetime.strftime(data['end_time'], '%m%d'))
+    elif spectroscopy:
+        suffix += "_spectra"
+    if too_mode is True:
+        suffix += '_ToO'
+    default_group_name = body.current_name() + '_' + data['site_code'].upper() + '-' + suffix
+    if not group_name or (group_name == default_group_name + '_bin2x2' and bin_mode != '2k_2x2'):
+        group_name = default_group_name
+    if group_name == default_group_name and bin_mode == '2k_2x2':
+        group_name += '_bin2x2'
 
     resp = {
         'target_name': body.current_name(),
@@ -1319,6 +1324,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'dec_midpoint': dec,
         'period' : period,
         'jitter' : jitter,
+        'bin_mode' : bin_mode,
         'snr' : snr,
         'saturated' : saturated,
         'spectroscopy' : spectroscopy,
@@ -1431,7 +1437,7 @@ def schedule_submit(data, body, username):
               'tag_id': proposal.tag,
               'priority': data.get('priority', 15),
               'submitter_id': username,
-
+              'bin_mode': data['bin_mode'],
               'filter_pattern': data['filter_pattern'],
               'exp_count': data['exp_count'],
               'exp_time': data['exp_length'],
@@ -2889,7 +2895,6 @@ def create_source_measurement(obs_lines, block=None):
                             measures.append(measure)
                             measure_count += 1
 
-
         # Set updated to True for the target with the current datetime
         update_params = { 'updated' : True,
                           'update_time' : datetime.utcnow()
@@ -3001,7 +3006,7 @@ def make_new_catalog_entry(new_ldac_catalog, header, block):
                        'zeropoint_err': header['zeropoint_err'],
                                 'fwhm': header['fwhm'],
                            'frametype': Frame.BANZAI_LDAC_CATALOG,
-                           'astrometric_catalog' : header.get('astrometric_catalog', None),
+                'astrometric_catalog' : header.get('astrometric_catalog', None),
                           'rms_of_fit': header['astrometric_fit_rms'],
                        'nstars_in_fit': header['astrometric_fit_nstars'],
                                 'wcs' : header.get('wcs', None),
