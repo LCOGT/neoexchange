@@ -18,6 +18,7 @@ from django.db import models
 from django.db.models import Sum
 from django.utils.translation import ugettext_lazy as _
 from django.utils.encoding import python_2_unicode_compatible
+from django.utils.functional import cached_property
 from requests.compat import urljoin
 from numpy import fromstring
 
@@ -45,6 +46,7 @@ SITE_CHOICES = (
                     ('spc', 'Spectral cameras')
     )
 
+
 @python_2_unicode_compatible
 class SuperBlock(models.Model):
 
@@ -62,6 +64,14 @@ class SuperBlock(models.Model):
     timeused        = models.FloatField('Time used (seconds)', null=True, blank=True)
     active          = models.BooleanField(default=False)
 
+    @cached_property
+    def get_blocks(self):
+        blocks_query = self.block_set.all()
+        blocks_list = []
+        for block in blocks_query:
+            blocks_list.append(model_to_dict(block))
+        return blocks_list
+
     def current_name(self):
         name = ''
         if self.body is not None:
@@ -77,7 +87,8 @@ class SuperBlock(models.Model):
         return url
 
     def get_sites(self):
-        qs = Block.objects.filter(superblock=self.id).values_list('site', flat=True).distinct()
+        bl = self.get_blocks
+        qs = list(set([b['site'] for b in bl]))
         qs = [q for q in qs if q is not None]
         if qs:
             return ", ".join(qs)
@@ -85,18 +96,19 @@ class SuperBlock(models.Model):
             return None
 
     def get_telclass(self):
-        qs = Block.objects.filter(superblock=self.id).values_list('telclass', 'obstype').distinct()
 
+        bl = self.get_blocks
+        qs = list(set([(b['telclass'], b['obstype']) for b in bl]))
         # Convert obstypes into "(S)" suffix for spectra, nothing for imaging
-        class_obstype = [x[0]+str(x[1]).replace(str(Block.OPT_SPECTRA),'(S)').replace(str(Block.OPT_SPECTRA_CALIB),'(SC)').replace(str(Block.OPT_IMAGING), '') for x in qs]
+        class_obstype = [x[0]+str(x[1]).replace(str(Block.OPT_SPECTRA), '(S)').replace(str(Block.OPT_SPECTRA_CALIB), '(SC)').replace(str(Block.OPT_IMAGING), '') for x in qs]
 
         return ", ".join(class_obstype)
 
     def get_obsdetails(self):
         obs_details_str = ""
 
-        qs = Block.objects.filter(superblock=self.id).values_list('num_exposures', 'exp_length')
-
+        bl = self.get_blocks
+        qs = [(b['num_exposures'], b['exp_length']) for b in bl]
         # Count number of unique N exposure x Y exposure length combinations
         counts = Counter([elem for elem in qs])
 
@@ -113,19 +125,15 @@ class SuperBlock(models.Model):
         return obs_details_str
 
     def get_num_observed(self):
-        qs = Block.objects.filter(superblock=self.id)
 
-        num_obs_dict = qs.filter(num_observed__gte=1).aggregate(num_observed=Sum('num_observed'))
-        if num_obs_dict.get('num_observed', None) is None:
-            num_obs = 0
-        else:
-            num_obs = num_obs_dict.get('num_observed', 0)
-        return num_obs, qs.count()
+        bl = self.get_blocks
+        num_obs = sum([b['num_observed'] for b in bl if b['num_observed'] and b['num_observed'] >= 1])
+        return num_obs, len(bl)
 
     def get_num_reported(self):
-        qs = Block.objects.filter(superblock=self.id)
-
-        return qs.filter(reported=True).count(), qs.count()
+        bl = self.get_blocks
+        qs = len([b for b in bl if b['reported'] is True])
+        return qs, len(bl)
 
     def get_last_observed(self):
         last_observed = None
@@ -210,7 +218,7 @@ class Block(models.Model):
 
     def num_red_frames(self):
         """Returns the total number of reduced frames (quicklook and fully reduced)"""
-        return self.frame_set.filter(frametype__in=[11,91]).count()
+        return self.frame_set.filter(frametype__in=[11, 91]).count()
 
     def num_unique_red_frames(self):
         """Returns the number of *unique* reduced frames (quicklook OR fully reduced)"""
@@ -257,6 +265,7 @@ class Block(models.Model):
             text = 'not '
 
         return '%s is %sactive' % (self.request_number, text)
+
 
 @python_2_unicode_compatible
 class Candidate(models.Model):
@@ -310,6 +319,7 @@ class Candidate(models.Model):
 
     def __str__(self):
         return "%s#%04d" % (self.block.request_number, self.cand_id)
+
 
 def detections_array_dtypes():
     """Declare the columns and types of the structured numpy array for holding
