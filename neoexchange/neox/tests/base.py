@@ -63,10 +63,10 @@ class FunctionalTest(StaticLiveServerTestCase):
                     'elements_type' : 'MPC_MINOR_PLANET',
                     'active'        : True,
                     'origin'        : 'M',
-                    'ingest'        : '2015-05-11 17:20:00',
+                    'ingest'        : datetime(2015, 5, 11, 17, 20, 00),
                     'score'         : 90,
-                    'discovery_date': '2015-05-10 12:00:00',
-                    'update_time'   : '2015-05-18 05:00:00',
+                    'discovery_date': datetime(2015, 5, 10, 12, 0, 0),
+                    'update_time'   : datetime(2015, 5, 18, 5, 0, 0),
                     'num_obs'       : 17,
                     'arc_length'    : 3.123456789,
                     'not_seen'      : 0.423456789,
@@ -260,7 +260,6 @@ class FunctionalTest(StaticLiveServerTestCase):
 
         if settings.USE_FIREFOXDRIVER:
             fp = webdriver.FirefoxProfile()
-            # fp = webdriver.Chrome()
             fp.set_preference("browser.startup.homepage", "about:blank")
             fp.set_preference("startup.homepage_welcome_url", "about:blank")
             fp.set_preference("startup.homepage_welcome_url.additional", "about:blank")
@@ -282,10 +281,12 @@ class FunctionalTest(StaticLiveServerTestCase):
                 if version and 'Firefox' in version:
                     version_num = version.rstrip().split(' ')[-1]
                     major_version = version_num.split('.')[0]
+                    firefox_capabilities['marionette'] = True
                     if major_version.isdigit() and int(major_version) <= 52:
                         firefox_capabilities['marionette'] = False
-
-                self.browser = webdriver.Firefox(capabilities=firefox_capabilities, firefox_profile=fp)
+                options = webdriver.firefox.options.Options()
+                options.add_argument('--headless')
+                self.browser = webdriver.Firefox(capabilities=firefox_capabilities, firefox_profile=fp, firefox_options=options)
         else:
             options = webdriver.chrome.options.Options()
             options.add_argument('--headless')
