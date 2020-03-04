@@ -260,7 +260,6 @@ class FunctionalTest(StaticLiveServerTestCase):
 
         if settings.USE_FIREFOXDRIVER:
             fp = webdriver.FirefoxProfile()
-            # fp = webdriver.Chrome()
             fp.set_preference("browser.startup.homepage", "about:blank")
             fp.set_preference("startup.homepage_welcome_url", "about:blank")
             fp.set_preference("startup.homepage_welcome_url.additional", "about:blank")
@@ -282,6 +281,7 @@ class FunctionalTest(StaticLiveServerTestCase):
                 if version and 'Firefox' in version:
                     version_num = version.rstrip().split(' ')[-1]
                     major_version = version_num.split('.')[0]
+                    firefox_capabilities['marionette'] = True
                     if major_version.isdigit() and int(major_version) <= 52:
                         firefox_capabilities['marionette'] = False
                 options = webdriver.firefox.options.Options()
