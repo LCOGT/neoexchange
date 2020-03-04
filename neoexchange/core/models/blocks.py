@@ -64,14 +64,6 @@ class SuperBlock(models.Model):
     timeused        = models.FloatField('Time used (seconds)', null=True, blank=True)
     active          = models.BooleanField(default=False)
 
-    @cached_property
-    def get_blocks(self):
-        blocks_query = self.block_set.all()
-        blocks_list = []
-        for block in blocks_query:
-            blocks_list.append(model_to_dict(block))
-        return blocks_list
-
     def current_name(self):
         name = ''
         if self.body is not None:
@@ -87,8 +79,7 @@ class SuperBlock(models.Model):
         return url
 
     def get_sites(self):
-        bl = self.get_blocks
-        qs = list(set([b['site'] for b in bl]))
+        qs = Block.objects.filter(superblock=self.id).values_list('site', flat=True).distinct()
         qs = [q for q in qs if q is not None]
         if qs:
             return ", ".join(qs)
@@ -96,9 +87,8 @@ class SuperBlock(models.Model):
             return None
 
     def get_telclass(self):
+        qs = Block.objects.filter(superblock=self.id).values_list('telclass', 'obstype').distinct()
 
-        bl = self.get_blocks
-        qs = list(set([(b['telclass'], b['obstype']) for b in bl]))
         # Convert obstypes into "(S)" suffix for spectra, nothing for imaging
         class_obstype = [x[0]+str(x[1]).replace(str(Block.OPT_SPECTRA), '(S)').replace(str(Block.OPT_SPECTRA_CALIB), '(SC)').replace(str(Block.OPT_IMAGING), '') for x in qs]
 
@@ -107,8 +97,8 @@ class SuperBlock(models.Model):
     def get_obsdetails(self):
         obs_details_str = ""
 
-        bl = self.get_blocks
-        qs = [(b['num_exposures'], b['exp_length']) for b in bl]
+        qs = Block.objects.filter(superblock=self.id).values_list('num_exposures', 'exp_length')
+
         # Count number of unique N exposure x Y exposure length combinations
         counts = Counter([elem for elem in qs])
 
@@ -125,15 +115,19 @@ class SuperBlock(models.Model):
         return obs_details_str
 
     def get_num_observed(self):
+        qs = Block.objects.filter(superblock=self.id)
 
-        bl = self.get_blocks
-        num_obs = sum([b['num_observed'] for b in bl if b['num_observed'] and b['num_observed'] >= 1])
-        return num_obs, len(bl)
+        num_obs_dict = qs.filter(num_observed__gte=1).aggregate(num_observed=Sum('num_observed'))
+        if num_obs_dict.get('num_observed', None) is None:
+            num_obs = 0
+        else:
+            num_obs = num_obs_dict.get('num_observed', 0)
+        return num_obs, qs.count()
 
     def get_num_reported(self):
-        bl = self.get_blocks
-        qs = len([b for b in bl if b['reported'] is True])
-        return qs, len(bl)
+        qs = Block.objects.filter(superblock=self.id)
+
+        return qs.filter(reported=True).count(), qs.count()
 
     def get_last_observed(self):
         last_observed = None
