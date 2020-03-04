@@ -146,6 +146,17 @@ class TestBody(TestCase):
                        }
         self.test_block3 = Block.objects.create(**block_params3)
 
+        frame_params = { 'sitecode' : 'E10',
+                         'instrument' : 'fs03',
+                         'midpoint' : self.body4.ingest + timedelta(days=1),
+                         'block' : self.test_block3
+                       }
+        self.test_frame = Frame.objects.create(**frame_params)
+
+        srcm_params = { 'body' : self.body4,
+                        'frame' : self.test_frame
+                      }
+
         sblock_params5a = {
                          'body'     : self.body5,
                          'proposal' : self.neo_proposal,
@@ -334,6 +345,14 @@ class TestBody(TestCase):
         self.assertEqual(expected_type, update_type)
         self.assertEqual(expected_dt, update_dt)
 
+    def test_return_later_srcmeasure(self):
+        expected_dt = self.test_frame.midpoint
+        expected_type = 'Last Measurement'
+
+        update_type, update_dt = self.body3.get_latest_update()
+
+        self.assertEqual(expected_type, update_type)
+        self.assertEqual(expected_dt, update_dt)
 
 @patch('core.models.body.datetime', MockDateTime)
 class TestComputeFOM(TestCase):
