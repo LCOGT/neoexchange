@@ -355,6 +355,19 @@ class TestBody(TestCase):
         self.assertEqual(expected_type, update_type)
         self.assertEqual(expected_dt, update_dt)
 
+    def test_return_earlier_srcmeasure(self):
+        self.body5.update_time += timedelta(days=2)
+        self.body5.save()
+        self.body5.refresh_from_db()
+
+        expected_dt = self.body5.update_time
+        expected_type = 'Last Update'
+
+        update_type, update_dt = self.body5.get_latest_update()
+
+        self.assertEqual(expected_type, update_type)
+        self.assertEqual(expected_dt, update_dt)
+
 @patch('core.models.body.datetime', MockDateTime)
 class TestComputeFOM(TestCase):
 
