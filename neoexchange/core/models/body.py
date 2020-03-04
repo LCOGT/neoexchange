@@ -461,12 +461,13 @@ class Body(models.Model):
             update_time = self.update_time
 
         # See if there is a later SourceMeasurement
-        all_sm = self.sourcemeasurement_set.all()
-        if all_sm:
-            last_sm = all_sm.latest('frame__midpoint')
+        try:
+            last_sm = self.sourcemeasurement_set.all().latest('frame__midpoint')
             if last_sm and last_sm.frame.midpoint > update_time:
                 update_time = last_sm.frame.midpoint
                 update_type = 'Last Measurement'
+        except models.ObjectDoesNotExist:
+            pass
 
         return update_type, update_time
 

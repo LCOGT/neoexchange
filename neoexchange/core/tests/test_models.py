@@ -368,6 +368,7 @@ class TestBody(TestCase):
         self.assertEqual(expected_type, update_type)
         self.assertEqual(expected_dt, update_dt)
 
+
 @patch('core.models.body.datetime', MockDateTime)
 class TestComputeFOM(TestCase):
 
