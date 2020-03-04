@@ -12,7 +12,7 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
-
+from collections import Counter
 from operator import itemgetter
 from django import template
 from django.conf import settings
@@ -21,6 +21,7 @@ from django.template.defaultfilters import floatformat
 from astrometrics.time_subs import degreestohours, hourstodegrees, degreestodms, \
     degreestohms, radianstohms, radianstodms, dttodecimalday
 from astrometrics.ephem_subs import get_alt_from_airmass
+from core.models import Block
 
 register = Library()
 
@@ -95,6 +96,51 @@ def format_mpc_line_upload(measure):
 @register.simple_tag
 def format_mpc_line_catcode(measure):
     return measure.format_mpc_line(include_catcode=True)
+
+
+@register.inclusion_tag('partials/block_row.html')
+def build_block_row(superblock):
+    qs = superblock.block_set.all()
+
+    sites_list = list(set([q.site for q in qs]))
+    sites_list = [s for s in sites_list if s is not None]
+    if sites_list:
+        sites = ", ".join(sites_list)
+    else:
+        sites = None
+
+    class_list = list(set([(q.telclass, q.obstype) for q in qs]))
+    class_obstype = [x[0]+str(x[1]).replace(str(Block.OPT_SPECTRA), '(S)').replace(str(Block.OPT_SPECTRA_CALIB), '(SC)').replace(str(Block.OPT_IMAGING), '') for x in class_list]
+    telclass = ", ".join(class_obstype)
+
+    detail_list = list(set([(q.num_exposures, q.exp_length) for q in qs]))
+    # Count number of unique N exposure x Y exposure length combinations
+    counts = Counter([elem for elem in detail_list])
+
+    obsdetails = ""
+    if len(counts) > 1:
+        obs_details = []
+        for c in counts.items():
+            obs_details.append("%d of %dx%.1f secs" % (c[1], c[0][0], c[0][1]))
+
+        obsdetails = ", ".join(obs_details)
+    elif len(counts) == 1:
+        c = list(counts)
+        obsdetails = "%dx%.1f secs" % (c[0][0], c[0][1])
+
+    num_obs = sum([q.num_observed for q in qs if q.num_observed and q.num_observed >= 1])
+    num_observed = num_obs, qs.count()
+
+    num_reported = len([q for q in qs if q.reported is True]), qs.count()
+
+    return {
+        'block': superblock,
+        'sites': sites,
+        'telclass': telclass,
+        'obsdetails': obsdetails,
+        'num_observed': num_observed,
+        'num_reported': num_reported
+    }
 
 
 register.filter('make_int_list', make_int_list)
