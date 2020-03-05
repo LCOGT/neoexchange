@@ -2856,6 +2856,13 @@ class TestSanitizeObjectName(TestCase):
 
         self.assertEqual(expected_obj_name, object_name)
 
+    def test_comet_whitespace(self):
+        expected_obj_name = 'C_2019_Y4'
+
+        object_name = sanitize_object_name('  C/2019 Y4 ')
+
+        self.assertEqual(expected_obj_name, object_name)
+
     def test_staticsource_names(self):
         expected_obj_names = ['agk81d266', 'bd25d4655', 'cd_34d241', 'eg21', 'feige110', 'g138_31', 'g191_b2b', 'gd108', 'grw70d5824',
 #            'hd49798',
