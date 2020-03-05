@@ -2829,9 +2829,16 @@ class TestSanitizeObjectName(TestCase):
         self.assertEqual(expected_obj_name, object_name)
 
     def test_asteroid_with_space(self):
-        expected_obj_name = '2020_BR10'
+        expected_obj_name = '2020BR10'
 
         object_name = sanitize_object_name('2020 BR10')
+
+        self.assertEqual(expected_obj_name, object_name)
+
+    def test_asteroid_with_two_desigs(self):
+        expected_obj_name = '85989_1999JD6'
+
+        object_name = sanitize_object_name('85989 (1999 JD6)')
 
         self.assertEqual(expected_obj_name, object_name)
 
@@ -2850,44 +2857,33 @@ class TestSanitizeObjectName(TestCase):
         self.assertEqual(expected_obj_name, object_name)
 
     def test_comet_nonperiodic(self):
-        expected_obj_name = 'C_2019_Y4'
+        expected_obj_name = 'C_2019Y4'
 
         object_name = sanitize_object_name('C/2019 Y4')
 
         self.assertEqual(expected_obj_name, object_name)
 
     def test_comet_whitespace(self):
-        expected_obj_name = 'C_2019_Y4'
+        expected_obj_name = 'C_2019Y4'
 
         object_name = sanitize_object_name('  C/2019 Y4 ')
 
         self.assertEqual(expected_obj_name, object_name)
 
+    def test_unnumbered_comet_with_longname(self):
+        name = 'Machholz-Fujikawa-Iwamo (C/2018 V1'
+        expected_name = 'Machholz_Fujikawa_Iwamo_C_2018V1'
+
+        new_name = sanitize_object_name(name)
+
+        self.assertEqual(expected_name, new_name)
+
     def test_staticsource_names(self):
         expected_obj_names = ['agk81d266', 'bd25d4655', 'cd_34d241', 'eg21', 'feige110', 'g138_31', 'g191_b2b', 'gd108', 'grw70d5824',
-#            'hd49798',
-            'hd60753', 'hilt600', 'hr153', 'hr1544', 'hz2', 'hz21', 'lb227', 'lds749b', 'ltt1020', 'ngc7293']
+            'hd49798', 'hd60753', 'hilt600', 'hr153', 'hr1544', 'hz2', 'hz21', 'lb227', 'lds749b', 'ltt1020', 'ngc7293']
 
-        statsrc_names = ['AGK+81d266',
-                         'BD+25d4655',
-                         'CD-34d241',
-                         'EG21',
-                         'Feige110',
-                         'G138-31',
-                         'G191-B2B',
-                         'GD108',
-                         'GRW+70d5824',
-#                         'HD 49798',
-                         'HD60753',
-                         'HILT600',
-                         'HR153',
-                         'HR1544',
-                         'HZ2',
-                         'HZ21',
-                         'LB227',
-                         'LDS749B',
-                         'LTT1020',
-                         'NGC 7293']
+        statsrc_names = ['AGK+81d266', 'BD+25d4655', 'CD-34d241', 'EG21', 'Feige110', 'G138-31', 'G191-B2B', 'GD108', 'GRW+70d5824',
+            'HD 49798', 'HD60753', 'HILT600', 'HR153', 'HR1544', 'HZ2', 'HZ21', 'LB227', 'LDS749B', 'LTT1020', 'NGC 7293']
 
         for i,stat_src in enumerate(statsrc_names):
             object_name = sanitize_object_name(stat_src)
