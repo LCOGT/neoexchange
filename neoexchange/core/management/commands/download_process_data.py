@@ -129,7 +129,7 @@ class Command(BaseCommand):
                     keep_temp_dir = False
                     if len(fits_files) > options['mtdlink_file_limit']:
                         self.stdout.write("Too many frames to run mtd_link")
-                        skip_mtdlink= True
+                        skip_mtdlink = True
                     if options['keep_temp_dir']:
                         keep_temp_dir = True
 # Compulsory arguments need to go here as a list

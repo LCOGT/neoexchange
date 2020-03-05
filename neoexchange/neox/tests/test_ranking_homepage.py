@@ -90,7 +90,7 @@ class NewVisitorTest(FunctionalTest):
         self.body3, created = Body.objects.get_or_create(pk=3, **params)
 
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
-    @patch('core.models.datetime', MockDateTime)
+    @patch('core.models.body.datetime', MockDateTime)
     def test_homepage_has_ranking(self):
 
         MockDateTime.change_datetime(2015, 7, 1, 17, 0, 0)
@@ -132,7 +132,7 @@ class NewVisitorTest(FunctionalTest):
         self.assertIn(self.body.full_name(), header_text)
 
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
-    @patch('core.models.datetime', MockDateTime)
+    @patch('core.models.body.datetime', MockDateTime)
     def test_homepage_rounds_arc_notseen(self):
 
         MockDateTime.change_datetime(2017, 2, 1, 17, 0, 0)
