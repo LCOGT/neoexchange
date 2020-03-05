@@ -46,7 +46,7 @@ class TestMakeTargetName(TestCase):
 
     def test_unnumbered_comet_with_longname(self):
         name = 'Machholz-Fujikawa-Iwamo (C/2018'
-        expected_name = 'Machholz-Fujikawa-Iwamo_C_2018'
+        expected_name = 'Machholz_Fujikawa_IwamoC_2018'
 
         new_name = make_targetname(name)
 

@@ -23,13 +23,6 @@ def make_targetname(target_name):
     filenames
     """
 
-    start_idx = target_name.find('(')
-    end_idx = target_name.find(')')
-    if start_idx >= 0 and (end_idx > 0 or end_idx == -1):
-        if end_idx == -1:
-            end_idx = len(target_name)-1
-        new_name = target_name[start_idx:end_idx+1].replace(' ', '').replace('(','').replace(')','')
-        target_name = target_name[0:start_idx] + new_name + target_name[end_idx+2:]
     target_name = sanitize_object_name(target_name)
 
     return target_name
