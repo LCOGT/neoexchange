@@ -402,7 +402,7 @@ def download_measurements_file(template, body, m_format, request):
     measures = SourceMeasurement.objects.filter(body=body.id).order_by('frame__midpoint')
     measures = measures.prefetch_related(Prefetch('frame'), Prefetch('body'))
     data = { 'measures' : measures}
-    filename = "{}{}".format(body.current_name().replace(' ', '').replace('/', '_'), m_format)
+    filename = "{}{}".format(sanitize_object_name(body.current_name()), m_format)
 
     response = HttpResponse(template.render(data), content_type="text/plain")
     response['Content-Disposition'] = 'attachment; filename=' + filename
@@ -450,7 +450,7 @@ def export_measurements(body_id, output_path=''):
     measures = measures.prefetch_related(Prefetch('frame'), Prefetch('body'))
     data = { 'measures' : measures}
 
-    filename = "{}.mpc".format(body.current_name().replace(' ', '').replace('/', '_'))
+    filename = "{}.mpc".format(sanitize_object_name(body.current_name()))
     filename = os.path.join(output_path, filename)
 
     output_fh = open(filename, 'w')
