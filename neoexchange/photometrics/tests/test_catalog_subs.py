@@ -2856,6 +2856,36 @@ class TestSanitizeObjectName(TestCase):
 
         self.assertEqual(expected_obj_name, object_name)
 
+    def test_staticsource_names(self):
+        expected_obj_names = ['agk81d266', 'bd25d4655', 'cd_34d241', 'eg21', 'feige110', 'g138_31', 'g191_b2b', 'gd108', 'grw70d5824',
+#            'hd49798',
+            'hd60753', 'hilt600', 'hr153', 'hr1544', 'hz2', 'hz21', 'lb227', 'lds749b', 'ltt1020', 'ngc7293']
+
+        statsrc_names = ['AGK+81d266',
+                         'BD+25d4655',
+                         'CD-34d241',
+                         'EG21',
+                         'Feige110',
+                         'G138-31',
+                         'G191-B2B',
+                         'GD108',
+                         'GRW+70d5824',
+#                         'HD 49798',
+                         'HD60753',
+                         'HILT600',
+                         'HR153',
+                         'HR1544',
+                         'HZ2',
+                         'HZ21',
+                         'LB227',
+                         'LDS749B',
+                         'LTT1020',
+                         'NGC 7293']
+
+        for i,stat_src in enumerate(statsrc_names):
+            object_name = sanitize_object_name(stat_src)
+            self.assertEqual(expected_obj_names[i], object_name.lower())
+
 
 class TestMakeObjectDirectory(ExternalCodeUnitTest):
 

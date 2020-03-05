@@ -1426,6 +1426,9 @@ def sanitize_object_name(object_name):
     if type(object_name) == str:
         clean_object_name = object_name.replace(' ', '_').replace('(', '').replace(')', '')
         clean_object_name = clean_object_name.replace('/P', 'P').replace('/', '_')
+        # Additional mangling for calibration stars (StaticSources)
+        clean_object_name = clean_object_name.replace('+', '').replace('-', '_')
+
     return clean_object_name
 
 def make_object_directory(filepath, object_name, block_id):
