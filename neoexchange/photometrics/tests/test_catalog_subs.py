@@ -2821,6 +2821,14 @@ class TestSanitizeObjectName(TestCase):
 
         self.assertEqual(expected_obj_name, object_name)
 
+    def test_numpy_string(self):
+        expected_obj_name = '2016WW2'
+
+        name_array = array(['(2016 WW2)'])
+        object_name = sanitize_object_name(name_array[0])
+
+        self.assertEqual(expected_obj_name, object_name)
+
     def test_regular_asteroid(self):
         expected_obj_name = '12345'
 

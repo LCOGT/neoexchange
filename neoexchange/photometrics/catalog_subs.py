@@ -1423,7 +1423,7 @@ def sanitize_object_name(object_name):
     can be used for e.g. directory names"""
 
     clean_object_name = None
-    if type(object_name) == str:
+    if type(object_name) == str or type(object_name) == np.str_:
         clean_object_name = object_name.strip().replace('(', '').replace(')', '')
         # Find the rightmost space and then do space->underscore mapping *left*
         # of that but space->empty string right of that.
