@@ -3213,7 +3213,7 @@ def plot_all_spec(source):
         calibsource = source
         base_dir = os.path.join('cdbs', 'ctiostan')  # new base_dir for method
 
-        obj = calibsource.name.lower().replace(' ', '').replace('-', '_').replace('+', '')
+        obj = sanitize_object_name(calibsource.name.lower())
         spec_file = os.path.join(base_dir, "f{}.dat".format(obj))
         wav, flux, err = pull_data_from_text(spec_file)
         if wav:
