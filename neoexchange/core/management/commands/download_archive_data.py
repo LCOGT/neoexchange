@@ -29,6 +29,7 @@ from core.archive_subs import archive_login, get_frame_data, get_catalog_data, \
     determine_archive_start_end, download_files, make_data_dir
 from core.views import determine_active_proposals
 from photometrics.gf_movie import make_movie
+from photometrics.catalog_subs import sanitize_object_name
 from core.utils import save_to_default
 
 
@@ -101,12 +102,12 @@ class Command(BaseCommand):
                     self.stdout.write("Found %d frames for reduction level: %s" % ( len(all_frames[red_lvl]), red_lvl ))
                 out_path = options['datadir']
                 dl_frames = download_files(all_frames, out_path, verbose)
-                self.stdout.write("Downloaded %d frames" % ( len(dl_frames) ))
+                self.stdout.write("Downloaded %d frames" % (len(dl_frames)))
                 # unpack tarballs and make movie.
                 for frame in all_frames.get('', []):
                     if "tar.gz" in frame['filename']:
                         tar_path = make_data_dir(out_path, frame)
-                        obj = frame['OBJECT'].replace(" ", "_")
+                        obj = sanitize_object_name(frame['OBJECT'])
                         req_num = str(frame['REQNUM'])
                         movie_file = make_movie(frame['DATE_OBS'], obj, req_num, tar_path, out_path, frame['PROPID'])
                         if settings.USE_S3:
