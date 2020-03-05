@@ -132,7 +132,7 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow(), s
         return HttpResponse(PIXEL_GIF_DATA, content_type='image/gif')
 
     base_dir = os.path.join('visibility', str(body.pk))  # new base_dir for method
-    obj = body.name.replace(' ', '').replace('-', '_').replace('+', '')
+    obj = sanitize_object_name(body.name)
     site = ''
     if plot_type == 'hoursup':
         site = "_" + site_code + "_"

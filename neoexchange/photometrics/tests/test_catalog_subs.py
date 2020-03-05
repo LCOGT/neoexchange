@@ -2897,6 +2897,36 @@ class TestSanitizeObjectName(TestCase):
             object_name = sanitize_object_name(stat_src)
             self.assertEqual(expected_obj_names[i], object_name.lower())
 
+    def test_horizons_names(self):
+        expected_obj_names = ['2016WW2', '5604_1992FE', 'PANSTARRS_C_2017D5', '66391_Moshup_1999KW4', 'PANSTARRS_C_2015ER61',
+            'Lemmon_C_2017S7', 'ATLAS_C_2017M4', '11Parthenope', '328P_LONEOS_Tucker', 'A_2018V3', '155P_Shoemaker3',
+            '29P_Schwassmann_Wachmann1', 'Groeller_P_2019V2', 'Pruyne_P_2019X1', '4581_Asclepius_1989FC', '289P_Blanpain',
+            '469219_Kamo`oalewa_2016HO3', '2100_Ra_Shalom_1978RA', 'NEOWISE_C_2016U1']
+
+        horizons_names = ['(2016 WW2)',
+                          '5604 (1992 FE)',
+                          'PANSTARRS (C/2017 D5)',
+                          '66391 Moshup (1999 KW4)',
+                          'PANSTARRS (C/2015 ER61)',
+                          'Lemmon (C/2017 S7)',
+                          'ATLAS (C/2017 M4)',
+                          '11 Parthenope',
+                          '328P/LONEOS-Tucker',
+                          'A/2018 V3',
+                          '155P/Shoemaker 3',
+                          '29P/Schwassmann-Wachmann 1',
+                          'Groeller (P/2019 V2)',
+                          'Pruyne (P/2019 X1)',
+                          '4581 Asclepius (1989 FC)',
+                          '289P/Blanpain',
+                          '469219 Kamo`oalewa (2016 HO3)',
+                          '2100 Ra-Shalom (1978 RA)',
+                          'NEOWISE (C/2016 U1)']
+
+        for i, name in enumerate(horizons_names):
+            object_name = sanitize_object_name(name)
+            self.assertEqual(expected_obj_names[i], object_name)
+
 
 class TestMakeObjectDirectory(ExternalCodeUnitTest):
 
