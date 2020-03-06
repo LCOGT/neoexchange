@@ -109,7 +109,7 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
             query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup'])
         else:
             query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
-        query_service.VIZIER_SERVER = 'vizier.hia.nrc.ca'  # 'vizier.cfa.harvard.edu'
+        query_service.VIZIER_SERVER = 'vizier.cfa.harvard.edu' #'vizier.hia.nrc.ca'  # 'vizier.cfa.harvard.edu'
         query_service.TIMEOUT = 60
         try:
             result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=cat_mapping[cat_name])
@@ -1066,6 +1066,10 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
             raise FITSHdrException(fits_keyword)
 
     if 'obs_date' in header_items and 'exptime' in header_items:
+        try:
+            header_items['exptime'] = float(header_items['exptime'])
+        except ValueError:
+            pass
         header_items['obs_midpoint'] = header_items['obs_date'] + timedelta(seconds=header_items['exptime'] / 2.0)
     # Determine site code
     if 'site_id' in header_items and 'enc_id' in header_items and 'tel_id' in header_items:
@@ -1434,7 +1438,7 @@ def get_or_create_CatalogSources(table, frame):
                                         position_angle=source['ccd_pa'], ellipticity=1.0-(source['minor_axis']/source['major_axis']), 
                                         aperture_size=3.0, flags=source['flags'], flux_max=source['flux_max'], threshold=source['threshold'])
             new_sources.append(new_source)
-        CatalogSources.objects.bulk_create(new_sources)
+        CatalogSources.objects.bulk_create(new_sources, batch_size=200)
         num_sources_created = len(new_sources)
     elif num_in_table != num_cat_sources:
         for source in table:
