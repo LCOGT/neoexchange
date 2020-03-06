@@ -304,9 +304,12 @@ class FunctionalTest(StaticLiveServerTestCase):
                 try:
                     files_to_remove = glob(os.path.join(self.test_dir, '*'))
                     for file_to_rm in files_to_remove:
-                        os.remove(file_to_rm)
+                        if os.path.isdir(file_to_rm):
+                            shutil.rmtree(file_to_rm)
+                        else:
+                            os.remove(file_to_rm)
                 except OSError:
-                    print("Error removing files in temporary test directory", self.test_dir)
+                    print("Error removing files/directories in temporary test directory", self.test_dir)
                 try:
                     os.rmdir(self.test_dir)
                     if debug_print:
