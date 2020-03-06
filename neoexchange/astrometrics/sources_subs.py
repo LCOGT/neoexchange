@@ -1255,54 +1255,52 @@ def fetch_arecibo_targets(page=None):
     targets = []
 
     if type(page) == BeautifulSoup:
-        # Find the tables, we want the second one
+        # Find the tables
         tables = page.find_all('table')
-        if len(tables) != 2 and len(tables) != 3 :
-            logger.warning("Unexpected number of tables found in Arecibo page (Found %d)" % len(tables))
-        else:
-            for targets_table in tables[1:]:
-                rows = targets_table.find_all('tr')
-                if len(rows) > 1:
-                    for row in rows[1:]:
-                        items = row.find_all('td')
-                        target_object = items[0].text
+        for t, targets_table in enumerate(tables):
+            rows = targets_table.find_all('tr')
+            header = rows[0].find_all('td')[0].text.upper()
+            if len(rows) > 1 and 'OBJECT' in header or 'ASTEROID' in header:
+                for row in rows[1:]:
+                    items = row.find_all('td')
+                    target_object = items[0].text
+                    target_object = target_object.strip()
+                    # See if it is the form "(12345) 2008 FOO". If so, extract
+                    # just the asteroid number
+                    if '(' in target_object and ')' in target_object:
+                        # See if we have parentheses around the number or around the
+                        # temporary designation.
+                        # If the first character in the string is a '(' we have the first
+                        # case and should split on the closing ')' and take the 0th chunk
+                        # If the first char is not a '(', then we have parentheses around
+                        # the temporary designation and we should split on the '(', take
+                        # the 0th chunk and strip whitespace
+                        split_char = ')'
+                        if target_object[0] != '(':
+                            split_char = '('
+                        target_object = target_object.split(split_char)[0].replace('(', '')
                         target_object = target_object.strip()
-                        # See if it is the form "(12345) 2008 FOO". If so, extract
-                        # just the asteroid number
-                        if '(' in target_object and ')' in target_object:
-                            # See if we have parentheses around the number or around the
-                            # temporary desigination.
-                            # If the first character in the string is a '(' we have the first
-                            # case and should split on the closing ')' and take the 0th chunk
-                            # If the first char is not a '(', then we have parentheses around
-                            # the temporary desigination and we should split on the '(', take
-                            # the 0th chunk and strip whitespace
-                            split_char = ')'
-                            if target_object[0] != '(':
-                                split_char = '('
-                            target_object = target_object.split(split_char)[0].replace('(', '')
-                            target_object = target_object.strip()
-                        else:
-                            # No parentheses, either just a number or a number and name
-                            chunks = target_object.split(' ')
-                            if len(chunks) >= 2:
-                                if chunks[0].isalpha() and chunks[1].isalpha():
-                                    logger.warning("All text object found: " + target_object)
-                                    target_object = None
-                                else:
-                                    if chunks[1].replace('-', '').isalpha() and len(chunks[1]) != 2:
-                                        target_object = chunks[0]
-                                    elif 'Comet' in chunks[0] and '/P' in chunks[1].rstrip()[-2:]:
-                                        target_object = chunks[1].replace('/', '')
-                                    else:
-                                        target_object = chunks[0] + " " + chunks[1]
-                            else:
-                                logger.warning("Unable to parse Arecibo target %s" % target_object)
+                    else:
+                        # No parentheses, either just a number or a number and name
+                        chunks = target_object.split(' ')
+                        if len(chunks) >= 2:
+                            if chunks[0].isalpha() and chunks[1].isalpha():
+                                logger.warning("All text object found: " + target_object)
                                 target_object = None
-                        if target_object:
-                            targets.append(target_object)
-                else:
-                    logger.warning("No targets found in Arecibo page")
+                            else:
+                                if chunks[1].replace('-', '').isalpha() and len(chunks[1]) != 2:
+                                    target_object = chunks[0]
+                                elif 'Comet' in chunks[0] and '/P' in chunks[1].rstrip()[-2:]:
+                                    target_object = chunks[1].replace('/', '')
+                                else:
+                                    target_object = chunks[0] + " " + chunks[1]
+                        else:
+                            logger.warning("Unable to parse Arecibo target %s" % target_object)
+                            target_object = None
+                    if target_object:
+                        targets.append(target_object)
+            else:
+                logger.warning("No targets found in Arecibo page table {}.".format(t+1))
     return targets
 
 
@@ -1608,6 +1606,8 @@ def make_config(params, exp_filter):
             }
         ]
     }
+    if params.get('bin_mode', None) == '2k_2x2' and params['pondtelescope'] == '1m0':
+        conf['instrument_configs'][0]['mode'] = 'central_2k_2x2'
     return conf
 
 
@@ -1893,6 +1893,8 @@ def configure_defaults(params):
         if params['site_code'] == 'V38':
             # elp-aqwa-0m4a kb80
             params['observatory'] = 'aqwa'
+    elif params.get('bin_mode', None) == '2k_2x2':
+        params['binning'] = 2
 
     return params
 
@@ -1942,6 +1944,10 @@ def make_requestgroup(elements, params):
         params['source_id'] = params['calibsource']['name']
         params['ra_deg'] = params['calibsource']['ra_deg']
         params['dec_deg'] = params['calibsource']['dec_deg']
+        if 'pm_ra' in params['calibsource']:
+            params['pm_ra'] = params['calibsource']['pm_ra']
+        if 'pm_dec' in params['calibsource']:
+            params['pm_dec'] = params['calibsource']['pm_dec']
         params['target'] = make_target(params)
         exp_time = params['exp_time']
         params['exp_time'] = params['calibsrc_exptime']

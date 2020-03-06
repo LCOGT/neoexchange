@@ -35,3 +35,19 @@ class TestMakeTargetName(TestCase):
         new_name = make_targetname(name)
 
         self.assertEqual(expected_name, new_name)
+
+    def test_unnumbered_comet_with_name(self):
+        name = 'ATLAS (C/2019 Y4)'
+        expected_name = 'ATLAS_C_2019Y4'
+
+        new_name = make_targetname(name)
+
+        self.assertEqual(expected_name, new_name)
+
+    def test_unnumbered_comet_with_longname(self):
+        name = 'Machholz-Fujikawa-Iwamo (C/2018'
+        expected_name = 'Machholz_Fujikawa_IwamoC_2018'
+
+        new_name = make_targetname(name)
+
+        self.assertEqual(expected_name, new_name)

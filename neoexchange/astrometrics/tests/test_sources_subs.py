@@ -20,6 +20,7 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from unittest import skipIf
 from math import radians
+from copy import deepcopy
 
 import astropy.units as u
 from bs4 import BeautifulSoup
@@ -1077,6 +1078,137 @@ class TestSubmitBlockToScheduler(TestCase):
         self.assertEqual(user_request['requests'][0].get('observation_type', None), None)
         self.assertEqual(user_request['observation_type'], 'TIME_CRITICAL')
 
+    def test_1m_binning_requestgroup(self):
+
+        site_code = '1M0'
+        utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 18,
+                    'exp_time' : 50.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson',
+                    'filter_pattern' : 'w',
+                    'bin_mode' : '2k_2x2'
+                 }
+
+        user_request = make_requestgroup(self.body_elements, params)
+
+        instrument_configs = user_request['requests'][0]['configurations'][0]['instrument_configs'][0]
+
+        self.assertEqual(user_request['submitter'], 'bsimpson')
+        self.assertEqual(instrument_configs['bin_x'], 2)
+        self.assertEqual(instrument_configs['bin_y'], 2)
+        self.assertEqual(instrument_configs['mode'], 'central_2k_2x2')
+        self.assertEqual(user_request['requests'][0]['location'].get('telescope', None), None)
+
+    def test_ELP_1m_binning_requestgroup(self):
+
+        site_code = 'V39'
+        utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 18,
+                    'exp_time' : 50.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'group_name' : self.body_elements['current_name'] + '_' + 'ELP' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson',
+                    'filter_pattern' : 'w',
+                    'bin_mode' : '2k_2x2'
+                 }
+
+        user_request = make_requestgroup(self.body_elements, params)
+
+        instrument_configs = user_request['requests'][0]['configurations'][0]['instrument_configs'][0]
+
+        self.assertEqual(user_request['submitter'], 'bsimpson')
+        self.assertEqual(instrument_configs['bin_x'], 2)
+        self.assertEqual(instrument_configs['bin_y'], 2)
+        self.assertEqual(instrument_configs['mode'], 'central_2k_2x2')
+
+    def test_1m_no_binning_requestgroup(self):
+
+        site_code = 'V39'
+        utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 18,
+                    'exp_time' : 50.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'group_name' : self.body_elements['current_name'] + '_' + 'ELP' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson',
+                    'filter_pattern' : 'w',
+                    'bin_mode' : 'full_chip'
+                 }
+
+        user_request = make_requestgroup(self.body_elements, params)
+
+        instrument_configs = user_request['requests'][0]['configurations'][0]['instrument_configs'][0]
+
+        self.assertEqual(user_request['submitter'], 'bsimpson')
+        self.assertEqual(instrument_configs['bin_x'], 1)
+        self.assertEqual(instrument_configs['bin_y'], 1)
+        self.assertNotIn('mode', instrument_configs.keys())
+
+    def test_2m_no_binning_requestgroup(self):
+
+        site_code = '2M0'
+        utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 18,
+                    'exp_time' : 50.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'group_name' : self.body_elements['current_name'] + '_' + 'ELP' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson',
+                    'filter_pattern' : 'w',
+                    'bin_mode' : '2k_2x2'
+                 }
+
+        user_request = make_requestgroup(self.body_elements, params)
+
+        instrument_configs = user_request['requests'][0]['configurations'][0]['instrument_configs'][0]
+
+        self.assertEqual(user_request['submitter'], 'bsimpson')
+        self.assertEqual(instrument_configs['bin_x'], 2)
+        self.assertEqual(instrument_configs['bin_y'], 2)
+        self.assertNotIn('mode', instrument_configs.keys())
+
+    def test_0m4_no_binning_requestgroup(self):
+
+        site_code = 'L09'
+        utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 18,
+                    'exp_time' : 50.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'group_name' : self.body_elements['current_name'] + '_' + 'ELP' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson',
+                    'filter_pattern' : 'w',
+                    'bin_mode' : '2k_2x2'
+                 }
+
+        user_request = make_requestgroup(self.body_elements, params)
+
+        instrument_configs = user_request['requests'][0]['configurations'][0]['instrument_configs'][0]
+
+        self.assertEqual(user_request['submitter'], 'bsimpson')
+        self.assertEqual(instrument_configs['bin_x'], 1)
+        self.assertEqual(instrument_configs['bin_y'], 1)
+        self.assertNotIn('mode', instrument_configs.keys())
+
     def test_multi_filter_requestgroup(self):
 
             site_code = 'W85'
@@ -1330,6 +1462,7 @@ class TestSubmitBlockToScheduler(TestCase):
                     'ra_deg' : 234.3254167,
                     'dec_deg' : -0.163889,
                     'vmag' : 12.4,
+                    'source_id' : 'SA107-684',
                     'source_type' : 4
                   }
         expected_num_requests = 1
@@ -1339,8 +1472,10 @@ class TestSubmitBlockToScheduler(TestCase):
         expected_exptime = 300.0
         expected_filter = 'slit_6.0as'
         expected_groupid = params['group_name']
+        expected_target = {'type': 'ICRS', 'name': 'SA107-684', 'ra': 234.3254167, 'dec': -0.163889,
+                                'extra_params': { 'v_magnitude' : 12.4} }
 
-        user_request = make_requestgroup(self.body_elements, params)
+        user_request = make_requestgroup({}, params)
         requests = user_request['requests']
         self.assertEqual(expected_num_requests, len(requests))
         self.assertEqual(expected_operator, user_request['operator'])
@@ -1351,6 +1486,117 @@ class TestSubmitBlockToScheduler(TestCase):
         self.assertEqual(sol_configurations[2]['instrument_configs'][0]['exposure_count'], expected_exp_count)
         self.assertEqual(sol_configurations[2]['instrument_configs'][0]['exposure_time'], expected_exptime)
         self.assertEqual(sol_configurations[2]['instrument_configs'][0]['optical_elements']['slit'], expected_filter)
+        self.assertEqual(sol_configurations[2]['target'], expected_target)
+
+    def test_spectro_with_solar_analog_pm(self):
+
+        utc_date = datetime(2018, 5, 11, 0)
+        params = {  'proposal_id' : 'LCOEngineering',
+                    'user_id'  : 'bsimpson',
+                    'spectroscopy' : True,
+                    'calibs'     : 'before',
+                    'exp_count'  : 1,
+                    'exp_time'   : 300.0,
+                    'instrument_code' : 'F65-FLOYDS',
+                    'site_code' : 'F65',
+                    'filter_pattern' : 'slit_6.0as',
+                    'group_name' : self.body_elements['current_name'] + '_' + 'F65' + '-' + datetime.strftime(utc_date, '%Y%m%d') + "_spectra",
+                    'start_time' :  utc_date + timedelta(hours=5),
+                    'end_time'   :  utc_date + timedelta(hours=15),
+                    'solar_analog' : True,
+                    'calibsource' : { 'name' : 'SA107-684',
+                                      'ra_deg' : 234.3254167,
+                                      'dec_deg' : -0.163889,
+                                      'pm_ra' : 60.313,
+                                      'pm_dec' : -35.584,
+                                      'parallax' : 10.5664,
+                                      'calib_exptime': 60},
+                  }
+        expected_num_requests = 2
+        expected_operator = 'MANY'
+        expected_configuration_num = 3
+        expected_exp_count = 1
+        expected_ast_exptime = 300.0
+        expected_cal_exptime = 60.0
+        expected_filter = 'slit_6.0as'
+        expected_groupid = params['group_name'] + '+solstd'
+        expected_ast_target = {'name': 'N999r0q', 'type': 'ORBITAL_ELEMENTS', 'scheme': 'MPC_MINOR_PLANET',
+                               'epochofel': 57100.0, 'orbinc': 8.34739, 'longascnode': 147.81325,
+                               'argofperih': 85.19251, 'eccentricity': 0.1896865, 'extra_params': {'v_magnitude': 16.68},
+                               'meandist': 1.2176312, 'meananom': 325.2636}
+        expected_cal_target = {'type': 'ICRS', 'name': 'SA107-684', 'ra': 234.3254167, 'dec': -0.163889,
+                                'proper_motion_ra' : 60.313,
+                                'proper_motion_dec' : -35.584,
+                                'extra_params': {}}
+
+        user_request = make_requestgroup(self.body_elements, params)
+        requests = user_request['requests']
+        self.assertEqual(expected_num_requests, len(requests))
+        self.assertEqual(expected_operator, user_request['operator'])
+        self.assertEqual(expected_groupid, user_request['name'])
+
+        ast_configurations = user_request['requests'][0]['configurations']
+        self.assertEqual(len(ast_configurations), expected_configuration_num)
+        self.assertEqual(ast_configurations[2]['target'], expected_ast_target)
+        self.assertEqual(ast_configurations[2]['instrument_configs'][0]['exposure_count'], expected_exp_count)
+        self.assertEqual(ast_configurations[2]['instrument_configs'][0]['exposure_time'], expected_ast_exptime)
+        self.assertEqual(ast_configurations[2]['instrument_configs'][0]['optical_elements']['slit'], expected_filter)
+
+        cal_configurations = user_request['requests'][1]['configurations']
+        self.assertEqual(len(cal_configurations), expected_configuration_num)
+        self.assertEqual(cal_configurations[2]['instrument_configs'][0]['exposure_count'], expected_exp_count)
+        self.assertEqual(cal_configurations[2]['target'], expected_cal_target)
+        self.assertEqual(cal_configurations[2]['instrument_configs'][0]['exposure_time'], expected_cal_exptime)
+        self.assertEqual(cal_configurations[2]['instrument_configs'][0]['optical_elements']['slit'], expected_filter)
+
+    def test_solo_solar_spectrum_pm(self):
+
+        utc_date = datetime(2018, 5, 11, 0)
+        params = {  'proposal_id' : 'LCOEngineering',
+                    'user_id'  : 'bsimpson',
+                    'spectroscopy' : True,
+                    'calibs'     : 'before',
+                    'exp_count'  : 1,
+                    'exp_time'   : 300.0,
+                    'instrument_code' : 'F65-FLOYDS',
+                    'site_code' : 'F65',
+                    'filter_pattern' : 'slit_6.0as',
+                    'group_name' : 'SA107-684' + '_' + 'F65' + '-' + datetime.strftime(utc_date, '%Y%m%d') + "_spectra",
+                    'start_time' :  utc_date + timedelta(hours=5),
+                    'end_time'   :  utc_date + timedelta(hours=15),
+                    'solar_analog' : False,
+                    'ra_deg' : 234.3254167,
+                    'dec_deg' : -0.163889,
+                    'pm_ra' : 60.313,
+                    'pm_dec' : -35.584,
+                    'parallax' : 10.5664,
+                    'vmag' : 12.4,
+                    'source_type' : 4,
+                    'source_id' : 'SA107-684',
+                  }
+        expected_num_requests = 1
+        expected_operator = 'SINGLE'
+        expected_configuration_num = 3
+        expected_exp_count = 1
+        expected_exptime = 300.0
+        expected_filter = 'slit_6.0as'
+        expected_groupid = params['group_name']
+        expected_target = {'type': 'ICRS', 'name': 'SA107-684', 'ra': 234.3254167, 'dec': -0.163889,
+                                'proper_motion_ra' : 60.313, 'proper_motion_dec' : -35.584, 'parallax' : 10.5664,
+                                'extra_params': { 'v_magnitude' : 12.4} }
+
+        user_request = make_requestgroup({}, params)
+        requests = user_request['requests']
+        self.assertEqual(expected_num_requests, len(requests))
+        self.assertEqual(expected_operator, user_request['operator'])
+        self.assertEqual(expected_groupid, user_request['name'])
+
+        sol_configurations = user_request['requests'][0]['configurations']
+        self.assertEqual(len(sol_configurations), expected_configuration_num)
+        self.assertEqual(sol_configurations[2]['instrument_configs'][0]['exposure_count'], expected_exp_count)
+        self.assertEqual(sol_configurations[2]['instrument_configs'][0]['exposure_time'], expected_exptime)
+        self.assertEqual(sol_configurations[2]['instrument_configs'][0]['optical_elements']['slit'], expected_filter)
+        self.assertEqual(sol_configurations[2]['target'], expected_target)
 
 
 class TestFetchFilterList(TestCase):
@@ -4860,6 +5106,84 @@ class TestMakeCadence(TestCase):
                     self.assertEqual(exrequest, ur['requests'][i])
             else:
                 self.assertEqual(expected[key], ur[key])
+
+
+class TestMakeTarget(TestCase):
+
+    def setUp(self):
+        self.params = { 'utc_date' : datetime(2017, 8, 20, 0, 0),
+                        'start_time' : datetime(2017, 8, 20, 8, 40),
+                        'end_time' : datetime(2017, 8, 20, 19, 40),
+                        'period' : 2.0,
+                        'jitter' : 0.25,
+                        'group_name' : "3122_Q59-20170815" + "+solstd",
+                        'proposal_id' : 'LCOSchedulerTest',
+                        'user_id' : 'tlister@lcogt.net',
+                        'exp_type' : 'EXPOSE',
+                        'exp_count' : 105,
+                        'exp_time' : 20.0,
+                        'binning' : 2,
+                        'instrument' : '0M4-SCICAM-SBIG',
+                        'filter_pattern' : 'w',
+                        'site' : 'COJ',
+                        'pondtelescope' : '0m4a',
+                        'site_code' : 'Q59',
+                        'source_id' : 'LTT9999',
+                        'ra_deg'  : 359.07507666666663,
+                        'dec_deg' : 4.626489444444445,
+                        'constraints' : {'max_airmass': 2.0, 'min_lunar_distance': 15}
+                        }
+        self.ipp_value = 1.0
+
+    def test_nopm(self):
+        expected_target = { 'type' : 'ICRS',
+                            'name' : 'LTT9999',
+                            'ra'   : self.params['ra_deg'],
+                            'dec'  : self.params['dec_deg'],
+                            'extra_params' : {}
+                          }
+        target = make_target(self.params)
+
+        self.assertEqual(expected_target, target)
+
+    def test_pm_no_parallax(self):
+        expected_target = { 'type' : 'ICRS',
+                            'name' : 'LTT9999',
+                            'ra'   : self.params['ra_deg'],
+                            'dec'  : self.params['dec_deg'],
+                            'proper_motion_ra': 10.0,
+                            'proper_motion_dec': -10.0,
+                            'extra_params' : {}
+                          }
+
+        params_pm = deepcopy(self.params)
+        params_pm['pm_ra'] = 10.0
+        params_pm['pm_dec'] = -10.0
+
+        target = make_target(params_pm)
+
+        self.assertEqual(expected_target, target)
+
+    def test_pm_parallax_vmag(self):
+        expected_target = { 'type' : 'ICRS',
+                            'name' : 'LTT9999',
+                            'ra'   : self.params['ra_deg'],
+                            'dec'  : self.params['dec_deg'],
+                            'proper_motion_ra': 10.0,
+                            'proper_motion_dec': -10.0,
+                            'parallax' : 7.9985,
+                            'extra_params' : { 'v_magnitude' : 9.08}
+                          }
+
+        params_pm = deepcopy(self.params)
+        params_pm['pm_ra'] = 10.0
+        params_pm['pm_dec'] = -10.0
+        params_pm['parallax'] = 7.9985
+        params_pm['vmag'] = 9.08
+
+        target = make_target(params_pm)
+
+        self.assertEqual(expected_target, target)
 
 
 class TestFetchTaxonomyData(TestCase):
