@@ -796,7 +796,6 @@ class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
 
     def form_valid(self, form, request):
         data = schedule_check(form.cleaned_data, self.body, self.ok_to_schedule)
-        print(data)
         new_form = ScheduleBlockForm(data)
         return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.body})
 
@@ -1023,7 +1022,7 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
         if form.is_valid():
             return self.form_valid(form, request)
         else:
-            return self.form_invalid(form)
+            return self.form_invalid(form, request)
 
     def form_valid(self, form, request):
         # Recalculate the parameters using new form data
@@ -1051,6 +1050,12 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
                 messages.warning(self.request, msg)
             return super(ScheduleSubmit, self).form_valid(new_form)
 
+    def form_invalid(self, form, request):
+        # Recalculate the parameters using new form data
+        data = schedule_check(form.cleaned_data, self.object)
+        new_form = ScheduleBlockForm(data)
+        return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.object})
+
     def get_success_url(self):
         if self.success:
             return reverse('home')
@@ -1077,11 +1082,15 @@ def parse_portal_errors(sched_params):
                         msg += "\n".join(errors[key])
     return msg
 
+
 def schedule_check(data, body, ok_to_schedule=True):
 
     spectroscopy = data.get('spectroscopy', False)
     solar_analog = data.get('solar_analog', False)
     body_elements = model_to_dict(body)
+    # Get period and jitter for cadence
+    period = data.get('period', None)
+    jitter = data.get('jitter', None)
 
     if spectroscopy:
         data['site_code'] = data['instrument_code'][0:3]
@@ -1104,16 +1113,14 @@ def schedule_check(data, body, ok_to_schedule=True):
     if data.get('start_time') and data.get('end_time'):
         dark_start = data.get('start_time')
         dark_end = data.get('end_time')
-        utc_date = data.get('utc_date', dark_start.date())
     else:
         dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'])
-        utc_date = data['utc_date']
         if dark_end <= datetime.utcnow():
             dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'] + timedelta(days=1))
-            utc_date = data['utc_date'] + timedelta(days=1)
+    dark_midpoint = dark_start + (dark_end - dark_start) / 2
+    utc_date = dark_start.date()
     semester_date = max(datetime.utcnow(), datetime.combine(utc_date, datetime.min.time()))
     semester_start, semester_end = get_semester_dates(semester_date)
-    dark_midpoint = dark_start + (dark_end - dark_start) / 2
 
     # Get maximum airmass
     max_airmass = data.get('max_airmass', 1.74)
@@ -1126,19 +1133,32 @@ def schedule_check(data, body, ok_to_schedule=True):
     # Determine the semester boundaries for the current time and truncate the visibility time and
     # therefore the windows appropriately.
     dark_and_up_time, max_alt, rise_time, set_time = get_visibility(None, None, dark_midpoint, data['site_code'], '2 m', alt_limit, False, body_elements)
+    if (data['site_code'] in ['1M0', '2M0', '0M4']) or (period is not None and dark_end - dark_start > timedelta(days=1)):
+        rise_time = dark_start
+        set_time = dark_end
     if rise_time and set_time:
         if set_time < dark_start:
             dark_and_up_time, max_alt, rise_time, set_time = get_visibility(None, None, dark_midpoint+timedelta(days=1), data['site_code'], '2 m', alt_limit, False, body_elements)
-        if rise_time.day != set_time.day and semester_start < rise_time:
-            semester_date = max(datetime.utcnow(), datetime.combine(utc_date, datetime.min.time()) - timedelta(days=1))
-            semester_start, semester_end = get_semester_dates(semester_date)
-        rise_time = max(rise_time, semester_start)
-        set_time = min(set_time, semester_end)
-        if set_time < rise_time:
-            set_time = rise_time
-        mid_dark_up_time = rise_time + (set_time - rise_time) / 2
+        if rise_time and set_time:
+            if rise_time.day != set_time.day and semester_start < rise_time:
+                semester_date = max(datetime.utcnow(), datetime.combine(utc_date, datetime.min.time()) - timedelta(days=1))
+                semester_start, semester_end = get_semester_dates(semester_date)
+            rise_time = up_time = max(rise_time, semester_start)
+            set_time = down_time = min(set_time, semester_end)
+            if rise_time < datetime.utcnow():
+                rise_time = datetime.utcnow().replace(microsecond=0)
+            if down_time > dark_end > up_time:
+                set_time = dark_end
+            if up_time < dark_start < down_time:
+                rise_time = dark_start
+            if set_time < rise_time:
+                set_time = rise_time
+            mid_dark_up_time = rise_time + (set_time - rise_time) / 2
+        else:
+            mid_dark_up_time = rise_time = set_time = dark_midpoint
     else:
         mid_dark_up_time = rise_time = set_time = dark_midpoint
+    utc_date = rise_time.date()
 
     if max_alt is not None:
         max_alt_airmass = S.sla_airmas((pi/2.0)-radians(max_alt))
@@ -1270,10 +1290,6 @@ def schedule_check(data, body, ok_to_schedule=True):
     else:
         pattern_iterations = None
 
-    # Get period and jitter for cadence
-    period = data.get('period', None)
-    jitter = data.get('jitter', None)
-
     if period is not None and jitter is not None:
         # Increase Jitter if shorter than slot length
         if jitter < slot_length / 60:
@@ -1282,8 +1298,8 @@ def schedule_check(data, body, ok_to_schedule=True):
             period = 0.02
 
         # Number of times the cadence request will run between start and end date
-        cadence_start = rise_time = dark_start
-        cadence_end = set_time = dark_end
+        cadence_start = rise_time
+        cadence_end = set_time
         total_run_time = cadence_end - cadence_start
         cadence_period = timedelta(seconds=data['period']*3600.0)
         total_requests = 1 + int(floor(total_run_time.total_seconds() / cadence_period.total_seconds()))

@@ -1572,7 +1572,7 @@ def moon_ra_dec(date, obsvr_long, obsvr_lat, obsvr_hgt, dbg=False):
     (in meters).
     Returns a (RA, Dec, diameter) (in radians) tuple."""
 
-    body = 3 # The Moon...
+    body = 3  # The Moon...
 
     mjd_tdb = datetime2mjd_tdb(date, obsvr_long, obsvr_lat, obsvr_hgt, dbg)
 
@@ -1593,12 +1593,12 @@ def atmos_params(airless):
         tlr = 0.0
     else:
         # "Standard" atmosphere
-        temp_k = 283.0 # 10 degC
+        temp_k = 283.0  # 10 degC
 # Average of FTN (709), FTS (891), TFN(767.5), SAAO(827), CTIO(777), SQA(981)
 # and McDonald (790) on 2011-02-05
         pres_mb = 820.0
         rel_humid = 0.5
-        wavel = 0.55 # Approx Bessell V
+        wavel = 0.55  # Approx Bessell V
 # International Civil Aviation Organization (ICAO) defines an international
 # standard atmosphere (ISA) at 6.49 K/km
         tlr = 0.0065
@@ -1770,7 +1770,7 @@ def radec2strings(ra_radians, dec_radians, seperator=' '):
     There is no sign produced on the RA quantity unless ra_radians and dec_radians
     are equal."""
 
-    ra_format =  "%s%02.2d%c%02.2d%c%02.2d.%02.2d"
+    ra_format = "%s%02.2d%c%02.2d%c%02.2d.%02.2d"
     dec_format = "%s%02.2d%c%02.2d%c%02.2d.%d"
 
     (rsign, ra ) = S.sla_dr2tf(2, ra_radians)
