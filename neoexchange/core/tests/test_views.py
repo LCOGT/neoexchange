@@ -1324,6 +1324,414 @@ class TestScheduleCheck(TestCase):
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
+    def test_change_start_time(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = {'site_code': 'Q63',
+                'utc_date': date(2016, 4, 6),
+                'proposal_code': self.neo_proposal.code,
+                'start_time' : datetime(2016, 4, 6, 15, 10, 0),
+                'end_time': datetime(2016, 4, 6, 17, 12, 0)
+                }
+
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data[
+            'site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d')
+        expected_resp1['utc_date'] = data['utc_date'].isoformat()
+        expected_resp1['start_time'] = data['start_time'].isoformat()
+        expected_resp1['mid_time'] = '2016-04-06T16:11:00'
+
+        check_list = ['utc_date', 'start_time', 'mid_time', 'end_time']
+
+        resp = schedule_check(data, self.body_mp)
+
+        for check in check_list:
+            self.assertEqual(expected_resp1[check], resp[check], msg=check)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_change_start_time_early(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = {'site_code': 'Q63',
+                'utc_date': date(2016, 4, 6),
+                'proposal_code': self.neo_proposal.code,
+                'start_time' : datetime(2016, 4, 6, 5, 10, 0),
+                'end_time': datetime(2016, 4, 6, 17, 12, 0)
+                }
+
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data[
+            'site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d')
+        expected_resp1['utc_date'] = data['utc_date'].isoformat()
+
+        check_list = ['utc_date', 'start_time', 'mid_time', 'end_time']
+
+        resp = schedule_check(data, self.body_mp)
+
+        for check in check_list:
+            self.assertEqual(expected_resp1[check], resp[check], msg=check)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_change_start_time_late(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = {'site_code': 'Q63',
+                'utc_date': date(2016, 4, 6),
+                'proposal_code': self.neo_proposal.code,
+                'start_time' : datetime(2016, 4, 7, 5, 10, 0),
+                'end_time': datetime(2016, 4, 6, 17, 12, 0)
+                }
+
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data[
+            'site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d')
+        expected_resp1['utc_date'] = date(2016, 4, 7).isoformat()
+        expected_resp1['start_time'] = datetime(2016, 4, 7, 10, 6, 0).isoformat()
+        expected_resp1['mid_time'] = '2016-04-07T13:35:00'
+        expected_resp1['end_time'] = datetime(2016, 4, 7, 17, 4, 0).isoformat()
+
+        check_list = ['utc_date', 'start_time', 'mid_time', 'end_time']
+
+        resp = schedule_check(data, self.body_mp)
+
+        for check in check_list:
+            self.assertEqual(expected_resp1[check], resp[check], msg=check)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_change_end_time_late(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = {'site_code': 'Q63',
+                'utc_date': date(2016, 4, 6),
+                'proposal_code': self.neo_proposal.code,
+                'start_time' : datetime(2016, 4, 6, 10, 10, 0),
+                'end_time': datetime(2016, 4, 8, 17, 12, 0)
+                }
+
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data[
+            'site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d')
+        expected_resp1['utc_date'] = date(2016, 4, 6).isoformat()
+
+        check_list = ['utc_date', 'start_time', 'mid_time', 'end_time']
+
+        resp = schedule_check(data, self.body_mp)
+
+        for check in check_list:
+            self.assertEqual(expected_resp1[check], resp[check], msg=check)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_change_end_time_less(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = {'site_code': 'Q63',
+                'utc_date': date(2016, 4, 6),
+                'proposal_code': self.neo_proposal.code,
+                'start_time' : datetime(2016, 4, 6, 10, 10, 0),
+                'end_time': datetime(2016, 4, 6, 12, 10, 0)
+                }
+
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data[
+            'site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d')
+        expected_resp1['utc_date'] = date(2016, 4, 6).isoformat()
+        expected_resp1['end_time'] = data['end_time'].isoformat()
+        expected_resp1['mid_time'] = '2016-04-06T11:10:00'
+
+        check_list = ['utc_date', 'start_time', 'mid_time', 'end_time']
+
+        resp = schedule_check(data, self.body_mp)
+
+        for check in check_list:
+            self.assertEqual(expected_resp1[check], resp[check], msg=check)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_change_end_time_early(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = {'site_code': 'Q63',
+                'utc_date': date(2016, 4, 6),
+                'proposal_code': self.neo_proposal.code,
+                'start_time' : datetime(2016, 4, 6, 10, 10, 0),
+                'end_time': datetime(2016, 4, 2, 12, 10, 0)
+                }
+
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data[
+            'site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d')
+        expected_resp1['utc_date'] = date(2016, 4, 6).isoformat()
+
+        check_list = ['utc_date', 'start_time', 'mid_time', 'end_time']
+
+        resp = schedule_check(data, self.body_mp)
+
+        for check in check_list:
+            self.assertEqual(expected_resp1[check], resp[check], msg=check)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_time_generic(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = {'site_code': '1M0',
+                'utc_date': date(2016, 4, 6),
+                'proposal_code': self.neo_proposal.code,
+                }
+
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data[
+            'site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d')
+        expected_resp1['utc_date'] = date(2016, 4, 6).isoformat()
+        expected_resp1['start_time'] = datetime(2016, 4, 6, 2, 0, 0).isoformat()
+        expected_resp1['mid_time'] = '2016-04-06T13:00:00'
+        expected_resp1['end_time'] = datetime(2016, 4, 7, 0, 0, 0).isoformat()
+
+        check_list = ['utc_date', 'start_time', 'mid_time', 'end_time']
+
+        resp = schedule_check(data, self.body_mp)
+
+        for check in check_list:
+            self.assertEqual(expected_resp1[check], resp[check], msg=check)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_time_generic_change_start(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = {'site_code': '1M0',
+                'utc_date': date(2016, 4, 6),
+                'proposal_code': self.neo_proposal.code,
+                'start_time' : datetime(2016, 4, 6, 10, 0, 0),
+                'end_time': datetime(2016, 4, 7, 0, 0, 0)
+                }
+
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data[
+            'site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d')
+        expected_resp1['utc_date'] = date(2016, 4, 6).isoformat()
+        expected_resp1['start_time'] = datetime(2016, 4, 6, 10, 0, 0).isoformat()
+        expected_resp1['mid_time'] = '2016-04-06T17:00:00'
+        expected_resp1['end_time'] = datetime(2016, 4, 7, 0, 0, 0).isoformat()
+
+        check_list = ['utc_date', 'start_time', 'mid_time', 'end_time']
+
+        resp = schedule_check(data, self.body_mp)
+
+        for check in check_list:
+            self.assertEqual(expected_resp1[check], resp[check], msg=check)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_time_generic_change_start_late(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = {'site_code': '1M0',
+                'utc_date': date(2016, 4, 6),
+                'proposal_code': self.neo_proposal.code,
+                'start_time' : datetime(2016, 4, 18, 0, 0, 0),
+                'end_time': datetime(2016, 4, 7, 0, 0, 0)
+                }
+
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data[
+            'site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d')
+        expected_resp1['utc_date'] = date(2016, 4, 18).isoformat()
+        expected_resp1['start_time'] = datetime(2016, 4, 18, 0, 0, 0).isoformat()
+        expected_resp1['mid_time'] = '2016-04-18T00:00:00'
+        expected_resp1['end_time'] = datetime(2016, 4, 18, 0, 0, 0).isoformat()
+
+        check_list = ['utc_date', 'start_time', 'mid_time', 'end_time']
+
+        resp = schedule_check(data, self.body_mp)
+
+        for check in check_list:
+            self.assertEqual(expected_resp1[check], resp[check], msg=check)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_time_generic_change_end_late(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = {'site_code': '1M0',
+                'utc_date': date(2016, 4, 6),
+                'proposal_code': self.neo_proposal.code,
+                'start_time' : datetime(2016, 4, 6, 0, 0, 0),
+                'end_time': datetime(2016, 4, 17, 0, 0, 0)
+                }
+
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data[
+            'site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d')
+        expected_resp1['utc_date'] = date(2016, 4, 6).isoformat()
+        expected_resp1['start_time'] = datetime(2016, 4, 6, 2, 0, 0).isoformat()
+        expected_resp1['mid_time'] = '2016-04-11T13:00:00'
+        expected_resp1['end_time'] = datetime(2016, 4, 17, 0, 0, 0).isoformat()
+
+        check_list = ['utc_date', 'start_time', 'mid_time', 'end_time']
+
+        resp = schedule_check(data, self.body_mp)
+
+        for check in check_list:
+            self.assertEqual(expected_resp1[check], resp[check], msg=check)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_time_generic_change_end_early(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = {'site_code': '1M0',
+                'utc_date': date(2016, 4, 6),
+                'proposal_code': self.neo_proposal.code,
+                'start_time' : datetime(2016, 4, 6, 0, 0, 0),
+                'end_time': datetime(2016, 4, 2, 0, 0, 0)
+                }
+
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data[
+            'site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d')
+        expected_resp1['utc_date'] = date(2016, 4, 6).isoformat()
+        expected_resp1['start_time'] = datetime(2016, 4, 6, 2, 0, 0).isoformat()
+        expected_resp1['mid_time'] = '2016-04-06T02:00:00'
+        expected_resp1['end_time'] = datetime(2016, 4, 6, 2, 0, 0).isoformat()
+
+        check_list = ['utc_date', 'start_time', 'mid_time', 'end_time']
+
+        resp = schedule_check(data, self.body_mp)
+
+        for check in check_list:
+            self.assertEqual(expected_resp1[check], resp[check], msg=check)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_time_cadence(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = {'site_code': 'Q63',
+                'utc_date': date(2016, 4, 6),
+                'period': 2,
+                'jitter': 2,
+                'proposal_code': self.neo_proposal.code,
+                }
+
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data['site_code'].upper() + '-' +\
+                                       'cad-{}-{}'.format(datetime.strftime(data['utc_date'], '%Y%m%d'), datetime.strftime(data['utc_date'], '%m%d'))
+        expected_resp1['utc_date'] = date(2016, 4, 6).isoformat()
+
+        check_list = ['utc_date', 'start_time', 'mid_time', 'end_time', 'group_name']
+
+        resp = schedule_check(data, self.body_mp)
+
+        for check in check_list:
+            self.assertEqual(expected_resp1[check], resp[check], msg=check)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_time_cadence_change_much(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = {'site_code': 'Q63',
+                'utc_date': date(2016, 4, 6),
+                'proposal_code': self.neo_proposal.code,
+                'period': 2,
+                'jitter': 2,
+                'start_time' : datetime(2016, 4, 6, 12, 0, 0),
+                'end_time': datetime(2016, 4, 8, 12, 0, 0)
+                }
+
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data[
+            'site_code'].upper() + '-' + 'cad-{}-{}'.format(datetime.strftime(data['start_time'], '%Y%m%d'), datetime.strftime(data['end_time'], '%m%d'))
+        expected_resp1['utc_date'] = date(2016, 4, 6).isoformat()
+        expected_resp1['start_time'] = datetime(2016, 4, 6, 12, 0, 0).isoformat()
+        expected_resp1['mid_time'] = '2016-04-07T12:00:00'
+        expected_resp1['end_time'] = datetime(2016, 4, 8, 12, 0, 0).isoformat()
+
+        check_list = ['utc_date', 'start_time', 'mid_time', 'end_time', 'group_name']
+
+        resp = schedule_check(data, self.body_mp)
+
+        for check in check_list:
+            self.assertEqual(expected_resp1[check], resp[check], msg=check)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_time_cadence_change_little(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = {'site_code': 'Q63',
+                'utc_date': date(2016, 4, 6),
+                'proposal_code': self.neo_proposal.code,
+                'period': 2,
+                'jitter': 2,
+                'start_time' : datetime(2016, 4, 6, 12, 0, 0),
+                'end_time': datetime(2016, 4, 6, 19, 0, 0)
+                }
+
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data[
+            'site_code'].upper() + '-' + 'cad-{}-{}'.format(datetime.strftime(data['start_time'], '%Y%m%d'), datetime.strftime(data['end_time'], '%m%d'))
+        expected_resp1['utc_date'] = date(2016, 4, 6).isoformat()
+        expected_resp1['start_time'] = datetime(2016, 4, 6, 12, 0, 0).isoformat()
+        expected_resp1['mid_time'] = '2016-04-06T14:36:00'
+        expected_resp1['end_time'] = datetime(2016, 4, 6, 17, 12, 0).isoformat()
+
+        check_list = ['utc_date', 'start_time', 'mid_time', 'end_time', 'group_name']
+
+        resp = schedule_check(data, self.body_mp)
+
+        for check in check_list:
+            self.assertEqual(expected_resp1[check], resp[check], msg=check)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
     def test_mp_good_too(self):
         MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
         # Turn on ToO mode on proposal
@@ -1367,7 +1775,7 @@ class TestScheduleCheck(TestCase):
 
         resp = schedule_check(data, self.body_mp)
 
-        assertDeepAlmostEqual(self,expected_resp, resp)
+        assertDeepAlmostEqual(self, expected_resp, resp)
         self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
