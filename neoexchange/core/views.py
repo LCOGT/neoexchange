@@ -3189,6 +3189,10 @@ def find_analog(date_obs, site):
     """Search for Calib Source blocks taken 10 days before or after a given date at a specific site.
     Return a list of reduced fits files in order of temporal distance from given date."""
 
+    if date_obs is None:
+        logger.warning("Attempt to find analogs for unobserved Block")
+        return []
+
     analog_blocks = Block.objects.filter(obstype=Block.OPT_SPECTRA_CALIB, site=site, when_observed__lte=date_obs+timedelta(days=10), when_observed__gte=date_obs-timedelta(days=10))
     star_list = []
     time_diff = []

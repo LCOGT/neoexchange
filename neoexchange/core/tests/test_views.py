@@ -6892,6 +6892,122 @@ class TestFindSpec(TestCase):
         self.assertEqual(self.eng_proposal.code, prop)
 
 
+class TestFindAnalog(TestCase):
+
+    def setUp(self):
+        body_params = {
+                         'provisional_name': None,
+                         'provisional_packed': 'j5432',
+                         'name': '455432',
+                         'origin': 'A',
+                         'source_type': 'N',
+                         'elements_type': 'MPC_MINOR_PLANET',
+                         'active': True,
+                         'fast_moving': True,
+                         'urgency': None,
+                         'epochofel': datetime(2019, 7, 31, 0, 0),
+                         'orbit_rms': 0.46,
+                         'orbinc': 31.23094,
+                         'longascnode': 301.42266,
+                         'argofperih': 22.30793,
+                         'eccentricity': 0.3660154,
+                         'meandist': 1.7336673,
+                         'meananom': 352.55084,
+                         'perihdist': None,
+                         'epochofperih': None,
+                         'abs_mag': 18.54,
+                         'slope': 0.15,
+                         'score': None,
+                         'discovery_date': datetime(2003, 9, 7, 3, 7, 18),
+                         'num_obs': 130,
+                         'arc_length': 6209.0,
+                         'not_seen': 3.7969329574421296,
+                         'updated': True,
+                         'ingest': datetime(2019, 7, 4, 5, 28, 39),
+                         'update_time': datetime(2019, 7, 30, 19, 7, 35)
+                        }
+        self.test_body = Body.objects.create(**body_params)
+
+        statsrc_params = {
+                         'name': '9 Cet',
+                         'ra' : 0.5,
+                         'dec' : -12.2,
+                         'vmag' : 7.0,
+                         'spectral_type' : 'G2.5V',
+                         'source_type' : StaticSource.SOLAR_STANDARD
+                        }
+        self.solar_analog = StaticSource.objects.create(**statsrc_params)
+
+        proposal_params = { 'code'   : 'LCOEngineering',
+                                'title'  : 'LCOEngineering',
+                                'active' : True
+                              }
+        self.eng_proposal, created = Proposal.objects.get_or_create(**proposal_params)
+
+        sblock_params = {
+                        'body' : self.test_body,
+                        'block_start' : datetime(2019, 7, 27, 8, 30),
+                        'block_end'   : datetime(2019, 7, 27,19, 30),
+                        'proposal' : self.eng_proposal,
+                        'tracking_number' : '818566'
+                        }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+
+        block_params = {
+                        'body' : self.test_body,
+                        'superblock' : self.test_sblock,
+                        'site' : 'coj',
+                        'block_start' : datetime(2019, 7, 27, 8, 30),
+                        'block_end'   : datetime(2019, 7, 27,19, 30),
+                        'obstype' : Block.OPT_SPECTRA,
+                        'request_number' : '1878696',
+                        'num_observed' : 1,
+                        'when_observed' : datetime(2019, 7, 27, 17, 15),
+                        'num_exposures' : 1,
+                        'exp_length' : 1800
+                        }
+        self.test_objblock = Block.objects.create(**block_params)
+
+        block_params = {
+                        'calibsource' : self.solar_analog,
+                        'superblock' : self.test_sblock,
+                        'site' : 'coj',
+                        'block_start' : datetime(2019, 7, 27, 8, 30),
+                        'block_end'   : datetime(2019, 7, 27,19, 30),
+                        'obstype' : Block.OPT_SPECTRA_CALIB,
+                        'request_number' : '1878697',
+                        'num_exposures' : 1,
+                        'exp_length' : 120
+                        }
+        self.test_calblock = Block.objects.create(**block_params)
+
+        frame_params = {
+                         'block' : self.test_objblock,
+                         'sitecode': 'E10',
+                         'instrument': 'en12',
+                         'filter': 'SLIT_30.0x6.0AS',
+                         'filename': 'coj2m002-en12-20190727-0014-w00.fits',
+                         'frameid' : 12272496,
+                         'frametype' : Frame.SPECTRUM_FRAMETYPE,
+                         'midpoint': datetime(2019, 7, 27, 15, 52, 29, 495000),
+
+                        }
+        self.test_specframe = Frame.objects.create(**frame_params)
+
+    def test_no_obsdate(self):
+        expected_analog_list = []
+
+        analog_list = find_analog(None, 'coj')
+
+        self.assertEqual(expected_analog_list, analog_list)
+
+    def test_obsdate_in_range(self):
+        expected_analog_list = []
+
+        analog_list = find_analog(self.test_objblock.when_observed+timedelta(days=1), 'coj')
+
+        self.assertEqual(expected_analog_list, analog_list)
+
 class TestBuildVisibilitySource(TestCase):
 
     def setUp(self):
