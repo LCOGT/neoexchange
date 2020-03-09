@@ -42,6 +42,7 @@ from astrometrics.ephem_subs import horizons_ephem, call_compute_ephem, determin
     moon_ra_dec, target_rise_set, moonphase, dark_and_object_up, compute_dark_and_up_time, get_visibility
 from photometrics.obsgeomplot import plot_ra_dec, plot_brightness, plot_helio_geo_dist, \
     plot_uncertainty, plot_hoursup
+from photometrics.catalog_subs import sanitize_object_name
 from photometrics.SA_scatter import readSources, plotScatter, plotFormat
 from photometrics.spectraplot import spectrum_plot, read_mean_tax
 
