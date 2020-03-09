@@ -224,8 +224,8 @@ class ScheduleBlockForm(forms.Form):
 
     def clean_start_time(self):
         start = self.cleaned_data['start_time']
-        window_cutoff = datetime.utcnow()
-        if start < window_cutoff:
+        window_cutoff = datetime.utcnow() - timedelta(days=1)
+        if start <= window_cutoff:
             return datetime.utcnow().replace(microsecond=0)
         else:
             return self.cleaned_data['start_time']
@@ -258,6 +258,12 @@ class ScheduleBlockForm(forms.Form):
             return 0.02
         else:
             return self.cleaned_data['period']
+
+    def clean_slot_length(self):
+        if self.cleaned_data['slot_length'] is None:
+            return 0
+        else:
+            return self.cleaned_data['slot_length']
 
     def clean(self):
         cleaned_data = super(ScheduleBlockForm, self).clean()

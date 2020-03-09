@@ -1117,8 +1117,8 @@ def schedule_check(data, body, ok_to_schedule=True):
         dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'])
         if dark_end <= datetime.utcnow():
             dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'] + timedelta(days=1))
+    utc_date = data['utc_date']
     dark_midpoint = dark_start + (dark_end - dark_start) / 2
-    utc_date = dark_start.replace(hour=0, minute=0, second=0, microsecond=0)
     semester_date = max(datetime.utcnow(), datetime.combine(utc_date, datetime.min.time()))
     semester_start, semester_end = get_semester_dates(semester_date)
 
@@ -1133,7 +1133,7 @@ def schedule_check(data, body, ok_to_schedule=True):
     # Determine the semester boundaries for the current time and truncate the visibility time and
     # therefore the windows appropriately.
     dark_and_up_time, max_alt, rise_time, set_time = get_visibility(None, None, utc_date, data['site_code'], '2 m', alt_limit, False, body_elements)
-    if (data['site_code'] in ['1M0', '2M0', '0M4']) or (period is not None and dark_end - dark_start > timedelta(days=1)):
+    if (data['site_code'] in ['1M0', '2M0', '0M4']) or (period is not None and dark_end - dark_start >= timedelta(days=1)):
         rise_time = dark_start
         set_time = dark_end
     if rise_time and set_time:
@@ -1141,11 +1141,11 @@ def schedule_check(data, body, ok_to_schedule=True):
             dark_and_up_time, max_alt, rise_time, set_time = get_visibility(None, None, utc_date+timedelta(days=1), data['site_code'], '2 m', alt_limit, False, body_elements)
         if rise_time and set_time:
             if rise_time.day != set_time.day and semester_start < rise_time:
-                semester_date = max(datetime.utcnow(), datetime.combine(utc_date, datetime.min.time()) - timedelta(days=1))
+                semester_date = max(datetime.utcnow(), datetime.combine(utc_date, datetime.min.time()))
                 semester_start, semester_end = get_semester_dates(semester_date)
             rise_time = up_time = max(rise_time, semester_start)
             set_time = down_time = min(set_time, semester_end)
-            if rise_time < datetime.utcnow():
+            if rise_time < datetime.utcnow() and period is None:
                 rise_time = datetime.utcnow().replace(microsecond=0)
             if down_time > dark_end > up_time:
                 set_time = dark_end
@@ -1158,13 +1158,14 @@ def schedule_check(data, body, ok_to_schedule=True):
             mid_dark_up_time = rise_time = set_time = dark_midpoint
     else:
         mid_dark_up_time = rise_time = set_time = dark_midpoint
-    utc_date = rise_time.replace(hour=0, minute=0, second=0, microsecond=0)
 
     if max_alt is not None:
         max_alt_airmass = S.sla_airmas((pi/2.0)-radians(max_alt))
     else:
         max_alt_airmass = 13
         dark_and_up_time = 0
+    if abs(mid_dark_up_time.date() - utc_date) > timedelta(days=1) or rise_time.date() > utc_date or set_time.date() < utc_date:
+        utc_date = mid_dark_up_time.date()
 
     solar_analog_id = -1
     solar_analog_params = {}
@@ -1340,7 +1341,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'site_code': data['site_code'],
         'proposal_code': data['proposal_code'],
         'group_name': group_name,
-        'utc_date': utc_date.date().isoformat(),
+        'utc_date': utc_date.isoformat(),
         'start_time': rise_time.isoformat(),
         'end_time': set_time.isoformat(),
         'mid_time': mid_dark_up_time.isoformat(),
