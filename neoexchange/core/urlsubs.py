@@ -158,7 +158,7 @@ class QueryTelemetry(ESMetricsSource):
         return results
 
 
-def convert_temps_to_table(temps_data, time_field='timestampmeasured', datum_name='datumname', data_field='seeing', default_units=u.deg_C):
+def convert_temps_to_table(temps_data, time_field='timestampmeasured', datum_name='datumname', data_field='seeing', default_units=None):
     """
         Convert a list of temperature measurements read from ES (via
         get_temps_for_site_telescope()) in <temps_data> into an Astropy Table
@@ -179,9 +179,9 @@ def convert_temps_to_table(temps_data, time_field='timestampmeasured', datum_nam
                 logger.warning("Could not parse datetime:" + temp_data.get(time_field, ''))
                 temp_time = None
         units = temp_data.get('units', None)
-        if not units:
-            logger.debug("Unknown units found, assuming " + default_units.name)
-            units = default_units
+        if not units and default_units is None:
+            logger.debug("Unknown units found, assuming degrees C")
+            units = 'degC'
         datum = temp_data.get('datumname', datum_name)
         temp_value = temp_data.get(data_field, None)
         if temp_value and temp_time and datum:
