@@ -57,6 +57,9 @@ MOON = (('G', 'Grey',),
         ('B', 'Bright'),
         ('D', 'Dark'))
 
+BIN_MODES = (('full_chip', 'Full Chip, 1x1'),
+             ('2k_2x2', 'Central 2k, 2x2'))
+
 
 class EphemQuery(forms.Form):
 
@@ -165,6 +168,7 @@ class ScheduleBlockForm(forms.Form):
     utc_date = forms.DateField(input_formats=['%Y-%m-%d', ], widget=forms.HiddenInput(), required=False)
     jitter = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}), required=False)
     period = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}), required=False)
+    bin_mode = forms.ChoiceField(required=False, choices=BIN_MODES)
     spectroscopy = forms.BooleanField(required=False, widget=forms.HiddenInput())
     too_mode = forms.BooleanField(required=False, widget=forms.HiddenInput())
     calibs = forms.ChoiceField(required=False, widget=forms.HiddenInput(), choices=CALIBS)

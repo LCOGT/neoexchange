@@ -173,6 +173,12 @@
                             <td class="kv-value">{{ data.speed|floatformat:2 }} "/min <i class="fa fa-arrow-right"></i> {{ data.trail_len|floatformat:2 }} "/exp</td>
                         {% endif %}
                     </tr>
+                    {% if '1M0' in data.lco_tel or '1M0' in data.site_code %}
+                    <tr id="id_bin_mode_row">
+                        <td class="kv-key">Binning</td>
+                        <td class="kv-value">{{ form.bin_mode }}</td>
+                    </tr>
+                    {% endif %}
                     {% if data.spectroscopy %}
                     <tr id="id_slit_pattern_row"><td ><table align="left"  style="margin: 0px"><tr><td class="kv-key" name="{{data.available_filters}}">
                             <div class="tooltip">Slit Pattern

@@ -42,6 +42,7 @@ from astrometrics.ephem_subs import horizons_ephem, call_compute_ephem, determin
     moon_ra_dec, target_rise_set, moonphase, dark_and_object_up, compute_dark_and_up_time, get_visibility
 from photometrics.obsgeomplot import plot_ra_dec, plot_brightness, plot_helio_geo_dist, \
     plot_uncertainty, plot_hoursup
+from photometrics.catalog_subs import sanitize_object_name
 from photometrics.SA_scatter import readSources, plotScatter, plotFormat
 from photometrics.spectraplot import spectrum_plot, read_mean_tax
 
@@ -132,7 +133,7 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow(), s
         return HttpResponse(PIXEL_GIF_DATA, content_type='image/gif')
 
     base_dir = os.path.join('visibility', str(body.pk))  # new base_dir for method
-    obj = body.name.replace(' ', '').replace('-', '_').replace('+', '')
+    obj = sanitize_object_name(body.name)
     site = ''
     if plot_type == 'hoursup':
         site = "_" + site_code + "_"
@@ -478,7 +479,7 @@ def lin_vis_plot(body):
     # base
     plot.circle(x='x', y='y', radius=rad, fill_color="white", source=source, line_color="black", line_width=2)
     # object
-    plot.wedge(x='x', y='y', radius=rad, start_angle="obj_rise", end_angle="obj_set", color="colors", line_color="black",line_alpha="line_alpha", source=source)
+    plot.wedge(x='x', y='y', radius=rad, start_angle="obj_rise", end_angle="obj_set", color="colors", line_color="black", line_alpha="line_alpha", source=source)
     # sun
     plot.wedge(x='x', y='y', radius=rad * .75, start_angle="sun_rise", end_angle="sun_set", color="khaki", line_color="black", source=source)
     # moon
