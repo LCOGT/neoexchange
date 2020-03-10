@@ -691,6 +691,19 @@ class ScheduleObservations(FunctionalTest):
             self.browser.find_element_by_id("id_edit_button").click()
         vis = self.browser.find_element_by_id('id_visibility_row').find_element_by_class_name('warning').text
         self.assertIn('Target Not Visible', vis)
+        error_message = self.browser.find_element_by_class_name("errorlist").text
+        self.assertIn('Requested Observations will not fit within Scheduling Window.', error_message)
+
+        # Fix issue:
+        self.browser.find_element_by_id("advanced-switch").click()
+        airmass_box = self.browser.find_element_by_id('id_max_airmass')
+        airmass_box.clear()
+        airmass_box.send_keys('1.5')
+        start_time_box = self.browser.find_element_by_id('id_start_time')
+        start_time_box.clear()
+        start_time_box.send_keys('2020-03-10T00:53:00')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
 
         # Bart wants to be a little &^%$ and stress test our group ID input
         group_id_box = self.browser.find_element_by_name("group_name")
@@ -700,7 +713,7 @@ class ScheduleObservations(FunctionalTest):
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_id("id_edit_button").click()
         group_id = self.browser.find_element_by_id('id_group_name').get_attribute('value')
-        self.assertEqual('N999r0q_V37-20150421', group_id)
+        self.assertEqual('N999r0q_V37-20150422', group_id)
         group_id_box = self.browser.find_element_by_name("group_name")
         group_id_box.clear()
         bs_string = 'rcoivny3q5r@@yciht8ycv9njcrnc87vy b0y98uxm9cyh8ycvn0fh 80hfcubfuh87yc 0nhfhxmhf7g 70h'
@@ -763,12 +776,12 @@ class ScheduleObservations(FunctionalTest):
         # The page refreshes and a series of values for magnitude, speed, slot
         # length, number and length of exposures appear
         magnitude = self.browser.find_element_by_id('id_magnitude_row').find_element_by_class_name('kv-value').text
-        self.assertIn('20.39', magnitude)
+        self.assertIn('20.40', magnitude)
         speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
-        self.assertIn('2.51 "/min', speed)
-        self.assertIn('2.51 "/exp', speed)
+        self.assertIn('2.49 "/min', speed)
+        self.assertIn('2.49 "/exp', speed)
         speed_warn = self.browser.find_element_by_class_name('warning').text
-        self.assertIn('2.51 "/exp', speed_warn)
+        self.assertIn('2.49 "/exp', speed_warn)
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
@@ -776,7 +789,7 @@ class ScheduleObservations(FunctionalTest):
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
         self.assertIn('60.0', exp_length)
         moon_sep = self.browser.find_element_by_id('id_moon_row').find_element_by_class_name('kv-value').text
-        self.assertIn('104.7', moon_sep)
+        self.assertIn('108.4', moon_sep)
 
         # Bart wants to change the slot length to less than 1 exposure.
         slot_length_box = self.browser.find_element_by_id('id_slot_length')
@@ -799,7 +812,7 @@ class ScheduleObservations(FunctionalTest):
 
         # The page refreshes and we get correct hours visible and a warning on moon dist
         moon_warn = self.browser.find_element_by_id('id_moon_row').find_element_by_class_name('warning').text
-        self.assertIn('104.7', moon_warn)
+        self.assertIn('108.4', moon_warn)
 
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
         self.assertIn('Schedule this Object', submit)
@@ -869,7 +882,7 @@ class ScheduleObservations(FunctionalTest):
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
         self.assertIn('6.5', exp_length)
         moon_sep = self.browser.find_element_by_id('id_moon_row').find_element_by_class_name('kv-value').text
-        self.assertIn('108.5', moon_sep)
+        self.assertIn('108.4', moon_sep)
 
         # Bart wants longer exposures
         exp_length_box = self.browser.find_element_by_id('id_exp_length')
@@ -877,7 +890,7 @@ class ScheduleObservations(FunctionalTest):
         exp_length_box.send_keys('750')
         self.browser.find_element_by_id("id_edit_button").click()
         speed_warn = self.browser.find_element_by_class_name('warning').text
-        self.assertIn('31.15 "/exp', speed_warn)
+        self.assertIn('31.16 "/exp', speed_warn)
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('17.5', slot_length)
 
@@ -890,7 +903,7 @@ class ScheduleObservations(FunctionalTest):
 
         # The page refreshes and we get correct hours visible and a warning on moon dist
         moon_warn = self.browser.find_element_by_id('id_moon_row').find_element_by_class_name('warning').text
-        self.assertIn('108.5', moon_warn)
+        self.assertIn('108.4', moon_warn)
 
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
         self.assertIn('Schedule this Object', submit)
@@ -945,10 +958,10 @@ class ScheduleObservations(FunctionalTest):
         # The page refreshes and a series of values for magnitude, speed, slot
         # length, number and length of exposures appear
         magnitude = self.browser.find_element_by_id('id_magnitude_row').find_element_by_class_name('kv-value').text
-        self.assertIn('20.39', magnitude)
+        self.assertIn('20.40', magnitude)
         speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
-        self.assertIn('2.51 "/min', speed)
-        self.assertIn('1.68 "/exp', speed)
+        self.assertIn('2.49 "/min', speed)
+        self.assertIn('1.66 "/exp', speed)
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('32.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
@@ -956,7 +969,7 @@ class ScheduleObservations(FunctionalTest):
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
         self.assertIn('40', exp_length)
         moon_sep = self.browser.find_element_by_id('id_moon_row').find_element_by_class_name('kv-value').text
-        self.assertIn('104.7', moon_sep)
+        self.assertIn('108.4', moon_sep)
 
         # Bart wants to change the slot length to less than 1 exposure.
         slot_length_box = self.browser.find_element_by_id('id_slot_length')
@@ -979,7 +992,7 @@ class ScheduleObservations(FunctionalTest):
 
         # The page refreshes and we get correct hours visible and a warning on moon dist
         moon_warn = self.browser.find_element_by_id('id_moon_row').find_element_by_class_name('warning').text
-        self.assertIn('104.7', moon_warn)
+        self.assertIn('108.4', moon_warn)
 
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
         self.assertIn('Schedule this Object', submit)
@@ -1050,12 +1063,12 @@ class ScheduleObservations(FunctionalTest):
         self.assertIn('LCO2015A-009 (TC)', proposal)
 
         magnitude = self.browser.find_element_by_id('id_magnitude_row').find_element_by_class_name('kv-value').text
-        self.assertIn('20.39', magnitude)
+        self.assertIn('20.40', magnitude)
         speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
-        self.assertIn('2.51 "/min', speed)
-        self.assertIn('2.51 "/exp', speed)
+        self.assertIn('2.49 "/min', speed)
+        self.assertIn('2.49 "/exp', speed)
         speed_warn = self.browser.find_element_by_class_name('warning').text
-        self.assertIn('2.51 "/exp', speed_warn)
+        self.assertIn('2.49 "/exp', speed_warn)
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
@@ -1063,7 +1076,7 @@ class ScheduleObservations(FunctionalTest):
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
         self.assertIn('60.0', exp_length)
         moon_sep = self.browser.find_element_by_id('id_moon_row').find_element_by_class_name('kv-value').text
-        self.assertIn('104.7', moon_sep)
+        self.assertIn('108.4', moon_sep)
 
         # Bart wants to change the slot length to less than 1 exposure.
         slot_length_box = self.browser.find_element_by_id('id_slot_length')
@@ -1086,7 +1099,7 @@ class ScheduleObservations(FunctionalTest):
 
         # The page refreshes and we get correct hours visible and a warning on moon dist
         moon_warn = self.browser.find_element_by_id('id_moon_row').find_element_by_class_name('warning').text
-        self.assertIn('104.7', moon_warn)
+        self.assertIn('108.4', moon_warn)
 
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
         self.assertIn('Schedule this Object', submit)
