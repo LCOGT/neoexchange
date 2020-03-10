@@ -66,8 +66,8 @@ class SuperBlock(models.Model):
 
     @cached_property
     def get_blocks(self):
-        blocks_query = self.block_set.all()
-        return blocks_query
+        """Return and Cache the querryset of all blocks connected to the SuperBlock"""
+        return self.block_set.all()
 
     def current_name(self):
         name = ''
