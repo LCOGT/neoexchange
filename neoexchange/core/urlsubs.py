@@ -121,7 +121,7 @@ class QueryTelemetry(ESMetricsSource):
 
         site_code = self.map_LCOsite_to_sitecode(site)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date=self.start_time, sun_zd=96)
-        print(dark_start, dark_end)
+        print("Darkness times: {start}->{end}".format(start=dark_start, end=dark_end))
 
         # Setup ElasticSearch query
         es = Elasticsearch(self.es_urls)
