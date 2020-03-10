@@ -302,8 +302,8 @@ class TestCalibrationSources(FunctionalTest):
         # He picks a star
         link = self.browser.find_element_by_link_text('Landolt SA98-978')
         target = StaticSource.objects.filter(name='Landolt SA98-978')
-        tarket_key = target[0].id
-        target_url = "{0}{1}".format(self.live_server_url, reverse('calibsource' , kwargs={'pk': tarket_key}))
+        target_key = target[0].id
+        target_url = "{0}{1}".format(self.live_server_url, reverse('calibsource' , kwargs={'pk': target_key}))
         actual_url = link.get_attribute('href')
         self.assertEqual(actual_url, target_url)
 
