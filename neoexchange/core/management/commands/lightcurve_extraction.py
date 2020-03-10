@@ -86,8 +86,10 @@ class Command(BaseCommand):
         return expected_fwhm
 
     def fetch_dimm_seeing(self, sitecode, date):
-        fwhm = QueryTelemetry(start_time=date+timedelta(days=1))
         site, encid, telid = MPC_site_code_to_domes(sitecode)
+        if site == 'cpt':
+            date = date.replace(hour=16, minute=0, second=0)
+        fwhm = QueryTelemetry(start_time=date)
         dimm_data = fwhm.get_seeing_for_site(site)
         tables = convert_temps_to_table(dimm_data, time_field='measure_time', datum_name='seeing', data_field='seeing')
 
@@ -380,11 +382,12 @@ class Command(BaseCommand):
                             header, table, cattype = open_fits_catalog(frame_fpath)
                             for tempkey in temp_keywords:
                                 foc_temp = header.get(tempkey, None)
-                                print("Value of {key:8s}={val:.2f}".format(key=tempkey, val=foc_temp))
-                                if tempkey not in focus_temps:
-                                    focus_temps[tempkey] = [foc_temp,]
-                                else:
-                                    focus_temps[tempkey].append(foc_temp)
+                                if foc_temp:
+                                    print("Value of {key:8s}={val:.2f}".format(key=tempkey, val=foc_temp))
+                                    if tempkey not in focus_temps:
+                                        focus_temps[tempkey] = [foc_temp,]
+                                    else:
+                                        focus_temps[tempkey].append(foc_temp)
                         azimuth, altitude = moon_alt_az(frame.midpoint, ra, dec, *get_sitepos(frame.sitecode)[1:])
                         zenith_distance = radians(90) - altitude
                         air_mass.append(S.sla_airmas(zenith_distance))
