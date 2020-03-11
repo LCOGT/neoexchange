@@ -111,7 +111,7 @@ def get_header_info(fits_file):
     return obj, rn, site, inst, guide_frames
 
 
-def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True, out_path="", tr=False, center=None, plot_source=False, target_data=None, horizons_comp=False):
+def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True, out_path="", show_reticle=False, center=None, plot_source=False, target_data=None, horizons_comp=False):
     """
     takes in list of .fits guide frames and turns them into a moving gif.
     <frames> = list of .fits frame paths
@@ -119,8 +119,8 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
     <sort> = [optional] bool to sort frames by title (Which usually corresponds to date)
     <fr> = frame rate for output gif in ms/frame [default = 100 ms/frame or 10fps]
     <init_fr> = frame rate for first 5 frames in ms/frame [default = 1000 ms/frame or 1fps]
-    <tr> = Bool to determine if reticle present for all guide frames.
-    <center> = Central portion of frame in arcmin.
+    <show_reticle> = Bool to determine if reticle present for all guide frames.
+    <center> = Display only Central region of frame with this many arcmin/side.
     output = savefile (path of gif)
     """
 
@@ -251,7 +251,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
         plt.imshow(data, cmap='gray', vmin=z_interval[0], vmax=z_interval[1])
 
         # If first few frames, add 5" and 15" reticle
-        if current_count < 6 and fr != init_fr or tr:
+        if current_count < 6 and fr != init_fr or show_reticle:
             circle_5arcsec = plt.Circle((header_n['CRPIX1'], header_n['CRPIX2']), 5/header_n['PIXSCALE'], fill=False, color='limegreen', linewidth=1.5)
             circle_15arcsec = plt.Circle((header_n['CRPIX1'], header_n['CRPIX2']), 15/header_n['PIXSCALE'], fill=False, color='lime', linewidth=1.5)
             ax.add_artist(circle_5arcsec)
@@ -403,7 +403,7 @@ if __name__ == '__main__':
     if len(files) < 1:
         files = np.sort(glob(path+'*.fits'))
     if len(files) >= 1:
-        gif_file = make_gif(files, fr=fr, init_fr=ir, tr=tr, center=center, progress=True)
+        gif_file = make_gif(files, fr=fr, init_fr=ir, show_reticle=tr, center=center, progress=True)
         logger.info("New gif created: {}".format(gif_file))
     else:
         logger.info("No files found.")

@@ -641,7 +641,8 @@ class BestStandardsView(ListView):
             ra_filter = Q(ra__gte=min_ra) & Q(ra__lte=max_ra)
         ftn_standards = StaticSource.objects.filter(ra_filter, source_type=StaticSource.FLUX_STANDARD, dec__gte=0).order_by('ra')
         fts_standards = StaticSource.objects.filter(ra_filter, source_type=StaticSource.FLUX_STANDARD, dec__lte=0).order_by('ra')
-        if dbg: print(ftn_standards, fts_standards)
+        if dbg:
+            print(ftn_standards, fts_standards)
 
         return ftn_standards, fts_standards
 
@@ -3469,9 +3470,9 @@ def display_movie(request, pk):
     logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
 
     block = Block.objects.get(pk=pk)
-    if block.obstype in [0, 2]:
+    if block.obstype in [Block.OPT_IMAGING, Block.OPT_IMAGING_CALIB]:
         movie_file = "{}_{}_framemovie.gif".format(obj.replace(' ', '_'), req)
-    elif block.obstype in [1, 3]:
+    elif block.obstype in [Block.OPT_SPECTRA, Block.OPT_SPECTRA_CALIB]:
         movie_file = "{}_{}_guidemovie.gif".format(obj.replace(' ', '_'), req)
         base_dir = os.path.join(path, "Guide_frames")
     else:
