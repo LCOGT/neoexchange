@@ -22,6 +22,7 @@ from django.template.defaultfilters import floatformat
 from astrometrics.time_subs import degreestohours, hourstodegrees, degreestodms, \
     degreestohms, radianstohms, radianstodms, dttodecimalday, mjd_utc2datetime
 from astrometrics.ephem_subs import get_alt_from_airmass
+from core.models import Block
 
 
 register = Library()
@@ -97,6 +98,18 @@ def format_mpc_line_upload(measure):
 @register.simple_tag
 def format_mpc_line_catcode(measure):
     return measure.format_mpc_line(include_catcode=True)
+
+
+@register.inclusion_tag('partials/block_row.html')
+def build_block_row(superblock):
+    return {
+        'block': superblock,
+        'sites': superblock.get_sites(),
+        'telclass': superblock.get_telclass(),
+        'obsdetails': superblock.get_obsdetails(),
+        'num_observed': superblock.get_num_observed(),
+        'num_reported': superblock.get_num_reported()
+    }
 
 
 @register.filter(is_safe=False)
