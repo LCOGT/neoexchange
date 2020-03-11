@@ -1093,6 +1093,7 @@ def schedule_check(data, body, ok_to_schedule=True):
     spectroscopy = data.get('spectroscopy', False)
     solar_analog = data.get('solar_analog', False)
     body_elements = model_to_dict(body)
+
     # Get period and jitter for cadence
     period = data.get('period', None)
     jitter = data.get('jitter', None)
@@ -1115,15 +1116,19 @@ def schedule_check(data, body, ok_to_schedule=True):
             logger.warning("ToO/TC observations not possible with this proposal")
             too_mode = False
 
+    # if start/stop times already established, use those
     if data.get('start_time') and data.get('end_time'):
         dark_start = data.get('start_time')
         dark_end = data.get('end_time')
     else:
-        dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'])
+        # Otherwise, calculate night based on site and date.
+        dark_start, dark_end = determine_darkness_times(data['site_code'], data.get('utc_date', datetime.utcnow().date))
         if dark_end <= datetime.utcnow():
+            # If night has already ended, use next night instead
             dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'] + timedelta(days=1))
     dark_midpoint = dark_start + (dark_end - dark_start) / 2
     utc_date = data.get('utc_date', dark_midpoint.date())
+    # Get semester boundaries for "current" semester
     semester_date = max(datetime.utcnow(), datetime.combine(utc_date, datetime.min.time()))
     semester_start, semester_end = get_semester_dates(semester_date)
 
@@ -1131,32 +1136,36 @@ def schedule_check(data, body, ok_to_schedule=True):
     max_airmass = data.get('max_airmass', 1.74)
     alt_limit = get_alt_from_airmass(max_airmass)
 
-    # Pull out LCO Site, Telescope Class using site_config.py
-    lco_site_code = next(key for key, value in cfg.valid_site_codes.items() if value == data['site_code'])
-
     # calculate visibility
     # Determine the semester boundaries for the current time and truncate the visibility time and
     # therefore the windows appropriately.
     dark_and_up_time, max_alt, rise_time, set_time = get_visibility(None, None, utc_date, data['site_code'], '2 m', alt_limit, False, body_elements)
     if (data['site_code'] in ['1M0', '2M0', '0M4']) or (period is not None and dark_end - dark_start >= timedelta(days=1)):
+        # If using generic telescope or cadence lasting more than 1 day ignore object visibility
         rise_time = dark_start
         set_time = dark_end
     if rise_time and set_time:
         if set_time < dark_start > rise_time:
+            # If object sets before it gets dark, use next night instead
             dark_and_up_time, max_alt, rise_time, set_time = get_visibility(None, None, utc_date+timedelta(days=1), data['site_code'], '2 m', alt_limit, False, body_elements)
         if rise_time and set_time:
             if rise_time.day != set_time.day and semester_start < rise_time:
+                # if observations cross UT day boundary, check semester boundaries.
                 semester_date = max(datetime.utcnow(), datetime.combine(utc_date, datetime.min.time()))
                 semester_start, semester_end = get_semester_dates(semester_date)
             rise_time = up_time = max(rise_time, semester_start)
             set_time = down_time = min(set_time, semester_end)
             if rise_time < datetime.utcnow() and period is None:
+                # If start time would be in the past, set to now except for cadence.
                 rise_time = datetime.utcnow().replace(microsecond=0)
             if down_time > dark_end > up_time:
+                # If object sets after morning, truncate to end of night
                 set_time = dark_end
             if up_time < dark_start < down_time:
+                # if object rises before evening, truncate to start of night
                 rise_time = dark_start
             if set_time < rise_time:
+                # object sets before it rises somehow, set window to 0.
                 set_time = rise_time
             mid_dark_up_time = rise_time + (set_time - rise_time) / 2
         else:
