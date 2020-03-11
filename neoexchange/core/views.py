@@ -274,14 +274,6 @@ class SuperBlockTimeline(DetailView):
         return context
 
 
-class BlockListView(ListView):
-    model = Block
-    template_name = 'core/block_list.html'
-    queryset = Block.objects.order_by('-block_start')
-    context_object_name = "block_list"
-    paginate_by = 20
-
-
 class SuperBlockListView(ListView):
     model = SuperBlock
     template_name = 'core/block_list.html'
