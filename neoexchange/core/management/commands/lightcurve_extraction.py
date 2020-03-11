@@ -38,7 +38,7 @@ from django.conf import settings
 from core.models import Block, Frame, SuperBlock, SourceMeasurement, CatalogSources
 from astrometrics.ephem_subs import compute_ephem, radec2strings, moon_alt_az, get_sitepos
 from astrometrics.time_subs import datetime2mjd_utc
-from photometrics.catalog_subs import search_box
+from photometrics.catalog_subs import search_box, sanitize_object_name
 from photometrics.photometry_subs import compute_fwhm, map_filter_to_wavelength
 
 
@@ -241,7 +241,7 @@ class Command(BaseCommand):
         mpc_site = []
         fwhm = []
         air_mass = []
-        obj_name = start_super_block.body.current_name().replace(' ', '_')
+        obj_name = sanitize_object_name(start_super_block.body.current_name())
         datadir = os.path.join(options['datadir'], obj_name)
         rw_permissions = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH
         if not os.path.exists(datadir):

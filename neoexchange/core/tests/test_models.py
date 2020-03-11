@@ -54,12 +54,15 @@ class TestBody(TestCase):
         self.body, created = Body.objects.get_or_create(**params)
 
         params['provisional_name'] = 'V92818q'
+        params['ingest'] = datetime(2019, 4, 20, 3, 2, 1)
         self.body2, created = Body.objects.get_or_create(**params)
 
         params['provisional_name'] = 'I22871'
+        params['update_time'] = params['ingest'] - timedelta(seconds=1)
         self.body3, created = Body.objects.get_or_create(**params)
 
         params['provisional_name'] = 'Ntheiqo'
+        params['update_time'] = params['ingest'] + timedelta(seconds=1)
         self.body4, created = Body.objects.get_or_create(**params)
 
         params['provisional_name'] = 'Q488391r'
@@ -191,6 +194,18 @@ class TestBody(TestCase):
                        }
         self.test_block5b = Block.objects.create(**block_params5b)
 
+        frame_params = { 'sitecode' : 'E10',
+                         'instrument' : 'fs03',
+                         'midpoint' : self.body5.ingest + timedelta(days=1),
+                         'block' : self.test_block5b
+                       }
+        self.test_frame = Frame.objects.create(**frame_params)
+
+        srcm_params = { 'body' : self.body5,
+                        'frame' : self.test_frame
+                      }
+        self.test_srcmeasure = SourceMeasurement.objects.create(**srcm_params)
+
         spectra_params = {'body'         : self.body,
                           'spec_wav'     : 'Vis',
                           'spec_vis'     : 'sp233/a265962.sp233.txt',
@@ -294,6 +309,64 @@ class TestBody(TestCase):
         obs_window = test_body.compute_obs_window(d=datetime(2015, 7, 1, 17, 0, 0))
         self.assertEqual(obs_window[0], expected_start)
         self.assertEqual(obs_window[1], expected_end)
+
+    def test_return_latest_measurement_no_ingest(self):
+        expected_dt = self.body.ingest
+        expected_type = 'Ingest Time'
+
+        update_type, update_dt = self.body.get_latest_update()
+
+        self.assertEqual(expected_type, update_type)
+        self.assertEqual(expected_dt, update_dt)
+
+    def test_return_latest_measurement_ingest(self):
+        expected_dt = self.body2.ingest
+        expected_type = 'Ingest Time'
+
+        update_type, update_dt = self.body2.get_latest_update()
+
+        self.assertEqual(expected_type, update_type)
+        self.assertEqual(expected_dt, update_dt)
+
+    def test_return_latest_measurement_update_earlier(self):
+        expected_dt = self.body3.ingest
+        expected_type = 'Ingest Time'
+
+        update_type, update_dt = self.body3.get_latest_update()
+
+        self.assertEqual(expected_type, update_type)
+        self.assertEqual(expected_dt, update_dt)
+
+    def test_return_latest_measurement_update_later(self):
+        expected_dt = self.body4.update_time
+        expected_type = 'Last Update'
+
+        update_type, update_dt = self.body4.get_latest_update()
+
+        self.assertEqual(expected_type, update_type)
+        self.assertEqual(expected_dt, update_dt)
+
+    def test_return_later_srcmeasure(self):
+        expected_dt = self.test_frame.midpoint
+        expected_type = 'Last Measurement'
+
+        update_type, update_dt = self.body5.get_latest_update()
+
+        self.assertEqual(expected_type, update_type)
+        self.assertEqual(expected_dt, update_dt)
+
+    def test_return_earlier_srcmeasure(self):
+        self.body5.update_time += timedelta(days=2)
+        self.body5.save()
+        self.body5.refresh_from_db()
+
+        expected_dt = self.body5.update_time
+        expected_type = 'Last Update'
+
+        update_type, update_dt = self.body5.get_latest_update()
+
+        self.assertEqual(expected_type, update_type)
+        self.assertEqual(expected_dt, update_dt)
 
 
 @patch('core.models.body.datetime', MockDateTime)

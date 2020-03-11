@@ -1,8 +1,12 @@
 ## NEO Exchange
 
-Portal for scheduling observations of NEOs using Las Cumbres Observatory.
+Portal for scheduling observations of NEOs (and other Solar System objects) using Las Cumbres Observatory.
 
 ## History
+
+### 3.2.8
+* Add 2x2 binning & central chip section mode suppport (for faster readout on speedy rocks).
+* Fix table parsing of Arecibo targets.
 
 ### 3.2.7
 * Allow ingestion of numbered comet and comet fragment observations.
