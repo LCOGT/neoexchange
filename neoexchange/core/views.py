@@ -875,7 +875,7 @@ class ScheduleParametersCadence(LoginRequiredMixin, LookUpBodyMixin, FormView):
     def form_valid(self, form, request):
         data = schedule_check(form.cleaned_data, self.body, self.ok_to_schedule)
         new_form = ScheduleBlockForm(data)
-        return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.body, 'cadence':True})
+        return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.body, 'cadence': True})
 
 
 class ScheduleParametersSpectra(LoginRequiredMixin, LookUpBodyMixin, FormView):
@@ -973,8 +973,7 @@ class ScheduleCalibSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
         if form.is_valid():
             return self.form_valid(form, request)
         else:
-            print(form)
-            return self.form_invalid(form)
+            return self.form_invalid(form, request)
 
     def form_valid(self, form, request):
         if 'edit' in request.POST:
@@ -1002,6 +1001,12 @@ class ScheduleCalibSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
                     msg += "\nAdditional information:" + sched_params['error_msg']
                 messages.warning(self.request, msg)
             return super(ScheduleCalibSubmit, self).form_valid(form)
+
+    def form_invalid(self, form, request):
+        # Recalculate the parameters using new form data
+        data = schedule_check(form.cleaned_data, self.object)
+        new_form = ScheduleBlockForm(data)
+        return render(request, 'core/calib_schedule_confirm.html', {'form': new_form, 'data': data, 'calibrator': self.object})
 
     def get_success_url(self):
         return reverse('home')
@@ -1117,8 +1122,8 @@ def schedule_check(data, body, ok_to_schedule=True):
         dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'])
         if dark_end <= datetime.utcnow():
             dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'] + timedelta(days=1))
-    utc_date = data['utc_date']
     dark_midpoint = dark_start + (dark_end - dark_start) / 2
+    utc_date = data.get('utc_date', dark_midpoint.date())
     semester_date = max(datetime.utcnow(), datetime.combine(utc_date, datetime.min.time()))
     semester_start, semester_end = get_semester_dates(semester_date)
 

@@ -324,6 +324,9 @@ class ScheduleObservations(FunctionalTest):
         moon_warn = self.browser.find_element_by_id('id_moon_row').find_element_by_class_name('warning').text
         self.assertIn('35.8', moon_warn)
 
+        submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
+        self.assertIn('Schedule this Object', submit)
+
         # Bart wants to change the max airmass to 1.1 and gets a warning
         self.browser.find_element_by_id("advanced-switch").click()
         airmass_box = self.browser.find_element_by_id('id_max_airmass')
@@ -352,8 +355,6 @@ class ScheduleObservations(FunctionalTest):
         group_id = self.browser.find_element_by_id('id_group_name').get_attribute('value')
         self.assertEqual(bs_string[:50], group_id)
 
-        submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
-        self.assertIn('Schedule this Object', submit)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list_no2m)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list_no2m)

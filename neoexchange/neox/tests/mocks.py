@@ -15,6 +15,7 @@ GNU General Public License for more details.
 
 from datetime import datetime as real_datetime
 from datetime import datetime
+from datetime import date
 import os
 
 import astropy.units as u
@@ -64,6 +65,19 @@ class MockDateTime(datetime, metaclass=MockDateTimeType):
     @classmethod
     def utcnow(cls):
         return cls(cls.year, cls.month, cls.day, cls.hour, cls.minute, cls.second)
+
+
+class MockDate(date, metaclass=MockDateTimeType):
+
+    @classmethod
+    def change_date(cls, year, month, day):
+        cls.year = year
+        cls.month = month
+        cls.day = day
+
+    @classmethod
+    def today(cls):
+        return cls(cls.year, cls.month, cls.day)
 
 
 def mock_fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser"):

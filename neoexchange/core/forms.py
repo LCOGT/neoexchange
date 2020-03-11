@@ -117,17 +117,19 @@ class ScheduleCadenceForm(forms.Form):
     jitter = forms.FloatField(initial=0.25, required=True, widget=forms.TextInput(attrs={'size': '10'}), error_messages={'required': _(u'Jitter is required')})
     too_mode = forms.BooleanField(initial=False, required=False)
 
-    # def clean_start_time(self):
-    #     start = self.cleaned_data['start_time']
-    #     if start < datetime.utcnow():
-    #         raise forms.ValidationError("Window cannot start in the past")
-    #     return start
-    #
     # def clean_end_time(self):
     #     end = self.cleaned_data['end_time']
     #     if end < datetime.utcnow():
     #         raise forms.ValidationError("Window cannot end in the past")
     #     return end
+
+    def clean_start_time(self):
+        start = self.cleaned_data['start_time']
+        window_cutoff = datetime.utcnow() - timedelta(days=1)
+        if start <= window_cutoff:
+            return datetime.utcnow().replace(microsecond=0)
+        else:
+            return self.cleaned_data['start_time']
 
     def clean_period(self):
         if self.cleaned_data['period'] is not None and self.cleaned_data['period'] < 0.02:
