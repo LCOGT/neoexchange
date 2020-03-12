@@ -46,6 +46,7 @@ from bokeh.palettes import Category20, Category10
 from .models import Body, CatalogSources, StaticSource, Block, model_to_dict, PreviousSpectra
 from astrometrics.ephem_subs import horizons_ephem, call_compute_ephem, determine_darkness_times, get_sitepos,\
     moon_ra_dec, target_rise_set, moonphase, dark_and_object_up, compute_dark_and_up_time, get_visibility
+from astrometrics.time_subs import jd_utc2datetime
 from photometrics.obsgeomplot import plot_ra_dec, plot_brightness, plot_helio_geo_dist, \
     plot_uncertainty, plot_hoursup
 from photometrics.SA_scatter import readSources, plotScatter, plotFormat
@@ -569,6 +570,8 @@ def lin_vis_plot(body):
 
 
 def get_name(meta_dat):
+    """Pulls an object name from the ALCDEF metadata."""
+
     name = meta_dat['OBJECTNAME']
     number = meta_dat['OBJECTNUMBER']
     desig = meta_dat['MPCDESIG']
@@ -690,7 +693,7 @@ def lc_plot(lc_list, meta_list, period=1, jpl_ephem=None):
     # Set Axis and Title Text
     plot_u.yaxis.axis_label = 'Apparent Magnitude'
     plot_u.title.text = 'LC for {} ({})'.format(obj, date_range)
-    plot_u.xaxis.axis_label = 'Date (Hours from {}.0)'.format(base_date)
+    plot_u.xaxis.axis_label = 'Date (Hours from {}.5/{}.0)'.format(jd_utc2datetime(base_date).strftime("%Y-%m-%d"), base_date)
     plot_p.yaxis.axis_label = 'Apparent Magnitude'
     plot_p.title.text = 'LC for {} ({})'.format(obj, date_range)
     plot_p.xaxis.axis_label = 'Phase (Period = {}h / Epoch = {})'.format(period, base_date)
