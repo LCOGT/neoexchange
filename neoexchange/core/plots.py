@@ -723,10 +723,11 @@ def lc_plot(lc_list, meta_list, period=1, jpl_ephem=None):
             md = meta_list[c]
             sess_date.append(md['SESSIONDATE'])
             sess_time.append(md['SESSIONTIME'])
-            sess_filt.append(md['FILTER'])
+            filt = translate_from_alcdef_filter(md['FILTER'])
+            sess_filt.append(filt)
             sess_site.append(md['MPCCODE'])
             sess_color.append(plot_col)
-            dataset_title = "{}T{} -- Filter:{} -- Site:{}".format(md['SESSIONDATE'], md['SESSIONTIME'], md['FILTER'], md['MPCCODE'])
+            dataset_title = "{}T{} -- Filter:{} -- Site:{}".format(md['SESSIONDATE'], md['SESSIONTIME'], filt, md['MPCCODE'])
             sess_title.append(dataset_title)
         sess_sym = ['&#10739;']*len(sess_date)
         offset = [0]*len(sess_date)
@@ -1029,3 +1030,13 @@ def phase_lc(lc_data, period, base_date):
         lc['date'] = phase
         phase_list.append(lc)
     return phase_list
+
+
+def translate_from_alcdef_filter(filt):
+    if filt not in ['B, V, R, I, J, H, K']:
+        filt = filt.lower()
+        if len(filt) > 1 and filt[0] == 's':
+            filt = filt[1] + 'p'
+        elif filt == 'c':
+            filt = 'Clear'
+    return filt
