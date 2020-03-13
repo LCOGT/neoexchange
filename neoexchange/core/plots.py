@@ -611,6 +611,9 @@ def lc_plot(lc_list, meta_list, period=1, jpl_ephem=None):
             ['V'] --- predicted V magnitude for given Julian dates
     """
 
+    # JS file containing call back functions
+    js_file = os.path.abspath(os.path.join('core', 'static', 'core', 'js', 'bokeh_custom_javascript.js'))
+
     # Pull general info from metadata
     obj, name, num = get_name(meta_list[0])
     date_range = meta_list[0]['SESSIONDATE'].replace('-', '') + '-' + meta_list[-1]['SESSIONDATE'].replace('-', '')
@@ -662,26 +665,9 @@ def lc_plot(lc_list, meta_list, period=1, jpl_ephem=None):
     base_line = plot_p.line([-2, 2], [base_date, base_date], alpha=0, name="phase_line")
 
     # Write custom JavaScript Code to print the time to the next iteration of the given phase in a HoverTool
-    next_time = CustomJSHover(args=dict(period_box=period_box, phase_shift=phase_shift),
-                              code="""
-                                            const P = period_box.value;
-                                            const B = phase_shift.value;
-                                            var x = special_vars.x;
-                                            var base_date = special_vars.data_y;
-                                            var JD = new Date().getTime()/86400000 + 2440587.5;
-                                            let hours = JD - base_date * 24;
-                                            let current_phase = (hours / P);
-                                            current_phase = current_phase - Math.floor(current_phase) + B;
-                                            let phase_diff = x - current_phase;
-                                            if (phase_diff < 0){
-                                                phase_diff = phase_diff + 1;
-                                                if (phase_diff < 0){
-                                                    phase_diff = phase_diff + 1;
-                                                }
-                                            }
-                                            let hours_diff = phase_diff * P
-                                            return "" + hours_diff.toFixed(2) + "h";
-                                        """)
+    js_hover_text = get_js_as_text(js_file, "next_time_phased")
+    next_time = CustomJSHover(args=dict(period_box=period_box, phase_shift=phase_shift), code=js_hover_text)
+
     # Build Hovertools
     hover1 = HoverTool(tooltips=[('Phase', '$x{0.000}'), ('Mag', '$y{0.000}'), ('To Next', '@y{custom}')],
                        formatters=dict(y=next_time), point_policy="none", line_policy="none", show_arrow=False,
@@ -777,113 +763,22 @@ def lc_plot(lc_list, meta_list, period=1, jpl_ephem=None):
     table_title = Div(text='<b>LC Data</b>', width=450)  # No way to set title for Table, Have to build HTML Div and put above it...
 
     # JS Callback to set Dataset Mag offset to relative Horizons v-mag differences
-    v_offset_callback = CustomJS(args=dict(dataset_source=dataset_source, toggle=v_offset_button),
-                        code="""const dataset = dataset_source.data;
-                                const O = dataset['offset'];
-                                const V = dataset['v_mid']
-                                if (toggle.active){
-                                    for (var i = 0; i < O.length; i++) {
-                                        O[i] = V[0] - V[i];
-                                    }
-                                    toggle.label = 'Reset Offsets';
-                                } else {
-                                    for (var i = 0; i < O.length; i++) {
-                                        O[i] = 0;
-                                    }
-                                    toggle.label = 'Apply Predicted Offset';
-                                }
-                                dataset_source.change.emit();
-                            """)
+    js_mag_offset = get_js_as_text(js_file, "set_mag_offset")
+    v_offset_callback = CustomJS(args=dict(dataset_source=dataset_source, toggle=v_offset_button), code=js_mag_offset)
     v_offset_button.js_on_click(v_offset_callback)
 
     # JS Callback to update phased data when datasets are removed, and mag offsets are made.
     # Note: Data just hidden (set to alpha=0). Not actually removed.
-    callback = CustomJS(args=dict(source=source, dataset_source=dataset_source, osource=orig_source, plot=plot_p),
-                        code="""const data = source.data;
-                                const base = osource.data;
-                                const I = dataset_source.selected.indices;
-                                const T = dataset_source.data['title'];
-                                const O = dataset_source.data['offset'];
-                                const y = data['mag'];
-                                const el = data['err_low'];
-                                const eh = data['err_high'];
-                                const m = base['mag'];
-                                const me = base['mag_err'];
-                                const t = data['title'];
-                                const t2 = base['title'];
-                                const a = data['alpha'];
-                                const a2 = base['alpha']
-                                var selected = [];
-                                var offy = [];
-                                for (var i = 0; i < I.length; i++) {
-                                    selected[i] = T[I[i]];
-                                    offy.push(I[i]);
-                                }
-                                for (var i = 0; i < a2.length; i++) {
-                                    if (selected.includes(t2[i])){
-                                        a2[i] = 1;
-                                    } else {
-                                        a2[i] = 0;
-                                    }
-                                }
-                                for (var i = 0; i < a.length; i++) {
-                                    if (selected.includes(t[i])){
-                                        a[i] = 1;
-                                    } else {
-                                        a[i] = 0;
-                                    }
-                                    if (offy != []) {
-                                        for (var k = 0; k < offy.length; k++) {
-                                            if (t[i] == T[offy[k]]) {
-                                                y[i] = m[i] + O[offy[k]];
-                                                el[i] = m[i] - me[i] + O[offy[k]];
-                                                eh[i] = m[i] + me[i] + O[offy[k]];
-                                                k = offy.length
-                                            } else {
-                                                y[i] = m[i];
-                                                el[i] = m[i] - me[i];
-                                                eh[i] = m[i] + me[i];
-                                            }
-                                        }
-                                    } else {
-                                        y[i] = m[i]
-                                        el[i] = m[i] - me[i];
-                                        eh[i] = m[i] + me[i];
-                                    }
-                                }
-                                source.change.emit();
-                                osource.change.emit();
-                                if (O.some(item => item != 0)){
-                                    plot.left[0].axis_label = 'Apparent Magnitude (Adjusted)';
-                                } else {
-                                    plot.left[0].axis_label = 'Apparent Magnitude';
-                                }
-                                """)
+    js_remove_shift_data = get_js_as_text(js_file, "remove_shift_data")
+    callback = CustomJS(args=dict(source=source, dataset_source=dataset_source, osource=orig_source, plot=plot_p), code=js_remove_shift_data)
     dataset_source.selected.js_on_change('indices', callback)
     draw_button.js_on_click(callback)
     dataset_source.js_on_change('data', callback)  # Does not seem to work. Not sure why.
 
     # JS Call back to handle period max and min changes to both the period_box and the period_slider
     # Self validation (min < 0, for instance) does not seem to work properly.
-    period_bounds_callback = CustomJS(args=dict(period_box=period_box, period_slider=period_slider, p_max=p_slider_max, p_min=p_slider_min),
-                        code="""
-                        if (p_min.value < 0){
-                            p_min.value = 0;
-                        }
-                        if (p_max.value <= p_min.value){
-                            p_max.value = p_min.value + 1;
-                        }
-                        period_slider.end = p_max.value;
-                        period_slider.start = p_min.value;
-                        if (period_slider.value < p_min.value){
-                            period_slider.value = p_min.value;
-                        }
-                        if (period_slider.value > p_max.value){
-                            period_slider.value = p_max.value;
-                        }
-                        period_slider.step = ((p_max.value - p_min.value) / 1000 );
-                        period_box.step = ((p_max.value - p_min.value) / 1000 );
-                        """)
+    js_period_linker = get_js_as_text(js_file, "link_period")
+    period_bounds_callback = CustomJS(args=dict(period_box=period_box, period_slider=period_slider, p_max=p_slider_max, p_min=p_slider_min), code=js_period_linker)
     p_slider_max.js_on_change('value', period_bounds_callback)
     p_slider_min.js_on_change('value', period_bounds_callback)
 
@@ -891,70 +786,9 @@ def lc_plot(lc_list, meta_list, period=1, jpl_ephem=None):
     period_slider.js_link('value', period_box, 'value')
 
     # JS call back to handle phasing of data to given period/epoch
-    phased_callback = CustomJS(args=dict(source=source, period_box=period_box, period_slider=period_slider, plot=plot_p, osource=orig_source, phase_shift=phase_shift, base_date=base_date),
-                        code="""
-                        if (period_box.value <= 0){
-                            period_box.value = 0;
-                        }
-                        const B = phase_shift.value;
-                        const data = source.data;
-                        const base = osource.data;
-                        const x = data['time'];
-                        const d = base['time'];
-                        const y = data['mag'];
-                        const m = base['mag'];
-                        const el = data['err_low'];
-                        const eh = data['err_high'];
-                        const me = data['mag_err'];
-                        const t = data['title'];
-                        const a = data['alpha'];
-                        const c = data['color'];
-                        const period = period_box.value;
-                        period_slider.value = period_box.value;
-                        let pos = d.length - 1;
-                        let n = x.length - d.length;
-                        x.splice(pos,n);
-                        y.splice(pos,n);
-                        el.splice(pos,n);
-                        eh.splice(pos,n);
-                        a.splice(pos,n);
-                        t.splice(pos,n);
-                        c.splice(pos,n);
-                        me.splice(pos,n);
-                        if (period > 0) {
-                            for (var i = 0; i < d.length; i++){
-                                x[i] = (d[i] / period);
-                                x[i] = x[i] - Math.floor(x[i]);
-                                x[i] = x[i] + B;
-                                if (x[i] > 1.0){
-                                    x[i] = x[i] - 1.0;
-                                } else if (x[i] < 0.0){
-                                    x[i] = x[i] + 1.0;
-                                }
-                                if ((x[i] > 0.0) && (x[i] < 0.5)){
-                                    x.push(x[i] + 1.0);
-                                } else if ((x[i] < 1.0) && (x[i] > 0.5)){
-                                    x.push(x[i] - 1.0);
-                                }
-                                y.push(y[i]);
-                                el.push(el[i]);
-                                eh.push(eh[i]);
-                                a.push(a[i]);
-                                t.push(t[i]);
-                                c.push(c[i]);
-                                me.push(c[i]);
-                            }
-                        } else{
-                            for (var i = 0; i < d.length; i++){
-                                if (i <= (d.length - 1)){
-                                    x[i] = d[i];
-                                }
-                            }
-                        }
-                        let epoch = base_date + (B * period / 24);
-                        plot.below[0].axis_label = 'Phase (Period = ' + period + 'h / Epoch = '+ epoch + ')';
-                        source.change.emit();
-                        """)
+    js_phase_data = get_js_as_text(js_file, "phase_data")
+    phased_callback = CustomJS(args=dict(source=source, period_box=period_box, period_slider=period_slider, plot=plot_p,
+                                         osource=orig_source, phase_shift=phase_shift, base_date=base_date), code=js_phase_data)
     period_box.js_on_change('value', phased_callback)
     phase_shift.js_on_change('value', phased_callback)
 
@@ -1040,3 +874,23 @@ def translate_from_alcdef_filter(filt):
         elif filt == 'c':
             filt = 'Clear'
     return filt
+
+
+def get_js_as_text(file, funct):
+    """Pull out given function from js file and convert to text for Bokeh
+    Inputs:
+        file: Absolute path to js file containing desired function
+        funct: name of function to be imported into Bokeh Callback
+    """
+    with open(file, "r") as js:
+        lines = js.readlines()
+    js_text = ''
+    print_js = False
+    for line in lines:
+        if print_js and line == '}\n' or print_js and line == '}':
+            break
+        if print_js:
+            js_text += line
+        if "function {}(".format(funct) in line:
+            print_js = True
+    return js_text
