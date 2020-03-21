@@ -253,6 +253,13 @@
                         {% endif %}
                     </tr>
                     {% endif %}
+                    {% if data.vis_start not in data.start_time or data.vis_end not in data.end_time %}
+                            <tr id="id_window_error2_row">
+                               <td colspan="2" style="text-align: center">
+                                   <span class="warning  msgpadded">Target Visible From {{data.vis_start}} -> {{data.vis_end}}</span>
+                               </td>
+                            </tr>
+                    {% endif %}
                     <tr id="id_window_row">
                         {% if data.num_times is not None and data.num_times < 2 %}
                             <td ><table align="left"  style="margin: 0px"><tr><td></td><td class="kv-key"><div class="tooltip">

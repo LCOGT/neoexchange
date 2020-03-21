@@ -1242,6 +1242,8 @@ class TestScheduleCheck(TestCase):
                             'start_time': '2016-04-06T10:10:00',
                             'end_time': '2016-04-06T17:12:00',
                             'mid_time': '2016-04-06T13:41:00',
+                            'vis_start': '2016-04-06T10:10:00',
+                            'vis_end': '2016-04-06T17:12:00',
                             'ra_midpoint': 3.3125083790342504,
                             'dec_midpoint': -0.16076987814455768,
                             'period' : None,
@@ -1832,6 +1834,8 @@ class TestScheduleCheck(TestCase):
                         'utc_date': data['utc_date'].isoformat(),
                         'start_time': '2016-04-06T09:42:00',
                         'end_time': '2016-04-06T17:40:00',
+                        'vis_start': '2016-04-06T09:42:00',
+                        'vis_end': '2016-04-06T17:40:00',
                         'mid_time': '2016-04-06T13:41:00',
                         'ra_midpoint': 3.3125083797952244,
                         'dec_midpoint': -0.16076987807708198,
@@ -1906,6 +1910,8 @@ class TestScheduleCheck(TestCase):
                         'start_time': '2016-04-06T09:42:00',
                         'end_time': '2016-04-06T17:40:00',
                         'mid_time': '2016-04-06T13:41:00',
+                        'vis_start': '2016-04-06T09:42:00',
+                        'vis_end': '2016-04-06T17:40:00',
                         'ra_midpoint': 3.3125083797952244,
                         'dec_midpoint': -0.16076987807708198,
                         'period' : None,
@@ -1968,6 +1974,8 @@ class TestScheduleCheck(TestCase):
         expected_resp1['period'] = data['period']
         expected_resp1['start_time'] = datetime(2016, 4, 5, 4, 22, 0).isoformat()
         expected_resp1['end_time'] = datetime(2016, 4, 7, 23, 0, 0).isoformat()
+        expected_resp1['vis_start'] = datetime(2016, 4, 5, 4, 22, 0).isoformat()
+        expected_resp1['vis_end'] = datetime(2016, 4, 7, 23, 0, 0).isoformat()
         expected_resp1['num_times'] = 16
         expected_resp1['total_time'] = 5.333333333333333
         expected_resp1['target_name'] = self.body_mp.name
@@ -2002,6 +2010,8 @@ class TestScheduleCheck(TestCase):
         expected_resp1['period'] = data['period']
         expected_resp1['start_time'] = datetime(2016, 4, 5, 4, 22, 0).isoformat()
         expected_resp1['end_time'] = datetime(2016, 4, 7, 23, 0, 0).isoformat()
+        expected_resp1['vis_start'] = datetime(2016, 4, 5, 4, 22, 0).isoformat()
+        expected_resp1['vis_end'] = datetime(2016, 4, 7, 23, 0, 0).isoformat()
         expected_resp1['num_times'] = 16
         expected_resp1['total_time'] = 5.333333333333333
         expected_resp1['target_name'] = self.body_mp.name
@@ -2032,6 +2042,8 @@ class TestScheduleCheck(TestCase):
         expected_resp1['utc_date'] = data['utc_date'].isoformat()
         expected_resp1['start_time'] = datetime(2016, 4, 5, 4, 22, 0).isoformat()
         expected_resp1['end_time'] = datetime(2016, 4, 7, 23, 0, 0).isoformat()
+        expected_resp1['vis_start'] = datetime(2016, 4, 5, 4, 22, 0).isoformat()
+        expected_resp1['vis_end'] = datetime(2016, 4, 7, 23, 0, 0).isoformat()
         expected_resp1['jitter'] = data['jitter']
         expected_resp1['period'] = data['period']
         expected_resp1['num_times'] = 16
@@ -2111,6 +2123,8 @@ class TestScheduleCheck(TestCase):
                         'target_name': self.body_mp.current_name(),
                         'start_time' : '2016-04-21T02:30:00',
                         'end_time'   : '2016-04-21T08:06:00',
+                        'vis_start' : '2016-04-21T02:30:00',
+                        'vis_end'   : '2016-04-21T08:06:00',
                         'exp_count'  : 7,
                         'exp_length' : 165,
                         'mid_time': '2016-04-21T05:18:00',
@@ -2140,6 +2154,8 @@ class TestScheduleCheck(TestCase):
                         'target_name': self.body_mp.current_name(),
                         'start_time' : '2015-04-21T09:22:00',
                         'end_time'   : '2015-04-21T11:08:00',
+                        'vis_start' : '2015-04-21T09:22:00',
+                        'vis_end'   : '2015-04-21T11:08:00',
                         'exp_count'  : 6,
                         'exp_length' : 165,
                         'mid_time': '2015-04-21T10:15:00',
@@ -2169,7 +2185,8 @@ class TestScheduleCheck(TestCase):
                         'start_time' : '2016-09-30T19:28:00',
                         'end_time'   : '2016-09-30T23:59:59',
                         'mid_time': '2016-09-30T21:43:59.500000',
-
+                        'vis_start' : '2016-09-30T19:28:00',
+                        'vis_end'   : '2016-09-30T23:59:59',
                         }
         resp = schedule_check(data, body)
 #        self.assertEqual(expected_resp, resp)

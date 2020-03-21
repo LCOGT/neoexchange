@@ -1161,10 +1161,9 @@ def schedule_check(data, body, ok_to_schedule=True):
                 set_time = rise_time
             mid_dark_up_time = rise_time + (set_time - rise_time) / 2
         else:
-            mid_dark_up_time = rise_time = set_time = dark_midpoint
+            mid_dark_up_time = rise_time = set_time = up_time = down_time = dark_midpoint
     else:
-        mid_dark_up_time = rise_time = set_time = dark_midpoint
-
+        mid_dark_up_time = rise_time = set_time = up_time = down_time = dark_midpoint
     if max_alt is not None:
         max_alt_airmass = S.sla_airmas((pi/2.0)-radians(max_alt))
     else:
@@ -1177,8 +1176,7 @@ def schedule_check(data, body, ok_to_schedule=True):
     solar_analog_params = {}
     solar_analog_exptime = 60
     if type(body) == Body:
-        emp = compute_ephem(mid_dark_up_time, body_elements, data['site_code'],
-            dbg=False, perturb=False, display=False)
+        emp = compute_ephem(mid_dark_up_time, body_elements, data['site_code'], dbg=False, perturb=False, display=False)
         if emp == {}:
             emp['date'] = mid_dark_up_time
             emp['ra'] = -99
@@ -1256,7 +1254,7 @@ def schedule_check(data, body, ok_to_schedule=True):
     if spectroscopy:
         snr_params = {'airmass': max_alt_airmass,
                       'slit_width': float(filter_pattern[5:8])*u.arcsec,
-                      'moon_phase' : moon_phase_code
+                      'moon_phase': moon_phase_code
                       }
         new_mag, new_passband, snr, saturated = calc_asteroid_snr(magnitude, 'V', data['exp_length'], instrument=data['instrument_code'], params=snr_params)
         exp_count = data['exp_count']
@@ -1364,36 +1362,38 @@ def schedule_check(data, body, ok_to_schedule=True):
         'start_time': rise_time.isoformat(),
         'end_time': set_time.isoformat(),
         'mid_time': mid_dark_up_time.isoformat(),
+        'vis_start': up_time.isoformat(),
+        'vis_end': down_time.isoformat(),
         'ra_midpoint': ra,
         'dec_midpoint': dec,
-        'period' : period,
-        'jitter' : jitter,
-        'bin_mode' : bin_mode,
-        'snr' : snr,
-        'saturated' : saturated,
-        'spectroscopy' : spectroscopy,
-        'calibs' : data.get('calibs', ''),
-        'instrument_code' : data['instrument_code'],
-        'lco_site' : lco_site_code[0:3],
-        'lco_tel' : lco_site_code[-4:-1],
-        'lco_enc' : lco_site_code[4:8],
-        'max_alt' : max_alt,
-        'max_alt_airmass' : max_alt_airmass,
-        'vis_time' : dark_and_up_time,
-        'moon_alt' : moon_alt,
-        'moon_sep' : moon_obj_sep,
-        'moon_phase' : moon_phase * 100,
-        'min_lunar_dist' : min_lunar_dist,
+        'period': period,
+        'jitter': jitter,
+        'bin_mode': bin_mode,
+        'snr': snr,
+        'saturated': saturated,
+        'spectroscopy': spectroscopy,
+        'calibs': data.get('calibs', ''),
+        'instrument_code': data['instrument_code'],
+        'lco_site': lco_site_code[0:3],
+        'lco_tel': lco_site_code[-4:-1],
+        'lco_enc': lco_site_code[4:8],
+        'max_alt': max_alt,
+        'max_alt_airmass': max_alt_airmass,
+        'vis_time': dark_and_up_time,
+        'moon_alt': moon_alt,
+        'moon_sep': moon_obj_sep,
+        'moon_phase': moon_phase * 100,
+        'min_lunar_dist': min_lunar_dist,
         'max_airmass': max_airmass,
         'ipp_value': ipp_value,
         'ag_exp_time': ag_exp_time,
         'acceptability_threshold': acceptability_threshold,
-        'trail_len' : trail_len,
-        'typical_seeing' : typical_seeing,
-        'solar_analog' : solar_analog,
-        'calibsource' : solar_analog_params,
-        'calibsource_id' : solar_analog_id,
-        'calibsource_exptime' : solar_analog_exptime,
+        'trail_len': trail_len,
+        'typical_seeing': typical_seeing,
+        'solar_analog': solar_analog,
+        'calibsource': solar_analog_params,
+        'calibsource_id': solar_analog_id,
+        'calibsource_exptime': solar_analog_exptime,
     }
 
     if period and jitter:
