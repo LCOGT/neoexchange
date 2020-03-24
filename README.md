@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.2.9
+Add ability to cancel observations.
+
 ### 3.2.8
 * Add 2x2 binning & central chip section mode suppport (for faster readout on speedy rocks).
 * Fix table parsing of Arecibo targets.
