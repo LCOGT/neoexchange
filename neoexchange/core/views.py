@@ -336,12 +336,14 @@ class BlockCancel(View):
         url = f'https://observe.lco.global/api/requestgroups/{bk.tracking_number}/cancel/'
         resp = lco_api_call(url, method='post')
         if 'Not Found' in resp.get('detail',''):
-            messages.warning(request, 'Block not found')
+            messages.warning(request, 'SuperBlock not found')
         else:
             if resp['state'] == 'CANCELED':
-                messages.success(request, f'Block {bk.id} cancelled')
                 bk.active = False
                 bk.save()
+                # Cancel all sub-Blocks
+                num_canceled = Blocks.objects.filter(superblock=bk, active=True).update(active=False)
+                messages.success(request, f'SuperBlock {bk.id} and {num_canceled} Blocks cancelled')
         return HttpResponseRedirect(reverse('block-view', kwargs={'pk': kwargs['pk']}))
 
 class UploadReport(LoginRequiredMixin, FormView):
