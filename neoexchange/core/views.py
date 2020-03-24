@@ -342,7 +342,7 @@ class BlockCancel(View):
                 bk.active = False
                 bk.save()
                 # Cancel all sub-Blocks
-                num_canceled = Blocks.objects.filter(superblock=bk, active=True).update(active=False)
+                num_canceled = Block.objects.filter(superblock=bk, active=True).update(active=False)
                 messages.success(request, f'SuperBlock {bk.id} and {num_canceled} Blocks cancelled')
         return HttpResponseRedirect(reverse('block-view', kwargs={'pk': kwargs['pk']}))
 
