@@ -327,6 +327,22 @@ class BlockReportMPC(LoginRequiredMixin, View):
             messages.error(request, 'It was not possible to email report to MPC')
             return HttpResponseRedirect(reverse('block-report-mpc', kwargs={'pk': kwargs['pk']}))
 
+class BlockCancel(View):
+    def get(self, request, *args, **kwargs):
+        try:
+            bk = SuperBlock.objects.get(id=kwargs['pk'])
+        except Exception:
+            return Http404
+        url = f'https://observe.lco.global/api/requestgroups/{bk.tracking_number}/cancel/'
+        resp = lco_api_call(url, method='post')
+        if 'Not Found' in resp.get('detail',''):
+            messages.warning(request, 'Block not found')
+        else:
+            if resp['state'] == 'CANCELED':
+                messages.success(request, f'Block {bk.id} cancelled')
+                bk.active = False
+                bk.save()
+        return HttpResponseRedirect(reverse('block-view', kwargs={'pk': kwargs['pk']}))
 
 class UploadReport(LoginRequiredMixin, FormView):
     template_name = 'core/uploadreport.html'

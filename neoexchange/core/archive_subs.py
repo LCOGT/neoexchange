@@ -48,15 +48,16 @@ def archive_login(username=None, password=None):
     return get_lcogt_headers(archive_url, username, password)
 
 
-def lco_api_call(url):
+def lco_api_call(url, method='get'):
     if 'archive' in url:
         token = settings.ARCHIVE_TOKEN
     else:
         token = settings.PORTAL_TOKEN
     headers = {'Authorization': 'Token ' + token}
     data = None
+    methods = {'get':requests.get, 'post':requests.post}
     try:
-        resp = requests.get(url, headers=headers, timeout=60, verify=ssl_verify)
+        resp = methods[method](url, headers=headers, timeout=60, verify=ssl_verify)
         data = resp.json()
     except requests.exceptions.InvalidSchema as err:
         data = None
