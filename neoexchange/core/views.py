@@ -344,6 +344,8 @@ class BlockCancel(View):
                 # Cancel all sub-Blocks
                 num_canceled = Block.objects.filter(superblock=bk, active=True).update(active=False)
                 messages.success(request, f'SuperBlock {bk.id} and {num_canceled} Blocks cancelled')
+            else:
+                messages.warning(request, f'SuperBlock {bk.id} not cancelled')
         return HttpResponseRedirect(reverse('block-view', kwargs={'pk': kwargs['pk']}))
 
 class UploadReport(LoginRequiredMixin, FormView):
