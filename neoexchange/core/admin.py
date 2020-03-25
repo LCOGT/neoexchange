@@ -326,7 +326,7 @@ class ColorValuesAdmin(admin.ModelAdmin):
     search_fields = ('body__name', 'body__provisional_name')
     list_display = ('id', 'body_name', 'color_band', 'value', 'error', 'preferred', 'update_time')
     list_filter = ('color_band', 'preferred')
-    ordering = [ 'body__name', 'color_band', '-preferred']
+    ordering = ['body__name', 'color_band', '-preferred']
 
 
 admin.site.register(Proposal, ProposalAdmin)

@@ -9,9 +9,22 @@
   $(document).ready(function(){
     // Initially hide the advanced options
     $('#advanced_options').hide();
+    // Set window switch initial conditions
+    var ws = document.getElementById("id_edit_window");
+    if(ws.checked){
+        $('#data_window').hide();
+        $('#form_window').show();
+    } else {
+        $('#form_window').hide();
+        $('#data_window').show();
+    }
 
     $('a.mode-switch').click(function(event){
       $('.mode-container').toggle();
+    });
+
+    $('.window-switch').click(function(event){
+      $('.mode-window').toggle();
     });
 
   });
@@ -253,12 +266,14 @@
                         {% endif %}
                     </tr>
                     {% endif %}
-                    {% if data.vis_start not in data.start_time or data.vis_end not in data.end_time %}
-                            <tr id="id_window_error2_row">
-                               <td colspan="2" style="text-align: center">
-                                   <span class="warning  msgpadded">Target Visible From {{data.vis_start}} -> {{data.vis_end}}</span>
-                               </td>
-                            </tr>
+                    {% if data.lco_site != 'XXX' %}
+                        {% if data.vis_start not in data.start_time or data.vis_end not in data.end_time %}
+                                <tr id="id_window_error2_row">
+                                   <td colspan="2" style="text-align: center">
+                                       <span class="warning  msgpadded">Target Visible From {{data.vis_start}} -> {{data.vis_end}}</span>
+                                   </td>
+                                </tr>
+                        {% endif %}
                     {% endif %}
                     <tr id="id_window_row">
                         {% if data.num_times is not None and data.num_times < 2 %}
@@ -268,9 +283,16 @@
                                 <br>You cannot fit multiple observations within this observing window. Consider increasing window, decreasing period, or using single observation. <br>
                                 </span></div></td></tr></table></td>
                         {% else %}
-                            <td class="kv-key">Window (UTC)</td>
+                            <td class="kv-key">Window (UTC)
+                                <div class="compact-field">
+                                    {{ form.edit_window }}<label for="id_edit_window">(Edit)</label>
+                                </div>
+                            </td>
                         {% endif %}
-                        <td class="kv-value">{{ form.start_time }} -> {{ form.end_time }}</td>
+                        <td class="kv-value">
+                            <div id="data_window" class="mode-window">{{ data.start_time }} -> {{ data.end_time }}</div>
+                            <div id="form_window" class="mode-window">{{ form.start_time }} -> {{ form.end_time }}</div>
+                        </td>
                     </tr>
                     {% if data.jitter is not None%}
                     <tr id="id_jitter_row">

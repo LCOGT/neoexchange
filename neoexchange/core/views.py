@@ -1109,7 +1109,7 @@ def schedule_check(data, body, ok_to_schedule=True):
             too_mode = False
 
     # if start/stop times already established, use those
-    if data.get('start_time') and data.get('end_time'):
+    if data.get('start_time') and data.get('end_time') and data.get('edit_window', False):
         dark_start = data.get('start_time')
         dark_end = data.get('end_time')
     else:
@@ -1354,7 +1354,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'exp_count': exp_count,
         'exp_length': exp_length,
         'schedule_ok': ok_to_schedule,
-        'too_mode' : too_mode,
+        'too_mode': too_mode,
         'site_code': data['site_code'],
         'proposal_code': data['proposal_code'],
         'group_name': group_name,
@@ -1364,6 +1364,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'mid_time': mid_dark_up_time.isoformat(),
         'vis_start': up_time.isoformat(),
         'vis_end': down_time.isoformat(),
+        'edit_window': data.get('edit_window', False),
         'ra_midpoint': ra,
         'dec_midpoint': dec,
         'period': period,
@@ -1489,16 +1490,16 @@ def schedule_submit(data, body, username):
               'start_time': data['start_time'],
               'end_time': data['end_time'],
               'group_name': data['group_name'],
-              'too_mode' : data.get('too_mode', False),
-              'spectroscopy' : data.get('spectroscopy', False),
-              'calibs' : data.get('calibs', ''),
-              'instrument_code' : data['instrument_code'],
-              'solar_analog' : data.get('solar_analog', False),
-              'calibsource' : calibsource_params,
-              'max_airmass' : data.get('max_airmass', 1.74),
-              'ipp_value' : data.get('ipp_value', 1),
-              'min_lunar_distance' : data.get('min_lunar_dist', 30),
-              'acceptability_threshold' : data.get('acceptability_threshold', 90),
+              'too_mode': data.get('too_mode', False),
+              'spectroscopy': data.get('spectroscopy', False),
+              'calibs': data.get('calibs', ''),
+              'instrument_code': data['instrument_code'],
+              'solar_analog': data.get('solar_analog', False),
+              'calibsource': calibsource_params,
+              'max_airmass': data.get('max_airmass', 1.74),
+              'ipp_value': data.get('ipp_value', 1),
+              'min_lunar_distance': data.get('min_lunar_dist', 30),
+              'acceptability_threshold': data.get('acceptability_threshold', 90),
               'ag_exp_time': data.get('ag_exp_time', 10)
               }
     if data['period'] or data['jitter']:
@@ -1817,17 +1818,17 @@ def record_block(tracking_number, params, form_data, target):
             cadence = True
         proposal = Proposal.objects.get(code=form_data['proposal_code'])
         sblock_kwargs = {
-                         'proposal' : proposal,
-                         'groupid'  : form_data['group_name'],
-                         'block_start' : form_data['start_time'],
-                         'block_end'   : form_data['end_time'],
-                         'tracking_number' : tracking_number,
-                         'cadence'  : cadence,
-                         'period'   : params.get('period', None),
-                         'jitter'   : params.get('jitter', None),
-                         'timeused' : params.get('block_duration', None),
-                         'rapid_response' : params.get('too_mode', False),
-                         'active'   : True,
+                         'proposal': proposal,
+                         'groupid': form_data['group_name'],
+                         'block_start': form_data['start_time'],
+                         'block_end': form_data['end_time'],
+                         'tracking_number': tracking_number,
+                         'cadence': cadence,
+                         'period': params.get('period', None),
+                         'jitter': params.get('jitter', None),
+                         'timeused': params.get('block_duration', None),
+                         'rapid_response': params.get('too_mode', False),
+                         'active': True,
                        }
         if isinstance(target, StaticSource):
             sblock_kwargs['calibsource'] = target
