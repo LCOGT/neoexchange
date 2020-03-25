@@ -98,10 +98,10 @@ class Command(BaseCommand):
                             else:
                                 all_frames[red_lvl] = catalogs[red_lvl]
                 for red_lvl in all_frames.keys():
-                    self.stdout.write("Found %d frames for reduction level: %s" % ( len(all_frames[red_lvl]), red_lvl))
+                    self.stdout.write("Found %d frames for reduction level: %s" % (len(all_frames[red_lvl]), red_lvl))
                 out_path = options['datadir']
                 dl_frames = download_files(all_frames, out_path, verbose)
-                self.stdout.write("Downloaded %d frames" % ( len(dl_frames)))
+                self.stdout.write("Downloaded %d frames" % (len(dl_frames)))
                 # Create postage stamp movie for non_spectra images
                 block_lists = {}
                 save_paths = {}
@@ -116,7 +116,7 @@ class Command(BaseCommand):
                     movie_file = search(save_paths[rn].replace(out_path, "").lstrip("/"), '.*{}_framemovie.gif'.format(rn), latest=True)
                     if not movie_file:
                         self.stdout.write("No frame movie found for request number: {}".format(rn))
-                        movie_file = make_gif(block_lists[rn], init_fr=100, center=.01, out_path=out_path)
+                        movie_file = make_gif(block_lists[rn], init_fr=100, center=3, out_path=out_path)
                         self.stdout.write("New gif created: {}".format(movie_file))
 
                 # unpack tarballs and make movie.
