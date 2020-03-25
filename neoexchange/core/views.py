@@ -1114,7 +1114,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         dark_end = data.get('end_time')
     else:
         # Otherwise, calculate night based on site and date.
-        dark_start, dark_end = determine_darkness_times(data['site_code'], data.get('utc_date', datetime.utcnow().date))
+        dark_start, dark_end = determine_darkness_times(data['site_code'], data.get('utc_date', datetime.utcnow().date()))
         if dark_end <= datetime.utcnow():
             # If night has already ended, use next night instead
             dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'] + timedelta(days=1))

@@ -1244,20 +1244,21 @@ class TestScheduleCheck(TestCase):
                             'mid_time': '2016-04-06T13:41:00',
                             'vis_start': '2016-04-06T10:10:00',
                             'vis_end': '2016-04-06T17:12:00',
+                            'edit_window': False,
                             'ra_midpoint': 3.3125083790342504,
                             'dec_midpoint': -0.16076987814455768,
-                            'period' : None,
-                            'jitter' : None,
-                            'instrument_code' : '',
+                            'period': None,
+                            'jitter': None,
+                            'instrument_code': '',
                             'saturated': None,
-                            'snr' : None,
+                            'snr': None,
                             'too_mode': False,
-                            'calibs' : '',
-                            'spectroscopy' : False,
-                            'calibsource' : {},
-                            'calibsource_id' : -1,
-                            'calibsource_exptime' : 60,
-                            'solar_analog' : False,
+                            'calibs': '',
+                            'spectroscopy': False,
+                            'calibsource': {},
+                            'calibsource_id': -1,
+                            'calibsource_exptime': 60,
+                            'solar_analog': False,
                             'vis_time': 7.033333333333333,
                             'lco_enc': 'DOMA',
                             'lco_site': 'COJ',
@@ -1308,9 +1309,9 @@ class TestScheduleCheck(TestCase):
     def test_mp_good(self):
         MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
 
-        data = { 'site_code' : 'Q63',
-                 'utc_date' : date(2016, 4, 6),
-                 'proposal_code' : self.neo_proposal.code
+        data = { 'site_code': 'Q63',
+                 'utc_date': date(2016, 4, 6),
+                 'proposal_code': self.neo_proposal.code
                }
 
         expected_resp1 = self.expected_resp
@@ -1354,8 +1355,9 @@ class TestScheduleCheck(TestCase):
         data = {'site_code': 'Q63',
                 'utc_date': date(2016, 4, 6),
                 'proposal_code': self.neo_proposal.code,
-                'start_time' : datetime(2016, 4, 6, 15, 10, 0),
-                'end_time': datetime(2016, 4, 6, 17, 12, 0)
+                'start_time': datetime(2016, 4, 6, 15, 10, 0),
+                'end_time': datetime(2016, 4, 6, 17, 12, 0),
+                'edit_window': True
                 }
 
         expected_resp1 = self.expected_resp
@@ -1383,8 +1385,9 @@ class TestScheduleCheck(TestCase):
         data = {'site_code': 'Q63',
                 'utc_date': date(2016, 4, 6),
                 'proposal_code': self.neo_proposal.code,
-                'start_time' : datetime(2016, 4, 6, 5, 10, 0),
-                'end_time': datetime(2016, 4, 6, 17, 12, 0)
+                'start_time': datetime(2016, 4, 6, 5, 10, 0),
+                'end_time': datetime(2016, 4, 6, 17, 12, 0),
+                'edit_window': True
                 }
 
         expected_resp1 = self.expected_resp
@@ -1410,8 +1413,9 @@ class TestScheduleCheck(TestCase):
         data = {'site_code': 'Q63',
                 'utc_date': date(2016, 4, 6),
                 'proposal_code': self.neo_proposal.code,
-                'start_time' : datetime(2016, 4, 7, 5, 10, 0),
-                'end_time': datetime(2016, 4, 6, 17, 12, 0)
+                'start_time': datetime(2016, 4, 7, 5, 10, 0),
+                'end_time': datetime(2016, 4, 6, 17, 12, 0),
+                'edit_window': True
                 }
 
         expected_resp1 = self.expected_resp
@@ -1440,8 +1444,9 @@ class TestScheduleCheck(TestCase):
         data = {'site_code': 'Q63',
                 'utc_date': date(2016, 4, 6),
                 'proposal_code': self.neo_proposal.code,
-                'start_time' : datetime(2016, 4, 6, 10, 10, 0),
-                'end_time': datetime(2016, 4, 8, 17, 12, 0)
+                'start_time': datetime(2016, 4, 6, 10, 10, 0),
+                'end_time': datetime(2016, 4, 8, 17, 12, 0),
+                'edit_window': True
                 }
 
         expected_resp1 = self.expected_resp
@@ -1467,8 +1472,9 @@ class TestScheduleCheck(TestCase):
         data = {'site_code': 'Q63',
                 'utc_date': date(2016, 4, 6),
                 'proposal_code': self.neo_proposal.code,
-                'start_time' : datetime(2016, 4, 6, 10, 10, 0),
-                'end_time': datetime(2016, 4, 6, 12, 10, 0)
+                'start_time': datetime(2016, 4, 6, 10, 10, 0),
+                'end_time': datetime(2016, 4, 6, 12, 10, 0),
+                'edit_window': True
                 }
 
         expected_resp1 = self.expected_resp
@@ -1496,8 +1502,9 @@ class TestScheduleCheck(TestCase):
         data = {'site_code': 'Q63',
                 'utc_date': date(2016, 4, 6),
                 'proposal_code': self.neo_proposal.code,
-                'start_time' : datetime(2016, 4, 6, 10, 10, 0),
-                'end_time': datetime(2016, 4, 2, 12, 10, 0)
+                'start_time': datetime(2016, 4, 6, 10, 10, 0),
+                'end_time': datetime(2016, 4, 2, 12, 10, 0),
+                'edit_window': True
                 }
 
         expected_resp1 = self.expected_resp
@@ -1551,8 +1558,9 @@ class TestScheduleCheck(TestCase):
         data = {'site_code': '1M0',
                 'utc_date': date(2016, 4, 6),
                 'proposal_code': self.neo_proposal.code,
-                'start_time' : datetime(2016, 4, 6, 10, 0, 0),
-                'end_time': datetime(2016, 4, 7, 0, 0, 0)
+                'start_time': datetime(2016, 4, 6, 10, 0, 0),
+                'end_time': datetime(2016, 4, 7, 0, 0, 0),
+                'edit_window': True
                 }
 
         expected_resp1 = self.expected_resp
@@ -1581,8 +1589,9 @@ class TestScheduleCheck(TestCase):
         data = {'site_code': '1M0',
                 'utc_date': date(2016, 4, 6),
                 'proposal_code': self.neo_proposal.code,
-                'start_time' : datetime(2016, 4, 18, 0, 0, 0),
-                'end_time': datetime(2016, 4, 7, 0, 0, 0)
+                'start_time': datetime(2016, 4, 18, 0, 0, 0),
+                'end_time': datetime(2016, 4, 7, 0, 0, 0),
+                'edit_window': True
                 }
 
         expected_resp1 = self.expected_resp
@@ -1612,7 +1621,8 @@ class TestScheduleCheck(TestCase):
                 'utc_date': date(2016, 4, 6),
                 'proposal_code': self.neo_proposal.code,
                 'start_time' : datetime(2016, 4, 6, 0, 0, 0),
-                'end_time': datetime(2016, 4, 17, 0, 0, 0)
+                'end_time': datetime(2016, 4, 17, 0, 0, 0),
+                'edit_window': True
                 }
 
         expected_resp1 = self.expected_resp
@@ -1641,8 +1651,9 @@ class TestScheduleCheck(TestCase):
         data = {'site_code': '1M0',
                 'utc_date': date(2016, 4, 6),
                 'proposal_code': self.neo_proposal.code,
-                'start_time' : datetime(2016, 4, 6, 0, 0, 0),
-                'end_time': datetime(2016, 4, 2, 0, 0, 0)
+                'start_time': datetime(2016, 4, 6, 0, 0, 0),
+                'end_time': datetime(2016, 4, 2, 0, 0, 0),
+                'edit_window': True
                 }
 
         expected_resp1 = self.expected_resp
@@ -1700,8 +1711,9 @@ class TestScheduleCheck(TestCase):
                 'proposal_code': self.neo_proposal.code,
                 'period': 2,
                 'jitter': 2,
-                'start_time' : datetime(2016, 4, 6, 12, 0, 0),
-                'end_time': datetime(2016, 4, 8, 12, 0, 0)
+                'start_time': datetime(2016, 4, 6, 12, 0, 0),
+                'end_time': datetime(2016, 4, 8, 12, 0, 0),
+                'edit_window': True
                 }
 
         expected_resp1 = self.expected_resp
@@ -1732,8 +1744,9 @@ class TestScheduleCheck(TestCase):
                 'proposal_code': self.neo_proposal.code,
                 'period': 2,
                 'jitter': 2,
-                'start_time' : datetime(2016, 4, 6, 12, 0, 0),
-                'end_time': datetime(2016, 4, 6, 19, 0, 0)
+                'start_time': datetime(2016, 4, 6, 12, 0, 0),
+                'end_time': datetime(2016, 4, 6, 19, 0, 0),
+                'edit_window': True
                 }
 
         expected_resp1 = self.expected_resp
@@ -1837,6 +1850,7 @@ class TestScheduleCheck(TestCase):
                         'vis_start': '2016-04-06T09:42:00',
                         'vis_end': '2016-04-06T17:40:00',
                         'mid_time': '2016-04-06T13:41:00',
+                        'edit_window': False,
                         'ra_midpoint': 3.3125083797952244,
                         'dec_midpoint': -0.16076987807708198,
                         'period' : None,
@@ -1912,6 +1926,7 @@ class TestScheduleCheck(TestCase):
                         'mid_time': '2016-04-06T13:41:00',
                         'vis_start': '2016-04-06T09:42:00',
                         'vis_end': '2016-04-06T17:40:00',
+                        'edit_window': False,
                         'ra_midpoint': 3.3125083797952244,
                         'dec_midpoint': -0.16076987807708198,
                         'period' : None,
@@ -1956,13 +1971,14 @@ class TestScheduleCheck(TestCase):
         self.body_mp.name = '2009 HA'
         self.body_mp.save()
 
-        data = { 'site_code' : 'Q63',
-                 'utc_date' : date(2016, 4, 6),
-                 'proposal_code' : self.neo_proposal.code,
-                 'period' : 4.0,
-                 'jitter' : 1.0,
-                 'start_time' : datetime(2016, 4, 5, 4, 22, 0),
-                 'end_time' : datetime(2016, 4, 7, 23, 0, 0),
+        data = { 'site_code': 'Q63',
+                 'utc_date': date(2016, 4, 6),
+                 'proposal_code': self.neo_proposal.code,
+                 'period': 4.0,
+                 'jitter': 1.0,
+                 'start_time': datetime(2016, 4, 5, 4, 22, 0),
+                 'end_time': datetime(2016, 4, 7, 23, 0, 0),
+                 'edit_window': True
                }
 
         expected_resp1 = self.expected_resp
@@ -1976,6 +1992,7 @@ class TestScheduleCheck(TestCase):
         expected_resp1['end_time'] = datetime(2016, 4, 7, 23, 0, 0).isoformat()
         expected_resp1['vis_start'] = datetime(2016, 4, 5, 4, 22, 0).isoformat()
         expected_resp1['vis_end'] = datetime(2016, 4, 7, 23, 0, 0).isoformat()
+        expected_resp1['edit_window'] = True
         expected_resp1['num_times'] = 16
         expected_resp1['total_time'] = 5.333333333333333
         expected_resp1['target_name'] = self.body_mp.name
@@ -1992,13 +2009,14 @@ class TestScheduleCheck(TestCase):
         self.body_mp.name = '2009 HA'
         self.body_mp.save()
 
-        data = { 'site_code' : 'Q63',
-                 'utc_date' : date(2016, 4, 6),
-                 'proposal_code' : self.neo_proposal.code,
-                 'period' : 4.0,
-                 'jitter' : 0.1,
-                 'start_time' : datetime(2016, 4, 5, 4, 22, 0),
-                 'end_time' : datetime(2016, 4, 7, 23, 0, 0),
+        data = { 'site_code': 'Q63',
+                 'utc_date': date(2016, 4, 6),
+                 'proposal_code': self.neo_proposal.code,
+                 'period': 4.0,
+                 'jitter': 0.1,
+                 'start_time': datetime(2016, 4, 5, 4, 22, 0),
+                 'end_time': datetime(2016, 4, 7, 23, 0, 0),
+                 'edit_window': True
                }
 
         expected_resp1 = self.expected_resp
@@ -2012,6 +2030,7 @@ class TestScheduleCheck(TestCase):
         expected_resp1['end_time'] = datetime(2016, 4, 7, 23, 0, 0).isoformat()
         expected_resp1['vis_start'] = datetime(2016, 4, 5, 4, 22, 0).isoformat()
         expected_resp1['vis_end'] = datetime(2016, 4, 7, 23, 0, 0).isoformat()
+        expected_resp1['edit_window'] = True
         expected_resp1['num_times'] = 16
         expected_resp1['total_time'] = 5.333333333333333
         expected_resp1['target_name'] = self.body_mp.name
@@ -2026,13 +2045,14 @@ class TestScheduleCheck(TestCase):
     def test_mp_cadence_long_name(self):
         MockDateTime.change_datetime(2016, 4, 4, 2, 0, 0)
 
-        data = { 'site_code' : 'Q63',
-                 'utc_date' : date(2016, 4, 6),
-                 'proposal_code' : self.neo_proposal.code,
-                 'period' : 4.0,
-                 'jitter' : 1.0,
-                 'start_time' : datetime(2016, 4, 5, 4, 22, 0),
-                 'end_time' : datetime(2016, 4, 7, 23, 0, 0),
+        data = { 'site_code': 'Q63',
+                 'utc_date': date(2016, 4, 6),
+                 'proposal_code': self.neo_proposal.code,
+                 'period': 4.0,
+                 'jitter': 1.0,
+                 'start_time': datetime(2016, 4, 5, 4, 22, 0),
+                 'end_time': datetime(2016, 4, 7, 23, 0, 0),
+                 'edit_window': True
                }
 
         expected_resp1 = self.expected_resp
@@ -2042,6 +2062,7 @@ class TestScheduleCheck(TestCase):
         expected_resp1['utc_date'] = data['utc_date'].isoformat()
         expected_resp1['start_time'] = datetime(2016, 4, 5, 4, 22, 0).isoformat()
         expected_resp1['end_time'] = datetime(2016, 4, 7, 23, 0, 0).isoformat()
+        expected_resp1['edit_window'] = True
         expected_resp1['vis_start'] = datetime(2016, 4, 5, 4, 22, 0).isoformat()
         expected_resp1['vis_end'] = datetime(2016, 4, 7, 23, 0, 0).isoformat()
         expected_resp1['jitter'] = data['jitter']
