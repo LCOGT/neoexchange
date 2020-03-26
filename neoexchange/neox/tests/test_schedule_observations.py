@@ -701,6 +701,7 @@ class ScheduleObservations(FunctionalTest):
         airmass_box = self.browser.find_element_by_id('id_max_airmass')
         airmass_box.clear()
         airmass_box.send_keys('1.5')
+        self.browser.find_element_by_id("id_edit_window").click()
         start_time_box = self.browser.find_element_by_id('id_start_time')
         start_time_box.clear()
         start_time_box.send_keys('2020-03-10T00:53:00')

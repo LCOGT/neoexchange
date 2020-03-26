@@ -77,11 +77,9 @@ class ScheduleCadence(FunctionalTest):
         # Wait until response is recieved
         self.wait_for_element_with_id('page')
 
-
-# Monkey patch the datetime used by forms otherwise it fails with 'window in the past'
-# TAL: Need to patch the datetime in views also otherwise we will get the wrong
-# semester and window bounds.
-
+    # Monkey patch the datetime used by forms otherwise it fails with 'window in the past'
+    # TAL: Need to patch the datetime in views also otherwise we will get the wrong
+    # semester and window bounds.
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.forms.datetime', MockDateTime)
     @patch('core.views.datetime', MockDateTime)
@@ -311,6 +309,8 @@ class ScheduleCadence(FunctionalTest):
         periodbox.clear()
         periodbox.send_keys('0')
 
+        # He wants the cadence to end a few days later
+        self.browser.find_element_by_id("id_edit_window").click()
         datebox = self.get_item_input_box('id_end_time')
         datebox.clear()
         datebox.send_keys('2015-04-23 07:30:00')

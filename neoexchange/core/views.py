@@ -1109,7 +1109,7 @@ def schedule_check(data, body, ok_to_schedule=True):
             too_mode = False
 
     # if start/stop times already established, use those
-    if data.get('start_time') and data.get('end_time') and data.get('edit_window', False):
+    if data.get('start_time') and data.get('end_time') and (data.get('edit_window', False) or period is not None):
         dark_start = data.get('start_time')
         dark_end = data.get('end_time')
     else:
