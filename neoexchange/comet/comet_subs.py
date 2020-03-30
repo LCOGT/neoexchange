@@ -300,12 +300,25 @@ def fetch_ps1_field(cat_center, radius=0.5, max_records=50001, db_name='cat.db')
     ps1 = cvc.PanSTARRS1(db_name)
     ps1.max_records = max_records
 
+    snr = 2.0
+    err_threshold = 1.086/snr
+    num_single_epochs = 6
     params = {'ra' : cat_center.ra.deg, 'dec' : cat_center.dec.deg,
               'radius' : radius, 'pagesize' : ps1.max_records,
               'sort_by' : 'ndetections.desc',
               'ndetections.gt' : 1,
+              # Additional filters from ZTF pipeline for calibration stars
+              # http://web.ipac.caltech.edu/staff/fmasci/ztf/ztf_pipelines_deliverables.pdf (page 32)
+              'gmeanpsfmagerr.lt' : err_threshold,
+              'rmeanpsfmagerr.lt' : err_threshold,
+              'imeanpsfmagerr.lt' : err_threshold,
+              'zmeanpsfmagerr.lt' : err_threshold,
+              'gmeanpsfmagnpt.gte' : num_single_epochs,
+              'rmeanpsfmagnpt.gte' : num_single_epochs,
+              'imeanpsfmagnpt.gte' : num_single_epochs,
+              'zmeanpsfmagnpt.gte' : num_single_epochs,
               'columns' : ','.join(ps1.table.columns)}
-    query_url = 'https://catalogs.mast.stsci.edu/api/v0.1/panstarrs/dr1/mean.votable'
+    query_url = 'https://catalogs.mast.stsci.edu/api/v0.1/panstarrs/dr2/mean.votable'
     q = requests.get(query_url,
                          params=params)
     with io.BytesIO(q.text.encode()) as xml:
