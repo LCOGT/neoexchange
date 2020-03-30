@@ -4,6 +4,7 @@ import os
 from glob import glob
 from math import atan2, degrees
 from sys import path, exit
+from datetime import datetime, timedelta
 import requests
 import io
 import logging
@@ -277,7 +278,11 @@ def calibrate_catalog(catfile, cat_center, trim_limits, table_format='ascii.sext
     else:
         logger.info("Fetching PS1 catalog around {} with radius {} deg".format(cat_center.to_string('decimal'), radius))
         ps1 = fetch_ps1_field(cat_center, radius)
-    results = ps1.xmatch(lco_cut_coords)
+    if ps1 is not None:
+        results = ps1.xmatch(lco_cut_coords)
+    else:
+        results = None
+        logger.warning("Unable to retrieve PS1 catalog")
     if results is not None:
         objids, distances = results
         r_inst = -2.5 * np.log10(lco_cut[flux_column])
