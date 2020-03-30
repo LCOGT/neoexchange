@@ -300,12 +300,13 @@ def fetch_ps1_field(cat_center, radius=0.5, max_records=50001, db_name='cat.db')
     ps1 = cvc.PanSTARRS1(db_name)
     ps1.max_records = max_records
 
-    params = dict(RA=cat_center.ra.deg, DEC=cat_center.dec.deg,
-                      SR=radius, max_records=ps1.max_records,
-                      ordercolumn1='ndetections',
-                      descending1='on',
-                      selectedColumnsCsv=','.join(ps1.table.columns))
-    q = requests.get('https://archive.stsci.edu/panstarrs/search.php',
+    params = {'ra' : cat_center.ra.deg, 'dec' : cat_center.dec.deg,
+              'radius' : radius, 'pagesize' : ps1.max_records,
+              'sort_by' : 'ndetections.desc',
+              'ndetections.gt' : 1,
+              'columns' : ','.join(ps1.table.columns)}
+    query_url = 'https://catalogs.mast.stsci.edu/api/v0.1/panstarrs/dr1/mean.votable'
+    q = requests.get(query_url,
                          params=params)
     with io.BytesIO(q.text.encode()) as xml:
         try:
