@@ -97,7 +97,7 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
             query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'rmag', 'e_rmag'])
         else:
             query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
-        query_service.VIZIER_SERVER ='vizier.hia.nrc.ca' #  'vizier.cfa.harvard.edu' #
+        query_service.VIZIER_SERVER = 'vizier.hia.nrc.ca' #  'vizier.cfa.harvard.edu'  #
         query_service.TIMEOUT = 60
         try:
             result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
@@ -1437,6 +1437,7 @@ def sanitize_object_name(object_name):
         clean_object_name = clean_object_name.replace('+', '').replace('-', '_')
 
     return clean_object_name
+
 
 def make_object_directory(filepath, object_name, block_id):
 

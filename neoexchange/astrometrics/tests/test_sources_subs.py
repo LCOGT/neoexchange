@@ -5747,6 +5747,29 @@ class TestFetchJPLPhysParams(TestCase):
         self.assertEqual(obj_ex[0].value, '2019 HG2')
         self.assertEqual(obj_ex[0].desig_type, 'P')
 
+    def test_parse_jpl_comet_names(self):
+        comet_list = [{'fullname': 'C/2019 Q4 (Borisov)', 'des': '2019 Q4', 'prefix': 'C'},
+                      {'fullname': 'P/2019 B2 (Groeller)', 'des': '2019 B2', 'prefix': 'P'},
+                      {'fullname': '289P/Blanpain', 'des': '289P', 'prefix': 'P'},
+                      {'fullname': '329P/LINEAR-Catalina', 'des': '329P', 'prefix': 'P'},
+                      {'fullname': '393P/Spacewatch-Hill', 'des': '393P', 'prefix': 'P'},
+                      {'fullname': '389P/Siding Spring', 'des': '389P', 'prefix': 'P'},
+                      {'fullname': "'Oumuamua (A/2017 U1)", 'des': '2017 U1', 'prefix': 'A'}]
+
+        comet_expected_dict = [[{'value': None, 'desig_type': '#'}, {'value': 'Borisov', 'desig_type': 'N'}, {'value': 'C/2019 Q4', 'desig_type': 'P'}],
+                               [{'value': None, 'desig_type': '#'}, {'value': 'Groeller', 'desig_type': 'N'}, {'value': 'P/2019 B2', 'desig_type': 'P'}],
+                               [{'value': '289P', 'desig_type': '#'}, {'value': 'Blanpain', 'desig_type': 'N'}, {'value': None, 'desig_type': 'P'}],
+                               [{'value': '329P', 'desig_type': '#'}, {'value': 'LINEAR-Catalina', 'desig_type': 'N'}, {'value': None, 'desig_type': 'P'}],
+                               [{'value': '393P', 'desig_type': '#'}, {'value': 'Spacewatch-Hill', 'desig_type': 'N'}, {'value': None, 'desig_type': 'P'}],
+                               [{'value': '389P', 'desig_type': '#'}, {'value': 'Siding Spring', 'desig_type': 'N'}, {'value': None, 'desig_type': 'P'}],
+                               [{'value': None, 'desig_type': '#'}, {'value': "'Oumuamua", 'desig_type': 'N'}, {'value': 'A/2017 U1', 'desig_type': 'P'}]
+                               ]
+        for i, comet in enumerate(comet_list):
+            out_dicts = parse_jpl_fullname(comet)
+            for designation in comet_expected_dict[i]:
+                designation['preferred'] = True
+            self.assertEqual(out_dicts, comet_expected_dict[i])
+
     def test_store_stuff_sourcetypes(self):
         """Test the storage of sourcetypes."""
         bodies = Body.objects.all()
