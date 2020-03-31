@@ -867,7 +867,7 @@ class ScheduleParametersCadence(LoginRequiredMixin, LookUpBodyMixin, FormView):
     def form_valid(self, form, request):
         data = schedule_check(form.cleaned_data, self.body, self.ok_to_schedule)
         new_form = ScheduleBlockForm(data)
-        return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.body, 'cadence':True})
+        return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.body, 'cadence': True})
 
 
 class ScheduleParametersSpectra(LoginRequiredMixin, LookUpBodyMixin, FormView):
@@ -965,8 +965,7 @@ class ScheduleCalibSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
         if form.is_valid():
             return self.form_valid(form, request)
         else:
-            print(form)
-            return self.form_invalid(form)
+            return self.form_invalid(form, request)
 
     def form_valid(self, form, request):
         if 'edit' in request.POST:
@@ -995,6 +994,12 @@ class ScheduleCalibSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
                 messages.warning(self.request, msg)
             return super(ScheduleCalibSubmit, self).form_valid(form)
 
+    def form_invalid(self, form, request):
+        # Recalculate the parameters using new form data
+        data = schedule_check(form.cleaned_data, self.object)
+        new_form = ScheduleBlockForm(data)
+        return render(request, 'core/calib_schedule_confirm.html', {'form': new_form, 'data': data, 'calibrator': self.object})
+
     def get_success_url(self):
         return reverse('home')
 
@@ -1014,7 +1019,7 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
         if form.is_valid():
             return self.form_valid(form, request)
         else:
-            return self.form_invalid(form)
+            return self.form_invalid(form, request)
 
     def form_valid(self, form, request):
         # Recalculate the parameters using new form data
@@ -1042,6 +1047,12 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
                 messages.warning(self.request, msg)
             return super(ScheduleSubmit, self).form_valid(new_form)
 
+    def form_invalid(self, form, request):
+        # Recalculate the parameters using new form data
+        data = schedule_check(form.cleaned_data, self.object)
+        new_form = ScheduleBlockForm(data)
+        return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.object})
+
     def get_success_url(self):
         if self.success:
             return reverse('home')
@@ -1068,11 +1079,16 @@ def parse_portal_errors(sched_params):
                         msg += "\n".join(errors[key])
     return msg
 
+
 def schedule_check(data, body, ok_to_schedule=True):
 
     spectroscopy = data.get('spectroscopy', False)
     solar_analog = data.get('solar_analog', False)
     body_elements = model_to_dict(body)
+
+    # Get period and jitter for cadence
+    period = data.get('period', None)
+    jitter = data.get('jitter', None)
 
     if spectroscopy:
         data['site_code'] = data['instrument_code'][0:3]
@@ -1092,36 +1108,77 @@ def schedule_check(data, body, ok_to_schedule=True):
             logger.warning("ToO/TC observations not possible with this proposal")
             too_mode = False
 
-    if data.get('start_time') and data.get('end_time'):
+    # if start/stop times already established, use those
+    if data.get('start_time') and data.get('end_time') and (data.get('edit_window', False) or period is not None):
         dark_start = data.get('start_time')
         dark_end = data.get('end_time')
-        utc_date = data.get('utc_date', dark_start.date())
     else:
-        dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'])
-        utc_date = data['utc_date']
+        # Otherwise, calculate night based on site and date.
+        dark_start, dark_end = determine_darkness_times(data['site_code'], data.get('utc_date', datetime.utcnow().date()))
         if dark_end <= datetime.utcnow():
+            # If night has already ended, use next night instead
             dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'] + timedelta(days=1))
-            utc_date = data['utc_date'] + timedelta(days=1)
-    # Determine the semester boundaries for the current time and truncate the dark time and
-    # therefore the windows appropriately.
+    dark_midpoint = dark_start + (dark_end - dark_start) / 2
+    utc_date = data.get('utc_date', dark_midpoint.date())
+    # Get semester boundaries for "current" semester
     semester_date = max(datetime.utcnow(), datetime.combine(utc_date, datetime.min.time()))
     semester_start, semester_end = get_semester_dates(semester_date)
-    if dark_start.day != dark_end.day and semester_start < dark_start:
-        semester_date = max(datetime.utcnow(), datetime.combine(utc_date, datetime.min.time()) - timedelta(days=1))
-        semester_start, semester_end = get_semester_dates(semester_date)
-    dark_start = max(dark_start, semester_start)
-    dark_end = min(dark_end, semester_end)
 
-    dark_midpoint = dark_start + (dark_end - dark_start) / 2
+    # Get maximum airmass
+    max_airmass = data.get('max_airmass', 1.74)
+    alt_limit = get_alt_from_airmass(max_airmass)
+
+    # calculate visibility
+    # Determine the semester boundaries for the current time and truncate the visibility time and
+    # therefore the windows appropriately.
+    dark_and_up_time, max_alt, rise_time, set_time = get_visibility(None, None, utc_date, data['site_code'], '2 m', alt_limit, False, body_elements)
+    if (data['site_code'] in ['1M0', '2M0', '0M4']) or (period is not None and dark_end - dark_start >= timedelta(days=1)):
+        # If using generic telescope or cadence lasting more than 1 day ignore object visibility
+        rise_time = dark_start
+        set_time = dark_end
+    if rise_time and set_time:
+        if set_time < dark_start > rise_time:
+            # If object sets before it gets dark, use next night instead
+            dark_and_up_time, max_alt, rise_time, set_time = get_visibility(None, None, utc_date+timedelta(days=1), data['site_code'], '2 m', alt_limit, False, body_elements)
+        if rise_time and set_time:
+            if rise_time.day != set_time.day and semester_start < rise_time:
+                # if observations cross UT day boundary, check semester boundaries.
+                semester_date = max(datetime.utcnow(), datetime.combine(utc_date, datetime.min.time()))
+                semester_start, semester_end = get_semester_dates(semester_date)
+            rise_time = up_time = max(rise_time, semester_start)
+            set_time = down_time = min(set_time, semester_end)
+            if rise_time < datetime.utcnow() and period is None:
+                # If start time would be in the past, set to now except for cadence.
+                rise_time = datetime.utcnow().replace(microsecond=0)
+            if down_time > dark_end > up_time:
+                # If object sets after morning, truncate to end of night
+                set_time = dark_end
+            if up_time < dark_start < down_time:
+                # if object rises before evening, truncate to start of night
+                rise_time = dark_start
+            if set_time < rise_time:
+                # object sets before it rises somehow, set window to 0.
+                set_time = rise_time
+            mid_dark_up_time = rise_time + (set_time - rise_time) / 2
+        else:
+            mid_dark_up_time = rise_time = set_time = up_time = down_time = dark_midpoint
+    else:
+        mid_dark_up_time = rise_time = set_time = up_time = down_time = dark_midpoint
+    if max_alt is not None:
+        max_alt_airmass = S.sla_airmas((pi/2.0)-radians(max_alt))
+    else:
+        max_alt_airmass = 13
+        dark_and_up_time = 0
+    if abs(mid_dark_up_time.date() - utc_date) > timedelta(days=1) or rise_time.date() > utc_date or set_time.date() < utc_date:
+        utc_date = mid_dark_up_time.date()
 
     solar_analog_id = -1
     solar_analog_params = {}
     solar_analog_exptime = 60
     if type(body) == Body:
-        emp = compute_ephem(dark_midpoint, body_elements, data['site_code'],
-            dbg=False, perturb=False, display=False)
+        emp = compute_ephem(mid_dark_up_time, body_elements, data['site_code'], dbg=False, perturb=False, display=False)
         if emp == {}:
-            emp['date'] = dark_midpoint
+            emp['date'] = mid_dark_up_time
             emp['ra'] = -99
             emp['dec'] = -99
             emp['mag'] = -99
@@ -1171,14 +1228,6 @@ def schedule_check(data, body, ok_to_schedule=True):
     # Pull out LCO Site, Telescope Class using site_config.py
     lco_site_code = next(key for key, value in cfg.valid_site_codes.items() if value == data['site_code'])
 
-    # calculate visibility
-    dark_and_up_time, max_alt = get_visibility(ra, dec, dark_midpoint, data['site_code'], '2 m', alt_limit, True, body_elements)
-    if max_alt is not None:
-        max_alt_airmass = S.sla_airmas((pi/2.0)-radians(max_alt))
-    else:
-        max_alt_airmass = 13
-        dark_and_up_time = 0
-
     # Determine slot length
     if data.get('slot_length', None):
         slot_length = data.get('slot_length')
@@ -1190,7 +1239,7 @@ def schedule_check(data, body, ok_to_schedule=True):
             ok_to_schedule = False
 
     # determine lunar position
-    moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(dark_midpoint, ra, dec, data['site_code'])
+    moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(mid_dark_up_time, ra, dec, data['site_code'])
     min_lunar_dist = data.get('min_lunar_dist', 30)
     if moon_phase <= .25:
         moon_phase_code = 'D'
@@ -1205,7 +1254,7 @@ def schedule_check(data, body, ok_to_schedule=True):
     if spectroscopy:
         snr_params = {'airmass': max_alt_airmass,
                       'slit_width': float(filter_pattern[5:8])*u.arcsec,
-                      'moon_phase' : moon_phase_code
+                      'moon_phase': moon_phase_code
                       }
         new_mag, new_passband, snr, saturated = calc_asteroid_snr(magnitude, 'V', data['exp_length'], instrument=data['instrument_code'], params=snr_params)
         exp_count = data['exp_count']
@@ -1256,10 +1305,6 @@ def schedule_check(data, body, ok_to_schedule=True):
     else:
         pattern_iterations = None
 
-    # Get period and jitter for cadence
-    period = data.get('period', None)
-    jitter = data.get('jitter', None)
-
     if period is not None and jitter is not None:
         # Increase Jitter if shorter than slot length
         if jitter < slot_length / 60:
@@ -1268,8 +1313,8 @@ def schedule_check(data, body, ok_to_schedule=True):
             period = 0.02
 
         # Number of times the cadence request will run between start and end date
-        cadence_start = dark_start
-        cadence_end = dark_end
+        cadence_start = rise_time
+        cadence_end = set_time
         total_run_time = cadence_end - cadence_start
         cadence_period = timedelta(seconds=data['period']*3600.0)
         total_requests = 1 + int(floor(total_run_time.total_seconds() / cadence_period.total_seconds()))
@@ -1287,7 +1332,7 @@ def schedule_check(data, body, ok_to_schedule=True):
 
     suffix = datetime.strftime(utc_date, '%Y%m%d')
     if period and jitter:
-        suffix = "cad-%s-%s" % (datetime.strftime(data['start_time'], '%Y%m%d'), datetime.strftime(data['end_time'], '%m%d'))
+        suffix = "cad-%s-%s" % (datetime.strftime(rise_time, '%Y%m%d'), datetime.strftime(set_time, '%m%d'))
     elif spectroscopy:
         suffix += "_spectra"
     if too_mode is True:
@@ -1309,44 +1354,47 @@ def schedule_check(data, body, ok_to_schedule=True):
         'exp_count': exp_count,
         'exp_length': exp_length,
         'schedule_ok': ok_to_schedule,
-        'too_mode' : too_mode,
+        'too_mode': too_mode,
         'site_code': data['site_code'],
         'proposal_code': data['proposal_code'],
         'group_name': group_name,
         'utc_date': utc_date.isoformat(),
-        'start_time': dark_start.isoformat(),
-        'end_time': dark_end.isoformat(),
-        'mid_time': dark_midpoint.isoformat(),
+        'start_time': rise_time.isoformat(),
+        'end_time': set_time.isoformat(),
+        'mid_time': mid_dark_up_time.isoformat(),
+        'vis_start': up_time.isoformat(),
+        'vis_end': down_time.isoformat(),
+        'edit_window': data.get('edit_window', False),
         'ra_midpoint': ra,
         'dec_midpoint': dec,
-        'period' : period,
-        'jitter' : jitter,
-        'bin_mode' : bin_mode,
-        'snr' : snr,
-        'saturated' : saturated,
-        'spectroscopy' : spectroscopy,
-        'calibs' : data.get('calibs', ''),
-        'instrument_code' : data['instrument_code'],
-        'lco_site' : lco_site_code[0:3],
-        'lco_tel' : lco_site_code[-4:-1],
-        'lco_enc' : lco_site_code[4:8],
-        'max_alt' : max_alt,
-        'max_alt_airmass' : max_alt_airmass,
-        'vis_time' : dark_and_up_time,
-        'moon_alt' : moon_alt,
-        'moon_sep' : moon_obj_sep,
-        'moon_phase' : moon_phase * 100,
-        'min_lunar_dist' : min_lunar_dist,
+        'period': period,
+        'jitter': jitter,
+        'bin_mode': bin_mode,
+        'snr': snr,
+        'saturated': saturated,
+        'spectroscopy': spectroscopy,
+        'calibs': data.get('calibs', ''),
+        'instrument_code': data['instrument_code'],
+        'lco_site': lco_site_code[0:3],
+        'lco_tel': lco_site_code[-4:-1],
+        'lco_enc': lco_site_code[4:8],
+        'max_alt': max_alt,
+        'max_alt_airmass': max_alt_airmass,
+        'vis_time': dark_and_up_time,
+        'moon_alt': moon_alt,
+        'moon_sep': moon_obj_sep,
+        'moon_phase': moon_phase * 100,
+        'min_lunar_dist': min_lunar_dist,
         'max_airmass': max_airmass,
         'ipp_value': ipp_value,
         'ag_exp_time': ag_exp_time,
         'acceptability_threshold': acceptability_threshold,
-        'trail_len' : trail_len,
-        'typical_seeing' : typical_seeing,
-        'solar_analog' : solar_analog,
-        'calibsource' : solar_analog_params,
-        'calibsource_id' : solar_analog_id,
-        'calibsource_exptime' : solar_analog_exptime,
+        'trail_len': trail_len,
+        'typical_seeing': typical_seeing,
+        'solar_analog': solar_analog,
+        'calibsource': solar_analog_params,
+        'calibsource_id': solar_analog_id,
+        'calibsource_exptime': solar_analog_exptime,
     }
 
     if period and jitter:
@@ -1442,16 +1490,16 @@ def schedule_submit(data, body, username):
               'start_time': data['start_time'],
               'end_time': data['end_time'],
               'group_name': data['group_name'],
-              'too_mode' : data.get('too_mode', False),
-              'spectroscopy' : data.get('spectroscopy', False),
-              'calibs' : data.get('calibs', ''),
-              'instrument_code' : data['instrument_code'],
-              'solar_analog' : data.get('solar_analog', False),
-              'calibsource' : calibsource_params,
-              'max_airmass' : data.get('max_airmass', 1.74),
-              'ipp_value' : data.get('ipp_value', 1),
-              'min_lunar_distance' : data.get('min_lunar_dist', 30),
-              'acceptability_threshold' : data.get('acceptability_threshold', 90),
+              'too_mode': data.get('too_mode', False),
+              'spectroscopy': data.get('spectroscopy', False),
+              'calibs': data.get('calibs', ''),
+              'instrument_code': data['instrument_code'],
+              'solar_analog': data.get('solar_analog', False),
+              'calibsource': calibsource_params,
+              'max_airmass': data.get('max_airmass', 1.74),
+              'ipp_value': data.get('ipp_value', 1),
+              'min_lunar_distance': data.get('min_lunar_dist', 30),
+              'acceptability_threshold': data.get('acceptability_threshold', 90),
               'ag_exp_time': data.get('ag_exp_time', 10)
               }
     if data['period'] or data['jitter']:
@@ -1770,17 +1818,17 @@ def record_block(tracking_number, params, form_data, target):
             cadence = True
         proposal = Proposal.objects.get(code=form_data['proposal_code'])
         sblock_kwargs = {
-                         'proposal' : proposal,
-                         'groupid'  : form_data['group_name'],
-                         'block_start' : form_data['start_time'],
-                         'block_end'   : form_data['end_time'],
-                         'tracking_number' : tracking_number,
-                         'cadence'  : cadence,
-                         'period'   : params.get('period', None),
-                         'jitter'   : params.get('jitter', None),
-                         'timeused' : params.get('block_duration', None),
-                         'rapid_response' : params.get('too_mode', False),
-                         'active'   : True,
+                         'proposal': proposal,
+                         'groupid': form_data['group_name'],
+                         'block_start': form_data['start_time'],
+                         'block_end': form_data['end_time'],
+                         'tracking_number': tracking_number,
+                         'cadence': cadence,
+                         'period': params.get('period', None),
+                         'jitter': params.get('jitter', None),
+                         'timeused': params.get('block_duration', None),
+                         'rapid_response': params.get('too_mode', False),
+                         'active': True,
                        }
         if isinstance(target, StaticSource):
             sblock_kwargs['calibsource'] = target

@@ -117,17 +117,19 @@ class ScheduleCadenceForm(forms.Form):
     jitter = forms.FloatField(initial=0.25, required=True, widget=forms.TextInput(attrs={'size': '10'}), error_messages={'required': _(u'Jitter is required')})
     too_mode = forms.BooleanField(initial=False, required=False)
 
-    # def clean_start_time(self):
-    #     start = self.cleaned_data['start_time']
-    #     if start < datetime.utcnow():
-    #         raise forms.ValidationError("Window cannot start in the past")
-    #     return start
-    #
     # def clean_end_time(self):
     #     end = self.cleaned_data['end_time']
     #     if end < datetime.utcnow():
     #         raise forms.ValidationError("Window cannot end in the past")
     #     return end
+
+    def clean_start_time(self):
+        start = self.cleaned_data['start_time']
+        window_cutoff = datetime.utcnow() - timedelta(days=1)
+        if start <= window_cutoff:
+            return datetime.utcnow().replace(microsecond=0)
+        else:
+            return self.cleaned_data['start_time']
 
     def clean_period(self):
         if self.cleaned_data['period'] is not None and self.cleaned_data['period'] < 0.02:
@@ -155,8 +157,8 @@ class ScheduleCadenceForm(forms.Form):
 
 
 class ScheduleBlockForm(forms.Form):
-    start_time = forms.DateTimeField(widget=forms.HiddenInput(), input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'])
-    end_time = forms.DateTimeField(widget=forms.HiddenInput(), input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'])
+    start_time = forms.DateTimeField(widget=forms.DateTimeInput(attrs={'style': 'width: 200px;'}), input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'])
+    end_time = forms.DateTimeField(widget=forms.DateTimeInput(attrs={'style': 'width: 200px;'}), input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'])
     exp_count = forms.IntegerField(widget=forms.HiddenInput(), required=False)
     exp_length = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}))
     slot_length = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}), required=False)
@@ -181,6 +183,7 @@ class ScheduleBlockForm(forms.Form):
     min_lunar_dist = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     acceptability_threshold = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     ag_exp_time = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
+    edit_window = forms.BooleanField(initial=False, required=False, widget=forms.CheckboxInput(attrs={'class': 'window-switch'}))
 
     def clean_exp_length(self):
         if not self.cleaned_data['exp_length'] or self.cleaned_data['exp_length'] < 0.1:
@@ -230,7 +233,7 @@ class ScheduleBlockForm(forms.Form):
         start = self.cleaned_data['start_time']
         window_cutoff = datetime.utcnow() - timedelta(days=1)
         if start <= window_cutoff:
-            raise forms.ValidationError("Window cannot start in the past")
+            return datetime.utcnow().replace(microsecond=0)
         else:
             return self.cleaned_data['start_time']
 
@@ -263,6 +266,12 @@ class ScheduleBlockForm(forms.Form):
         else:
             return self.cleaned_data['period']
 
+    def clean_slot_length(self):
+        if self.cleaned_data['slot_length'] is None:
+            return 0
+        else:
+            return self.cleaned_data['slot_length']
+
     def clean(self):
         cleaned_data = super(ScheduleBlockForm, self).clean()
         site = self.cleaned_data['site_code']
@@ -285,6 +294,13 @@ class ScheduleBlockForm(forms.Form):
                 raise forms.ValidationError('%(bad)s are not acceptable filters at this site.', params={'bad': ",".join(bad_filters)})
         elif self.cleaned_data['exp_count'] == 0:
             raise forms.ValidationError("There must be more than 1 exposure")
+        if self.cleaned_data.get('end_time') and self.cleaned_data.get('start_time'):
+            window_width = self.cleaned_data['end_time'] - self.cleaned_data['start_time']
+            window_width = window_width.total_seconds() / 60
+            if window_width < self.cleaned_data['slot_length']:
+                raise forms.ValidationError("Requested Observations will not fit within Scheduling Window.")
+            if self.cleaned_data.get('end_time') < self.cleaned_data.get('start_time'):
+                raise forms.ValidationError("Scheduling Window cannot end before it begins without breaking causality. Please Fix.")
         return cleaned_data
 
 

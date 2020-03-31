@@ -368,6 +368,7 @@ class FunctionalTest(StaticLiveServerTestCase):
             )
         )
 
+
 def assertDeepAlmostEqual(test_case, expected, actual, *args, **kwargs):
     """
     Assert that two complex structures have almost equal contents.
