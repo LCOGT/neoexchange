@@ -317,7 +317,7 @@ def fetch_ps1_field(cat_center, radius=0.5, max_records=50001, db_name='cat.db')
               'rmeanpsfmagnpt.gte' : num_single_epochs,
               'imeanpsfmagnpt.gte' : num_single_epochs,
               'zmeanpsfmagnpt.gte' : num_single_epochs,
-              'columns' : ','.join(ps1.table.columns)}
+              'columns' : '[' + ','.join(ps1.table.columns) + ']'}
     query_url = 'https://catalogs.mast.stsci.edu/api/v0.1/panstarrs/dr2/mean.votable'
     q = requests.get(query_url,
                          params=params)
