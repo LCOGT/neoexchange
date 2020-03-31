@@ -328,15 +328,6 @@ def fetch_ps1_field(cat_center, radius=0.5, max_records=50001, db_name='cat.db')
             logger.error(q.text)
             return None
 
-    tab['objname'] = np.array(
-        [str(x.decode()) for x in tab['objname']])
-    tab['objid'] = np.array(
-        [str(x.decode()) for x in tab['objid']], int)
-    tab['rastack'] = np.array(
-        [str(x.decode()) for x in tab['rastack']])
-    tab['decstack'] = np.array(
-        [str(x.decode()) for x in tab['decstack']])
-
     logger.debug('Updating {} with {} sources.'.format(
         ps1.table.name, len(tab)))
 
