@@ -398,7 +398,7 @@ def build_visibility_source(body, site_list, site_code, color_list, d, alt_limit
         moon_rise, moon_set, moon_max_alt, moon_vis_time = target_rise_set(d, moon_app_ra, moon_app_dec, site, 10, step_size, sun=False)
         moon_phase = moonphase(d, site_long, site_lat, site_hgt)
         emp = call_compute_ephem(body_elements, d, d + timedelta(days=1), site, step_size, perturb=False)
-        obj_up_emp = dark_and_object_up(emp, d, d + timedelta(days=1), 0 , alt_limit=alt_limit)
+        obj_up_emp = dark_and_object_up(emp, d, d + timedelta(days=1), 0, alt_limit=alt_limit)
         vis_time, emp_obj_up, set_time = compute_dark_and_up_time(obj_up_emp, step_size)
         obj_set = datetime_to_radians(d, set_time)
         dark_and_up_time, max_alt = get_visibility(None, None, d + timedelta(days=bonus_day), site, step_size, alt_limit, False, body_elements)
@@ -440,7 +440,7 @@ def lin_vis_plot(body):
     vis, mag = build_visibility_source(body, site_list, site_code, color_list, d, alt_limit, step_size)
     new_x = []
     for i, l in enumerate(site_code):
-        new_x.append(-1 + i * ( 2 / (len(site_list)-1)))
+        new_x.append(-1 + i * (2 / (len(site_list)-1)))
     vis['x'] = new_x
     rad = ((2 / (len(site_list)-1))*.9)/2
 

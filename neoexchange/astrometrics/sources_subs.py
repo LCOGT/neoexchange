@@ -2546,6 +2546,24 @@ def store_jpl_desigs(obj, body):
     number = name = prov_des = None
     if fullname[0] is '(':
         prov_des = fullname.strip('()')
+    elif '/' in fullname:  # comet
+        part1, part2 = fullname.split('/')
+        if len(part1) == 1 and part1.isalpha():
+            prov_des = fullname
+        elif '(' in part1:
+            part11, part12 = part1.split('(')
+            name = part11.rstrip()
+            prov_des = part12 + '/' + part2.strip('()')
+        else:
+            number = part1
+        if '(' in part2:
+            part21, part22 = part2.split('(')
+            prov_des = part1 + '/' + part21.rstrip()
+            name = part22.strip('()')
+        elif ' ' in part2 and number:
+            prov_des = part2
+        else:
+            name = part2
     elif ' ' in fullname:
         space_num = fullname.count(' ')
         if space_num is 3:
@@ -2560,20 +2578,6 @@ def store_jpl_desigs(obj, body):
             part1, part2 = fullname.split(' ')
             number = part1
             name = part2   
-    elif '/' in fullname:  # comet
-        part1, part2 = fullname.split('/')
-        if len(part1) == 1 and part1.isalpha():
-            prov_des = fullname
-        else:
-            number = part1
-        if '(' in part2:
-            part21, part22 = part2.split('(')
-            name = part21
-            prov_des = part22.strip('()')
-        elif ' ' in part2 and number:
-            prov_des = part2
-        else:
-            name = part2
 
     # designation dictionary
     des_dict_list = [{'value': number, 'desig_type': '#', 'preferred': True},
