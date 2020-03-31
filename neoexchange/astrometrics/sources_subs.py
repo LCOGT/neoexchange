@@ -2542,47 +2542,7 @@ def store_jpl_desigs(obj, body):
     """Function to store object name, number, and designations from JPL Horizons"""
 
     # parsing through JPL designations
-    fullname = obj['fullname']
-    number = name = prov_des = None
-    if fullname[0] is '(':
-        prov_des = fullname.strip('()')
-    elif '/' in fullname:  # comet
-        part1, part2 = fullname.split('/')
-        if len(part1) == 1 and part1.isalpha():
-            prov_des = fullname
-        elif '(' in part1:
-            part11, part12 = part1.split('(')
-            name = part11.rstrip()
-            prov_des = part12 + '/' + part2.strip('()')
-        else:
-            number = part1
-        if '(' in part2:
-            part21, part22 = part2.split('(')
-            prov_des = part1 + '/' + part21.rstrip()
-            name = part22.strip('()')
-        elif ' ' in part2 and number:
-            prov_des = part2
-        else:
-            name = part2
-    elif ' ' in fullname:
-        space_num = fullname.count(' ')
-        if space_num is 3:
-            part1, part2, part3, part4 = fullname.split(' ')
-            number = part1
-            if part2[0].isalpha:
-                name = part2
-        elif space_num is 2:
-            part1, part2, part3 = fullname.split(' ')
-            number = part1
-        elif space_num is 1:
-            part1, part2 = fullname.split(' ')
-            number = part1
-            name = part2   
-
-    # designation dictionary
-    des_dict_list = [{'value': number, 'desig_type': '#', 'preferred': True},
-                     {'value': name, 'desig_type': 'N', 'preferred': True},
-                     {'value': prov_des, 'desig_type': 'P', 'preferred': True}]
+    des_dict_list = parse_jpl_fullname(obj)
 
     des_alt = obj['des_alt']
     preferred = False
@@ -2612,11 +2572,58 @@ def store_jpl_desigs(obj, body):
             saved = body.save_physical_parameters(D)
             if saved:
                 logger.info('New Designation saved for {}: {}'.format(body.current_name(), D['value']))
-    
-  
+
+
+def parse_jpl_fullname(obj):
+    """Given a JPL object, return parsed full name"""
+    fullname = obj['fullname']
+    number = name = prov_des = None
+    if fullname[0] is '(':
+        prov_des = fullname.strip('()')
+    elif '/' in fullname:  # comet
+        parts = fullname.split('/')
+        if len(parts) == 2:
+            part1 = parts[0]
+            part2 = parts[1]
+            if len(part1) == 1 and part1.isalpha():
+                prov_des = fullname
+            elif '(' in part1:
+                part11, part12 = part1.split('(')
+                name = part11.rstrip()
+                prov_des = part12 + '/' + part2.strip('()')
+            else:
+                number = part1
+            if '(' in part2:
+                part21, part22 = part2.split('(')
+                prov_des = part1 + '/' + part21.rstrip()
+                name = part22.strip('()')
+            elif number:
+                name = part2
+    elif ' ' in fullname:
+        space_num = fullname.count(' ')
+        if space_num is 3:
+            part1, part2, part3, part4 = fullname.split(' ')
+            number = part1
+            if part2[0].isalpha:
+                name = part2
+        elif space_num is 2:
+            part1, part2, part3 = fullname.split(' ')
+            number = part1
+        elif space_num is 1:
+            part1, part2 = fullname.split(' ')
+            number = part1
+            name = part2
+
+    # designation dictionary
+    des_dict_list = [{'value': number, 'desig_type': '#', 'preferred': True},
+                     {'value': name, 'desig_type': 'N', 'preferred': True},
+                     {'value': prov_des, 'desig_type': 'P', 'preferred': True}]
+    return des_dict_list
+
+
 def store_jpl_sourcetypes(code, obj, body):
     """Function to store object source types and subtypes from JPL Horizons"""
-    
+
     source_type = source_subtype_1 = source_subtype_2 = None
     if 'CEN' in code:  # Centaur
         source_type = 'E'
