@@ -96,7 +96,7 @@ def mock_check_request_status(tracking_num):
               'proposal': 'LCOEPO2014B-XXX',
               'requests': [{
                  'id': 611796,
-                 'location': {'site': 'lsc', 
+                 'location': {'site': 'lsc',
                               'telescope_class': '1m0'},
                  'configurations': [{
                     'id': 3260058,
@@ -701,6 +701,10 @@ def mock_lco_api_call(link):
 
     return header_out
 
+# Mock api call to cancel block
+def mock_lco_api_call_blockcancel(link,method):
+    return {'state' : 'CANCELED'}
+
 # Mock block records output from Valhalla
 # One for each block in superblock. Changed block id's to match blocks
 def mock_check_result_status(tracking_num):
@@ -958,7 +962,7 @@ def mock_check_request_status_spectro(tracking_num):
                            'location': {'site': 'ogg', 'telescope_class': '2m0'},
                            'configurations': [{
                               'id': 3126189,
-                              'constraints': {'max_airmass': 1.74, 
+                              'constraints': {'max_airmass': 1.74,
                                               'min_lunar_distance': 30.0,
                                               'max_lunar_phase': None,
                                               'max_seeing': None,
@@ -1006,7 +1010,7 @@ def mock_check_request_status_spectro(tracking_num):
                            },
                            {
                               'id': 3126190,
-                              'constraints': {'max_airmass': 1.74, 
+                              'constraints': {'max_airmass': 1.74,
                                               'min_lunar_distance': 30.0,
                                               'max_lunar_phase': None,
                                               'max_seeing': None,
@@ -1054,7 +1058,7 @@ def mock_check_request_status_spectro(tracking_num):
                           },
                            {
                               'id': 3126191,
-                              'constraints': {'max_airmass': 1.15, 
+                              'constraints': {'max_airmass': 1.15,
                                               'min_lunar_distance': 30.0,
                                               'max_lunar_phase': None,
                                               'max_seeing': None,
