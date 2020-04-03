@@ -1255,54 +1255,52 @@ def fetch_arecibo_targets(page=None):
     targets = []
 
     if type(page) == BeautifulSoup:
-        # Find the tables, we want the second one
+        # Find the tables
         tables = page.find_all('table')
-        if len(tables) != 2 and len(tables) != 3 :
-            logger.warning("Unexpected number of tables found in Arecibo page (Found %d)" % len(tables))
-        else:
-            for targets_table in tables[1:]:
-                rows = targets_table.find_all('tr')
-                if len(rows) > 1:
-                    for row in rows[1:]:
-                        items = row.find_all('td')
-                        target_object = items[0].text
+        for t, targets_table in enumerate(tables):
+            rows = targets_table.find_all('tr')
+            header = rows[0].find_all('td')[0].text.upper()
+            if len(rows) > 1 and 'OBJECT' in header or 'ASTEROID' in header:
+                for row in rows[1:]:
+                    items = row.find_all('td')
+                    target_object = items[0].text
+                    target_object = target_object.strip()
+                    # See if it is the form "(12345) 2008 FOO". If so, extract
+                    # just the asteroid number
+                    if '(' in target_object and ')' in target_object:
+                        # See if we have parentheses around the number or around the
+                        # temporary designation.
+                        # If the first character in the string is a '(' we have the first
+                        # case and should split on the closing ')' and take the 0th chunk
+                        # If the first char is not a '(', then we have parentheses around
+                        # the temporary designation and we should split on the '(', take
+                        # the 0th chunk and strip whitespace
+                        split_char = ')'
+                        if target_object[0] != '(':
+                            split_char = '('
+                        target_object = target_object.split(split_char)[0].replace('(', '')
                         target_object = target_object.strip()
-                        # See if it is the form "(12345) 2008 FOO". If so, extract
-                        # just the asteroid number
-                        if '(' in target_object and ')' in target_object:
-                            # See if we have parentheses around the number or around the
-                            # temporary desigination.
-                            # If the first character in the string is a '(' we have the first
-                            # case and should split on the closing ')' and take the 0th chunk
-                            # If the first char is not a '(', then we have parentheses around
-                            # the temporary desigination and we should split on the '(', take
-                            # the 0th chunk and strip whitespace
-                            split_char = ')'
-                            if target_object[0] != '(':
-                                split_char = '('
-                            target_object = target_object.split(split_char)[0].replace('(', '')
-                            target_object = target_object.strip()
-                        else:
-                            # No parentheses, either just a number or a number and name
-                            chunks = target_object.split(' ')
-                            if len(chunks) >= 2:
-                                if chunks[0].isalpha() and chunks[1].isalpha():
-                                    logger.warning("All text object found: " + target_object)
-                                    target_object = None
-                                else:
-                                    if chunks[1].replace('-', '').isalpha() and len(chunks[1]) != 2:
-                                        target_object = chunks[0]
-                                    elif 'Comet' in chunks[0] and '/P' in chunks[1].rstrip()[-2:]:
-                                        target_object = chunks[1].replace('/', '')
-                                    else:
-                                        target_object = chunks[0] + " " + chunks[1]
-                            else:
-                                logger.warning("Unable to parse Arecibo target %s" % target_object)
+                    else:
+                        # No parentheses, either just a number or a number and name
+                        chunks = target_object.split(' ')
+                        if len(chunks) >= 2:
+                            if chunks[0].isalpha() and chunks[1].isalpha():
+                                logger.warning("All text object found: " + target_object)
                                 target_object = None
-                        if target_object:
-                            targets.append(target_object)
-                else:
-                    logger.warning("No targets found in Arecibo page")
+                            else:
+                                if chunks[1].replace('-', '').isalpha() and len(chunks[1]) != 2:
+                                    target_object = chunks[0]
+                                elif 'Comet' in chunks[0] and '/P' in chunks[1].rstrip()[-2:]:
+                                    target_object = chunks[1].replace('/', '')
+                                else:
+                                    target_object = chunks[0] + " " + chunks[1]
+                        else:
+                            logger.warning("Unable to parse Arecibo target %s" % target_object)
+                            target_object = None
+                    if target_object:
+                        targets.append(target_object)
+            else:
+                logger.warning("No targets found in Arecibo page table {}.".format(t+1))
     return targets
 
 
@@ -1608,6 +1606,8 @@ def make_config(params, exp_filter):
             }
         ]
     }
+    if params.get('bin_mode', None) == '2k_2x2' and params['pondtelescope'] == '1m0':
+        conf['instrument_configs'][0]['mode'] = 'central_2k_2x2'
     return conf
 
 
@@ -1893,6 +1893,8 @@ def configure_defaults(params):
         if params['site_code'] == 'V38':
             # elp-aqwa-0m4a kb80
             params['observatory'] = 'aqwa'
+    elif params.get('bin_mode', None) == '2k_2x2':
+        params['binning'] = 2
 
     return params
 
@@ -1942,6 +1944,10 @@ def make_requestgroup(elements, params):
         params['source_id'] = params['calibsource']['name']
         params['ra_deg'] = params['calibsource']['ra_deg']
         params['dec_deg'] = params['calibsource']['dec_deg']
+        if 'pm_ra' in params['calibsource']:
+            params['pm_ra'] = params['calibsource']['pm_ra']
+        if 'pm_dec' in params['calibsource']:
+            params['pm_dec'] = params['calibsource']['pm_dec']
         params['target'] = make_target(params)
         exp_time = params['exp_time']
         params['exp_time'] = params['calibsrc_exptime']
@@ -2536,43 +2542,7 @@ def store_jpl_desigs(obj, body):
     """Function to store object name, number, and designations from JPL Horizons"""
 
     # parsing through JPL designations
-    fullname = obj['fullname']
-    number = name = prov_des = None
-    if fullname[0] is '(':
-        prov_des = fullname.strip('()')
-    elif ' ' in fullname:
-        space_num = fullname.count(' ')
-        if space_num is 3:
-            part1, part2, part3, part4 = fullname.split(' ')
-            number = part1
-            if part2[0].isalpha:
-                name = part2
-        elif space_num is 2:
-            part1, part2, part3 = fullname.split(' ')
-            number = part1
-        elif space_num is 1:
-            part1, part2 = fullname.split(' ')
-            number = part1
-            name = part2   
-    elif '/' in fullname:  # comet
-        part1, part2 = fullname.split('/')
-        if len(part1) == 1 and part1.isalpha():
-            prov_des = fullname
-        else:
-            number = part1
-        if '(' in part2:
-            part21, part22 = part2.split('(')
-            name = part21
-            prov_des = part22.strip('()')
-        elif ' ' in part2 and number:
-            prov_des = part2
-        else:
-            name = part2
-
-    # designation dictionary
-    des_dict_list = [{'value': number, 'desig_type': '#', 'preferred': True},
-                     {'value': name, 'desig_type': 'N', 'preferred': True},
-                     {'value': prov_des, 'desig_type': 'P', 'preferred': True}]
+    des_dict_list = parse_jpl_fullname(obj)
 
     des_alt = obj['des_alt']
     preferred = False
@@ -2602,11 +2572,58 @@ def store_jpl_desigs(obj, body):
             saved = body.save_physical_parameters(D)
             if saved:
                 logger.info('New Designation saved for {}: {}'.format(body.current_name(), D['value']))
-    
-  
+
+
+def parse_jpl_fullname(obj):
+    """Given a JPL object, return parsed full name"""
+    fullname = obj['fullname']
+    number = name = prov_des = None
+    if fullname[0] is '(':
+        prov_des = fullname.strip('()')
+    elif '/' in fullname:  # comet
+        parts = fullname.split('/')
+        if len(parts) == 2:
+            part1 = parts[0]
+            part2 = parts[1]
+            if len(part1) == 1 and part1.isalpha():
+                prov_des = fullname
+            elif '(' in part1:
+                part11, part12 = part1.split('(')
+                name = part11.rstrip()
+                prov_des = part12 + '/' + part2.strip('()')
+            else:
+                number = part1
+            if '(' in part2:
+                part21, part22 = part2.split('(')
+                prov_des = part1 + '/' + part21.rstrip()
+                name = part22.strip('()')
+            elif number:
+                name = part2
+    elif ' ' in fullname:
+        space_num = fullname.count(' ')
+        if space_num is 3:
+            part1, part2, part3, part4 = fullname.split(' ')
+            number = part1
+            if part2[0].isalpha:
+                name = part2
+        elif space_num is 2:
+            part1, part2, part3 = fullname.split(' ')
+            number = part1
+        elif space_num is 1:
+            part1, part2 = fullname.split(' ')
+            number = part1
+            name = part2
+
+    # designation dictionary
+    des_dict_list = [{'value': number, 'desig_type': '#', 'preferred': True},
+                     {'value': name, 'desig_type': 'N', 'preferred': True},
+                     {'value': prov_des, 'desig_type': 'P', 'preferred': True}]
+    return des_dict_list
+
+
 def store_jpl_sourcetypes(code, obj, body):
     """Function to store object source types and subtypes from JPL Horizons"""
-    
+
     source_type = source_subtype_1 = source_subtype_2 = None
     if 'CEN' in code:  # Centaur
         source_type = 'E'

@@ -98,6 +98,9 @@
                 <div class="four columns">
                     <h5 class="section-title">{% if object.block_set.all%}Observation Blocks{% else%}Controls{% endif %}</h5>
                         {% if request.user.is_authenticated %}
+                        {% if object.active %}
+                        <a class="button warning" href="{% url 'block-cancel' object.pk %}" id='cancelblock'>Cancel Block</a>
+                        {% endif %}
                         {% if object.block_set.all|length > 1 %}
                         <a href="{% url 'view-timeline' object.id %}" class="button button-primary">Observation timeline</a>
                         {% endif %}

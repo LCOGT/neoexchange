@@ -23,6 +23,7 @@ from matplotlib.animation import FuncAnimation
 import pyslalib.slalib as S
 from astropy.io import fits
 from astropy.wcs import WCS
+from django.conf import settings
 from astropy.wcs._wcs import InvalidTransformError
 from astropy.wcs.utils import skycoord_to_pixel
 from astropy.coordinates import SkyCoord
@@ -41,6 +42,7 @@ from photometrics.external_codes import unpack_tarball
 from core.models import Frame, CatalogSources
 from astrometrics.ephem_subs import horizons_ephem
 from astrometrics.time_subs import timeit
+from photometrics.catalog_subs import sanitize_object_name
 
 logger = logging.getLogger(__name__)
 
@@ -308,20 +310,24 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
     # takes in fig, update function, and frame rate set to fr
     anim = FuncAnimation(fig, update, frames=len(fits_files), blit=False, interval=fr)
 
-    filename = os.path.join(path, obj.replace(' ', '_') + '_' + rn + '_tmp_guidemovie.gif')
+    filename = os.path.join(path, sanitize_object_name(obj) + '_' + rn + '_guidemovie.gif')
     anim.save(filename, dpi=90, writer='imagemagick')
 
     # Save to default location because Matplotlib wants a string filename not File object
-    daydir = path.replace(out_path, "").lstrip("/")
-    if guide_frames:
-        movie_filename = os.path.join(daydir, obj.replace(' ', '_') + '_' + rn + '_guidemovie.gif')
+    if settings.USE_S3:
+        daydir = path.replace(out_path, "").lstrip("/")
+        movie_filename = os.path.join(daydir, sanitize_object_name(obj) + '_' + rn + '_guidemovie.gif')
+        if guide_frames:
+            movie_filename = os.path.join(daydir, sanitize_object_name(obj) + '_' + rn + '_guidemovie.gif')
+        else:
+            movie_filename = os.path.join(daydir, sanitize_object_name(obj) + '_' + rn + '_framemovie.gif')
+        movie_file = default_storage.open(movie_filename, "wb+")
+        with open(filename, 'rb+') as f:
+            movie_file.write(f.read())
+        movie_file.close()
+        return movie_file.name
     else:
-        movie_filename = os.path.join(daydir, obj.replace(' ', '_') + '_' + rn + '_framemovie.gif')
-    movie_file = default_storage.open(movie_filename, "wb+")
-    with open(filename, 'rb+') as f:
-        movie_file.write(f.read())
-    movie_file.close()
-    return movie_file.name
+        return filename
 
 
 def make_movie(date_obs, obj, req, base_dir, out_path, prop):

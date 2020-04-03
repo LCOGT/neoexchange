@@ -1192,12 +1192,12 @@ def determine_exptime(speed, pixel_scale, max_exp_time=300.0):
     return round_exptime
 
 
-def determine_exp_time_count(speed, site_code, slot_length_in_mins, mag, filter_pattern):
+def determine_exp_time_count(speed, site_code, slot_length_in_mins, mag, filter_pattern, bin_mode=None):
     exp_time = None
     exp_count = None
     min_exp_count = 4
 
-    (chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, site_max_exp_time, alt_limit) = get_sitecam_params(site_code)
+    (chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, site_max_exp_time, alt_limit) = get_sitecam_params(site_code, bin_mode)
 
     slot_length = slot_length_in_mins * 60.0
 
@@ -1232,10 +1232,10 @@ def determine_exp_time_count(speed, site_code, slot_length_in_mins, mag, filter_
     return exp_time, exp_count
 
 
-def determine_exp_count(slot_length_in_mins, exp_time, site_code, filter_pattern, min_exp_count=1):
+def determine_exp_count(slot_length_in_mins, exp_time, site_code, filter_pattern, min_exp_count=1, bin_mode=None):
     exp_count = None
 
-    (chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, site_max_exp_time, alt_limit) = get_sitecam_params(site_code)
+    (chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, site_max_exp_time, alt_limit) = get_sitecam_params(site_code, bin_mode)
 
     slot_length = slot_length_in_mins * 60.0
 
@@ -1573,7 +1573,7 @@ def moon_ra_dec(date, obsvr_long, obsvr_lat, obsvr_hgt, dbg=False):
     (in meters).
     Returns a (RA, Dec, diameter) (in radians) tuple."""
 
-    body = 3 # The Moon...
+    body = 3  # The Moon...
 
     mjd_tdb = datetime2mjd_tdb(date, obsvr_long, obsvr_lat, obsvr_hgt, dbg)
 
@@ -1594,12 +1594,12 @@ def atmos_params(airless):
         tlr = 0.0
     else:
         # "Standard" atmosphere
-        temp_k = 283.0 # 10 degC
+        temp_k = 283.0  # 10 degC
 # Average of FTN (709), FTS (891), TFN(767.5), SAAO(827), CTIO(777), SQA(981)
 # and McDonald (790) on 2011-02-05
         pres_mb = 820.0
         rel_humid = 0.5
-        wavel = 0.55 # Approx Bessell V
+        wavel = 0.55  # Approx Bessell V
 # International Civil Aviation Organization (ICAO) defines an international
 # standard atmosphere (ISA) at 6.49 K/km
         tlr = 0.0065
@@ -1687,6 +1687,8 @@ def target_rise_set(date, app_ra, app_dec, sitecode, min_alt, step_size='30m', s
 
     if sun:
         ephem_time, sun_set = determine_darkness_times(sitecode, date)
+        if sun_set <= date:
+            ephem_time, sun_set = determine_darkness_times(sitecode, date + timedelta(days=1))
     else:
         ephem_time = date
         sun_set = date + timedelta(days=1)
@@ -1769,7 +1771,7 @@ def radec2strings(ra_radians, dec_radians, seperator=' '):
     There is no sign produced on the RA quantity unless ra_radians and dec_radians
     are equal."""
 
-    ra_format =  "%s%02.2d%c%02.2d%c%02.2d.%02.2d"
+    ra_format = "%s%02.2d%c%02.2d%c%02.2d.%02.2d"
     dec_format = "%s%02.2d%c%02.2d%c%02.2d.%d"
 
     (rsign, ra ) = S.sla_dr2tf(2, ra_radians)
@@ -1840,7 +1842,7 @@ def MPC_site_code_to_domes(site):
     return siteid, encid, telid
 
 
-def get_sitecam_params(site):
+def get_sitecam_params(site, bin_mode=None):
     """Translates <site> (e.g. 'FTN') to MPC site code, pixel scale, maximum
     exposure time, setup and exposure overheads.
     site_code is set to 'XXX' and the others are set to -1 in the event of an
@@ -1898,9 +1900,14 @@ def get_sitecam_params(site):
         alt_limit = cfg.tel_alt['point4m_alt_limit']
     elif site in valid_site_codes or site == '1M0':
         setup_overhead = cfg.tel_overhead['onem_setup_overhead']
-        exp_overhead = cfg.inst_overhead['sinistro_exp_overhead']
-        pixel_scale = cfg.tel_field['onem_sinistro_pixscale']
-        fov = arcmins_to_radians(cfg.tel_field['onem_sinistro_fov'])
+        if bin_mode == '2k_2x2':
+            pixel_scale = cfg.tel_field['onem_2x2_sin_pixscale']
+            exp_overhead = cfg.inst_overhead['sinistro_2x2_exp_overhead']
+            fov = arcmins_to_radians(cfg.tel_field['onem_2x2_sinistro_fov'])
+        else:
+            exp_overhead = cfg.inst_overhead['sinistro_exp_overhead']
+            pixel_scale = cfg.tel_field['onem_sinistro_pixscale']
+            fov = arcmins_to_radians(cfg.tel_field['onem_sinistro_fov'])
         max_exp_length = 300.0
         alt_limit = cfg.tel_alt['normal_alt_limit']
         site_code = site
@@ -2120,28 +2127,34 @@ def get_visibility(ra, dec, date, site_code, step_size='30 m', alt_limit=30, qui
 
     # For generic sites, include northern and southern site for visibility calculation
     if site_code == '1M0':
-        site_list = ['V37', 'W85']
+        site_list = ['V37', 'K91']
     elif site_code == '2M0':
         site_list = ['F65', 'E10']
     elif site_code == '0M4':
-        site_list = ['V38', 'W89']
+        site_list = ['V38', 'L09']
     else:
         site_list = [site_code]
 
     dark_and_up_time = 0
     max_alt = 0
+    start_time = None
+    stop_time = None
     for site in site_list:
+        dark_start, dark_end = determine_darkness_times(site, date)
         if quick_n_dirty:
-            start_time, end_time, test_alt, vis = target_rise_set(date, ra, dec, site, alt_limit, step_size)
-            if start_time and end_time:
-                vis_time = (end_time-start_time).total_seconds()/3600.0
+            rise_time, set_time, test_alt, vis = target_rise_set(date, ra, dec, site, alt_limit, step_size)
+            if rise_time and set_time:
+                vis_time = (set_time-rise_time).total_seconds()/3600.0
             else:
                 vis_time = 0
         else:
-            dark_start, dark_end = determine_darkness_times(site, date)
             emp = call_compute_ephem(body_elements, dark_start, dark_end, site, step_size, perturb=False)
             emp_dark_and_up = dark_and_object_up(emp, dark_start, dark_end, 0, alt_limit=alt_limit)
             vis_time, emp_dark_and_up, set_time = compute_dark_and_up_time(emp_dark_and_up, step_size)
+            if emp_dark_and_up:
+                rise_time = datetime.strptime(emp_dark_and_up[0][0], '%Y %m %d %H:%M')
+            else:
+                rise_time = None
             try:
                 test_alt = compute_max_altitude(emp)
             except ValueError:
@@ -2150,4 +2163,13 @@ def get_visibility(ra, dec, date, site_code, step_size='30 m', alt_limit=30, qui
             dark_and_up_time = vis_time
         if test_alt > max_alt:
             max_alt = test_alt
-    return dark_and_up_time, max_alt
+        if len(site_list) > 1:
+            if start_time is None or dark_start < start_time:
+                start_time = dark_start
+            if stop_time is None or dark_end > stop_time:
+                stop_time = dark_end
+        else:
+            start_time = rise_time
+            stop_time = set_time
+
+    return dark_and_up_time, max_alt, start_time, stop_time

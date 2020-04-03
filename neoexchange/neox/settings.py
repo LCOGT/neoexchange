@@ -7,7 +7,7 @@ from django.utils.crypto import get_random_string
 import rollbar
 
 
-VERSION = '3.2.7.1'
+VERSION = '3.3.0'
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
@@ -249,6 +249,7 @@ EMAIL_PORT          = 587
 DEFAULT_FROM_EMAIL  = 'NEO Exchange <neox@lco.global>'
 EMAIL_HOST_USER = os.environ.get('NEOX_EMAIL_USERNAME', '')
 EMAIL_HOST_PASSWORD = os.environ.get('NEOX_EMAIL_PASSWORD', '')
+EMAIL_MPC_RECIPIENTS = ['tlister@lco.global', 'jchatelain@lco.global']
 
 ####################
 # LCO Api settings #

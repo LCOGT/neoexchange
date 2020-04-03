@@ -40,7 +40,7 @@ class Command(BaseCommand):
         parser.add_argument('--datadir', action="store", default=out_path, help='Path for processed data (e.g. %s)' % out_path)
         parser.add_argument('--mtdlink_file_limit', action="store", type=int, default=9, help='Maximum number of images for running mtdlink')
         parser.add_argument('--keep-temp-dir', action="store_true", help='Whether to remove the temporary directories')
-        parser.add_argument('--object', action="store", help="Which object to analyze")
+        parser.add_argument('--object', action="store", help="Which object to analyze (replace spaces with underscores)")
         parser.add_argument('--skip-download', action="store_true", help='Whether to skip downloading data')
 
     def handle(self, *args, **options):
@@ -128,7 +128,7 @@ class Command(BaseCommand):
                     keep_temp_dir = False
                     if len(fits_files) > options['mtdlink_file_limit']:
                         self.stdout.write("Too many frames to run mtd_link")
-                        skip_mtdlink= True
+                        skip_mtdlink = True
                     if options['keep_temp_dir']:
                         keep_temp_dir = True
 # Compulsory arguments need to go here as a list
