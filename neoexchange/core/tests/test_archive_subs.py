@@ -200,7 +200,6 @@ class TestCheckForExistingFile(TestCase):
         self.assertFalse(check_for_existing_file('wibble'), "Wrong result")
 
 
-@patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
 class TestFetchArchiveFrames(TestCase):
 
     def test_fetch_spectra(self):
@@ -208,8 +207,7 @@ class TestFetchArchiveFrames(TestCase):
         request_id = 1391169
         archive_url = '%s?limit=%d&REQNUM=%s&OBSTYPE=%s' % (settings.ARCHIVE_FRAMES_URL, 3000, request_id, 'SPECTRUM')
 
-        expected_data = { 'obstypes' : ['SPECTRUM', 'SPECTRUM'],
-                          'redlevels' : [90, 0]}
+        expected_data = {'obstypes': ['SPECTRUM', 'SPECTRUM'], 'redlevels': [90, 0]}
 
         data = mock_fetch_archive_frames(auth_header, archive_url, [])
 
@@ -217,6 +215,19 @@ class TestFetchArchiveFrames(TestCase):
         self.assertEqual(expected_data['obstypes'], [x['OBSTYPE'] for x in data])
         self.assertEqual([request_id, request_id], [x['REQNUM'] for x in data])
         self.assertEqual(expected_data['redlevels'], [x['RLEVEL'] for x in data])
+
+    def lco_api_fail(self, data_url):
+        return None
+
+    @patch('core.archive_subs.lco_api_call', lco_api_fail)
+    def test_fetch_nothing(self):
+        auth_header = {'Authorization': 'Token LetMeInPrettyPlease'}
+        request_id = 1391169
+        archive_url = '%s?limit=%d&REQNUM=%s&OBSTYPE=%s' % (settings.ARCHIVE_FRAMES_URL, 3000, request_id, 'SPECTRUM')
+        frames = []
+
+        data = fetch_archive_frames(auth_header, archive_url, frames)
+        self.assertEqual(data, frames)
 
 
 @patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
