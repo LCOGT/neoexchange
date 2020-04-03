@@ -4,6 +4,14 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.3.0
+* Send proper motion details for solar analogs through to the LCO observing system.
+* Display the most recent time of ingest or update on the Body details page.
+* Truncate observing windows by the object's visibility as well as the site's darkness times.
+* Warn about scheduling of objects that would fail lunar distance constrains before submitting.
+* Fix the light curve extraction code to work with comet names
+* Refactor all the Django models into separate domain-specific files.
+
 ### 3.2.9
 Add ability to cancel observations.
 
