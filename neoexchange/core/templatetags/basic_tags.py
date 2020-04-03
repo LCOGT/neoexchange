@@ -114,7 +114,10 @@ def build_block_row(superblock):
 
 @register.filter(is_safe=False)
 def mjd_utc2date(mjd):
-    return mjd_utc2datetime(mjd).date()
+    utc_date = None
+    if mjd is not None:
+        utc_date = mjd_utc2datetime(mjd).date()
+    return utc_date
 
 
 register.filter('make_int_list', make_int_list)
