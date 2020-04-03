@@ -22,7 +22,7 @@ from mock import patch
 from django.test import TestCase
 from django.conf import settings
 
-from neox.tests.mocks import MockDateTime, mock_fetch_archive_frames
+from neox.tests.mocks import MockDateTime, mock_fetch_archive_frames, mock_lco_api_fail
 # Import module to test
 from core.archive_subs import *
 
@@ -216,10 +216,7 @@ class TestFetchArchiveFrames(TestCase):
         self.assertEqual([request_id, request_id], [x['REQNUM'] for x in data])
         self.assertEqual(expected_data['redlevels'], [x['RLEVEL'] for x in data])
 
-    def lco_api_fail(self, data_url):
-        return None
-
-    @patch('core.archive_subs.lco_api_call', lco_api_fail)
+    @patch('core.archive_subs.lco_api_call', mock_lco_api_fail)
     def test_fetch_nothing(self):
         auth_header = {'Authorization': 'Token LetMeInPrettyPlease'}
         request_id = 1391169
@@ -236,10 +233,8 @@ class TestCheckArchiveImages(TestCase):
     def test_fetch_imaging(self):
         request_id = 42
 
-        expected_data = { 'obstypes' : ['EXPOSE', ],
-                          'redlevels' : [91, ],
-                          'files' : ['ogg0m406-kb27-20160531-0063-e91.fits.fz', ]
-                        }
+        expected_data = {'obstypes': ['EXPOSE', ], 'redlevels': [91, ],
+                         'files': ['ogg0m406-kb27-20160531-0063-e91.fits.fz', ]}
         frames, num_frames = check_for_archive_images(request_id)
 
         self.assertEqual(2, num_frames)
