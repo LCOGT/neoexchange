@@ -3225,7 +3225,10 @@ def find_spec(pk):
         url = settings.ARCHIVE_FRAMES_URL+str(Frame.objects.filter(block=block)[0].frameid)+'/headers'
     except IndexError:
         return '', '', '', '', ''
-    data = lco_api_call(url)['data']
+    try:
+        data = lco_api_call(url)['data']
+    except TypeError:
+        return '', '', '', '', ''
     if 'DAY_OBS' in data:
         date_obs = data['DAY_OBS']
     elif 'DAY-OBS' in data:

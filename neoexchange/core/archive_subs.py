@@ -170,7 +170,7 @@ def fetch_observations(tracking_num):
     """
     data_url = urljoin(settings.PORTAL_REQUEST_API, tracking_num)
     data = lco_api_call(data_url)
-    if data.get('requests', '') == 'Not found.':
+    if data is None or data.get('requests', '') == 'Not found.' or data.get('requests', '') == '':
         return []
     for r in data['requests']:
         images = check_for_archive_images(request_id=r['id'])
@@ -180,7 +180,7 @@ def fetch_observations(tracking_num):
 def fetch_archive_frames(auth_header, archive_url, frames):
 
     data = lco_api_call(archive_url, auth_header)
-    if data.get('count', 0) > 0:
+    if data is not None and data.get('count', 0) > 0:
         frames += data['results']
         if data['next']:
             fetch_archive_frames(auth_header, data['next'], frames)

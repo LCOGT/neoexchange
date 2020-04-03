@@ -443,6 +443,11 @@ def mock_check_for_archive_images(request_id, obstype='EXPOSE'):
     else:
         return result_images_out, 3
 
+
+def mock_lco_api_fail(data_url):
+        return None
+
+
 # Mock Header output read from Valhalla
 # modified Origname for easy tracking
 def mock_lco_api_call(link):

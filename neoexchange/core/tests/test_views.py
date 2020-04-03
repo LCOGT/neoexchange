@@ -35,7 +35,7 @@ from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check
     mock_archive_spectra_header, \
     mock_odin_login, mock_run_sextractor_make_catalog, mock_fetch_filter_list, \
     mock_update_elements_with_findorb, mock_update_elements_with_findorb_badrms, \
-    mock_update_elements_with_findorb_badepoch
+    mock_update_elements_with_findorb_badepoch, mock_lco_api_fail
 
 from neox.tests.base import assertDeepAlmostEqual
 
@@ -7231,6 +7231,15 @@ class TestFindSpec(TestCase):
         self.assertEqual(self.test_block.request_number, req)
         self.assertEqual(expected_path, path)
         self.assertEqual(self.eng_proposal.code, prop)
+
+    @patch('core.views.lco_api_call', mock_lco_api_fail)
+    def test_S3_data(self):
+        settings.USE_S3 = True
+        settings.DATA_ROOT = None
+
+        expected_results = ('', '', '', '', '')
+        results = find_spec(self.test_block.pk)
+        self.assertEqual(expected_results, results)
 
 
 class TestFindAnalog(TestCase):
