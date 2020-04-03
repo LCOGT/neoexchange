@@ -3230,7 +3230,7 @@ def find_spec(pk):
     for frame in frames:
         if frame.frameid:
             first_frame = frame
-            continue
+            break
     url = settings.ARCHIVE_FRAMES_URL + str(first_frame.frameid) + '/headers'
     try:
         data = lco_api_call(url)['data']
