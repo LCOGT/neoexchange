@@ -42,6 +42,7 @@ from astrometrics.ephem_subs import horizons_ephem, call_compute_ephem, determin
     moon_ra_dec, target_rise_set, moonphase, dark_and_object_up, compute_dark_and_up_time, get_visibility
 from photometrics.obsgeomplot import plot_ra_dec, plot_brightness, plot_helio_geo_dist, \
     plot_uncertainty, plot_hoursup
+from photometrics.catalog_subs import sanitize_object_name
 from photometrics.SA_scatter import readSources, plotScatter, plotFormat
 from photometrics.spectraplot import spectrum_plot, read_mean_tax
 
@@ -132,7 +133,7 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow(), s
         return HttpResponse(PIXEL_GIF_DATA, content_type='image/gif')
 
     base_dir = os.path.join('visibility', str(body.pk))  # new base_dir for method
-    obj = body.name.replace(' ', '').replace('-', '_').replace('+', '')
+    obj = sanitize_object_name(body.name)
     site = ''
     if plot_type == 'hoursup':
         site = "_" + site_code + "_"
@@ -397,10 +398,10 @@ def build_visibility_source(body, site_list, site_code, color_list, d, alt_limit
         moon_rise, moon_set, moon_max_alt, moon_vis_time = target_rise_set(d, moon_app_ra, moon_app_dec, site, 10, step_size, sun=False)
         moon_phase = moonphase(d, site_long, site_lat, site_hgt)
         emp = call_compute_ephem(body_elements, d, d + timedelta(days=1), site, step_size, perturb=False)
-        obj_up_emp = dark_and_object_up(emp, d, d + timedelta(days=1), 0 , alt_limit=alt_limit)
+        obj_up_emp = dark_and_object_up(emp, d, d + timedelta(days=1), 0, alt_limit=alt_limit)
         vis_time, emp_obj_up, set_time = compute_dark_and_up_time(obj_up_emp, step_size)
         obj_set = datetime_to_radians(d, set_time)
-        dark_and_up_time, max_alt = get_visibility(None, None, d + timedelta(days=bonus_day), site, step_size, alt_limit, False, body_elements)
+        dark_and_up_time, max_alt, up_time, down_time = get_visibility(None, None, d + timedelta(days=bonus_day), site, step_size, alt_limit, False, body_elements)
         vis["x"].append(0)
         vis["y"].append(0)
         vis["sun_rise"].append(datetime_to_radians(d, dark_end))
@@ -439,7 +440,7 @@ def lin_vis_plot(body):
     vis, mag = build_visibility_source(body, site_list, site_code, color_list, d, alt_limit, step_size)
     new_x = []
     for i, l in enumerate(site_code):
-        new_x.append(-1 + i * ( 2 / (len(site_list)-1)))
+        new_x.append(-1 + i * (2 / (len(site_list)-1)))
     vis['x'] = new_x
     rad = ((2 / (len(site_list)-1))*.9)/2
 

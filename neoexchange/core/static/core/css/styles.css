@@ -466,7 +466,7 @@ li.dropdown-menu:after {
 body.compose #main { background-color:#e6e6e6; }
 body.view #main { background-color:#e6e6e6; }
 body.calendar, body.calendar #main { background-color:#202020; }
-body.page #main { display:block; overflow-y: auto; background-color:white; margin-top:50px;}
+body.page #main { display:block; overflow-y: auto; overflow: visible; background-color:white; margin-top:50px;}
 
 #extramenu:after {
     content: '';

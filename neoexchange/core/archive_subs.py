@@ -48,14 +48,15 @@ def archive_login(username=None, password=None):
     return get_lcogt_headers(archive_url, username, password)
 
 
-def lco_api_call(url, method='get'):
-    if 'archive' in url:
-        token = settings.ARCHIVE_TOKEN
-    else:
-        token = settings.PORTAL_TOKEN
-    headers = {'Authorization': 'Token ' + token}
+def lco_api_call(url, headers=None, method='get'):
+    if headers is None:
+        if 'archive' in url:
+            token = settings.ARCHIVE_TOKEN
+        else:
+            token = settings.PORTAL_TOKEN
+        headers = {'Authorization': 'Token ' + token}
     data = None
-    methods = {'get':requests.get, 'post':requests.post}
+    methods = {'get': requests.get, 'post': requests.post}
     try:
         resp = methods[method](url, headers=headers, timeout=60, verify=ssl_verify)
         data = resp.json()
@@ -178,7 +179,7 @@ def fetch_observations(tracking_num):
 
 def fetch_archive_frames(auth_header, archive_url, frames):
 
-    data = lco_api_call(archive_url)
+    data = lco_api_call(archive_url, auth_header)
     if data.get('count', 0) > 0:
         frames += data['results']
         if data['next']:
