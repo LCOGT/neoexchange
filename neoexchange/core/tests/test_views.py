@@ -4900,6 +4900,91 @@ class TestCleanCrossid(TestCase):
 
         self.assertEqual(expected_params, params)
 
+    def test_newstyle_comet_numbered_pre_time(self):
+        MockDateTime.change_datetime(2020, 4, 9, 6, 30, 0)
+
+        crossid = ['SWAN20A ', '58P', '', '(Apr. 9.13 UT)']
+        expected_params = { 'active' : True,
+                            'name' : '58P',
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_newstyle_comet_numbered_post_time(self):
+        MockDateTime.change_datetime(2020, 4, 19, 6, 30, 0)
+
+        crossid = ['SWAN20A ', '58P', '', '(Apr. 9.13 UT)']
+        expected_params = { 'active' : False,
+                            'name' : '58P',
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_newstyle_comet_unnumbered_pre_time_1(self):
+        MockDateTime.change_datetime(2020, 4, 9, 0, 30, 0)
+
+        crossid = ['P10XLLe ', 'C/2020 F6', '', '(Apr. 8.96 UT)']
+        expected_params = { 'active' : True,
+                            'name' : 'C/2020 F6',
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_newstyle_comet_unnumbered_post_time_1(self):
+        MockDateTime.change_datetime(2020, 4, 12, 0, 0, 0)
+
+        crossid = ['P10XLLe ', 'C/2020 F6', '', '(Apr. 8.96 UT)']
+        expected_params = { 'active' : False,
+                            'name' : 'C/2020 F6',
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_newstyle_comet_unnumbered_pre_time_2(self):
+        MockDateTime.change_datetime(2020, 4, 8, 6, 30, 0)
+
+        crossid = ['M60B7LC ', 'C/2020 F5', '', '(Apr. 8.11 UT)']
+        expected_params = { 'active' : True,
+                            'name' : 'C/2020 F5',
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_newstyle_comet_unnumbered_post_time_2(self):
+        MockDateTime.change_datetime(2020, 4, 9, 2, 50, 0)
+
+        crossid = ['M60B7LC ', 'C/2020 F5', '', '(Apr. 8.11 UT)']
+        expected_params = { 'active' : False,
+                            'name' : 'C/2020 F5',
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+
 
 class TestSummariseBlockEfficiency(TestCase):
 
