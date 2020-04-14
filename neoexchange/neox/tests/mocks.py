@@ -444,7 +444,7 @@ def mock_check_for_archive_images(request_id, obstype='EXPOSE'):
         return result_images_out, 3
 
 
-def mock_lco_api_fail(data_url):
+def mock_lco_api_fail(data_url, auth_header=None):
         return None
 
 
