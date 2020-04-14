@@ -209,7 +209,7 @@ class Body(models.Model):
         fname = ''
         if num:
             fname += num[0].value
-            if not fname.isdigit():
+            if not fname.isdigit() and name:
                 fname += '/'
         if name:
             if fname and fname.isdigit():
