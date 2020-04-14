@@ -4971,7 +4971,7 @@ class TestCleanCrossid(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_newstyle_comet_unnumbered_post_time_2(self):
-        MockDateTime.change_datetime(2020, 4, 9, 2, 50, 0)
+        MockDateTime.change_datetime(2020, 4, 11, 2, 39, 0)
 
         crossid = ['M60B7LC ', 'C/2020 F5', '', '(Apr. 8.11 UT)']
         expected_params = { 'active' : False,
@@ -6309,7 +6309,7 @@ class TestUpdateCrossids(TestCase):
         q = self.body.meandist * (1.0 - self.body.eccentricity)
         self.body.save()
 
-        status = update_crossids(crossid_info, dbg=True)
+        status = update_crossids(crossid_info, dbg=False)
         self.assertEqual(2, Body.objects.count())
 
         body = Body.objects.get(provisional_name=self.body.provisional_name)
@@ -6340,14 +6340,14 @@ class TestUpdateCrossids(TestCase):
         self.body.epochofel = datetime(2020, 3, 22, 0, 0)
         self.body.eccentricity = 0.9857459
         self.body.meandist = 246.2398975
-        self.body.meananom = 347.37843
+        self.body.meananom = 359.93312
         self.body.perihdist = None
         self.body.epochofperih = None
 
         q = self.body.meandist * (1.0 - self.body.eccentricity)
         self.body.save()
 
-        status = update_crossids(crossid_info, dbg=True)
+        status = update_crossids(crossid_info, dbg=False)
         self.assertEqual(2, Body.objects.count())
 
         body = Body.objects.get(provisional_name=self.body.provisional_name)
@@ -6359,7 +6359,7 @@ class TestUpdateCrossids(TestCase):
         self.assertEqual('MPC_COMET', body.elements_type)
         self.assertAlmostEqual(q, body.perihdist, 7)
         self.assertIs(None, body.meananom)
-        self.assertEqual(False, body.active)
+        self.assertEqual(True, body.active)
 
     @patch('core.views.datetime', MockDateTime)
     @patch('astrometrics.time_subs.datetime', MockDateTime)
@@ -6377,14 +6377,14 @@ class TestUpdateCrossids(TestCase):
         self.body.epochofel = datetime(2020, 3, 23, 0, 0)
         self.body.eccentricity = 0.9997408
         self.body.meandist = 16761.69106
-        self.body.meananom = 347.37843
+        self.body.meananom = 359.93312
         self.body.perihdist = None
         self.body.epochofperih = None
 
         q = self.body.meandist * (1.0 - self.body.eccentricity)
         self.body.save()
 
-        status = update_crossids(crossid_info, dbg=True)
+        status = update_crossids(crossid_info, dbg=False)
         self.assertEqual(2, Body.objects.count())
 
         body = Body.objects.get(provisional_name=self.body.provisional_name)
@@ -6396,7 +6396,7 @@ class TestUpdateCrossids(TestCase):
         self.assertEqual('MPC_COMET', body.elements_type)
         self.assertAlmostEqual(q, body.perihdist, 7)
         self.assertIs(None, body.meananom)
-        self.assertEqual(False, body.active)
+        self.assertEqual(True, body.active)
 
 
 class TestStoreDetections(TestCase):
