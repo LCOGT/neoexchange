@@ -274,6 +274,7 @@ class TestComputeEphemerides(TestCase):
 
         body_dict['provisional_name'] = 'N999z0z'
         body_dict['eccentricity'] = 0.42
+        body_dict['ingest'] += timedelta(seconds=1)
         body_dict['id'] += 3
         second_body = Body.objects.create(**body_dict)
         second_body.save()
@@ -283,8 +284,9 @@ class TestComputeEphemerides(TestCase):
 
         first_saved_item = saved_items[0]
         second_saved_item = saved_items[1]
-        self.assertEqual(first_saved_item.provisional_name, 'N999r0q')
-        self.assertEqual(second_saved_item.provisional_name, 'N999z0z')
+        # Newer should be first due to `-ingest` in the Body Meta ordering
+        self.assertEqual(first_saved_item.provisional_name, 'N999z0z')
+        self.assertEqual(second_saved_item.provisional_name, 'N999r0q')
 
     def test_compute_ephem_with_elements(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
