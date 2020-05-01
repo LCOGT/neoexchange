@@ -2669,6 +2669,8 @@ def store_jpl_sourcetypes(code, obj, body):
         source_subtype_1 = 'JF'
     elif 'HTC' in code:  # Halley type comet
         source_subtype_1 = 'HT'
+    elif 'COM' in code:  # Long Period comet
+        source_subtype_1 = 'LP'
     else:
         source_subtype_1 = code
 

@@ -68,8 +68,9 @@ OBJECT_SUBTYPES = (
                 ('S', 'SDO'),
                 ('H', 'Hyperbolic'),
                 ('PA', 'Parabolic'),
-                ('JF', 'Jupiter Family'),   # P < 20
+                ('JF', 'Jupiter Family'),   # P < 20 y
                 ('HT', 'Halley-Type'),      # 20 y < P < 200 y
+                ('LP', 'Long Period')       # P > 200 y
             )
 
 

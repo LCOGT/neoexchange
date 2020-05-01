@@ -5863,4 +5863,20 @@ class TestFetchJPLPhysParams(TestCase):
         self.assertEqual(body.source_subtype_1, 'JF')       
         self.assertEqual(body.source_subtype_2, 'PH')
 
+    def test_store_stuff_comet_longperiod(self):
+        """Test the storage of source subtypes when the object is a comet
+           (instead of an asteroid) and is labeled as both an NEO and as a PHA."""
+
+        bodies = Body.objects.all()
+        body = bodies[0]
+        objcode = self.resp['object']
+        objcode['orbit_class']['code'] = 'COM'
+        body.source_type = 'C'
+        body.save()
+
+        store_jpl_sourcetypes(objcode['orbit_class']['code'], objcode, body)
+
+        self.assertEqual(body.source_type, 'C')
+        self.assertLessEqual(len(body.source_subtype_1), 2)
+        self.assertEqual(body.source_subtype_1, 'LP')
 
