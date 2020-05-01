@@ -2672,7 +2672,7 @@ def store_jpl_sourcetypes(code, obj, body):
     elif 'COM' in code:  # Long Period comet
         source_subtype_1 = 'LP'
     else:
-        source_subtype_1 = code
+        source_subtype_1 = None
 
     if obj['neo'] is True:
         source_type = body.source_type
