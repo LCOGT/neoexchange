@@ -19,7 +19,7 @@ from sys import exit
 from datetime import datetime, timedelta, time
 from math import degrees, radians, floor
 import numpy as np
-
+from django.core.files.storage import default_storage
 from django.core.management.base import BaseCommand, CommandError
 from django.forms.models import model_to_dict
 try:
@@ -320,7 +320,7 @@ class Command(BaseCommand):
         obj_name = sanitize_object_name(start_super_block.body.current_name())
         datadir = os.path.join(options['datadir'], obj_name)
         rw_permissions = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH | stat.S_IWOTH
-        if not os.path.exists(datadir):
+        if not os.path.exists(datadir) and not settings.USE_S3:
             try:
                 os.makedirs(datadir)
                 # Set directory permissions correctly for shared directories
@@ -349,7 +349,7 @@ class Command(BaseCommand):
         # Create, name, open ALCDEF file.
         base_name = '{}_{}_{}_{}_'.format(obj_name, sb_site, sb_day, start_super_block.tracking_number)
         filename = os.path.join(datadir, base_name + 'ALCDEF.txt')
-        alcdef_file = open(filename, 'w')
+        alcdef_file = default_storage.open(filename, 'w')
         for super_block in super_blocks:
             block_list = Block.objects.filter(superblock=super_block.id)
             self.stdout.write("Analyzing SuperblockBlock# %s for %s" % (super_block.tracking_number, super_block.body.current_name()))
@@ -460,6 +460,7 @@ class Command(BaseCommand):
                                               plot_source=True, target_data=frame_data, horizons_comp=False, progress=True)
                         self.stdout.write("New gif created: {}".format(movie_file))
         alcdef_file.close()
+
         try:
             os.chmod(filename, rw_permissions)
         except PermissionError:
@@ -530,14 +531,15 @@ class Command(BaseCommand):
                 subtitle = ''
 
             # Make plots
-            self.plot_timeseries(times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, title=plot_title, sub_title=subtitle, datadir=datadir, filename=base_name, diameter=tel_diameter)
-            try:
-                os.chmod(os.path.join(datadir, base_name + 'lightcurve_cond.png'), rw_permissions)
-            except PermissionError:
-                pass
-            try:
-                os.chmod(os.path.join(datadir, base_name + 'lightcurve.png'), rw_permissions)
-            except PermissionError:
-                pass
+            if not settings.USE_S3:
+                self.plot_timeseries(times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, title=plot_title, sub_title=subtitle, datadir=datadir, filename=base_name, diameter=tel_diameter)
+                try:
+                    os.chmod(os.path.join(datadir, base_name + 'lightcurve_cond.png'), rw_permissions)
+                except PermissionError:
+                    pass
+                try:
+                    os.chmod(os.path.join(datadir, base_name + 'lightcurve.png'), rw_permissions)
+                except PermissionError:
+                    pass
         else:
             self.stdout.write("No sources matched.")

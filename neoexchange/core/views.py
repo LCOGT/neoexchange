@@ -3497,7 +3497,7 @@ def get_lc_plot(body, data):
     """
 
     base_dir = os.path.join(settings.DATA_ROOT, 'Reduction')
-    obj_name = body.current_name().replace(' ', '_')
+    obj_name = sanitize_object_name(body.current_name())
     datadir = os.path.join(base_dir, obj_name)
     filenames = search(datadir, '.*.ALCDEF.txt')
     if data.get('period', None):

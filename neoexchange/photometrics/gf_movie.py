@@ -107,10 +107,10 @@ def get_header_info(fits_file):
         except KeyError:
             inst = ' '
         if header['OBSTYPE'] in 'GUIDE':
-            guide_frames = True
+            frame_type = 'guide'
         else:
-            guide_frames = False
-    return obj, rn, site, inst, guide_frames
+            frame_type = 'frame'
+    return obj, rn, site, inst, frame_type
 
 
 def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True, out_path="", show_reticle=False, center=None, plot_source=False, target_data=None, horizons_comp=False):
@@ -148,10 +148,10 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
     # pull header information from first fits file
     for file in fits_files:
         try:
-            obj, rn, site, inst, guide_frames = get_header_info(file)
+            obj, rn, site, inst, frame_type = get_header_info(file)
             break
         except FileNotFoundError:
-            obj = rn = site = inst = None
+            obj = rn = site = inst = frame_type = None
             continue
     if not obj and not rn and not site and not inst:
         return "WARNING: COULD NOT FIND FITS FILES"
@@ -310,17 +310,12 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
     # takes in fig, update function, and frame rate set to fr
     anim = FuncAnimation(fig, update, frames=len(fits_files), blit=False, interval=fr)
 
-    filename = os.path.join(path, sanitize_object_name(obj) + '_' + rn + '_guidemovie.gif')
+    filename = os.path.join(path, sanitize_object_name(obj) + '_' + rn + '_{}movie.gif'.format(frame_type))
     anim.save(filename, dpi=90, writer='imagemagick')
 
     # Save to default location because Matplotlib wants a string filename not File object
     if settings.USE_S3:
-        daydir = path.replace(out_path, "").lstrip("/")
-        movie_filename = os.path.join(daydir, sanitize_object_name(obj) + '_' + rn + '_guidemovie.gif')
-        if guide_frames:
-            movie_filename = os.path.join(daydir, sanitize_object_name(obj) + '_' + rn + '_guidemovie.gif')
-        else:
-            movie_filename = os.path.join(daydir, sanitize_object_name(obj) + '_' + rn + '_framemovie.gif')
+        movie_filename = filename.replace(out_path, "").lstrip("/")
         movie_file = default_storage.open(movie_filename, "wb+")
         with open(filename, 'rb+') as f:
             movie_file.write(f.read())
