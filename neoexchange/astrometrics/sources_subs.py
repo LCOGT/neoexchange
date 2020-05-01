@@ -836,9 +836,9 @@ def parse_mpcorbit(page, epoch_now=None, dbg=False):
             except ValueError:
                 msg = "Couldn't parse epoch: " + epoch
                 logger.warning(msg)
-    name_element = page.find('h3')
-    if name_element is not None:
-        best_elements['obj_id'] = name_element.text.strip()
+            name_element = page.find('h3')
+            if name_element is not None:
+                best_elements['obj_id'] = name_element.text.strip()
 
     return best_elements
 

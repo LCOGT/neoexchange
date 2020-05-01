@@ -2658,6 +2658,10 @@ class TestFetchMPCOrbit(TestCase):
         self.test_multiple_epochs_page = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
 
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcdb_Comet2020H3.html'), 'r')
+        self.test_missing_data_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
         # Set to None to show all differences
         self.maxDiff = None
 
@@ -2879,6 +2883,16 @@ class TestFetchMPCOrbit(TestCase):
                              'obj_id': '243P/NEAT'}
 
         elements = parse_mpcorbit(self.test_multiple_epochs_page, epoch)
+        self.assertEqual(expected_elements, elements)
+
+    def test_fetch_C2020H3(self):
+
+        epoch = datetime(2020, 5, 1, 12, 0, 0)
+
+        expected_elements = {}
+
+        elements = parse_mpcorbit(self.test_missing_data_page, epoch)
+
         self.assertEqual(expected_elements, elements)
 
     def test_badpage(self):
