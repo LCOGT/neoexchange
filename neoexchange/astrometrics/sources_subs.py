@@ -836,9 +836,9 @@ def parse_mpcorbit(page, epoch_now=None, dbg=False):
             except ValueError:
                 msg = "Couldn't parse epoch: " + epoch
                 logger.warning(msg)
-    name_element = page.find('h3')
-    if name_element is not None:
-        best_elements['obj_id'] = name_element.text.strip()
+            name_element = page.find('h3')
+            if name_element is not None:
+                best_elements['obj_id'] = name_element.text.strip()
 
     return best_elements
 
@@ -2669,8 +2669,10 @@ def store_jpl_sourcetypes(code, obj, body):
         source_subtype_1 = 'JF'
     elif 'HTC' in code:  # Halley type comet
         source_subtype_1 = 'HT'
+    elif 'COM' in code:  # Long Period comet
+        source_subtype_1 = 'LP'
     else:
-        source_subtype_1 = code
+        source_subtype_1 = None
 
     if obj['neo'] is True:
         source_type = body.source_type

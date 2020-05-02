@@ -2616,7 +2616,7 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
         body.save()
         logger.info("More recent elements already stored for %s" % obj_id)
     # Update Physical Parameters
-    if body.characterization_target():
+    if body.characterization_target() or body.source_type == 'C':
         update_jpl_phys_params(body)
     return True
 
