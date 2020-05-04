@@ -836,9 +836,9 @@ def parse_mpcorbit(page, epoch_now=None, dbg=False):
             except ValueError:
                 msg = "Couldn't parse epoch: " + epoch
                 logger.warning(msg)
-    name_element = page.find('h3')
-    if name_element is not None:
-        best_elements['obj_id'] = name_element.text.strip()
+            name_element = page.find('h3')
+            if name_element is not None:
+                best_elements['obj_id'] = name_element.text.strip()
 
     return best_elements
 
@@ -1333,9 +1333,10 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
 
     list_address = '"small-bodies-observations@lists.nasa.gov"'
     list_authors = [ '"paul.a.abell@nasa.gov"',
-                        '"paul.w.chodas@jpl.nasa.gov"',
-                        '"brent.w.barbee@nasa.gov"',
-                        '"Barbee, Brent W. (GSFC-5950) via small-bodies-observations"']
+                     '"Abell, Paul A. (JSC-XI111) via small-bodies-observations"',
+                     '"paul.w.chodas@jpl.nasa.gov"',
+                     '"brent.w.barbee@nasa.gov"',
+                     '"Barbee, Brent W. (GSFC-5950) via small-bodies-observations"']
 
     list_prefix = '[' + list_address.replace('"', '').split('@')[0] + ']'
     list_suffix = 'Observations Requested'
@@ -2668,8 +2669,10 @@ def store_jpl_sourcetypes(code, obj, body):
         source_subtype_1 = 'JF'
     elif 'HTC' in code:  # Halley type comet
         source_subtype_1 = 'HT'
+    elif 'COM' in code:  # Long Period comet
+        source_subtype_1 = 'LP'
     else:
-        source_subtype_1 = code
+        source_subtype_1 = None
 
     if obj['neo'] is True:
         source_type = body.source_type
