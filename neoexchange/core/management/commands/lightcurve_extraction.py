@@ -460,86 +460,87 @@ class Command(BaseCommand):
                                               plot_source=True, target_data=frame_data, horizons_comp=False, progress=True)
                         self.stdout.write("New gif created: {}".format(movie_file))
         alcdef_file.close()
+        self.stdout.write("Found matches in %d of %d frames" % (len(times), total_frame_count))
 
-        try:
-            os.chmod(filename, rw_permissions)
-        except PermissionError:
-            pass
-        self.stdout.write("Found matches in %d of %d frames" % ( len(times), total_frame_count))
-
-        # Write light curve data out in similar format to Make_lc.csh
-        i = 0
-
-        lightcurve_file = open(os.path.join(datadir, base_name + 'lightcurve_data.txt'), 'w')
-        mpc_file = open(os.path.join(datadir, base_name + 'mpc_positions.txt'), 'w')
-        psv_file = open(os.path.join(datadir, base_name + 'ades_positions.psv'), 'w')
-
-        # Calculate integer part of JD for first frame and use this as a
-        # constant in case of wrapover to the next day
-        if len(times) > 0 and len(mags) > 0:
-            mjd_offset = int(datetime2mjd_utc(times[0]))
-            for time in times:
-                time_jd = datetime2mjd_utc(time)
-                time_jd_truncated = time_jd - mjd_offset
-                if i == 0:
-                    lightcurve_file.write('#Object: %s\n' % start_super_block.body.current_name())
-                    lightcurve_file.write("#MJD-%.1f Mag. Mag. error\n" % mjd_offset)
-                lightcurve_file.write("%7.5lf %6.3lf %5.3lf\n" % (time_jd_truncated, mags[i], mag_errs[i]))
-                i += 1
-            lightcurve_file.close()
+        if not settings.USE_S3:
             try:
-                os.chmod(os.path.join(datadir, base_name + 'lightcurve_data.txt'), rw_permissions)
+                os.chmod(filename, rw_permissions)
             except PermissionError:
                 pass
 
-            # Write out MPC1992 80 column file
-            for mpc_line in mpc_lines:
-                mpc_file.write(mpc_line + '\n')
-            mpc_file.close()
-            try:
-                os.chmod(os.path.join(datadir, base_name + 'mpc_positions.txt'), rw_permissions)
-            except PermissionError:
-                pass
+            # Write light curve data out in similar format to Make_lc.csh
+            i = 0
 
-            # Write out ADES Pipe Separated Value file
-            for psv_line in psv_lines:
-                psv_file.write(psv_line + '\n')
-            psv_file.close()
-            try:
-                os.chmod(os.path.join(datadir, base_name + 'ades_positions.psv'), rw_permissions)
-            except PermissionError:
-                pass
+            lightcurve_file = open(os.path.join(datadir, base_name + 'lightcurve_data.txt'), 'w')
+            mpc_file = open(os.path.join(datadir, base_name + 'mpc_positions.txt'), 'w')
+            psv_file = open(os.path.join(datadir, base_name + 'ades_positions.psv'), 'w')
 
-            # Create Default Plot Title
-            if options['title'] is None:
-                sites = ', '.join(mpc_site)
+            # Calculate integer part of JD for first frame and use this as a
+            # constant in case of wrapover to the next day
+            if len(times) > 0 and len(mags) > 0:
+                mjd_offset = int(datetime2mjd_utc(times[0]))
+                for time in times:
+                    time_jd = datetime2mjd_utc(time)
+                    time_jd_truncated = time_jd - mjd_offset
+                    if i == 0:
+                        lightcurve_file.write('#Object: %s\n' % start_super_block.body.current_name())
+                        lightcurve_file.write("#MJD-%.1f Mag. Mag. error\n" % mjd_offset)
+                    lightcurve_file.write("%7.5lf %6.3lf %5.3lf\n" % (time_jd_truncated, mags[i], mag_errs[i]))
+                    i += 1
+                lightcurve_file.close()
                 try:
-                    if options['timespan'] < 1:
-                        plot_title = '%s from %s (%s) on %s' % (start_super_block.body.current_name(),
-                                                                start_block.site.upper(), sites, start_super_block.block_end.strftime("%Y-%m-%d"))
+                    os.chmod(os.path.join(datadir, base_name + 'lightcurve_data.txt'), rw_permissions)
+                except PermissionError:
+                    pass
+
+                # Write out MPC1992 80 column file
+                for mpc_line in mpc_lines:
+                    mpc_file.write(mpc_line + '\n')
+                mpc_file.close()
+                try:
+                    os.chmod(os.path.join(datadir, base_name + 'mpc_positions.txt'), rw_permissions)
+                except PermissionError:
+                    pass
+
+                # Write out ADES Pipe Separated Value file
+                for psv_line in psv_lines:
+                    psv_file.write(psv_line + '\n')
+                psv_file.close()
+                try:
+                    os.chmod(os.path.join(datadir, base_name + 'ades_positions.psv'), rw_permissions)
+                except PermissionError:
+                    pass
+
+                # Create Default Plot Title
+                if options['title'] is None:
+                    sites = ', '.join(mpc_site)
+                    try:
+                        if options['timespan'] < 1:
+                            plot_title = '%s from %s (%s) on %s' % (start_super_block.body.current_name(),
+                                                                    start_block.site.upper(), sites, start_super_block.block_end.strftime("%Y-%m-%d"))
+                            subtitle = ''
+                        else:
+                            plot_title = '%s from %s to %s' % (start_block.body.current_name(),
+                                                               (start_super_block.block_end - timedelta(days=options['timespan'])).strftime("%Y-%m-%d"),
+                                                               start_super_block.block_end.strftime("%Y-%m-%d"))
+                            subtitle = 'Sites: ' + sites
+                    except TypeError:
+                        plot_title = 'LC for %s' % (start_super_block.body.current_name())
                         subtitle = ''
-                    else:
-                        plot_title = '%s from %s to %s' % (start_block.body.current_name(),
-                                                           (start_super_block.block_end - timedelta(days=options['timespan'])).strftime("%Y-%m-%d"),
-                                                           start_super_block.block_end.strftime("%Y-%m-%d"))
-                        subtitle = 'Sites: ' + sites
-                except TypeError:
-                    plot_title = 'LC for %s' % (start_super_block.body.current_name())
+                else:
+                    plot_title = options['title']
                     subtitle = ''
-            else:
-                plot_title = options['title']
-                subtitle = ''
 
-            # Make plots
-            if not settings.USE_S3:
-                self.plot_timeseries(times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, title=plot_title, sub_title=subtitle, datadir=datadir, filename=base_name, diameter=tel_diameter)
-                try:
-                    os.chmod(os.path.join(datadir, base_name + 'lightcurve_cond.png'), rw_permissions)
-                except PermissionError:
-                    pass
-                try:
-                    os.chmod(os.path.join(datadir, base_name + 'lightcurve.png'), rw_permissions)
-                except PermissionError:
-                    pass
-        else:
-            self.stdout.write("No sources matched.")
+                # Make plots
+                if not settings.USE_S3:
+                    self.plot_timeseries(times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, title=plot_title, sub_title=subtitle, datadir=datadir, filename=base_name, diameter=tel_diameter)
+                    try:
+                        os.chmod(os.path.join(datadir, base_name + 'lightcurve_cond.png'), rw_permissions)
+                    except PermissionError:
+                        pass
+                    try:
+                        os.chmod(os.path.join(datadir, base_name + 'lightcurve.png'), rw_permissions)
+                    except PermissionError:
+                        pass
+            else:
+                self.stdout.write("No sources matched.")
