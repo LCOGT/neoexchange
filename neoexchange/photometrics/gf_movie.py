@@ -17,7 +17,6 @@ import sys
 import numpy as np
 from math import degrees, cos, radians
 import matplotlib
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import pyslalib.slalib as S
