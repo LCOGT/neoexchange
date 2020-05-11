@@ -180,6 +180,8 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
             date_array = []
 
     time_in = datetime.now()
+    x_offset = 0
+    y_offset = 0
 
     def update(n):
         """ this method is required to build FuncAnimation
@@ -219,12 +221,14 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
                 td = target_data[n]
                 target_source = td['best_source']
                 if target_source:
+                    global x_offset
+                    global y_offset
                     x_offset = int(target_source.obs_x - header_n['CRPIX1'])
                     y_offset = int(target_source.obs_y - header_n['CRPIX2'])
-                    data_x_range = [x + x_offset for x in data_x_range]
-                    data_y_range = [y + y_offset for y in data_y_range]
-                    x_frac += x_offset
-                    y_frac += y_offset
+                data_x_range = [x + x_offset for x in data_x_range]
+                data_y_range = [y + y_offset for y in data_y_range]
+                x_frac += x_offset
+                y_frac += y_offset
             data = data[data_y_range[0]:data_y_range[1], data_x_range[0]:data_x_range[1]]
             # Set new coordinates for Reference Pixel w/in smaller window
             header_n['CRPIX1'] -= x_frac
