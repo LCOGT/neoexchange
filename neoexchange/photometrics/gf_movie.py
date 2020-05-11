@@ -211,10 +211,25 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
         if center is not None:
             y_frac = np.max(int((shape[0] - (center * 60)/header_n['PIXSCALE']) / 2), 0)
             x_frac = np.max(int((shape[1] - (center * 60)/header_n['PIXSCALE']) / 2), 0)
-            data = data[y_frac:-(y_frac+1), x_frac:-(x_frac+1)]
+
+            # set data ranges
+            data_x_range = [x_frac, -(x_frac+1)]
+            data_y_range = [y_frac, -(y_frac+1)]
+            if target_data:
+                td = target_data[n]
+                target_source = td['best_source']
+                if target_source:
+                    x_offset = target_source.obs_x - header_n['CRPIX1']
+                    y_offset = target_source.obs_y - header_n['CRPIX2']
+                    data_x_range = [x + x_offset for x in data_x_range]
+                    data_y_range = [y + y_offset for y in data_y_range]
+                    x_frac += x_offset
+                    y_frac += y_offset
+            data = data[data_y_range[0]:data_y_range[1], data_x_range[0]:data_x_range[1]]
             # Set new coordinates for Reference Pixel w/in smaller window
             header_n['CRPIX1'] -= x_frac
             header_n['CRPIX2'] -= y_frac
+
         # pull Date from Header
         try:
             date_obs = header_n['DATE-OBS']
@@ -253,10 +268,13 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
 
         # If first few frames, add 5" and 15" reticle
         if current_count < 6 and fr != init_fr or show_reticle:
-            circle_5arcsec = plt.Circle((header_n['CRPIX1'], header_n['CRPIX2']), 5/header_n['PIXSCALE'], fill=False, color='limegreen', linewidth=1.5)
-            circle_15arcsec = plt.Circle((header_n['CRPIX1'], header_n['CRPIX2']), 15/header_n['PIXSCALE'], fill=False, color='lime', linewidth=1.5)
-            ax.add_artist(circle_5arcsec)
-            ax.add_artist(circle_15arcsec)
+            if plot_source:
+                plt.plot([header_n['CRPIX1']], [header_n['CRPIX2']], color='red', marker='+', linestyle=' ', label="Frame_Center")
+            else:
+                circle_5arcsec = plt.Circle((header_n['CRPIX1'], header_n['CRPIX2']), 5/header_n['PIXSCALE'], fill=False, color='limegreen', linewidth=1.5)
+                circle_15arcsec = plt.Circle((header_n['CRPIX1'], header_n['CRPIX2']), 15/header_n['PIXSCALE'], fill=False, color='lime', linewidth=1.5)
+                ax.add_artist(circle_5arcsec)
+                ax.add_artist(circle_15arcsec)
 
         # add sources
         if plot_source:
