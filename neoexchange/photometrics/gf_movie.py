@@ -284,7 +284,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
         if plot_source:
             try:
                 frame_obj = Frame.objects.get(filename=os.path.basename(fits_files[n]))
-                sources = CatalogSources.objects.filter(frame=frame_obj, obs_y__range=(y_frac, shape[0]-y_frac-y_offset), obs_x__range=(x_frac, shape[1]-x_frac-x_offset))
+                sources = CatalogSources.objects.filter(frame=frame_obj, obs_y__range=(y_frac, shape[0] - y_frac + 2 * y_offset), obs_x__range=(x_frac, shape[1] - x_frac + 2 * x_offset))
                 for source in sources:
                     circle_source = plt.Circle((source.obs_x - x_frac, source.obs_y - y_frac), 3/header_n['PIXSCALE'], fill=False, color='red', linewidth=1, alpha=.5)
                     ax.add_artist(circle_source)
