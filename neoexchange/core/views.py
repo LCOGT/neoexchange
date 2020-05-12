@@ -3441,7 +3441,7 @@ class LCPlot(LookUpBodyMixin, FormView):
 def import_alcdef(file, meta_list, lc_list):
     """Pull LC data from ALCDEF text files."""
 
-    lc_file = default_storage.open(file, 'r')
+    lc_file = default_storage.open(file, 'rt')
     lines = lc_file.readlines()
 
     metadata = {}
