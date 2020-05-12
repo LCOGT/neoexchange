@@ -272,7 +272,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
 
         # If first few frames, add 5" and 15" reticle
         if current_count < 6 and fr != init_fr or show_reticle:
-            if plot_source:
+            if plot_source and header_n['CRPIX1'] > 0 and header_n['CRPIX2'] > 0:
                 plt.plot([header_n['CRPIX1']], [header_n['CRPIX2']], color='red', marker='+', linestyle=' ', label="Frame_Center")
             else:
                 circle_5arcsec = plt.Circle((header_n['CRPIX1'], header_n['CRPIX2']), 5/header_n['PIXSCALE'], fill=False, color='limegreen', linewidth=1.5)
