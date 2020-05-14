@@ -220,9 +220,9 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
             if target_data:
                 td = target_data[n]
                 target_source = td['best_source']
+                global x_offset
+                global y_offset
                 if target_source:
-                    global x_offset
-                    global y_offset
                     x_offset = int(target_source.obs_x - header_n['CRPIX1'])
                     y_offset = int(target_source.obs_y - header_n['CRPIX2'])
                 data_x_range = [x + x_offset for x in data_x_range]
