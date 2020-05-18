@@ -223,10 +223,10 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
                 if target_source:
                     make_gif.x_offset = int(target_source.obs_x - header_n['CRPIX1'])
                     make_gif.y_offset = int(target_source.obs_y - header_n['CRPIX2'])
-                data_x_range = [x + x_offset for x in data_x_range]
-                data_y_range = [y + y_offset for y in data_y_range]
-                x_frac += x_offset
-                y_frac += y_offset
+                data_x_range = [x + make_gif.x_offset for x in data_x_range]
+                data_y_range = [y + make_gif.y_offset for y in data_y_range]
+                x_frac += make_gif.x_offset
+                y_frac += make_gif.y_offset
             data = data[data_y_range[0]:data_y_range[1], data_x_range[0]:data_x_range[1]]
             # Set new coordinates for Reference Pixel w/in smaller window
             header_n['CRPIX1'] -= x_frac
@@ -282,7 +282,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
         if plot_source:
             try:
                 frame_obj = Frame.objects.get(filename=os.path.basename(fits_files[n]))
-                sources = CatalogSources.objects.filter(frame=frame_obj, obs_y__range=(y_frac, shape[0] - y_frac + 2 * y_offset), obs_x__range=(x_frac, shape[1] - x_frac + 2 * x_offset))
+                sources = CatalogSources.objects.filter(frame=frame_obj, obs_y__range=(y_frac, shape[0] - y_frac + 2 * make_gif.y_offset), obs_x__range=(x_frac, shape[1] - x_frac + 2 * make_gif.x_offset))
                 for source in sources:
                     circle_source = plt.Circle((source.obs_x - x_frac, source.obs_y - y_frac), 3/header_n['PIXSCALE'], fill=False, color='red', linewidth=1, alpha=.5)
                     ax.add_artist(circle_source)
