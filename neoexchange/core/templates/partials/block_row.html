@@ -1,0 +1,17 @@
+<td class="list_title"  data-label="Block #"><a href="{% url 'block-view' block.pk %}">{{block.pk}}</a></td>
+{% if block.body %}
+    <td class="list_title"  data-label="Target Name"><a href="{% url 'target' block.body.pk %}">{{block.body.current_name}}</a></td>
+{% elif block.calibsource %}
+    <td class="list_title"  data-label="Target Name"><a href="{% url 'calibsource' block.calibsource.pk %}">{{block.calibsource.current_name}}</a></td>
+{% else %}
+    <td class="list_title"  data-label="Target Name">None!?</td>
+{% endif %}
+<td data-label="Site">{{sites|upper}}</td>
+<td data-label="Telescope Type">{{telclass}}</td>
+<td data-label="Proposal">{{block.proposal.code}}</td>
+<td data-label="Tracking #"><a href="{{block.make_obsblock_link}}">{{block.tracking_number}}</a></td>
+<td data-label="Obs. details">{{obsdetails}}</td>
+<td data-label="Cadence?"><span class="">{% if block.cadence %}<span class="warning msgpadded">Yes</span>{% else %}No{% endif %}</span></td>
+<td data-label="Active?"><span class="">{% if block.active %}<span class="warning msgpadded">Active</span>{% else %}Not Active{% endif %}</span></td>
+<td data-label="Observed?">{{num_observed.0}} / {{num_observed.1}}</td>
+<td data-label="Reported?"><span class="">{% if num_reported.0 >= 1 %}<span class="warning msgpadded">{{num_reported.0}} / {{num_reported.1}}</span>{% else %}{{num_reported.0}} / {{num_reported.1}}{% endif %}</span></td>

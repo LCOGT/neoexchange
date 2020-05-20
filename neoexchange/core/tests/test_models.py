@@ -54,12 +54,15 @@ class TestBody(TestCase):
         self.body, created = Body.objects.get_or_create(**params)
 
         params['provisional_name'] = 'V92818q'
+        params['ingest'] = datetime(2019, 4, 20, 3, 2, 1)
         self.body2, created = Body.objects.get_or_create(**params)
 
         params['provisional_name'] = 'I22871'
+        params['update_time'] = params['ingest'] - timedelta(seconds=1)
         self.body3, created = Body.objects.get_or_create(**params)
 
         params['provisional_name'] = 'Ntheiqo'
+        params['update_time'] = params['ingest'] + timedelta(seconds=1)
         self.body4, created = Body.objects.get_or_create(**params)
 
         params['provisional_name'] = 'Q488391r'
@@ -191,6 +194,18 @@ class TestBody(TestCase):
                        }
         self.test_block5b = Block.objects.create(**block_params5b)
 
+        frame_params = { 'sitecode' : 'E10',
+                         'instrument' : 'fs03',
+                         'midpoint' : self.body5.ingest + timedelta(days=1),
+                         'block' : self.test_block5b
+                       }
+        self.test_frame = Frame.objects.create(**frame_params)
+
+        srcm_params = { 'body' : self.body5,
+                        'frame' : self.test_frame
+                      }
+        self.test_srcmeasure = SourceMeasurement.objects.create(**srcm_params)
+
         spectra_params = {'body'         : self.body,
                           'spec_wav'     : 'Vis',
                           'spec_vis'     : 'sp233/a265962.sp233.txt',
@@ -295,8 +310,66 @@ class TestBody(TestCase):
         self.assertEqual(obs_window[0], expected_start)
         self.assertEqual(obs_window[1], expected_end)
 
+    def test_return_latest_measurement_no_ingest(self):
+        expected_dt = self.body.ingest
+        expected_type = 'Ingest Time'
 
-@patch('core.models.datetime', MockDateTime)
+        update_type, update_dt = self.body.get_latest_update()
+
+        self.assertEqual(expected_type, update_type)
+        self.assertEqual(expected_dt, update_dt)
+
+    def test_return_latest_measurement_ingest(self):
+        expected_dt = self.body2.ingest
+        expected_type = 'Ingest Time'
+
+        update_type, update_dt = self.body2.get_latest_update()
+
+        self.assertEqual(expected_type, update_type)
+        self.assertEqual(expected_dt, update_dt)
+
+    def test_return_latest_measurement_update_earlier(self):
+        expected_dt = self.body3.ingest
+        expected_type = 'Ingest Time'
+
+        update_type, update_dt = self.body3.get_latest_update()
+
+        self.assertEqual(expected_type, update_type)
+        self.assertEqual(expected_dt, update_dt)
+
+    def test_return_latest_measurement_update_later(self):
+        expected_dt = self.body4.update_time
+        expected_type = 'Last Update'
+
+        update_type, update_dt = self.body4.get_latest_update()
+
+        self.assertEqual(expected_type, update_type)
+        self.assertEqual(expected_dt, update_dt)
+
+    def test_return_later_srcmeasure(self):
+        expected_dt = self.test_frame.midpoint
+        expected_type = 'Last Measurement'
+
+        update_type, update_dt = self.body5.get_latest_update()
+
+        self.assertEqual(expected_type, update_type)
+        self.assertEqual(expected_dt, update_dt)
+
+    def test_return_earlier_srcmeasure(self):
+        self.body5.update_time += timedelta(days=2)
+        self.body5.save()
+        self.body5.refresh_from_db()
+
+        expected_dt = self.body5.update_time
+        expected_type = 'Last Update'
+
+        update_type, update_dt = self.body5.get_latest_update()
+
+        self.assertEqual(expected_type, update_type)
+        self.assertEqual(expected_dt, update_dt)
+
+
+@patch('core.models.body.datetime', MockDateTime)
 class TestComputeFOM(TestCase):
 
     def setUp(self):
@@ -1683,7 +1756,7 @@ class TestSourceMeasurement(TestCase):
                             'astrometric_catalog' : "PPMXL",
                             'flags' : 'K'
                          }
-                                 
+
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '     N999r0q KC2015 07 13.88184010 30 00.00 -32 45 00.0          20.7 Rt     K93'
         mpc_line = measure.format_mpc_line(include_catcode=True)
@@ -1697,7 +1770,7 @@ class TestSourceMeasurement(TestCase):
                             'obs_mag' : 21.6,
                             'flags' : 'K'
                          }
-                                 
+
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '     K15X54S KC2015 12 05.04918923 04 04.12 -03 50 35.1          21.6 R      W86'
         mpc_line = measure.format_mpc_line()
@@ -1717,7 +1790,7 @@ class TestSourceMeasurement(TestCase):
                             'obs_ra': 106.933,
                             'photometric_catalog': u'UCAC4',
                             'snr': None}
-                                 
+
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '     K15X54S KC2015 12 05.04918907 07 43.92 -29 30 01.1               R      W86'
         mpc_line = measure.format_mpc_line()
@@ -1737,7 +1810,7 @@ class TestSourceMeasurement(TestCase):
                             'obs_ra': 228.6245,
                             'photometric_catalog': u'2MASS',
                             'snr': None}
-                                 
+
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '     N999r0q  S2016 02 08.89193 15 14 29.88 -09 50 03.0          19.0 RL     C51' +\
                           '\n' + '     N999r0q  s2016 02 08.89193 1 - 3471.6659 - 5748.3475 - 1442.3263        C51'
@@ -1758,7 +1831,7 @@ class TestSourceMeasurement(TestCase):
                             'obs_ra': 228.6245,
                             'photometric_catalog': u'2MASS',
                             'snr': None}
-                                 
+
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '    CK16C020  S2016 02 08.89193 15 14 29.88 -09 50 03.0          19.0 RL     C51' +\
                           '\n' + '    CK16C020  s2016 02 08.89193 1 - 3471.6659 - 5748.3475 - 1442.3263        C51'
@@ -2229,4 +2302,3 @@ class TestCandidate(TestCase):
         for frame in arange(self.dets_array.shape[0]):
             for column in self.dets_array.dtype.names:
                 self.assertAlmostEqual(self.dets_array[column][frame], new_dets_array[column][frame], 7)
-

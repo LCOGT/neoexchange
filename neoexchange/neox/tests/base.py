@@ -23,6 +23,7 @@ import shutil
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.conf import settings
 from contextlib import contextmanager
+from numpy import ndarray, long
 from selenium import webdriver
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
@@ -62,10 +63,10 @@ class FunctionalTest(StaticLiveServerTestCase):
                     'elements_type' : 'MPC_MINOR_PLANET',
                     'active'        : True,
                     'origin'        : 'M',
-                    'ingest'        : '2015-05-11 17:20:00',
+                    'ingest'        : datetime(2015, 5, 11, 17, 20, 00),
                     'score'         : 90,
-                    'discovery_date': '2015-05-10 12:00:00',
-                    'update_time'   : '2015-05-18 05:00:00',
+                    'discovery_date': datetime(2015, 5, 10, 12, 0, 0),
+                    'update_time'   : datetime(2015, 5, 18, 5, 0, 0),
                     'num_obs'       : 17,
                     'arc_length'    : 3.123456789,
                     'not_seen'      : 0.423456789,
@@ -259,7 +260,6 @@ class FunctionalTest(StaticLiveServerTestCase):
 
         if settings.USE_FIREFOXDRIVER:
             fp = webdriver.FirefoxProfile()
-            # fp = webdriver.Chrome()
             fp.set_preference("browser.startup.homepage", "about:blank")
             fp.set_preference("startup.homepage_welcome_url", "about:blank")
             fp.set_preference("startup.homepage_welcome_url.additional", "about:blank")
@@ -281,10 +281,12 @@ class FunctionalTest(StaticLiveServerTestCase):
                 if version and 'Firefox' in version:
                     version_num = version.rstrip().split(' ')[-1]
                     major_version = version_num.split('.')[0]
+                    firefox_capabilities['marionette'] = True
                     if major_version.isdigit() and int(major_version) <= 52:
                         firefox_capabilities['marionette'] = False
-
-                self.browser = webdriver.Firefox(capabilities=firefox_capabilities, firefox_profile=fp)
+                options = webdriver.firefox.options.Options()
+                options.add_argument('--headless')
+                self.browser = webdriver.Firefox(capabilities=firefox_capabilities, firefox_profile=fp, firefox_options=options)
         else:
             options = webdriver.chrome.options.Options()
             options.add_argument('--headless')
@@ -302,9 +304,12 @@ class FunctionalTest(StaticLiveServerTestCase):
                 try:
                     files_to_remove = glob(os.path.join(self.test_dir, '*'))
                     for file_to_rm in files_to_remove:
-                        os.remove(file_to_rm)
+                        if os.path.isdir(file_to_rm):
+                            shutil.rmtree(file_to_rm)
+                        else:
+                            os.remove(file_to_rm)
                 except OSError:
-                    print("Error removing files in temporary test directory", self.test_dir)
+                    print("Error removing files/directories in temporary test directory", self.test_dir)
                 try:
                     os.rmdir(self.test_dir)
                     if debug_print:
@@ -362,3 +367,44 @@ class FunctionalTest(StaticLiveServerTestCase):
                 element_id, self.browser.find_element_by_tag_name('body').text
             )
         )
+
+
+def assertDeepAlmostEqual(test_case, expected, actual, *args, **kwargs):
+    """
+    Assert that two complex structures have almost equal contents.
+
+    Compares lists, dicts and tuples recursively. Checks numeric values
+    using test_case's :py:meth:`unittest.TestCase.assertAlmostEqual` and
+    checks all other values with :py:meth:`unittest.TestCase.assertEqual`.
+    Accepts additional positional and keyword arguments and pass those
+    intact to assertAlmostEqual() (that's how you specify comparison
+    precision).
+
+    :param test_case: TestCase object on which we can call all of the basic
+    'assert' methods.
+    :type test_case: :py:class:`unittest.TestCase` object
+    """
+    is_root = not '__trace' in kwargs
+    trace = kwargs.pop('__trace', 'ROOT')
+    try:
+        if isinstance(expected, (int, float, long, complex)):
+            test_case.assertAlmostEqual(expected, actual, *args, **kwargs)
+        elif isinstance(expected, (list, tuple, ndarray)):
+            test_case.assertEqual(len(expected), len(actual))
+            for index in range(len(expected)):
+                v1, v2 = expected[index], actual[index]
+                assertDeepAlmostEqual(test_case, v1, v2,
+                                      __trace=repr(index), *args, **kwargs)
+        elif isinstance(expected, dict):
+            test_case.assertEqual(set(expected), set(actual))
+            for key in expected:
+                assertDeepAlmostEqual(test_case, expected[key], actual[key],
+                                      __trace=repr(key), *args, **kwargs)
+        else:
+            test_case.assertEqual(expected, actual)
+    except AssertionError as exc:
+        exc.__dict__.setdefault('traces', []).append(trace)
+        if is_root:
+            trace = ' -> '.join(reversed(exc.traces))
+            exc = AssertionError("%s\nTRACE: %s" % (exc.message, trace))
+        raise exc

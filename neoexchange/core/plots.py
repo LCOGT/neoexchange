@@ -42,6 +42,7 @@ from astrometrics.ephem_subs import horizons_ephem, call_compute_ephem, determin
     moon_ra_dec, target_rise_set, moonphase, dark_and_object_up, compute_dark_and_up_time, get_visibility
 from photometrics.obsgeomplot import plot_ra_dec, plot_brightness, plot_helio_geo_dist, \
     plot_uncertainty, plot_hoursup
+from photometrics.catalog_subs import sanitize_object_name
 from photometrics.SA_scatter import readSources, plotScatter, plotFormat
 from photometrics.spectraplot import spectrum_plot, read_mean_tax
 
@@ -132,7 +133,7 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow(), s
         return HttpResponse(PIXEL_GIF_DATA, content_type='image/gif')
 
     base_dir = os.path.join('visibility', str(body.pk))  # new base_dir for method
-    obj = body.name.replace(' ', '').replace('-', '_').replace('+', '')
+    obj = sanitize_object_name(body.name)
     site = ''
     if plot_type == 'hoursup':
         site = "_" + site_code + "_"
@@ -288,7 +289,7 @@ def spec_plot(data_spec, analog_data, reflec=False):
         spec_dict = read_mean_tax()
         spec_dict["Wavelength"] = [l*10000 for l in spec_dict["Wavelength"]]
 
-        stand_list = ['A', 'B', 'C', 'D', 'L', 'Q', 'S', 'Sq', 'V', 'X', 'Xe']
+        stand_list = ['A', 'B', 'C', 'D', 'K', 'L', 'O', 'Q', 'S', 'Sq', 'T', 'V', 'X', 'Xe']
         init_stand = ['C', 'Q', 'S', 'X']
         colors = Category20[len(stand_list)]
         for j, tax in enumerate(stand_list):
@@ -306,7 +307,8 @@ def spec_plot(data_spec, analog_data, reflec=False):
             source = ColumnDataSource(spec_dict)
 
             plot2.line("Wavelength", tax+"_Mean", source=source, color=colors[j], name=tax + "-Type", line_width=2, line_dash='dashed', legend_label=tax, visible=vis)
-            plot2.patch(xs, ys, fill_alpha=.25, line_width=1, fill_color=colors[j], line_color="black", name=tax + "-Type", legend_label=tax, line_alpha=.25, visible=vis)
+            if np.mean(spec_dict[tax + '_Sigma']) > 0:
+                plot2.patch(xs, ys, fill_alpha=.25, line_width=1, fill_color=colors[j], line_color="black", name=tax + "-Type", legend_label=tax, line_alpha=.25, visible=vis)
 
         if not reflec:
             for spec in data_spec:
@@ -396,10 +398,10 @@ def build_visibility_source(body, site_list, site_code, color_list, d, alt_limit
         moon_rise, moon_set, moon_max_alt, moon_vis_time = target_rise_set(d, moon_app_ra, moon_app_dec, site, 10, step_size, sun=False)
         moon_phase = moonphase(d, site_long, site_lat, site_hgt)
         emp = call_compute_ephem(body_elements, d, d + timedelta(days=1), site, step_size, perturb=False)
-        obj_up_emp = dark_and_object_up(emp, d, d + timedelta(days=1), 0 , alt_limit=alt_limit)
+        obj_up_emp = dark_and_object_up(emp, d, d + timedelta(days=1), 0, alt_limit=alt_limit)
         vis_time, emp_obj_up, set_time = compute_dark_and_up_time(obj_up_emp, step_size)
         obj_set = datetime_to_radians(d, set_time)
-        dark_and_up_time, max_alt = get_visibility(None, None, d + timedelta(days=bonus_day), site, step_size, alt_limit, False, body_elements)
+        dark_and_up_time, max_alt, up_time, down_time = get_visibility(None, None, d + timedelta(days=bonus_day), site, step_size, alt_limit, False, body_elements)
         vis["x"].append(0)
         vis["y"].append(0)
         vis["sun_rise"].append(datetime_to_radians(d, dark_end))
@@ -438,7 +440,7 @@ def lin_vis_plot(body):
     vis, mag = build_visibility_source(body, site_list, site_code, color_list, d, alt_limit, step_size)
     new_x = []
     for i, l in enumerate(site_code):
-        new_x.append(-1 + i * ( 2 / (len(site_list)-1)))
+        new_x.append(-1 + i * (2 / (len(site_list)-1)))
     vis['x'] = new_x
     rad = ((2 / (len(site_list)-1))*.9)/2
 
@@ -477,7 +479,7 @@ def lin_vis_plot(body):
     # base
     plot.circle(x='x', y='y', radius=rad, fill_color="white", source=source, line_color="black", line_width=2)
     # object
-    plot.wedge(x='x', y='y', radius=rad, start_angle="obj_rise", end_angle="obj_set", color="colors", line_color="black",line_alpha="line_alpha", source=source)
+    plot.wedge(x='x', y='y', radius=rad, start_angle="obj_rise", end_angle="obj_set", color="colors", line_color="black", line_alpha="line_alpha", source=source)
     # sun
     plot.wedge(x='x', y='y', radius=rad * .75, start_angle="sun_rise", end_angle="sun_set", color="khaki", line_color="black", source=source)
     # moon

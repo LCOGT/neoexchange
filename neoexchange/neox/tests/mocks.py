@@ -15,6 +15,7 @@ GNU General Public License for more details.
 
 from datetime import datetime as real_datetime
 from datetime import datetime
+from datetime import date
 import os
 
 import astropy.units as u
@@ -67,6 +68,19 @@ class MockDateTime(datetime, metaclass=MockDateTimeType):
         return cls(cls.year, cls.month, cls.day, cls.hour, cls.minute, cls.second)
 
 
+class MockDate(date, metaclass=MockDateTimeType):
+
+    @classmethod
+    def change_date(cls, year, month, day):
+        cls.year = year
+        cls.month = month
+        cls.day = day
+
+    @classmethod
+    def today(cls):
+        return cls(cls.year, cls.month, cls.day)
+
+
 def mock_fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser"):
     logger.warning("Page retrieval failed because this is a test and no page was attempted.")
     return None
@@ -83,7 +97,7 @@ def mock_check_request_status(tracking_num):
               'proposal': 'LCOEPO2014B-XXX',
               'requests': [{
                  'id': 611796,
-                 'location': {'site': 'lsc', 
+                 'location': {'site': 'lsc',
                               'telescope_class': '1m0'},
                  'configurations': [{
                     'id': 3260058,
@@ -430,6 +444,11 @@ def mock_check_for_archive_images(request_id, obstype='EXPOSE'):
     else:
         return result_images_out, 3
 
+
+def mock_lco_api_fail(data_url, auth_header=None):
+        return None
+
+
 # Mock Header output read from Valhalla
 # modified Origname for easy tracking
 def mock_lco_api_call(link):
@@ -688,6 +707,10 @@ def mock_lco_api_call(link):
 
     return header_out
 
+# Mock api call to cancel block
+def mock_lco_api_call_blockcancel(link,method):
+    return {'state' : 'CANCELED'}
+
 # Mock block records output from Valhalla
 # One for each block in superblock. Changed block id's to match blocks
 def mock_check_result_status(tracking_num):
@@ -945,7 +968,7 @@ def mock_check_request_status_spectro(tracking_num):
                            'location': {'site': 'ogg', 'telescope_class': '2m0'},
                            'configurations': [{
                               'id': 3126189,
-                              'constraints': {'max_airmass': 1.74, 
+                              'constraints': {'max_airmass': 1.74,
                                               'min_lunar_distance': 30.0,
                                               'max_lunar_phase': None,
                                               'max_seeing': None,
@@ -993,7 +1016,7 @@ def mock_check_request_status_spectro(tracking_num):
                            },
                            {
                               'id': 3126190,
-                              'constraints': {'max_airmass': 1.74, 
+                              'constraints': {'max_airmass': 1.74,
                                               'min_lunar_distance': 30.0,
                                               'max_lunar_phase': None,
                                               'max_seeing': None,
@@ -1041,7 +1064,7 @@ def mock_check_request_status_spectro(tracking_num):
                           },
                            {
                               'id': 3126191,
-                              'constraints': {'max_airmass': 1.15, 
+                              'constraints': {'max_airmass': 1.15,
                                               'min_lunar_distance': 30.0,
                                               'max_lunar_phase': None,
                                               'max_seeing': None,
@@ -1782,7 +1805,8 @@ def mock_build_visibility_source(body, site_list, site_code, color_list, d, alt_
            'colors': ['darkviolet', 'forestgreen', 'saddlebrown', 'coral', 'darkslategray', 'dodgerblue'],
            'site': ['LSC', 'CPT', 'COJ', 'ELP', 'TFN', 'OGG'],
            'obj_vis': [5.5, 5.5, 5.5, 2.5, 3.0, 4.0],
-           'max_alt': [84, 83, 84, 33, 36, 43]}
+           'max_alt': [84, 83, 84, 33, 36, 43],
+           'line_alpha': [1, 1, 1, 1, 1, 1]}
     emp = [['2019 10 15 02:00', '22 01 28.18', '-25 38 42.1', '21.7', ' 0.85', ' 72.9', '+5', '0.98', ' 71', '-39', '-999', '-04:54'],
            ['2019 10 15 02:30', '22 01 29.97', '-25 38 34.7', '21.7', ' 0.84', ' 72.7', '+11', '0.98', ' 71', '-33', '-999', '-04:24'],
            ['2019 10 15 03:00', '22 01 31.74', '-25 38 27.1', '21.7', ' 0.83', ' 72.3', '+16', '0.98', ' 71', '-27', '-999', '-03:54'],
