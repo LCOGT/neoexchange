@@ -32,7 +32,7 @@ class Command(BaseCommand):
         parser.add_argument('site_code', help='MPC site code')
         parser.add_argument('dark_and_up_time_limit', type=float, help='Amount of time sky must be dark and target is above the horizon')
         parser.add_argument('targets', nargs='+', help='Targets to schedule')
-        parser.add_argument('--start_date', default=datetime.utcnow().strftime('%Y-%m-%d'), help='Date to start ephemeris search in %Y-%m-%d format')
+        parser.add_argument('--start_date', default=datetime.utcnow().strftime('%Y-%m-%d'), help='Date to start ephemeris search in YYYY-MM-DD format')
         parser.add_argument('--date_range', type=int, default=30, help='Date range ephemeris search in days')
 
     def handle(self, *args, **options):
