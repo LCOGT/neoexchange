@@ -1539,8 +1539,8 @@ class TestScheduleCheck(TestCase):
             'site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d')
         expected_resp1['utc_date'] = date(2016, 4, 6).isoformat()
         expected_resp1['start_time'] = datetime(2016, 4, 6, 2, 0, 0).isoformat()
-        expected_resp1['mid_time'] = '2016-04-06T13:00:00'
-        expected_resp1['end_time'] = datetime(2016, 4, 7, 0, 0, 0).isoformat()
+        expected_resp1['mid_time'] = '2016-04-06T14:00:00'
+        expected_resp1['end_time'] = datetime(2016, 4, 7, 2, 0, 0).isoformat()
 
         check_list = ['utc_date', 'start_time', 'mid_time', 'end_time']
 
@@ -2088,10 +2088,10 @@ class TestScheduleCheck(TestCase):
         expected_resp = {
                         'target_name': self.body_mp.current_name(),
                         'start_time' : '2016-03-31T19:18:00',
-                        'end_time'   : '2016-03-31T23:59:59',
+                        'end_time'   : '2016-03-31T23:59:00',
                         'exp_count'  : 18,
                         'exp_length' : 30.0,
-                        'mid_time': '2016-03-31T21:38:59.500000',
+                        'mid_time': '2016-03-31T21:38:00',
 
                         }
         resp = schedule_check(data, self.body_mp)
@@ -2114,11 +2114,11 @@ class TestScheduleCheck(TestCase):
 
         expected_resp = {
                         'target_name': self.body_mp.current_name(),
-                        'start_time' : '2016-04-01T00:00:02',
+                        'start_time' : '2016-04-01T00:00:00',
                         'end_time'   : '2016-04-01T02:44:00',
                         'exp_count'  : 18,
                         'exp_length' : 30.0,
-                        'mid_time': '2016-04-01T01:22:01',
+                        'mid_time': '2016-04-01T01:22:00',
 
                         }
         resp = schedule_check(data, self.body_mp)
@@ -2204,10 +2204,10 @@ class TestScheduleCheck(TestCase):
         expected_resp = {
                         'target_name': body.current_name(),
                         'start_time' : '2016-09-30T19:28:00',
-                        'end_time'   : '2016-09-30T23:59:59',
-                        'mid_time': '2016-09-30T21:43:59.500000',
+                        'end_time'   : '2016-09-30T23:59:00',
+                        'mid_time': '2016-09-30T21:43:00',
                         'vis_start' : '2016-09-30T19:28:00',
-                        'vis_end'   : '2016-09-30T23:59:59',
+                        'vis_end'   : '2016-09-30T23:59:00',
                         }
         resp = schedule_check(data, body)
 #        self.assertEqual(expected_resp, resp)
@@ -2307,8 +2307,8 @@ class TestScheduleCheck(TestCase):
         expected_resp = {
                         'target_name': body.current_name(),
                         'start_time' : '2017-11-30T20:38:00',
-                        'end_time'   : '2017-11-30T23:59:59',
-                        'mid_time': '2017-11-30T22:18:59.500000',
+                        'end_time'   : '2017-11-30T23:59:00',
+                        'mid_time': '2017-11-30T22:18:00',
 
                         }
         resp = schedule_check(data, body)
@@ -2356,8 +2356,8 @@ class TestScheduleCheck(TestCase):
         expected_resp = {
                         'target_name': body.current_name(),
                         'start_time' : '2018-05-31T18:16:00',
-                        'end_time'   : '2018-05-31T23:59:59',
-                        'mid_time': '2018-05-31T21:07:59.500000',
+                        'end_time'   : '2018-05-31T23:59:00',
+                        'mid_time': '2018-05-31T21:07:00',
 
                         }
         resp = schedule_check(data, body)
@@ -2381,8 +2381,8 @@ class TestScheduleCheck(TestCase):
         expected_resp = {
                         'target_name': body.current_name(),
                         'start_time' : '2018-11-30T20:38:00',
-                        'end_time'   : '2018-11-30T23:59:59',
-                        'mid_time': '2018-11-30T22:18:59.500000',
+                        'end_time'   : '2018-11-30T23:59:00',
+                        'mid_time': '2018-11-30T22:18:00',
 
                         }
         resp = schedule_check(data, body)

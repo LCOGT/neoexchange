@@ -1132,6 +1132,13 @@ def schedule_check(data, body, ok_to_schedule=True):
     if data.get('start_time') and data.get('end_time') and (data.get('edit_window', False) or period is not None):
         dark_start = data.get('start_time')
         dark_end = data.get('end_time')
+    elif data['site_code'] in ['1M0', '2M0', '0M4']:
+        utc_date = data.get('utc_date', datetime.utcnow().date())
+        if utc_date == datetime.utcnow().date():
+            dark_start = datetime.utcnow().replace(microsecond=0).replace(second=0)
+        else:
+            dark_start = datetime.combine(utc_date, datetime.min.time())
+        dark_end = dark_start + timedelta(hours=24)
     else:
         # Otherwise, calculate night based on site and date.
         dark_start, dark_end = determine_darkness_times(data['site_code'], data.get('utc_date', datetime.utcnow().date()))
@@ -1379,9 +1386,9 @@ def schedule_check(data, body, ok_to_schedule=True):
         'proposal_code': data['proposal_code'],
         'group_name': group_name,
         'utc_date': utc_date.isoformat(),
-        'start_time': rise_time.isoformat(),
-        'end_time': set_time.isoformat(),
-        'mid_time': mid_dark_up_time.isoformat(),
+        'start_time': rise_time.replace(second=0).isoformat(),
+        'end_time': set_time.replace(second=0).isoformat(),
+        'mid_time': mid_dark_up_time.replace(second=0).replace(microsecond=0).isoformat(),
         'vis_start': up_time.isoformat(),
         'vis_end': down_time.isoformat(),
         'edit_window': data.get('edit_window', False),
