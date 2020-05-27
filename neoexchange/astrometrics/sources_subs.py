@@ -1230,11 +1230,14 @@ def fetch_goldstone_targets(page=None, dbg=False):
     return radar_objects
 
 
-def fetch_arecibo_page():
+def fetch_arecibo_page(pagetype=None):
     """Fetches the Arecibo list of radar targets, returning a list
     of object id's for the current year"""
 
-    arecibo_url = 'http://www.naic.edu/~pradar/'
+    page_mapping = { 'calendar' : 'http://www.naic.edu/~smarshal/radar_targets.html',
+                     'default'  : 'http://www.naic.edu/~pradar/'
+                   }
+    arecibo_url = page_mapping.get(pagetype, page_mapping['default'])
 
     page = fetchpage_and_make_soup(arecibo_url)
 
@@ -1301,6 +1304,40 @@ def fetch_arecibo_targets(page=None):
                         targets.append(target_object)
             else:
                 logger.warning("No targets found in Arecibo page table {}.".format(t+1))
+    return targets
+
+
+def fetch_arecibo_calendar_targets(page=None):
+    """Parses the Arecibo radar targets webpage for details of these targets and returns a list
+    of these targets back, along with the calendar times when it will be observed
+    Takes either a BeautifulSoup page version of the Arecibo target page (from
+    a call to fetch_arecibo_page('calendar') or a static capture parsed with
+    BeautifulSoup (to allow  standalone testing) or calls the above
+    routine and then parses the resulting page.
+    """
+
+    if type(page) != BeautifulSoup:
+        page = fetch_arecibo_page('calendar')
+
+    targets = []
+
+    if type(page) == BeautifulSoup:
+        # Find the tables
+        tables = page.find_all('table')
+        if len(tables) > 1:
+            targets_table = tables[0]
+            rows = targets_table.find_all('tr')
+            header = rows[0].find_all('th')
+            if len(rows) > 2 and header[0].text.upper() == 'ASTEROID' and header[4].text.upper() == 'WINDOW (UTC)':
+                for row in rows[2:-1]:
+                    items = row.find_all('td')
+                    target_object = items[0].text
+                    target_object = target_object.strip()
+                    print(target_object)
+                    if target_object:
+                        targets.append(target_object)
+        else:
+            logger.warning("No tables found in Arecibo page")
     return targets
 
 
