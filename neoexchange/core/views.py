@@ -81,7 +81,7 @@ from core.archive_subs import lco_api_call
 from core.utils import search
 from photometrics.SA_scatter import readSources, genGalPlane, plotScatter, \
     plotFormat
-from core.plots import spec_plot, lin_vis_plot
+from core.plots import spec_plot, lin_vis_plot, calendar_plot
 
 logger = logging.getLogger(__name__)
 
@@ -3435,6 +3435,23 @@ class GuideMovie(View):
     def get(self, request, *args, **kwargs):
         block = Block.objects.get(pk=kwargs['pk'])
         params = {'pk': kwargs['pk'], 'sb_id': block.superblock.id}
+
+        return render(request, self.template_name, params)
+
+
+class CharacterizationCalendar(View):
+
+    template_name = 'core/CCalendar.html'
+
+    def get(self, request, *args, **kwargs):
+        script, div = calendar_plot()
+        params = {}
+        if div:
+            params["the_script"] = script
+            params["div"] = div
+        base_path = BOKEH_URL.format(bokeh.__version__)
+        params['css_path'] = base_path + 'css'
+        params['js_path'] = base_path + 'js'
 
         return render(request, self.template_name, params)
 

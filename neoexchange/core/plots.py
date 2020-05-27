@@ -20,6 +20,7 @@ import logging
 import os
 import re
 import shutil
+import itertools
 from math import pi
 import numpy as np
 from astropy import units as u
@@ -34,7 +35,7 @@ import matplotlib.pyplot as plt
 from bokeh.plotting import figure, ColumnDataSource
 from bokeh.resources import CDN
 from bokeh.embed import components
-from bokeh.models import HoverTool, Label, CrosshairTool
+from bokeh.models import HoverTool, Label, CrosshairTool, HBar
 from bokeh.palettes import Category20
 
 from .models import Body, CatalogSources, StaticSource, Block, model_to_dict, PreviousSpectra
@@ -557,6 +558,40 @@ def lin_vis_plot(body):
     plot.legend.glyph_height = 0
     plot.legend.label_width = 0
     plot.legend.label_height = 0
+
+    script, div = components(plot, CDN)
+
+    return script, div
+
+
+def calendar_plot():
+
+    test_dict = [{'target': '2020 HG9', 'start': datetime(2020, 5, 28, 23, 14), 'end': datetime(2020, 5, 31, 1, 31)},
+                 {'target': '2020 JD2', 'start': datetime(2020, 5, 29, 5, 32), 'end': datetime(2020, 5, 30, 8, 6)},
+                 {'target': 'test3', 'start': datetime(2020, 5, 30, 5, 32), 'end': datetime(2020, 5, 31, 8, 6)},
+                 {'target': 'test4', 'start': datetime(2020, 5, 30, 9, 32), 'end': datetime(2020, 5, 31, 10, 6)}]
+
+    plot = figure(x_range=(datetime.utcnow(), datetime.utcnow()+timedelta(days=7)), y_range=(-1, 1), plot_width=600,
+                  plot_height=200, title="Example calendar Using Bokeh")
+    plot.yaxis.visible = False
+    plot.ygrid.grid_line_color = None
+
+    colors = itertools.cycle(Category20[10])
+    for i, window in enumerate(test_dict):
+        window['y'] = 0.5
+        b_win = []
+        for k, t in enumerate(test_dict):
+            if k == i:
+                break
+            if t['end'] >= window['start'] >= t['start'] or t['end'] >= window['end'] >= t['start']:
+                b_win.append(t.get('y', 0.5))
+        i = 0
+        while i < len(b_win)+1:
+            y = 0.5 - i*0.5
+            if y not in b_win:
+                window['y'] = y
+            i += 1
+        plot.hbar(y=window.get('y', .5), right=window['end'], left=window['start'], height=0.45, fill_color=next(colors), line_color='black')
 
     script, div = components(plot, CDN)
 
