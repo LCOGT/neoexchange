@@ -1339,7 +1339,7 @@ def fetch_arecibo_calendar_targets(page=None):
                     items = row.find_all('td')
                     target_object = parse_arecibo_targetnames(items[0].text.strip())
                     if target_object:
-                        targets.append(target_object)
+                        targets.append({'target': target_object, 'windows' : []})
         else:
             logger.warning("No tables found in Arecibo page")
     return targets
