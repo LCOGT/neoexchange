@@ -1230,6 +1230,44 @@ def fetch_goldstone_targets(page=None, dbg=False):
     return radar_objects
 
 
+def parse_arecibo_targetnames(target_object):
+    """Handle parsing of Arecibo target names"""
+
+    # See if it is the form "(12345) 2008 FOO". If so, extract
+    # just the asteroid number
+    if '(' in target_object and ')' in target_object:
+        # See if we have parentheses around the number or around the
+        # temporary designation.
+        # If the first character in the string is a '(' we have the first
+        # case and should split on the closing ')' and take the 0th chunk
+        # If the first char is not a '(', then we have parentheses around
+        # the temporary designation and we should split on the '(', take
+        # the 0th chunk and strip whitespace
+        split_char = ')'
+        if target_object[0] != '(':
+            split_char = '('
+        target_object = target_object.split(split_char)[0].replace('(', '')
+        target_object = target_object.strip()
+    else:
+        # No parentheses, either just a number or a number and name
+        chunks = target_object.split(' ')
+        if len(chunks) >= 2:
+            if chunks[0].isalpha() and chunks[1].isalpha():
+                logger.warning("All text object found: " + target_object)
+                target_object = None
+            else:
+                if chunks[1].replace('-', '').isalpha() and len(chunks[1]) != 2:
+                    target_object = chunks[0]
+                elif 'Comet' in chunks[0] and '/P' in chunks[1].rstrip()[-2:]:
+                    target_object = chunks[1].replace('/', '')
+                else:
+                    target_object = chunks[0] + " " + chunks[1]
+        else:
+            logger.warning("Unable to parse Arecibo target %s" % target_object)
+            target_object = None
+    return target_object
+
+
 def fetch_arecibo_page(pagetype=None):
     """Fetches the Arecibo list of radar targets, returning a list
     of object id's for the current year"""
@@ -1266,40 +1304,8 @@ def fetch_arecibo_targets(page=None):
             if len(rows) > 1 and 'OBJECT' in header or 'ASTEROID' in header:
                 for row in rows[1:]:
                     items = row.find_all('td')
-                    target_object = items[0].text
-                    target_object = target_object.strip()
-                    # See if it is the form "(12345) 2008 FOO". If so, extract
-                    # just the asteroid number
-                    if '(' in target_object and ')' in target_object:
-                        # See if we have parentheses around the number or around the
-                        # temporary designation.
-                        # If the first character in the string is a '(' we have the first
-                        # case and should split on the closing ')' and take the 0th chunk
-                        # If the first char is not a '(', then we have parentheses around
-                        # the temporary designation and we should split on the '(', take
-                        # the 0th chunk and strip whitespace
-                        split_char = ')'
-                        if target_object[0] != '(':
-                            split_char = '('
-                        target_object = target_object.split(split_char)[0].replace('(', '')
-                        target_object = target_object.strip()
-                    else:
-                        # No parentheses, either just a number or a number and name
-                        chunks = target_object.split(' ')
-                        if len(chunks) >= 2:
-                            if chunks[0].isalpha() and chunks[1].isalpha():
-                                logger.warning("All text object found: " + target_object)
-                                target_object = None
-                            else:
-                                if chunks[1].replace('-', '').isalpha() and len(chunks[1]) != 2:
-                                    target_object = chunks[0]
-                                elif 'Comet' in chunks[0] and '/P' in chunks[1].rstrip()[-2:]:
-                                    target_object = chunks[1].replace('/', '')
-                                else:
-                                    target_object = chunks[0] + " " + chunks[1]
-                        else:
-                            logger.warning("Unable to parse Arecibo target %s" % target_object)
-                            target_object = None
+                    target_object = parse_arecibo_targetnames(items[0].text.strip())
+
                     if target_object:
                         targets.append(target_object)
             else:
@@ -1331,9 +1337,7 @@ def fetch_arecibo_calendar_targets(page=None):
             if len(rows) > 2 and header[0].text.upper() == 'ASTEROID' and header[4].text.upper() == 'WINDOW (UTC)':
                 for row in rows[2:-1]:
                     items = row.find_all('td')
-                    target_object = items[0].text
-                    target_object = target_object.strip()
-                    print(target_object)
+                    target_object = parse_arecibo_targetnames(items[0].text.strip())
                     if target_object:
                         targets.append(target_object)
         else:
