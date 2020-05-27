@@ -19,16 +19,15 @@ import logging
 import os
 import urllib.request
 import urllib.error
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlencode
 import imaplib
 import email
 from re import sub, compile
 from math import degrees
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from socket import error
 from random import randint
 from time import sleep
-from datetime import date
 import requests
 
 from bs4 import BeautifulSoup
@@ -1408,6 +1407,37 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
         logger.error("Could not open folder/label %s on %s" % (folder, mailbox.host))
         return []
     return NASA_targets
+
+
+def clean_parameters(parameters):
+    return {k.replace('_', '-'): v for k, v in parameters.items() if v}
+
+
+def fetch_scout_targets(target=None, parameters={}):
+    """Queries the API for the CNEOS Scout system and returns the JSON response
+
+    If [target] is not given, a list of dictionaries of the targets and their
+    summary parameters is returned, sorted into reverse order with most recently
+    updated at the top.
+    If [target] is given e.g. `target = 'P110DoP' (not likely to work beyond 2020-06-01;
+    replace with suitable current target), then just the summary data for that object
+    is returned. Extra parameters per the docs (https://ssd-api.jpl.nasa.gov/doc/scout.html)
+    can be added through the [parameters] dictionary
+    """
+
+    SCOUT_URL = 'https://ssd-api.jpl.nasa.gov/scout.api'
+
+    if target is not None:
+        parameters['tdes'] = target
+    args = urlencode(clean_parameters(parameters))
+    url = '{0}?{1}'.format(SCOUT_URL, args)
+    response = requests.get(url)
+    response.raise_for_status()
+    resp = response.json()
+    parsed = resp.get('data', resp)
+    if target is None:
+        parsed.sort(key=lambda x: datetime.strptime(x['lastRun'], "%Y-%m-%d %H:%M"), reverse=True)
+    return parsed
 
 
 def get_site_status(site_code):
