@@ -1338,8 +1338,18 @@ def fetch_arecibo_calendar_targets(page=None):
                 for row in rows[2:-1]:
                     items = row.find_all('td')
                     target_object = parse_arecibo_targetnames(items[0].text.strip())
-                    if target_object:
-                        targets.append({'target': target_object, 'windows' : []})
+                    try:
+                        window_start = datetime.strptime(items[5].text+items[6].text, "%Y-%b-%d%H:%M")
+                    except ValueError:
+                        window_start = None
+                    try:
+                        window_end = datetime.strptime(items[5].text+items[7].text, "%Y-%b-%d%H:%M")
+                        if window_start and window_end < window_start:
+                            window_end += timedelta(days=1)
+                    except ValueError:
+                        window_end = None
+                    if target_object and window_start and window_end:
+                        targets.append({'target': target_object, 'windows' : [{'start' : window_start, 'end' : window_end}] })
         else:
             logger.warning("No tables found in Arecibo page")
     return targets
