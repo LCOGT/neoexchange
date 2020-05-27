@@ -1315,10 +1315,14 @@ def fetch_arecibo_targets(page=None):
 
 def fetch_arecibo_calendar_targets(page=None):
     """Parses the Arecibo radar targets webpage for details of these targets and returns a list
-    of these targets back, along with the calendar times when it will be observed
+    of these targets back, along with the calendar times when it will be observed. The format of
+    each target is a dictionary with the following format:
+      { 'target' : '<target name>',
+        'windows' : { 'start' : <start `datetime`>, 'end' : <end `datetime`> }
+      }
     Takes either a BeautifulSoup page version of the Arecibo target page (from
     a call to fetch_arecibo_page('calendar') or a static capture parsed with
-    BeautifulSoup (to allow  standalone testing) or calls the above
+    BeautifulSoup (to allow  standalone testing)) or calls the fetch_arecibo_page('calendar')
     routine and then parses the resulting page.
     """
 
