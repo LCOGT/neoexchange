@@ -5516,7 +5516,7 @@ class TestFetchJPLPhysParams(TestCase):
                     'origin'        : 'M',
                     }
         self.body, created = Body.objects.get_or_create(**params)
-        
+
         self.resp = {'phys_par': [{'ref': 'MPO347540',
                    'value': '11.9',
                    'name': 'H',
@@ -5562,27 +5562,27 @@ class TestFetchJPLPhysParams(TestCase):
         """Test the storage of physical parameter types, values, and errors."""
         bodies = Body.objects.all()
         body = bodies[0]
-        
+
         phys_params = PhysicalParameters.objects.filter(body=body)
-        
+
         store_jpl_physparams(self.resp['phys_par'], body)
-        
+
         expected_values = [11.9, 10.256, 0.320]
-        expected_ptypes = ['H', 'D', 'ab']       
-        expected_sigmas = [None, 1.605, 0.152]        
+        expected_ptypes = ['H', 'D', 'ab']
+        expected_sigmas = [None, 1.605, 0.152]
         expected = list(zip(expected_values, expected_ptypes, expected_sigmas))
         for p in phys_params:
             test_list = (p.value, p.parameter_type, p.error)
             self.assertIn(test_list, expected)
             expected.remove(test_list)
-            
-        self.assertEqual(expected, [])  
+
+        self.assertEqual(expected, [])
 
     def test_pole_orient(self):
         """Test the splitting of the value and error numbers.
          Also to test the storage of these values."""
         bodies = Body.objects.all()
-        body = bodies[0]   
+        body = bodies[0]
 
         pole_test = [{"value":"291.421/66.758",
                     "name":"pole",
@@ -5591,7 +5591,7 @@ class TestFetchJPLPhysParams(TestCase):
 
         phys_params = PhysicalParameters.objects.filter(body=body)
         dbpole_param = phys_params.filter(parameter_type='O')
-        store_jpl_physparams(pole_test, body)        
+        store_jpl_physparams(pole_test, body)
 
         self.assertEqual(dbpole_param[0].value, 291.421)
         self.assertEqual(dbpole_param[0].value2, 66.758)
@@ -5601,7 +5601,7 @@ class TestFetchJPLPhysParams(TestCase):
     def test_color(self):
         """Test the storage of color bands, values, and errors."""
         bodies = Body.objects.all()
-        body = bodies[0] 
+        body = bodies[0]
 
         color_test = [{"value": "0.426",
                        "name" : "UB",
@@ -5662,7 +5662,7 @@ class TestFetchJPLPhysParams(TestCase):
                    "des": "2",
                    "prefix": None}
 
-        desigs = Designations.objects.filter(body=body) 
+        desigs = Designations.objects.filter(body=body)
         store_jpl_desigs(pallas, body)
 
         self.assertEqual(desigs[0].value, '2')
@@ -5701,7 +5701,7 @@ class TestFetchJPLPhysParams(TestCase):
                          "version": "1.1"}
                     }
 
-        comet_des = Designations.objects.filter(body=body)   
+        comet_des = Designations.objects.filter(body=body)
         store_jpl_desigs(westphal['object'], body)
 
         self.assertEqual(comet_des[0].value, '20D')
@@ -5792,7 +5792,7 @@ class TestFetchJPLPhysParams(TestCase):
         store_jpl_sourcetypes(objcode, self.resp['object'], body)
 
         self.assertEqual(body.source_type, 'T')
-        self.assertEqual(body.source_subtype_1, 'P5')       
+        self.assertEqual(body.source_subtype_1, 'P5')
         self.assertEqual(body.source_subtype_2, None)
 
     def test_store_stuff_neo_pha_1(self):
@@ -5809,7 +5809,7 @@ class TestFetchJPLPhysParams(TestCase):
         store_jpl_sourcetypes(objcode['orbit_class']['code'], objcode, body)
 
         self.assertEqual(body.source_type, 'N')
-        self.assertEqual(body.source_subtype_1, 'N3')       
+        self.assertEqual(body.source_subtype_1, 'N3')
         self.assertEqual(body.source_subtype_2, None)
 
     def test_store_stuff_neo_pha_2(self):
@@ -5826,12 +5826,12 @@ class TestFetchJPLPhysParams(TestCase):
         store_jpl_sourcetypes(objcode['orbit_class']['code'], objcode, body)
 
         self.assertEqual(body.source_type, 'N')
-        self.assertEqual(body.source_subtype_1, 'N3')       
+        self.assertEqual(body.source_subtype_1, 'N3')
         self.assertEqual(body.source_subtype_2, 'PH')
 
     def test_store_stuff_neo_pha_3(self):
         """Test the storage of source subtypes when the object is labeled as a PHA
-           but not as an NEO (This situation is rare)."""                    
+           but not as an NEO (This situation is rare)."""
         bodies = Body.objects.all()
         body = bodies[0]
         objcode = self.resp['object']
@@ -5843,12 +5843,12 @@ class TestFetchJPLPhysParams(TestCase):
         store_jpl_sourcetypes(objcode['orbit_class']['code'], objcode, body)
 
         self.assertEqual(body.source_type, None)
-        self.assertEqual(body.source_subtype_1, 'N3')       
+        self.assertEqual(body.source_subtype_1, 'N3')
         self.assertEqual(body.source_subtype_2, None)
 
     def test_store_stuff_neo_pha_4(self):
         """Test the storage of source subtypes when the object is a comet
-           (instead of an asteroid) and is labeled as both an NEO and as a PHA."""                
+           (instead of an asteroid) and is labeled as both an NEO and as a PHA."""
         bodies = Body.objects.all()
         body = bodies[0]
         objcode = self.resp['object']
@@ -5860,7 +5860,7 @@ class TestFetchJPLPhysParams(TestCase):
         store_jpl_sourcetypes(objcode['orbit_class']['code'], objcode, body)
 
         self.assertEqual(body.source_type, 'C')
-        self.assertEqual(body.source_subtype_1, 'JF')       
+        self.assertEqual(body.source_subtype_1, 'JF')
         self.assertEqual(body.source_subtype_2, 'PH')
 
     def test_store_stuff_comet_longperiod(self):
