@@ -618,6 +618,70 @@ class TestFetchGoldstoneTargets(TestCase):
         self.assertEqual(expected_target, targets)
 
 
+class TestFetchAreciboCalendarTargets(TestCase):
+
+    def setUp(self):
+        # Read and make soup from the stored version of the Arecibo radar targets pages for making a calendar page
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_arecibo_targets_page_v1.html'), 'r')
+        self.test_arecibo_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+        self.maxDiff = None
+
+    def test_basics(self):
+        expected_length = 39
+
+        targets = fetch_arecibo_calendar_targets(self.test_arecibo_page)
+
+        self.assertEqual(expected_length, len(targets))
+
+    def test_targets(self):
+        expected_targets = [
+                                '2020 HG9',
+                                '2020 JD2',
+                                '478784',
+                                '2020 KA',
+                                '2020 JY1',
+                                '2020 KU2',
+                                '2020 KV1',
+                                '2020 KP',
+                                '2020 KP3',
+                                '2020 JN3',
+                                '2020 KJ3',
+                                '2020 KJ',
+                                '2020 KV',
+                                '2020 KD3',
+                                '2020 JV2',
+                                '2020 KE4',
+                                '2020 KZ3',
+                                '66391',
+                                '2020 KD4',
+                                '2020 KO1',
+                                '2020 KN2',
+                                '2020 KJ1',
+                                '2013 XA22',
+                                '2020 KB3',
+                                '2016 JT38',
+                                '2020 JU',
+                                '2005 MR5',
+                                '2020 KR1',
+                                '144411',
+                                '441987',
+                                '2017 XL2',
+                                '2020 JX1',
+                                '242450',
+                                '2016 YO3',
+                                '2006 NL',
+                                '480936',
+                                '8014',
+                                '85989',
+                                '2015 FP332']
+
+        targets = fetch_arecibo_calendar_targets(self.test_arecibo_page)
+
+        self.assertEqual(expected_targets, targets)
+
+
 class TestFetchYarkovskyTargets(TestCase):
 
     def test_read_from_file(self):
