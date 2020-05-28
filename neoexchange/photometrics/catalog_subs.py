@@ -23,6 +23,8 @@ from datetime import datetime, timedelta
 from math import sqrt, log10, log, degrees
 from collections import OrderedDict
 import time
+from requests.exceptions import ReadTimeout, ConnectTimeout, ConnectionError
+import re
 import warnings
 
 from astropy.utils.exceptions import AstropyDeprecationWarning
@@ -33,7 +35,7 @@ warnings.simplefilter('ignore', category = AstropyDeprecationWarning)
 from astroquery.vizier import Vizier
 import astropy.units as u
 import astropy.coordinates as coord
-from astropy.wcs import WCS
+from astropy.wcs import WCS, FITSFixedWarning
 from astropy.wcs.utils import proj_plane_pixel_scales
 from astropy import __version__ as astropyversion
 
@@ -99,8 +101,19 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
         else:
             query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
 
-        result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
-
+        query_service.VIZIER_SERVER = 'vizier.hia.nrc.ca' #  'vizier.cfa.harvard.edu'  #
+        query_service.TIMEOUT = 60
+        try:
+            result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
+        except (ReadTimeout, ConnectionError):
+            logger.warning("Timeout seen querying {}".format(query_service.VIZIER_SERVER))
+            query_service.TIMEOUT = 120
+            result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
+        except ConnectTimeout:
+            old_server = query_service.VIZIER_SERVER
+            query_service.VIZIER_SERVER = 'vizier.cfa.harvard.edu'
+            logger.warning("Timeout querying {}. Switching to {}".format(old_server, query_service.VIZIER_SERVER))
+            result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
         # resulting catalog table
         # if resulting catalog table is empty or the r mag column has only masked values, try the other catalog and redo
         # the query; if the resulting catalog table is still empty, fill the table with zeros
@@ -919,6 +932,11 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
         elif fits_keyword[0] == '<' and fits_keyword[-1] == '>':
             header_item = None
             if fits_keyword == '<WCS>':
+                # Suppress warnings from newer astropy versions which raise
+                # FITSFixedWarning on the lack of OBSGEO-L,-B,-H keywords even
+                # though we have OBSGEO-X,-Y,-Z as recommended by the FITS
+                # Paper VII standard...
+                warnings.simplefilter('ignore', category = FITSFixedWarning)
                 fits_wcs = WCS(catalog_header)
                 pixscale = proj_plane_pixel_scales(fits_wcs).mean()*3600.0
                 header_item = {item: round(pixscale, 5), 'wcs' : fits_wcs}
@@ -1544,6 +1562,40 @@ def get_fits_files(fits_path):
     return sorted_fits_files
 
 
+def sanitize_object_name(object_name):
+    """Remove problematic characters (space, slash) from object names so it
+    can be used for e.g. directory names"""
+
+    clean_object_name = None
+    if type(object_name) == str or type(object_name) == np.str_:
+        clean_object_name = object_name.strip().replace('(', '').replace(')', '')
+        # Find the rightmost space and then do space->underscore mapping *left*
+        # of that but space->empty string right of that.
+        index = clean_object_name.rfind(' ')
+        if index > 0:
+            first_part = clean_object_name[0:index].replace(' ', '_')
+            second_part = clean_object_name[index:].replace(' ', '')
+            clean_object_name = first_part + second_part
+        clean_object_name = clean_object_name.replace('/P', 'P').replace('/', '_')
+        # Additional mangling for calibration stars (StaticSources)
+        clean_object_name = clean_object_name.replace('+', '').replace('-', '_')
+
+    return clean_object_name
+
+
+def make_object_directory(filepath, object_name, block_id):
+
+    object_directory = sanitize_object_name(object_name)
+    if block_id != '':
+        object_directory = object_directory + '_' + str(block_id)
+    object_directory = os.path.join(os.path.dirname(filepath), object_directory)
+    if not os.path.exists(object_directory):
+        oldumask = os.umask(0o002)
+        os.makedirs(object_directory)
+        os.umask(oldumask)
+    return object_directory
+
+
 def sort_rocks(fits_files):
     """Takes a list of FITS files and creates directories for each asteroid
     object and unique block number (i.e. if an object is observed more than
@@ -1558,14 +1610,9 @@ def sort_rocks(fits_files):
         object_name = fits_header.get('OBJECT', None)
         block_id = fits_header.get('BLKUID', '').replace('/', '')
         if object_name:
-            object_directory = object_name.replace(' ', '').replace('/', '')
-            if block_id != '':
-                object_directory = object_directory + '_' + str(block_id)
-            if object_directory not in objects:
-                objects.append(object_directory)
-            object_directory = os.path.join(os.path.dirname(fits_filepath), object_directory)
-            if not os.path.exists(object_directory):
-                os.makedirs(object_directory)
+            object_directory = make_object_directory(fits_filepath, object_name, block_id)
+            if os.path.basename(object_directory) not in objects:
+                objects.append(os.path.basename(object_directory))
             dest_filepath = os.path.join(object_directory, os.path.basename(fits_filepath))
             # if the file is an e91 and an e11 exists in the working directory, remove the link to the e11 and link the e91
             if 'e91' in fits_filepath:

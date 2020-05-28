@@ -3,7 +3,7 @@ CON LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117
 CON [tlister@lco.global]
 OBS T. Lister, J. Chatelain, S. Greenstreet, E. Gomez
 MEA T. Lister
-TEL {{measures.0.frame.return_tel_string}}
+TEL {{measures.0.frame.return_tel_string.full}}
 ACK NEOx_{{body.current_name}}_{{measures.0.frame.sitecode}}_{{measures.0.frame.instrument}}
 COM {{measures.0.frame.return_site_string}}
 AC2 tlister@lco.global,sgreenstreet@lco.global,jchatelain@lco.global

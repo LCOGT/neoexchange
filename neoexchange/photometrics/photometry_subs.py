@@ -27,13 +27,13 @@ logger = logging.getLogger(__name__)
 
 def transform_Vmag(mag_V, passband, taxonomy='Mean'):
     """
-    Returns the magnitude in <passband> for an asteroid with a V amgnitude of
+    Returns the magnitude in <passband> for an asteroid with a V magnitude of
     <mag_V> and a taxonomic class of [taxonomy]. If the taxonomy is not given,
     a 'Mean' is assumed
     Taxonomy can be one of:
     'solar' - assuming solar colors (used by the MPC?),
     'mean'  - average of the S- and C-types is used,
-    'neo'   - average weighted by the occurence fraction among NEOs,
+    'neo'   - average weighted by the occurrence fraction among NEOs,
     's', 'c', 'q', 'x' - individual taxonomies
 
     Table 2. Asteroid magnitude transformations from Pan-STARRS1 AB filter magnitudes to the
@@ -67,7 +67,7 @@ def transform_Vmag(mag_V, passband, taxonomy='Mean'):
     # Lookup taxonomy to try and get V-<passband> color terms
     color_terms = mag_mapping.get(taxonomy.upper(), None)
 
-    # If we got a sucessful taxonomy lookup, try to lookup the <passband>
+    # If we got a successful taxonomy lookup, try to lookup the <passband>
     # in the color terms
     delta_mag = None
     if color_terms:
@@ -143,7 +143,7 @@ def sky_brightness_model(params, dbg=False):
             except ValueError:
                 logger.warning("Could not find/convert co-ordinates")
     # Assume a value of 60.0 in S10 units for the zodiacal light if the
-    # latitude wasn't given or calculatable
+    # latitude wasn't given or calculable
     q_zodi = 60.0
     if ecliptic_lat:
         if type(ecliptic_lat) == float:
@@ -264,7 +264,7 @@ def compute_photon_rate(mag, tic_params, emulate_signal=False):
 
     if emulate_signal:
         # Equivalent original code below
-        # 6.6 magic no .is the mantissa part of Planck's constant(rounded). Most of the
+        # 6.6 magic no. is the mantissa part of Planck's constant(rounded). Most of the
         # exponent part (10^-34) is cancelled by Jansky->erg conversion (10^-23) and
         # erg->Watts (10^-7)
         # m_0 = tic_params['flux_mag0'] * 10000.0/6.6/tic_params['wavelength']

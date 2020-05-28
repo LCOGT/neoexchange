@@ -15,10 +15,11 @@ GNU General Public License for more details.
 from datetime import datetime, timedelta
 from math import ceil
 import sys
+import warnings
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
-from astropy.wcs import WCS
+from astropy.wcs import WCS, FITSFixedWarning
 from urllib.parse import urljoin
 
 from core.models import Block, Frame, Candidate, SourceMeasurement, Body
@@ -128,7 +129,9 @@ def create_frame(params, block=None, frameid=None):
     if params.get('photometric_catalog', None):
         frame.photometric_catalog = params.get('photometric_catalog')
     if params.get('L1FWHM', None):
-        frame.fwhm = params.get('L1FWHM')
+        fwhm = params.get('L1FWHM')
+        if fwhm != 'NaN':
+            frame.fwhm = fwhm
     frame.save()
 
     if frame_created:
@@ -149,7 +152,7 @@ def frame_params_from_header(params, block):
     try:
         rlevel = int(rlevel)
     except ValueError:
-        logger.warning("Error converting RLEVEL to integer in frame " + frame_params['filename'])
+        logger.warning("Error converting RLEVEL to integer in frame " + params.get('ORIGNAME', None))
         rlevel = 0
 
     frame_params = { 'midpoint' : params.get('DATE_OBS', None),
@@ -161,6 +164,10 @@ def frame_params_from_header(params, block):
                      'filename'  : params.get('ORIGNAME', None),
                      'exptime'   : params.get('EXPTIME', None),
                  }
+
+    inst_mode = params.get('CONFMODE', None)
+    if inst_mode and inst_mode not in ['default', 'full_frame']:
+        frame_params['extrainfo'] = inst_mode
 
     # correct exptime to actual shutter open duration
     shutter_open = params.get('DATE_OBS', None)
@@ -216,6 +223,11 @@ def frame_params_from_header(params, block):
     # params
     wcs = None
     try:
+        # Suppress warnings from newer astropy versions which raise
+        # FITSFixedWarning on the lack of OBSGEO-L,-B,-H keywords even
+        # though we have OBSGEO-X,-Y,-Z as recommended by the FITS
+        # Paper VII standard...
+        warnings.simplefilter('ignore', category = FITSFixedWarning)
         wcs = WCS(params)
         frame_params['wcs'] = wcs
     except ValueError:
@@ -235,21 +247,6 @@ def frame_params_from_header(params, block):
 
         midpoint = midpoint + timedelta(seconds=float(frame_params['exptime']) / 2.0)
         frame_params['midpoint'] = midpoint
-    return frame_params
-
-
-def frame_params_from_block(params, block):
-    # In these cases we are parsing the Block info
-    sitecode = LCOGT_domes_to_site_codes(params.get('siteid', None), params.get('encid', None), params.get('telid', None))
-    frame_params = { 'midpoint' : params.get('date_obs', None),
-                     'sitecode' : sitecode,
-                     'filter'   : params.get('filter_name', "B"),
-                     'frametype': Frame.SINGLE_FRAMETYPE,
-                     'block'    : block,
-                     'instrument': params.get('instrume', None),
-                     'filename'  : params.get('origname', None),
-                     'exptime'   : params.get('exptime', None),
-                 }
     return frame_params
 
 
@@ -336,7 +333,7 @@ def block_status(block_id):
     # only the one block used to call this procedure.
     exposure_count = 0
     for r in data['requests']:
-        if r['id'] == int(block.tracking_number) or len(data['requests']) < 2:
+        if r['id'] == int(block.request_number) or len(data['requests']) < 2:
             obstype = 'EXPOSE'
             try:
                 if block.obstype == Block.OPT_SPECTRA or block.obstype == Block.OPT_SPECTRA_CALIB:
@@ -348,8 +345,9 @@ def block_status(block_id):
             images, num_archive_frames = check_for_archive_images(request_id=r['id'], obstype=obstype)
             logger.info('Request no. %s x %s images (%s total all red. levels)' % (r['id'], len(images), num_archive_frames))
             if images:
-                exposure_count = sum([x['exposure_count'] for x in r['molecules']])
-                obs_types = [x['type'] for x in r['molecules']]
+                inst_configs = [x['instrument_configs'] for x in r['configurations']]
+                exposure_count = sum([x[0]['exposure_count'] for x in inst_configs])
+                obs_types = [x['type'] for x in r['configurations']]
                 # Look in the archive at the header of the most recent frame for a timestamp of the observation
                 last_image_dict = images[0]
                 last_image_header = lco_api_call(last_image_dict.get('headers', None))

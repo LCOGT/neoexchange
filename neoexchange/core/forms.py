@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 SITES = (('1M0', '------------ Any 1.0m ------------'),
          ('W86', 'LSC 1.0m - W85-87; (CTIO, Chile)'),
-         ('V37', 'ELP 1.0m - V37; (McDonald, Texas)'),
+         ('V37', 'ELP 1.0m - V37,V39; (McDonald, Texas)'),
          ('Q63', 'COJ 1.0m - Q63-64; (Siding Spring, Aust.)'),
          ('K92', 'CPT 1.0m - K91-93; (Sutherland, S. Africa)'),
          ('0M4', '------------ Any 0.4m ------------'),
@@ -56,6 +56,9 @@ CALIBS = (('Both', 'Calibrations before and after spectrum'),
 MOON = (('G', 'Grey',),
         ('B', 'Bright'),
         ('D', 'Dark'))
+
+BIN_MODES = (('full_chip', 'Full Chip, 1x1'),
+             ('2k_2x2', 'Central 2k, 2x2'))
 
 
 class EphemQuery(forms.Form):
@@ -87,6 +90,7 @@ class ScheduleForm(forms.Form):
     site_code = forms.ChoiceField(required=True, choices=SITES)
     utc_date = forms.DateField(input_formats=['%Y-%m-%d', ], initial=date.today, required=True, widget=forms.TextInput(attrs={'size': '10'}),
                                error_messages={'required': _(u'UTC date is required')})
+    too_mode = forms.BooleanField(initial=False, required=False)
 
     def clean_utc_date(self):
         start = self.cleaned_data['utc_date']
@@ -111,18 +115,21 @@ class ScheduleCadenceForm(forms.Form):
                                    initial=tomorrow, required=True, error_messages={'required': _(u'UTC end date is required')})
     period = forms.FloatField(initial=2.0, required=True, widget=forms.TextInput(attrs={'size': '10'}), error_messages={'required': _(u'Period is required')})
     jitter = forms.FloatField(initial=0.25, required=True, widget=forms.TextInput(attrs={'size': '10'}), error_messages={'required': _(u'Jitter is required')})
+    too_mode = forms.BooleanField(initial=False, required=False)
 
-    # def clean_start_time(self):
-    #     start = self.cleaned_data['start_time']
-    #     if start < datetime.utcnow():
-    #         raise forms.ValidationError("Window cannot start in the past")
-    #     return start
-    #
     # def clean_end_time(self):
     #     end = self.cleaned_data['end_time']
     #     if end < datetime.utcnow():
     #         raise forms.ValidationError("Window cannot end in the past")
     #     return end
+
+    def clean_start_time(self):
+        start = self.cleaned_data['start_time']
+        window_cutoff = datetime.utcnow() - timedelta(days=1)
+        if start <= window_cutoff:
+            return datetime.utcnow().replace(microsecond=0)
+        else:
+            return self.cleaned_data['start_time']
 
     def clean_period(self):
         if self.cleaned_data['period'] is not None and self.cleaned_data['period'] < 0.02:
@@ -150,8 +157,8 @@ class ScheduleCadenceForm(forms.Form):
 
 
 class ScheduleBlockForm(forms.Form):
-    start_time = forms.DateTimeField(widget=forms.HiddenInput(), input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'])
-    end_time = forms.DateTimeField(widget=forms.HiddenInput(), input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'])
+    start_time = forms.DateTimeField(widget=forms.DateTimeInput(attrs={'style': 'width: 200px;'}), input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'])
+    end_time = forms.DateTimeField(widget=forms.DateTimeInput(attrs={'style': 'width: 200px;'}), input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'])
     exp_count = forms.IntegerField(widget=forms.HiddenInput(), required=False)
     exp_length = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}))
     slot_length = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}), required=False)
@@ -159,21 +166,24 @@ class ScheduleBlockForm(forms.Form):
     pattern_iterations = forms.FloatField(widget=forms.HiddenInput(), required=False)
     proposal_code = forms.CharField(max_length=20, widget=forms.HiddenInput())
     site_code = forms.CharField(max_length=5, widget=forms.HiddenInput())
-    group_id = forms.CharField(max_length=50, widget=forms.TextInput(attrs={'style': 'text-align: right; width: -webkit-fill-available; width: -moz-available;'}))
+    group_name = forms.CharField(max_length=50, widget=forms.TextInput(attrs={'style': 'text-align: right; width: -webkit-fill-available; width: -moz-available;'}))
     utc_date = forms.DateField(input_formats=['%Y-%m-%d', ], widget=forms.HiddenInput(), required=False)
     jitter = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}), required=False)
     period = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}), required=False)
+    bin_mode = forms.ChoiceField(required=False, choices=BIN_MODES)
     spectroscopy = forms.BooleanField(required=False, widget=forms.HiddenInput())
+    too_mode = forms.BooleanField(required=False, widget=forms.HiddenInput())
     calibs = forms.ChoiceField(required=False, widget=forms.HiddenInput(), choices=CALIBS)
     instrument_code = forms.CharField(max_length=10, widget=forms.HiddenInput(), required=False)
     solar_analog = forms.BooleanField(initial=True, widget=forms.HiddenInput(), required=False)
     calibsource_id = forms.IntegerField(widget=forms.HiddenInput(), required=False)
-    calibsource_exptime = forms.IntegerField(widget=forms.HiddenInput(), required=False)
+    calibsource_exptime = forms.IntegerField(widget=forms.NumberInput(attrs={'size': '5'}), required=False)
     max_airmass = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     ipp_value = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     min_lunar_dist = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     acceptability_threshold = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     ag_exp_time = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
+    edit_window = forms.BooleanField(initial=False, required=False, widget=forms.CheckboxInput(attrs={'class': 'window-switch'}))
 
     def clean_exp_length(self):
         if not self.cleaned_data['exp_length'] or self.cleaned_data['exp_length'] < 0.1:
@@ -223,7 +233,7 @@ class ScheduleBlockForm(forms.Form):
         start = self.cleaned_data['start_time']
         window_cutoff = datetime.utcnow() - timedelta(days=1)
         if start <= window_cutoff:
-            raise forms.ValidationError("Window cannot start in the past")
+            return datetime.utcnow().replace(microsecond=0)
         else:
             return self.cleaned_data['start_time']
 
@@ -256,6 +266,12 @@ class ScheduleBlockForm(forms.Form):
         else:
             return self.cleaned_data['period']
 
+    def clean_slot_length(self):
+        if self.cleaned_data['slot_length'] is None:
+            return 0
+        else:
+            return self.cleaned_data['slot_length']
+
     def clean(self):
         cleaned_data = super(ScheduleBlockForm, self).clean()
         site = self.cleaned_data['site_code']
@@ -278,6 +294,13 @@ class ScheduleBlockForm(forms.Form):
                 raise forms.ValidationError('%(bad)s are not acceptable filters at this site.', params={'bad': ",".join(bad_filters)})
         elif self.cleaned_data['exp_count'] == 0:
             raise forms.ValidationError("There must be more than 1 exposure")
+        if self.cleaned_data.get('end_time') and self.cleaned_data.get('start_time'):
+            window_width = self.cleaned_data['end_time'] - self.cleaned_data['start_time']
+            window_width = window_width.total_seconds() / 60
+            if window_width < self.cleaned_data['slot_length']:
+                raise forms.ValidationError("Requested Observations will not fit within Scheduling Window.")
+            if self.cleaned_data.get('end_time') < self.cleaned_data.get('start_time'):
+                raise forms.ValidationError("Scheduling Window cannot end before it begins without breaking causality. Please Fix.")
         return cleaned_data
 
 
@@ -288,7 +311,7 @@ class ScheduleSpectraForm(forms.Form):
     exp_count = forms.IntegerField(initial=1, widget=forms.NumberInput(attrs={'size': '5'}), required=True)
     exp_length = forms.FloatField(initial=1800.0, required=True)
     calibs = forms.ChoiceField(required=True, choices=CALIBS)
-    solar_analog = forms.BooleanField(initial=False, required=False)
+    solar_analog = forms.BooleanField(initial=True, required=False)
     spectroscopy = forms.BooleanField(initial=True, widget=forms.HiddenInput(), required=False)
 
     def clean_utc_date(self):
@@ -296,6 +319,13 @@ class ScheduleSpectraForm(forms.Form):
         if start < datetime.utcnow().date():
             raise forms.ValidationError("Window cannot start in the past")
         return start
+
+    def clean(self):
+        cleaned_data = super(ScheduleSpectraForm, self).clean()
+        site = self.cleaned_data['instrument_code']
+        spectra = self.cleaned_data['spectroscopy']
+        if not fetch_filter_list(site[0:3], spectra):
+            raise forms.ValidationError("This Site/Instrument combination is not currently available.")
 
     def __init__(self, *args, **kwargs):
         self.proposal_code = kwargs.pop('proposal_code', None)

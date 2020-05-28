@@ -20,7 +20,7 @@ import tempfile
 from glob import glob
 import mock
 
-from django.test import TestCase
+from django.test import TestCase, tag
 from django.forms.models import model_to_dict
 
 # Import module to test
@@ -68,6 +68,14 @@ class TestGetMountLimits(TestCase):
 
     def test_1m_by_site_code(self):
         (neg_limit, pos_limit, alt_limit) = get_mountlimits('K91')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '1m')
+
+    def test_1m_by_site_elp2(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('ELP-DOMB-1m0a')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '1m')
+
+    def test_1m_by_site_code_elp2(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('V39')
         self.compare_limits(pos_limit, neg_limit, alt_limit, '1m')
 
     def test_1m_by_site_code_lowercase(self):
@@ -266,6 +274,7 @@ class TestComputeEphemerides(TestCase):
 
         body_dict['provisional_name'] = 'N999z0z'
         body_dict['eccentricity'] = 0.42
+        body_dict['ingest'] += timedelta(seconds=1)
         body_dict['id'] += 3
         second_body = Body.objects.create(**body_dict)
         second_body.save()
@@ -275,16 +284,17 @@ class TestComputeEphemerides(TestCase):
 
         first_saved_item = saved_items[0]
         second_saved_item = saved_items[1]
-        self.assertEqual(first_saved_item.provisional_name, 'N999r0q')
-        self.assertEqual(second_saved_item.provisional_name, 'N999z0z')
+        # Newer should be first due to `-ingest` in the Body Meta ordering
+        self.assertEqual(first_saved_item.provisional_name, 'N999z0z')
+        self.assertEqual(second_saved_item.provisional_name, 'N999r0q')
 
     def test_compute_ephem_with_elements(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
-        expected_ra  = 5.28722753669144
+        expected_ra = 5.28722753669144
         expected_dec = 0.522637696108887
         expected_mag = 20.408525362626005
         expected_motion = 2.4825093417658186
-        expected_alt =  -58.658929026981895
+        expected_alt = -58.658929026981895
         expected_spd = 119.94694444444444
         expected_pa = 91.35793788996334
 
@@ -303,13 +313,13 @@ class TestComputeEphemerides(TestCase):
 
     def test_compute_ephem_with_body(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
-        expected_ra  = 5.28722753669144
+        expected_ra = 5.28722753669144
         expected_dec = 0.522637696108887
         expected_mag = 20.408525362626005
         expected_motion = 2.4825093417658186
-        expected_alt =  -58.658929026981895
+        expected_alt = -58.658929026981895
         expected_spd = 119.94694444444444
-        expected_pa  = 91.35793788996334
+        expected_pa = 91.35793788996334
 
         body_elements = model_to_dict(self.body)
         emp_line = compute_ephem(d, body_elements, '500', dbg=False, perturb=True, display=False)
@@ -490,6 +500,103 @@ class TestComputeEphemerides(TestCase):
         while line < len(expected_ephem_lines):
             self.assertEqual(expected_ephem_lines[line], ephem_lines[line])
             line += 1
+
+    def test_call_compute_comet_missing_q(self):
+        body_elements = {
+                         'provisional_name': 'C0TUUZ2',
+                         'name': None,
+                         'origin': 'M',
+                         'source_type': 'U',
+                         'elements_type': 'MPC_COMET',
+                         'epochofel': datetime(2019, 8, 21, 0, 0),
+                         'orbit_rms': 0.28,
+                         'orbinc': 105.5272,
+                         'longascnode': 323.82141,
+                         'argofperih': 74.17643,
+                         'eccentricity': 1.0,
+                         'meandist': 351375868.8,
+                         'meananom': None,
+                         'perihdist': None,
+                         'epochofperih': datetime(2019, 8, 21, 0, 0),
+                         'abs_mag': 14.9,
+                         'slope': 4.0,
+                         'num_obs': 7,
+                         'arc_length': 0.2,
+                        }
+        start = datetime(2019, 8, 21, 15)
+        site_code = '500'
+
+        emp_line = compute_ephem(start, body_elements, site_code, perturb=False)
+
+        self.assertEqual({}, emp_line)
+
+    def test_call_compute_comet_missing_qdate(self):
+        body_elements = {
+                         'provisional_name': 'C0TUUZ2',
+                         'name': None,
+                         'origin': 'M',
+                         'source_type': 'U',
+                         'elements_type': 'MPC_COMET',
+                         'epochofel': datetime(2019, 8, 21, 0, 0),
+                         'orbit_rms': 0.28,
+                         'orbinc': 105.5272,
+                         'longascnode': 323.82141,
+                         'argofperih': 74.17643,
+                         'eccentricity': 1.0,
+                         'meandist': 351375868.8,
+                         'meananom': None,
+                         'perihdist': None,
+                         'epochofperih': None,
+                         'abs_mag': 14.9,
+                         'slope': 4.0,
+                         'num_obs': 7,
+                         'arc_length': 0.2,
+                        }
+        start = datetime(2019, 8, 21, 15)
+        site_code = '500'
+
+        emp_line = compute_ephem(start, body_elements, site_code, perturb=False)
+
+        self.assertEqual({}, emp_line)
+
+    def test_call_compute_empty_elements(self):
+        body_elements = { 'id': 241,
+                          'provisional_name': 'WD3FB24',
+                          'provisional_packed': None,
+                          'name': '2015 DP53',
+                          'origin': 'M',
+                          'source_type': 'N',
+                          'elements_type': None,
+                          'active': False,
+                          'fast_moving': False,
+                          'urgency': None,
+                          'epochofel': None,
+                          'orbit_rms': 99.0,
+                          'orbinc': None,
+                          'longascnode': None,
+                          'argofperih': None,
+                          'eccentricity': None,
+                          'meandist': None,
+                          'meananom': None,
+                          'perihdist': None,
+                          'epochofperih': None,
+                          'abs_mag': None,
+                          'slope': None,
+                          'score': None,
+                          'discovery_date': None,
+                          'num_obs': None,
+                          'arc_length': None,
+                          'not_seen': None,
+                          'updated': False,
+                          'ingest': datetime(2015, 3, 7, 1, 22, 34),
+                          'update_time': None
+                        }
+        start = datetime(2019, 11, 11, 15)
+        site_code = '500'
+
+        emp_line = compute_ephem(start, body_elements, site_code, perturb=False)
+
+        self.assertEqual({}, emp_line)
 
 
 class TestDarkAndObjectUp(TestCase):
@@ -683,7 +790,7 @@ class TestComputeFOM(TestCase):
 
         self.assertEqual(expected_FOM, FOM)
 
-
+@tag('slow')
 class TestLongTermScheduling(TestCase):
 
     def setUp(self):
@@ -892,7 +999,7 @@ class TestLongTermScheduling(TestCase):
 
         dark_start, dark_end = determine_darkness_times(site_code, utc_date=datetime(2017, 1, 6, 0, 0, 00))
         emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size='5 m', alt_limit=30)
-        dark_and_up_time, emp_dark_and_up = compute_dark_and_up_time(emp)
+        dark_and_up_time, emp_dark_and_up, set_time = compute_dark_and_up_time(emp)
 
         self.assertEqual(expected_dark_and_up_time, dark_and_up_time)
         self.assertEqual(expected_emp_dark_and_up, emp_dark_and_up)
@@ -906,7 +1013,7 @@ class TestLongTermScheduling(TestCase):
 
         dark_start, dark_end = determine_darkness_times(site_code, utc_date=datetime(2017, 1, 6, 0, 0, 00))
         emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size='5 m', alt_limit=30)
-        dark_and_up_time, emp_dark_and_up = compute_dark_and_up_time(emp)
+        dark_and_up_time, emp_dark_and_up, set_time = compute_dark_and_up_time(emp)
 
         self.assertEqual(expected_dark_and_up_time, dark_and_up_time)
         self.assertEqual(expected_emp_dark_and_up_first_line, emp_dark_and_up[0])
@@ -919,7 +1026,6 @@ class TestLongTermScheduling(TestCase):
 
         dark_start, dark_end = determine_darkness_times(site_code, utc_date=datetime(2017, 1, 6, 0, 0, 00))
         emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size='5 m', alt_limit=30)
-        dark_and_up_time = compute_dark_and_up_time(emp)
 
         max_alt = compute_max_altitude(emp)
 
@@ -933,7 +1039,6 @@ class TestLongTermScheduling(TestCase):
 
         dark_start, dark_end = determine_darkness_times(site_code, utc_date=datetime(2017, 1, 6, 0, 0, 00))
         emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size='5 m', alt_limit=30)
-        dark_and_up_time = compute_dark_and_up_time(emp)
 
         max_alt = compute_max_altitude(emp)
 
@@ -951,7 +1056,7 @@ class TestLongTermScheduling(TestCase):
         app_ra = emp_line['ra']
         app_dec = emp_line['dec']
         min_alt = 30
-        rise_time, set_time, max_alt = target_rise_set(mid_time, app_ra, app_dec, site_code, min_alt, step_size='1m')
+        rise_time, set_time, max_alt, vis_time = target_rise_set(mid_time, app_ra, app_dec, site_code, min_alt, step_size='1m')
 
         self.assertAlmostEqual(expected_max_alt, max_alt, 1)
         self.assertEqual(expected_rise_time, rise_time)
@@ -962,27 +1067,36 @@ class TestLongTermScheduling(TestCase):
         body_elements = model_to_dict(self.body2)
         expected_max_alt = 41.3
         expected_up_time = 3.8333333333333335
+        expected_start_time = datetime(2017, 1, 6, 8, 40)
+        expected_stop_time = datetime(2017, 1, 6, 12, 30)
 
         emp_line = compute_ephem(datetime(2017, 1, 6, 0, 0, 00), body_elements, site_code, dbg=False, perturb=True, display=False)
         app_ra = emp_line['ra']
         app_dec = emp_line['dec']
         min_alt = 30
-        up_time, max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=True, body_elements=None)
+        up_time, max_alt, start_time, stop_time = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=True, body_elements=None)
+
         self.assertAlmostEqual(expected_max_alt, max_alt, 1)
         self.assertAlmostEqual(expected_up_time, up_time, 1)
+        self.assertEqual(expected_start_time, start_time)
+        self.assertEqual(expected_stop_time, stop_time)
 
     def test_visibility_general1m(self):
         site_code = '1M0'
         body_elements = model_to_dict(self.body2)
+        expected_start_time = datetime(2017, 1, 5, 19, 0, 00)
+        expected_stop_time = datetime(2017, 1, 6, 12, 40, 00)
 
         emp_line = compute_ephem(datetime(2017, 1, 6, 0, 0, 00), body_elements, site_code, dbg=False, perturb=True, display=False)
         app_ra = emp_line['ra']
         app_dec = emp_line['dec']
         min_alt = 30
-        up_time, max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=True, body_elements=body_elements)
-        true_up_time, true_max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=False, body_elements=body_elements)
+        up_time, max_alt, start_time, stop_time = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=True, body_elements=body_elements)
+        true_up_time, true_max_alt, true_start_time, true_stop_time = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=False, body_elements=body_elements)
         self.assertEqual(floor(true_max_alt), floor(max_alt))
         self.assertAlmostEqual(true_up_time, up_time, 1)
+        self.assertEqual(expected_start_time, start_time)
+        self.assertEqual(expected_stop_time, stop_time)
 
     def test_visibility_general1m_single_site(self):
         site_code = '1M0'
@@ -994,29 +1108,56 @@ class TestLongTermScheduling(TestCase):
         app_ra = emp_line['ra']
         app_dec = emp_line['dec']
         min_alt = 30
-        up_time, max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=True, body_elements=body_elements)
-        true_up_time, true_max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=False, body_elements=body_elements)
+        up_time, max_alt, start_time, stop_time = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=True, body_elements=body_elements)
+        true_up_time, true_max_alt, true_start_time, true_stop_time = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=False, body_elements=body_elements)
         self.assertEqual(floor(true_max_alt), floor(max_alt))
         self.assertAlmostEqual(true_up_time, up_time, 1)
         self.assertAlmostEqual(expected_max_alt, max_alt, 0)
         self.assertAlmostEqual(expected_up_time, up_time, 0)
+        self.assertEqual(start_time, true_start_time)
+        self.assertEqual(stop_time, true_stop_time)
 
-    def test_visibility_general2m_never_up(self):
-        site_code = '0M4'
+    def test_visibility_2m_never_up(self):
+        site_code = 'E10'
         body_elements = model_to_dict(self.body4)
-        expected_max_alt = 61
+        expected_max_alt = 63.5
         expected_up_time = 0
+        expected_start_time = None
+        expected_stop_time = None
 
         emp_line = compute_ephem(datetime(2017, 1, 6, 0, 0, 00), body_elements, site_code, dbg=False, perturb=True, display=False)
         app_ra = emp_line['ra']
         app_dec = emp_line['dec']
         min_alt = 80
-        up_time, max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '30 m', min_alt, quick_n_dirty=True, body_elements=body_elements)
-        true_up_time, true_max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '30 m', min_alt, quick_n_dirty=False, body_elements=body_elements)
+        up_time, max_alt, start_time, stop_time = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '30 m', min_alt, quick_n_dirty=True, body_elements=body_elements)
+        true_up_time, true_max_alt, true_start_time, true_stop_time = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '30 m', min_alt, quick_n_dirty=False, body_elements=body_elements)
         self.assertEqual(floor(true_max_alt), floor(max_alt))
         self.assertAlmostEqual(true_up_time, up_time, 1)
         self.assertAlmostEqual(expected_max_alt, max_alt, 0)
         self.assertAlmostEqual(expected_up_time, up_time, 0)
+        self.assertEqual(expected_start_time, start_time)
+        self.assertEqual(expected_stop_time, stop_time)
+
+    def test_visibility_general2m_never_up(self):
+        site_code = '2M0'
+        body_elements = model_to_dict(self.body4)
+        expected_max_alt = 63.5
+        expected_up_time = 0
+        expected_start_time = datetime(2017, 1, 6, 5, 0, 00)
+        expected_stop_time = datetime(2017, 1, 6, 17, 40, 00)
+
+        emp_line = compute_ephem(datetime(2017, 1, 6, 0, 0, 00), body_elements, site_code, dbg=False, perturb=True, display=False)
+        app_ra = emp_line['ra']
+        app_dec = emp_line['dec']
+        min_alt = 80
+        up_time, max_alt, start_time, stop_time = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '30 m', min_alt, quick_n_dirty=True, body_elements=body_elements)
+        true_up_time, true_max_alt, true_start_time, true_stop_time = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '30 m', min_alt, quick_n_dirty=False, body_elements=body_elements)
+        self.assertEqual(floor(true_max_alt), floor(max_alt))
+        self.assertAlmostEqual(true_up_time, up_time, 1)
+        self.assertAlmostEqual(expected_max_alt, max_alt, 0)
+        self.assertAlmostEqual(expected_up_time, up_time, 0)
+        self.assertEqual(expected_start_time, start_time)
+        self.assertEqual(expected_stop_time, stop_time)
 
 
 class TestDetermineRatesAndPA(TestCase):
@@ -1530,6 +1671,14 @@ class TestDetermineSlotLength(TestCase):
         slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
+    def test_slot_length_basic_elp_1m0_2(self):
+        site_code = 'V39'
+        name = 'A101foo'
+        mag = 19.0
+        expected_length = 20
+        slot_length = determine_slot_length(mag, site_code)
+        self.assertEqual(expected_length, slot_length)
+
 
 class TestGetSiteCamParams(TestCase):
 
@@ -1716,6 +1865,16 @@ class TestGetSiteCamParams(TestCase):
         self.assertEqual(self.max_exp, max_exp_time)
         self.assertEqual(self.onem_setup_overhead, setup_overhead)
         self.assertEqual(self.sinistro_exp_overhead, exp_overhead)
+
+    def test_1m_elp_site_sinistro_domeB(self):
+        site_code = 'V39'
+        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        self.assertEqual(site_code.upper(), chk_site_code)
+        self.assertEqual(0.389, pixel_scale)
+        self.assertEqual(self.onem_sinistro_fov, ccd_fov)
+        self.assertEqual(self.onem_setup_overhead, setup_overhead)
+        self.assertEqual(self.sinistro_exp_overhead, exp_overhead)
+        self.assertEqual(self.max_exp, max_exp_time)
 
 
 class TestDetermineExpTimeCount(TestCase):
@@ -2065,6 +2224,54 @@ class TestGetSitePos(TestCase):
         site_code = 'BPL'
 
         expected_site_name = 'LCO Back Parking Lot Node (BPL)'
+
+        site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+
+        self.assertEqual(expected_site_name, site_name)
+        self.assertNotEqual(site_long, 0.0)
+        self.assertNotEqual(site_lat, 0.0)
+        self.assertNotEqual(site_hgt, 0.0)
+
+    def test_elp_num1_by_code(self):
+        site_code = 'V37'
+
+        expected_site_name = 'LCO ELP Node 1m0 Dome A at McDonald Observatory'
+
+        site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+
+        self.assertEqual(expected_site_name, site_name)
+        self.assertNotEqual(site_long, 0.0)
+        self.assertNotEqual(site_lat, 0.0)
+        self.assertNotEqual(site_hgt, 0.0)
+
+    def test_elp_num1_by_name(self):
+        site_code = 'ELP-DOMA'
+
+        expected_site_name = 'LCO ELP Node 1m0 Dome A at McDonald Observatory'
+
+        site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+
+        self.assertEqual(expected_site_name, site_name)
+        self.assertNotEqual(site_long, 0.0)
+        self.assertNotEqual(site_lat, 0.0)
+        self.assertNotEqual(site_hgt, 0.0)
+
+    def test_elp_num2_by_code(self):
+        site_code = 'V39'
+
+        expected_site_name = 'LCO ELP Node 1m0 Dome B at McDonald Observatory'
+
+        site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+
+        self.assertEqual(expected_site_name, site_name)
+        self.assertNotEqual(site_long, 0.0)
+        self.assertNotEqual(site_lat, 0.0)
+        self.assertNotEqual(site_hgt, 0.0)
+
+    def test_elp_num2_by_name(self):
+        site_code = 'ELP-DOMB'
+
+        expected_site_name = 'LCO ELP Node 1m0 Dome B at McDonald Observatory'
 
         site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
 
@@ -2793,3 +3000,84 @@ class TestReadFindorbEphem(TestCase):
         empinfo, emp = read_findorb_ephem(outfile)
 
         self.compare_ephemeris((expected_empinfo, expected_emp), (empinfo, emp))
+
+
+class TestDetermineHorizonsId(TestCase):
+
+    def test_289P(self):
+        expected_id = 90001196
+        lines = ['Ambiguous target name; provide unique id:',
+                 '    Record #  Epoch-yr  >MATCH DESIG<  Primary Desig  Name  ',
+                 '    --------  --------  -------------  -------------  -------------------------',
+                 '    90001195    2005    289P           289P            Blanpain',
+                 '    90001196    2018    289P           289P            Blanpain',
+                 '']
+
+        horizons_id = determine_horizons_id(lines)
+
+        self.assertEqual(expected_id, horizons_id)
+
+    def test_46P(self):
+        expected_id = 90000544
+        lines = ['Ambiguous target name; provide unique id:',
+                 '    Record #  Epoch-yr  >MATCH DESIG<  Primary Desig  Name  ',
+                 '    --------  --------  -------------  -------------  -------------------------',
+                 '    90000532    1947    46P            46P             Wirtanen',
+                 '    90000533    1954    46P            46P             Wirtanen',
+                 '    90000534    1961    46P            46P             Wirtanen',
+                 '    90000535    1967    46P            46P             Wirtanen',
+                 '    90000536    1974    46P            46P             Wirtanen',
+                 '    90000537    1986    46P            46P             Wirtanen',
+                 '    90000538    1991    46P            46P             Wirtanen',
+                 '    90000539    1997    46P            46P             Wirtanen',
+                 '    90000540    1999    46P            46P             Wirtanen',
+                 '    90000541    2006    46P            46P             Wirtanen',
+                 '    90000542    2007    46P            46P             Wirtanen',
+                 '    90000543    2018    46P            46P             Wirtanen',
+                 '    90000544    2018    46P            46P             Wirtanen',
+                 '']
+
+        horizons_id = determine_horizons_id(lines)
+
+        self.assertEqual(expected_id, horizons_id)
+
+    def test_46P_prior_apparition(self):
+        expected_id = 90000542
+        lines = ['Ambiguous target name; provide unique id:',
+                 '    Record #  Epoch-yr  >MATCH DESIG<  Primary Desig  Name  ',
+                 '    --------  --------  -------------  -------------  -------------------------',
+                 '    90000532    1947    46P            46P             Wirtanen',
+                 '    90000533    1954    46P            46P             Wirtanen',
+                 '    90000534    1961    46P            46P             Wirtanen',
+                 '    90000535    1967    46P            46P             Wirtanen',
+                 '    90000536    1974    46P            46P             Wirtanen',
+                 '    90000537    1986    46P            46P             Wirtanen',
+                 '    90000538    1991    46P            46P             Wirtanen',
+                 '    90000539    1997    46P            46P             Wirtanen',
+                 '    90000540    1999    46P            46P             Wirtanen',
+                 '    90000541    2006    46P            46P             Wirtanen',
+                 '    90000542    2007    46P            46P             Wirtanen',
+                 '    90000543    2018    46P            46P             Wirtanen',
+                 '    90000544    2018    46P            46P             Wirtanen',
+                 '']
+        now = datetime(2008, 5, 11, 17, 20, 42)
+
+        horizons_id = determine_horizons_id(lines, now)
+
+        self.assertEqual(expected_id, horizons_id)
+
+    def test_bad_object(self):
+        expected_id = None
+        lines = ['Unknown target (20000P). Maybe try different id_type?']
+
+        horizons_id = determine_horizons_id(lines)
+
+        self.assertEqual(expected_id, horizons_id)
+
+    def test_bad_object2(self):
+        expected_id = None
+        lines = []
+
+        horizons_id = determine_horizons_id(lines)
+
+        self.assertEqual(expected_id, horizons_id)

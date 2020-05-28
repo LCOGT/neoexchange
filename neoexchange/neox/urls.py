@@ -18,17 +18,22 @@ from django.contrib.staticfiles import views
 from django.contrib import admin
 from django.contrib.auth.views import login, logout
 from django.views.generic import ListView, DetailView
-from django.core.urlresolvers import reverse_lazy
+from django.views.generic.base import TemplateView
+from django.urls import reverse_lazy
 
 from core.models import Body, Block, SourceMeasurement, SuperBlock, StaticSource
-from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockListView, ScheduleParameters, \
+from core.views import BodySearchView, BodyDetailView, BlockDetailView, ScheduleParameters, \
     ScheduleSubmit, ephemeris, home, BlockReport, ranking, MeasurementViewBody, MeasurementViewBlock, \
     UploadReport, BlockTimeSummary, ScheduleParametersCadence, ScheduleParametersSpectra, \
-    plotframe, make_plot, CandidatesViewBlock, BlockReportMPC, \
-    SuperBlockListView, SuperBlockDetailView, characterization, SpectroFeasibility, \
-    display_spec, PlotSpec, display_movie, GuideMovie, \
+    CandidatesViewBlock, BlockReportMPC, \
+    MeasurementDownloadMPC, MeasurementDownloadADESPSV, \
+    SuperBlockListView, SuperBlockDetailView, characterization, SpectroFeasibility, BlockSpec,\
+    display_movie, GuideMovie, \
     StaticSourceView, StaticSourceDetailView, ScheduleCalibSpectra, ScheduleCalibSubmit, \
-    make_standards_plot, make_solar_standards_plot, CalibSpectroFeasibility, ScheduleCalibParameters
+    CalibSpectroFeasibility, ScheduleCalibParameters, \
+    BestStandardsView, PlotSpec, BodyVisibilityView, SuperBlockTimeline, BlockCancel
+from core.plots import make_visibility_plot, \
+    make_standards_plot, make_solar_standards_plot
 
 from analyser.views import BlockFramesView, ProcessCandidates
 
@@ -37,14 +42,15 @@ admin.autodiscover()
 
 urlpatterns = [
     url(r'^$', home, name='home'),
-    url(r'^makeplot/$', make_plot, name='makeplot'),
-    url(r'^plotframe/$', plotframe),
+    # url(r'^makeplot/$', make_plot, name='makeplot'),
+    # url(r'^plotframe/$', TemplateView.as_view(template_name='core/frame_plot.html')),
     url(r'^make-standards-plot/$', make_standards_plot, name='make-standards-plot'),
     url(r'^make-solar-standards-plot/$', make_solar_standards_plot, name='make-solar-standards-plot'),
+    url(r'^visibility_plot/(?P<pk>\d+)/(?P<plot_type>[a-z]*)/$', make_visibility_plot, name='visibility-plot'),
+    url(r'^visibility_plot/(?P<pk>\d+)/(?P<plot_type>[a-z]*)/(?P<site_code>[A-Z,0-9]{3})/$', make_visibility_plot, name='visibility-plot-site'),
     url(r'^block/summary/$', BlockTimeSummary.as_view(), name='block-summary'),
     url(r'^block/list/$', SuperBlockListView.as_view(model=SuperBlock, queryset=SuperBlock.objects.order_by('-block_start'), context_object_name="block_list"), name='blocklist'),
-    url(r'^block/(?P<pk>\d+)/spectra/(?P<obs_num>\d+)/spectra.png$', display_spec, name='display_spec'),
-    url(r'^block/(?P<pk>\d+)/spectra/(?P<obs_num>\d+)/$', PlotSpec.as_view(), name='plotspec'),
+    url(r'^block/(?P<pk>\d+)/spectra/(?P<obs_num>\d+)/$', BlockSpec.as_view(), name='blockspec'),
     url(r'^block/(?P<pk>\d+)/guidemovie/$', GuideMovie.as_view(), name='guidemovie'),
     url(r'^block/(?P<pk>\d+)/spectra/guidemovie.gif$', display_movie, name='display_movie'),
     url(r'^block/(?P<pk>\d+)/source/(?P<source>\d+)/report/submit/$', BlockReportMPC.as_view(), name='block-submit-mpc'),
@@ -55,15 +61,23 @@ urlpatterns = [
     url(r'^block/(?P<pk>\d+)/analyser/$', BlockFramesView.as_view(), name='block-ast'),
     url(r'^block/(?P<pk>\d+)/analyser/submit/$', ProcessCandidates.as_view(), name='submit-candidates'),
     url(r'^block/(?P<pk>\d+)/candidates/$', CandidatesViewBlock.as_view(), name='view-candidates'),
+    url(r'^block/(?P<pk>\d+)/timeline/$', SuperBlockTimeline.as_view(), name='view-timeline'),
+    url(r'^block/(?P<pk>\d+)/cancel/$', BlockCancel.as_view(), name='block-cancel'),
     url(r'^block/(?P<pk>\d+)/$', SuperBlockDetailView.as_view(model=SuperBlock), name='block-view'),
     url(r'^target/$', ListView.as_view(model=Body, queryset=Body.objects.filter(active=True).order_by('-origin', '-ingest'), context_object_name="target_list"), name='targetlist'),
+    url(r'^target/(?P<pk>\d+)/measurements/ades/download/$', MeasurementDownloadADESPSV.as_view(), name='download-ades'),
+    url(r'^target/(?P<pk>\d+)/measurements/mpc/download/$', MeasurementDownloadMPC.as_view(), name='download-mpc'),
+    url(r'^target/(?P<pk>\d+)/measurements/ades/$', MeasurementViewBody.as_view(template='core/adesreport.html'), name='measurement-ades'),
     url(r'^target/(?P<pk>\d+)/measurements/mpc/$', MeasurementViewBody.as_view(template='core/mpcreport.html'), name='measurement-mpc'),
     url(r'^target/(?P<pk>\d+)/measurements/$', MeasurementViewBody.as_view(), name='measurement'),
+    url(r'^target/(?P<pk>\d+)/visibility/$', BodyVisibilityView.as_view(model=Body), name='visibility'),
     url(r'^target/(?P<pk>\d+)/$', BodyDetailView.as_view(model=Body), name='target'),
+    url(r'^target/(?P<pk>\d+)/spectra/$', PlotSpec.as_view(), name='plotspec'),
     url(r'^search/$', BodySearchView.as_view(context_object_name="target_list"), name='search'),
     url(r'^ephemeris/$', ephemeris, name='ephemeris'),
     url(r'^ranking/$', ranking, name='ranking'),
     url(r'^calibsources/$', StaticSourceView.as_view(), name='calibsource-view'),
+    url(r'^calibsources/best/$', BestStandardsView.as_view(), name='beststandards-view'),
     url(r'^calibsources/solar/$', StaticSourceView.as_view(queryset=StaticSource.objects.filter(source_type=StaticSource.SOLAR_STANDARD).order_by('ra')), name='solarstandard-view'),
     url(r'^calibsources/(?P<pk>\d+)/$', StaticSourceDetailView.as_view(model=StaticSource), name='calibsource'),
     url(r'^characterization/$', characterization, name='characterization'),

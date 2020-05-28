@@ -13,14 +13,17 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 
+from datetime import date
 from operator import itemgetter
 from django import template
 from django.conf import settings
 from django.template import Library
 from django.template.defaultfilters import floatformat
 from astrometrics.time_subs import degreestohours, hourstodegrees, degreestodms, \
-    degreestohms, radianstohms, radianstodms, dttodecimalday
+    degreestohms, radianstohms, radianstodms, dttodecimalday, mjd_utc2datetime
 from astrometrics.ephem_subs import get_alt_from_airmass
+from core.models import Block
+
 
 register = Library()
 
@@ -102,6 +105,26 @@ def format_mpc_line_upload(measure):
 @register.simple_tag
 def format_mpc_line_catcode(measure):
     return measure.format_mpc_line(include_catcode=True)
+
+
+@register.inclusion_tag('partials/block_row.html')
+def build_block_row(superblock):
+    return {
+        'block': superblock,
+        'sites': superblock.get_sites(),
+        'telclass': superblock.get_telclass(),
+        'obsdetails': superblock.get_obsdetails(),
+        'num_observed': superblock.get_num_observed(),
+        'num_reported': superblock.get_num_reported()
+    }
+
+
+@register.filter(is_safe=False)
+def mjd_utc2date(mjd):
+    utc_date = None
+    if mjd is not None:
+        utc_date = mjd_utc2datetime(mjd).date()
+    return utc_date
 
 
 register.filter('make_int_list', make_int_list)

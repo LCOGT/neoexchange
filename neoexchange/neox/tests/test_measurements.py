@@ -14,9 +14,13 @@ GNU General Public License for more details.
 """
 
 from .base import FunctionalTest
+import os
 from selenium import webdriver
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from core.models import Body, Frame, SourceMeasurement
+from mock import patch
+from neox.tests.mocks import mock_build_visibility_source
+
 
 class MeasurementsPageTests(FunctionalTest):
 
@@ -47,7 +51,7 @@ class MeasurementsPageTests(FunctionalTest):
         body2, status = Body.objects.get_or_create(**params)
         self.body2 = body2
 
-    def insert_test_measurements(self):
+    def insert_test_measurements(self, rms=False):
         frame_params = { 'sitecode' : 'K91',
                          'instrument' : 'kb70',
                          'filter' : 'w',
@@ -56,7 +60,10 @@ class MeasurementsPageTests(FunctionalTest):
                          'midpoint' : '2015-04-20 18:00:00',
                          'block' : self.test_block
                         }
-        frame,status = Frame.objects.get_or_create(pk=1, **frame_params)
+        if rms:
+            frame_params['astrometric_catalog'] = 'UCAC-4'
+            frame_params['photometric_catalog'] = 'UCAC-4'
+        frame, status = Frame.objects.get_or_create(pk=1, **frame_params)
         self.test_frame = frame
 
         measure_params = { 'body' : self.body,
@@ -66,7 +73,10 @@ class MeasurementsPageTests(FunctionalTest):
                            'obs_mag' : 21.05,
                            'err_obs_mag' : 0.03
                          }
-        sourcemeas,status = SourceMeasurement.objects.get_or_create(pk=1, **measure_params)
+        if rms:
+            measure_params['err_obs_ra'] = 300e-3/3600.0
+            measure_params['err_obs_dec'] = 275e-3/3600.0  
+        sourcemeas, status = SourceMeasurement.objects.get_or_create(pk=1, **measure_params)
         self.test_measure1 = sourcemeas
 
     def insert_satellite_test_measurements(self):
@@ -105,7 +115,7 @@ class MeasurementsPageTests(FunctionalTest):
                          }
         self.test_measure1 = SourceMeasurement.objects.create(pk=2, **measure_params)
 
-    def insert_extra_measurements(self):
+    def insert_extra_measurements(self, rms=False):
 
         frame_params = { 'sitecode' : 'K91',
                          'instrument' : 'kb70',
@@ -115,6 +125,10 @@ class MeasurementsPageTests(FunctionalTest):
                          'midpoint' : '2015-04-21 18:00:00',
                          'block' : self.test_block
                         }
+        if rms:
+            frame_params['astrometric_catalog'] = 'PPMXL'
+            frame_params['photometric_catalog'] = 'PPMXL'
+            frame_params['fwhm'] = 1.6
         self.test_frame = Frame.objects.create(pk=2, **frame_params)
 
         measure_params = { 'body' : self.body,
@@ -122,8 +136,13 @@ class MeasurementsPageTests(FunctionalTest):
                            'obs_ra' : 42.2,
                            'obs_dec' : -31.05,
                            'obs_mag' : 20.95,
-                           'err_obs_mag' : 0.03
+                           'err_obs_mag' : 0.028
                          }
+        if rms:
+            measure_params['err_obs_ra'] = 300e-3/3600.0
+            measure_params['err_obs_dec'] = 275e-3/3600.0
+            measure_params['aperture_size'] = 1.56
+            measure_params['snr'] = 24.8
         self.test_measure2 = SourceMeasurement.objects.create(pk=2, **measure_params)
 
         # These measurements are precoverys, earlier in time but discovered later
@@ -136,6 +155,9 @@ class MeasurementsPageTests(FunctionalTest):
                          'midpoint' : '2015-03-21 06:00:00',
                          'block' : None
                         }
+        if rms:
+            frame_params['astrometric_catalog'] = '2MASS'
+            frame_params['photometric_catalog'] = '2MASS'
         self.test_precovery_frame = Frame.objects.create(pk=3, **frame_params)
 
         measure_params = { 'body' : self.body,
@@ -143,10 +165,14 @@ class MeasurementsPageTests(FunctionalTest):
                            'obs_ra' : 62.2,
                            'obs_dec' : -11.05,
                            'obs_mag' : 21.5,
-                           'err_obs_mag' : 0.03
+                           'err_obs_mag' : 0.01
                          }
+        if rms:
+            measure_params['err_obs_ra'] = 90e-3/3600.0
+            measure_params['err_obs_dec'] = 90e-3/3600.0
         self.test_measure3 = SourceMeasurement.objects.create(pk=3, **measure_params)
 
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     def test_measurements_page(self):
 
         # Setup
@@ -180,7 +206,7 @@ class MeasurementsPageTests(FunctionalTest):
         self.check_for_row_not_in_table('id_targets', testlines[1])
 
         link = self.browser.find_element_by_partial_link_text('N999r0q')
-        target_url = "{0}{1}".format(self.live_server_url, reverse('target',kwargs={'pk':1}))
+        target_url = "{0}{1}".format(self.live_server_url, reverse('target', kwargs={'pk': 1}))
         actual_url = link.get_attribute('href')
         self.assertEqual(actual_url, target_url)
         with self.wait_for_page_load(timeout=10):
@@ -189,12 +215,12 @@ class MeasurementsPageTests(FunctionalTest):
         # He is taken to a page with the object's details on it.
         self.assertEqual(self.browser.current_url, target_url)
         header_text = self.browser.find_element_by_class_name('headingleft').text
-        self.assertIn('Object: ' + self.body.current_name(), header_text)
+        self.assertIn(self.body.full_name(), header_text)
 
         # He sees a link that says it will show the measurements
         # available for this object.
         link = self.browser.find_element_by_id('show-measurements')
-        target_url = "{0}{1}".format(self.live_server_url, reverse('measurement',kwargs={'pk':1}))
+        target_url = "{0}{1}".format(self.live_server_url, reverse('measurement', kwargs={'pk': 1}))
         actual_url = link.get_attribute('href')
         self.assertEqual(actual_url, target_url)
 
@@ -221,6 +247,7 @@ class MeasurementsPageTests(FunctionalTest):
         # Satisfied that the planet is safe from this asteroid, he
         # leaves.
 
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     def test_measurements_mpc_format(self):
 
         # Setup
@@ -229,7 +256,7 @@ class MeasurementsPageTests(FunctionalTest):
 
         # A user, Timo, is interested in seeing what existing measurements
         # exist for a NEOCP candidate that he has heard about
-        target_url = self.live_server_url + reverse('target',kwargs={'pk':1})
+        target_url = self.live_server_url + reverse('target', kwargs={'pk': 1})
         self.browser.get(target_url)
 
         # He sees a link that says it will export the measurements
@@ -271,6 +298,7 @@ class MeasurementsPageTests(FunctionalTest):
         # Satisfied that the planet is safe from this asteroid, he
         # leaves.
 
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     def test_satellite_measurements_mpc_format(self):
 
         # Setup
@@ -278,7 +306,7 @@ class MeasurementsPageTests(FunctionalTest):
 
         # A user, James, is interested in seeing what existing measurements
         # exist for a NEOCP candidate that he has heard about
-        target_url = self.live_server_url + reverse('target',kwargs={'pk':1})
+        target_url = self.live_server_url + reverse('target', kwargs={'pk': 1})
         self.browser.get(target_url)
 
         # He sees a link that says it will show the source measurements
@@ -322,6 +350,7 @@ class MeasurementsPageTests(FunctionalTest):
         # Satisfied that the planet is safe from this asteroid, he
         # leaves.
 
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     def test_precovery_measurements(self):
 
         self.insert_test_measurements()
@@ -329,7 +358,7 @@ class MeasurementsPageTests(FunctionalTest):
 
         # A user, Marco, is interested in seeing what existing measurements
         # exist for a NEOCP candidate that he has heard about
-        target_url = self.live_server_url + reverse('target',kwargs={'pk':1})
+        target_url = self.live_server_url + reverse('target', kwargs={'pk': 1})
         self.browser.get(target_url)
 
         # He sees a link that says it will show the source measurements
@@ -361,7 +390,178 @@ class MeasurementsPageTests(FunctionalTest):
         rownum = 0
         while rownum < len(testlines):
             self.assertIn(testlines[rownum], rows[rownum].text.replace('\n', ' '))
-            rownum+=1
+            rownum += 1
 
         # Satisfied that his newly reported precovery for this asteroid has
         # been recorded, he leaves.
+
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
+    def test_display_ADES_measurements(self):
+
+        self.insert_test_measurements()
+        self.insert_extra_measurements()
+
+        # A user, Marco, is interested in seeing what existing measurements
+        # exist for a NEOCP candidate that he has heard about
+        target_url = self.live_server_url + reverse('target', kwargs={'pk': 1})
+        self.browser.get(target_url)
+
+        # He sees a link that says it will show the source measurements
+        # available for this object.
+        link = self.browser.find_element_by_id('show-measurements')
+        target_url = "{0}/target/{1}/measurements/".format(self.live_server_url, 1)
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
+
+        # He clicks on the link and sees that he is taken to a page with details
+        # on the source measurements for this object
+        with self.wait_for_page_load(timeout=10):
+            link.click()
+        self.assertEqual(self.browser.current_url, target_url)
+        header_text = self.browser.find_element_by_class_name('headingleft').text
+        self.assertIn('Source Measurements: ' + self.body.current_name(), header_text)
+
+        # He sees a link that says it will display the measurements in ADES format
+        ades_link = self.browser.find_element_by_partial_link_text('View in ADES format')
+        ades_target_url = "{0}/target/{1}/measurements/ades/".format(self.live_server_url, 1)
+        actual_url = ades_link.get_attribute('href')
+        self.assertEqual(actual_url, ades_target_url)
+
+        # He clicks on the link and sees that he is taken to a page with the
+        # source measurements for this object in ADES PSV format
+        ades_link.click()
+
+        # He sees that there is a table in which are the original
+        # discovery observations from PanSTARRS (obs. code F51) and from
+        # the LCOGT follow-up network.
+        testlines = [ 'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |  astCat|mag  |band| photCat|notes|remarks',
+                      '       |           | N999r0q| CCD|F51 |2015-03-21T06:00:00.00Z| 62.200000 |-11.050000 |        |21.5 |   r|        |     |',
+                      '       |           | N999r0q| CCD|K91 |2015-04-20T18:00:00.00Z| 42.100000 |-30.050000 |        |21.1 |   R|        |     |',
+                    ]
+        pre_block = self.browser.find_element_by_tag_name('pre')
+        rows = pre_block.text.splitlines()
+        for test_text in testlines:
+            self.assertIn(test_text, [row.replace('\n', ' ') for row in rows])
+
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
+    def test_display_ADES_measurements_withRMS(self):
+
+        self.insert_test_measurements(rms=True)
+        self.insert_extra_measurements(rms=True)
+
+        # A user, Marco, is interested in seeing what existing measurements
+        # exist for a NEOCP candidate that he has heard about
+        target_url = self.live_server_url + reverse('target', kwargs={'pk': 1})
+        self.browser.get(target_url)
+
+        # He sees a link that says it will show the source measurements
+        # available for this object.
+        link = self.browser.find_element_by_id('show-measurements')
+        target_url = "{0}/target/{1}/measurements/".format(self.live_server_url, 1)
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
+
+        # He clicks on the link and sees that he is taken to a page with details
+        # on the source measurements for this object
+        with self.wait_for_page_load(timeout=10):
+            link.click()
+        self.assertEqual(self.browser.current_url, target_url)
+        header_text = self.browser.find_element_by_class_name('headingleft').text
+        self.assertIn('Source Measurements: ' + self.body.current_name(), header_text)
+
+        # He sees a link that says it will display the measurements in ADES format
+        ades_link = self.browser.find_element_by_partial_link_text('View in ADES format')
+        ades_target_url = "{0}/target/{1}/measurements/ades/".format(self.live_server_url, 1)
+        actual_url = ades_link.get_attribute('href')
+        self.assertEqual(actual_url, ades_target_url)
+
+        # He clicks on the link and sees that he is taken to a page with the
+        # source measurements for this object in ADES PSV format
+        ades_link.click()
+
+        # He sees that there is a table in which are the original
+        # discovery observations from PanSTARRS (obs. code F51) and from
+        # the LCOGT follow-up network.
+        testlines = [ 'permID |provID     |trkSub  |mode|stn |obsTime                |         ra|        dec|rmsRA|rmsDec|  astCat|mag  |rmsMag|band| photCat|photAp|logSNR|seeing|notes|remarks',
+                      '       |           | N999r0q| CCD|F51 |2015-03-21T06:00:00.00Z| 62.200000 |-11.050000 |0.090| 0.090|   2MASS|21.5 |0.010 |   r|   2MASS|      |      |      |     |',
+                      '       |           | N999r0q| CCD|K91 |2015-04-20T18:00:00.00Z| 42.100000 |-30.050000 | 0.30|  0.28|   UCAC4|21.1 |0.030 |   R|   UCAC4|      |      |      |     |',
+                      '       |           | N999r0q| CCD|K91 |2015-04-21T18:00:00.00Z| 42.200000 |-31.050000 | 0.30|  0.28|   PPMXL|20.9 |0.028 |   R|   PPMXL|  1.56|1.3945|1.6000|     |',
+                    ]
+        pre_block = self.browser.find_element_by_tag_name('pre')
+        rows = pre_block.text.splitlines()
+        for test_text in testlines:
+            self.assertIn(test_text, [row.replace('\n', ' ') for row in rows])
+
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
+    def test_download_mpc_measurements(self):
+
+        self.insert_test_measurements()
+        self.insert_extra_measurements()
+
+        # A user, Marco, is interested in seeing what existing measurements
+        # exist for a NEOCP candidate that he has heard about
+        target_url = self.live_server_url + reverse('target', kwargs={'pk': 1})
+        self.browser.get(target_url)
+
+        # He sees a link that says it will show the source measurements
+        # available for this object.
+        link = self.browser.find_element_by_id('show-measurements')
+        target_url = "{0}/target/{1}/measurements/".format(self.live_server_url, 1)
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
+
+        # He clicks on the link and sees that he is taken to a page with details
+        # on the source measurements for this object
+        with self.wait_for_page_load(timeout=10):
+            link.click()
+        self.assertEqual(self.browser.current_url, target_url)
+        header_text = self.browser.find_element_by_class_name('headingleft').text
+        self.assertIn('Source Measurements: ' + self.body.current_name(), header_text)
+
+        # He sees a link that says it will download the measurements in MPC format
+        mpc_dl_link = self.browser.find_element_by_partial_link_text('Download in MPC format')
+        mpc_dl_target_url = "{0}/target/{1}/measurements/mpc/download/".format(self.live_server_url, 1)
+        actual_url = mpc_dl_link.get_attribute('href')
+        self.assertEqual(actual_url, mpc_dl_target_url)
+
+        # He clicks the link and gets the file downloaded
+        mpc_dl_link.click()
+        dl_filepath = os.path.join(self.test_dir, self.body.current_name() + "_mpc.dat")
+        self.assertTrue(os.path.exists(dl_filepath))
+
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
+    def test_download_ades_measurements(self):
+
+        self.insert_test_measurements(rms=True)
+        self.insert_extra_measurements(rms=True)
+
+        # A user, Marco, is interested in seeing what existing measurements
+        # exist for a NEOCP candidate that he has heard about
+        target_url = self.live_server_url + reverse('target', kwargs={'pk': 1})
+        self.browser.get(target_url)
+
+        # He sees a link that says it will show the source measurements
+        # available for this object.
+        link = self.browser.find_element_by_id('show-measurements')
+        target_url = "{0}/target/{1}/measurements/".format(self.live_server_url, 1)
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
+
+        # He clicks on the link and sees that he is taken to a page with details
+        # on the source measurements for this object
+        with self.wait_for_page_load(timeout=10):
+            link.click()
+        self.assertEqual(self.browser.current_url, target_url)
+        header_text = self.browser.find_element_by_class_name('headingleft').text
+        self.assertIn('Source Measurements: ' + self.body.current_name(), header_text)
+
+        # He sees a link that says it will download the measurements in ADES format
+        ades_dl_link = self.browser.find_element_by_partial_link_text('Download in ADES format')
+        ades_dl_target_url = "{0}/target/{1}/measurements/ades/download/".format(self.live_server_url, 1)
+        actual_url = ades_dl_link.get_attribute('href')
+        self.assertEqual(actual_url, ades_dl_target_url)
+
+        # He clicks the link and gets the file downloaded
+        ades_dl_link.click()
+        dl_filepath = os.path.join(self.test_dir, self.body.current_name() + ".psv")
+        self.assertTrue(os.path.exists(dl_filepath))

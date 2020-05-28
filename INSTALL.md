@@ -25,7 +25,6 @@ BASE_DIR = os.path.dirname(CURRENT_PATH)
 
 SECRET_KEY = '<50 random characters>'
 
-PREFIX =""
 DEBUG = True
 PRODUCTION = False
 STATIC_ROOT =  '<filesystem path>'
@@ -82,6 +81,13 @@ This can be done with e.g.
 on the Docker command line or adding this to the 'Volumes' tab in Rancher when
 upgrading.
 
+For the plotting of the flux standards, a `cdbs/ctiostan/` directory needs to be
+created in the file system pointed at by `DATA_ROOT`. Inside this directory
+should be placed the `f<objectname>.dat` files and the `aaareadme.ctio` file
+from `ftp://ftp.eso.org/pub/stecf/standards/ctiostan/`. The other objects from
+the `hststan`, `okestan` and `wdstan` directories of the FTP site should also be
+included in the `cdbs/ctiostan` directory.
+
 Local Testing
 -------------
 
@@ -121,3 +127,26 @@ To prepare the local SQLite DB for use, you should follow these steps:
 
 1. `cd neoexchange\neoexchange`
 2. Run `python manage.py syncdb`. This will perform migrations as necessary.
+
+## Downloading dev data
+
+Sometimes it is useful to have a representative snapshot of the live database. There are 2 parts: 1) on the deployed pod, export data, 2) on your local machine import data
+
+To log in to a shell on the deployed pod:
+
+```
+kubectl -n prod exec <NAME OF POD> -c backend -it /bin/sh
+```
+
+When in the shell run:
+```
+% ./manage.py export_test_fixtures
+```
+
+On your local machine:
+```
+% kubectl -n prod cp <NAME OF POD>:/var/www/apps/neoexchange/core/fixtures <PATH TO NEOX>/neoexchange/core/fixtures -c backend
+% ./manage.py import_test_fixtures
+```
+
+If you encounter an `error: unexpected EOF`, try copying the files individually from `/core/fixtures/`

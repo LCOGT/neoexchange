@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% load staticfiles basic_tags %}
+{% block header %}Best Calibration Sources{% endblock %}
+
+{% block bodyclass %}page{% endblock %}
+
+
+{% block extramenu %}
+    <div class="headingleft">
+        <h1>Best Calibration Sources</h1>
+    </div>
+{% endblock%}
+
+{% block main-content %}
+    <div id="main" class="fill-height">
+        <div class="container">
+            <h5  class="section-title"><span class="msgpadded" id="night_banner">Best Calibration Sources for {{night.utc_date}}</span></h5>
+            <div class="row">
+                {% if "solar" in request.get_full_path %}
+                    <a class="button button-primary" href="{% url 'schedule-calib-spectra' 'F65-FLOYDS' '-' %}" id="schedule-solar-ftn-obs">Schedule FTN Calib Observations</a>
+                    <a class="button button-primary" href="{% url 'schedule-calib-spectra' 'E10-FLOYDS' '-' %}" id="schedule-solar-fts-obs">Schedule FTS Calib Observations</a>
+                {% else %}
+                    <a class="button button-primary" href="{% url 'schedule-calib-spectra' 'F65-FLOYDS' '-' %}" id="schedule-calib-ftn-obs">Schedule FTN Calib Observations</a>
+                    <a class="button button-primary" href="{% url 'schedule-calib-spectra' 'E10-FLOYDS' '-' %}" id="schedule-calib-fts-obs">Schedule FTS Calib Observations</a>
+                {% endif %}
+            </div>
+            <span id="anti_solar_point"> <b> Current Anti-Solar Point: RA = {{night.ra}} / Dec = {{night.dec}} </b></span>
+            <h5  class="section-title"><span class="msgpadded">Spectrophotometric Calibration Sources for FTN</span></h5>
+            <div class="row">
+                <table class="datatable u-full-width" id="id_ftn_calibsources">
+                    <thead>
+                        <tr>
+                            <th class="list_title">
+                                <span class="sortable" id="name_id">Name</span>
+                            </th>
+                            <th>
+                                <span class="sortable" id="ra">R.A.</span>
+                            </th>
+                            <th>
+                                <span class="sortable" id="dec">Dec.</span>
+                            </th>
+                            <th>
+                                <span class="sortable" id="v_mag">V Mag.</span>
+                            </th>
+                            <th>
+                                <span class="sortable" id="sp_type">Spectral Type</span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for src in ftn_calibsources %}
+                        <tr>
+                            <td><a href="{% url 'calibsource' src.pk %}">{{src.name}}</a></td>
+                            <td>{{src.ra|degreestohms:":"}}</td>
+                            <td>{{src.dec|degreestodms:":"}}</td>
+                            <td>{{src.vmag|floatformat:2}}</td>
+                            <td>{{src.spectral_type}}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <h5  class="section-title"><span class="msgpadded">Spectrophotometric Calibration Sources for FTS</span></h5>
+            <div class="row">
+                <table class="datatable u-full-width" id="id_fts_calibsources">
+                    <thead>
+                        <tr>
+                            <th class="list_title">
+                                <span class="sortable" id="name_id">Name</span>
+                            </th>
+                            <th>
+                                <span class="sortable" id="ra">R.A.</span>
+                            </th>
+                            <th>
+                                <span class="sortable" id="dec">Dec.</span>
+                            </th>
+                            <th>
+                                <span class="sortable" id="v_mag">V Mag.</span>
+                            </th>
+                            <th>
+                                <span class="sortable" id="sp_type">Spectral Type</span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for src in fts_calibsources %}
+                        <tr>
+                            <td><a href="{% url 'calibsource' src.pk %}">{{src.name}}</a></td>
+                            <td>{{src.ra|degreestohms:":"}}</td>
+                            <td>{{src.dec|degreestodms:":"}}</td>
+                            <td>{{src.vmag|floatformat:2}}</td>
+                            <td>{{src.spectral_type}}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}

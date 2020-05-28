@@ -26,6 +26,8 @@ try:
     import pyslalib.slalib as S
 except:
     pass
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.dates import HourLocator, DateFormatter
 from astropy.stats import LombScargle
@@ -36,7 +38,7 @@ from django.conf import settings
 from core.models import Block, Frame, SuperBlock, SourceMeasurement, CatalogSources
 from astrometrics.ephem_subs import compute_ephem, radec2strings, moon_alt_az, get_sitepos
 from astrometrics.time_subs import datetime2mjd_utc
-from photometrics.catalog_subs import search_box
+from photometrics.catalog_subs import search_box, sanitize_object_name
 from photometrics.photometry_subs import compute_fwhm, map_filter_to_wavelength
 
 
@@ -130,7 +132,9 @@ class Command(BaseCommand):
         fig2.autofmt_xdate()
         ax2.legend()
         fig2.savefig(os.path.join(datadir, filename + 'lightcurve_cond.png'))
-
+        # Switch backend for GUI windows
+        matplotlib.use('TkAgg')
+        plt.ion()
         plt.show()
 
         return
@@ -165,9 +169,10 @@ class Command(BaseCommand):
                         }
         source, created = SourceMeasurement.objects.get_or_create(**source_params)
         mpc_line = source.format_mpc_line()
+        ades_psv_line = source.format_psv_line()
         if persist is not True:
             source.delete()
-        return mpc_line
+        return mpc_line, ades_psv_line
 
     def output_alcdef(self, lightcurve_file, block, site, dates, mags, mag_errors, filt, outmag):
         obj_name = block.body.current_name()
@@ -180,7 +185,7 @@ class Command(BaseCommand):
                          'AllowSharing': 'TRUE',
                          'MPCCode'     : site,
                          'Delimiter'   : 'PIPE',
-                         'ContactInfo' : '[{}]'.format(block.proposal.pi),
+                         'ContactInfo' : '[{}]'.format(block.superblock.proposal.pi),
                          'ContactName' : 'T. Lister',
                          'DifferMags'  : 'FALSE',
                          'Facility'    : 'Las Cumbres Observatory',
@@ -232,18 +237,20 @@ class Command(BaseCommand):
         zps = []
         zp_errs = []
         mpc_lines = []
+        psv_lines = []
         total_frame_count = 0
         mpc_site = []
         fwhm = []
         air_mass = []
-        obj_name = start_super_block.body.current_name().replace(' ', '_')
+        obj_name = sanitize_object_name(start_super_block.body.current_name())
         datadir = os.path.join(options['datadir'], obj_name)
+        rw_permissions = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH
         if not os.path.exists(datadir):
             try:
                 os.makedirs(datadir)
                 # Set directory permissions correctly for shared directories
                 # Sets to (r)ead,(w)rite,e(x)ecute for owner & group, r-x for others
-                os.chmod(datadir, stat.S_IRWXU|stat.S_IRWXG|stat.S_IROTH|stat.S_IXOTH)
+                os.chmod(datadir, stat.S_IRWXU | stat.S_IRWXG | stat.S_IROTH | stat.S_IXOTH)
             except:
                 msg = "Error creating output path %s" % datadir
                 raise CommandError(msg)
@@ -322,8 +329,9 @@ class Command(BaseCommand):
 
                             if best_source and best_source.obs_mag > 0.0 and abs(mag_estimate - best_source.obs_mag) <= 3 * options['deltamag']:
                                 block_times.append(frame.midpoint)
-                                mpc_line = self.make_source_measurement(block.body, frame, best_source, persist=options['persist'])
+                                mpc_line, psv_line = self.make_source_measurement(block.body, frame, best_source, persist=options['persist'])
                                 mpc_lines.append(mpc_line)
+                                psv_lines.append(psv_line)
                                 block_mags.append(best_source.obs_mag)
                                 block_mag_errs.append(best_source.err_obs_mag)
                                 filter_list.append(frame.ALCDEF_filter_format())
@@ -355,6 +363,7 @@ class Command(BaseCommand):
                     mag_errs += block_mag_errs
                     times += block_times
         alcdef_file.close()
+        os.chmod(filename, rw_permissions)
         self.stdout.write("Found matches in %d of %d frames" % ( len(times), total_frame_count))
 
         # Write light curve data out in similar format to Make_lc.csh
@@ -362,6 +371,7 @@ class Command(BaseCommand):
 
         lightcurve_file = open(os.path.join(datadir, base_name + 'lightcurve_data.txt'), 'w')
         mpc_file = open(os.path.join(datadir, base_name + 'mpc_positions.txt'), 'w')
+        psv_file = open(os.path.join(datadir, base_name + 'ades_positions.psv'), 'w')
 
         # Calculate integer part of JD for first frame and use this as a
         # constant in case of wrapover to the next day
@@ -371,15 +381,24 @@ class Command(BaseCommand):
                 time_jd = datetime2mjd_utc(time)
                 time_jd_truncated = time_jd - mjd_offset
                 if i == 0:
-                    lightcurve_file.write('Object: %s\n' % start_super_block.body.current_name())
+                    lightcurve_file.write('#Object: %s\n' % start_super_block.body.current_name())
                     lightcurve_file.write("#MJD-%.1f Mag. Mag. error\n" % mjd_offset)
                 lightcurve_file.write("%7.5lf %6.3lf %5.3lf\n" % (time_jd_truncated, mags[i], mag_errs[i]))
                 i += 1
             lightcurve_file.close()
+            os.chmod(os.path.join(datadir, base_name + 'lightcurve_data.txt'), rw_permissions)
 
+            # Write out MPC1992 80 column file
             for mpc_line in mpc_lines:
                 mpc_file.write(mpc_line + '\n')
             mpc_file.close()
+            os.chmod(os.path.join(datadir, base_name + 'mpc_positions.txt'), rw_permissions)
+
+            # Write out ADES Pipe Separated Value file
+            for psv_line in psv_lines:
+                psv_file.write(psv_line + '\n')
+            psv_file.close()
+            os.chmod(os.path.join(datadir, base_name + 'ades_positions.psv'), rw_permissions)
 
             if options['title'] is None:
                 sites = ', '.join(mpc_site)
@@ -401,5 +420,7 @@ class Command(BaseCommand):
                 subtitle = ''
 
             self.plot_timeseries(times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, title=plot_title, sub_title=subtitle, datadir=datadir, filename=base_name, diameter=tel_diameter)
+            os.chmod(os.path.join(datadir, base_name + 'lightcurve_cond.png'), rw_permissions)
+            os.chmod(os.path.join(datadir, base_name + 'lightcurve.png'), rw_permissions)
         else:
             self.stdout.write("No sources matched.")

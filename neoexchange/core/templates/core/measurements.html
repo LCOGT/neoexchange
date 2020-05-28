@@ -9,21 +9,26 @@
 					</div>
 {% endblock%}
 {% block main-content %}
-			<div id="main" class="fill-height">
+            <div id="main" class="fill-height fullwidth">
 				<div class="container">
-				<div class="row">
-					<p>
-					{% if slot %}
-					<h5>Report to MPC</h5>
-					{% for b in extra_bodies %} <a class="button button-primary" href="{% url 'block-submit-mpc' slot.id b.id %}">{{b.current_name}}</a>{% endfor%}
-					{% endif %}
-				</div>
-				<div class="row">
-					<a href="{% if slot %}{% url 'block-report-mpc' slot.id %}{% else %}{% url 'measurement-mpc' body.id %}{%endif%}">[ View in MPC format ]</a></p>
-				</div>
-			</div>
+                    <div class="row">
+                        <p>
+                            {% if slot %}
+                            <h5>Report to MPC</h5>
+                            {% for b in extra_bodies %} <a class="button button-primary" href="{% url 'block-submit-mpc' slot.id b.id %}">{{b.current_name}}</a>{% endfor%}
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="row">
+                        <a class="button mode-switch" href="{% if is_paginated %} ?page=0 {% else %} ?page=1 {% endif %}" id="page-switch">Toggle Pages</a>
+                        <a href="{% if slot %}{% url 'block-report-mpc' slot.id %}{% else %}{% url 'measurement-mpc' body.id %}{%endif%}">[ View in MPC format ]</a>
+                        <a href="{% url 'measurement-ades' body.id %}">[ View in ADES format ]</a>
+                        <a href="{% url 'download-mpc' body.id %}">[ Download in MPC format ]</a>
+                        <a href="{% url 'download-ades' body.id %}">[ Download in ADES format ]</a>
+                    </div>
+			    </div>
 				<div class="fullwidth">
-					<table class="datatable" id="id_measurements">
+					<table class="datatable u-full-width" id="id_measurements">
 						<thead>
 							<tr>
 								<th class="list_title">
@@ -56,17 +61,24 @@
 								<td>{{line.frame.midpoint|dttodecimalday:False}}</td>
 								<td>{{line.obs_ra|degreestohms:" "}}</td>
 								<td>{{line.obs_dec|degreestodms:" "}}</td>
-                <td>{{line.obs_mag|floatformat:1}}</td>
-                <td>{{line.frame.filter}}</td>
-                <td>{{line.frame.sitecode}}</td>
+                                <td>{{line.obs_mag|floatformat:1}}</td>
+                                <td>{{line.frame.filter}}</td>
+                                <td>{{line.frame.sitecode}}</td>
 							</tr>
-              {% empty %}
-              <tr>
-                <td colspan=7>No measurements have been made yet</td>
-              </tr>
+                        {% empty %}
+                              <tr>
+                                <td colspan=7>No measurements have been made yet</td>
+                              </tr>
 						{% endfor %}
 						</tbody>
 					</table>
 				</div>
+				<div class="row">
+                    {% if is_paginated %}
+                        <!-- start -->
+                            {% include '_pagination.html' with items=items %}
+                        <!-- end -->
+                    {% endif %}
+              </div>
 			</div>
 {% endblock %}

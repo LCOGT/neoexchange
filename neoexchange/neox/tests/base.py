@@ -13,12 +13,17 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 
-from subprocess import check_output
+from subprocess import check_output, CalledProcessError
 from datetime import datetime
+from glob import glob
+import tempfile
+import os
+import shutil
 
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.conf import settings
 from contextlib import contextmanager
+from numpy import ndarray, long
 from selenium import webdriver
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
@@ -31,7 +36,7 @@ from core.models import Body, Proposal, Block, SuperBlock, SpectralInfo, Previou
 class FunctionalTest(StaticLiveServerTestCase):
     def __init__(self, *args, **kwargs):
         super(FunctionalTest, self).__init__(*args, **kwargs)
-
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
         if settings.DEBUG is False:
             settings.DEBUG = True
 
@@ -58,10 +63,10 @@ class FunctionalTest(StaticLiveServerTestCase):
                     'elements_type' : 'MPC_MINOR_PLANET',
                     'active'        : True,
                     'origin'        : 'M',
-                    'ingest'        : '2015-05-11 17:20:00',
+                    'ingest'        : datetime(2015, 5, 11, 17, 20, 00),
                     'score'         : 90,
-                    'discovery_date': '2015-05-10 12:00:00',
-                    'update_time'   : '2015-05-18 05:00:00',
+                    'discovery_date': datetime(2015, 5, 10, 12, 0, 0),
+                    'update_time'   : datetime(2015, 5, 18, 5, 0, 0),
                     'num_obs'       : 17,
                     'arc_length'    : 3.123456789,
                     'not_seen'      : 0.423456789,
@@ -86,7 +91,7 @@ class FunctionalTest(StaticLiveServerTestCase):
         self.calib, created = StaticSource.objects.get_or_create(pk=1, **params)
 
     def insert_test_comet(self):
-        params = { 
+        params = {
                      'provisional_name': 'P10MsRM',
                      'provisional_packed': None,
                      'name': 'C/2006 F4',
@@ -207,10 +212,9 @@ class FunctionalTest(StaticLiveServerTestCase):
         block_params = { 'telclass' : '1m0',
                          'site'     : 'cpt',
                          'body'     : self.body,
-                         'proposal' : self.neo_proposal,
                          'block_start' : '2015-04-20 13:00:00',
                          'block_end'   : '2015-04-21 03:00:00',
-                         'tracking_number' : '00042',
+                         'request_number' : '10042',
                          'num_exposures' : 5,
                          'exp_length' : 42.0,
                          'active'   : True,
@@ -232,10 +236,9 @@ class FunctionalTest(StaticLiveServerTestCase):
         block_params2 = { 'telclass' : '2m0',
                          'site'     : 'coj',
                          'body'     : self.body,
-                         'proposal' : self.test_proposal,
                          'block_start' : '2015-04-20 03:00:00',
                          'block_end'   : '2015-04-20 13:00:00',
-                         'tracking_number' : '00043',
+                         'request_number' : '10043',
                          'num_exposures' : 7,
                          'exp_length' : 30.0,
                          'active'   : False,
@@ -248,29 +251,6 @@ class FunctionalTest(StaticLiveServerTestCase):
         self.test_block2 = Block.objects.create(pk=2, **block_params2)
 
     def setUp(self):
-
-        fp = webdriver.FirefoxProfile()
-        fp.set_preference("browser.startup.homepage", "about:blank")
-        fp.set_preference("startup.homepage_welcome_url", "about:blank")
-        fp.set_preference("startup.homepage_welcome_url.additional", "about:blank")
-
-        if not hasattr(self, 'browser'):
-            firefox_capabilities = DesiredCapabilities.FIREFOX
-            # Marionette does not work on Firefox ~< 57. Try and determine the
-            # version and check it. Hopefully this code is robust and platform-
-            # independent...
-            try:
-                version = check_output(["firefox", "--version"], universal_newlines=True)
-            except (OSError, subprocess.CalledProcessError):
-                version = None
-            if version and 'Firefox' in version:
-                version_num = version.rstrip().split(' ')[-1]
-                major_version = version_num.split('.')[0]
-                if major_version.isdigit() and int(major_version) <= 52:
-                    firefox_capabilities['marionette'] = False
-
-            self.browser = webdriver.Firefox(capabilities=firefox_capabilities, firefox_profile=fp)
-        self.browser.implicitly_wait(5)
         self.insert_test_body()
         self.insert_test_calib()
         self.insert_test_proposals()
@@ -278,10 +258,64 @@ class FunctionalTest(StaticLiveServerTestCase):
         self.insert_test_taxonomy()
         self.insert_previous_spectra()
 
+        if settings.USE_FIREFOXDRIVER:
+            fp = webdriver.FirefoxProfile()
+            fp.set_preference("browser.startup.homepage", "about:blank")
+            fp.set_preference("startup.homepage_welcome_url", "about:blank")
+            fp.set_preference("startup.homepage_welcome_url.additional", "about:blank")
+            # Don't ask where to save downloaded files
+            fp.set_preference("browser.download.folderList", 2);
+            fp.set_preference("browser.download.manager.showWhenStarting", False);
+            fp.set_preference("browser.download.dir", self.test_dir);
+            fp.set_preference("browser.helperApps.neverAsk.saveToDisk", "text/plain");
+
+            if not hasattr(self, 'browser'):
+                firefox_capabilities = DesiredCapabilities.FIREFOX
+                # Marionette does not work on Firefox ~< 57. Try and determine the
+                # version and check it. Hopefully this code is robust and platform-
+                # independent...
+                try:
+                    version = check_output(["firefox", "--version"], universal_newlines=True)
+                except (OSError, CalledProcessError):
+                    version = None
+                if version and 'Firefox' in version:
+                    version_num = version.rstrip().split(' ')[-1]
+                    major_version = version_num.split('.')[0]
+                    firefox_capabilities['marionette'] = True
+                    if major_version.isdigit() and int(major_version) <= 52:
+                        firefox_capabilities['marionette'] = False
+                options = webdriver.firefox.options.Options()
+                options.add_argument('--headless')
+                self.browser = webdriver.Firefox(capabilities=firefox_capabilities, firefox_profile=fp, firefox_options=options)
+        else:
+            options = webdriver.chrome.options.Options()
+            options.add_argument('--headless')
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-gpu')
+            self.browser = webdriver.Chrome(chrome_options=options)
+        self.browser.implicitly_wait(5)
+
     def tearDown(self):
-        self.browser.refresh()
-#       self.browser.implicitly_wait(5)
         self.browser.quit()
+        with self.settings(MEDIA_ROOT=self.test_dir):
+            remove = True
+            debug_print = False
+            if remove:
+                try:
+                    files_to_remove = glob(os.path.join(self.test_dir, '*'))
+                    for file_to_rm in files_to_remove:
+                        if os.path.isdir(file_to_rm):
+                            shutil.rmtree(file_to_rm)
+                        else:
+                            os.remove(file_to_rm)
+                except OSError:
+                    print("Error removing files/directories in temporary test directory", self.test_dir)
+                try:
+                    os.rmdir(self.test_dir)
+                    if debug_print:
+                        print("Removed", self.test_dir)
+                except OSError:
+                    shutil.rmtree(self.test_dir)
 
     def check_for_row_in_table(self, table_id, row_text):
         table = self.browser.find_element_by_id(table_id)
@@ -333,3 +367,44 @@ class FunctionalTest(StaticLiveServerTestCase):
                 element_id, self.browser.find_element_by_tag_name('body').text
             )
         )
+
+
+def assertDeepAlmostEqual(test_case, expected, actual, *args, **kwargs):
+    """
+    Assert that two complex structures have almost equal contents.
+
+    Compares lists, dicts and tuples recursively. Checks numeric values
+    using test_case's :py:meth:`unittest.TestCase.assertAlmostEqual` and
+    checks all other values with :py:meth:`unittest.TestCase.assertEqual`.
+    Accepts additional positional and keyword arguments and pass those
+    intact to assertAlmostEqual() (that's how you specify comparison
+    precision).
+
+    :param test_case: TestCase object on which we can call all of the basic
+    'assert' methods.
+    :type test_case: :py:class:`unittest.TestCase` object
+    """
+    is_root = not '__trace' in kwargs
+    trace = kwargs.pop('__trace', 'ROOT')
+    try:
+        if isinstance(expected, (int, float, long, complex)):
+            test_case.assertAlmostEqual(expected, actual, *args, **kwargs)
+        elif isinstance(expected, (list, tuple, ndarray)):
+            test_case.assertEqual(len(expected), len(actual))
+            for index in range(len(expected)):
+                v1, v2 = expected[index], actual[index]
+                assertDeepAlmostEqual(test_case, v1, v2,
+                                      __trace=repr(index), *args, **kwargs)
+        elif isinstance(expected, dict):
+            test_case.assertEqual(set(expected), set(actual))
+            for key in expected:
+                assertDeepAlmostEqual(test_case, expected[key], actual[key],
+                                      __trace=repr(key), *args, **kwargs)
+        else:
+            test_case.assertEqual(expected, actual)
+    except AssertionError as exc:
+        exc.__dict__.setdefault('traces', []).append(trace)
+        if is_root:
+            trace = ' -> '.join(reversed(exc.traces))
+            exc = AssertionError("%s\nTRACE: %s" % (exc.message, trace))
+        raise exc

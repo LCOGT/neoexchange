@@ -3,11 +3,20 @@
 
 {% block header %}{{body.current_name}} details{% endblock %}
 
+<!-- Import Bokeh CSS for plotting (UPDATE RELEASE NUMBER IF BOKEH IS UPDATED) -->
+{% block last-css-content %}
+<link rel="stylesheet" href={{css_path}}>
+{% endblock %}
+<!-- Import Bokeh Script for plotting (UPDATE RELEASE NUMBER IF BOKEH IS UPDATED) -->
+{% block script-content %}
+<script src={{js_path}}></script>
+{% endblock %}
+
 {% block bodyclass %}page{% endblock %}
 
 {% block extramenu %}
                     <div class="headingleft">
-                        <h1>Object: {{body.current_name}}</h1>
+                        <h1>{{body.full_name}}</h1>
                     </div>
 {% endblock%}
 
@@ -15,15 +24,23 @@
             <!-- Main body -->
             <div class="container" id="main">
                     <div class="row">
+                        <div class="eight columns">
+                            <div class="row">
                         <a class="button button-primary" href="{% url 'schedule-body' body.id %}" id="schedule-obs">Schedule Observations</a>
                         <a class="button button-primary" href="{% url 'schedule-body-spectra' body.id %}" id="schedule-spectro-obs">Schedule Spectroscopic Observations</a>
-                    </div>
-                    <div class="row">
-                        <div class="eight columns">
+                            </div>
                             {% if body.old_name %}
                             <h5  class="section-title"><span class="">Name</span><span class="msgpadded">{{body.old_name}} &rarr; {{body.name}}</span></h5>
                             {% endif %}
-                            <h5  class="section-title"><span class="">Type</span><span class="msgpadded">{{body.get_source_type_display}}</span></h5>
+                            <h5  class="section-title"><span class="">Type</span>
+                                <span class="msgpadded">{{body.get_source_type_display}}
+                                    {% if body.source_subtype_1 %}
+                                        ({{body.get_source_subtype_1_display}})
+                                    {% endif %}
+                                    {% if body.source_subtype_2 %}
+                                        [{{body.get_source_subtype_2_display}}]
+                                    {% endif %}
+                                </span></h5>
                             <h5  class="section-title"><span class="">Status</span> <span class="">{% if body.active %}<span class="warning msgpadded">Actively Following</span>{% else %}Not Following{% endif %}</span>
                                 {% if body.characterization_target %}
                                     <br><span style="font-size:75%;padding-left:100px;font-style:italic;">Characterization Target</span>
@@ -75,7 +92,7 @@
                                                 <span class="block-status-item"><i class="fa fa-long-arrow-right"></i></span>
                                                 <span class="block-status-item">{{b.block_end|date:"c"}}</span>
                                                 <span class="block-status-item">{{b.site|upper}}</span>
-                                                <span class="block-status-item">Req: {{b.tracking_number}}</span>
+                                                <span class="block-status-item">Req: {{b.request_number}}</span>
                                             </span>
                                             </a>
                                     </li>
@@ -88,7 +105,17 @@
                         <a href="{% url 'measurement' body.id %}" class="button button-primary" id="show-measurements">Show Measurements</a>
                             </div>
                         <div class="four columns rightsidebar">
-                            <div class="section-title">Last Update: {{body.ingest|date:"Y-M-d H:i"}}</div>
+                            <div align="center">
+                                <!-- Import the javascript and div created by Bokeh for circle plots -->
+                            {% block lin_plot %}
+                            {{ lin_div|safe }}
+                            {{ lin_script|safe }}
+                            {% endblock %}
+                            {% if body.name %}
+                                <a href="{% url 'visibility' body.id %}" class="button button-primary" id="visibility">Plot Visibility</a>
+                            {% endif %}
+                            </div>
+                            <div class="section-title">{{body.get_latest_update.0}}: {{body.get_latest_update.1|date:"Y-M-d H:i"}}</div>
                             <h5 class="section-title">Orbital Elements</h5>
                             <table class="keyvalue-table" id="id_orbelements">
                                 <tbody>
@@ -97,7 +124,17 @@
                                     </tr>
                                     <tr>
                                         <td class="kv-key">Epoch of elements (MJD)</td>
-                                        <td class="kv-value">{{body.epochofel_mjd}}</td>
+                                        <td>
+                                        <table align="right"  style="margin: 0px"><tr>
+                                            <td class="kv-value">
+                                                <div class="tooltip">
+                                                    {{body.epochofel_mjd}}
+                                                    <span class="tooltiptext" style="width:fit-content;left:75%;width:-moz-fit-content;">
+                                                        {{body.epochofel_mjd|mjd_utc2date}}
+                                                    </span>
+                                                </div>
+                                            </td><td></td></tr></table>
+                                        </td>
                                     </tr>
                                     <tr>
                                         <td class="kv-key">Orbital inclination in deg</td>
@@ -115,7 +152,29 @@
                                         <td class="kv-key">Eccentricity</td>
                                         <td class="kv-value">{{body.eccentricity}}</td>
                                     </tr>
-                                    {% if body.elements_type  == 'MPC_MINOR_PLANET' %}
+                                    {% if body.elements_type  == 'MPC_COMET' %}
+                                    <!-- Comets -->
+                                    <tr>
+                                        <td class="kv-key">Perihelion distance (AU)</td>
+                                        <td class="kv-value">{{body.perihdist|floatformat:7}}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="kv-key">Epoch of perihelion</td>
+                                        <td class="kv-value">{{body.epochofperih}}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="kv-key">Epoch of perihelion (MJD)</td>
+                                        <td class="kv-value">{{body.epochofperih_mjd|floatformat:5}}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="kv-key">Total Magnitude (M1)</td>
+                                        <td class="kv-value">{{body.abs_mag}}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="kv-key">Slope Parameter (k1)</td>
+                                        <td class="kv-value">{{body.slope|multiply:2.5}}</td>
+                                    </tr>
+                                    {% else %}
                                     <tr>
                                         <td class="kv-key">Mean distance (AU)</td>
                                         <td class="kv-value">{{body.meandist}}</td>
@@ -148,29 +207,61 @@
                                         <td class="kv-key">Diameter in meters<br/>(range)</td>
                                         <td class="kv-value">{{body.diameter_range.0|floatformat:0}} - {{body.diameter_range.1|floatformat:0}}</td>
                                     </tr>
-                                    {% else %}
-                                    <!-- Comets -->
-                                    <tr>
-                                        <td class="kv-key">Perihelion distance (AU)</td>
-                                        <td class="kv-value">{{body.perihdist|floatformat:7}}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="kv-key">Epoch of perihelion</td>
-                                        <td class="kv-value">{{body.epochofperih}}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="kv-key">Epoch of perihelion (MJD)</td>
-                                        <td class="kv-value">{{body.epochofperih_mjd|floatformat:5}}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="kv-key">Total Magnitude (M1)</td>
-                                        <td class="kv-value">{{body.abs_mag}}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="kv-key">Slope Parameter (k1)</td>
-                                        <td class="kv-value">{{body.slope|multiply:2.5}}</td>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                            <h5 class="section-title">Physical Parameters</h5>
+                            <table class="keyvalue-table" id="id_physparams">
+                                <tbody>
+                                    {% for p in body.get_physical_parameters %}
+                                    {% if p.preferred %}
+                                    <tr><td ><table align="left"  style="margin: 0px"><tr>
+                                            <td class="kv-key">
+                                                <div class="tooltip">{{p.type_display}}
+                                                    <span class="tooltiptext" style="left:30%">
+                                                        {% if p.notes %}
+                                                            {{p.notes}}
+                                                        <br>
+                                                        <br>
+                                                        {% endif %}
+                                                        {{p.reference}}
+                                                    </span>
+                                                </div>
+                                            </td><td></td></tr></table>
+                                        </td>
+                                        <td ><table align="right"  style="margin: 0px"><tr>
+                                            <td class="kv-value">
+                                                    {% if p.error %}
+                                                <div class="tooltip">
+                                                    {% endif %}
+                                                    {% if p.units %}
+                                                        {{p.value}} {{p.units}}
+                                                    {% else %}
+                                                        {% if p.value2 %}
+                                                            {{p.value}}/{{p.value2}}
+                                                        {% else %}
+                                                            {{p.value}}
+                                                        {% endif %}
+                                                    {% endif %}
+                                                    {% if p.error %}
+                                                    <span class="tooltiptext" style="width:fit-content;left:75%;width:-moz-fit-content;">
+                                                        {% if p.error2 %}
+                                                            {% if p.value2 %}
+                                                                +/- {{p.error}} <br> +/- {{p.error2}}
+                                                            {% else %}
+                                                                +{{p.error}} / -{{p.error2}}
+                                                            {% endif %}
+                                                        {% else %}
+                                                            +/- {{p.error}}
+                                                        {% endif %}
+                                                    </span>
+                                                </div>
+                                                {% endif %}
+                                            </td><td></td></tr></table>
+                                        </td>
                                     </tr>
                                     {% endif %}
+                                    {% endfor %}
                                 </tbody>
                             </table>
                             <h5 class="section-title">Follow-up Details</h5>
@@ -202,7 +293,11 @@
                                                                         {% endif %}
 								</tbody>
 							</table>
-							<h5 class="section-title">Spectroscopy Details</h5>
+							<h5 class="section-title">Spectroscopy Details
+                                {% if spectra %}
+                                <a href="{% url 'plotspec' body.pk %}" style="font-size: small;">(Plots)</a>
+                                {% endif %}
+                            </h5>
 							<table class="keyvalue-table" id="id_spectralinfo">
 								<tbody>
 								    {% for s in spectra %}
@@ -227,6 +322,13 @@
 									        </tr>
 								        {% endif %}
 								    {% endfor %}
+                                    {% for sb in blocks %}
+                                        {% if sb.obstype == 1 %}
+                                            <tr>
+										        <td class="kv-key"> LCO Spectrum</td>
+                                                <td class="kv-value"><a href="{% url 'blockspec' sb.pk 1 %}">{{sb.when_observed|date:"Y-m-d"}} ({{sb.site|upper}}) </a></td>
+                                        {% endif %}
+                                    {% endfor %}
                                     {% for t in taxonomies %}
 									<tr><td ><table align="left"  style="margin: 0px"><tr>
 										<td class="kv-key" >

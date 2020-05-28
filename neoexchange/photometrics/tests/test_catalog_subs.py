@@ -31,7 +31,7 @@ import astropy.units as u
 from numpy import where, array
 from numpy.testing import assert_allclose
 
-from core.models import Body, Proposal, Block, Frame
+from core.models import Body, Proposal, SuperBlock, Block, Frame
 
 # Import module to test
 from photometrics.catalog_subs import *
@@ -1905,7 +1905,8 @@ class TestIncrementRedLevel(TestCase):
 
 class ExternalCodeUnitTest(TestCase):
 
-    def setUp(self):
+    def __init__(self, *args, **kwargs):
+        super(ExternalCodeUnitTest, self).__init__(*args, **kwargs)
         self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
 
         self.debug_print = False
@@ -1956,14 +1957,23 @@ class UpdateFrameZeropointTest(FITSUnitTest):
         self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
 
         # Create test block
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'LSC',
+        sblock_params = {
                          'body'     : self.body_with_provname,
                          'proposal' : self.neo_proposal,
                          'groupid'  : self.body_with_provname.current_name() + '_CPT-20150420',
                          'block_start' : '2017-03-08 05:05:00',
                          'block_end'   : '2017-03-08 05:22:36',
                          'tracking_number' : '0000358587',
+                         'active'   : False
+                       }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'LSC',
+                         'body'     : self.body_with_provname,
+                         'superblock' : self.test_sblock,
+                         'block_start' : '2017-03-08 05:05:00',
+                         'block_end'   : '2017-03-08 05:22:36',
+                         'request_number' : '0001358587',
                          'num_exposures' : 6,
                          'exp_length' : 120.0,
                          'active'   : False
@@ -2577,3 +2587,185 @@ class MakeSEXTFileTest(FITSUnitTest):
         self.assertEqual(len(sext_line_list), 2)
         self.assertEqual(sext_line_list[0], test_line_list[0])
         self.assertEqual(sext_line_list[-1], test_line_list[1])
+
+
+class TestSanitizeObjectName(TestCase):
+
+    def test_none(self):
+        expected_obj_name = None
+
+        object_name = sanitize_object_name(None)
+
+        self.assertEqual(expected_obj_name, object_name)
+
+    def test_nonstring(self):
+        expected_obj_name = None
+
+        object_name = sanitize_object_name(12345)
+
+        self.assertEqual(expected_obj_name, object_name)
+
+    def test_numpy_string(self):
+        expected_obj_name = '2016WW2'
+
+        name_array = array(['(2016 WW2)'])
+        object_name = sanitize_object_name(name_array[0])
+
+        self.assertEqual(expected_obj_name, object_name)
+
+    def test_regular_asteroid(self):
+        expected_obj_name = '12345'
+
+        object_name = sanitize_object_name('12345')
+
+        self.assertEqual(expected_obj_name, object_name)
+
+    def test_asteroid_with_space(self):
+        expected_obj_name = '2020BR10'
+
+        object_name = sanitize_object_name('2020 BR10')
+
+        self.assertEqual(expected_obj_name, object_name)
+
+    def test_asteroid_with_two_desigs(self):
+        expected_obj_name = '85989_1999JD6'
+
+        object_name = sanitize_object_name('85989 (1999 JD6)')
+
+        self.assertEqual(expected_obj_name, object_name)
+
+    def test_asteroid_with_brackets(self):
+        expected_obj_name = '123456'
+
+        object_name = sanitize_object_name('(123456)')
+
+        self.assertEqual(expected_obj_name, object_name)
+
+    def test_comet_periodic(self):
+        expected_obj_name = '46P'
+
+        object_name = sanitize_object_name('46/P')
+
+        self.assertEqual(expected_obj_name, object_name)
+
+    def test_comet_nonperiodic(self):
+        expected_obj_name = 'C_2019Y4'
+
+        object_name = sanitize_object_name('C/2019 Y4')
+
+        self.assertEqual(expected_obj_name, object_name)
+
+    def test_comet_whitespace(self):
+        expected_obj_name = 'C_2019Y4'
+
+        object_name = sanitize_object_name('  C/2019 Y4 ')
+
+        self.assertEqual(expected_obj_name, object_name)
+
+    def test_unnumbered_comet_with_longname(self):
+        name = 'Machholz-Fujikawa-Iwamo (C/2018 V1'
+        expected_name = 'Machholz_Fujikawa_Iwamo_C_2018V1'
+
+        new_name = sanitize_object_name(name)
+
+        self.assertEqual(expected_name, new_name)
+
+    def test_staticsource_names(self):
+        expected_obj_names = ['agk81d266', 'bd25d4655', 'cd_34d241', 'eg21', 'feige110', 'g138_31', 'g191_b2b', 'gd108', 'grw70d5824',
+            'hd49798', 'hd60753', 'hilt600', 'hr153', 'hr1544', 'hz2', 'hz21', 'lb227', 'lds749b', 'ltt1020', 'ngc7293']
+
+        statsrc_names = ['AGK+81d266', 'BD+25d4655', 'CD-34d241', 'EG21', 'Feige110', 'G138-31', 'G191-B2B', 'GD108', 'GRW+70d5824',
+            'HD 49798', 'HD60753', 'HILT600', 'HR153', 'HR1544', 'HZ2', 'HZ21', 'LB227', 'LDS749B', 'LTT1020', 'NGC 7293']
+
+        for i,stat_src in enumerate(statsrc_names):
+            object_name = sanitize_object_name(stat_src)
+            self.assertEqual(expected_obj_names[i], object_name.lower())
+
+    def test_horizons_names(self):
+        expected_obj_names = ['2016WW2', '5604_1992FE', 'PANSTARRS_C_2017D5', '66391_Moshup_1999KW4', 'PANSTARRS_C_2015ER61',
+            'Lemmon_C_2017S7', 'ATLAS_C_2017M4', '11Parthenope', '328P_LONEOS_Tucker', 'A_2018V3', '155P_Shoemaker3',
+            '29P_Schwassmann_Wachmann1', 'Groeller_P_2019V2', 'Pruyne_P_2019X1', '4581_Asclepius_1989FC', '289P_Blanpain',
+            '469219_Kamo`oalewa_2016HO3', '2100_Ra_Shalom_1978RA', 'NEOWISE_C_2016U1']
+
+        horizons_names = ['(2016 WW2)',
+                          '5604 (1992 FE)',
+                          'PANSTARRS (C/2017 D5)',
+                          '66391 Moshup (1999 KW4)',
+                          'PANSTARRS (C/2015 ER61)',
+                          'Lemmon (C/2017 S7)',
+                          'ATLAS (C/2017 M4)',
+                          '11 Parthenope',
+                          '328P/LONEOS-Tucker',
+                          'A/2018 V3',
+                          '155P/Shoemaker 3',
+                          '29P/Schwassmann-Wachmann 1',
+                          'Groeller (P/2019 V2)',
+                          'Pruyne (P/2019 X1)',
+                          '4581 Asclepius (1989 FC)',
+                          '289P/Blanpain',
+                          '469219 Kamo`oalewa (2016 HO3)',
+                          '2100 Ra-Shalom (1978 RA)',
+                          'NEOWISE (C/2016 U1)']
+
+        for i, name in enumerate(horizons_names):
+            object_name = sanitize_object_name(name)
+            self.assertEqual(expected_obj_names[i], object_name)
+
+
+class TestMakeObjectDirectory(ExternalCodeUnitTest):
+
+    def __init__(self, *args, **kwargs):
+        super(TestMakeObjectDirectory, self).__init__(*args, **kwargs)
+
+        self.test_filepath = os.path.join(self.test_dir, 'lsc1m004-fa03-20200212-0088-e91.fits')
+
+    def tearDown(self):
+        remove = True
+        if remove:
+            try:
+                files_to_remove = glob(os.path.join(self.test_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.rmdir(file_to_rm)
+            except OSError:
+                print("Error removing directories in temporary test directory", self.test_dir)
+            try:
+                os.rmdir(self.test_dir)
+                if self.debug_print:
+                    print("Removed", self.test_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.test_dir)
+
+    def test_regular_object_noblock(self):
+        object_name = 'N999q0q'
+        expected_object_dir = os.path.join(self.test_dir, object_name)
+
+        object_dir = make_object_directory(self.test_filepath, object_name, '')
+
+        self.assertEqual(expected_object_dir, object_dir)
+
+    def test_regular_object(self):
+        object_name = 'N999q0q'
+        block_id = '12345'
+        expected_object_dir = os.path.join(self.test_dir, object_name+'_'+block_id)
+
+        object_dir = make_object_directory(self.test_filepath, object_name, block_id)
+
+        self.assertEqual(expected_object_dir, object_dir)
+
+    def test_object_with_space(self):
+        object_name = '2020 BR10'
+        block_id = '12345'
+        expected_object_dir = os.path.join(self.test_dir, object_name.replace(' ', '')+'_'+block_id)
+
+        object_dir = make_object_directory(self.test_filepath, object_name, block_id)
+
+        self.assertEqual(expected_object_dir, object_dir)
+
+    def test_comet(self):
+        object_name = 'C/2019 Y4'
+        block_id = '12345'
+        expected_object_dir = os.path.join(self.test_dir, object_name.replace(' ', '').replace('/', '_')+'_'+block_id)
+
+        object_dir = make_object_directory(self.test_filepath, object_name, block_id)
+
+        self.assertEqual(expected_object_dir, object_dir)

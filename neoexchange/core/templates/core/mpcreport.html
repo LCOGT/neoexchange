@@ -13,21 +13,28 @@
 {% endblock%}
 
 {% block main-content %}
-    <div class="container">
-        <div id="main">
-            <div class="row">
+    <div id="main" class="fill-height fullwidth">
+        <div class="container">
+            <div class="row"  style="margin-top: .1em;">
 
               {% if slot %}
-              <a class="button button-primary" href="{% url 'block-submit-mpc' slot.id body.id %}">Report to MPC</a>
+                <p>
+              <a class="button button-primary" href="{% url 'block-submit-mpc' slot.id body.id %}">Report to MPC</a></p>
               {% endif %}
+                </div>
 
               {% if measures %}
-              <p><a href="{% if slot %}{% url 'block-report' slot.id %}{% else %}{% url 'measurement' body.id %}{%endif%}">[View in HTML format]</a></p>
+                <div class="row">
+              <a class="button mode-switch" href="{% if is_paginated %} ?page=0 {% else %} ?page=1 {% endif %}" id="page-switch">Toggle Pages</a>
+                  <a href="{% if slot %}{% url 'block-report' slot.id %}{% else %}{% url 'measurement' body.id %}{%endif%}">[View in HTML format]</a>
+                <a href="{% url 'measurement-ades' body.id %}">[ View in ADES format ]</a>
+                </div>
+        </div>
 {% comment %} Do not fiddle with/adjust the "incorrect" indentation below. The
 MPC report is in a strictly defined 80 character format and stray spaces/blank
 lines matter. A Lot.
 {% endcomment %}
-
+        <div class="container">
 <pre>{% for line in measures %}
 {% if slot %}{% format_mpc_line_upload line %}{% else %}{% format_mpc_line_catcode line %}{%endif%}{% endfor %}
 </pre>
@@ -35,6 +42,12 @@ lines matter. A Lot.
               <h3>No report has been made for this block.</h3>
               {% endif %}
             </div>
+        <div class="row">
+                {% if is_paginated %}
+                    <!-- start -->
+                            {% include '_pagination.html' with items=items %}
+                    <!-- end -->
+                {% endif %}
         </div>
     </div>
 {% endblock %}

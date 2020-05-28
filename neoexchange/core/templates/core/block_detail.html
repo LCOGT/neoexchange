@@ -98,10 +98,16 @@
                 <div class="four columns">
                     <h5 class="section-title">{% if object.block_set.all%}Observation Blocks{% else%}Controls{% endif %}</h5>
                         {% if request.user.is_authenticated %}
+                        {% if object.active %}
+                        <a class="button warning" href="{% url 'block-cancel' object.pk %}" id='cancelblock'>Cancel Block</a>
+                        {% endif %}
+                        {% if object.block_set.all|length > 1 %}
+                        <a href="{% url 'view-timeline' object.id %}" class="button button-primary">Observation timeline</a>
+                        {% endif %}
                         <ul class="block-status">
                         {% for blk in object.block_set.all %}
                         <li class="{% cycle 'odd' 'even' %}">
-                            <span class="block-control">Request Number: <a href="{{blk.make_obsblock_link}}">{{blk.tracking_number}}</a></span><br/>
+                            <span class="block-control">Request Number: <a href="{{blk.make_obsblock_link}}">{{blk.request_number}}</a></span><br/>
                             <span class="block-status-line">
                               <span class="block-status-item">
                               {% if blk.reported and blk.when_observed %}
@@ -124,10 +130,10 @@
                                 {% if "TAR" in blk.num_spectro_frames %}
                                     {% if blk.num_spectra_complete > 1 %}
                                         {% for obs_num in blk.num_spectra_complete|make_int_list %}
-                                            <div class="block-control"><a href="{% url 'plotspec' blk.pk obs_num %}">Spectrum Plot {{obs_num}}</a></div>
+                                            <div class="block-control"><a href="{% url 'blockspec' blk.pk obs_num %}">Spectrum Plot {{obs_num}}</a></div>
                                         {% endfor %}
                                     {% else %}
-                                        <div class="block-control"><a href="{% url 'plotspec' blk.pk 1 %}">Spectrum Plot</a></div>
+                                        <div class="block-control"><a href="{% url 'blockspec' blk.pk 1 %}">Spectrum Plot</a></div>
                                     {% endif %}
                                   <div class="block-control"><a href="{% url 'guidemovie' blk.pk %}">Guide Movie</a></div>
                                 {% endif %}

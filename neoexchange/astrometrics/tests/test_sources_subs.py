@@ -20,20 +20,20 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from unittest import skipIf
 from math import radians
+from copy import deepcopy
 
 import astropy.units as u
 from bs4 import BeautifulSoup
 from django.test import TestCase
 from django.forms.models import model_to_dict
 
-from core.models import Body, Proposal, Block
+from core.models import Body, Proposal, Block, StaticSource, PhysicalParameters, Designations, ColorValues
 from astrometrics.ephem_subs import determine_darkness_times
 from astrometrics.time_subs import datetime2mjd_utc
-from neox.tests.mocks import MockDateTime, mock_expand_cadence
+from neox.tests.mocks import MockDateTime, mock_expand_cadence, mock_fetchpage_and_make_soup
 from core.views import record_block, create_calib_sources, compute_vmag_pa
 # Import module to test
 from astrometrics.sources_subs import *
-
 
 # Disable logging during testing
 import logging
@@ -116,6 +116,13 @@ class TestPackedToNormal(TestCase):
         expected = '100001'
 
         result = packed_to_normal('A0001')
+
+        self.assertEqual(expected, result)
+
+    def test_ast_Z4030(self):
+        expected = '354030'
+
+        result = packed_to_normal('Z4030')
 
         self.assertEqual(expected, result)
 
@@ -277,6 +284,10 @@ class TestFetchAreciboTargets(TestCase):
         self.test_arecibo_page_v3 = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
 
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_arecibo_page_v4.html'), 'r')
+        self.test_arecibo_page_v4 = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
         self.maxDiff = None
 
     def test_basics(self):
@@ -376,6 +387,31 @@ class TestFetchAreciboTargets(TestCase):
         targets = fetch_arecibo_targets(self.test_arecibo_page_v3)
 
         self.assertEqual(expected_targets, targets)
+
+    def test_targets_v4(self):
+        # Includes Comet target [Issue #387]
+        expected_targets = [ u'289P',
+                             u'137924',
+                             u'250577',
+                             u'163379',
+                             u'35107',
+                             u'2017 BM123',
+                             u'2015 BK509',
+                             u'4581',
+                             u'2013 BA74',
+                             u'2003 OC3',
+                             u'2019 UO9']
+
+        targets = fetch_arecibo_targets(self.test_arecibo_page_v4)
+
+        self.assertEqual(expected_targets, targets)
+
+    @patch('astrometrics.sources_subs.fetchpage_and_make_soup', mock_fetchpage_and_make_soup)
+    def test_page_down(self):
+        expected_targets = []
+        targets = fetch_arecibo_targets()
+        self.assertEqual(expected_targets, targets)
+
 
 class TestFetchGoldstoneTargets(TestCase):
 
@@ -506,7 +542,7 @@ class TestFetchGoldstoneTargets(TestCase):
                                                         Needs     Physical
                                          Target      Astrometry?  Observations?   H
 
-                2018 Jan 13 &amp; 15  <a href="https://echo.jpl.nasa.gov/asteroids/2003YO3/2003YO3_planning.html">438017 2003 YO3</a>        No         Yes         18.7            
+                2018 Jan 13 &amp; 15  <a href="https://echo.jpl.nasa.gov/asteroids/2003YO3/2003YO3_planning.html">438017 2003 YO3</a>        No         Yes         18.7
                 </body></html>
                 '''
         page = BeautifulSoup(html, 'html.parser')
@@ -527,7 +563,7 @@ class TestFetchGoldstoneTargets(TestCase):
                                                         Needs     Physical
                                          Target      Astrometry?  Observations?   H
 
-                2018 Jan 13&amp;15  <a href="https://echo.jpl.nasa.gov/asteroids/2003YO3/2003YO3_planning.html">438017 2003 YO3</a>        No         Yes         18.7            
+                2018 Jan 13&amp;15  <a href="https://echo.jpl.nasa.gov/asteroids/2003YO3/2003YO3_planning.html">438017 2003 YO3</a>        No         Yes         18.7
                 </body></html>
                 '''
         page = BeautifulSoup(html, 'html.parser')
@@ -548,7 +584,7 @@ class TestFetchGoldstoneTargets(TestCase):
                                                         Needs     Physical
                                          Target      Astrometry?  Observations?   H
 
-                2018 Jan 13&amp; 15  <a href="https://echo.jpl.nasa.gov/asteroids/2003YO3/2003YO3_planning.html">438017 2003 YO3</a>        No         Yes         18.7            
+                2018 Jan 13&amp; 15  <a href="https://echo.jpl.nasa.gov/asteroids/2003YO3/2003YO3_planning.html">438017 2003 YO3</a>        No         Yes         18.7
                 </body></html>
                 '''
         page = BeautifulSoup(html, 'html.parser')
@@ -569,7 +605,7 @@ class TestFetchGoldstoneTargets(TestCase):
                                                         Needs     Physical
                                          Target      Astrometry?  Observations?   H
 
-                2018 Jan 13 &amp;15  <a href="https://echo.jpl.nasa.gov/asteroids/2003YO3/2003YO3_planning.html">438017 2003 YO3</a>        No         Yes         18.7            
+                2018 Jan 13 &amp;15  <a href="https://echo.jpl.nasa.gov/asteroids/2003YO3/2003YO3_planning.html">438017 2003 YO3</a>        No         Yes         18.7
                 </body></html>
                 '''
         page = BeautifulSoup(html, 'html.parser')
@@ -620,6 +656,7 @@ class TestFetchYarkovskyTargets(TestCase):
 
         self.assertEqual(expected_targets, target_list)
 
+
 class TestSubmitBlockToScheduler(TestCase):
 
     def setUp(self):
@@ -642,17 +679,26 @@ class TestSubmitBlockToScheduler(TestCase):
         self.body_elements = model_to_dict(self.body)
         self.body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
         self.body_elements['current_name'] = self.body.current_name()
+        self.body_elements['v_mag'] = 16.6777676
 
         neo_proposal_params = { 'code'  : 'LCO2015A-009',
                                 'title' : 'LCOGT NEO Follow-up Network'
                               }
         self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
 
+        ssource_params = {  'name' : 'SA107-684',
+                            'ra' : 234.3,
+                            'dec' : -0.16,
+                            'vmag' : 7.0,
+                            'source_type' : StaticSource.SOLAR_STANDARD
+                        }
+        self.ssource = StaticSource.objects.create(**ssource_params)
+
     @patch('astrometrics.sources_subs.requests.post')
     def test_submit_body_for_cpt(self, mock_post):
         mock_post.return_value.status_code = 200
 
-        mock_post.return_value.json.return_value = {'id': '999', 'requests' : [{'id': '111', 'target' : {'type' : 'NON-SIDEREAL' }, 'duration' : 1820}]}
+        mock_post.return_value.json.return_value = {'id': '999', 'requests' : [{'id': '111', 'target' : {'type' : 'NON-SIDEREAL'}, 'duration' : 1820}]}
 
         site_code = 'K92'
         utc_date = datetime.now()+timedelta(days=1)
@@ -664,7 +710,7 @@ class TestSubmitBlockToScheduler(TestCase):
                     'start_time' : dark_start,
                     'end_time' : dark_end,
                     'filter_pattern' : 'w',
-                    'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                     'user_id'  : 'bsimpson'
                  }
 
@@ -684,14 +730,58 @@ class TestSubmitBlockToScheduler(TestCase):
             self.assertEqual(block.block_start, block.superblock.block_start)
             self.assertEqual(block.block_end, block.superblock.block_end)
 
+    @patch('astrometrics.sources_subs.requests.post')
+    def test_submit_body_for_cpt_V3(self, mock_post):
+        mock_post.return_value.status_code = 200
+
+        mock_post.return_value.json.return_value = {'id': 999, 'requests' :
+            [{'id': 111, 'configurations' :
+                [{'id' : 222, 'target' : {'type' : 'ORBITAL-ELEMENTS'}}
+                ],
+            'duration' : 1820}]}
+
+        site_code = 'K92'
+        utc_date = datetime.now()+timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 18,
+                    'exp_time' : 50.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'filter_pattern' : 'w',
+                    'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson'
+                 }
+
+        resp, sched_params = submit_block_to_scheduler(self.body_elements, params)
+        self.assertEqual(resp, '999')
+
+        # store block
+        data = params
+        data['proposal_code'] = 'LCO2015A-009'
+        data['exp_length'] = 91
+        block_resp = record_block(resp, sched_params, data, self.body)
+        self.assertEqual(block_resp, True)
+
+        # Test that block has same start/end as superblock
+        blocks = Block.objects.filter(active=True)
+        for block in blocks:
+            self.assertEqual(block.block_start, block.superblock.block_start)
+            self.assertEqual(block.block_end, block.superblock.block_end)
+            self.assertEqual(block.request_number, '111')
+            self.assertEqual(block.obstype, Block.OPT_IMAGING)
+            self.assertEqual(block.num_exposures, params['exp_count'])
+            self.assertEqual(block.exp_length, params['exp_time'])
+
     @patch('astrometrics.sources_subs.expand_cadence', mock_expand_cadence)
     @patch('astrometrics.sources_subs.requests.post')
     def test_submit_cadence(self, mock_post):
         mock_post.return_value.status_code = 200
 
-        mock_post.return_value.json.return_value = {'id': '999', 'requests' : [{'id': '111', 'target' : {'type' : 'NON-SIDEREAL' }, 'duration' : 1820},
-                                                                               {'id': '222', 'target' : {'type' : 'NON-SIDEREAL' }, 'duration' : 1820},
-                                                                               {'id': '333', 'target' : {'type' : 'NON-SIDEREAL' }, 'duration' : 1820}]}
+        mock_post.return_value.json.return_value = {'id': '999', 'requests' : [{'id': '111', 'target' : {'type' : 'NON-SIDEREAL'}, 'duration' : 1820},
+                                                                               {'id': '222', 'target' : {'type' : 'NON-SIDEREAL'}, 'duration' : 1820},
+                                                                               {'id': '333', 'target' : {'type' : 'NON-SIDEREAL'}, 'duration' : 1820}]}
 
         site_code = 'V38'
         utc_date = datetime(2015, 3, 19, 00, 00, 00) + timedelta(days=1)
@@ -703,7 +793,7 @@ class TestSubmitBlockToScheduler(TestCase):
                     'start_time' : dark_start,
                     'end_time' : dark_end,
                     'filter_pattern' : 'w',
-                    'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                     'user_id'  : 'bsimpson',
                     'period'    : 2.0,
                     'jitter'    : 0.25
@@ -730,7 +820,7 @@ class TestSubmitBlockToScheduler(TestCase):
     def test_submit_spectra_for_ogg(self, mock_post):
         mock_post.return_value.status_code = 200
 
-        mock_post.return_value.json.return_value = {'id': '999', 'requests' : [{'id': '111', 'duration' : 1820, 'target': {'type': 'NON_SIDEREAL'}}]}
+        mock_post.return_value.json.return_value = {'id': '999', 'requests' : [{'id': '111', 'duration' : 1820, 'target': {'type': 'ORBITAL_ELEMENTS'}}]}
 
         body_elements = model_to_dict(self.body)
         body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
@@ -745,7 +835,7 @@ class TestSubmitBlockToScheduler(TestCase):
                     'start_time' : dark_start,
                     'end_time' : dark_end,
                     'filter_pattern' : 'slit_6.0as',
-                    'group_id' : body_elements['current_name'] + '_' + 'ogg' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'group_name' : body_elements['current_name'] + '_' + 'ogg' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                     'user_id'  : 'bsimpson',
                     'spectroscopy' : True,
                     'spectra_slit' : 'slit_6.0as'
@@ -767,7 +857,80 @@ class TestSubmitBlockToScheduler(TestCase):
             self.assertEqual(block.block_start, block.superblock.block_start)
             self.assertEqual(block.block_end, block.superblock.block_end)
 
-    def test_make_userrequest(self):
+    @patch('astrometrics.sources_subs.requests.post')
+    def test_submit_spectra_for_ogg_V3(self, mock_post):
+        mock_post.return_value.status_code = 201
+
+        mock_post.return_value.json.return_value = {'id': 999, 'requests' : [
+            {'id': 111, 'duration' : 1820, 'configurations' : [{
+                'id' : 2635701,
+                'constraints' : {'max_airmass' : 1.74},
+                'instrument_configs' : [{'optical_elements': {'slit' : 'slit_6.0as'}, 'rotator_mode' : 'VFLOAT'}],
+                'target': {'type': 'ORBITAL_ELEMENTS', 'name' : '11500'},
+                'type' : 'SPECTRUM'
+                },
+                ]
+            },
+            {'id' : 112, 'duration' : 665, 'configurations' : [{
+                'id' : 2635704,
+                'constraints' : {'max_airmass' : 1.74},
+                'instrument_configs' : [{'optical_elements': {'slit' : 'slit_6.0as'}, 'rotator_mode' : 'VFLOAT'}],
+                'target': {'type': 'ICRS', 'name' : 'SA107-684', 'ra' : 234.3, 'dec' : -0.16},
+                'type' : 'SPECTRUM'
+                },
+                ]}
+            ]
+        }
+
+        body_elements = model_to_dict(self.body)
+        body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+        body_elements['current_name'] = self.body.current_name()
+        site_code = 'F65'
+        utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 1,
+                    'exp_time' : 150.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'filter_pattern' : 'slit_6.0as',
+                    'group_name' : body_elements['current_name'] + '_' + 'ogg' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson',
+                    'solar_analog' : True,
+                    'calibsource' : {'id' : 1, 'name' : 'SA107-684', 'ra_deg' : 234.3, 'dec_deg' : -0.16, 'calib_exptime' : 60},
+                    'calibsrc_exptime' : 60,
+                    'spectroscopy' : True,
+                    'spectra_slit' : 'slit_6.0as'
+                 }
+
+        resp, sched_params = submit_block_to_scheduler(body_elements, params)
+        self.assertEqual(resp, '999')
+
+        # store block
+        data = params
+        data['proposal_code'] = 'LCO2015A-009'
+        data['exp_length'] = params['exp_time']
+        block_resp = record_block(resp, sched_params, data, self.body)
+        self.assertEqual(block_resp, True)
+
+        # Test that block has same start/end as superblock
+        blocks = Block.objects.filter(active=True)
+        self.assertEqual(2, blocks.count())
+        for block in blocks:
+            self.assertEqual(block.block_start, block.superblock.block_start)
+            self.assertEqual(block.block_end, block.superblock.block_end)
+        self.assertEqual(blocks[0].obstype, Block.OPT_SPECTRA)
+        self.assertEqual(blocks[0].exp_length, params['exp_time'])
+        self.assertEqual(blocks[0].calibsource, None)
+        self.assertNotEqual(blocks[0].body, None)
+        self.assertEqual(blocks[1].obstype, Block.OPT_SPECTRA_CALIB)
+        self.assertEqual(blocks[1].exp_length, params['calibsrc_exptime'])
+        self.assertEqual(blocks[1].body, None)
+        self.assertNotEqual(blocks[1].calibsource, None)
+        self.assertEqual(blocks[1].calibsource.name, params['calibsource']['name'])
+
+    def test_make_requestgroup(self):
 
         site_code = 'K92'
         utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
@@ -778,18 +941,18 @@ class TestSubmitBlockToScheduler(TestCase):
                     'site_code' : site_code,
                     'start_time' : dark_start,
                     'end_time' : dark_end,
-                    'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                     'user_id'  : 'bsimpson',
                     'filter_pattern' : 'w'
                  }
 
-        user_request = make_userrequest(self.body_elements, params)
+        user_request = make_requestgroup(self.body_elements, params)
 
         self.assertEqual(user_request['submitter'], 'bsimpson')
         self.assertEqual(user_request['requests'][0]['windows'][0]['start'], dark_start.strftime('%Y-%m-%dT%H:%M:%S'))
         self.assertEqual(user_request['requests'][0]['location'].get('telescope', None), None)
 
-    def test_make_generic_userrequest(self):
+    def test_make_generic_requestgroup(self):
 
         site_code = '2M0'
         utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
@@ -800,12 +963,12 @@ class TestSubmitBlockToScheduler(TestCase):
                     'site_code' : site_code,
                     'start_time' : dark_start,
                     'end_time' : dark_end,
-                    'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                     'user_id'  : 'bsimpson',
                     'filter_pattern' : 'w'
                  }
 
-        user_request = make_userrequest(self.body_elements, params)
+        user_request = make_requestgroup(self.body_elements, params)
 
         self.assertEqual(user_request['submitter'], 'bsimpson')
         self.assertEqual(user_request['requests'][0]['windows'][0]['start'], dark_start.strftime('%Y-%m-%dT%H:%M:%S'))
@@ -815,7 +978,7 @@ class TestSubmitBlockToScheduler(TestCase):
         self.assertEqual(user_request['requests'][0]['location'].get('site', None), None)
         self.assertEqual(user_request['requests'][0]['location']['telescope_class'], '2m0')
 
-    def test_make_spectra_userrequest(self):
+    def test_make_spectra_requestgroup(self):
         body_elements = model_to_dict(self.body)
         body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
         body_elements['current_name'] = self.body.current_name()
@@ -829,20 +992,19 @@ class TestSubmitBlockToScheduler(TestCase):
                     'start_time' : dark_start,
                     'end_time' : dark_end,
                     'filter_pattern' : 'slit_6.0as',
-                    'group_id' : body_elements['current_name'] + '_' + 'OGG' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'group_name' : body_elements['current_name'] + '_' + 'OGG' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                     'user_id'  : 'bsimpson',
                     'spectroscopy' : True,
                     'spectra_slit' : 'slit_6.0as'
                  }
 
         body_elements = compute_vmag_pa(body_elements, params)
-        user_request = make_userrequest(body_elements, params)
+        user_request = make_requestgroup(body_elements, params)
+        self.assertAlmostEqual(user_request['requests'][0]['configurations'][0]['target']['extra_params']['v_magnitude'], 20.88, 2)
+        self.assertAlmostEqual(user_request['requests'][0]['configurations'][0]['instrument_configs'][0]['extra_params']['rotator_angle'], 107.53, 1)
+        self.assertEqual(user_request['requests'][0]['configurations'][0]['instrument_configs'][0]['rotator_mode'], 'SKY')
 
-        self.assertAlmostEqual(user_request['requests'][0]['target']['vmag'], 20.88, 2)
-        self.assertAlmostEqual(user_request['requests'][0]['target']['rot_angle'], 107.53, 1)
-        self.assertEqual(user_request['requests'][0]['target']['rot_mode'], 'SKY')
-
-    def test_1m_sinistro_lsc_doma_userrequest(self):
+    def test_1m_sinistro_lsc_doma_requestgroup(self):
 
         site_code = 'W85'
         utc_date = datetime.now()+timedelta(days=1)
@@ -853,19 +1015,43 @@ class TestSubmitBlockToScheduler(TestCase):
                     'site_code' : site_code,
                     'start_time' : dark_start,
                     'end_time' : dark_end,
-                    'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                     'user_id'  : 'bsimpson',
                     'filter_pattern' : 'w'
                  }
 
-        user_request = make_userrequest(self.body_elements, params)
+        user_request = make_requestgroup(self.body_elements, params)
 
         self.assertEqual(user_request['submitter'], 'bsimpson')
         self.assertEqual(user_request['requests'][0]['location']['telescope'], '1m0a')
         self.assertEqual(user_request['requests'][0]['location']['telescope_class'], '1m0')
         self.assertEqual(user_request['requests'][0]['location']['site'], 'lsc')
 
-    def test_make_too_userrequest(self):
+    def test_1m_sinistro_elp_domb_requestgroup(self):
+
+        site_code = 'V39'
+        utc_date = datetime.now()+timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 18,
+                    'exp_time' : 50.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'group_name' : self.body_elements['current_name'] + '_' + 'ELP' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson',
+                    'filter_pattern' : 'w'
+                 }
+
+        user_request = make_requestgroup(self.body_elements, params)
+
+        self.assertEqual(user_request['submitter'], 'bsimpson')
+        self.assertEqual(user_request['requests'][0]['location']['telescope'], '1m0a')
+        self.assertEqual(user_request['requests'][0]['location']['observatory'], 'domb')
+        self.assertEqual(user_request['requests'][0]['location']['telescope_class'], '1m0')
+        self.assertEqual(user_request['requests'][0]['location']['site'], 'elp')
+
+    def test_make_too_requestgroup(self):
         body_elements = model_to_dict(self.body)
         body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
         body_elements['current_name'] = self.body.current_name()
@@ -878,21 +1064,152 @@ class TestSubmitBlockToScheduler(TestCase):
                     'site_code' : site_code,
                     'start_time' : dark_start,
                     'end_time' : dark_end,
-                    'group_id' : body_elements['current_name'] + '_' + 'COJ' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'group_name' : body_elements['current_name'] + '_' + 'COJ' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                     'user_id'  : 'bsimpson',
                     'filter_pattern' : 'w',
                     'too_mode' : True
                  }
 
-        user_request = make_userrequest(body_elements, params)
+        user_request = make_requestgroup(body_elements, params)
 
         self.assertEqual(user_request['submitter'], 'bsimpson')
         self.assertEqual(user_request['requests'][0]['windows'][0]['start'], dark_start.strftime('%Y-%m-%dT%H:%M:%S'))
-        self.assertEqual(user_request['requests'][0]['location'].get('telescope',None), None)
+        self.assertEqual(user_request['requests'][0]['location'].get('telescope', None), None)
         self.assertEqual(user_request['requests'][0].get('observation_type', None), None)
-        self.assertEqual(user_request['observation_type'], 'TARGET_OF_OPPORTUNITY')
+        self.assertEqual(user_request['observation_type'], 'TIME_CRITICAL')
 
-    def test_multi_filter_userrequest(self):
+    def test_1m_binning_requestgroup(self):
+
+        site_code = '1M0'
+        utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 18,
+                    'exp_time' : 50.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson',
+                    'filter_pattern' : 'w',
+                    'bin_mode' : '2k_2x2'
+                 }
+
+        user_request = make_requestgroup(self.body_elements, params)
+
+        instrument_configs = user_request['requests'][0]['configurations'][0]['instrument_configs'][0]
+
+        self.assertEqual(user_request['submitter'], 'bsimpson')
+        self.assertEqual(instrument_configs['bin_x'], 2)
+        self.assertEqual(instrument_configs['bin_y'], 2)
+        self.assertEqual(instrument_configs['mode'], 'central_2k_2x2')
+        self.assertEqual(user_request['requests'][0]['location'].get('telescope', None), None)
+
+    def test_ELP_1m_binning_requestgroup(self):
+
+        site_code = 'V39'
+        utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 18,
+                    'exp_time' : 50.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'group_name' : self.body_elements['current_name'] + '_' + 'ELP' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson',
+                    'filter_pattern' : 'w',
+                    'bin_mode' : '2k_2x2'
+                 }
+
+        user_request = make_requestgroup(self.body_elements, params)
+
+        instrument_configs = user_request['requests'][0]['configurations'][0]['instrument_configs'][0]
+
+        self.assertEqual(user_request['submitter'], 'bsimpson')
+        self.assertEqual(instrument_configs['bin_x'], 2)
+        self.assertEqual(instrument_configs['bin_y'], 2)
+        self.assertEqual(instrument_configs['mode'], 'central_2k_2x2')
+
+    def test_1m_no_binning_requestgroup(self):
+
+        site_code = 'V39'
+        utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 18,
+                    'exp_time' : 50.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'group_name' : self.body_elements['current_name'] + '_' + 'ELP' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson',
+                    'filter_pattern' : 'w',
+                    'bin_mode' : 'full_chip'
+                 }
+
+        user_request = make_requestgroup(self.body_elements, params)
+
+        instrument_configs = user_request['requests'][0]['configurations'][0]['instrument_configs'][0]
+
+        self.assertEqual(user_request['submitter'], 'bsimpson')
+        self.assertEqual(instrument_configs['bin_x'], 1)
+        self.assertEqual(instrument_configs['bin_y'], 1)
+        self.assertNotIn('mode', instrument_configs.keys())
+
+    def test_2m_no_binning_requestgroup(self):
+
+        site_code = '2M0'
+        utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 18,
+                    'exp_time' : 50.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'group_name' : self.body_elements['current_name'] + '_' + 'ELP' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson',
+                    'filter_pattern' : 'w',
+                    'bin_mode' : '2k_2x2'
+                 }
+
+        user_request = make_requestgroup(self.body_elements, params)
+
+        instrument_configs = user_request['requests'][0]['configurations'][0]['instrument_configs'][0]
+
+        self.assertEqual(user_request['submitter'], 'bsimpson')
+        self.assertEqual(instrument_configs['bin_x'], 2)
+        self.assertEqual(instrument_configs['bin_y'], 2)
+        self.assertNotIn('mode', instrument_configs.keys())
+
+    def test_0m4_no_binning_requestgroup(self):
+
+        site_code = 'L09'
+        utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 18,
+                    'exp_time' : 50.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'group_name' : self.body_elements['current_name'] + '_' + 'ELP' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson',
+                    'filter_pattern' : 'w',
+                    'bin_mode' : '2k_2x2'
+                 }
+
+        user_request = make_requestgroup(self.body_elements, params)
+
+        instrument_configs = user_request['requests'][0]['configurations'][0]['instrument_configs'][0]
+
+        self.assertEqual(user_request['submitter'], 'bsimpson')
+        self.assertEqual(instrument_configs['bin_x'], 1)
+        self.assertEqual(instrument_configs['bin_y'], 1)
+        self.assertNotIn('mode', instrument_configs.keys())
+
+    def test_multi_filter_requestgroup(self):
 
             site_code = 'W85'
             utc_date = datetime.now()+timedelta(days=1)
@@ -903,22 +1220,22 @@ class TestSubmitBlockToScheduler(TestCase):
                         'site_code' : site_code,
                         'start_time' : dark_start,
                         'end_time' : dark_end,
-                        'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                         'user_id'  : 'bsimpson',
                         'filter_pattern' : 'V,V,R,R,I,I'
                      }
 
-            user_request = make_userrequest(self.body_elements, params)
-            molecules = user_request.get('requests')[0].get('molecules')
-            expected_molecule_num = 9
+            user_request = make_requestgroup(self.body_elements, params)
+            configurations = user_request.get('requests')[0].get('configurations')
+            expected_configuration_num = 9
             expected_exp_count = 2
             expected_filter = 'V'
 
-            self.assertEqual(len(molecules), expected_molecule_num)
-            self.assertEqual(molecules[3].get('exposure_count'), expected_exp_count)
-            self.assertEqual(molecules[3].get('filter'), expected_filter)
+            self.assertEqual(len(configurations), expected_configuration_num)
+            self.assertEqual(configurations[3]['instrument_configs'][0]['exposure_count'], expected_exp_count)
+            self.assertEqual(configurations[3]['instrument_configs'][0]['optical_elements']['filter'], expected_filter)
 
-    def test_uneven_filter_userrequest(self):
+    def test_uneven_filter_requestgroup(self):
 
             site_code = 'W85'
             utc_date = datetime.now()+timedelta(days=1)
@@ -929,22 +1246,22 @@ class TestSubmitBlockToScheduler(TestCase):
                         'site_code' : site_code,
                         'start_time' : dark_start,
                         'end_time' : dark_end,
-                        'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                         'user_id'  : 'bsimpson',
                         'filter_pattern' : 'V,V,R,I'
                      }
 
-            user_request = make_userrequest(self.body_elements, params)
-            molecules = user_request.get('requests')[0].get('molecules')
-            expected_molecule_num = 13
+            user_request = make_requestgroup(self.body_elements, params)
+            configurations = user_request.get('requests')[0].get('configurations')
+            expected_configuration_num = 13
             expected_exp_count = 1
             expected_filter = 'I'
 
-            self.assertEqual(len(molecules), expected_molecule_num)
-            self.assertEqual(molecules[2].get('exposure_count'), expected_exp_count)
-            self.assertEqual(molecules[2].get('filter'), expected_filter)
+            self.assertEqual(len(configurations), expected_configuration_num)
+            self.assertEqual(configurations[2]['instrument_configs'][0]['exposure_count'], expected_exp_count)
+            self.assertEqual(configurations[2]['instrument_configs'][0]['optical_elements']['filter'], expected_filter)
 
-    def test_single_filter_userrequest(self):
+    def test_single_filter_requestgroup(self):
 
             site_code = 'W85'
             utc_date = datetime.now()+timedelta(days=1)
@@ -955,22 +1272,22 @@ class TestSubmitBlockToScheduler(TestCase):
                         'site_code' : site_code,
                         'start_time' : dark_start,
                         'end_time' : dark_end,
-                        'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                         'user_id'  : 'bsimpson',
                         'filter_pattern' : 'V'
                      }
 
-            user_request = make_userrequest(self.body_elements, params)
-            molecules = user_request.get('requests')[0].get('molecules')
-            expected_molecule_num = 1
+            user_request = make_requestgroup(self.body_elements, params)
+            configurations = user_request.get('requests')[0].get('configurations')
+            expected_configuration_num = 1
             expected_exp_count = 18
             expected_filter = 'V'
 
-            self.assertEqual(len(molecules), expected_molecule_num)
-            self.assertEqual(molecules[0].get('exposure_count'), expected_exp_count)
-            self.assertEqual(molecules[0].get('filter'), expected_filter)
+            self.assertEqual(len(configurations), expected_configuration_num)
+            self.assertEqual(configurations[0]['instrument_configs'][0]['exposure_count'], expected_exp_count)
+            self.assertEqual(configurations[0]['instrument_configs'][0]['optical_elements']['filter'], expected_filter)
 
-    def test_overlap_filter_userrequest(self):
+    def test_overlap_filter_requestgroup(self):
 
             site_code = 'W85'
             utc_date = datetime.now()+timedelta(days=1)
@@ -981,22 +1298,22 @@ class TestSubmitBlockToScheduler(TestCase):
                         'site_code' : site_code,
                         'start_time' : dark_start,
                         'end_time' : dark_end,
-                        'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                         'user_id'  : 'bsimpson',
                         'filter_pattern' : 'V,V,R,R,I,I,V'
                      }
 
-            user_request = make_userrequest(self.body_elements, params)
-            molecules = user_request.get('requests')[0].get('molecules')
-            expected_molecule_num = 8
+            user_request = make_requestgroup(self.body_elements, params)
+            configurations = user_request.get('requests')[0].get('configurations')
+            expected_configuration_num = 8
             expected_exp_count = 3
             expected_filter = 'V'
 
-            self.assertEqual(len(molecules), expected_molecule_num)
-            self.assertEqual(molecules[3].get('exposure_count'), expected_exp_count)
-            self.assertEqual(molecules[3].get('filter'), expected_filter)
+            self.assertEqual(len(configurations), expected_configuration_num)
+            self.assertEqual(configurations[3]['instrument_configs'][0]['exposure_count'], expected_exp_count)
+            self.assertEqual(configurations[3]['instrument_configs'][0]['optical_elements']['filter'], expected_filter)
 
-    def test_overlap_nooverlap_filter_userrequest(self):
+    def test_overlap_nooverlap_filter_requestgroup(self):
 
             site_code = 'W85'
             utc_date = datetime.now()+timedelta(days=1)
@@ -1007,22 +1324,22 @@ class TestSubmitBlockToScheduler(TestCase):
                         'site_code' : site_code,
                         'start_time' : dark_start,
                         'end_time' : dark_end,
-                        'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                         'user_id'  : 'bsimpson',
                         'filter_pattern' : 'V,V,R,I,V'
                      }
 
-            user_request = make_userrequest(self.body_elements, params)
-            molecules = user_request.get('requests')[0].get('molecules')
-            expected_molecule_num = 10
+            user_request = make_requestgroup(self.body_elements, params)
+            configurations = user_request.get('requests')[0].get('configurations')
+            expected_configuration_num = 10
             expected_exp_count = 1
             expected_filter = 'V'
 
-            self.assertEqual(len(molecules), expected_molecule_num)
-            self.assertEqual(molecules[9].get('exposure_count'), expected_exp_count)
-            self.assertEqual(molecules[9].get('filter'), expected_filter)
+            self.assertEqual(len(configurations), expected_configuration_num)
+            self.assertEqual(configurations[9]['instrument_configs'][0]['exposure_count'], expected_exp_count)
+            self.assertEqual(configurations[9]['instrument_configs'][0]['optical_elements']['filter'], expected_filter)
 
-    def test_partial_filter_userrequest(self):
+    def test_partial_filter_requestgroup(self):
 
             site_code = 'W85'
             utc_date = datetime.now()+timedelta(days=1)
@@ -1033,22 +1350,22 @@ class TestSubmitBlockToScheduler(TestCase):
                         'site_code' : site_code,
                         'start_time' : dark_start,
                         'end_time' : dark_end,
-                        'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                         'user_id'  : 'bsimpson',
                         'filter_pattern' : 'V,V,V,V,V,V,R,R,R,R,R,I,I,I,I,I,I'
                      }
 
-            user_request = make_userrequest(self.body_elements, params)
-            molecules = user_request.get('requests')[0].get('molecules')
-            expected_molecule_num = 3
+            user_request = make_requestgroup(self.body_elements, params)
+            configurations = user_request.get('requests')[0].get('configurations')
+            expected_configuration_num = 3
             expected_exp_count = 4
             expected_filter = 'I'
 
-            self.assertEqual(len(molecules), expected_molecule_num)
-            self.assertEqual(molecules[2].get('exposure_count'), expected_exp_count)
-            self.assertEqual(molecules[2].get('filter'), expected_filter)
+            self.assertEqual(len(configurations), expected_configuration_num)
+            self.assertEqual(configurations[2]['instrument_configs'][0]['exposure_count'], expected_exp_count)
+            self.assertEqual(configurations[2]['instrument_configs'][0]['optical_elements']['filter'], expected_filter)
 
-    def test_partial_overlap_filter_userrequest(self):
+    def test_partial_overlap_filter_requestgroup(self):
 
             site_code = 'W85'
             utc_date = datetime.now()+timedelta(days=1)
@@ -1059,20 +1376,20 @@ class TestSubmitBlockToScheduler(TestCase):
                         'site_code' : site_code,
                         'start_time' : dark_start,
                         'end_time' : dark_end,
-                        'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                         'user_id'  : 'bsimpson',
                         'filter_pattern' : 'V,V,R,R,I,V'
                      }
 
-            user_request = make_userrequest(self.body_elements, params)
-            molecules = user_request.get('requests')[0].get('molecules')
-            expected_molecule_num = 8
+            user_request = make_requestgroup(self.body_elements, params)
+            configurations = user_request.get('requests')[0].get('configurations')
+            expected_configuration_num = 8
             expected_exp_count = 3
             expected_filter = 'V'
 
-            self.assertEqual(len(molecules), expected_molecule_num)
-            self.assertEqual(molecules[6].get('exposure_count'), expected_exp_count)
-            self.assertEqual(molecules[6].get('filter'), expected_filter)
+            self.assertEqual(len(configurations), expected_configuration_num)
+            self.assertEqual(configurations[6]['instrument_configs'][0]['exposure_count'], expected_exp_count)
+            self.assertEqual(configurations[6]['instrument_configs'][0]['optical_elements']['filter'], expected_filter)
 
     def test_spectro_with_solar_analog(self):
 
@@ -1086,8 +1403,7 @@ class TestSubmitBlockToScheduler(TestCase):
                     'instrument_code' : 'F65-FLOYDS',
                     'site_code' : 'F65',
                     'filter_pattern' : 'slit_6.0as',
-                    'group_id' : self.body_elements['current_name'] + '_' + 'F65' + '-' + datetime.strftime(utc_date, '%Y%m%d') + "_spectra",
-
+                    'group_name' : self.body_elements['current_name'] + '_' + 'F65' + '-' + datetime.strftime(utc_date, '%Y%m%d') + "_spectra",
                     'start_time' :  utc_date + timedelta(hours=5),
                     'end_time'   :  utc_date + timedelta(hours=15),
                     'solar_analog' : True,
@@ -1095,30 +1411,37 @@ class TestSubmitBlockToScheduler(TestCase):
                   }
         expected_num_requests = 2
         expected_operator = 'MANY'
-        expected_molecule_num = 3
+        expected_configuration_num = 3
         expected_exp_count = 1
         expected_ast_exptime = 300.0
         expected_cal_exptime = 60.0
         expected_filter = 'slit_6.0as'
-        expected_groupid = params['group_id'] + '+solstd'
+        expected_groupid = params['group_name'] + '+solstd'
+        expected_ast_target = {'name': 'N999r0q', 'type': 'ORBITAL_ELEMENTS', 'scheme': 'MPC_MINOR_PLANET',
+                               'epochofel': 57100.0, 'orbinc': 8.34739, 'longascnode': 147.81325,
+                               'argofperih': 85.19251, 'eccentricity': 0.1896865, 'extra_params': {'v_magnitude': 16.68},
+                               'meandist': 1.2176312, 'meananom': 325.2636}
+        expected_cal_target = {'type': 'ICRS', 'name': 'SA107-684', 'ra': 234.3254167, 'dec': -0.163889, 'extra_params': {}}
 
-        user_request = make_userrequest(self.body_elements, params)
+        user_request = make_requestgroup(self.body_elements, params)
         requests = user_request['requests']
         self.assertEqual(expected_num_requests, len(requests))
         self.assertEqual(expected_operator, user_request['operator'])
-        self.assertEqual(expected_groupid, user_request['group_id'])
+        self.assertEqual(expected_groupid, user_request['name'])
 
-        ast_molecules = user_request['requests'][0]['molecules']
-        self.assertEqual(len(ast_molecules), expected_molecule_num)
-        self.assertEqual(ast_molecules[2]['exposure_count'], expected_exp_count)
-        self.assertEqual(ast_molecules[2]['exposure_time'], expected_ast_exptime)
-        self.assertEqual(ast_molecules[2]['spectra_slit'], expected_filter)
+        ast_configurations = user_request['requests'][0]['configurations']
+        self.assertEqual(len(ast_configurations), expected_configuration_num)
+        self.assertEqual(ast_configurations[2]['target'], expected_ast_target)
+        self.assertEqual(ast_configurations[2]['instrument_configs'][0]['exposure_count'], expected_exp_count)
+        self.assertEqual(ast_configurations[2]['instrument_configs'][0]['exposure_time'], expected_ast_exptime)
+        self.assertEqual(ast_configurations[2]['instrument_configs'][0]['optical_elements']['slit'], expected_filter)
 
-        cal_molecules = user_request['requests'][1]['molecules']
-        self.assertEqual(len(cal_molecules), expected_molecule_num)
-        self.assertEqual(cal_molecules[2]['exposure_count'], expected_exp_count)
-        self.assertEqual(cal_molecules[2]['exposure_time'], expected_cal_exptime)
-        self.assertEqual(cal_molecules[2]['spectra_slit'], expected_filter)
+        cal_configurations = user_request['requests'][1]['configurations']
+        self.assertEqual(len(cal_configurations), expected_configuration_num)
+        self.assertEqual(cal_configurations[2]['instrument_configs'][0]['exposure_count'], expected_exp_count)
+        self.assertEqual(cal_configurations[2]['target'], expected_cal_target)
+        self.assertEqual(cal_configurations[2]['instrument_configs'][0]['exposure_time'], expected_cal_exptime)
+        self.assertEqual(cal_configurations[2]['instrument_configs'][0]['optical_elements']['slit'], expected_filter)
 
     def test_solo_solar_spectrum(self):
 
@@ -1132,90 +1455,371 @@ class TestSubmitBlockToScheduler(TestCase):
                     'instrument_code' : 'F65-FLOYDS',
                     'site_code' : 'F65',
                     'filter_pattern' : 'slit_6.0as',
-                    'group_id' : 'SA107-684' + '_' + 'F65' + '-' + datetime.strftime(utc_date, '%Y%m%d') + "_spectra",
+                    'group_name' : 'SA107-684' + '_' + 'F65' + '-' + datetime.strftime(utc_date, '%Y%m%d') + "_spectra",
                     'start_time' :  utc_date + timedelta(hours=5),
                     'end_time'   :  utc_date + timedelta(hours=15),
                     'solar_analog' : False,
                     'ra_deg' : 234.3254167,
                     'dec_deg' : -0.163889,
                     'vmag' : 12.4,
+                    'source_id' : 'SA107-684',
                     'source_type' : 4
                   }
         expected_num_requests = 1
         expected_operator = 'SINGLE'
-        expected_molecule_num = 3
+        expected_configuration_num = 3
         expected_exp_count = 1
         expected_exptime = 300.0
         expected_filter = 'slit_6.0as'
-        expected_groupid = params['group_id']
+        expected_groupid = params['group_name']
+        expected_target = {'type': 'ICRS', 'name': 'SA107-684', 'ra': 234.3254167, 'dec': -0.163889,
+                                'extra_params': { 'v_magnitude' : 12.4} }
 
-        user_request = make_userrequest(self.body_elements, params)
+        user_request = make_requestgroup({}, params)
         requests = user_request['requests']
         self.assertEqual(expected_num_requests, len(requests))
         self.assertEqual(expected_operator, user_request['operator'])
-        self.assertEqual(expected_groupid, user_request['group_id'])
+        self.assertEqual(expected_groupid, user_request['name'])
 
-        sol_molecules = user_request['requests'][0]['molecules']
-        self.assertEqual(len(sol_molecules), expected_molecule_num)
-        self.assertEqual(sol_molecules[2]['exposure_count'], expected_exp_count)
-        self.assertEqual(sol_molecules[2]['exposure_time'], expected_exptime)
-        self.assertEqual(sol_molecules[2]['spectra_slit'], expected_filter)
+        sol_configurations = user_request['requests'][0]['configurations']
+        self.assertEqual(len(sol_configurations), expected_configuration_num)
+        self.assertEqual(sol_configurations[2]['instrument_configs'][0]['exposure_count'], expected_exp_count)
+        self.assertEqual(sol_configurations[2]['instrument_configs'][0]['exposure_time'], expected_exptime)
+        self.assertEqual(sol_configurations[2]['instrument_configs'][0]['optical_elements']['slit'], expected_filter)
+        self.assertEqual(sol_configurations[2]['target'], expected_target)
+
+    def test_spectro_with_solar_analog_pm(self):
+
+        utc_date = datetime(2018, 5, 11, 0)
+        params = {  'proposal_id' : 'LCOEngineering',
+                    'user_id'  : 'bsimpson',
+                    'spectroscopy' : True,
+                    'calibs'     : 'before',
+                    'exp_count'  : 1,
+                    'exp_time'   : 300.0,
+                    'instrument_code' : 'F65-FLOYDS',
+                    'site_code' : 'F65',
+                    'filter_pattern' : 'slit_6.0as',
+                    'group_name' : self.body_elements['current_name'] + '_' + 'F65' + '-' + datetime.strftime(utc_date, '%Y%m%d') + "_spectra",
+                    'start_time' :  utc_date + timedelta(hours=5),
+                    'end_time'   :  utc_date + timedelta(hours=15),
+                    'solar_analog' : True,
+                    'calibsource' : { 'name' : 'SA107-684',
+                                      'ra_deg' : 234.3254167,
+                                      'dec_deg' : -0.163889,
+                                      'pm_ra' : 60.313,
+                                      'pm_dec' : -35.584,
+                                      'parallax' : 10.5664,
+                                      'calib_exptime': 60},
+                  }
+        expected_num_requests = 2
+        expected_operator = 'MANY'
+        expected_configuration_num = 3
+        expected_exp_count = 1
+        expected_ast_exptime = 300.0
+        expected_cal_exptime = 60.0
+        expected_filter = 'slit_6.0as'
+        expected_groupid = params['group_name'] + '+solstd'
+        expected_ast_target = {'name': 'N999r0q', 'type': 'ORBITAL_ELEMENTS', 'scheme': 'MPC_MINOR_PLANET',
+                               'epochofel': 57100.0, 'orbinc': 8.34739, 'longascnode': 147.81325,
+                               'argofperih': 85.19251, 'eccentricity': 0.1896865, 'extra_params': {'v_magnitude': 16.68},
+                               'meandist': 1.2176312, 'meananom': 325.2636}
+        expected_cal_target = {'type': 'ICRS', 'name': 'SA107-684', 'ra': 234.3254167, 'dec': -0.163889,
+                                'proper_motion_ra' : 60.313,
+                                'proper_motion_dec' : -35.584,
+                                'extra_params': {}}
+
+        user_request = make_requestgroup(self.body_elements, params)
+        requests = user_request['requests']
+        self.assertEqual(expected_num_requests, len(requests))
+        self.assertEqual(expected_operator, user_request['operator'])
+        self.assertEqual(expected_groupid, user_request['name'])
+
+        ast_configurations = user_request['requests'][0]['configurations']
+        self.assertEqual(len(ast_configurations), expected_configuration_num)
+        self.assertEqual(ast_configurations[2]['target'], expected_ast_target)
+        self.assertEqual(ast_configurations[2]['instrument_configs'][0]['exposure_count'], expected_exp_count)
+        self.assertEqual(ast_configurations[2]['instrument_configs'][0]['exposure_time'], expected_ast_exptime)
+        self.assertEqual(ast_configurations[2]['instrument_configs'][0]['optical_elements']['slit'], expected_filter)
+
+        cal_configurations = user_request['requests'][1]['configurations']
+        self.assertEqual(len(cal_configurations), expected_configuration_num)
+        self.assertEqual(cal_configurations[2]['instrument_configs'][0]['exposure_count'], expected_exp_count)
+        self.assertEqual(cal_configurations[2]['target'], expected_cal_target)
+        self.assertEqual(cal_configurations[2]['instrument_configs'][0]['exposure_time'], expected_cal_exptime)
+        self.assertEqual(cal_configurations[2]['instrument_configs'][0]['optical_elements']['slit'], expected_filter)
+
+    def test_solo_solar_spectrum_pm(self):
+
+        utc_date = datetime(2018, 5, 11, 0)
+        params = {  'proposal_id' : 'LCOEngineering',
+                    'user_id'  : 'bsimpson',
+                    'spectroscopy' : True,
+                    'calibs'     : 'before',
+                    'exp_count'  : 1,
+                    'exp_time'   : 300.0,
+                    'instrument_code' : 'F65-FLOYDS',
+                    'site_code' : 'F65',
+                    'filter_pattern' : 'slit_6.0as',
+                    'group_name' : 'SA107-684' + '_' + 'F65' + '-' + datetime.strftime(utc_date, '%Y%m%d') + "_spectra",
+                    'start_time' :  utc_date + timedelta(hours=5),
+                    'end_time'   :  utc_date + timedelta(hours=15),
+                    'solar_analog' : False,
+                    'ra_deg' : 234.3254167,
+                    'dec_deg' : -0.163889,
+                    'pm_ra' : 60.313,
+                    'pm_dec' : -35.584,
+                    'parallax' : 10.5664,
+                    'vmag' : 12.4,
+                    'source_type' : 4,
+                    'source_id' : 'SA107-684',
+                  }
+        expected_num_requests = 1
+        expected_operator = 'SINGLE'
+        expected_configuration_num = 3
+        expected_exp_count = 1
+        expected_exptime = 300.0
+        expected_filter = 'slit_6.0as'
+        expected_groupid = params['group_name']
+        expected_target = {'type': 'ICRS', 'name': 'SA107-684', 'ra': 234.3254167, 'dec': -0.163889,
+                                'proper_motion_ra' : 60.313, 'proper_motion_dec' : -35.584, 'parallax' : 10.5664,
+                                'extra_params': { 'v_magnitude' : 12.4} }
+
+        user_request = make_requestgroup({}, params)
+        requests = user_request['requests']
+        self.assertEqual(expected_num_requests, len(requests))
+        self.assertEqual(expected_operator, user_request['operator'])
+        self.assertEqual(expected_groupid, user_request['name'])
+
+        sol_configurations = user_request['requests'][0]['configurations']
+        self.assertEqual(len(sol_configurations), expected_configuration_num)
+        self.assertEqual(sol_configurations[2]['instrument_configs'][0]['exposure_count'], expected_exp_count)
+        self.assertEqual(sol_configurations[2]['instrument_configs'][0]['exposure_time'], expected_exptime)
+        self.assertEqual(sol_configurations[2]['instrument_configs'][0]['optical_elements']['slit'], expected_filter)
+        self.assertEqual(sol_configurations[2]['target'], expected_target)
 
 
 class TestFetchFilterList(TestCase):
     """Unit test for getting current filters from configdb"""
 
     def setUp(self):
-        # Read stored version of camera mappings file
-        self.test_filter_map = os.path.join('astrometrics', 'tests', 'test_camera_mapping.dat')
+        self.lsc_1m_rsp = {
+                        "count": 1,
+                        "next": 'null',
+                        "previous": 'null',
+                        "results": [
+                            {
+                                "id": 92,
+                                "code": "fa15",
+                                "state": "SCHEDULABLE",
+                                "telescope": "http://configdb.lco.gtn/telescopes/10/",
+                                "science_camera": {
+                                    "id": 93,
+                                    "code": "fa15",
+                                    "camera_type": {
+                                        "id": 3,
+                                        "name": "1.0 meter Sinistro",
+                                        "code": "1m0-SciCam-Sinistro",
+                                    },
+                                    "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,ND,400um-Pinhole,150um-Pinhole",
+                                    "host": "inst.1m0a.doma.lsc.lco.gtn"
+                                },
+                                "__str__": "lsc.doma.1m0a.fa15-ef06"
+                            }
+                        ]
+                    }
 
-    def test_1m_cpt(self):
-        expected_filter_list = ['air', 'U', 'B', 'V', 'R', 'I', 'up', 'gp', 'rp', 'ip', 'zs', 'Y', 'w']
+        self.all_1m_rsp = {
+                        "count": 4,
+                        "next": 'null',
+                        "previous": 'null',
+                        "results": [
+                            {
+                                "id": 1,
+                                "code": "fa01",
+                                "state": "SCHEDULABLE",
+                                "telescope": "http://configdb.lco.gtn/telescopes/10/",
+                                "science_camera": {
+                                    "id": 1,
+                                    "TestIMAPLogincode": "fa01",
+                                    "camera_type": {
+                                        "id": 3,
+                                        "name": "1.0 meter Sinistro",
+                                        "code": "1m0-SciCam-Sinistro",
+                                    },
+                                    "filters": "I,R,U",
+                                    "host": "inst.1m0a.doma.lsc.lco.gtn"
+                                },
+                                "__str__": "lsc.doma.1m0a.fa15-ef06"
+                            },
+                            {
+                                "id": 2,
+                                "code": "fa02",
+                                "state": "SCHEDULABLE",
+                                "telescope": "http://configdb.lco.gtn/telescopes/10/",
+                                "science_camera": {
+                                    "id": 2,
+                                    "code": "fa02",
+                                    "camera_type": {
+                                        "id": 3,
+                                        "name": "1.0 meter Sinistro",
+                                        "code": "1m0-SciCam-Sinistro",
+                                    },
+                                    "filters": "ip,gp,zs,B,ND,400um-Pinhole,150um-Pinhole",
+                                    "host": "inst.1m0a.doma.lsc.lco.gtn"
+                                },
+                                "__str__": "lsc.doma.1m0a.fa15-ef06"
+                            },
+                            {
+                                "id": 3,
+                                "code": "fa03",
+                                "state": "SCHEDULABLE",
+                                "telescope": "http://configdb.lco.gtn/telescopes/10/",
+                                "science_camera": {
+                                    "id": 3,
+                                    "code": "fa03",
+                                    "camera_type": {
+                                        "id": 3,
+                                        "name": "1.0 meter Sinistro",
+                                        "code": "1m0-SciCam-Sinistro",
+                                    },
+                                    "filters": "Y,up,air,rp",
+                                    "host": "inst.1m0a.doma.lsc.lco.gtn"
+                                },
+                                "__str__": "lsc.doma.1m0a.fa15-ef06"
+                            },
+                            {
+                                "id": 4,
+                                "code": "fa04",
+                                "state": "SCHEDULABLE",
+                                "telescope": "http://configdb.lco.gtn/telescopes/10/",
+                                "science_camera": {
+                                    "id": 4,
+                                    "code": "fa04",
+                                    "camera_type": {
+                                        "id": 3,
+                                        "name": "1.0 meter Sinistro",
+                                        "code": "1m0-SciCam-Sinistro",
+                                    },
+                                    "filters": "U,w,Y,up,B,ND,400um-Pinhole,150um-Pinhole",
+                                    "host": "inst.1m0a.doma.lsc.lco.gtn"
+                                },
+                                "__str__": "lsc.doma.1m0a.fa15-ef06"
+                            }
+                        ]
+                    }
+        self.all_2m_rsp = {
+                        "count": 4,
+                        "next": 'null',
+                        "previous": 'null',
+                        "results": [
+                            {
+                                "id": 40,
+                                "code": "floyds01",
+                                "state": "SCHEDULABLE",
+                                "telescope": "http://configdb.lco.gtn/telescopes/14/",
+                                "science_camera": {
+                                    "id": 17,
+                                    "code": "floyds01",
+                                    "camera_type": {
+                                        "name": "2.0 meter FLOYDS",
+                                        "code": "2m0-FLOYDS-SciCam",
+                                    },
+                                    "filters": "slit_6.0as,slit_1.6as,slit_2.0as,slit_1.2as",
+                                    "host": "floyds.ogg.lco.gtn"
+                                },
+                                "__str__": "ogg.clma.2m0a.floyds01-kb42"
+                            },
+                            {
+                                "id": 84,
+                                "code": "floyds02",
+                                "state": "SCHEDULABLE",
+                                "telescope": "http://configdb.lco.gtn/telescopes/3/",
+                                "science_camera": {
+                                    "id": 18,
+                                    "code": "floyds02",
+                                    "camera_type": {
+                                        "name": "2.0 meter FLOYDS",
+                                        "code": "2m0-FLOYDS-SciCam",
+                                    },
+                                    "filters": "slit_6.0as,slit_1.6as,slit_2.0as,slit_1.2as",
+                                    "host": "floyds.coj.lco.gtn"
+                                },
+                                "__str__": "coj.clma.2m0a.floyds02-kb38"
+                            },
+                            {
+                                "id": 7,
+                                "code": "fs01",
+                                "state": "SCHEDULABLE",
+                                "telescope": "http://configdb.lco.gtn/telescopes/3/",
+                                "science_camera": {
+                                    "id": 19,
+                                    "code": "fs01",
+                                    "camera_type": {
+                                        "name": "2.0 meter Spectral",
+                                        "code": "2m0-SciCam-Spectral",
+                                    },
+                                    "filters": "D51,H-Beta,OIII,H-Alpha,Skymapper-VS,solar,Astrodon-UV,I,R,Y,up,air,rp,ip,gp,zs,V,B,200um-Pinhole",
+                                    "host": "fs.coj.lco.gtn"
+                                },
+                                "__str__": "coj.clma.2m0a.fs01-kb34"
+                            },
+                            {
+                                "id": 42,
+                                "code": "fs02",
+                                "state": "SCHEDULABLE",
+                                "telescope": "http://configdb.lco.gtn/telescopes/14/",
+                                "science_camera": {
+                                    "id": 20,
+                                    "code": "fs02",
+                                    "camera_type": {
+                                        "name": "2.0 meter Spectral",
+                                        "code": "2m0-SciCam-Spectral",
+                                    },
+                                    "filters": "D51,H-Beta,OIII,H-Alpha,Skymapper-VS,solar,Astrodon-UV,I,R,Y,up,air,rp,ip,gp,zs,V,B,200um-Pinhole",
+                                    "host": "fs.ogg.lco.gtn"
+                                },
+                                "__str__": "ogg.clma.2m0a.fs02-kb40"
+                            }
+                        ]
+                    }
 
-        filter_list = fetch_filter_list('K91', False, self.test_filter_map)
-        self.assertEqual(expected_filter_list, filter_list)
+        self.empty = {
+                        "count": 0,
+                        "next": 'null',
+                        "previous": 'null',
+                        "results": []
+                    }
 
-    def test_0m4_ogg(self):
-        expected_filter_list = ['air', 'B', 'V', 'up', 'gp', 'rp', 'ip', 'zs', 'w']
+    def test_1m_lsc(self):
+        expected_filter_list = ['air', 'ND', 'U', 'B', 'V', 'R', 'I', 'up', 'gp', 'rp', 'ip', 'zs', 'Y', 'w']
 
-        filter_list = fetch_filter_list('T04', False, self.test_filter_map)
-        self.assertEqual(expected_filter_list, filter_list)
+        filter_list = parse_filter_file(self.lsc_1m_rsp, False)
+        self.assertCountEqual(expected_filter_list, filter_list)
 
-    def test_2m_ogg(self):
+    def test_1m_all(self):
+        expected_filter_list = ['air', 'ND', 'U', 'B', 'R', 'I', 'up', 'gp', 'rp', 'ip', 'zs', 'Y', 'w']
+
+        filter_list = parse_filter_file(self.all_1m_rsp, False)
+        self.assertCountEqual(expected_filter_list, filter_list)
+
+    def test_2m_spectral(self):
         expected_filter_list = ['air', 'Astrodon-UV', 'B', 'V', 'R', 'I', 'up', 'gp', 'rp', 'ip', 'Skymapper-VS', 'solar', 'zs', 'Y']
 
-        filter_list = fetch_filter_list('F65', False, self.test_filter_map)
-        self.assertEqual(expected_filter_list, filter_list)
-
-    def test_1m_lsc_domeb(self):
-        expected_filter_list = ['air', 'ND' , 'U', 'B', 'V', 'R', 'I', 'up', 'gp', 'rp', 'ip', 'zs', 'Y', 'w']
-
-        filter_list = fetch_filter_list('W86', False, self.test_filter_map)
-        self.assertEqual(expected_filter_list, filter_list)
+        filter_list = parse_filter_file(self.all_2m_rsp, False)
+        self.assertCountEqual(expected_filter_list, filter_list)
 
     def test_unavailable_telescope(self):
         expected_filter_list = []
 
-        filter_list = fetch_filter_list('Z21', False, self.test_filter_map)
-        self.assertEqual(expected_filter_list, filter_list)
-
-    def test_lowercase_telescope(self):
-        expected_filter_list = ['air', 'B', 'V', 'up', 'gp', 'rp', 'ip', 'zs', 'w']
-
-        filter_list = fetch_filter_list('t04', False, self.test_filter_map)
-        self.assertEqual(expected_filter_list, filter_list)
-
-    def test_invalid_telescope(self):
-        expected_filter_list = []
-
-        filter_list = fetch_filter_list('BESTtelescope', False, self.test_filter_map)
-        self.assertEqual(expected_filter_list, filter_list)
+        filter_list = parse_filter_file(self.empty, False)
+        self.assertCountEqual(expected_filter_list, filter_list)
 
     def test_spectra_telescope(self):
         expected_filter_list = ['slit_1.2as', 'slit_1.6as', 'slit_2.0as', 'slit_6.0as']
 
-        filter_list = fetch_filter_list('F65', True, self.test_filter_map)
-        self.assertEqual(expected_filter_list, filter_list)
+        filter_list = parse_filter_file(self.all_2m_rsp, True)
+        self.assertCountEqual(expected_filter_list, filter_list)
 
 
 class TestPreviousNEOCPParser(TestCase):
@@ -1357,14 +1961,14 @@ class TestPreviousNEOCPParser(TestCase):
     def test_new_crossmatch(self):
         items = ['ZTF02tx = C075WX1 (Apr. 8.66 UT)\n']
         expected = [u'C075WX1', 'ZTF02tx', '', '(Apr. 8.66 UT)']
- 
+
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
 
     def test_new_crossmatch2(self):
         items = [' 2019 GR',  BeautifulSoup('<sub>3</sub>', "html.parser").sub, ' = P10Mrzv (Apr. 8.96 UT)\n']
         expected = [u'P10Mrzv', '2019 GR3', '', '(Apr. 8.96 UT)']
- 
+
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
 
@@ -1378,6 +1982,15 @@ class TestPreviousNEOCPParser(TestCase):
     def test_remove_parentheses(self):
         items = [' (455176) = A10c9Hv (Feb. 15.79 UT)\n']
         expected = [u'A10c9Hv', '455176', '', '(Feb. 15.79 UT)']
+
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+    def test_was_not_confirmed_with_MPEC(self):
+        items = [' P10QYyp was not confirmed (Sept. 4.34 UT)   [see ',
+            BeautifulSoup('<a href="/mpec/K19/K19R24.html"><i>MPEC</i> 2019-R24</a>', "html.parser").a,
+            ']\n']
+        expected = [u'P10QYyp', 'wasnotconfirmed', '', u'(Sept. 4.34 UT)']
 
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
@@ -1744,6 +2357,83 @@ class TestParseNEOCPExtraParams(TestCase):
             self.assertEqual(expected_obj_ids[obj][1], obj_ids[obj][1])
             obj += 1
 
+    def test_parse_neocpep_new_dates_good_multi_entries(self):
+        html = BeautifulSoup(self.table_header +
+                             '''
+        <tr><td><span style="display:none">P10OkU8</span>&nbsp;<input type="checkbox" name="obj" VALUE="P10OkU8"> P10OkU8</td>
+        <td align="right"><span style="display:none">100</span>100&nbsp;&nbsp;&nbsp;</td>
+        <td>&nbsp;&nbsp;2019 05 30.3&nbsp;&nbsp;</td>
+        <td><span style="display:none">135.5475</span>&nbsp;&nbsp;13 33.0&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">052.7566</span>&nbsp;&nbsp;-37 14&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">29.5</span>&nbsp;&nbsp;20.5&nbsp;&nbsp;</td>
+        <td><span style="display:none">J2458634.158700</span>&nbsp;Added May 30.66 UT&nbsp;</td>
+        <td align="center">&nbsp;&nbsp;</td>
+        <td align="right">&nbsp;   4&nbsp;</td>
+        <td align="right">&nbsp;  0.03&nbsp;</td>
+        <td align="right">&nbsp;20.8&nbsp;</td>
+        <td align="right">&nbsp; 0.595&nbsp;</td><tr>
+        <tr><td><span style="display:none">A10dYck</span>&nbsp;<input type="checkbox" name="obj" VALUE="A10dYck"> A10dYck</td>
+        <td align="right"><span style="display:none">100</span>100&nbsp;&nbsp;&nbsp;</td>
+        <td>&nbsp;&nbsp;2019 05 30.4&nbsp;&nbsp;</td>
+        <td><span style="display:none">156.4714</span>&nbsp;&nbsp;14 56.7&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">054.0014</span>&nbsp;&nbsp;-35 59&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">31.4</span>&nbsp;&nbsp;18.6&nbsp;&nbsp;</td>
+        <td><span style="display:none">J2458634.129509</span>&nbsp;Updated May 30.63 UT&nbsp;</td>
+        <td align="center">&nbsp;&nbsp;</td>
+        <td align="right">&nbsp;   7&nbsp;</td>
+        <td align="right">&nbsp;  0.23&nbsp;</td>
+        <td align="right">&nbsp;21.6&nbsp;</td>
+        <td align="right">&nbsp; 0.281&nbsp;</td><tr>
+        ''' + self.table_footer, "html.parser")
+
+        obj_ids = parse_NEOCP_extra_params(html)
+        expected_obj_ids = [(u'P10OkU8', {'score' : 100,
+                                        'discovery_date' : datetime(2019, 5, 30, 7, 12, 00),
+                                        'num_obs' : 4,
+                                        'arc_length' : 0.03,
+                                        'not_seen' :  0.595,
+                                        'update_time': datetime(2019, 5, 30, 15, 48, 32),
+                                        'updated' : False
+                                }),
+                           (u'A10dYck', {'score' : 100,
+                                        'discovery_date' : datetime(2019, 5, 30, 9, 36, 00),
+                                        'num_obs' : 7,
+                                        'arc_length' : 0.23,
+                                        'not_seen' :  0.281,
+                                        'update_time': datetime(2019, 5, 30, 15, 6, 30),
+                                        'updated' : True
+                                })
+        ]
+        self.assertNotEqual(None, obj_ids)
+        obj = 0
+        while obj < len(expected_obj_ids):
+            self.assertEqual(expected_obj_ids[obj][0], obj_ids[obj][0])
+            self.assertEqual(expected_obj_ids[obj][1], obj_ids[obj][1])
+            obj += 1
+
+    @patch('astrometrics.sources_subs.fetchpage_and_make_soup', mock_fetchpage_and_make_soup)
+    def test_parse_neocpep_pccp_page_down(self):
+        """Test of 'Moved to the PCCP' entries"""
+
+        html = BeautifulSoup(self.table_header +
+                             '''
+        <tr><td><span style="display:none">WR0159E</span><center>WR0159E</center></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Moved to the <a href="/iau/NEO/pccp_tabular.html">PCCP</a></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td><td></td></tr>
+        ''' + self.table_footer, "html.parser")
+
+        obj_ids = parse_NEOCP_extra_params(html)
+        expected_obj_ids = []
+        self.assertEqual(expected_obj_ids, obj_ids)
+
 
 class TestParsePCCP(TestCase):
 
@@ -1876,6 +2566,84 @@ class TestParsePCCP(TestCase):
             self.assertEqual(expected_obj_ids[obj][1], obj_ids[obj][1])
             obj += 1
 
+    def test_parse_pccp_newdates_multientries(self):
+
+        html = BeautifulSoup(self.table_header +
+                             '''
+        <tr><td><span style="display:none">A10dRr5</span>&nbsp;<input type="checkbox" name="obj" VALUE="A10dRr5"> A10dRr5</td>
+        <td align="right"><span style="display:none">086</span> 86&nbsp;&nbsp;&nbsp;</td>
+        <td>&nbsp;&nbsp;2019 05 27.6&nbsp;&nbsp;</td>
+        <td><span style="display:none">226.1313</span>&nbsp;&nbsp;19 35.4&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">154.5926</span>&nbsp;&nbsp;+64 35&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">30.7</span>&nbsp;&nbsp;19.3&nbsp;&nbsp;</td>
+        <td><span style="display:none">J2458634.240898</span>&nbsp;Updated May 30.74 UT&nbsp;</td>
+        <td align="center">&nbsp;&nbsp;</td>
+        <td align="right">&nbsp;  60&nbsp;</td>
+        <td align="right">&nbsp;  2.76&nbsp;</td>
+        <td align="right">&nbsp;13.4&nbsp;</td>
+        <td align="right">&nbsp; 0.568&nbsp;</td><tr>
+        <tr><td><span style="display:none">C0P3XJ2</span>&nbsp;<input type="checkbox" name="obj" VALUE="C0P3XJ2"> C0P3XJ2</td>
+        <td align="right"><span style="display:none">035</span> 35&nbsp;&nbsp;&nbsp;</td>
+        <td>&nbsp;&nbsp;2019 05 26.4&nbsp;&nbsp;</td>
+        <td><span style="display:none">180.6551</span>&nbsp;&nbsp;16 33.5&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">085.3800</span>&nbsp;&nbsp;-04 37&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">29.6</span>&nbsp;&nbsp;20.4&nbsp;&nbsp;</td>
+        <td><span style="display:none">J2458633.792922</span>&nbsp;Updated May 30.29 UT&nbsp;</td>
+        <td align="center">&nbsp;&nbsp;</td>
+        <td align="right">&nbsp;  51&nbsp;</td>
+        <td align="right">&nbsp;  3.91&nbsp;</td>
+        <td align="right">&nbsp;14.9&nbsp;</td>
+        <td align="right">&nbsp; 0.611&nbsp;</td><tr>
+        <tr><td><span style="display:none">A10dQbl</span>&nbsp;<input type="checkbox" name="obj" VALUE="A10dQbl"> A10dQbl</td>
+        <td align="right"><span style="display:none">035</span> 35&nbsp;&nbsp;&nbsp;</td>
+        <td>&nbsp;&nbsp;2019 05 25.6&nbsp;&nbsp;</td>
+        <td><span style="display:none">297.7413</span>&nbsp;&nbsp;00 21.8&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">096.3491</span>&nbsp;&nbsp;+06 20&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">32.7</span>&nbsp;&nbsp;17.3&nbsp;&nbsp;</td>
+        <td><span style="display:none">J2458633.646664</span>&nbsp;Added May 30.15 UT&nbsp;</td>
+        <td align="center">&nbsp;&nbsp;</td>
+        <td align="right">&nbsp;  51&nbsp;</td>
+        <td align="right">&nbsp;  4.33&nbsp;</td>
+        <td align="right">&nbsp;13.0&nbsp;</td>
+        <td align="right">&nbsp; 0.970&nbsp;</td><tr>
+        ''' + self.table_footer, "html.parser")
+
+        obj_ids = parse_PCCP(html)
+        expected_obj_ids = [(u'A10dRr5', {'score' : 86,
+                                        'discovery_date' : datetime(2019, 5, 27, 14, 24),
+                                        'num_obs' : 60,
+                                        'arc_length' :  2.76,
+                                        'not_seen' : 0.568,
+                                        'update_time': datetime(2019, 5, 30, 17, 46, 54),
+                                        'updated' : True
+                                       }
+                            ),
+                            (u'C0P3XJ2', {'score' : 35,
+                                        'discovery_date' : datetime(2019, 5, 26, 9, 36, 0),
+                                        'num_obs' : 51,
+                                        'arc_length' :  3.91,
+                                        'not_seen' : 0.611,
+                                        'update_time': datetime(2019, 5, 30, 7, 1, 48),
+                                        'updated' : True
+                                       }
+                            ),
+                            (u'A10dQbl', {'score' : 35,
+                                        'discovery_date' : datetime(2019, 5, 25, 14, 24),
+                                        'num_obs' : 51,
+                                        'arc_length' :  4.33,
+                                        'not_seen' : 0.970,
+                                        'update_time': datetime(2019, 5, 30,  3, 31, 12),
+                                        'updated' : False
+                                       }
+                            ),
+                            ]
+        self.assertNotEqual(None, obj_ids)
+        obj = 0
+        while obj < len(expected_obj_ids):
+            self.assertEqual(expected_obj_ids[obj][0], obj_ids[obj][0])
+            self.assertEqual(expected_obj_ids[obj][1], obj_ids[obj][1])
+            obj += 1
+
 
 class TestFetchMPCOrbit(TestCase):
 
@@ -1888,6 +2656,10 @@ class TestFetchMPCOrbit(TestCase):
 
         test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcdb_Comet243P.html'), 'r')
         self.test_multiple_epochs_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcdb_Comet2020H3.html'), 'r')
+        self.test_missing_data_page = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
 
         # Set to None to show all differences
@@ -2113,6 +2885,16 @@ class TestFetchMPCOrbit(TestCase):
         elements = parse_mpcorbit(self.test_multiple_epochs_page, epoch)
         self.assertEqual(expected_elements, elements)
 
+    def test_fetch_C2020H3(self):
+
+        epoch = datetime(2020, 5, 1, 12, 0, 0)
+
+        expected_elements = {}
+
+        elements = parse_mpcorbit(self.test_missing_data_page, epoch)
+
+        self.assertEqual(expected_elements, elements)
+
     def test_badpage(self):
 
         expected_elements = {}
@@ -2135,7 +2917,7 @@ class TestReadMPCOrbitFile(TestCase):
 
     def test1(self):
 
-        expected_orblines = ['K19E00N 21.17  0.15 K1939 343.19351   46.63108  192.93185    9.77594  0.6187870  0.30650105   2.1786196    FO 190311   190   1   59 days 0.21 M-P 06  NEOCPNomin 0000 2019 EN                     20190309',]
+        expected_orblines = ['K19E00N 21.17  0.15 K1939 343.19351   46.63108  192.93185    9.77594  0.6187870  0.30650105   2.1786196    FO 190311   190   1   59 days 0.21 M-P 06  NEOCPNomin 0000 2019 EN                     20190309']
 
         orblines = read_mpcorbit_file(self.orbit_file)
 
@@ -2191,6 +2973,18 @@ class TestParseMPCObsFormat(TestCase):
                             't_* C_l' : u'     LSCTLZZ* C2018 10 19.36445 04 16 45.66 -02 06 29.9          18.7 Rq     W85',
                             't_*KC_l' : u'     LSCTLZZ*KC2018 10 18.42125 04 16 20.07 -02 07 27.5          19.2 Vq     W86',
                             't_*IC_l' : u'     CPTTLAZ*IC2018 10 18.92125 04 16 20.07 -02 07 27.5          19.2 rV     L09',
+                            'cp_ A_l' : u'0289PI19W010  A1819 12 14.22911 12 47 12.8  +06 18 32                   BJ824007',
+                            'cp_ C_l' : u'0289PK03W25Y  C2003 10 25.16974 00 25 15.12 -19 59 45.5          18.8 Toj1989699',
+                            'c_ C_l'  : u'0289P         C2015 05 18.19229 13 15 46.04 -02 26 41.9          17.3 Nu94436G30',
+                            'c_ M_l2P': u'0002P         M1881 08 26.07540 04 02 14.37 +33 31 38.5                pAN114522',
+                            'c_ A_l2P': u'0002P         A1957 07 28.40075 03 42 44.76 +28 38 23.3          19.3 N AJ070689',
+                            'c_KC_l2P': u'0002P        KC2019 10 04.62400 23 25 58.25 +04 03 54.3          18.2 Tq~01Y1Q11',
+                            'c_ A_l46P':u'0046PJ54R020  A1954 10 28.53048 09 53 23.37 +18 44 42.1                 AJ060662',
+                            'c_ C_l73P':u'0073P         C1995 12 22.36597 22 02 32.30 -21 36 12.0                 26211897',
+                            'c_aC_l73P':u'0073P      a  C1995 12 23.12177 22 04 58.78 -21 21 19.8                 26444693',
+                           'c_btC_l73P':u'0073P     bt  C2017 09 27.20655 03 00 10.55 +05 17 00.6          17.0 Tq@6559J22',
+                            'cp_bKC_l': u'    CK15E61b KC2017 12 17.94440 02 44 22.10 +15 55 27.3          18.5 Nq@7755160',
+                            'cp_cKC_l': u'0332PK10V01c KC2016 02 19.06978 08 49 10.77 +34 23 21.4          18.1 Nq97706I81',
                           }
         self.maxDiff = None
 
@@ -2466,8 +3260,10 @@ class TestParseMPCObsFormat(TestCase):
 
         params = parse_mpcobs(self.test_lines['p_quoteC_h'])
 
+        self.compare_dict(expected_params, params)
+
     def test_cp_plingC_h(self):
-        expected_params = { 'body'  : '0315P',
+        expected_params = { 'body'  : '315P',
                             'flags' : '!',
                             'obs_type'  : 'C',
                             'obs_date'  : datetime(2013, 11,  6, 3, 30, 18, int(0.3744*1e6)),
@@ -2503,6 +3299,222 @@ class TestParseMPCObsFormat(TestCase):
 
         self.compare_dict(expected_params, params)
 
+    def test_cp_A_l(self):
+        """Test for comet with number and provisional designation, old-style A-observation"""
+        expected_params = { 'body'  : '289P',
+                            'flags' : ' ',
+                            'obs_type'  : 'A',
+                            'obs_date'  : datetime(1819, 12, 14,  5, 29, 55, int(0.1040*1e6)),
+                            'obs_ra'    : 191.803333333,
+                            'obs_dec'   : 6.30888888889,
+                            'obs_mag'   : None,
+                            'filter'    : ' ',
+                            'astrometric_catalog' : '',
+                            'site_code' : '007',
+                            'discovery' : False,
+                            'lco_discovery' : False
+                          }
+        params = parse_mpcobs(self.test_lines['cp_ A_l'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_cp_C_l(self):
+        """Test for comet with number and provisional designation, new-style (C)CD observation"""
+        expected_params = { 'body'  : '289P',
+                            'flags' : ' ',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2003, 10, 25,  4,  4, 25, int(0.536*1e6)),
+                            'obs_ra'    : 6.313,
+                            'obs_dec'   : -19.9959722222,
+                            'obs_mag'   : 18.8,
+                            'filter'    : 'T',
+                            'astrometric_catalog' : 'USNO-B1',
+                            'site_code' : '699',
+                            'discovery' : False,
+                            'lco_discovery' : False
+                          }
+        params = parse_mpcobs(self.test_lines['cp_ C_l'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_c_C_l(self):
+        """Test for comet with number only, new-style (C)CD observation"""
+        expected_params = { 'body'  : '289P',
+                            'flags' : ' ',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2015,  5, 18,  4, 36, 53, int(0.856*1e6)),
+                            'obs_ra'    : 198.941833333,
+                            'obs_dec'   : -2.44497222222,
+                            'obs_mag'   : 17.3,
+                            'filter'    : 'N',
+                            'astrometric_catalog' : 'UCAC-3',
+                            'site_code' : 'G30',
+                            'discovery' : False,
+                            'lco_discovery' : False
+                          }
+        params = parse_mpcobs(self.test_lines['c_ C_l'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_c_M_l_2P(self):
+        """Test for comet 2P with number only, really old-style (M)icrometer observation (to be ignored)"""
+        expected_params = {}
+        params = parse_mpcobs(self.test_lines['c_ M_l2P'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_c_A_l_2P(self):
+        """Test for comet 2P with number only, old-style A-observation"""
+        expected_params = { 'body'  : '2P',
+                            'flags' : ' ',
+                            'obs_type'  : 'A',
+                            'obs_date'  : datetime(1957,  7, 28,  9, 37,  4, int(0.8*1e6)),
+                            'obs_ra'    : 55.6865,
+                            'obs_dec'   : 28.6398055556,
+                            'obs_mag'   : 19.3,
+                            'filter'    : 'N',
+                            'astrometric_catalog' : '',
+                            'site_code' : '689',
+                            'discovery' : False,
+                            'lco_discovery' : False
+                          }
+        params = parse_mpcobs(self.test_lines['c_ A_l2P'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_c_KC_l_2P(self):
+        """Test for comet 2P with number only, new-style (C)CD observation"""
+        expected_params = { 'body'  : '2P',
+                            'flags' : 'K',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2019, 10,  4, 14, 58, 33, int(0.6*1e6)),
+                            'obs_ra'    : 351.492708333,
+                            'obs_dec'   : 4.06508333333,
+                            'obs_mag'   : 18.2,
+                            'filter'    : 'T',
+                            'astrometric_catalog' : 'UCAC-4',
+                            'site_code' : 'Q11',
+                            'discovery' : False,
+                            'lco_discovery' : False
+                          }
+        params = parse_mpcobs(self.test_lines['c_KC_l2P'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_c_A_l_46P(self):
+        """Test for comet 46P with number and provisional desigination, old-style A-observation"""
+        expected_params = { 'body'  : '46P',
+                            'flags' : ' ',
+                            'obs_type'  : 'A',
+                            'obs_date'  : datetime(1954, 10, 28, 12, 43, 53, int(0.472*1e6)),
+                            'obs_ra'    : 148.347375,
+                            'obs_dec'   : 18.7450277778,
+                            'obs_mag'   : None,
+                            'filter'    : ' ',
+                            'astrometric_catalog' : '',
+                            'site_code' : '662',
+                            'discovery' : False,
+                            'lco_discovery' : False
+                          }
+        params = parse_mpcobs(self.test_lines['c_ A_l46P'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_c_C_l_73P(self):
+        """Test for comet 73P (whole comet) with number only, new-style (C)CD observation"""
+        expected_params = { 'body'  : '73P',
+                            'flags' : ' ',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(1995, 12, 22,  8, 46, 59, int(0.808*1e6)),
+                            'obs_ra'    : 330.634583333,
+                            'obs_dec'   : -21.6033333333,
+                            'obs_mag'   : None,
+                            'filter'    : ' ',
+                            'astrometric_catalog' : '',
+                            'site_code' : '897',
+                            'discovery' : False,
+                            'lco_discovery' : False
+                          }
+        params = parse_mpcobs(self.test_lines['c_ C_l73P'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_c_aC_l_73P(self):
+        """Test for comet 73P ('a' fragment) with number only, new-style (C)CD observation"""
+        expected_params = { 'body'  : '73P-A',
+                            'flags' : ' ',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(1995, 12, 23,  2, 55, 20, int(0.928*1e6)),
+                            'obs_ra'    : 331.244916667,
+                            'obs_dec'   : -21.3555,
+                            'obs_mag'   : None,
+                            'filter'    : ' ',
+                            'astrometric_catalog' : '',
+                            'site_code' : '693',
+                            'discovery' : False,
+                            'lco_discovery' : False
+                          }
+        params = parse_mpcobs(self.test_lines['c_aC_l73P'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_c_btC_l_73P(self):
+        """Test for comet 73P ('bt' fragment) with number only, new-style (C)CD observation"""
+        expected_params = { 'body'  : '73P-BT',
+                            'flags' : ' ',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2017,  9, 27,  4, 57, 25, int(0.92*1e6)),
+                            'obs_ra'    : 45.0439583333,
+                            'obs_dec'   : 5.2835,
+                            'obs_mag'   : 17.0,
+                            'filter'    : 'T',
+                            'astrometric_catalog' : 'UCAC-4',
+                            'site_code' : 'J22',
+                            'discovery' : False,
+                            'lco_discovery' : False
+                          }
+        params = parse_mpcobs(self.test_lines['c_btC_l73P'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_cp_bKC_l(self):
+        """Test for comet C/2015-E61-B ('b' fragment) with provisional desigination only, new-style (C)CD observation"""
+        expected_params = { 'body'  : 'CK15E61b',
+                            'flags' : 'K',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2017, 12, 17, 22, 39, 56, int(0.16*1e6)),
+                            'obs_ra'    : 41.0920833333,
+                            'obs_dec'   : 15.92425,
+                            'obs_mag'   : 18.5,
+                            'filter'    : 'N',
+                            'astrometric_catalog' : 'UCAC-4',
+                            'site_code' : '160',
+                            'discovery' : False,
+                            'lco_discovery' : False
+                          }
+        params = parse_mpcobs(self.test_lines['cp_bKC_l'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_cp_cKC_l(self):
+        """Test for comet 332P-C = P/2010 V1-C (332P 'c' fragment) with number and provisional desigination only, new-style (C)CD observation"""
+        expected_params = { 'body'  : '332P-C',
+                            'flags' : 'K',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2016,  2, 19,  1, 40, 28, int(0.992*1e6)),
+                            'obs_ra'    : 132.294875,
+                            'obs_dec'   : 34.3892777778,
+                            'obs_mag'   : 18.1,
+                            'filter'    : 'N',
+                            'astrometric_catalog' : 'UCAC-4',
+                            'site_code' : 'I81',
+                            'discovery' : False,
+                            'lco_discovery' : False
+                          }
+        params = parse_mpcobs(self.test_lines['cp_cKC_l'])
+
+        self.compare_dict(expected_params, params)
+
     def test_np_fourA_l(self):
         expected_params = { 'body'  : '24554',
                             'flags' : ' ',
@@ -2524,7 +3536,6 @@ class TestParseMPCObsFormat(TestCase):
     def test_np_fourX_l(self):
         expected_params = { }
         params = parse_mpcobs(self.test_lines['np_4X_l'])
-
 
         self.compare_dict(expected_params, params)
 
@@ -2678,6 +3689,12 @@ class TestFetchNEOCPObservations(TestCase):
         observations = fetch_NEOCP_observations(page)
         self.assertEqual(expected, observations)
 
+    @patch('astrometrics.sources_subs.fetchpage_and_make_soup', mock_fetchpage_and_make_soup)
+    def test_page_down(self):
+        observations = fetch_NEOCP_observations("test_body")
+        expected = None
+        self.assertEqual(expected, observations)
+
 
 class TestIMAPLogin(TestCase):
 
@@ -2749,7 +3766,7 @@ class TestIMAPLogin(TestCase):
         mailbox = MagicMock()
         mailbox.select.return_value = ("OK", [b'1'])
         mailbox.search.return_value = ("OK", [b'1'])
-        mailbox.fetch.return_value =  ("OK", [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 CV246 - Observations Requested\r\nDate: Tue, 18 Feb 2016 21:27:04 +000\r\n')])
+        mailbox.fetch.return_value = ("OK", [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 CV246 - Observations Requested\r\nDate: Tue, 18 Feb 2016 21:27:04 +000\r\n')])
 
         expected_targets = ['2016 CV246']
         targets = fetch_NASA_targets(mailbox)
@@ -2762,7 +3779,7 @@ class TestIMAPLogin(TestCase):
         mailbox = MagicMock()
         mailbox.select.return_value = ("OK", [b'1'])
         mailbox.search.return_value = ("OK", [b'1'])
-        mailbox.fetch.return_value =  ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-birds-observations] 2016 CV246 - Observations Requested\r\nDate: Tue, 16 Feb 2018 21:27:04 +000\r\n')])
+        mailbox.fetch.return_value = ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-birds-observations] 2016 CV246 - Observations Requested\r\nDate: Tue, 16 Feb 2018 21:27:04 +000\r\n')])
 
         expected_targets = []
         targets = fetch_NASA_targets(mailbox)
@@ -2775,7 +3792,7 @@ class TestIMAPLogin(TestCase):
         mailbox = MagicMock()
         mailbox.select.return_value = ("OK", [b'1'])
         mailbox.search.return_value = ("OK", [b'1'])
-        mailbox.fetch.return_value =  ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 CV246 - Radar Requested\r\nDate: Tue, 18 Feb 2016 21:27:04 +000\r\n')])
+        mailbox.fetch.return_value = ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 CV246 - Radar Requested\r\nDate: Tue, 18 Feb 2016 21:27:04 +000\r\n')])
 
         expected_targets = []
         targets = fetch_NASA_targets(mailbox)
@@ -2788,7 +3805,7 @@ class TestIMAPLogin(TestCase):
         mailbox = MagicMock()
         mailbox.select.return_value = ("OK", [b'1'])
         mailbox.search.return_value = ("OK", [b'1'])
-        mailbox.fetch.return_value =  ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 22 Feb 2016 20:27:04 -0500\r\n')])
+        mailbox.fetch.return_value = ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 22 Feb 2016 20:27:04 -0500\r\n')])
 
         expected_targets = ['2016 BA14']
         targets = fetch_NASA_targets(mailbox)
@@ -2801,7 +3818,7 @@ class TestIMAPLogin(TestCase):
         mailbox = MagicMock()
         mailbox.select.return_value = ("OK", [b'1'])
         mailbox.search.return_value = ("OK", [b'1'])
-        mailbox.fetch.return_value =  ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 13 Feb 2016 20:27:04 -0800\r\n')])
+        mailbox.fetch.return_value = ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 13 Feb 2016 20:27:04 -0800\r\n')])
 
         expected_targets = []
         targets = fetch_NASA_targets(mailbox)
@@ -2847,7 +3864,7 @@ class TestIMAPLogin(TestCase):
         mailbox = MagicMock()
         mailbox.select.return_value = ("OK", [b'1'])
         mailbox.search.return_value = ("OK", [b'1'])
-        mailbox.fetch.return_value =  ('OK', [(b'1 (RFC822 {12326}', b'Subject: Fwd: [small-bodies-observations] 2016 DJ - Observations Requested\r\nDate: Tue, 23 Feb 2016 11:25:29 -0800\r\n')])
+        mailbox.fetch.return_value = ('OK', [(b'1 (RFC822 {12326}', b'Subject: Fwd: [small-bodies-observations] 2016 DJ - Observations Requested\r\nDate: Tue, 23 Feb 2016 11:25:29 -0800\r\n')])
 
         expected_targets = ['2016 DJ']
         targets = fetch_NASA_targets(mailbox)
@@ -2860,7 +3877,7 @@ class TestIMAPLogin(TestCase):
         mailbox = MagicMock()
         mailbox.select.return_value = ("OK", [b'1'])
         mailbox.search.return_value = ("OK", [b'1'])
-        mailbox.fetch.return_value =  ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 13 Feb 2016 20:27:04 -0800\r\n')])
+        mailbox.fetch.return_value = ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 13 Feb 2016 20:27:04 -0800\r\n')])
 
         expected_targets = []
         targets = fetch_NASA_targets(mailbox, date_cutoff=2)
@@ -2873,7 +3890,7 @@ class TestIMAPLogin(TestCase):
         mailbox = MagicMock()
         mailbox.select.return_value = ("OK", [b'1'])
         mailbox.search.return_value = ("OK", [b'1'])
-        mailbox.fetch.return_value =  ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 13 Feb 2016 20:27:04 -0800\r\n')])
+        mailbox.fetch.return_value = ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 13 Feb 2016 20:27:04 -0800\r\n')])
 
         expected_targets = ['2016 BA14']
         targets = fetch_NASA_targets(mailbox, date_cutoff=2)
@@ -2886,7 +3903,7 @@ class TestIMAPLogin(TestCase):
         mailbox = MagicMock()
         mailbox.select.return_value = ("OK", [b'1'])
         mailbox.search.return_value = ("OK", [b'1'])
-        mailbox.fetch.return_value =  ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 TQ11, 2016 SR2, 2016 NP56,\r\n\t2016 ND1- Observations Requested\r\nDate: Mon, 24 Oct 2016 20:20:57 +0000\r\n')])
+        mailbox.fetch.return_value = ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 TQ11, 2016 SR2, 2016 NP56,\r\n\t2016 ND1- Observations Requested\r\nDate: Mon, 24 Oct 2016 20:20:57 +0000\r\n')])
 
         expected_targets = ['2016 TQ11', '2016 SR2', '2016 NP56', '2016 ND1']
         targets = fetch_NASA_targets(mailbox, date_cutoff=2)
@@ -2905,7 +3922,7 @@ class TestSFUFetch(TestCase):
 
     def test(self):
 
-        expected_result = (datetime(2018,1,15,17,44,10), 70*self.sfu)
+        expected_result = (datetime(2018, 1, 15, 17, 44, 10), 70*self.sfu)
 
         sfu_result = fetch_sfu(self.test_sfu_page)
 
@@ -2959,12 +3976,13 @@ class TestSFUFetch(TestCase):
                 </body></html>
                 '''
         page = BeautifulSoup(html, 'html.parser')
-        expected_result = (datetime(2018,1,15,17,44,10), None)
+        expected_result = (datetime(2018, 1, 15, 17, 44, 10), None)
 
         sfu_result = fetch_sfu(page)
 
         self.assertEqual(expected_result[0], sfu_result[0])
         self.assertEqual(expected_result[1], sfu_result[1])
+
 
 class TestConfigureDefaults(TestCase):
 
@@ -3201,6 +4219,25 @@ class TestConfigureDefaults(TestCase):
 
         self.assertEqual(expected_params, params)
 
+    def test_elp_num2_sinistro(self):
+        test_params = {
+              'exp_count': 42,
+              'exp_time': 42.0,
+              'site_code': 'V39',
+              }
+
+        expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
+                            'pondtelescope': '1m0',
+                            'observatory': '',
+                            'exp_type': 'EXPOSE',
+                            'site': 'ELP',
+                            'binning': 1}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
     def test_1m_sinistro_cpt(self):
         expected_params = { 'binning': 1,
                             'instrument': '1M0-SCICAM-SINISTRO',
@@ -3410,256 +4447,44 @@ class TestConfigureDefaults(TestCase):
         self.assertEqual(params, expected_params)
 
 
-class TestMakeMolecule(TestCase):
+class TestMakeconfiguration(TestCase):
 
     def setUp(self):
+
+        self.target = {'type': 'ICRS', 'name' : 'SA107-684', 'ra' : 234.3, 'dec' : -0.16}
 
         self.params_2m0_imaging = configure_defaults({ 'site_code': 'F65',
                                                        'exp_time' : 60.0,
                                                        'exp_count' : 12,
-                                                       'filter_pattern' : 'solar'})
+                                                       'filter_pattern' : 'solar',
+                                                       'target' : self.target,
+                                                       'constraints': {
+                                                         'max_airmass': 2.0,
+                                                         'min_lunar_distance': 30.0
+                                                       }})
         self.filt_2m0_imaging = build_filter_blocks(self.params_2m0_imaging['filter_pattern'],
                                                     self.params_2m0_imaging['exp_count'])[0]
 
         self.params_1m0_imaging = configure_defaults({ 'site_code': 'K92',
                                                        'exp_time' : 60.0,
                                                        'exp_count' : 12,
-                                                       'filter_pattern' : 'w'})
+                                                       'filter_pattern' : 'w',
+                                                       'target' : self.target,
+                                                       'constraints': {
+                                                         'max_airmass': 2.0,
+                                                         'min_lunar_distance': 30.0
+                                                       }})
         self.filt_1m0_imaging = build_filter_blocks(self.params_1m0_imaging['filter_pattern'],
                                                     self.params_1m0_imaging['exp_count'])[0]
         self.params_0m4_imaging = configure_defaults({ 'site_code': 'Z21',
                                                        'exp_time' : 90.0,
                                                        'exp_count' : 18,
-                                                       'filter_pattern' : 'w'})
-        self.filt_0m4_imaging = build_filter_blocks(self.params_0m4_imaging['filter_pattern'],
-                                                    self.params_0m4_imaging['exp_count'])[0]
-
-        self.params_2m0_spectroscopy = configure_defaults({ 'site_code': 'F65',
-                                                            'instrument_code' : 'F65-FLOYDS',
-                                                            'spectroscopy' : True,
-                                                            'exp_time' : 180.0,
-                                                            'exp_count' : 1})
-        self.filt_2m0_spectroscopy = ['slit_6.0as', 1]
-
-    def test_2m_imaging(self):
-
-        expected_molecule = {
-                             'type' : 'EXPOSE',
-                             'exposure_count' : 12,
-                             'exposure_time' : 60.0,
-                             'bin_x'       : 2,
-                             'bin_y'       : 2,
-                             'instrument_name' : '2M0-SCICAM-SPECTRAL',
-                             'filter'      : 'solar',
-                             'ag_mode'     : 'OPTIONAL',
-                             'ag_name'     : ''
-                            }
-
-        molecule = make_molecule(self.params_2m0_imaging, self.filt_2m0_imaging)
-
-        self.assertEqual(expected_molecule, molecule)
-
-    def test_1m_imaging(self):
-
-        expected_molecule = {
-                             'type' : 'EXPOSE',
-                             'exposure_count' : 12,
-                             'exposure_time' : 60.0,
-                             'bin_x'       : 1,
-                             'bin_y'       : 1,
-                             'instrument_name' : '1M0-SCICAM-SINISTRO',
-                             'filter'      : 'w',
-                             'ag_mode'     : 'OPTIONAL',
-                             'ag_name'     : ''
-                            }
-
-        molecule = make_molecule(self.params_1m0_imaging, self.filt_1m0_imaging)
-
-        self.assertEqual(expected_molecule, molecule)
-
-    def test_0m4_imaging(self):
-
-        expected_molecule = {
-                             'type' : 'EXPOSE',
-                             'exposure_count' : 18,
-                             'exposure_time' : 90.0,
-                             'bin_x'       : 1,
-                             'bin_y'       : 1,
-                             'instrument_name' : '0M4-SCICAM-SBIG',
-                             'filter'      : 'w',
-                             'ag_mode'     : 'OPTIONAL',
-                             'ag_name'     : ''
-                            }
-
-        molecule = make_molecule(self.params_0m4_imaging, self.filt_0m4_imaging)
-
-        self.assertEqual(expected_molecule, molecule)
-
-    def test_2m_spectroscopy_spectrum(self):
-
-        expected_molecule = {
-                             'type' : 'SPECTRUM',
-                             'exposure_count' : 1,
-                             'exposure_time' : 180.0,
-                             'bin_x'       : 1,
-                             'bin_y'       : 1,
-                             'instrument_name' : '2M0-FLOYDS-SCICAM',
-                             'spectra_slit': 'slit_6.0as',
-                             'ag_mode'     : 'ON',
-                             'ag_name'     : '',
-                             'acquire_mode': 'BRIGHTEST',
-                             'ag_exp_time': 10,
-                             'acquire_exp_time': 10,
-                             'acquire_radius_arcsec': 15.0
-                            }
-
-        molecule = make_molecule(self.params_2m0_spectroscopy, self.filt_2m0_spectroscopy)
-
-        self.assertEqual(expected_molecule, molecule)
-
-    def test_2m_spectroscopy_arc(self):
-
-        self.params_2m0_spectroscopy['exp_type'] = 'ARC'
-
-        expected_molecule = {
-                             'type' : 'ARC',
-                             'exposure_count' : 1,
-                             'exposure_time' : 60.0,
-                             'bin_x'       : 1,
-                             'bin_y'       : 1,
-                             'instrument_name' : '2M0-FLOYDS-SCICAM',
-                             'spectra_slit': 'slit_6.0as',
-                             'ag_mode'     : 'OFF',
-                             'ag_name'     : '',
-                             'acquire_mode': 'BRIGHTEST',
-                             'ag_exp_time': 10,
-                             'acquire_exp_time': 10,
-                             'acquire_radius_arcsec': 15.0
-                            }
-
-        molecule = make_molecule(self.params_2m0_spectroscopy, self.filt_2m0_spectroscopy)
-
-        self.assertEqual(expected_molecule, molecule)
-
-    def test_2m_spectroscopy_arc_multiple_spectra(self):
-
-        self.params_2m0_spectroscopy['exp_type'] = 'ARC'
-        self.params_2m0_spectroscopy['exp_count'] = 2
-
-        expected_molecule = {
-                             'type' : 'ARC',
-                             'exposure_count' : 1,
-                             'exposure_time' : 60.0,
-                             'bin_x'       : 1,
-                             'bin_y'       : 1,
-                             'instrument_name' : '2M0-FLOYDS-SCICAM',
-                             'spectra_slit': 'slit_6.0as',
-                             'ag_mode'     : 'OFF',
-                             'ag_name'     : '',
-                             'acquire_mode': 'BRIGHTEST',
-                             'ag_exp_time': 10,
-                             'acquire_exp_time': 10,
-                             'acquire_radius_arcsec': 15.0
-                            }
-
-        molecule = make_molecule(self.params_2m0_spectroscopy, self.filt_2m0_spectroscopy)
-
-        self.assertEqual(expected_molecule, molecule)
-
-    def test_2m_spectroscopy_lampflat(self):
-
-        self.params_2m0_spectroscopy['exp_type'] = 'LAMP_FLAT'
-
-        expected_molecule = {
-                             'type' : 'LAMP_FLAT',
-                             'exposure_count' : 1,
-                             'exposure_time' : 20.0,
-                             'bin_x'       : 1,
-                             'bin_y'       : 1,
-                             'instrument_name' : '2M0-FLOYDS-SCICAM',
-                             'spectra_slit': 'slit_6.0as',
-                             'ag_mode'     : 'OFF',
-                             'ag_name'     : '',
-                             'acquire_mode': 'BRIGHTEST',
-                             'ag_exp_time': 10,
-                             'acquire_exp_time': 10,
-                             'acquire_radius_arcsec': 15.0
-                            }
-
-        molecule = make_molecule(self.params_2m0_spectroscopy, self.filt_2m0_spectroscopy)
-
-        self.assertEqual(expected_molecule, molecule)
-
-    def test_2m_spectroscopy_lampflat_multiple_spectra(self):
-
-        self.params_2m0_spectroscopy['exp_type'] = 'LAMP_FLAT'
-        self.params_2m0_spectroscopy['exp_count'] = 42
-
-        expected_molecule = {
-                             'type' : 'LAMP_FLAT',
-                             'exposure_count' : 1,
-                             'exposure_time' : 20.0,
-                             'bin_x'       : 1,
-                             'bin_y'       : 1,
-                             'instrument_name' : '2M0-FLOYDS-SCICAM',
-                             'spectra_slit': 'slit_6.0as',
-                             'ag_mode'     : 'OFF',
-                             'ag_name'     : '',
-                             'acquire_mode': 'BRIGHTEST',
-                             'ag_exp_time': 10,
-                             'acquire_exp_time': 10,
-                             'acquire_radius_arcsec': 15.0
-                            }
-
-        molecule = make_molecule(self.params_2m0_spectroscopy, self.filt_2m0_spectroscopy)
-
-        self.assertEqual(expected_molecule, molecule)
-
-    def test_2m_spectroscopy_spectrum_different_slit(self):
-
-        expected_molecule = {
-                             'type' : 'SPECTRUM',
-                             'exposure_count' : 1,
-                             'exposure_time' : 180.0,
-                             'bin_x'       : 1,
-                             'bin_y'       : 1,
-                             'instrument_name' : '2M0-FLOYDS-SCICAM',
-                             'spectra_slit': 'slit_2.0as',
-                             'ag_mode'     : 'ON',
-                             'ag_name'     : '',
-                             'acquire_mode': 'BRIGHTEST',
-                             'ag_exp_time': 10,
-                             'acquire_exp_time': 10,
-                             'acquire_radius_arcsec': 15.0
-                            }
-
-        molecule = make_molecule(self.params_2m0_spectroscopy, ['slit_2.0as', 1])
-
-        self.assertEqual(expected_molecule, molecule)
-
-
-class TestMakeMolecules(TestCase):
-
-    def setUp(self):
-
-        self.params_2m0_imaging = configure_defaults({ 'site_code': 'F65',
-                                                       'exp_time' : 60.0,
-                                                       'exp_count' : 12,
-                                                       'filter_pattern' : 'solar'})
-        self.filt_2m0_imaging = build_filter_blocks(self.params_2m0_imaging['filter_pattern'],
-                                                    self.params_2m0_imaging['exp_count'])[0]
-
-        self.params_1m0_imaging = configure_defaults({ 'site_code': 'K92',
-                                                       'exp_time' : 60.0,
-                                                       'exp_count' : 12,
-                                                       'filter_pattern' : 'w'})
-
-        self.filt_1m0_imaging = build_filter_blocks(self.params_1m0_imaging['filter_pattern'],
-                                                    self.params_1m0_imaging['exp_count'])[0]
-        self.params_0m4_imaging = configure_defaults({ 'site_code': 'Z21',
-                                                       'exp_time' : 90.0,
-                                                       'exp_count' : 18,
-                                                       'filter_pattern' : 'w'})
+                                                       'filter_pattern' : 'w',
+                                                       'target' : self.target,
+                                                       'constraints': {
+                                                         'max_airmass': 2.0,
+                                                         'min_lunar_distance': 30.0
+                                                       }})
         self.filt_0m4_imaging = build_filter_blocks(self.params_0m4_imaging['filter_pattern'],
                                                     self.params_0m4_imaging['exp_count'])[0]
 
@@ -3668,138 +4493,549 @@ class TestMakeMolecules(TestCase):
                                                             'spectroscopy' : True,
                                                             'exp_time' : 180.0,
                                                             'exp_count' : 1,
-                                                            'filter_pattern' : 'slit_6.0as'})
+                                                            'target' : self.target,
+                                                            'constraints': {
+                                                              'max_airmass': 2.0,
+                                                              'min_lunar_distance': 30.0
+                                                            }})
+        self.filt_2m0_spectroscopy = ['slit_6.0as', 1]
+
+    def test_2m_imaging(self):
+
+        expected_configuration = {
+                          'type': 'EXPOSE',
+                          'instrument_type': '2M0-SCICAM-SPECTRAL',
+                          'target': {
+                            'type': 'ICRS',
+                            'name': 'SA107-684',
+                            'ra': 234.3,
+                            'dec': -0.16
+                          },
+                          'constraints': {
+                            'max_airmass': 2.0,
+                            'min_lunar_distance': 30.0
+                          },
+                          'acquisition_config': {},
+                          'guiding_config': {},
+                          'instrument_configs': [{
+                            'exposure_count': 12,
+                            'exposure_time': 60.0,
+                            'bin_x': 2,
+                            'bin_y': 2,
+                            'optical_elements': {
+                              'filter': 'solar'
+                            }
+                          }]
+                        }
+
+        configuration = make_config(self.params_2m0_imaging, self.filt_2m0_imaging)
+        self.assertEqual(expected_configuration, configuration)
+
+    def test_1m_imaging(self):
+
+        expected_configuration = {
+                              'type': 'EXPOSE',
+                              'instrument_type': '1M0-SCICAM-SINISTRO',
+                              'target': {
+                                'type': 'ICRS',
+                                'name': 'SA107-684',
+                                'ra': 234.3,
+                                'dec': -0.16
+                              },
+                              'constraints': {
+                                'max_airmass': 2.0,
+                                'min_lunar_distance': 30.0
+                              },
+                              'acquisition_config': {},
+                              'guiding_config': {},
+                              'instrument_configs': [{
+                                'exposure_count': 12,
+                                'exposure_time': 60.0,
+                                'bin_x': 1,
+                                'bin_y': 1,
+                                'optical_elements': {
+                                  'filter': 'w'
+                                }
+                              }]
+                            }
+
+        configuration = make_config(self.params_1m0_imaging, self.filt_1m0_imaging)
+        self.assertEqual(expected_configuration, configuration)
+
+    def test_0m4_imaging(self):
+
+        expected_configuration = {
+                              'type': 'EXPOSE',
+                              'instrument_type': '0M4-SCICAM-SBIG',
+                              'target': {
+                                'type': 'ICRS',
+                                'name': 'SA107-684',
+                                'ra': 234.3,
+                                'dec': -0.16
+                              },
+                              'constraints': {
+                                'max_airmass': 2.0,
+                                'min_lunar_distance': 30.0
+                              },
+                              'acquisition_config': {},
+                              'guiding_config': {},
+                              'instrument_configs': [{
+                                'exposure_count': 18,
+                                'exposure_time': 90.0,
+                                'bin_x': 1,
+                                'bin_y': 1,
+                                'optical_elements': {
+                                  'filter': 'w'
+                                }
+                              }]
+                            }
+
+        configuration = make_config(self.params_0m4_imaging, self.filt_0m4_imaging)
+
+        self.assertEqual(expected_configuration, configuration)
+
+    def test_2m_spectroscopy_spectrum(self):
+
+        expected_configuration = {
+                              'type': 'SPECTRUM',
+                              'instrument_type': '2M0-FLOYDS-SCICAM',
+                              'constraints': {
+                                'max_airmass': 2.0,
+                                'min_lunar_distance': 30.0
+                              },
+                              'target': {
+                                'type': 'ICRS',
+                                'name': 'SA107-684',
+                                'ra': 234.3,
+                                'dec': -0.16
+                              },
+                              'acquisition_config': {
+                                'mode': 'BRIGHTEST',
+                                'exposure_time': 10,
+                                'extra_params': {
+                                  'acquire_radius': 5.0
+                                }
+                              },
+                              'guiding_config': {
+                                'mode': 'ON',
+                                'optional': False,
+                                'exposure_time': 10
+                              },
+                              'instrument_configs': [{
+                                'exposure_time': 180.0,
+                                'exposure_count': 1,
+                                'rotator_mode': 'VFLOAT',
+                                'optical_elements': {
+                                  'slit': 'slit_6.0as'
+                                },
+                                'extra_params': {}
+                              }]
+                            }
+
+        configuration = make_spect_config(self.params_2m0_spectroscopy, self.filt_2m0_spectroscopy)
+        self.assertEqual(expected_configuration, configuration)
+
+    def test_2m_spectroscopy_arc(self):
+
+        self.params_2m0_spectroscopy['exp_type'] = 'ARC'
+
+        expected_configuration = {
+                          'type': 'ARC',
+                          'instrument_type': '2M0-FLOYDS-SCICAM',
+                          'constraints': {
+                            'max_airmass': 2.0,
+                            'min_lunar_distance': 30.0
+                          },
+                          'target': {
+                            'type': 'ICRS',
+                            'name': 'SA107-684',
+                            'ra': 234.3,
+                            'dec': -0.16
+                          },
+                          'acquisition_config': {
+                            'mode': 'BRIGHTEST',
+                            'exposure_time': 10,
+                            'extra_params': {
+                              'acquire_radius': 5.0
+                            }
+                          },
+                          'guiding_config': {
+                            'mode': 'ON',
+                            'optional': False,
+                            'exposure_time': 10
+                          },
+                          'instrument_configs': [{
+                            'exposure_time': 60.0,
+                            'exposure_count': 1,
+                            'rotator_mode': 'VFLOAT',
+                            'optical_elements': {
+                              'slit': 'slit_6.0as'
+                            },
+                            'extra_params': {}
+                          }]
+                        }
+
+        configuration = make_spect_config(self.params_2m0_spectroscopy, self.filt_2m0_spectroscopy)
+        self.assertEqual(expected_configuration, configuration)
+
+    def test_2m_spectroscopy_arc_multiple_spectra(self):
+
+        self.params_2m0_spectroscopy['exp_type'] = 'ARC'
+        self.params_2m0_spectroscopy['exp_count'] = 2
+
+        expected_configuration = {
+                          'type': 'ARC',
+                          'instrument_type': '2M0-FLOYDS-SCICAM',
+                          'constraints': {
+                            'max_airmass': 2.0,
+                            'min_lunar_distance': 30.0
+                          },
+                          'target': {
+                            'type': 'ICRS',
+                            'name': 'SA107-684',
+                            'ra': 234.3,
+                            'dec': -0.16
+                          },
+                          'acquisition_config': {
+                            'mode': 'BRIGHTEST',
+                            'exposure_time': 10,
+                            'extra_params': {
+                              'acquire_radius': 5.0
+                            }
+                          },
+                          'guiding_config': {
+                            'mode': 'ON',
+                            'optional': False,
+                            'exposure_time': 10
+                          },
+                          'instrument_configs': [{
+                            'exposure_time': 60.0,
+                            'exposure_count': 1,
+                            'rotator_mode': 'VFLOAT',
+                            'optical_elements': {
+                              'slit': 'slit_6.0as'
+                            },
+                            'extra_params': {}
+                          }]
+                        }
+
+        configuration = make_spect_config(self.params_2m0_spectroscopy, self.filt_2m0_spectroscopy)
+        self.assertEqual(expected_configuration, configuration)
+
+    def test_2m_spectroscopy_lampflat(self):
+
+        self.params_2m0_spectroscopy['exp_type'] = 'LAMP_FLAT'
+
+        expected_configuration = {
+                          'type': 'LAMP_FLAT',
+                          'instrument_type': '2M0-FLOYDS-SCICAM',
+                          'constraints': {
+                            'max_airmass': 2.0,
+                            'min_lunar_distance': 30.0
+                          },
+                          'target': {
+                            'type': 'ICRS',
+                            'name': 'SA107-684',
+                            'ra': 234.3,
+                            'dec': -0.16
+                          },
+                          'acquisition_config': {
+                            'mode': 'BRIGHTEST',
+                            'exposure_time': 10,
+                            'extra_params': {
+                              'acquire_radius': 5.0
+                            }
+                          },
+                          'guiding_config': {
+                            'mode': 'ON',
+                            'optional': False,
+                            'exposure_time': 10
+                          },
+                          'instrument_configs': [{
+                            'exposure_time': 20.0,
+                            'exposure_count': 1,
+                            'rotator_mode': 'VFLOAT',
+                            'optical_elements': {
+                              'slit': 'slit_6.0as'
+                            },
+                            'extra_params': {}
+                          }]
+                        }
+
+        configuration = make_spect_config(self.params_2m0_spectroscopy, self.filt_2m0_spectroscopy)
+        self.assertEqual(expected_configuration, configuration)
+
+    def test_2m_spectroscopy_lampflat_multiple_spectra(self):
+
+        self.params_2m0_spectroscopy['exp_type'] = 'LAMP_FLAT'
+        self.params_2m0_spectroscopy['exp_count'] = 42
+
+        expected_configuration = {
+                                  'type': 'LAMP_FLAT',
+                                  'instrument_type': '2M0-FLOYDS-SCICAM',
+                                  'constraints': {
+                                    'max_airmass': 2.0,
+                                    'min_lunar_distance': 30.0
+                                  },
+                                  'target': {
+                                    'type': 'ICRS',
+                                    'name': 'SA107-684',
+                                    'ra': 234.3,
+                                    'dec': -0.16
+                                  },
+                                  'acquisition_config': {
+                                    'mode': 'BRIGHTEST',
+                                    'exposure_time': 10,
+                                    'extra_params': {
+                                      'acquire_radius': 5.0
+                                    }
+                                  },
+                                  'guiding_config': {
+                                    'mode': 'ON',
+                                    'optional': False,
+                                    'exposure_time': 10
+                                  },
+                                  'instrument_configs': [{
+                                    'exposure_time': 20.0,
+                                    'exposure_count': 1,
+                                    'rotator_mode': 'VFLOAT',
+                                    'optical_elements': {
+                                      'slit': 'slit_6.0as'
+                                    },
+                                'extra_params': {}
+                                  }]
+                                }
+
+        configuration = make_spect_config(self.params_2m0_spectroscopy, self.filt_2m0_spectroscopy)
+
+        self.assertEqual(expected_configuration, configuration)
+
+    def test_2m_spectroscopy_spectrum_different_slit(self):
+
+        expected_configuration = {
+                                  'type': 'SPECTRUM',
+                                  'instrument_type': '2M0-FLOYDS-SCICAM',
+                                  'constraints': {
+                                    'max_airmass': 2.0,
+                                    'min_lunar_distance': 30.0
+                                  },
+                                  'target': {
+                                    'type': 'ICRS',
+                                    'name': 'SA107-684',
+                                    'ra': 234.3,
+                                    'dec': -0.16
+                                  },
+                                  'acquisition_config': {
+                                    'mode': 'BRIGHTEST',
+                                    'exposure_time': 10,
+                                    'extra_params': {
+                                      'acquire_radius': 5.0
+                                    }
+                                  },
+                                  'guiding_config': {
+                                    'mode': 'ON',
+                                    'optional': False,
+                                    'exposure_time': 10
+                                  },
+                                  'instrument_configs': [{
+                                    'exposure_time': 180.0,
+                                    'exposure_count': 1,
+                                    'rotator_mode': 'VFLOAT',
+                                    'optical_elements': {
+                                      'slit': 'slit_2.0as'
+                                    },
+                                    'extra_params': {}
+                                  }]
+                                }
+
+        configuration = make_spect_config(self.params_2m0_spectroscopy, ['slit_2.0as', 1])
+
+        self.assertEqual(expected_configuration, configuration)
+
+
+class TestMakeconfigurations(TestCase):
+
+    def setUp(self):
+        self.target = {'type': 'ICRS', 'name' : 'SA107-684', 'ra' : 234.3, 'dec' : -0.16}
+
+        self.params_2m0_imaging = configure_defaults({ 'site_code': 'F65',
+                                                       'exp_time' : 60.0,
+                                                       'exp_count' : 12,
+                                                       'filter_pattern' : 'solar',
+                                                       'target' : self.target,
+                                                       'constraints': {
+                                                         'max_airmass': 2.0,
+                                                         'min_lunar_distance': 30.0
+                                                       }})
+        self.filt_2m0_imaging = build_filter_blocks(self.params_2m0_imaging['filter_pattern'],
+                                                    self.params_2m0_imaging['exp_count'])[0]
+
+        self.params_1m0_imaging = configure_defaults({ 'site_code': 'K92',
+                                                       'exp_time' : 60.0,
+                                                       'exp_count' : 12,
+                                                       'filter_pattern' : 'w',
+                                                       'target' : self.target,
+                                                       'constraints': {
+                                                         'max_airmass': 2.0,
+                                                         'min_lunar_distance': 30.0
+                                                       }})
+
+        self.filt_1m0_imaging = build_filter_blocks(self.params_1m0_imaging['filter_pattern'],
+                                                    self.params_1m0_imaging['exp_count'])[0]
+        self.params_0m4_imaging = configure_defaults({ 'site_code': 'Z21',
+                                                       'exp_time' : 90.0,
+                                                       'exp_count' : 18,
+                                                       'filter_pattern' : 'w',
+                                                       'target' : self.target,
+                                                       'constraints': {
+                                                         'max_airmass': 2.0,
+                                                         'min_lunar_distance': 30.0
+                                                       }})
+        self.filt_0m4_imaging = build_filter_blocks(self.params_0m4_imaging['filter_pattern'],
+                                                    self.params_0m4_imaging['exp_count'])[0]
+
+        self.params_2m0_spectroscopy = configure_defaults({ 'site_code': 'F65',
+                                                            'instrument_code' : 'F65-FLOYDS',
+                                                            'spectroscopy' : True,
+                                                            'exp_time' : 180.0,
+                                                            'exp_count' : 1,
+                                                            'filter_pattern' : 'slit_6.0as',
+                                                            'target' : self.target,
+                                                            'constraints': {
+                                                              'max_airmass': 2.0,
+                                                              'min_lunar_distance': 30.0
+                                                            }})
         self.filt_2m0_spectroscopy = ['slit_6.0as', ]
 
     def test_2m_imaging(self):
 
-        expected_num_molecules = 1
+        expected_num_configurations = 1
         expected_type = 'EXPOSE'
 
-        molecules = make_molecules(self.params_2m0_imaging)
+        configurations = make_configs(self.params_2m0_imaging)
 
-        self.assertEqual(expected_num_molecules, len(molecules))
-        self.assertEqual(expected_type, molecules[0]['type'])
+        self.assertEqual(expected_num_configurations, len(configurations))
+        self.assertEqual(expected_type, configurations[0]['type'])
 
     def test_1m_imaging(self):
 
-        expected_num_molecules = 1
+        expected_num_configurations = 1
         expected_type = 'EXPOSE'
 
-        molecules = make_molecules(self.params_1m0_imaging)
+        configurations = make_configs(self.params_1m0_imaging)
 
-        self.assertEqual(expected_num_molecules, len(molecules))
-        self.assertEqual(expected_type, molecules[0]['type'])
+        self.assertEqual(expected_num_configurations, len(configurations))
+        self.assertEqual(expected_type, configurations[0]['type'])
 
     def test_0m4_imaging(self):
 
-        expected_num_molecules = 1
+        expected_num_configurations = 1
         expected_type = 'EXPOSE'
 
-        molecules = make_molecules(self.params_0m4_imaging)
+        configurations = make_configs(self.params_0m4_imaging)
 
-        self.assertEqual(expected_num_molecules, len(molecules))
-        self.assertEqual(expected_type, molecules[0]['type'])
-
+        self.assertEqual(expected_num_configurations, len(configurations))
+        self.assertEqual(expected_type, configurations[0]['type'])
 
     def test_2m_spectroscopy_nocalibs(self):
 
-        expected_num_molecules = 1
+        expected_num_configurations = 1
         expected_type = 'SPECTRUM'
 
-        molecules = make_molecules(self.params_2m0_spectroscopy)
+        configurations = make_configs(self.params_2m0_spectroscopy)
 
-        self.assertEqual(expected_num_molecules, len(molecules))
-        self.assertEqual(expected_type, molecules[0]['type'])
+        self.assertEqual(expected_num_configurations, len(configurations))
+        self.assertEqual(expected_type, configurations[0]['type'])
 
     def test_2m_spectroscopy_calibs_before(self):
 
         self.params_2m0_spectroscopy['calibs'] = 'before'
-        expected_num_molecules = 3
+        expected_num_configurations = 3
 
-        molecules = make_molecules(self.params_2m0_spectroscopy)
+        configurations = make_configs(self.params_2m0_spectroscopy)
 
-        self.assertEqual(expected_num_molecules, len(molecules))
-        self.assertEqual('LAMP_FLAT', molecules[0]['type'])
-        self.assertEqual('ARC', molecules[1]['type'])
-        self.assertEqual('SPECTRUM', molecules[2]['type'])
+        self.assertEqual(expected_num_configurations, len(configurations))
+        self.assertEqual('LAMP_FLAT', configurations[0]['type'])
+        self.assertEqual('ARC', configurations[1]['type'])
+        self.assertEqual('SPECTRUM', configurations[2]['type'])
 
     def test_2m_spectroscopy_calibs_after(self):
 
         self.params_2m0_spectroscopy['calibs'] = 'AFTER'
-        expected_num_molecules = 3
+        expected_num_configurations = 3
 
-        molecules = make_molecules(self.params_2m0_spectroscopy)
+        configurations = make_configs(self.params_2m0_spectroscopy)
 
-        self.assertEqual(expected_num_molecules, len(molecules))
-        self.assertEqual('LAMP_FLAT', molecules[2]['type'])
-        self.assertEqual('ARC', molecules[1]['type'])
-        self.assertEqual('SPECTRUM', molecules[0]['type'])
+        self.assertEqual(expected_num_configurations, len(configurations))
+        self.assertEqual('LAMP_FLAT', configurations[2]['type'])
+        self.assertEqual('ARC', configurations[1]['type'])
+        self.assertEqual('SPECTRUM', configurations[0]['type'])
 
     def test_2m_spectroscopy_calibs_both(self):
 
         self.params_2m0_spectroscopy['calibs'] = 'BoTh'
-        expected_num_molecules = 5
+        expected_num_configurations = 5
 
-        molecules = make_molecules(self.params_2m0_spectroscopy)
+        configurations = make_configs(self.params_2m0_spectroscopy)
 
-        self.assertEqual(expected_num_molecules, len(molecules))
-        self.assertEqual('LAMP_FLAT', molecules[0]['type'])
-        self.assertEqual('ARC', molecules[1]['type'])
-        self.assertEqual('SPECTRUM', molecules[2]['type'])
-        self.assertEqual('ARC', molecules[3]['type'])
-        self.assertEqual('LAMP_FLAT', molecules[4]['type'])
+        self.assertEqual(expected_num_configurations, len(configurations))
+        self.assertEqual('LAMP_FLAT', configurations[0]['type'])
+        self.assertEqual('ARC', configurations[1]['type'])
+        self.assertEqual('SPECTRUM', configurations[2]['type'])
+        self.assertEqual('ARC', configurations[3]['type'])
+        self.assertEqual('LAMP_FLAT', configurations[4]['type'])
 
     def test_2m_spectroscopy_nocalibs_6as_slit(self):
 
-        expected_num_molecules = 1
+        expected_num_configurations = 1
         expected_type = 'SPECTRUM'
         expected_slit = 'slit_6.0as'
 
         params_2m0_spectroscopy = self.params_2m0_spectroscopy
         params_2m0_spectroscopy['filter_pattern'] = 'slit_6.0as'
-        molecules = make_molecules(params_2m0_spectroscopy)
+        configurations = make_configs(params_2m0_spectroscopy)
 
-        self.assertEqual(expected_num_molecules, len(molecules))
-        self.assertEqual(expected_type, molecules[0]['type'])
-        self.assertEqual(expected_slit, molecules[0]['spectra_slit'])
+        self.assertEqual(expected_num_configurations, len(configurations))
+        self.assertEqual(expected_type, configurations[0]['type'])
+        self.assertEqual(expected_slit, configurations[0]['instrument_configs'][0]['optical_elements']['slit'])
 
     def test_2m_spectroscopy_nocalibs_1p6as_slit(self):
 
-        expected_num_molecules = 1
+        expected_num_configurations = 1
         expected_type = 'SPECTRUM'
         expected_slit = 'slit_1.6as'
 
         params_2m0_spectroscopy = self.params_2m0_spectroscopy
         params_2m0_spectroscopy['filter_pattern'] = 'slit_1.6as'
-        molecules = make_molecules(params_2m0_spectroscopy)
+        configurations = make_configs(params_2m0_spectroscopy)
 
-        self.assertEqual(expected_num_molecules, len(molecules))
-        self.assertEqual(expected_type, molecules[0]['type'])
-        self.assertEqual(expected_slit, molecules[0]['spectra_slit'])
+        self.assertEqual(expected_num_configurations, len(configurations))
+        self.assertEqual(expected_type, configurations[0]['type'])
+        self.assertEqual(expected_slit, configurations[0]['instrument_configs'][0]['optical_elements']['slit'])
 
 
 class TestMakeCadence(TestCase):
 
     def setUp(self):
 
-        self.elements = {"epochofel_mjd": 58000.0,
-                         "current_name" : "3122",
-                         "name" : "3122",
-                         "meandist": 1.7691326,
-                         "longascnode": 336.0952,
-                         "orbinc": 22.1508, 
-                         "eccentricity": 0.4233003,
-                         "meananom": 351.43854,
-                         "elements_type": "MPC_MINOR_PLANET",
-                         "type": "NON_SIDEREAL",
-                         "argofperih": 27.8469}
+        self.elements = {
+                  'name': '481394',
+                  'type': 'ORBITAL_ELEMENTS',
+                  'scheme': 'MPC_MINOR_PLANET',
+                  'epochofel': 58772.0,
+                  'orbinc': 5.86644,
+                  'longascnode': 228.05483,
+                  'argofperih': 305.65602,
+                  'meandist': 0.9493097,
+                  'eccentricity': 0.2805184,
+                  'meananom': 236.20921
+                }
         self.params = { 'utc_date' : datetime(2017, 8, 20, 0, 0),
                         'start_time' : datetime(2017, 8, 20, 8, 40),
                         'end_time' : datetime(2017, 8, 20, 19, 40),
                         'period' : 2.0,
                         'jitter' : 0.25,
-                        'group_id' : "3122_Q59-20170815",
+                        'group_name' : "3122_Q59-20170815",
                         'proposal_id' : 'LCOSchedulerTest',
                         'user_id' : 'tlister@lcogt.net',
                         'exp_type' : 'EXPOSE',
@@ -3807,270 +5043,161 @@ class TestMakeCadence(TestCase):
                         'exp_time' : 20.0,
                         'binning' : 2,
                         'instrument' : '0M4-SCICAM-SBIG',
-                        'filter' : 'w',
+                        'filter_pattern' : 'w',
                         'site' : 'COJ',
                         'pondtelescope' : '0m4a',
-                        'site_code' : 'Q59'
+                        'site_code' : 'Q59',
+                        'target' : self.elements,
+                        'constraints' : {'max_airmass': 2.0, 'min_lunar_distance': 15}
                         }
         self.ipp_value = 1.0
 
-        self.request = {  'constraints' : {'max_airmass': 2.0, 'min_lunar_distance': 15},
-                          'location' : { 'site' : self.params['site'].lower(),
+        configurations = make_configs(self.params)
+        self.request = {  'location' : { 'site' : self.params['site'].lower(),
                                          'telescope_class' : self.params['pondtelescope'][0:3]
                                        },
-                          'target' : self.elements,
-                          'molecules' : [{  'ag_mode': 'OPTIONAL',
-                                            'ag_name': '',
-                                            'bin_x' : self.params['binning'],
-                                            'bin_y' : self.params['binning'],
-                                            'exposure_count' : self.params['exp_count'],
-                                            'exposure_time' : self.params['exp_time'],
-                                            'filter' : self.params['filter'],
-                                            'instrument_name' : self.params['instrument'],
-                                            'type' : self.params['exp_type']
-                                        }],
+                          'configurations' : configurations,
                           'windows' : [{'start' : datetime.strftime(self.params['start_time'], '%Y-%m-%dT%H:%M:%SZ'),
                                         'end'   : datetime.strftime(self.params['end_time'], '%Y-%m-%dT%H:%M:%SZ')
                                         }]
                         }
-        self.request['target']['epochofel'] = self.request['target']['epochofel_mjd']
-        self.request['target']['scheme'] = self.request['target']['elements_type']
 
         self.maxDiff = None
 
     @patch('astrometrics.sources_subs.expand_cadence', mock_expand_cadence)
-    def test_cadence_valhalla(self):
-        expected = {
-                     u'group_id': u'3122_Q59-20170815',
-                     u'ipp_value': 1.05,
-                     u'observation_type': u'NORMAL',
-                     u'operator': u'MANY',
-                     u'proposal': u'LCOSchedulerTest',
-                     u'requests': [{u'constraints': {u'max_airmass': 2.0, u'min_lunar_distance': 15.0},
-                       u'location': {u'site': u'ogg', u'telescope_class': u'0m4'},
-                       u'molecules': [{u'ag_mode': u'OPTIONAL',
-                         u'ag_name': u'',
-                         u'bin_x': 2,
-                         u'bin_y': 2,
-                         u'exposure_count': 10,
-                         u'exposure_time': 2.0,
-                         u'filter': u'w',
-                         u'instrument_name': u'0M4-SCICAM-SBIG',
-                         u'priority': 1,
-                         u'type': u'EXPOSE'}],
-                       u'target': {u'argofperih': 27.8469,
-                        u'eccentricity': 0.4233003,
-                        u'epochofel': 58000.0,
-                        u'longascnode': 336.0952,
-                        u'meananom': 351.43854,
-                        u'meandist': 1.7691326,
-                        u'name': u'3122',
-                        u'orbinc': 22.1508,
-                        u'scheme': u'MPC_MINOR_PLANET',
-                        u'type': u'NON_SIDEREAL'},
-                       u'windows': [{u'end': u'2017-09-02T06:07:30Z',
-                         u'start': u'2017-09-02T06:00:00Z'}]},
-                      {u'constraints': {u'max_airmass': 2.0, u'min_lunar_distance': 15.0},
-                       u'location': {u'site': u'ogg', u'telescope_class': u'0m4'},
-                       u'molecules': [{u'ag_mode': u'OPTIONAL',
-                         u'ag_name': u'',
-                         u'bin_x': 2,
-                         u'bin_y': 2,
-                         u'exposure_count': 10,
-                         u'exposure_time': 2.0,
-                         u'filter': u'w',
-                         u'instrument_name': u'0M4-SCICAM-SBIG',
-                         u'priority': 1,
-                         u'type': u'EXPOSE'}],
-                       u'target': {u'argofperih': 27.8469,
-                        u'eccentricity': 0.4233003,
-                        u'epochofel': 58000.0,
-                        u'longascnode': 336.0952,
-                        u'meananom': 351.43854,
-                        u'meandist': 1.7691326,
-                        u'name': u'3122',
-                        u'orbinc': 22.1508,
-                        u'scheme': u'MPC_MINOR_PLANET',
-                        u'type': u'NON_SIDEREAL'},
-                       u'windows': [{u'end': u'2017-09-02T08:07:30Z',
-                         u'start': u'2017-09-02T07:52:30Z'}]},
-                      {u'constraints': {u'max_airmass': 2.0, u'min_lunar_distance': 15.0},
-                       u'location': {u'site': u'ogg', u'telescope_class': u'0m4'},
-                       u'molecules': [{u'ag_mode': u'OPTIONAL',
-                         u'ag_name': u'',
-                         u'bin_x': 2,
-                         u'bin_y': 2,
-                         u'exposure_count': 10,
-                         u'exposure_time': 2.0,
-                         u'filter': u'w',
-                         u'instrument_name': u'0M4-SCICAM-SBIG',
-                         u'priority': 1,
-                         u'type': u'EXPOSE'}],
-                       u'target': {u'argofperih': 27.8469,
-                        u'eccentricity': 0.4233003,
-                        u'epochofel': 58000.0,
-                        u'longascnode': 336.0952,
-                        u'meananom': 351.43854,
-                        u'meandist': 1.7691326,
-                        u'name': u'3122',
-                        u'orbinc': 22.1508,
-                        u'scheme': u'MPC_MINOR_PLANET',
-                        u'type': u'NON_SIDEREAL'},
-                       u'windows': [{u'end': u'2017-09-02T10:07:30Z',
-                         u'start': u'2017-09-02T09:52:30Z'}]},
-                      {u'constraints': {u'max_airmass': 2.0, u'min_lunar_distance': 15.0},
-                       u'location': {u'site': u'ogg', u'telescope_class': u'0m4'},
-                       u'molecules': [{u'ag_mode': u'OPTIONAL',
-                         u'ag_name': u'',
-                         u'bin_x': 2,
-                         u'bin_y': 2,
-                         u'exposure_count': 10,
-                         u'exposure_time': 2.0,
-                         u'filter': u'w',
-                         u'instrument_name': u'0M4-SCICAM-SBIG',
-                         u'priority': 1,
-                         u'type': u'EXPOSE'}],
-                       u'target': {u'argofperih': 27.8469,
-                        u'eccentricity': 0.4233003,
-                        u'epochofel': 58000.0,
-                        u'longascnode': 336.0952,
-                        u'meananom': 351.43854,
-                        u'meandist': 1.7691326,
-                        u'name': u'3122',
-                        u'orbinc': 22.1508,
-                        u'scheme': u'MPC_MINOR_PLANET',
-                        u'type': u'NON_SIDEREAL'},
-                       u'windows': [{u'end': u'2017-09-02T12:07:30Z',
-                         u'start': u'2017-09-02T11:52:30Z'}]}],
-                     u'submitter': u'tlister@lcogt.net'}
-
-        self.request['location']['site'] = 'ogg'
-        self.request['molecules'][0]['exposure_count'] = 10
-        self.request['molecules'][0]['exposure_time'] = 2.0
-        params = self.params
-        params['start_time'] = datetime(2017, 9, 2, 6, 0, 0)
-        params['end_time'] = datetime(2017, 9, 2, 12, 40, 0)
-
-        ur = make_cadence_valhalla(self.request, params, self.ipp_value)
-        for key in ur.keys():
-            self.assertEqual(expected[key], ur[key])
-
-    @patch('astrometrics.sources_subs.expand_cadence', mock_expand_cadence)
     def test_cadence_wrapper(self):
+        inst_confs = [{u'bin_x': 1,
+                       u'bin_y': 1,
+                       u'exposure_count': 10,
+                       u'exposure_time': 2.0,
+                       'optical_elements': {'filter': 'w'}
+                       }]
+        configs = [{u'instrument_type': u'0M4-SCICAM-SBIG',
+                    u'priority': 1,
+                    u'type': u'EXPOSE',
+                    u'target': self.elements,
+                    u'constraints': {u'max_airmass': 2.0,
+                                     'min_lunar_distance': 30.0},
+                    'instrument_configs' : inst_confs
+                    }]
+
+        windows = [{'start': '2019-11-01T00:00:00Z',
+                    'end': '2019-11-01T00:30:00Z'},
+                   {'start': '2019-11-01T01:30:00Z',
+                    'end': '2019-11-01T02:30:00Z'},
+                   {'start': '2019-11-01T03:30:00Z',
+                    'end': '2019-11-01T04:30:00Z'}]
+        requests = []
+        for window in windows:
+            requests.append({
+                    'location': {'site': 'ogg', 'telescope_class': '0m4'},
+                    'configurations': configs,
+                    'windows': [window],
+                })
         expected = {
-                     u'group_id': u'3122_Q59-20170815',
-                     u'ipp_value': 1.05,
+                     u'name': u'3122_Q59-20170815',
+                     u'ipp_value': 1.0,
                      u'observation_type': u'NORMAL',
                      u'operator': u'MANY',
                      u'proposal': u'LCOSchedulerTest',
-                     u'requests': [{u'constraints': {u'max_airmass': 2.0, u'min_lunar_distance': 15.0},
-                       u'location': {u'site': u'ogg', u'telescope_class': u'0m4'},
-                       u'molecules': [{u'ag_mode': u'OPTIONAL',
-                         u'ag_name': u'',
-                         u'bin_x': 2,
-                         u'bin_y': 2,
-                         u'exposure_count': 10,
-                         u'exposure_time': 2.0,
-                         u'filter': u'w',
-                         u'instrument_name': u'0M4-SCICAM-SBIG',
-                         u'priority': 1,
-                         u'type': u'EXPOSE'}],
-                       u'target': {u'argofperih': 27.8469,
-                        u'eccentricity': 0.4233003,
-                        u'epochofel': 58000.0,
-                        u'longascnode': 336.0952,
-                        u'meananom': 351.43854,
-                        u'meandist': 1.7691326,
-                        u'name': u'3122',
-                        u'orbinc': 22.1508,
-                        u'scheme': u'MPC_MINOR_PLANET',
-                        u'type': u'NON_SIDEREAL'},
-                       u'windows': [{u'end': u'2017-09-02T06:07:30Z',
-                         u'start': u'2017-09-02T06:00:00Z'}]},
-                      {u'constraints': {u'max_airmass': 2.0, u'min_lunar_distance': 15.0},
-                       u'location': {u'site': u'ogg', u'telescope_class': u'0m4'},
-                       u'molecules': [{u'ag_mode': u'OPTIONAL',
-                         u'ag_name': u'',
-                         u'bin_x': 2,
-                         u'bin_y': 2,
-                         u'exposure_count': 10,
-                         u'exposure_time': 2.0,
-                         u'filter': u'w',
-                         u'instrument_name': u'0M4-SCICAM-SBIG',
-                         u'priority': 1,
-                         u'type': u'EXPOSE'}],
-                       u'target': {u'argofperih': 27.8469,
-                        u'eccentricity': 0.4233003,
-                        u'epochofel': 58000.0,
-                        u'longascnode': 336.0952,
-                        u'meananom': 351.43854,
-                        u'meandist': 1.7691326,
-                        u'name': u'3122',
-                        u'orbinc': 22.1508,
-                        u'scheme': u'MPC_MINOR_PLANET',
-                        u'type': u'NON_SIDEREAL'},
-                       u'windows': [{u'end': u'2017-09-02T08:07:30Z',
-                         u'start': u'2017-09-02T07:52:30Z'}]},
-                      {u'constraints': {u'max_airmass': 2.0, u'min_lunar_distance': 15.0},
-                       u'location': {u'site': u'ogg', u'telescope_class': u'0m4'},
-                       u'molecules': [{u'ag_mode': u'OPTIONAL',
-                         u'ag_name': u'',
-                         u'bin_x': 2,
-                         u'bin_y': 2,
-                         u'exposure_count': 10,
-                         u'exposure_time': 2.0,
-                         u'filter': u'w',
-                         u'instrument_name': u'0M4-SCICAM-SBIG',
-                         u'priority': 1,
-                         u'type': u'EXPOSE'}],
-                       u'target': {u'argofperih': 27.8469,
-                        u'eccentricity': 0.4233003,
-                        u'epochofel': 58000.0,
-                        u'longascnode': 336.0952,
-                        u'meananom': 351.43854,
-                        u'meandist': 1.7691326,
-                        u'name': u'3122',
-                        u'orbinc': 22.1508,
-                        u'scheme': u'MPC_MINOR_PLANET',
-                        u'type': u'NON_SIDEREAL'},
-                       u'windows': [{u'end': u'2017-09-02T10:07:30Z',
-                         u'start': u'2017-09-02T09:52:30Z'}]},
-                      {u'constraints': {u'max_airmass': 2.0, u'min_lunar_distance': 15.0},
-                       u'location': {u'site': u'ogg', u'telescope_class': u'0m4'},
-                       u'molecules': [{u'ag_mode': u'OPTIONAL',
-                         u'ag_name': u'',
-                         u'bin_x': 2,
-                         u'bin_y': 2,
-                         u'exposure_count': 10,
-                         u'exposure_time': 2.0,
-                         u'filter': u'w',
-                         u'instrument_name': u'0M4-SCICAM-SBIG',
-                         u'priority': 1,
-                         u'type': u'EXPOSE'}],
-                       u'target': {u'argofperih': 27.8469,
-                        u'eccentricity': 0.4233003,
-                        u'epochofel': 58000.0,
-                        u'longascnode': 336.0952,
-                        u'meananom': 351.43854,
-                        u'meandist': 1.7691326,
-                        u'name': u'3122',
-                        u'orbinc': 22.1508,
-                        u'scheme': u'MPC_MINOR_PLANET',
-                        u'type': u'NON_SIDEREAL'},
-                       u'windows': [{u'end': u'2017-09-02T12:07:30Z',
-                         u'start': u'2017-09-02T11:52:30Z'}]}],
-                     u'submitter': u'tlister@lcogt.net'}
+                     u'requests': requests,
+                }
 
         self.request['location']['site'] = 'ogg'
-        self.request['molecules'][0]['exposure_count'] = 10
-        self.request['molecules'][0]['exposure_time'] = 2.0
-        params = self.params
-        params['start_time'] = datetime(2017, 9, 2, 6, 0, 0)
-        params['end_time'] = datetime(2017, 9, 2, 12, 40, 0)
+        self.request['configurations'][0]['exposure_count'] = 10
+        self.request['configurations'][0]['exposure_time'] = 2.0
+        self.request['configurations'][0]['max_airmass'] = 2.0
 
-        ur = make_cadence(self.elements, params, self.ipp_value, self.request)
-        for key in ur.keys():
-            self.assertEqual(expected[key], ur[key])
+        params = self.params
+        params['start_time'] = datetime(2019, 11, 1, 0, 0, 0)
+        params['end_time'] = datetime(2019, 11, 2, 0, 0, 0)
+        params['jitter'] = 1.0
+        params['period'] = 2
+        ur = make_cadence(self.request, params, self.ipp_value)
+        for key in expected.keys():
+            if key == 'requests':
+                for i, exrequest in enumerate(expected['requests']):
+                    self.assertEqual(exrequest, ur['requests'][i])
+            else:
+                self.assertEqual(expected[key], ur[key])
+
+
+class TestMakeTarget(TestCase):
+
+    def setUp(self):
+        self.params = { 'utc_date' : datetime(2017, 8, 20, 0, 0),
+                        'start_time' : datetime(2017, 8, 20, 8, 40),
+                        'end_time' : datetime(2017, 8, 20, 19, 40),
+                        'period' : 2.0,
+                        'jitter' : 0.25,
+                        'group_name' : "3122_Q59-20170815" + "+solstd",
+                        'proposal_id' : 'LCOSchedulerTest',
+                        'user_id' : 'tlister@lcogt.net',
+                        'exp_type' : 'EXPOSE',
+                        'exp_count' : 105,
+                        'exp_time' : 20.0,
+                        'binning' : 2,
+                        'instrument' : '0M4-SCICAM-SBIG',
+                        'filter_pattern' : 'w',
+                        'site' : 'COJ',
+                        'pondtelescope' : '0m4a',
+                        'site_code' : 'Q59',
+                        'source_id' : 'LTT9999',
+                        'ra_deg'  : 359.07507666666663,
+                        'dec_deg' : 4.626489444444445,
+                        'constraints' : {'max_airmass': 2.0, 'min_lunar_distance': 15}
+                        }
+        self.ipp_value = 1.0
+
+    def test_nopm(self):
+        expected_target = { 'type' : 'ICRS',
+                            'name' : 'LTT9999',
+                            'ra'   : self.params['ra_deg'],
+                            'dec'  : self.params['dec_deg'],
+                            'extra_params' : {}
+                          }
+        target = make_target(self.params)
+
+        self.assertEqual(expected_target, target)
+
+    def test_pm_no_parallax(self):
+        expected_target = { 'type' : 'ICRS',
+                            'name' : 'LTT9999',
+                            'ra'   : self.params['ra_deg'],
+                            'dec'  : self.params['dec_deg'],
+                            'proper_motion_ra': 10.0,
+                            'proper_motion_dec': -10.0,
+                            'extra_params' : {}
+                          }
+
+        params_pm = deepcopy(self.params)
+        params_pm['pm_ra'] = 10.0
+        params_pm['pm_dec'] = -10.0
+
+        target = make_target(params_pm)
+
+        self.assertEqual(expected_target, target)
+
+    def test_pm_parallax_vmag(self):
+        expected_target = { 'type' : 'ICRS',
+                            'name' : 'LTT9999',
+                            'ra'   : self.params['ra_deg'],
+                            'dec'  : self.params['dec_deg'],
+                            'proper_motion_ra': 10.0,
+                            'proper_motion_dec': -10.0,
+                            'parallax' : 7.9985,
+                            'extra_params' : { 'v_magnitude' : 9.08}
+                          }
+
+        params_pm = deepcopy(self.params)
+        params_pm['pm_ra'] = 10.0
+        params_pm['pm_dec'] = -10.0
+        params_pm['parallax'] = 7.9985
+        params_pm['vmag'] = 9.08
+
+        target = make_target(params_pm)
+
+        self.assertEqual(expected_target, target)
 
 
 class TestFetchTaxonomyData(TestCase):
@@ -4087,6 +5214,12 @@ class TestFetchTaxonomyData(TestCase):
         targets = fetch_taxonomy_page(self.test_taxonomy_page)
 
         self.assertEqual(expected_length, len(targets))
+
+    @patch('astrometrics.sources_subs.fetchpage_and_make_soup', mock_fetchpage_and_make_soup)
+    def test_page_down(self):
+        expected_tax = []
+        targets = fetch_taxonomy_page(None)
+        self.assertEqual(expected_tax, targets)
 
     def test_basics_sdss(self):
         expected_length = 25
@@ -4328,6 +5461,12 @@ class TestFetchFluxStandards(TestCase):
                 else:
                     self.assertEqual(expected_standards[fluxstd][key], standards[fluxstd][key])
 
+    @patch('astrometrics.sources_subs.fetchpage_and_make_soup', mock_fetchpage_and_make_soup)
+    def test_standards_page_down(self):
+        expected_standards = None
+        standards = fetch_flux_standards(None, filter_optical_model=True)
+        self.assertEqual(expected_standards, standards)
+
 
 class TestReadSolarStandards(TestCase):
 
@@ -4344,7 +5483,7 @@ class TestReadSolarStandards(TestCase):
                                'Hyades 64'        : { 'ra_rad' : 1.1635601068681027, 'dec_rad' : 0.2922893202041282, 'mag' : 8.1, 'spectral_type' : 'G2V'},
                                'Landolt SA98-978' : { 'ra_rad' : radians(102.8916666666666), 'dec_rad' : radians(-0.1925), 'mag' : 10.5, 'spectral_type' : 'G2V'},
                                'Landolt SA107-684' : { 'ra_rad' : radians(234.3254166666666), 'dec_rad' : radians(-0.163888888888), 'mag' : 8.4, 'spectral_type' : 'G2V'},
-                               'Landolt SA107-998' : { 'ra_rad' : radians(234.5683333333333), 'dec_rad' : radians(0.2563888888888), 'mag' : 10.4, 'spectral_type' : 'G2V'},  
+                               'Landolt SA107-998' : { 'ra_rad' : radians(234.5683333333333), 'dec_rad' : radians(0.2563888888888), 'mag' : 10.4, 'spectral_type' : 'G2V'},
                              }
 
         standards = read_solar_standards(self.test_file)
@@ -4356,3 +5495,388 @@ class TestReadSolarStandards(TestCase):
                     self.assertAlmostEqual(expected_standards[solstd][key], standards[solstd][key], places=self.precision, msg="Mismatch for {} on {}".format(solstd, key))
                 else:
                     self.assertEqual(expected_standards[solstd][key], standards[solstd][key])
+
+
+class TestFetchJPLPhysParams(TestCase):
+    """Tests the sources_subs.py Fetch JPL PhysParams functions."""
+    def setUp(self):
+        params = {  'name' : '2555',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : datetime(2015, 3, 19, 00, 00, 00),
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'A',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+        
+        self.resp = {'phys_par': [{'ref': 'MPO347540',
+                   'value': '11.9',
+                   'name': 'H',
+                   'desc': 'absolute magnitude (magnitude at 1 au from Sun and observer)',
+                   'notes': None,
+                   'sigma': None,
+                   'title': 'absolute magnitude',
+                   'units': None},
+                  {'ref': 'urn:nasa:pds:neowise_diameters_albedos::2.0[mainbelt] (http://adsabs.harvard.edu/abs/2012ApJ...759L...8M)',
+                   'value': '10.256',
+                   'name': 'diameter',
+                   'desc': 'effective body diameter',
+                   'notes': None,
+                   'sigma': '1.605',
+                   'title': 'diameter',
+                   'units': 'km'},
+                  {'ref': 'urn:nasa:pds:neowise_diameters_albedos::2.0[mainbelt] (http://adsabs.harvard.edu/abs/2012ApJ...759L...8M)',
+                   'value': '0.320',
+                   'name': 'albedo',
+                   'desc': 'geometric albedo',
+                   'notes': None,
+                   'sigma': '0.152',
+                   'title': 'geometric albedo',
+                   'units': None}],
+                 'object': {'shortname': '2555 Thomas',
+                  'neo': False,
+                  'des_alt': [{'pri': '1980 OC'},
+                   {'des': '1976 YQ'},
+                   {'des': '1971 UZ2'},
+                   {'des': '1961 US'}],
+                  'orbit_class': {'name': 'Main-belt Asteroid', 'code': 'MBA'},
+                  'pha': False,
+                  'spkid': '2002555',
+                  'kind': 'an',
+                  'orbit_id': '30',
+                  'fullname': '2555 Thomas (1980 OC)',
+                  'des': '2555',
+                  'prefix': None},
+                 'signature': {'source': 'NASA/JPL Small-Body Database (SBDB) API',
+                  'version': '1.1'}}
+
+    def test_store_stuff_physparams(self):
+        """Test the storage of physical parameter types, values, and errors."""
+        bodies = Body.objects.all()
+        body = bodies[0]
+        
+        phys_params = PhysicalParameters.objects.filter(body=body)
+        
+        store_jpl_physparams(self.resp['phys_par'], body)
+        
+        expected_values = [11.9, 10.256, 0.320]
+        expected_ptypes = ['H', 'D', 'ab']       
+        expected_sigmas = [None, 1.605, 0.152]        
+        expected = list(zip(expected_values, expected_ptypes, expected_sigmas))
+        for p in phys_params:
+            test_list = (p.value, p.parameter_type, p.error)
+            self.assertIn(test_list, expected)
+            expected.remove(test_list)
+            
+        self.assertEqual(expected, [])  
+
+    def test_pole_orient(self):
+        """Test the splitting of the value and error numbers.
+         Also to test the storage of these values."""
+        bodies = Body.objects.all()
+        body = bodies[0]   
+
+        pole_test = [{"value":"291.421/66.758",
+                    "name":"pole",
+                    "sigma":"0.007/0.002",
+                    "units":None}]
+
+        phys_params = PhysicalParameters.objects.filter(body=body)
+        dbpole_param = phys_params.filter(parameter_type='O')
+        store_jpl_physparams(pole_test, body)        
+
+        self.assertEqual(dbpole_param[0].value, 291.421)
+        self.assertEqual(dbpole_param[0].value2, 66.758)
+        self.assertEqual(dbpole_param[0].error, 0.007)
+        self.assertEqual(dbpole_param[0].error2, 0.002)
+
+    def test_color(self):
+        """Test the storage of color bands, values, and errors."""
+        bodies = Body.objects.all()
+        body = bodies[0] 
+
+        color_test = [{"value": "0.426",
+                       "name" : "UB",
+                       "desc" : "color index U-B magnitude difference",
+                       "sigma": "0.026",
+                       "title": "U-B",
+                       "units": None}]
+
+        color_param = ColorValues.objects.filter(body=body)
+        store_jpl_physparams(color_test, body)
+
+        self.assertEqual(color_param[0].value, 0.426)
+        self.assertEqual(color_param[0].color_band, 'U-B')
+        self.assertEqual(color_param[0].error, 0.026)
+
+    def test_store_stuff_desigs(self):
+        """Test the storage of designations without any duplicate designations.
+           Also to test the storage of preferred designations."""
+        bodies = Body.objects.all()
+        body = bodies[0]
+
+        expected_desigs = ['Thomas', '2555', '1980 OC', '1976 YQ', '1971 UZ2', '1961 US']
+        expected_dtypes = ['N', '#', 'P', 'P', 'P', 'P']
+        expected = list(zip(expected_desigs, expected_dtypes))
+        # expected = [[x,expected_dtypes[i]] for i,x in enumerate(expected_desigs)]
+        desigs = Designations.objects.filter(body=body)
+        store_jpl_desigs(self.resp['object'], body)
+
+        # running second time to test we're only storing values once
+        store_jpl_desigs(self.resp['object'], body)
+        for d in desigs:
+            test_list = (d.value, d.desig_type)
+            self.assertIn(test_list, expected)
+            expected.remove(test_list)
+
+        self.assertEqual(expected, [])
+
+        # testing for preferred designations
+        prov_desig = desigs.filter(desig_type='P').filter(preferred=True)
+        self.assertEqual(len(prov_desig), 1)
+        self.assertEqual('1980 OC', prov_desig[0].value)
+
+    def test_store_stuff_desigs_noprovdes(self):
+        """Test for when there are no alternate designations."""
+        bodies = Body.objects.all()
+        body = bodies[0]
+
+        pallas = {"neo": False,
+                   "des_alt": [],
+                   "orbit_class":
+                       {"name": "Main-belt Asteroid",
+                        "code": "MBA"},
+                   "pha": False,
+                   "spkid": "2000002",
+                   "kind": "an",
+                   "orbit_id": "35",
+                   "fullname": "2 Pallas",
+                   "des": "2",
+                   "prefix": None}
+
+        desigs = Designations.objects.filter(body=body) 
+        store_jpl_desigs(pallas, body)
+
+        self.assertEqual(desigs[0].value, '2')
+        self.assertEqual(desigs[0].desig_type, '#')
+        self.assertEqual(desigs[1].value, 'Pallas')
+        self.assertEqual(desigs[1].desig_type, 'N')
+        self.assertEqual(len(desigs), 2)
+
+    def test_store_stuff_desigs_comet(self):
+        """Test the storage of comet designations."""
+        bodies = Body.objects.all()
+        body = bodies[0]
+
+        westphal = {"object":
+                        {"neo": True,
+                         "des_alt":
+                             [{"yl": "1913d",
+                               "rn": "1913 VI",
+                               "des": "20D/1913 S1"},
+                              {"rn": "1852 IV",
+                               "des": "20D/1852 O1"},
+                              {"yl": "1813d",
+                               "rn": "1813 VI"}],
+                         "orbit_class":
+                             {"name": "Halley-type Comet*",
+                              "code": "HTC"},
+                         "pha": False,
+                         "spkid": "1000212",
+                         "kind": "cn",
+                         "orbit_id": "19",
+                        "fullname": "20D/Westphal",
+                         "des": "20D",
+                         "prefix": "D"},
+                    "signature":
+                        {"source": "NASA/JPL Small-Body Database (SBDB) API",
+                         "version": "1.1"}
+                    }
+
+        comet_des = Designations.objects.filter(body=body)   
+        store_jpl_desigs(westphal['object'], body)
+
+        self.assertEqual(comet_des[0].value, '20D')
+        self.assertEqual(comet_des[0].desig_type, '#')
+        self.assertEqual(comet_des[1].value, 'Westphal')
+        self.assertEqual(comet_des[1].desig_type, 'N')
+
+    def test_store_stuff_desigs_noname(self):
+        """Test the storage of an object's designations when there is no name."""
+        bodies = Body.objects.all()
+        body = bodies[0]
+
+        ex_obj = {"neo": False,
+                  "des_alt":
+                      [{"pri": "2005 RT33"}],
+                  "orbit_class":
+                      {"name": "Main-belt Asteroid",
+                       "code": "MBA"},
+                  "pha": False,
+                  "spkid": "2254857",
+                  "kind": "an",
+                  "orbit_id": "12",
+                  "fullname": "254857 (2005 RT33)",
+                  "des": "254857",
+                  "prefix": None}
+
+        obj_ex = Designations.objects.filter(body=body)
+        store_jpl_desigs(ex_obj, body)
+
+        self.assertEqual(obj_ex[0].value, '254857')
+        self.assertEqual(obj_ex[0].desig_type, '#')
+        self.assertEqual(obj_ex[1].value, '2005 RT33')
+        self.assertEqual(obj_ex[1].desig_type, 'P')
+
+    def test_store_stuff_desigs_nonamenum(self):
+        """Test the storage of an object's designations when there is no name and number
+           (only a provisional designation)."""
+        bodies = Body.objects.all()
+        body = bodies[0]
+
+        ex_obj = {"neo": False,
+                  "des_alt": [],
+                  "orbit_class":
+                      {"name": "Inner Main-belt Asteroid",
+                       "code": "IMB"},
+                  "pha": False,
+                  "spkid": "3841574",
+                  "kind": "au",
+                  "orbit_id": "3",
+                  "fullname": "(2019 HG2)",
+                  "des": "2019 HG2",
+                  "prefix": None}
+
+        obj_ex = Designations.objects.filter(body=body)
+        store_jpl_desigs(ex_obj, body)
+
+        self.assertEqual(obj_ex[0].value, '2019 HG2')
+        self.assertEqual(obj_ex[0].desig_type, 'P')
+
+    def test_parse_jpl_comet_names(self):
+        comet_list = [{'fullname': 'C/2019 Q4 (Borisov)', 'des': '2019 Q4', 'prefix': 'C'},
+                      {'fullname': 'P/2019 B2 (Groeller)', 'des': '2019 B2', 'prefix': 'P'},
+                      {'fullname': '289P/Blanpain', 'des': '289P', 'prefix': 'P'},
+                      {'fullname': '329P/LINEAR-Catalina', 'des': '329P', 'prefix': 'P'},
+                      {'fullname': '393P/Spacewatch-Hill', 'des': '393P', 'prefix': 'P'},
+                      {'fullname': '389P/Siding Spring', 'des': '389P', 'prefix': 'P'},
+                      {'fullname': "'Oumuamua (A/2017 U1)", 'des': '2017 U1', 'prefix': 'A'}]
+
+        comet_expected_dict = [[{'value': None, 'desig_type': '#'}, {'value': 'Borisov', 'desig_type': 'N'}, {'value': 'C/2019 Q4', 'desig_type': 'P'}],
+                               [{'value': None, 'desig_type': '#'}, {'value': 'Groeller', 'desig_type': 'N'}, {'value': 'P/2019 B2', 'desig_type': 'P'}],
+                               [{'value': '289P', 'desig_type': '#'}, {'value': 'Blanpain', 'desig_type': 'N'}, {'value': None, 'desig_type': 'P'}],
+                               [{'value': '329P', 'desig_type': '#'}, {'value': 'LINEAR-Catalina', 'desig_type': 'N'}, {'value': None, 'desig_type': 'P'}],
+                               [{'value': '393P', 'desig_type': '#'}, {'value': 'Spacewatch-Hill', 'desig_type': 'N'}, {'value': None, 'desig_type': 'P'}],
+                               [{'value': '389P', 'desig_type': '#'}, {'value': 'Siding Spring', 'desig_type': 'N'}, {'value': None, 'desig_type': 'P'}],
+                               [{'value': None, 'desig_type': '#'}, {'value': "'Oumuamua", 'desig_type': 'N'}, {'value': 'A/2017 U1', 'desig_type': 'P'}]
+                               ]
+        for i, comet in enumerate(comet_list):
+            out_dicts = parse_jpl_fullname(comet)
+            for designation in comet_expected_dict[i]:
+                designation['preferred'] = True
+            self.assertEqual(out_dicts, comet_expected_dict[i])
+
+    def test_store_stuff_sourcetypes(self):
+        """Test the storage of sourcetypes."""
+        bodies = Body.objects.all()
+        body = bodies[0]
+        objcode = 'TJN'
+        store_jpl_sourcetypes(objcode, self.resp['object'], body)
+
+        self.assertEqual(body.source_type, 'T')
+        self.assertEqual(body.source_subtype_1, 'P5')       
+        self.assertEqual(body.source_subtype_2, None)
+
+    def test_store_stuff_neo_pha_1(self):
+        """Test the storage of source subtypes when the object is labeled as an NEO
+           but not as a PHA."""
+        bodies = Body.objects.all()
+        body = bodies[0]
+        objcode = self.resp['object']
+        objcode['orbit_class']['code'] = 'APO'
+        body.source_type = None
+        body.save()
+        objcode['neo'] = True
+        objcode['pha'] = False
+        store_jpl_sourcetypes(objcode['orbit_class']['code'], objcode, body)
+
+        self.assertEqual(body.source_type, 'N')
+        self.assertEqual(body.source_subtype_1, 'N3')       
+        self.assertEqual(body.source_subtype_2, None)
+
+    def test_store_stuff_neo_pha_2(self):
+        """Test the storage of source subtypes when the object is labeled as both an NEO
+           and as a PHA."""
+        bodies = Body.objects.all()
+        body = bodies[0]
+        objcode = self.resp['object']
+        objcode['orbit_class']['code'] = 'APO'
+        body.source_type = 'N'
+        body.save()
+        objcode['neo'] = True
+        objcode['pha'] = True
+        store_jpl_sourcetypes(objcode['orbit_class']['code'], objcode, body)
+
+        self.assertEqual(body.source_type, 'N')
+        self.assertEqual(body.source_subtype_1, 'N3')       
+        self.assertEqual(body.source_subtype_2, 'PH')
+
+    def test_store_stuff_neo_pha_3(self):
+        """Test the storage of source subtypes when the object is labeled as a PHA
+           but not as an NEO (This situation is rare)."""                    
+        bodies = Body.objects.all()
+        body = bodies[0]
+        objcode = self.resp['object']
+        objcode['orbit_class']['code'] = 'APO'
+        body.source_type = None
+        body.save()
+        objcode['neo'] = False
+        objcode['pha'] = True
+        store_jpl_sourcetypes(objcode['orbit_class']['code'], objcode, body)
+
+        self.assertEqual(body.source_type, None)
+        self.assertEqual(body.source_subtype_1, 'N3')       
+        self.assertEqual(body.source_subtype_2, None)
+
+    def test_store_stuff_neo_pha_4(self):
+        """Test the storage of source subtypes when the object is a comet
+           (instead of an asteroid) and is labeled as both an NEO and as a PHA."""                
+        bodies = Body.objects.all()
+        body = bodies[0]
+        objcode = self.resp['object']
+        objcode['orbit_class']['code'] = 'JFC'
+        body.source_type = 'C'
+        body.save()
+        objcode['neo'] = True
+        objcode['pha'] = True
+        store_jpl_sourcetypes(objcode['orbit_class']['code'], objcode, body)
+
+        self.assertEqual(body.source_type, 'C')
+        self.assertEqual(body.source_subtype_1, 'JF')       
+        self.assertEqual(body.source_subtype_2, 'PH')
+
+    def test_store_stuff_comet_longperiod(self):
+        """Test the storage of source subtypes when the object is a comet
+           (instead of an asteroid) and is labeled as both an NEO and as a PHA."""
+
+        bodies = Body.objects.all()
+        body = bodies[0]
+        objcode = self.resp['object']
+        objcode['orbit_class']['code'] = 'COM'
+        body.source_type = 'C'
+        body.save()
+
+        store_jpl_sourcetypes(objcode['orbit_class']['code'], objcode, body)
+
+        self.assertEqual(body.source_type, 'C')
+        self.assertLessEqual(len(body.source_subtype_1), 2)
+        self.assertEqual(body.source_subtype_1, 'LP')
+

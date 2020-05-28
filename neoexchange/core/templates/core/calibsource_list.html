@@ -19,10 +19,12 @@
                     <a class="button button-primary" href="{% url 'schedule-calib-spectra' 'F65-FLOYDS' '-' %}" id="schedule-solar-ftn-obs">Schedule FTN Calib Observations</a>
                     <a class="button button-primary" href="{% url 'schedule-calib-spectra' 'E10-FLOYDS' '-' %}" id="schedule-solar-fts-obs">Schedule FTS Calib Observations</a>
                     <a class="button button-primary" href="{% url 'calibsource-view' %}" id="show-all-calibsources">Show all Calibration Sources</a>
+                    <a class="button button-primary" href="{% url 'beststandards-view' %}" id="show-best-standards">Show best standards</a>
                 {% else %}
                     <a class="button button-primary" href="{% url 'schedule-calib-spectra' 'F65-FLOYDS' '-' %}" id="schedule-calib-ftn-obs">Schedule FTN Calib Observations</a>
                     <a class="button button-primary" href="{% url 'schedule-calib-spectra' 'E10-FLOYDS' '-' %}" id="schedule-calib-fts-obs">Schedule FTS Calib Observations</a>
                     <a class="button button-primary" href="{% url 'solarstandard-view' %}" id="show-solar-standards">Show only Solar Analogs</a>
+                    <a class="button button-primary" href="{% url 'beststandards-view' %}" id="show-best-standards">Show best standards</a>
                 {% endif %}
             </div>
             <span id="anti_solar_point"> <b> Current Anti-Solar Point: RA = {{night.ra}} / Dec = {{night.dec}} </b></span>
@@ -66,31 +68,9 @@
             </div>
             <div class="row">
                 {% if is_paginated %}
-                    <div class="pagination">
-                        <span class="page-links">
-                            {% if "solar" in request.get_full_path %}
-                                {% if page_obj.has_previous %}
-                                    <a href="{% url 'solarstandard-view' %}?page={{ page_obj.previous_page_number }}"><i class="fa fa-arrow-left fa-2x"></i></a>
-                                {% endif %}
-                                <span class="page-current">
-                                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-                                </span>
-                                {% if page_obj.has_next %}
-                                    <a href="{% url 'solarstandard-view' %}?page={{ page_obj.next_page_number }}"><i class="fa fa-arrow-right fa-2x"></i></a>
-                                {% endif %}
-                            {% else %}
-                                {% if page_obj.has_previous %}
-                                    <a href="{% url 'calibsource-view' %}?page={{ page_obj.previous_page_number }}"><i class="fa fa-arrow-left fa-2x"></i></a>
-                                {% endif %}
-                                <span class="page-current">
-                                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-                                </span>
-                                {% if page_obj.has_next %}
-                                    <a href="{% url 'calibsource-view' %}?page={{ page_obj.next_page_number }}"><i class="fa fa-arrow-right fa-2x"></i></a>
-                                {% endif %}
-                            {% endif %}
-                            </span>
-                    </div>
+                    <!-- start -->
+                            {% include '_pagination.html' with items=items %}
+                    <!-- end -->
                 {% endif %}
             </div>
             <div class="row">

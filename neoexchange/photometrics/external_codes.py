@@ -155,7 +155,9 @@ def setup_working_dir(source_dir, dest_dir, config_files):
 
     if not os.path.exists(dest_dir):
         try:
+            oldumask = os.umask(0o002)
             os.makedirs(dest_dir)
+            os.umask(oldumask)
         except OSError:
             logger.error("Destination path '%s' could not be created" % dest_dir)
             return -2
@@ -276,7 +278,7 @@ def determine_findorb_options(site_code, start_time=datetime.utcnow()):
 
     epoch_date = start_time.date() + timedelta(days=1)
 
-    options = "-z -c -q -C {} -e new.ephem -tE{}".format(site_code, epoch_date.strftime("%Y-%m-%d"))
+    options = "-z -c -q -C {} -tE{}".format(site_code, epoch_date.strftime("%Y-%m-%d"))
 
     return options
 

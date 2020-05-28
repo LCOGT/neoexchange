@@ -12,7 +12,7 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.contrib import admin
 
 from core.models import *
@@ -57,6 +57,10 @@ class SuperBlockAdmin(VersionAdmin):
             name = obj.calibsource.name
         return name
 
+    # Use raw_id fields (https://docs.djangoproject.com/en/1.11/ref/contrib/admin/#django.contrib.admin.ModelAdmin.raw_id_fields)
+    # for the Body to stop it making a select box tens of thousands entries long...
+    raw_id_fields = ("body",)
+
     list_display = ('groupid', 'body_name', 'proposal', 'block_start', 'active', )
     list_filter = ('proposal', 'block_start', 'active', )
     ordering = ('-block_start',)
@@ -69,22 +73,6 @@ class BlockAdmin(VersionAdmin):
     format_block_start.short_description = 'Block start'
     format_block_start.admin_order_field = 'block_start'
 
-    def zoo_friendly(self, obj):
-        if obj.num_exposures is None or obj.num_observed is None or obj.num_candidates() is None:
-            return False
-        elif obj.num_exposures < 10 and obj.num_observed > 0 and obj.num_candidates() > 0:
-            return True
-        else:
-            return False
-    zoo_friendly.boolean = True
-
-    def sent_to_zoo(self, obj):
-        if PanoptesReport.objects.filter(block=obj).count() > 0:
-            return True
-        else:
-            return False
-    sent_to_zoo.boolean = True
-
     def body_name(self, obj):
         name = ''
         if obj.body is not None:
@@ -93,8 +81,21 @@ class BlockAdmin(VersionAdmin):
             name = obj.calibsource.name
         return name
 
-    list_display = ('groupid', 'body_name', 'site', 'proposal', 'block_start', 'num_observed', 'active', 'reported', 'zoo_friendly', 'sent_to_zoo')
-    list_filter = ('site', 'telclass', 'proposal', 'block_start', 'num_observed', 'active', 'reported',)
+    def groupid(self, obj):
+        groupid = ''
+        if obj.superblock.groupid is not None:
+            groupid = obj.superblock.groupid
+        return groupid
+
+    def proposal(self, obj):
+        return obj.superblock.proposal
+
+    # Use raw_id fields (https://docs.djangoproject.com/en/1.11/ref/contrib/admin/#django.contrib.admin.ModelAdmin.raw_id_fields)
+    # for the Body to stop it making a select box tens of thousands entries long...
+    raw_id_fields = ("body",)
+
+    list_display = ('groupid', 'body_name', 'site', 'proposal', 'block_start', 'num_observed', 'active', 'reported')
+    list_filter = ('site', 'telclass', 'superblock__proposal', 'block_start', 'num_observed', 'active', 'reported',)
 
     ordering = ('-block_start',)
 
@@ -107,8 +108,8 @@ class FrameAdmin(VersionAdmin):
     format_midpoint.admin_order_field = 'midpoint'
 
     def block_groupid(self, obj):
-        if obj.block:
-            return obj.block.groupid
+        if obj.block and obj.block.superblock:
+            return obj.block.superblock.groupid
         else:
             return "No block"
 
@@ -122,6 +123,7 @@ class FrameAdmin(VersionAdmin):
 
     list_display = ('id', 'block_groupid', 'quality', 'frametype', 'filename_or_midpoint', 'exptime', 'filter', 'sitecode')
     list_filter = ('quality', 'frametype', 'midpoint', 'filter', 'sitecode', 'instrument')
+    search_fields = ('filename', )
 
     ordering = ('-midpoint',)
 
@@ -174,6 +176,10 @@ class SourceMeasurementAdmin(admin.ModelAdmin):
     def obs_dec_dms(self, obj):
         return degreestodms(obj.obs_dec, ' ')
 
+    # Use raw_id fields (https://docs.djangoproject.com/en/1.11/ref/contrib/admin/#django.contrib.admin.ModelAdmin.raw_id_fields)
+    # for the Body and Frame to stop it making a select box tens of thousands entries long...
+    raw_id_fields = ("body", "frame")
+
     list_display = ('body_name', 'frame', 'flags', 'obs_ra_hms', 'obs_dec_dms', 'site_code')
     search_fields = ('body__name', 'body__provisional_name')
 
@@ -199,6 +205,10 @@ class CatalogSourcesAdmin(admin.ModelAdmin):
     def obs_mag_error(self, obj):
         return "%.2f +/- %.3f" % ( obj.obs_mag, obj.err_obs_mag)
     obs_mag_error.short_description = "Magnitude"
+
+    # Use raw_id fields (https://docs.djangoproject.com/en/1.11/ref/contrib/admin/#django.contrib.admin.ModelAdmin.raw_id_fields)
+    # for the Frame to stop it making a select box tens of thousands entries long...
+    raw_id_fields = ("frame",)
 
     list_display = ('id', 'frame', 'obs_x_rnd', 'obs_y_rnd', 'obs_ra', 'obs_dec', 'obs_ra_hms', 'obs_dec_dms', 'obs_mag_error')
     search_fields = ('frame__filename', )
@@ -271,10 +281,60 @@ class StaticSourceAdmin(admin.ModelAdmin):
     search_fields = ('name',)
 
 
+class PhysicalParametersAdmin(admin.ModelAdmin):
+
+    def body_name(self, obj):
+        name = ''
+        if obj.body is not None:
+            name = obj.body.full_name()
+        elif obj.calibsource is not None:
+            name = obj.calibsource.name
+        return name
+
+    search_fields = ('body__name', 'body__provisional_name')
+    list_display = ('id', 'body_name', 'parameter_type', 'value', 'error', 'units', 'preferred')
+    list_filter = ('parameter_type', 'preferred')
+    ordering = [ 'body__name', 'parameter_type', '-preferred']
+
+
+class DesignationsAdmin(admin.ModelAdmin):
+
+    def body_name(self, obj):
+        name = ''
+        if obj.body is not None:
+            name = obj.body.full_name()
+        elif obj.calibsource is not None:
+            name = obj.calibsource.name
+        return name
+
+    search_fields = ('value',)
+    list_display = ('id', 'value', 'desig_type', 'body_name', 'preferred', 'update_time')
+    list_filter = ('desig_type', 'preferred')
+    ordering = [ 'body__name', 'desig_type', '-preferred']
+
+
+class ColorValuesAdmin(admin.ModelAdmin):
+
+    def body_name(self, obj):
+        name = ''
+        if obj.body is not None:
+            name = obj.body.full_name()
+        elif obj.calibsource is not None:
+            name = obj.calibsource.name
+        return name
+
+    search_fields = ('body__name', 'body__provisional_name')
+    list_display = ('id', 'body_name', 'color_band', 'value', 'error', 'preferred', 'update_time')
+    list_filter = ('color_band', 'preferred')
+    ordering = ['body__name', 'color_band', '-preferred']
+
+
 admin.site.register(Proposal, ProposalAdmin)
 admin.site.register(SourceMeasurement, SourceMeasurementAdmin)
 admin.site.register(ProposalPermission)
 admin.site.register(CatalogSources, CatalogSourcesAdmin)
 admin.site.register(Candidate, CandidateAdmin)
-admin.site.register(PanoptesReport)
 admin.site.register(StaticSource, StaticSourceAdmin)
+admin.site.register(PhysicalParameters, PhysicalParametersAdmin)
+admin.site.register(Designations, DesignationsAdmin)
+admin.site.register(ColorValues, ColorValuesAdmin)

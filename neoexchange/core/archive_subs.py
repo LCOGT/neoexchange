@@ -20,10 +20,12 @@ import glob
 import logging
 from urllib.parse import urljoin
 
+
 import requests
 from django.conf import settings
 
 from core.urlsubs import get_lcogt_headers
+
 
 logger = logging.getLogger(__name__)
 
@@ -35,23 +37,28 @@ if sys.version_info < (2, 7, 9):
     ssl_verify = False  # Danger, danger !
 
 
-def archive_login(username, password):
+def archive_login(username=None, password=None):
     """
-    Wrapper function to get API token for Archive
+    Wrapper function to get API token for Archive. [username] and [password]
+    are optional; If the PORTAL or ARCHIVE token (depending on the URL lookup)
+    is not found inside get_lcogt_headers(), then this will allow the retrieval
+    of the token via a passed username and password.
     """
     archive_url = settings.ARCHIVE_TOKEN_URL
     return get_lcogt_headers(archive_url, username, password)
 
 
-def lco_api_call(url):
-    if 'archive' in url:
-        token = settings.ARCHIVE_TOKEN
-    else:
-        token = settings.PORTAL_TOKEN
-    headers = {'Authorization': 'Token ' + token}
+def lco_api_call(url, headers=None, method='get'):
+    if headers is None:
+        if 'archive' in url:
+            token = settings.ARCHIVE_TOKEN
+        else:
+            token = settings.PORTAL_TOKEN
+        headers = {'Authorization': 'Token ' + token}
     data = None
+    methods = {'get': requests.get, 'post': requests.post}
     try:
-        resp = requests.get(url, headers=headers, timeout=20, verify=ssl_verify)
+        resp = methods[method](url, headers=headers, timeout=60, verify=ssl_verify)
         data = resp.json()
     except requests.exceptions.InvalidSchema as err:
         data = None
@@ -63,15 +70,15 @@ def lco_api_call(url):
     return data
 
 
-def determine_archive_start_end(dt=None):
+def determine_archive_start_end(obs_t=None):
 
-    dt = dt or datetime.utcnow()
+    dt = obs_t or datetime.utcnow()
     start = datetime(dt.year, dt.month, dt.day, 16, 0, 0)
-    end = datetime(dt.year, dt.month, dt.day, 16, 0, 0)
-    if 0 <= dt.hour <= 16:
+    end = datetime(dt.year, dt.month, dt.day, 20, 0, 0)
+    end = end + timedelta(days=1)
+
+    if obs_t is None:
         start = start - timedelta(days=1)
-    elif 17 <= dt.hour <= 23:
-        end = end + timedelta(days=1)
 
     return start, end
 
@@ -163,7 +170,7 @@ def fetch_observations(tracking_num):
     """
     data_url = urljoin(settings.PORTAL_REQUEST_API, tracking_num)
     data = lco_api_call(data_url)
-    if data.get('requests', '') == 'Not found.':
+    if data is None or data.get('requests', '') == 'Not found.' or data.get('requests', '') == '':
         return []
     for r in data['requests']:
         images = check_for_archive_images(request_id=r['id'])
@@ -172,8 +179,8 @@ def fetch_observations(tracking_num):
 
 def fetch_archive_frames(auth_header, archive_url, frames):
 
-    data = lco_api_call(archive_url)
-    if data.get('count', 0) > 0:
+    data = lco_api_call(archive_url, auth_header)
+    if data is not None and data.get('count', 0) > 0:
         frames += data['results']
         if data['next']:
             fetch_archive_frames(auth_header, data['next'], frames)
@@ -258,7 +265,7 @@ def check_for_bad_file(filename, reject_dir='Bad'):
     return reject_file
 
 
-def download_files(frames, output_path, verbose=False, dbg=False):
+def download_files(frames, data_path, verbose=False, dbg=False):
     """Downloads and saves to disk, the specified files from the new Science
     Archive. Returns a list of the frames that were downloaded.
     Takes a dictionary <frames> (keyed by reduction levels and produced by
@@ -269,14 +276,13 @@ def download_files(frames, output_path, verbose=False, dbg=False):
     already exist. If [verbose] is set to True, the filename of the downloaded
     file will be printed."""
 
-    if not os.path.exists(output_path):
-        os.makedirs(output_path)
     downloaded_frames = []
     for reduction_lvl in frames.keys():
         logger.debug(reduction_lvl)
         frames_to_download = frames[reduction_lvl]
         for frame in frames_to_download:
             logger.debug(frame['filename'])
+            output_path = make_data_dir(data_path, frame)
             filename = os.path.join(output_path, frame['filename'])
             archive_md5 = frame['version_set'][-1]['md5']
             if check_for_existing_file(filename, archive_md5, dbg, verbose) or check_for_bad_file(filename):
@@ -287,6 +293,42 @@ def download_files(frames, output_path, verbose=False, dbg=False):
                 with open(filename, 'wb') as f:
                     f.write(requests.get(frame['url']).content)
     return downloaded_frames
+
+
+def make_data_dir(data_dir, frame):
+    filename = frame['filename']
+    if "tar.gz" in filename:
+        chunks = filename.split('_')
+        day_dir = chunks[3]
+    else:
+        chunks = filename.split('-')
+        day_dir = chunks[2]
+
+    try:
+        dd = datetime.strptime(day_dir, '%Y%m%d')
+    except ValueError:
+        try:
+            logger.warning("Filename ({}) does not contain day-obs.".format(filename))
+            dd = datetime.strptime(frame['DATE_OBS'], '%Y-%m-%dT%H:%M:%S.%fZ')
+            day_dir = datetime.strftime(dd, '%Y%m%d')
+        except ValueError:
+            logger.error("{} has improperly formated DATE_OBS in Header!")
+            day_dir = "bad_date"
+            dd = datetime.utcnow()
+
+    if "tar.gz" in filename and frame['SITEID'] == 'ogg':
+        day_dir = datetime.strftime(dd-timedelta(days=1), '%Y%m%d')
+
+    out_path = os.path.join(data_dir, day_dir)
+    if not os.path.exists(out_path):
+        try:
+            oldumask = os.umask(0o002)
+            os.makedirs(out_path)
+            os.umask(oldumask)
+        except:
+            msg = "Error creating output path %s" % out_path
+            raise CommandError(msg)
+    return out_path
 
 
 def archive_lookup_images(images):
