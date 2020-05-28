@@ -34,6 +34,7 @@ from core.views import BodySearchView, BodyDetailView, BlockDetailView, Schedule
     BestStandardsView, PlotSpec, BodyVisibilityView, SuperBlockTimeline, BlockCancel
 from core.plots import make_visibility_plot, \
     make_standards_plot, make_solar_standards_plot
+from cal.views import arecibo_events
 
 from analyser.views import BlockFramesView, ProcessCandidates
 
@@ -92,6 +93,8 @@ urlpatterns = [
     url(r'^calib-schedule/(?P<pk>\d+)/confirm/$', ScheduleCalibSubmit.as_view(), name='schedule-calib-confirm'),
     url(r'^accounts/login/$', login, {'template_name': 'core/login.html'}, name='auth_login'),
     url(r'^accounts/logout/$', logout, {'template_name': 'core/logout.html'}, name='auth_logout'),
+    url(r'^calendar/$', TemplateView.as_view(template_name='cal/calendar.html')),
+    url(r'^events/arecibo/$',  arecibo_events),
     url(r'^admin/', include(admin.site.urls)),
 ]
 

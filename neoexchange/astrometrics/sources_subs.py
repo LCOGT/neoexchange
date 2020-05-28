@@ -1353,7 +1353,7 @@ def fetch_arecibo_calendar_targets(page=None):
                     except ValueError:
                         window_end = None
                     if target_object and window_start and window_end:
-                        targets.append({'target': target_object, 'windows' : [{'start' : window_start, 'end' : window_end}] })
+                        targets.append({'title': target_object, 'start' : window_start.isoformat('T'), 'end' : window_end.isoformat('T') })
         else:
             logger.warning("No tables found in Arecibo page")
     return targets
@@ -2746,6 +2746,3 @@ def store_jpl_sourcetypes(code, obj, body):
     body.source_subtype_1 = source_subtype_1
     body.source_subtype_2 = source_subtype_2
     body.save()
-
-
-

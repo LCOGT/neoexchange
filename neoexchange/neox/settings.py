@@ -152,6 +152,7 @@ INSTALLED_APPS = (
     'reversion',
     'core.apps.CoreConfig',
     'analyser.apps.AstrometerConfig',
+    'cal.apps.CalConfig',
 )
 
 rollbar_default_env = 'development' if DEBUG else 'production'
