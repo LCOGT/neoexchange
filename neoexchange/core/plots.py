@@ -92,9 +92,7 @@ def determine_plot_valid(vis_file, now=None):
         other than 'uncertainty' which uses a 1 day age)
     """
 
-    logger.setLevel(logging.DEBUG)
     now = now or datetime.utcnow()
-    logger.debug("Server time {}, now {}".format(datetime.utcnow(), now))
     valid_vis_file = ''
     file_root, ext = os.path.splitext(os.path.basename(vis_file))
     chunks = file_root.split('_')
