@@ -6,4 +6,5 @@ from astrometrics.sources_subs import fetch_arecibo_calendar_targets
 
 def arecibo_events(request):
     data = fetch_arecibo_calendar_targets()
-    return JsonResponse(data, safe=False)
+    targets = [{'title': d['target'], 'start' : d['windows'][0]['start'], 'end' : d['windows'][0]['end']}  for d in data]
+    return JsonResponse(targets, safe=False)
