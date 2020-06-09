@@ -751,7 +751,7 @@ class ZeropointUnitTest(TestCase):
 
         expected_avg_zeropoint = 27.389040152231853
 
-        expected_std_zeropoint = 0.08511626631873609
+        expected_std_zeropoint = 0.08511636159289811
 
         expected_count = 12
 
@@ -774,9 +774,9 @@ class ZeropointUnitTest(TestCase):
 
     def test_call_cross_match_and_zeropoint_with_UCAC4(self):
 
-        expected_avg_zeropoint = 27.3076036537
+        expected_avg_zeropoint = 27.307603618677927
 
-        expected_std_zeropoint = 0.0818534024596
+        expected_std_zeropoint = 0.0818536464006553
 
         expected_count = 26
 
@@ -801,7 +801,7 @@ class ZeropointUnitTest(TestCase):
 
         expected_avg_zeropoint = 27.368678593401157
 
-        expected_std_zeropoint = 0.018250034068048576
+        expected_std_zeropoint = 0.01825025160423379
 
         expected_count = 10
 
@@ -828,9 +828,9 @@ class ZeropointUnitTest(TestCase):
         the FITS catalog ZP (in the header) and the Vizier catalog computed ZP
         """
 
-        expected_avg_zeropoint = 0.276944994033
+        expected_avg_zeropoint = 0.27694574038664266
 
-        expected_std_zeropoint = 0.0857935965306
+        expected_std_zeropoint = 0.0857936711126839
 
         expected_count = 9
 
@@ -854,9 +854,9 @@ class ZeropointUnitTest(TestCase):
     def test_call_with_diff_test_cat_UCAC4(self):
         # test the call with a different FITS catalog file and the default UCAC4 catalog
 
-        expected_avg_zeropoint = 27.2969494845
+        expected_avg_zeropoint = 27.296948986142457
 
-        expected_std_zeropoint = 0.0512114572605
+        expected_std_zeropoint = 0.05121113268467079
 
         expected_count = 8
 
@@ -880,9 +880,9 @@ class ZeropointUnitTest(TestCase):
     def test_call_with_diff_test_cat_PPMXL(self):
         # test the call with a different FITS catalog file and the default UCAC4 catalog
 
-        expected_avg_zeropoint = 27.0946609497
+        expected_avg_zeropoint = 27.094661331176756
 
-        expected_std_zeropoint = 0.0643614354292
+        expected_std_zeropoint = 0.06436118777919021
 
         expected_count = 5
 
