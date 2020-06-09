@@ -319,7 +319,7 @@ def parse_NEOCP_extra_params(neocp_page, dbg=False):
             # Turn the HTML non-breaking spaces (&nbsp;) into regular spaces
             cols = [ele.text.replace(u'\xa0', u' ').strip() for ele in cols]
             if dbg:
-                print("Cols=", cols, len(cols))
+                print(len(new_objects), len(cols))
             pccp = False
             try:
                 update_date = cols[6].split()[0]
@@ -351,7 +351,12 @@ def parse_NEOCP_extra_params(neocp_page, dbg=False):
                     score = int(cols[1][0:3])
                 except:
                     score = None
-                neocp_datetime = parse_neocp_decimal_date(cols[2])
+                try:
+                    neocp_datetime = parse_neocp_decimal_date(cols[2])
+                except ValueError:
+                    neocp_datetime = None
+                    logger.warning("Date Parsing error:" + cols[2])
+                    logger.warning(cols)
                 try:
                     nobs = int(cols[8])
                 except:
