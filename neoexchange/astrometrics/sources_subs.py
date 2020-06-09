@@ -268,7 +268,7 @@ def fetch_NEOCP(dbg=False):
 
     NEOCP_url = 'https://www.minorplanetcenter.net/iau/NEO/toconfirm_tabular.html'
 
-    neocp_page = fetchpage_and_make_soup(NEOCP_url)
+    neocp_page = fetchpage_and_make_soup(NEOCP_url, parser='html5lib')
     return neocp_page
 
 
