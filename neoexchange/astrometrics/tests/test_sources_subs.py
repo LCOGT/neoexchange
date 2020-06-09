@@ -2434,6 +2434,31 @@ class TestParseNEOCPExtraParams(TestCase):
         expected_obj_ids = []
         self.assertEqual(expected_obj_ids, obj_ids)
 
+    def test_parse_neocpep_whole_page(self):
+        expected_obj_ids = [ ('CAH024', {'arc_length' : 0.06,
+                                          'discovery_date' : datetime(2015,9,20),
+                                          'not_seen' : 4.878,
+                                          'num_obs' : 6,
+                                          'score' : 99,
+                                          'update_time' : datetime(2015,9,24,22,47,17),
+                                          'updated' : False}),
+                             ('P10nw2g', {'arc_length' : 1.16,
+                                          'discovery_date' : datetime(2015,9,6,7,12),
+                                          'not_seen' : 17.455,
+                                          'num_obs' : 6,
+                                          'score' : 100,
+                                          'update_time' : datetime(2015,9,16,1,30,34),
+                                          'updated' : True
+                                          }),
+                            ]
+        expected_length = 45
+
+        obj_ids = parse_NEOCP_extra_params(self.test_neocp_page_table)
+
+        self.assertEqual(expected_length, len(obj_ids))
+        self.assertEqual(expected_obj_ids[0], obj_ids[0])
+        self.assertEqual(expected_obj_ids[-1], obj_ids[-1])
+
 
 class TestParsePCCP(TestCase):
 
