@@ -2434,6 +2434,62 @@ class TestParseNEOCPExtraParams(TestCase):
         expected_obj_ids = []
         self.assertEqual(expected_obj_ids, obj_ids)
 
+    def test_parse_neocpep_whole_page(self):
+        expected_obj_ids = [ ('CAH024', {'arc_length' : 0.06,
+                                          'discovery_date' : datetime(2015,9,20),
+                                          'not_seen' : 4.878,
+                                          'num_obs' : 6,
+                                          'score' : 99,
+                                          'update_time' : datetime(2015,9,24,22,47,17),
+                                          'updated' : False}),
+                             ('P10nw2g', {'arc_length' : 1.16,
+                                          'discovery_date' : datetime(2015,9,6,7,12),
+                                          'not_seen' : 17.455,
+                                          'num_obs' : 6,
+                                          'score' : 100,
+                                          'update_time' : datetime(2015,9,16,1,30,34),
+                                          'updated' : True
+                                          }),
+                            ]
+        expected_length = 45
+
+        obj_ids = parse_NEOCP_extra_params(self.test_neocp_page_table)
+
+        self.assertEqual(expected_length, len(obj_ids))
+        self.assertEqual(expected_obj_ids[0], obj_ids[0])
+        self.assertEqual(expected_obj_ids[-1], obj_ids[-1])
+
+    def test_parse_neocpep_new_dates_bad1(self):
+        html = BeautifulSoup(self.table_header +
+                             '''
+        <tr><td><span style="display:none">N00gkyc</span>&nbsp;<input type="checkbox" name="obj" VALUE="N00gkyc"> N00gkyc</td>
+        <td align="right"><span style="display:none">100</span>100&nbsp;&nbsp;&nbsp;</td>
+        <td>&nbsp;&nbsp;2020 05 32.0&nbsp;&nbsp;</td>
+        <td><span style="display:none">328.6061</span>&nbsp;&nbsp;21 54.4&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">098.4370</span>&nbsp;&nbsp;+08 26&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">30.7</span>&nbsp;&nbsp;19.3&nbsp;&nbsp;</td>
+        <td><span style="display:none">J2459010.192346</span>&nbsp;Updated June 9.69 UT&nbsp;</td>
+        <td align="center">&nbsp;&nbsp;</td>
+        <td align="right">&nbsp;   5&nbsp;</td>
+        <td align="right">&nbsp;  0.46&nbsp;</td>
+        <td align="right">&nbsp;18.8&nbsp;</td>
+        <td align="right">&nbsp; 8.394&nbsp;</td><tr>
+        ''' + self.table_footer, "html.parser")
+
+        expected_obj_ids = [('N00gkyc', {'arc_length': 0.46,
+                                         'discovery_date': None,
+                                         'not_seen': 8.394,
+                                         'num_obs': 5,
+                                         'score': 100,
+                                         'update_time': datetime(2020, 6, 9, 16, 36, 59),
+                                         'updated': True})
+                                                ]
+        expected_length = 1
+
+        obj_ids = parse_NEOCP_extra_params(html)
+        self.assertEqual(expected_length, len(obj_ids))
+        self.assertEqual(expected_obj_ids[0], obj_ids[0])
+
 
 class TestParsePCCP(TestCase):
 
