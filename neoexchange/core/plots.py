@@ -83,7 +83,7 @@ def find_existing_vis_file(base_dir, filematch):
     return vis_file
 
 
-def determine_plot_valid(vis_file, now=datetime.utcnow()):
+def determine_plot_valid(vis_file, now=None):
     """
         Determine if the passed <vis_file> is too old. If it is not too old,
         the filename is returned unmodified, otherwise an empty string is returned.
@@ -91,6 +91,8 @@ def determine_plot_valid(vis_file, now=datetime.utcnow()):
         the vis_file filename) is more than 15 days old (for all plot types
         other than 'uncertainty' which uses a 1 day age)
     """
+
+    now = now or datetime.utcnow()
 
     valid_vis_file = ''
     file_root, ext = os.path.splitext(os.path.basename(vis_file))
@@ -114,7 +116,7 @@ def determine_plot_valid(vis_file, now=datetime.utcnow()):
     return valid_vis_file
 
 
-def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow(), site_code='-1'):
+def make_visibility_plot(request, pk, plot_type, start_date=None, site_code='-1'):
 
     try:
         body = Body.objects.get(pk=pk)
@@ -132,6 +134,7 @@ def make_visibility_plot(request, pk, plot_type, start_date=datetime.utcnow(), s
 
         return HttpResponse(PIXEL_GIF_DATA, content_type='image/gif')
 
+    start_date = start_date or datetime.utcnow()
     base_dir = os.path.join('visibility', str(body.pk))  # new base_dir for method
     obj = sanitize_object_name(body.name)
     site = ''
