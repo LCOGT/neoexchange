@@ -152,7 +152,7 @@ class StoreCatalogSourcesTest(FITSUnitTest):
         first_catsrc = CatalogSources.objects.first()
 
         self.assertGreater(first_catsrc.obs_mag, 0.0)
-        self.assertAlmostEqual(first_catsrc.err_obs_mag, 0.0023, 4)
+        self.assertAlmostEqual(first_catsrc.err_obs_mag, sqrt(header['zeropoint_err']**2 + 0.0034573015**2), 4)
 
     def test_duplicate_entries(self):
 

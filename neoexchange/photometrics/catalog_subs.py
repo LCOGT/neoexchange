@@ -1317,7 +1317,7 @@ def update_zeropoint(header, table, avg_zeropoint, std_zeropoint):
 
     for source in table:
         source['obs_mag'] += avg_zeropoint
-#        source['obs_mag_err'] = sqrt(((source['obs_mag_err']/source['obs_mag'])**2.0) + ((header['zeropoint_err']/header['zeropoint'])**2.0))
+        # source['obs_mag_err'] = sqrt(((source['obs_mag_err']/source['obs_mag'])**2.0) + ((header['zeropoint_err']/header['zeropoint'])**2.0))
         source['obs_mag_err'] = sqrt((source['obs_mag_err']**2.0) + (header['zeropoint_err']**2.0))
 
     return header, table
