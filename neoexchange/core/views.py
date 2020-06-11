@@ -2130,7 +2130,7 @@ def clean_NEOCP_object(page_list):
         page_list.pop(0)
     for line in page_list:
         line = line.strip()
-        if 'NEOCPNomin' in line:
+        if 'NEOCPNomin' in line or 'MPC       ' in line:
             current = line.split()
             break
     if current:
@@ -2755,6 +2755,11 @@ def ingest_new_object(orbit_file, obs_file=None, dbg=False):
         else:
             save_and_make_revision(body, kwargs)
             msg = "Added new local target %s" % obj_id
+    else:
+        body = None
+        created = False
+        msg = "Unable to parse orbit line"
+
     return body, created, msg
 
 
