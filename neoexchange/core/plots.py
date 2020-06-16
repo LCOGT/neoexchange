@@ -683,6 +683,13 @@ def lc_plot(lc_list, meta_list, period=1, jpl_ephem=None):
     plot_u.xaxis.axis_label = 'Date (Hours from {}.5/{}.0)'.format(jd_utc2datetime(base_date).strftime("%Y-%m-%d"), base_date)
     plot_p.yaxis.axis_label = 'Apparent Magnitude'
     plot_p.title.text = 'LC for {} ({})'.format(obj, date_range)
+    # plot_p.title.text_font_size = '20pt'
+    # plot_p.xaxis.axis_label_text_font_size = "18pt"
+    # plot_p.yaxis.axis_label_text_font_size = "18pt"
+    # plot_p.axis.axis_line_width = 2
+    # plot_p.yaxis.major_label_text_font_size = "14pt"
+    # plot_p.xaxis.major_label_text_font_size = "14pt"
+    # plot_p.axis.major_tick_line_width = 2
     plot_p.xaxis.axis_label = 'Phase (Period = {}h / Epoch = {})'.format(period, base_date)
 
     # Create update function to fill datasets. This is currently unnecessary, but could be used if we ever got a
