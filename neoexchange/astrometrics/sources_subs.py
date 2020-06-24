@@ -2097,7 +2097,7 @@ def parse_filter_file(resp, spec):
     site_filters = []
     for result in resp['results']:
         try:
-            filters_1tel = result['science_camera']['filters']
+            filters_1tel = result['science_camera']['optical_elements']['filters']
             filt_list = filters_1tel.split(',')
         except KeyError:
             filt_list = []
