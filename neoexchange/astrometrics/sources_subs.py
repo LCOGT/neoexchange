@@ -2080,9 +2080,13 @@ def fetch_filter_list(site, spec):
     request_url += '?telescope={}&science_camera=&autoguider_camera=&camera_type={}&site={}&enclosure={}&state=SCHEDULABLE'.format(telid.lower(), camid, siteid.lower(), encid.lower())
     resp = requests.get(request_url, timeout=20, verify=True).json()
 
-    data_out = parse_filter_file(resp, spec)
-    if not data_out:
-        logger.error('Could not find any filters for {}'.format(site))
+    if not resp[['results']]:
+        logger.error('Could not find any telescopes at {}'.format(site))
+        data_out = []
+    else:
+        data_out = parse_filter_file(resp, spec)
+        if not data_out:
+            logger.error('Could not find any filters for {}'.format(site))
     return data_out
 
 
