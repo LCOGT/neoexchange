@@ -103,22 +103,6 @@ class Command(BaseCommand):
                 out_path = options['datadir']
                 dl_frames = download_files(all_frames, out_path, verbose)
                 self.stdout.write("Downloaded %d frames" % (len(dl_frames)))
-                # Create postage stamp movie for non_spectra images
-                block_lists = {}
-                save_paths = {}
-                for frame in all_frames.get('91', []):
-                    if frame['REQNUM'] in block_lists.keys():
-                        if os.path.exists(os.path.join(save_paths[frame['REQNUM']], frame['filename'])):
-                            block_lists[frame['REQNUM']].append(os.path.join(save_paths[frame['REQNUM']], frame['filename']))
-                    else:
-                        save_paths[frame['REQNUM']] = make_data_dir(out_path, frame)
-                        block_lists[frame['REQNUM']] = [os.path.join(save_paths[frame['REQNUM']], frame['filename'])]
-                for rn in block_lists.keys():
-                    movie_file = search(save_paths[rn].replace(out_path, "").lstrip("/"), '.*{}_framemovie.gif'.format(rn), latest=True)
-                    if not movie_file:
-                        self.stdout.write("No frame movie found for request number: {}".format(rn))
-                        movie_file = make_gif(block_lists[rn], init_fr=100, center=3, out_path=out_path)
-                        self.stdout.write("New gif created: {}".format(movie_file))
 
                 # unpack tarballs and make movie.
                 for frame in all_frames.get('', []):
