@@ -310,10 +310,13 @@ class Command(BaseCommand):
         mpc_site = []
         fwhm = []
         air_mass = []
+        output_file_list = []
 
         # build directory path / set permissions
         obj_name = sanitize_object_name(start_super_block.body.current_name())
         datadir = os.path.join(options['datadir'], obj_name)
+        out_path = settings.DATA_ROOT
+        data_path = ''
         rw_permissions = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH | stat.S_IWOTH
         if not os.path.exists(datadir) and not settings.USE_S3:
             try:
@@ -343,8 +346,9 @@ class Command(BaseCommand):
 
         # Create, name, open ALCDEF file.
         base_name = '{}_{}_{}_{}_'.format(obj_name, sb_site, sb_day, start_super_block.tracking_number)
-        filename = os.path.join(datadir, base_name + 'ALCDEF.txt')
-        alcdef_file = default_storage.open(filename, 'w')
+        alcdef_filename = os.path.join(datadir, base_name + 'ALCDEF.txt')
+        output_file_list.append('{},{}'.format(alcdef_filename, datadir.lstrip(out_path)))
+        alcdef_file = default_storage.open(alcdef_filename, 'w')
         for super_block in super_blocks:
             block_list = Block.objects.filter(superblock=super_block.id)
             self.stdout.write("Analyzing SuperblockBlock# %s for %s" % (super_block.tracking_number, super_block.body.current_name()))
@@ -447,19 +451,20 @@ class Command(BaseCommand):
                     times += block_times
 
                     # Create gif of fits files used for LC extraction
-                    out_path = settings.DATA_ROOT
                     data_path = make_data_dir(out_path, model_to_dict(frames_all_zp[0]))
                     frames_list = [os.path.join(data_path, f.filename) for f in frames_all_zp]
                     if not options['nogif']:
                         movie_file = make_gif(frames_list, init_fr=100, center=3, out_path=out_path, plot_source=True,
                                               target_data=frame_data, show_reticle=True, progress=True)
+                        if "WARNING" not in movie_file:
+                            output_file_list.append('{},{}'.format(movie_file, data_path.lstrip(out_path)))
                         self.stdout.write("New gif created: {}".format(movie_file))
         alcdef_file.close()
         self.stdout.write("Found matches in %d of %d frames" % (len(times), total_frame_count))
 
         if not settings.USE_S3:
             try:
-                os.chmod(filename, rw_permissions)
+                os.chmod(alcdef_filename, rw_permissions)
             except PermissionError:
                 pass
 
@@ -469,6 +474,9 @@ class Command(BaseCommand):
             lightcurve_file = open(os.path.join(datadir, base_name + 'lightcurve_data.txt'), 'w')
             mpc_file = open(os.path.join(datadir, base_name + 'mpc_positions.txt'), 'w')
             psv_file = open(os.path.join(datadir, base_name + 'ades_positions.psv'), 'w')
+            output_file_list.append('{},{}'.format(os.path.join(datadir, base_name + 'lightcurve_data.txt'), datadir.lstrip(out_path)))
+            output_file_list.append('{},{}'.format(os.path.join(datadir, base_name + 'mpc_positions.txt'), datadir.lstrip(out_path)))
+            output_file_list.append('{},{}'.format(os.path.join(datadir, base_name + 'ades_positions.psv'), datadir.lstrip(out_path)))
 
             # Calculate integer part of JD for first frame and use this as a
             # constant in case of wrapover to the next day
@@ -529,6 +537,8 @@ class Command(BaseCommand):
                 # Make plots
                 if not settings.USE_S3:
                     self.plot_timeseries(times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, title=plot_title, sub_title=subtitle, datadir=datadir, filename=base_name, diameter=tel_diameter)
+                    output_file_list.append('{},{}'.format(os.path.join(datadir, base_name + 'lightcurve_cond.png'), datadir.lstrip(out_path)))
+                    output_file_list.append('{},{}'.format(os.path.join(datadir, base_name + 'lightcurve.png'), datadir.lstrip(out_path)))
                     try:
                         os.chmod(os.path.join(datadir, base_name + 'lightcurve_cond.png'), rw_permissions)
                     except PermissionError:
@@ -539,3 +549,14 @@ class Command(BaseCommand):
                         pass
             else:
                 self.stdout.write("No sources matched.")
+
+            if data_path:
+                with open(os.path.join(data_path, base_name + 'lc_file_list.txt'), 'w') as outfut_file_file:
+                    outfut_file_file.write('# == Files created by Lightcurve Extraction for {} on {} ==\n'.format(obj_name, sb_day))
+                    for output_file in output_file_list:
+                        outfut_file_file.write(output_file)
+                        outfut_file_file.write('\n')
+                try:
+                    os.chmod(os.path.join(data_path, base_name + 'lc_file_list.txt'), rw_permissions)
+                except PermissionError:
+                    pass

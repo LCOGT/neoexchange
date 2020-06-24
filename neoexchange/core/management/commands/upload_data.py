@@ -15,6 +15,7 @@ GNU General Public License for more details.
 
 import os
 from sys import argv
+from glob import glob
 
 from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
@@ -29,13 +30,75 @@ class Command(BaseCommand):
     help = 'Upload file to S3'
 
     def add_arguments(self, parser):
-        parser.add_argument('file', type=str, help='File to upload')
-        parser.add_argument('--datadir', action="store", default=None, help="data directory for file upload")
+        parser.add_argument('path', type=str, help='local path/File to upload')
+        parser.add_argument('--destdir', action="store", default=None, help="data directory for file upload")
+        parser.add_argument('--ext', default=None, type=str, help='comma separated file extensions to upload. '
+                                                                  'If provided will upload path/*ext (Use * for all)')
+        parser.add_argument('--list', default=False, action='store_true', help='Set this flag to designate path input '
+                                                                               'as pointing to a file containing a list '
+                                                                               'of files,destinations to be uploaded')
+        parser.add_argument('--overwrite', default=False, action='store_true', help='Set flag to overwrite data on S3')
 
     def handle(self, *args, **options):
-        filepath = options['file']
-        self.stdout.write("==== Uploading {} to S3".format(filepath))
+        filepath = options['path']
+        ext = options['ext']
+        file_list = []
+        search_list = []
+        dest_list = []
 
-        filename = os.path.basename(filepath)
-        with open(filepath, "rb") as file:
-            default_storage.save(os.path.join(options['datadir'], filename), file)
+        if options['list']:
+            if '*' in filepath:
+                list_list = glob(filepath)
+            else:
+                list_list = [filepath]
+            for listfile in list_list:
+                with open(listfile, 'r') as input_list:
+                    for line in input_list:
+                        if line[0] != '#':
+                            search_list.append(line.rstrip())
+
+        if ext:
+            if ',' in ext:
+                ext_list = ext.split(',')
+            else:
+                ext_list = [ext]
+            if filepath[-1] != '/':
+                filepath += '/'
+            for ex in ext_list:
+                if not search_list:
+                    if ex[0] != '*':
+                        ex = '*{}'.format(ex)
+                    search_path = filepath + ex
+                    file_list += glob(search_path)
+                else:
+                    for f in search_list:
+                        if ex in f or ex == '*':
+                            if ',' in f and options['destdir'] is None:
+                                f_split = f.split(',')
+                                file_list.append(f_split[0])
+                                dest_list.append(f_split[1])
+                            else:
+                                file_list.append(f)
+                                dest_list.append(options['destdir'])
+        elif search_list:
+            for f in search_list:
+                if ',' in f and options['destdir'] is None:
+                    f_split = f.split(',')
+                    file_list.append(f_split[0])
+                    dest_list.append(f_split[1])
+                else:
+                    file_list.append(f)
+                    dest_list.append(options['destdir'])
+        else:
+            file_list.append(filepath)
+            dest_list.append(options['destdir'])
+
+        for i, file in enumerate(file_list):
+
+            filename = os.path.basename(file)
+            if not search(dest_list[i], filename) or options['overwrite']:
+                self.stdout.write("==== Uploading {} to S3".format(file))
+                with open(file, "rb") as f:
+                    default_storage.save(os.path.join(dest_list[i], filename), f)
+            else:
+                self.stdout.write("==== {} already exists on S3".format(os.path.join(dest_list[i], filename)))
