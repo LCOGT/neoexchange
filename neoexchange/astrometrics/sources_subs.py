@@ -2096,7 +2096,7 @@ def parse_filter_file(resp, spec):
 
     site_filters = []
     for result in resp['results']:
-        filters_1tel = result['science_camera']['filters']
+        filters_1tel = result['science_camera']['optical_elements']['filters']
         filt_list = filters_1tel.split(',')
         for filt in filter_list:
             if filt in filt_list and filt not in site_filters:
