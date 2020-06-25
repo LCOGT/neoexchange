@@ -2080,9 +2080,8 @@ def fetch_filter_list(site, spec):
     request_url += '?telescope={}&science_camera=&autoguider_camera=&camera_type={}&site={}&enclosure={}&state=SCHEDULABLE'.format(telid.lower(), camid, siteid.lower(), encid.lower())
     response = requests.get(request_url, timeout=20, verify=True)
 
+    resp = {'results': ''}
     if response.status_code in [200, 201]:
-        resp = {'results': ''}
-    else:
         resp = response.json()
 
     if not resp['results']:
