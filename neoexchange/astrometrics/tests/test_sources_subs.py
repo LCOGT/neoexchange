@@ -30,7 +30,7 @@ from django.forms.models import model_to_dict
 from core.models import Body, Proposal, Block, StaticSource, PhysicalParameters, Designations, ColorValues
 from astrometrics.ephem_subs import determine_darkness_times
 from astrometrics.time_subs import datetime2mjd_utc
-from neox.tests.mocks import MockDateTime, mock_expand_cadence, mock_fetchpage_and_make_soup
+from neox.tests.mocks import MockDateTime, mock_expand_cadence, mock_fetchpage_and_make_soup, mock_fetchpage_and_make_soup_pccp
 from core.views import record_block, create_calib_sources, compute_vmag_pa
 # Import module to test
 from astrometrics.sources_subs import *
@@ -2452,6 +2452,7 @@ class TestParseNEOCPExtraParams(TestCase):
         expected_obj_ids = []
         self.assertEqual(expected_obj_ids, obj_ids)
 
+    @patch('astrometrics.sources_subs.fetchpage_and_make_soup', mock_fetchpage_and_make_soup_pccp)
     def test_parse_neocpep_whole_page(self):
         expected_obj_ids = [ ('CAH024', {'arc_length' : 0.06,
                                           'discovery_date' : datetime(2015,9,20),
@@ -2460,6 +2461,13 @@ class TestParseNEOCPExtraParams(TestCase):
                                           'score' : 99,
                                           'update_time' : datetime(2015,9,24,22,47,17),
                                           'updated' : False}),
+                             ('WR0159E', {'arc_length' : 15.44,
+                                          'discovery_date' : datetime(2015,9,13,9,36),
+                                          'not_seen' : 0.726,
+                                          'num_obs' : 222,
+                                          'score' : 10,
+                                          'update_time' : datetime(2015,9,28,17,48,10),
+                                          'updated' : True}),
                              ('P10nw2g', {'arc_length' : 1.16,
                                           'discovery_date' : datetime(2015,9,6,7,12),
                                           'not_seen' : 17.455,
@@ -2476,6 +2484,7 @@ class TestParseNEOCPExtraParams(TestCase):
         self.assertEqual(expected_length, len(obj_ids))
         self.assertEqual(expected_obj_ids[0], obj_ids[0])
         self.assertEqual(expected_obj_ids[-1], obj_ids[-1])
+        self.assertEqual(expected_obj_ids[-2], obj_ids[-4])
 
     def test_parse_neocpep_new_dates_bad1(self):
         html = BeautifulSoup(self.table_header +
@@ -5590,7 +5599,7 @@ class TestFetchJPLPhysParams(TestCase):
                     'origin'        : 'M',
                     }
         self.body, created = Body.objects.get_or_create(**params)
-        
+
         self.resp = {'phys_par': [{'ref': 'MPO347540',
                    'value': '11.9',
                    'name': 'H',
@@ -5636,27 +5645,27 @@ class TestFetchJPLPhysParams(TestCase):
         """Test the storage of physical parameter types, values, and errors."""
         bodies = Body.objects.all()
         body = bodies[0]
-        
+
         phys_params = PhysicalParameters.objects.filter(body=body)
-        
+
         store_jpl_physparams(self.resp['phys_par'], body)
-        
+
         expected_values = [11.9, 10.256, 0.320]
-        expected_ptypes = ['H', 'D', 'ab']       
-        expected_sigmas = [None, 1.605, 0.152]        
+        expected_ptypes = ['H', 'D', 'ab']
+        expected_sigmas = [None, 1.605, 0.152]
         expected = list(zip(expected_values, expected_ptypes, expected_sigmas))
         for p in phys_params:
             test_list = (p.value, p.parameter_type, p.error)
             self.assertIn(test_list, expected)
             expected.remove(test_list)
-            
-        self.assertEqual(expected, [])  
+
+        self.assertEqual(expected, [])
 
     def test_pole_orient(self):
         """Test the splitting of the value and error numbers.
          Also to test the storage of these values."""
         bodies = Body.objects.all()
-        body = bodies[0]   
+        body = bodies[0]
 
         pole_test = [{"value":"291.421/66.758",
                     "name":"pole",
@@ -5665,7 +5674,7 @@ class TestFetchJPLPhysParams(TestCase):
 
         phys_params = PhysicalParameters.objects.filter(body=body)
         dbpole_param = phys_params.filter(parameter_type='O')
-        store_jpl_physparams(pole_test, body)        
+        store_jpl_physparams(pole_test, body)
 
         self.assertEqual(dbpole_param[0].value, 291.421)
         self.assertEqual(dbpole_param[0].value2, 66.758)
@@ -5675,7 +5684,7 @@ class TestFetchJPLPhysParams(TestCase):
     def test_color(self):
         """Test the storage of color bands, values, and errors."""
         bodies = Body.objects.all()
-        body = bodies[0] 
+        body = bodies[0]
 
         color_test = [{"value": "0.426",
                        "name" : "UB",
@@ -5736,7 +5745,7 @@ class TestFetchJPLPhysParams(TestCase):
                    "des": "2",
                    "prefix": None}
 
-        desigs = Designations.objects.filter(body=body) 
+        desigs = Designations.objects.filter(body=body)
         store_jpl_desigs(pallas, body)
 
         self.assertEqual(desigs[0].value, '2')
@@ -5775,7 +5784,7 @@ class TestFetchJPLPhysParams(TestCase):
                          "version": "1.1"}
                     }
 
-        comet_des = Designations.objects.filter(body=body)   
+        comet_des = Designations.objects.filter(body=body)
         store_jpl_desigs(westphal['object'], body)
 
         self.assertEqual(comet_des[0].value, '20D')
@@ -5866,7 +5875,7 @@ class TestFetchJPLPhysParams(TestCase):
         store_jpl_sourcetypes(objcode, self.resp['object'], body)
 
         self.assertEqual(body.source_type, 'T')
-        self.assertEqual(body.source_subtype_1, 'P5')       
+        self.assertEqual(body.source_subtype_1, 'P5')
         self.assertEqual(body.source_subtype_2, None)
 
     def test_store_stuff_neo_pha_1(self):
@@ -5883,7 +5892,7 @@ class TestFetchJPLPhysParams(TestCase):
         store_jpl_sourcetypes(objcode['orbit_class']['code'], objcode, body)
 
         self.assertEqual(body.source_type, 'N')
-        self.assertEqual(body.source_subtype_1, 'N3')       
+        self.assertEqual(body.source_subtype_1, 'N3')
         self.assertEqual(body.source_subtype_2, None)
 
     def test_store_stuff_neo_pha_2(self):
@@ -5900,12 +5909,12 @@ class TestFetchJPLPhysParams(TestCase):
         store_jpl_sourcetypes(objcode['orbit_class']['code'], objcode, body)
 
         self.assertEqual(body.source_type, 'N')
-        self.assertEqual(body.source_subtype_1, 'N3')       
+        self.assertEqual(body.source_subtype_1, 'N3')
         self.assertEqual(body.source_subtype_2, 'PH')
 
     def test_store_stuff_neo_pha_3(self):
         """Test the storage of source subtypes when the object is labeled as a PHA
-           but not as an NEO (This situation is rare)."""                    
+           but not as an NEO (This situation is rare)."""
         bodies = Body.objects.all()
         body = bodies[0]
         objcode = self.resp['object']
@@ -5917,12 +5926,12 @@ class TestFetchJPLPhysParams(TestCase):
         store_jpl_sourcetypes(objcode['orbit_class']['code'], objcode, body)
 
         self.assertEqual(body.source_type, None)
-        self.assertEqual(body.source_subtype_1, 'N3')       
+        self.assertEqual(body.source_subtype_1, 'N3')
         self.assertEqual(body.source_subtype_2, None)
 
     def test_store_stuff_neo_pha_4(self):
         """Test the storage of source subtypes when the object is a comet
-           (instead of an asteroid) and is labeled as both an NEO and as a PHA."""                
+           (instead of an asteroid) and is labeled as both an NEO and as a PHA."""
         bodies = Body.objects.all()
         body = bodies[0]
         objcode = self.resp['object']
@@ -5934,7 +5943,7 @@ class TestFetchJPLPhysParams(TestCase):
         store_jpl_sourcetypes(objcode['orbit_class']['code'], objcode, body)
 
         self.assertEqual(body.source_type, 'C')
-        self.assertEqual(body.source_subtype_1, 'JF')       
+        self.assertEqual(body.source_subtype_1, 'JF')
         self.assertEqual(body.source_subtype_2, 'PH')
 
     def test_store_stuff_comet_longperiod(self):

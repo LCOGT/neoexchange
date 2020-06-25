@@ -19,6 +19,7 @@ from datetime import date
 import os
 
 import astropy.units as u
+from bs4 import BeautifulSoup
 from django.contrib.auth import authenticate
 import logging
 from astrometrics.sources_subs import parse_filter_file
@@ -84,6 +85,46 @@ def mock_fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.p
     logger.warning("Page retrieval failed because this is a test and no page was attempted.")
     return None
 
+
+def mock_fetchpage_and_make_soup_pccp(url, fakeagent=False, dbg=False, parser="html.parser"):
+
+        table_header = '''<table class="tablesorter">
+          <thead>
+            <tr>
+              <th>&nbsp;&nbsp;Temp Desig&nbsp;&nbsp;&nbsp;</th>
+              <th>&nbsp;&nbsp;Score&nbsp;&nbsp;&nbsp;</th>
+              <th>&nbsp;&nbsp;Discovery</th>
+              <th>&nbsp;&nbsp;R.A.&nbsp;&nbsp;</th>
+              <th>&nbsp;&nbsp;Decl.&nbsp;&nbsp;</th>
+              <th>&nbsp;&nbsp;V&nbsp;&nbsp;</th>
+              <th>Updated</th>
+              <th>&nbsp;Note&nbsp;&nbsp;&nbsp;</th>
+              <th>&nbsp;NObs&nbsp;&nbsp;&nbsp;</th>
+              <th>&nbsp;Arc&nbsp;&nbsp;</th>
+              <th>&nbsp;H&nbsp;&nbsp;</th>
+              <th>&nbsp;Not Seen/dys&nbsp;&nbsp;</th>
+            </tr>
+          </thead>
+
+          <tbody>'''
+        table_footer = "</tbody>\n</table>"
+
+        html = BeautifulSoup(table_header +
+                             '''
+        <tr><td><span style="display:none">WR0159E</span>&nbsp;<input type="checkbox" name="obj" VALUE="WR0159E"> WR0159E</td>
+        <td align="right"><span style="display:none">010</span> 10&nbsp;&nbsp;&nbsp;</td>
+        <td>&nbsp;&nbsp;2015 09 13.4&nbsp;&nbsp;</td>
+        <td><span style="display:none">190.5617</span>&nbsp;&nbsp;01 01.5 &nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">089.7649</span>&nbsp;&nbsp;-00 14&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">31.2</span>&nbsp;&nbsp;18.8&nbsp;&nbsp;</td>
+        <td><span style="display:none">U2457294.241781</span>&nbsp;Updated Sept. 28.74 UT&nbsp;</td>
+        <td align="center">&nbsp;&nbsp;</td>
+        <td align="right">&nbsp; 222&nbsp;</td>
+        <td align="right">&nbsp; 15.44&nbsp;</td>
+        <td align="right">&nbsp;14.4&nbsp;</td>
+        <td align="right">&nbsp; 0.726&nbsp;</td>
+        ''' + table_footer, "html.parser")
+        return html
 
 def mock_check_request_status(tracking_num):
     status = {'created' : '2015-10-21T19:07:26.023049Z',
