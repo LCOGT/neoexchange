@@ -2443,6 +2443,13 @@ class TestParseNEOCPExtraParams(TestCase):
                                           'score' : 99,
                                           'update_time' : datetime(2015,9,24,22,47,17),
                                           'updated' : False}),
+                             ('WR0159E', {'arc_length' : 15.44,
+                                          'discovery_date' : datetime(2015,9,13,9,36),
+                                          'not_seen' : 0.726,
+                                          'num_obs' : 222,
+                                          'score' : 10,
+                                          'update_time' : datetime(2015,9,28,17,48,10),
+                                          'updated' : True}),
                              ('P10nw2g', {'arc_length' : 1.16,
                                           'discovery_date' : datetime(2015,9,6,7,12),
                                           'not_seen' : 17.455,
@@ -2459,6 +2466,7 @@ class TestParseNEOCPExtraParams(TestCase):
         self.assertEqual(expected_length, len(obj_ids))
         self.assertEqual(expected_obj_ids[0], obj_ids[0])
         self.assertEqual(expected_obj_ids[-1], obj_ids[-1])
+        self.assertEqual(expected_obj_ids[-2], obj_ids[-4])
 
     def test_parse_neocpep_new_dates_bad1(self):
         html = BeautifulSoup(self.table_header +
