@@ -268,7 +268,7 @@ def fetch_NEOCP(dbg=False):
 
     NEOCP_url = 'https://www.minorplanetcenter.net/iau/NEO/toconfirm_tabular.html'
 
-    neocp_page = fetchpage_and_make_soup(NEOCP_url)
+    neocp_page = fetchpage_and_make_soup(NEOCP_url, parser='html5lib')
     return neocp_page
 
 
@@ -319,7 +319,7 @@ def parse_NEOCP_extra_params(neocp_page, dbg=False):
             # Turn the HTML non-breaking spaces (&nbsp;) into regular spaces
             cols = [ele.text.replace(u'\xa0', u' ').strip() for ele in cols]
             if dbg:
-                print("Cols=", cols, len(cols))
+                print(len(new_objects), len(cols))
             pccp = False
             try:
                 update_date = cols[6].split()[0]
@@ -351,7 +351,12 @@ def parse_NEOCP_extra_params(neocp_page, dbg=False):
                     score = int(cols[1][0:3])
                 except:
                     score = None
-                neocp_datetime = parse_neocp_decimal_date(cols[2])
+                try:
+                    neocp_datetime = parse_neocp_decimal_date(cols[2])
+                except ValueError:
+                    neocp_datetime = None
+                    logger.warning("Date Parsing error:" + cols[2])
+                    logger.warning(cols)
                 try:
                     nobs = int(cols[8])
                 except:
@@ -2073,11 +2078,19 @@ def fetch_filter_list(site, spec):
 
     request_url = settings.CONFIGDB_API_URL + 'instruments/'
     request_url += '?telescope={}&science_camera=&autoguider_camera=&camera_type={}&site={}&enclosure={}&state=SCHEDULABLE'.format(telid.lower(), camid, siteid.lower(), encid.lower())
-    resp = requests.get(request_url, timeout=20, verify=True).json()
+    response = requests.get(request_url, timeout=20, verify=True)
 
-    data_out = parse_filter_file(resp, spec)
-    if not data_out:
-        logger.error('Could not find any filters for {}'.format(site))
+    resp = {'results': ''}
+    if response.status_code in [200, 201]:
+        resp = response.json()
+
+    if not resp['results']:
+        logger.error('Could not find any telescopes at {}'.format(site))
+        data_out = []
+    else:
+        data_out = parse_filter_file(resp, spec)
+        if not data_out:
+            logger.error('Could not find any filters for {}'.format(site))
     return data_out
 
 
@@ -2091,8 +2104,12 @@ def parse_filter_file(resp, spec):
 
     site_filters = []
     for result in resp['results']:
-        filters_1tel = result['science_camera']['filters']
-        filt_list = filters_1tel.split(',')
+        try:
+            opt_elem = result['science_camera']['optical_elements']
+            filters_1tel = ",".join(list(opt_elem.values()))
+            filt_list = filters_1tel.split(',')
+        except KeyError:
+            filt_list = []
         for filt in filter_list:
             if filt in filt_list and filt not in site_filters:
                 site_filters.append(filt)
