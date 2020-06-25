@@ -2078,9 +2078,14 @@ def fetch_filter_list(site, spec):
 
     request_url = settings.CONFIGDB_API_URL + 'instruments/'
     request_url += '?telescope={}&science_camera=&autoguider_camera=&camera_type={}&site={}&enclosure={}&state=SCHEDULABLE'.format(telid.lower(), camid, siteid.lower(), encid.lower())
-    resp = requests.get(request_url, timeout=20, verify=True).json()
+    response = requests.get(request_url, timeout=20, verify=True)
 
-    if not resp[['results']]:
+    if response.status_code in [200, 201]:
+        resp = {'results': ''}
+    else:
+        resp = response.json()
+
+    if not resp['results']:
         logger.error('Could not find any telescopes at {}'.format(site))
         data_out = []
     else:
@@ -2102,9 +2107,7 @@ def parse_filter_file(resp, spec):
     for result in resp['results']:
         try:
             opt_elem = result['science_camera']['optical_elements']
-            filters_1tel = ''
-            for key in opt_elem.keys():
-                filters_1tel += ',' + opt_elem[key]
+            filters_1tel = ",".join(list(opt_elem.values()))
             filt_list = filters_1tel.split(',')
         except KeyError:
             filt_list = []
