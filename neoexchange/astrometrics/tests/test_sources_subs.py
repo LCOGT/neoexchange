@@ -1621,7 +1621,9 @@ class TestFetchFilterList(TestCase):
                                         "name": "1.0 meter Sinistro",
                                         "code": "1m0-SciCam-Sinistro",
                                     },
-                                    "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,ND,400um-Pinhole,150um-Pinhole",
+                                    "optical_elements": {
+                                        "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,ND,400um-Pinhole,150um-Pinhole"
+                                    },
                                     "host": "inst.1m0a.doma.lsc.lco.gtn"
                                 },
                                 "__str__": "lsc.doma.1m0a.fa15-ef06"
@@ -1647,7 +1649,9 @@ class TestFetchFilterList(TestCase):
                                         "name": "1.0 meter Sinistro",
                                         "code": "1m0-SciCam-Sinistro",
                                     },
-                                    "filters": "I,R,U",
+                                    "optical_elements": {
+                                        "filters": "I,R,U"
+                                    },
                                     "host": "inst.1m0a.doma.lsc.lco.gtn"
                                 },
                                 "__str__": "lsc.doma.1m0a.fa15-ef06"
@@ -1665,7 +1669,9 @@ class TestFetchFilterList(TestCase):
                                         "name": "1.0 meter Sinistro",
                                         "code": "1m0-SciCam-Sinistro",
                                     },
-                                    "filters": "ip,gp,zs,B,ND,400um-Pinhole,150um-Pinhole",
+                                    "optical_elements": {
+                                        "filters": "ip,gp,zs,B,ND,400um-Pinhole,150um-Pinhole"
+                                    },
                                     "host": "inst.1m0a.doma.lsc.lco.gtn"
                                 },
                                 "__str__": "lsc.doma.1m0a.fa15-ef06"
@@ -1683,7 +1689,9 @@ class TestFetchFilterList(TestCase):
                                         "name": "1.0 meter Sinistro",
                                         "code": "1m0-SciCam-Sinistro",
                                     },
-                                    "filters": "Y,up,air,rp",
+                                    "optical_elements": {
+                                        "filters": "Y,up,air,rp"
+                                    },
                                     "host": "inst.1m0a.doma.lsc.lco.gtn"
                                 },
                                 "__str__": "lsc.doma.1m0a.fa15-ef06"
@@ -1701,13 +1709,16 @@ class TestFetchFilterList(TestCase):
                                         "name": "1.0 meter Sinistro",
                                         "code": "1m0-SciCam-Sinistro",
                                     },
-                                    "filters": "U,w,Y,up,B,ND,400um-Pinhole,150um-Pinhole",
+                                    "optical_elements": {
+                                        "filters": "U,w,Y,up,B,ND,400um-Pinhole,150um-Pinhole"}
+                                    ,
                                     "host": "inst.1m0a.doma.lsc.lco.gtn"
                                 },
                                 "__str__": "lsc.doma.1m0a.fa15-ef06"
                             }
                         ]
                     }
+
         self.all_2m_rsp = {
                         "count": 4,
                         "next": 'null',
@@ -1725,7 +1736,8 @@ class TestFetchFilterList(TestCase):
                                         "name": "2.0 meter FLOYDS",
                                         "code": "2m0-FLOYDS-SciCam",
                                     },
-                                    "filters": "slit_6.0as,slit_1.6as,slit_2.0as,slit_1.2as",
+                                    "optical_elements": {"slits": "slit_6.0as,slit_1.6as,slit_2.0as,slit_1.2as"
+                                                         },
                                     "host": "floyds.ogg.lco.gtn"
                                 },
                                 "__str__": "ogg.clma.2m0a.floyds01-kb42"
@@ -1742,7 +1754,9 @@ class TestFetchFilterList(TestCase):
                                         "name": "2.0 meter FLOYDS",
                                         "code": "2m0-FLOYDS-SciCam",
                                     },
-                                    "filters": "slit_6.0as,slit_1.6as,slit_2.0as,slit_1.2as",
+                                    "optical_elements": {
+                                        "slits": "slit_6.0as,slit_1.6as,slit_2.0as,slit_1.2as"
+                                    },
                                     "host": "floyds.coj.lco.gtn"
                                 },
                                 "__str__": "coj.clma.2m0a.floyds02-kb38"
@@ -1759,7 +1773,9 @@ class TestFetchFilterList(TestCase):
                                         "name": "2.0 meter Spectral",
                                         "code": "2m0-SciCam-Spectral",
                                     },
-                                    "filters": "D51,H-Beta,OIII,H-Alpha,Skymapper-VS,solar,Astrodon-UV,I,R,Y,up,air,rp,ip,gp,zs,V,B,200um-Pinhole",
+                                    "optical_elements": {
+                                        "filters": "D51,H-Beta,OIII,H-Alpha,Skymapper-VS,solar,Astrodon-UV,I,R,Y,up,air,rp,ip,gp,zs,V,B,200um-Pinhole"
+                                    },
                                     "host": "fs.coj.lco.gtn"
                                 },
                                 "__str__": "coj.clma.2m0a.fs01-kb34"
@@ -1776,7 +1792,9 @@ class TestFetchFilterList(TestCase):
                                         "name": "2.0 meter Spectral",
                                         "code": "2m0-SciCam-Spectral",
                                     },
-                                    "filters": "D51,H-Beta,OIII,H-Alpha,Skymapper-VS,solar,Astrodon-UV,I,R,Y,up,air,rp,ip,gp,zs,V,B,200um-Pinhole",
+                                    "optical_elements": {
+                                        "filters": "D51,H-Beta,OIII,H-Alpha,Skymapper-VS,solar,Astrodon-UV,I,R,Y,up,air,rp,ip,gp,zs,V,B,200um-Pinhole"
+                                    },
                                     "host": "fs.ogg.lco.gtn"
                                 },
                                 "__str__": "ogg.clma.2m0a.fs02-kb40"
