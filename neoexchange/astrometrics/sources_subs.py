@@ -2489,9 +2489,9 @@ def store_jpl_physparams(phys_par, body):
 
     # parsing the JPL physparams dictionary
     for p in phys_par:   
-        if 'H' is p['name']:  # absolute magnitude
+        if 'H' == p['name']:  # absolute magnitude
             p_type = 'H'
-        elif 'G' is p['name']:  # magnitude (phase) slope
+        elif 'G' == p['name']:  # magnitude (phase) slope
             p_type = 'G'
         elif 'diameter' in p['name']:  # diameter
             p_type = 'D'     
@@ -2508,11 +2508,11 @@ def store_jpl_physparams(phys_par, body):
         elif 'albedo' in p['name']:  # geometric albedo
             p_type = 'ab'
         # Parameters available from the MPC, but not stored by us at the moment.
-#        elif 'M1' is p['name']: # absolute magnitude of comet and coma (total)
-#        elif 'M2' is p['name']: # comet total magnitude parameter  
-#        elif 'K1' is p['name']: # comet total magnitude slope parameter
-#        elif 'K2' is p['name']: # comet nuclear magnitude slope parameter
-#        elif 'PC' is p['name']: # comet nuclear magnitude law - phase coefficient
+#        elif 'M1' == p['name']: # absolute magnitude of comet and coma (total)
+#        elif 'M2' == p['name']: # comet total magnitude parameter
+#        elif 'K1' == p['name']: # comet total magnitude slope parameter
+#        elif 'K2' == p['name']: # comet nuclear magnitude slope parameter
+#        elif 'PC' == p['name']: # comet nuclear magnitude law - phase coefficient
         elif 'spectral' in p['desc']:
             continue
         else:
@@ -2600,7 +2600,7 @@ def parse_jpl_fullname(obj):
     """Given a JPL object, return parsed full name"""
     fullname = obj['fullname']
     number = name = prov_des = None
-    if fullname[0] is '(':
+    if fullname[0] == '(':
         prov_des = fullname.strip('()')
     elif '/' in fullname:  # comet
         parts = fullname.split('/')
@@ -2623,15 +2623,15 @@ def parse_jpl_fullname(obj):
                 name = part2
     elif ' ' in fullname:
         space_num = fullname.count(' ')
-        if space_num is 3:
+        if space_num == 3:
             part1, part2, part3, part4 = fullname.split(' ')
             number = part1
             if part2[0].isalpha:
                 name = part2
-        elif space_num is 2:
+        elif space_num == 2:
             part1, part2, part3 = fullname.split(' ')
             number = part1
-        elif space_num is 1:
+        elif space_num == 1:
             part1, part2 = fullname.split(' ')
             number = part1
             name = part2
