@@ -1449,15 +1449,19 @@ def get_site_status(site_code):
 
 
 def fetch_yarkovsky_targets(yark_targets):
-    """Fetches yarkovsky targets from command line and returns a list of targets"""
+    """Fetches Yarkovsky targets from command line and returns a list of targets"""
 
     yark_target_list = []
 
     for obj_id in yark_targets:
         obj_id = obj_id.strip()
+        comment_loc = obj_id.find('#')
+        if comment_loc >= 0:
+            obj_id = obj_id[0:comment_loc].strip()
         if '_' in obj_id:
             obj_id = str(obj_id).replace('_', ' ')
-        yark_target_list.append(obj_id)
+        if len(obj_id) > 0:
+            yark_target_list.append(obj_id)
 
     return yark_target_list
 
