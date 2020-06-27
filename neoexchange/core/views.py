@@ -319,6 +319,7 @@ class BlockReportMPC(LoginRequiredMixin, View):
             messages.error(request, 'It was not possible to email report to MPC')
             return HttpResponseRedirect(reverse('block-report-mpc', kwargs={'pk': kwargs['pk']}))
 
+
 class BlockCancel(View):
     def get(self, request, *args, **kwargs):
         try:
@@ -339,6 +340,7 @@ class BlockCancel(View):
             else:
                 messages.warning(request, f'SuperBlock {bk.id} not cancelled')
         return HttpResponseRedirect(reverse('block-view', kwargs={'pk': kwargs['pk']}))
+
 
 class UploadReport(LoginRequiredMixin, FormView):
     template_name = 'core/uploadreport.html'
@@ -1631,6 +1633,59 @@ def feasibility_check(data, body):
     data['slot_length'] = slot_length
 
     return data
+
+
+class SpecDataListView(ListView):
+    model = Block
+    template_name = 'core/data_summary.html'
+    queryset = Block.objects.filter(obstype=1).filter(num_observed__gt=0).order_by('-when_observed')
+    context_object_name = "data_list"
+    paginate_by = 20
+
+    def get_context_data(self, **kwargs):
+        context = super(SpecDataListView, self).get_context_data(**kwargs)
+        context['data_type'] = 'Spec'
+        return context
+
+
+class LCDataListView(ListView):
+    model = Body
+    template_name = 'core/data_summary.html'
+    paginate_by = 20
+
+    def get_context_data(self, **kwargs):
+        context = {'data_list': self.find_lc(), 'data_type': 'LC'}
+        return context
+
+    def find_lc(self):
+        base_dir = os.path.join(settings.DATA_ROOT, 'Reduction')
+        dir_list, _ = default_storage.listdir(base_dir)
+        lc_list = []
+        for name in dir_list:
+            object_list = []
+            if name != '':
+                if name.isdigit():
+                    object_list = Body.objects.filter(designations__value=name).filter(designations__desig_type='#')
+                if not object_list:
+                    new_name = name.replace('_', ' ')
+                    object_list = Body.objects.filter(
+                                Q(designations__value__icontains=new_name) | Q(provisional_name__icontains=new_name) | Q(
+                                    provisional_packed__icontains=new_name) | Q(name__icontains=new_name))
+                if not object_list:
+                    for c in range(len(name)):
+                        new_name = name[:c] + ' ' + name[c:]
+                        if not object_list:
+                            object_list = Body.objects.filter(
+                                Q(designations__value__icontains=new_name) | Q(provisional_name__icontains=new_name) | Q(
+                                    provisional_packed__icontains=new_name) | Q(name__icontains=new_name))
+                            if object_list:
+                                break
+            for obj in object_list:
+                if sanitize_object_name(obj.current_name()) == name:
+                    lc_list.append(obj)
+                    break
+        return lc_list
+
 
 
 def ranking(request):
