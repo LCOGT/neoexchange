@@ -1660,32 +1660,23 @@ class LCDataListView(ListView):
     def find_lc(self):
         base_dir = os.path.join(settings.DATA_ROOT, 'Reduction')
         dir_list, _ = default_storage.listdir(base_dir)
-        lc_list = []
+        name_list = []
         for name in dir_list:
-            object_list = []
-            if name != '':
-                if name.isdigit():
-                    object_list = Body.objects.filter(designations__value=name).filter(designations__desig_type='#')
-                if not object_list:
-                    new_name = name.replace('_', ' ')
-                    object_list = Body.objects.filter(
-                                Q(designations__value__icontains=new_name) | Q(provisional_name__icontains=new_name) | Q(
-                                    provisional_packed__icontains=new_name) | Q(name__icontains=new_name))
-                if not object_list:
-                    for c in range(len(name)):
-                        new_name = name[:c] + ' ' + name[c:]
-                        if not object_list:
-                            object_list = Body.objects.filter(
-                                Q(designations__value__icontains=new_name) | Q(provisional_name__icontains=new_name) | Q(
-                                    provisional_packed__icontains=new_name) | Q(name__icontains=new_name))
-                            if object_list:
-                                break
-            for obj in object_list:
-                if sanitize_object_name(obj.current_name()) == name:
-                    lc_list.append(obj)
-                    break
-        return lc_list
-
+            if name.isdigit():
+                name_list.append(name)
+            elif '_' in name:
+                name_list.append(name.replace('_', ' '))
+            else:
+                for c in range(len(name)):
+                    new_name = name[:c] + ' ' + name[c:]
+                    name_list.append(new_name.lstrip())
+        object_list = Body.objects.filter(Q(designations__value__in=name_list) | Q(provisional_name__in=name_list)
+                                          | Q(provisional_packed__in=name_list) | Q(name__in=name_list))
+        final_objects = object_list
+        for obj in object_list:
+            if sanitize_object_name(obj.current_name()) not in name_list:
+                final_objects = final_objects.exclude(pk=obj.pk)
+        return list(set(final_objects))
 
 
 def ranking(request):
