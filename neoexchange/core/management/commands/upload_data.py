@@ -70,6 +70,7 @@ class Command(BaseCommand):
                         ex = '*{}'.format(ex)
                     search_path = filepath + ex
                     file_list += glob(search_path)
+                    dest_list.append(options['destdir'])
                 else:
                     for f in search_list:
                         if ex in f or ex == '*':
@@ -94,11 +95,15 @@ class Command(BaseCommand):
             dest_list.append(options['destdir'])
 
         for i, file in enumerate(file_list):
+            if len(dest_list) == len(file_list):
+                dest = dest_list[i]
+            else:
+                dest = dest_list[0]
 
             filename = os.path.basename(file)
-            if not search(dest_list[i], filename) or options['overwrite']:
-                self.stdout.write("==== Uploading {} to S3".format(file))
+            if not search(dest, filename) or options['overwrite']:
+                self.stdout.write("==== Uploading {} to S3:{}".format(file, dest))
                 with open(file, "rb") as f:
-                    default_storage.save(os.path.join(dest_list[i], filename), f)
+                    default_storage.save(os.path.join(dest, filename), f)
             else:
-                self.stdout.write("==== {} already exists on S3".format(os.path.join(dest_list[i], filename)))
+                self.stdout.write("==== {} already exists on S3".format(os.path.join(dest, filename)))
