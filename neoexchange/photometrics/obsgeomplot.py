@@ -149,6 +149,88 @@ def plot_ra_dec(ephem, title=None, base_dir=''):
 
     return save_file
 
+def plot_gal_long_lat(ephem, title=None, base_dir=''):
+    """Plot Galactic longitude against latitude"""
+
+    # Generate the figure **without using pyplot**.
+    # https://matplotlib.org/faq/howto_faq.html#matplotlib-in-a-web-application-server
+    fig = Figure()
+    ax = fig.subplots()
+
+    # Look for longitude wraparound at l=360/0 deg and plot in two parts
+    if ephem['GlxLon'].max() >= 358.0:
+        # Find index of max, min value
+        wrap_index1 = np.argmin(ephem['GlxLon'])
+        wrap_index2 = np.argmax(ephem['GlxLon'])
+        if max(wrap_index1, wrap_index2) < len(ephem['GlxLon']):
+            if wrap_index1 > wrap_index2:
+                # Max occurs before min so we are wrapping at 360 and GlxLon is increasing
+                wrap_index = wrap_index2
+            elif  wrap_index1 < wrap_index2:
+                # Min occurs before max so we are wrapping at 0 and GlxLon is decreasing
+                wrap_index = wrap_index1
+            first_part = ephem[0:wrap_index+1]
+            second_part = ephem[wrap_index+1:]
+            lines = ax.plot(first_part['GlxLon'], first_part['GlxLat'])
+            line_color = lines[0].get_color()
+            ax.plot(second_part['GlxLon'], second_part['GlxLat'], color=line_color)
+        else:
+            ax.plot(ephem['GlxLon'], ephem['GlxLat'])
+    else:
+        ax.plot(ephem['GlxLon'], ephem['GlxLat'])
+    ax.set_xlim(360.0, 0.0)
+    ax.set_ylim(-95, 95)
+    ax.set_xlabel('Galactic Longitude (deg)')
+    ax.set_ylabel('Galactic Latitude (deg)')
+    # Set the Galactic Latitude tick labels from -80 to +80 in steps of 20
+    labels = np.arange(-80,90,20)
+    ax.yaxis.set_ticks(labels)
+    ax.minorticks_on()
+    ax.xaxis.set_ticks_position('both')
+    ax.yaxis.set_ticks_position('both')
+
+    # Include Milky Way outline
+    mw_top, mw_bot = plot_milkyway(ax, radec=False)
+
+    first = ephem[0]
+    first_date = datetime.strptime(first['datetime_str'], "%Y-%b-%d %H:%M")
+    last = ephem[-1]
+    last_date = datetime.strptime(last['datetime_str'], "%Y-%b-%d %H:%M")
+
+    if title is None:
+        title = "{} for {} to {}".format(first['targetname'], first_date.strftime("%Y-%m-%d"), last_date.strftime("%Y-%m-%d"))
+    fig.suptitle(title)
+    ax.set_title("Galactic position")
+
+    dec_offset = +10
+    if first['GlxLat'] >= 75:
+        dec_offset = -15
+    ra_offset = 0
+    if first['GlxLon'] <= 40:
+        ra_offset = +60
+    ax.annotate(first_date.strftime("%Y-%m-%d"), xy=(first['GlxLon'], first['GlxLat']), xytext=(first['GlxLon']+ra_offset, first['GlxLat']+dec_offset),
+            arrowprops=dict(facecolor='black', arrowstyle='->'))
+    dec_offset = +10
+    if last['GlxLat'] >= 75:
+        dec_offset = -15
+    ra_offset = 0
+    if last['GlxLon'] <= 40:
+        ra_offset = +60
+    ax.annotate(last_date.strftime("%Y-%m-%d"), xy=(last['GlxLon'], last['GlxLat']), xytext=(last['GlxLon']+ra_offset, last['GlxLat']+dec_offset),
+            arrowprops=dict(arrowstyle='->'))
+
+    # Add watermark
+    add_watermark(fig)
+
+    targetname = make_targetname(first['targetname'])
+    save_file = "{}_glonglat_{}-{}.png".format(targetname, first_date.strftime("%Y%m%d"), last_date.strftime("%Y%m%d"))
+    save_file = os.path.join(base_dir, save_file)
+    fig_file  = default_storage.open(save_file,"wb+")
+    fig.savefig(fig_file, format='png')
+    fig_file.close()
+
+    return save_file
+
 def plot_helio_geo_dist(ephem, title=None, base_dir=''):
     """Plot heliocentric distance (r) and geocentric distance (delta)
     against time
