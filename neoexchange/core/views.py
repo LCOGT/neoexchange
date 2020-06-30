@@ -1794,6 +1794,10 @@ def build_characterization_list(disp=None):
     return params
 
 
+def look_project(request):
+    params = {}
+    return render(request, 'core/lookproject.html', params)
+
 def check_for_block(form_data, params, new_body):
     """Checks if a block with the given name exists in the Django DB.
     Return 0 if no block found, 1 if found, 2 if multiple blocks found"""
