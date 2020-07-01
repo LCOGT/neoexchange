@@ -15,7 +15,7 @@ import os
 from shutil import move
 from glob import glob
 from datetime import datetime, timedelta, date
-from math import floor, ceil, degrees, radians, pi, acos
+from math import floor, ceil, degrees, radians, pi, acos, pow
 from astropy import units as u
 import json
 import urllib
@@ -1794,8 +1794,124 @@ def build_characterization_list(disp=None):
     return params
 
 
-def look_project(request):
+def build_lookproject_list(disp=None):
     params = {}
+    # If we don't have any Body instances, return None instead of breaking
+    try:
+        look_targets = Body.objects.filter(active=True, origin='O')
+        unranked = []
+        for body in look_targets:
+            try:
+                body_dict = model_to_dict(body)
+                body_dict['current_name'] = body.current_name()
+                body_dict['ingest_date'] = body.ingest
+                source_types = [x[1] for x in OBJECT_TYPES if x[0] == body.source_type]
+                if len(source_types) == 1:
+                    body_dict['source_type'] = source_types[0]
+                subtypes =  [x[1] for x in OBJECT_SUBTYPES if x[0] == body.source_subtype_1]
+                if len(subtypes) == 1:
+                    body_dict['subtype1'] = subtypes[0]
+                emp_line = body.compute_position()
+                if not emp_line:
+                    continue
+                obs_dates = body.compute_obs_window()
+                if obs_dates[0]:
+                    body_dict['obs_sdate'] = obs_dates[0]
+                    if obs_dates[0] == obs_dates[2]:
+                        startdate = 'Now'
+                    else:
+                        startdate = obs_dates[0].strftime('%m/%y')
+                    if not obs_dates[1]:
+                        body_dict['obs_edate'] = obs_dates[2]+timedelta(days=99)
+                        enddate = '>'
+                    else:
+                        enddate = obs_dates[1].strftime('%m/%y')
+                        body_dict['obs_edate'] = obs_dates[1]
+                else:
+                    body_dict['obs_sdate'] = body_dict['obs_edate'] = obs_dates[2]+timedelta(days=99)
+                    startdate = '[--'
+                    enddate = '--]'
+                days_to_start = body_dict['obs_sdate']-obs_dates[2]
+                days_to_end = body_dict['obs_edate']-obs_dates[2]
+                # Define a sorting Priority:
+                # Currently a combination of imminence and window width.
+                body_dict['priority'] = days_to_start.days + days_to_end.days
+                body_dict['obs_start'] = startdate
+                body_dict['obs_end'] = enddate
+                body_dict['ra'] = emp_line[0]
+                body_dict['dec'] = emp_line[1]
+                body_dict['v_mag'] = emp_line[2]
+                body_dict['motion'] = emp_line[4]
+                unranked.append(body_dict)
+            except Exception as e:
+                logger.error('LOOK target %s failed on %s' % (body.name, e))
+        latest = Body.objects.filter(source_type='C').latest('ingest')
+        max_dt = latest.ingest
+        min_dt = max_dt - timedelta(days=30)
+        newest_comets = Body.objects.filter(ingest__range=(min_dt, max_dt), source_type='C')
+        comets = []
+        for body in newest_comets:
+            try:
+                body_dict = model_to_dict(body)
+                body_dict['current_name'] = body.current_name()
+                body_dict['ingest_date'] = body.ingest
+                subtypes =  [x[1] for x in OBJECT_SUBTYPES if x[0] == body.source_subtype_1]
+                if len(subtypes) == 1:
+                    body_dict['subtype1'] = subtypes[0]
+                emp_line = body.compute_position()
+                if not emp_line:
+                    continue
+                obs_dates = body.compute_obs_window()
+                if obs_dates[0]:
+                    body_dict['obs_sdate'] = obs_dates[0]
+                    if obs_dates[0] == obs_dates[2]:
+                        startdate = 'Now'
+                    else:
+                        startdate = obs_dates[0].strftime('%m/%y')
+                    if not obs_dates[1]:
+                        body_dict['obs_edate'] = obs_dates[2]+timedelta(days=99)
+                        enddate = '>'
+                    else:
+                        enddate = obs_dates[1].strftime('%m/%y')
+                        body_dict['obs_edate'] = obs_dates[1]
+                else:
+                    body_dict['obs_sdate'] = body_dict['obs_edate'] = obs_dates[2]+timedelta(days=99)
+                    startdate = '[--'
+                    enddate = '--]'
+                days_to_start = body_dict['obs_sdate']-obs_dates[2]
+                days_to_end = body_dict['obs_edate']-obs_dates[2]
+                # Define a sorting Priority:
+                # Currently a combination of imminence and window width.
+                body_dict['obs_start'] = startdate
+                body_dict['obs_end'] = enddate
+                body_dict['ra'] = emp_line[0]
+                body_dict['dec'] = emp_line[1]
+                body_dict['v_mag'] = emp_line[2]
+                body_dict['motion'] = emp_line[4]
+                period = None
+                if body.eccentricity and body.perihdist:
+                    period = 1e99
+                    if body.eccentricity < 1.0:
+                        a_au = body.perihdist / (1.0 - body.eccentricity)
+                        period = pow(a_au, (3.0/2.0))
+                body_dict['period'] = period
+                body_dict['perihdist'] = body.perihdist
+                comets.append(body_dict)
+            except Exception as e:
+                logger.error('LOOK target %s failed on %s' % (body.name, e))
+    except Body.DoesNotExist as e:
+        unranked = None
+        logger.error('LOOK list failed on %s' % e)
+    params = {
+        'look_targets': unranked,
+        'new_comets': comets
+    }
+    return params
+
+
+def look_project(request):
+
+    params =  build_lookproject_list()
     return render(request, 'core/lookproject.html', params)
 
 def check_for_block(form_data, params, new_body):
