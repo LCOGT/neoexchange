@@ -70,7 +70,9 @@ OBJECT_SUBTYPES = (
                 ('PA', 'Parabolic'),
                 ('JF', 'Jupiter Family'),   # P < 20 y
                 ('HT', 'Halley-Type'),      # 20 y < P < 200 y
-                ('LP', 'Long Period')       # P > 200 y
+                ('LP', 'Long Period'),      # P > 200 y
+                ('DN', 'Dynamically New'),  # Dynamically New Comet
+                ('DO', 'Dynamically Old')   # Dynamically Old Comet
             )
 
 
