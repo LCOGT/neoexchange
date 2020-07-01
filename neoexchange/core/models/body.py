@@ -86,7 +86,8 @@ ORIGINS = (
             ('R', 'Goldstone & Arecibo'),
             ('L', 'LCOGT'),
             ('Y', 'Yarkovsky'),
-            ('T', 'Trojan')
+            ('T', 'Trojan'),
+            ('O', 'LOOK Project')
             )
 
 DESIG_CHOICES = (
