@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.4.0
+Update Photometry to use GAIA-DR2
+
 ### 3.3.2
 Initial support for the LCO Outbursting Objects Key (LOOK) Project
 
