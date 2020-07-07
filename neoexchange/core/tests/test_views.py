@@ -2402,6 +2402,14 @@ class TestUpdateMPCOrbit(TestCase):
         self.test_mpcdb_page = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
 
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcdb_Comet243P.html'), 'r')
+        self.test_mpcdb_page_spcomet = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcdb_Comet2016C2.html'), 'r')
+        self.test_mpcdb_comet = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
         self.nocheck_keys = ['ingest']   # Involves datetime.utcnow(), hard to check
 
         self.expected_elements = {u'id' : 1,
@@ -3319,7 +3327,7 @@ class TestCleanMPCOrbit(TestCase):
         test_mpcdb_page = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
 
-        self.test_comet_elements = parse_mpcorbit(test_mpcdb_page)
+        self.test_comet_elements = parse_mpcorbit(test_mpcdb_page, epoch_now=datetime(2016, 4, 24, 18, 0, 0))
 
         test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcdb_Comet243P.html'), 'r')
         self.test_multiple_epochs_page = BeautifulSoup(test_fh, "html.parser")
@@ -3395,7 +3403,7 @@ class TestCleanMPCOrbit(TestCase):
                                         'discovery_date': datetime(2016, 2, 8, 0),
                                         'num_obs': '89',
                                         'arc_length': '10',
-                                        'not_seen' : 6.75,
+                                        'not_seen' : 66.75,
                                         'update_time' : datetime(2016, 2, 18, 0),
                                         'updated' : True
                                      }
@@ -3514,7 +3522,7 @@ class TestCleanMPCOrbit(TestCase):
     @patch('core.views.datetime', MockDateTime)
     def test_clean_C_2016C2(self):
 
-        MockDateTime.change_datetime(2016, 2, 24, 18, 0, 0)
+        MockDateTime.change_datetime(2016, 4, 24, 18, 0, 0)
         params = clean_mpcorbit(self.test_comet_elements)
 
         self.assertEqual(self.expected_comet_params, params)
