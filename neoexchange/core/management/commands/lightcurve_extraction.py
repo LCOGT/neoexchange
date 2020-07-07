@@ -34,7 +34,6 @@ from astropy.stats import LombScargle
 import astropy.units as u
 from astropy.time import Time
 from django.conf import settings
-
 from core.models import Block, Frame, SuperBlock, SourceMeasurement, CatalogSources
 from astrometrics.ephem_subs import compute_ephem, radec2strings, moon_alt_az, get_sitepos
 from astrometrics.time_subs import datetime2mjd_utc
@@ -169,6 +168,7 @@ class Command(BaseCommand):
                         }
         source, created = SourceMeasurement.objects.get_or_create(**source_params)
         mpc_line = source.format_mpc_line()
+
         ades_psv_line = source.format_psv_line()
         if persist is not True:
             source.delete()

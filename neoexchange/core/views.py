@@ -18,7 +18,6 @@ from datetime import datetime, timedelta, date
 from math import floor, ceil, degrees, radians, pi, acos, pow
 from astropy import units as u
 import json
-import urllib
 import logging
 import tempfile
 import bokeh
@@ -72,7 +71,8 @@ from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
     read_mtds_file, unpack_tarball, run_findorb
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
-    determine_filenames, increment_red_level, update_ldac_catalog_wcs, FITSHdrException, sanitize_object_name
+    determine_filenames, increment_red_level, update_ldac_catalog_wcs, FITSHdrException, \
+    get_reference_catalog, reset_database_connection, sanitize_object_name
 from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
 from photometrics.spectraplot import pull_data_from_spectrum, pull_data_from_text, spectrum_plot
 from core.frames import create_frame, ingest_frames, measurements_from_block
@@ -82,6 +82,10 @@ from core.utils import search
 from photometrics.SA_scatter import readSources, genGalPlane, plotScatter, \
     plotFormat
 from core.plots import spec_plot, lin_vis_plot
+
+# import matplotlib
+# matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 logger = logging.getLogger(__name__)
 
@@ -3183,7 +3187,9 @@ def make_new_catalog_entry(new_ldac_catalog, header, block):
     # if a Frame does not exist for the catalog file with a non-null block
     # create one with the fits filename
     catfilename = os.path.basename(new_ldac_catalog)
-    if len(Frame.objects.filter(filename=catfilename, block__isnull=False)) < 1:
+    cat_frames = Frame.objects.filter(filename=catfilename, block__isnull=False)
+    num_frames = cat_frames.count()
+    if num_frames == 0:
 
         # Create a new Frame entry for new fits_file_output name
         frame_params = {    'sitecode': header['site_code'],
@@ -3205,13 +3211,33 @@ def make_new_catalog_entry(new_ldac_catalog, header, block):
 
         frame, created = Frame.objects.get_or_create(**frame_params)
         if created is True:
-            logger.debug("Created new Frame id#%d", frame.id)
+            logger.info("Created new Frame id#%d", frame.id)
             num_new_frames_created += 1
-
+    elif num_frames == 1:
+        frame_params = {    'sitecode': header['site_code'],
+                  'instrument': header['instrument'],
+                      'filter': header['filter'],
+                    'filename': catfilename,
+                     'exptime': header['exptime'],
+                    'midpoint': header['obs_midpoint'],
+                       'block': block,
+                   'zeropoint': header['zeropoint'],
+               'zeropoint_err': header['zeropoint_err'],
+                        'fwhm': header['fwhm'],
+                   'frametype': Frame.BANZAI_LDAC_CATALOG,
+                   'astrometric_catalog' : header.get('astrometric_catalog', None),
+                  'rms_of_fit': header['astrometric_fit_rms'],
+               'nstars_in_fit': header['astrometric_fit_nstars'],
+                        'wcs' : header.get('wcs', None),
+                }
+        cat_frames.update(**frame_params)
+        logger.info("Updated Frame id#%d", cat_frames[0].id)
+    else:
+        logger.warning("Found an unexpected number of Frame entries (%d) for %s", (num_frames, catfilename))
     return num_new_frames_created
 
 
-def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
+def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False, desired_catalog=None):
     """New version of check_catalog_and_refit designed for BANZAI data. This
     version of the routine assumes that the astrometric fit status of <catfile>
     is likely to be good and exits if not the case. A new source extraction
@@ -3238,11 +3264,15 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
         logger.error("Unable to process non-BANZAI data at this time")
         return -99, num_new_frames_created
 
-    # Check for matching catalog
+    # Check for matching catalog (solved with desired astrometric reference catalog)
     catfilename = os.path.basename(catfile).replace('.fits', '_ldac.fits')
-    catalog_frames = Frame.objects.filter(filename=catfilename, frametype__in=(Frame.BANZAI_LDAC_CATALOG, Frame.FITS_LDAC_CATALOG))
+    reproc_catfilename = increment_red_level(catfilename)
+    catalog_frames = Frame.objects.filter(filename__in=(catfilename, reproc_catfilename),
+                                          frametype__in=(Frame.BANZAI_LDAC_CATALOG, Frame.FITS_LDAC_CATALOG),
+                                          astrometric_catalog=desired_catalog)
     if len(catalog_frames) != 0:
-        return os.path.abspath(os.path.join(dest_dir, os.path.basename(catfile.replace('.fits', '_ldac.fits')))), 0
+        logger.info("Found reprocessed frame in DB")
+        return os.path.abspath(os.path.join(dest_dir, catalog_frames[0].filename)), 0
 
     # Find image file for this catalog
     fits_file = find_matching_image_file(catfile)
@@ -3256,6 +3286,53 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
         logger.error("Execution of SExtractor failed")
         return -4, 0
 
+    # If desired catalog is GAIA-DR2, need to grab it ourselves as SCAMP does
+    # not support it
+    if desired_catalog == 'GAIA-DR2':
+        refcat, num_ref_srcs = get_reference_catalog(dest_dir, header['field_center_ra'],
+            header['field_center_dec'], header['field_width'], header['field_height'],
+            cat_name=desired_catalog)
+        if refcat is None or num_ref_srcs is None:
+            logger.error("Could not obtain reference catalog for fits frame %s" % catfile)
+            return -6, num_new_frames_created
+
+        scamp_status = run_scamp(configs_dir, dest_dir, new_ldac_catalog, refcatalog=refcat)
+        logger.info("Return status for scamp: {}".format(scamp_status))
+
+        if scamp_status == 0:
+            scamp_file = os.path.basename(new_ldac_catalog).replace('.fits', '.head' )
+            scamp_file = os.path.join(dest_dir, scamp_file)
+            scamp_xml_file = os.path.join(dest_dir, 'scamp.xml')
+            # Update WCS in image file
+            # Strip off now unneeded FITS extension
+            fits_file = fits_file.replace('[SCI]', '')
+            # Get new output filename
+            fits_file_output = increment_red_level(fits_file)
+            fits_file_output = os.path.join(dest_dir, fits_file_output.replace('[SCI]', ''))
+            logger.info("Updating refitted WCS in image file: %s. Output to: %s" % (fits_file, fits_file_output))
+            status, new_header = updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output)
+            logger.info("Return status for updateFITSWCS: {}".format(status))
+#           XXX In principle, this is an alternative way of doing it without
+#           needing to do a re-extraction. However it requires breaking the 24,000+
+#           byte LDAC "header" back into a proper Header, updating, and joining
+#           it all back together again. This approach would also allow multi-
+#           aperture/curve-of-growth to be done with the second extraction
+#            ## Update WCS in catalog file
+#            logger.info("Updating bad WCS in catalog file: %s." % (new_ldac_catalog,))
+#            status, new_cat_header = updateFITSWCS(new_ldac_catalog, scamp_file, scamp_xml_file, new_ldac_catalog)
+#            logger.info("Return status for updateFITSWCS: {}".format(status))
+#            header = get_catalog_header(new_header, cattype)
+#            # Apply new refitted WCS to catalog RA,Dec columns
+#            status = update_ldac_catalog_wcs(fits_file_output, new_ldac_catalog)
+#            logger.info("Return status for update_ldac_catalog_wcs: {}".format(status))
+            # Re-run SExtractor to make a new FITS_LDAC catalog from the frame
+            status, new_ldac_catalog = run_sextractor_make_catalog(configs_dir, dest_dir, fits_file_output)
+            logger.debug("Filename after 2nd SExtractor= {}".format(new_ldac_catalog))
+            if status != 0:
+                logger.error("Execution of second SExtractor failed")
+                return -4, 0
+    # Reset DB connection after potentially long-running process.
+    reset_database_connection()
     # Find Block for original frame
     block = find_block_for_frame(catfile)
     if block is None:

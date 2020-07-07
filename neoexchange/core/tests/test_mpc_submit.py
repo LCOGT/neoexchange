@@ -24,7 +24,7 @@ from core.models import Body, Proposal, SuperBlock, Block, Frame, SourceMeasurem
 from core.mpc_submit import *
 
 
-class Test_Generate_Message(TestCase):
+class TestGenerateMessage(TestCase):
 
     def setUp(self):
 
@@ -654,7 +654,7 @@ class Test_Generate_Message(TestCase):
         self.assertEqual(expected_message, message)
 
 
-class Test_Generate_ADES_PSV_Message(TestCase):
+class TestGenerateADESPSVMessage(TestCase):
 
     def setUp(self):
 

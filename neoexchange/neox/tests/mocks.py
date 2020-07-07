@@ -19,6 +19,7 @@ from datetime import date
 import os
 
 import astropy.units as u
+from astropy.table import Table
 from bs4 import BeautifulSoup
 from django.contrib.auth import authenticate
 import logging
@@ -1672,6 +1673,23 @@ def mock_fetch_sfu(sfu_value=None):
         sfu_value = 42.0 * sfu
 
     return datetime(2018, 4, 20, 5, 0, 0), sfu_value
+
+
+def mock_get_vizier_catalog_table(ra, dec, ref_width, ref_height, cat_name="GAIA-DR2", set_row_limit=10, rmag_limit="<=15.0"):
+    row_data = [(122.87969710600, -58.07853650240,    4.0395,    3.8507, 17.9948,  0.0019,     0),
+                (122.61441851900, -58.07346919930,    1.8437,    1.8947, 16.8281,  0.0009,     0)
+               ]
+
+    column_units = { 'RAJ2000' : u.deg, 'DEJ2000' : u.deg, 'e_RAJ2000' : u.mas, 'e_DEJ2000' : u.mas,
+                     'Gmag' : u.mag, 'e_Gmag' : u.mag, 'Dup' : ''
+                   }
+    fake_table = Table(rows=row_data, names=('RAJ2000', 'DEJ2000', 'e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup'),
+                       dtype=('<f8', '<f8', '<f8', '<f8', '<f8', '<f8', 'u1'))
+    for column in fake_table.colnames:
+        unit = column_units[column]
+        fake_table[column].unit = unit
+
+    return fake_table, cat_name
 
 
 def mock_submit_to_scheduler(elements, params):
