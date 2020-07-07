@@ -149,12 +149,12 @@ class Command(BaseCommand):
 
 # Step 4: Run Lightcurve Extraction
                 if first_frame.block.superblock.tracking_number == last_frame.block.superblock.tracking_number:
-                    status = call_command('lightcurve_extraction', int(first_frame.block.superblock.tracking_number))
+                    status = call_command('lightcurve_extraction', int(first_frame.block.superblock.tracking_number), '--single')
                 else:
                     tn_list = []
                     for fits in fits_files:
                         if fits.block.superblock.tracking_number not in tn_list:
-                            status = call_command('lightcurve_extraction', int(fits.block.superblock.tracking_number))
+                            status = call_command('lightcurve_extraction', int(fits.block.superblock.tracking_number), '--single')
                             tn_list.append(fits.block.superblock.tracking_number)
             else:
                 self.stderr.write("No Block found for the object")
