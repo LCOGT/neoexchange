@@ -491,6 +491,148 @@ class TestComputeFOM(TestCase):
         self.assertEqual(expected_FOM, FOM)
 
 
+class TestComputePeriod(TestCase):
+
+    def setUp(self):
+        # Initialise with a few test bodies
+        params = {  'provisional_name' : 'N999r0q',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    'not_seen'      : 2.3942,
+                    'arc_length'    : 0.4859,
+                    'score'         : 83,
+                    'abs_mag'       : 19.8
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+
+        params['eccentricity'] = 1.0
+        self.body_parabolic, created = Body.objects.get_or_create(**params)
+
+        params['eccentricity'] = 1.001
+        self.body_hyperbolic, created = Body.objects.get_or_create(**params)
+
+        params['eccentricity'] = None
+        self.body_bad_e, created = Body.objects.get_or_create(**params)
+
+        params = {
+                     'provisional_name': None,
+                     'provisional_packed': None,
+                     'name': '46P',
+                     'origin': 'O',
+                     'source_type': 'C',
+                     'source_subtype_1': 'JF',
+                     'source_subtype_2': None,
+                     'elements_type': 'MPC_COMET',
+                     'active': True,
+                     'fast_moving': False,
+                     'urgency': None,
+                     'epochofel': datetime(2018, 12, 13, 0, 0),
+                     'orbit_rms': 0.5,
+                     'orbinc': 11.7476819127047,
+                     'longascnode': 82.1575744851216,
+                     'argofperih': 356.341231360739,
+                     'eccentricity': 0.6587595570783943,
+                     'meandist': None,
+                     'meananom': None,
+                     'perihdist': 1.055355764253904,
+                     'epochofperih': datetime(2018, 12, 12, 22, 21, 2),
+                     'abs_mag': 14.9,
+                     'slope': 6.4,
+                     'score': 58,
+                     'discovery_date': datetime(1948, 1, 17, 9, 36),
+                     'num_obs': 14,
+                     'arc_length': 2.61,
+                     'not_seen': 0.023,
+                     'updated': True,
+                     'ingest': datetime(2017, 5, 21, 19, 50, 9),
+                     'update_time': datetime(2017, 5, 24, 2, 51, 58)}
+        self.body_46P, created = Body.objects.get_or_create(**params)
+
+        params = {
+                     'provisional_name': None,
+                     'provisional_packed': None,
+                     'name': 'C/2013 US10',
+                     'origin': 'O',
+                     'source_type': 'C',
+                     'source_subtype_1': 'H',
+                     'source_subtype_2': None,
+                     'elements_type': 'MPC_COMET',
+                     'active': True,
+                     'fast_moving': False,
+                     'urgency': None,
+                     'epochofel': datetime(2019, 4, 27, 0, 0),
+                     'orbit_rms': 99.0,
+                     'orbinc': 148.83797,
+                     'longascnode': 186.25239,
+                     'argofperih': 340.51541,
+                     'eccentricity': 1.0005522,
+                     'meandist': None,
+                     'meananom': None,
+                     'perihdist': 0.8244693,
+                     'epochofperih': datetime(2015, 11, 16, 1, 5, 31),
+                     'abs_mag': 8.1,
+                     'slope': 2.8,
+                     'score': None,
+                     'discovery_date': datetime(2013, 8, 14, 0, 0),
+                     'num_obs': 4703,
+                     'arc_length': 1555.0,
+                     'not_seen': 963.9336267593403,
+                     'updated': True,
+                     'ingest': datetime(2020, 7, 6, 22, 23, 23),
+                     'update_time': datetime(2017, 11, 16, 0, 0)
+                    }
+        self.body_US10, created = Body.objects.get_or_create(**params)
+
+    def test_asteroid(self):
+        expected_period = 1.3436113120948885
+
+        period = self.body.period
+
+        self.assertAlmostEqual(expected_period, period, 5)
+
+    def test_asteroid_parabolic(self):
+        expected_period = 1e99
+
+        period = self.body_parabolic.period
+
+        self.assertEqual(expected_period, period)
+
+    def test_asteroid_hyperbolic(self):
+        expected_period = 1e99
+
+        period = self.body_hyperbolic.period
+
+    def test_asteroid_no_e(self):
+        expected_period = None
+
+        period = self.body_bad_e.period
+
+        self.assertEqual(expected_period, period)
+
+    def test_comet(self):
+        expected_period = 5.4388562985454545
+
+        period = self.body_46P.period
+
+        self.assertAlmostEqual(expected_period, period, 5)
+
+    def test_comet_hyperbolic(self):
+        expected_period = 1e99
+
+        period = self.body_US10.period
+
+
 class TestSavePhysicalParameters(TestCase):
 
     def setUp(self):

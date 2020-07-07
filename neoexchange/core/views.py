@@ -1888,13 +1888,7 @@ def build_lookproject_list(disp=None):
                 body_dict['dec'] = emp_line[1]
                 body_dict['v_mag'] = emp_line[2]
                 body_dict['motion'] = emp_line[4]
-                period = None
-                if body.eccentricity and body.perihdist:
-                    period = 1e99
-                    if body.eccentricity < 1.0:
-                        a_au = body.perihdist / (1.0 - body.eccentricity)
-                        period = pow(a_au, (3.0/2.0))
-                body_dict['period'] = period
+                body_dict['period'] = body.period
                 body_dict['perihdist'] = body.perihdist
                 comets.append(body_dict)
             except Exception as e:

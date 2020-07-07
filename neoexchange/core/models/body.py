@@ -151,6 +151,20 @@ class Body(models.Model):
     ingest              = models.DateTimeField(default=datetime.utcnow, db_index=True)
     update_time         = models.DateTimeField(blank=True, null=True, db_index=True)
 
+    def _compute_period(self):
+        period = None
+        if self.eccentricity:
+            period = 1e99
+            if self.eccentricity < 1.0:
+                if self.perihdist:
+                    a_au = self.perihdist / (1.0 - self.eccentricity)
+                else:
+                    a_au = self.meandist
+                period = pow(a_au, (3.0/2.0))
+        return period
+
+    period = property(_compute_period)
+
     def characterization_target(self):
         # If we change the definition of Characterization Target,
         # also update views.get_characterization_targets
@@ -197,6 +211,7 @@ class Body(models.Model):
         except:
             pass
         return mjd
+
 
     def current_name(self):
         if self.name:
