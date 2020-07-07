@@ -5616,10 +5616,8 @@ class TestCheckCatalogAndRefitNew(TestCase):
 
         fits_file_output = self.test_banzai_fits.replace('_frame', '_frame_new')
         status, new_header = updateFITSWCS(self.test_banzai_fits, self.test_externscamp_TPV_headfile, self.test_externcat_TPV_xml, fits_file_output)
-        print(fits_file_output)
         header = get_catalog_header(new_header, cattype)
         new_wcs = WCS(new_header)
-        print(new_wcs)
         expected_wcs = new_wcs.wcs
         num_new_frames = make_new_catalog_entry(new_ldac_catalog, header, self.test_block)
 
