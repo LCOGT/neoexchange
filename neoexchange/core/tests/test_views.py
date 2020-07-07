@@ -5626,7 +5626,7 @@ class TestCheckCatalogAndRefitNew(TestCase):
         frame = frames[0]
         self.assertEqual('GAIA-DR2', frame.astrometric_catalog)
         self.assertEqual(' ', frame.photometric_catalog)
-        self.assertAlmostEqual(0.327896797481046, frame.rms_of_fit, 7)
+        self.assertAlmostEqual(0.327895, frame.rms_of_fit, 6)
         self.assertEqual(23, frame.nstars_in_fit)
 
         frame_wcs = frame.wcs.wcs
