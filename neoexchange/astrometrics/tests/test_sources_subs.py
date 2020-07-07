@@ -30,7 +30,7 @@ from django.forms.models import model_to_dict
 from core.models import Body, Proposal, Block, StaticSource, PhysicalParameters, Designations, ColorValues
 from astrometrics.ephem_subs import determine_darkness_times
 from astrometrics.time_subs import datetime2mjd_utc
-from neox.tests.mocks import MockDateTime, mock_expand_cadence, mock_fetchpage_and_make_soup
+from neox.tests.mocks import MockDateTime, mock_expand_cadence, mock_fetchpage_and_make_soup, mock_fetchpage_and_make_soup_pccp
 from core.views import record_block, create_calib_sources, compute_vmag_pa
 # Import module to test
 from astrometrics.sources_subs import *
@@ -1621,7 +1621,9 @@ class TestFetchFilterList(TestCase):
                                         "name": "1.0 meter Sinistro",
                                         "code": "1m0-SciCam-Sinistro",
                                     },
-                                    "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,ND,400um-Pinhole,150um-Pinhole",
+                                    "optical_elements": {
+                                        "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,ND,400um-Pinhole,150um-Pinhole"
+                                    },
                                     "host": "inst.1m0a.doma.lsc.lco.gtn"
                                 },
                                 "__str__": "lsc.doma.1m0a.fa15-ef06"
@@ -1647,7 +1649,9 @@ class TestFetchFilterList(TestCase):
                                         "name": "1.0 meter Sinistro",
                                         "code": "1m0-SciCam-Sinistro",
                                     },
-                                    "filters": "I,R,U",
+                                    "optical_elements": {
+                                        "filters": "I,R,U"
+                                    },
                                     "host": "inst.1m0a.doma.lsc.lco.gtn"
                                 },
                                 "__str__": "lsc.doma.1m0a.fa15-ef06"
@@ -1665,7 +1669,9 @@ class TestFetchFilterList(TestCase):
                                         "name": "1.0 meter Sinistro",
                                         "code": "1m0-SciCam-Sinistro",
                                     },
-                                    "filters": "ip,gp,zs,B,ND,400um-Pinhole,150um-Pinhole",
+                                    "optical_elements": {
+                                        "filters": "ip,gp,zs,B,ND,400um-Pinhole,150um-Pinhole"
+                                    },
                                     "host": "inst.1m0a.doma.lsc.lco.gtn"
                                 },
                                 "__str__": "lsc.doma.1m0a.fa15-ef06"
@@ -1683,7 +1689,9 @@ class TestFetchFilterList(TestCase):
                                         "name": "1.0 meter Sinistro",
                                         "code": "1m0-SciCam-Sinistro",
                                     },
-                                    "filters": "Y,up,air,rp",
+                                    "optical_elements": {
+                                        "filters": "Y,up,air,rp"
+                                    },
                                     "host": "inst.1m0a.doma.lsc.lco.gtn"
                                 },
                                 "__str__": "lsc.doma.1m0a.fa15-ef06"
@@ -1701,13 +1709,16 @@ class TestFetchFilterList(TestCase):
                                         "name": "1.0 meter Sinistro",
                                         "code": "1m0-SciCam-Sinistro",
                                     },
-                                    "filters": "U,w,Y,up,B,ND,400um-Pinhole,150um-Pinhole",
+                                    "optical_elements": {
+                                        "filters": "U,w,Y,up,B,ND,400um-Pinhole,150um-Pinhole"}
+                                    ,
                                     "host": "inst.1m0a.doma.lsc.lco.gtn"
                                 },
                                 "__str__": "lsc.doma.1m0a.fa15-ef06"
                             }
                         ]
                     }
+
         self.all_2m_rsp = {
                         "count": 4,
                         "next": 'null',
@@ -1725,7 +1736,8 @@ class TestFetchFilterList(TestCase):
                                         "name": "2.0 meter FLOYDS",
                                         "code": "2m0-FLOYDS-SciCam",
                                     },
-                                    "filters": "slit_6.0as,slit_1.6as,slit_2.0as,slit_1.2as",
+                                    "optical_elements": {"slits": "slit_6.0as,slit_1.6as,slit_2.0as,slit_1.2as"
+                                                         },
                                     "host": "floyds.ogg.lco.gtn"
                                 },
                                 "__str__": "ogg.clma.2m0a.floyds01-kb42"
@@ -1742,7 +1754,9 @@ class TestFetchFilterList(TestCase):
                                         "name": "2.0 meter FLOYDS",
                                         "code": "2m0-FLOYDS-SciCam",
                                     },
-                                    "filters": "slit_6.0as,slit_1.6as,slit_2.0as,slit_1.2as",
+                                    "optical_elements": {
+                                        "slits": "slit_6.0as,slit_1.6as,slit_2.0as,slit_1.2as"
+                                    },
                                     "host": "floyds.coj.lco.gtn"
                                 },
                                 "__str__": "coj.clma.2m0a.floyds02-kb38"
@@ -1759,7 +1773,9 @@ class TestFetchFilterList(TestCase):
                                         "name": "2.0 meter Spectral",
                                         "code": "2m0-SciCam-Spectral",
                                     },
-                                    "filters": "D51,H-Beta,OIII,H-Alpha,Skymapper-VS,solar,Astrodon-UV,I,R,Y,up,air,rp,ip,gp,zs,V,B,200um-Pinhole",
+                                    "optical_elements": {
+                                        "filters": "D51,H-Beta,OIII,H-Alpha,Skymapper-VS,solar,Astrodon-UV,I,R,Y,up,air,rp,ip,gp,zs,V,B,200um-Pinhole"
+                                    },
                                     "host": "fs.coj.lco.gtn"
                                 },
                                 "__str__": "coj.clma.2m0a.fs01-kb34"
@@ -1776,7 +1792,9 @@ class TestFetchFilterList(TestCase):
                                         "name": "2.0 meter Spectral",
                                         "code": "2m0-SciCam-Spectral",
                                     },
-                                    "filters": "D51,H-Beta,OIII,H-Alpha,Skymapper-VS,solar,Astrodon-UV,I,R,Y,up,air,rp,ip,gp,zs,V,B,200um-Pinhole",
+                                    "optical_elements": {
+                                        "filters": "D51,H-Beta,OIII,H-Alpha,Skymapper-VS,solar,Astrodon-UV,I,R,Y,up,air,rp,ip,gp,zs,V,B,200um-Pinhole"
+                                    },
                                     "host": "fs.ogg.lco.gtn"
                                 },
                                 "__str__": "ogg.clma.2m0a.fs02-kb40"
@@ -2433,6 +2451,71 @@ class TestParseNEOCPExtraParams(TestCase):
         obj_ids = parse_NEOCP_extra_params(html)
         expected_obj_ids = []
         self.assertEqual(expected_obj_ids, obj_ids)
+
+    @patch('astrometrics.sources_subs.fetchpage_and_make_soup', mock_fetchpage_and_make_soup_pccp)
+    def test_parse_neocpep_whole_page(self):
+        expected_obj_ids = [ ('CAH024', {'arc_length' : 0.06,
+                                          'discovery_date' : datetime(2015,9,20),
+                                          'not_seen' : 4.878,
+                                          'num_obs' : 6,
+                                          'score' : 99,
+                                          'update_time' : datetime(2015,9,24,22,47,17),
+                                          'updated' : False}),
+                             ('WR0159E', {'arc_length' : 15.44,
+                                          'discovery_date' : datetime(2015,9,13,9,36),
+                                          'not_seen' : 0.726,
+                                          'num_obs' : 222,
+                                          'score' : 10,
+                                          'update_time' : datetime(2015,9,28,17,48,10),
+                                          'updated' : True}),
+                             ('P10nw2g', {'arc_length' : 1.16,
+                                          'discovery_date' : datetime(2015,9,6,7,12),
+                                          'not_seen' : 17.455,
+                                          'num_obs' : 6,
+                                          'score' : 100,
+                                          'update_time' : datetime(2015,9,16,1,30,34),
+                                          'updated' : True
+                                          }),
+                            ]
+        expected_length = 45
+
+        obj_ids = parse_NEOCP_extra_params(self.test_neocp_page_table)
+
+        self.assertEqual(expected_length, len(obj_ids))
+        self.assertEqual(expected_obj_ids[0], obj_ids[0])
+        self.assertEqual(expected_obj_ids[-1], obj_ids[-1])
+        self.assertEqual(expected_obj_ids[-2], obj_ids[-4])
+
+    def test_parse_neocpep_new_dates_bad1(self):
+        html = BeautifulSoup(self.table_header +
+                             '''
+        <tr><td><span style="display:none">N00gkyc</span>&nbsp;<input type="checkbox" name="obj" VALUE="N00gkyc"> N00gkyc</td>
+        <td align="right"><span style="display:none">100</span>100&nbsp;&nbsp;&nbsp;</td>
+        <td>&nbsp;&nbsp;2020 05 32.0&nbsp;&nbsp;</td>
+        <td><span style="display:none">328.6061</span>&nbsp;&nbsp;21 54.4&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">098.4370</span>&nbsp;&nbsp;+08 26&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">30.7</span>&nbsp;&nbsp;19.3&nbsp;&nbsp;</td>
+        <td><span style="display:none">J2459010.192346</span>&nbsp;Updated June 9.69 UT&nbsp;</td>
+        <td align="center">&nbsp;&nbsp;</td>
+        <td align="right">&nbsp;   5&nbsp;</td>
+        <td align="right">&nbsp;  0.46&nbsp;</td>
+        <td align="right">&nbsp;18.8&nbsp;</td>
+        <td align="right">&nbsp; 8.394&nbsp;</td><tr>
+        ''' + self.table_footer, "html.parser")
+
+        expected_obj_ids = [('N00gkyc', {'arc_length': 0.46,
+                                         'discovery_date': None,
+                                         'not_seen': 8.394,
+                                         'num_obs': 5,
+                                         'score': 100,
+                                         'update_time': datetime(2020, 6, 9, 16, 36, 59),
+                                         'updated': True})
+                                                ]
+        expected_length = 1
+
+        obj_ids = parse_NEOCP_extra_params(html)
+        self.assertEqual(expected_length, len(obj_ids))
+        self.assertEqual(expected_obj_ids[0], obj_ids[0])
 
 
 class TestParsePCCP(TestCase):
@@ -5516,7 +5599,7 @@ class TestFetchJPLPhysParams(TestCase):
                     'origin'        : 'M',
                     }
         self.body, created = Body.objects.get_or_create(**params)
-        
+
         self.resp = {'phys_par': [{'ref': 'MPO347540',
                    'value': '11.9',
                    'name': 'H',
@@ -5562,27 +5645,27 @@ class TestFetchJPLPhysParams(TestCase):
         """Test the storage of physical parameter types, values, and errors."""
         bodies = Body.objects.all()
         body = bodies[0]
-        
+
         phys_params = PhysicalParameters.objects.filter(body=body)
-        
+
         store_jpl_physparams(self.resp['phys_par'], body)
-        
+
         expected_values = [11.9, 10.256, 0.320]
-        expected_ptypes = ['H', 'D', 'ab']       
-        expected_sigmas = [None, 1.605, 0.152]        
+        expected_ptypes = ['H', 'D', 'ab']
+        expected_sigmas = [None, 1.605, 0.152]
         expected = list(zip(expected_values, expected_ptypes, expected_sigmas))
         for p in phys_params:
             test_list = (p.value, p.parameter_type, p.error)
             self.assertIn(test_list, expected)
             expected.remove(test_list)
-            
-        self.assertEqual(expected, [])  
+
+        self.assertEqual(expected, [])
 
     def test_pole_orient(self):
         """Test the splitting of the value and error numbers.
          Also to test the storage of these values."""
         bodies = Body.objects.all()
-        body = bodies[0]   
+        body = bodies[0]
 
         pole_test = [{"value":"291.421/66.758",
                     "name":"pole",
@@ -5591,7 +5674,7 @@ class TestFetchJPLPhysParams(TestCase):
 
         phys_params = PhysicalParameters.objects.filter(body=body)
         dbpole_param = phys_params.filter(parameter_type='O')
-        store_jpl_physparams(pole_test, body)        
+        store_jpl_physparams(pole_test, body)
 
         self.assertEqual(dbpole_param[0].value, 291.421)
         self.assertEqual(dbpole_param[0].value2, 66.758)
@@ -5601,7 +5684,7 @@ class TestFetchJPLPhysParams(TestCase):
     def test_color(self):
         """Test the storage of color bands, values, and errors."""
         bodies = Body.objects.all()
-        body = bodies[0] 
+        body = bodies[0]
 
         color_test = [{"value": "0.426",
                        "name" : "UB",
@@ -5662,7 +5745,7 @@ class TestFetchJPLPhysParams(TestCase):
                    "des": "2",
                    "prefix": None}
 
-        desigs = Designations.objects.filter(body=body) 
+        desigs = Designations.objects.filter(body=body)
         store_jpl_desigs(pallas, body)
 
         self.assertEqual(desigs[0].value, '2')
@@ -5701,7 +5784,7 @@ class TestFetchJPLPhysParams(TestCase):
                          "version": "1.1"}
                     }
 
-        comet_des = Designations.objects.filter(body=body)   
+        comet_des = Designations.objects.filter(body=body)
         store_jpl_desigs(westphal['object'], body)
 
         self.assertEqual(comet_des[0].value, '20D')
@@ -5792,7 +5875,7 @@ class TestFetchJPLPhysParams(TestCase):
         store_jpl_sourcetypes(objcode, self.resp['object'], body)
 
         self.assertEqual(body.source_type, 'T')
-        self.assertEqual(body.source_subtype_1, 'P5')       
+        self.assertEqual(body.source_subtype_1, 'P5')
         self.assertEqual(body.source_subtype_2, None)
 
     def test_store_stuff_neo_pha_1(self):
@@ -5809,7 +5892,7 @@ class TestFetchJPLPhysParams(TestCase):
         store_jpl_sourcetypes(objcode['orbit_class']['code'], objcode, body)
 
         self.assertEqual(body.source_type, 'N')
-        self.assertEqual(body.source_subtype_1, 'N3')       
+        self.assertEqual(body.source_subtype_1, 'N3')
         self.assertEqual(body.source_subtype_2, None)
 
     def test_store_stuff_neo_pha_2(self):
@@ -5826,12 +5909,12 @@ class TestFetchJPLPhysParams(TestCase):
         store_jpl_sourcetypes(objcode['orbit_class']['code'], objcode, body)
 
         self.assertEqual(body.source_type, 'N')
-        self.assertEqual(body.source_subtype_1, 'N3')       
+        self.assertEqual(body.source_subtype_1, 'N3')
         self.assertEqual(body.source_subtype_2, 'PH')
 
     def test_store_stuff_neo_pha_3(self):
         """Test the storage of source subtypes when the object is labeled as a PHA
-           but not as an NEO (This situation is rare)."""                    
+           but not as an NEO (This situation is rare)."""
         bodies = Body.objects.all()
         body = bodies[0]
         objcode = self.resp['object']
@@ -5843,12 +5926,12 @@ class TestFetchJPLPhysParams(TestCase):
         store_jpl_sourcetypes(objcode['orbit_class']['code'], objcode, body)
 
         self.assertEqual(body.source_type, None)
-        self.assertEqual(body.source_subtype_1, 'N3')       
+        self.assertEqual(body.source_subtype_1, 'N3')
         self.assertEqual(body.source_subtype_2, None)
 
     def test_store_stuff_neo_pha_4(self):
         """Test the storage of source subtypes when the object is a comet
-           (instead of an asteroid) and is labeled as both an NEO and as a PHA."""                
+           (instead of an asteroid) and is labeled as both an NEO and as a PHA."""
         bodies = Body.objects.all()
         body = bodies[0]
         objcode = self.resp['object']
@@ -5860,7 +5943,7 @@ class TestFetchJPLPhysParams(TestCase):
         store_jpl_sourcetypes(objcode['orbit_class']['code'], objcode, body)
 
         self.assertEqual(body.source_type, 'C')
-        self.assertEqual(body.source_subtype_1, 'JF')       
+        self.assertEqual(body.source_subtype_1, 'JF')
         self.assertEqual(body.source_subtype_2, 'PH')
 
     def test_store_stuff_comet_longperiod(self):

@@ -15,7 +15,7 @@ import os
 from shutil import move
 from glob import glob
 from datetime import datetime, timedelta, date
-from math import floor, ceil, degrees, radians, pi, acos
+from math import floor, ceil, degrees, radians, pi, acos, pow
 from astropy import units as u
 import json
 import logging
@@ -1136,6 +1136,13 @@ def schedule_check(data, body, ok_to_schedule=True):
     if data.get('start_time') and data.get('end_time') and (data.get('edit_window', False) or period is not None):
         dark_start = data.get('start_time')
         dark_end = data.get('end_time')
+    elif data['site_code'] in ['1M0', '2M0', '0M4']:
+        utc_date = data.get('utc_date', datetime.utcnow().date())
+        if utc_date == datetime.utcnow().date():
+            dark_start = datetime.utcnow().replace(microsecond=0).replace(second=0)
+        else:
+            dark_start = datetime.combine(utc_date, datetime.min.time())
+        dark_end = dark_start + timedelta(hours=24)
     else:
         # Otherwise, calculate night based on site and date.
         dark_start, dark_end = determine_darkness_times(data['site_code'], data.get('utc_date', datetime.utcnow().date()))
@@ -1383,9 +1390,9 @@ def schedule_check(data, body, ok_to_schedule=True):
         'proposal_code': data['proposal_code'],
         'group_name': group_name,
         'utc_date': utc_date.isoformat(),
-        'start_time': rise_time.isoformat(),
-        'end_time': set_time.isoformat(),
-        'mid_time': mid_dark_up_time.isoformat(),
+        'start_time': rise_time.replace(second=0).isoformat(),
+        'end_time': set_time.replace(second=0).isoformat(),
+        'mid_time': mid_dark_up_time.replace(second=0).replace(microsecond=0).isoformat(),
         'vis_start': up_time.isoformat(),
         'vis_end': down_time.isoformat(),
         'edit_window': data.get('edit_window', False),
@@ -1791,6 +1798,126 @@ def build_characterization_list(disp=None):
     return params
 
 
+def build_lookproject_list(disp=None):
+    params = {}
+    # If we don't have any Body instances, return None instead of breaking
+    try:
+        look_targets = Body.objects.filter(active=True, origin='O')
+        unranked = []
+        for body in look_targets:
+            try:
+                body_dict = model_to_dict(body)
+                body_dict['current_name'] = body.current_name()
+                body_dict['ingest_date'] = body.ingest
+                source_types = [x[1] for x in OBJECT_TYPES if x[0] == body.source_type]
+                if len(source_types) == 1:
+                    body_dict['source_type'] = source_types[0]
+                subtypes =  [x[1] for x in OBJECT_SUBTYPES if x[0] == body.source_subtype_1]
+                if len(subtypes) == 1:
+                    body_dict['subtype1'] = subtypes[0]
+                emp_line = body.compute_position()
+                if not emp_line:
+                    continue
+                obs_dates = body.compute_obs_window()
+                if obs_dates[0]:
+                    body_dict['obs_sdate'] = obs_dates[0]
+                    if obs_dates[0] == obs_dates[2]:
+                        startdate = 'Now'
+                    else:
+                        startdate = obs_dates[0].strftime('%m/%y')
+                    if not obs_dates[1]:
+                        body_dict['obs_edate'] = obs_dates[2]+timedelta(days=99)
+                        enddate = '>'
+                    else:
+                        enddate = obs_dates[1].strftime('%m/%y')
+                        body_dict['obs_edate'] = obs_dates[1]
+                else:
+                    body_dict['obs_sdate'] = body_dict['obs_edate'] = obs_dates[2]+timedelta(days=99)
+                    startdate = '[--'
+                    enddate = '--]'
+                days_to_start = body_dict['obs_sdate']-obs_dates[2]
+                days_to_end = body_dict['obs_edate']-obs_dates[2]
+                # Define a sorting Priority:
+                # Currently a combination of imminence and window width.
+                body_dict['priority'] = days_to_start.days + days_to_end.days
+                body_dict['obs_start'] = startdate
+                body_dict['obs_end'] = enddate
+                body_dict['ra'] = emp_line[0]
+                body_dict['dec'] = emp_line[1]
+                body_dict['v_mag'] = emp_line[2]
+                body_dict['motion'] = emp_line[4]
+                unranked.append(body_dict)
+            except Exception as e:
+                logger.error('LOOK target %s failed on %s' % (body.name, e))
+        latest = Body.objects.filter(source_type='C').latest('ingest')
+        max_dt = latest.ingest
+        min_dt = max_dt - timedelta(days=30)
+        newest_comets = Body.objects.filter(ingest__range=(min_dt, max_dt), source_type='C')
+        comets = []
+        for body in newest_comets:
+            try:
+                body_dict = model_to_dict(body)
+                body_dict['current_name'] = body.current_name()
+                body_dict['ingest_date'] = body.ingest
+                subtypes =  [x[1] for x in OBJECT_SUBTYPES if x[0] == body.source_subtype_1]
+                if len(subtypes) == 1:
+                    body_dict['subtype1'] = subtypes[0]
+                emp_line = body.compute_position()
+                if not emp_line:
+                    continue
+                obs_dates = body.compute_obs_window()
+                if obs_dates[0]:
+                    body_dict['obs_sdate'] = obs_dates[0]
+                    if obs_dates[0] == obs_dates[2]:
+                        startdate = 'Now'
+                    else:
+                        startdate = obs_dates[0].strftime('%m/%y')
+                    if not obs_dates[1]:
+                        body_dict['obs_edate'] = obs_dates[2]+timedelta(days=99)
+                        enddate = '>'
+                    else:
+                        enddate = obs_dates[1].strftime('%m/%y')
+                        body_dict['obs_edate'] = obs_dates[1]
+                else:
+                    body_dict['obs_sdate'] = body_dict['obs_edate'] = obs_dates[2]+timedelta(days=99)
+                    startdate = '[--'
+                    enddate = '--]'
+                days_to_start = body_dict['obs_sdate']-obs_dates[2]
+                days_to_end = body_dict['obs_edate']-obs_dates[2]
+                # Define a sorting Priority:
+                # Currently a combination of imminence and window width.
+                body_dict['obs_start'] = startdate
+                body_dict['obs_end'] = enddate
+                body_dict['ra'] = emp_line[0]
+                body_dict['dec'] = emp_line[1]
+                body_dict['v_mag'] = emp_line[2]
+                body_dict['motion'] = emp_line[4]
+                period = None
+                if body.eccentricity and body.perihdist:
+                    period = 1e99
+                    if body.eccentricity < 1.0:
+                        a_au = body.perihdist / (1.0 - body.eccentricity)
+                        period = pow(a_au, (3.0/2.0))
+                body_dict['period'] = period
+                body_dict['perihdist'] = body.perihdist
+                comets.append(body_dict)
+            except Exception as e:
+                logger.error('LOOK target %s failed on %s' % (body.name, e))
+    except Body.DoesNotExist as e:
+        unranked = None
+        logger.error('LOOK list failed on %s' % e)
+    params = {
+        'look_targets': unranked,
+        'new_comets': comets
+    }
+    return params
+
+
+def look_project(request):
+
+    params =  build_lookproject_list()
+    return render(request, 'core/lookproject.html', params)
+
 def check_for_block(form_data, params, new_body):
     """Checks if a block with the given name exists in the Django DB.
     Return 0 if no block found, 1 if found, 2 if multiple blocks found"""
@@ -2127,7 +2254,7 @@ def clean_NEOCP_object(page_list):
         page_list.pop(0)
     for line in page_list:
         line = line.strip()
-        if 'NEOCPNomin' in line:
+        if 'NEOCPNomin' in line or 'MPC       ' in line:
             current = line.split()
             break
     if current:
@@ -2752,6 +2879,11 @@ def ingest_new_object(orbit_file, obs_file=None, dbg=False):
         else:
             save_and_make_revision(body, kwargs)
             msg = "Added new local target %s" % obj_id
+    else:
+        body = None
+        created = False
+        msg = "Unable to parse orbit line"
+
     return body, created, msg
 
 

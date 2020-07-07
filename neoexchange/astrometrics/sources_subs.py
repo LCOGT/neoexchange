@@ -268,7 +268,7 @@ def fetch_NEOCP(dbg=False):
 
     NEOCP_url = 'https://www.minorplanetcenter.net/iau/NEO/toconfirm_tabular.html'
 
-    neocp_page = fetchpage_and_make_soup(NEOCP_url)
+    neocp_page = fetchpage_and_make_soup(NEOCP_url, parser='html5lib')
     return neocp_page
 
 
@@ -319,7 +319,7 @@ def parse_NEOCP_extra_params(neocp_page, dbg=False):
             # Turn the HTML non-breaking spaces (&nbsp;) into regular spaces
             cols = [ele.text.replace(u'\xa0', u' ').strip() for ele in cols]
             if dbg:
-                print("Cols=", cols, len(cols))
+                print(len(new_objects), len(cols))
             pccp = False
             try:
                 update_date = cols[6].split()[0]
@@ -351,7 +351,12 @@ def parse_NEOCP_extra_params(neocp_page, dbg=False):
                     score = int(cols[1][0:3])
                 except:
                     score = None
-                neocp_datetime = parse_neocp_decimal_date(cols[2])
+                try:
+                    neocp_datetime = parse_neocp_decimal_date(cols[2])
+                except ValueError:
+                    neocp_datetime = None
+                    logger.warning("Date Parsing error:" + cols[2])
+                    logger.warning(cols)
                 try:
                     nobs = int(cols[8])
                 except:
@@ -1444,15 +1449,19 @@ def get_site_status(site_code):
 
 
 def fetch_yarkovsky_targets(yark_targets):
-    """Fetches yarkovsky targets from command line and returns a list of targets"""
+    """Fetches Yarkovsky targets from command line and returns a list of targets"""
 
     yark_target_list = []
 
     for obj_id in yark_targets:
         obj_id = obj_id.strip()
+        comment_loc = obj_id.find('#')
+        if comment_loc >= 0:
+            obj_id = obj_id[0:comment_loc].strip()
         if '_' in obj_id:
             obj_id = str(obj_id).replace('_', ' ')
-        yark_target_list.append(obj_id)
+        if len(obj_id) > 0:
+            yark_target_list.append(obj_id)
 
     return yark_target_list
 
@@ -2073,11 +2082,19 @@ def fetch_filter_list(site, spec):
 
     request_url = settings.CONFIGDB_API_URL + 'instruments/'
     request_url += '?telescope={}&science_camera=&autoguider_camera=&camera_type={}&site={}&enclosure={}&state=SCHEDULABLE'.format(telid.lower(), camid, siteid.lower(), encid.lower())
-    resp = requests.get(request_url, timeout=20, verify=True).json()
+    response = requests.get(request_url, timeout=20, verify=True)
 
-    data_out = parse_filter_file(resp, spec)
-    if not data_out:
-        logger.error('Could not find any filters for {}'.format(site))
+    resp = {'results': ''}
+    if response.status_code in [200, 201]:
+        resp = response.json()
+
+    if not resp['results']:
+        logger.error('Could not find any telescopes at {}'.format(site))
+        data_out = []
+    else:
+        data_out = parse_filter_file(resp, spec)
+        if not data_out:
+            logger.error('Could not find any filters for {}'.format(site))
     return data_out
 
 
@@ -2091,8 +2108,12 @@ def parse_filter_file(resp, spec):
 
     site_filters = []
     for result in resp['results']:
-        filters_1tel = result['science_camera']['filters']
-        filt_list = filters_1tel.split(',')
+        try:
+            opt_elem = result['science_camera']['optical_elements']
+            filters_1tel = ",".join(list(opt_elem.values()))
+            filt_list = filters_1tel.split(',')
+        except KeyError:
+            filt_list = []
         for filt in filter_list:
             if filt in filt_list and filt not in site_filters:
                 site_filters.append(filt)
@@ -2468,9 +2489,9 @@ def store_jpl_physparams(phys_par, body):
 
     # parsing the JPL physparams dictionary
     for p in phys_par:   
-        if 'H' is p['name']:  # absolute magnitude
+        if 'H' == p['name']:  # absolute magnitude
             p_type = 'H'
-        elif 'G' is p['name']:  # magnitude (phase) slope
+        elif 'G' == p['name']:  # magnitude (phase) slope
             p_type = 'G'
         elif 'diameter' in p['name']:  # diameter
             p_type = 'D'     
@@ -2487,11 +2508,11 @@ def store_jpl_physparams(phys_par, body):
         elif 'albedo' in p['name']:  # geometric albedo
             p_type = 'ab'
         # Parameters available from the MPC, but not stored by us at the moment.
-#        elif 'M1' is p['name']: # absolute magnitude of comet and coma (total)
-#        elif 'M2' is p['name']: # comet total magnitude parameter  
-#        elif 'K1' is p['name']: # comet total magnitude slope parameter
-#        elif 'K2' is p['name']: # comet nuclear magnitude slope parameter
-#        elif 'PC' is p['name']: # comet nuclear magnitude law - phase coefficient
+#        elif 'M1' == p['name']: # absolute magnitude of comet and coma (total)
+#        elif 'M2' == p['name']: # comet total magnitude parameter
+#        elif 'K1' == p['name']: # comet total magnitude slope parameter
+#        elif 'K2' == p['name']: # comet nuclear magnitude slope parameter
+#        elif 'PC' == p['name']: # comet nuclear magnitude law - phase coefficient
         elif 'spectral' in p['desc']:
             continue
         else:
@@ -2579,7 +2600,7 @@ def parse_jpl_fullname(obj):
     """Given a JPL object, return parsed full name"""
     fullname = obj['fullname']
     number = name = prov_des = None
-    if fullname[0] is '(':
+    if fullname[0] == '(':
         prov_des = fullname.strip('()')
     elif '/' in fullname:  # comet
         parts = fullname.split('/')
@@ -2602,15 +2623,15 @@ def parse_jpl_fullname(obj):
                 name = part2
     elif ' ' in fullname:
         space_num = fullname.count(' ')
-        if space_num is 3:
+        if space_num == 3:
             part1, part2, part3, part4 = fullname.split(' ')
             number = part1
             if part2[0].isalpha:
                 name = part2
-        elif space_num is 2:
+        elif space_num == 2:
             part1, part2, part3 = fullname.split(' ')
             number = part1
-        elif space_num is 1:
+        elif space_num == 1:
             part1, part2 = fullname.split(' ')
             number = part1
             name = part2
