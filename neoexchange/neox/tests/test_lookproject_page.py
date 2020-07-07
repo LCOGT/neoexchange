@@ -120,3 +120,10 @@ class LOOKProjectPageTest(FunctionalTest):
 
         self.check_for_row_in_table('active_targets', testlines[0])
         self.check_for_row_in_table('active_targets', testlines[1])
+
+        # He checks for fresh victims...comet targets...
+        section_text = self.browser.find_element_by_id("new_comets").text
+        self.assertIn("New Comet Targets", section_text)
+        testlines = [u'C/2013 US10 Hyperbolic 03 57 50.41 +44 46 52.2 18.5 0.20 1.00055 1e+99 0.8245 [-----]',]
+
+        self.check_for_row_in_table('new_comets', testlines[0])
