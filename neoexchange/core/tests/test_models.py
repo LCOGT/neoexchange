@@ -999,11 +999,13 @@ class TestSuperBlock(TestCase):
         self.block3 = Block.objects.create(**params3)
 
     def test_telclass(self):
-        expected_telclass = "2m0(S), 1m0"
+        expected_telclass1 = "2m0(S)"
+        expected_telclass2 = "1m0"
 
         tel_class = self.sblock.get_telclass()
 
-        self.assertEqual(expected_telclass, tel_class)
+        self.assertIn(expected_telclass1, tel_class)
+        self.assertIn(expected_telclass2, tel_class)
 
     def test_telclass_spectro_only(self):
         # Remove non spectroscopic blocks

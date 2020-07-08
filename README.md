@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.4.1
+Add Parallactic angle option for spectroscopic observations.
+
 ### 3.4.0
 Update Photometry to use GAIA-DR2
 
