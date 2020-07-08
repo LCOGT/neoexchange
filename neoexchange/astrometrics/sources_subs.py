@@ -1919,7 +1919,7 @@ def make_requestgroup(elements, params):
     if len(elements) > 0:
         logger.debug("Making a moving object")
         params['target'] = make_moving_target(elements)
-        if 'sky_pa' in elements:
+        if 'sky_pa' in elements and params['para_angle'] is False:
             params['rot_mode'] = 'SKY'
             params['rot_angle'] = round(elements['sky_pa'], 1)
     else:

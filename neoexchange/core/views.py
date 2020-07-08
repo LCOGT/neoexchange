@@ -1329,6 +1329,9 @@ def schedule_check(data, body, ok_to_schedule=True):
     # get acceptability threshold
     acceptability_threshold = data.get('acceptability_threshold', 90)
 
+    # set parallactic angle?
+    para_angle = data.get('para_angle', False)
+
     # Determine pattern iterations
     if exp_count:
         pattern_iterations = float(exp_count) / float(len(filter_pattern.split(',')))
@@ -1418,6 +1421,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'min_lunar_dist': min_lunar_dist,
         'max_airmass': max_airmass,
         'ipp_value': ipp_value,
+        'para_angle': para_angle,
         'ag_exp_time': ag_exp_time,
         'acceptability_threshold': acceptability_threshold,
         'trail_len': trail_len,
@@ -1505,7 +1509,7 @@ def schedule_submit(data, body, username):
     proposal = Proposal.objects.get(code=data['proposal_code'])
     my_proposals = user_proposals(username)
     if proposal not in my_proposals:
-        resp_params = {'msg' : 'You do not have permission to schedule using proposal %s' % data['proposal_code']}
+        resp_params = {'msg': 'You do not have permission to schedule using proposal %s' % data['proposal_code']}
 
         return None, resp_params
     params = {'proposal_id': proposal.code,
@@ -1529,6 +1533,7 @@ def schedule_submit(data, body, username):
               'calibsource': calibsource_params,
               'max_airmass': data.get('max_airmass', 1.74),
               'ipp_value': data.get('ipp_value', 1),
+              'para_angle': data.get('para_angle', False),
               'min_lunar_distance': data.get('min_lunar_dist', 30),
               'acceptability_threshold': data.get('acceptability_threshold', 90),
               'ag_exp_time': data.get('ag_exp_time', 10)
@@ -1557,7 +1562,7 @@ def schedule_submit(data, body, username):
         params['group_name'] = data['group_name']
     elif check_for_block(data, params, body) >= 2:
         # Multiple blocks found
-        resp_params = {'error_msg' : 'Multiple Blocks for same day and site found'}
+        resp_params = {'error_msg': 'Multiple Blocks for same day and site found'}
     if check_for_block(data, params, body) == 0:
         # Submit to scheduler and then record block
         tracking_number, resp_params = submit_block_to_scheduler(body_elements, params)

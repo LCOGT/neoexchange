@@ -985,18 +985,19 @@ class TestSubmitBlockToScheduler(TestCase):
         site_code = 'F65'
         utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 18,
-                    'exp_time' : 50.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'filter_pattern' : 'slit_6.0as',
-                    'group_name' : body_elements['current_name'] + '_' + 'OGG' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson',
-                    'spectroscopy' : True,
-                    'spectra_slit' : 'slit_6.0as'
-                 }
+        params = {'proposal_id': 'LCO2015A-009',
+                  'exp_count': 18,
+                  'exp_time': 50.0,
+                  'site_code': site_code,
+                  'start_time': dark_start,
+                  'end_time': dark_end,
+                  'filter_pattern': 'slit_6.0as',
+                  'group_name': body_elements['current_name'] + '_' + 'OGG' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                  'user_id': 'bsimpson',
+                  'spectroscopy': True,
+                  'spectra_slit': 'slit_6.0as',
+                  'para_angle': False
+                  }
 
         body_elements = compute_vmag_pa(body_elements, params)
         user_request = make_requestgroup(body_elements, params)
