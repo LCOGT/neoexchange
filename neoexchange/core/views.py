@@ -2699,7 +2699,11 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
         return False
 
     if type(obj_id_or_page) == BeautifulSoup:
-        obj_id = elements['obj_id']
+        chunks = elements['obj_id'].split('\n')
+        if len(chunks) > 1:
+            obj_id = chunks[0]
+        else:
+            obj_id = elements['obj_id']
         del elements['obj_id']
 
     try:
