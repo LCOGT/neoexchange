@@ -2120,7 +2120,8 @@ def parse_filter_file(resp, spec):
             filt_list = []
             for optical_elements in instrument_type_config['optical_elements'].values():
                 for optical_element in optical_elements:
-                    filt_list.append(optical_element['code'])
+                    if optical_element['schedulable'] is True:
+                        filt_list.append(optical_element['code'])
         except KeyError:
             filt_list = []
         for filt in filter_list:
