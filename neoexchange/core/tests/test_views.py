@@ -2396,8 +2396,8 @@ class TestUpdateMPCOrbit(TestCase):
 
     def setUp(self):
 
-        # Read and make soup from a static version of the HTML table/page for
-        # an object
+        # Read and make soup from a static version of the HTML tables/pages for
+        # 3 objects
         test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcdb_2014UR.html'), 'r')
         self.test_mpcdb_page = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
@@ -2409,6 +2409,43 @@ class TestUpdateMPCOrbit(TestCase):
         test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcdb_Comet2016C2.html'), 'r')
         self.test_mpcdb_page_comet = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
+
+
+        # We preset some things here to avoid having to actually call JPL in the test
+        self.test_body_2014UR, created = Body.objects.get_or_create(id=1, name='2014 UR')
+        self.test_body_243P, created = Body.objects.get_or_create(id=2, name='243P/NEAT', source_subtype_1='JF')
+        params = {  'parameter_type' : 'M1',
+                    'value' : 10.4,
+                    'preferred' : True
+                 }
+        pp = PhysicalParameters.objects.create(body=self.test_body_243P, **params)
+        params = {  'parameter_type' : 'K1',
+                    'value' : 15.5,
+                    'preferred' : True
+                 }
+        pp = PhysicalParameters.objects.create(body=self.test_body_243P, **params)
+
+        self.test_body_C2016C2, created = Body.objects.get_or_create(id=3, name='C/2016 C2', source_subtype_1='LP')
+        params = {  'parameter_type' : 'M1',
+                    'value' : 13.8,
+                    'preferred' : True
+                 }
+        pp = PhysicalParameters.objects.create(body=self.test_body_C2016C2, **params)
+        params = {  'parameter_type' : 'K1',
+                    'value' : 21.0,
+                    'preferred' : True
+                 }
+        pp = PhysicalParameters.objects.create(body=self.test_body_C2016C2, **params)
+        params = {  'parameter_type' : 'M2',
+                    'value' : 17.5,
+                    'preferred' : True
+                 }
+        pp = PhysicalParameters.objects.create(body=self.test_body_C2016C2, **params)
+        params = {  'parameter_type' : 'K2',
+                    'value' : 5.0,
+                    'preferred' : True
+                 }
+        pp = PhysicalParameters.objects.create(body=self.test_body_C2016C2, **params)
 
         self.nocheck_keys = ['ingest']   # Involves datetime.utcnow(), hard to check
 
@@ -2447,12 +2484,12 @@ class TestUpdateMPCOrbit(TestCase):
 
         # Elements from epoch=2018-03-23 set
         self.expected_elements_sp_comet = {
-                                             'id' : 1,
+                                             'id' : 2,
                                              'name' : u'243P/NEAT',
                                              'provisional_name': None,
                                              'provisional_packed': None,
                                              'elements_type': u'MPC_COMET',
-                                             'abs_mag' : None,
+                                             'abs_mag' : 10.4,
                                              'argofperih': 283.56217,
                                              'longascnode': 87.66076,
                                              'eccentricity': 0.3591386,
@@ -2463,7 +2500,7 @@ class TestUpdateMPCOrbit(TestCase):
                                              'meananom': None,
                                              'epochofperih': datetime(2018, 8, 26, 0, 59, 55, int(0.968*1e6)),
                                              'perihdist': 2.4544160,
-                                             'slope': 4.00,
+                                             'slope': 15.5/2.5,
                                              'origin' : u'M',
                                              'active' : True,
                                              'arc_length': 5528.0,
@@ -2473,7 +2510,7 @@ class TestUpdateMPCOrbit(TestCase):
                                              'fast_moving' : False,
                                              'score' : None,
                                              'source_type' : 'C',
-                                             'source_subtype_1' : None,
+                                             'source_subtype_1' : 'JF',
                                              'source_subtype_2': None,
                                              'update_time' : datetime(2018,  9,19, 0),
                                              'updated' : True,
@@ -2482,12 +2519,12 @@ class TestUpdateMPCOrbit(TestCase):
 
         # Elements from epoch=2016-04-19 set
         self.expected_elements_comet_set1 = {
-                                             'id' : 1,
+                                             'id' : 3,
                                              'name' : u'C/2016 C2',
                                              'provisional_name': None,
                                              'provisional_packed': None,
                                              'elements_type': u'MPC_COMET',
-                                             'abs_mag' : None,
+                                             'abs_mag' : 13.8,
                                              'argofperih': 214.01052,
                                              'longascnode': 24.55858,
                                              'eccentricity': 1.0000000,
@@ -2498,7 +2535,7 @@ class TestUpdateMPCOrbit(TestCase):
                                              'meananom': None,
                                              'epochofperih': datetime(2016, 4, 19, 0, 41, 44, int(0.736*1e6)),
                                              'perihdist': 1.5671127,
-                                             'slope': 4.00,
+                                             'slope': 21/2.5,
                                              'origin' : u'M',
                                              'active' : True,
                                              'arc_length': 10.0,
@@ -2517,12 +2554,12 @@ class TestUpdateMPCOrbit(TestCase):
 
         # Elements from epoch=2016-07-30 set
         self.expected_elements_comet_set2 = {
-                                             'id' : 1,
+                                             'id' : 3,
                                              'name' : u'C/2016 C2',
                                              'provisional_name': None,
                                              'provisional_packed': None,
                                              'elements_type': u'MPC_COMET',
-                                             'abs_mag' : None,
+                                             'abs_mag' : 13.8,
                                              'argofperih': 214.40704,
                                              'longascnode': 24.40401,
                                              'eccentricity': 0.9755678,
@@ -2533,7 +2570,7 @@ class TestUpdateMPCOrbit(TestCase):
                                              'meananom': None,
                                              'epochofperih': datetime(2016, 4, 19, 14, 26, 29, int(0.472*1e6)),
                                              'perihdist': 1.5597633,
-                                             'slope': 4.00,
+                                             'slope': 21.0/2.5,
                                              'origin' : u'M',
                                              'active' : True,
                                              'arc_length': 126,
@@ -2567,7 +2604,7 @@ class TestUpdateMPCOrbit(TestCase):
         status = update_MPC_orbit(self.test_mpcdb_page, origin='M')
         self.assertEqual(True, status)
 
-        new_body = Body.objects.last()
+        new_body = Body.objects.get(id=self.test_body_2014UR.id)
         new_body_elements = model_to_dict(new_body)
 
         self.assertEqual(len(self.expected_elements)+len(self.nocheck_keys), len(new_body_elements))
@@ -2586,7 +2623,7 @@ class TestUpdateMPCOrbit(TestCase):
         status = update_MPC_orbit(self.test_mpcdb_page, origin='M')
         self.assertEqual(True, status)
 
-        body = Body.objects.last()
+        body = Body.objects.get(id=self.test_body_2014UR.id)
         phys_params = body.get_physical_parameters
 
         for param in phys_params():
@@ -2606,7 +2643,7 @@ class TestUpdateMPCOrbit(TestCase):
         status = update_MPC_orbit(self.test_mpcdb_page, origin='G')
         self.assertEqual(True, status)
 
-        new_body = Body.objects.last()
+        new_body = Body.objects.get(id=self.test_body_2014UR.id)
         new_body_elements = model_to_dict(new_body)
 
         self.assertEqual(len(expected_elements)+len(self.nocheck_keys), len(new_body_elements))
@@ -2687,7 +2724,7 @@ class TestUpdateMPCOrbit(TestCase):
                   'origin': 'M',
                   }
 
-        self.body, created = Body.objects.get_or_create(**params)
+        Body.objects.filter(id=self.test_body_2014UR.id).update(**params)
 
         expected_types = ['H', 'D', 'G', 'ab']
         expected_values = [26.6, 28.45, 0.15, 0.05]
@@ -2721,7 +2758,8 @@ class TestUpdateMPCOrbit(TestCase):
     @patch('core.views.update_jpl_phys_params')
     @patch('core.views.datetime', MockDateTime)
     def test_2014UR_Arecibo_older_exists(self, mock_class):
-        params = {'name': '2014 UR',
+        params = {
+                  'name': '2014 UR',
                   'abs_mag': 26.6,
                   'slope': 0.1,
                   'epochofel': '2013-03-19 00:00:00',
@@ -2737,7 +2775,7 @@ class TestUpdateMPCOrbit(TestCase):
                   'origin': 'M',
                   }
 
-        self.body, created = Body.objects.get_or_create(**params)
+        Body.objects.filter(id=self.test_body_2014UR.id).update(**params)
         expected_elements = self.expected_elements
         expected_elements['origin'] = 'A'
 
@@ -2823,15 +2861,17 @@ class TestUpdateMPCOrbit(TestCase):
             if key not in self.nocheck_keys and key != 'id':
                 self.assertEqual(expected_elements[key], new_body_elements[key])
 
+    @patch('core.views.update_jpl_phys_params')
     @patch('core.views.datetime', MockDateTime)
     @patch('astrometrics.sources_subs.datetime', MockDateTime)
-    def test_243P_MPC(self):
+    def test_243P_MPC(self, mock_class):
 
         MockDateTime.change_datetime(2018,  4, 20, 12, 0, 0)
+
         status = update_MPC_orbit(self.test_mpcdb_page_spcomet, origin='M')
         self.assertEqual(True, status)
 
-        new_body = Body.objects.last()
+        new_body = Body.objects.get(id=self.test_body_243P.id)
         new_body_elements = model_to_dict(new_body)
 
         self.assertEqual(len(self.expected_elements_sp_comet)+len(self.nocheck_keys), len(new_body_elements))
@@ -2839,15 +2879,17 @@ class TestUpdateMPCOrbit(TestCase):
             if key not in self.nocheck_keys and key != 'id':
                 self.assertEqual(self.expected_elements_sp_comet[key], new_body_elements[key], msg="Failure on key: " + key)
 
+    @patch('core.views.update_jpl_phys_params')
     @patch('core.views.datetime', MockDateTime)
     @patch('astrometrics.sources_subs.datetime', MockDateTime)
-    def test_C2016C2_April_epoch(self):
+    def test_C2016C2_April_epoch(self, mock_class):
 
         MockDateTime.change_datetime(2016,  4, 20, 12, 0, 0)
+
         status = update_MPC_orbit(self.test_mpcdb_page_comet, origin='M')
         self.assertEqual(True, status)
 
-        new_body = Body.objects.last()
+        new_body = Body.objects.get(id=self.test_body_C2016C2.id)
         new_body_elements = model_to_dict(new_body)
 
         self.assertEqual(len(self.expected_elements_comet_set1)+len(self.nocheck_keys), len(new_body_elements))
@@ -2855,15 +2897,17 @@ class TestUpdateMPCOrbit(TestCase):
             if key not in self.nocheck_keys and key != 'id':
                 self.assertEqual(self.expected_elements_comet_set1[key], new_body_elements[key], msg="Failure on key: " + key)
 
+    @patch('core.views.update_jpl_phys_params')
     @patch('core.views.datetime', MockDateTime)
     @patch('astrometrics.sources_subs.datetime', MockDateTime)
-    def test_C2016C2_July_epoch(self):
+    def test_C2016C2_July_epoch(self, mock_class):
 
         MockDateTime.change_datetime(2017,  4, 20, 12, 0, 0)
+
         status = update_MPC_orbit(self.test_mpcdb_page_comet, origin='M')
         self.assertEqual(True, status)
 
-        new_body = Body.objects.last()
+        new_body = Body.objects.get(id=self.test_body_C2016C2.id)
         new_body_elements = model_to_dict(new_body)
 
         self.assertEqual(len(self.expected_elements_comet_set2)+len(self.nocheck_keys), len(new_body_elements))

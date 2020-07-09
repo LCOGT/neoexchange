@@ -2743,6 +2743,29 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
     # Update Physical Parameters
     if body.characterization_target() or body.source_type == 'C':
         update_jpl_phys_params(body)
+        if body.source_type == 'C':
+            # The MPC DB doesn't return any info for comets; update the Body's
+            # `abs_mag` and `slope` values here if possible
+            new_abs_mag = None
+            try:
+                new_abs_mag = PhysicalParameters.objects.get(body=body, parameter_type='M1', preferred=True).value
+            except (PhysicalParameters.DoesNotExist, PhysicalParameters.MultipleObjectsReturned):
+                new_abs_mag = None
+            if new_abs_mag:
+                msg = "Updated abs_mag for {} from M1={}".format(body.current_name(), new_abs_mag)
+                logger.debug(msg)
+                body.abs_mag = new_abs_mag
+
+            new_slope = None
+            try:
+                new_slope = PhysicalParameters.objects.get(body=body, parameter_type='K1', preferred=True).value
+            except (PhysicalParameters.DoesNotExist, PhysicalParameters.MultipleObjectsReturned):
+                new_slope = None
+            if new_slope:
+                msg = "Updated slope for {} from K1={}".format(body.current_name(), new_slope)
+                logger.debug(msg)
+                body.slope = new_slope / 2.5
+            body.save()
     return True
 
 
