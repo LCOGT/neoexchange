@@ -1665,17 +1665,11 @@ class TestFetchFilterList(TestCase):
                         {'name': 'Diffuser_PennState', 'code': 'Diffuser', 'schedulable': False, 'default': False},
                         {'name': 'gp*Diffuser', 'code': 'gp*Diffuser', 'schedulable': False, 'default': False}]}}}
 
-        self.all_2m_rsp = {'2M0-FLOYDS-SCICAM': {
-        'type': 'SPECTRA',
-        'class': '2m0',
-        'name': '2.0 meter FLOYDS',
-        'optical_elements':
-            {'slits': [
-                {'name': '6.0 arcsec slit', 'code': 'slit_6.0as', 'schedulable': True, 'default': False},
-                {'name': '1.6 arcsec slit', 'code': 'slit_1.6as', 'schedulable': True, 'default': False},
-                {'name': '2.0 arcsec slit', 'code': 'slit_2.0as', 'schedulable': True, 'default': False},
-                {'name': '1.2 arcsec slit', 'code': 'slit_1.2as', 'schedulable': True, 'default': False}],
-             'filters': [
+        self.all_2m_rsp = {"2M0-SCICAM-SPECTRAL": {
+            "type": "IMAGE",
+            "class": "2m0",
+            "name": "2.0 meter Spectral",
+            "optical_elements": {'filters': [
                  {'name': 'D51', 'code': 'D51', 'schedulable': True, 'default': False},
                  {'name': 'H Beta', 'code': 'H-Beta', 'schedulable': True, 'default': False},
                  {'name': 'OIII', 'code': 'OIII', 'schedulable': True, 'default': False},
@@ -1695,6 +1689,18 @@ class TestFetchFilterList(TestCase):
                  {'name': 'Bessell-V', 'code': 'V', 'schedulable': True, 'default': False},
                  {'name': 'Bessell-B', 'code': 'B', 'schedulable': True, 'default': False},
                  {'name': '200um Pinhole', 'code': '200um-Pinhole', 'schedulable': False, 'default': False}]}}}
+
+        self.spec_2m_rsp = {'2M0-FLOYDS-SCICAM': {
+            'type': 'SPECTRA',
+            'class': '2m0',
+            'name': '2.0 meter FLOYDS',
+            'optical_elements':
+                {'slits': [
+                    {'name': '6.0 arcsec slit', 'code': 'slit_6.0as', 'schedulable': True, 'default': False},
+                    {'name': '1.6 arcsec slit', 'code': 'slit_1.6as', 'schedulable': True, 'default': False},
+                    {'name': '2.0 arcsec slit', 'code': 'slit_2.0as', 'schedulable': True, 'default': False},
+                    {'name': '1.2 arcsec slit', 'code': 'slit_1.2as', 'schedulable': True, 'default': False}],
+                 }}}
 
         self.empty = {}
 
@@ -1725,7 +1731,7 @@ class TestFetchFilterList(TestCase):
     def test_spectra_telescope(self):
         expected_filter_list = ['slit_1.2as', 'slit_1.6as', 'slit_2.0as', 'slit_6.0as']
 
-        filter_list = parse_filter_file(self.all_2m_rsp, True)
+        filter_list = parse_filter_file(self.spec_2m_rsp, True)
         self.assertCountEqual(expected_filter_list, filter_list)
 
 

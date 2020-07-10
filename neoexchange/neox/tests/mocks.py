@@ -1517,31 +1517,40 @@ def mock_fetch_filter_list(site, spec):
                 {'name': '1.6 arcsec slit', 'code': 'slit_1.6as', 'schedulable': True, 'default': False},
                 {'name': '2.0 arcsec slit', 'code': 'slit_2.0as', 'schedulable': True, 'default': False},
                 {'name': '1.2 arcsec slit', 'code': 'slit_1.2as', 'schedulable': True, 'default': False}],
-             'filters': [
-                 {'name': 'D51', 'code': 'D51', 'schedulable': True, 'default': False},
-                 {'name': 'H Beta', 'code': 'H-Beta', 'schedulable': True, 'default': False},
-                 {'name': 'OIII', 'code': 'OIII', 'schedulable': True, 'default': False},
-                 {'name': 'H Alpha', 'code': 'H-Alpha', 'schedulable': True, 'default': False},
-                 {'name': 'Skymapper CaV', 'code': 'Skymapper-VS', 'schedulable': True, 'default': False},
-                 {'name': 'Solar (V+R)', 'code': 'solar', 'schedulable': True, 'default': False},
-                 {'name': 'Astrodon UV', 'code': 'Astrodon-UV', 'schedulable': True, 'default': False},
-                 {'name': 'Bessell-I', 'code': 'I', 'schedulable': True, 'default': False},
-                 {'name': 'Bessell-R', 'code': 'R', 'schedulable': True, 'default': False},
-                 {'name': 'PanSTARRS-Y', 'code': 'Y', 'schedulable': True, 'default': False},
-                 {'name': 'SDSS-up', 'code': 'up', 'schedulable': True, 'default': False},
-                 {'name': 'Clear', 'code': 'air', 'schedulable': True, 'default': False},
-                 {'name': 'SDSS-rp', 'code': 'rp', 'schedulable': True, 'default': False},
-                 {'name': 'SDSS-ip', 'code': 'ip', 'schedulable': True, 'default': False},
-                 {'name': 'SDSS-gp', 'code': 'gp', 'schedulable': True, 'default': False},
-                 {'name': 'PanSTARRS-Z', 'code': 'zs', 'schedulable': True, 'default': False},
-                 {'name': 'Bessell-V', 'code': 'V', 'schedulable': True, 'default': False},
-                 {'name': 'Bessell-B', 'code': 'B', 'schedulable': True, 'default': False},
-                 {'name': '200um Pinhole', 'code': '200um-Pinhole', 'schedulable': False, 'default': False}]}}}
+             }}}
+
+    phot_2m_rsp = {"2M0-SCICAM-SPECTRAL": {
+        "type": "IMAGE",
+        "class": "2m0",
+        "name": "2.0 meter Spectral",
+        "optical_elements": {'filters': [
+             {'name': 'D51', 'code': 'D51', 'schedulable': True, 'default': False},
+             {'name': 'H Beta', 'code': 'H-Beta', 'schedulable': True, 'default': False},
+             {'name': 'OIII', 'code': 'OIII', 'schedulable': True, 'default': False},
+             {'name': 'H Alpha', 'code': 'H-Alpha', 'schedulable': True, 'default': False},
+             {'name': 'Skymapper CaV', 'code': 'Skymapper-VS', 'schedulable': True, 'default': False},
+             {'name': 'Solar (V+R)', 'code': 'solar', 'schedulable': True, 'default': False},
+             {'name': 'Astrodon UV', 'code': 'Astrodon-UV', 'schedulable': True, 'default': False},
+             {'name': 'Bessell-I', 'code': 'I', 'schedulable': True, 'default': False},
+             {'name': 'Bessell-R', 'code': 'R', 'schedulable': True, 'default': False},
+             {'name': 'PanSTARRS-Y', 'code': 'Y', 'schedulable': True, 'default': False},
+             {'name': 'SDSS-up', 'code': 'up', 'schedulable': True, 'default': False},
+             {'name': 'Clear', 'code': 'air', 'schedulable': True, 'default': False},
+             {'name': 'SDSS-rp', 'code': 'rp', 'schedulable': True, 'default': False},
+             {'name': 'SDSS-ip', 'code': 'ip', 'schedulable': True, 'default': False},
+             {'name': 'SDSS-gp', 'code': 'gp', 'schedulable': True, 'default': False},
+             {'name': 'PanSTARRS-Z', 'code': 'zs', 'schedulable': True, 'default': False},
+             {'name': 'Bessell-V', 'code': 'V', 'schedulable': True, 'default': False},
+             {'name': 'Bessell-B', 'code': 'B', 'schedulable': True, 'default': False},
+             {'name': '200um Pinhole', 'code': '200um-Pinhole', 'schedulable': False, 'default': False}]}}}
 
     empty = {}
 
     if '2m0' in telid.lower():
-        resp = spec_2m_rsp
+        if spec:
+            resp = spec_2m_rsp
+        else:
+            resp = phot_2m_rsp
     elif '1m0' in telid.lower() or '0m4' in telid.lower():
         resp = coj_1m_rsp
     else:
