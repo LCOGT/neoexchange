@@ -101,7 +101,7 @@ class Command(BaseCommand):
             # Step 1: Determine if astrometric fit in catalog is good and
             # if not, refit using SExtractor and SCAMP.
             self.stdout.write("Processing %s" % catalog)
-            new_catalog_or_status, num_new_frames_created = check_catalog_and_refit(configs_dir, temp_dir, catalog)
+            new_catalog_or_status, num_new_frames_created = check_catalog_and_refit(configs_dir, temp_dir, catalog, desired_catalog='GAIA-DR2')
 
             catalog_type = 'LCOGT'
             try:
@@ -122,7 +122,9 @@ class Command(BaseCommand):
             # results into CatalogSources
             self.stdout.write("Creating CatalogSources from %s (Cat. type=%s)" % (new_catalog, catalog_type))
 
-            num_sources_created, num_in_catalog = store_catalog_sources(new_catalog, catalog_type, std_zeropoint_tolerance=0.1)
+            num_sources_created, num_in_catalog = store_catalog_sources(new_catalog, catalog_type,
+                                                                        std_zeropoint_tolerance=0.1,
+                                                                        phot_cat_name='GAIA-DR2')
             if num_sources_created >= 0 and num_in_catalog > 0:
                 self.stdout.write("Created/updated %d sources from %d in catalog" % (num_sources_created, num_in_catalog))
             else:
@@ -132,6 +134,8 @@ class Command(BaseCommand):
             if options['skip_mtdlink'] is False:
                 self.stdout.write("Creating .sext file(s) from %s" % (new_catalog))
                 fits_filename = make_sext_file(temp_dir, new_catalog, catalog_type)
+                if fits_filename is None:
+                    continue
             else:
                 self.stdout.write("Skipping creation of .sext files for skipped mtdlink")
 
@@ -140,16 +144,16 @@ class Command(BaseCommand):
             fits_file_list.append(fits_filename)
 
         if options['skip_mtdlink'] is False:
-            # Step 4: Run MTDLINK to find moving objects
-            self.stdout.write("Running mtdlink on file(s) %s" % fits_file_list)
-            param_file = os.path.abspath(os.path.join('photometrics', 'configs', 'mtdi.lcogt.param'))
-            # May change this to get pa and rate from compute_ephem later
-            pa_rate_dict = make_pa_rate_dict(float(options['pa']), float(options['deltapa']), float(options['minrate']), float(options['maxrate']))
-
-            retcode_or_cmdline = run_mtdlink(configs_dir, temp_dir, fits_file_list, len(fits_file_list), param_file, pa_rate_dict, catalog_type)
-
-            # Step 5: Read MTDLINK output file and create candidates in NEOexchange
             if len(fits_file_list) > 0:
+                # Step 4: Run MTDLINK to find moving objects
+                self.stdout.write("Running mtdlink on file(s) %s" % fits_file_list)
+                param_file = os.path.abspath(os.path.join('photometrics', 'configs', 'mtdi.lcogt.param'))
+                # May change this to get pa and rate from compute_ephem later
+                pa_rate_dict = make_pa_rate_dict(float(options['pa']), float(options['deltapa']), float(options['minrate']), float(options['maxrate']))
+
+                retcode_or_cmdline = run_mtdlink(configs_dir, temp_dir, fits_file_list, len(fits_file_list), param_file, pa_rate_dict, catalog_type)
+
+                # Step 5: Read MTDLINK output file and create candidates in NEOexchange
                 mtds_file = os.path.join(temp_dir, fits_file_list[0].replace('.fits', '.mtds'))
                 if os.path.exists(mtds_file):
                     num_cands_or_status = store_detections(mtds_file,dbg=False)
@@ -157,6 +161,8 @@ class Command(BaseCommand):
                         self.stdout.write("Created %d Candidates" % num_cands_or_status)
                 else:
                     self.stdout.write("Cannot find the MTDS output file  %s" % mtds_file)
+            else:
+                self.stdout.write("No valid files to run mtdlink on (%s)" % fits_file_list)
         else:
             self.stdout.write("Skipping running of mtdlink")
 

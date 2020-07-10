@@ -1375,179 +1375,179 @@ def get_sitepos(site_code, dbg=False):
     if site_code == 'F65' or site_code == 'FTN':
         # MPC code for FTN. Positions from JPL HORIZONS, longitude converted from 203d 44' 32.6" East
         # 156d 15' 27.4" W
-        (site_lat, status)  =  S.sla_daf2r(20, 42, 25.5)
-        (site_long, status) =  S.sla_daf2r(156, 15, 27.4)
+        (site_lat, status) = S.sla_daf2r(20, 42, 25.5)
+        (site_long, status) = S.sla_daf2r(156, 15, 27.4)
         site_long = -site_long
         site_hgt = 3055.0
         site_name = 'Haleakala-Faulkes Telescope North (FTN)'
     elif site_code == 'E10' or site_code == 'FTS':
         # MPC code for FTS. Positions from JPL HORIZONS ( 149d04'13.0''E, 31d16'23.4''S, 1111.8 m )
-        (site_lat, status)  =  (S.sla_daf2r(31, 16, 23.4))
+        (site_lat, status) = (S.sla_daf2r(31, 16, 23.4))
         site_lat = -site_lat
         (site_long, status) = S.sla_daf2r(149, 4., 13.0)
         site_hgt = 1111.8
         site_name = 'Siding Spring-Faulkes Telescope South (FTS)'
     elif site_code == 'SQA' or site_code == 'G51':
-        (site_lat, status)  =  S.sla_daf2r(34, 41, 29.23)
-        (site_long, status) =  S.sla_daf2r(120, 2., 32.0)
+        (site_lat, status) = S.sla_daf2r(34, 41, 29.23)
+        (site_long, status) = S.sla_daf2r(120, 2., 32.0)
         site_long = -site_long
         site_hgt = 328.0
         site_name = 'Sedgwick Observatory (SQA)'
     elif site_code == 'ELP-DOMA' or site_code == 'V37':
-        (site_lat, status)  =  S.sla_daf2r(30, 40, 47.53)
-        (site_long, status) =  S.sla_daf2r(104, 0., 54.63)
+        (site_lat, status) = S.sla_daf2r(30, 40, 47.53)
+        (site_long, status) = S.sla_daf2r(104, 0., 54.63)
         site_long = -site_long
         site_hgt = 2010.0
         site_name = 'LCO ELP Node 1m0 Dome A at McDonald Observatory'
     elif site_code == 'ELP-DOMB' or site_code == 'V39':
         # Position from screenshot of Annie's GPS on mount at site...
-        (site_lat, status)  =  S.sla_daf2r(30, 40, 48.00)
-        (site_long, status) =  S.sla_daf2r(104, 0.0, 55.74)
+        (site_lat, status) = S.sla_daf2r(30, 40, 48.00)
+        (site_long, status) = S.sla_daf2r(104, 0.0, 55.74)
         site_long = -site_long
         site_hgt = 2029.4
         site_name = 'LCO ELP Node 1m0 Dome B at McDonald Observatory'
     elif site_code == 'ELP-AQWA-0M4A' or site_code == 'V38':
-        (site_lat, status)  =  S.sla_daf2r(30, 40, 48.15)
-        (site_long, status) =  S.sla_daf2r(104, 0., 54.24)
+        (site_lat, status) = S.sla_daf2r(30, 40, 48.15)
+        (site_long, status) = S.sla_daf2r(104, 0., 54.24)
         site_long = -site_long
         site_hgt = 2027.0
         site_name = 'LCO ELP Node 0m4a Aqawan A at McDonald Observatory'
     elif site_code == 'BPL':
-        (site_lat, status)  =  S.sla_daf2r(34, 25, 57)
-        (site_long, status) =  S.sla_daf2r(119, 51, 46)
+        (site_lat, status) = S.sla_daf2r(34, 25, 57)
+        (site_long, status) = S.sla_daf2r(119, 51, 46)
         site_long = -site_long
         site_hgt = 7.0
         site_name = 'LCO Back Parking Lot Node (BPL)'
     elif site_code == 'LSC-DOMA-1M0A' or site_code == 'W85':
         # Latitude, longitude from Eric Mamajek (astro-ph: 1210.1616) Table 6. Height
         # corrected by +3m for telescope height from Vince.
-        (site_lat, status)  =  S.sla_daf2r(30, 10, 2.58)
+        (site_lat, status) = S.sla_daf2r(30, 10, 2.58)
         site_lat = -site_lat   # Southern hemisphere !
-        (site_long, status) =  S.sla_daf2r(70, 48, 17.24)
-        site_long = -site_long # West of Greenwich !
+        (site_long, status) = S.sla_daf2r(70, 48, 17.24)
+        site_long = -site_long  # West of Greenwich !
         site_hgt = 2201.0
         site_name = 'LCO LSC Node 1m0 Dome A at Cerro Tololo'
     elif site_code == 'LSC-DOMB-1M0A' or site_code == 'W86':
         # Latitude, longitude from Eric Mamajek (astro-ph: 1210.1616) Table 6. Height
         # corrected by +3m for telescope height from Vince.
-        (site_lat, status)  =  S.sla_daf2r(30, 10, 2.39)
+        (site_lat, status) = S.sla_daf2r(30, 10, 2.39)
         site_lat = -site_lat   # Southern hemisphere !
-        (site_long, status) =  S.sla_daf2r(70, 48, 16.78)
-        site_long = -site_long # West of Greenwich !
+        (site_long, status) = S.sla_daf2r(70, 48, 16.78)
+        site_long = -site_long  # West of Greenwich !
         site_hgt = 2201.0
         site_name = 'LCO LSC Node 1m0 Dome B at Cerro Tololo'
     elif site_code == 'LSC-DOMC-1M0A' or site_code == 'W87':
         # Latitude, longitude from Eric Mamajek (astro-ph: 1210.1616) Table 6. Height
         # corrected by +3m for telescope height from Vince.
-        (site_lat, status)  =  S.sla_daf2r(30, 10, 2.81)
+        (site_lat, status) = S.sla_daf2r(30, 10, 2.81)
         site_lat = -site_lat   # Southern hemisphere !
-        (site_long, status) =  S.sla_daf2r(70, 48, 16.85)
-        site_long = -site_long # West of Greenwich !
+        (site_long, status) = S.sla_daf2r(70, 48, 16.85)
+        site_long = -site_long  # West of Greenwich !
         site_hgt = 2201.0
         site_name = 'LCO LSC Node 1m0 Dome C at Cerro Tololo'
     elif site_code == 'LSC-AQWA-0M4A' or site_code == 'W89':
         # Latitude, longitude from somewhere
-        (site_lat, status)  =  S.sla_daf2r(30, 10, 3.79)
+        (site_lat, status) = S.sla_daf2r(30, 10, 3.79)
         site_lat = -site_lat   # Southern hemisphere !
-        (site_long, status) =  S.sla_daf2r(70, 48, 16.88)
-        site_long = -site_long # West of Greenwich !
+        (site_long, status) = S.sla_daf2r(70, 48, 16.88)
+        site_long = -site_long  # West of Greenwich !
         site_hgt = 2202.5
         site_name = 'LCO LSC Node 0m4a Aqawan A at Cerro Tololo'
     elif site_code == 'LSC-AQWB-0M4A' or site_code == 'W79':
         # Latitude, longitude from Nikolaus/Google Earth
-        (site_lat, status)  =  S.sla_daf2r(30, 10, 3.56)
+        (site_lat, status) = S.sla_daf2r(30, 10, 3.56)
         site_lat = -site_lat   # Southern hemisphere !
-        (site_long, status) =  S.sla_daf2r(70, 48, 16.74)
-        site_long = -site_long # West of Greenwich !
+        (site_long, status) = S.sla_daf2r(70, 48, 16.74)
+        site_long = -site_long  # West of Greenwich !
         site_hgt = 2202.5
         site_name = 'LCO LSC Node 0m4a Aqawan A at Cerro Tololo'
     elif site_code == 'CPT-DOMA-1M0A' or site_code == 'K91':
         # Latitude, longitude from site GPS co-ords plus offsets from site plan. Height
         # corrected by +3m for telescope height from Vince.
-        (site_lat, status)  =  S.sla_daf2r(32, 22, 50.0)
+        (site_lat, status) = S.sla_daf2r(32, 22, 50.0)
         site_lat = -site_lat   # Southern hemisphere !
-        (site_long, status) =  S.sla_daf2r(20, 48, 36.65)
+        (site_long, status) = S.sla_daf2r(20, 48, 36.65)
         site_hgt = 1807.0
         site_name = 'LCO CPT Node 1m0 Dome A at Sutherland'
     elif site_code == 'CPT-DOMB-1M0A' or site_code == 'K92':
         # Latitude, longitude from site GPS co-ords plus offsets from site plan. Height
         # corrected by +3m for telescope height from Vince.
-        (site_lat, status)  =  S.sla_daf2r(32, 22, 50.0)
+        (site_lat, status) = S.sla_daf2r(32, 22, 50.0)
         site_lat = -site_lat   # Southern hemisphere !
-        (site_long, status) =  S.sla_daf2r(20, 48, 36.13)
+        (site_long, status) = S.sla_daf2r(20, 48, 36.13)
         site_hgt = 1807.0
         site_name = 'LCO CPT Node 1m0 Dome B at Sutherland'
     elif site_code == 'CPT-DOMC-1M0A' or site_code == 'K93':
         # Latitude, longitude from site GPS co-ords plus offsets from site plan. Height
         # corrected by +3m for telescope height from Vince.
-        (site_lat, status)  =  S.sla_daf2r(32, 22, 50.38)
+        (site_lat, status) = S.sla_daf2r(32, 22, 50.38)
         site_lat = -site_lat   # Southern hemisphere !
-        (site_long, status) =  S.sla_daf2r(20, 48, 36.39)
+        (site_long, status) = S.sla_daf2r(20, 48, 36.39)
         site_hgt = 1807.0
         site_name = 'LCO CPT Node 1m0 Dome C at Sutherland'
     elif site_code == 'COJ-DOMA-1M0A' or site_code == 'Q63':
         # Latitude, longitude from Google Earth guesswork. Height
         # corrected by +3m for telescope height from Vince.
-        (site_lat, status)  =  S.sla_daf2r(31, 16, 22.56)
+        (site_lat, status) = S.sla_daf2r(31, 16, 22.56)
         site_lat = -site_lat   # Southern hemisphere !
-        (site_long, status) =  S.sla_daf2r(149, 4., 14.33)
+        (site_long, status) = S.sla_daf2r(149, 4., 14.33)
         site_hgt = 1168.0
         site_name = 'LCO COJ Node 1m0 Dome A at Siding Spring'
     elif site_code == 'COJ-DOMB-1M0A' or site_code == 'Q64':
         # Latitude, longitude from Google Earth guesswork. Height
         # corrected by +3m for telescope height from Vince.
-        (site_lat, status)  =  S.sla_daf2r(31, 16, 22.89)
+        (site_lat, status) = S.sla_daf2r(31, 16, 22.89)
         site_lat = -site_lat   # Southern hemisphere !
-        (site_long, status) =  S.sla_daf2r(149, 4., 14.75)
+        (site_long, status) = S.sla_daf2r(149, 4., 14.75)
         site_hgt = 1168.0
         site_name = 'LCO COJ Node 1m0 Dome B at Siding Spring'
     elif site_code == 'TFN-AQWA-0M4A' or site_code == 'Z21':
         # Latitude, longitude from Todd B./Google Earth
-        (site_lat, status)  =  S.sla_daf2r(28, 18, 1.11)
-        (site_long, status) =  S.sla_daf2r(16, 30, 42.13)
-        site_long = -site_long # West of Greenwich !
+        (site_lat, status) = S.sla_daf2r(28, 18, 1.11)
+        (site_long, status) = S.sla_daf2r(16, 30, 42.13)
+        site_long = -site_long  # West of Greenwich !
         site_hgt = 2390.0
         site_name = 'LCO TFN Node 0m4a Aqawan A at Tenerife'
     elif site_code == 'TFN-AQWA-0M4B' or site_code == 'Z17':
         # Latitude, longitude from Todd B./Google Earth
-        (site_lat, status)  =  S.sla_daf2r(28, 18, 1.11)
-        (site_long, status) =  S.sla_daf2r(16, 30, 42.21)
-        site_long = -site_long # West of Greenwich !
+        (site_lat, status) = S.sla_daf2r(28, 18, 1.11)
+        (site_long, status) = S.sla_daf2r(16, 30, 42.21)
+        site_long = -site_long  # West of Greenwich !
         site_hgt = 2390.0
         site_name = 'LCO TFN Node 0m4b Aqawan A at Tenerife'
     elif site_code == 'OGG-CLMA-0M4B' or site_code == 'T04':
         # Latitude, longitude from Google Earth, SW corner of clamshell, probably wrong
-        (site_lat, status)  =  S.sla_daf2r(20, 42, 25.1)
-        (site_long, status) =  S.sla_daf2r(156, 15, 27.11)
-        site_long = -site_long # West of Greenwich !
+        (site_lat, status) = S.sla_daf2r(20, 42, 25.1)
+        (site_long, status) = S.sla_daf2r(156, 15, 27.11)
+        site_long = -site_long  # West of Greenwich !
         site_hgt = 3037.0
         site_name = 'LCO OGG Node 0m4b at Maui'
     elif site_code == 'OGG-CLMA-0M4C' or site_code == 'T03':
         # Latitude, longitude from Google Earth, SW corner of clamshell, probably wrong
-        (site_lat, status)  =  S.sla_daf2r(20, 42, 25.1)
-        (site_long, status) =  S.sla_daf2r(156, 15, 27.12)
-        site_long = -site_long # West of Greenwich !
+        (site_lat, status) = S.sla_daf2r(20, 42, 25.1)
+        (site_long, status) = S.sla_daf2r(156, 15, 27.12)
+        site_long = -site_long  # West of Greenwich !
         site_hgt = 3037.0
         site_name = 'LCO OGG Node 0m4c at Maui'
     elif site_code == 'COJ-CLMA-0M4A' or site_code == 'Q58':
         # Latitude, longitude from Google Earth, SE corner of clamshell, probably wrong
-        (site_lat, status)  =  S.sla_daf2r(31, 16, 22.38)
+        (site_lat, status) = S.sla_daf2r(31, 16, 22.38)
         site_lat = -site_lat   # Southern hemisphere !
-        (site_long, status) =  S.sla_daf2r(149, 4., 15.05)
+        (site_long, status) = S.sla_daf2r(149, 4., 15.05)
         site_hgt = 1191.0
         site_name = 'LCO COJ Node 0m4a at Siding Spring'
     elif site_code == 'COJ-CLMA-0M4B' or site_code == 'Q59':
         # Latitude, longitude from Google Earth, SW corner of clamshell, probably wrong
-        (site_lat, status)  =  S.sla_daf2r(31, 16, 22.48)
+        (site_lat, status) = S.sla_daf2r(31, 16, 22.48)
         site_lat = -site_lat   # Southern hemisphere !
-        (site_long, status) =  S.sla_daf2r(149, 4., 14.91)
+        (site_long, status) = S.sla_daf2r(149, 4., 14.91)
         site_hgt = 1191.0
         site_name = 'LCO COJ Node 0m4b at Siding Spring'
     elif site_code == 'CPT-AQWA-0M4A' or site_code == 'L09':
         # Latitude, longitude from Nikolaus/Google Earth
-        (site_lat, status)  =  S.sla_daf2r(32, 22, 50.25)
+        (site_lat, status) = S.sla_daf2r(32, 22, 50.25)
         site_lat = -site_lat   # Southern hemisphere !
-        (site_long, status) =  S.sla_daf2r(20, 48, 35.54)
+        (site_long, status) = S.sla_daf2r(20, 48, 35.54)
         site_hgt = 1804.0
         site_name = 'LCO CPT Node 0m4a Aqawan A at Sutherland'
     elif site_code == '500' or site_code == '1M0' or site_code == '0M4' or site_code == '2M0':
@@ -1656,8 +1656,7 @@ def moonphase(date, obsvr_long, obsvr_lat, obsvr_hgt, dbg=False):
 
     (sun_ra, sun_dec, sun_diam) = S.sla_rdplan (mjd_tdb, 0, obsvr_long, obsvr_lat)
 
-    cosphi = ( sin(sun_dec) * sin(moon_dec) + cos(sun_dec) \
-        * cos(moon_dec) * cos(sun_ra - moon_ra) )
+    cosphi = ( sin(sun_dec) * sin(moon_dec) + cos(sun_dec) * cos(moon_dec) * cos(sun_ra - moon_ra))
     logger.debug("cos(phi)=%s" % cosphi)
 
 # Full formula for phase angle, i. Requires r (Earth-Sun distance) and del(ta) (the
@@ -1783,8 +1782,8 @@ def radec2strings(ra_radians, dec_radians, seperator=' '):
 
     if rsign == '+' and ra_radians != dec_radians:
         rsign = ''
-    ra_str = ra_format % ( rsign, ra[0], seperator, ra[1], seperator, ra[2],  ra[3] )
-    dec_str = dec_format % ( dsign, dec[0], seperator, dec[1], seperator, dec[2], dec[3] )
+    ra_str = ra_format % (rsign, ra[0], seperator, ra[1], seperator, ra[2],  ra[3])
+    dec_str = dec_format % (dsign, dec[0], seperator, dec[1], seperator, dec[2], dec[3])
 
     return ra_str, dec_str
 

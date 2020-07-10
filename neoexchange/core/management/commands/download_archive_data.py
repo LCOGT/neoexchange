@@ -47,6 +47,7 @@ class Command(BaseCommand):
         parser.add_argument('--datadir', default=out_path, help='Place to save data (e.g. %s)' % out_path)
         parser.add_argument('--spectraonly', default=False, action='store_true', help='Whether to only download spectra')
         parser.add_argument('--dlengimaging', default=False, action='store_true', help='Whether to download imaging for LCOEngineering')
+        parser.add_argument('--numdays', action="store", default=0.0, type=float, help='How many extra days to look for')
 
     def handle(self, *args, **options):
         usage = "Incorrect usage. Usage: %s [YYYYMMDD] [proposal code]" % ( argv[1] )
@@ -72,6 +73,7 @@ class Command(BaseCommand):
         if archive_token is not None:
             auth_headers = archive_login()
             start_date, end_date = determine_archive_start_end(obs_date)
+            end_date = end_date + timedelta(days=options['numdays'])
             for proposal in proposals:
                 self.stdout.write("Looking for frames between %s->%s from %s" % ( start_date, end_date, proposal ))
                 obstypes = ['EXPOSE', 'ARC', 'LAMPFLAT', 'SPECTRUM']

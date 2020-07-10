@@ -375,7 +375,6 @@ class TestComputeFOM(TestCase):
     def setUp(self):
         # Initialise with a test body and two test proposals
         params = {  'provisional_name' : 'N999r0q',
-                    'abs_mag'       : 21.0,
                     'slope'         : 0.15,
                     'epochofel'     : '2015-03-19 00:00:00',
                     'meananom'      : 325.2636,
@@ -396,7 +395,6 @@ class TestComputeFOM(TestCase):
         self.body, created = Body.objects.get_or_create(**params)
 
         params = {  'provisional_name' : '29182875',
-                    'abs_mag'       : 21.0,
                     'slope'         : 0.15,
                     'epochofel'     : '2015-03-19 00:00:00',
                     'meananom'      : 325.2636,
@@ -417,7 +415,6 @@ class TestComputeFOM(TestCase):
         self.body2, created = Body.objects.get_or_create(**params)
 
         params = {  'provisional_name' : 'C94028',
-                    'abs_mag'       : 21.0,
                     'slope'         : 0.15,
                     'epochofel'     : '2015-03-19 00:00:00',
                     'meananom'      : 325.2636,
@@ -438,7 +435,6 @@ class TestComputeFOM(TestCase):
         self.body3, created = Body.objects.get_or_create(**params)
 
         params = {  'provisional_name' : 't392019fci',
-                    'abs_mag'       : 21.0,
                     'slope'         : 0.15,
                     'epochofel'     : '2015-03-19 00:00:00',
                     'meananom'      : 325.2636,
@@ -495,7 +491,6 @@ class TestSavePhysicalParameters(TestCase):
 
     def setUp(self):
         params = {  'name' : '21545',
-                    'abs_mag'       : 21.0,
                     'slope'         : 0.15,
                     'epochofel'     : '2015-03-19 00:00:00',
                     'meananom'      : 325.2636,
@@ -691,7 +686,6 @@ class TestGetPhysicalParameters(TestCase):
 
     def setUp(self):
         params = {  'name' : 'nameless',
-                    'abs_mag'       : 21.0,
                     'slope'         : 0.15,
                     'epochofel'     : '2015-03-19 00:00:00',
                     'meananom'      : 325.2636,
@@ -829,7 +823,6 @@ class TestGetFullName(TestCase):
 
     def setUp(self):
         params = {  'name' : 'nameless',
-                    'abs_mag'       : 21.0,
                     'slope'         : 0.15,
                     'epochofel'     : '2015-03-19 00:00:00',
                     'meananom'      : 325.2636,
@@ -933,7 +926,6 @@ class TestSuperBlock(TestCase):
 
     def setUp(self):
         params = {  'provisional_name' : 'N999r0q',
-                    'abs_mag'       : 21.0,
                     'slope'         : 0.15,
                     'epochofel'     : '2015-03-19 00:00:00',
                     'meananom'      : 325.2636,
@@ -1007,11 +999,13 @@ class TestSuperBlock(TestCase):
         self.block3 = Block.objects.create(**params3)
 
     def test_telclass(self):
-        expected_telclass = "2m0(S), 1m0"
+        expected_telclass1 = "2m0(S)"
+        expected_telclass2 = "1m0"
 
         tel_class = self.sblock.get_telclass()
 
-        self.assertEqual(expected_telclass, tel_class)
+        self.assertIn(expected_telclass1, tel_class)
+        self.assertIn(expected_telclass2, tel_class)
 
     def test_telclass_spectro_only(self):
         # Remove non spectroscopic blocks
@@ -1057,7 +1051,6 @@ class TestBlock(TestCase):
     @classmethod
     def setUpTestData(cls):
         params = {  'provisional_name' : 'N999r0q',
-                    'abs_mag'       : 21.0,
                     'slope'         : 0.15,
                     'epochofel'     : '2015-03-19 00:00:00',
                     'meananom'      : 325.2636,
@@ -1473,8 +1466,8 @@ class TestFrame(TestCase):
 
         pix_coord = array([[512.0, 512.0]])
         assert_allclose(null_wcs.wcs.pc, frame.wcs.wcs.cd, rtol=1e-8)
-        self.assertEqual(null_wcs.wcs_pix2world(pix_coord, 1)[0][0], frame.wcs.wcs_pix2world(pix_coord, 1)[0][0])
-        self.assertEqual(null_wcs.wcs_pix2world(pix_coord, 1)[0][1], frame.wcs.wcs_pix2world(pix_coord, 1)[0][1])
+        self.assertEqual(null_wcs.all_pix2world(pix_coord, 1)[0][0], frame.wcs.all_pix2world(pix_coord, 1)[0][0])
+        self.assertEqual(null_wcs.all_pix2world(pix_coord, 1)[0][1], frame.wcs.all_pix2world(pix_coord, 1)[0][1])
         self.assertAlmostEqual(1.0, proj_plane_pixel_scales(frame.wcs)[0], 10)
         self.assertAlmostEqual(1.0, proj_plane_pixel_scales(frame.wcs)[1], 10)
 
@@ -1493,8 +1486,8 @@ class TestFrame(TestCase):
 
         pix_coord = array([[512.0, 512.0]])
         assert_allclose(self.w.wcs.cd, frame.wcs.wcs.cd, rtol=1e-8)
-        self.assertEqual(self.w.wcs_pix2world(pix_coord, 1)[0][0], frame.wcs.wcs_pix2world(pix_coord, 1)[0][0])
-        self.assertEqual(self.w.wcs_pix2world(pix_coord, 1)[0][1], frame.wcs.wcs_pix2world(pix_coord, 1)[0][1])
+        self.assertEqual(self.w.all_pix2world(pix_coord, 1)[0][0], frame.wcs.all_pix2world(pix_coord, 1)[0][0])
+        self.assertEqual(self.w.all_pix2world(pix_coord, 1)[0][1], frame.wcs.all_pix2world(pix_coord, 1)[0][1])
         self.assertAlmostEqual(self.pixel_scale, proj_plane_pixel_scales(frame.wcs)[0], 10)
         self.assertAlmostEqual(self.pixel_scale, proj_plane_pixel_scales(frame.wcs)[1], 10)
 

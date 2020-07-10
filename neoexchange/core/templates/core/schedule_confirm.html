@@ -427,6 +427,18 @@
                   <td class="kv-key">GuideCam Exposure time (s)</td>
                   <td class="kv-value">{{ form.ag_exp_time }}</td>
               </tr>
+              <tr id="id_para_angle_row">
+                  <td >
+                      <table align="left"  style="margin: 0px"><tr><td class="kv-key">
+                            <div class="tooltip">Use Parallactic Angle
+                            <span class="tooltiptext" style="left:60%;"><u>Parallactic Angle:</u>
+                                Slit Orientation Perpendicular to Horizon. <br>
+                                By Default slit orientation in direction of motion.
+                            </span></div></td><td></td></tr>
+                      </table>
+                  </td>
+                  <td class="kv-value">{{ form.para_angle }}</td>
+              </tr>
               {% endif %}
           </table>
           </div>

@@ -4,6 +4,15 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.4.1
+Add Parallactic angle option for spectroscopic observations.
+
+### 3.4.0
+Update Photometry to use GAIA-DR2
+
+### 3.3.2
+Initial support for the LCO Outbursting Objects Key (LOOK) Project
+
 ### 3.3.0
 * Send proper motion details for solar analogs through to the LCO observing system.
 * Display the most recent time of ingest or update on the Body details page.

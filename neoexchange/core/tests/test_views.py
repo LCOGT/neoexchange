@@ -27,6 +27,8 @@ from django.conf import settings
 from bs4 import BeautifulSoup
 from mock import patch
 from astropy.io import fits
+from astropy.wcs import WCS
+from numpy.testing import assert_allclose
 
 from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check_for_images, \
     mock_check_request_status_null, mock_check_request_status_notfound, \
@@ -35,7 +37,7 @@ from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check
     mock_archive_spectra_header, \
     mock_odin_login, mock_run_sextractor_make_catalog, mock_fetch_filter_list, \
     mock_update_elements_with_findorb, mock_update_elements_with_findorb_badrms, \
-    mock_update_elements_with_findorb_badepoch, mock_lco_api_fail
+    mock_update_elements_with_findorb_badepoch, mock_get_vizier_catalog_table, mock_lco_api_fail
 
 from neox.tests.base import assertDeepAlmostEqual
 
@@ -1270,6 +1272,7 @@ class TestScheduleCheck(TestCase):
                             'trail_len': 2.4202588233794056,
                             'typical_seeing': 2.0,
                             'ipp_value': 1.0,
+                            'para_angle': False,
                             'ag_exp_time': None,
                             'max_airmass': 1.74,
                             'max_alt_airmass': 1.0861815238132588,
@@ -1877,6 +1880,7 @@ class TestScheduleCheck(TestCase):
                         'trail_len': 0.4840515969823632,
                         'typical_seeing': 2.0,
                         'ipp_value': 1.0,
+                        'para_angle': False,
                         'ag_exp_time': 10,
                         'max_airmass': 2.0,
                         'max_alt_airmass': 1.0861815238132588,
@@ -1952,6 +1956,7 @@ class TestScheduleCheck(TestCase):
                         'trail_len': 0.4840515969823632,
                         'typical_seeing': 2.0,
                         'ipp_value': 1.0,
+                        'para_angle': False,
                         'ag_exp_time': 10,
                         'max_airmass': 2.0,
                         'max_alt_airmass': 1.0861815238132588,
@@ -5250,6 +5255,11 @@ class TestCheckCatalogAndRefitNew(TestCase):
         self.test_banzai_fits = os.path.abspath(os.path.join(self.temp_dir, 'banzai_test_frame.fits'))
         self.test_cat_bad_wcs = os.path.abspath(os.path.join(self.temp_dir, 'oracdr_test_catalog.fits'))
 
+        self.test_externscamp_headfile = os.path.join('photometrics', 'tests', 'example_externcat_scamp.head')
+        self.test_externcat_xml = os.path.join('photometrics', 'tests', 'example_externcat_scamp.xml')
+        self.test_externscamp_TPV_headfile = os.path.join('photometrics', 'tests', 'example_externcat_scamp_tpv.head')
+        self.test_externcat_TPV_xml = os.path.join('photometrics', 'tests', 'example_externcat_scamp_tpv.xml')
+
         shutil.copyfile(original_test_banzai_fits, self.test_banzai_fits)
         shutil.copyfile(original_test_cat_bad_wcs, self.test_cat_bad_wcs)
 
@@ -5578,6 +5588,54 @@ class TestCheckCatalogAndRefitNew(TestCase):
         num_new_frames = make_new_catalog_entry(new_ldac_catalog, header, self.test_block)
 
         self.assertEqual(expected_num_new_frames, num_new_frames)
+
+    def test_make_new_catalog_entry_gaiadr2(self):
+        fits_header, junk_table, cattype = open_fits_catalog(self.test_banzai_fits, header_only=True)
+        (status, new_ldac_catalog) = run_sextractor_make_catalog(self.configs_dir, self.temp_dir, self.test_banzai_fits.replace('.fits', '.fits[SCI]'))
+
+        fits_file_output = self.test_banzai_fits.replace('_frame', '_frame_new')
+        status, new_header = updateFITSWCS(self.test_banzai_fits, self.test_externscamp_headfile, self.test_externcat_xml, fits_file_output)
+        header = get_catalog_header(new_header, cattype)
+        new_wcs = WCS(new_header)
+        expected_wcs = new_wcs.wcs
+        num_new_frames = make_new_catalog_entry(new_ldac_catalog, header, self.test_block)
+
+        frames = Frame.objects.filter(frametype=Frame.BANZAI_LDAC_CATALOG)
+        self.assertEqual(1, frames.count())
+        frame = frames[0]
+        self.assertEqual('GAIA-DR2', frame.astrometric_catalog)
+        self.assertEqual(' ', frame.photometric_catalog)
+        self.assertEqual(0.30818, frame.rms_of_fit)
+        self.assertEqual(23, frame.nstars_in_fit)
+
+        frame_wcs = frame.wcs.wcs
+        assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
+        assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
+        assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
+
+    def test_make_new_catalog_entry_gaiadr2_tpv(self):
+        fits_header, junk_table, cattype = open_fits_catalog(self.test_banzai_fits, header_only=True)
+        (status, new_ldac_catalog) = run_sextractor_make_catalog(self.configs_dir, self.temp_dir, self.test_banzai_fits.replace('.fits', '.fits[SCI]'))
+
+        fits_file_output = self.test_banzai_fits.replace('_frame', '_frame_new')
+        status, new_header = updateFITSWCS(self.test_banzai_fits, self.test_externscamp_TPV_headfile, self.test_externcat_TPV_xml, fits_file_output)
+        header = get_catalog_header(new_header, cattype)
+        new_wcs = WCS(new_header)
+        expected_wcs = new_wcs.wcs
+        num_new_frames = make_new_catalog_entry(new_ldac_catalog, header, self.test_block)
+
+        frames = Frame.objects.filter(frametype=Frame.BANZAI_LDAC_CATALOG)
+        self.assertEqual(1, frames.count())
+        frame = frames[0]
+        self.assertEqual('GAIA-DR2', frame.astrometric_catalog)
+        self.assertEqual(' ', frame.photometric_catalog)
+        self.assertAlmostEqual(0.327895, frame.rms_of_fit, 6)
+        self.assertEqual(23, frame.nstars_in_fit)
+
+        frame_wcs = frame.wcs.wcs
+        assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
+        assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
+        assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
 
 
 class TestUpdateCrossids(TestCase):

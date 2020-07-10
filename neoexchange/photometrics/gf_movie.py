@@ -429,3 +429,4 @@ if __name__ == '__main__':
         logger.info("New gif created: {}".format(gif_file))
     else:
         logger.info("No files found.")
+

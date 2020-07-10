@@ -44,7 +44,7 @@ class Command(BaseCommand):
         parser.add_argument('--skip-download', action="store_true", help='Whether to skip downloading data')
 
     def handle(self, *args, **options):
-        usage = "Incorrect usage. Usage: %s --date [YYYYMMDD] --proposal [proposal code] --datadir [path]" % ( argv[1] )
+        usage = "Incorrect usage. Usage: %s --date [YYYYMMDD] --proposal [proposal code] --datadir [path]" % ( argv[1])
 
         self.stdout.write("==== Download and process astrometry %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
 
@@ -81,11 +81,11 @@ class Command(BaseCommand):
             # Single proposal specified
             proposal_text = " from" + proposals[0]
         if options['skip_download']:
-            self.stdout.write("Skipping download data for %s%s" % ( obs_date, proposal_text))
+            self.stdout.write("Skipping download data for %s%s" % (obs_date, proposal_text))
         else:
-            self.stdout.write("Downloading data for %s%s" % ( obs_date, proposal_text ))
+            self.stdout.write("Downloading data for %s%s" % (obs_date, proposal_text))
             if len(proposals) == 1:
-                call_command('download_archive_data', '--date', obs_date, '--proposal', proposals[0], '--datadir', dataroot )
+                call_command('download_archive_data', '--date', obs_date, '--proposal', proposals[0], '--datadir', dataroot)
             else:
                 call_command('download_archive_data', '--date', obs_date, '--datadir', dataroot)
 
@@ -156,6 +156,7 @@ class Command(BaseCommand):
                         if fits.block.superblock.tracking_number not in tn_list:
                             status = call_command('lightcurve_extraction', int(fits.block.superblock.tracking_number), '--single')
                             tn_list.append(fits.block.superblock.tracking_number)
+
             else:
                 self.stderr.write("No Block found for the object")
 
