@@ -1604,216 +1604,104 @@ class TestFetchFilterList(TestCase):
     """Unit test for getting current filters from configdb"""
 
     def setUp(self):
-        self.lsc_1m_rsp = {
-                        "count": 1,
-                        "next": 'null',
-                        "previous": 'null',
-                        "results": [
-                            {
-                                "id": 92,
-                                "code": "fa15",
-                                "state": "SCHEDULABLE",
-                                "telescope": "http://configdb.lco.gtn/telescopes/10/",
-                                "science_camera": {
-                                    "id": 93,
-                                    "code": "fa15",
-                                    "camera_type": {
-                                        "id": 3,
-                                        "name": "1.0 meter Sinistro",
-                                        "code": "1m0-SciCam-Sinistro",
-                                    },
-                                    "optical_elements": {
-                                        "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,ND,400um-Pinhole,150um-Pinhole"
-                                    },
-                                    "host": "inst.1m0a.doma.lsc.lco.gtn"
-                                },
-                                "__str__": "lsc.doma.1m0a.fa15-ef06"
-                            }
-                        ]
-                    }
+        self.coj_1m_rsp = {
+            '1M0-SCICAM-SINISTRO': {
+                'type': 'IMAGE',
+                'class': '1m0',
+                'name': '1.0 meter Sinistro',
+                'optical_elements':
+                    {'filters': [
+                        {'name': 'Bessell-I', 'code': 'I', 'schedulable': True, 'default': False},
+                        {'name': 'Bessell-R', 'code': 'R', 'schedulable': True, 'default': False},
+                        {'name': 'Bessell-U', 'code': 'U', 'schedulable': True, 'default': False},
+                        {'name': 'PanSTARRS-w', 'code': 'w', 'schedulable': True, 'default': False},
+                        {'name': 'PanSTARRS-Y', 'code': 'Y', 'schedulable': True, 'default': False},
+                        {'name': 'SDSS-up', 'code': 'up', 'schedulable': True, 'default': False},
+                        {'name': 'Clear', 'code': 'air', 'schedulable': True, 'default': False},
+                        {'name': 'SDSS-rp', 'code': 'rp', 'schedulable': True, 'default': False},
+                        {'name': 'SDSS-ip', 'code': 'ip', 'schedulable': True, 'default': False},
+                        {'name': 'SDSS-gp', 'code': 'gp', 'schedulable': True, 'default': False},
+                        {'name': 'PanSTARRS-Z', 'code': 'zs', 'schedulable': True, 'default': False},
+                        {'name': 'Bessell-V', 'code': 'V', 'schedulable': True, 'default': False},
+                        {'name': 'Bessell-B', 'code': 'B', 'schedulable': True, 'default': False},
+                        {'name': '400um Pinhole', 'code': '400um-Pinhole', 'schedulable': False, 'default': False},
+                        {'name': '150um Pinhole', 'code': '150um-Pinhole', 'schedulable': False, 'default': False},
+                        {'name': 'ND', 'code': 'ND', 'schedulable': True, 'default': False},
+                        {'name': 'B*ND', 'code': 'B*ND', 'schedulable': False, 'default': False},
+                        {'name': 'V*ND', 'code': 'V*ND', 'schedulable': False, 'default': False},
+                        {'name': 'R*ND', 'code': 'R*ND', 'schedulable': False, 'default': False},
+                        {'name': 'I*ND', 'code': 'I*ND', 'schedulable': False, 'default': False},
+                        {'name': 'rp*Diffuser', 'code': 'rp*Diffuser', 'schedulable': False, 'default': False},
+                        {'name': 'Diffuser_PennState', 'code': 'Diffuser', 'schedulable': False, 'default': False},
+                        {'name': 'gp*Diffuser', 'code': 'gp*Diffuser', 'schedulable': False, 'default': False}]}}}
 
         self.all_1m_rsp = {
-                        "count": 4,
-                        "next": 'null',
-                        "previous": 'null',
-                        "results": [
-                            {
-                                "id": 1,
-                                "code": "fa01",
-                                "state": "SCHEDULABLE",
-                                "telescope": "http://configdb.lco.gtn/telescopes/10/",
-                                "science_camera": {
-                                    "id": 1,
-                                    "TestIMAPLogincode": "fa01",
-                                    "camera_type": {
-                                        "id": 3,
-                                        "name": "1.0 meter Sinistro",
-                                        "code": "1m0-SciCam-Sinistro",
-                                    },
-                                    "optical_elements": {
-                                        "filters": "I,R,U"
-                                    },
-                                    "host": "inst.1m0a.doma.lsc.lco.gtn"
-                                },
-                                "__str__": "lsc.doma.1m0a.fa15-ef06"
-                            },
-                            {
-                                "id": 2,
-                                "code": "fa02",
-                                "state": "SCHEDULABLE",
-                                "telescope": "http://configdb.lco.gtn/telescopes/10/",
-                                "science_camera": {
-                                    "id": 2,
-                                    "code": "fa02",
-                                    "camera_type": {
-                                        "id": 3,
-                                        "name": "1.0 meter Sinistro",
-                                        "code": "1m0-SciCam-Sinistro",
-                                    },
-                                    "optical_elements": {
-                                        "filters": "ip,gp,zs,B,ND,400um-Pinhole,150um-Pinhole"
-                                    },
-                                    "host": "inst.1m0a.doma.lsc.lco.gtn"
-                                },
-                                "__str__": "lsc.doma.1m0a.fa15-ef06"
-                            },
-                            {
-                                "id": 3,
-                                "code": "fa03",
-                                "state": "SCHEDULABLE",
-                                "telescope": "http://configdb.lco.gtn/telescopes/10/",
-                                "science_camera": {
-                                    "id": 3,
-                                    "code": "fa03",
-                                    "camera_type": {
-                                        "id": 3,
-                                        "name": "1.0 meter Sinistro",
-                                        "code": "1m0-SciCam-Sinistro",
-                                    },
-                                    "optical_elements": {
-                                        "filters": "Y,up,air,rp"
-                                    },
-                                    "host": "inst.1m0a.doma.lsc.lco.gtn"
-                                },
-                                "__str__": "lsc.doma.1m0a.fa15-ef06"
-                            },
-                            {
-                                "id": 4,
-                                "code": "fa04",
-                                "state": "SCHEDULABLE",
-                                "telescope": "http://configdb.lco.gtn/telescopes/10/",
-                                "science_camera": {
-                                    "id": 4,
-                                    "code": "fa04",
-                                    "camera_type": {
-                                        "id": 3,
-                                        "name": "1.0 meter Sinistro",
-                                        "code": "1m0-SciCam-Sinistro",
-                                    },
-                                    "optical_elements": {
-                                        "filters": "U,w,Y,up,B,ND,400um-Pinhole,150um-Pinhole"}
-                                    ,
-                                    "host": "inst.1m0a.doma.lsc.lco.gtn"
-                                },
-                                "__str__": "lsc.doma.1m0a.fa15-ef06"
-                            }
-                        ]
-                    }
+            '1M0-SCICAM-SINISTRO': {
+                'type': 'IMAGE',
+                'class': '1m0',
+                'name': '1.0 meter Sinistro',
+                'optical_elements':
+                    {'filters': [
+                        {'name': 'Bessell-I', 'code': 'I', 'schedulable': True, 'default': False},
+                        {'name': 'Bessell-R', 'code': 'R', 'schedulable': True, 'default': False},
+                        {'name': 'Bessell-U', 'code': 'U', 'schedulable': True, 'default': False},
+                        {'name': 'PanSTARRS-w', 'code': 'w', 'schedulable': True, 'default': False},
+                        {'name': 'PanSTARRS-Y', 'code': 'Y', 'schedulable': True, 'default': False},
+                        {'name': 'SDSS-up', 'code': 'up', 'schedulable': True, 'default': False},
+                        {'name': 'Clear', 'code': 'air', 'schedulable': True, 'default': False},
+                        {'name': 'SDSS-rp', 'code': 'rp', 'schedulable': True, 'default': False},
+                        {'name': 'SDSS-ip', 'code': 'ip', 'schedulable': True, 'default': False},
+                        {'name': 'SDSS-gp', 'code': 'gp', 'schedulable': True, 'default': False},
+                        {'name': 'PanSTARRS-Z', 'code': 'zs', 'schedulable': True, 'default': False},
+                        {'name': 'Bessell-B', 'code': 'B', 'schedulable': True, 'default': False},
+                        {'name': '400um Pinhole', 'code': '400um-Pinhole', 'schedulable': False, 'default': False},
+                        {'name': '150um Pinhole', 'code': '150um-Pinhole', 'schedulable': False, 'default': False},
+                        {'name': 'ND', 'code': 'ND', 'schedulable': True, 'default': False},
+                        {'name': 'B*ND', 'code': 'B*ND', 'schedulable': False, 'default': False},
+                        {'name': 'V*ND', 'code': 'V*ND', 'schedulable': False, 'default': False},
+                        {'name': 'R*ND', 'code': 'R*ND', 'schedulable': False, 'default': False},
+                        {'name': 'I*ND', 'code': 'I*ND', 'schedulable': False, 'default': False},
+                        {'name': 'rp*Diffuser', 'code': 'rp*Diffuser', 'schedulable': False, 'default': False},
+                        {'name': 'Diffuser_PennState', 'code': 'Diffuser', 'schedulable': False, 'default': False},
+                        {'name': 'gp*Diffuser', 'code': 'gp*Diffuser', 'schedulable': False, 'default': False}]}}}
 
-        self.all_2m_rsp = {
-                        "count": 4,
-                        "next": 'null',
-                        "previous": 'null',
-                        "results": [
-                            {
-                                "id": 40,
-                                "code": "floyds01",
-                                "state": "SCHEDULABLE",
-                                "telescope": "http://configdb.lco.gtn/telescopes/14/",
-                                "science_camera": {
-                                    "id": 17,
-                                    "code": "floyds01",
-                                    "camera_type": {
-                                        "name": "2.0 meter FLOYDS",
-                                        "code": "2m0-FLOYDS-SciCam",
-                                    },
-                                    "optical_elements": {"slits": "slit_6.0as,slit_1.6as,slit_2.0as,slit_1.2as"
-                                                         },
-                                    "host": "floyds.ogg.lco.gtn"
-                                },
-                                "__str__": "ogg.clma.2m0a.floyds01-kb42"
-                            },
-                            {
-                                "id": 84,
-                                "code": "floyds02",
-                                "state": "SCHEDULABLE",
-                                "telescope": "http://configdb.lco.gtn/telescopes/3/",
-                                "science_camera": {
-                                    "id": 18,
-                                    "code": "floyds02",
-                                    "camera_type": {
-                                        "name": "2.0 meter FLOYDS",
-                                        "code": "2m0-FLOYDS-SciCam",
-                                    },
-                                    "optical_elements": {
-                                        "slits": "slit_6.0as,slit_1.6as,slit_2.0as,slit_1.2as"
-                                    },
-                                    "host": "floyds.coj.lco.gtn"
-                                },
-                                "__str__": "coj.clma.2m0a.floyds02-kb38"
-                            },
-                            {
-                                "id": 7,
-                                "code": "fs01",
-                                "state": "SCHEDULABLE",
-                                "telescope": "http://configdb.lco.gtn/telescopes/3/",
-                                "science_camera": {
-                                    "id": 19,
-                                    "code": "fs01",
-                                    "camera_type": {
-                                        "name": "2.0 meter Spectral",
-                                        "code": "2m0-SciCam-Spectral",
-                                    },
-                                    "optical_elements": {
-                                        "filters": "D51,H-Beta,OIII,H-Alpha,Skymapper-VS,solar,Astrodon-UV,I,R,Y,up,air,rp,ip,gp,zs,V,B,200um-Pinhole"
-                                    },
-                                    "host": "fs.coj.lco.gtn"
-                                },
-                                "__str__": "coj.clma.2m0a.fs01-kb34"
-                            },
-                            {
-                                "id": 42,
-                                "code": "fs02",
-                                "state": "SCHEDULABLE",
-                                "telescope": "http://configdb.lco.gtn/telescopes/14/",
-                                "science_camera": {
-                                    "id": 20,
-                                    "code": "fs02",
-                                    "camera_type": {
-                                        "name": "2.0 meter Spectral",
-                                        "code": "2m0-SciCam-Spectral",
-                                    },
-                                    "optical_elements": {
-                                        "filters": "D51,H-Beta,OIII,H-Alpha,Skymapper-VS,solar,Astrodon-UV,I,R,Y,up,air,rp,ip,gp,zs,V,B,200um-Pinhole"
-                                    },
-                                    "host": "fs.ogg.lco.gtn"
-                                },
-                                "__str__": "ogg.clma.2m0a.fs02-kb40"
-                            }
-                        ]
-                    }
+        self.all_2m_rsp = {'2M0-FLOYDS-SCICAM': {
+        'type': 'SPECTRA',
+        'class': '2m0',
+        'name': '2.0 meter FLOYDS',
+        'optical_elements':
+            {'slits': [
+                {'name': '6.0 arcsec slit', 'code': 'slit_6.0as', 'schedulable': True, 'default': False},
+                {'name': '1.6 arcsec slit', 'code': 'slit_1.6as', 'schedulable': True, 'default': False},
+                {'name': '2.0 arcsec slit', 'code': 'slit_2.0as', 'schedulable': True, 'default': False},
+                {'name': '1.2 arcsec slit', 'code': 'slit_1.2as', 'schedulable': True, 'default': False}],
+             'filters': [
+                 {'name': 'D51', 'code': 'D51', 'schedulable': True, 'default': False},
+                 {'name': 'H Beta', 'code': 'H-Beta', 'schedulable': True, 'default': False},
+                 {'name': 'OIII', 'code': 'OIII', 'schedulable': True, 'default': False},
+                 {'name': 'H Alpha', 'code': 'H-Alpha', 'schedulable': True, 'default': False},
+                 {'name': 'Skymapper CaV', 'code': 'Skymapper-VS', 'schedulable': True, 'default': False},
+                 {'name': 'Solar (V+R)', 'code': 'solar', 'schedulable': True, 'default': False},
+                 {'name': 'Astrodon UV', 'code': 'Astrodon-UV', 'schedulable': True, 'default': False},
+                 {'name': 'Bessell-I', 'code': 'I', 'schedulable': True, 'default': False},
+                 {'name': 'Bessell-R', 'code': 'R', 'schedulable': True, 'default': False},
+                 {'name': 'PanSTARRS-Y', 'code': 'Y', 'schedulable': True, 'default': False},
+                 {'name': 'SDSS-up', 'code': 'up', 'schedulable': True, 'default': False},
+                 {'name': 'Clear', 'code': 'air', 'schedulable': True, 'default': False},
+                 {'name': 'SDSS-rp', 'code': 'rp', 'schedulable': True, 'default': False},
+                 {'name': 'SDSS-ip', 'code': 'ip', 'schedulable': True, 'default': False},
+                 {'name': 'SDSS-gp', 'code': 'gp', 'schedulable': True, 'default': False},
+                 {'name': 'PanSTARRS-Z', 'code': 'zs', 'schedulable': True, 'default': False},
+                 {'name': 'Bessell-V', 'code': 'V', 'schedulable': True, 'default': False},
+                 {'name': 'Bessell-B', 'code': 'B', 'schedulable': True, 'default': False},
+                 {'name': '200um Pinhole', 'code': '200um-Pinhole', 'schedulable': False, 'default': False}]}}}
 
-        self.empty = {
-                        "count": 0,
-                        "next": 'null',
-                        "previous": 'null',
-                        "results": []
-                    }
+        self.empty = {}
 
-    def test_1m_lsc(self):
+    def test_1m_coj(self):
         expected_filter_list = ['air', 'ND', 'U', 'B', 'V', 'R', 'I', 'up', 'gp', 'rp', 'ip', 'zs', 'Y', 'w']
 
-        filter_list = parse_filter_file(self.lsc_1m_rsp, False)
+        filter_list = parse_filter_file(self.coj_1m_rsp, False)
         self.assertCountEqual(expected_filter_list, filter_list)
 
     def test_1m_all(self):

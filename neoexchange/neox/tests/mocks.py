@@ -1507,7 +1507,7 @@ def mock_fetch_filter_list(site, spec):
                 {'name': 'Diffuser_PennState', 'code': 'Diffuser', 'schedulable': False, 'default': False},
                 {'name': 'gp*Diffuser', 'code': 'gp*Diffuser', 'schedulable': False, 'default': False}]}}}
 
-    spec_2m_rsp = {'2M0-FLOYDS-SCICAM':{
+    spec_2m_rsp = {'2M0-FLOYDS-SCICAM': {
         'type': 'SPECTRA',
         'class': '2m0',
         'name': '2.0 meter FLOYDS',
@@ -1538,12 +1538,7 @@ def mock_fetch_filter_list(site, spec):
                  {'name': 'Bessell-B', 'code': 'B', 'schedulable': True, 'default': False},
                  {'name': '200um Pinhole', 'code': '200um-Pinhole', 'schedulable': False, 'default': False}]}}}
 
-    empty = {
-                        "count": 0,
-                        "next": 'null',
-                        "previous": 'null',
-                        "results": []
-                    }
+    empty = {}
 
     if '2m0' in telid.lower():
         resp = spec_2m_rsp
