@@ -111,7 +111,8 @@ PARAM_CHOICES = (
                 ('ab', 'Albedo'),
                 ('Y', 'Yarkovsky Drift'),
                 ('E', 'Coma Extent'),
-                ('M', 'Mass')
+                ('M', 'Mass'),
+                ('/a', 'Reciprocal of semimajor axis')
                 )
 
 logger = logging.getLogger(__name__)

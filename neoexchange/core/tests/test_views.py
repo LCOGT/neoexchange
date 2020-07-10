@@ -2882,6 +2882,27 @@ class TestUpdateMPCOrbit(TestCase):
     @patch('core.views.update_jpl_phys_params')
     @patch('core.views.datetime', MockDateTime)
     @patch('astrometrics.sources_subs.datetime', MockDateTime)
+    def test_243P_MPC_physpar(self, mock_class):
+
+        MockDateTime.change_datetime(2018,  4, 20, 12, 0, 0)
+
+        expected_types = ['M1', 'K1', 'G']
+        expected_values = [10.4, 15.5, 4,0]
+        expected_params = list(zip(expected_types, expected_values))
+
+        status = update_MPC_orbit(self.test_mpcdb_page_spcomet, origin='M')
+        self.assertEqual(True, status)
+
+        new_body = Body.objects.get(id=self.test_body_243P.id)
+        phys_params = new_body.get_physical_parameters()
+        self.assertEqual(len(expected_types), len(phys_params))
+        for param in phys_params:
+            test_list = (param['parameter_type'], param['value'])
+            self.assertIn(test_list, expected_params)
+
+    @patch('core.views.update_jpl_phys_params')
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.sources_subs.datetime', MockDateTime)
     def test_C2016C2_April_epoch(self, mock_class):
 
         MockDateTime.change_datetime(2016,  4, 20, 12, 0, 0)
@@ -2914,6 +2935,29 @@ class TestUpdateMPCOrbit(TestCase):
         for key in self.expected_elements_comet_set2:
             if key not in self.nocheck_keys and key != 'id':
                 self.assertEqual(self.expected_elements_comet_set2[key], new_body_elements[key], msg="Failure on key: " + key)
+
+    @patch('core.views.update_jpl_phys_params')
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.sources_subs.datetime', MockDateTime)
+    def test_C2016C2_physpar(self, mock_class):
+
+        MockDateTime.change_datetime(2017,  4, 20, 12, 0, 0)
+
+        expected_types = ['M1', 'K1', 'M2', 'K2', 'G', '/a']
+        expected_values = [13.8, 21.0, 17.5, 5.0, 4.0, 0.01664452]
+        expected_units = [None, None, None, None, None, 'au']
+        expected_params = list(zip(expected_types, expected_values, expected_units))
+
+        status = update_MPC_orbit(self.test_mpcdb_page_comet, origin='M')
+        self.assertEqual(True, status)
+
+        new_body = Body.objects.get(id=self.test_body_C2016C2.id)
+        phys_params = new_body.get_physical_parameters()
+        self.assertEqual(len(expected_types), len(phys_params))
+        for param in phys_params:
+            test_list = (param['parameter_type'], param['value'], param['units'])
+            self.assertIn(test_list, expected_params)
+
 
 class TestIngestNewObject(TestCase):
 

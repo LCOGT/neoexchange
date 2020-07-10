@@ -2766,6 +2766,19 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
                 logger.debug(msg)
                 body.slope = new_slope / 2.5
             body.save()
+            # Build physparams dictionary to store reciprocal semi-major axis
+            phys_params = {'parameter_type': '/a',
+                           'value' : elements.get('recip semimajor axis orig', None),
+                           'error' : elements.get('recip semimajor axis error', None),
+                           'value2': elements.get('recip semimajor axis future', None),
+                           'error2': elements.get('recip semimajor axis error', None),
+                           'units': 'au',
+                           'reference': elements.get('reference', None),
+                           'preferred': True
+                           }
+            if phys_params['value'] is not None:
+                saved = body.save_physical_parameters(phys_params)
+
     return True
 
 
