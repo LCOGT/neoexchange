@@ -101,7 +101,12 @@
                             <span class="sortable" id="period">Period (years)</span><br>
                         </th>
                         <th>
-                            <span class="sortable" id="q">Perihelion Distance (AU)</span><br>
+                            <span class="sortable" id="q">Perihelion</span><br>
+                            <span class="sortable" id="q">Distance (AU)</span><br>
+                        </th>
+                        <th>
+                            <span class="sortable" id="q">Reciprocal Semi-</span><br>
+                            <span class="sortable" id="q">Major Axis (1/a; AU)</span><br>
                         </th>
                         <th>
                             <span class="sortable" id="obsdate">Observation Window</span><br>
@@ -121,10 +126,11 @@
                         <td data-label="Eccentricity">{{body.eccentricity|floatformat:5 }}</td>
                         <td data-label="Period">{{body.period|stringformat:".4g" }}</td>
                         <td data-label="Perihelion distance">{{body.perihdist|floatformat:4 }}</td>
+                        <td data-label="1/a">{{body.recip_a|stringformat:".4g" }}</td>
                         <td data-label="Observation Window"><a href="{%url 'visibility' body.id %}">{{body.obs_start}}-{{body.obs_end}}</a>  </td>
                         </tr>
                     {% empty%}
-                        <tr><td colspan=9> No new targets</td></tr>
+                        <tr><td colspan=10> No new targets</td></tr>
                     {% endfor%}
                 </tbody>
             </table>

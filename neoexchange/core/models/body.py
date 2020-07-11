@@ -164,7 +164,22 @@ class Body(models.Model):
                 period = pow(a_au, (3.0/2.0))
         return period
 
+    def _compute_one_over_a(self):
+        # Returns the reciprocal semi-major axis (1/a) from the PhysicalProperties if present
+        recip_a = None
+        try:
+            recip_a_par = PhysicalParameters.objects.get(body=self.id, parameter_type='/a', preferred=True, value__isnull=False)
+            recip_a = recip_a_par.value
+        except PhysicalParameters.DoesNotExist:
+            recip_a = None
+        except PhysicalParameters.MultipleObjectsReturned:
+            logger.warning("Multiple preferred values exist for 1/a parameter for %s", self.current_name())
+            recip_a = None
+        return recip_a
+
     period = property(_compute_period)
+    recip_a = property(_compute_one_over_a)
+    one_over_a  = property(_compute_one_over_a)
 
     def characterization_target(self):
         # If we change the definition of Characterization Target,

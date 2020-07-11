@@ -1889,6 +1889,7 @@ def build_lookproject_list(disp=None):
                 body_dict['v_mag'] = emp_line[2]
                 body_dict['motion'] = emp_line[4]
                 body_dict['period'] = body.period
+                body_dict['recip_a'] = body.recip_a
                 body_dict['perihdist'] = body.perihdist
                 comets.append(body_dict)
             except Exception as e:

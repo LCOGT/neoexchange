@@ -17,7 +17,7 @@ from .base import FunctionalTest
 from mock import patch
 from neox.tests.mocks import MockDateTime, mock_build_visibility_source
 from datetime import datetime
-from core.models import Body, PreviousSpectra
+from core.models import Body, PreviousSpectra, PhysicalParameters
 from django.urls import reverse
 
 
@@ -93,6 +93,8 @@ class LOOKProjectPageTest(FunctionalTest):
                     }
         self.body_US10, created = Body.objects.get_or_create(**params)
 
+        PhysicalParameters.objects.create(body=self.body_US10, parameter_type='/a', value=0.00005296, preferred=True)
+
         return
 
 # The LOOK Project page computes the RA, Dec of each body for 'now' so we need to mock
@@ -124,6 +126,6 @@ class LOOKProjectPageTest(FunctionalTest):
         # He checks for fresh victims...comet targets...
         section_text = self.browser.find_element_by_id("new_comets").text
         self.assertIn("New Comet Targets", section_text)
-        testlines = [u'C/2013 US10 Hyperbolic 03 57 50.41 +44 46 52.2 18.5 0.20 1.00055 1e+99 0.8245 [-----]',]
+        testlines = [u'C/2013 US10 Hyperbolic 03 57 50.41 +44 46 52.2 18.5 0.20 1.00055 1e+99 0.8245 5.296e-05 [-----]',]
 
         self.check_for_row_in_table('new_comets', testlines[0])
