@@ -55,6 +55,7 @@ class Command(BaseCommand):
         parser.add_argument('--persist', action="store_true", default=False, help='Whether to store cross-matches as SourceMeasurements for the body')
         parser.add_argument('--single', action="store_true", default=False, help='Whether to only analyze a single SuperBlock')
         parser.add_argument('--nogif', action="store_true", default=False, help='Whether to create a gif movie of the extraction')
+        parser.add_argument('--date', action="store", default=None, help='Date of the blocks to extract (YYYYMMDD)')
         base_dir = os.path.join(settings.DATA_ROOT, 'Reduction')
         parser.add_argument('--datadir', default=base_dir, help='Place to save data (e.g. %s)' % base_dir)
 
@@ -296,6 +297,15 @@ class Command(BaseCommand):
             super_blocks = [start_super_block, ]
         else:
             super_blocks = SuperBlock.objects.filter(body=start_super_block.body, block_start__gte=start_super_block.block_start-timedelta(days=options['timespan']))
+        obs_date = None
+        if options['date']:
+            if isinstance(options['date'], str):
+                try:
+                    obs_date = datetime.strptime(options['date'], '%Y%m%d')
+                except ValueError:
+                    raise CommandError(usage)
+            else:
+                obs_date = options['date']
 
         # Initialize lists
         times = []
@@ -345,12 +355,18 @@ class Command(BaseCommand):
             tel_diameter = 0.4*u.m
 
         # Create, name, open ALCDEF file.
-        base_name = '{}_{}_{}_{}_'.format(obj_name, sb_site, sb_day, start_super_block.tracking_number)
+        if obs_date:
+            alcdef_date = options['date']
+        else:
+            alcdef_date = sb_day
+        base_name = '{}_{}_{}_{}_'.format(obj_name, sb_site, alcdef_date, start_super_block.tracking_number)
         alcdef_filename = os.path.join(datadir, base_name + 'ALCDEF.txt')
         output_file_list.append('{},{}'.format(alcdef_filename, datadir.lstrip(out_path)))
         alcdef_file = default_storage.open(alcdef_filename, 'w')
         for super_block in super_blocks:
             block_list = Block.objects.filter(superblock=super_block.id)
+            if obs_date:
+                block_list = block_list.filter(when_observed__lt=obs_date+timedelta(days=1)).filter(when_observed__gt=obs_date-timedelta(days=1))
             self.stdout.write("Analyzing SuperblockBlock# %s for %s" % (super_block.tracking_number, super_block.body.current_name()))
             for block in block_list:
                 block_mags = []
