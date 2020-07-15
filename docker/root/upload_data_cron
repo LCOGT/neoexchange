@@ -1,0 +1,37 @@
+#!/bin/bash
+
+source ~/cronwrapper_S3
+export PYTHONPATH="${HOME}/git/neoexchange"
+logroot=/data/eng/rocks
+log=${logroot}/Logs/upload_data_$(date +%F).log
+
+date_options=""
+if [[ $# -eq 1 ]]; then
+  date=$1
+  if [[ ${#date} -eq 8 ]]; then 
+    date_options="${date}"
+    year=${date:0:4}
+    month=${date:4:2}
+    day=${date:6:2}
+    log=${logroot}/Logs/upload_data_${year}-${month}-${day}.log
+    echo "Processing with ${date_options}" >> ${log}
+  else
+    echo "Incorrect date format; need YYYYMMDD"
+  fi
+fi
+#echo ${log}
+touch ${log}
+echo "================= $(date +"%F %T %Z") =================" >> ${log}
+
+cd $PYTHONPATH/neoexchange
+echo "date_options= ${date_options}" >> ${log}
+# Check for matching files in the daydir (From https://stackoverflow.com/questions/91368/checking-from-shell-script-if-a-directory-contains-files)
+if [ -n "$(ls -A ${logroot}/${date_options}/*_lc_file_list.txt)" ]; then
+    files="$(ls -A ${logroot}/${date_options}/*_lc_file_list.txt)"
+    echo "Uploading:" >> ${log}
+    echo "${files}" >> ${log}
+    echo "to S3 bucket ${AWS_STORAGE_BUCKET_NAME}" >> ${log}
+    python3 manage.py upload_data ${logroot}/${date_options}/'*_lc_file_list.txt' --ext .gif,ALCDEF.txt --list >> ${log} 2>&1
+else
+    echo "No lightcurve data in ${logroot}/${date_options}" >> ${log}
+fi
