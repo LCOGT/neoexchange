@@ -4,6 +4,13 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.5.0
+Add Light curve analysis tools
+* active plotting of light curves
+* uploading and displaying annotated gifs for images
+* automatic light curve extraction for all image sets
+* uploading ALCDEF files to S3
+
 ### 3.4.1
 Add Parallactic angle option for spectroscopic observations.
 
