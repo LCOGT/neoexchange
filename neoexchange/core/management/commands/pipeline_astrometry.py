@@ -103,13 +103,13 @@ class Command(BaseCommand):
             self.stdout.write("Processing %s" % catalog)
             new_catalog_or_status, num_new_frames_created = check_catalog_and_refit(configs_dir, temp_dir, catalog, desired_catalog='GAIA-DR2')
 
+            catalog_type = 'LCOGT'
             try:
                 int(new_catalog_or_status)
                 if new_catalog_or_status != 0:
                     self.stdout.write("Error reprocessing %s (Error code= %s)" % (catalog, new_catalog_or_status))
                     continue
                 new_catalog = catalog
-                catalog_type = 'LCOGT'
                 if 'e91' in catalog or 'e11' in catalog:
                     catalog_type = 'BANZAI'
             except ValueError:
@@ -126,7 +126,7 @@ class Command(BaseCommand):
                                                                         std_zeropoint_tolerance=0.1,
                                                                         phot_cat_name='GAIA-DR2')
             if num_sources_created >= 0 and num_in_catalog > 0:
-                self.stdout.write("Created/updated %d sources from %d in catalog" % (num_sources_created, num_in_catalog) )
+                self.stdout.write("Created/updated %d sources from %d in catalog" % (num_sources_created, num_in_catalog))
             else:
                 self.stdout.write("Error occured storing catalog sources (Error code= %d, %d)" % (num_sources_created, num_in_catalog))
             # Step 3: Synthesize MTDLINK-compatible SExtractor .sext ASCII catalogs

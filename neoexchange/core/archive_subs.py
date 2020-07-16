@@ -12,6 +12,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 
+
 from datetime import datetime, timedelta
 import os
 import sys
@@ -23,6 +24,7 @@ from urllib.parse import urljoin
 
 import requests
 from django.conf import settings
+from django.core.management.base import CommandError
 
 from core.urlsubs import get_lcogt_headers
 

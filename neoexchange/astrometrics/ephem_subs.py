@@ -32,7 +32,7 @@ import re
 import warnings
 
 from astropy.utils.exceptions import AstropyDeprecationWarning
-warnings.simplefilter('ignore', category = AstropyDeprecationWarning)
+warnings.simplefilter('ignore', category=AstropyDeprecationWarning)
 from astroquery.jplhorizons import Horizons
 from astropy.table import Column
 
@@ -636,8 +636,8 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
     to the table.
     """
 
-    eph = Horizons(id=obj_name, id_type= 'smallbody', epochs={'start' : start.strftime("%Y-%m-%d %H:%M:%S"),
-            'stop' : end.strftime("%Y-%m-%d %H:%M:%S"), 'step' : ephem_step_size}, location=site_code)
+    eph = Horizons(id=obj_name, id_type='smallbody', epochs={'start' : start.strftime("%Y-%m-%d %H:%M"),
+            'stop' : end.strftime("%Y-%m-%d %H:%M"), 'step' : ephem_step_size}, location=site_code)
 
     airmass_limit = 99
     if alt_limit > 0:
@@ -663,7 +663,7 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
             logger.debug("HORIZONS id=", horizons_id)
             if horizons_id:
                 try:
-                    eph = Horizons(id=horizons_id, id_type= 'id', epochs={'start' : start.strftime("%Y-%m-%d %H:%M:%S"),
+                    eph = Horizons(id=horizons_id, id_type='id', epochs={'start' : start.strftime("%Y-%m-%d %H:%M:%S"),
                         'stop' : end.strftime("%Y-%m-%d %H:%M:%S"), 'step' : ephem_step_size}, location=site_code)
                     ephem = eph.ephemerides(quantities='1,3,4,9,19,20,23,24,38,42',
                         skip_daylight=should_skip_daylight, airmass_lessthan=airmass_limit,
@@ -705,6 +705,7 @@ def convert_horizons_table(ephem, include_moon=False):
         ephem.add_columns(cols=(Column(moon_seps), Column(moon_phases)), names=('moon_sep', 'moon_phase'))
 
     return ephem
+
 
 def determine_horizons_id(lines, now=None):
     """Attempts to determine the HORIZONS id of a target body that has multiple

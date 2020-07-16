@@ -60,7 +60,7 @@ from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
     MagRangeError, determine_spectro_slot_length, get_sitepos, read_findorb_ephem,\
     accurate_astro_darkness, get_visibility, determine_exp_count, determine_star_trails,\
-    calc_moon_sep, get_alt_from_airmass
+    calc_moon_sep, get_alt_from_airmass, horizons_ephem
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs, validate_text,\
@@ -81,7 +81,7 @@ from core.archive_subs import lco_api_call
 from core.utils import search
 from photometrics.SA_scatter import readSources, genGalPlane, plotScatter, \
     plotFormat
-from core.plots import spec_plot, lin_vis_plot
+from core.plots import spec_plot, lin_vis_plot, lc_plot
 
 # import matplotlib
 # matplotlib.use('Agg')
@@ -323,6 +323,7 @@ class BlockReportMPC(LoginRequiredMixin, View):
             messages.error(request, 'It was not possible to email report to MPC')
             return HttpResponseRedirect(reverse('block-report-mpc', kwargs={'pk': kwargs['pk']}))
 
+
 class BlockCancel(View):
     def get(self, request, *args, **kwargs):
         try:
@@ -343,6 +344,7 @@ class BlockCancel(View):
             else:
                 messages.warning(request, f'SuperBlock {bk.id} not cancelled')
         return HttpResponseRedirect(reverse('block-view', kwargs={'pk': kwargs['pk']}))
+
 
 class UploadReport(LoginRequiredMixin, FormView):
     template_name = 'core/uploadreport.html'
@@ -633,7 +635,8 @@ class BestStandardsView(ListView):
         night_ra = degrees(sun_ra - pi)
         if night_ra < 0:
             night_ra += 360
-        if dbg: print(utc_dt, degreestohms(night_ra, ':'), HA_hours*15)
+        if dbg:
+            print(utc_dt, degreestohms(night_ra, ':'), HA_hours*15)
 
         min_ra = night_ra - (HA_hours * 15)
         if min_ra < 0:
@@ -641,7 +644,8 @@ class BestStandardsView(ListView):
         max_ra = night_ra + (HA_hours * 15)
         if max_ra > 360:
             max_ra -= 360
-        if dbg: print("RA range=", min_ra, max_ra)
+        if dbg:
+            print("RA range=", min_ra, max_ra)
 
         return min_ra, max_ra
 
@@ -655,7 +659,8 @@ class BestStandardsView(ListView):
             ra_filter = Q(ra__gte=min_ra) & Q(ra__lte=max_ra)
         ftn_standards = StaticSource.objects.filter(ra_filter, source_type=StaticSource.FLUX_STANDARD, dec__gte=0).order_by('ra')
         fts_standards = StaticSource.objects.filter(ra_filter, source_type=StaticSource.FLUX_STANDARD, dec__lte=0).order_by('ra')
-        if dbg: print(ftn_standards,fts_standards)
+        if dbg:
+            print(ftn_standards, fts_standards)
 
         return ftn_standards, fts_standards
 
@@ -1637,6 +1642,50 @@ def feasibility_check(data, body):
     data['slot_length'] = slot_length
 
     return data
+
+
+class SpecDataListView(ListView):
+    model = Block
+    template_name = 'core/data_summary.html'
+    queryset = Block.objects.filter(obstype=1).filter(num_observed__gt=0).order_by('-when_observed')
+    context_object_name = "data_list"
+    paginate_by = 20
+
+    def get_context_data(self, **kwargs):
+        context = super(SpecDataListView, self).get_context_data(**kwargs)
+        context['data_type'] = 'Spec'
+        return context
+
+
+class LCDataListView(ListView):
+    model = Body
+    template_name = 'core/data_summary.html'
+    paginate_by = 20
+
+    def get_context_data(self, **kwargs):
+        context = {'data_list': self.find_lc(), 'data_type': 'LC'}
+        return context
+
+    def find_lc(self):
+        base_dir = os.path.join(settings.DATA_ROOT, 'Reduction')
+        dir_list, _ = default_storage.listdir(base_dir)
+        name_list = []
+        for name in dir_list:
+            if name.isdigit():
+                name_list.append(name)
+            elif '_' in name:
+                name_list.append(name.replace('_', ' '))
+            else:
+                for c in range(len(name)):
+                    new_name = name[:c] + ' ' + name[c:]
+                    name_list.append(new_name.lstrip())
+        object_list = Body.objects.filter(Q(designations__value__in=name_list) | Q(provisional_name__in=name_list)
+                                          | Q(provisional_packed__in=name_list) | Q(name__in=name_list))
+        final_objects = object_list
+        for obj in object_list:
+            if sanitize_object_name(obj.current_name()) not in name_list:
+                final_objects = final_objects.exclude(pk=obj.pk)
+        return list(set(final_objects))
 
 
 def ranking(request):
@@ -3428,15 +3477,20 @@ def find_spec(pk):
     """find directory of spectra for a certain block
     NOTE: Currently will only pull first spectrum of a superblock
     """
-    try:
-        block = Block.objects.get(pk=pk)
-        url = settings.ARCHIVE_FRAMES_URL+str(Frame.objects.filter(block=block)[0].frameid)+'/headers'
-    except IndexError:
+    block = Block.objects.get(pk=pk)
+    frames = Frame.objects.filter(block=block)
+    if not frames:
         return '', '', '', '', ''
+    for frame in frames:
+        if frame.frameid:
+            first_frame = frame
+            break
+    url = settings.ARCHIVE_FRAMES_URL + str(first_frame.frameid) + '/headers'
     try:
         data = lco_api_call(url)['data']
     except TypeError:
         return '', '', '', '', ''
+
     if 'DAY_OBS' in data:
         date_obs = data['DAY_OBS']
     elif 'DAY-OBS' in data:
@@ -3614,15 +3668,148 @@ class PlotSpec(View):
         return render(request, self.template_name, params)
 
 
+class LCPlot(LookUpBodyMixin, FormView):
+
+    template_name = 'core/plot_lc.html'
+
+    def get(self, request, *args, **kwargs):
+        best_period = self.body.get_physical_parameters('P', False)
+        if best_period:
+            period = best_period[0].get('value', None)
+        else:
+            period = None
+        script, div, meta_list = get_lc_plot(self.body, {'period': period})
+
+        return self.render_to_response(self.get_context_data(body=self.body, script=script, div=div, meta_list=meta_list))
+
+    def get_context_data(self, **kwargs):
+        params = kwargs
+        params['body'] = self.body
+        if kwargs['script']:
+            params["the_script"] = kwargs['script']
+            params["lc_div"] = kwargs['div']['plot']
+        else:
+            params["lc_div"] = kwargs['div']
+        base_path = BOKEH_URL.format(bokeh.__version__)
+        params['css_path'] = base_path + 'css'
+        params['js_path'] = base_path + 'js'
+        params['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
+        params['table_path'] = BOKEH_URL.format('tables-'+bokeh.__version__) + 'js'
+        return params
+
+
+def import_alcdef(file, meta_list, lc_list):
+    """Pull LC data from ALCDEF text files."""
+
+    lc_file = default_storage.open(file, 'rb')
+    lines = lc_file.readlines()
+
+    metadata = {}
+    dates = []
+    mags = []
+    mag_errs = []
+    met_dat = False
+
+    for line in lines:
+        line = str(line, 'utf-8')
+        if line[0] == '#':
+            continue
+        if '=' in line:
+            if 'DATA=' in line and met_dat is False:
+                chunks = line[5:].split('|')
+                jd = float(chunks[0])
+                mag = float(chunks[1])
+                mag_err = float(chunks[2])
+                dates.append(jd)
+                mags.append(mag)
+                mag_errs.append(mag_err)
+            else:
+                chunks = line.split('=')
+                metadata[chunks[0]] = chunks[1].replace('\n', '')
+        elif 'ENDDATA' in line:
+            if metadata not in meta_list:
+                meta_list.append(metadata)
+                lc_data = {
+                    'date': dates,
+                    'mags': mags,
+                    'mag_errs': mag_errs,
+                    }
+                lc_list.append(lc_data)
+            dates = []
+            mags = []
+            mag_errs = []
+            metadata = {}
+        elif 'STARTMETADATA' in line:
+            met_dat = True
+        elif 'ENDMETADATA' in line:
+            met_dat = False
+
+    return meta_list, lc_list
+
+
+def get_lc_plot(body, data):
+    """Plot all lightcurve data for given source.
+    """
+
+    base_dir = os.path.join(settings.DATA_ROOT, 'Reduction')
+    obj_name = sanitize_object_name(body.current_name())
+    datadir = os.path.join(base_dir, obj_name)
+    filenames = search(datadir, '.*.ALCDEF.txt')
+    if data.get('period', None):
+        period = data['period']
+    else:
+        period = 1.0
+
+    meta_list = []
+    lc_list = []
+    if filenames:
+        for file in filenames:
+            meta_list, lc_list = import_alcdef(os.path.join(datadir, file), meta_list, lc_list)
+    else:
+        meta_list = lc_list = []
+
+    meta_list = [x for _, x in sorted(zip(lc_list, meta_list), key=lambda i: i[0]['date'][0])]
+    lc_list = sorted(lc_list, key=lambda i: i['date'][0])
+
+    # Get predicted JPL position of target during obs
+    if meta_list:
+        start = datetime.strptime(meta_list[0]['SESSIONDATE']+'T'+meta_list[0]['SESSIONTIME'], '%Y-%m-%dT%H:%M:%S') - timedelta(days=1)
+        end = datetime.strptime(meta_list[-1]['SESSIONDATE']+'T'+meta_list[-1]['SESSIONTIME'], '%Y-%m-%dT%H:%M:%S') + timedelta(days=1)
+        total_time = end-start
+        step_size = round(total_time.total_seconds()/60/100)
+        sitecode = '500'
+        obj_name = body.name
+        ephem = horizons_ephem(obj_name, start, end, sitecode, ephem_step_size='{}m'.format(step_size))
+    else:
+        ephem = []
+
+    if lc_list:
+        script, div = lc_plot(lc_list, meta_list, period, jpl_ephem=ephem)
+    else:
+        script = None
+        div = """
+            <div class='warning msgpadded'>Could not find any LC data for {}</div>
+        """.format(body.full_name())
+
+    return script, div, meta_list
+
+
 def display_movie(request, pk):
     """Display previously made guide movie, or make one if no movie found."""
 
     date_obs, obj, req, path, prop = find_spec(pk)
-    base_dir = os.path.join(path, 'Guide_frames')
+    base_dir = date_obs
     logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date_obs, req, prop))
     logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
 
-    movie_file = "{}_{}_guidemovie.gif".format(obj, req)
+    block = Block.objects.get(pk=pk)
+    if block.obstype in [Block.OPT_IMAGING, Block.OPT_IMAGING_CALIB]:
+        movie_file = "{}_{}_framemovie.gif".format(obj.replace(' ', '_'), req)
+    elif block.obstype in [Block.OPT_SPECTRA, Block.OPT_SPECTRA_CALIB]:
+        movie_file = "{}_{}_guidemovie.gif".format(obj.replace(' ', '_'), req)
+        base_dir = os.path.join(path, "Guide_frames")
+    else:
+        return HttpResponse()
 
     movie_file = search(base_dir, movie_file, latest=True)
 

@@ -93,7 +93,6 @@ class Command(BaseCommand):
         dataroot = os.path.join(dataroot, obs_date)
 
 # Step 2: Sort data into directories per-object
-
         fits_files = get_fits_files(dataroot)
         self.stdout.write("Found %d FITS files in %s" % (len(fits_files), dataroot))
         objects = sort_rocks(fits_files)
@@ -115,7 +114,7 @@ class Command(BaseCommand):
             if first_frame is None or last_frame is None:
                 self.stderr.write("Couldn't determine first and last frames, skipping target")
                 continue
-            self.stdout.write("Timespan %s->%s" % ( first_frame.midpoint, last_frame.midpoint))
+            self.stdout.write("Timespan %s->%s" % (first_frame.midpoint, last_frame.midpoint))
 # Step 3b: Calculate mean PA and speed
             if first_frame.block:
                 body = first_frame.block.body
@@ -138,15 +137,28 @@ class Command(BaseCommand):
 # Optional arguments go here, minus the leading double minus signs and with
 # hyphens replaced by underscores for...reasons.
 # e.g. '--keep-temp-dir' becomes 'temp_dir'
-                    mtdlink_kwargs = {  'temp_dir' : os.path.join(datadir, 'Temp'),
-                                        'skip_mtdlink' : skip_mtdlink,
-                                        'keep_temp_dir' : keep_temp_dir
-                                     }
+                    mtdlink_kwargs = {'temp_dir': os.path.join(datadir, 'Temp'),
+                                      'skip_mtdlink': skip_mtdlink,
+                                      'keep_temp_dir': keep_temp_dir
+                                      }
                     self.stdout.write("Calling pipeline_astrometry with: %s %s" % (mtdlink_args, mtdlink_kwargs))
-                    status = call_command('pipeline_astrometry', *mtdlink_args , **mtdlink_kwargs)
+                    status = call_command('pipeline_astrometry', *mtdlink_args, **mtdlink_kwargs)
                     self.stderr.write("\n")
                 else:
                     self.stderr.write("Object %s does not have updated elements" % body.current_name())
+
+# Step 4: Run Lightcurve Extraction
+                if first_frame.block.superblock.tracking_number == last_frame.block.superblock.tracking_number:
+                    status = call_command('lightcurve_extraction', int(first_frame.block.superblock.tracking_number),
+                                          '--single', '--date', options['date'])
+                else:
+                    tn_list = []
+                    for fits in fits_files:
+                        if fits.block.superblock.tracking_number not in tn_list:
+                            status = call_command('lightcurve_extraction', int(fits.block.superblock.tracking_number),
+                                                  '--single', '--date', options['date'])
+                            tn_list.append(fits.block.superblock.tracking_number)
+
             else:
                 self.stderr.write("No Block found for the object")
 

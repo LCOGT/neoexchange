@@ -20,7 +20,7 @@ import os
 from glob import glob
 import numpy as np
 from datetime import datetime, timedelta
-from math import sqrt, log10, log, degrees
+from math import sqrt, log10, log, degrees, cos
 from collections import OrderedDict
 import time
 from requests.exceptions import ReadTimeout, ConnectTimeout, ConnectionError
@@ -1729,8 +1729,8 @@ def search_box(frame, ra, dec, box_halfwidth=3.0, dbg=False):
     box_halfwidth_deg = box_halfwidth / 3600.0
     ra_deg = degrees(ra)
     dec_deg = degrees(dec)
-    ra_min = ra_deg - box_halfwidth_deg
-    ra_max = ra_deg + box_halfwidth_deg
+    ra_min = ra_deg - box_halfwidth_deg / cos(dec)
+    ra_max = ra_deg + box_halfwidth_deg / cos(dec)
     box_dec_min = dec_deg - box_halfwidth_deg
     box_dec_max = dec_deg + box_halfwidth_deg
     dec_min = min(box_dec_min, box_dec_max)
@@ -1738,7 +1738,6 @@ def search_box(frame, ra, dec, box_halfwidth=3.0, dbg=False):
     if dbg: 
         logger.debug("Searching %.4f->%.4f, %.4f->%.4f in %s" % (ra_min, ra_max, dec_min, dec_max , frame.filename))
     sources = CatalogSources.objects.filter(frame=frame, obs_ra__range=(ra_min, ra_max), obs_dec__range=(dec_min, dec_max))
-
     return sources
 
 
@@ -1816,9 +1815,9 @@ def sort_rocks(fits_files):
             dest_filepath = os.path.join(object_directory, os.path.basename(fits_filepath))
             # if the file is an e91 and an e11 exists in the working directory, remove the link to the e11 and link the e91
             if 'e91' in fits_filepath:
-                if os.path.exists(dest_filepath.replace('e91.fits', 'e11.fits')):
+                if os.path.lexists(dest_filepath.replace('e91.fits', 'e11.fits')):
                     os.unlink(dest_filepath.replace('e91.fits', 'e11.fits'))
-                if not os.path.exists(dest_filepath):
+                if not os.path.lexists(dest_filepath):
                     os.symlink(fits_filepath, dest_filepath)
             # if the file is an e11 and an e91 doesn't exit in the working directory, create link to the e11
             elif 'e11' in fits_filepath and not os.path.exists(dest_filepath.replace('e11.fits', 'e91.fits')):
