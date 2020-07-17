@@ -2487,6 +2487,7 @@ class TestUpdateMPCOrbit(TestCase):
                              'discovery_date': datetime(2014, 10, 17, 0),
                              'num_obs' : 147,
                              'not_seen' : 5.5,
+                             'orbit_rms' : 0.57,
                              'fast_moving' : False,
                              'score' : None,
                              'source_type' : 'N',
@@ -2522,6 +2523,7 @@ class TestUpdateMPCOrbit(TestCase):
                                              'discovery_date': datetime(2003,  8,  1, 0),
                                              'num_obs' : 334,
                                              'not_seen' : -151.5,
+                                             'orbit_rms' : 0.60,
                                              'fast_moving' : False,
                                              'score' : None,
                                              'source_type' : 'C',
@@ -2557,6 +2559,7 @@ class TestUpdateMPCOrbit(TestCase):
                                              'discovery_date': datetime(2016, 2, 8, 0),
                                              'num_obs' : 89,
                                              'not_seen' : 62.5,
+                                             'orbit_rms' : 99.0,
                                              'fast_moving' : False,
                                              'score' : None,
                                              'source_type' : 'C',
@@ -2592,6 +2595,7 @@ class TestUpdateMPCOrbit(TestCase):
                                              'discovery_date': datetime(2016, 2, 8, 0),
                                              'num_obs' : 138,
                                              'not_seen' : 311.5,
+                                             'orbit_rms' : 0.40,
                                              'fast_moving' : False,
                                              'score' : None,
                                              'source_type' : 'C',
@@ -2627,6 +2631,7 @@ class TestUpdateMPCOrbit(TestCase):
                                              'discovery_date': datetime(2013, 5, 12, 0),
                                              'num_obs' : 1452,
                                              'not_seen' : -169.5,
+                                             'orbit_rms' : 0.40,
                                              'fast_moving' : False,
                                              'score' : None,
                                              'source_type' : 'C',
@@ -3690,6 +3695,7 @@ class TestCleanMPCOrbit(TestCase):
                              'arc_length': '357',
                              'not_seen' : 5.5,
                              # 'score' : None,
+                             'orbit_rms' : 0.57,
                              'update_time' : datetime(2015, 10, 9, 0),
                              'updated' : True
                              }
@@ -3734,6 +3740,7 @@ class TestCleanMPCOrbit(TestCase):
                                         'num_obs': '87',
                                         'arc_length': '145',
                                         'not_seen' : 23.75,
+                                        'orbit_rms' : 0.2,
                                         'update_time' : datetime(2018, 2, 10, 0),
                                         'updated' : True
                                      }
@@ -3757,6 +3764,7 @@ class TestCleanMPCOrbit(TestCase):
                                         'num_obs': '334',
                                         'arc_length': '5528',
                                         'not_seen' :  6.75,
+                                        'orbit_rms' : 0.60,
                                         'update_time' : datetime(2018, 9, 19, 0),
                                         'updated' : True
                                     }
@@ -3780,6 +3788,7 @@ class TestCleanMPCOrbit(TestCase):
                                         'num_obs': '334',
                                         'arc_length': '5528',
                                         'not_seen' : -216.87383101851853,
+                                        'orbit_rms' : 0.60,
                                         'update_time' : datetime(2018, 9, 19, 0),
                                         'updated' : True
                                     }

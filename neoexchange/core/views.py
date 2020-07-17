@@ -2679,6 +2679,14 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
             time_diff = datetime.utcnow() - last_obs
             not_seen = time_diff.total_seconds() / 86400.0
         params['not_seen'] = not_seen
+        if 'residual rms' in elements:
+            orbit_rms = None
+            try:
+                orbit_rms = float(elements['residual rms'])
+            except (ValueError, TypeError):
+                orbit_rms = None
+            if orbit_rms:
+                params['orbit_rms'] = orbit_rms
     return params
 
 
