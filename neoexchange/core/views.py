@@ -1808,9 +1808,13 @@ def build_lookproject_list(disp=None):
                 source_types = [x[1] for x in OBJECT_TYPES if x[0] == body.source_type]
                 if len(source_types) == 1:
                     body_dict['source_type'] = source_types[0]
-                subtypes =  [x[1] for x in OBJECT_SUBTYPES if x[0] == body.source_subtype_1]
+                subtype1 = [x[1] for x in OBJECT_SUBTYPES if x[0] == body.source_subtype_1]
+                subtype2 = [x[1] for x in OBJECT_SUBTYPES if x[0] == body.source_subtype_2]
+                subtypes = subtype1+subtype2
                 if len(subtypes) == 1:
-                    body_dict['subtype1'] = subtypes[0]
+                    body_dict['subtypes'] = subtypes[0]
+                elif len(subtypes) > 1:
+                    body_dict['subtypes'] = ", ".join(subtypes)
                 emp_line = body.compute_position()
                 if not emp_line:
                     continue
@@ -1855,9 +1859,13 @@ def build_lookproject_list(disp=None):
                 body_dict = model_to_dict(body)
                 body_dict['current_name'] = body.current_name()
                 body_dict['ingest_date'] = body.ingest
-                subtypes =  [x[1] for x in OBJECT_SUBTYPES if x[0] == body.source_subtype_1]
+                subtype1 = [x[1] for x in OBJECT_SUBTYPES if x[0] == body.source_subtype_1]
+                subtype2 = [x[1] for x in OBJECT_SUBTYPES if x[0] == body.source_subtype_2]
+                subtypes = subtype1+subtype2
                 if len(subtypes) == 1:
-                    body_dict['subtype1'] = subtypes[0]
+                    body_dict['subtypes'] = subtypes[0]
+                elif len(subtypes) > 1:
+                    body_dict['subtypes'] = ", ".join(subtypes)
                 emp_line = body.compute_position()
                 if not emp_line:
                     continue
@@ -2779,6 +2787,11 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
                            }
             if phys_params['value'] is not None:
                 saved = body.save_physical_parameters(phys_params)
+                body.refresh_from_db()
+                # Test to see if it's a DNC with a 1/a value < 1e-4 (10,000 AU)
+                if body.recip_a and body.recip_a < 1e-4 and body.source_subtype_2 is None:
+                    body.source_subtype_2 = 'DN'
+                    body.save()
 
     return True
 

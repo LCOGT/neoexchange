@@ -56,7 +56,7 @@
                     <tr class="{% cycle 'odd' 'even' %}">
                         <td class="list_title"><a href="{% url 'target' body.id %}">{{body.current_name}}</a></td>
                         <td data-label="Type">{{body.source_type}}</td>
-                        <td data-label="SubType">{{body.subtype1}}</td>
+                        <td data-label="SubType">{{body.subtypes}}</td>
                         <td data-label="RA">{{body.ra|radianstohms:" "}}</td>
                         <td data-label="Dec">{{body.dec|radianstodms:" "}}</td>
                         <td data-label="Vmag">{{body.v_mag|floatformat:1 }}</td>
@@ -118,7 +118,7 @@
                     {% for body in new_comets %}
                     <tr class="{% cycle 'odd' 'even' %}">
                         <td class="list_title"><a href="{% url 'target' body.id %}">{{body.current_name}}</a></td>
-                        <td data-label="SubType">{{body.subtype1}}</td>
+                        <td data-label="SubType">{{body.subtypes}}</td>
                         <td data-label="RA">{{body.ra|radianstohms:" "}}</td>
                         <td data-label="Dec">{{body.dec|radianstodms:" "}}</td>
                         <td data-label="Vmag">{{body.v_mag|floatformat:1 }}</td>

@@ -31,7 +31,7 @@ class LOOKProjectPageTest(FunctionalTest):
                      'origin': 'O',
                      'source_type': 'C',
                      'source_subtype_1': 'LP',
-                     'source_subtype_2': None,
+                     'source_subtype_2': 'DN',
                      'elements_type': 'MPC_COMET',
                      'active': True,
                      'fast_moving': False,
@@ -65,7 +65,7 @@ class LOOKProjectPageTest(FunctionalTest):
                      'origin': 'O',
                      'source_type': 'C',
                      'source_subtype_1': 'H',
-                     'source_subtype_2': None,
+                     'source_subtype_2': 'DN',
                      'elements_type': 'MPC_COMET',
                      'active': True,
                      'fast_moving': False,
@@ -117,8 +117,8 @@ class LOOKProjectPageTest(FunctionalTest):
 
         # Position below computed for 2015-07-01 17:00:00
 
-        testlines = [u'C/2013 US10 Comet Hyperbolic 03 57 50.41 +44 46 52.2 18.5 0.20 Coming soon... [-----]',
-                     u'C/2017 K2 Comet Long Period 17 29 39.56 +64 13 24.1 17.8 0.17 Coming soon... [-----]']
+        testlines = [u'C/2013 US10 Comet Hyperbolic, Dynamically New 03 57 50.41 +44 46 52.2 18.5 0.20 Coming soon... [-----]',
+                     u'C/2017 K2 Comet Long Period, Dynamically New 17 29 39.56 +64 13 24.1 17.8 0.17 Coming soon... [-----]']
 
         self.check_for_row_in_table('active_targets', testlines[0])
         self.check_for_row_in_table('active_targets', testlines[1])
@@ -126,6 +126,6 @@ class LOOKProjectPageTest(FunctionalTest):
         # He checks for fresh victims...comet targets...
         section_text = self.browser.find_element_by_id("new_comets").text
         self.assertIn("New Comet Targets", section_text)
-        testlines = [u'C/2013 US10 Hyperbolic 03 57 50.41 +44 46 52.2 18.5 0.20 1.00055 1e+99 0.8245 5.296e-05 [-----]',]
+        testlines = [u'C/2013 US10 Hyperbolic, Dynamically New 03 57 50.41 +44 46 52.2 18.5 0.20 1.00055 1e+99 0.8245 5.296e-05 [-----]',]
 
         self.check_for_row_in_table('new_comets', testlines[0])
