@@ -22,7 +22,7 @@ django-oauth-toolkit<1.2.0
 django-storages
 boto3
 requests_oauthlib
-matplotlib
+matplotlib<3.3
 bokeh==1.4.0
 fits2image
 pillow
