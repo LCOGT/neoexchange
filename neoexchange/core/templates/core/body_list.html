@@ -30,7 +30,12 @@
 						<tbody>
 						{% for body in target_list %}
 							<tr class="{% cycle 'odd' 'even' %}">
-								<td class="list_title" data-label="Name"><a href="{% url 'target' body.pk %}">{{body.full_name}}</a></td>
+
+								{% if "standard" in body.get_source_type_display or "source" in body.get_source_type_display %}
+									<td class="list_title" data-label="Name"><a href="{% url 'calibsource' body.pk %}">{{body.full_name}}</a></td>
+								{% else %}
+									<td class="list_title" data-label="Name"><a href="{% url 'target' body.pk %}">{{body.full_name}}</a></td>
+								{% endif %}
 								<td data-label="Type">{{body.get_source_type_display}}
 									{% if body.source_subtype_1 %}
                                         ({{body.get_source_subtype_1_display}})
@@ -39,7 +44,11 @@
                                         [{{body.get_source_subtype_2_display}}]
                                     {% endif %}
 								</td>
-								<td data-label="Origin">{{body.get_origin_display}}</td>
+								{% if "standard" in body.get_source_type_display or "source" in body.get_source_type_display %}
+									<td data-label="Origin">{{body.reference}}</td>
+								{% else %}
+									<td data-label="Origin">{{body.get_origin_display}}</td>
+								{% endif %}
 								<td  data-label="Ingest date">
 									<time class="datestamp nicedate" datetime="{{ body.ingest|date:'c' }}">
 										{{ body.ingest|date:'j M Y, H:i' }}
