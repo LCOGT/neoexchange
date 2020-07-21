@@ -1071,6 +1071,106 @@ class TestGetFullName(TestCase):
         self.assertEqual(full_name, expected_name)
 
 
+@patch('core.models.body.datetime', MockDateTime)
+class TestGetCadenceInfo(TestCase):
+
+    def setUp(self):
+        params = {
+                 'name': 'C/2013 US10',
+                 'origin': 'O',
+                 'source_type': 'C',
+                 'source_subtype_1': 'H',
+                 'source_subtype_2': 'DN',
+                 'elements_type': 'MPC_COMET',
+                 'active': True,
+                 'epochofel': datetime(2019, 4, 27, 0, 0),
+                 'orbinc': 148.83797,
+                 'longascnode': 186.25239,
+                 'argofperih': 340.51541,
+                 'eccentricity': 1.0005522,
+                 'perihdist': 0.8244693,
+                 'epochofperih': datetime(2015, 11, 16, 1, 5, 31, 200000),
+                 'abs_mag': 8.1,
+                 'slope': 2.8,
+                 'discovery_date': datetime(2013, 8, 14, 0, 0),
+                 'updated': True,
+                 }
+        self.comet_US10, created = Body.objects.get_or_create(**params)
+        params = {
+                   'name': 'C/2017 K2',
+                   'origin': 'O',
+                   'source_type': 'C',
+                   'source_subtype_1': 'H',
+                   'source_subtype_2': None,
+                   'elements_type': 'MPC_COMET',
+                   'active': True,
+                   'epochofel': datetime(2020, 5, 31, 0, 0),
+                   'orbit_rms': 0.4,
+                   'orbinc': 87.54274,
+                   'longascnode': 88.26626,
+                   'argofperih': 236.15875,
+                   'eccentricity': 1.0004242,
+                   'perihdist': 1.7996145,
+                   'epochofperih': datetime(2022, 12, 19, 23, 32, 38, 400000),
+                   'abs_mag': 6.6,
+                   'slope': 2.2,
+                   'discovery_date': datetime(2013, 5, 12, 0, 0)
+                   }
+        self.comet_K2, created = Body.objects.get_or_create(**params)
+
+        params = { 'code' : 'KEY2020A-001',
+                   'title' : 'LOOK Projectal'
+                 }
+        self.proposal = Proposal.objects.create(**params)
+        return
+
+    def insert_sblock(self, body, cadence):
+        sblock_params = {   'cadence' : cadence,
+                            'body' : body,
+                            'proposal' : self.proposal,
+                            'block_start' : datetime(2017, 7, 1, 3),
+                            'block_end' : datetime(2017, 7, 20, 23),
+                            'active' : True
+                        }
+        sblock,created = SuperBlock.objects.get_or_create(**sblock_params)
+
+        return sblock
+
+    def test_nosblocks(self):
+        expected_result = "Nothing scheduled"
+
+        result = self.comet_K2.get_cadence_info()
+
+        self.assertEqual(expected_result, result)
+
+    def test_no_cadence_sblocks(self):
+        sblock = self.insert_sblock(self.comet_K2, cadence=False)
+
+        expected_result = "Nothing scheduled"
+
+        result = self.comet_K2.get_cadence_info()
+
+        self.assertEqual(expected_result, result)
+
+    def test_active_cadence_sblocks(self):
+        sblock = self.insert_sblock(self.comet_K2, cadence=True)
+
+        expected_result = "Active until 07/20"
+
+        result = self.comet_K2.get_cadence_info()
+
+        self.assertEqual(expected_result, result)
+
+    def test_inactive_cadence_sblocks(self):
+        sblock = self.insert_sblock(self.comet_K2, cadence=True)
+        MockDateTime.change_datetime(2017, 7, 21, 1, 2, 3)
+
+        expected_result = "Inactive since 07/20"
+
+        result = self.comet_K2.get_cadence_info()
+
+        self.assertEqual(expected_result, result)
+
 class TestSuperBlock(TestCase):
 
     def setUp(self):

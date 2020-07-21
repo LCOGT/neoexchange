@@ -406,6 +406,21 @@ class Body(models.Model):
             reported = 'Not yet'
         return observed, reported
 
+    def get_cadence_info(self):
+        cad_blocks = self.superblock_set.filter(cadence=True)
+        num_cad_blocks = cad_blocks.count()
+        if num_cad_blocks > 0:
+            last_sblock = cad_blocks.latest('block_end')
+            block_end_dt = last_sblock.block_end
+            prefix = "Active until"
+            if datetime.utcnow() > block_end_dt:
+                prefix = "Inactive since"
+            scheduled = "{} {}".format(prefix, block_end_dt.strftime("%m/%d"))
+        else:
+            scheduled = 'Nothing scheduled'
+
+        return scheduled
+
     def get_physical_parameters(self, param_type=None, return_all=True):
         phys_params = PhysicalParameters.objects.filter(body=self.id)
         color_params = ColorValues.objects.filter(body=self.id)

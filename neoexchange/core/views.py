@@ -1815,6 +1815,8 @@ def build_lookproject_list(disp=None):
                     body_dict['subtypes'] = subtypes[0]
                 elif len(subtypes) > 1:
                     body_dict['subtypes'] = ", ".join(subtypes)
+                body_dict['cadence_info'] = body.get_cadence_info()
+                # Compute ephemeris and observability window
                 emp_line = body.compute_position()
                 if not emp_line:
                     continue

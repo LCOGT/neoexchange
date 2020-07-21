@@ -61,7 +61,7 @@
                         <td data-label="Dec">{{body.dec|radianstodms:" "}}</td>
                         <td data-label="Vmag">{{body.v_mag|floatformat:1 }}</td>
                         <td data-label="motion">{{body.motion|floatformat:2 }}</td>
-                        <td data-label="Observations Scheduled">Coming soon...</td>
+                        <td data-label="Observations Scheduled">{{body.cadence_info}}</td>
                         <td data-label="Observation Window"><a href="{%url 'visibility' body.id %}">{{body.obs_start}}-{{body.obs_end}}</a>  </td>
                         </tr>
                     {% empty%}

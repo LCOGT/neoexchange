@@ -17,7 +17,7 @@ from .base import FunctionalTest
 from mock import patch
 from neox.tests.mocks import MockDateTime, mock_build_visibility_source
 from datetime import datetime
-from core.models import Body, PreviousSpectra, PhysicalParameters
+from core.models import Body, PreviousSpectra, PhysicalParameters, Proposal, SuperBlock
 from django.urls import reverse
 
 
@@ -94,6 +94,21 @@ class LOOKProjectPageTest(FunctionalTest):
         self.body_US10, created = Body.objects.get_or_create(**params)
 
         PhysicalParameters.objects.create(body=self.body_US10, parameter_type='/a', value=0.00005296, preferred=True)
+        # Create Key Project proposal
+        params = { 'code' : 'KEY2020A-001',
+                   'title' : 'LOOK Projectal'
+                 }
+        self.proposal = Proposal.objects.create(**params)
+
+        sblock_params = {
+                            'cadence' : True,
+                            'active' : True,
+                            'body' : self.body_K2,
+                            'proposal' : self.proposal,
+                            'block_start' : datetime(2017, 7, 2, 4, 0, 0),
+                            'block_end' : datetime(2017, 7, 30, 23, 59, 59)
+                        }
+        self.sblock_K2 = SuperBlock.objects.create(**sblock_params)
 
         return
 
@@ -115,10 +130,10 @@ class LOOKProjectPageTest(FunctionalTest):
         self.assertNotIn('Home | LCO NEOx', self.browser.title)
         self.assertIn('LOOK Project Page | LCO NEOx', self.browser.title)
 
-        # Position below computed for 2015-07-01 17:00:00
+        # Position below computed for 2017-07-01 17:00:00
 
-        testlines = [u'C/2013 US10 Comet Hyperbolic, Dynamically New 03 57 50.41 +44 46 52.2 18.5 0.20 Coming soon... [-----]',
-                     u'C/2017 K2 Comet Long Period, Dynamically New 17 29 39.56 +64 13 24.1 17.8 0.17 Coming soon... [-----]']
+        testlines = [u'C/2013 US10 Comet Hyperbolic, Dynamically New 03 57 50.41 +44 46 52.2 18.5 0.20 Nothing scheduled [-----]',
+                     u'C/2017 K2 Comet Long Period, Dynamically New 17 29 39.56 +64 13 24.1 17.8 0.17 Active until 07/30 [-----]']
 
         self.check_for_row_in_table('active_targets', testlines[0])
         self.check_for_row_in_table('active_targets', testlines[1])
