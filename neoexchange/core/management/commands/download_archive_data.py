@@ -28,7 +28,7 @@ from django.core.files.storage import default_storage
 from core.archive_subs import archive_login, get_frame_data, get_catalog_data, \
     determine_archive_start_end, download_files, make_data_dir
 from core.views import determine_active_proposals
-from photometrics.gf_movie import make_movie, make_gif
+from photometrics.gf_movie import make_movie
 from photometrics.catalog_subs import sanitize_object_name
 from core.utils import save_to_default, search
 
