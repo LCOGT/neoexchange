@@ -1164,6 +1164,18 @@ class TestGetCadenceInfo(TestCase):
 
         self.assertEqual(expected_result, result)
 
+    def test_inactive_cadence_sblocks_future(self):
+        sblock = self.insert_sblock(self.comet_K2, cadence=True)
+        sblock.active = False
+        sblock.save()
+        MockDateTime.change_datetime(2017, 7, 15, 1, 2, 3)
+
+        expected_result = "Inactive"
+
+        result = self.comet_K2.get_cadence_info()
+
+        self.assertEqual(expected_result, result)
+
 class TestSuperBlock(TestCase):
 
     def setUp(self):

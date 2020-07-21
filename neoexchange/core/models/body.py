@@ -410,12 +410,25 @@ class Body(models.Model):
         cad_blocks = self.superblock_set.filter(cadence=True)
         num_cad_blocks = cad_blocks.count()
         if num_cad_blocks > 0:
-            last_sblock = cad_blocks.latest('block_end')
-            block_end_dt = last_sblock.block_end
-            prefix = "Active until"
-            if datetime.utcnow() > block_end_dt:
-                prefix = "Inactive since"
-            scheduled = "{} {}".format(prefix, block_end_dt.strftime("%m/%d"))
+            active_sblocks = cad_blocks.filter(active=True)
+            prefix = "Division by cucumber"
+            if active_sblocks.count() > 0:
+                last_sblock = active_sblocks.latest('block_end')
+                prefix = "Active until"
+                if datetime.utcnow() > last_sblock.block_end:
+                    prefix = "Inactive since"
+                block_time = last_sblock.block_end.strftime("%m/%d")
+            else:
+                # There are SBlocks but none are active
+                last_sblock = cad_blocks.filter(active=False).latest('block_end')
+                prefix = "Inactive"
+                block_time = ""
+                if datetime.utcnow() > last_sblock.block_end:
+                    prefix = "Inactive since"
+                    block_time = last_sblock.block_end.strftime("%m/%d")
+
+            scheduled = "{} {}".format(prefix, block_time)
+            scheduled = scheduled.rstrip()
         else:
             scheduled = 'Nothing scheduled'
 
