@@ -234,7 +234,7 @@ class BodySearchView(ListView):
         standard_list = []
         if name != '':
             if name.isdigit():
-                object_list = self.model.objects.filter(designations__value=name).filter(designations__desig_type='#')
+                object_list = self.model.objects.filter(Q(designations__value=name) | Q(name=name))
             if not object_list and not (name.isdigit() and int(name) < 2100):
                 object_list = self.model.objects.filter(Q(designations__value__icontains=name) | Q(provisional_name__icontains=name) | Q(provisional_packed__icontains=name) | Q(name__icontains=name))
             if not (name.isdigit() and len(name) < 3):
