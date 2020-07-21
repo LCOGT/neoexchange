@@ -225,6 +225,7 @@ def sort_previous_spectra(self, **kwargs):
 class BodySearchView(ListView):
     template_name = 'core/body_list.html'
     model = Body
+    paginate_by = 20
 
     def get_queryset(self):
         name = self.request.GET.get("q", "")

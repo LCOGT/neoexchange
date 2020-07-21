@@ -58,6 +58,13 @@
 						{% endfor %}
 						</tbody>
 					</table>
+					<div class="row">
+                    {% if is_paginated %}
+                        <!-- start -->
+                            {% include '_pagination.html' with items=items %}
+                        <!-- end -->
+                    {% endif %}
+					</div>
 				</div>
 			</div>
 {% endblock %}
