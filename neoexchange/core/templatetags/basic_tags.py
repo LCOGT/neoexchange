@@ -56,6 +56,13 @@ def dictsortreversed_with_none(value, arg):
     except TypeError:
         return ''
 
+@register.simple_tag
+def format_mpc_line_upload(measure):
+    return measure.format_mpc_line(include_catcode=False)
+
+@register.simple_tag
+def format_mpc_line_catcode(measure):
+    return measure.format_mpc_line(include_catcode=True)
 
 def make_int_list(value):
     """

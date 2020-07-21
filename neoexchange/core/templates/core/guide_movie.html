@@ -6,7 +6,7 @@
 
 {% block extramenu %}
     <div class="headingleft">
-        <h1>Block: <a href="{% url 'block-view' sb_id %}">{{pk}}</a></h1>
+        <h1>Super Block: <a href="{% url 'block-view' sb_id %}">{{sb_id}}</a> / Block: {{pk}} </h1>
     </div>
 {% endblock%}
 
@@ -14,7 +14,7 @@
 <!-- Main body -->
 <div class="container" id="main">
     {% block graphic %}
-      <img src="{% url 'display_movie' pk %}" alt="Could not find or create guide movie to show.">
+      <img src="{% url 'display_movie' pk %}" alt="Could not find or create movie to show.">
     {% endblock %}
 </div>
 {% endblock %}

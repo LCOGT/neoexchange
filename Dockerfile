@@ -89,7 +89,7 @@ COPY neoexchange/requirements.txt .
 # numpy needs to be explicitly installed first otherwise pySLALIB fails with a
 # missing numpy.distutils.core reference because the package's setup.py is broken
 RUN pip3 --no-cache-dir install --upgrade pip \
-    && pip3 --no-cache-dir install --upgrade numpy \
+    && pip3 --no-cache-dir install --upgrade numpy wheel \
     && pip3 --no-cache-dir install --trusted-host buildsba.lco.gtn -r requirements.txt
 
 ################################################################################

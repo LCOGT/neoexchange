@@ -18,7 +18,6 @@ from datetime import datetime, timedelta, date
 from math import floor, ceil, degrees, radians, pi, acos, pow
 from astropy import units as u
 import json
-import urllib
 import logging
 import tempfile
 import bokeh
@@ -61,7 +60,7 @@ from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
     MagRangeError, determine_spectro_slot_length, get_sitepos, read_findorb_ephem,\
     accurate_astro_darkness, get_visibility, determine_exp_count, determine_star_trails,\
-    calc_moon_sep, get_alt_from_airmass
+    calc_moon_sep, get_alt_from_airmass, horizons_ephem
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs, validate_text,\
@@ -72,7 +71,8 @@ from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
     read_mtds_file, unpack_tarball, run_findorb
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
-    determine_filenames, increment_red_level, update_ldac_catalog_wcs, FITSHdrException, sanitize_object_name
+    determine_filenames, increment_red_level, update_ldac_catalog_wcs, FITSHdrException, \
+    get_reference_catalog, reset_database_connection, sanitize_object_name
 from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
 from photometrics.spectraplot import pull_data_from_spectrum, pull_data_from_text, spectrum_plot
 from core.frames import create_frame, ingest_frames, measurements_from_block
@@ -81,7 +81,11 @@ from core.archive_subs import lco_api_call
 from core.utils import search
 from photometrics.SA_scatter import readSources, genGalPlane, plotScatter, \
     plotFormat
-from core.plots import spec_plot, lin_vis_plot
+from core.plots import spec_plot, lin_vis_plot, lc_plot
+
+# import matplotlib
+# matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 logger = logging.getLogger(__name__)
 
@@ -319,6 +323,7 @@ class BlockReportMPC(LoginRequiredMixin, View):
             messages.error(request, 'It was not possible to email report to MPC')
             return HttpResponseRedirect(reverse('block-report-mpc', kwargs={'pk': kwargs['pk']}))
 
+
 class BlockCancel(View):
     def get(self, request, *args, **kwargs):
         try:
@@ -339,6 +344,7 @@ class BlockCancel(View):
             else:
                 messages.warning(request, f'SuperBlock {bk.id} not cancelled')
         return HttpResponseRedirect(reverse('block-view', kwargs={'pk': kwargs['pk']}))
+
 
 class UploadReport(LoginRequiredMixin, FormView):
     template_name = 'core/uploadreport.html'
@@ -629,7 +635,8 @@ class BestStandardsView(ListView):
         night_ra = degrees(sun_ra - pi)
         if night_ra < 0:
             night_ra += 360
-        if dbg: print(utc_dt, degreestohms(night_ra, ':'), HA_hours*15)
+        if dbg:
+            print(utc_dt, degreestohms(night_ra, ':'), HA_hours*15)
 
         min_ra = night_ra - (HA_hours * 15)
         if min_ra < 0:
@@ -637,7 +644,8 @@ class BestStandardsView(ListView):
         max_ra = night_ra + (HA_hours * 15)
         if max_ra > 360:
             max_ra -= 360
-        if dbg: print("RA range=", min_ra, max_ra)
+        if dbg:
+            print("RA range=", min_ra, max_ra)
 
         return min_ra, max_ra
 
@@ -651,7 +659,8 @@ class BestStandardsView(ListView):
             ra_filter = Q(ra__gte=min_ra) & Q(ra__lte=max_ra)
         ftn_standards = StaticSource.objects.filter(ra_filter, source_type=StaticSource.FLUX_STANDARD, dec__gte=0).order_by('ra')
         fts_standards = StaticSource.objects.filter(ra_filter, source_type=StaticSource.FLUX_STANDARD, dec__lte=0).order_by('ra')
-        if dbg: print(ftn_standards,fts_standards)
+        if dbg:
+            print(ftn_standards, fts_standards)
 
         return ftn_standards, fts_standards
 
@@ -1325,6 +1334,9 @@ def schedule_check(data, body, ok_to_schedule=True):
     # get acceptability threshold
     acceptability_threshold = data.get('acceptability_threshold', 90)
 
+    # set parallactic angle?
+    para_angle = data.get('para_angle', False)
+
     # Determine pattern iterations
     if exp_count:
         pattern_iterations = float(exp_count) / float(len(filter_pattern.split(',')))
@@ -1414,6 +1426,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'min_lunar_dist': min_lunar_dist,
         'max_airmass': max_airmass,
         'ipp_value': ipp_value,
+        'para_angle': para_angle,
         'ag_exp_time': ag_exp_time,
         'acceptability_threshold': acceptability_threshold,
         'trail_len': trail_len,
@@ -1501,7 +1514,7 @@ def schedule_submit(data, body, username):
     proposal = Proposal.objects.get(code=data['proposal_code'])
     my_proposals = user_proposals(username)
     if proposal not in my_proposals:
-        resp_params = {'msg' : 'You do not have permission to schedule using proposal %s' % data['proposal_code']}
+        resp_params = {'msg': 'You do not have permission to schedule using proposal %s' % data['proposal_code']}
 
         return None, resp_params
     params = {'proposal_id': proposal.code,
@@ -1525,6 +1538,7 @@ def schedule_submit(data, body, username):
               'calibsource': calibsource_params,
               'max_airmass': data.get('max_airmass', 1.74),
               'ipp_value': data.get('ipp_value', 1),
+              'para_angle': data.get('para_angle', False),
               'min_lunar_distance': data.get('min_lunar_dist', 30),
               'acceptability_threshold': data.get('acceptability_threshold', 90),
               'ag_exp_time': data.get('ag_exp_time', 10)
@@ -1553,7 +1567,7 @@ def schedule_submit(data, body, username):
         params['group_name'] = data['group_name']
     elif check_for_block(data, params, body) >= 2:
         # Multiple blocks found
-        resp_params = {'error_msg' : 'Multiple Blocks for same day and site found'}
+        resp_params = {'error_msg': 'Multiple Blocks for same day and site found'}
     if check_for_block(data, params, body) == 0:
         # Submit to scheduler and then record block
         tracking_number, resp_params = submit_block_to_scheduler(body_elements, params)
@@ -1628,6 +1642,50 @@ def feasibility_check(data, body):
     data['slot_length'] = slot_length
 
     return data
+
+
+class SpecDataListView(ListView):
+    model = Block
+    template_name = 'core/data_summary.html'
+    queryset = Block.objects.filter(obstype=1).filter(num_observed__gt=0).order_by('-when_observed')
+    context_object_name = "data_list"
+    paginate_by = 20
+
+    def get_context_data(self, **kwargs):
+        context = super(SpecDataListView, self).get_context_data(**kwargs)
+        context['data_type'] = 'Spec'
+        return context
+
+
+class LCDataListView(ListView):
+    model = Body
+    template_name = 'core/data_summary.html'
+    paginate_by = 20
+
+    def get_context_data(self, **kwargs):
+        context = {'data_list': self.find_lc(), 'data_type': 'LC'}
+        return context
+
+    def find_lc(self):
+        base_dir = os.path.join(settings.DATA_ROOT, 'Reduction')
+        dir_list, _ = default_storage.listdir(base_dir)
+        name_list = []
+        for name in dir_list:
+            if name.isdigit():
+                name_list.append(name)
+            elif '_' in name:
+                name_list.append(name.replace('_', ' '))
+            else:
+                for c in range(len(name)):
+                    new_name = name[:c] + ' ' + name[c:]
+                    name_list.append(new_name.lstrip())
+        object_list = Body.objects.filter(Q(designations__value__in=name_list) | Q(provisional_name__in=name_list)
+                                          | Q(provisional_packed__in=name_list) | Q(name__in=name_list))
+        final_objects = object_list
+        for obj in object_list:
+            if sanitize_object_name(obj.current_name()) not in name_list:
+                final_objects = final_objects.exclude(pk=obj.pk)
+        return list(set(final_objects))
 
 
 def ranking(request):
@@ -3241,7 +3299,9 @@ def make_new_catalog_entry(new_ldac_catalog, header, block):
     # if a Frame does not exist for the catalog file with a non-null block
     # create one with the fits filename
     catfilename = os.path.basename(new_ldac_catalog)
-    if len(Frame.objects.filter(filename=catfilename, block__isnull=False)) < 1:
+    cat_frames = Frame.objects.filter(filename=catfilename, block__isnull=False)
+    num_frames = cat_frames.count()
+    if num_frames == 0:
 
         # Create a new Frame entry for new fits_file_output name
         frame_params = {    'sitecode': header['site_code'],
@@ -3263,13 +3323,33 @@ def make_new_catalog_entry(new_ldac_catalog, header, block):
 
         frame, created = Frame.objects.get_or_create(**frame_params)
         if created is True:
-            logger.debug("Created new Frame id#%d", frame.id)
+            logger.info("Created new Frame id#%d", frame.id)
             num_new_frames_created += 1
-
+    elif num_frames == 1:
+        frame_params = {    'sitecode': header['site_code'],
+                  'instrument': header['instrument'],
+                      'filter': header['filter'],
+                    'filename': catfilename,
+                     'exptime': header['exptime'],
+                    'midpoint': header['obs_midpoint'],
+                       'block': block,
+                   'zeropoint': header['zeropoint'],
+               'zeropoint_err': header['zeropoint_err'],
+                        'fwhm': header['fwhm'],
+                   'frametype': Frame.BANZAI_LDAC_CATALOG,
+                   'astrometric_catalog' : header.get('astrometric_catalog', None),
+                  'rms_of_fit': header['astrometric_fit_rms'],
+               'nstars_in_fit': header['astrometric_fit_nstars'],
+                        'wcs' : header.get('wcs', None),
+                }
+        cat_frames.update(**frame_params)
+        logger.info("Updated Frame id#%d", cat_frames[0].id)
+    else:
+        logger.warning("Found an unexpected number of Frame entries (%d) for %s", (num_frames, catfilename))
     return num_new_frames_created
 
 
-def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
+def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False, desired_catalog=None):
     """New version of check_catalog_and_refit designed for BANZAI data. This
     version of the routine assumes that the astrometric fit status of <catfile>
     is likely to be good and exits if not the case. A new source extraction
@@ -3296,11 +3376,15 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
         logger.error("Unable to process non-BANZAI data at this time")
         return -99, num_new_frames_created
 
-    # Check for matching catalog
+    # Check for matching catalog (solved with desired astrometric reference catalog)
     catfilename = os.path.basename(catfile).replace('.fits', '_ldac.fits')
-    catalog_frames = Frame.objects.filter(filename=catfilename, frametype__in=(Frame.BANZAI_LDAC_CATALOG, Frame.FITS_LDAC_CATALOG))
+    reproc_catfilename = increment_red_level(catfilename)
+    catalog_frames = Frame.objects.filter(filename__in=(catfilename, reproc_catfilename),
+                                          frametype__in=(Frame.BANZAI_LDAC_CATALOG, Frame.FITS_LDAC_CATALOG),
+                                          astrometric_catalog=desired_catalog)
     if len(catalog_frames) != 0:
-        return os.path.abspath(os.path.join(dest_dir, os.path.basename(catfile.replace('.fits', '_ldac.fits')))), 0
+        logger.info("Found reprocessed frame in DB")
+        return os.path.abspath(os.path.join(dest_dir, catalog_frames[0].filename)), 0
 
     # Find image file for this catalog
     fits_file = find_matching_image_file(catfile)
@@ -3314,6 +3398,53 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
         logger.error("Execution of SExtractor failed")
         return -4, 0
 
+    # If desired catalog is GAIA-DR2, need to grab it ourselves as SCAMP does
+    # not support it
+    if desired_catalog == 'GAIA-DR2':
+        refcat, num_ref_srcs = get_reference_catalog(dest_dir, header['field_center_ra'],
+            header['field_center_dec'], header['field_width'], header['field_height'],
+            cat_name=desired_catalog)
+        if refcat is None or num_ref_srcs is None:
+            logger.error("Could not obtain reference catalog for fits frame %s" % catfile)
+            return -6, num_new_frames_created
+
+        scamp_status = run_scamp(configs_dir, dest_dir, new_ldac_catalog, refcatalog=refcat)
+        logger.info("Return status for scamp: {}".format(scamp_status))
+
+        if scamp_status == 0:
+            scamp_file = os.path.basename(new_ldac_catalog).replace('.fits', '.head' )
+            scamp_file = os.path.join(dest_dir, scamp_file)
+            scamp_xml_file = os.path.join(dest_dir, 'scamp.xml')
+            # Update WCS in image file
+            # Strip off now unneeded FITS extension
+            fits_file = fits_file.replace('[SCI]', '')
+            # Get new output filename
+            fits_file_output = increment_red_level(fits_file)
+            fits_file_output = os.path.join(dest_dir, fits_file_output.replace('[SCI]', ''))
+            logger.info("Updating refitted WCS in image file: %s. Output to: %s" % (fits_file, fits_file_output))
+            status, new_header = updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output)
+            logger.info("Return status for updateFITSWCS: {}".format(status))
+#           XXX In principle, this is an alternative way of doing it without
+#           needing to do a re-extraction. However it requires breaking the 24,000+
+#           byte LDAC "header" back into a proper Header, updating, and joining
+#           it all back together again. This approach would also allow multi-
+#           aperture/curve-of-growth to be done with the second extraction
+#            ## Update WCS in catalog file
+#            logger.info("Updating bad WCS in catalog file: %s." % (new_ldac_catalog,))
+#            status, new_cat_header = updateFITSWCS(new_ldac_catalog, scamp_file, scamp_xml_file, new_ldac_catalog)
+#            logger.info("Return status for updateFITSWCS: {}".format(status))
+#            header = get_catalog_header(new_header, cattype)
+#            # Apply new refitted WCS to catalog RA,Dec columns
+#            status = update_ldac_catalog_wcs(fits_file_output, new_ldac_catalog)
+#            logger.info("Return status for update_ldac_catalog_wcs: {}".format(status))
+            # Re-run SExtractor to make a new FITS_LDAC catalog from the frame
+            status, new_ldac_catalog = run_sextractor_make_catalog(configs_dir, dest_dir, fits_file_output)
+            logger.debug("Filename after 2nd SExtractor= {}".format(new_ldac_catalog))
+            if status != 0:
+                logger.error("Execution of second SExtractor failed")
+                return -4, 0
+    # Reset DB connection after potentially long-running process.
+    reset_database_connection()
     # Find Block for original frame
     block = find_block_for_frame(catfile)
     if block is None:
@@ -3404,15 +3535,20 @@ def find_spec(pk):
     """find directory of spectra for a certain block
     NOTE: Currently will only pull first spectrum of a superblock
     """
-    try:
-        block = Block.objects.get(pk=pk)
-        url = settings.ARCHIVE_FRAMES_URL+str(Frame.objects.filter(block=block)[0].frameid)+'/headers'
-    except IndexError:
+    block = Block.objects.get(pk=pk)
+    frames = Frame.objects.filter(block=block)
+    if not frames:
         return '', '', '', '', ''
+    for frame in frames:
+        if frame.frameid:
+            first_frame = frame
+            break
+    url = settings.ARCHIVE_FRAMES_URL + str(first_frame.frameid) + '/headers'
     try:
         data = lco_api_call(url)['data']
     except TypeError:
         return '', '', '', '', ''
+
     if 'DAY_OBS' in data:
         date_obs = data['DAY_OBS']
     elif 'DAY-OBS' in data:
@@ -3590,15 +3726,148 @@ class PlotSpec(View):
         return render(request, self.template_name, params)
 
 
+class LCPlot(LookUpBodyMixin, FormView):
+
+    template_name = 'core/plot_lc.html'
+
+    def get(self, request, *args, **kwargs):
+        best_period = self.body.get_physical_parameters('P', False)
+        if best_period:
+            period = best_period[0].get('value', None)
+        else:
+            period = None
+        script, div, meta_list = get_lc_plot(self.body, {'period': period})
+
+        return self.render_to_response(self.get_context_data(body=self.body, script=script, div=div, meta_list=meta_list))
+
+    def get_context_data(self, **kwargs):
+        params = kwargs
+        params['body'] = self.body
+        if kwargs['script']:
+            params["the_script"] = kwargs['script']
+            params["lc_div"] = kwargs['div']['plot']
+        else:
+            params["lc_div"] = kwargs['div']
+        base_path = BOKEH_URL.format(bokeh.__version__)
+        params['css_path'] = base_path + 'css'
+        params['js_path'] = base_path + 'js'
+        params['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
+        params['table_path'] = BOKEH_URL.format('tables-'+bokeh.__version__) + 'js'
+        return params
+
+
+def import_alcdef(file, meta_list, lc_list):
+    """Pull LC data from ALCDEF text files."""
+
+    lc_file = default_storage.open(file, 'rb')
+    lines = lc_file.readlines()
+
+    metadata = {}
+    dates = []
+    mags = []
+    mag_errs = []
+    met_dat = False
+
+    for line in lines:
+        line = str(line, 'utf-8')
+        if line[0] == '#':
+            continue
+        if '=' in line:
+            if 'DATA=' in line and met_dat is False:
+                chunks = line[5:].split('|')
+                jd = float(chunks[0])
+                mag = float(chunks[1])
+                mag_err = float(chunks[2])
+                dates.append(jd)
+                mags.append(mag)
+                mag_errs.append(mag_err)
+            else:
+                chunks = line.split('=')
+                metadata[chunks[0]] = chunks[1].replace('\n', '')
+        elif 'ENDDATA' in line:
+            if metadata not in meta_list:
+                meta_list.append(metadata)
+                lc_data = {
+                    'date': dates,
+                    'mags': mags,
+                    'mag_errs': mag_errs,
+                    }
+                lc_list.append(lc_data)
+            dates = []
+            mags = []
+            mag_errs = []
+            metadata = {}
+        elif 'STARTMETADATA' in line:
+            met_dat = True
+        elif 'ENDMETADATA' in line:
+            met_dat = False
+
+    return meta_list, lc_list
+
+
+def get_lc_plot(body, data):
+    """Plot all lightcurve data for given source.
+    """
+
+    base_dir = os.path.join(settings.DATA_ROOT, 'Reduction')
+    obj_name = sanitize_object_name(body.current_name())
+    datadir = os.path.join(base_dir, obj_name)
+    filenames = search(datadir, '.*.ALCDEF.txt')
+    if data.get('period', None):
+        period = data['period']
+    else:
+        period = 1.0
+
+    meta_list = []
+    lc_list = []
+    if filenames:
+        for file in filenames:
+            meta_list, lc_list = import_alcdef(os.path.join(datadir, file), meta_list, lc_list)
+    else:
+        meta_list = lc_list = []
+
+    meta_list = [x for _, x in sorted(zip(lc_list, meta_list), key=lambda i: i[0]['date'][0])]
+    lc_list = sorted(lc_list, key=lambda i: i['date'][0])
+
+    # Get predicted JPL position of target during obs
+    if meta_list:
+        start = datetime.strptime(meta_list[0]['SESSIONDATE']+'T'+meta_list[0]['SESSIONTIME'], '%Y-%m-%dT%H:%M:%S') - timedelta(days=1)
+        end = datetime.strptime(meta_list[-1]['SESSIONDATE']+'T'+meta_list[-1]['SESSIONTIME'], '%Y-%m-%dT%H:%M:%S') + timedelta(days=1)
+        total_time = end-start
+        step_size = round(total_time.total_seconds()/60/100)
+        sitecode = '500'
+        obj_name = body.name
+        ephem = horizons_ephem(obj_name, start, end, sitecode, ephem_step_size='{}m'.format(step_size))
+    else:
+        ephem = []
+
+    if lc_list:
+        script, div = lc_plot(lc_list, meta_list, period, jpl_ephem=ephem)
+    else:
+        script = None
+        div = """
+            <div class='warning msgpadded'>Could not find any LC data for {}</div>
+        """.format(body.full_name())
+
+    return script, div, meta_list
+
+
 def display_movie(request, pk):
     """Display previously made guide movie, or make one if no movie found."""
 
     date_obs, obj, req, path, prop = find_spec(pk)
-    base_dir = os.path.join(path, 'Guide_frames')
+    base_dir = date_obs
     logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date_obs, req, prop))
     logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
 
-    movie_file = "{}_{}_guidemovie.gif".format(obj, req)
+    block = Block.objects.get(pk=pk)
+    if block.obstype in [Block.OPT_IMAGING, Block.OPT_IMAGING_CALIB]:
+        movie_file = "{}_{}_framemovie.gif".format(obj.replace(' ', '_'), req)
+    elif block.obstype in [Block.OPT_SPECTRA, Block.OPT_SPECTRA_CALIB]:
+        movie_file = "{}_{}_guidemovie.gif".format(obj.replace(' ', '_'), req)
+        base_dir = os.path.join(path, "Guide_frames")
+    else:
+        return HttpResponse()
 
     movie_file = search(base_dir, movie_file, latest=True)
 
