@@ -398,7 +398,7 @@ def make_movie(date_obs, obj, req, base_dir, out_path, prop):
     if frames is not None and len(frames) > 0:
         logger.debug("#Frames = {}".format(len(frames)))
         logger.info("Making Movie...")
-        movie_file = make_gif(frames, out_path=out_path)
+        movie_file = make_gif(frames, out_path=out_path, progress=False)
         return movie_file
     else:
         logger.error("There must be at least 1 frame to make guide movie.")
