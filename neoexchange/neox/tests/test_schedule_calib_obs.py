@@ -337,6 +337,21 @@ class ScheduleObservations(FunctionalTest):
         vis = self.browser.find_element_by_id('id_visibility_row').find_element_by_class_name('warning').text
         self.assertIn('Target Not Visible', vis)
 
+        # Fix issue:
+        self.browser.find_element_by_id("advanced-switch").click()
+        airmass_box = self.browser.find_element_by_id('id_max_airmass')
+        airmass_box.clear()
+        airmass_box.send_keys('2.0')
+        self.browser.find_element_by_id("id_edit_window").click()
+        start_time_box = self.browser.find_element_by_id('id_start_time')
+        start_time_box.clear()
+        start_time_box.send_keys('2015-12-21T13:13:00')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
+        start_time = self.browser.find_element_by_id('id_start_time').get_attribute('value')
+        self.assertEqual(start_time, '2015-12-21T13:13:00')
+
+
         # Bart wants to be a little &^%$ and stress test our group ID input
         group_id_box = self.browser.find_element_by_name("group_name")
         group_id_box.clear()
