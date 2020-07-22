@@ -47,6 +47,8 @@ class Command(BaseCommand):
             for date in visible_dates:
                 print(date)
             self.stdout.write("Start of night ephemeris entries for %s:" % options['site_code'])
+            if len(emp_visible_dates) > 0:
+                self.stdout.write('  Date/Time (UTC)        RA              Dec        Mag     "/min    P.A.    Alt Moon Phase Moon Dist Moon Alt Score  H.A.')
             for emp in emp_visible_dates:
                 print(emp)
             self.stdout.write("Maximum altitudes:")
