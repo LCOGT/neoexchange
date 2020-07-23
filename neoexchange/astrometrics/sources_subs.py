@@ -2517,10 +2517,13 @@ def store_jpl_physparams(phys_par, body):
             p_type = 'O'
         elif 'albedo' in p['name']:  # geometric albedo
             p_type = 'ab'
-        # Parameters available from the MPC, but not stored by us at the moment.
+        # Parameters available from JPL, but not explicitly stored by us at the moment.
+        # TAL 2020/7/8: Thought about mapping M1,K1->H,G here but decided against
 #        elif 'M1' == p['name']: # absolute magnitude of comet and coma (total)
-#        elif 'M2' == p['name']: # comet total magnitude parameter
+#            p_type = 'H'
 #        elif 'K1' == p['name']: # comet total magnitude slope parameter
+#            p_type = 'G'
+#        elif 'M2' == p['name']: # comet total magnitude parameter
 #        elif 'K2' == p['name']: # comet nuclear magnitude slope parameter
 #        elif 'PC' == p['name']: # comet nuclear magnitude law - phase coefficient
         elif 'spectral' in p['desc']:

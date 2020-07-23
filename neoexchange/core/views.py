@@ -1866,9 +1866,15 @@ def build_lookproject_list(disp=None):
                 source_types = [x[1] for x in OBJECT_TYPES if x[0] == body.source_type]
                 if len(source_types) == 1:
                     body_dict['source_type'] = source_types[0]
-                subtypes =  [x[1] for x in OBJECT_SUBTYPES if x[0] == body.source_subtype_1]
+                subtype1 = [x[1] for x in OBJECT_SUBTYPES if x[0] == body.source_subtype_1]
+                subtype2 = [x[1] for x in OBJECT_SUBTYPES if x[0] == body.source_subtype_2]
+                subtypes = subtype1+subtype2
                 if len(subtypes) == 1:
-                    body_dict['subtype1'] = subtypes[0]
+                    body_dict['subtypes'] = subtypes[0]
+                elif len(subtypes) > 1:
+                    body_dict['subtypes'] = ", ".join(subtypes)
+                body_dict['cadence_info'] = body.get_cadence_info()
+                # Compute ephemeris and observability window
                 emp_line = body.compute_position()
                 if not emp_line:
                     continue
@@ -1913,9 +1919,13 @@ def build_lookproject_list(disp=None):
                 body_dict = model_to_dict(body)
                 body_dict['current_name'] = body.current_name()
                 body_dict['ingest_date'] = body.ingest
-                subtypes =  [x[1] for x in OBJECT_SUBTYPES if x[0] == body.source_subtype_1]
+                subtype1 = [x[1] for x in OBJECT_SUBTYPES if x[0] == body.source_subtype_1]
+                subtype2 = [x[1] for x in OBJECT_SUBTYPES if x[0] == body.source_subtype_2]
+                subtypes = subtype1+subtype2
                 if len(subtypes) == 1:
-                    body_dict['subtype1'] = subtypes[0]
+                    body_dict['subtypes'] = subtypes[0]
+                elif len(subtypes) > 1:
+                    body_dict['subtypes'] = ", ".join(subtypes)
                 emp_line = body.compute_position()
                 if not emp_line:
                     continue
@@ -1946,13 +1956,8 @@ def build_lookproject_list(disp=None):
                 body_dict['dec'] = emp_line[1]
                 body_dict['v_mag'] = emp_line[2]
                 body_dict['motion'] = emp_line[4]
-                period = None
-                if body.eccentricity and body.perihdist:
-                    period = 1e99
-                    if body.eccentricity < 1.0:
-                        a_au = body.perihdist / (1.0 - body.eccentricity)
-                        period = pow(a_au, (3.0/2.0))
-                body_dict['period'] = period
+                body_dict['period'] = body.period
+                body_dict['recip_a'] = body.recip_a
                 body_dict['perihdist'] = body.perihdist
                 comets.append(body_dict)
             except Exception as e:
@@ -2734,6 +2739,14 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
             time_diff = datetime.utcnow() - last_obs
             not_seen = time_diff.total_seconds() / 86400.0
         params['not_seen'] = not_seen
+        if 'residual rms' in elements:
+            orbit_rms = None
+            try:
+                orbit_rms = float(elements['residual rms'])
+            except (ValueError, TypeError):
+                orbit_rms = None
+            if orbit_rms:
+                params['orbit_rms'] = orbit_rms
     return params
 
 
@@ -2763,7 +2776,11 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
         return False
 
     if type(obj_id_or_page) == BeautifulSoup:
-        obj_id = elements['obj_id']
+        chunks = elements['obj_id'].split('\n')
+        if len(chunks) > 1:
+            obj_id = chunks[0]
+        else:
+            obj_id = elements['obj_id']
         del elements['obj_id']
 
     try:
@@ -2803,6 +2820,47 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
     # Update Physical Parameters
     if body.characterization_target() or body.source_type == 'C':
         update_jpl_phys_params(body)
+        if body.source_type == 'C':
+            # The MPC DB doesn't return any info for comets; update the Body's
+            # `abs_mag` and `slope` values here if possible
+            new_abs_mag = None
+            try:
+                new_abs_mag = PhysicalParameters.objects.get(body=body, parameter_type='M1', preferred=True).value
+            except (PhysicalParameters.DoesNotExist, PhysicalParameters.MultipleObjectsReturned):
+                new_abs_mag = None
+            if new_abs_mag:
+                msg = "Updated abs_mag for {} from M1={}".format(body.current_name(), new_abs_mag)
+                logger.debug(msg)
+                body.abs_mag = new_abs_mag
+
+            new_slope = None
+            try:
+                new_slope = PhysicalParameters.objects.get(body=body, parameter_type='K1', preferred=True).value
+            except (PhysicalParameters.DoesNotExist, PhysicalParameters.MultipleObjectsReturned):
+                new_slope = None
+            if new_slope:
+                msg = "Updated slope for {} from K1={}".format(body.current_name(), new_slope)
+                logger.debug(msg)
+                body.slope = new_slope / 2.5
+            body.save()
+            # Build physparams dictionary to store reciprocal semi-major axis
+            phys_params = {'parameter_type': '/a',
+                           'value' : elements.get('recip semimajor axis orig', None),
+                           'error' : elements.get('recip semimajor axis error', None),
+                           'value2': elements.get('recip semimajor axis future', None),
+                           'error2': elements.get('recip semimajor axis error', None),
+                           'units': 'au',
+                           'reference': elements.get('reference', None),
+                           'preferred': True
+                           }
+            if phys_params['value'] is not None:
+                saved = body.save_physical_parameters(phys_params)
+                body.refresh_from_db()
+                # Test to see if it's a DNC with a 1/a value < 1e-4 (10,000 AU)
+                if body.recip_a and body.recip_a < 1e-4 and body.source_subtype_2 is None:
+                    body.source_subtype_2 = 'DN'
+                    body.save()
+
     return True
 
 
