@@ -4,7 +4,7 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
-### 3.5.2
+### 3.5.1
 * Allow editing of window for spectroscopic calibration targets.
 * Fix for incorrect slot length calculation with multiple spectra exposures.
 * Upgrades astropy minimum version to 3.2.3 for updated USNO Earth Orientation Parameter URLs and also the minimum version that works on python 3.8
