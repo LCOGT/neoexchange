@@ -90,6 +90,7 @@ class Command(BaseCommand):
         site, encid, telid = MPC_site_code_to_domes(sitecode)
         if site == 'cpt':
             date = date.replace(hour=16, minute=0, second=0)
+            date += timedelta(days=1)
         fwhm = QueryTelemetry(start_time=date)
         dimm_data = fwhm.get_seeing_for_site(site)
         if len(dimm_data) > 0:
@@ -142,11 +143,13 @@ class Command(BaseCommand):
         for temp in temps:
             temp_line = ax4.plot(alltimes, temps[temp], linewidth=0.66, marker='.', linestyle='-', label=temp)
             temp_lines.append(temp_line[0])
-        ax4.legend(temp_lines, temp_keyword, loc='best', fontsize='xx-small')
         ax2.set_ylabel('FWHM (")')
         # ax2.set_title('FWHM')
         fig2.suptitle('Conditions for obs: '+title)
-        ax3.plot(alltimes, air_mass, marker='.', color=colors, linestyle=' ')
+        airmass_line = ax3.plot(alltimes, air_mass, marker='.', color='black', linestyle=' ')
+        temp_lines.append(airmass_line[0])
+        temp_keyword.append('Airmass')
+        ax4.legend(temp_lines, temp_keyword, loc='best', fontsize='xx-small')
         ax3.set_xlabel('Time')
         ax3.set_ylabel('Airmass')
         # ax3.set_title('Airmass')
