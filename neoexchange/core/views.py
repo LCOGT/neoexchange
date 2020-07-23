@@ -225,19 +225,25 @@ def sort_previous_spectra(self, **kwargs):
 class BodySearchView(ListView):
     template_name = 'core/body_list.html'
     model = Body
+    paginate_by = 20
 
     def get_queryset(self):
         name = self.request.GET.get("q", "")
         name = name.strip()
         object_list = []
+        standard_list = []
         if name != '':
             if name.isdigit():
-                object_list = self.model.objects.filter(designations__value=name).filter(designations__desig_type='#')
-            if not object_list:
+                object_list = self.model.objects.filter(Q(designations__value=name) | Q(name=name))
+            if not object_list and not (name.isdigit() and int(name) < 2100):
                 object_list = self.model.objects.filter(Q(designations__value__icontains=name) | Q(provisional_name__icontains=name) | Q(provisional_packed__icontains=name) | Q(name__icontains=name))
+            if not (name.isdigit() and len(name) < 3):
+                standard_list = StaticSource.objects.filter(Q(name__icontains=name))
         else:
             object_list = self.model.objects.all()
-        return list(set(object_list))
+        object_list = list(set(object_list))
+        standard_list = list(set(standard_list))
+        return object_list + standard_list
 
 
 class BodyVisibilityView(DetailView):

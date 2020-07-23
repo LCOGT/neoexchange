@@ -344,6 +344,7 @@ class CatalogSources(models.Model):
             flag = 'E'
         return flag
 
+
 @python_2_unicode_compatible
 class StaticSource(models.Model):
     """
@@ -384,6 +385,9 @@ class StaticSource(models.Model):
         return srctype_name
 
     def current_name(self):
+        return self.name
+
+    def full_name(self):
         return self.name
 
     class Meta:
