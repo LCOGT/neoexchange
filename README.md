@@ -4,6 +4,16 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.5.1
+* Allow editing of window for spectroscopic calibration targets.
+* Fix for incorrect slot length calculation with multiple spectra exposures.
+* Upgrades astropy minimum version to 3.2.3 for updated USNO Earth Orientation Parameter URLs and also the minimum version that works on python 3.8
+* Adds storage of the orbit RMS from MPC DB
+* LOOK Project updates:
+  * Adds storage of reciprocal semi-major axis from MPC DB as a PhysicalParameter
+  * Adds additional Body attribute to return reciprocal semi-major axis
+  * Adds new get_cadence_info() method to summarize whether an object's cadence is underway or has halted and adds this into the LOOK Project template
+
 ### 3.5.0
 Add Light curve analysis tools
 * active plotting of light curves

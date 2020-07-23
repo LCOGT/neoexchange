@@ -111,7 +111,8 @@ PARAM_CHOICES = (
                 ('ab', 'Albedo'),
                 ('Y', 'Yarkovsky Drift'),
                 ('E', 'Coma Extent'),
-                ('M', 'Mass')
+                ('M', 'Mass'),
+                ('/a', 'Reciprocal of semimajor axis')
                 )
 
 logger = logging.getLogger(__name__)
@@ -150,6 +151,35 @@ class Body(models.Model):
     updated             = models.BooleanField('Has this object been updated?', default=False)
     ingest              = models.DateTimeField(default=datetime.utcnow, db_index=True)
     update_time         = models.DateTimeField(blank=True, null=True, db_index=True)
+
+    def _compute_period(self):
+        period = None
+        if self.eccentricity:
+            period = 1e99
+            if self.eccentricity < 1.0:
+                if self.perihdist:
+                    a_au = self.perihdist / (1.0 - self.eccentricity)
+                else:
+                    a_au = self.meandist
+                period = pow(a_au, (3.0/2.0))
+        return period
+
+    def _compute_one_over_a(self):
+        # Returns the reciprocal semi-major axis (1/a) from the PhysicalProperties if present
+        recip_a = None
+        try:
+            recip_a_par = PhysicalParameters.objects.get(body=self.id, parameter_type='/a', preferred=True, value__isnull=False)
+            recip_a = recip_a_par.value
+        except PhysicalParameters.DoesNotExist:
+            recip_a = None
+        except PhysicalParameters.MultipleObjectsReturned:
+            logger.warning("Multiple preferred values exist for 1/a parameter for %s", self.current_name())
+            recip_a = None
+        return recip_a
+
+    period = property(_compute_period)
+    recip_a = property(_compute_one_over_a)
+    one_over_a  = property(_compute_one_over_a)
 
     def characterization_target(self):
         # If we change the definition of Characterization Target,
@@ -197,6 +227,7 @@ class Body(models.Model):
         except:
             pass
         return mjd
+
 
     def current_name(self):
         if self.name:
@@ -374,6 +405,34 @@ class Body(models.Model):
             observed = 'Not yet'
             reported = 'Not yet'
         return observed, reported
+
+    def get_cadence_info(self):
+        cad_blocks = self.superblock_set.filter(cadence=True)
+        num_cad_blocks = cad_blocks.count()
+        if num_cad_blocks > 0:
+            active_sblocks = cad_blocks.filter(active=True)
+            prefix = "Division by cucumber"
+            if active_sblocks.count() > 0:
+                last_sblock = active_sblocks.latest('block_end')
+                prefix = "Active until"
+                if datetime.utcnow() > last_sblock.block_end:
+                    prefix = "Inactive since"
+                block_time = last_sblock.block_end.strftime("%m/%d")
+            else:
+                # There are SBlocks but none are active
+                last_sblock = cad_blocks.filter(active=False).latest('block_end')
+                prefix = "Inactive"
+                block_time = ""
+                if datetime.utcnow() > last_sblock.block_end:
+                    prefix = "Inactive since"
+                    block_time = last_sblock.block_end.strftime("%m/%d")
+
+            scheduled = "{} {}".format(prefix, block_time)
+            scheduled = scheduled.rstrip()
+        else:
+            scheduled = 'Nothing scheduled'
+
+        return scheduled
 
     def get_physical_parameters(self, param_type=None, return_all=True):
         phys_params = PhysicalParameters.objects.filter(body=self.id)
