@@ -1295,7 +1295,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         new_mag, new_passband, snr, saturated = calc_asteroid_snr(magnitude, 'V', data['exp_length'], instrument=data['instrument_code'], params=snr_params)
         exp_count = data['exp_count']
         exp_length = data.get('exp_length', 1)
-        slot_length = determine_spectro_slot_length(data['exp_length'], data['calibs'])
+        slot_length = determine_spectro_slot_length(data['exp_length'], data['calibs'], data['exp_count'])
         slot_length /= 60.0
         slot_length = ceil(slot_length)
         # If automatically finding Solar Analog, calculate exposure time.
@@ -1637,7 +1637,7 @@ def feasibility_check(data, body):
         spectral_type = 'Solar'
     data['new_mag'], data['new_passband'], data['snr'], data['saturated'] = calc_asteroid_snr(data['magnitude'], ast_mag_bandpass, data['exp_length'], instrument=data['instrument_code'], params=snr_params, taxonomy=spectral_type)
     calibs = data.get('calibs', 'both')
-    slot_length = determine_spectro_slot_length(data['exp_length'], calibs)
+    slot_length = determine_spectro_slot_length(data['exp_length'], calibs, data.get('exp_count', 1))
     slot_length /= 60.0
     data['slot_length'] = slot_length
 
