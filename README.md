@@ -13,6 +13,7 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
   * Adds storage of reciprocal semi-major axis from MPC DB as a PhysicalParameter
   * Adds additional Body attribute to return reciprocal semi-major axis
   * Adds new get_cadence_info() method to summarize whether an object's cadence is underway or has halted and adds this into the LOOK Project template
+* Allow search of static (sidereal) calibration sources.
 
 ### 3.5.0
 Add Light curve analysis tools
