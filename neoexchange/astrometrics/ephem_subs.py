@@ -700,7 +700,7 @@ def convert_horizons_table(ephem, include_moon=False):
         moon_seps = []
         moon_phases = []
         for date, obj_ra, obj_dec in ephem[('datetime', 'RA', 'DEC')]:
-            moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(date, radians(obj_ra), radians(obj_dec), '-1')
+            moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(date.datetime, radians(obj_ra), radians(obj_dec), '-1')
             moon_seps.append(moon_obj_sep)
             moon_phases.append(moon_phase)
         ephem.add_columns(cols=(Column(moon_seps), Column(moon_phases)), names=('moon_sep', 'moon_phase'))
