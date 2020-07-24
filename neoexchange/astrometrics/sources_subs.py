@@ -1919,7 +1919,7 @@ def make_requestgroup(elements, params):
     if len(elements) > 0:
         logger.debug("Making a moving object")
         params['target'] = make_moving_target(elements)
-        if 'sky_pa' in elements:
+        if 'sky_pa' in elements and params['para_angle'] is False:
             params['rot_mode'] = 'SKY'
             params['rot_angle'] = round(elements['sky_pa'], 1)
     else:
@@ -2059,7 +2059,7 @@ def submit_block_to_scheduler(elements, params):
 
 
 def fetch_filter_list(site, spec):
-    """Fetches the filter list from the configdb"""
+    """Fetches the filter list from the observation portal instruments endpoint"""
 
     siteid, encid, telid = MPC_site_code_to_domes(site)
     if '1m0' in telid.lower():
@@ -2080,15 +2080,23 @@ def fetch_filter_list(site, spec):
     # Disable specific telescope check, use all telescopes of appropriate class at a site.
     encid = telid = ''
 
-    request_url = settings.CONFIGDB_API_URL + 'instruments/'
-    request_url += '?telescope={}&science_camera=&autoguider_camera=&camera_type={}&site={}&enclosure={}&state=SCHEDULABLE'.format(telid.lower(), camid, siteid.lower(), encid.lower())
+    request_url = (
+        '{instruments_url}?site={site}&enclosure={enclosure}&telescope={telescope}&instrument_type={instrument_type}'
+        '&only_schedulable=true'
+    ).format(
+        instruments_url=settings.PORTAL_INSTRUMENTS_URL,
+        site=siteid.lower(),
+        enclosure=encid.lower(),
+        telescope=telid.lower(),
+        instrument_type=camid
+    )
     response = requests.get(request_url, timeout=20, verify=True)
 
-    resp = {'results': ''}
+    resp = {}
     if response.status_code in [200, 201]:
         resp = response.json()
 
-    if not resp['results']:
+    if not resp:
         logger.error('Could not find any telescopes at {}'.format(site))
         data_out = []
     else:
@@ -2107,11 +2115,13 @@ def parse_filter_file(resp, spec):
         filter_list = cfg.spec_filters
 
     site_filters = []
-    for result in resp['results']:
+    for instrument_type_config in resp.values():
         try:
-            opt_elem = result['science_camera']['optical_elements']
-            filters_1tel = ",".join(list(opt_elem.values()))
-            filt_list = filters_1tel.split(',')
+            filt_list = []
+            for optical_elements in instrument_type_config['optical_elements'].values():
+                for optical_element in optical_elements:
+                    if optical_element['schedulable'] is True:
+                        filt_list.append(optical_element['code'])
         except KeyError:
             filt_list = []
         for filt in filter_list:
@@ -2507,10 +2517,13 @@ def store_jpl_physparams(phys_par, body):
             p_type = 'O'
         elif 'albedo' in p['name']:  # geometric albedo
             p_type = 'ab'
-        # Parameters available from the MPC, but not stored by us at the moment.
+        # Parameters available from JPL, but not explicitly stored by us at the moment.
+        # TAL 2020/7/8: Thought about mapping M1,K1->H,G here but decided against
 #        elif 'M1' == p['name']: # absolute magnitude of comet and coma (total)
-#        elif 'M2' == p['name']: # comet total magnitude parameter
+#            p_type = 'H'
 #        elif 'K1' == p['name']: # comet total magnitude slope parameter
+#            p_type = 'G'
+#        elif 'M2' == p['name']: # comet total magnitude parameter
 #        elif 'K2' == p['name']: # comet nuclear magnitude slope parameter
 #        elif 'PC' == p['name']: # comet nuclear magnitude law - phase coefficient
         elif 'spectral' in p['desc']:

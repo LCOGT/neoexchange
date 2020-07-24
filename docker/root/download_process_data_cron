@@ -1,0 +1,28 @@
+#!/bin/bash
+
+source ~/cronwrapper
+export PYTHONPATH="${HOME}/git/neoexchange-devel"
+logroot=/data/eng/rocks
+log=${logroot}/Logs/download_process_$(date +%F).log
+
+date_options=""
+if [[ $# -eq 1 ]]; then
+  date=$1
+  if [[ ${#date} -eq 8 ]]; then 
+    date_options="--date ${date}"
+    year=${date:0:4}
+    month=${date:4:2}
+    day=${date:6:2}
+    log=${logroot}/Logs/download_process_${year}-${month}-${day}.log
+    echo "Processing with ${date_options}" >> ${log}
+  else
+    echo "Incorrect date format; need YYYYMMDD"
+  fi
+fi
+#echo ${log}
+touch ${log}
+echo "================= $(date +"%F %T %Z") =================" >> ${log}
+
+cd $PYTHONPATH/neoexchange
+echo "date_options= ${date_options}" >> ${log}
+python3 manage.py download_process_data --skip-download --keep-temp-dir ${date_options} >> ${log} 2>&1 

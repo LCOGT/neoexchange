@@ -12,6 +12,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 
+
 from datetime import datetime, timedelta
 import os
 import sys
@@ -23,6 +24,7 @@ from urllib.parse import urljoin
 
 import requests
 from django.conf import settings
+from django.core.management.base import CommandError
 
 from core.urlsubs import get_lcogt_headers
 
@@ -249,6 +251,7 @@ def check_for_existing_file(filename, archive_md5=None, dbg=False, verbose=False
                     if verbose:
                         print("Tarball exists with correct MD5 sum")
                     return True
+
     return False
 
 

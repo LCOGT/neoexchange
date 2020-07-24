@@ -2057,6 +2057,42 @@ class TestDetermineSpectroSlotLength(TestCase):
 
         self.assertEqual(expected_slot_length, slot_length)
 
+    def test_multiexp_no_calibs(self):
+
+        exp_time = 30.0
+        calibs = 'none'
+        num_exp = 10
+
+        expected_slot_length = 961.0
+
+        slot_length = determine_spectro_slot_length(exp_time, calibs, num_exp)
+
+        self.assertEqual(expected_slot_length, slot_length)
+
+    def test_multiexp_calibs_after(self):
+
+        exp_time = 30.0
+        calibs = 'after'
+        num_exp = 10
+
+        expected_slot_length = 1284.0
+
+        slot_length = determine_spectro_slot_length(exp_time, calibs, num_exp)
+
+        self.assertEqual(expected_slot_length, slot_length)
+
+    def test_multiexp_calibs_both(self):
+
+        exp_time = 30.0
+        calibs = 'both'
+        num_exp = 10
+
+        expected_slot_length = 1607.0
+
+        slot_length = determine_spectro_slot_length(exp_time, calibs, num_exp)
+
+        self.assertEqual(expected_slot_length, slot_length)
+
 
 class TestGetSitePos(TestCase):
 

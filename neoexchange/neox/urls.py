@@ -28,10 +28,11 @@ from core.views import BodySearchView, BodyDetailView, BlockDetailView, Schedule
     CandidatesViewBlock, BlockReportMPC, \
     MeasurementDownloadMPC, MeasurementDownloadADESPSV, \
     SuperBlockListView, SuperBlockDetailView, characterization, SpectroFeasibility, BlockSpec,\
-    display_movie, GuideMovie, \
+    display_movie, GuideMovie, LCPlot, SpecDataListView, LCDataListView,\
     StaticSourceView, StaticSourceDetailView, ScheduleCalibSpectra, ScheduleCalibSubmit, \
     CalibSpectroFeasibility, ScheduleCalibParameters, \
-    BestStandardsView, PlotSpec, BodyVisibilityView, SuperBlockTimeline, BlockCancel
+    BestStandardsView, PlotSpec, BodyVisibilityView, SuperBlockTimeline, BlockCancel, \
+    look_project
 from core.plots import make_visibility_plot, \
     make_standards_plot, make_solar_standards_plot
 
@@ -64,6 +65,8 @@ urlpatterns = [
     url(r'^block/(?P<pk>\d+)/timeline/$', SuperBlockTimeline.as_view(), name='view-timeline'),
     url(r'^block/(?P<pk>\d+)/cancel/$', BlockCancel.as_view(), name='block-cancel'),
     url(r'^block/(?P<pk>\d+)/$', SuperBlockDetailView.as_view(model=SuperBlock), name='block-view'),
+    url(r'^summary/spec/$', SpecDataListView.as_view(), name='spec_data_summary'),
+    url(r'^summary/lc/$', LCDataListView.as_view(), name='lc_data_summary'),
     url(r'^target/$', ListView.as_view(model=Body, queryset=Body.objects.filter(active=True).order_by('-origin', '-ingest'), context_object_name="target_list"), name='targetlist'),
     url(r'^target/(?P<pk>\d+)/measurements/ades/download/$', MeasurementDownloadADESPSV.as_view(), name='download-ades'),
     url(r'^target/(?P<pk>\d+)/measurements/mpc/download/$', MeasurementDownloadMPC.as_view(), name='download-mpc'),
@@ -73,6 +76,7 @@ urlpatterns = [
     url(r'^target/(?P<pk>\d+)/visibility/$', BodyVisibilityView.as_view(model=Body), name='visibility'),
     url(r'^target/(?P<pk>\d+)/$', BodyDetailView.as_view(model=Body), name='target'),
     url(r'^target/(?P<pk>\d+)/spectra/$', PlotSpec.as_view(), name='plotspec'),
+    url(r'^target/(?P<pk>\d+)/lc/$', LCPlot.as_view(), name='lc_plot'),
     url(r'^search/$', BodySearchView.as_view(context_object_name="target_list"), name='search'),
     url(r'^ephemeris/$', ephemeris, name='ephemeris'),
     url(r'^ranking/$', ranking, name='ranking'),
@@ -81,6 +85,7 @@ urlpatterns = [
     url(r'^calibsources/solar/$', StaticSourceView.as_view(queryset=StaticSource.objects.filter(source_type=StaticSource.SOLAR_STANDARD).order_by('ra')), name='solarstandard-view'),
     url(r'^calibsources/(?P<pk>\d+)/$', StaticSourceDetailView.as_view(model=StaticSource), name='calibsource'),
     url(r'^characterization/$', characterization, name='characterization'),
+    url(r'^lookproject/$', look_project, name='look_project'),
     url(r'^feasibility/(?P<pk>\d+)/$', SpectroFeasibility.as_view(), name='feasibility'),
     url(r'^feasibility/calib/(?P<pk>\d+)/$', CalibSpectroFeasibility.as_view(), name='feasibility-calib'),
     url(r'^schedule/(?P<pk>\d+)/confirm/$', ScheduleSubmit.as_view(), name='schedule-confirm'),

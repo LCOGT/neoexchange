@@ -180,6 +180,7 @@ class ScheduleBlockForm(forms.Form):
     calibsource_exptime = forms.IntegerField(widget=forms.NumberInput(attrs={'size': '5'}), required=False)
     max_airmass = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     ipp_value = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
+    para_angle = forms.BooleanField(initial=False, required=False)
     min_lunar_dist = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     acceptability_threshold = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     ag_exp_time = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
