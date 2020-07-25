@@ -35,6 +35,7 @@ from astropy.utils.exceptions import AstropyDeprecationWarning
 warnings.simplefilter('ignore', category=AstropyDeprecationWarning)
 from astroquery.jplhorizons import Horizons
 from astropy.table import Column
+from astropy.time import Time
 
 # Local imports
 from astrometrics.time_subs import datetime2mjd_utc, datetime2mjd_tdb, mjd_utc2mjd_tt, ut1_minus_utc, round_datetime
@@ -684,7 +685,7 @@ def convert_horizons_table(ephem, include_moon=False):
     columns (if [include_moon] is True).
     The modified Astropy Table is returned"""
 
-    dates = Column([datetime.strptime(d, "%Y-%b-%d %H:%M") for d in ephem['datetime_str']])
+    dates = Time([datetime.strptime(d, "%Y-%b-%d %H:%M") for d in ephem['datetime_str']])
     if 'datetime' not in ephem.colnames:
         ephem.add_column(dates, name='datetime')
     # Convert units of RA/Dec rate from arcsec/hr to arcsec/min and compute
@@ -699,7 +700,7 @@ def convert_horizons_table(ephem, include_moon=False):
         moon_seps = []
         moon_phases = []
         for date, obj_ra, obj_dec in ephem[('datetime', 'RA', 'DEC')]:
-            moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(date, radians(obj_ra), radians(obj_dec), '-1')
+            moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(date.datetime, radians(obj_ra), radians(obj_dec), '-1')
             moon_seps.append(moon_obj_sep)
             moon_phases.append(moon_phase)
         ephem.add_columns(cols=(Column(moon_seps), Column(moon_phases)), names=('moon_sep', 'moon_phase'))
