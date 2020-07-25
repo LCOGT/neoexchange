@@ -366,7 +366,7 @@ class Command(BaseCommand):
         for super_block in super_blocks:
             block_list = Block.objects.filter(superblock=super_block.id)
             if obs_date:
-                block_list = block_list.filter(when_observed__lt=obs_date+timedelta(days=1)).filter(when_observed__gt=obs_date-timedelta(days=1))
+                block_list = block_list.filter(when_observed__lt=obs_date+timedelta(days=2)).filter(when_observed__gt=obs_date)
             self.stdout.write("Analyzing SuperblockBlock# %s for %s" % (super_block.tracking_number, super_block.body.current_name()))
             for block in block_list:
                 block_mags = []
