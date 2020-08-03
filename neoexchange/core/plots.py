@@ -709,13 +709,16 @@ def lc_plot(lc_list, meta_list, period=1, jpl_ephem=None):
         phased_lc_list = phase_lc(copy.deepcopy(lc_list), period, base_date)
         unphased_lc_list = phase_lc(copy.deepcopy(lc_list), None, base_date)
         jpl_date = (jpl_ephem['datetime_jd'] - base_date) * 24
-        horizons_source.data = dict(date=jpl_date, v_mag=jpl_ephem['V'])
+        try:
+            horizons_source.data = dict(date=jpl_date, v_mag=jpl_ephem['V'])
+        except KeyError:
+            horizons_source.data = dict(date=jpl_date, v_mag=jpl_ephem['Tmag'])
         colors = itertools.cycle(Category10[10])
         for c, lc in enumerate(phased_lc_list):
             plot_col = next(colors)
             # Build dataset_title
             sess_mid = (unphased_lc_list[c]['date'][-1] + unphased_lc_list[c]['date'][0]) / 2
-            jpl_v_mid.append(np.interp(sess_mid, jpl_date, jpl_ephem['V']))
+            jpl_v_mid.append(np.interp(sess_mid, jpl_date, horizons_source.data['v_mag']))
             span.append(round((unphased_lc_list[c]['date'][-1] - unphased_lc_list[c]['date'][0]), 2))
             md = meta_list[c]
             sess_date.append(md['SESSIONDATE'])
