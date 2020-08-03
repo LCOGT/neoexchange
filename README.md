@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.5.1.2
+Implement lc_plot fix to read in comet mags from Horizons.
+
 ### 3.5.1.1
 Fix creation of hours-up plots (Due to a need to work around [astropy/numpy bug](https://github.com/astropy/astropy/issues/9374) with filtering on `datetime`s in AstroPy `Table`s with AstroPy >= 3.2.2)
 
