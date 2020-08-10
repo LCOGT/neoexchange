@@ -25,7 +25,7 @@ def search(base_dir, matchpattern, latest=False):
     :return:
         If base directory doesn't exist: False
         If base directory exists, but is empty: Empty string
-        If base directory exists and latest==False: iterator
+        If base directory exists and latest==False: list of matched files
         If base directory exists, latest == True, and files found: String containing filename
         If base directory exists, latest == True, and files not found: Empty string
     """
@@ -35,7 +35,8 @@ def search(base_dir, matchpattern, latest=False):
         return False
     if files:
         regex = re.compile(matchpattern)
-        matchfiles = filter(regex.search, files)
+        file_filter = filter(regex.search, files)
+        matchfiles = [f for f in file_filter]
         # Find most recent file
         if not latest:
             return matchfiles
