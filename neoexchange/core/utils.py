@@ -18,6 +18,17 @@ from django.core.files.storage import default_storage
 
 
 def search(base_dir, matchpattern, latest=False):
+    """
+    :param base_dir: directory to search
+    :param matchpattern: filename pattern to search for
+    :param latest: flag to return only a single, most recently modified search result
+    :return:
+        If base directory doesn't exist: False
+        If base directory exists, but is empty: Empty string
+        If base directory exists and latest==False: iterator
+        If base directory exists, latest == True, and files found: String containing filename
+        If base directory exists, latest == True, and files not found: Empty string
+    """
     try:
         _, files = default_storage.listdir(base_dir)
     except FileNotFoundError:
