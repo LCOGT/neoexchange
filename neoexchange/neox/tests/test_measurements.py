@@ -16,6 +16,7 @@ GNU General Public License for more details.
 from .base import FunctionalTest
 import os
 from selenium import webdriver
+from selenium.common.exceptions import NoSuchElementException
 from django.urls import reverse
 from core.models import Body, Frame, SourceMeasurement
 from mock import patch
@@ -565,3 +566,19 @@ class MeasurementsPageTests(FunctionalTest):
         ades_dl_link.click()
         dl_filepath = os.path.join(self.test_dir, self.body.current_name() + ".psv")
         self.assertTrue(os.path.exists(dl_filepath))
+
+    def test_no_body_bad_measurements(self):
+
+        self.insert_test_measurements(rms=True)
+        self.insert_extra_measurements(rms=True)
+
+        # A user, Marco the trouble maker, is typing in random object IDs for the measurement page
+        target_url = self.live_server_url + reverse('measurement', kwargs={'pk': 10})
+        self.browser.get(target_url)
+
+        try:
+            error_text = self.browser.find_element_by_id('site-name').text
+        except NoSuchElementException:
+            error_text = self.browser.find_element_by_tag_name('h1').text
+        self.assertIn('Page not found', error_text)
+        self.assertNotIn('Server error', error_text)
