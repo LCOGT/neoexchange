@@ -393,7 +393,10 @@ class MeasurementViewBody(View):
     orphans = 3
 
     def get(self, request, *args, **kwargs):
-        body = Body.objects.get(pk=kwargs['pk'])
+        try:
+            body = Body.objects.get(pk=kwargs['pk'])
+        except ObjectDoesNotExist:
+            raise Http404("Body does not exist")
         measurements = SourceMeasurement.objects.filter(body=body).order_by('frame__midpoint')
         measurements = measurements.prefetch_related(Prefetch('frame'), Prefetch('body'))
 
@@ -419,7 +422,7 @@ class MeasurementViewBody(View):
             page = paginator.num_pages
         page_obj = paginator.page(page)
 
-        return render(request, self.template, {'body': body, 'measures' : page_obj, 'is_paginated': is_paginated, 'page_obj': page_obj})
+        return render(request, self.template, {'body': body, 'measures': page_obj, 'is_paginated': is_paginated, 'page_obj': page_obj})
 
 
 def download_measurements_file(template, body, m_format, request):
