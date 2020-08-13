@@ -101,7 +101,7 @@ class Command(BaseCommand):
                 dest = dest_list[0]
 
             filename = os.path.basename(file)
-            if not search(dest, filename, True) or options['overwrite']:
+            if not search(dest, filename) or options['overwrite']:
                 self.stdout.write("==== Uploading {} to S3:{}".format(file, dest))
                 with open(file, "rb") as f:
                     default_storage.save(os.path.join(dest, filename), f)
