@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.5.1.3
+A couple bug fixes
+
 ### 3.5.1.2
 Implement lc_plot fix to read in comet mags from Horizons.
 
