@@ -1650,7 +1650,7 @@ def make_spect_config(params, exp_filter):
         'target': params['target'],
         'acquisition_config': {
             'mode': 'BRIGHTEST',
-            'exposure_time' : params.get('ag_exp_time', 10),
+            'exposure_time': params.get('ag_exp_time', 10),
             "extra_params": {
               "acquire_radius": acq_rad,
             }
@@ -1658,7 +1658,7 @@ def make_spect_config(params, exp_filter):
         'guiding_config': {
             'mode': 'ON',
             'optional': False,
-            'exposure_time' : params.get('ag_exp_time', 10)
+            'exposure_time': params.get('ag_exp_time', 10)
         },
         'instrument_configs': [
             {
@@ -1668,7 +1668,7 @@ def make_spect_config(params, exp_filter):
                 'optical_elements': {
                     'slit': exp_filter[0]
                 },
-                'extra_params' : inst_extra
+                'extra_params': inst_extra
             }
         ]
     }
@@ -1959,14 +1959,21 @@ def make_requestgroup(elements, params):
         if 'pm_dec' in params['calibsource']:
             params['pm_dec'] = params['calibsource']['pm_dec']
         params['target'] = make_target(params)
+        # save target exposure settings
         exp_time = params['exp_time']
-        params['exp_time'] = params['calibsrc_exptime']
+        exp_count =  params['exp_count']
         ag_exptime = params.get('ag_exp_time', 10)
+        # update exposure settings for analog and create configurations
+        params['exp_time'] = params['calibsrc_exptime']
+        params['exp_count'] = 1
         params['ag_exp_time'] = 10
         params['rot_mode'] = 'VFLOAT'
         cal_configurations = make_configs(params)
+        # reinstate target exposure settings
         params['exp_time'] = exp_time
+        params['exp_count'] = exp_count
         params['ag_exp_time'] = ag_exptime
+
 
         cal_request = {
                         "location": location,
