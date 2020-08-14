@@ -1961,7 +1961,7 @@ def make_requestgroup(elements, params):
         params['target'] = make_target(params)
         # save target exposure settings
         exp_time = params['exp_time']
-        exp_count =  params['exp_count']
+        exp_count = params['exp_count']
         ag_exptime = params.get('ag_exp_time', 10)
         # update exposure settings for analog and create configurations
         params['exp_time'] = params['calibsrc_exptime']
@@ -1973,7 +1973,6 @@ def make_requestgroup(elements, params):
         params['exp_time'] = exp_time
         params['exp_count'] = exp_count
         params['ag_exp_time'] = ag_exptime
-
 
         cal_request = {
                         "location": location,
