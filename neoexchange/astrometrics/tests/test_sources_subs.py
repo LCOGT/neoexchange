@@ -930,6 +930,8 @@ class TestSubmitBlockToScheduler(TestCase):
         self.assertNotEqual(blocks[1].calibsource, None)
         self.assertEqual(blocks[1].calibsource.name, params['calibsource']['name'])
 
+
+
     def test_make_requestgroup(self):
 
         site_code = 'K92'
@@ -1440,6 +1442,59 @@ class TestSubmitBlockToScheduler(TestCase):
         cal_configurations = user_request['requests'][1]['configurations']
         self.assertEqual(len(cal_configurations), expected_configuration_num)
         self.assertEqual(cal_configurations[2]['instrument_configs'][0]['exposure_count'], expected_exp_count)
+        self.assertEqual(cal_configurations[2]['target'], expected_cal_target)
+        self.assertEqual(cal_configurations[2]['instrument_configs'][0]['exposure_time'], expected_cal_exptime)
+        self.assertEqual(cal_configurations[2]['instrument_configs'][0]['optical_elements']['slit'], expected_filter)
+
+    def test_multiframe_spectro_with_solar_analog(self):
+
+        utc_date = datetime(2018, 5, 11, 0)
+        params = {'proposal_id': 'LCOEngineering',
+                  'user_id': 'bsimpson',
+                  'spectroscopy': True,
+                  'calibs': 'before',
+                  'exp_count': 10,
+                  'exp_time': 30.0,
+                  'instrument_code': 'F65-FLOYDS',
+                  'site_code': 'F65',
+                  'filter_pattern': 'slit_2.0as',
+                  'group_name': self.body_elements['current_name'] + '_' + 'F65' + '-' + datetime.strftime(utc_date, '%Y%m%d') + "_spectra",
+                  'start_time':  utc_date + timedelta(hours=5),
+                  'end_time':  utc_date + timedelta(hours=15),
+                  'solar_analog': True,
+                  'calibsource': {'name': 'SA107-684', 'ra_deg': 234.3254167, 'dec_deg': -0.163889, 'calib_exptime': 60},
+                  }
+        expected_num_requests = 2
+        expected_operator = 'MANY'
+        expected_configuration_num = 3
+        expected_exp_count = 10
+        expected_ast_exptime = 30.0
+        expected_cal_exptime = 60.0
+        expected_cal_exp_count = 1
+        expected_filter = 'slit_2.0as'
+        expected_groupid = params['group_name'] + '+solstd'
+        expected_ast_target = {'name': 'N999r0q', 'type': 'ORBITAL_ELEMENTS', 'scheme': 'MPC_MINOR_PLANET',
+                               'epochofel': 57100.0, 'orbinc': 8.34739, 'longascnode': 147.81325,
+                               'argofperih': 85.19251, 'eccentricity': 0.1896865, 'extra_params': {'v_magnitude': 16.68},
+                               'meandist': 1.2176312, 'meananom': 325.2636}
+        expected_cal_target = {'type': 'ICRS', 'name': 'SA107-684', 'ra': 234.3254167, 'dec': -0.163889, 'extra_params': {}}
+
+        user_request = make_requestgroup(self.body_elements, params)
+        requests = user_request['requests']
+        self.assertEqual(expected_num_requests, len(requests))
+        self.assertEqual(expected_operator, user_request['operator'])
+        self.assertEqual(expected_groupid, user_request['name'])
+
+        ast_configurations = user_request['requests'][0]['configurations']
+        self.assertEqual(len(ast_configurations), expected_configuration_num)
+        self.assertEqual(ast_configurations[2]['target'], expected_ast_target)
+        self.assertEqual(ast_configurations[2]['instrument_configs'][0]['exposure_count'], expected_exp_count)
+        self.assertEqual(ast_configurations[2]['instrument_configs'][0]['exposure_time'], expected_ast_exptime)
+        self.assertEqual(ast_configurations[2]['instrument_configs'][0]['optical_elements']['slit'], expected_filter)
+
+        cal_configurations = user_request['requests'][1]['configurations']
+        self.assertEqual(len(cal_configurations), expected_configuration_num)
+        self.assertEqual(cal_configurations[2]['instrument_configs'][0]['exposure_count'], expected_cal_exp_count)
         self.assertEqual(cal_configurations[2]['target'], expected_cal_target)
         self.assertEqual(cal_configurations[2]['instrument_configs'][0]['exposure_time'], expected_cal_exptime)
         self.assertEqual(cal_configurations[2]['instrument_configs'][0]['optical_elements']['slit'], expected_filter)
