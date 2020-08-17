@@ -295,7 +295,10 @@ class SuperBlockListView(ListView):
 class BlockReport(LoginRequiredMixin, View):
 
     def get(self, request, *args, **kwargs):
-        block = Block.objects.get(pk=kwargs['pk'])
+        try:
+            block = Block.objects.get(pk=kwargs['pk'])
+        except ObjectDoesNotExist:
+            raise Http404("Block does not exist.")
         if block.when_observed:
             block.active = False
             block.reported = True
@@ -310,7 +313,10 @@ class BlockReport(LoginRequiredMixin, View):
 class BlockReportMPC(LoginRequiredMixin, View):
 
     def get(self, request, *args, **kwargs):
-        block = Block.objects.get(pk=kwargs['pk'])
+        try:
+            block = Block.objects.get(pk=kwargs['pk'])
+        except ObjectDoesNotExist:
+            raise Http404("Block does not exist.")
         if block.reported is True:
             messages.error(request, 'Block has already been reported')
             return HttpResponseRedirect(reverse('block-report-mpc', kwargs={'pk': kwargs['pk']}))
@@ -358,7 +364,10 @@ class UploadReport(LoginRequiredMixin, FormView):
     form_class = MPCReportForm
 
     def get(self, request, *args, **kwargs):
-        block = Block.objects.get(pk=kwargs['pk'])
+        try:
+            block = Block.objects.get(pk=kwargs['pk'])
+        except ObjectDoesNotExist:
+            raise Http404("Block does not exist.")
         form = MPCReportForm(initial={'block_id': block.id})
         return render(request, 'core/uploadreport.html', {'form': form, 'slot': block})
 
@@ -610,7 +619,10 @@ class CandidatesViewBlock(LoginRequiredMixin, View):
     template = 'core/candidates.html'
 
     def get(self, request, *args, **kwargs):
-        block = Block.objects.get(pk=kwargs['pk'])
+        try:
+            block = Block.objects.get(pk=kwargs['pk'])
+        except ObjectDoesNotExist:
+            raise Http404("Block does not exist.")
         candidates = Candidate.objects.filter(block=block).order_by('score')
         return render(request, self.template, {'body': block.body, 'candidates': candidates, 'slot': block})
 
@@ -3544,7 +3556,10 @@ def find_spec(pk):
     """find directory of spectra for a certain block
     NOTE: Currently will only pull first spectrum of a superblock
     """
-    block = Block.objects.get(pk=pk)
+    try:
+        block = Block.objects.get(pk=pk)
+    except ObjectDoesNotExist:
+        raise Http404("Block does not exist.")
     frames = Frame.objects.filter(block=block)
     if not frames:
         return '', '', '', '', ''
@@ -3702,7 +3717,10 @@ class BlockSpec(View):  # make logging required later
     template_name = 'core/plot_spec.html'
 
     def get(self, request, *args, **kwargs):
-        block = Block.objects.get(pk=kwargs['pk'])
+        try:
+            block = Block.objects.get(pk=kwargs['pk'])
+        except ObjectDoesNotExist:
+            raise Http404("Block does not exist.")
         script, div = plot_floyds_spec(block, int(kwargs['obs_num']))
         params = {'pk': kwargs['pk'], 'obs_num': kwargs['obs_num'], 'sb_id': block.superblock.id}
         if div:
@@ -3721,7 +3739,10 @@ class PlotSpec(View):
     template_name = 'core/plot_spec.html'
 
     def get(self, request, *args, **kwargs):
-        body = Body.objects.get(pk=kwargs['pk'])
+        try:
+            body = Body.objects.get(pk=kwargs['pk'])
+        except ObjectDoesNotExist:
+            raise Http404("Body does not exist.")
         script, div, p_spec = plot_all_spec(body)
         params = {'body': body, 'floyds': False}
         if div:
@@ -3869,7 +3890,10 @@ def display_movie(request, pk):
     logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date_obs, req, prop))
     logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
 
-    block = Block.objects.get(pk=pk)
+    try:
+        block = Block.objects.get(pk=pk)
+    except ObjectDoesNotExist:
+        raise Http404("Block does not exist.")
     if block.obstype in [Block.OPT_IMAGING, Block.OPT_IMAGING_CALIB]:
         movie_file = "{}_{}_framemovie.gif".format(obj.replace(' ', '_'), req)
     elif block.obstype in [Block.OPT_SPECTRA, Block.OPT_SPECTRA_CALIB]:
@@ -3894,7 +3918,10 @@ class GuideMovie(View):
     template_name = 'core/guide_movie.html'
 
     def get(self, request, *args, **kwargs):
-        block = Block.objects.get(pk=kwargs['pk'])
+        try:
+            block = Block.objects.get(pk=kwargs['pk'])
+        except ObjectDoesNotExist:
+            raise Http404("Block does not exist.")
         params = {'pk': kwargs['pk'], 'sb_id': block.superblock.id}
 
         return render(request, self.template_name, params)
