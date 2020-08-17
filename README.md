@@ -4,6 +4,10 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.5.1.4
+Limit Solar Analog spectra to 1 regardless of frames requested for Target
+Fix more Server Error Bugs
+
 ### 3.5.1.3
 A couple bug fixes
 
