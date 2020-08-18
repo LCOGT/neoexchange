@@ -8017,14 +8017,14 @@ class TestParsePortalErrors(TestCase):
         self.assertEqual(self.no_parse_msg, msg)
 
     def test_empty_response(self):
-        params = {'error_msg' : {} }
+        params = {'error_msg': {}}
         msg = parse_portal_errors(params)
 
         self.assertEqual(self.no_parse_msg, msg)
 
     def test_bad_proposal(self):
         expected_msg = self.no_extrainfo_msg + '\nproposal: Invalid pk "foo" - object does not exist.'
-        params = {'error_msg' : {'proposal': ['Invalid pk "foo" - object does not exist.']}}
+        params = {'error_msg': {'proposal': ['Invalid pk "foo" - object does not exist.']}}
 
         msg = parse_portal_errors(params)
 
@@ -8032,7 +8032,7 @@ class TestParsePortalErrors(TestCase):
 
     def test_no_visibility(self):
         expected_msg = self.no_extrainfo_msg + "According to the constraints of the request, the target is never visible within the time window. Check that the target is in the nighttime sky. Consider modifying the time window or loosening the airmass or lunar separation constraints. If the target is non sidereal, double check that the provided elements are correct."
-        params = {'error_msg' : {'requests': [{'non_field_errors': ['According to the constraints of the request, the target is never visible within the time window. Check that the target is in the nighttime sky. Consider modifying the time window or loosening the airmass or lunar separation constraints. If the target is non sidereal, double check that the provided elements are correct.']}]}}
+        params = {'error_msg': {'requests': [{'non_field_errors': ['According to the constraints of the request, the target is never visible within the time window. Check that the target is in the nighttime sky. Consider modifying the time window or loosening the airmass or lunar separation constraints. If the target is non sidereal, double check that the provided elements are correct.']}]}}
 
         msg = parse_portal_errors(params)
 
@@ -8042,9 +8042,29 @@ class TestParsePortalErrors(TestCase):
         expected_msg = self.no_extrainfo_msg + "According to the constraints of the request, the target is never visible within the time window. Check that the target is in the nighttime sky. Consider modifying the time window or loosening the airmass or lunar separation constraints. If the target is non sidereal, double check that the provided elements are correct."
         expected_msg += '\nproposal: Invalid pk "foo" - object does not exist.'
 
-        params = {'error_msg' : {'requests': [{'non_field_errors': ['According to the constraints of the request, the target is never visible within the time window. Check that the target is in the nighttime sky. Consider modifying the time window or loosening the airmass or lunar separation constraints. If the target is non sidereal, double check that the provided elements are correct.']}],
+        params = {'error_msg': {'requests': [{'non_field_errors': ['According to the constraints of the request, the target is never visible within the time window. Check that the target is in the nighttime sky. Consider modifying the time window or loosening the airmass or lunar separation constraints. If the target is non sidereal, double check that the provided elements are correct.']}],
                                  'proposal': ['Invalid pk "foo" - object does not exist.']}
-                 }
+                  }
+
+        msg = parse_portal_errors(params)
+
+        self.assertEqual(expected_msg, msg)
+
+    def test_multiple_blocks_same_name_error(self):
+        expected_msg = self.no_extrainfo_msg
+        expected_msg += '\nneox: Multiple Blocks for same day and site found'
+
+        params = {'error_msg': {'neox': ['Multiple Blocks for same day and site found']}}
+
+        msg = parse_portal_errors(params)
+
+        self.assertEqual(expected_msg, msg)
+
+    def test_no_proposal_permission(self):
+        expected_msg = self.no_extrainfo_msg
+        expected_msg += '\nneox: You do not have permission to schedule using proposal LCO20XXB-003'
+
+        params = {'error_msg': {'neox': ['You do not have permission to schedule using proposal LCO20XXB-003']}}
 
         msg = parse_portal_errors(params)
 
