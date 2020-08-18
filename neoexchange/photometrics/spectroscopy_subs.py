@@ -191,7 +191,7 @@ if __name__ == 'main':
     cdbs = os.getenv('CDBS_PATH', os.path.join(os.path.sep,'apophis','tlister','cdbs'))
     calspec = os.path.join(cdbs, 'calspec')
     sun_file = os.path.join(calspec, 'sun_reference_stis_002.fits')
-    sky_file = os.path.join(cdbs,'extinction','skytable_z1.2_pwv3.5_new_moon.fits')
+    sky_file = os.path.join(cdbs,'atmos','skytable_z1.2_pwv3.5_new_moon.fits')
     tic_params = construct_tic_params('F65-FLOYDS')
     optics_path = os.getenv('OPTICS_PATH', os.path.join('photometrics', 'data'))
     solar_analog = synthesize_solar_standard(10.57, sun_file, sky_file, tic_params, optics_path)
