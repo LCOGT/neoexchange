@@ -1588,7 +1588,7 @@ def schedule_submit(data, body, username):
         params['group_name'] = data['group_name']
     elif check_for_block(data, params, body) >= 2:
         # Multiple blocks found
-        resp_params = {'error_msg': 'Multiple Blocks for same day and site found'}
+        resp_params = {'error_msg': {'neox': ['Multiple Blocks for same day and site found']}}
     if check_for_block(data, params, body) == 0:
         # Submit to scheduler and then record block
         tracking_number, resp_params = submit_block_to_scheduler(body_elements, params)
