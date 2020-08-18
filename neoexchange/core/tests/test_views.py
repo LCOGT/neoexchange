@@ -8059,3 +8059,13 @@ class TestParsePortalErrors(TestCase):
         msg = parse_portal_errors(params)
 
         self.assertEqual(expected_msg, msg)
+
+    def test_no_proposal_permission(self):
+        expected_msg = self.no_extrainfo_msg
+        expected_msg += '\nneox: You do not have permission to schedule using proposal LCO20XXB-003'
+
+        params = {'error_msg': {'neox': ['You do not have permission to schedule using proposal LCO20XXB-003']}}
+
+        msg = parse_portal_errors(params)
+
+        self.assertEqual(expected_msg, msg)
