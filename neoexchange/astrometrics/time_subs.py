@@ -229,6 +229,20 @@ def jd_utc2datetime(jd):
     return dt
 
 
+def datetime2jd_utc(d):
+    """Converts a passed datetime object in UTC to the equivalent Julian
+    Date (JD), which is returned"""
+    mjd_utc = datetime2mjd_utc(d)
+    try:
+        jd_utc = mjd_utc+2400000.5
+    except TypeError:
+        try:
+            jd_utc = float(mjd_utc)+2400000.5
+        except:
+            return None
+    return jd_utc
+
+
 def mjd_utc2datetime(mjd):
     """Converts a passed Modified Julian date to a Python datetime object. 'None' is
     returned if the conversion was not possible."""

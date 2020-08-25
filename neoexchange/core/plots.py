@@ -38,7 +38,8 @@ from bokeh.layouts import layout, column, row
 from bokeh.plotting import figure, ColumnDataSource
 from bokeh.resources import CDN, INLINE
 from bokeh.embed import components, file_html
-from bokeh.models import HoverTool, Label, CrosshairTool, Whisker, TeeHead, Range1d, CustomJS, Title, CustomJSHover, DataRange1d
+from bokeh.models import HoverTool, Label, CrosshairTool, Whisker, TeeHead, Range1d, CustomJS, Title, CustomJSHover,\
+    DataRange1d
 from bokeh.models.widgets import CheckboxGroup, Slider, TableColumn, DataTable, HTMLTemplateFormatter, NumberEditor,\
     NumberFormatter, Spinner, Button, Panel, Tabs, Div, Toggle
 from bokeh.palettes import Category20, Category10
@@ -324,6 +325,8 @@ def spec_plot(data_spec, analog_data, reflec=False):
             for spec in data_spec:
                 data_label_reflec, reflec_spec, reflec_ast_wav = spectrum_plot(spec['filename'], analog=analog_data[0]['filename'])
                 plot2.line(reflec_ast_wav, reflec_spec, line_width=3, name=spec['label'])
+                # for n, wav in enumerate(reflec_ast_wav):
+                #     print(wav.value, reflec_spec[n])
                 plot2.title.text = 'Object: {}    Analog: {}'.format(spec['label'], analog_data[0]['label'])
         else:
             for spec in data_spec:
@@ -594,7 +597,7 @@ def get_name(meta_dat):
     return out_string, name, number
 
 
-def lc_plot(lc_list, meta_list, period=1, jpl_ephem=None):
+def lc_plot(lc_list, meta_list, spec_list, period=1, jpl_ephem=None):
     """Creates an interactive Bokeh LC plot:
     Inputs:
     [lc_list] --- A list of LC dictionaries, each one containing the following keys:
@@ -613,15 +616,25 @@ def lc_plot(lc_list, meta_list, period=1, jpl_ephem=None):
     jpl_ephem --- AstroPy Table containing at least the following keys:
             ['datetime_jd'] --- Julian dates
             ['V'] --- predicted V magnitude for given Julian dates
+                --OR --
+            ['tmag'] --- predicted mag for comets for given dates
     """
 
     # JS file containing call back functions
     js_file = os.path.abspath(os.path.join('core', 'static', 'core', 'js', 'bokeh_custom_javascript.js'))
 
-    # Pull general info from metadata
-    obj, name, num = get_name(meta_list[0])
-    date_range = meta_list[0]['SESSIONDATE'].replace('-', '') + '-' + meta_list[-1]['SESSIONDATE'].replace('-', '')
-    base_date = floor(min(sorted([jd for lc in lc_list for jd in lc['date']])))
+    if meta_list:
+        # Pull general info from metadata
+        obj, name, num = get_name(meta_list[0])
+        date_range = meta_list[0]['SESSIONDATE'].replace('-', '') + '-' + meta_list[-1]['SESSIONDATE'].replace('-', '')
+        base_date = floor(min(sorted([jd for lc in lc_list for jd in lc['date']])))
+    elif spec_list:
+        # pull general info from speclist
+        obj = spec_list['object']
+        date_range = min(spec_list['mid_times']).strftime('%Y/%m/%d') + '-' + max(spec_list['mid_times']).strftime('%Y/%m/%d')
+        base_date = floor(min(sorted(spec_list['start_JD'])))
+    else:
+        return None, """<div class='warning msgpadded'>Could not find any LC data for {}</div>""".format(body.full_name())
 
     # Initialize plots
     plot_u = figure(plot_width=900, plot_height=400)
@@ -635,6 +648,8 @@ def lc_plot(lc_list, meta_list, period=1, jpl_ephem=None):
     orig_source = ColumnDataSource(data=dict(time=[], mag=[], mag_err=[], color=[], title=[], err_high=[], err_low=[], alpha=[]))  # unphased LC data source
     dataset_source = ColumnDataSource(data=dict(symbol=[], date=[], time=[], site=[], filter=[], color=[], title=[], offset=[]))  # dataset info
     horizons_source = ColumnDataSource(data=dict(date=[], v_mag=[]))  # V-mag info
+    spectra_source = ColumnDataSource(data=dict(y=[], start=[], end=[], color=[]))
+    orig_spectra_source = ColumnDataSource(data=dict(y=[], start=[], end=[], color=[]))
 
     # Create Input controls
     phase_shift = Slider(title="Phase Offset", value=0, start=-1, end=1, step=.01, width=200, tooltips=False)  # Slider bar to change base_date by +/- 1 period
@@ -655,17 +670,18 @@ def lc_plot(lc_list, meta_list, period=1, jpl_ephem=None):
     # Create plots
     error_cap = TeeHead(line_alpha=0)
     # Build unphased plot:
-    plot_u.line(x="date", y="v_mag", source=horizons_source, line_color='black', line_width=3, line_alpha=.5, legend_label="Horizons V-mag", visible=False)
-    plot_u.add_layout(
-        Whisker(source=orig_source, base="time", upper="err_high", lower="err_low", line_color="color", line_alpha="alpha",
-                lower_head=error_cap, upper_head=error_cap))
+    plot_u.line(x="date", y="v_mag", source=horizons_source, line_color='black', line_width=3, line_alpha=.5,
+                legend_label="Horizons V-mag", visible=False)
+    plot_u.add_layout(Whisker(source=orig_source, base="time", upper="err_high", lower="err_low", line_color="color",
+                              line_alpha="alpha", lower_head=error_cap, upper_head=error_cap))
     plot_u.circle(x="time", y="mag", source=orig_source, size=3, color="color", alpha="alpha")
+    plot_u.hbar(y="y", left="start", right="end", height=0.1, color="color", source=orig_spectra_source)
     plot_u.legend.click_policy = 'hide'
     # Build Phased PLot:
-    plot_p.add_layout(
-        Whisker(source=source, base="time", upper="err_high", lower="err_low", line_color="color", line_alpha="alpha",
-                lower_head=error_cap, upper_head=error_cap))
+    plot_p.add_layout(Whisker(source=source, base="time", upper="err_high", lower="err_low", line_color="color",
+                              line_alpha="alpha", lower_head=error_cap, upper_head=error_cap))
     data_plot = plot_p.circle(x="time", y="mag", source=source, size=3, color="color", alpha="alpha", name='mags')
+    plot_p.hbar(y="y", left="start", right="end", height=0.1, color="color", source=spectra_source, name='mags')
     base_line = plot_p.line([-2, 2], [base_date, base_date], alpha=0, name="phase_line")
 
     # Write custom JavaScript Code to print the time to the next iteration of the given phase in a HoverTool
@@ -708,17 +724,19 @@ def lc_plot(lc_list, meta_list, period=1, jpl_ephem=None):
         jpl_v_mid = []
         phased_lc_list = phase_lc(copy.deepcopy(lc_list), period, base_date)
         unphased_lc_list = phase_lc(copy.deepcopy(lc_list), None, base_date)
-        jpl_date = (jpl_ephem['datetime_jd'] - base_date) * 24
-        try:
-            horizons_source.data = dict(date=jpl_date, v_mag=jpl_ephem['V'])
-        except KeyError:
-            horizons_source.data = dict(date=jpl_date, v_mag=jpl_ephem['Tmag'])
+        if jpl_ephem:
+            jpl_date = (jpl_ephem['datetime_jd'] - base_date) * 24
+            try:
+                horizons_source.data = dict(date=jpl_date, v_mag=jpl_ephem['V'])
+            except KeyError:
+                horizons_source.data = dict(date=jpl_date, v_mag=jpl_ephem['Tmag'])
         colors = itertools.cycle(Category10[10])
         for c, lc in enumerate(phased_lc_list):
             plot_col = next(colors)
             # Build dataset_title
             sess_mid = (unphased_lc_list[c]['date'][-1] + unphased_lc_list[c]['date'][0]) / 2
-            jpl_v_mid.append(np.interp(sess_mid, jpl_date, horizons_source.data['v_mag']))
+            if jpl_ephem:
+                jpl_v_mid.append(np.interp(sess_mid, jpl_date, horizons_source.data['v_mag']))
             span.append(round((unphased_lc_list[c]['date'][-1] - unphased_lc_list[c]['date'][0]), 2))
             md = meta_list[c]
             sess_date.append(md['SESSIONDATE'])
@@ -735,7 +753,7 @@ def lc_plot(lc_list, meta_list, period=1, jpl_ephem=None):
 
         phased_dict = build_data_sets(phased_lc_list, sess_title)
         for k, phase in enumerate(phased_dict['time']):
-            if 0 < phase < 1 :
+            if 0 < phase < 1:
                 for key in phased_dict.keys():
                     if key == 'time':
                         if 0 < phase < 0.5:
@@ -746,6 +764,8 @@ def lc_plot(lc_list, meta_list, period=1, jpl_ephem=None):
                         phased_dict[key].append(phased_dict[key][k])
         source.data = phased_dict
         orig_source.data = build_data_sets(unphased_lc_list, sess_title)
+        spectra_source.data = phase_spec(spec_list, period, base_date)
+        orig_spectra_source.data = phase_spec(spec_list, None, base_date)
 
     update()  # initial load of the data
 
@@ -860,7 +880,7 @@ def build_data_sets(lc_list, title_list):
         dataset_title = title_list[c]
         data_title += [dataset_title]*len(lc['date'])
     data = dict(time=x_times, mag=y_mags, color=dat_colors, title=data_title, err_high=hi_errs,
-                            err_low=low_errs, alpha=dat_alphas, mag_err=mag_err)
+                err_low=low_errs, alpha=dat_alphas, mag_err=mag_err)
     return data
 
 
@@ -878,6 +898,39 @@ def phase_lc(lc_data, period, base_date):
         lc['date'] = phase
         phase_list.append(lc)
     return phase_list
+
+
+def phase_spec(spec_list, period, base_date):
+    """Remove base JD, convert to hours, and fold spec around period.
+        If Period=None, Just remove Base JD and convert to Hours.
+    """
+    start_list = []
+    end_list = []
+    base_y = 0
+    colors = itertools.cycle(Category10[10])
+    dat_colors = []
+    y_height = []
+    for c, start in enumerate(spec_list['start_JD']):
+        plot_col = next(colors)
+        dat_colors.append(plot_col)
+        y_height.append(base_y)
+        start_phased = (start - base_date) * 24
+        end_phased = (spec_list['end_JD'][c] - base_date) * 24
+        if period:
+            start_phased = start_phased / period
+            start_phased = start_phased - start_phased // 1
+            end_phased = end_phased / period
+            end_phased = end_phased - end_phased // 1
+        start_list.append(start_phased)
+        if end_phased < start_phased:
+            end_list.append(1)
+            start_list.append(0)
+            dat_colors.append(plot_col)
+            y_height.append(base_y)
+        end_list.append(end_phased)
+
+    data = dict(y=y_height, start=start_list, end=end_list, color=dat_colors)
+    return data
 
 
 def translate_from_alcdef_filter(filt):

@@ -67,7 +67,7 @@ from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal,
     read_mpcorbit_file, fetch_jpl_physparams_altdes, store_jpl_sourcetypes, store_jpl_desigs,\
     store_jpl_physparams
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
-    parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
+    parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st, datetime2jd_utc
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
     read_mtds_file, unpack_tarball, run_findorb
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
@@ -3871,8 +3871,22 @@ def get_lc_plot(body, data):
     else:
         ephem = []
 
-    if lc_list:
-        script, div = lc_plot(lc_list, meta_list, period, jpl_ephem=ephem)
+    # get spectroscopy data
+    spec_frame = Frame.objects.filter(block__body=body, frametype=4, filename__icontains='e00').values('midpoint', 'exptime')
+    spec_start_times = []
+    spec_end_times = []
+    spec_mid_times = []
+    for sf in spec_frame:
+        spec_start_times.append(datetime2jd_utc(sf['midpoint']-timedelta(seconds=sf['exptime']/2)))
+        spec_end_times.append(datetime2jd_utc(sf['midpoint']+timedelta(seconds=sf['exptime']/2)))
+        spec_mid_times.append(sf['midpoint'])
+    spec_frame_data = {'object': body.full_name(),
+                       'start_JD': spec_start_times,
+                       'end_JD': spec_end_times,
+                       'mid_times': spec_mid_times}
+
+    if meta_list or spec_frame_data:
+        script, div = lc_plot(lc_list, meta_list, spec_frame_data, period, jpl_ephem=ephem)
     else:
         script = None
         div = """
