@@ -70,6 +70,7 @@
                                 </form>
                             </div>
                             <a class="button button-primary" href="{% url 'feasibility' body.id %}" id="check-feasibility">Check Spectroscopic Feasibility</a>
+                            <a class="button button-primary" href="{% url 'lc_plot' body.id %}" id="lightcurve-plot">Create LC Plot</a>
                             <h5  class="section-title">Recent Blocks Scheduled</h5>
                             <ul class="block-status">
                                 {% for b in blocks %}
@@ -115,7 +116,7 @@
                                 <a href="{% url 'visibility' body.id %}" class="button button-primary" id="visibility">Plot Visibility</a>
                             {% endif %}
                             </div>
-                            <div class="section-title">Last Update: {{body.ingest|date:"Y-M-d H:i"}}</div>
+                            <div class="section-title">{{body.get_latest_update.0}}: {{body.get_latest_update.1|date:"Y-M-d H:i"}}</div>
                             <h5 class="section-title">Orbital Elements</h5>
                             <table class="keyvalue-table" id="id_orbelements">
                                 <tbody>
@@ -124,7 +125,17 @@
                                     </tr>
                                     <tr>
                                         <td class="kv-key">Epoch of elements (MJD)</td>
-                                        <td class="kv-value">{{body.epochofel_mjd}}</td>
+                                        <td>
+                                        <table align="right"  style="margin: 0px"><tr>
+                                            <td class="kv-value">
+                                                <div class="tooltip">
+                                                    {{body.epochofel_mjd}}
+                                                    <span class="tooltiptext" style="width:fit-content;left:75%;width:-moz-fit-content;">
+                                                        {{body.epochofel_mjd|mjd_utc2date}}
+                                                    </span>
+                                                </div>
+                                            </td><td></td></tr></table>
+                                        </td>
                                     </tr>
                                     <tr>
                                         <td class="kv-key">Orbital inclination in deg</td>
@@ -312,6 +323,13 @@
 									        </tr>
 								        {% endif %}
 								    {% endfor %}
+                                    {% for sb in blocks %}
+                                        {% if sb.obstype == 1 %}
+                                            <tr>
+										        <td class="kv-key"> LCO Spectrum</td>
+                                                <td class="kv-value"><a href="{% url 'blockspec' sb.pk 1 %}">{{sb.when_observed|date:"Y-m-d"}} ({{sb.site|upper}}) </a></td>
+                                        {% endif %}
+                                    {% endfor %}
                                     {% for t in taxonomies %}
 									<tr><td ><table align="left"  style="margin: 0px"><tr>
 										<td class="kv-key" >

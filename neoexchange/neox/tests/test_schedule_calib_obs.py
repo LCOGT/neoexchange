@@ -142,7 +142,7 @@ class ScheduleObservations(FunctionalTest):
         magnitude = self.browser.find_element_by_id('id_magnitude_row').find_element_by_class_name('kv-value').text
         self.assertIn('7.0', magnitude)
         vis = self.browser.find_element_by_id('id_visibility_row').find_element_by_class_name('kv-value').text
-        self.assertIn('7.8 hrs / 88°', vis)
+        self.assertIn('7.6 hrs / 87°', vis)
         slot_length = self.browser.find_element_by_id('id_slot_length_row').find_element_by_class_name('kv-value').text
         self.assertIn('21', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
@@ -150,7 +150,7 @@ class ScheduleObservations(FunctionalTest):
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
         self.assertIn('180.0', exp_length)
         snr = self.browser.find_element_by_id('id_snr_row').find_element_by_class_name('kv-value').text
-        self.assertIn('2149.3', snr)
+        self.assertIn('2149.2', snr)
 
         # At this point, a 'Schedule this object' button appears
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
@@ -282,7 +282,7 @@ class ScheduleObservations(FunctionalTest):
         magnitude = self.browser.find_element_by_id('id_magnitude_row').find_element_by_class_name('kv-value').text
         self.assertIn('7.0', magnitude)
         vis = self.browser.find_element_by_id('id_visibility_row').find_element_by_class_name('kv-value').text
-        self.assertIn('3.1 hrs / 40°', vis)
+        self.assertIn('2.8 hrs / 40°', vis)
         slot_length = self.browser.find_element_by_id('id_slot_length_row').find_element_by_class_name('kv-value').text
         self.assertIn('21', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
@@ -290,7 +290,7 @@ class ScheduleObservations(FunctionalTest):
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
         self.assertIn('180.0', exp_length)
         snr = self.browser.find_element_by_id('id_snr_row').find_element_by_class_name('kv-value').text
-        self.assertIn('2068.7', snr)
+        self.assertIn('2068.6', snr)
 
         # Bart wants to change the exposure time and recalculate snr
         slot_length_box = self.browser.find_element_by_id('id_exp_length')
@@ -322,7 +322,10 @@ class ScheduleObservations(FunctionalTest):
         vis = self.browser.find_element_by_id('id_visibility_row').find_element_by_class_name('kv-value').text
         self.assertIn('4.6 hrs', vis)
         moon_warn = self.browser.find_element_by_id('id_moon_row').find_element_by_class_name('warning').text
-        self.assertIn('35.3', moon_warn)
+        self.assertIn('35.8', moon_warn)
+
+        submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
+        self.assertIn('Schedule this Object', submit)
 
         # Bart wants to change the max airmass to 1.1 and gets a warning
         self.browser.find_element_by_id("advanced-switch").click()
@@ -333,6 +336,21 @@ class ScheduleObservations(FunctionalTest):
             self.browser.find_element_by_id("id_edit_button").click()
         vis = self.browser.find_element_by_id('id_visibility_row').find_element_by_class_name('warning').text
         self.assertIn('Target Not Visible', vis)
+
+        # Fix issue:
+        self.browser.find_element_by_id("advanced-switch").click()
+        airmass_box = self.browser.find_element_by_id('id_max_airmass')
+        airmass_box.clear()
+        airmass_box.send_keys('2.0')
+        self.browser.find_element_by_id("id_edit_window").click()
+        start_time_box = self.browser.find_element_by_id('id_start_time')
+        start_time_box.clear()
+        start_time_box.send_keys('2015-12-21T13:13:00')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
+        start_time = self.browser.find_element_by_id('id_start_time').get_attribute('value')
+        self.assertEqual(start_time, '2015-12-21T13:13:00')
+
 
         # Bart wants to be a little &^%$ and stress test our group ID input
         group_id_box = self.browser.find_element_by_name("group_name")
@@ -352,8 +370,6 @@ class ScheduleObservations(FunctionalTest):
         group_id = self.browser.find_element_by_id('id_group_name').get_attribute('value')
         self.assertEqual(bs_string[:50], group_id)
 
-        submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
-        self.assertIn('Schedule this Object', submit)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list_no2m)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list_no2m)

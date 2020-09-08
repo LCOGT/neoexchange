@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% load staticfiles basic_tags %}
+
+{% block css-content %}<link rel="stylesheet" href="{% static 'core/css/forms.css' %}">{% endblock %}
+
+{% block header %}Data Summary Page{% endblock %}
+
+{% block bodyclass %}page{% endblock %}
+
+{% block extramenu %}
+ <div class="headingleft">
+        <h1>Data Summary Page</h1>
+    </div>
+{% endblock%}
+
+{% block main-content %}
+    <div id="main" class="fullwidth">
+        {% if data_type == 'Spec' %}
+            <h1 style="display:inline"> LCO Spectroscopy </h1> <a href="{% url 'lc_data_summary' %}" style="display:inline">(LC)</a>
+        {% else %}
+            {% if data_type == 'LC' %}
+                <h1 style="display:inline"> LCO Light Curves </h1> <a href="{% url 'spec_data_summary' %}" style="display:inline">(Spec)</a>
+            {% endif %}
+        {% endif %}
+        <table id="id_ranked_targets" class="datatable">
+            <thead>
+                <tr>
+                    <th class="list_project">
+                        <span class="sortable" id="rank"></span>
+                    </th>
+                    {% if data_type == 'Spec' %}
+                    <th class="list_project">
+                        <span class="sortable" id="Date">Date</span>
+                    </th>
+                    <th class="list_title">
+                        <span class="sortable" id="name_id">Target Name</span>
+                    </th>
+                    <th>
+                        <span class="sortable" id="Block">Block</span>
+                    </th>
+                    <th>
+                        <span class="sortable" id="Obs">Obs</span>
+                    </th>
+                    {% endif %}
+                    {% if data_type == 'LC' %}
+                    <th class="list_title">
+                        <span class="sortable" id="name_id">Target Name</span>
+                    </th>
+                    {% endif %}
+
+                </tr>
+            </thead>
+            <tbody>
+                {% for datum in data_list %}
+                <tr class="{% cycle 'odd' 'even' %}">
+                    <td data-label="Rank">{{forloop.counter}}</td>
+                    {% if data_type == 'Spec' %}
+                    {% with datum as block %}
+                        <td data-label="date">{{block.when_observed|date:"Y-m-d"}}</td>
+                        <td data-label="body"><a href="{% url 'target' block.body.id %}">{{block.body.current_name}}</a></td>
+                        <td data-label="block"><a href="{% url 'block-view' block.superblock.id %}">{{block.superblock.id}}</a></td>
+                        <td data-label="obs">
+                            <div>
+                            {% with ' '|center:block.num_observed as range %}
+                            {% for _ in range %}
+                                <a href="{% url 'blockspec' block.id forloop.counter %}" style="display: inline;">{{forloop.counter}}</a>
+                                {% if forloop.counter != block.num_observed %},&ensp;{% endif %}
+                            {% endfor %}
+                            {% endwith %}
+                            </div>
+                        </td>
+                    {% endwith %}
+                    {% else %}
+                        {% if data_type == 'LC' %}
+                        {% with datum as body %}
+                            <td data-label="body"><a href="{% url 'lc_plot' body.id %}">{{body.current_name}}</a></td>
+                        {% endwith %}
+                        {% endif %}
+                    {% endif %}
+
+                    </tr>
+                {% empty%}
+                    <tr><td colspan=16> No new targets</td></tr>
+                {% endfor%}
+            </tbody>
+        </table>
+    </div>
+    <div class="row">
+        {% if is_paginated %}
+            <!-- start -->
+                {% include '_pagination.html' with items=items %}
+            <!-- end -->
+        {% endif %}
+    </div>
+{% endblock %}
+

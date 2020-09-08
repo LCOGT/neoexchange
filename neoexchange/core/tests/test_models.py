@@ -54,12 +54,15 @@ class TestBody(TestCase):
         self.body, created = Body.objects.get_or_create(**params)
 
         params['provisional_name'] = 'V92818q'
+        params['ingest'] = datetime(2019, 4, 20, 3, 2, 1)
         self.body2, created = Body.objects.get_or_create(**params)
 
         params['provisional_name'] = 'I22871'
+        params['update_time'] = params['ingest'] - timedelta(seconds=1)
         self.body3, created = Body.objects.get_or_create(**params)
 
         params['provisional_name'] = 'Ntheiqo'
+        params['update_time'] = params['ingest'] + timedelta(seconds=1)
         self.body4, created = Body.objects.get_or_create(**params)
 
         params['provisional_name'] = 'Q488391r'
@@ -191,6 +194,18 @@ class TestBody(TestCase):
                        }
         self.test_block5b = Block.objects.create(**block_params5b)
 
+        frame_params = { 'sitecode' : 'E10',
+                         'instrument' : 'fs03',
+                         'midpoint' : self.body5.ingest + timedelta(days=1),
+                         'block' : self.test_block5b
+                       }
+        self.test_frame = Frame.objects.create(**frame_params)
+
+        srcm_params = { 'body' : self.body5,
+                        'frame' : self.test_frame
+                      }
+        self.test_srcmeasure = SourceMeasurement.objects.create(**srcm_params)
+
         spectra_params = {'body'         : self.body,
                           'spec_wav'     : 'Vis',
                           'spec_vis'     : 'sp233/a265962.sp233.txt',
@@ -295,6 +310,64 @@ class TestBody(TestCase):
         self.assertEqual(obs_window[0], expected_start)
         self.assertEqual(obs_window[1], expected_end)
 
+    def test_return_latest_measurement_no_ingest(self):
+        expected_dt = self.body.ingest
+        expected_type = 'Ingest Time'
+
+        update_type, update_dt = self.body.get_latest_update()
+
+        self.assertEqual(expected_type, update_type)
+        self.assertEqual(expected_dt, update_dt)
+
+    def test_return_latest_measurement_ingest(self):
+        expected_dt = self.body2.ingest
+        expected_type = 'Ingest Time'
+
+        update_type, update_dt = self.body2.get_latest_update()
+
+        self.assertEqual(expected_type, update_type)
+        self.assertEqual(expected_dt, update_dt)
+
+    def test_return_latest_measurement_update_earlier(self):
+        expected_dt = self.body3.ingest
+        expected_type = 'Ingest Time'
+
+        update_type, update_dt = self.body3.get_latest_update()
+
+        self.assertEqual(expected_type, update_type)
+        self.assertEqual(expected_dt, update_dt)
+
+    def test_return_latest_measurement_update_later(self):
+        expected_dt = self.body4.update_time
+        expected_type = 'Last Update'
+
+        update_type, update_dt = self.body4.get_latest_update()
+
+        self.assertEqual(expected_type, update_type)
+        self.assertEqual(expected_dt, update_dt)
+
+    def test_return_later_srcmeasure(self):
+        expected_dt = self.test_frame.midpoint
+        expected_type = 'Last Measurement'
+
+        update_type, update_dt = self.body5.get_latest_update()
+
+        self.assertEqual(expected_type, update_type)
+        self.assertEqual(expected_dt, update_dt)
+
+    def test_return_earlier_srcmeasure(self):
+        self.body5.update_time += timedelta(days=2)
+        self.body5.save()
+        self.body5.refresh_from_db()
+
+        expected_dt = self.body5.update_time
+        expected_type = 'Last Update'
+
+        update_type, update_dt = self.body5.get_latest_update()
+
+        self.assertEqual(expected_type, update_type)
+        self.assertEqual(expected_dt, update_dt)
+
 
 @patch('core.models.body.datetime', MockDateTime)
 class TestComputeFOM(TestCase):
@@ -302,7 +375,6 @@ class TestComputeFOM(TestCase):
     def setUp(self):
         # Initialise with a test body and two test proposals
         params = {  'provisional_name' : 'N999r0q',
-                    'abs_mag'       : 21.0,
                     'slope'         : 0.15,
                     'epochofel'     : '2015-03-19 00:00:00',
                     'meananom'      : 325.2636,
@@ -323,7 +395,6 @@ class TestComputeFOM(TestCase):
         self.body, created = Body.objects.get_or_create(**params)
 
         params = {  'provisional_name' : '29182875',
-                    'abs_mag'       : 21.0,
                     'slope'         : 0.15,
                     'epochofel'     : '2015-03-19 00:00:00',
                     'meananom'      : 325.2636,
@@ -344,7 +415,6 @@ class TestComputeFOM(TestCase):
         self.body2, created = Body.objects.get_or_create(**params)
 
         params = {  'provisional_name' : 'C94028',
-                    'abs_mag'       : 21.0,
                     'slope'         : 0.15,
                     'epochofel'     : '2015-03-19 00:00:00',
                     'meananom'      : 325.2636,
@@ -365,7 +435,6 @@ class TestComputeFOM(TestCase):
         self.body3, created = Body.objects.get_or_create(**params)
 
         params = {  'provisional_name' : 't392019fci',
-                    'abs_mag'       : 21.0,
                     'slope'         : 0.15,
                     'epochofel'     : '2015-03-19 00:00:00',
                     'meananom'      : 325.2636,
@@ -418,11 +487,152 @@ class TestComputeFOM(TestCase):
         self.assertEqual(expected_FOM, FOM)
 
 
+class TestComputePeriod(TestCase):
+
+    def setUp(self):
+        # Initialise with a few test bodies
+        params = {  'provisional_name' : 'N999r0q',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    'not_seen'      : 2.3942,
+                    'arc_length'    : 0.4859,
+                    'score'         : 83,
+                    'abs_mag'       : 19.8
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+
+        params['eccentricity'] = 1.0
+        self.body_parabolic, created = Body.objects.get_or_create(**params)
+
+        params['eccentricity'] = 1.001
+        self.body_hyperbolic, created = Body.objects.get_or_create(**params)
+
+        params['eccentricity'] = None
+        self.body_bad_e, created = Body.objects.get_or_create(**params)
+
+        params = {
+                     'provisional_name': None,
+                     'provisional_packed': None,
+                     'name': '46P',
+                     'origin': 'O',
+                     'source_type': 'C',
+                     'source_subtype_1': 'JF',
+                     'source_subtype_2': None,
+                     'elements_type': 'MPC_COMET',
+                     'active': True,
+                     'fast_moving': False,
+                     'urgency': None,
+                     'epochofel': datetime(2018, 12, 13, 0, 0),
+                     'orbit_rms': 0.5,
+                     'orbinc': 11.7476819127047,
+                     'longascnode': 82.1575744851216,
+                     'argofperih': 356.341231360739,
+                     'eccentricity': 0.6587595570783943,
+                     'meandist': None,
+                     'meananom': None,
+                     'perihdist': 1.055355764253904,
+                     'epochofperih': datetime(2018, 12, 12, 22, 21, 2),
+                     'abs_mag': 14.9,
+                     'slope': 6.4,
+                     'score': 58,
+                     'discovery_date': datetime(1948, 1, 17, 9, 36),
+                     'num_obs': 14,
+                     'arc_length': 2.61,
+                     'not_seen': 0.023,
+                     'updated': True,
+                     'ingest': datetime(2017, 5, 21, 19, 50, 9),
+                     'update_time': datetime(2017, 5, 24, 2, 51, 58)}
+        self.body_46P, created = Body.objects.get_or_create(**params)
+
+        params = {
+                     'provisional_name': None,
+                     'provisional_packed': None,
+                     'name': 'C/2013 US10',
+                     'origin': 'O',
+                     'source_type': 'C',
+                     'source_subtype_1': 'H',
+                     'source_subtype_2': None,
+                     'elements_type': 'MPC_COMET',
+                     'active': True,
+                     'fast_moving': False,
+                     'urgency': None,
+                     'epochofel': datetime(2019, 4, 27, 0, 0),
+                     'orbit_rms': 99.0,
+                     'orbinc': 148.83797,
+                     'longascnode': 186.25239,
+                     'argofperih': 340.51541,
+                     'eccentricity': 1.0005522,
+                     'meandist': None,
+                     'meananom': None,
+                     'perihdist': 0.8244693,
+                     'epochofperih': datetime(2015, 11, 16, 1, 5, 31),
+                     'abs_mag': 8.1,
+                     'slope': 2.8,
+                     'score': None,
+                     'discovery_date': datetime(2013, 8, 14, 0, 0),
+                     'num_obs': 4703,
+                     'arc_length': 1555.0,
+                     'not_seen': 963.9336267593403,
+                     'updated': True,
+                     'ingest': datetime(2020, 7, 6, 22, 23, 23),
+                     'update_time': datetime(2017, 11, 16, 0, 0)
+                    }
+        self.body_US10, created = Body.objects.get_or_create(**params)
+
+    def test_asteroid(self):
+        expected_period = 1.3436113120948885
+
+        period = self.body.period
+
+        self.assertAlmostEqual(expected_period, period, 5)
+
+    def test_asteroid_parabolic(self):
+        expected_period = 1e99
+
+        period = self.body_parabolic.period
+
+        self.assertEqual(expected_period, period)
+
+    def test_asteroid_hyperbolic(self):
+        expected_period = 1e99
+
+        period = self.body_hyperbolic.period
+
+    def test_asteroid_no_e(self):
+        expected_period = None
+
+        period = self.body_bad_e.period
+
+        self.assertEqual(expected_period, period)
+
+    def test_comet(self):
+        expected_period = 5.4388562985454545
+
+        period = self.body_46P.period
+
+        self.assertAlmostEqual(expected_period, period, 5)
+
+    def test_comet_hyperbolic(self):
+        expected_period = 1e99
+
+        period = self.body_US10.period
+
+
 class TestSavePhysicalParameters(TestCase):
 
     def setUp(self):
         params = {  'name' : '21545',
-                    'abs_mag'       : 21.0,
                     'slope'         : 0.15,
                     'epochofel'     : '2015-03-19 00:00:00',
                     'meananom'      : 325.2636,
@@ -618,7 +828,6 @@ class TestGetPhysicalParameters(TestCase):
 
     def setUp(self):
         params = {  'name' : 'nameless',
-                    'abs_mag'       : 21.0,
                     'slope'         : 0.15,
                     'epochofel'     : '2015-03-19 00:00:00',
                     'meananom'      : 325.2636,
@@ -756,7 +965,6 @@ class TestGetFullName(TestCase):
 
     def setUp(self):
         params = {  'name' : 'nameless',
-                    'abs_mag'       : 21.0,
                     'slope'         : 0.15,
                     'epochofel'     : '2015-03-19 00:00:00',
                     'meananom'      : 325.2636,
@@ -856,11 +1064,122 @@ class TestGetFullName(TestCase):
         self.assertEqual(full_name, expected_name)
 
 
+@patch('core.models.body.datetime', MockDateTime)
+class TestGetCadenceInfo(TestCase):
+
+    def setUp(self):
+        params = {
+                 'name': 'C/2013 US10',
+                 'origin': 'O',
+                 'source_type': 'C',
+                 'source_subtype_1': 'H',
+                 'source_subtype_2': 'DN',
+                 'elements_type': 'MPC_COMET',
+                 'active': True,
+                 'epochofel': datetime(2019, 4, 27, 0, 0),
+                 'orbinc': 148.83797,
+                 'longascnode': 186.25239,
+                 'argofperih': 340.51541,
+                 'eccentricity': 1.0005522,
+                 'perihdist': 0.8244693,
+                 'epochofperih': datetime(2015, 11, 16, 1, 5, 31, 200000),
+                 'abs_mag': 8.1,
+                 'slope': 2.8,
+                 'discovery_date': datetime(2013, 8, 14, 0, 0),
+                 'updated': True,
+                 }
+        self.comet_US10, created = Body.objects.get_or_create(**params)
+        params = {
+                   'name': 'C/2017 K2',
+                   'origin': 'O',
+                   'source_type': 'C',
+                   'source_subtype_1': 'H',
+                   'source_subtype_2': None,
+                   'elements_type': 'MPC_COMET',
+                   'active': True,
+                   'epochofel': datetime(2020, 5, 31, 0, 0),
+                   'orbit_rms': 0.4,
+                   'orbinc': 87.54274,
+                   'longascnode': 88.26626,
+                   'argofperih': 236.15875,
+                   'eccentricity': 1.0004242,
+                   'perihdist': 1.7996145,
+                   'epochofperih': datetime(2022, 12, 19, 23, 32, 38, 400000),
+                   'abs_mag': 6.6,
+                   'slope': 2.2,
+                   'discovery_date': datetime(2013, 5, 12, 0, 0)
+                   }
+        self.comet_K2, created = Body.objects.get_or_create(**params)
+
+        params = { 'code' : 'KEY2020A-001',
+                   'title' : 'LOOK Projectal'
+                 }
+        self.proposal = Proposal.objects.create(**params)
+        return
+
+    def insert_sblock(self, body, cadence):
+        sblock_params = {   'cadence' : cadence,
+                            'body' : body,
+                            'proposal' : self.proposal,
+                            'block_start' : datetime(2017, 7, 1, 3),
+                            'block_end' : datetime(2017, 7, 20, 23),
+                            'active' : True
+                        }
+        sblock,created = SuperBlock.objects.get_or_create(**sblock_params)
+
+        return sblock
+
+    def test_nosblocks(self):
+        expected_result = "Nothing scheduled"
+
+        result = self.comet_K2.get_cadence_info()
+
+        self.assertEqual(expected_result, result)
+
+    def test_no_cadence_sblocks(self):
+        sblock = self.insert_sblock(self.comet_K2, cadence=False)
+
+        expected_result = "Nothing scheduled"
+
+        result = self.comet_K2.get_cadence_info()
+
+        self.assertEqual(expected_result, result)
+
+    def test_active_cadence_sblocks(self):
+        sblock = self.insert_sblock(self.comet_K2, cadence=True)
+
+        expected_result = "Active until 07/20"
+
+        result = self.comet_K2.get_cadence_info()
+
+        self.assertEqual(expected_result, result)
+
+    def test_inactive_cadence_sblocks(self):
+        sblock = self.insert_sblock(self.comet_K2, cadence=True)
+        MockDateTime.change_datetime(2017, 7, 21, 1, 2, 3)
+
+        expected_result = "Inactive since 07/20"
+
+        result = self.comet_K2.get_cadence_info()
+
+        self.assertEqual(expected_result, result)
+
+    def test_inactive_cadence_sblocks_future(self):
+        sblock = self.insert_sblock(self.comet_K2, cadence=True)
+        sblock.active = False
+        sblock.save()
+        MockDateTime.change_datetime(2017, 7, 15, 1, 2, 3)
+
+        expected_result = "Inactive"
+
+        result = self.comet_K2.get_cadence_info()
+
+        self.assertEqual(expected_result, result)
+
 class TestSuperBlock(TestCase):
 
     def setUp(self):
         params = {  'provisional_name' : 'N999r0q',
-                    'abs_mag'       : 21.0,
                     'slope'         : 0.15,
                     'epochofel'     : '2015-03-19 00:00:00',
                     'meananom'      : 325.2636,
@@ -934,11 +1253,13 @@ class TestSuperBlock(TestCase):
         self.block3 = Block.objects.create(**params3)
 
     def test_telclass(self):
-        expected_telclass = "2m0(S), 1m0"
+        expected_telclass1 = "2m0(S)"
+        expected_telclass2 = "1m0"
 
         tel_class = self.sblock.get_telclass()
 
-        self.assertEqual(expected_telclass, tel_class)
+        self.assertIn(expected_telclass1, tel_class)
+        self.assertIn(expected_telclass2, tel_class)
 
     def test_telclass_spectro_only(self):
         # Remove non spectroscopic blocks
@@ -984,7 +1305,6 @@ class TestBlock(TestCase):
     @classmethod
     def setUpTestData(cls):
         params = {  'provisional_name' : 'N999r0q',
-                    'abs_mag'       : 21.0,
                     'slope'         : 0.15,
                     'epochofel'     : '2015-03-19 00:00:00',
                     'meananom'      : 325.2636,
@@ -1400,8 +1720,8 @@ class TestFrame(TestCase):
 
         pix_coord = array([[512.0, 512.0]])
         assert_allclose(null_wcs.wcs.pc, frame.wcs.wcs.cd, rtol=1e-8)
-        self.assertEqual(null_wcs.wcs_pix2world(pix_coord, 1)[0][0], frame.wcs.wcs_pix2world(pix_coord, 1)[0][0])
-        self.assertEqual(null_wcs.wcs_pix2world(pix_coord, 1)[0][1], frame.wcs.wcs_pix2world(pix_coord, 1)[0][1])
+        self.assertEqual(null_wcs.all_pix2world(pix_coord, 1)[0][0], frame.wcs.all_pix2world(pix_coord, 1)[0][0])
+        self.assertEqual(null_wcs.all_pix2world(pix_coord, 1)[0][1], frame.wcs.all_pix2world(pix_coord, 1)[0][1])
         self.assertAlmostEqual(1.0, proj_plane_pixel_scales(frame.wcs)[0], 10)
         self.assertAlmostEqual(1.0, proj_plane_pixel_scales(frame.wcs)[1], 10)
 
@@ -1420,8 +1740,8 @@ class TestFrame(TestCase):
 
         pix_coord = array([[512.0, 512.0]])
         assert_allclose(self.w.wcs.cd, frame.wcs.wcs.cd, rtol=1e-8)
-        self.assertEqual(self.w.wcs_pix2world(pix_coord, 1)[0][0], frame.wcs.wcs_pix2world(pix_coord, 1)[0][0])
-        self.assertEqual(self.w.wcs_pix2world(pix_coord, 1)[0][1], frame.wcs.wcs_pix2world(pix_coord, 1)[0][1])
+        self.assertEqual(self.w.all_pix2world(pix_coord, 1)[0][0], frame.wcs.all_pix2world(pix_coord, 1)[0][0])
+        self.assertEqual(self.w.all_pix2world(pix_coord, 1)[0][1], frame.wcs.all_pix2world(pix_coord, 1)[0][1])
         self.assertAlmostEqual(self.pixel_scale, proj_plane_pixel_scales(frame.wcs)[0], 10)
         self.assertAlmostEqual(self.pixel_scale, proj_plane_pixel_scales(frame.wcs)[1], 10)
 

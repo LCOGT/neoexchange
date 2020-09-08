@@ -49,7 +49,7 @@ class SpectraplotTest(FunctionalTest):
         settings.MEDIA_ROOT = self.test_dir
         build_data_dir(os.path.join(self.test_dir, '20190727', '455432_1878696'), self.spectradir,
                        'target_2df_ex.fits')
-        build_data_dir(os.path.join(self.test_dir, '20190727', 'HD_30455_1878697'), self.spectradir,
+        build_data_dir(os.path.join(self.test_dir, '20190727', 'HD30455_1878697'), self.spectradir,
                        'analog_2df_ex.fits')
 
         self.username = 'bart'

@@ -268,7 +268,7 @@ def fetch_NEOCP(dbg=False):
 
     NEOCP_url = 'https://www.minorplanetcenter.net/iau/NEO/toconfirm_tabular.html'
 
-    neocp_page = fetchpage_and_make_soup(NEOCP_url)
+    neocp_page = fetchpage_and_make_soup(NEOCP_url, parser='html5lib')
     return neocp_page
 
 
@@ -319,7 +319,7 @@ def parse_NEOCP_extra_params(neocp_page, dbg=False):
             # Turn the HTML non-breaking spaces (&nbsp;) into regular spaces
             cols = [ele.text.replace(u'\xa0', u' ').strip() for ele in cols]
             if dbg:
-                print("Cols=", cols, len(cols))
+                print(len(new_objects), len(cols))
             pccp = False
             try:
                 update_date = cols[6].split()[0]
@@ -351,7 +351,12 @@ def parse_NEOCP_extra_params(neocp_page, dbg=False):
                     score = int(cols[1][0:3])
                 except:
                     score = None
-                neocp_datetime = parse_neocp_decimal_date(cols[2])
+                try:
+                    neocp_datetime = parse_neocp_decimal_date(cols[2])
+                except ValueError:
+                    neocp_datetime = None
+                    logger.warning("Date Parsing error:" + cols[2])
+                    logger.warning(cols)
                 try:
                     nobs = int(cols[8])
                 except:
@@ -836,9 +841,9 @@ def parse_mpcorbit(page, epoch_now=None, dbg=False):
             except ValueError:
                 msg = "Couldn't parse epoch: " + epoch
                 logger.warning(msg)
-    name_element = page.find('h3')
-    if name_element is not None:
-        best_elements['obj_id'] = name_element.text.strip()
+            name_element = page.find('h3')
+            if name_element is not None:
+                best_elements['obj_id'] = name_element.text.strip()
 
     return best_elements
 
@@ -1255,54 +1260,52 @@ def fetch_arecibo_targets(page=None):
     targets = []
 
     if type(page) == BeautifulSoup:
-        # Find the tables, we want the second one
+        # Find the tables
         tables = page.find_all('table')
-        if len(tables) != 2 and len(tables) != 3 :
-            logger.warning("Unexpected number of tables found in Arecibo page (Found %d)" % len(tables))
-        else:
-            for targets_table in tables[1:]:
-                rows = targets_table.find_all('tr')
-                if len(rows) > 1:
-                    for row in rows[1:]:
-                        items = row.find_all('td')
-                        target_object = items[0].text
+        for t, targets_table in enumerate(tables):
+            rows = targets_table.find_all('tr')
+            header = rows[0].find_all('td')[0].text.upper()
+            if len(rows) > 1 and 'OBJECT' in header or 'ASTEROID' in header:
+                for row in rows[1:]:
+                    items = row.find_all('td')
+                    target_object = items[0].text
+                    target_object = target_object.strip()
+                    # See if it is the form "(12345) 2008 FOO". If so, extract
+                    # just the asteroid number
+                    if '(' in target_object and ')' in target_object:
+                        # See if we have parentheses around the number or around the
+                        # temporary designation.
+                        # If the first character in the string is a '(' we have the first
+                        # case and should split on the closing ')' and take the 0th chunk
+                        # If the first char is not a '(', then we have parentheses around
+                        # the temporary designation and we should split on the '(', take
+                        # the 0th chunk and strip whitespace
+                        split_char = ')'
+                        if target_object[0] != '(':
+                            split_char = '('
+                        target_object = target_object.split(split_char)[0].replace('(', '')
                         target_object = target_object.strip()
-                        # See if it is the form "(12345) 2008 FOO". If so, extract
-                        # just the asteroid number
-                        if '(' in target_object and ')' in target_object:
-                            # See if we have parentheses around the number or around the
-                            # temporary desigination.
-                            # If the first character in the string is a '(' we have the first
-                            # case and should split on the closing ')' and take the 0th chunk
-                            # If the first char is not a '(', then we have parentheses around
-                            # the temporary desigination and we should split on the '(', take
-                            # the 0th chunk and strip whitespace
-                            split_char = ')'
-                            if target_object[0] != '(':
-                                split_char = '('
-                            target_object = target_object.split(split_char)[0].replace('(', '')
-                            target_object = target_object.strip()
-                        else:
-                            # No parentheses, either just a number or a number and name
-                            chunks = target_object.split(' ')
-                            if len(chunks) >= 2:
-                                if chunks[0].isalpha() and chunks[1].isalpha():
-                                    logger.warning("All text object found: " + target_object)
-                                    target_object = None
-                                else:
-                                    if chunks[1].replace('-', '').isalpha() and len(chunks[1]) != 2:
-                                        target_object = chunks[0]
-                                    elif 'Comet' in chunks[0] and '/P' in chunks[1].rstrip()[-2:]:
-                                        target_object = chunks[1].replace('/', '')
-                                    else:
-                                        target_object = chunks[0] + " " + chunks[1]
-                            else:
-                                logger.warning("Unable to parse Arecibo target %s" % target_object)
+                    else:
+                        # No parentheses, either just a number or a number and name
+                        chunks = target_object.split(' ')
+                        if len(chunks) >= 2:
+                            if chunks[0].isalpha() and chunks[1].isalpha():
+                                logger.warning("All text object found: " + target_object)
                                 target_object = None
-                        if target_object:
-                            targets.append(target_object)
-                else:
-                    logger.warning("No targets found in Arecibo page")
+                            else:
+                                if chunks[1].replace('-', '').isalpha() and len(chunks[1]) != 2:
+                                    target_object = chunks[0]
+                                elif 'Comet' in chunks[0] and '/P' in chunks[1].rstrip()[-2:]:
+                                    target_object = chunks[1].replace('/', '')
+                                else:
+                                    target_object = chunks[0] + " " + chunks[1]
+                        else:
+                            logger.warning("Unable to parse Arecibo target %s" % target_object)
+                            target_object = None
+                    if target_object:
+                        targets.append(target_object)
+            else:
+                logger.warning("No targets found in Arecibo page table {}.".format(t+1))
     return targets
 
 
@@ -1335,9 +1338,10 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
 
     list_address = '"small-bodies-observations@lists.nasa.gov"'
     list_authors = [ '"paul.a.abell@nasa.gov"',
-                        '"paul.w.chodas@jpl.nasa.gov"',
-                        '"brent.w.barbee@nasa.gov"',
-                        '"Barbee, Brent W. (GSFC-5950) via small-bodies-observations"']
+                     '"Abell, Paul A. (JSC-XI111) via small-bodies-observations"',
+                     '"paul.w.chodas@jpl.nasa.gov"',
+                     '"brent.w.barbee@nasa.gov"',
+                     '"Barbee, Brent W. (GSFC-5950) via small-bodies-observations"']
 
     list_prefix = '[' + list_address.replace('"', '').split('@')[0] + ']'
     list_suffix = 'Observations Requested'
@@ -1445,15 +1449,19 @@ def get_site_status(site_code):
 
 
 def fetch_yarkovsky_targets(yark_targets):
-    """Fetches yarkovsky targets from command line and returns a list of targets"""
+    """Fetches Yarkovsky targets from command line and returns a list of targets"""
 
     yark_target_list = []
 
     for obj_id in yark_targets:
         obj_id = obj_id.strip()
+        comment_loc = obj_id.find('#')
+        if comment_loc >= 0:
+            obj_id = obj_id[0:comment_loc].strip()
         if '_' in obj_id:
             obj_id = str(obj_id).replace('_', ' ')
-        yark_target_list.append(obj_id)
+        if len(obj_id) > 0:
+            yark_target_list.append(obj_id)
 
     return yark_target_list
 
@@ -1608,6 +1616,8 @@ def make_config(params, exp_filter):
             }
         ]
     }
+    if params.get('bin_mode', None) == '2k_2x2' and params['pondtelescope'] == '1m0':
+        conf['instrument_configs'][0]['mode'] = 'central_2k_2x2'
     return conf
 
 
@@ -1640,7 +1650,7 @@ def make_spect_config(params, exp_filter):
         'target': params['target'],
         'acquisition_config': {
             'mode': 'BRIGHTEST',
-            'exposure_time' : params.get('ag_exp_time', 10),
+            'exposure_time': params.get('ag_exp_time', 10),
             "extra_params": {
               "acquire_radius": acq_rad,
             }
@@ -1648,7 +1658,7 @@ def make_spect_config(params, exp_filter):
         'guiding_config': {
             'mode': 'ON',
             'optional': False,
-            'exposure_time' : params.get('ag_exp_time', 10)
+            'exposure_time': params.get('ag_exp_time', 10)
         },
         'instrument_configs': [
             {
@@ -1658,7 +1668,7 @@ def make_spect_config(params, exp_filter):
                 'optical_elements': {
                     'slit': exp_filter[0]
                 },
-                'extra_params' : inst_extra
+                'extra_params': inst_extra
             }
         ]
     }
@@ -1893,6 +1903,8 @@ def configure_defaults(params):
         if params['site_code'] == 'V38':
             # elp-aqwa-0m4a kb80
             params['observatory'] = 'aqwa'
+    elif params.get('bin_mode', None) == '2k_2x2':
+        params['binning'] = 2
 
     return params
 
@@ -1907,7 +1919,7 @@ def make_requestgroup(elements, params):
     if len(elements) > 0:
         logger.debug("Making a moving object")
         params['target'] = make_moving_target(elements)
-        if 'sky_pa' in elements:
+        if 'sky_pa' in elements and params['para_angle'] is False:
             params['rot_mode'] = 'SKY'
             params['rot_angle'] = round(elements['sky_pa'], 1)
     else:
@@ -1942,14 +1954,24 @@ def make_requestgroup(elements, params):
         params['source_id'] = params['calibsource']['name']
         params['ra_deg'] = params['calibsource']['ra_deg']
         params['dec_deg'] = params['calibsource']['dec_deg']
+        if 'pm_ra' in params['calibsource']:
+            params['pm_ra'] = params['calibsource']['pm_ra']
+        if 'pm_dec' in params['calibsource']:
+            params['pm_dec'] = params['calibsource']['pm_dec']
         params['target'] = make_target(params)
+        # save target exposure settings
         exp_time = params['exp_time']
-        params['exp_time'] = params['calibsrc_exptime']
+        exp_count = params['exp_count']
         ag_exptime = params.get('ag_exp_time', 10)
+        # update exposure settings for analog and create configurations
+        params['exp_time'] = params['calibsrc_exptime']
+        params['exp_count'] = 1
         params['ag_exp_time'] = 10
         params['rot_mode'] = 'VFLOAT'
         cal_configurations = make_configs(params)
+        # reinstate target exposure settings
         params['exp_time'] = exp_time
+        params['exp_count'] = exp_count
         params['ag_exp_time'] = ag_exptime
 
         cal_request = {
@@ -2043,7 +2065,7 @@ def submit_block_to_scheduler(elements, params):
 
 
 def fetch_filter_list(site, spec):
-    """Fetches the filter list from the configdb"""
+    """Fetches the filter list from the observation portal instruments endpoint"""
 
     siteid, encid, telid = MPC_site_code_to_domes(site)
     if '1m0' in telid.lower():
@@ -2064,13 +2086,29 @@ def fetch_filter_list(site, spec):
     # Disable specific telescope check, use all telescopes of appropriate class at a site.
     encid = telid = ''
 
-    request_url = settings.CONFIGDB_API_URL + 'instruments/'
-    request_url += '?telescope={}&science_camera=&autoguider_camera=&camera_type={}&site={}&enclosure={}&state=SCHEDULABLE'.format(telid.lower(), camid, siteid.lower(), encid.lower())
-    resp = requests.get(request_url, timeout=20, verify=True).json()
+    request_url = (
+        '{instruments_url}?site={site}&enclosure={enclosure}&telescope={telescope}&instrument_type={instrument_type}'
+        '&only_schedulable=true'
+    ).format(
+        instruments_url=settings.PORTAL_INSTRUMENTS_URL,
+        site=siteid.lower(),
+        enclosure=encid.lower(),
+        telescope=telid.lower(),
+        instrument_type=camid
+    )
+    response = requests.get(request_url, timeout=20, verify=True)
 
-    data_out = parse_filter_file(resp, spec)
-    if not data_out:
-        logger.error('Could not find any filters for {}'.format(site))
+    resp = {}
+    if response.status_code in [200, 201]:
+        resp = response.json()
+
+    if not resp:
+        logger.error('Could not find any telescopes at {}'.format(site))
+        data_out = []
+    else:
+        data_out = parse_filter_file(resp, spec)
+        if not data_out:
+            logger.error('Could not find any filters for {}'.format(site))
     return data_out
 
 
@@ -2083,9 +2121,15 @@ def parse_filter_file(resp, spec):
         filter_list = cfg.spec_filters
 
     site_filters = []
-    for result in resp['results']:
-        filters_1tel = result['science_camera']['filters']
-        filt_list = filters_1tel.split(',')
+    for instrument_type_config in resp.values():
+        try:
+            filt_list = []
+            for optical_elements in instrument_type_config['optical_elements'].values():
+                for optical_element in optical_elements:
+                    if optical_element['schedulable'] is True:
+                        filt_list.append(optical_element['code'])
+        except KeyError:
+            filt_list = []
         for filt in filter_list:
             if filt in filt_list and filt not in site_filters:
                 site_filters.append(filt)
@@ -2461,9 +2505,9 @@ def store_jpl_physparams(phys_par, body):
 
     # parsing the JPL physparams dictionary
     for p in phys_par:   
-        if 'H' is p['name']:  # absolute magnitude
+        if 'H' == p['name']:  # absolute magnitude
             p_type = 'H'
-        elif 'G' is p['name']:  # magnitude (phase) slope
+        elif 'G' == p['name']:  # magnitude (phase) slope
             p_type = 'G'
         elif 'diameter' in p['name']:  # diameter
             p_type = 'D'     
@@ -2479,12 +2523,15 @@ def store_jpl_physparams(phys_par, body):
             p_type = 'O'
         elif 'albedo' in p['name']:  # geometric albedo
             p_type = 'ab'
-        # Parameters available from the MPC, but not stored by us at the moment.
-#        elif 'M1' is p['name']: # absolute magnitude of comet and coma (total)
-#        elif 'M2' is p['name']: # comet total magnitude parameter  
-#        elif 'K1' is p['name']: # comet total magnitude slope parameter
-#        elif 'K2' is p['name']: # comet nuclear magnitude slope parameter
-#        elif 'PC' is p['name']: # comet nuclear magnitude law - phase coefficient
+        # Parameters available from JPL, but not explicitly stored by us at the moment.
+        # TAL 2020/7/8: Thought about mapping M1,K1->H,G here but decided against
+#        elif 'M1' == p['name']: # absolute magnitude of comet and coma (total)
+#            p_type = 'H'
+#        elif 'K1' == p['name']: # comet total magnitude slope parameter
+#            p_type = 'G'
+#        elif 'M2' == p['name']: # comet total magnitude parameter
+#        elif 'K2' == p['name']: # comet nuclear magnitude slope parameter
+#        elif 'PC' == p['name']: # comet nuclear magnitude law - phase coefficient
         elif 'spectral' in p['desc']:
             continue
         else:
@@ -2536,43 +2583,7 @@ def store_jpl_desigs(obj, body):
     """Function to store object name, number, and designations from JPL Horizons"""
 
     # parsing through JPL designations
-    fullname = obj['fullname']
-    number = name = prov_des = None
-    if fullname[0] is '(':
-        prov_des = fullname.strip('()')
-    elif ' ' in fullname:
-        space_num = fullname.count(' ')
-        if space_num is 3:
-            part1, part2, part3, part4 = fullname.split(' ')
-            number = part1
-            if part2[0].isalpha:
-                name = part2
-        elif space_num is 2:
-            part1, part2, part3 = fullname.split(' ')
-            number = part1
-        elif space_num is 1:
-            part1, part2 = fullname.split(' ')
-            number = part1
-            name = part2   
-    elif '/' in fullname:  # comet
-        part1, part2 = fullname.split('/')
-        if len(part1) == 1 and part1.isalpha():
-            prov_des = fullname
-        else:
-            number = part1
-        if '(' in part2:
-            part21, part22 = part2.split('(')
-            name = part21
-            prov_des = part22.strip('()')
-        elif ' ' in part2 and number:
-            prov_des = part2
-        else:
-            name = part2
-
-    # designation dictionary
-    des_dict_list = [{'value': number, 'desig_type': '#', 'preferred': True},
-                     {'value': name, 'desig_type': 'N', 'preferred': True},
-                     {'value': prov_des, 'desig_type': 'P', 'preferred': True}]
+    des_dict_list = parse_jpl_fullname(obj)
 
     des_alt = obj['des_alt']
     preferred = False
@@ -2602,11 +2613,58 @@ def store_jpl_desigs(obj, body):
             saved = body.save_physical_parameters(D)
             if saved:
                 logger.info('New Designation saved for {}: {}'.format(body.current_name(), D['value']))
-    
-  
+
+
+def parse_jpl_fullname(obj):
+    """Given a JPL object, return parsed full name"""
+    fullname = obj['fullname']
+    number = name = prov_des = None
+    if fullname[0] == '(':
+        prov_des = fullname.strip('()')
+    elif '/' in fullname:  # comet
+        parts = fullname.split('/')
+        if len(parts) == 2:
+            part1 = parts[0]
+            part2 = parts[1]
+            if len(part1) == 1 and part1.isalpha():
+                prov_des = fullname
+            elif '(' in part1:
+                part11, part12 = part1.split('(')
+                name = part11.rstrip()
+                prov_des = part12 + '/' + part2.strip('()')
+            else:
+                number = part1
+            if '(' in part2:
+                part21, part22 = part2.split('(')
+                prov_des = part1 + '/' + part21.rstrip()
+                name = part22.strip('()')
+            elif number:
+                name = part2
+    elif ' ' in fullname:
+        space_num = fullname.count(' ')
+        if space_num == 3:
+            part1, part2, part3, part4 = fullname.split(' ')
+            number = part1
+            if part2[0].isalpha:
+                name = part2
+        elif space_num == 2:
+            part1, part2, part3 = fullname.split(' ')
+            number = part1
+        elif space_num == 1:
+            part1, part2 = fullname.split(' ')
+            number = part1
+            name = part2
+
+    # designation dictionary
+    des_dict_list = [{'value': number, 'desig_type': '#', 'preferred': True},
+                     {'value': name, 'desig_type': 'N', 'preferred': True},
+                     {'value': prov_des, 'desig_type': 'P', 'preferred': True}]
+    return des_dict_list
+
+
 def store_jpl_sourcetypes(code, obj, body):
     """Function to store object source types and subtypes from JPL Horizons"""
-    
+
     source_type = source_subtype_1 = source_subtype_2 = None
     if 'CEN' in code:  # Centaur
         source_type = 'E'
@@ -2651,8 +2709,10 @@ def store_jpl_sourcetypes(code, obj, body):
         source_subtype_1 = 'JF'
     elif 'HTC' in code:  # Halley type comet
         source_subtype_1 = 'HT'
+    elif 'COM' in code:  # Long Period comet
+        source_subtype_1 = 'LP'
     else:
-        source_subtype_1 = code
+        source_subtype_1 = None
 
     if obj['neo'] is True:
         source_type = body.source_type

@@ -466,7 +466,7 @@ li.dropdown-menu:after {
 body.compose #main { background-color:#e6e6e6; }
 body.view #main { background-color:#e6e6e6; }
 body.calendar, body.calendar #main { background-color:#202020; }
-body.page #main { display:block; overflow-y: auto; background-color:white; margin-top:50px;}
+body.page #main { display:block; overflow-y: auto; overflow: visible; background-color:white; margin-top:50px;}
 
 #extramenu:after {
     content: '';
@@ -1177,3 +1177,13 @@ ul.candidate-controls li:hover {background-color:#eee; }
 
 .moon { fill:#D6D5C0; }
 .moonback { fill:black;stroke:#fff;stroke-width:1px; }
+
+.bk-root .slick-cell.selected {
+    background: white;
+    color: black;
+}
+
+.bk-root .slick-cell {
+    background: white;
+    color: silver;
+}

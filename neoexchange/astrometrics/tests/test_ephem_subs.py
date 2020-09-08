@@ -274,6 +274,7 @@ class TestComputeEphemerides(TestCase):
 
         body_dict['provisional_name'] = 'N999z0z'
         body_dict['eccentricity'] = 0.42
+        body_dict['ingest'] += timedelta(seconds=1)
         body_dict['id'] += 3
         second_body = Body.objects.create(**body_dict)
         second_body.save()
@@ -283,8 +284,9 @@ class TestComputeEphemerides(TestCase):
 
         first_saved_item = saved_items[0]
         second_saved_item = saved_items[1]
-        self.assertEqual(first_saved_item.provisional_name, 'N999r0q')
-        self.assertEqual(second_saved_item.provisional_name, 'N999z0z')
+        # Newer should be first due to `-ingest` in the Body Meta ordering
+        self.assertEqual(first_saved_item.provisional_name, 'N999z0z')
+        self.assertEqual(second_saved_item.provisional_name, 'N999r0q')
 
     def test_compute_ephem_with_elements(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
@@ -1065,27 +1067,36 @@ class TestLongTermScheduling(TestCase):
         body_elements = model_to_dict(self.body2)
         expected_max_alt = 41.3
         expected_up_time = 3.8333333333333335
+        expected_start_time = datetime(2017, 1, 6, 8, 40)
+        expected_stop_time = datetime(2017, 1, 6, 12, 30)
 
         emp_line = compute_ephem(datetime(2017, 1, 6, 0, 0, 00), body_elements, site_code, dbg=False, perturb=True, display=False)
         app_ra = emp_line['ra']
         app_dec = emp_line['dec']
         min_alt = 30
-        up_time, max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=True, body_elements=None)
+        up_time, max_alt, start_time, stop_time = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=True, body_elements=None)
+
         self.assertAlmostEqual(expected_max_alt, max_alt, 1)
         self.assertAlmostEqual(expected_up_time, up_time, 1)
+        self.assertEqual(expected_start_time, start_time)
+        self.assertEqual(expected_stop_time, stop_time)
 
     def test_visibility_general1m(self):
         site_code = '1M0'
         body_elements = model_to_dict(self.body2)
+        expected_start_time = datetime(2017, 1, 5, 19, 0, 00)
+        expected_stop_time = datetime(2017, 1, 6, 12, 40, 00)
 
         emp_line = compute_ephem(datetime(2017, 1, 6, 0, 0, 00), body_elements, site_code, dbg=False, perturb=True, display=False)
         app_ra = emp_line['ra']
         app_dec = emp_line['dec']
         min_alt = 30
-        up_time, max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=True, body_elements=body_elements)
-        true_up_time, true_max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=False, body_elements=body_elements)
+        up_time, max_alt, start_time, stop_time = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=True, body_elements=body_elements)
+        true_up_time, true_max_alt, true_start_time, true_stop_time = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=False, body_elements=body_elements)
         self.assertEqual(floor(true_max_alt), floor(max_alt))
         self.assertAlmostEqual(true_up_time, up_time, 1)
+        self.assertEqual(expected_start_time, start_time)
+        self.assertEqual(expected_stop_time, stop_time)
 
     def test_visibility_general1m_single_site(self):
         site_code = '1M0'
@@ -1097,29 +1108,56 @@ class TestLongTermScheduling(TestCase):
         app_ra = emp_line['ra']
         app_dec = emp_line['dec']
         min_alt = 30
-        up_time, max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=True, body_elements=body_elements)
-        true_up_time, true_max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=False, body_elements=body_elements)
+        up_time, max_alt, start_time, stop_time = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=True, body_elements=body_elements)
+        true_up_time, true_max_alt, true_start_time, true_stop_time = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=False, body_elements=body_elements)
         self.assertEqual(floor(true_max_alt), floor(max_alt))
         self.assertAlmostEqual(true_up_time, up_time, 1)
         self.assertAlmostEqual(expected_max_alt, max_alt, 0)
         self.assertAlmostEqual(expected_up_time, up_time, 0)
+        self.assertEqual(start_time, true_start_time)
+        self.assertEqual(stop_time, true_stop_time)
 
-    def test_visibility_general2m_never_up(self):
-        site_code = '0M4'
+    def test_visibility_2m_never_up(self):
+        site_code = 'E10'
         body_elements = model_to_dict(self.body4)
-        expected_max_alt = 61
+        expected_max_alt = 63.5
         expected_up_time = 0
+        expected_start_time = None
+        expected_stop_time = None
 
         emp_line = compute_ephem(datetime(2017, 1, 6, 0, 0, 00), body_elements, site_code, dbg=False, perturb=True, display=False)
         app_ra = emp_line['ra']
         app_dec = emp_line['dec']
         min_alt = 80
-        up_time, max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '30 m', min_alt, quick_n_dirty=True, body_elements=body_elements)
-        true_up_time, true_max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '30 m', min_alt, quick_n_dirty=False, body_elements=body_elements)
+        up_time, max_alt, start_time, stop_time = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '30 m', min_alt, quick_n_dirty=True, body_elements=body_elements)
+        true_up_time, true_max_alt, true_start_time, true_stop_time = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '30 m', min_alt, quick_n_dirty=False, body_elements=body_elements)
         self.assertEqual(floor(true_max_alt), floor(max_alt))
         self.assertAlmostEqual(true_up_time, up_time, 1)
         self.assertAlmostEqual(expected_max_alt, max_alt, 0)
         self.assertAlmostEqual(expected_up_time, up_time, 0)
+        self.assertEqual(expected_start_time, start_time)
+        self.assertEqual(expected_stop_time, stop_time)
+
+    def test_visibility_general2m_never_up(self):
+        site_code = '2M0'
+        body_elements = model_to_dict(self.body4)
+        expected_max_alt = 63.5
+        expected_up_time = 0
+        expected_start_time = datetime(2017, 1, 6, 5, 0, 00)
+        expected_stop_time = datetime(2017, 1, 6, 17, 40, 00)
+
+        emp_line = compute_ephem(datetime(2017, 1, 6, 0, 0, 00), body_elements, site_code, dbg=False, perturb=True, display=False)
+        app_ra = emp_line['ra']
+        app_dec = emp_line['dec']
+        min_alt = 80
+        up_time, max_alt, start_time, stop_time = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '30 m', min_alt, quick_n_dirty=True, body_elements=body_elements)
+        true_up_time, true_max_alt, true_start_time, true_stop_time = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '30 m', min_alt, quick_n_dirty=False, body_elements=body_elements)
+        self.assertEqual(floor(true_max_alt), floor(max_alt))
+        self.assertAlmostEqual(true_up_time, up_time, 1)
+        self.assertAlmostEqual(expected_max_alt, max_alt, 0)
+        self.assertAlmostEqual(expected_up_time, up_time, 0)
+        self.assertEqual(expected_start_time, start_time)
+        self.assertEqual(expected_stop_time, stop_time)
 
 
 class TestDetermineRatesAndPA(TestCase):
@@ -2016,6 +2054,42 @@ class TestDetermineSpectroSlotLength(TestCase):
         expected_slot_length = 1258.0
 
         slot_length = determine_spectro_slot_length(exp_time, calibs)
+
+        self.assertEqual(expected_slot_length, slot_length)
+
+    def test_multiexp_no_calibs(self):
+
+        exp_time = 30.0
+        calibs = 'none'
+        num_exp = 10
+
+        expected_slot_length = 961.0
+
+        slot_length = determine_spectro_slot_length(exp_time, calibs, num_exp)
+
+        self.assertEqual(expected_slot_length, slot_length)
+
+    def test_multiexp_calibs_after(self):
+
+        exp_time = 30.0
+        calibs = 'after'
+        num_exp = 10
+
+        expected_slot_length = 1284.0
+
+        slot_length = determine_spectro_slot_length(exp_time, calibs, num_exp)
+
+        self.assertEqual(expected_slot_length, slot_length)
+
+    def test_multiexp_calibs_both(self):
+
+        exp_time = 30.0
+        calibs = 'both'
+        num_exp = 10
+
+        expected_slot_length = 1607.0
+
+        slot_length = determine_spectro_slot_length(exp_time, calibs, num_exp)
 
         self.assertEqual(expected_slot_length, slot_length)
 
