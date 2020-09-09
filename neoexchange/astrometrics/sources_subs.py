@@ -1352,8 +1352,16 @@ def fetch_arecibo_calendar_targets(page=None):
                             window_end += timedelta(days=1)
                     except ValueError:
                         window_end = None
+                    try:
+                        uncertainty = float(items[15].text)
+                    except ValueError:
+                        uncertainty = None
+
                     if target_object and window_start and window_end:
-                        targets.append({'target': target_object, 'windows' : [{'start' : window_start.isoformat('T'), 'end' : window_end.isoformat('T')}] })
+                        target = {'target': target_object, 'windows' : [{'start' : window_start.isoformat('T'), 'end' : window_end.isoformat('T')}] }
+                        if uncertainty is not None:
+                            target['extrainfo'] = {'uncertainty' : uncertainty }
+                        targets.append(target)
         else:
             logger.warning("No tables found in Arecibo page")
     return targets
