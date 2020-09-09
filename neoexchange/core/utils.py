@@ -16,6 +16,12 @@ import re
 import os
 from django.core.files.storage import default_storage
 
+class NeoException(Exception):
+    """
+    Used as a general purpose NEOx exception class to halt code
+    """
+    pass
+
 
 def search(base_dir, matchpattern, latest=False):
     """

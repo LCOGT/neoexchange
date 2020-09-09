@@ -142,6 +142,7 @@ LOGIN_REDIRECT_URL = '/'
 # GRAPPELLI_INDEX_DASHBOARD = 'neox.dashboard.CustomIndexDashboard'
 
 INSTALLED_APPS = (
+    "django_dramatiq",
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -152,7 +153,26 @@ INSTALLED_APPS = (
     'reversion',
     'core.apps.CoreConfig',
     'analyser.apps.AstrometerConfig',
+    'pipelines.apps.PipelinesConfig'
 )
+
+REDIS_HOSTNAME = os.environ.get('REDIS_HOSTNAME','localhost')
+
+# Example Dramatiq configuration using Redis
+DRAMATIQ_BROKER = {
+    'BROKER': 'dramatiq.brokers.redis.RedisBroker',
+    'OPTIONS': {
+        'url': f'redis://{REDIS_HOSTNAME}:6379',
+    },
+    'MIDDLEWARE': [
+        'dramatiq.middleware.AgeLimit',
+        'dramatiq.middleware.TimeLimit',
+        'dramatiq.middleware.Callbacks',
+        'dramatiq.middleware.Retries',
+        'django_dramatiq.middleware.DbConnectionsMiddleware',
+    ]
+}
+
 
 rollbar_default_env = 'development' if DEBUG else 'production'
 ROLLBAR = {

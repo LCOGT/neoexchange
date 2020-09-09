@@ -95,8 +95,8 @@ def get_frame_data(start_date, end_date, auth_header='', obstype='EXPOSE', propo
 
     limit = 1000
     base_url = settings.ARCHIVE_FRAMES_URL
-    archive_url = '%s?limit=%d&start=%s&end=%s&OBSTYPE=%s&PROPID=%s' % (base_url, limit, start_date, end_date, obstype, proposal)
-
+    archive_url = '%s?limit=%d&start=%s&end=%s&OBSTYPE=%s&PROPID=%s&format=json' % (base_url, limit, start_date, end_date, obstype, proposal)
+    print(archive_url)
     frames = {}
     for reduction_lvl in red_lvls:
         search_url = archive_url + '&RLEVEL=' + reduction_lvl

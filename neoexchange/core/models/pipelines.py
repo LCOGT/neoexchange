@@ -14,7 +14,6 @@ from django.utils.module_loading import import_string
 from core.models.frame import Frame
 
 from core.models.async_process import AsyncError, AsyncProcess, ASYNC_STATUS_CREATED
-from tom_education.utils import assert_valid_suffix
 
 
 class InvalidPipelineError(Exception):
@@ -28,23 +27,21 @@ PipelineOutput = namedtuple('PipelineOutput', ['path', 'output_type'], defaults=
 
 class PipelineProcess(AsyncProcess):
     short_name = 'pipeline'
-    flags = None
+    inputs = None
     allowed_suffixes = None
 
     logs = models.TextField(null=True, blank=True)
-    flags_json = models.TextField(null=True, blank=True)
+    inputs_json = models.TextField(null=True, blank=True)
 
     def run(self):
-        if not self.input_files.exists():
-            raise AsyncError('No input files to process')
 
         with tempfile.TemporaryDirectory() as tmpdir_name:
             tmpdir = Path(tmpdir_name)
 
             # Do the actual work
-            flags = json.loads(self.flags_json) if self.flags_json else {}
+            inputs = json.loads(self.inputs_json) if self.inputs_json else {}
             try:
-                outputs = self.do_pipeline(tmpdir, **flags)
+                outputs = self.do_pipeline(tmpdir, **inputs)
                 for output in outputs:
                     if not isinstance(output, PipelineOutput):
                         output = PipelineOutput(*output)
@@ -104,9 +101,9 @@ class PipelineProcess(AsyncProcess):
             raise InvalidPipelineError(err)
 
         try:
-            cls.validate_flags(pipeline_cls.flags)
+            cls.validate_inputs(pipeline_cls.inputs)
         except AssertionError:
-            raise InvalidPipelineError("Invalid 'flags' attribute in {}".format(pipeline_cls))
+            raise InvalidPipelineError("Invalid 'inputs' attribute in {}".format(pipeline_cls))
         return pipeline_cls
 
     @classmethod

@@ -25,7 +25,7 @@ from django.conf import settings
 from django.core.files import File
 from django.core.files.storage import default_storage
 
-from core.models import DownloadProcessPipeline
+from pipelines.downloaddata import DownloadProcessPipeline
 
 
 class Command(BaseCommand):
@@ -57,4 +57,9 @@ class Command(BaseCommand):
             obs_date = options['date']
 
         pipe = DownloadProcessPipeline()
-        pipe.download(date=obs_date,proposals=options['proposal'])
+        pipe.download(obs_date=obs_date,
+                    proposals=[options['proposal']],
+                    out_path=options['datadir'],
+                    spectraonly=options['spectraonly'],
+                    dlengimaging=options['dlengimaging'])
+        pipe.create_movies()

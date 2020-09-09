@@ -39,6 +39,7 @@ from django.core.files.storage import default_storage
 
 from photometrics.external_codes import unpack_tarball
 from core.models import Frame, CatalogSources
+from core.utils import NeoException
 from astrometrics.ephem_subs import horizons_ephem
 from astrometrics.time_subs import timeit
 from photometrics.catalog_subs import sanitize_object_name
@@ -390,19 +391,17 @@ def make_movie(date_obs, obj, req, base_dir, out_path, prop):
                     if '.fits.fz' in file:
                         frames.append(file)
             else:
-                logger.error("Could not find Guide Frames or Guide Frame tarball for request: %s" % req)
-                return None
+                raise NeoException("Could not find Guide Frames or Guide Frame tarball for request: %s" % req)
+    
     else:
-        logger.error("Could not find spectrum data or tarball for request: %s" % req)
-        return None
+        raise NeoException("Could not find spectrum data or tarball for request: %s" % req)
     if frames is not None and len(frames) > 0:
         logger.debug("#Frames = {}".format(len(frames)))
         logger.info("Making Movie...")
         movie_file = make_gif(frames, out_path=out_path, progress=False)
         return movie_file
     else:
-        logger.error("There must be at least 1 frame to make guide movie.")
-        return None
+        raise NeoException("There must be at least 1 frame to make guide movie.")
 
 
 if __name__ == '__main__':
@@ -429,4 +428,3 @@ if __name__ == '__main__':
         logger.info("New gif created: {}".format(gif_file))
     else:
         logger.info("No files found.")
-

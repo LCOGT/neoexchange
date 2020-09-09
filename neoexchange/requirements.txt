@@ -31,3 +31,6 @@ gunicorn[gevent]~=19.9.0
 rollbar
 sty
 awscli
+redis
+dramatiq[watch,redis]
+django-dramatiq

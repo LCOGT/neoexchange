@@ -12,10 +12,10 @@ from django.core.files.storage import default_storage
 
 from core.archive_subs import archive_login, get_frame_data, get_catalog_data, \
     determine_archive_start_end, download_files, make_data_dir
+from core.models.pipelines import PipelineProcess, PipelineOutput
+from core.utils import save_to_default, NeoException
 from core.views import determine_active_proposals
 from photometrics.gf_movie import make_movie
-from core.utils import save_to_default
-from core.models.pipelines import PipelineProcess, PipelineOutput
 
 logger = logging.getLogger(__name__)
 
@@ -25,45 +25,73 @@ class DownloadProcessPipeline(PipelineProcess):
     """
     short_name = 'dlp'
     allowed_suffixes = ['.gz', '.fz']
-    flags = {
-        'skip_download': {
-            'default': False,
-            'long_name': 'Skip data download'
+    inputs = {
+        'date': {
+            'default': None,
+            'long_name': 'Date of the data to download (YYYYMMDD)'
         },
+        'proposal':{
+            'default': None,
+            'long_name' : 'Proposal code to query for data (e.g. LCO2019B-023; default is for all active proposals)'
+        },
+        'datadir' : {
+            'default' : None,
+            'long_name' : 'Place to save data'
+        },
+        'spectraonly': {
+            'default' : False,
+            'long_name' : 'Whether to only download spectra'
+        },
+        'dlengimaging' : {
+            'default' : False,
+            'long_name' : 'Whether to download imaging for LCOEngineering'
+        },
+        'numdays' : {
+            'default' : 0.0,
+            'long_name' : 'How many extra days to look for'
+        }
     }
     OBSTYPES = ['EXPOSE', 'ARC', 'LAMPFLAT', 'SPECTRUM']
 
     class Meta:
         proxy = True
 
-    def do_pipeline(self, tmpdir, **flags):
-        self.out_path = tmpdir()
-        tl_settings = self.get_settings()
+    def do_pipeline(self, tmpdir, **inputs):
+        if not inputs.get('datadir')
+            self.out_path = tmpdir()
+        else:
+            self.out_path = inputs.get('datadir')
+        obs_date = inputs.get('obs_date')
+        proposals = inputs.get('proposals')
+        dlengimaging = inputs.get('dlengimaging')
+        spectraonly = inputs.get('spectraonly')
+        numdays = inputs.get('numdays')
 
         try:
-            self.download()
+            self.download(obs_date, proposals, out_path, dlengimaging, spectraonly)
             # unpack tarballs and make movie.
-            self.get_frames()
-            self.process()
+            self.create_movies()
             self.cleanup()
-        except ValueError as ex:
-            logger.error('ValueError: {}'.format(ex))
-            raise AsyncError('Invalid parameters. Are all images the same size?')
+        except NeoException as ex:
+            logger.error('Error with Movie: {}'.format(ex))
+            raise AsyncError('Error creating movie')
         except TimeLimitExceeded:
-            raise AsyncError("Timelapse took longer than 10 mins to create")
+            raise AsyncError("Download and create took longer than 10 mins to create")
         except PipelineProcess.DoesNotExist:
-            raise AsyncError("Timelapse record has been deleted")
+            raise AsyncError("Record has been deleted")
 
         return [PipelineOutput(outfile, DataProduct, settings.DATA_PRODUCT_TYPES['timelapse'][0])]
 
-    def download(self, obs_date, proposals):
+    def download(self, obs_date, proposals, out_path, dlengimaging=False, spectraonly=False):
         self.frames = {}
+        if not hasattr(self, out_path):
+            self.out_path = out_path
         auth_headers = archive_login()
         start_date, end_date = determine_archive_start_end(obs_date)
         for proposal in proposals:
             logger.info("Looking for frames between %s->%s from %s" % ( start_date, end_date, proposal ))
-            obstypes = OBSTYPES
-            if (proposal == 'LCOEngineering' and options['dlengimaging'] is False) or options['spectraonly'] is True:
+            obstypes = self.OBSTYPES
+            if (proposal == 'LCOEngineering' and not dlengimaging) or spectraonly:
                 # Not interested in imaging frames
                 obstypes = ['ARC', 'LAMPFLAT', 'SPECTRUM']
 
@@ -73,9 +101,10 @@ class DownloadProcessPipeline(PipelineProcess):
                 else:
                     # '' seems to be needed to get the tarball of FLOYDS products
                     redlevel = ['0', '']
+                logger.info(f"Looking for {obstype} data")
                 frames = get_frame_data(start_date, end_date, auth_headers, obstype, proposal, red_lvls=redlevel)
                 for red_lvl in frames.keys():
-                    if red_lvl in all_frames:
+                    if red_lvl in self.frames:
                         self.frames[red_lvl] = self.frames[red_lvl] + frames[red_lvl]
                     else:
                         self.frames[red_lvl] = frames[red_lvl]
@@ -86,9 +115,9 @@ class DownloadProcessPipeline(PipelineProcess):
                             self.frames[red_lvl] = self.frames[red_lvl] + catalogs[red_lvl]
                         else:
                             self.frames[red_lvl] = catalogs[red_lvl]
-                for red_lvl in all_frames.keys():
-                    logger.info("Found %d frames for reduction level: %s" % ( len(all_frames[red_lvl]), red_lvl ))
-                dl_frames = download_files(self.frames, self.out_path)
+                for red_lvl in self.frames.keys():
+                    logger.info("Found %d frames for reduction level: %s" % ( len(self.frames[red_lvl]), red_lvl ))
+                dl_frames = download_files(self.frames, out_path)
                 logger.info("Downloaded %d frames" % ( len(dl_frames) ))
         return
 
@@ -101,12 +130,8 @@ class DownloadProcessPipeline(PipelineProcess):
                 movie_file = make_movie(frame['DATE_OBS'], obj, req_num, tar_path, self.out_path, frame['PROPID'])
                 if settings.USE_S3:
                     filenames = glob(os.path.join(tar_path, obj + '_' + req_num, '*_2df_ex.fits'))
-                    if filenames:
-                        for filename in filenames:
-                            save_to_default(filename, self.out_path)
-        return
-
-    def process(self):
+                    for filename in filenames:
+                        save_to_default(filename, self.out_path)
         return
 
     def cleanup():
