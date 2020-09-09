@@ -32,5 +32,10 @@ def arecibo_events(request):
     targets = []
     for d in data:
         target = {'title': d['target'], 'start' : d['windows'][0]['start'], 'end' : d['windows'][0]['end']}
+        if d.get('extrainfo', None):
+            # See if uncertainty is greater than Arecibo beam width (~2 arcmin)
+            # If so, set border colo(u)r to red
+            if d['extrainfo'].get('uncertainty', 0) >= 120:
+                target['borderColor'] = 'red'
         targets.append(target)
     return JsonResponse(targets, safe=False)

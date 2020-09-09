@@ -87,9 +87,12 @@ class CalAreciboApiTest(TestCase):
             str(response.content, encoding='utf8'),
              [ {"title": "2020 RY",
                  "start": "2020-09-03T01:17:00",
-                 "end": "2020-09-03T03:06:00"},
+                 "end": "2020-09-03T03:06:00",
+                 "borderColor": "red"
+                },
                 {"title": "2020 RK",
                  "start": "2020-09-03T01:29:00",
-                 "end": "2020-09-03T03:56:00"}
+                 "end": "2020-09-03T03:56:00"
+                }
               ]
         )
