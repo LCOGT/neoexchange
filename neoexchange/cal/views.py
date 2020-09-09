@@ -29,5 +29,8 @@ class NeoxEvents(View):
 
 def arecibo_events(request):
     data = fetch_arecibo_calendar_targets()
-    targets = [{'title': d['target'], 'start' : d['windows'][0]['start'], 'end' : d['windows'][0]['end']}  for d in data]
+    targets = []
+    for d in data:
+        target = {'title': d['target'], 'start' : d['windows'][0]['start'], 'end' : d['windows'][0]['end']}
+        targets.append(target)
     return JsonResponse(targets, safe=False)
