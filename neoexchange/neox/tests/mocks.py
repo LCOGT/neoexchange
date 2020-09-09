@@ -1795,3 +1795,15 @@ def mock_build_visibility_source(body, site_list, site_code, color_list, d, alt_
            ['2019 10 15 03:30', '22 01 33.49', '-25 38 19.5', '21.7', ' 0.83', ' 72.0', '+22', '0.98', ' 72', '-20', '-999', '-03:24']]
 
     return vis, emp
+
+
+def mock_fetch_arecibo_calendar_targets():
+    targets = [ { 'target': '2020 RY',
+                  'windows' : [ {'start': '2020-09-03T01:17:00', 'end': '2020-09-03T03:06:00'} ],
+                  'extrainfo': {'uncertainty': 31014.0}},
+                { "target": "2020 RK",
+                  'windows' : [ {"start": "2020-09-03T01:29:00", "end": "2020-09-03T03:56:00"} ],
+                  'extrainfo': {'uncertainty': 54.0}},
+              ]
+
+    return targets

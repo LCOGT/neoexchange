@@ -1,9 +1,10 @@
 from django.test import TestCase
+from mock import patch
 
-from astrometrics.sources_subs import fetch_arecibo_calendar_targets
 from core.models import Body, SuperBlock, Proposal, Block
+from neox.tests.mocks import mock_fetch_arecibo_calendar_targets
 
-class CalApiTest(TestCase):
+class CalNeoxApiTest(TestCase):
 
     def setUp(self):
         params = {  'name' : 'N999r0q',
@@ -70,4 +71,25 @@ class CalApiTest(TestCase):
         self.assertJSONEqual(
             str(response.content, encoding='utf8'),
             []
+        )
+
+
+class CalAreciboApiTest(TestCase):
+
+    def setUp(self):
+        self.maxDiff = None
+
+    @patch('cal.views.fetch_arecibo_calendar_targets', mock_fetch_arecibo_calendar_targets)
+    def test_low_uncertainty(self):
+        response = self.client.get('/api/arecibo/')
+        self.assertEqual(response.status_code, 200)
+        self.assertJSONEqual(
+            str(response.content, encoding='utf8'),
+             [ {"title": "2020 RY",
+                 "start": "2020-09-03T01:17:00",
+                 "end": "2020-09-03T03:06:00"},
+                {"title": "2020 RK",
+                 "start": "2020-09-03T01:29:00",
+                 "end": "2020-09-03T03:56:00"}
+              ]
         )
