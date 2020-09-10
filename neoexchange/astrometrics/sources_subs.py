@@ -1338,7 +1338,8 @@ def fetch_arecibo_calendar_targets(page=None):
             targets_table = tables[0]
             rows = targets_table.find_all('tr')
             header = rows[0].find_all('th')
-            if len(rows) > 2 and header[0].text.upper() == 'ASTEROID' and header[4].text.upper() == 'WINDOW (UTC)':
+            if len(rows) > 2 and header[0].text.upper() == 'ASTEROID' and \
+              (header[4].text.upper() == 'WINDOW (UTC)' or header[4].text.upper() == 'TRACK (UTC)'):
                 for row in rows[2:-1]:
                     items = row.find_all('td')
                     target_object = parse_arecibo_targetnames(items[0].text.strip())
