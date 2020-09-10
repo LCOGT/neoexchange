@@ -1137,30 +1137,17 @@ class TestSubmitBlockToScheduler(TestCase):
         inst_configs = configurations[0].get('instrument_configs')
 
         expected_configuration_num = 1
-        expected_ist_config_num = 3
+        expected_inst_config_num = 3
         expected_exp_count = 2
         expected_filter = 'I'
 
         self.assertEqual(len(configurations), expected_configuration_num)
-        self.assertEqual(len(inst_configs), expected_ist_config_num)
+        self.assertEqual(len(inst_configs), expected_inst_config_num)
         self.assertEqual(inst_configs[2]['exposure_count'], expected_exp_count)
         self.assertEqual(inst_configs[2]['optical_elements']['filter'], expected_filter)
 
     def test_uneven_filter_requestgroup(self):
 
-        # site_code = 'W85'
-        # utc_date = datetime.now()+timedelta(days=1)
-        # dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        # params = {  'proposal_id' : 'LCO2015A-009',
-        #             'exp_count' : 18,
-        #             'exp_time' : 50.0,
-        #             'site_code' : site_code,
-        #             'start_time' : dark_start,
-        #             'end_time' : dark_end,
-        #             'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-        #             'user_id'  : 'bsimpson',
-        #             'filter_pattern' : 'V,V,R,I'
-        #          }
         params = self.obs_params
         params['filter_pattern'] = 'V,V,R,I'
 
@@ -1168,143 +1155,112 @@ class TestSubmitBlockToScheduler(TestCase):
         configurations = user_request.get('requests')[0].get('configurations')
         inst_configs = configurations[0].get('instrument_configs')
 
-        expected_configuration_num = 13
+        expected_configuration_num = 1
+        expected_inst_config_num = 3
         expected_exp_count = 1
         expected_filter = 'I'
 
         self.assertEqual(len(configurations), expected_configuration_num)
-        self.assertEqual(configurations[2]['instrument_configs'][0]['exposure_count'], expected_exp_count)
-        self.assertEqual(configurations[2]['instrument_configs'][0]['optical_elements']['filter'], expected_filter)
+        self.assertEqual(len(inst_configs), expected_inst_config_num)
+        self.assertEqual(inst_configs[0]['exposure_count'], 2)
+        self.assertEqual(inst_configs[0]['optical_elements']['filter'], 'V')
+        self.assertEqual(inst_configs[2]['exposure_count'], expected_exp_count)
+        self.assertEqual(inst_configs[2]['optical_elements']['filter'], expected_filter)
 
     def test_single_filter_requestgroup(self):
 
-            site_code = 'W85'
-            utc_date = datetime.now()+timedelta(days=1)
-            dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-            params = {  'proposal_id' : 'LCO2015A-009',
-                        'exp_count' : 18,
-                        'exp_time' : 50.0,
-                        'site_code' : site_code,
-                        'start_time' : dark_start,
-                        'end_time' : dark_end,
-                        'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                        'user_id'  : 'bsimpson',
-                        'filter_pattern' : 'V'
-                     }
+        params = self.obs_params
+        params['filter_pattern'] = 'V'
 
-            user_request = make_requestgroup(self.body_elements, params)
-            configurations = user_request.get('requests')[0].get('configurations')
-            expected_configuration_num = 1
-            expected_exp_count = 18
-            expected_filter = 'V'
+        user_request = make_requestgroup(self.body_elements, params)
+        configurations = user_request.get('requests')[0].get('configurations')
+        expected_configuration_num = 1
+        expected_exp_count = 1
+        expected_filter = 'V'
 
-            self.assertEqual(len(configurations), expected_configuration_num)
-            self.assertEqual(configurations[0]['instrument_configs'][0]['exposure_count'], expected_exp_count)
-            self.assertEqual(configurations[0]['instrument_configs'][0]['optical_elements']['filter'], expected_filter)
+        self.assertEqual(len(configurations), expected_configuration_num)
+        self.assertEqual(configurations[0]['instrument_configs'][0]['exposure_count'], expected_exp_count)
+        self.assertEqual(configurations[0]['instrument_configs'][0]['optical_elements']['filter'], expected_filter)
 
     def test_overlap_filter_requestgroup(self):
 
-            site_code = 'W85'
-            utc_date = datetime.now()+timedelta(days=1)
-            dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-            params = {  'proposal_id' : 'LCO2015A-009',
-                        'exp_count' : 18,
-                        'exp_time' : 50.0,
-                        'site_code' : site_code,
-                        'start_time' : dark_start,
-                        'end_time' : dark_end,
-                        'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                        'user_id'  : 'bsimpson',
-                        'filter_pattern' : 'V,V,R,R,I,I,V'
-                     }
+        params = self.obs_params
+        params['filter_pattern'] = 'V,V,R,I,V'
+        params['exp_count'] = 9
 
-            user_request = make_requestgroup(self.body_elements, params)
-            configurations = user_request.get('requests')[0].get('configurations')
-            expected_configuration_num = 8
-            expected_exp_count = 3
-            expected_filter = 'V'
+        user_request = make_requestgroup(self.body_elements, params)
+        configurations = user_request.get('requests')[0].get('configurations')
+        inst_configs = configurations[0].get('instrument_configs')
 
-            self.assertEqual(len(configurations), expected_configuration_num)
-            self.assertEqual(configurations[3]['instrument_configs'][0]['exposure_count'], expected_exp_count)
-            self.assertEqual(configurations[3]['instrument_configs'][0]['optical_elements']['filter'], expected_filter)
+        expected_configuration_num = 1
+        expected_inst_config_num = 6
+        expected_exp_count = 3
+        expected_filter = 'V'
+
+        self.assertEqual(len(configurations), expected_configuration_num)
+        self.assertEqual(len(inst_configs), expected_inst_config_num)
+        self.assertEqual(inst_configs[3]['exposure_count'], expected_exp_count)
+        self.assertEqual(inst_configs[3]['optical_elements']['filter'], expected_filter)
 
     def test_overlap_nooverlap_filter_requestgroup(self):
 
-            site_code = 'W85'
-            utc_date = datetime.now()+timedelta(days=1)
-            dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-            params = {  'proposal_id' : 'LCO2015A-009',
-                        'exp_count' : 15,
-                        'exp_time' : 50.0,
-                        'site_code' : site_code,
-                        'start_time' : dark_start,
-                        'end_time' : dark_end,
-                        'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                        'user_id'  : 'bsimpson',
-                        'filter_pattern' : 'V,V,R,I,V'
-                     }
+        params = self.obs_params
+        params['filter_pattern'] = 'V,V,R,I,V'
+        params['exp_count'] = 10
 
-            user_request = make_requestgroup(self.body_elements, params)
-            configurations = user_request.get('requests')[0].get('configurations')
-            expected_configuration_num = 10
-            expected_exp_count = 1
-            expected_filter = 'V'
+        user_request = make_requestgroup(self.body_elements, params)
+        configurations = user_request.get('requests')[0].get('configurations')
+        inst_configs = configurations[0].get('instrument_configs')
 
-            self.assertEqual(len(configurations), expected_configuration_num)
-            self.assertEqual(configurations[9]['instrument_configs'][0]['exposure_count'], expected_exp_count)
-            self.assertEqual(configurations[9]['instrument_configs'][0]['optical_elements']['filter'], expected_filter)
+        expected_inst_config_num = 7
+        expected_configuration_num = 1
+        expected_exp_count = 1
+        expected_filter = 'V'
+
+        self.assertEqual(len(configurations), expected_configuration_num)
+        self.assertEqual(len(inst_configs), expected_inst_config_num)
+        self.assertEqual(inst_configs[6]['exposure_count'], expected_exp_count)
+        self.assertEqual(inst_configs[6]['optical_elements']['filter'], expected_filter)
 
     def test_partial_filter_requestgroup(self):
 
-            site_code = 'W85'
-            utc_date = datetime.now()+timedelta(days=1)
-            dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-            params = {  'proposal_id' : 'LCO2015A-009',
-                        'exp_count' : 15,
-                        'exp_time' : 50.0,
-                        'site_code' : site_code,
-                        'start_time' : dark_start,
-                        'end_time' : dark_end,
-                        'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                        'user_id'  : 'bsimpson',
-                        'filter_pattern' : 'V,V,V,V,V,V,R,R,R,R,R,I,I,I,I,I,I'
-                     }
+        params = self.obs_params
+        params['filter_pattern'] = 'V,V,V,V,V,V,R,R,R,R,R,I,I,I,I,I,I'
+        params['exp_count'] = 10
 
-            user_request = make_requestgroup(self.body_elements, params)
-            configurations = user_request.get('requests')[0].get('configurations')
-            expected_configuration_num = 3
-            expected_exp_count = 4
-            expected_filter = 'I'
+        user_request = make_requestgroup(self.body_elements, params)
+        configurations = user_request.get('requests')[0].get('configurations')
+        inst_configs = configurations[0].get('instrument_configs')
 
-            self.assertEqual(len(configurations), expected_configuration_num)
-            self.assertEqual(configurations[2]['instrument_configs'][0]['exposure_count'], expected_exp_count)
-            self.assertEqual(configurations[2]['instrument_configs'][0]['optical_elements']['filter'], expected_filter)
+        expected_inst_config_num = 2
+        expected_configuration_num = 1
+        expected_exp_count = 4
+        expected_filter = 'R'
+
+        self.assertEqual(len(configurations), expected_configuration_num)
+        self.assertEqual(len(inst_configs), expected_inst_config_num)
+        self.assertEqual(inst_configs[1]['exposure_count'], expected_exp_count)
+        self.assertEqual(inst_configs[1]['optical_elements']['filter'], expected_filter)
 
     def test_partial_overlap_filter_requestgroup(self):
 
-            site_code = 'W85'
-            utc_date = datetime.now()+timedelta(days=1)
-            dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-            params = {  'proposal_id' : 'LCO2015A-009',
-                        'exp_count' : 15,
-                        'exp_time' : 50.0,
-                        'site_code' : site_code,
-                        'start_time' : dark_start,
-                        'end_time' : dark_end,
-                        'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                        'user_id'  : 'bsimpson',
-                        'filter_pattern' : 'V,V,R,R,I,V'
-                     }
+        params = self.obs_params
+        params['filter_pattern'] = 'V,V,R,R,I,V'
+        params['exp_count'] = 10
 
-            user_request = make_requestgroup(self.body_elements, params)
-            configurations = user_request.get('requests')[0].get('configurations')
-            expected_configuration_num = 8
-            expected_exp_count = 3
-            expected_filter = 'V'
+        user_request = make_requestgroup(self.body_elements, params)
+        configurations = user_request.get('requests')[0].get('configurations')
+        inst_configs = configurations[0].get('instrument_configs')
 
-            self.assertEqual(len(configurations), expected_configuration_num)
-            self.assertEqual(configurations[6]['instrument_configs'][0]['exposure_count'], expected_exp_count)
-            self.assertEqual(configurations[6]['instrument_configs'][0]['optical_elements']['filter'], expected_filter)
+        expected_inst_config_num = 5
+        expected_configuration_num = 1
+        expected_exp_count = 3
+        expected_filter = 'V'
+
+        self.assertEqual(len(configurations), expected_configuration_num)
+        self.assertEqual(len(inst_configs), expected_inst_config_num)
+        self.assertEqual(inst_configs[3]['exposure_count'], expected_exp_count)
+        self.assertEqual(inst_configs[3]['optical_elements']['filter'], expected_filter)
 
     def test_spectro_with_solar_analog(self):
 
