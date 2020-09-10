@@ -1225,22 +1225,22 @@ class TestSubmitBlockToScheduler(TestCase):
     def test_partial_filter_requestgroup(self):
 
         params = self.obs_params
-        params['filter_pattern'] = 'V,V,V,V,V,V,R,R,R,R,R,I,I,I,I,I,I'
-        params['exp_count'] = 10
+        params['filter_pattern'] = 'V,V,V,V,V,V,R,R,R,R,R,I,I,I,I,I,I,B,B,B,B,B,B,B'
+        params['exp_count'] = 15
 
         user_request = make_requestgroup(self.body_elements, params)
         configurations = user_request.get('requests')[0].get('configurations')
         inst_configs = configurations[0].get('instrument_configs')
 
-        expected_inst_config_num = 2
+        expected_inst_config_num = 3
         expected_configuration_num = 1
         expected_exp_count = 4
-        expected_filter = 'R'
+        expected_filter = 'I'
 
         self.assertEqual(len(configurations), expected_configuration_num)
         self.assertEqual(len(inst_configs), expected_inst_config_num)
-        self.assertEqual(inst_configs[1]['exposure_count'], expected_exp_count)
-        self.assertEqual(inst_configs[1]['optical_elements']['filter'], expected_filter)
+        self.assertEqual(inst_configs[2]['exposure_count'], expected_exp_count)
+        self.assertEqual(inst_configs[2]['optical_elements']['filter'], expected_filter)
 
     def test_partial_overlap_filter_requestgroup(self):
 
@@ -1261,6 +1261,26 @@ class TestSubmitBlockToScheduler(TestCase):
         self.assertEqual(len(inst_configs), expected_inst_config_num)
         self.assertEqual(inst_configs[3]['exposure_count'], expected_exp_count)
         self.assertEqual(inst_configs[3]['optical_elements']['filter'], expected_filter)
+
+    def test_long_filterlist_largecount_requestgroup(self):
+
+        params = self.obs_params
+        params['filter_pattern'] = 'V,V,V,R,R,R,I,I,I'
+        params['exp_count'] = 20
+
+        user_request = make_requestgroup(self.body_elements, params)
+        configurations = user_request.get('requests')[0].get('configurations')
+        inst_configs = configurations[0].get('instrument_configs')
+
+        expected_inst_config_num = 3
+        expected_configuration_num = 1
+        expected_exp_count = 3
+        expected_filter = 'V'
+
+        self.assertEqual(len(configurations), expected_configuration_num)
+        self.assertEqual(len(inst_configs), expected_inst_config_num)
+        self.assertEqual(inst_configs[0]['exposure_count'], expected_exp_count)
+        self.assertEqual(inst_configs[0]['optical_elements']['filter'], expected_filter)
 
     def test_spectro_with_solar_analog(self):
 

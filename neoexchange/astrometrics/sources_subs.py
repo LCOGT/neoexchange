@@ -1881,7 +1881,9 @@ def configure_defaults(params):
         pass
     params['binning'] = 1
     params['instrument'] = '1M0-SCICAM-SINISTRO'
-    if params['exp_count'] <= 10:
+
+    # Perform Repeated exposures if many exposures compared to number of filter changes.
+    if params['exp_count'] <= 10 or params['exp_count'] < 2*len(list(filter(None, params['filter_pattern'].split(',')))):
         params['exp_type'] = 'EXPOSE'
     else:
         params['exp_type'] = 'REPEAT_EXPOSE'
