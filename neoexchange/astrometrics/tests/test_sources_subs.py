@@ -3908,14 +3908,14 @@ class TestSFUFetch(TestCase):
 class TestConfigureDefaults(TestCase):
 
     def setUp(self):
-        pass
+        self.obs_params = {'exp_count': 10,
+                           'exp_time': 42.0
+                           }
 
     def test_tfn_point4m(self):
-        test_params = {
-              'exp_count': 42,
-              'exp_time': 42.0,
-              'site_code': 'Z21',
-              }
+
+        test_params = self.obs_params
+        test_params['site_code'] = 'Z21'
 
         expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
                             'pondtelescope': '0m4',
@@ -3930,11 +3930,8 @@ class TestConfigureDefaults(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_ogg_point4m(self):
-        test_params = {
-              'exp_count': 42,
-              'exp_time': 42.0,
-              'site_code': 'T04',
-              }
+        test_params = self.obs_params
+        test_params['site_code'] = 'T04'
 
         expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
                             'pondtelescope': '0m4',
@@ -3949,11 +3946,8 @@ class TestConfigureDefaults(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_coj_point4m(self):
-        test_params = {
-              'exp_count': 42,
-              'exp_time': 42.0,
-              'site_code': 'Q59',
-              }
+        test_params = self.obs_params
+        test_params['site_code'] = 'Q59'
 
         expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
                             'pondtelescope': '0m4',
@@ -3968,11 +3962,8 @@ class TestConfigureDefaults(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_cpt_point4m(self):
-        test_params = {
-              'exp_count': 42,
-              'exp_time': 42.0,
-              'site_code': 'L09',
-              }
+        test_params = self.obs_params
+        test_params['site_code'] = 'L09'
 
         expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
                             'pondtelescope': '0m4',
@@ -3987,11 +3978,8 @@ class TestConfigureDefaults(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_elp_point4m(self):
-        test_params = {
-              'exp_count': 42,
-              'exp_time': 42.0,
-              'site_code': 'V38',
-              }
+        test_params = self.obs_params
+        test_params['site_code'] = 'V38'
 
         expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
                             'pondtelescope': '0m4',
@@ -4006,11 +3994,8 @@ class TestConfigureDefaults(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_lsc_point4m_num1(self):
-        test_params = {
-              'exp_count': 42,
-              'exp_time': 42.0,
-              'site_code': 'W89',
-              }
+        test_params = self.obs_params
+        test_params['site_code'] = 'W89'
 
         expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
                             'pondtelescope': '0m4',
@@ -4025,11 +4010,8 @@ class TestConfigureDefaults(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_lsc_point4m_num2(self):
-        test_params = {
-              'exp_count': 42,
-              'exp_time': 42.0,
-              'site_code': 'W79',
-              }
+        test_params = self.obs_params
+        test_params['site_code'] = 'W79'
 
         expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
                             'pondtelescope': '0m4',
@@ -4044,11 +4026,8 @@ class TestConfigureDefaults(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_lsc_sinistro(self):
-        test_params = {
-              'exp_count': 42,
-              'exp_time': 42.0,
-              'site_code': 'W86',
-              }
+        test_params = self.obs_params
+        test_params['site_code'] = 'W86'
 
         expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
                             'pondtelescope': '1m0',
@@ -4063,11 +4042,8 @@ class TestConfigureDefaults(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_lsc_bad_sinistro(self):
-        test_params = {
-              'exp_count': 42,
-              'exp_time': 42.0,
-              'site_code': 'W87',
-              }
+        test_params = self.obs_params
+        test_params['site_code'] = 'W87'
 
         expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
                             'pondtelescope': '1m0',
@@ -4076,7 +4052,7 @@ class TestConfigureDefaults(TestCase):
                             'site': 'LSC',
                             'binning': 1,
                             'site_code': 'W87',
-                            'exp_count': 42,
+                            'exp_count': 10,
                             'exp_time': 42.0}
 
         params = configure_defaults(test_params)
@@ -4084,18 +4060,17 @@ class TestConfigureDefaults(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_ftn(self):
-        test_params = {
-              'exp_count': 42,
-              'exp_time': 42.0,
-              'site_code': 'F65',
-              }
+        test_params = self.obs_params
+        test_params['site_code'] = 'F65'
 
         expected_params = { 'instrument':  '2M0-SCICAM-SPECTRAL',
                             'pondtelescope': '2m0',
                             'observatory': '',
                             'exp_type': 'EXPOSE',
                             'site': 'OGG',
-                            'binning': 2}
+                            'binning': 2,
+                            'exp_count': 10,
+                            'exp_time': 42.0}
         expected_params.update(test_params)
 
         params = configure_defaults(test_params)
@@ -4103,18 +4078,17 @@ class TestConfigureDefaults(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_fts(self):
-        test_params = {
-              'exp_count': 42,
-              'exp_time': 42.0,
-              'site_code': 'E10',
-              }
+        test_params = self.obs_params
+        test_params['site_code'] = 'E10'
 
         expected_params = { 'instrument':  '2M0-SCICAM-SPECTRAL',
                             'pondtelescope': '2m0',
-                            'observatory' : '',
+                            'observatory': '',
                             'exp_type': 'EXPOSE',
-                            'site' : 'COJ',
-                            'binning' : 2}
+                            'site': 'COJ',
+                            'binning': 2,
+                            'exp_count': 10,
+                            'exp_time': 42.0}
         expected_params.update(test_params)
 
         params = configure_defaults(test_params)
@@ -4122,18 +4096,17 @@ class TestConfigureDefaults(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_elp_sinistro(self):
-        test_params = {
-              'exp_count': 42,
-              'exp_time': 42.0,
-              'site_code': 'V37',
-              }
+        test_params = self.obs_params
+        test_params['site_code'] = 'V37'
 
         expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
                             'pondtelescope': '1m0',
                             'observatory': '',
                             'exp_type': 'EXPOSE',
                             'site': 'ELP',
-                            'binning': 1}
+                            'binning': 1,
+                            'exp_count': 10,
+                            'exp_time': 42.0}
         expected_params.update(test_params)
 
         params = configure_defaults(test_params)
@@ -4141,18 +4114,17 @@ class TestConfigureDefaults(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_elp_num2_sinistro(self):
-        test_params = {
-              'exp_count': 42,
-              'exp_time': 42.0,
-              'site_code': 'V39',
-              }
+        test_params = self.obs_params
+        test_params['site_code'] = 'V39'
 
         expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
                             'pondtelescope': '1m0',
                             'observatory': '',
                             'exp_type': 'EXPOSE',
                             'site': 'ELP',
-                            'binning': 1}
+                            'binning': 1,
+                            'exp_count': 10,
+                            'exp_time': 42.0}
         expected_params.update(test_params)
 
         params = configure_defaults(test_params)
@@ -4166,9 +4138,12 @@ class TestConfigureDefaults(TestCase):
                             'exp_type': 'EXPOSE',
                             'pondtelescope': '1m0',
                             'site': 'CPT',
-                            'site_code': 'K92'}
+                            'site_code': 'K92',
+                            'exp_count': 10,
+                            'exp_time': 42.0}
 
-        params = {'site_code': 'K92'}
+        params = self.obs_params
+        params['site_code'] = 'K92'
 
         params = configure_defaults(params)
 
@@ -4181,9 +4156,12 @@ class TestConfigureDefaults(TestCase):
                             'exp_type': 'EXPOSE',
                             'pondtelescope': '1m0',
                             'site': 'LSC',
-                            'site_code': 'W85'}
+                            'site_code': 'W85',
+                            'exp_count': 10,
+                            'exp_time': 42.0}
 
-        params = {'site_code': 'W85'}
+        params = self.obs_params
+        params['site_code'] = 'W85'
 
         params = configure_defaults(params)
 
@@ -4196,9 +4174,12 @@ class TestConfigureDefaults(TestCase):
                             'exp_type': 'EXPOSE',
                             'pondtelescope': '1m0',
                             'site': 'LSC',
-                            'site_code': 'W86'}
+                            'site_code': 'W86',
+                            'exp_count': 10,
+                            'exp_time': 42.0}
 
-        params = {'site_code': 'W86'}
+        params = self.obs_params
+        params['site_code'] = 'W86'
 
         params = configure_defaults(params)
 
@@ -4211,9 +4192,12 @@ class TestConfigureDefaults(TestCase):
                             'exp_type': 'EXPOSE',
                             'pondtelescope': '1m0',
                             'site': 'ELP',
-                            'site_code': 'V37'}
+                            'site_code': 'V37',
+                            'exp_count': 10,
+                            'exp_time': 42.0}
 
-        params = {'site_code': 'V37'}
+        params = self.obs_params
+        params['site_code'] = 'V37'
 
         params = configure_defaults(params)
 
@@ -4226,9 +4210,12 @@ class TestConfigureDefaults(TestCase):
                             'exp_type': 'EXPOSE',
                             'pondtelescope': '1m0',
                             'site': 'LSC',
-                            'site_code': 'W87'}
+                            'site_code': 'W87',
+                            'exp_count': 10,
+                            'exp_time': 42.0}
 
-        params = {'site_code': 'W87'}
+        params = self.obs_params
+        params['site_code'] = 'W87'
 
         params = configure_defaults(params)
 
@@ -4241,9 +4228,12 @@ class TestConfigureDefaults(TestCase):
                             'exp_type': 'EXPOSE',
                             'pondtelescope': '1m0',
                             'site': 'CPT',
-                            'site_code': 'K93'}
+                            'site_code': 'K93',
+                            'exp_count': 10,
+                            'exp_time': 42.0}
 
-        params = {'site_code': 'K93'}
+        params = self.obs_params
+        params['site_code'] = 'K93'
 
         params = configure_defaults(params)
 
@@ -4256,9 +4246,12 @@ class TestConfigureDefaults(TestCase):
                             'exp_type': 'EXPOSE',
                             'pondtelescope': '2m0',
                             'site': 'OGG',
-                            'site_code': 'F65'}
+                            'site_code': 'F65',
+                            'exp_count': 10,
+                            'exp_time': 42.0}
 
-        params = {'site_code': 'F65'}
+        params = self.obs_params
+        params['site_code'] = 'F65'
 
         params = configure_defaults(params)
 
@@ -4271,9 +4264,12 @@ class TestConfigureDefaults(TestCase):
                             'exp_type': 'EXPOSE',
                             'pondtelescope': '2m0',
                             'site': 'COJ',
-                            'site_code': 'E10'}
+                            'site_code': 'E10',
+                            'exp_count': 10,
+                            'exp_time': 42.0}
 
-        params = {'site_code': 'E10'}
+        params = self.obs_params
+        params['site_code'] = 'E10'
 
         params = configure_defaults(params)
 
@@ -4288,10 +4284,14 @@ class TestConfigureDefaults(TestCase):
                             'exp_type'    : 'SPECTRUM',
                             'pondtelescope' : '2m0',
                             'site'        : 'OGG',
+                            'exp_count': 1,
                             'site_code'   : 'F65',
                             'instrument_code' : 'F65-FLOYDS'}
 
-        params = { 'site_code' : 'F65', 'instrument_code' : 'F65-FLOYDS', 'spectroscopy' : True}
+        params = {'site_code': 'F65',
+                  'instrument_code': 'F65-FLOYDS',
+                  'spectroscopy': True,
+                  'exp_count': 1}
 
         params = configure_defaults(params)
 
@@ -4304,12 +4304,14 @@ class TestConfigureDefaults(TestCase):
                             'instrument'  : '2M0-FLOYDS-SCICAM',
                             'observatory' : '',
                             'exp_type'    : 'SPECTRUM',
+                            'exp_count': 1,
                             'pondtelescope': '2m0',
                             'site'        : 'COJ',
                             'site_code'   : 'E10',
                             'instrument_code' : 'E10-FLOYDS'}
 
-        params = { 'site_code' : 'E10', 'instrument_code' : 'E10-FLOYDS', 'spectroscopy' : True}
+        params = { 'site_code' : 'E10', 'instrument_code' : 'E10-FLOYDS', 'spectroscopy' : True,
+                   'exp_count': 1}
 
         params = configure_defaults(params)
 
@@ -4322,6 +4324,7 @@ class TestConfigureDefaults(TestCase):
                             'instrument'  : '2M0-FLOYDS-SCICAM',
                             'observatory' : '',
                             'exp_type'    : 'SPECTRUM',
+                            'exp_count'   : 1,
                             'pondtelescope' : '2m0',
                             'site'        : 'OGG',
                             'site_code'   : 'F65',
@@ -4330,11 +4333,12 @@ class TestConfigureDefaults(TestCase):
                             'calibsource' : {'name' : 'SA107-684'}
                             }
 
-        params = { 'site_code' : 'F65',
-                   'instrument_code' : 'F65-FLOYDS',
-                   'spectroscopy' : True,
-                   'solar_analog' : False,
-                   'calibsource' : {'name' : 'SA107-684'}
+        params = { 'site_code': 'F65',
+                   'instrument_code': 'F65-FLOYDS',
+                   'spectroscopy': True,
+                   'solar_analog': False,
+                   'calibsource': {'name': 'SA107-684'},
+                   'exp_count': 1
                    }
 
         params = configure_defaults(params)
@@ -4348,6 +4352,7 @@ class TestConfigureDefaults(TestCase):
                             'instrument'  : '2M0-FLOYDS-SCICAM',
                             'observatory' : '',
                             'exp_type'    : 'SPECTRUM',
+                            'exp_count': 1,
                             'pondtelescope' : '2m0',
                             'site'        : 'OGG',
                             'site_code'   : 'F65',
@@ -4360,7 +4365,8 @@ class TestConfigureDefaults(TestCase):
                    'instrument_code' : 'F65-FLOYDS',
                    'spectroscopy' : True,
                    'solar_analog' : False,
-                   'calibsource' : {}
+                   'calibsource' : {},
+                   'exp_count': 1
                    }
 
         params = configure_defaults(params)
