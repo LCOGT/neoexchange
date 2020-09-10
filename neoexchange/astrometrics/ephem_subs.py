@@ -1314,15 +1314,18 @@ def molecule_overhead(filter_blocks):
     return molecule_setup_overhead
 
 
-def build_filter_blocks(filter_pattern, exp_count):
+def build_filter_blocks(filter_pattern, exp_count, exp_type):
     """Take in filter pattern string, export list of [filter, # of exposures in filter] """
     filter_bits = filter_pattern.split(',')
     filter_bits = list(filter(None, filter_bits))
     filter_list = []
     filter_blocks = []
-    while exp_count > 0:
-        filter_list += filter_bits[:exp_count]
-        exp_count -= len(filter_bits)
+    if exp_type == 'REPEAT_EXPOSE':
+        filter_list = filter_bits
+    else:
+        while exp_count > 0:
+            filter_list += filter_bits[:exp_count]
+            exp_count -= len(filter_bits)
     for f, m in groupby(filter_list):
         filter_blocks.append(list(m))
     if len(filter_blocks) == 0:

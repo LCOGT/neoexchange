@@ -1594,30 +1594,37 @@ def make_window(params):
     return window
 
 
-def make_config(params, exp_filter):
+def make_config(params, filter_list):
     # Common part of a molecule
-    exp_count = exp_filter[1]
     conf = {
-        'type' : params['exp_type'],
-        'instrument_type'   : params['instrument'],
+        'type': params['exp_type'],
+        'instrument_type': params['instrument'],
         'target': params['target'],
         'constraints': params['constraints'],
         'acquisition_config': {},
         'guiding_config': {},
-        'instrument_configs': [
-            {
-                'exposure_count'  : exp_count,
-                'exposure_time' : params['exp_time'],
-                'bin_x'       : params['binning'],
-                'bin_y'       : params['binning'],
-                'optical_elements': {
-                    'filter': exp_filter[0]
-                }
-            }
-        ]
+        'instrument_configs': []
     }
-    if params.get('bin_mode', None) == '2k_2x2' and params['pondtelescope'] == '1m0':
-        conf['instrument_configs'][0]['mode'] = 'central_2k_2x2'
+    if params['exp_type'] == 'REPEAT_EXPOSE':
+        conf['repeat_duration'] = params['slot_length']
+    for filt in filter_list:
+        if params['exp_type'] == 'REPEAT_EXPOSE' and len(filter_list) == 1:
+            exp_count = 1
+        else:
+            exp_count = filt[1]
+
+        instrument_config = {'exposure_count': exp_count,
+                             'exposure_time': params['exp_time'],
+                             'bin_x': params['binning'],
+                             'bin_y': params['binning'],
+                             'optical_elements': {'filter': filt[0]}
+                             }
+
+        if params.get('bin_mode', None) == '2k_2x2' and params['pondtelescope'] == '1m0':
+            instrument_config['mode'] = 'central_2k_2x2'
+
+        conf['instrument_configs'].append(instrument_config)
+
     return conf
 
 
@@ -1682,7 +1689,7 @@ def make_configs(params):
     In spectroscopy mode, this will produce 1, 3 or 5 molecules depending on whether
     `params['calibs']` is 'none, 'before'/'after' or 'both'."""
 
-    filt_list = build_filter_blocks(params['filter_pattern'], params['exp_count'])
+    filt_list = build_filter_blocks(params['filter_pattern'], params['exp_count'], params['exp_type'])
 
     calib_mode = params.get('calibs', 'none').lower()
     if params.get('spectroscopy', False) is True:
@@ -1705,7 +1712,7 @@ def make_configs(params):
         else:
             configs = [spectrum_molecule, ]
     else:
-        configs = [make_config(params, filt) for filt in filt_list]
+        configs = [make_config(params, filt_list)]
 
     return configs
 
@@ -1717,8 +1724,8 @@ def make_constraints(params):
                     # 'max_airmass' : 1.55,   # 40 deg altitude (The maximum airmass you are willing to accept)
                     # 'max_airmass' : 2.37,   # 25 deg altitude (The maximum airmass you are willing to accept)
                     # 'min_lunar_distance': 30
-                    'max_airmass' : params.get('max_airmass', 1.74),
-                    'min_lunar_distance' : params.get('min_lunar_distance', 30)
+                    'max_airmass': params.get('max_airmass', 1.74),
+                    'min_lunar_distance': params.get('min_lunar_distance', 30)
                   }
     return constraints
 
@@ -1874,7 +1881,10 @@ def configure_defaults(params):
         pass
     params['binning'] = 1
     params['instrument'] = '1M0-SCICAM-SINISTRO'
-    params['exp_type'] = 'EXPOSE'
+    if params['exp_count'] <= 10:
+        params['exp_type'] = 'EXPOSE'
+    else:
+        params['exp_type'] = 'REPEAT_EXPOSE'
 
     if params['site_code'] in ['F65', 'E10', '2M0']:
         params['instrument'] = '2M0-SCICAM-SPECTRAL'
@@ -1912,6 +1922,7 @@ def configure_defaults(params):
 def make_requestgroup(elements, params):
 
     params = configure_defaults(params)
+
 # Create Location (site, observatory etc)
     location = make_location(params)
     logger.debug("Location=%s" % location)

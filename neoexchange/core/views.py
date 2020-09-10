@@ -1546,6 +1546,7 @@ def schedule_submit(data, body, username):
               'bin_mode': data['bin_mode'],
               'filter_pattern': data['filter_pattern'],
               'exp_count': data['exp_count'],
+              'slot_length': data['slot_length'],
               'exp_time': data['exp_length'],
               'site_code': data['site_code'],
               'start_time': data['start_time'],

@@ -660,7 +660,7 @@ class TestFetchYarkovskyTargets(TestCase):
 class TestSubmitBlockToScheduler(TestCase):
 
     def setUp(self):
-        params = {  'provisional_name' : 'N999r0q',
+        b_params = {'provisional_name' : 'N999r0q',
                     'abs_mag'       : 21.0,
                     'slope'         : 0.15,
                     'epochofel'     : datetime(2015, 3, 19, 00, 00, 00),
@@ -675,7 +675,7 @@ class TestSubmitBlockToScheduler(TestCase):
                     'active'        : True,
                     'origin'        : 'M',
                     }
-        self.body, created = Body.objects.get_or_create(**params)
+        self.body, created = Body.objects.get_or_create(**b_params)
         self.body_elements = model_to_dict(self.body)
         self.body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
         self.body_elements['current_name'] = self.body.current_name()
@@ -694,25 +694,28 @@ class TestSubmitBlockToScheduler(TestCase):
                         }
         self.ssource = StaticSource.objects.create(**ssource_params)
 
+        site_code = 'K92'
+        utc_date = datetime.now()+timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        self.obs_params = {'proposal_id': 'LCO2015A-009',
+                           'exp_count': 18,
+                           'exp_time': 50.0,
+                           'slot_length': 30,
+                           'site_code': site_code,
+                           'start_time': dark_start,
+                           'end_time': dark_end,
+                           'filter_pattern': 'w',
+                           'group_name': self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                           'user_id': 'bsimpson'
+                           }
+
     @patch('astrometrics.sources_subs.requests.post')
     def test_submit_body_for_cpt(self, mock_post):
         mock_post.return_value.status_code = 200
 
-        mock_post.return_value.json.return_value = {'id': '999', 'requests' : [{'id': '111', 'target' : {'type' : 'NON-SIDEREAL'}, 'duration' : 1820}]}
+        mock_post.return_value.json.return_value = {'id': '999', 'requests': [{'id': '111', 'target': {'type': 'NON-SIDEREAL'}, 'duration': 1820}]}
 
-        site_code = 'K92'
-        utc_date = datetime.now()+timedelta(days=1)
-        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 18,
-                    'exp_time' : 50.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'filter_pattern' : 'w',
-                    'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson'
-                 }
+        params = self.obs_params
 
         resp, sched_params = submit_block_to_scheduler(self.body_elements, params)
         self.assertEqual(resp, '999')
@@ -734,25 +737,16 @@ class TestSubmitBlockToScheduler(TestCase):
     def test_submit_body_for_cpt_V3(self, mock_post):
         mock_post.return_value.status_code = 200
 
-        mock_post.return_value.json.return_value = {'id': 999, 'requests' :
-            [{'id': 111, 'configurations' :
-                [{'id' : 222, 'target' : {'type' : 'ORBITAL-ELEMENTS'}}
-                ],
-            'duration' : 1820}]}
+        mock_post.return_value.json.return_value = {'id': 999,
+                                                    'requests': [
+                                                        {'id': 111,
+                                                         'configurations': [{'id': 222,
+                                                                             'target': {'type': 'ORBITAL-ELEMENTS'}
+                                                                             }],
+                                                         'duration': 1820}
+                                                    ]}
 
-        site_code = 'K92'
-        utc_date = datetime.now()+timedelta(days=1)
-        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 18,
-                    'exp_time' : 50.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'filter_pattern' : 'w',
-                    'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson'
-                 }
+        params = self.obs_params
 
         resp, sched_params = submit_block_to_scheduler(self.body_elements, params)
         self.assertEqual(resp, '999')
@@ -779,25 +773,19 @@ class TestSubmitBlockToScheduler(TestCase):
     def test_submit_cadence(self, mock_post):
         mock_post.return_value.status_code = 200
 
-        mock_post.return_value.json.return_value = {'id': '999', 'requests' : [{'id': '111', 'target' : {'type' : 'NON-SIDEREAL'}, 'duration' : 1820},
-                                                                               {'id': '222', 'target' : {'type' : 'NON-SIDEREAL'}, 'duration' : 1820},
-                                                                               {'id': '333', 'target' : {'type' : 'NON-SIDEREAL'}, 'duration' : 1820}]}
+        mock_post.return_value.json.return_value = {'id': '999', 'requests': [{'id': '111', 'target': {'type': 'NON-SIDEREAL'}, 'duration': 1820},
+                                                                              {'id': '222', 'target': {'type': 'NON-SIDEREAL'}, 'duration': 1820},
+                                                                              {'id': '333', 'target': {'type': 'NON-SIDEREAL'}, 'duration': 1820}]}
 
         site_code = 'V38'
         utc_date = datetime(2015, 3, 19, 00, 00, 00) + timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 18,
-                    'exp_time' : 50.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'filter_pattern' : 'w',
-                    'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson',
-                    'period'    : 2.0,
-                    'jitter'    : 0.25
-                 }
+        params = self.obs_params
+        params['start_time'] = dark_start
+        params['end_time'] = dark_end
+        params['period'] = 2.0
+        params['jitter'] = 0.25
+
         tracking_num, sched_params = submit_block_to_scheduler(self.body_elements, params)
 
         # store Blocks
@@ -820,7 +808,7 @@ class TestSubmitBlockToScheduler(TestCase):
     def test_submit_spectra_for_ogg(self, mock_post):
         mock_post.return_value.status_code = 200
 
-        mock_post.return_value.json.return_value = {'id': '999', 'requests' : [{'id': '111', 'duration' : 1820, 'target': {'type': 'ORBITAL_ELEMENTS'}}]}
+        mock_post.return_value.json.return_value = {'id': '999', 'requests': [{'id': '111', 'duration': 1820, 'target': {'type': 'ORBITAL_ELEMENTS'}}]}
 
         body_elements = model_to_dict(self.body)
         body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
@@ -828,18 +816,19 @@ class TestSubmitBlockToScheduler(TestCase):
         site_code = 'F65'
         utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 18,
-                    'exp_time' : 50.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'filter_pattern' : 'slit_6.0as',
-                    'group_name' : body_elements['current_name'] + '_' + 'ogg' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson',
-                    'spectroscopy' : True,
-                    'spectra_slit' : 'slit_6.0as'
-                 }
+        params = {'proposal_id': 'LCO2015A-009',
+                  'exp_count': 18,
+                  'exp_time': 50.0,
+                  'slot_length': 30,
+                  'site_code': site_code,
+                  'start_time': dark_start,
+                  'end_time': dark_end,
+                  'filter_pattern': 'slit_6.0as',
+                  'group_name': body_elements['current_name'] + '_' + 'ogg' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                  'user_id': 'bsimpson',
+                  'spectroscopy': True,
+                  'spectra_slit': 'slit_6.0as'
+                  }
 
         resp, sched_params = submit_block_to_scheduler(body_elements, params)
         self.assertEqual(resp, '999')
@@ -888,21 +877,22 @@ class TestSubmitBlockToScheduler(TestCase):
         site_code = 'F65'
         utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 1,
-                    'exp_time' : 150.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'filter_pattern' : 'slit_6.0as',
-                    'group_name' : body_elements['current_name'] + '_' + 'ogg' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson',
-                    'solar_analog' : True,
-                    'calibsource' : {'id' : 1, 'name' : 'SA107-684', 'ra_deg' : 234.3, 'dec_deg' : -0.16, 'calib_exptime' : 60},
-                    'calibsrc_exptime' : 60,
-                    'spectroscopy' : True,
-                    'spectra_slit' : 'slit_6.0as'
-                 }
+        params = {'proposal_id': 'LCO2015A-009',
+                  'exp_count': 1,
+                  'exp_time': 150.0,
+                  'slot_length': 30,
+                  'site_code': site_code,
+                  'start_time': dark_start,
+                  'end_time': dark_end,
+                  'filter_pattern': 'slit_6.0as',
+                  'group_name': body_elements['current_name'] + '_' + 'ogg' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                  'user_id': 'bsimpson',
+                  'solar_analog': True,
+                  'calibsource': {'id': 1, 'name': 'SA107-684', 'ra_deg': 234.3, 'dec_deg': -0.16, 'calib_exptime': 60},
+                  'calibsrc_exptime': 60,
+                  'spectroscopy': True,
+                  'spectra_slit': 'slit_6.0as'
+                  }
 
         resp, sched_params = submit_block_to_scheduler(body_elements, params)
         self.assertEqual(resp, '999')
@@ -930,23 +920,14 @@ class TestSubmitBlockToScheduler(TestCase):
         self.assertNotEqual(blocks[1].calibsource, None)
         self.assertEqual(blocks[1].calibsource.name, params['calibsource']['name'])
 
-
-
     def test_make_requestgroup(self):
 
         site_code = 'K92'
         utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 18,
-                    'exp_time' : 50.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson',
-                    'filter_pattern' : 'w'
-                 }
+        params = self.obs_params
+        params['start_time'] = dark_start
+        params['end_time'] = dark_end
 
         user_request = make_requestgroup(self.body_elements, params)
 
@@ -959,16 +940,10 @@ class TestSubmitBlockToScheduler(TestCase):
         site_code = '2M0'
         utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 18,
-                    'exp_time' : 50.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson',
-                    'filter_pattern' : 'w'
-                 }
+        params = self.obs_params
+        params['start_time'] = dark_start
+        params['end_time'] = dark_end
+        params['site_code'] = site_code
 
         user_request = make_requestgroup(self.body_elements, params)
 
@@ -1012,16 +987,10 @@ class TestSubmitBlockToScheduler(TestCase):
         site_code = 'W85'
         utc_date = datetime.now()+timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 18,
-                    'exp_time' : 50.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson',
-                    'filter_pattern' : 'w'
-                 }
+        params = self.obs_params
+        params['start_time'] = dark_start
+        params['end_time'] = dark_end
+        params['site_code'] = site_code
 
         user_request = make_requestgroup(self.body_elements, params)
 
@@ -1035,16 +1004,10 @@ class TestSubmitBlockToScheduler(TestCase):
         site_code = 'V39'
         utc_date = datetime.now()+timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 18,
-                    'exp_time' : 50.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'group_name' : self.body_elements['current_name'] + '_' + 'ELP' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson',
-                    'filter_pattern' : 'w'
-                 }
+        params = self.obs_params
+        params['start_time'] = dark_start
+        params['end_time'] = dark_end
+        params['site_code'] = site_code
 
         user_request = make_requestgroup(self.body_elements, params)
 
@@ -1061,17 +1024,11 @@ class TestSubmitBlockToScheduler(TestCase):
         site_code = 'Q63'
         utc_date = datetime.now()+timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 18,
-                    'exp_time' : 50.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'group_name' : body_elements['current_name'] + '_' + 'COJ' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson',
-                    'filter_pattern' : 'w',
-                    'too_mode' : True
-                 }
+        params = self.obs_params
+        params['start_time'] = dark_start
+        params['end_time'] = dark_end
+        params['site_code'] = site_code
+        params['too_mode'] = True
 
         user_request = make_requestgroup(body_elements, params)
 
@@ -1086,17 +1043,11 @@ class TestSubmitBlockToScheduler(TestCase):
         site_code = '1M0'
         utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 18,
-                    'exp_time' : 50.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson',
-                    'filter_pattern' : 'w',
-                    'bin_mode' : '2k_2x2'
-                 }
+        params = self.obs_params
+        params['start_time'] = dark_start
+        params['end_time'] = dark_end
+        params['site_code'] = site_code
+        params['bin_mode'] = '2k_2x2'
 
         user_request = make_requestgroup(self.body_elements, params)
 
@@ -1110,20 +1061,8 @@ class TestSubmitBlockToScheduler(TestCase):
 
     def test_ELP_1m_binning_requestgroup(self):
 
-        site_code = 'V39'
-        utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
-        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 18,
-                    'exp_time' : 50.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'group_name' : self.body_elements['current_name'] + '_' + 'ELP' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson',
-                    'filter_pattern' : 'w',
-                    'bin_mode' : '2k_2x2'
-                 }
+        params = self.obs_params
+        params['bin_mode'] = '2k_2x2'
 
         user_request = make_requestgroup(self.body_elements, params)
 
@@ -1136,20 +1075,8 @@ class TestSubmitBlockToScheduler(TestCase):
 
     def test_1m_no_binning_requestgroup(self):
 
-        site_code = 'V39'
-        utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
-        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 18,
-                    'exp_time' : 50.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'group_name' : self.body_elements['current_name'] + '_' + 'ELP' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson',
-                    'filter_pattern' : 'w',
-                    'bin_mode' : 'full_chip'
-                 }
+        params = self.obs_params
+        params['bin_mode'] = 'full_chip'
 
         user_request = make_requestgroup(self.body_elements, params)
 
@@ -1165,17 +1092,11 @@ class TestSubmitBlockToScheduler(TestCase):
         site_code = '2M0'
         utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 18,
-                    'exp_time' : 50.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'group_name' : self.body_elements['current_name'] + '_' + 'ELP' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson',
-                    'filter_pattern' : 'w',
-                    'bin_mode' : '2k_2x2'
-                 }
+        params = self.obs_params
+        params['start_time'] = dark_start
+        params['end_time'] = dark_end
+        params['site_code'] = site_code
+        params['bin_mode'] = '2k_2x2'
 
         user_request = make_requestgroup(self.body_elements, params)
 
@@ -1191,17 +1112,11 @@ class TestSubmitBlockToScheduler(TestCase):
         site_code = 'L09'
         utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 18,
-                    'exp_time' : 50.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'group_name' : self.body_elements['current_name'] + '_' + 'ELP' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson',
-                    'filter_pattern' : 'w',
-                    'bin_mode' : '2k_2x2'
-                 }
+        params = self.obs_params
+        params['start_time'] = dark_start
+        params['end_time'] = dark_end
+        params['site_code'] = site_code
+        params['bin_mode'] = '2k_2x2'
 
         user_request = make_requestgroup(self.body_elements, params)
 
@@ -1214,55 +1129,52 @@ class TestSubmitBlockToScheduler(TestCase):
 
     def test_multi_filter_requestgroup(self):
 
-            site_code = 'W85'
-            utc_date = datetime.now()+timedelta(days=1)
-            dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-            params = {  'proposal_id' : 'LCO2015A-009',
-                        'exp_count' : 18,
-                        'exp_time' : 50.0,
-                        'site_code' : site_code,
-                        'start_time' : dark_start,
-                        'end_time' : dark_end,
-                        'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                        'user_id'  : 'bsimpson',
-                        'filter_pattern' : 'V,V,R,R,I,I'
-                     }
+        params = self.obs_params
+        params['filter_pattern'] = 'V,V,R,R,I,I'
 
-            user_request = make_requestgroup(self.body_elements, params)
-            configurations = user_request.get('requests')[0].get('configurations')
-            expected_configuration_num = 9
-            expected_exp_count = 2
-            expected_filter = 'V'
+        user_request = make_requestgroup(self.body_elements, params)
+        configurations = user_request.get('requests')[0].get('configurations')
+        inst_configs = configurations[0].get('instrument_configs')
 
-            self.assertEqual(len(configurations), expected_configuration_num)
-            self.assertEqual(configurations[3]['instrument_configs'][0]['exposure_count'], expected_exp_count)
-            self.assertEqual(configurations[3]['instrument_configs'][0]['optical_elements']['filter'], expected_filter)
+        expected_configuration_num = 1
+        expected_ist_config_num = 3
+        expected_exp_count = 2
+        expected_filter = 'I'
+
+        self.assertEqual(len(configurations), expected_configuration_num)
+        self.assertEqual(len(inst_configs), expected_ist_config_num)
+        self.assertEqual(inst_configs[2]['exposure_count'], expected_exp_count)
+        self.assertEqual(inst_configs[2]['optical_elements']['filter'], expected_filter)
 
     def test_uneven_filter_requestgroup(self):
 
-            site_code = 'W85'
-            utc_date = datetime.now()+timedelta(days=1)
-            dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-            params = {  'proposal_id' : 'LCO2015A-009',
-                        'exp_count' : 18,
-                        'exp_time' : 50.0,
-                        'site_code' : site_code,
-                        'start_time' : dark_start,
-                        'end_time' : dark_end,
-                        'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                        'user_id'  : 'bsimpson',
-                        'filter_pattern' : 'V,V,R,I'
-                     }
+        # site_code = 'W85'
+        # utc_date = datetime.now()+timedelta(days=1)
+        # dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        # params = {  'proposal_id' : 'LCO2015A-009',
+        #             'exp_count' : 18,
+        #             'exp_time' : 50.0,
+        #             'site_code' : site_code,
+        #             'start_time' : dark_start,
+        #             'end_time' : dark_end,
+        #             'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+        #             'user_id'  : 'bsimpson',
+        #             'filter_pattern' : 'V,V,R,I'
+        #          }
+        params = self.obs_params
+        params['filter_pattern'] = 'V,V,R,I'
 
-            user_request = make_requestgroup(self.body_elements, params)
-            configurations = user_request.get('requests')[0].get('configurations')
-            expected_configuration_num = 13
-            expected_exp_count = 1
-            expected_filter = 'I'
+        user_request = make_requestgroup(self.body_elements, params)
+        configurations = user_request.get('requests')[0].get('configurations')
+        inst_configs = configurations[0].get('instrument_configs')
 
-            self.assertEqual(len(configurations), expected_configuration_num)
-            self.assertEqual(configurations[2]['instrument_configs'][0]['exposure_count'], expected_exp_count)
-            self.assertEqual(configurations[2]['instrument_configs'][0]['optical_elements']['filter'], expected_filter)
+        expected_configuration_num = 13
+        expected_exp_count = 1
+        expected_filter = 'I'
+
+        self.assertEqual(len(configurations), expected_configuration_num)
+        self.assertEqual(configurations[2]['instrument_configs'][0]['exposure_count'], expected_exp_count)
+        self.assertEqual(configurations[2]['instrument_configs'][0]['optical_elements']['filter'], expected_filter)
 
     def test_single_filter_requestgroup(self):
 
