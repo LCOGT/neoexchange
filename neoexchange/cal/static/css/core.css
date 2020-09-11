@@ -1050,3 +1050,8 @@ Lots taken from Flatly (MIT): https://bootswatch.com/4/flatly/bootstrap.css
     /* don't display any button-related controls */
   }
 }
+
+.neox-arecibo {
+  background-image: linear-gradient(45deg, #caedd4 25%, #fafdff 25%, #fafdff 50%, #caedd4 50%, #caedd4 75%, #fafdff 75%, #fafdff 100%);
+  background-size: 56.57px 56.57px;
+}

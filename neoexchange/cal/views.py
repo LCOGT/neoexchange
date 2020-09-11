@@ -36,7 +36,7 @@ def arecibo_events(request):
             # See if uncertainty is greater than Arecibo beam width (~2 arcmin)
             # If so, set border colo(u)r to red
             if d['extrainfo'].get('uncertainty', 0) >= 120:
-                target['borderColor'] = 'red'
+                target['className'] = 'neox-arecibo'
         targets.append(target)
     return JsonResponse(targets, safe=False)
 
