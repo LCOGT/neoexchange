@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block header %}
+    Pipeline overview
+{% endblock %}
+
+{% block extramenu %}
+    <div class="headingleft">
+        <h1>Pipeline Overview</h1>
+    </div>
+{% endblock%}
+
+{% block bodyclass %}page{% endblock %}
+
+{% block main-content %}
+<div id="main" class="fill-height fullwidth">
+  <a href="{% url 'pipesubmit' %}">Submit pipeline</a>
+                <table class="datatable u-full-width" id="id_blocks">
+                        <thead>
+                                <tr>
+                                        <th class="list_title">
+                                                <span class="sortable">Pipeline #</span>
+                                        </th>
+                                        <th class="list_title">
+                                                <span class="sortable">Status</span>
+                                        </th>
+                                        <th class="list_title">
+                                                <span class="sortable">Message</span>
+                                        </th>
+                                        <th class="list_title">
+                                                <span class="sortable">Update</span>
+                                        </th>
+                                </tr>
+                        </thead>
+                        <tbody>
+                        {% for pipeline in pipelines %}
+                                <tr class="{% cycle 'odd' 'even' %}">
+                                  <td>{{pipeline.identifier}}</td>
+                                  <td>{{pipeline.status}}</td>
+                                  <td>{{pipeline.terminal_timestamp}}</td>
+                                  <td>{{pipeline.failure_message}}</td>
+                                </tr>
+                        {% endfor %}
+                        </tbody>
+                </table>
+        </div>
+{% endblock %}

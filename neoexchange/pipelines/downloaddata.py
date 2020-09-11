@@ -9,6 +9,7 @@ from glob import glob
 from django.conf import settings
 from django.core.files import File
 from django.core.files.storage import default_storage
+from dramatiq.middleware.time_limit import TimeLimitExceeded
 
 from core.archive_subs import archive_login, get_frame_data, get_catalog_data, \
     determine_archive_start_end, download_files, make_data_dir
@@ -30,7 +31,7 @@ class DownloadProcessPipeline(PipelineProcess):
             'default': None,
             'long_name': 'Date of the data to download (YYYYMMDD)'
         },
-        'proposal':{
+        'proposals':{
             'default': None,
             'long_name' : 'Proposal code to query for data (e.g. LCO2019B-023; default is for all active proposals)'
         },
@@ -57,10 +58,10 @@ class DownloadProcessPipeline(PipelineProcess):
         proxy = True
 
     def do_pipeline(self, tmpdir, **inputs):
-        if not inputs.get('datadir')
-            self.out_path = tmpdir()
+        if not inputs.get('datadir'):
+            out_path = tmpdir
         else:
-            self.out_path = inputs.get('datadir')
+            out_path = inputs.get('datadir')
         obs_date = inputs.get('obs_date')
         proposals = inputs.get('proposals')
         dlengimaging = inputs.get('dlengimaging')
@@ -71,25 +72,26 @@ class DownloadProcessPipeline(PipelineProcess):
             self.download(obs_date, proposals, out_path, dlengimaging, spectraonly)
             # unpack tarballs and make movie.
             self.create_movies()
-            self.cleanup()
         except NeoException as ex:
             logger.error('Error with Movie: {}'.format(ex))
+            self.log('Error with Movie: {}'.format(ex))
             raise AsyncError('Error creating movie')
         except TimeLimitExceeded:
             raise AsyncError("Download and create took longer than 10 mins to create")
         except PipelineProcess.DoesNotExist:
             raise AsyncError("Record has been deleted")
 
-        return [PipelineOutput(outfile, DataProduct, settings.DATA_PRODUCT_TYPES['timelapse'][0])]
+        return
 
     def download(self, obs_date, proposals, out_path, dlengimaging=False, spectraonly=False):
         self.frames = {}
-        if not hasattr(self, out_path):
+        if not hasattr(self, 'out_path'):
             self.out_path = out_path
         auth_headers = archive_login()
         start_date, end_date = determine_archive_start_end(obs_date)
         for proposal in proposals:
             logger.info("Looking for frames between %s->%s from %s" % ( start_date, end_date, proposal ))
+            self.log("Looking for frames between %s->%s from %s" % ( start_date, end_date, proposal ))
             obstypes = self.OBSTYPES
             if (proposal == 'LCOEngineering' and not dlengimaging) or spectraonly:
                 # Not interested in imaging frames
@@ -102,6 +104,7 @@ class DownloadProcessPipeline(PipelineProcess):
                     # '' seems to be needed to get the tarball of FLOYDS products
                     redlevel = ['0', '']
                 logger.info(f"Looking for {obstype} data")
+                self.log(f"Looking for {obstype} data")
                 frames = get_frame_data(start_date, end_date, auth_headers, obstype, proposal, red_lvls=redlevel)
                 for red_lvl in frames.keys():
                     if red_lvl in self.frames:
@@ -117,8 +120,10 @@ class DownloadProcessPipeline(PipelineProcess):
                             self.frames[red_lvl] = catalogs[red_lvl]
                 for red_lvl in self.frames.keys():
                     logger.info("Found %d frames for reduction level: %s" % ( len(self.frames[red_lvl]), red_lvl ))
+                    self.log("Found %d frames for reduction level: %s" % ( len(self.frames[red_lvl]), red_lvl ))
                 dl_frames = download_files(self.frames, out_path)
                 logger.info("Downloaded %d frames" % ( len(dl_frames) ))
+                self.log("Downloaded %d frames" % ( len(dl_frames) ))
         return
 
     def create_movies(self):

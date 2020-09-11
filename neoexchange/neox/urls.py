@@ -36,6 +36,8 @@ from core.views import BodySearchView, BodyDetailView, BlockDetailView, Schedule
 from core.plots import make_visibility_plot, \
     make_standards_plot, make_solar_standards_plot
 
+from pipelines.views import SubmitView, overview, AsyncStatusApi, PipelineProcessApi, PipelineProcessDetailView
+
 from analyser.views import BlockFramesView, ProcessCandidates
 
 
@@ -97,6 +99,11 @@ urlpatterns = [
     url(r'^calib-schedule/(?P<pk>\d+)/confirm/$', ScheduleCalibSubmit.as_view(), name='schedule-calib-confirm'),
     url(r'^accounts/login/$', login, {'template_name': 'core/login.html'}, name='auth_login'),
     url(r'^accounts/logout/$', logout, {'template_name': 'core/logout.html'}, name='auth_logout'),
+    url(r'^pipelines/submit/$', SubmitView.as_view(), name='pipesubmit'),
+    url(r'^pipelines/detail/(?P<pk>\d+)/$', PipelineProcessDetailView.as_view() ,name="pipelinedetail" ),
+    url(r'^pipelines/$', overview, name='pipelines'),
+    url(r'^api/pipelines/status/(?P<pk>\d+)/$', AsyncStatusApi.as_view(), name='async_process_status_api'),
+    url(r'^api/pipelines/logs/(?P<pk>\d+)/$', PipelineProcessApi.as_view(), name='pipeline_api'),
     url(r'^admin/', include(admin.site.urls)),
 ]
 

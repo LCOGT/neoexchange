@@ -5,7 +5,6 @@ import json
 import tempfile
 from pathlib import Path
 import re
-import os.path
 
 from django.conf import settings
 from django.core.files.base import ContentFile
@@ -22,7 +21,7 @@ class InvalidPipelineError(Exception):
     """
 
 
-PipelineOutput = namedtuple('PipelineOutput', ['path', 'output_type'], defaults=('',))
+PipelineOutput = namedtuple('PipelineOutput', ['msg'], defaults=('',))
 
 
 class PipelineProcess(AsyncProcess):
@@ -41,15 +40,9 @@ class PipelineProcess(AsyncProcess):
             # Do the actual work
             inputs = json.loads(self.inputs_json) if self.inputs_json else {}
             try:
-                outputs = self.do_pipeline(tmpdir, **inputs)
-                for output in outputs:
-                    if not isinstance(output, PipelineOutput):
-                        output = PipelineOutput(*output)
-
-                    path, output_type = output
-                    identifier = f'{self.identifier}_{path.name}'
-            except:
-                raise AsyncError(f"Invalid output type '{output_type}'")
+                self.do_pipeline(tmpdir, **inputs)
+            except Exception as e:
+                raise AsyncError(f"Error: '{e}'")
 
         self.status = ASYNC_STATUS_CREATED
         self.save()
@@ -107,34 +100,32 @@ class PipelineProcess(AsyncProcess):
         return pipeline_cls
 
     @classmethod
-    def validate_flags(cls, flags):
+    def validate_inputs(cls, inputs):
         """
-        Validate a class's `flags` attribute. Raises AssertionError if
+        Validate a class's `inputs` attribute. Raises AssertionError if
         invalid
         """
-        if flags is None:
+        if inputs is None:
             return
-        assert isinstance(flags, dict)
+        assert isinstance(inputs, dict)
         # `name` will be used as an ID in the HTML, so must not contain
         # whitespace
-        for name, info in flags.items():
+        for name, info in inputs.items():
             assert re.match(r'[^\s]+$', name)
             assert isinstance(info, dict)
             assert 'default' in info
             assert 'long_name' in info
 
     @classmethod
-    def create_timestamped(cls, target, products, flags=None):
+    def create_timestamped(cls, inputs=None):
         date_str = datetime.now().strftime('%Y%m%d%H%M%S')
-        identifier = f'{cls.short_name}_{target.pk}_{date_str}'
+        identifier = f'{cls.short_name}__{date_str}'
         kwargs = {
             'identifier': identifier,
-            'target': target
         }
-        if flags:
-            kwargs['flags_json'] = json.dumps(flags)
+        if inputs:
+            kwargs['inputs_json'] = json.dumps(inputs)
 
         pipe = cls.objects.create(**kwargs)
-        pipe.input_files.add(*products)
         pipe.save()
         return pipe

@@ -6,7 +6,7 @@ from core.models.body import Body
 
 # Statuses for asynchronous processes
 ASYNC_STATUS_PENDING = 'pending'
-ASYNC_STATUS_CREATED = 'created'
+ASYNC_STATUS_CREATED = 'success'
 ASYNC_STATUS_FAILED = 'failed'
 ASYNC_TERMINAL_STATES = (ASYNC_STATUS_CREATED, ASYNC_STATUS_FAILED)
 
@@ -41,3 +41,6 @@ class AsyncProcess(models.Model):
         an appropriate error message on failure.
         """
         raise NotImplementedError
+
+    def __str__(self):
+        return self.identifier

@@ -1,8 +1,8 @@
-from django.conf.urls import include, url
+from django.conf.urls import url
 
-from .views import submitjob, detail
+from .views import SubmitView, detail
 
 url_patterns = [
-    url(r'^submit/$', submitjob, name='submit'),
-    url(r'^detail/(?P<pk>\d+)/$', detail, name='detail'),
+    url(r'^$', detail),
+    url(r'^submit/$', SubmitView.as_view(), name='submit')
 ]

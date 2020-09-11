@@ -151,10 +151,15 @@ INSTALLED_APPS = (
     'django.contrib.admin',
     'django.contrib.messages',
     'reversion',
+    'rest_framework',
     'core.apps.CoreConfig',
     'analyser.apps.AstrometerConfig',
     'pipelines.apps.PipelinesConfig'
 )
+
+PIPELINES = {
+    'dldata' : 'pipelines.downloaddata.DownloadProcessPipeline',
+}
 
 REDIS_HOSTNAME = os.environ.get('REDIS_HOSTNAME','localhost')
 
