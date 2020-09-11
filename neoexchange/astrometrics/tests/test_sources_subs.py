@@ -4416,59 +4416,65 @@ class TestMakeconfiguration(TestCase):
 
     def setUp(self):
 
-        self.target = {'type': 'ICRS', 'name' : 'SA107-684', 'ra' : 234.3, 'dec' : -0.16}
+        self.target = {'type': 'ICRS', 'name': 'SA107-684', 'ra': 234.3, 'dec': -0.16}
 
-        self.params_2m0_imaging = configure_defaults({ 'site_code': 'F65',
-                                                       'exp_time' : 60.0,
-                                                       'exp_count' : 12,
-                                                       'filter_pattern' : 'solar',
-                                                       'target' : self.target,
-                                                       'constraints': {
-                                                         'max_airmass': 2.0,
-                                                         'min_lunar_distance': 30.0
+        self.params_2m0_imaging = configure_defaults({'site_code': 'F65',
+                                                      'exp_time': 60.0,
+                                                      'exp_count': 12,
+                                                      'slot_length': 750,
+                                                      'filter_pattern': 'solar',
+                                                      'target': self.target,
+                                                      'constraints': {
+                                                          'max_airmass': 2.0,
+                                                          'min_lunar_distance': 30.0
                                                        }})
         self.filt_2m0_imaging = build_filter_blocks(self.params_2m0_imaging['filter_pattern'],
-                                                    self.params_2m0_imaging['exp_count'])[0]
+                                                    self.params_2m0_imaging['exp_count'],
+                                                    self.params_2m0_imaging['exp_type'])
 
-        self.params_1m0_imaging = configure_defaults({ 'site_code': 'K92',
-                                                       'exp_time' : 60.0,
-                                                       'exp_count' : 12,
-                                                       'filter_pattern' : 'w',
-                                                       'target' : self.target,
-                                                       'constraints': {
-                                                         'max_airmass': 2.0,
-                                                         'min_lunar_distance': 30.0
-                                                       }})
+        self.params_1m0_imaging = configure_defaults({'site_code': 'K92',
+                                                      'exp_time': 60.0,
+                                                      'exp_count': 10,
+                                                      'filter_pattern': 'w',
+                                                      'target': self.target,
+                                                      'constraints': {
+                                                          'max_airmass': 2.0,
+                                                          'min_lunar_distance': 30.0
+                                                      }})
         self.filt_1m0_imaging = build_filter_blocks(self.params_1m0_imaging['filter_pattern'],
-                                                    self.params_1m0_imaging['exp_count'])[0]
-        self.params_0m4_imaging = configure_defaults({ 'site_code': 'Z21',
-                                                       'exp_time' : 90.0,
-                                                       'exp_count' : 18,
-                                                       'filter_pattern' : 'w',
-                                                       'target' : self.target,
-                                                       'constraints': {
-                                                         'max_airmass': 2.0,
-                                                         'min_lunar_distance': 30.0
-                                                       }})
-        self.filt_0m4_imaging = build_filter_blocks(self.params_0m4_imaging['filter_pattern'],
-                                                    self.params_0m4_imaging['exp_count'])[0]
+                                                    self.params_1m0_imaging['exp_count'],
+                                                    self.params_1m0_imaging['exp_type'])
 
-        self.params_2m0_spectroscopy = configure_defaults({ 'site_code': 'F65',
-                                                            'instrument_code' : 'F65-FLOYDS',
-                                                            'spectroscopy' : True,
-                                                            'exp_time' : 180.0,
-                                                            'exp_count' : 1,
-                                                            'target' : self.target,
-                                                            'constraints': {
-                                                              'max_airmass': 2.0,
-                                                              'min_lunar_distance': 30.0
-                                                            }})
+        self.params_0m4_imaging = configure_defaults({'site_code': 'Z21',
+                                                      'exp_time': 90.0,
+                                                      'exp_count': 10,
+                                                      'filter_pattern': 'w',
+                                                      'target': self.target,
+                                                      'constraints': {
+                                                          'max_airmass': 2.0,
+                                                          'min_lunar_distance': 30.0
+                                                      }})
+        self.filt_0m4_imaging = build_filter_blocks(self.params_0m4_imaging['filter_pattern'],
+                                                    self.params_0m4_imaging['exp_count'],
+                                                    self.params_0m4_imaging['exp_type'])
+
+        self.params_2m0_spectroscopy = configure_defaults({'site_code': 'F65',
+                                                           'instrument_code': 'F65-FLOYDS',
+                                                           'spectroscopy': True,
+                                                           'exp_time': 180.0,
+                                                           'exp_count': 1,
+                                                           'target': self.target,
+                                                           'constraints': {
+                                                               'max_airmass': 2.0,
+                                                               'min_lunar_distance': 30.0
+                                                           }})
         self.filt_2m0_spectroscopy = ['slit_6.0as', 1]
 
     def test_2m_imaging(self):
 
         expected_configuration = {
-                          'type': 'EXPOSE',
+                          'type': 'REPEAT_EXPOSE',
+                          'repeat_duration': 750,
                           'instrument_type': '2M0-SCICAM-SPECTRAL',
                           'target': {
                             'type': 'ICRS',
@@ -4483,7 +4489,7 @@ class TestMakeconfiguration(TestCase):
                           'acquisition_config': {},
                           'guiding_config': {},
                           'instrument_configs': [{
-                            'exposure_count': 12,
+                            'exposure_count': 1,
                             'exposure_time': 60.0,
                             'bin_x': 2,
                             'bin_y': 2,
@@ -4514,7 +4520,7 @@ class TestMakeconfiguration(TestCase):
                               'acquisition_config': {},
                               'guiding_config': {},
                               'instrument_configs': [{
-                                'exposure_count': 12,
+                                'exposure_count': 10,
                                 'exposure_time': 60.0,
                                 'bin_x': 1,
                                 'bin_y': 1,
@@ -4545,7 +4551,7 @@ class TestMakeconfiguration(TestCase):
                               'acquisition_config': {},
                               'guiding_config': {},
                               'instrument_configs': [{
-                                'exposure_count': 18,
+                                'exposure_count': 10,
                                 'exposure_time': 90.0,
                                 'bin_x': 1,
                                 'bin_y': 1,
@@ -4821,11 +4827,11 @@ class TestMakeconfiguration(TestCase):
 class TestMakeconfigurations(TestCase):
 
     def setUp(self):
-        self.target = {'type': 'ICRS', 'name' : 'SA107-684', 'ra' : 234.3, 'dec' : -0.16}
+        self.target = {'type': 'ICRS', 'name': 'SA107-684', 'ra': 234.3, 'dec': -0.16}
 
         self.params_2m0_imaging = configure_defaults({ 'site_code': 'F65',
                                                        'exp_time' : 60.0,
-                                                       'exp_count' : 12,
+                                                       'exp_count' : 10,
                                                        'filter_pattern' : 'solar',
                                                        'target' : self.target,
                                                        'constraints': {
@@ -4833,11 +4839,12 @@ class TestMakeconfigurations(TestCase):
                                                          'min_lunar_distance': 30.0
                                                        }})
         self.filt_2m0_imaging = build_filter_blocks(self.params_2m0_imaging['filter_pattern'],
-                                                    self.params_2m0_imaging['exp_count'])[0]
+                                                    self.params_2m0_imaging['exp_count'],
+                                                    self.params_2m0_imaging['exp_type'])[0]
 
         self.params_1m0_imaging = configure_defaults({ 'site_code': 'K92',
                                                        'exp_time' : 60.0,
-                                                       'exp_count' : 12,
+                                                       'exp_count' : 10,
                                                        'filter_pattern' : 'w',
                                                        'target' : self.target,
                                                        'constraints': {
@@ -4846,10 +4853,12 @@ class TestMakeconfigurations(TestCase):
                                                        }})
 
         self.filt_1m0_imaging = build_filter_blocks(self.params_1m0_imaging['filter_pattern'],
-                                                    self.params_1m0_imaging['exp_count'])[0]
+                                                    self.params_1m0_imaging['exp_count'],
+                                                    self.params_1m0_imaging['exp_type'])[0]
         self.params_0m4_imaging = configure_defaults({ 'site_code': 'Z21',
                                                        'exp_time' : 90.0,
                                                        'exp_count' : 18,
+                                                       'slot_length': 220,
                                                        'filter_pattern' : 'w',
                                                        'target' : self.target,
                                                        'constraints': {
@@ -4857,7 +4866,8 @@ class TestMakeconfigurations(TestCase):
                                                          'min_lunar_distance': 30.0
                                                        }})
         self.filt_0m4_imaging = build_filter_blocks(self.params_0m4_imaging['filter_pattern'],
-                                                    self.params_0m4_imaging['exp_count'])[0]
+                                                    self.params_0m4_imaging['exp_count'],
+                                                    self.params_0m4_imaging['exp_type'])[0]
 
         self.params_2m0_spectroscopy = configure_defaults({ 'site_code': 'F65',
                                                             'instrument_code' : 'F65-FLOYDS',
@@ -4895,7 +4905,7 @@ class TestMakeconfigurations(TestCase):
     def test_0m4_imaging(self):
 
         expected_num_configurations = 1
-        expected_type = 'EXPOSE'
+        expected_type = 'REPEAT_EXPOSE'
 
         configurations = make_configs(self.params_0m4_imaging)
 
