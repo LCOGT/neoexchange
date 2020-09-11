@@ -39,6 +39,7 @@ except ModuleNotFoundError:
     pass
 from django.conf import settings
 from astropy.io import ascii
+from dateutil.relativedelta import relativedelta
 
 import astrometrics.site_config as cfg
 from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime, datetime2mjd_utc, mjd_utc2mjd_tt, mjd_utc2datetime
@@ -1077,7 +1078,7 @@ def psv_padding(s, l, jtype, dpos=0):
 
 def parse_goldstone_chunks(chunks, dbg=False):
     """Tries to parse the Goldstone target line (a split()'ed list of fields)
-    to extract the object id. Could also parse the date of radar observation
+    to extract the object id and range of observations dates. Could also
     and whether astrometry or photometry is needed"""
 
     if dbg:
@@ -1086,6 +1087,8 @@ def parse_goldstone_chunks(chunks, dbg=False):
     # that suceeds, check it's greater than 31. If yes, it's an asteroid number
     # (we assume asteroid #1-31 will never be observed with radar..)
     object_id = ''
+    window_start = None
+    window_end = None
 
     try:
         astnum = int(chunks[2])
@@ -1144,7 +1147,58 @@ def parse_goldstone_chunks(chunks, dbg=False):
                 print("In case 4")
             object_id = str(chunks[3] + ' ' + chunks[4])
 
-    return object_id
+    # Try and parse the window of observability. This is messy...
+    if '-' in chunks[2] and len(chunks[2].split('-')) == 2:
+        # Specific range of days
+        if dbg: print("In dates case 1")
+        dates_parts = chunks[2].split('-')
+        try:
+            window_start = datetime.strptime(str(chunks[0])+str(chunks[1]+str(dates_parts[0])), "%Y%b%d")
+            window_end = datetime.strptime(str(chunks[0])+str(chunks[1]+str(dates_parts[1])), "%Y%b%d")
+            window_end = window_end.replace(hour=23, minute=59, second=59)
+        except ValueError:
+            pass
+    elif chunks[2].isdigit() is True:
+        # Specific date , but first test if the number is <=31 and not an
+        # asteroid number
+        if dbg: print("In dates case 2")
+        if int(chunks[2]) <= 31:
+            if dbg: print("In dates case 2a")
+            try:
+                window_start = datetime.strptime(str(chunks[0])+str(chunks[1])+str(chunks[2]), "%Y%b%d")
+                window_end = window_start + relativedelta(days=1) -timedelta(seconds=1)
+            except ValueError:
+                pass
+
+    if window_start is None or window_end is None:
+        if dbg: print("In dates case 3")
+        try:
+            # Month crossing specific dates
+            dates_parts = chunks[2].split('-')
+            window_start = datetime.strptime(str(chunks[0])+str(chunks[1])+str(dates_parts[0]), "%Y%b%d")
+            window_end = datetime.strptime(str(chunks[0])+str(dates_parts[1])+str(chunks[3]), "%Y%b%d")
+            window_end = window_end.replace(hour=23, minute=59, second=59)
+        except (ValueError, IndexError):
+            if dbg: print("In dates case 4")
+            try:
+                # Try for a hyphen-split month range
+                dates_parts = chunks[1].split('-')
+                window_start = datetime.strptime(str(chunks[0])+str(dates_parts[0]), "%Y%b")
+                window_end = datetime.strptime(str(chunks[0])+str(dates_parts[1]), "%Y%b")
+                window_end = window_end + relativedelta(months=1) - timedelta(seconds=1)
+            except (ValueError, IndexError):
+                if dbg: print("In dates case 5")
+                try:
+                    window_start = datetime.strptime(str(chunks[0])+str(chunks[1]), "%Y%b")
+                    window_end = window_start + relativedelta(months=1) -timedelta(seconds=1)
+                except ValueError:
+                    logger.warning("Failed at all attempts to parse observing windows. Chunks=", chunks)
+    if window_start and window_end:
+        if window_end < window_start:
+            # End of year wrap
+            window_end += relativedelta(years=1)
+
+    return object_id, window_start, window_end
 
 
 def fetch_goldstone_page():
@@ -1158,12 +1212,15 @@ def fetch_goldstone_page():
     return page
 
 
-def fetch_goldstone_targets(page=None, dbg=False):
+def fetch_goldstone_targets(page=None, calendar_format=False, dbg=False):
     """Fetches and parses the Goldstone list of radar targets, returning a list
     of object id's for the current year.
     Takes either a BeautifulSoup page version of the Goldstone target page (from
     a call to fetch_goldstone_page() - to allow  standalone testing) or  calls
     this routine and then parses the resulting page.
+    If [calendar_format]=True, then the return format is changed to a JSON list
+    of targets with a dictionary with 'target' and 'windows' keys/values in the same
+    format as fetch_arecibo_calendar_targets()
     """
 
     if type(page) != BeautifulSoup:
@@ -1205,7 +1262,7 @@ def fetch_goldstone_targets(page=None, dbg=False):
                 if '&' in line[0:40] or ' &' in line[0:40] or '& ' in line[0:40] or ' & ' in line[0:40]:
                     line = line.replace(' & ', '-', 1).replace('& ', '-', 1).replace(' &', '-', 1)
                 chunks = line.lstrip().split()
-                # if dbg: print(line)
+                if dbg: print(line)
                 # Check if the start of the stripped line is no longer the
                 # current year.
                 # <sigh> we also need to check if the year goes backwards due
@@ -1223,9 +1280,20 @@ def fetch_goldstone_targets(page=None, dbg=False):
                     in_objects = False
                     logger.debug("Done with objects")
                 else:
-                    obj_id = parse_goldstone_chunks(chunks, dbg)
+                    obj_id, window_start, window_end = parse_goldstone_chunks(chunks, dbg)
                     if obj_id != '':
-                        radar_objects.append(obj_id)
+                        target = obj_id
+                        if calendar_format is True:
+                            if window_start is not None:
+                                 window_start = window_start.isoformat("T")
+                            else:
+                                window_start = ''
+                            if window_end is not None:
+                                window_end = window_end.isoformat("T")
+                            else:
+                                window_end = ''
+                            target = {'target' : obj_id, 'windows' : [{'start' : window_start, 'end' : window_end}] }
+                        radar_objects.append(target)
                 last_year_seen = year
     return radar_objects
 
