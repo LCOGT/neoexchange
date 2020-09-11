@@ -4131,6 +4131,44 @@ class TestConfigureDefaults(TestCase):
 
         self.assertEqual(expected_params, params)
 
+    def test_sinistro_many(self):
+        test_params = self.obs_params
+        test_params['site_code'] = '1M0'
+        test_params['exp_count'] = 45
+        test_params['filter_pattern'] = 'w'
+
+        expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
+                            'pondtelescope': '1m0',
+                            'observatory': '',
+                            'exp_type': 'REPEAT_EXPOSE',
+                            'binning': 1,
+                            'exp_count': 45,
+                            'exp_time': 42.0}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
+    def test_sinistro_many_plus_filters(self):
+        test_params = self.obs_params
+        test_params['site_code'] = '1M0'
+        test_params['exp_count'] = 15
+        test_params['filter_pattern'] = 'B,B,B,V,V,V,R,R,R,R,I,I,I'
+
+        expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
+                            'pondtelescope': '1m0',
+                            'observatory': '',
+                            'exp_type': 'EXPOSE',
+                            'binning': 1,
+                            'exp_count': 15,
+                            'exp_time': 42.0}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
     def test_1m_sinistro_cpt(self):
         expected_params = { 'binning': 1,
                             'instrument': '1M0-SCICAM-SINISTRO',
