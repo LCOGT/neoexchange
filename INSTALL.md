@@ -128,6 +128,17 @@ To prepare the local SQLite DB for use, you should follow these steps:
 1. `cd neoexchange\neoexchange`
 2. Run `python manage.py syncdb`. This will perform migrations as necessary.
 
+## Async testing
+
+- You will need to update your environment with the new packages from `requirements.txt`.
+- Install [redis](https://redis.io/topics/quickstart) on your local system
+- Open 3 terminal windows:
+- Run `redis-server` in one terminal (this is a simple DB for holding the task states)
+- Run `./manage.py rundramatiq` in another (this is the message/task broker)
+- Run `./manage.py runserver` as normal in the third
+
+The `dramatiq` process does not autoreload, so if you change your code it will need to be manually stop/started
+
 ## Downloading dev data
 
 Sometimes it is useful to have a representative snapshot of the live database. There are 2 parts: 1) on the deployed pod, export data, 2) on your local machine import data
