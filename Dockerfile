@@ -52,19 +52,22 @@ RUN curl -fsSL https://github.com/Bill-Gray/find_orb/archive/${FIND_ORB_VERSION}
 COPY neoexchange/photometrics/configs/environ.def /root/.find_orb/
 
 ################################################################################
-# Python dependencies build container
+# Production Container
 ################################################################################
-FROM centos:8 as pythonbuilder
+FROM centos:8
 
-# Add path for lcogt-python36 package
-#ENV PATH=/opt/lcogt-python36/bin:$PATH
+# Copy findorb from builder container
+COPY --from=findorbbuilder /root /root
+
+# Install Python dependencies
 
 # Add LCO RPM repository
 COPY docker/etc/yum.repos.d/lcogt.repo /etc/yum.repos.d/lcogt.repo
 
 # Install build dependencies for Python packages
 # XXX Need to install powertools repo
-RUN yum -y install epel-release \
+# 'glibc-langpack-en' is needed to prevent locale complaints (https://www.tecmint.com/fix-failed-to-set-locale-defaulting-to-c-utf-8-in-centos/)
+RUN yum -y install epel-release glibc-langpack-en\
         && yum -y install \
             gcc \
             gcc-c++ \
@@ -74,9 +77,7 @@ RUN yum -y install epel-release \
             libffi-devel \
             libjpeg-devel \
             libpng-devel \
-            mariadb-devel \
-            plplot-devel \
-        && yum -y clean all
+            mariadb-devel
 
 # Copy Python dependencies manifest
 COPY neoexchange/requirements.txt .
@@ -87,22 +88,11 @@ COPY neoexchange/requirements.txt .
 # numpy needs to be explicitly installed first otherwise pySLALIB fails with a
 # missing numpy.distutils.core reference because the package's setup.py is broken
 RUN pip3 --no-cache-dir install --upgrade pip \
-    && pip3 --no-cache-dir install --upgrade numpy \
-    && pip3 --no-cache-dir install --trusted-host buildsba.lco.gtn -r requirements.txt
+    && python3 -m pip --no-cache-dir install --upgrade numpy \
+    && python3 -m pip --no-cache-dir install --trusted-host buildsba.lco.gtn -r requirements.txt
 
-################################################################################
-# Production Container
-################################################################################
-FROM centos:8
-
-# Copy findorb from builder container
-COPY --from=findorbbuilder /root /root
-
-# Copy python3.6 and dependencies from builder container
-#COPY --from=pythonbuilder /opt/lcogt-python36 /opt/lcogt-python36
-
-# Add path to python3.6 and findorb
-#ENV PATH=/opt/lcogt-python36/bin:/root/bin:$PATH
+# Add path to findorb
+ENV PATH=/root/bin:$PATH
 
 # The entry point is our init script, which runs startup tasks, then starts gunicorn
 ENTRYPOINT [ "/init" ]
@@ -121,12 +111,10 @@ RUN curl -fsSLO "$SUPERCRONIC_URL" \
 
 # Install packages and update base system
 # XXX Need to install powertools repo
-RUN yum -y install epel-release \
-        && yum -y install \
+RUN yum -y install \
             cdsclient \
             ImageMagick \
             less \
-            mariadb-devel \
             mtdlink \
             plplot \
             scamp \
