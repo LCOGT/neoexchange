@@ -68,6 +68,7 @@ class AsyncStatusApi(ListAPIView):
 
 class PipelineProcessDetailView(DetailView):
     model = PipelineProcess
+    template_name = 'pipelines/pipeline_detail.html'
 
 
 class PipelineProcessApi(RetrieveAPIView):

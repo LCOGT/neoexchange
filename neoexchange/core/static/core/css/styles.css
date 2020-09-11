@@ -1187,3 +1187,8 @@ ul.candidate-controls li:hover {background-color:#eee; }
     background: white;
     color: silver;
 }
+
+/* Pipeline */
+.logs {
+    height: 50em;
+}
