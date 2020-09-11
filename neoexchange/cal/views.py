@@ -7,7 +7,7 @@ from django.shortcuts import render
 from django.http import JsonResponse, Http404
 from django.urls import reverse
 
-from astrometrics.sources_subs import fetch_arecibo_calendar_targets
+from astrometrics.sources_subs import fetch_arecibo_calendar_targets, fetch_goldstone_targets
 from core.models import SuperBlock, Block
 
 logger = logging.getLogger(__name__)
@@ -37,5 +37,13 @@ def arecibo_events(request):
             # If so, set border colo(u)r to red
             if d['extrainfo'].get('uncertainty', 0) >= 120:
                 target['borderColor'] = 'red'
+        targets.append(target)
+    return JsonResponse(targets, safe=False)
+
+def goldstone_events(request):
+    data = fetch_goldstone_targets(calendar_format=True)
+    targets = []
+    for d in data:
+        target = {'title': d['target'], 'start' : d['windows'][0]['start'], 'end' : d['windows'][0]['end']}
         targets.append(target)
     return JsonResponse(targets, safe=False)

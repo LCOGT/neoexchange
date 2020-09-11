@@ -49,6 +49,14 @@ Calendar
         textColor: 'black',
       },
       {
+        url: '/api/goldstone/',
+        failure: function() {
+          document.getElementById('script-warning').style.display = 'block'
+        },
+        color: 'khaki',
+        textColor: 'black',
+      },
+      {
         url: '/api/neox/',
         color: 'blue',
         textColor: 'white',
