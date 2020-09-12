@@ -18,13 +18,25 @@ from django.core.files.storage import default_storage
 
 
 def search(base_dir, matchpattern, latest=False):
+    """
+    :param base_dir: directory to search
+    :param matchpattern: filename pattern to search for
+    :param latest: flag to return only a single, most recently modified search result
+    :return:
+        If base directory doesn't exist: False
+        If base directory exists, but is empty: Empty list
+        If base directory exists with files and latest==False: list of matched files
+        If base directory exists, latest == True, and files found: String containing filename
+        If base directory exists, latest == True, and files not found: Empty string
+    """
     try:
         _, files = default_storage.listdir(base_dir)
     except FileNotFoundError:
         return False
     if files:
         regex = re.compile(matchpattern)
-        matchfiles = filter(regex.search, files)
+        file_filter = filter(regex.search, files)
+        matchfiles = [f for f in file_filter]
         # Find most recent file
         if not latest:
             return matchfiles
@@ -34,7 +46,7 @@ def search(base_dir, matchpattern, latest=False):
         else:
             latestfile = ''
         return latestfile
-    return ''
+    return []
 
 
 def save_to_default(filename, out_path):

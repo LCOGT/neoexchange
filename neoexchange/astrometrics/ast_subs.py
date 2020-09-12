@@ -104,6 +104,7 @@ def normal_to_packed(obj_name, dbg=False):
         obj_name = obj_name.rstrip()[:-1]
 
     buff = obj_name.replace(" ", "")
+
     if dbg:
         print("len(buff)=", len(buff))
 
@@ -141,7 +142,8 @@ def normal_to_packed(obj_name, dbg=False):
             pack9 = chr(ord('A') + sub_designator // 10 - 10)
         else:
             pack9 = chr(ord('a') + sub_designator // 10 - 36)
-        packed_desig = "    %c%c%02d%c%c%c%c" % (comet_type, ord('A') - 10 + year // 100, year % 100, str(buff[4]).upper(), pack9, pack10, pack11)
+        packed_desig = "    %c%c%02d%c%c%c%c" % (comet_type, ord('A') - 10 + year // 100, year % 100,
+                                                 str(buff[4]).upper(), pack9, pack10, pack11)
     else:
         # Bad id
         packed_desig = ' ' * 12

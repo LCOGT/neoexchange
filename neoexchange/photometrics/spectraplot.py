@@ -54,7 +54,6 @@ def get_x_units(x_data):
     else:
         logger.warning("Could not parse wavelength units from file. Assuming Angstoms")
         x_units = u.AA
-
     xxx = np.array(x_data)
     wavelength = (xxx * x_units).to(u.AA)
     return wavelength

@@ -32,7 +32,7 @@ class Command(BaseCommand):
         parser.add_argument('site_code', help='MPC site code')
         parser.add_argument('dark_and_up_time_limit', type=float, help='Amount of time sky must be dark and target is above the horizon')
         parser.add_argument('targets', nargs='+', help='Targets to schedule')
-        parser.add_argument('--start_date', default=datetime.utcnow().strftime('%Y-%m-%d'), help='Date to start ephemeris search in %Y-%m-%d format')
+        parser.add_argument('--start_date', default=datetime.utcnow().strftime('%Y-%m-%d'), help='Date to start ephemeris search in YYYY-MM-DD format')
         parser.add_argument('--date_range', type=int, default=30, help='Date range ephemeris search in days')
 
     def handle(self, *args, **options):
@@ -47,6 +47,8 @@ class Command(BaseCommand):
             for date in visible_dates:
                 print(date)
             self.stdout.write("Start of night ephemeris entries for %s:" % options['site_code'])
+            if len(emp_visible_dates) > 0:
+                self.stdout.write('  Date/Time (UTC)        RA              Dec        Mag     "/min    P.A.    Alt Moon Phase Moon Dist Moon Alt Score  H.A.')
             for emp in emp_visible_dates:
                 print(emp)
             self.stdout.write("Maximum altitudes:")

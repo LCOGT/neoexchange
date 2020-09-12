@@ -9,9 +9,22 @@
   $(document).ready(function(){
     // Initially hide the advanced options
     $('#advanced_options').hide();
+    // Set window switch initial conditions
+    var ws = document.getElementById("id_edit_window");
+    if(ws.checked){
+        $('#data_window').hide();
+        $('#form_window').show();
+    } else {
+        $('#form_window').hide();
+        $('#data_window').show();
+    }
 
     $('a.mode-switch').click(function(event){
       $('.mode-container').toggle();
+    });
+
+    $('.window-switch').click(function(event){
+      $('.mode-window').toggle();
     });
 
   });
@@ -173,6 +186,12 @@
                             <td class="kv-value">{{ data.speed|floatformat:2 }} "/min <i class="fa fa-arrow-right"></i> {{ data.trail_len|floatformat:2 }} "/exp</td>
                         {% endif %}
                     </tr>
+                    {% if '1M0' in data.lco_tel or '1M0' in data.site_code %}
+                    <tr id="id_bin_mode_row">
+                        <td class="kv-key">Binning</td>
+                        <td class="kv-value">{{ form.bin_mode }}</td>
+                    </tr>
+                    {% endif %}
                     {% if data.spectroscopy %}
                     <tr id="id_slit_pattern_row"><td ><table align="left"  style="margin: 0px"><tr><td class="kv-key" name="{{data.available_filters}}">
                             <div class="tooltip">Slit Pattern
@@ -247,18 +266,33 @@
                         {% endif %}
                     </tr>
                     {% endif %}
+                    {% if data.lco_site != 'XXX' %}
+                        {% if data.vis_start not in data.start_time or data.vis_end not in data.end_time %}
+                                <tr id="id_window_error2_row">
+                                   <td colspan="2" style="text-align: center">
+                                       <span class="warning  msgpadded">Target Visible From {{data.vis_start}} -> {{data.vis_end}}</span>
+                                   </td>
+                                </tr>
+                        {% endif %}
+                    {% endif %}
                     <tr id="id_window_row">
-                        <td class="kv-key">Window (UTC)</td>
                         {% if data.num_times is not None and data.num_times < 2 %}
-                            <td ><table align="left"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip">
-                                <span class="warning msgpadded"> {{ data.start_time }} -> {{ data.end_time }} </span>
+                            <td ><table align="left"  style="margin: 0px"><tr><td></td><td class="kv-key"><div class="tooltip">
+                                <span class="warning  msgpadded"> Window (UTC) </span>
                                 <span class="tooltiptext" style="width: 150px;"><u>Window too short for Cadence!</u>
                                 <br>You cannot fit multiple observations within this observing window. Consider increasing window, decreasing period, or using single observation. <br>
                                 </span></div></td></tr></table></td>
                         {% else %}
-                            <td class="kv-value">{{ data.start_time }} -> {{ data.end_time }}</td>
+                            <td class="kv-key">Window (UTC)
+                                <div class="compact-field">
+                                    {{ form.edit_window }}<label for="id_edit_window">(Edit)</label>
+                                </div>
+                            </td>
                         {% endif %}
-
+                        <td class="kv-value">
+                            <div id="data_window" class="mode-window">{{ data.start_time }} -> {{ data.end_time }}</div>
+                            <div id="form_window" class="mode-window">{{ form.start_time }} -> {{ form.end_time }}</div>
+                        </td>
                     </tr>
                     {% if data.jitter is not None%}
                     <tr id="id_jitter_row">
@@ -290,7 +324,7 @@
                     {% endif %}
                     {% if data.num_times is not None and data.total_time is not None%}
                     <tr id="id_cadence_cost_row">
-                        <td class="kv-key">Max No. of Repeats / Total Time </td>
+                        <td class="kv-key">Max No. of Repeats /<br> Total Time </td>
                         {% if data.total_time >= 10 %}
                             <td ><table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip">
                                 <span class="warning msgpadded">{{ data.num_times }} / {{ data.total_time|floatformat:2 }} hrs </span>
@@ -349,12 +383,13 @@
       <div class="four columns">
         {% if form.errors%}
           {% if form.spectroscopy.value == 'True' %}
-            <a href="{% url 'schedule-body-spectra' body.id %}" id="id_return_spec_link">Return to schedule spectra page</a>
+            <a class="button" href="{% url 'schedule-body-spectra' body.id %}" id="id_return_spec_link">Return to Previous Page</a>
           {% else %}
-            <a href="{% url 'schedule-body' body.id %}{% if cadence %}?cadence=true{% endif%}" id="id_return_link">Return to schedule parameters page</a>
+            <a class="button" href="{% url 'schedule-body' body.id %}{% if cadence %}?cadence=true{% endif%}" id="id_return_link">Return to Previous Page</a>
           {% endif %}
         {% else %}
         <input type="submit" class="button button-primary" value="Schedule this Object" id="id_submit_button" name="submit">
+          {% endif%}
         <input type="submit" class="button button-primary" value="Update Parameters" id="id_edit_button" name="edit">
           <a class="button mode-switch" href="#" id="advanced-switch">Advanced Options</a>
           <div id="advanced_options" class="mode-container">
@@ -366,7 +401,12 @@
                       <table align="left"  style="margin: 0px"><tr><td class="kv-value">
                             <div class="tooltip">{{ form.max_airmass }}
                             <span class="tooltiptext" style="left:60%; width:75px;"><u>Altitude:</u>
-                            <span name="min_alt">{{data.max_airmass|get_alt_from_airmass|floatformat:1}}&deg</span></span></div></td><td></td></tr>
+                                {% if data.max_airmass %}
+                                  <span name="min_alt">{{data.max_airmass|get_alt_from_airmass|floatformat:1}}&deg</span>
+                                {% else %}
+                                    <span name="min_alt">{{data.max_airmass}}&deg</span>
+                                {% endif %}
+                            </span></div></td><td></td></tr>
                       </table>
                   </td>
               </tr>
@@ -387,10 +427,22 @@
                   <td class="kv-key">GuideCam Exposure time (s)</td>
                   <td class="kv-value">{{ form.ag_exp_time }}</td>
               </tr>
+              <tr id="id_para_angle_row">
+                  <td >
+                      <table align="left"  style="margin: 0px"><tr><td class="kv-key">
+                            <div class="tooltip">Use Parallactic Angle
+                            <span class="tooltiptext" style="left:60%;"><u>Parallactic Angle:</u>
+                                Slit Orientation Perpendicular to Horizon. <br>
+                                By Default slit orientation in direction of motion.
+                            </span></div></td><td></td></tr>
+                      </table>
+                  </td>
+                  <td class="kv-value">{{ form.para_angle }}</td>
+              </tr>
               {% endif %}
           </table>
           </div>
-        {% endif%}
+
           {% for hidden in form.hidden_fields %}
             {{ hidden }}
           {% endfor %}

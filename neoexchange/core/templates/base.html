@@ -1,195 +1,202 @@
 <!DOCTYPE html>
 {% load staticfiles %}
 <html>
-	<head>
+        <head>
         <base href="{{base_url}}">
-		<title>{%block header %}{% endblock %} | LCO NEOx</title>
-		<meta charset="UTF-8" />
-		<meta name="author" content="Las Cumbres Observatory" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, user-scalable=yes" />
-		<meta name="version" content="{{site_version}}" />
-		{% block meta %}{% endblock %}
-		{% block favicon %}
-		<link rel="shortcut icon" href="{% static 'core/images/favicon.ico' %}" type="image/vnd.microsoft.icon" />
-		{% endblock %}
-		<link href="http://fonts.googleapis.com/css?family=Open+Sans:400,800,300,600,300italic,400italic,600italic" rel="stylesheet" type="text/css">
-		{% block css-content %}{% endblock %}
-		<link rel="stylesheet" href="{% static 'core/css/font-awesome.min.css' %}">
-		<link rel="stylesheet" href="{% static 'core/css/skeleton.css' %}">
-		<link rel="stylesheet" href="{% static 'core/css/normalize.css' %}">
-		<link rel="stylesheet" href="{% static 'core/css/styles.css' %}">
-		<link rel="stylesheet" href="{% static 'core/css/forms.css' %}">
+                <title>{%block header %}{% endblock %} | LCO NEOx</title>
+                <meta charset="UTF-8" />
+                <meta name="author" content="Las Cumbres Observatory" />
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, user-scalable=yes" />
+                <meta name="version" content="{{site_version}}" />
+                {% block meta %}{% endblock %}
+                {% block favicon %}
+                <link rel="shortcut icon" href="{% static 'core/images/favicon.ico' %}" type="image/vnd.microsoft.icon" />
+                {% endblock %}
+                <link href="http://fonts.googleapis.com/css?family=Open+Sans:400,800,300,600,300italic,400italic,600italic" rel="stylesheet" type="text/css">
+                {% block css-content %}{% endblock %}
+                <link rel="stylesheet" href="{% static 'core/css/font-awesome.min.css' %}">
+                <link rel="stylesheet" href="{% static 'core/css/skeleton.css' %}">
+                <link rel="stylesheet" href="{% static 'core/css/normalize.css' %}">
+                <link rel="stylesheet" href="{% static 'core/css/styles.css' %}">
+                <link rel="stylesheet" href="{% static 'core/css/forms.css' %}">
 
 
         {% block last-css-content %}{% endblock %}
         <!--[if lt IE 9]>
         <script src="https://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
         <![endif]-->
-		<script type="text/javascript" src="{% static 'core/js/jquery-1.12.3.js' %}"></script>
-		<script type="text/javascript" src="{% static 'core/js/jquery-ui-1.12.1.min.js' %}"></script>
-		<script type="text/javascript">
-			$(document).ready(function(){
+                <script type="text/javascript" src="{% static 'core/js/jquery-1.12.3.js' %}"></script>
+                <script type="text/javascript" src="{% static 'core/js/jquery-ui-1.12.1.min.js' %}"></script>
+                <script type="text/javascript">
+                        $(document).ready(function(){
 
-				/* Grab the token from localstorage and makes sure we can use it */
-				$.ajaxPrefilter(function(options, originalOptions, jqXHR){
-				  if(options.url.indexOf('lcogt.net/') >= 0 && localStorage.getItem('token')){
-				    jqXHR.setRequestHeader('Authorization', 'Token ' + localStorage.getItem('token'));
-				  }
-				});
+                                /* Grab the token from localstorage and makes sure we can use it */
+                                $.ajaxPrefilter(function(options, originalOptions, jqXHR){
+                                  if(options.url.indexOf('lcogt.net/') >= 0 && localStorage.getItem('token')){
+                                    jqXHR.setRequestHeader('Authorization', 'Token ' + localStorage.getItem('token'));
+                                  }
+                                });
 
-				$(document).on('click','#messages-inbox',function(event){
-					if ($('#show-messages').is(':visible')) $('#show-messages').fadeOut("fast");
-					else $('#show-messages').fadeIn("fast");
-				})
+                                $(document).on('click','#messages-inbox',function(event){
+                                        if ($('#show-messages').is(':visible')) $('#show-messages').fadeOut("fast");
+                                        else $('#show-messages').fadeIn("fast");
+                                })
 
-				$(window).on('load',function(event){
-					centreDiv('#show-messages');
-					$('#show-messages-close').bind("click",function(){
-						$('#show-messages').fadeOut("fast");
-					});
-					return false;
-				})
-				centreDiv = function(el){
-					var wide = $(window).width();
-					var tall = $(window).height();
-					$(el).css({left:(wide-$(el).outerWidth())/2,top:($(window).scrollTop()+(tall-$(el).outerHeight())/2)});
-				}
-			});
-		</script>
-		{% block script-content %}{% endblock %}
-	</head>
-	<body class="{% block bodyclass %}{% endblock %}">
-		{% block bodyscript %}{% endblock %}
-		<div id="page-wrapper">
-			<div id="page">
-				<div id="header-holder">
-					<div id="lcogt-bar">
-						{% block login %}
-						<div id="login" class="block">
-							<ul>
-								<li>
-									<span id="clock"></span>
-									<script type="text/javascript" src="{% static 'core/js/utc_clock.js' %}" charset="UTF-8"></script>
-								</li>
-								{% if user.is_authenticated %}
-								<li>
-									<a href="#" id="messages-inbox" class="fa fa-inbox{% if messages %} highlight{% endif %}"></a>
-								</li>
-								<li>
-									{% if user.first_name %}{{ user.first_name }}{% else %}{{user.username}}{% endif %}
-								</li>
-								<li>
-									<a target="_parent" href="{% url 'auth_logout' as logouturl %}{{ logouturl }}" id="logout-btn"> Logout</a>
-								</li>
-								{% else %}
-								<li>
-									<a target="_parent" href="{% url 'auth_login' as loginurl %}{{ loginurl }}">Login</a>
-								</li>
-								{% endif %}
-							</ul>
-						</div>
-						{% endblock %}
-						<div id="lcogt-name">
-							<a target="_parent" href="http://lco.global/" title="LCO Homepage"><span class="l">L</span><span class="wide">as </span><span class="c">C</span><span class="wide">umbres </span><span class="o">O</span><span class="wide">bservatory</span></a>
-						</div>
-					</div>
-					<div class="container-lg">
-					<div id="header" role="banner">
-						<div id="logo">
-							<a href="{% url 'home' %}" title="NEO exchange homepage" rel="home"><img src="{% static 'core/images/NEO-logo_sm.jpg' %}" alt="NEO exchange" /></a>
-						</div>
-						<div id="site-name">
-							<strong>{% block title %}Minor planet follow-up portal{% endblock %}</strong>
-							<div id="neox-version">
-								v. {{neox_version}}
-							</div>
-						</div>
-						<div id="powered-by">
-							<a href="http://lco.global" title="LCO Home" rel="home">
-								<img src="{% static 'core/images/LCO_bw_poweredby.png' %}" alt="Home" id="logo-image2" />
-							</a>
-						</div>
-					</div>
-					</div>
-				</div>
-							<!-- Header region -->
-				<div id="{% block extramenucss %}extramenu{% endblock %}">
-					<div class="container-lg">
-							{% block extramenu %}
-							{% endblock %}
-							<nav id="navigation" role="navigation">
-								{% block nav %}
-								<ul class="navlist">
-									{% block navhome %}
-									<li>
-										<a rel="home" title="Home" class="navitem" href="{% url 'home'  %}">Home</a>
-									</li>
-									{% endblock %}
-									<li class="dropdown-menu">
-										Targets
-											<ul class="dropdown">
-												<li><a href="{% url 'targetlist' %}" title="NEO targets being actively followed" class="navitem">Active</a></li>
-												<li><a href="{% url 'ranking' %}" title="Ranked target list for NEO candidates" class="navitem">Candidates</a></li>
-												<li><a href="{% url 'characterization' %}" title="Targets slated for Characterization" class="navitem">Characterization</a></li>
-												<li><a href="{% url 'calibsource-view' %}" title="Calibration Sources" class="navitem">Standards</a></li>
-											</ul>
-									</li>
-									<li>
-										<a href="{% url 'blocklist' %}" title="Blocks scheduled for NEO follow-up" class="navitem">Blocks</a>
-									</li>
-									<li>
-										<a href="{% url 'block-summary' %}" title="Block Summary for NEO follow-up" class="navitem">Efficiency</a>
-									</li>
+                                $(window).on('load',function(event){
+                                        centreDiv('#show-messages');
+                                        $('#show-messages-close').bind("click",function(){
+                                                $('#show-messages').fadeOut("fast");
+                                        });
+                                        return false;
+                                })
+                                centreDiv = function(el){
+                                        var wide = $(window).width();
+                                        var tall = $(window).height();
+                                        $(el).css({left:(wide-$(el).outerWidth())/2,top:($(window).scrollTop()+(tall-$(el).outerHeight())/2)});
+                                }
+                        });
+                </script>
+                {% block script-content %}{% endblock %}
+        </head>
+        <body class="{% block bodyclass %}{% endblock %}">
+                {% block bodyscript %}{% endblock %}
+                <div id="page-wrapper">
+                        <div id="page">
+                                <div id="header-holder">
+                                        <div id="lcogt-bar">
+                                                {% block login %}
+                                                <div id="login" class="block">
+                                                        <ul>
+                                                                <li>
+                                                                        <span id="clock"></span>
+                                                                        <script type="text/javascript" src="{% static 'core/js/utc_clock.js' %}" charset="UTF-8"></script>
+                                                                </li>
+                                                                {% if user.is_authenticated %}
+                                                                <li>
+                                                                        <a href="#" id="messages-inbox" class="fa fa-inbox{% if messages %} highlight{% endif %}"></a>
+                                                                </li>
+                                                                <li>
+                                                                        {% if user.first_name %}{{ user.first_name }}{% else %}{{user.username}}{% endif %}
+                                                                </li>
+                                                                <li>
+                                                                        <a target="_parent" href="{% url 'auth_logout' as logouturl %}{{ logouturl }}" id="logout-btn"> Logout</a>
+                                                                </li>
+                                                                {% else %}
+                                                                <li>
+                                                                        <a target="_parent" href="{% url 'auth_login' as loginurl %}{{ loginurl }}">Login</a>
+                                                                </li>
+                                                                {% endif %}
+                                                        </ul>
+                                                </div>
+                                                {% endblock %}
+                                                <div id="lcogt-name">
+                                                        <a target="_parent" href="http://lco.global/" title="LCO Homepage"><span class="l">L</span><span class="wide">as </span><span class="c">C</span><span class="wide">umbres </span><span class="o">O</span><span class="wide">bservatory</span></a>
+                                                </div>
+                                        </div>
+                                        <div class="container-lg">
+                                        <div id="header" role="banner">
+                                                <div id="logo">
+                                                        <a href="{% url 'home' %}" title="NEO exchange homepage" rel="home"><img src="{% static 'core/images/NEO-logo_sm.jpg' %}" alt="NEO exchange" /></a>
+                                                </div>
+                                                <div id="site-name">
+                                                        <strong>{% block title %}Minor planet follow-up portal{% endblock %}</strong>
+                                                        <div id="neox-version">
+                                                                v. {{neox_version}}
+                                                        </div>
+                                                </div>
+                                                <div id="powered-by">
+                                                        <a href="http://lco.global" title="LCO Home" rel="home">
+                                                                <img src="{% static 'core/images/LCO_bw_poweredby.png' %}" alt="Home" id="logo-image2" />
+                                                        </a>
+                                                </div>
+                                        </div>
+                                        </div>
+                                </div>
+                                <!-- Header region -->
+                                <div id="{% block extramenucss %}extramenu{% endblock %}">
+                                        <div class="container-lg">
+                                                        {% block extramenu %}
+                                                        {% endblock %}
+                                                        <nav id="navigation" role="navigation">
+                                                                {% block nav %}
+                                                                <ul class="navlist">
+                                                                        {% block navhome %}
+                                                                        <li>
+                                                                                <a rel="home" title="Home" class="navitem" href="{% url 'home'  %}">Home</a>
+                                                                        </li>
+                                                                        {% endblock %}
+                                                                        <li class="dropdown-menu">
+                                                                                Targets
+                                                                                        <ul class="dropdown">
+                                                                                                <li><a href="{% url 'targetlist' %}" title="NEO targets being actively followed" class="navitem">Active</a></li>
+                                                                                                <li><a href="{% url 'ranking' %}" title="Ranked target list for NEO candidates" class="navitem">Candidates</a></li>
+                                                                                                <li><a href="{% url 'characterization' %}" title="Targets slated for Characterization" class="navitem">Characterization</a></li>
+                                                                                                <li><a href="{% url 'look_project' %}" title="Targets for the LOOK Project" class="navitem">LOOK Project</a></li>
+                                                                                                <li><a href="{% url 'calibsource-view' %}" title="Calibration Sources" class="navitem">Standards</a></li>
+                                                                                        </ul>
+                                                                        </li>
+                                                                        <li>
+                                                                                <a href="{% url 'blocklist' %}" title="Blocks scheduled for NEO follow-up" class="navitem">Blocks</a>
+                                                                        </li>
+                                                                        <li>
+                                                                                <a href="{% url 'block-summary' %}" title="Block Summary for NEO follow-up" class="navitem">Efficiency</a>
+                                                                        </li>
 
-								</ul>
-								{% endblock %}
+                                                                </ul>
+                                                                {% endblock %}
 
-								<form action="{% url 'search' %}" method="GET">
-									<input type='text' placeholder="Object name" name="q" id="id_target_search"/>
-									<input type="submit" class="button keepvisible" role="menuitem" value="Search" id="id_search_submit">
-								</form>
-							</nav>
-					</div>
-				</div>
-				{% block main-content %}{% endblock %}
-				{% block content %}{% endblock %}
-			</div>
-		</div>
-		{% if messages %}
-		<div id="show-messages" style="display:block;">
-			<div id="show-messages-inner">
-			<div id="show-messages-close">×</div>
-			{% for m in messages %}
-			<li class="{{m.tags}}">{{m}}</li>
-			{% empty %}
-			<li>No messages.</li>
-			{% endfor %}
-			</div>
-		</div>
-		{% else %}
-		<div id="show-messages" style="display:none;">
-			<div id="show-messages-inner">
-			<div id="show-messages-close">×</div>
-			{% for m in messages %}
-			<li class="{{m.tags}}">{{m}}</li>
-			{% empty %}
-			<li>No messages.</li>
-			{% endfor %}
-			</div>
-		</div>
-		{% endif %}
-		{% block end-scripts %}
-		{% endblock %}
-		<script>
-		  var _gaq = _gaq || [];
-		  _gaq.push(['_setAccount', 'UA-2087713-1']);
-		  _gaq.push(['_trackPageview']);
+                                                                <form action="{% url 'search' %}" method="GET">
+                                                                        <input type='text' placeholder="Object name" name="q" id="id_target_search"/>
+                                                                        <input type="submit" class="button keepvisible" role="menuitem" value="Search" id="id_search_submit">
+                                                                </form>
+                                                        </nav>
+                                        </div>
+                                </div>
+                                {% block main-content %}{% endblock %}
+                                {% block content %}{% endblock %}
+                        </div>
+                </div>
+                {% if messages %}
+                <div id="show-messages" style="display:block;">
+                        <div id="show-messages-inner">
+                        <div id="show-messages-close">×</div>
+                        {% for m in messages %}
+                        <li class="{{m.tags}}">
+                                {% if 'safe' in m.tags %}
+                                        {{m|safe}}
+                                {% else %}
+                                        {{m}}
+                                {% endif %}
+                        </li>
+                        {% empty %}
+                        <li>No messages.</li>
+                        {% endfor %}
+                        </div>
+                </div>
+                {% else %}
+                <div id="show-messages" style="display:none;">
+                        <div id="show-messages-inner">
+                        <div id="show-messages-close">×</div>
+                        {% for m in messages %}
+                        <li class="{{m.tags}}">{{m}}</li>
+                        {% empty %}
+                        <li>No messages.</li>
+                        {% endfor %}
+                        </div>
+                </div>
+                {% endif %}
+                {% block end-scripts %}
+                {% endblock %}
+                <script>
+                  var _gaq = _gaq || [];
+                  _gaq.push(['_setAccount', 'UA-2087713-1']);
+                  _gaq.push(['_trackPageview']);
 
-		  (function() {
-			var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-			ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-			var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-		  })();
-		</script>
-	</body>
+                  (function() {
+                        var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+                        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+                        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+                  })();
+                </script>
+        </body>
 </html>
