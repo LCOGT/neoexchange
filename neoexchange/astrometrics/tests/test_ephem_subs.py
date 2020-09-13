@@ -2483,37 +2483,42 @@ class Testmolecule_overhead(TestCase):
     def test_single_filter(self):
         filter_pattern = 'V'
         expected_overhead = (2. + 5. + 11.)*1
-        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 10)))
+        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 10, 'EXPOSE')))
 
     def test_multiple_individual_filters(self):
         filter_pattern = 'V,R,I'
         expected_overhead = (2. + 5. + 11.)*10.
-        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 10)))
+        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 10, 'EXPOSE')))
 
     def test_multiple_repeated_filters(self):
         filter_pattern = 'V,R,I,V,R,I'
         expected_overhead = (2. + 5. + 11.)*10.
-        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 10)))
+        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 10, 'EXPOSE')))
 
     def test_multiple_filter_strings(self):
         filter_pattern = 'V,V,V,R,R,R,I,I,I,'
         expected_overhead = (2. + 5. + 11.)*5.
-        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 14)))
+        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 14, 'EXPOSE')))
 
     def test_short_block(self):
         filter_pattern = 'V,V,V,R,R,R,I,I,I,V'
         expected_overhead = (2. + 5. + 11.)*2.
-        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 5)))
+        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 5, 'EXPOSE')))
+
+    def test_repeat_expose(self):
+        filter_pattern = 'V,V,R,R,V,V'
+        expected_overhead = (2. + 5. + 11.)*3.
+        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 19, 'REPEAT_EXPOSE')))
 
     def test_start_end_loop(self):
         filter_pattern = 'V,V,R,R,V,V'
-        expected_overhead = (2. + 5. + 11.)*7.
-        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 19)))
+        expected_overhead = (2. + 5. + 11.)*4.
+        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 9, 'EXPOSE')))
 
     def test_exact_loop(self):
         filter_pattern = 'V,V,R,R,I,I'
         expected_overhead = (2. + 5. + 11.)*9.
-        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 18)))
+        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 18, 'EXPOSE')))
 
 
 class TestDetermineExpTimeCount_WithFilters(TestCase):

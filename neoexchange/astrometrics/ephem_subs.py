@@ -1182,13 +1182,12 @@ def determine_exptime(speed, pixel_scale, max_exp_time=300.0):
     (round_exptime, full_exptime) = estimate_exptime(speed, pixel_scale, 5.0)
 
     if round_exptime > max_exp_time:
-        logger.debug("Capping exposure time at %.1f seconds (Was %1.f seconds)" % \
-            (round_exptime, max_exp_time))
+        logger.debug("Capping exposure time at %.1f seconds (Was %1.f seconds)" % (round_exptime, max_exp_time))
         round_exptime = full_exptime = max_exp_time
-    if round_exptime < 10.0 :
+    if round_exptime < 10.0:
         # If under 10 seconds, re-round to nearest half second
         (round_exptime, full_exptime) = estimate_exptime(speed, pixel_scale, 0.5)
-    logger.debug("Estimated exptime=%.1f seconds (%.1f)" % (round_exptime , full_exptime))
+    logger.debug("Estimated exptime=%.1f seconds (%.1f)" % (round_exptime, full_exptime))
 
     return round_exptime
 
@@ -1216,7 +1215,7 @@ def determine_exp_time_count(speed, site_code, slot_length_in_mins, mag, filter_
     exp_count = int((slot_length - setup_overhead)/(exp_time + exp_overhead))
     # Reduce exposure count by number of exposures necessary to accomidate molecule overhead
     mol_overhead = molecule_overhead(build_filter_blocks(filter_pattern, exp_count))
-    exp_count = int(ceil(exp_count * (1.0-(mol_overhead / ((( exp_time + exp_overhead ) * exp_count) + mol_overhead)))))
+    exp_count = int(ceil(exp_count * (1.0-(mol_overhead / (((exp_time + exp_overhead) * exp_count) + mol_overhead)))))
     # Safety while loop for edge cases
     while setup_overhead + molecule_overhead(build_filter_blocks(filter_pattern, exp_count)) + (exp_overhead * float(exp_count)) + exp_time * float(exp_count) > slot_length:
         exp_count -= 1
@@ -1244,7 +1243,7 @@ def determine_exp_count(slot_length_in_mins, exp_time, site_code, filter_pattern
     exp_count = int((slot_length - setup_overhead)/(exp_time + exp_overhead))
     # Reduce exposure count by number of exposures necessary to accommodate molecule overhead
     mol_overhead = molecule_overhead(build_filter_blocks(filter_pattern, exp_count))
-    exp_count = int(ceil(exp_count * (1.0-(mol_overhead / ((( exp_time + exp_overhead ) * exp_count) + mol_overhead)))))
+    exp_count = int(ceil(exp_count * (1.0-(mol_overhead / (((exp_time + exp_overhead) * exp_count) + mol_overhead)))))
     # Safety while loop for edge cases
     while setup_overhead + molecule_overhead(build_filter_blocks(filter_pattern, exp_count)) + (exp_overhead * float(exp_count)) + exp_time * float(exp_count) > slot_length:
         exp_count -= 1
@@ -1252,8 +1251,8 @@ def determine_exp_count(slot_length_in_mins, exp_time, site_code, filter_pattern
     if exp_count < min_exp_count:
         exp_count = min_exp_count
         slot_length = ((exp_time + exp_overhead) * float(exp_count)) + (setup_overhead + molecule_overhead(build_filter_blocks(filter_pattern, min_exp_count)))
-        logger.debug("increasing slot length to %.1f minutes to allow %.1f exposure time" % ( slot_length/60.0, exp_time))
-    logger.debug("Slot length of %.1f mins (%.1f secs) allows %d x %.1f second exposures" % ( slot_length/60.0, slot_length, exp_count, exp_time))
+        logger.debug("increasing slot length to %.1f minutes to allow %.1f exposure time" % (slot_length/60.0, exp_time))
+    logger.debug("Slot length of %.1f mins (%.1f secs) allows %d x %.1f second exposures" % (slot_length/60.0, slot_length, exp_count, exp_time))
     if exp_time is None or exp_time <= 0.0 or exp_count < 1:
         logger.debug("Invalid exposure count")
         exp_count = None
