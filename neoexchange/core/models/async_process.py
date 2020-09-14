@@ -6,7 +6,7 @@ from core.models.body import Body
 
 # Statuses for asynchronous processes
 ASYNC_STATUS_PENDING = 'pending'
-ASYNC_STATUS_CREATED = 'success'
+ASYNC_STATUS_CREATED = 'complete'
 ASYNC_STATUS_FAILED = 'failed'
 ASYNC_TERMINAL_STATES = (ASYNC_STATUS_CREATED, ASYNC_STATUS_FAILED)
 

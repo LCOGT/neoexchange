@@ -27,7 +27,7 @@ class DownloadProcessPipeline(PipelineProcess):
     short_name = 'dlp'
     allowed_suffixes = ['.gz', '.fz']
     inputs = {
-        'date': {
+        'obs_date': {
             'default': None,
             'long_name': 'Date of the data to download (YYYYMMDD)'
         },
@@ -80,7 +80,7 @@ class DownloadProcessPipeline(PipelineProcess):
             raise AsyncError("Download and create took longer than 10 mins to create")
         except PipelineProcess.DoesNotExist:
             raise AsyncError("Record has been deleted")
-
+        self.log('Pipeline Completed')
         return
 
     def download(self, obs_date, proposals, out_path, dlengimaging=False, spectraonly=False):

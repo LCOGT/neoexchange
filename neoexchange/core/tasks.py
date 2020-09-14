@@ -71,23 +71,23 @@ def run_process(process):
     logger.info("running process")
     failure_message = None
     process.run()
-    # try:
-    #     process.run()
-    # except AsyncError as ex:
-    #     failure_message = str(ex)
-    # except NotImplementedError as ex:
-    #     logger.error('S3 not configured correctly: {}'.format(ex))
-    #     failure_message = str(ex)
-    # except TypeError as ex:
-    #     logger.error('Unexpected input type: {}'.format(ex))
-    #     failure_message = 'Unexpected input type'
-    # except Exception as ex:
-    #     logger.error('unknown error occurred: {}'.format(ex))
-    #     failure_message = f'An unexpected error occurred {ex}'
-    #
-    # if failure_message is not None:
-    #     logger.error('task failed: {}'.format(failure_message))
-    #     process.failure_message = failure_message
-    #     process.status = ASYNC_STATUS_FAILED
-    #     process.save()
+    try:
+        process.run()
+    except AsyncError as ex:
+        failure_message = str(ex)
+    except NotImplementedError as ex:
+        logger.error('S3 not configured correctly: {}'.format(ex))
+        failure_message = str(ex)
+    except TypeError as ex:
+        logger.error('Unexpected input type: {}'.format(ex))
+        failure_message = 'Unexpected input type'
+    except Exception as ex:
+        logger.error('unknown error occurred: {}'.format(ex))
+        failure_message = f'An unexpected error occurred {ex}'
+
+    if failure_message is not None:
+        logger.error('task failed: {}'.format(failure_message))
+        process.failure_message = failure_message
+        process.status = ASYNC_STATUS_FAILED
+        process.save()
     logger.info('process finished')

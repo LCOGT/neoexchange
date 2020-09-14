@@ -1,9 +1,11 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static basic_tags %}
+
+{% block header %}Logs for {{object.identifier}}{% endblock %}
 
 {% block extramenu %}
     <div class="headingleft">
-        <h1>Pipeline process</h1>
+        <h1>Pipeline processing</h1>
     </div>
 {% endblock%}
 
@@ -11,11 +13,21 @@
 
 {% block main-content %}
 <div class="container" id="main">
-<h2>{{ object.identifier }}</h2>
+  <div class="eight columns">
+    <h2>{{object.process_type}}</h2>
+    <h4>Name: {{ object.identifier }}: {{object.status|upper}}</h4>
+  </div>
+  <div class="four columns rightsidebar">
+    <a href="{% url 'pipelines' %}" class="button button-primary" >Pipeline List</a>
+  </div>
 
 <div class="row">
-    <div class="eight columns rightsidebar">
-        <h4>Log output</h4>
+    <div class="twelve columns">
+      {% if object.failure_message %}
+      <div class="messages error">
+        {{object.failure_message}}
+      </div>
+      {% endif %}
         <p>
             <label>
                 <input type="checkbox" id="follow-logs" />
@@ -30,7 +42,7 @@
 <script type='text/javascript'>
     const PIPELINE_PROCESS_PK = "{{ object.pk }}";
 </script>
-<script type='text/javascript' src='{% static 'core/pipelines.js' %}'></script>
-<script type='text/javascript' src='{% static 'core/pipelineprocess_detail.js' %}'></script>
+<script type='text/javascript' src='{% static 'core/js/pipelines.js' %}'></script>
+<script type='text/javascript' src='{% static 'core/js/pipelineprocess_detail.js' %}'></script>
 
 {% endblock %}

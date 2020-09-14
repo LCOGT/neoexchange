@@ -518,6 +518,8 @@ body.compose form label, body.view form label { color: #202020; font-weight: bol
 #customForm select { margin-left:8px; font-size: 1em; }
 form input, form select, form textarea { font-family: inherit; font-size: inherit; color: inherit; }
 form.filter_form input { color: black; }
+form select.multiselect { height:150px}
+
 #extramenu, #extramenu-home, .menuholder {
 	z-index:100;
 	background-color: #F9F9F9;

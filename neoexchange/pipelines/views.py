@@ -17,12 +17,8 @@ from .serializers import AsyncProcessSerializer, PipelineProcessSerializer
 class SubmitView(FormView):
     template_name = 'pipelines/pipeline_form.html'
     form_class = DLDataForm
-    success_url = reverse_lazy('pipelines')
 
     def form_valid(self, form):
-        return self.handle_pipeline(form)
-
-    def handle_pipeline(self, form):
         name = 'dldata'
         try:
             pipeline_cls = PipelineProcess.get_subclass(name)
@@ -38,8 +34,15 @@ class SubmitView(FormView):
             inputs[key] = value
         pipe = pipeline_cls.create_timestamped(inputs)
         send_task(run_pipeline, pipe, name)
-        return redirect(self.success_url)
-        # return JsonResponse({'ok': True})
+        return redirect(reverse_lazy('pipelinedetail', kwargs={'pk':pipe.pk}))
+
+    def get_success_url(self):
+        return reverse_lazy('pipelinedetail', kwargs={'pk':pipe.pk})
+
+    def get_context_data(self):
+        data = super().get_context_data()
+        data['form_title'] = 'Download Data and Create Guider Movies'
+        return data
 
 def overview(request):
     pipelines = AsyncProcess.objects.all()

@@ -102,8 +102,8 @@ urlpatterns = [
     url(r'^pipelines/submit/$', SubmitView.as_view(), name='pipesubmit'),
     url(r'^pipelines/detail/(?P<pk>\d+)/$', PipelineProcessDetailView.as_view() ,name="pipelinedetail" ),
     url(r'^pipelines/$', overview, name='pipelines'),
-    url(r'^api/pipelines/status/(?P<pk>\d+)/$', AsyncStatusApi.as_view(), name='async_process_status_api'),
-    url(r'^api/pipelines/logs/(?P<pk>\d+)/$', PipelineProcessApi.as_view(), name='pipeline_api'),
+    url(r'^api/pipeline/status/(?P<pk>\d+)/$', AsyncStatusApi.as_view(), name='async_process_status_api'),
+    url(r'^api/pipeline/logs/(?P<pk>\d+)/$', PipelineProcessApi.as_view(), name='pipeline_api'),
     url(r'^admin/', include(admin.site.urls)),
 ]
 

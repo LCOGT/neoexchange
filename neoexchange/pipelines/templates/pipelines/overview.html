@@ -13,9 +13,9 @@
 {% block bodyclass %}page{% endblock %}
 
 {% block main-content %}
-<div id="main" class="fill-height fullwidth">
-  <a href="{% url 'pipesubmit' %}">Submit pipeline</a>
-                <table class="datatable u-full-width" id="id_blocks">
+<div id="main" class="fill-height">
+  <a href="{% url 'pipesubmit' %}" class="button button-primary">Start pipeline</a>
+                <table class="datatable" id="id_blocks">
                         <thead>
                                 <tr>
                                         <th class="list_title">
@@ -35,10 +35,10 @@
                         <tbody>
                         {% for pipeline in pipelines %}
                                 <tr class="{% cycle 'odd' 'even' %}">
-                                  <td>{{pipeline.identifier}}</td>
+                                  <td><a href="{% url 'pipelinedetail' pipeline.id %}">{{pipeline.identifier}}</a></td>
                                   <td>{{pipeline.status}}</td>
-                                  <td>{{pipeline.terminal_timestamp}}</td>
                                   <td>{{pipeline.failure_message}}</td>
+                                  <td>{{pipeline.terminal_timestamp}}</td>
                                 </tr>
                         {% endfor %}
                         </tbody>

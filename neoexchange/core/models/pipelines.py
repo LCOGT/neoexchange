@@ -1,7 +1,8 @@
 from collections import namedtuple
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, date
 import json
+import dateutil.parser
 import tempfile
 from pathlib import Path
 import re
@@ -23,6 +24,16 @@ class InvalidPipelineError(Exception):
 
 PipelineOutput = namedtuple('PipelineOutput', ['msg'], defaults=('',))
 
+class DateTimeEncoder(json.JSONEncoder):
+        #Override the default method
+        def default(self, obj):
+            if isinstance(obj, (date, datetime)):
+                return obj.isoformat()
+
+def decode_datetime(empDict):
+   if 'obs_date' in empDict:
+      empDict["obs_date"] = dateutil.parser.parse(empDict["obs_date"])
+      return empDict
 
 class PipelineProcess(AsyncProcess):
     short_name = 'pipeline'
@@ -38,7 +49,7 @@ class PipelineProcess(AsyncProcess):
             tmpdir = Path(tmpdir_name)
 
             # Do the actual work
-            inputs = json.loads(self.inputs_json) if self.inputs_json else {}
+            inputs = json.loads(self.inputs_json, object_hook=decode_datetime) if self.inputs_json else {}
             try:
                 self.do_pipeline(tmpdir, **inputs)
             except Exception as e:
@@ -124,7 +135,7 @@ class PipelineProcess(AsyncProcess):
             'identifier': identifier,
         }
         if inputs:
-            kwargs['inputs_json'] = json.dumps(inputs)
+            kwargs['inputs_json'] = json.dumps(inputs, cls=DateTimeEncoder)
 
         pipe = cls.objects.create(**kwargs)
         pipe.save()
