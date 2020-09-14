@@ -3102,6 +3102,44 @@ class TestDetermineHorizonsId(TestCase):
 
         self.assertEqual(expected_id, horizons_id)
 
+    def test_29P(self):
+        expected_id = 90000393
+        lines = ['Ambiguous target name; provide unique id:',
+                 '    Record #  Epoch-yr  >MATCH DESIG<  Primary Desig  Name  ',
+                 '    --------  --------  -------------  -------------  -------------------------',
+                 '    90000387    1908    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000388    1925    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000389    1941    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000390    1957    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000391    1974    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000392    2007    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000393    2011    29P            29P             Schwassmann-Wachmann 1',
+                 '']
+        now = datetime(2020, 5, 11, 17, 20, 42)
+
+        horizons_id = determine_horizons_id(lines, now)
+
+        self.assertEqual(expected_id, horizons_id)
+
+    def test_29P_prior_apparition(self):
+        expected_id = 90000392
+        lines = ['Ambiguous target name; provide unique id:',
+                 '    Record #  Epoch-yr  >MATCH DESIG<  Primary Desig  Name  ',
+                 '    --------  --------  -------------  -------------  -------------------------',
+                 '    90000387    1908    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000388    1925    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000389    1941    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000390    1957    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000391    1974    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000392    2007    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000393    2011    29P            29P             Schwassmann-Wachmann 1',
+                 '']
+        now = datetime(2008, 5, 11, 17, 20, 42)
+
+        horizons_id = determine_horizons_id(lines, now)
+
+        self.assertEqual(expected_id, horizons_id)
+
     def test_bad_object(self):
         expected_id = None
         lines = ['Unknown target (20000P). Maybe try different id_type?']
