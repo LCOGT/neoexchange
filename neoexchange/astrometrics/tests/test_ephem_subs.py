@@ -3140,6 +3140,40 @@ class TestDetermineHorizonsId(TestCase):
 
         self.assertEqual(expected_id, horizons_id)
 
+    def test_10P_prior_apparition(self):
+        expected_id = 90000207
+        lines = ['Ambiguous target name; provide unique id:',
+                 '    Record #  Epoch-yr  >MATCH DESIG<  Primary Desig  Name  ',
+                 '    --------  --------  -------------  -------------  -------------------------',
+                 '    90000192    1873    10P            10P             Tempel 2',
+                 '    90000193    1878    10P            10P             Tempel 2',
+                 '    90000194    1894    10P            10P             Tempel 2',
+                 '    90000195    1899    10P            10P             Tempel 2',
+                 '    90000196    1904    10P            10P             Tempel 2',
+                 '    90000197    1915    10P            10P             Tempel 2',
+                 '    90000198    1920    10P            10P             Tempel 2',
+                 '    90000199    1925    10P            10P             Tempel 2',
+                 '    90000200    1930    10P            10P             Tempel 2',
+                 '    90000201    1946    10P            10P             Tempel 2',
+                 '    90000202    1951    10P            10P             Tempel 2',
+                 '    90000203    1957    10P            10P             Tempel 2',
+                 '    90000204    1962    10P            10P             Tempel 2',
+                 '    90000205    1967    10P            10P             Tempel 2',
+                 '    90000206    1972    10P            10P             Tempel 2',
+                 '    90000207    1978    10P            10P             Tempel 2',
+                 '    90000208    1983    10P            10P             Tempel 2',
+                 '    90000209    1988    10P            10P             Tempel 2',
+                 '    90000210    1994    10P            10P             Tempel 2',
+                 '    90000211    1999    10P            10P             Tempel 2',
+                 '    90000212    2008    10P            10P             Tempel 2',
+                 '    90000213    2011    10P            10P             Tempel 2',
+                 '']
+        now = datetime(1975, 5, 11, 17, 20, 42)
+
+        horizons_id = determine_horizons_id(lines, now)
+
+        self.assertEqual(expected_id, horizons_id)
+
     def test_bad_object(self):
         expected_id = None
         lines = ['Unknown target (20000P). Maybe try different id_type?']
