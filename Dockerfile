@@ -47,6 +47,7 @@ RUN curl -fsSL https://github.com/Bill-Gray/find_orb/archive/${FIND_ORB_VERSION}
         && make \
         && make install \
         && if [[ -f "ps_1996.dat" && -f "elp82.dat" ]]; then cp ps_1996.dat elp82.dat /root/.find_orb; fi
+        && wget https://www.minorplanetcenter.net/iau/lists/ObsCodes.html -O /root/.find_orb/ObsCodes.htm
 
 # Copy default findorb config file
 COPY neoexchange/photometrics/configs/environ.def /root/.find_orb/
