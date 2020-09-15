@@ -1313,7 +1313,7 @@ def molecule_overhead(filter_blocks):
     return molecule_setup_overhead
 
 
-def build_filter_blocks(filter_pattern, exp_count, exp_type):
+def build_filter_blocks(filter_pattern, exp_count, exp_type="EXPOSE"):
     """Take in filter pattern string, export list of [filter, # of exposures in filter] """
     filter_bits = filter_pattern.split(',')
     filter_bits = list(filter(None, filter_bits))
