@@ -1131,6 +1131,7 @@ class TestSubmitBlockToScheduler(TestCase):
 
         params = self.obs_params
         params['filter_pattern'] = 'V,V,R,R,I,I'
+        params['exp_count'] = 70
 
         user_request = make_requestgroup(self.body_elements, params)
         configurations = user_request.get('requests')[0].get('configurations')
@@ -1150,6 +1151,7 @@ class TestSubmitBlockToScheduler(TestCase):
 
         params = self.obs_params
         params['filter_pattern'] = 'V,V,R,I'
+        params['exp_count'] = 40
 
         user_request = make_requestgroup(self.body_elements, params)
         configurations = user_request.get('requests')[0].get('configurations')
@@ -1266,7 +1268,7 @@ class TestSubmitBlockToScheduler(TestCase):
 
         params = self.obs_params
         params['filter_pattern'] = 'V,V,V,R,R,R,I,I,I'
-        params['exp_count'] = 20
+        params['exp_count'] = 91
 
         user_request = make_requestgroup(self.body_elements, params)
         configurations = user_request.get('requests')[0].get('configurations')
