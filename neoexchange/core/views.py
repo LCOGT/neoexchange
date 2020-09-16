@@ -834,7 +834,7 @@ class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
     def get(self, request, *args, **kwargs):
         form = self.get_form()
         cadence_form = ScheduleCadenceForm()
-        return self.render_to_response(self.get_context_data(form=form, cad_form=cadence_form, body=self.body))
+        return self.render(self.get_context_data(form=form, cad_form=cadence_form, body=self.body))
 
     def form_valid(self, form, request):
         data = schedule_check(form.cleaned_data, self.body, self.ok_to_schedule)
@@ -847,7 +847,7 @@ class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
         if form.is_valid():
             return self.form_valid(form, request)
         else:
-            return self.render_to_response(self.get_context_data(form=form, cad_form=cadence_form, body=self.body))
+            return self.render(self.get_context_data(form=form, cad_form=cadence_form, body=self.body))
 
     def get_context_data(self, **kwargs):
         """
@@ -872,7 +872,7 @@ class ScheduleCalibParameters(LoginRequiredMixin, LookUpCalibMixin, FormView):
     def get(self, request, *args, **kwargs):
         form = self.get_form()
         cadence_form = ScheduleCadenceForm()
-        return self.render_to_response(self.get_context_data(form=form, cad_form=cadence_form, body=self.target))
+        return self.render(self.get_context_data(form=form, cad_form=cadence_form, body=self.target))
 
     def form_valid(self, form, request):
         data = schedule_check(form.cleaned_data, self.target, self.ok_to_schedule)
@@ -885,7 +885,7 @@ class ScheduleCalibParameters(LoginRequiredMixin, LookUpCalibMixin, FormView):
         if form.is_valid():
             return self.form_valid(form, request)
         else:
-            return self.render_to_response(self.get_context_data(form=form, cad_form=cadence_form, body=self.target))
+            return self.render(self.get_context_data(form=form, cad_form=cadence_form, body=self.target))
 
     def get_context_data(self, **kwargs):
         """
@@ -912,7 +912,7 @@ class ScheduleParametersCadence(LoginRequiredMixin, LookUpBodyMixin, FormView):
         if form.is_valid():
             return self.form_valid(form, request)
         else:
-            return self.render_to_response(self.get_context_data(form=form, body=self.body))
+            return self.render(self.get_context_data(form=form, body=self.body))
 
     def form_valid(self, form, request):
         data = schedule_check(form.cleaned_data, self.body, self.ok_to_schedule)
@@ -931,14 +931,14 @@ class ScheduleParametersSpectra(LoginRequiredMixin, LookUpBodyMixin, FormView):
 
     def get(self, request, *args, **kwargs):
         form = self.get_form()
-        return self.render_to_response(self.get_context_data(form=form, body=self.body))
+        return self.render(self.get_context_data(form=form, body=self.body))
 
     def post(self, request, *args, **kwargs):
         form = ScheduleSpectraForm(request.POST)
         if form.is_valid():
             return self.form_valid(form,request)
         else:
-            return self.render_to_response(self.get_context_data(form=form, body=self.body))
+            return self.render(self.get_context_data(form=form, body=self.body))
 
     def form_valid(self, form, request):
         data = schedule_check(form.cleaned_data, self.body, self.ok_to_schedule)
@@ -970,14 +970,14 @@ class ScheduleCalibSpectra(LoginRequiredMixin, LookUpCalibMixin, FormView):
         form = ScheduleSpectraForm(initial={'exp_length' : 180.0,
                                             'instrument_code' : kwargs.get('instrument_code', '')}
                                   )
-        return self.render_to_response(self.get_context_data(form=form, body=self.target))
+        return self.render(self.get_context_data(form=form, body=self.target))
 
     def post(self, request, *args, **kwargs):
         form = ScheduleSpectraForm(request.POST)
         if form.is_valid():
             return self.form_valid(form, request)
         else:
-            return self.render_to_response(self.get_context_data(form=form, body=self.target))
+            return self.render(self.get_context_data(form=form, body=self.target))
 
     def form_valid(self, form, request):
         data = schedule_check(form.cleaned_data, self.target, self.ok_to_schedule)
@@ -1602,7 +1602,7 @@ class SpectroFeasibility(LookUpBodyMixin, FormView):
 
     def get(self, request, *args, **kwargs):
         form = SpectroFeasibilityForm(body=self.body)
-        return self.render_to_response(self.get_context_data(form=form, body=self.body))
+        return self.render(self.get_context_data(form=form, body=self.body))
 
     def form_valid(self, form, request):
         data = feasibility_check(form.cleaned_data, self.body)
@@ -1614,7 +1614,7 @@ class SpectroFeasibility(LookUpBodyMixin, FormView):
         if form.is_valid():
             return self.form_valid(form, request)
         else:
-            return self.render_to_response(self.get_context_data(form=form, body=self.body))
+            return self.render(self.get_context_data(form=form, body=self.body))
 
 
 class CalibSpectroFeasibility(LookUpCalibMixin, FormView):
@@ -1624,7 +1624,7 @@ class CalibSpectroFeasibility(LookUpCalibMixin, FormView):
 
     def get(self, request, *args, **kwargs):
         form = SpectroFeasibilityForm(body=self.target, initial={'exp_length' : 180.0})
-        return self.render_to_response(self.get_context_data(form=form, body=self.target))
+        return self.render(self.get_context_data(form=form, body=self.target))
 
     def form_valid(self, form, request):
         data = feasibility_check(form.cleaned_data, self.target)
@@ -1636,7 +1636,7 @@ class CalibSpectroFeasibility(LookUpCalibMixin, FormView):
         if form.is_valid():
             return self.form_valid(form, request)
         else:
-            return self.render_to_response(self.get_context_data(form=form, body=self.target))
+            return self.render(self.get_context_data(form=form, body=self.target))
 
 
 def feasibility_check(data, body):
@@ -3768,7 +3768,7 @@ class LCPlot(LookUpBodyMixin, FormView):
             period = None
         script, div, meta_list = get_lc_plot(self.body, {'period': period})
 
-        return self.render_to_response(self.get_context_data(body=self.body, script=script, div=div, meta_list=meta_list))
+        return self.render(self.get_context_data(body=self.body, script=script, div=div, meta_list=meta_list))
 
     def get_context_data(self, **kwargs):
         params = kwargs

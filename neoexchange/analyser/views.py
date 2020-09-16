@@ -51,7 +51,7 @@ class BlockFramesView(DetailView):
         self.object = self.get_object()
         context = self.get_context_data(object=self.object)
         if context.get('images', False):
-            return self.render_to_response(context)
+            return self.render(context)
         else:
             messages.error(request, 'There are no frame IDs for Block {}'.format(self.object.pk))
             return HttpResponseRedirect(reverse('block-view', kwargs={'pk':kwargs['pk']}))
