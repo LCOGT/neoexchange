@@ -37,6 +37,7 @@ from django.conf import settings
 
 from core.models import Block, Frame, SuperBlock, SourceMeasurement, CatalogSources
 from core.urlsubs import QueryTelemetry, convert_temps_to_table
+from core.archive_subs import lco_api_call
 from astrometrics.ephem_subs import compute_ephem, radec2strings, moon_alt_az, get_sitepos, MPC_site_code_to_domes
 from astrometrics.time_subs import datetime2mjd_utc
 from photometrics.catalog_subs import search_box, open_fits_catalog, sanitize_object_name
@@ -380,20 +381,21 @@ class Command(BaseCommand):
                         # so we can plot conditions for all frames
                         alltimes.append(frame.midpoint)
                         fwhm.append(frame.fwhm)
-                        # Open frame and get focus temperature (if able)
-                        filename_chunks = frame.filename.split('-')
-                        if len(filename_chunks) == 5:
-                            dayobs = filename_chunks[2]
-                            frame_fpath = os.path.join(settings.DATA_ROOT, dayobs, frame.filename)
-                            header, table, cattype = open_fits_catalog(frame_fpath)
+                        # Get frame headers from archive API and get focus temperature (if able)
+                        header_url = "{}frames/{}/headers".format(settings.ARCHIVE_API_URL, frame.frameid)
+                        header = lco_api_call(header_url)
+                        if 'detail' not in header or header['detail'] !=  'Not found.':
                             for tempkey in temp_keywords:
-                                foc_temp = header.get(tempkey, None)
+                                foc_temp = header['data'].get(tempkey, None)
                                 if foc_temp:
                                     print("Value of {key:8s}={val:.2f}".format(key=tempkey, val=foc_temp))
                                     if tempkey not in focus_temps:
                                         focus_temps[tempkey] = [foc_temp,]
                                     else:
                                         focus_temps[tempkey].append(foc_temp)
+                        else:
+                            msg = "Headers not found for: {}".format(frame.filename)
+                            self.stderr.write(msg)
                         azimuth, altitude = moon_alt_az(frame.midpoint, ra, dec, *get_sitepos(frame.sitecode)[1:])
                         zenith_distance = radians(90) - altitude
                         air_mass.append(S.sla_airmas(zenith_distance))
