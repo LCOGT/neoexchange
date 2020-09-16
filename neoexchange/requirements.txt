@@ -18,10 +18,8 @@ selenium>=3.8,<4.0
 pytest-django
 tblib
 mock
-django-oauth-toolkit<1.2.0
 django-storages
 boto3
-requests_oauthlib
 matplotlib<3.3
 bokeh==1.4.0
 fits2image
