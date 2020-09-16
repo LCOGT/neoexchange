@@ -719,7 +719,7 @@ def determine_horizons_id(lines, now=None):
     horizons_id = None
     for line in lines:
         chunks = line.split()
-        if len(chunks) == 5 and chunks[0].isdigit() is True and chunks[1].isdigit() is True:
+        if len(chunks) >= 5 and chunks[0].isdigit() is True and chunks[1].isdigit() is True:
             try:
                 epoch_yr = datetime.strptime(chunks[1], "%Y")
                 if abs(now-epoch_yr) <= timespan:
