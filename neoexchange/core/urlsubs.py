@@ -25,7 +25,7 @@ from elasticsearch import Elasticsearch
 
 from astrometrics.ephem_subs import determine_darkness_times
 
-ELASTICSEARCH_URLS = os.getenv('ELASTICSEARCH_URLS', 'http://elasticsearch:9200,http://es-dev.lco.gtn:80').split(',')
+ELASTICSEARCH_URLS = os.getenv('ELASTICSEARCH_URLS', 'http://elasticsearch.lco.gtn:9200,http://es-dev.lco.gtn:80').split(',')
 
 logger = logging.getLogger(__name__)
 ssl_verify = True
