@@ -491,7 +491,7 @@ class TestConvertAstToComet(TestCase):
 
     def test_near_parabolic_failure(self):
 
-        expected_kwargs = { }
+        expected_kwargs = None
 
         kwargs = {  'abs_mag': 0.0,
                     'slope': 0.15,
