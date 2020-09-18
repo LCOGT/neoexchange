@@ -2560,6 +2560,8 @@ def update_crossids(astobj, dbg=False):
             kwargs = convert_ast_to_comet(kwargs, body)
         if dbg:
             print(kwargs)
+        # XXX TAL 2020/09/18 Is this doing the right thing ? Think it's doing a
+        # case-insensitive match which could overwrite similarly named objects ?
         check_body = Body.objects.filter(provisional_name=temp_id, **kwargs)
         if check_body.count() == 0:
             save_and_make_revision(body, kwargs)
