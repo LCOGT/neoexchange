@@ -377,6 +377,21 @@ class TestDetermineTimeOfPerihelion(TestCase):
 
         self.assertEqual(expected_time_of_perih, time_of_perih)
 
+    def test_bad_meananom(self):
+        """Test case from failure of C/2020 O2 which had a meananom=359.99999573,
+        (rounding to 360.00000) which leads to impossibly large number of days pre-
+        perihelion"""
+
+        meandist = 84317.37148
+        meananom = 360.0
+        epochofel = datetime(2020, 9, 19)
+
+        expected_time_of_perih = None
+
+        time_of_perih = determine_time_of_perih(meandist, meananom, epochofel)
+
+        self.assertEqual(expected_time_of_perih, time_of_perih)
+
 
 class TestConvertAstToComet(TestCase):
 
@@ -471,5 +486,33 @@ class TestConvertAstToComet(TestCase):
         kwargs = {'source_type': 'C', 'name': 'C/2018 A5', 'active': True, 'source_subtype_1': ''}
 
         new_kwargs = convert_ast_to_comet(kwargs, self.body)
+
+        self.assertEqual(expected_kwargs, new_kwargs)
+
+    def test_near_parabolic_failure(self):
+
+        expected_kwargs = { }
+
+        kwargs = {  'abs_mag': 0.0,
+                    'slope': 0.15,
+                    'epochofel': datetime(2020, 9, 19, 0, 0),
+                    'meananom': 360.0,
+                    'argofperih': 10.03012,
+                    'longascnode': 256.72656,
+                    'orbinc': 71.78244,
+                    'eccentricity': 0.9999736,
+                    'meandist': 84317.37148,
+                    'source_type': 'U',
+                    'elements_type': 'MPC_MINOR_PLANET',
+                    'active': True, 'origin': 'M',
+                    'provisional_name': 'CK20O02',
+                    'num_obs': 70,
+                    'orbit_rms': 0.47,
+                    'update_time': datetime(2020, 9, 18, 19, 55, 12, 160144),
+                    'arc_length': 13.0,
+                    'not_seen': 44.83000185359954}
+
+
+        new_kwargs = convert_ast_to_comet(kwargs, None)
 
         self.assertEqual(expected_kwargs, new_kwargs)
