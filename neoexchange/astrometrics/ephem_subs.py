@@ -655,6 +655,8 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
             skip_daylight=should_skip_daylight, airmass_lessthan=airmass_limit,
             max_hour_angle=ha_limit)
         ephem = convert_horizons_table(ephem, include_moon)
+    except ConnectionError as e:
+        logger.error("Unable to connect to HORIZONS")
     except ValueError as e:
         logger.debug("Ambiguous object, trying to determine HORIZONS id")
         ephem = None
