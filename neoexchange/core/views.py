@@ -2560,6 +2560,8 @@ def update_crossids(astobj, dbg=False):
             kwargs = convert_ast_to_comet(kwargs, body)
         if dbg:
             print(kwargs)
+        # XXX TAL 2020/09/18 Is this doing the right thing ? Think it's doing a
+        # case-insensitive match which could overwrite similarly named objects ?
         check_body = Body.objects.filter(provisional_name=temp_id, **kwargs)
         if check_body.count() == 0:
             save_and_make_revision(body, kwargs)
@@ -3994,6 +3996,12 @@ def update_previous_spectra(specobj, source='U', dbg=False):
     if check_spec:
         for check in check_spec:
             if check.spec_date >= specobj[5]:
+                if check.spec_ref == specobj[4]:
+                    if specobj[2] and check.spec_vis != specobj[2]:
+                        check.spec_vis = specobj[2]
+                    if specobj[3] and check.spec_ir != specobj[3]:
+                        check.spec_ir = specobj[3]
+                    check.save()
                 if dbg is True:
                     print("More recent data already in DB")
                 return False

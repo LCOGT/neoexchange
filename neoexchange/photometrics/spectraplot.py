@@ -100,6 +100,9 @@ def pull_data_from_text(spectra):
                 lines = f.read()
         except ValueError:
             return [], [], []
+        except urllib.request.URLError:
+            logger.error(f"Connection to {spectra} error")
+            return [], [], []
     lines = re.split('[\n\r]', str(lines, 'utf-8'))
     xxx = []
     yyy = []
