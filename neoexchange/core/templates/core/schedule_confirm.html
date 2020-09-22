@@ -202,14 +202,16 @@
                         <td class="kv-value">{{ form.filter_pattern }}</td>
                     </tr>
                     {% else %}
-                    <tr id="id_filter_pattern_row"><td ><table align="left"  style="margin: 0px"><tr><td class="kv-key" name="{{data.available_filters}}">
-                            <div class="tooltip">Filter Pattern
-                            <span class="tooltiptext" style="left:75%">Comma Separated Pattern
-                            <br>(e.g.: rp,gp,rp,ip,rp)<br>
-                            <br><u>Filters Available at {{data.site_code}}:</u>
-                            <br><span name="filters">{{data.available_filters}}</span></span></div></td><td></td></tr></table></td>
-                        <td class="kv-value" id="">{{ form.filter_pattern }}</td>
-                    </tr>
+                        {% if 'F65' not in data.site_code %}
+                            <tr id="id_filter_pattern_row"><td ><table align="left"  style="margin: 0px"><tr><td class="kv-key" name="{{data.available_filters}}">
+                                    <div class="tooltip">Filter Pattern
+                                    <span class="tooltiptext" style="left:75%">Comma Separated Pattern
+                                    <br>(e.g.: rp,gp,rp,ip,rp)<br>
+                                    <br><u>Filters Available at {{data.site_code}}:</u>
+                                    <br><span name="filters">{{data.available_filters}}</span></span></div></td><td></td></tr></table></td>
+                                <td class="kv-value" id="">{{ form.filter_pattern }}</td>
+                            </tr>
+                        {% endif %}
                     {% endif %}
                     {% if data.pattern_iterations != data.exp_count %}
                         <tr id="id_pattern_iterations_row">
