@@ -1429,7 +1429,7 @@ def get_site_status(site_code):
 # Get dictionary mapping LCO code (site-enclosure-telescope) to MPC site code
 # and reverse it
     site_codes = cfg.valid_site_codes
-    lco_codes = {mpc_code:lco_code.lower().replace('-', '.') for lco_code, mpc_code in site_codes.items()}
+    lco_codes = {mpc_code: lco_code.lower().replace('-', '.') for lco_code, mpc_code in site_codes.items()}
 
     response = get_telescope_states()
 
@@ -2088,6 +2088,8 @@ def fetch_filter_list(site, spec):
     elif '2m0' in telid.lower():
         if spec:
             camid = "2m0-FLOYDS-SciCam"
+        elif "OGG" in siteid.upper():
+            camid = "2M0-SCICAM-MUSCAT"
         else:
             camid = "2m0-SciCam-Spectral"
     else:

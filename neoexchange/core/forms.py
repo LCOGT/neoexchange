@@ -40,9 +40,9 @@ SITES = (('1M0', '------------ Any 1.0m ------------'),
          ('Q58', 'COJ 0.4m - Q58-59; (Siding Spring, Aust.)'),
          ('L09', 'CPT 0.4m - L09; (Sutherland, S. Africa)'),
          ('Z21', 'TFN 0.4m - Z17,Z21; (Tenerife, Spain)'),
-         ('2M0', '------------ Any 2.0m ------------'),
+         # ('2M0', '------------ Any 2.0m ------------'),
          ('E10', 'FTS 2.0m - E10; (Siding Spring, Aust.)'),
-         ('F65', 'FTN 2.0m - F65; (Maui, Hawaii )'))
+         ('F65', 'FTN 2.0m - F65; (Maui, Hawaii ) [MuSCAT3]'))
 
 
 SPECTRO_SITES = (('F65-FLOYDS', 'Maui, Hawaii (FTN - F65)'),

@@ -1865,9 +1865,9 @@ def get_sitecam_params(site, bin_mode=None):
     elif site == 'FTN' or 'OGG-CLMA-2M0' in site or site == 'F65':
         site_code = 'F65'
         setup_overhead = cfg.tel_overhead['twom_setup_overhead']
-        exp_overhead = cfg.inst_overhead['twom_exp_overhead']
-        pixel_scale = cfg.tel_field['twom_pixscale']
-        fov = arcmins_to_radians(cfg.tel_field['twom_fov'])
+        exp_overhead = cfg.inst_overhead['muscat_exp_overhead']
+        pixel_scale = cfg.tel_field['twom_muscat_pixscale']
+        fov = arcmins_to_radians(cfg.tel_field['twom_muscat_fov'])
         max_exp_length = 300.0
         alt_limit = cfg.tel_alt['twom_alt_limit']
     elif site == 'FTS' or 'COJ-CLMA-2M0' in site or site == 'E10':
