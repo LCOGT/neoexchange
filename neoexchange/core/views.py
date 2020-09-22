@@ -3996,6 +3996,12 @@ def update_previous_spectra(specobj, source='U', dbg=False):
     if check_spec:
         for check in check_spec:
             if check.spec_date >= specobj[5]:
+                if check.spec_ref == specobj[4]:
+                    if specobj[2] and check.spec_vis != specobj[2]:
+                        check.spec_vis = specobj[2]
+                    if specobj[3] and check.spec_ir != specobj[3]:
+                        check.spec_ir = specobj[3]
+                    check.save()
                 if dbg is True:
                     print("More recent data already in DB")
                 return False
