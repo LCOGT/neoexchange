@@ -1336,6 +1336,17 @@ def schedule_check(data, body, ok_to_schedule=True):
             slot_length, exp_count = determine_exp_count(slot_length, exp_length, data['site_code'], filter_pattern, exp_count, bin_mode=bin_mode)
         if exp_length is None or exp_count is None:
             ok_to_schedule = False
+        # Set MuSCAT Exptimes
+        if 'F65' in data['site_code']:
+            muscat_exp_times = {}
+            muscat_filt_list = ['gp_explength', 'rp_explength', 'ip_explength', 'zp_explength']
+            for filt in muscat_filt_list:
+                if data.get(filt, None):
+                    muscat_exp_times[filt] = data.get(filt)
+                else:
+                    muscat_exp_times[filt] = exp_length
+            exp_length = max(muscat_exp_times.values())
+            slot_length, exp_count = determine_exp_count(slot_length, exp_length, data['site_code'], filter_pattern, bin_mode=bin_mode)
 
     # determine stellar trailing
     if spectroscopy:
@@ -1457,6 +1468,10 @@ def schedule_check(data, body, ok_to_schedule=True):
         'calibsource_id': solar_analog_id,
         'calibsource_exptime': solar_analog_exptime,
     }
+
+    if not spectroscopy and 'F65' in data['site_code']:
+        for filt in muscat_filt_list:
+            resp[filt] = muscat_exp_times[filt]
 
     if period and jitter:
         resp['num_times'] = total_requests

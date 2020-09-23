@@ -185,6 +185,10 @@ class ScheduleBlockForm(forms.Form):
     acceptability_threshold = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     ag_exp_time = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     edit_window = forms.BooleanField(initial=False, required=False, widget=forms.CheckboxInput(attrs={'class': 'window-switch'}))
+    gp_explength = forms.FloatField(required=False, widget=forms.NumberInput(attrs={'size': '5'}))
+    rp_explength = forms.FloatField(required=False, widget=forms.NumberInput(attrs={'size': '5'}))
+    ip_explength = forms.FloatField(required=False, widget=forms.NumberInput(attrs={'size': '5'}))
+    zp_explength = forms.FloatField(required=False, widget=forms.NumberInput(attrs={'size': '5'}))
 
     def clean_exp_length(self):
         if not self.cleaned_data['exp_length'] or self.cleaned_data['exp_length'] < 0.1:

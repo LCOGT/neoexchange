@@ -235,8 +235,12 @@
                         {% endif %}
                     </tr>
                     <tr id="id_no_of_exps_row">
-                        <td class="kv-key">No. of exposures</td>
-                        {% if data.exp_count < 4 and not data.spectroscopy%}
+                        <td class="kv-key">No. of exposures
+                        {% if 'F65' in data.site_code and not data.spectroscopy %}
+                            (single filter)
+                        {% endif %}
+                        </td>
+                        {% if data.exp_count < 4 and not data.spectroscopy %}
                             <td ><table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip"><span class="warning msgpadded"> {{ data.exp_count }} </span>
                                 <span class="tooltiptext" style="width: 150px;"><u>Fewer than 4 exposures will be taken!</u>
                                 <br>4 or more observations required if reporting astrometry to the MPC. <br></span></div></td></tr></table></td>
@@ -245,8 +249,18 @@
                         {% endif %}
                     </tr>
                     <tr id="id_expose_length_row">
+                    {% if 'F65' not in data.site_code or data.spectroscopy%}
                         <td class="kv-key">Exposure length</td>
                         <td class="kv-value">{{ form.exp_length }} secs</td>
+                    {% else %}
+                        <td class="kv-key">MuSCAT Exposure lengths</td>
+                        <td class="kv-value">
+                            g' : {{ form.gp_explength }} secs <br>
+                            r' : {{ form.rp_explength }} secs <br>
+                            i' : {{ form.ip_explength }} secs <br>
+                            z' : {{ form.zp_explength }} secs
+                        </td>
+                    {% endif %}
                     </tr>
                     {% if data.snr %}
                     <tr id="id_snr_row">
