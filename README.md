@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.6.0
+Update to Django 3.1 (and CentOS 8 for the Docker build)
+
 ### 3.5.2
 Various small backend fixes:
 * Fix HORIZONS SPK lookup on some comets (Issue #480)

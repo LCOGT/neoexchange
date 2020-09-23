@@ -7,7 +7,7 @@ from django.utils.crypto import get_random_string
 import rollbar
 
 
-VERSION = '3.6.0-dj3.1b'
+VERSION = '3.6.0'
 
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
