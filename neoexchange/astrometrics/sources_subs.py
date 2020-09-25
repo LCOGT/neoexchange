@@ -1511,7 +1511,7 @@ def fetch_sfu(page=None):
 
 
 def make_location(params):
-    location = {'telescope_class' : params['pondtelescope'][0:3]}
+    location = {'telescope_class': params['pondtelescope'][0:3]}
     if params.get('site', None):
         location['site'] = params['site'].lower()
     if params['site_code'] == 'W85':
@@ -1623,6 +1623,13 @@ def make_config(params, filter_list):
         if params.get('bin_mode', None) == '2k_2x2' and params['pondtelescope'] == '1m0':
             instrument_config['mode'] = 'central_2k_2x2'
 
+        if params['instrument'] == '2M0-SCICAM-MUSCAT':
+            extra_params = {'exposure_time_g': params['muscat_exp_times']['gp_explength'],
+                            'exposure_time_r': params['muscat_exp_times']['rp_explength'],
+                            'exposure_time_i': params['muscat_exp_times']['ip_explength'],
+                            'exposure_time_z': params['muscat_exp_times']['zp_explength']}
+            instrument_config['optical_elements'] = {}
+            instrument_config['extra_params'] = extra_params
         conf['instrument_configs'].append(instrument_config)
 
     return conf
@@ -1889,8 +1896,11 @@ def configure_defaults(params):
         params['exp_type'] = 'REPEAT_EXPOSE'
 
     if params['site_code'] in ['F65', 'E10', '2M0']:
-        params['instrument'] = '2M0-SCICAM-SPECTRAL'
-        params['binning'] = 2
+        if 'F65' in params['site_code']:
+            params['instrument'] = '2M0-SCICAM-MUSCAT'
+        else:
+            params['instrument'] = '2M0-SCICAM-SPECTRAL'
+            params['binning'] = 2
         params['pondtelescope'] = '2m0'
         if params.get('spectroscopy', False) is True and 'FLOYDS' in params.get('instrument_code', ''):
             params['exp_type'] = 'SPECTRUM'

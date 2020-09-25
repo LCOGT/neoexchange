@@ -1583,6 +1583,12 @@ def schedule_submit(data, body, username):
     if data['period'] or data['jitter']:
         params['period'] = data['period']
         params['jitter'] = data['jitter']
+    if data.get('gp_explength', None):
+        params['muscat_exp_times'] = {}
+        muscat_filt_list = ['gp_explength', 'rp_explength', 'ip_explength', 'zp_explength']
+        for filt in muscat_filt_list:
+            params['muscat_exp_times'][filt] = data[filt]
+
     # If we have a (static) StaticSource object, fill in details needed by make_target
     if type(body) == StaticSource:
         params['ra_deg'] = body.ra
