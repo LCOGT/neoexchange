@@ -1026,7 +1026,7 @@ class ScheduleCalibSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
         elif 'submit' in request.POST:
             target = self.get_object()
             username = ''
-            if request.user.is_authenticated():
+            if request.user.is_authenticated:
                 username = request.user.get_username()
             tracking_num, sched_params = schedule_submit(form.cleaned_data, target, username)
 
@@ -1080,7 +1080,7 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
         elif 'submit' in request.POST and new_form.is_valid():
             target = self.get_object()
             username = ''
-            if request.user.is_authenticated():
+            if request.user.is_authenticated:
                 username = request.user.get_username()
             tracking_num, sched_params = schedule_submit(new_form.cleaned_data, target, username)
             if tracking_num:

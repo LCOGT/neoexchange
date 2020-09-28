@@ -16,8 +16,7 @@ import logging
 
 from astropy.time import Time
 from django.db import models
-from django.utils.translation import ugettext_lazy as _
-from django.utils.encoding import python_2_unicode_compatible
+from django.utils.translation import gettext_lazy as _
 from django.forms.models import model_to_dict
 
 from astrometrics.ephem_subs import compute_ephem, comp_FOM, comp_sep
@@ -118,7 +117,6 @@ PARAM_CHOICES = (
 logger = logging.getLogger(__name__)
 
 
-@python_2_unicode_compatible
 class Body(models.Model):
     provisional_name    = models.CharField('Provisional MPC designation', max_length=15, blank=True, null=True, db_index=True)
     provisional_packed  = models.CharField('MPC name in packed format', max_length=7, blank=True, null=True, db_index=True)
@@ -551,7 +549,6 @@ class Body(models.Model):
             return_name = self.name
         return u'%s is %sactive' % (return_name, text)
 
-@python_2_unicode_compatible
 class Designations(models.Model):
     body        = models.ForeignKey(Body, on_delete=models.CASCADE)
     value       = models.CharField('Designation', blank=True, null=True, max_length=30, db_index=True)
@@ -570,7 +567,6 @@ class Designations(models.Model):
         return "%s is a designation for %s (pk=%s)" % (self.value, self.body.full_name(), self.body.id)
 
 
-@python_2_unicode_compatible
 class PhysicalParameters(models.Model):
     body           = models.ForeignKey(Body, on_delete=models.CASCADE)
     parameter_type = models.CharField('Physical Parameter Type', blank=True, null=True, choices=PARAM_CHOICES, max_length=2)
@@ -599,7 +595,6 @@ class PhysicalParameters(models.Model):
             return "{} is the {} for {} (pk={})".format(self.value, self.get_parameter_type_display(), self.body.full_name(), self.body.id)
 
 
-@python_2_unicode_compatible
 class ColorValues(models.Model):
     body          = models.ForeignKey(Body, on_delete=models.CASCADE)
     color_band    = models.CharField('X-X filter combination', blank=True, null=True, max_length=30)
