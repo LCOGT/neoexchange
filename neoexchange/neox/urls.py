@@ -16,7 +16,7 @@ from django.conf import settings
 from django.conf.urls import include, url
 from django.contrib.staticfiles import views
 from django.contrib import admin
-from django.contrib.auth.views import LoginView
+from django.contrib.auth.views import LoginView, LogoutView
 from django.views.generic import ListView, DetailView
 from django.views.generic.base import TemplateView
 from django.urls import reverse_lazy
@@ -96,7 +96,7 @@ urlpatterns = [
     url(r'^calib-schedule/(?P<instrument_code>[A-Z,0-9,\-]*)/(?P<pk>[-\d]+)/$', ScheduleCalibSpectra.as_view(), name='schedule-calib-spectra'),
     url(r'^calib-schedule/(?P<pk>\d+)/confirm/$', ScheduleCalibSubmit.as_view(), name='schedule-calib-confirm'),
     url(r'^accounts/login/$', LoginView.as_view(template_name='core/login.html'), name='auth_login'),
-    url(r'^accounts/logout/$', LoginView.as_view(template_name='core/logout.html'), name='auth_logout'),
+    url(r'^accounts/logout/$', LogoutView.as_view(template_name='core/logout.html'), name='auth_logout'),
     url(r'^admin/', admin.site.urls),
 ]
 
