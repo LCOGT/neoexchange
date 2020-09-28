@@ -4065,14 +4065,14 @@ class TestConfigureDefaults(TestCase):
         test_params = self.obs_params
         test_params['site_code'] = 'F65'
 
-        expected_params = { 'instrument':  '2M0-SCICAM-SPECTRAL',
-                            'pondtelescope': '2m0',
-                            'observatory': '',
-                            'exp_type': 'EXPOSE',
-                            'site': 'OGG',
-                            'binning': 2,
-                            'exp_count': 10,
-                            'exp_time': 42.0}
+        expected_params = {'instrument':  '2M0-SCICAM-MUSCAT',
+                           'pondtelescope': '2m0',
+                           'observatory': '',
+                           'exp_type': 'EXPOSE',
+                           'site': 'OGG',
+                           'binning': 1,
+                           'exp_count': 10,
+                           'exp_time': 42.0}
         expected_params.update(test_params)
 
         params = configure_defaults(test_params)
@@ -4280,15 +4280,15 @@ class TestConfigureDefaults(TestCase):
         self.assertEqual(params, expected_params)
 
     def test_2m_ogg(self):
-        expected_params = { 'binning': 2,
-                            'instrument': '2M0-SCICAM-SPECTRAL',
-                            'observatory': '',
-                            'exp_type': 'EXPOSE',
-                            'pondtelescope': '2m0',
-                            'site': 'OGG',
-                            'site_code': 'F65',
-                            'exp_count': 10,
-                            'exp_time': 42.0}
+        expected_params = {'binning': 1,
+                           'instrument': '2M0-SCICAM-MUSCAT',
+                           'observatory': '',
+                           'exp_type': 'EXPOSE',
+                           'pondtelescope': '2m0',
+                           'site': 'OGG',
+                           'site_code': 'F65',
+                           'exp_count': 10,
+                           'exp_time': 42.0}
 
         params = self.obs_params
         params['site_code'] = 'F65'
@@ -4425,6 +4425,12 @@ class TestMakeconfiguration(TestCase):
                                                       'exp_count': 12,
                                                       'slot_length': 750,
                                                       'filter_pattern': 'solar',
+                                                      'muscat_exp_times':  {'gp_explength': 60,
+                                                                            'rp_explength': 30,
+                                                                            'ip_explength': 30,
+                                                                            'zp_explength': 60,
+                                                                            },
+                                                      'muscat_sync': True,
                                                       'target': self.target,
                                                       'constraints': {
                                                           'max_airmass': 2.0,
@@ -4471,13 +4477,14 @@ class TestMakeconfiguration(TestCase):
                                                                'min_lunar_distance': 30.0
                                                            }})
         self.filt_2m0_spectroscopy = ['slit_6.0as', 1]
+        self.maxDiff = None
 
     def test_2m_imaging(self):
 
         expected_configuration = {
                           'type': 'REPEAT_EXPOSE',
                           'repeat_duration': 750,
-                          'instrument_type': '2M0-SCICAM-SPECTRAL',
+                          'instrument_type': '2M0-SCICAM-MUSCAT',
                           'target': {
                             'type': 'ICRS',
                             'name': 'SA107-684',
@@ -4491,13 +4498,16 @@ class TestMakeconfiguration(TestCase):
                           'acquisition_config': {},
                           'guiding_config': {},
                           'instrument_configs': [{
-                            'exposure_count': 1,
-                            'exposure_time': 60.0,
-                            'bin_x': 2,
-                            'bin_y': 2,
-                            'optical_elements': {
-                              'filter': 'solar'
-                            }
+                              'optical_elements': {},
+                              'exposure_count': 1,
+                              'exposure_time': 60.0,
+                              'extra_params': {
+                                  'exposure_time_g': 60,
+                                  'exposure_time_r': 30,
+                                  'exposure_time_i': 30,
+                                  'exposure_time_z': 60,
+                                  'exposure_mode': 'SYNCHRONOUS'
+                              }
                           }]
                         }
 
@@ -4831,15 +4841,21 @@ class TestMakeconfigurations(TestCase):
     def setUp(self):
         self.target = {'type': 'ICRS', 'name': 'SA107-684', 'ra': 234.3, 'dec': -0.16}
 
-        self.params_2m0_imaging = configure_defaults({ 'site_code': 'F65',
-                                                       'exp_time' : 60.0,
-                                                       'exp_count' : 10,
-                                                       'filter_pattern' : 'solar',
-                                                       'target' : self.target,
-                                                       'constraints': {
-                                                         'max_airmass': 2.0,
-                                                         'min_lunar_distance': 30.0
-                                                       }})
+        self.params_2m0_imaging = configure_defaults({'site_code': 'F65',
+                                                      'exp_time': 60.0,
+                                                      'exp_count': 10,
+                                                      'filter_pattern': 'solar',
+                                                      'target': self.target,
+                                                      'muscat_exp_times': {'gp_explength': 60,
+                                                                           'rp_explength': 30,
+                                                                           'ip_explength': 30,
+                                                                           'zp_explength': 60,
+                                                                           },
+                                                      'muscat_sync': True,
+                                                      'constraints': {
+                                                        'max_airmass': 2.0,
+                                                        'min_lunar_distance': 30.0
+                                                      }})
         self.filt_2m0_imaging = build_filter_blocks(self.params_2m0_imaging['filter_pattern'],
                                                     self.params_2m0_imaging['exp_count'],
                                                     self.params_2m0_imaging['exp_type'])[0]
