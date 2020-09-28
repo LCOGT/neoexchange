@@ -1624,10 +1624,15 @@ def make_config(params, filter_list):
             instrument_config['mode'] = 'central_2k_2x2'
 
         if params['instrument'] == '2M0-SCICAM-MUSCAT':
+            if params.get('muscat_sync', False):
+                exposure_mode = 'SYNCHRONOUS'
+            else:
+                exposure_mode = 'ASYNCHRONOUS'
             extra_params = {'exposure_time_g': params['muscat_exp_times']['gp_explength'],
                             'exposure_time_r': params['muscat_exp_times']['rp_explength'],
                             'exposure_time_i': params['muscat_exp_times']['ip_explength'],
-                            'exposure_time_z': params['muscat_exp_times']['zp_explength']}
+                            'exposure_time_z': params['muscat_exp_times']['zp_explength'],
+                            'exposure_mode': exposure_mode}
             instrument_config['optical_elements'] = {}
             instrument_config['extra_params'] = extra_params
         conf['instrument_configs'].append(instrument_config)

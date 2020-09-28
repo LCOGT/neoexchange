@@ -253,7 +253,12 @@
                         <td class="kv-key">Exposure length</td>
                         <td class="kv-value">{{ form.exp_length }} secs</td>
                     {% else %}
-                        <td class="kv-key">MuSCAT Exposure lengths</td>
+                        <td class="kv-key">MuSCAT Exposure lengths
+                            </br></br>
+                            <div class="compact-field">
+                                <label for="id_expose_length_row">Synchronous observations? {{ form.muscat_sync }}</label>
+                            </div>
+                        </td>
                         <td class="kv-value">
                             g' : {{ form.gp_explength }} secs <br>
                             r' : {{ form.rp_explength }} secs <br>

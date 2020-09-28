@@ -1347,6 +1347,10 @@ def schedule_check(data, body, ok_to_schedule=True):
                     muscat_exp_times[filt] = exp_length
             exp_length = max(muscat_exp_times.values())
             slot_length, exp_count = determine_exp_count(slot_length, exp_length, data['site_code'], filter_pattern, bin_mode=bin_mode)
+            if data.get('muscat_sync', None):
+                muscat_sync = data.get('muscat_sync')
+            else:
+                muscat_sync = False
 
     # determine stellar trailing
     if spectroscopy:
@@ -1470,6 +1474,7 @@ def schedule_check(data, body, ok_to_schedule=True):
     }
 
     if not spectroscopy and 'F65' in data['site_code']:
+        resp['muscat_sync'] = muscat_sync
         for filt in muscat_filt_list:
             resp[filt] = muscat_exp_times[filt]
 
@@ -1584,6 +1589,7 @@ def schedule_submit(data, body, username):
         params['period'] = data['period']
         params['jitter'] = data['jitter']
     if data.get('gp_explength', None):
+        params['muscat_sync'] = data['muscat_sync']
         params['muscat_exp_times'] = {}
         muscat_filt_list = ['gp_explength', 'rp_explength', 'ip_explength', 'zp_explength']
         for filt in muscat_filt_list:

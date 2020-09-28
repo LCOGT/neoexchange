@@ -189,6 +189,7 @@ class ScheduleBlockForm(forms.Form):
     rp_explength = forms.FloatField(required=False, widget=forms.NumberInput(attrs={'size': '5'}))
     ip_explength = forms.FloatField(required=False, widget=forms.NumberInput(attrs={'size': '5'}))
     zp_explength = forms.FloatField(required=False, widget=forms.NumberInput(attrs={'size': '5'}))
+    muscat_sync = forms.BooleanField(initial=False, required=False)
 
     def clean_exp_length(self):
         if not self.cleaned_data['exp_length'] or self.cleaned_data['exp_length'] < 0.1:
