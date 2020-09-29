@@ -2773,7 +2773,7 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
     return params
 
 
-def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
+def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M', force=False):
     """
     Performs remote look up of orbital elements for object with id obj_id_or_page,
     Gets or creates corresponding Body instance and updates entry.
@@ -2830,7 +2830,7 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
     if body.epochofel:
         time_to_current_epoch = abs(body.epochofel - datetime.now())
         time_to_new_epoch = abs(kwargs['epochofel'] - datetime.now())
-    if not body.epochofel or time_to_new_epoch <= time_to_current_epoch:
+    if not body.epochofel or time_to_new_epoch <= time_to_current_epoch or force is True:
         save_and_make_revision(body, kwargs)
         if not created:
             logger.info("Updated elements for %s from MPC" % obj_id)
