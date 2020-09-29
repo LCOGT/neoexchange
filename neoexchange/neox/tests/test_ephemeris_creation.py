@@ -127,7 +127,7 @@ class NewVisitorTest(FunctionalTest):
         # He notices a new selection for the site code and chooses FTN (F65)
         # XXX Code smell: Too many static text constants
         site_choices = Select(self.browser.find_element_by_id('id_site_code'))
-        self.assertIn('FTN 2.0m - F65; (Maui, Hawaii )', [option.text for option in site_choices.options])
+        self.assertIn('FTN 2.0m - F65; (Maui, Hawaii ) [MuSCAT3]', [option.text for option in site_choices.options])
 
         # site_choices.select_by_visible_text('Maui, Hawaii (FTN - F65)')
         site_choices.select_by_value("F65")

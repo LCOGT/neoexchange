@@ -1544,11 +1544,60 @@ def mock_fetch_filter_list(site, spec):
              {'name': 'Bessell-B', 'code': 'B', 'schedulable': True, 'default': False},
              {'name': '200um Pinhole', 'code': '200um-Pinhole', 'schedulable': False, 'default': False}]}}}
 
+    muscat_2m_rsp = {"2M0-SCICAM-MUSCAT": {
+        "type": "IMAGE",
+        "class": "2m0",
+        "name": "2.0 meter Muscat",
+        "optical_elements": {
+            "diffuser_z_positions": [
+                {"name": "In Beam",
+                 "code": "in",
+                 "schedulable": True,
+                 "default": False},
+                {"name": "Out of Beam",
+                 "code": "out",
+                 "schedulable": True,
+                 "default": True}
+            ],
+            "diffuser_r_positions": [
+                {"name": "In Beam",
+                 "code": "in",
+                 "schedulable": True,
+                 "default": False},
+                {"name": "Out of Beam",
+                 "code": "out",
+                 "schedulable": True,
+                 "default": True}
+            ],
+            "diffuser_i_positions": [
+                {"name": "In Beam",
+                 "code": "in",
+                 "schedulable": True,
+                    "default": False},
+                {"name": "Out of Beam",
+                 "code": "out",
+                 "schedulable": True,
+                 "default": True}
+            ],
+            "diffuser_g_positions": [
+                {"name": "In Beam",
+                 "code": "in",
+                 "schedulable": True,
+                 "default": False},
+                {"name": "Out of Beam",
+                 "code": "out",
+                 "schedulable": True,
+                 "default": True}
+            ]
+        }}}
+
     empty = {}
 
     if '2m0' in telid.lower():
         if spec:
             resp = spec_2m_rsp
+        elif 'OGG' in siteid.upper():
+            resp = muscat_2m_rsp
         else:
             resp = phot_2m_rsp
     elif '1m0' in telid.lower() or '0m4' in telid.lower():

@@ -2396,6 +2396,42 @@ class TestScheduleCheck(TestCase):
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_muscat_sub(self):
+        MockDateTime.change_datetime(2018, 11, 29, 23, 0, 0)
+
+        data = {'site_code': 'F65',
+                'utc_date': datetime(2018, 12, 1).date(),
+                'proposal_code': self.neo_proposal.code
+                }
+
+        body = self.make_visible_obj(datetime(2018, 11, 30, 23, 0, 0))
+
+        expected_resp1 = self.expected_resp
+        new_resp = {'site_code': 'F65',
+                    'available_filters': '',
+                    'exp_count': 4,
+                    'exp_length': 225.0,
+                    'slot_length': 22.5,
+                    'filter_pattern': 'solar',
+                    'pattern_iterations': 4.0,
+                    'gp_explength': 225.0,
+                    'rp_explength': 225.0,
+                    'ip_explength': 225.0,
+                    'zp_explength': 225.0,
+                    'muscat_sync': False,
+                    'group_name': 'over_there_F65-20181201',
+                    'lco_enc': 'CLMA',
+                    'lco_site': 'OGG',
+                    'lco_tel': '2M0',
+                    }
+
+        resp = schedule_check(data, body)
+
+        for key in new_resp:
+            self.assertEqual(new_resp[key], resp[key])
+
 
 class TestUpdateMPCOrbit(TestCase):
 
