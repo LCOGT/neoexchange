@@ -2409,7 +2409,7 @@ class TestScheduleCheck(TestCase):
         body = self.make_visible_obj(datetime(2018, 11, 30, 23, 0, 0))
 
         new_resp = {'site_code': 'F65',
-                    'available_filters': '',
+                    'available_filters': 'gp, rp, ip, zp',
                     'exp_count': 4,
                     'exp_length': 225.0,
                     'slot_length': 22.5,
