@@ -282,17 +282,18 @@ class ScheduleBlockForm(forms.Form):
         cleaned_data = super(ScheduleBlockForm, self).clean()
         site = self.cleaned_data['site_code']
         spectra = self.cleaned_data['spectroscopy']
-        if not fetch_filter_list(site, spectra):
-            raise forms.ValidationError("This Site/Telescope combination is not currently available.")
+        filter_list, fetch_error = fetch_filter_list(site, spectra)
+        if fetch_error:
+            raise forms.ValidationError(fetch_error)
         try:
             if not self.cleaned_data['filter_pattern']:
                 raise forms.ValidationError("You must select a filter.")
         except KeyError:
             raise forms.ValidationError('Dude, you had to actively input a bunch of spaces and nothing else to see this error. '
-                                        'Why?? Just pick a filter from the list! %(filters)s', params={'filters': ",".join(fetch_filter_list(site, spectra))})
+                                        'Why?? Just pick a filter from the list! %(filters)s', params={'filters': ",".join(filter_list)})
         pattern = self.cleaned_data['filter_pattern']
         chunks = pattern.split(',')
-        bad_filters = [x for x in chunks if x not in fetch_filter_list(site, spectra)]
+        bad_filters = [x for x in chunks if x not in filter_list]
         if len(bad_filters) > 0:
             if len(bad_filters) == 1:
                 raise forms.ValidationError('%(bad)s is not an acceptable filter at this site.', params={'bad': ",".join(bad_filters)})
@@ -330,8 +331,9 @@ class ScheduleSpectraForm(forms.Form):
         cleaned_data = super(ScheduleSpectraForm, self).clean()
         site = self.cleaned_data['instrument_code']
         spectra = self.cleaned_data['spectroscopy']
-        if not fetch_filter_list(site[0:3], spectra):
-            raise forms.ValidationError("This Site/Instrument combination is not currently available.")
+        filter_list, fetch_error = fetch_filter_list(site[0:3], spectra)
+        if fetch_error:
+            raise forms.ValidationError(fetch_error)
 
     def __init__(self, *args, **kwargs):
         self.proposal_code = kwargs.pop('proposal_code', None)

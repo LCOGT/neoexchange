@@ -2408,13 +2408,12 @@ class TestScheduleCheck(TestCase):
 
         body = self.make_visible_obj(datetime(2018, 11, 30, 23, 0, 0))
 
-        expected_resp1 = self.expected_resp
         new_resp = {'site_code': 'F65',
                     'available_filters': '',
                     'exp_count': 4,
                     'exp_length': 225.0,
                     'slot_length': 22.5,
-                    'filter_pattern': 'solar',
+                    'filter_pattern': 'gp',
                     'pattern_iterations': 4.0,
                     'gp_explength': 225.0,
                     'rp_explength': 225.0,

@@ -1685,6 +1685,7 @@ class TestGetSiteCamParams(TestCase):
     twom_setup_overhead = 240.0
     twom_exp_overhead = 19.0
     twom_fov = radians(10.0/60.0)
+    twom_muscat_fov = radians(9.1/60.0)
     onem_sbig_fov = radians(15.5/60.0)
     onem_setup_overhead = 90.0
     onem_exp_overhead = 15.5
@@ -1705,7 +1706,7 @@ class TestGetSiteCamParams(TestCase):
         self.assertEqual(-1, exp_overhead)
 
     def test_2m_site(self):
-        site_code = 'f65'
+        site_code = 'E10'
         chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
         self.assertEqual(site_code.upper(), chk_site_code)
         self.assertEqual(0.304, pixel_scale)
@@ -1714,10 +1715,20 @@ class TestGetSiteCamParams(TestCase):
         self.assertEqual(self.twom_setup_overhead, setup_overhead)
         self.assertEqual(self.twom_exp_overhead, exp_overhead)
 
-    def test_2m_sitename(self):
-        site_code = 'F65'
+    def test_muscat_site(self):
+        site_code = 'f65'
+        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        self.assertEqual(site_code.upper(), chk_site_code)
+        self.assertEqual(0.27, pixel_scale)
+        self.assertEqual(self.twom_muscat_fov, ccd_fov)
+        self.assertEqual(self.max_exp, max_exp_time)
+        self.assertEqual(self.twom_setup_overhead, setup_overhead)
+        self.assertEqual(10, exp_overhead)
 
-        site_string = 'OGG-CLMA-2M0A'
+    def test_2m_sitename(self):
+        site_code = 'E10'
+
+        site_string = 'COJ-CLMA-2M0A'
         chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_string)
         self.assertEqual(site_code, chk_site_code)
         self.assertEqual(0.304, pixel_scale)

@@ -1476,6 +1476,19 @@ class MockCandidate(object):
 def mock_fetch_filter_list(site, spec):
 
     siteid, encid, telid = MPC_site_code_to_domes(site)
+    if '1m0' in telid.lower():
+        camid = "1m0-SciCam-Sinistro"
+    elif '0m4' in telid.lower():
+        camid = "0m4-SciCam-SBIG"
+    elif '2m0' in telid.lower():
+        if spec:
+            camid = "2m0-FLOYDS-SciCam"
+        elif "OGG" in siteid.upper():
+            camid = "2M0-SCICAM-MUSCAT"
+        else:
+            camid = "2m0-SciCam-Spectral"
+    else:
+        camid = ''
 
     coj_1m_rsp = {'1M0-SCICAM-SINISTRO': {
         'type': 'IMAGE',
@@ -1592,6 +1605,7 @@ def mock_fetch_filter_list(site, spec):
         }}}
 
     empty = {}
+    fetch_error = ''
 
     if '2m0' in telid.lower():
         if spec:
@@ -1604,14 +1618,24 @@ def mock_fetch_filter_list(site, spec):
         resp = coj_1m_rsp
     else:
         resp = empty
+        fetch_error = 'The {} at {} is not schedulable'.format(camid, site)
 
-    out_data = parse_filter_file(resp, spec)
-    return out_data
+    if 'MUSCAT' in camid:
+        out_data = ['gp', 'rp', 'ip', 'zp']
+    else:
+        out_data = parse_filter_file(resp, spec)
+    return out_data, fetch_error
 
 
 def mock_fetch_filter_list_no2m(site, spec):
+    if spec:
+        camid = "2m0-FLOYDS-SciCam"
+    elif "F65" in site.upper():
+        camid = "2M0-SCICAM-MUSCAT"
+    else:
+        camid = "2M0-SCICAM-SPECTRAL"
 
-    return []
+    return [], "The {} at {} is not schedulable.".format(camid, site)
 
 
 def mock_expand_cadence(user_request):

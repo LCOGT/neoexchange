@@ -2134,14 +2134,19 @@ def fetch_filter_list(site, spec):
     if response.status_code in [200, 201]:
         resp = response.json()
 
+    fetch_error = ''
+    data_out = []
     if not resp:
-        logger.error('Could not find any telescopes at {}'.format(site))
-        data_out = []
+        fetch_error = 'The {} at {} is not schedulable.'.format(camid, site)
+    elif 'MUSCAT' in camid:
+        data_out = ['gp', 'rp', 'ip', 'zp']
     else:
         data_out = parse_filter_file(resp, spec)
         if not data_out:
-            logger.error('Could not find any filters for {}'.format(site))
-    return data_out
+            fetch_error = 'Could not find any filters for the {} at {}'.format(camid, site)
+    if fetch_error:
+        logger.error(fetch_error)
+    return data_out, fetch_error
 
 
 def parse_filter_file(resp, spec):

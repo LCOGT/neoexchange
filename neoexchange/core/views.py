@@ -1263,6 +1263,8 @@ def schedule_check(data, body, ok_to_schedule=True):
     elif data['site_code'] == 'E10' or data['site_code'] == 'F65' or data['site_code'] == '2M0':
         if spectroscopy:
             filter_pattern = 'slit_6.0as'
+        elif data['site_code'] == 'F65':
+            filter_pattern = 'gp'
         else:
             filter_pattern = 'solar'
     else:
@@ -1270,7 +1272,7 @@ def schedule_check(data, body, ok_to_schedule=True):
 
     # Get string of available filters
     available_filters = ''
-    filter_list = fetch_filter_list(data['site_code'], spectroscopy)
+    filter_list, fetch_error = fetch_filter_list(data['site_code'], spectroscopy)
     for filt in filter_list:
         available_filters = available_filters + filt + ', '
     available_filters = available_filters[:-2]

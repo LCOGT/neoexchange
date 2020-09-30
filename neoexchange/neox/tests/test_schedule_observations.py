@@ -414,7 +414,7 @@ class ScheduleObservations(FunctionalTest):
             self.browser.find_element_by_id('single-submit').click()
 
         error_msg = self.browser.find_element_by_class_name('errorlist').text
-        self.assertIn('This Site/Telescope combination is not currently available.', error_msg)
+        self.assertIn("Z21 is not schedulable.", error_msg)
 
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
@@ -530,7 +530,7 @@ class ScheduleObservations(FunctionalTest):
 
         # The page refreshes and an error appears.
         error_msg = self.browser.find_element_by_class_name('errorlist').text
-        self.assertIn('This Site/Instrument combination is not currently available.', error_msg)
+        self.assertIn('The 2m0-FLOYDS-SciCam at E10 is not schedulable.', error_msg)
 
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
