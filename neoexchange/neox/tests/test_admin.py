@@ -49,7 +49,7 @@ class TestAdmin(FunctionalTest):
         super(TestAdmin, self).setUp()
 
     def tearDown(self):
-#        self.marge.delete()
+        self.marge.delete()
         super(TestAdmin, self).tearDown()
 
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
