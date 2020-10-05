@@ -21,24 +21,24 @@ import json
 import logging
 import tempfile
 import bokeh
-from django.db.models import Q, Prefetch
-from django.forms.models import model_to_dict
+from bs4 import BeautifulSoup
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.files.storage import default_storage
 from django.core.paginator import Paginator
-from django.urls import reverse, reverse_lazy
-from django.shortcuts import render, redirect
-from django.views.generic import DetailView, ListView, FormView, TemplateView, View
-from django.views.generic.edit import FormView
-from django.views.generic.detail import SingleObjectMixin
+from django.db.models import Q, Prefetch
+from django.forms.models import model_to_dict
 from django.http import Http404, HttpResponse, HttpResponseRedirect
+from django.shortcuts import render, redirect
 from django.template.loader import get_template
+from django.urls import reverse, reverse_lazy
+from django.views.generic import DetailView, ListView, FormView, TemplateView, View
+from django.views.generic.detail import SingleObjectMixin
+from django.views.generic.edit import FormView
 from http.client import HTTPSConnection
-from django.conf import settings
-from bs4 import BeautifulSoup
 import reversion
 import requests
 import re
@@ -48,6 +48,7 @@ try:
 except ImportError:
     pass
 import io
+from urllib.parse import urljoin
 
 from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, \
     ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm
@@ -3563,13 +3564,12 @@ def find_spec(pk):
     except ObjectDoesNotExist:
         raise Http404("Block does not exist.")
     frames = Frame.objects.filter(block=block)
-    if not frames:
+    first_frames = [f.frameid for f in frames if f.frameid]
+    if first_frames:
+        url = urljoin(settings.ARCHIVE_FRAMES_URL, first_frames[0], 'headers')
+    else:
         return '', '', '', '', ''
-    for frame in frames:
-        if frame.frameid:
-            first_frame = frame
-            break
-    url = settings.ARCHIVE_FRAMES_URL + str(first_frame.frameid) + '/headers'
+
     try:
         data = lco_api_call(url)['data']
     except TypeError:
