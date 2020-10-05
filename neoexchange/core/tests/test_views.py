@@ -3177,7 +3177,7 @@ class TestIngestNewObject(TestCase):
         else:
             print("Not removing. Temporary test directory=", self.test_dir)
 
-    def _compare_bodies(self, body1, body2, excluded_keys={'_state', 'not_seen', 'ingest', 'update_time'}):
+    def _compare_bodies(self, body1, body2, excluded_keys={'_state', '_prefetched_objects_cache', 'not_seen', 'ingest', 'update_time'}):
         d1, d2 = body1.__dict__, body2.__dict__
         for key, value in d1.items():
             if key in excluded_keys:
