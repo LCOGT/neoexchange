@@ -4498,7 +4498,10 @@ class TestMakeconfiguration(TestCase):
                           'acquisition_config': {},
                           'guiding_config': {},
                           'instrument_configs': [{
-                              'optical_elements': {},
+                              'optical_elements': {'diffuser_g_position': 'out',
+                                                   'diffuser_r_position': 'out',
+                                                   'diffuser_i_position': 'out',
+                                                   'diffuser_z_position': 'out'},
                               'exposure_count': 1,
                               'exposure_time': 60.0,
                               'extra_params': {

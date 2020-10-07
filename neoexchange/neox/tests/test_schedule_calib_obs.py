@@ -370,7 +370,6 @@ class ScheduleObservations(FunctionalTest):
         group_id = self.browser.find_element_by_id('id_group_name').get_attribute('value')
         self.assertEqual(bs_string[:50], group_id)
 
-
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list_no2m)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list_no2m)
     @patch('core.forms.datetime', MockDateTime)
@@ -404,7 +403,7 @@ class ScheduleObservations(FunctionalTest):
 
         # The page refreshes and an error appears.
         error_msg = self.browser.find_element_by_class_name('errorlist').text
-        self.assertIn('This Site/Instrument combination is not currently available.', error_msg)
+        self.assertIn('The 2m0-FLOYDS-SciCam at E10 is not schedulable.', error_msg)
 
         # Bart has heard about a new website for NEOs. He goes to the
         # page of the first target
