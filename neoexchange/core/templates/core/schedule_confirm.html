@@ -211,6 +211,8 @@
                                     <br><span name="filters">{{data.available_filters}}</span></span></div></td><td></td></tr></table></td>
                                 <td class="kv-value" id="">{{ form.filter_pattern }}</td>
                             </tr>
+                        {% else %}
+                            {{ form.filter_pattern.as_hidden }}
                         {% endif %}
                     {% endif %}
                     {% if data.pattern_iterations != data.exp_count %}
@@ -260,6 +262,7 @@
                             </div>
                         </td>
                         <td class="kv-value">
+                            {{ form.exp_length.as_hidden }}
                             g' : {{ form.gp_explength }} secs <br>
                             r' : {{ form.rp_explength }} secs <br>
                             i' : {{ form.ip_explength }} secs <br>
