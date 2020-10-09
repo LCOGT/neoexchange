@@ -163,15 +163,15 @@ class ScheduleCadence(FunctionalTest):
         # He notices that a series of values for magnitude, speed, slot
         # length, number and length of exposures, period, and jitter appear
         magnitude = self.browser.find_element_by_id('id_magnitude_row').find_element_by_class_name('kv-value').text
-        self.assertIn('20.37', magnitude)
+        self.assertIn('20.35', magnitude)
         speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
-        self.assertIn('2.42 "/min', speed)
+        self.assertIn('2.75 "/min', speed)
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
         self.assertIn('14', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
-        self.assertIn('60.0', exp_length)
+        self.assertIn('55.0', exp_length)
         start_time = self.browser.find_element_by_id('id_start_time').get_attribute('value')
         self.assertIn('2015-04-20T01:30:00', start_time)
         jitter = self.browser.find_element_by_id('id_jitter').get_attribute('value')

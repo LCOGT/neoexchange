@@ -3177,7 +3177,7 @@ class TestIngestNewObject(TestCase):
         else:
             print("Not removing. Temporary test directory=", self.test_dir)
 
-    def _compare_bodies(self, body1, body2, excluded_keys={'_state', 'not_seen', 'ingest', 'update_time'}):
+    def _compare_bodies(self, body1, body2, excluded_keys={'_state', '_prefetched_objects_cache', 'not_seen', 'ingest', 'update_time'}):
         d1, d2 = body1.__dict__, body2.__dict__
         for key, value in d1.items():
             if key in excluded_keys:
@@ -6983,20 +6983,20 @@ class TestAddExternalSpectroscopyData(TestCase):
 
     def setUp(self):
 
-        params = { 'name' : '980',
-                   'provisional_name' : 'LNX0003',
-                   'origin' : 'L',
-                   'active' : True,
-                 }
+        params = {'name': '980',
+                  'provisional_name': 'LNX0003',
+                  'origin': 'L',
+                  'active': True,
+                  }
         self.body = Body.objects.create(pk=1, **params)
 
-        spec_params = {'body'          : self.body,
-                'spec_wav'      : 'Vis',
-                'spec_vis'      : 'spex/sp233/a265962.sp233.txt',
-                'spec_ref'      : 'sp[234]',
-                'spec_source'   : 'S',
-                'spec_date'     : '2017-09-25',
-                      }
+        spec_params = {'body': self.body,
+                       'spec_wav': 'Vis',
+                       'spec_vis': 'spex/sp233/a265962.sp233.txt',
+                       'spec_ref': 'sp[234]',
+                       'spec_source': 'S',
+                       'spec_date': '2017-09-25',
+                       }
         self.test_spectra = PreviousSpectra.objects.create(pk=1, **spec_params)
 
     def test_same_body_different_wavelength(self):
@@ -7005,6 +7005,17 @@ class TestAddExternalSpectroscopyData(TestCase):
         new_spec = update_previous_spectra(test_obj, 'S', dbg=True)
 
         self.assertEqual(expected_res, new_spec)
+
+    def test_same_everything_different_link(self):
+        expected_res = False
+        new_link = 'spex/sp233/a416584.sp234.txt'
+        self.assertNotEqual(new_link, self.test_spectra.spec_vis)
+        test_obj = ['LNX0003', 'Vis', new_link, "", "sp[234]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()]
+        new_spec = update_previous_spectra(test_obj, 'S', dbg=True)
+        self.test_spectra.refresh_from_db()
+
+        self.assertEqual(expected_res, new_spec)
+        self.assertEqual(new_link, self.test_spectra.spec_vis)
 
     def test_same_body_older(self):
         expected_res = False

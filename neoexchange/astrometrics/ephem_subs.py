@@ -655,6 +655,8 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
             skip_daylight=should_skip_daylight, airmass_lessthan=airmass_limit,
             max_hour_angle=ha_limit)
         ephem = convert_horizons_table(ephem, include_moon)
+    except ConnectionError as e:
+        logger.error("Unable to connect to HORIZONS")
     except ValueError as e:
         logger.debug("Ambiguous object, trying to determine HORIZONS id")
         ephem = None
@@ -719,7 +721,7 @@ def determine_horizons_id(lines, now=None):
     horizons_id = None
     for line in lines:
         chunks = line.split()
-        if len(chunks) == 5 and chunks[0].isdigit() is True and chunks[1].isdigit() is True:
+        if len(chunks) >= 5 and chunks[0].isdigit() is True and chunks[1].isdigit() is True:
             try:
                 epoch_yr = datetime.strptime(chunks[1], "%Y")
                 if abs(now-epoch_yr) <= timespan:

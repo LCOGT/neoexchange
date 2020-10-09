@@ -13,7 +13,7 @@ GNU General Public License for more details.
 from astropy.wcs import WCS
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
-from django.utils.encoding import force_text, python_2_unicode_compatible
+from django.utils.encoding import force_str
 try:
     # cpython 2.x
     from cPickle import loads, dumps
@@ -37,7 +37,7 @@ class WCSField(models.Field):
         del kwargs["editable"]
         return name, path, args, kwargs
 
-    def from_db_value(self, value, expression, connection, context):
+    def from_db_value(self, value, expression, connection):
         if value is None:
             return value
         return unpickle_wcs(value)
@@ -56,7 +56,7 @@ class WCSField(models.Field):
 
     def get_db_prep_value(self, value, connection=None, prepared=False):
         if value is not None:
-            value = force_text(pickle_wcs(value))
+            value = force_str(pickle_wcs(value))
         return value
 
     def value_to_string(self, obj):
@@ -67,7 +67,6 @@ class WCSField(models.Field):
         return 'TextField'
 
 
-@python_2_unicode_compatible
 class Frame(models.Model):
     """ Model to represent (FITS) frames of data from observations successfully
     made and filename of data which resulted.

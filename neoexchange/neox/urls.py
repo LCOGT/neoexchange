@@ -16,7 +16,7 @@ from django.conf import settings
 from django.conf.urls import include, url
 from django.contrib.staticfiles import views
 from django.contrib import admin
-from django.contrib.auth.views import login, logout
+from django.contrib.auth.views import LoginView, LogoutView
 from django.views.generic import ListView, DetailView
 from django.views.generic.base import TemplateView
 from django.urls import reverse_lazy

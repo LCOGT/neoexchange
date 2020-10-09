@@ -21,24 +21,24 @@ import json
 import logging
 import tempfile
 import bokeh
-from django.db.models import Q, Prefetch
-from django.forms.models import model_to_dict
+from bs4 import BeautifulSoup
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.files.storage import default_storage
 from django.core.paginator import Paginator
-from django.urls import reverse, reverse_lazy
-from django.shortcuts import render, redirect
-from django.views.generic import DetailView, ListView, FormView, TemplateView, View
-from django.views.generic.edit import FormView
-from django.views.generic.detail import SingleObjectMixin
+from django.db.models import Q, Prefetch
+from django.forms.models import model_to_dict
 from django.http import Http404, HttpResponse, HttpResponseRedirect
+from django.shortcuts import render, redirect
 from django.template.loader import get_template
+from django.urls import reverse, reverse_lazy
+from django.views.generic import DetailView, ListView, FormView, TemplateView, View
+from django.views.generic.detail import SingleObjectMixin
+from django.views.generic.edit import FormView
 from http.client import HTTPSConnection
-from django.conf import settings
-from bs4 import BeautifulSoup
 import reversion
 import requests
 import re
@@ -48,6 +48,7 @@ try:
 except ImportError:
     pass
 import io
+from urllib.parse import urljoin
 
 from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, \
     ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm
@@ -1026,7 +1027,7 @@ class ScheduleCalibSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
         elif 'submit' in request.POST:
             target = self.get_object()
             username = ''
-            if request.user.is_authenticated():
+            if request.user.is_authenticated:
                 username = request.user.get_username()
             tracking_num, sched_params = schedule_submit(form.cleaned_data, target, username)
 
@@ -1080,7 +1081,7 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
         elif 'submit' in request.POST and new_form.is_valid():
             target = self.get_object()
             username = ''
-            if request.user.is_authenticated():
+            if request.user.is_authenticated:
                 username = request.user.get_username()
             tracking_num, sched_params = schedule_submit(new_form.cleaned_data, target, username)
             if tracking_num:
@@ -2560,6 +2561,8 @@ def update_crossids(astobj, dbg=False):
             kwargs = convert_ast_to_comet(kwargs, body)
         if dbg:
             print(kwargs)
+        # XXX TAL 2020/09/18 Is this doing the right thing ? Think it's doing a
+        # case-insensitive match which could overwrite similarly named objects ?
         check_body = Body.objects.filter(provisional_name=temp_id, **kwargs)
         if check_body.count() == 0:
             save_and_make_revision(body, kwargs)
@@ -2771,7 +2774,7 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
     return params
 
 
-def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
+def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M', force=False):
     """
     Performs remote look up of orbital elements for object with id obj_id_or_page,
     Gets or creates corresponding Body instance and updates entry.
@@ -2828,7 +2831,7 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
     if body.epochofel:
         time_to_current_epoch = abs(body.epochofel - datetime.now())
         time_to_new_epoch = abs(kwargs['epochofel'] - datetime.now())
-    if not body.epochofel or time_to_new_epoch <= time_to_current_epoch:
+    if not body.epochofel or time_to_new_epoch <= time_to_current_epoch or force is True:
         save_and_make_revision(body, kwargs)
         if not created:
             logger.info("Updated elements for %s from MPC" % obj_id)
@@ -3561,13 +3564,12 @@ def find_spec(pk):
     except ObjectDoesNotExist:
         raise Http404("Block does not exist.")
     frames = Frame.objects.filter(block=block)
-    if not frames:
+    first_frames = [f.frameid for f in frames if f.frameid]
+    if first_frames:
+        url = urljoin(settings.ARCHIVE_FRAMES_URL, first_frames[0], 'headers')
+    else:
         return '', '', '', '', ''
-    for frame in frames:
-        if frame.frameid:
-            first_frame = frame
-            break
-    url = settings.ARCHIVE_FRAMES_URL + str(first_frame.frameid) + '/headers'
+
     try:
         data = lco_api_call(url)['data']
     except TypeError:
@@ -3994,6 +3996,12 @@ def update_previous_spectra(specobj, source='U', dbg=False):
     if check_spec:
         for check in check_spec:
             if check.spec_date >= specobj[5]:
+                if check.spec_ref == specobj[4]:
+                    if specobj[2] and check.spec_vis != specobj[2]:
+                        check.spec_vis = specobj[2]
+                    if specobj[3] and check.spec_ir != specobj[3]:
+                        check.spec_ir = specobj[3]
+                    check.save()
                 if dbg is True:
                     print("More recent data already in DB")
                 return False
