@@ -101,27 +101,46 @@ def create_frame(params, block=None, frameid=None):
         # We are parsing observation logs
         frame_params = frame_params_from_log(params, block)
 
-    try:
-        frame_list = Frame.objects.filter(midpoint=frame_params['midpoint'])
-        if len(frame_list) >= 1:
-            frame_test = frame_list.filter(**frame_params)
-            if frame_test:
-                frame = Frame.objects.get(**frame_params)
-                frame_created = False
+    if frameid is not None:
+        # LCO data should always have an Archive/`frameid`
+        frame_list = Frame.objects.filter(frameid=frameid)
+        if frame_list.count() == 0:
+            frame = Frame.objects.create(frameid=frameid, **frame_params)
+            frame_created = True
+        elif frame_list.count() == 1:
+            frame = frame_list[0]
+            frame_created = False
+        else:
+            msg = "Duplicate frames with frameid: " + frameid
+            logger.error(msg)
+            for frame in frame_list:
+                logger.error(frame.id)
+            raise Frame.MultipleObjectsReturned
+    else:
+        # Non-LCO data so need to match on less reliable midpoint
+        try:
+            frame_list = Frame.objects.filter(midpoint=frame_params['midpoint'])
+            if len(frame_list) >= 1:
+                frame_test = frame_list.filter(**frame_params)
+                if frame_test:
+                    frame = Frame.objects.get(**frame_params)
+                    frame_created = False
+                else:
+                    logger.warning("Creating new Frame")
+                    logger.warning(frame_params)
+                    frame = Frame.objects.create(**frame_params)
+                    frame_created = True
             else:
                 frame = Frame.objects.create(**frame_params)
                 frame_created = True
-        else:
-            frame = Frame.objects.create(**frame_params)
-            frame_created = True
-        frame.frameid = frameid
-        frame.save()
-    except Frame.MultipleObjectsReturned:
-        logger.error("Duplicate frames:")
-        frames = Frame.objects.filter(**frame_params)
-        for frame in frames:
-            logger.error(frame.id)
-        raise Frame.MultipleObjectsReturned
+            frame.frameid = frameid
+            frame.save()
+        except Frame.MultipleObjectsReturned:
+            logger.error("Duplicate frames:")
+            frames = Frame.objects.filter(**frame_params)
+            for frame in frames:
+                logger.error(frame.id)
+            raise Frame.MultipleObjectsReturned
 
     # Update catalogue information if we have it
     if params.get('astrometric_catalog', None):
