@@ -3566,7 +3566,7 @@ def find_spec(pk):
     frames = Frame.objects.filter(block=block)
     first_frames = [f.frameid for f in frames if f.frameid]
     if first_frames:
-        url = urljoin(settings.ARCHIVE_FRAMES_URL, first_frames[0], 'headers')
+        url = urljoin(settings.ARCHIVE_FRAMES_URL, str(first_frames[0]), 'headers')
     else:
         return '', '', '', '', ''
 
