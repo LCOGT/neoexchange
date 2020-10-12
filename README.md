@@ -4,6 +4,17 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.6.0
+Update to Django 3.1 (and CentOS 8 for the Docker build)
+
+### 3.5.2
+Various small backend fixes:
+* Fix HORIZONS SPK lookup on some comets (Issue #480)
+* Prevent objects inheriting old elements when refitting with `find_orb` fails
+* Fix crazy time from perihelion when mean anomaly is extremely close to 0/360.0 (Issue #484)
+* Catch various URL connection errors
+* Update internal links to SMASS datasets if they change after ingestion (Issue #486)
+
 ### 3.5.1.4
 Limit Solar Analog spectra to 1 regardless of frames requested for Target
 Fix more Server Error Bugs

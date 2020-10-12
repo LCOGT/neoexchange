@@ -26,7 +26,7 @@ class Migration(migrations.Migration):
                 ('speed', models.FloatField(verbose_name=b'Speed (degrees/day)')),
                 ('sky_motion_pa', models.FloatField(verbose_name=b'Position angle of motion on the sky (degrees)')),
                 ('detections', models.BinaryField(verbose_name=b'Detections array', null=True, blank=True)),
-                ('block', models.ForeignKey(to='core.Block')),
+                ('block', models.ForeignKey(to='core.Block', on_delete=models.deletion.CASCADE)),
             ],
             options={
                 'verbose_name': 'Candidate',

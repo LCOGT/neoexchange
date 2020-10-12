@@ -490,6 +490,13 @@ def run_findorb(source_dir, dest_dir, obs_file, site_code=500, start_time=dateti
 
     setup_findorb_environ_file(source_dir, site_code, start_time)
 
+    # Remove any old version of mpc_fmt.txt
+    orbit_file = os.path.join(os.getenv('HOME'), '.find_orb', 'mpc_fmt.txt')
+    try:
+        os.remove(orbit_file)
+    except FileNotFoundError:
+        pass
+
     options = determine_findorb_options(site_code, start_time)
     cmdline = "%s %s %s" % ( binary, obs_file, options)
     cmdline = cmdline.rstrip()

@@ -7,7 +7,8 @@ from django.utils.crypto import get_random_string
 import rollbar
 
 
-VERSION = '3.5.1.4'
+VERSION = '3.6.0'
+
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
@@ -83,7 +84,7 @@ STATICFILES_FINDERS = (
     "django.contrib.staticfiles.finders.AppDirectoriesFinder"
  )
 
-MIDDLEWARE_CLASSES = (
+MIDDLEWARE = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',

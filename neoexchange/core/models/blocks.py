@@ -16,8 +16,7 @@ from django.conf import settings
 from django.forms.models import model_to_dict
 from django.db import models
 from django.db.models import Sum
-from django.utils.translation import ugettext_lazy as _
-from django.utils.encoding import python_2_unicode_compatible
+from django.utils.translation import gettext_lazy as _
 from django.utils.functional import cached_property
 from requests.compat import urljoin
 from numpy import fromstring
@@ -47,7 +46,7 @@ SITE_CHOICES = (
     )
 
 
-@python_2_unicode_compatible
+
 class SuperBlock(models.Model):
 
     cadence         = models.BooleanField(default=False)
@@ -168,7 +167,7 @@ class SuperBlock(models.Model):
         return '%s is %sactive' % (self.tracking_number, text)
 
 
-@python_2_unicode_compatible
+
 class Block(models.Model):
 
     OPT_IMAGING = 0
@@ -264,7 +263,7 @@ class Block(models.Model):
         return '%s is %sactive' % (self.request_number, text)
 
 
-@python_2_unicode_compatible
+
 class Candidate(models.Model):
     """Class to hold candidate moving object detections found by the moving
     object code"""

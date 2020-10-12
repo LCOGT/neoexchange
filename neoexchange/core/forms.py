@@ -20,7 +20,7 @@ from django import forms
 from django.db.models import Q
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from astrometrics.sources_subs import fetch_sfu, fetch_filter_list
 from .models import Body, Proposal, Block, StaticSource
 from astrometrics.time_subs import tomorrow
