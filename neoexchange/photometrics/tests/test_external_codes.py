@@ -524,30 +524,6 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
             test_file = os.path.join(self.test_dir, config_file)
             self.assertTrue(os.path.exists(test_file), msg=config_file + ' is missing')
 
-    @skipIf(find_binary("scamp") is None, "Could not find SCAMP binary ('scamp') in PATH")
-    def test_run_scamp_realfile(self):
-
-        expected_status = 0
-        expected_line1 = 'EQUINOX =        2000.00000000 / Mean equinox'
-
-        status = run_scamp(self.source_dir, self.test_dir, self.test_fits_catalog)
-
-        self.assertEqual(expected_status, status)
-        if self.debug_print:
-            print(glob(os.path.join(self.test_dir, '*')))
-
-        header_file = os.path.basename(self.test_fits_catalog).replace('fits', 'head')
-        output_header = os.path.join(self.test_dir, header_file)
-        self.assertTrue(os.path.exists(output_header), msg=output_header + ' is missing')
-        self.assertFalse(os.path.exists(self.test_fits_catalog.replace('fits', 'head')), msg=output_header + ' exists in the wrong place')
-
-        test_fh = open(output_header, 'r')
-        test_lines = test_fh.readlines()
-        test_fh.close()
-
-        # Expected value is 29 lines of FITS header
-        self.assertEqual(29, len(test_lines))
-        self.assertEqual(expected_line1, test_lines[3].rstrip())
 
 class TestFindOrbRunner(ExternalCodeUnitTest):
 
