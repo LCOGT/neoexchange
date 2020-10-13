@@ -332,4 +332,3 @@ if not CURRENT_PATH.startswith('/app'):
         if "local_settings" not in str(e):
             raise e
 
-print(DATABASES['default'])
