@@ -132,7 +132,8 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
 
         self.assertEqual(expected_status, status)
 
-    @skipIf(find_binary("mtdlink") is None, "Could not find MTDLINK binary ('mtdlink') in PATH")
+#    @skipIf(find_binary("mtdlink") is None, "Could not find MTDLINK binary ('mtdlink') in PATH")
+    @skipIf(True, "Needs FITS files")
     def test_run_mtdlink_realfile(self):
 
         expected_status = 0
@@ -239,7 +240,8 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
         self.assertEqual(58, len(test_lines_file))
         self.assertEqual(expected_line1_file, test_lines_file[0].rstrip())
 
-    @skipIf(find_binary("mtdlink") is None, "Could not find MTDLINK binary ('mtdlink') in PATH")
+#    @skipIf(find_binary("mtdlink") is None, "Could not find MTDLINK binary ('mtdlink') in PATH")
+    @skipIf(True, "Needs FITS files")
     def test_run_mtdlink_realfile_different_set(self):
 
         expected_status = 0
