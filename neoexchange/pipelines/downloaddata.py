@@ -25,7 +25,6 @@ class DownloadProcessPipeline(PipelineProcess):
     Download and process FITS image and spectra data
     """
     short_name = 'dlp'
-    allowed_suffixes = ['.gz', '.fz']
     inputs = {
         'obs_date': {
             'default': None,

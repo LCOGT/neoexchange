@@ -14,16 +14,17 @@ from core.tasks import run_pipeline, send_task
 from .forms import DLDataForm
 from .serializers import AsyncProcessSerializer, PipelineProcessSerializer
 
-class SubmitView(FormView):
+class PipelineSubmitView(FormView):
     template_name = 'pipelines/pipeline_form.html'
-    form_class = DLDataForm
+    form_class = None
+    name = ''
+    title = ''
 
     def form_valid(self, form):
-        name = 'dldata'
         try:
-            pipeline_cls = PipelineProcess.get_subclass(name)
+            pipeline_cls = PipelineProcess.get_subclass(self.name)
         except KeyError:
-            return HttpResponseBadRequest("Invalid pipeline name '{}'".format(name))
+            return HttpResponseBadRequest("Invalid pipeline name '{}'".format(self.name))
 
         # Get pipeline-specific flags. Initially set all to False; those
         # present in form data will be set to True
@@ -41,8 +42,13 @@ class SubmitView(FormView):
 
     def get_context_data(self):
         data = super().get_context_data()
-        data['form_title'] = 'Download Data and Create Guider Movies'
+        data['form_title'] = self.title
         return data
+
+class DLCSubmitView(PipelineSubmitView):
+    title = 'Download Data and Create Guider Movies'
+    name = 'dldata'
+    form_class = DLDataForm
 
 def overview(request):
     pipelines = AsyncProcess.objects.all()

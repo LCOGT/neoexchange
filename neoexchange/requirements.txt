@@ -32,4 +32,4 @@ awscli
 redis
 dramatiq[watch,redis]
 django-dramatiq
-django-rest-framework
+djangorestframework
