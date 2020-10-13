@@ -78,13 +78,29 @@ class MyPipeline(PipelineProcess):
 
 Add a form to handle any inputs and to start the pipeline. If you are using the `pipelines` app, update the `forms.py` to include the new form class or you can process any form input yourself in a view.
 
+In `pipelines/forms.py`
 ```
+class MyPipeForm(forms.Form):
+    obs_date = forms.DateField(label='Date', widget=forms.DateInput(attrs={'type': 'date'}))
+    numbeans = forms.FloatField(label="How many beans?", required=False)
+
 ```
+
+In `pipelines/views.py` add a subclass of the `PipelineSubmitView`. This only needs
 
 ```
 class MySubmitView(PipelineSubmitView):
-    template_name = 'pipelines/mypipe_form.html'
-    form_class = MyPipe
+    form_class = MyPipeForm
     name = 'mypipe' # Pipeline name in settings.py
     title = 'Count how many beans make 5 asteroids' # page title for form
 ```
+
+### URL structure and Overview page
+
+You will need to provide a URL for the from in `pipelines/urls.py`. This can be anything but might be clearest if it ends with `submit` e.g.
+
+```
+path('mypipe/submit/', MySubmitView.as_view(), name='pipemysubmit'),
+```
+
+If you want this pipeline included on the `overview` page then update the `templates/pipelines/overview.html`.

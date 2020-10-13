@@ -1,10 +1,11 @@
-from django.conf.urls import url
 from django.urls import path
 
-from .views import PipelineSubmitView, PipelineProcessDetailView, overview
+import pipelines.views as pv
 
-url_patterns = [
-    path('', detail, name='pipelines'),
-    path('submit/$', SubmitView.as_view(), name='submit'),
-    path('detail/(?P<pk>\d+)/$', PipelineProcessDetailView.as_view() ,name="pipelinedetail" ),
+urlpatterns = [
+    path('', pv.overview, name='pipelines'),
+    path('dlc/submit/', pv.DLCSubmitView.as_view(), name='pipesubmitdlc'),
+    path('detail/<pk>/', pv.PipelineProcessDetailView.as_view() ,name="pipelinedetail" ),
+    path('api/status/<pk>/', pv.AsyncStatusApi.as_view(), name='async_process_status_api'),
+    path('api/logs/<pk>/', pv.PipelineProcessApi.as_view(), name='pipeline_api'),
 ]

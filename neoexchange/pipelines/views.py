@@ -34,7 +34,7 @@ class PipelineSubmitView(FormView):
                 continue
             inputs[key] = value
         pipe = pipeline_cls.create_timestamped(inputs)
-        send_task(run_pipeline, pipe, name)
+        send_task(run_pipeline, pipe, self.name)
         return redirect(reverse_lazy('pipelinedetail', kwargs={'pk':pipe.pk}))
 
     def get_success_url(self):

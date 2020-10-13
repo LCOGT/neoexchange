@@ -96,12 +96,13 @@ urlpatterns = [
     url(r'^schedule/(?P<pk>\d+)/spectra/$', ScheduleParametersSpectra.as_view(), name='schedule-body-spectra'),
     url(r'^calib-schedule/(?P<instrument_code>[A-Z,0-9,\-]*)/(?P<pk>[-\d]+)/$', ScheduleCalibSpectra.as_view(), name='schedule-calib-spectra'),
     url(r'^calib-schedule/(?P<pk>\d+)/confirm/$', ScheduleCalibSubmit.as_view(), name='schedule-calib-confirm'),
-    url(r'^accounts/login/$', login, {'template_name': 'core/login.html'}, name='auth_login'),
-    url(r'^accounts/logout/$', logout, {'template_name': 'core/logout.html'}, name='auth_logout'),
-    path('pipelines', include('pipeline.urls')),
-    url(r'^api/pipeline/status/(?P<pk>\d+)/$', AsyncStatusApi.as_view(), name='async_process_status_api'),
-    url(r'^api/pipeline/logs/(?P<pk>\d+)/$', PipelineProcessApi.as_view(), name='pipeline_api'),
-    url(r'^admin/', include(admin.site.urls)),
+
+    url(r'^accounts/login/$', LoginView.as_view(template_name='core/login.html'), name='auth_login'),
+    url(r'^accounts/logout/$', LogoutView.as_view(template_name='core/logout.html'), name='auth_logout'),
+
+    path('pipelines/', include('pipelines.urls')),
+
+    path('admin/', admin.site.urls),
 ]
 
 if settings.DEBUG:
