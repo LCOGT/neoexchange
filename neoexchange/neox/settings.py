@@ -7,7 +7,7 @@ from django.utils.crypto import get_random_string
 import rollbar
 
 
-VERSION = '3.6.0'
+VERSION = '3.6.1a'
 
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
@@ -331,3 +331,4 @@ if not CURRENT_PATH.startswith('/app'):
     except ImportError as e:
         if "local_settings" not in str(e):
             raise e
+
