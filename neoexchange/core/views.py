@@ -650,6 +650,7 @@ class StaticSourceView(ListView):
 class BestStandardsView(ListView):
     template_name = 'core/best_calibsource_list.html'
     model = StaticSource
+    ordering = ['ra']
     paginate_by = 20
 
     def determine_ra_range(self, utc_dt=datetime.utcnow(), HA_hours=3, dbg=False):
@@ -3596,7 +3597,10 @@ def find_spec(pk):
     frames = Frame.objects.filter(block=block)
     first_frames = [f.frameid for f in frames if f.frameid]
     if first_frames:
-        url = urljoin(settings.ARCHIVE_FRAMES_URL, first_frames[0], 'headers')
+        # urljoin() is stupid and can't join multiple items together or be
+        # chained together in multiple calls
+        frame_header_url = "/".join([str(first_frames[0]), 'headers'])
+        url = urljoin(settings.ARCHIVE_FRAMES_URL, frame_header_url)
     else:
         return '', '', '', '', ''
 
