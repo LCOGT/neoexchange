@@ -304,7 +304,7 @@ def extinction_in_band(tic_params_or_filter):
     The extinction in magnitudes/airmass is returned or 0.0 (if the bandpass was
     not found)"""
 
-# Extinction values from SIGNAL (for La Palma) for UBVRIZ, 
+# Extinction values from SIGNAL (for La Palma) for UBVRIZ,
 # Tonry et al. 2012 (divided by 1.2) for u'g'r'i'z'w
     airm = 1.2
     extinction = { 'U': 0.55, 'B': 0.25, 'V' : 0.15, 'R' : 0.09, 'I' : 0.06, 'Z' : 0.05,
@@ -449,7 +449,7 @@ def compute_fwhm(tic_params):
     m1_diameter: diameter of primary mirror (as an astropy Quantity, normally in meters but anything convertable to meters will work)
     """
 
-    # L_0 is the wave-front outer-scale. We have adopted a value of L_0=46m (van den Ancker et al. 2016, Proc.SPIE, Volume 9910, 111). 
+    # L_0 is the wave-front outer-scale. We have adopted a value of L_0=46m (van den Ancker et al. 2016, Proc.SPIE, Volume 9910, 111).
     L_0 = 46.0 * u.m
 
     fwhm_tel = compute_fwhm_tel(tic_params)
@@ -511,6 +511,7 @@ def compute_floyds_snr(mag_i, exp_time, tic_params, dbg=True, emulate_signal=Fal
     Not included is the (negligible) dark current"""
 
     # imaging = tic_params.get('imaging', False)
+    wave_scale = tic_params.get('wave_scale', 1.0*u.AA/u.pixel)
 
     # Photons per second from the source
     m_0 = compute_photon_rate(mag_i, tic_params, emulate_signal)
@@ -524,10 +525,10 @@ def compute_floyds_snr(mag_i, exp_time, tic_params, dbg=True, emulate_signal=Fal
     if dbg:
         print('Object=', signal, 'Sky=', sky)
     if dbg:
-        print(tic_params['pixel_scale'] , tic_params['wave_scale'], tic_params.get('slit_width', 1.0*u.arcsec))
+        print(tic_params['pixel_scale'] , wave_scale, tic_params.get('slit_width', 1.0*u.arcsec))
 
     # Scale sky (in photons/A/sq.arcsec) to size of slit
-    sky2 = sky * tic_params.get('slit_width', 1.0*u.arcsec) * tic_params['pixel_scale'] * tic_params['wave_scale']
+    sky2 = sky * tic_params.get('slit_width', 1.0*u.arcsec) * tic_params['pixel_scale'] * wave_scale
 
     # Calculate size of seeing disk in pixels
     seeing = 2.0 * tic_params['fwhm'] / tic_params['pixel_scale']
@@ -539,7 +540,7 @@ def compute_floyds_snr(mag_i, exp_time, tic_params, dbg=True, emulate_signal=Fal
     if dbg:
         print("Slit loss fraction=", vignette)
 
-    signal2 = signal * tic_params['wave_scale'] * vignette
+    signal2 = signal * wave_scale * vignette
     # Disperse signal across FWHM in spacial direction and determine peak counts in central pixel
     frac_in_single_pix = erf(sqrt(log(2))/seeing.value)
     peak_counts = signal2 / tic_params['gain'] * frac_in_single_pix
