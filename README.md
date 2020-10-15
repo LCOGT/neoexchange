@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.7.0
+Add MuSCAT3 support.
+
 ### 3.6.1
 Change the retrieval or creation of new Frame records to eliminate chance of creating duplicates.
 
