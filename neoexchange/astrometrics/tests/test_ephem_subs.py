@@ -274,6 +274,7 @@ class TestComputeEphemerides(TestCase):
 
         body_dict['provisional_name'] = 'N999z0z'
         body_dict['eccentricity'] = 0.42
+        body_dict['ingest'] += timedelta(seconds=1)
         body_dict['id'] += 3
         second_body = Body.objects.create(**body_dict)
         second_body.save()
@@ -283,16 +284,17 @@ class TestComputeEphemerides(TestCase):
 
         first_saved_item = saved_items[0]
         second_saved_item = saved_items[1]
-        self.assertEqual(first_saved_item.provisional_name, 'N999r0q')
-        self.assertEqual(second_saved_item.provisional_name, 'N999z0z')
+        # Newer should be first due to `-ingest` in the Body Meta ordering
+        self.assertEqual(first_saved_item.provisional_name, 'N999z0z')
+        self.assertEqual(second_saved_item.provisional_name, 'N999r0q')
 
     def test_compute_ephem_with_elements(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
-        expected_ra  = 5.28722753669144
+        expected_ra = 5.28722753669144
         expected_dec = 0.522637696108887
         expected_mag = 20.408525362626005
         expected_motion = 2.4825093417658186
-        expected_alt =  -58.658929026981895
+        expected_alt = -58.658929026981895
         expected_spd = 119.94694444444444
         expected_pa = 91.35793788996334
 
@@ -311,13 +313,13 @@ class TestComputeEphemerides(TestCase):
 
     def test_compute_ephem_with_body(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
-        expected_ra  = 5.28722753669144
+        expected_ra = 5.28722753669144
         expected_dec = 0.522637696108887
         expected_mag = 20.408525362626005
         expected_motion = 2.4825093417658186
-        expected_alt =  -58.658929026981895
+        expected_alt = -58.658929026981895
         expected_spd = 119.94694444444444
-        expected_pa  = 91.35793788996334
+        expected_pa = 91.35793788996334
 
         body_elements = model_to_dict(self.body)
         emp_line = compute_ephem(d, body_elements, '500', dbg=False, perturb=True, display=False)
@@ -516,6 +518,35 @@ class TestComputeEphemerides(TestCase):
                          'meananom': None,
                          'perihdist': None,
                          'epochofperih': datetime(2019, 8, 21, 0, 0),
+                         'abs_mag': 14.9,
+                         'slope': 4.0,
+                         'num_obs': 7,
+                         'arc_length': 0.2,
+                        }
+        start = datetime(2019, 8, 21, 15)
+        site_code = '500'
+
+        emp_line = compute_ephem(start, body_elements, site_code, perturb=False)
+
+        self.assertEqual({}, emp_line)
+
+    def test_call_compute_comet_missing_qdate(self):
+        body_elements = {
+                         'provisional_name': 'C0TUUZ2',
+                         'name': None,
+                         'origin': 'M',
+                         'source_type': 'U',
+                         'elements_type': 'MPC_COMET',
+                         'epochofel': datetime(2019, 8, 21, 0, 0),
+                         'orbit_rms': 0.28,
+                         'orbinc': 105.5272,
+                         'longascnode': 323.82141,
+                         'argofperih': 74.17643,
+                         'eccentricity': 1.0,
+                         'meandist': 351375868.8,
+                         'meananom': None,
+                         'perihdist': None,
+                         'epochofperih': None,
                          'abs_mag': 14.9,
                          'slope': 4.0,
                          'num_obs': 7,
@@ -1036,27 +1067,36 @@ class TestLongTermScheduling(TestCase):
         body_elements = model_to_dict(self.body2)
         expected_max_alt = 41.3
         expected_up_time = 3.8333333333333335
+        expected_start_time = datetime(2017, 1, 6, 8, 40)
+        expected_stop_time = datetime(2017, 1, 6, 12, 30)
 
         emp_line = compute_ephem(datetime(2017, 1, 6, 0, 0, 00), body_elements, site_code, dbg=False, perturb=True, display=False)
         app_ra = emp_line['ra']
         app_dec = emp_line['dec']
         min_alt = 30
-        up_time, max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=True, body_elements=None)
+        up_time, max_alt, start_time, stop_time = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=True, body_elements=None)
+
         self.assertAlmostEqual(expected_max_alt, max_alt, 1)
         self.assertAlmostEqual(expected_up_time, up_time, 1)
+        self.assertEqual(expected_start_time, start_time)
+        self.assertEqual(expected_stop_time, stop_time)
 
     def test_visibility_general1m(self):
         site_code = '1M0'
         body_elements = model_to_dict(self.body2)
+        expected_start_time = datetime(2017, 1, 5, 19, 0, 00)
+        expected_stop_time = datetime(2017, 1, 6, 12, 40, 00)
 
         emp_line = compute_ephem(datetime(2017, 1, 6, 0, 0, 00), body_elements, site_code, dbg=False, perturb=True, display=False)
         app_ra = emp_line['ra']
         app_dec = emp_line['dec']
         min_alt = 30
-        up_time, max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=True, body_elements=body_elements)
-        true_up_time, true_max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=False, body_elements=body_elements)
+        up_time, max_alt, start_time, stop_time = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=True, body_elements=body_elements)
+        true_up_time, true_max_alt, true_start_time, true_stop_time = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=False, body_elements=body_elements)
         self.assertEqual(floor(true_max_alt), floor(max_alt))
         self.assertAlmostEqual(true_up_time, up_time, 1)
+        self.assertEqual(expected_start_time, start_time)
+        self.assertEqual(expected_stop_time, stop_time)
 
     def test_visibility_general1m_single_site(self):
         site_code = '1M0'
@@ -1068,29 +1108,56 @@ class TestLongTermScheduling(TestCase):
         app_ra = emp_line['ra']
         app_dec = emp_line['dec']
         min_alt = 30
-        up_time, max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=True, body_elements=body_elements)
-        true_up_time, true_max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=False, body_elements=body_elements)
+        up_time, max_alt, start_time, stop_time = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=True, body_elements=body_elements)
+        true_up_time, true_max_alt, true_start_time, true_stop_time = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=False, body_elements=body_elements)
         self.assertEqual(floor(true_max_alt), floor(max_alt))
         self.assertAlmostEqual(true_up_time, up_time, 1)
         self.assertAlmostEqual(expected_max_alt, max_alt, 0)
         self.assertAlmostEqual(expected_up_time, up_time, 0)
+        self.assertEqual(start_time, true_start_time)
+        self.assertEqual(stop_time, true_stop_time)
 
-    def test_visibility_general2m_never_up(self):
-        site_code = '0M4'
+    def test_visibility_2m_never_up(self):
+        site_code = 'E10'
         body_elements = model_to_dict(self.body4)
-        expected_max_alt = 61
+        expected_max_alt = 63.5
         expected_up_time = 0
+        expected_start_time = None
+        expected_stop_time = None
 
         emp_line = compute_ephem(datetime(2017, 1, 6, 0, 0, 00), body_elements, site_code, dbg=False, perturb=True, display=False)
         app_ra = emp_line['ra']
         app_dec = emp_line['dec']
         min_alt = 80
-        up_time, max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '30 m', min_alt, quick_n_dirty=True, body_elements=body_elements)
-        true_up_time, true_max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '30 m', min_alt, quick_n_dirty=False, body_elements=body_elements)
+        up_time, max_alt, start_time, stop_time = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '30 m', min_alt, quick_n_dirty=True, body_elements=body_elements)
+        true_up_time, true_max_alt, true_start_time, true_stop_time = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '30 m', min_alt, quick_n_dirty=False, body_elements=body_elements)
         self.assertEqual(floor(true_max_alt), floor(max_alt))
         self.assertAlmostEqual(true_up_time, up_time, 1)
         self.assertAlmostEqual(expected_max_alt, max_alt, 0)
         self.assertAlmostEqual(expected_up_time, up_time, 0)
+        self.assertEqual(expected_start_time, start_time)
+        self.assertEqual(expected_stop_time, stop_time)
+
+    def test_visibility_general2m_never_up(self):
+        site_code = '2M0'
+        body_elements = model_to_dict(self.body4)
+        expected_max_alt = 63.5
+        expected_up_time = 0
+        expected_start_time = datetime(2017, 1, 6, 5, 0, 00)
+        expected_stop_time = datetime(2017, 1, 6, 17, 40, 00)
+
+        emp_line = compute_ephem(datetime(2017, 1, 6, 0, 0, 00), body_elements, site_code, dbg=False, perturb=True, display=False)
+        app_ra = emp_line['ra']
+        app_dec = emp_line['dec']
+        min_alt = 80
+        up_time, max_alt, start_time, stop_time = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '30 m', min_alt, quick_n_dirty=True, body_elements=body_elements)
+        true_up_time, true_max_alt, true_start_time, true_stop_time = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '30 m', min_alt, quick_n_dirty=False, body_elements=body_elements)
+        self.assertEqual(floor(true_max_alt), floor(max_alt))
+        self.assertAlmostEqual(true_up_time, up_time, 1)
+        self.assertAlmostEqual(expected_max_alt, max_alt, 0)
+        self.assertAlmostEqual(expected_up_time, up_time, 0)
+        self.assertEqual(expected_start_time, start_time)
+        self.assertEqual(expected_stop_time, stop_time)
 
 
 class TestDetermineRatesAndPA(TestCase):
@@ -1987,6 +2054,42 @@ class TestDetermineSpectroSlotLength(TestCase):
         expected_slot_length = 1258.0
 
         slot_length = determine_spectro_slot_length(exp_time, calibs)
+
+        self.assertEqual(expected_slot_length, slot_length)
+
+    def test_multiexp_no_calibs(self):
+
+        exp_time = 30.0
+        calibs = 'none'
+        num_exp = 10
+
+        expected_slot_length = 961.0
+
+        slot_length = determine_spectro_slot_length(exp_time, calibs, num_exp)
+
+        self.assertEqual(expected_slot_length, slot_length)
+
+    def test_multiexp_calibs_after(self):
+
+        exp_time = 30.0
+        calibs = 'after'
+        num_exp = 10
+
+        expected_slot_length = 1284.0
+
+        slot_length = determine_spectro_slot_length(exp_time, calibs, num_exp)
+
+        self.assertEqual(expected_slot_length, slot_length)
+
+    def test_multiexp_calibs_both(self):
+
+        exp_time = 30.0
+        calibs = 'both'
+        num_exp = 10
+
+        expected_slot_length = 1607.0
+
+        slot_length = determine_spectro_slot_length(exp_time, calibs, num_exp)
 
         self.assertEqual(expected_slot_length, slot_length)
 
@@ -2933,3 +3036,156 @@ class TestReadFindorbEphem(TestCase):
         empinfo, emp = read_findorb_ephem(outfile)
 
         self.compare_ephemeris((expected_empinfo, expected_emp), (empinfo, emp))
+
+
+class TestDetermineHorizonsId(TestCase):
+
+    def test_289P(self):
+        expected_id = 90001196
+        lines = ['Ambiguous target name; provide unique id:',
+                 '    Record #  Epoch-yr  >MATCH DESIG<  Primary Desig  Name  ',
+                 '    --------  --------  -------------  -------------  -------------------------',
+                 '    90001195    2005    289P           289P            Blanpain',
+                 '    90001196    2018    289P           289P            Blanpain',
+                 '']
+
+        horizons_id = determine_horizons_id(lines)
+
+        self.assertEqual(expected_id, horizons_id)
+
+    def test_46P(self):
+        expected_id = 90000544
+        lines = ['Ambiguous target name; provide unique id:',
+                 '    Record #  Epoch-yr  >MATCH DESIG<  Primary Desig  Name  ',
+                 '    --------  --------  -------------  -------------  -------------------------',
+                 '    90000532    1947    46P            46P             Wirtanen',
+                 '    90000533    1954    46P            46P             Wirtanen',
+                 '    90000534    1961    46P            46P             Wirtanen',
+                 '    90000535    1967    46P            46P             Wirtanen',
+                 '    90000536    1974    46P            46P             Wirtanen',
+                 '    90000537    1986    46P            46P             Wirtanen',
+                 '    90000538    1991    46P            46P             Wirtanen',
+                 '    90000539    1997    46P            46P             Wirtanen',
+                 '    90000540    1999    46P            46P             Wirtanen',
+                 '    90000541    2006    46P            46P             Wirtanen',
+                 '    90000542    2007    46P            46P             Wirtanen',
+                 '    90000543    2018    46P            46P             Wirtanen',
+                 '    90000544    2018    46P            46P             Wirtanen',
+                 '']
+
+        horizons_id = determine_horizons_id(lines)
+
+        self.assertEqual(expected_id, horizons_id)
+
+    def test_46P_prior_apparition(self):
+        expected_id = 90000542
+        lines = ['Ambiguous target name; provide unique id:',
+                 '    Record #  Epoch-yr  >MATCH DESIG<  Primary Desig  Name  ',
+                 '    --------  --------  -------------  -------------  -------------------------',
+                 '    90000532    1947    46P            46P             Wirtanen',
+                 '    90000533    1954    46P            46P             Wirtanen',
+                 '    90000534    1961    46P            46P             Wirtanen',
+                 '    90000535    1967    46P            46P             Wirtanen',
+                 '    90000536    1974    46P            46P             Wirtanen',
+                 '    90000537    1986    46P            46P             Wirtanen',
+                 '    90000538    1991    46P            46P             Wirtanen',
+                 '    90000539    1997    46P            46P             Wirtanen',
+                 '    90000540    1999    46P            46P             Wirtanen',
+                 '    90000541    2006    46P            46P             Wirtanen',
+                 '    90000542    2007    46P            46P             Wirtanen',
+                 '    90000543    2018    46P            46P             Wirtanen',
+                 '    90000544    2018    46P            46P             Wirtanen',
+                 '']
+        now = datetime(2008, 5, 11, 17, 20, 42)
+
+        horizons_id = determine_horizons_id(lines, now)
+
+        self.assertEqual(expected_id, horizons_id)
+
+    def test_29P(self):
+        expected_id = 90000393
+        lines = ['Ambiguous target name; provide unique id:',
+                 '    Record #  Epoch-yr  >MATCH DESIG<  Primary Desig  Name  ',
+                 '    --------  --------  -------------  -------------  -------------------------',
+                 '    90000387    1908    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000388    1925    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000389    1941    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000390    1957    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000391    1974    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000392    2007    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000393    2011    29P            29P             Schwassmann-Wachmann 1',
+                 '']
+        now = datetime(2020, 5, 11, 17, 20, 42)
+
+        horizons_id = determine_horizons_id(lines, now)
+
+        self.assertEqual(expected_id, horizons_id)
+
+    def test_29P_prior_apparition(self):
+        expected_id = 90000392
+        lines = ['Ambiguous target name; provide unique id:',
+                 '    Record #  Epoch-yr  >MATCH DESIG<  Primary Desig  Name  ',
+                 '    --------  --------  -------------  -------------  -------------------------',
+                 '    90000387    1908    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000388    1925    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000389    1941    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000390    1957    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000391    1974    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000392    2007    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000393    2011    29P            29P             Schwassmann-Wachmann 1',
+                 '']
+        now = datetime(2008, 5, 11, 17, 20, 42)
+
+        horizons_id = determine_horizons_id(lines, now)
+
+        self.assertEqual(expected_id, horizons_id)
+
+    def test_10P_prior_apparition(self):
+        expected_id = 90000207
+        lines = ['Ambiguous target name; provide unique id:',
+                 '    Record #  Epoch-yr  >MATCH DESIG<  Primary Desig  Name  ',
+                 '    --------  --------  -------------  -------------  -------------------------',
+                 '    90000192    1873    10P            10P             Tempel 2',
+                 '    90000193    1878    10P            10P             Tempel 2',
+                 '    90000194    1894    10P            10P             Tempel 2',
+                 '    90000195    1899    10P            10P             Tempel 2',
+                 '    90000196    1904    10P            10P             Tempel 2',
+                 '    90000197    1915    10P            10P             Tempel 2',
+                 '    90000198    1920    10P            10P             Tempel 2',
+                 '    90000199    1925    10P            10P             Tempel 2',
+                 '    90000200    1930    10P            10P             Tempel 2',
+                 '    90000201    1946    10P            10P             Tempel 2',
+                 '    90000202    1951    10P            10P             Tempel 2',
+                 '    90000203    1957    10P            10P             Tempel 2',
+                 '    90000204    1962    10P            10P             Tempel 2',
+                 '    90000205    1967    10P            10P             Tempel 2',
+                 '    90000206    1972    10P            10P             Tempel 2',
+                 '    90000207    1978    10P            10P             Tempel 2',
+                 '    90000208    1983    10P            10P             Tempel 2',
+                 '    90000209    1988    10P            10P             Tempel 2',
+                 '    90000210    1994    10P            10P             Tempel 2',
+                 '    90000211    1999    10P            10P             Tempel 2',
+                 '    90000212    2008    10P            10P             Tempel 2',
+                 '    90000213    2011    10P            10P             Tempel 2',
+                 '']
+        now = datetime(1975, 5, 11, 17, 20, 42)
+
+        horizons_id = determine_horizons_id(lines, now)
+
+        self.assertEqual(expected_id, horizons_id)
+
+    def test_bad_object(self):
+        expected_id = None
+        lines = ['Unknown target (20000P). Maybe try different id_type?']
+
+        horizons_id = determine_horizons_id(lines)
+
+        self.assertEqual(expected_id, horizons_id)
+
+    def test_bad_object2(self):
+        expected_id = None
+        lines = []
+
+        horizons_id = determine_horizons_id(lines)
+
+        self.assertEqual(expected_id, horizons_id)

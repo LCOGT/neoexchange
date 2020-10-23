@@ -24,7 +24,7 @@ from bs4 import BeautifulSoup
 from mock import patch
 
 from neox.tests.mocks import MockDateTime, mock_lco_authenticate, \
-    mock_fetch_filter_list, mock_submit_to_scheduler
+    mock_fetch_filter_list, mock_submit_to_scheduler, MockDate
 from neox.auth_backend import update_proposal_permissions
 from astrometrics.sources_subs import fetch_flux_standards
 from core.views import create_calib_sources
@@ -133,7 +133,7 @@ class TestCalibrationSources(FunctionalTest):
     def test_can_schedule_calibsource(self):
         self.add_new_calib_sources()
         self.test_login()
-        MockDateTime.change_datetime(2018, 5, 22, 5, 0, 0)
+        MockDateTime.change_datetime(2018, 9, 21, 5, 0, 0)
 
         # A new user, Daniel, goes to a hidden calibration page on the site
         target_url = "{0}{1}".format(self.live_server_url, reverse('calibsource-view'))
@@ -167,6 +167,9 @@ class TestCalibrationSources(FunctionalTest):
         self.assertIn("00:01:49.42", header_text)
         self.assertIn("-03:01:39.0", header_text)
         self.assertIn('V=5.1', header_text)
+        datebox = self.get_item_input_box('id_utc_date')
+        datebox.clear()
+        datebox.send_keys('2018-09-22')
 
         # Liking the selected star, he clicks Verify and is taken to a confirmation
         # page
@@ -199,7 +202,7 @@ class TestCalibrationSources(FunctionalTest):
     def test_can_schedule_calibsource_fts(self):
         self.add_new_calib_sources()
         self.test_login()
-        MockDateTime.change_datetime(2018, 5, 22, 5, 0, 0)
+        MockDateTime.change_datetime(2018, 9, 21, 5, 0, 0)
 
         # A new user, Daniel, goes to a hidden calibration page on the site
         target_url = "{0}{1}".format(self.live_server_url, reverse('calibsource-view'))
@@ -234,6 +237,9 @@ class TestCalibrationSources(FunctionalTest):
         self.assertIn("00:41:46.92", header_text)
         self.assertIn("-33:39:08.5", header_text)
         self.assertIn('V=11.2', header_text)
+        datebox = self.get_item_input_box('id_utc_date')
+        datebox.clear()
+        datebox.send_keys('2018-09-22')
 
         # Liking the selected star, he clicks Verify and is taken to a confirmation
         # page
@@ -266,7 +272,7 @@ class TestCalibrationSources(FunctionalTest):
     def test_can_schedule_specific_calibsource(self):
         self.add_new_calib_sources()
         self.test_login()
-        MockDateTime.change_datetime(2018, 5, 22, 5, 0, 0)
+        MockDateTime.change_datetime(2019, 1, 21, 5, 0, 0)
 
         # A new user, Daniel, goes to a hidden calibration page on the site
         target_url = "{0}{1}".format(self.live_server_url, reverse('calibsource-view'))
@@ -302,8 +308,8 @@ class TestCalibrationSources(FunctionalTest):
         # He picks a star
         link = self.browser.find_element_by_link_text('Landolt SA98-978')
         target = StaticSource.objects.filter(name='Landolt SA98-978')
-        tarket_key = target[0].id
-        target_url = "{0}{1}".format(self.live_server_url, reverse('calibsource' , kwargs={'pk': tarket_key}))
+        target_key = target[0].id
+        target_url = "{0}{1}".format(self.live_server_url, reverse('calibsource' , kwargs={'pk': target_key}))
         actual_url = link.get_attribute('href')
         self.assertEqual(actual_url, target_url)
 
@@ -321,7 +327,7 @@ class TestCalibrationSources(FunctionalTest):
 
         # He schedules a spectra
         link = self.browser.find_element_by_id('schedule-spectro-obs')
-        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-calib-spectra', kwargs={'instrument_code': 'E10-FLOYDS', 'pk': tarket_key}))
+        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-calib-spectra', kwargs={'instrument_code': 'E10-FLOYDS', 'pk': target_key}))
         actual_url = link.get_attribute('href')
         self.assertEqual(actual_url, target_url)
 
@@ -339,6 +345,9 @@ class TestCalibrationSources(FunctionalTest):
         self.assertIn("06:51:34.00", header_text)
         self.assertIn("-00:11:33.0", header_text)
         self.assertIn('V=10.5', header_text)
+        datebox = self.get_item_input_box('id_utc_date')
+        datebox.clear()
+        datebox.send_keys('2019-01-22')
 
         # Liking the selected star, he clicks Verify and is taken to a confirmation
         # page

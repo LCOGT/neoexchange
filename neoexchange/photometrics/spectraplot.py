@@ -54,7 +54,6 @@ def get_x_units(x_data):
     else:
         logger.warning("Could not parse wavelength units from file. Assuming Angstoms")
         x_units = u.AA
-
     xxx = np.array(x_data)
     wavelength = (xxx * x_units).to(u.AA)
     return wavelength
@@ -100,6 +99,9 @@ def pull_data_from_text(spectra):
             with urllib.request.urlopen(spectra) as f:
                 lines = f.read()
         except ValueError:
+            return [], [], []
+        except urllib.request.URLError:
+            logger.error(f"Connection to {spectra} error")
             return [], [], []
     lines = re.split('[\n\r]', str(lines, 'utf-8'))
     xxx = []

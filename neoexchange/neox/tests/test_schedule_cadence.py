@@ -77,11 +77,9 @@ class ScheduleCadence(FunctionalTest):
         # Wait until response is recieved
         self.wait_for_element_with_id('page')
 
-
-# Monkey patch the datetime used by forms otherwise it fails with 'window in the past'
-# TAL: Need to patch the datetime in views also otherwise we will get the wrong
-# semester and window bounds.
-
+    # Monkey patch the datetime used by forms otherwise it fails with 'window in the past'
+    # TAL: Need to patch the datetime in views also otherwise we will get the wrong
+    # semester and window bounds.
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.forms.datetime', MockDateTime)
     @patch('core.views.datetime', MockDateTime)
@@ -130,36 +128,18 @@ class ScheduleCadence(FunctionalTest):
 
         proposal_choices.select_by_visible_text(self.neo_proposal.title)
 
-        # He submits with a typo in the date box
+        # He enters the correct details
+        site_choices = Select(self.browser.find_element_by_id('id_site_code_cad'))
+        self.assertIn('ELP 1.0m - V37,V39; (McDonald, Texas)', [option.text for option in site_choices.options])
+        site_choices.select_by_visible_text('ELP 1.0m - V37,V39; (McDonald, Texas)')
+
+        # Submits with a typo in the start date box
         MockDateTime.change_datetime(2015, 4, 20, 1, 30, 00)
         datebox = self.get_item_input_box('id_start_time')
         datebox.clear()
         datebox.send_keys('2005-04-21 01:30:00')
 
-        with self.wait_for_page_load(timeout=10):
-            self.browser.find_element_by_xpath('//button[@id="cadence-submit"]').click()
-
-        # he sees an error message, and a link to return him to the cadence page
-        error_msg = self.browser.find_element_by_class_name('errorlist').text
-        self.assertIn("Window cannot start in the past", error_msg)
-
-        link = self.browser.find_element_by_id('id_return_link')
-        target_url = "{0}{1}{2}".format(self.live_server_url, reverse('schedule-body', kwargs={'pk': 1}), '?cadence=true')
-        link.click()
-        new_url = self.browser.current_url
-        self.assertEqual(str(new_url), target_url)
-
-        # He fixes his mistake and enters the correct details
-        site_choices = Select(self.browser.find_element_by_id('id_site_code_cad'))
-        self.assertIn('ELP 1.0m - V37,V39; (McDonald, Texas)', [option.text for option in site_choices.options])
-        site_choices.select_by_visible_text('ELP 1.0m - V37,V39; (McDonald, Texas)')
-
         MockDateTime.change_datetime(2015, 4, 20, 1, 30, 00)
-        datebox = self.get_item_input_box('id_start_time')
-        datebox.clear()
-        datebox.send_keys('2015-04-21 01:30:00')
-
-        MockDateTime.change_datetime(2015, 4, 20, 7, 30, 00)
         datebox = self.get_item_input_box('id_end_time')
         datebox.clear()
         datebox.send_keys('2015-04-21 07:30:00')
@@ -183,21 +163,23 @@ class ScheduleCadence(FunctionalTest):
         # He notices that a series of values for magnitude, speed, slot
         # length, number and length of exposures, period, and jitter appear
         magnitude = self.browser.find_element_by_id('id_magnitude_row').find_element_by_class_name('kv-value').text
-        self.assertIn('20.39', magnitude)
+        self.assertIn('20.35', magnitude)
         speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
-        self.assertIn('2.63 "/min', speed)
+        self.assertIn('2.75 "/min', speed)
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
         self.assertIn('14', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
         self.assertIn('55.0', exp_length)
+        start_time = self.browser.find_element_by_id('id_start_time').get_attribute('value')
+        self.assertIn('2015-04-20T01:30:00', start_time)
         jitter = self.browser.find_element_by_id('id_jitter').get_attribute('value')
         self.assertIn('0.5', jitter)
         period = self.browser.find_element_by_id('id_period').get_attribute('value')
         self.assertIn('3.0', period)
         cadence_cost = self.browser.find_element_by_id('id_cadence_cost_row').find_element_by_class_name('kv-value').text
-        self.assertIn('2 / 0.75', cadence_cost)
+        self.assertIn('10 / 3.75', cadence_cost)
 
         # At this point, a 'Schedule this object' button appears
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
@@ -289,7 +271,7 @@ class ScheduleCadence(FunctionalTest):
 
         periodbox = self.get_item_input_box('id_period')
         periodbox.clear()
-        periodbox.send_keys('3.0')
+        periodbox.send_keys('1.0')
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_xpath('//button[@id="cadence-submit"]').click()
 
@@ -301,19 +283,19 @@ class ScheduleCadence(FunctionalTest):
         # He notices that a series of values for magnitude, speed, slot
         # length, number and length of exposures, period, and jitter appear
         magnitude = self.browser.find_element_by_id('id_magnitude_row').find_element_by_class_name('kv-value').text
-        self.assertIn('20.39', magnitude)
+        self.assertIn('20.40', magnitude)
         speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
-        self.assertIn('2.63 "/min', speed)
+        self.assertIn('2.37 "/min', speed)
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
-        self.assertIn('14', num_exp)
+        self.assertIn('13', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
-        self.assertIn('55.0', exp_length)
+        self.assertIn('65.0', exp_length)
         jitter = self.browser.find_element_by_id('id_jitter').get_attribute('value')
         self.assertIn('0.5', jitter)
         period = self.browser.find_element_by_id('id_period').get_attribute('value')
-        self.assertIn('3.0', period)
+        self.assertIn('1.0', period)
         cadence_cost = self.browser.find_element_by_id('id_cadence_cost_row').find_element_by_class_name('kv-value').text
         self.assertIn('2 / 0.75', cadence_cost)
 
@@ -326,6 +308,13 @@ class ScheduleCadence(FunctionalTest):
         periodbox = self.browser.find_element_by_id('id_period')
         periodbox.clear()
         periodbox.send_keys('0')
+
+        # He wants the cadence to end a few days later
+        self.browser.find_element_by_id("id_edit_window").click()
+        datebox = self.get_item_input_box('id_end_time')
+        datebox.clear()
+        datebox.send_keys('2015-04-23 07:30:00')
+
         self.browser.find_element_by_id("id_edit_button").click()
 
         # The page refreshes and we get correct slot length and the Schedule button again
@@ -338,7 +327,7 @@ class ScheduleCadence(FunctionalTest):
 
         # He sees a warning about the large number of hours now required for this cadence. As well as a message about potential overlap
         cadence_cost = self.browser.find_element_by_id('id_cadence_cost_row').find_element_by_class_name('warning').text
-        self.assertIn('300 / 125', cadence_cost)
+        self.assertIn('2328 / 970', cadence_cost)
         period_warning = self.browser.find_element_by_id('id_period_row').find_element_by_class_name('warning').text
         self.assertIn('PERIOD', period_warning)
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
@@ -411,7 +400,7 @@ class ScheduleCadence(FunctionalTest):
 
         periodbox = self.get_item_input_box('id_period')
         periodbox.clear()
-        periodbox.send_keys('3.0')
+        periodbox.send_keys('1.0')
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_xpath('//button[@id="cadence-submit"]').click()
 
@@ -423,21 +412,21 @@ class ScheduleCadence(FunctionalTest):
         # He notices that a series of values for magnitude, speed, slot
         # length, number and length of exposures, period, and jitter appear
         magnitude = self.browser.find_element_by_id('id_magnitude_row').find_element_by_class_name('kv-value').text
-        self.assertIn('20.39', magnitude)
+        self.assertIn('20.40', magnitude)
         speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
-        self.assertIn('2.63 "/min', speed)
+        self.assertIn('2.37 "/min', speed)
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
-        self.assertIn('14', num_exp)
+        self.assertIn('13', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
-        self.assertIn('55.0', exp_length)
+        self.assertIn('65.0', exp_length)
 
         # He notices the Jitter automatically adjusts to fit the slot length.
         jitter = self.browser.find_element_by_id('id_jitter').get_attribute('value')
         self.assertIn('0.39', jitter)
         period = self.browser.find_element_by_id('id_period').get_attribute('value')
-        self.assertIn('3.0', period)
+        self.assertIn('1.0', period)
         cadence_cost = self.browser.find_element_by_id('id_cadence_cost_row').find_element_by_class_name('kv-value').text
         self.assertIn('2 / 0.75', cadence_cost)
 

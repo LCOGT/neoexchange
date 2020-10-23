@@ -22,7 +22,7 @@ from mock import patch
 from django.test import TestCase
 from django.conf import settings
 
-from neox.tests.mocks import MockDateTime, mock_fetch_archive_frames
+from neox.tests.mocks import MockDateTime, mock_fetch_archive_frames, mock_lco_api_fail
 # Import module to test
 from core.archive_subs import *
 
@@ -200,7 +200,6 @@ class TestCheckForExistingFile(TestCase):
         self.assertFalse(check_for_existing_file('wibble'), "Wrong result")
 
 
-@patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
 class TestFetchArchiveFrames(TestCase):
 
     def test_fetch_spectra(self):
@@ -208,8 +207,7 @@ class TestFetchArchiveFrames(TestCase):
         request_id = 1391169
         archive_url = '%s?limit=%d&REQNUM=%s&OBSTYPE=%s' % (settings.ARCHIVE_FRAMES_URL, 3000, request_id, 'SPECTRUM')
 
-        expected_data = { 'obstypes' : ['SPECTRUM', 'SPECTRUM'],
-                          'redlevels' : [90, 0]}
+        expected_data = {'obstypes': ['SPECTRUM', 'SPECTRUM'], 'redlevels': [90, 0]}
 
         data = mock_fetch_archive_frames(auth_header, archive_url, [])
 
@@ -218,6 +216,16 @@ class TestFetchArchiveFrames(TestCase):
         self.assertEqual([request_id, request_id], [x['REQNUM'] for x in data])
         self.assertEqual(expected_data['redlevels'], [x['RLEVEL'] for x in data])
 
+    @patch('core.archive_subs.lco_api_call', mock_lco_api_fail)
+    def test_fetch_nothing(self):
+        auth_header = {'Authorization': 'Token LetMeInPrettyPlease'}
+        request_id = 1391169
+        archive_url = '%s?limit=%d&REQNUM=%s&OBSTYPE=%s' % (settings.ARCHIVE_FRAMES_URL, 3000, request_id, 'SPECTRUM')
+        frames = []
+
+        data = fetch_archive_frames(auth_header, archive_url, frames)
+        self.assertEqual(data, frames)
+
 
 @patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
 class TestCheckArchiveImages(TestCase):
@@ -225,10 +233,8 @@ class TestCheckArchiveImages(TestCase):
     def test_fetch_imaging(self):
         request_id = 42
 
-        expected_data = { 'obstypes' : ['EXPOSE', ],
-                          'redlevels' : [91, ],
-                          'files' : ['ogg0m406-kb27-20160531-0063-e91.fits.fz', ]
-                        }
+        expected_data = {'obstypes': ['EXPOSE', ], 'redlevels': [91, ],
+                         'files': ['ogg0m406-kb27-20160531-0063-e91.fits.fz', ]}
         frames, num_frames = check_for_archive_images(request_id)
 
         self.assertEqual(2, num_frames)

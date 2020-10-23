@@ -101,27 +101,46 @@ def create_frame(params, block=None, frameid=None):
         # We are parsing observation logs
         frame_params = frame_params_from_log(params, block)
 
-    try:
-        frame_list = Frame.objects.filter(midpoint=frame_params['midpoint'])
-        if len(frame_list) >= 1:
-            frame_test = frame_list.filter(**frame_params)
-            if frame_test:
-                frame = Frame.objects.get(**frame_params)
-                frame_created = False
+    if frameid is not None:
+        # LCO data should always have an Archive/`frameid`
+        frame_list = Frame.objects.filter(frameid=frameid)
+        if frame_list.count() == 0:
+            frame = Frame.objects.create(frameid=frameid, **frame_params)
+            frame_created = True
+        elif frame_list.count() == 1:
+            frame = frame_list[0]
+            frame_created = False
+        else:
+            msg = "Duplicate frames with frameid: " + frameid
+            logger.error(msg)
+            for frame in frame_list:
+                logger.error(frame.id)
+            raise Frame.MultipleObjectsReturned
+    else:
+        # Non-LCO data so need to match on less reliable midpoint
+        try:
+            frame_list = Frame.objects.filter(midpoint=frame_params['midpoint'])
+            if len(frame_list) >= 1:
+                frame_test = frame_list.filter(**frame_params)
+                if frame_test:
+                    frame = Frame.objects.get(**frame_params)
+                    frame_created = False
+                else:
+                    logger.warning("Creating new Frame")
+                    logger.warning(frame_params)
+                    frame = Frame.objects.create(**frame_params)
+                    frame_created = True
             else:
                 frame = Frame.objects.create(**frame_params)
                 frame_created = True
-        else:
-            frame = Frame.objects.create(**frame_params)
-            frame_created = True
-        frame.frameid = frameid
-        frame.save()
-    except Frame.MultipleObjectsReturned:
-        logger.error("Duplicate frames:")
-        frames = Frame.objects.filter(**frame_params)
-        for frame in frames:
-            logger.error(frame.id)
-        raise Frame.MultipleObjectsReturned
+            frame.frameid = frameid
+            frame.save()
+        except Frame.MultipleObjectsReturned:
+            logger.error("Duplicate frames:")
+            frames = Frame.objects.filter(**frame_params)
+            for frame in frames:
+                logger.error(frame.id)
+            raise Frame.MultipleObjectsReturned
 
     # Update catalogue information if we have it
     if params.get('astrometric_catalog', None):
@@ -152,7 +171,7 @@ def frame_params_from_header(params, block):
     try:
         rlevel = int(rlevel)
     except ValueError:
-        logger.warning("Error converting RLEVEL to integer in frame " + frame_params['filename'])
+        logger.warning("Error converting RLEVEL to integer in frame " + params.get('ORIGNAME', None))
         rlevel = 0
 
     frame_params = { 'midpoint' : params.get('DATE_OBS', None),
@@ -164,6 +183,10 @@ def frame_params_from_header(params, block):
                      'filename'  : params.get('ORIGNAME', None),
                      'exptime'   : params.get('EXPTIME', None),
                  }
+
+    inst_mode = params.get('CONFMODE', None)
+    if inst_mode and inst_mode not in ['default', 'full_frame']:
+        frame_params['extrainfo'] = inst_mode
 
     # correct exptime to actual shutter open duration
     shutter_open = params.get('DATE_OBS', None)
@@ -243,21 +266,6 @@ def frame_params_from_header(params, block):
 
         midpoint = midpoint + timedelta(seconds=float(frame_params['exptime']) / 2.0)
         frame_params['midpoint'] = midpoint
-    return frame_params
-
-
-def frame_params_from_block(params, block):
-    # In these cases we are parsing the Block info
-    sitecode = LCOGT_domes_to_site_codes(params.get('siteid', None), params.get('encid', None), params.get('telid', None))
-    frame_params = { 'midpoint' : params.get('date_obs', None),
-                     'sitecode' : sitecode,
-                     'filter'   : params.get('filter_name', "B"),
-                     'frametype': Frame.SINGLE_FRAMETYPE,
-                     'block'    : block,
-                     'instrument': params.get('instrume', None),
-                     'filename'  : params.get('origname', None),
-                     'exptime'   : params.get('exptime', None),
-                 }
     return frame_params
 
 

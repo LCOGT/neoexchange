@@ -7,7 +7,7 @@ from django.utils.crypto import get_random_string
 import rollbar
 
 
-VERSION = '3.2.3'
+VERSION = '3.6.1-focus'
 
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
@@ -84,7 +84,7 @@ STATICFILES_FINDERS = (
     "django.contrib.staticfiles.finders.AppDirectoriesFinder"
  )
 
-MIDDLEWARE_CLASSES = (
+MIDDLEWARE = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -250,14 +250,13 @@ EMAIL_PORT          = 587
 DEFAULT_FROM_EMAIL  = 'NEO Exchange <neox@lco.global>'
 EMAIL_HOST_USER = os.environ.get('NEOX_EMAIL_USERNAME', '')
 EMAIL_HOST_PASSWORD = os.environ.get('NEOX_EMAIL_PASSWORD', '')
+EMAIL_MPC_RECIPIENTS = ['tlister@lco.global', 'jchatelain@lco.global']
 
 ####################
 # LCO Api settings #
 ####################
 
 THUMBNAIL_URL = 'https://thumbnails.lco.global/'
-
-CONFIGDB_API_URL = 'http://configdb.lco.gtn/'
 
 ARCHIVE_API_URL = 'https://archive-api.lco.global/'
 ARCHIVE_FRAMES_URL = ARCHIVE_API_URL + 'frames/'
@@ -271,6 +270,7 @@ PORTAL_REQUEST_URL = 'https://observe.lco.global/requests/'
 PORTAL_TOKEN_URL = PORTAL_API_URL + 'api-token-auth/'
 PORTAL_TOKEN = os.environ.get('VALHALLA_TOKEN', '')
 PORTAL_PROFILE_URL = PORTAL_API_URL + 'profile/'
+PORTAL_INSTRUMENTS_URL = PORTAL_API_URL + 'instruments/'
 
 ZOONIVERSE_USER = os.environ.get('ZOONIVERSE_USER', '')
 ZOONIVERSE_PASSWD = os.environ.get('ZOONIVERSE_PASSWD', '')
@@ -331,3 +331,4 @@ if not CURRENT_PATH.startswith('/app'):
     except ImportError as e:
         if "local_settings" not in str(e):
             raise e
+

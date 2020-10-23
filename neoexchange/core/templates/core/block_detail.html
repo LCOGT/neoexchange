@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load staticfiles basic_tags %}
+{% load static basic_tags %}
 
 {% block header %}
     {% if object.cadence %}
@@ -98,6 +98,9 @@
                 <div class="four columns">
                     <h5 class="section-title">{% if object.block_set.all%}Observation Blocks{% else%}Controls{% endif %}</h5>
                         {% if request.user.is_authenticated %}
+                        {% if object.active %}
+                        <a class="button warning" href="{% url 'block-cancel' object.pk %}" id='cancelblock'>Cancel Block</a>
+                        {% endif %}
                         {% if object.block_set.all|length > 1 %}
                         <a href="{% url 'view-timeline' object.id %}" class="button button-primary">Observation timeline</a>
                         {% endif %}
@@ -135,6 +138,9 @@
                                   <div class="block-control"><a href="{% url 'guidemovie' blk.pk %}">Guide Movie</a></div>
                                 {% endif %}
                               {% else %}
+                                  {% if blk.num_observed > 0 %}
+                                  <li class="block-control"><a href="{% url 'guidemovie' blk.pk %}">Preview Movie</a></li>
+                                  {% endif %}
                                   {% if blk.num_observed > 0 and blk.num_unique_red_frames < 10 and blk.num_candidates > 0 %}
                                   <li class="block-control"><a href="{% url 'block-ast' blk.id %}" id="analyse-btn">Analyse Images</a></li>
                                   {% if not blk.reported %}

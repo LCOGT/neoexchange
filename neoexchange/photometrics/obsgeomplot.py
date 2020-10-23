@@ -12,6 +12,7 @@ from matplotlib.ticker import FormatStrFormatter
 from django.core.files.storage import default_storage
 
 from astrometrics.ephem_subs import determine_darkness_times
+from photometrics.catalog_subs import sanitize_object_name
 from photometrics.lineticks import LineTicks
 
 logger = logging.getLogger(__name__)
@@ -22,13 +23,7 @@ def make_targetname(target_name):
     filenames
     """
 
-    start_idx = target_name.find('(')
-    end_idx = target_name.find(')')
-    if start_idx >= 0 and end_idx >= 0:
-        new_name = target_name[start_idx:end_idx+1].replace(' ', '').replace('(','').replace(')','')
-        target_name = target_name[0:start_idx] + new_name + target_name[end_idx+2:]
-    target_name = target_name.replace(" ", "_")
-    target_name = target_name.replace("/", "_")
+    target_name = sanitize_object_name(target_name)
 
     return target_name
 
@@ -138,7 +133,7 @@ def plot_helio_geo_dist(ephem, title=None, base_dir=''):
     # Generate the figure **without using pyplot**.
     fig = Figure()
     ax = fig.subplots()
-    dates =  ephem['datetime']
+    dates =  ephem['datetime'].datetime
     ax.plot(dates, ephem['r'], color=hel_color, linestyle='-')
     ax.plot(dates, ephem['delta'], color=geo_color, linestyle='-')
 
@@ -207,7 +202,7 @@ def plot_brightness(ephem, title=None, base_dir=''):
     ax = fig.subplots()
     ax2 = ax.twinx()
 
-    dates = ephem['datetime']
+    dates = ephem['datetime'].datetime
     line_mag = ax.plot(dates, ephem[mag_column], color=hel_color, linestyle='-')
     line_elong = ax2.plot(dates, ephem['elong'], color=geo_color, linestyle='-')
     lines = [line_mag[0], line_elong[0] ]
@@ -281,13 +276,13 @@ def determine_hours_up(ephem_ca, site_code, dbg=False):
 
     # Determine times of darkness for the site for the first night and use
     # the hour value of "sunset" as the boundary value of the night range
-    dark_start, dark_end = determine_darkness_times(site_code, dates[0])
+    dark_start, dark_end = determine_darkness_times(site_code, dates[0].datetime)
     dark_start = dark_start - timedelta(hours=2)
     dark_end = dark_end + timedelta(hours=2)
-    start_date = dates[0].replace(hour=dark_start.hour, minute=0, second=0, microsecond=0)
+    start_date = dates[0].datetime.replace(hour=dark_start.hour, minute=0, second=0, microsecond=0)
     if start_date > dark_start:
         start_date = start_date - timedelta(days=1)
-    end_date = dates[-1].replace(hour=dark_end.hour, minute=0, second=0, microsecond=0)
+    end_date = dates[-1].datetime.replace(hour=dark_end.hour, minute=0, second=0, microsecond=0)
     if dates[-1] < end_date:
         if dbg: print("Subtracting 1 day from", end_date,dates[-1])
         end_date -= timedelta(days=1)
@@ -306,7 +301,7 @@ def determine_hours_up(ephem_ca, site_code, dbg=False):
         vis_times = ''
         if len(visible_ephem) > 0:
             time_up = visible_ephem[-1]['datetime'] - visible_ephem[0]['datetime']
-            hours_up = time_up.total_seconds()/3600.0
+            hours_up = time_up.datetime.total_seconds()/3600.0
             vis_times = " ({}->{})".format(visible_ephem[0]['datetime'], visible_ephem[-1]['datetime'])
         hours_visible.append(hours_up)
         if dbg: print("For {}: {}->{}: {:.2f} hours{}".format(plot_date, date.strftime("%Y-%m-%d %H:%M"), end_dt.strftime("%Y-%m-%d %H:%M"), hours_up, vis_times))
@@ -331,7 +326,7 @@ def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, add_rate=T
         return ''
 
     first = ephem_ca[0]
-    dates = ephem_ca['datetime']
+    dates = ephem_ca['datetime'].datetime
     close_approach = dates[ephem_ca['delta'].argmin()]
     visible_dates, hours_visible = determine_hours_up(ephem_ca, site_code, dbg)
     mag_column = 'V'
@@ -434,7 +429,7 @@ def plot_uncertainty(ephem, title=None, base_dir=''):
     ca_color = '#4700c3'
 
     first = ephem[0]
-    dates = ephem['datetime']
+    dates = ephem['datetime'].datetime
 
     ca_idx = ephem['delta'].argmin()
     close_approach = None
@@ -445,7 +440,7 @@ def plot_uncertainty(ephem, title=None, base_dir=''):
     fig = Figure()
     ax = fig.subplots()
 
-    unc_line = ax.plot(ephem['datetime'], ephem['RSS_3sigma'], 'k-')
+    unc_line = ax.plot(dates, ephem['RSS_3sigma'], 'k-')
     unc_line = unc_line[0]
     ylim = ax.get_ylim()
     ax.set_ylim(0, ylim[1]*1.05)

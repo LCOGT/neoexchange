@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load staticfiles basic_tags %}
+{% load static basic_tags %}
 
 {% block css-content %}<link rel="stylesheet" href="{% static "core/css/forms.css" %}">{% endblock %}
 
@@ -9,7 +9,7 @@
 
 {% block extramenu %}
     <div class="headingleft">
-        <h1>Visibility for {{body.current_name}}</h1>
+        <h1>Visibility for <a href="{% url 'target' body.id %}">{{body.current_name}}</a></h1>
     </div>
 {% endblock%}
 
@@ -19,7 +19,7 @@
                 <div class="row">
                     <a class="button button-primary" href="{% url 'schedule-body' body.pk %}" id="schedule-obs">Schedule Observations</a>
                     <a class="button button-primary" href="{% url 'schedule-body-spectra' body.pk %}" id="schedule-spectro-obs">Schedule Spectroscopic Observations</a>
-                </div>                
+                </div>
                 <h5  class="section-title"><span class="">Right Ascension and Declination</span></h5>
                 <img src="{% url 'visibility-plot' pk=body.pk plot_type='radec' %}" id="id_radecplot">
                 <h5  class="section-title"><span class="">Heliocentric and Geocentric Distances</span></h5>

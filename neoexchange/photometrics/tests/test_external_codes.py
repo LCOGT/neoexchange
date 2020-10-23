@@ -40,6 +40,8 @@ class ExternalCodeUnitTest(TestCase):
         self.test_fits_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example-sbig-e10.fits'))
         self.test_fits_catalog = os.path.abspath(os.path.join('photometrics', 'tests', 'ldac_test_catalog.fits'))
 
+        self.test_GAIADR2_catalog = os.path.abspath(os.path.join('photometrics', 'tests', 'GAIA-DR2.cat'))
+
         self.test_fits_file_set1_1 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0098-e90.fits'))
         self.test_fits_file_set1_2 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0099-e90.fits'))
         self.test_fits_file_set1_3 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0100-e90.fits'))
@@ -59,11 +61,11 @@ class ExternalCodeUnitTest(TestCase):
         self.test_obs_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcobs_WSAE9A6.dat'))
 
         self.debug_print = False
-        self.maxDiff = None
+
+        self.remove = True
 
     def tearDown(self):
-        remove = True
-        if remove:
+        if self.remove:
             try:
                 files_to_remove = glob(os.path.join(self.test_dir, '*'))
                 for file_to_rm in files_to_remove:
@@ -130,7 +132,8 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
 
         self.assertEqual(expected_status, status)
 
-    @skipIf(find_binary("mtdlink") is None, "Could not find MTDLINK binary ('mtdlink') in PATH")
+#    @skipIf(find_binary("mtdlink") is None, "Could not find MTDLINK binary ('mtdlink') in PATH")
+    @skipIf(True, "Needs FITS files")
     def test_run_mtdlink_realfile(self):
 
         expected_status = 0
@@ -237,7 +240,8 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
         self.assertEqual(58, len(test_lines_file))
         self.assertEqual(expected_line1_file, test_lines_file[0].rstrip())
 
-    @skipIf(find_binary("mtdlink") is None, "Could not find MTDLINK binary ('mtdlink') in PATH")
+#    @skipIf(find_binary("mtdlink") is None, "Could not find MTDLINK binary ('mtdlink') in PATH")
+    @skipIf(True, "Needs FITS files")
     def test_run_mtdlink_realfile_different_set(self):
 
         expected_status = 0
@@ -252,13 +256,8 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
         test_fits_file_set2_5 = self.test_fits_file_set2_5
         test_fits_file_set2_6 = self.test_fits_file_set2_6
 
-        test_file_list = []
-        test_file_list.append(test_fits_file_set2_1)
-        test_file_list.append(test_fits_file_set2_2)
-        test_file_list.append(test_fits_file_set2_3)
-        test_file_list.append(test_fits_file_set2_4)
-        test_file_list.append(test_fits_file_set2_5)
-        test_file_list.append(test_fits_file_set2_6)
+        test_file_list = [test_fits_file_set2_1, test_fits_file_set2_2, test_fits_file_set2_3, test_fits_file_set2_4,
+                          test_fits_file_set2_5, test_fits_file_set2_6]
 
         param_file = 'mtdi.lcogt.param'
 
@@ -358,7 +357,91 @@ class TestSCAMPRunner(ExternalCodeUnitTest):
         status = setup_scamp_dir(self.source_dir, self.test_dir)
 
         self.assertEqual(expected_status, status)
-        self.assertTrue(os.path.exists(os.path.join(self.test_dir, 'scamp_neox.cfg')))
+        self.assertTrue(os.path.exists(os.path.join(self.test_dir, 'scamp_neox_gaiadr2.cfg')))
+
+    def test_scamp_options(self):
+
+        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat'
+
+        options = determine_scamp_options('foo.ldac')
+
+        self.assertEqual(expected_options, options)
+
+    def test_scamp_options_0m4_no_distortion(self):
+
+        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat'
+
+        options = determine_scamp_options('foo_0m4.ldac')
+
+        self.assertEqual(expected_options, options)
+
+    def test_scamp_options_2m0_no_distortion(self):
+
+        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat'
+
+        options = determine_scamp_options('foo_0m4.ldac')
+
+        self.assertEqual(expected_options, options)
+
+    def test_scamp_options_1m0_distortion(self):
+
+        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat -DISTORT_DEGREES 3 -PROJECTION_TYPE TPV'
+
+        options = determine_scamp_options('test1m0-fa##-date.ldac')
+
+        self.assertEqual(expected_options, options)
+
+    def test_scamp_options_1m0_distortion_4th_order(self):
+
+        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat -DISTORT_DEGREES 4 -PROJECTION_TYPE TPV'
+
+        options = determine_scamp_options('test1m0-fa##-date.ldac', distort_degrees=4)
+
+        self.assertEqual(expected_options, options)
+
+    def test_scamp_options_0m4_distortion_5th_order(self):
+
+        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat -DISTORT_DEGREES 5 -PROJECTION_TYPE TPV'
+
+        options = determine_scamp_options('test1m0-fa##-date.ldac', distort_degrees=5)
+
+        self.assertEqual(expected_options, options)
+
+    def test_scamp_options_1m0_no_distortion(self):
+
+        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat'
+
+        options = determine_scamp_options('test1m0-fa##-date.ldac', distort_degrees=1)
+
+        self.assertEqual(expected_options, options)
+
+    @skipIf(find_binary("scamp") is None, "Could not find SCAMP binary ('scamp') in PATH")
+    def test_run_scamp_realfile(self):
+        # Symlink in DR2 and LDAC catalogs into test directory
+        os.symlink(self.test_GAIADR2_catalog, os.path.join(self.test_dir,os.path.basename(self.test_GAIADR2_catalog)))
+        os.symlink(self.test_fits_catalog, os.path.join(self.test_dir,os.path.basename(self.test_fits_catalog)))
+
+        expected_status = 0
+        expected_line1 = 'EQUINOX =        2000.00000000 / Mean equinox'
+
+        status = run_scamp(self.source_dir, self.test_dir, self.test_fits_catalog)
+
+        self.assertEqual(expected_status, status)
+        if self.debug_print: print(glob(os.path.join(self.test_dir, '*')))
+
+        header_file = os.path.basename(self.test_fits_catalog).replace('fits', 'head')
+        output_header = os.path.join(self.test_dir, header_file)
+        self.assertTrue(os.path.exists(output_header), msg=output_header + ' is missing')
+        self.assertFalse(os.path.exists(self.test_fits_catalog.replace('fits', 'head')), msg=output_header + ' exists in the wrong place')
+
+        test_fh = open(output_header, 'r')
+        test_lines = test_fh.readlines()
+        test_fh.close()
+
+        # Expected value is 29 lines of FITS header
+        self.assertEqual(29, len(test_lines))
+        self.assertEqual(expected_line1, test_lines[3].rstrip())
+
 
 
 class TestSExtractorRunner(ExternalCodeUnitTest):
@@ -440,31 +523,6 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
         for config_file in expected_configs:
             test_file = os.path.join(self.test_dir, config_file)
             self.assertTrue(os.path.exists(test_file), msg=config_file + ' is missing')
-
-    @skipIf(find_binary("scamp") is None, "Could not find SCAMP binary ('scamp') in PATH")
-    def test_run_scamp_realfile(self):
-
-        expected_status = 0
-        expected_line1 = 'EQUINOX =        2000.00000000 / Mean equinox'
-
-        status = run_scamp(self.source_dir, self.test_dir, self.test_fits_catalog)
-
-        self.assertEqual(expected_status, status)
-        if self.debug_print:
-            print(glob(os.path.join(self.test_dir, '*')))
-
-        header_file = os.path.basename(self.test_fits_catalog).replace('fits', 'head')
-        output_header = os.path.join(self.test_dir, header_file)
-        self.assertTrue(os.path.exists(output_header), msg=output_header + ' is missing')
-        self.assertFalse(os.path.exists(self.test_fits_catalog.replace('fits', 'head')), msg=output_header + ' exists in the wrong place')
-
-        test_fh = open(output_header, 'r')
-        test_lines = test_fh.readlines()
-        test_fh.close()
-
-        # Expected value is 29 lines of FITS header
-        self.assertEqual(29, len(test_lines))
-        self.assertEqual(expected_line1, test_lines[3].rstrip())
 
 
 class TestFindOrbRunner(ExternalCodeUnitTest):
@@ -572,9 +630,34 @@ class TestUpdateFITSWCS(TestCase):
     def setUp(self):
 
         self.test_fits_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example-sbig-e10.fits'))
+        self.test_banzai_file = os.path.abspath(os.path.join('photometrics', 'tests', 'banzai_test_frame.fits'))
         self.test_scamp_headfile = os.path.abspath(os.path.join('photometrics', 'tests', 'example_scamp.head'))
         self.test_scamp_xml = os.path.join('photometrics', 'tests', 'example_scamp.xml')
+        self.test_externscamp_headfile = os.path.join('photometrics', 'tests', 'example_externcat_scamp.head')
+        self.test_externcat_xml = os.path.join('photometrics', 'tests', 'example_externcat_scamp.xml')
+        self.test_externscamp_TPV_headfile = os.path.join('photometrics', 'tests', 'example_externcat_scamp_tpv.head')
+        self.test_externcat_TPV_xml = os.path.join('photometrics', 'tests', 'example_externcat_scamp_tpv.xml')        
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+        self.fits_file_output = os.path.abspath(os.path.join(self.test_dir, 'example-sbig-e10_output.fits'))
+        self.banzai_file_output = os.path.abspath(os.path.join(self.test_dir, 'example-banzai-e92_output.fits'))
+
         self.precision = 7
+        self.debug_print = False
+        self.remove = True
+
+    def tearDown(self):
+        if self.remove:
+            try:
+                files_to_remove = glob(os.path.join(self.test_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.test_dir)
+            try:
+                os.rmdir(self.test_dir)
+                if self.debug_print: print("Removed", self.test_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.test_dir)
 
     def test_read_FITS_header(self):
 
@@ -601,82 +684,180 @@ class TestUpdateFITSWCS(TestCase):
 
         self.assertEqual(expected_radesys_value, radesys_value)
 
+    def test_update_FITS_WCS_missing_FITS(self):
+        expected_status = -1
+        expected_header = None
+
+        status, new_header = updateFITSWCS('wibble.fits', self.test_scamp_headfile, self.test_scamp_xml, self.fits_file_output)
+
+        self.assertEqual(expected_status, status)
+        self.assertEqual(expected_header, new_header)
+
+    def test_update_FITS_WCS_missing_scamp_xml(self):
+        expected_status = -2
+        expected_header = None
+
+        status, new_header = updateFITSWCS(self.test_fits_file, self.test_scamp_headfile, 'wibble.xml', self.fits_file_output)
+
+        self.assertEqual(expected_status, status)
+        self.assertEqual(expected_header, new_header)
+
+    def test_update_FITS_WCS_missing_scamp_head(self):
+        expected_status = -3
+        expected_header = None
+
+        status, new_header = updateFITSWCS(self.test_fits_file, 'wibble.head', self.test_scamp_xml, self.fits_file_output)
+
+        self.assertEqual(expected_status, status)
+        self.assertEqual(expected_header, new_header)
+
     def test_update_FITS_WCS(self):
 
-        fits_file_output = os.path.abspath(os.path.join('photometrics', 'tests', 'example-sbig-e10_output.fits'))
-        status = updateFITSWCS(self.test_fits_file, self.test_scamp_headfile, self.test_scamp_xml, fits_file_output)
+        status, new_header = updateFITSWCS(self.test_fits_file, self.test_scamp_headfile, self.test_scamp_xml, self.fits_file_output)
 
         self.assertEqual(status, 0)
 
-        expected_crval1 = 1.783286919001E+02
-        expected_crval2 = 1.169387882835E+01
-        expected_crpix1 = 2.047592457311E+03
-        expected_crpix2 = 2.048419571848E+03
-        expected_cd1_1 = 1.082433886779E-04
-        expected_cd1_2 = 6.824629998000E-07
-        expected_cd2_1 = 7.053875928440E-07
-        expected_cd2_2 = -1.082408809463E-04
-        expected_secpix = 0.389669
-        expected_wcssolvr = 'SCAMP-2.0.4'
-        expected_wcsrfcat = '<Vizier/aserver.cgi?ucac4@cds>'
-        expected_wcsimcat = 'ldac_test_catalog.fits'
-        expected_wcsnref = 606
-        expected_wcsmatch = 64
-        expected_wccattyp = 'UCAC4@CDS'
-        expected_wcsrdres = '0.21947/0.20434'
-        expected_wcsdelra = 37.175
-        expected_wcsdelde = -51.299
-        expected_wcserr = 0
-        expected_units = 'deg'
+        expected = {
+                     'crval1' : 1.783286919001E+02, 'crval2' : 1.169387882835E+01,
+                     'crpix1' : 2.047592457311E+03, 'crpix2' : 2.048419571848E+03,
+                     'cd1_1'  : 1.082433886779E-04,  'cd1_2' : 6.824629998000E-07,
+                     'cd2_1'  : 7.053875928440E-07,  'cd2_2' : -1.082408809463E-04,
+                     'secpix' : 0.389669,
+                     'wcssolvr' : 'SCAMP-2.0.4',
+                     'wcsrfcat' : '<Vizier/aserver.cgi?ucac4@cds>',
+                     'wcsimcat' : 'ldac_test_catalog.fits',
+                     'wcsnref' : 606, 'wcsmatch' : 64,
+                     'wccattyp' : 'UCAC4@CDS',
+                     'wcsrdres' : '0.21947/0.20434',
+                     'wcsdelra' : 37.1754196, 'wcsdelde' : -51.2994992,
+                     'wcserr' : 0,
+                     'cunit1' : 'deg', 'cunit2' : 'deg'
+                    }
 
         hdu_number = 0
-        header = fits.getheader(fits_file_output, hdu_number)
-        cunit1 = header['CUNIT1']
-        cunit2 = header['CUNIT2']
-        crval1 = header['CRVAL1']
-        crval2 = header['CRVAL2']
-        crpix1 = header['CRPIX1']
-        crpix2 = header['CRPIX2']
-        cd1_1 = header['CD1_1']
-        cd1_2 = header['CD1_2']
-        cd2_1 = header['CD2_1']
-        cd2_2 = header['CD2_2']
-        secpix   = header['SECPIX']
-        wcssolvr = header['WCSSOLVR']
-        wcsrfcat = header['WCSRFCAT']
-        wcsimcat = header['WCSIMCAT']
-        wcsnref  = header['WCSNREF']
-        wcsmatch = header['WCSMATCH']
-        wccattyp = header['WCCATTYP']
-        wcsrdres = header['WCSRDRES']
-        wcsdelra = header['WCSDELRA']
-        wcsdelde = header['WCSDELDE']
-        wcserr   = header['WCSERR']
+        header = fits.getheader(self.fits_file_output, hdu_number)
 
-        self.assertEqual(expected_units, cunit1)
-        self.assertEqual(expected_units, cunit2)
-        self.assertEqual(expected_crval1, crval1)
-        self.assertEqual(expected_crval2, crval2)
-        self.assertEqual(expected_crpix1, crpix1)
-        self.assertEqual(expected_crpix2, crpix2)
-        self.assertEqual(expected_cd1_1, cd1_1)
-        self.assertEqual(expected_cd1_2, cd1_2)
-        self.assertEqual(expected_cd2_1, cd2_1)
-        self.assertEqual(expected_cd2_2, cd2_2)
-        self.assertAlmostEqual(expected_secpix, secpix, self.precision)
-        self.assertEqual(expected_wcssolvr, wcssolvr)
-        self.assertEqual(expected_wcsrfcat, wcsrfcat)
-        self.assertEqual(expected_wcsimcat, wcsimcat)
-        self.assertEqual(expected_wcsnref, wcsnref)
-        self.assertEqual(expected_wcsmatch, wcsmatch)
-        self.assertEqual(expected_wccattyp, wccattyp)
-        self.assertEqual(expected_wcsrdres, wcsrdres)
-        self.assertAlmostEqual(expected_wcsdelra, wcsdelra, 3)
-        self.assertAlmostEqual(expected_wcsdelde, wcsdelde, 3)
-        self.assertEqual(expected_wcserr, wcserr)
+        for key in expected:
+            if type(expected[key]) == str:
+                self.assertEqual(expected[key], header[key], msg="Failure on {}".format(key))
+            else:
+                self.assertAlmostEqual(expected[key], header[key], self.precision, msg="Failure on {}".format(key))
 
-        # Clean up outputfile
-        os.remove(fits_file_output)
+    def test_update_FITS_WCS_GAIADR2(self):
+
+        status, new_header = updateFITSWCS(self.test_banzai_file, self.test_externscamp_headfile, self.test_externcat_xml, self.banzai_file_output)
+
+        self.assertEqual(status, 0)
+
+        expected = {
+                     'crval1' : 2.283330189100E+02, 'crval2' : 3.839546339622E+01,
+                     'crpix1' : 7.621032903029E+02, 'crpix2' : 5.105117960168E+02,
+                     'cd1_1'  : -1.024825024633E-06, 'cd1_2' : 3.162727554070E-04,
+                     'cd2_1'  : -3.162997037181E-04, 'cd2_2' : -1.075429228793E-06,
+                     'secpix' : 1.13853,
+                     'wcssolvr' : 'SCAMP-2.0.4',
+                     'wcsrfcat' : 'GAIA-DR2.cat',
+                     'wcsimcat' : 'tfn0m414-kb99-20180529-0202-e91_ldac.fits',
+                     'wcsnref' : 280, 'wcsmatch' : 23,
+                     'wccattyp' : 'GAIA-DR2@CDS',
+                     'wcsrdres' : '0.31469/0.30167', # ASTRRMS1*3600/ASTRRMS2*3600 from .head file
+                     'wcsdelra' : 44.619981558,
+                     'wcsdelde' : -37.1150613409,
+                     'wcserr' : 0,
+                     'cunit1' : 'deg',
+                     'cunit2' : 'deg'
+                    }
+
+        hdu_number = 0
+        header = fits.getheader(self.banzai_file_output, hdu_number)
+
+        for key in expected:
+            if type(expected[key]) == str:
+                self.assertEqual(expected[key], header[key], msg="Failure on {}".format(key))
+            else:
+                self.assertAlmostEqual(expected[key], header[key], self.precision, msg="Failure on {}".format(key))
+
+    def test_update_FITS_WCS_GAIADR2_new_header(self):
+
+        status, new_header = updateFITSWCS(self.test_banzai_file, self.test_externscamp_headfile, self.test_externcat_xml, self.banzai_file_output)
+
+        self.assertEqual(status, 0)
+
+        expected = {
+                     'crval1' : 2.283330189100E+02, 'crval2' : 3.839546339622E+01,
+                     'crpix1' : 7.621032903029E+02, 'crpix2' : 5.105117960168E+02,
+                     'cd1_1'  : -1.024825024633E-06, 'cd1_2' : 3.162727554070E-04,
+                     'cd2_1'  : -3.162997037181E-04, 'cd2_2' : -1.075429228793E-06,
+                     'secpix' : 1.13853,
+                     'wcssolvr' : 'SCAMP-2.0.4',
+                     'wcsrfcat' : 'GAIA-DR2.cat',
+                     'wcsimcat' : 'tfn0m414-kb99-20180529-0202-e91_ldac.fits',
+                     'wcsnref'  : 280, 'wcsmatch' : 23,
+                     'wccattyp' : 'GAIA-DR2@CDS',
+                     'wcsrdres' : '0.31469/0.30167', # ASTRRMS1*3600/ASTRRMS2*3600 from .head file
+                     'wcsdelra' : 44.619981558, 'wcsdelde' : -37.1150613409,
+                     'wcserr' : 0,
+                     'cunit1' : 'deg', 'cunit2' : 'deg'
+                    }
+
+        for key in expected:
+            if type(expected[key]) == str:
+                self.assertEqual(expected[key], new_header[key], msg="Failure on {}".format(key))
+            else:
+                self.assertAlmostEqual(expected[key], new_header[key], self.precision, msg="Failure on {}".format(key))
+
+    def test_update_FITS_WCS_GAIADR2_TPV_new_header(self):
+
+        status, new_header = updateFITSWCS(self.test_banzai_file, self.test_externscamp_TPV_headfile, self.test_externcat_TPV_xml, self.banzai_file_output)
+
+        self.assertEqual(status, 0)
+
+        expected = { 'crval1' : 2.283330189100E+02, 'crval2' : 3.839546339622E+01,
+                     'crpix1' : 7.620000000000E+02, 'crpix2' : 5.105000000000E+02,
+                     'cd1_1'  : -1.083049787920E-06, 'cd1_2' : 3.162568176201E-04,
+                     'cd2_1'  : -3.162568176201E-04, 'cd2_2' : -1.083049787920E-06,
+                     'pv1_0'  : -3.493949558753E-05,
+                     'pv1_1'  :  9.990845948728E-01,
+                     'pv1_2'  :  5.944161242327E-04,
+                     'pv1_4'  :  1.641289702411E-03,
+                     'pv1_5'  :  2.859739464233E-03,
+                     'pv1_6'  : -8.338448819528E-05,
+                     'pv1_7'  :  4.778142218367E-02,
+                     'pv1_8'  : -3.120516918032E-02,
+                     'pv1_9'  :  1.005901992058E-02,
+                     'pv1_10' : -1.475386390540E-02,
+                     'pv2_0'  :  1.238320321566E-04,
+                     'pv2_1'  :  9.992102543642E-01,
+                     'pv2_2'  :  2.505722546811E-04,
+                     'pv2_4'  : -1.613190458709E-03,
+                     'pv2_5'  : -3.765739615064E-03,
+                     'pv2_6'  : -6.917769250557E-03,
+                     'pv2_7'  :  2.493514752913E-02,
+                     'pv2_8'  :  1.947400823739E-02,
+                     'pv2_9'  :  2.222081573598E-02,
+                     'pv2_10' : -2.704416488002E-02,
+                     'secpix' : 1.13853,
+                     'wcssolvr' : 'SCAMP-2.0.4',
+                     'wcsrfcat' : 'GAIA-DR2_228.33+38.40_43.3488mx29.0321m.cat',
+                     'wcsimcat' : 'tfn0m414-kb99-20180529-0202-e91_ldac.fits',
+                     'wcsnref' : 280, 'wcsmatch' : 23, 'wccattyp' : 'GAIA-DR2@CDS',
+                     'wcsrdres' : '0.30803/0.34776', # ASTRRMS1*3600/ASTRRMS2*3600 from .head file
+                     'wcsdelra' : 44.619981558, 'wcsdelde' : -37.1150613409,
+                     'wcserr' : 0,
+                     'cunit1' : 'deg', 'cunit2' : 'deg',
+                     'ctype1' : 'RA---TPV', 'ctype2' : 'DEC--TPV'
+                    }
+        expected_pv_comment = 'TPV distortion coefficient'
+
+        for key in expected:
+            if type(expected[key]) == str:
+                self.assertEqual(expected[key], new_header[key], msg="Failure on {}".format(key))
+            else:
+                self.assertAlmostEqual(expected[key], new_header[key], self.precision, msg="Failure on {}".format(key))
+                if 'pv1_' in key or 'pv2_' in key:
+                    self.assertEqual(expected_pv_comment, new_header.comments[key])
+                else:
+                    self.assertNotEqual(expected_pv_comment, new_header.comments[key])
 
 
 class TestGetSCAMPXMLInfo(TestCase):
@@ -684,6 +865,8 @@ class TestGetSCAMPXMLInfo(TestCase):
     def setUp(self):
 
         self.test_scamp_xml = os.path.join('photometrics', 'tests', 'example_scamp.xml')
+        self.test_externcat_xml = os.path.join('photometrics', 'tests', 'example_externcat_scamp.xml')
+        self.test_externcat_tpv_xml = os.path.join('photometrics', 'tests', 'example_externcat_scamp_tpv.xml')
 
         self.maxDiff = None
 
@@ -704,6 +887,42 @@ class TestGetSCAMPXMLInfo(TestCase):
                 self.assertAlmostEqual(expected_results[key], results[key], 6)
             else:
                 self.assertEqual(expected_results[key], results[key])
+
+    def test_read_extern_cat(self):
+
+        expected_results = { 'num_refstars' : 280,
+                             'num_match'    : 23,
+                             'wcs_refcat'   : 'GAIA-DR2.cat',
+                             'wcs_cattype'  : 'GAIA-DR2@CDS',
+                             'wcs_imagecat' : 'tfn0m414-kb99-20180529-0202-e91_ldac.fits',
+                             'pixel_scale'  : 1.13853
+                           }
+
+        results = get_scamp_xml_info(self.test_externcat_xml)
+
+        for key in expected_results.keys():
+            if key == 'pixel_scale':
+                self.assertAlmostEqual(expected_results[key], results[key], 6)
+            else:
+                self.assertEqual(expected_results[key], results[key])
+
+    def test_read_extern_cat_TPV(self):
+
+        expected_results = { 'num_refstars' : 280,
+                             'num_match'    : 23,
+                             'wcs_refcat'   : 'GAIA-DR2_228.33+38.40_43.3488mx29.0321m.cat',
+                             'wcs_cattype'  : 'GAIA-DR2@CDS',
+                             'wcs_imagecat' : 'tfn0m414-kb99-20180529-0202-e91_ldac.fits',
+                             'pixel_scale'  : 1.13853
+                           }
+
+        results = get_scamp_xml_info(self.test_externcat_tpv_xml)
+
+        for key in expected_results.keys():
+            if key == 'pixel_scale':
+                self.assertAlmostEqual(expected_results[key], results[key], 6)
+            else:
+                self.assertEqual(expected_results[key], results[key], "Failure on " + key)
 
 
 class TestReadMTDSFile(TestCase):

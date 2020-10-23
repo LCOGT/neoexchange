@@ -466,7 +466,7 @@ li.dropdown-menu:after {
 body.compose #main { background-color:#e6e6e6; }
 body.view #main { background-color:#e6e6e6; }
 body.calendar, body.calendar #main { background-color:#202020; }
-body.page #main { display:block; overflow-y: auto; background-color:white; margin-top:50px;}
+body.page #main { display:block; overflow-y: auto; overflow: visible; background-color:white; margin-top:50px;}
 
 #extramenu:after {
     content: '';
@@ -629,7 +629,26 @@ body.view #main-holder #sidebar { box-shadow: none; }
 #main-holder.without-sidebar #main { display: block; }
 #main-holder.without-sidebar #sidebar { display: none; }
 
-.pagination {text-align: center; }
+.pagination {
+    text-align: center;
+    margin-top: 1em;}
+
+.pagination a {
+    text-decoration: none;
+    color: #fff;
+    }
+
+.pagination-number {
+    padding: 0.5em 0.8em;
+    border-radius: 2px;
+    color: #fff;
+    background-color: #6D85C7;}
+
+.pagination-number:hover,
+.page-current {
+    background-color: #3354AA;
+    padding: 0.2em 0.5em;
+    font-size: 2em}
 
 body.inbox #main table { margin: 0px; padding: 0px; background-color: white; width: 100%!important; border-collapse: collapse; table-layout: fixed; }
 body.inbox #main th, body.inbox #main td { text-align: left; padding: 8px; border: 0px; font-weight: normal; }
@@ -1158,3 +1177,13 @@ ul.candidate-controls li:hover {background-color:#eee; }
 
 .moon { fill:#D6D5C0; }
 .moonback { fill:black;stroke:#fff;stroke-width:1px; }
+
+.bk-root .slick-cell.selected {
+    background: white;
+    color: black;
+}
+
+.bk-root .slick-cell {
+    background: white;
+    color: silver;
+}
