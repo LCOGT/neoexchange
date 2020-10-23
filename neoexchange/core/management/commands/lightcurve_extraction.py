@@ -104,7 +104,7 @@ class Command(BaseCommand):
         ax0.errorbar(times, mags, yerr=mag_errs, marker='.', color=colors, linestyle=' ')
         ax1.errorbar(times, zps, yerr=zp_errs, marker='.', color=colors, linestyle=' ')
         ax0.invert_yaxis()
-        ax1.invert_yaxis()
+#        ax1.invert_yaxis()
         ax1.set_xlabel('Time')
         ax0.set_ylabel('Magnitude')
         ax1.set_ylabel('Magnitude')
