@@ -160,6 +160,7 @@ INSTALLED_APPS = (
 
 PIPELINES = {
     'dldata' : 'pipelines.downloaddata.DownloadProcessPipeline',
+    'ephem'  : 'pipelines.ephemeris.LongTermEphemeris',
 }
 
 REDIS_HOSTNAME = os.environ.get('REDIS_HOSTNAME','localhost')

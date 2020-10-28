@@ -11,7 +11,7 @@ from rest_framework.response import Response
 
 from core.models import PipelineProcess, AsyncProcess
 from core.tasks import run_pipeline, send_task
-from .forms import DLDataForm
+from .forms import DLDataForm, EphemDataForm
 from .serializers import AsyncProcessSerializer, PipelineProcessSerializer
 
 class PipelineSubmitView(FormView):
@@ -49,6 +49,12 @@ class DLCSubmitView(PipelineSubmitView):
     title = 'Download Data and Create Guider Movies'
     name = 'dldata'
     form_class = DLDataForm
+
+class EphemSubmitView(PipelineSubmitView):
+    title = 'Compute long term ephemeris'
+    name = 'ephem'
+    template_name = 'pipelines/pipeline_ephem_form.html'
+    form_class = EphemDataForm
 
 def overview(request):
     pipelines = AsyncProcess.objects.all()
