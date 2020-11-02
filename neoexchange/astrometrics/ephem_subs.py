@@ -276,6 +276,16 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
 
         logger.debug("Sun->Asteroid [x,y,z]=%s %s" % (pv[0:3], status))
         logger.debug("Sun->Asteroid [xdot,ydot,zdot]=%s %s" % (pv[3:6], status))
+        if status != 0:
+            err_mapping = { -1 : 'illegal JFORM',
+                            -2 : 'illegal E',
+                            -3 : 'illegal AORQ',
+                            -4 : 'illegal DM',
+                            -5 : 'numerical error'
+                          }
+            msg = "Position (sla_planel) error={} {}".format(status, err_mapping.get(status, 'Unknown error'))
+            logger.error(msg)
+            return {}
 
         for i, e_pos in enumerate(e_pos_hel):
             pos[i] = pv[i] - e_pos
