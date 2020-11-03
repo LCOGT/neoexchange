@@ -28,8 +28,8 @@ aplpy
 gunicorn[gevent]~=19.9.0
 rollbar
 sty
-awscli
-redis
+awscli==1.18.157
+redis==3.5.3
 dramatiq[watch,redis]
-django-dramatiq
-djangorestframework
+django-dramatiq==0.9.1
+djangorestframework==3.12.1
