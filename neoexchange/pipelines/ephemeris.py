@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 
 from django.forms import model_to_dict
 from dramatiq.middleware.time_limit import TimeLimitExceeded
@@ -16,11 +17,11 @@ class LongTermEphemeris(PipelineProcess):
     """
     short_name = 'ephem'
     inputs = {
-        'start': {
+        'start_date': {
             'default': None,
             'long_name': 'Start date of the ephemeris (YYYYMMDD)'
         },
-        'end': {
+        'end_date': {
             'default': None,
             'long_name': 'End date of the ephemeris (YYYYMMDD)'
         },
@@ -33,8 +34,8 @@ class LongTermEphemeris(PipelineProcess):
         proxy = True
 
     def do_pipeline(self, tmpdir, **inputs):
-        start_date = inputs.get('start')
-        end_date = inputs.get('end')
+        start_date = inputs.get('start_date')
+        end_date = inputs.get('end_date')
         body = inputs.get('body')
 
         try:
@@ -50,6 +51,7 @@ class LongTermEphemeris(PipelineProcess):
         self.log('Pipeline Completed')
         return
 
-    def compute(obj_id, start_date, end_date, site_code='500'):
-        orbelems = model_to_dict(Body.objects.get(name=obj_id))
-        visible_dates, emp_visible_dates, dark_and_up_time_all, max_alt_all = monitor_long_term_scheduling(site_code, orbelems, datetime.strptime(start_date, '%Y-%m-%d'), end_date, 1.0)
+    def compute(self, obj_id, start_date, end_date, site_code='V37'):
+        orbelems = model_to_dict(Body.objects.get(pk=obj_id))
+        date_range = end_date - start_date
+        visible_dates, emp_visible_dates, dark_and_up_time_all, max_alt_all = monitor_long_term_scheduling(site_code, orbelems, start_date, date_range.days, 1.0)

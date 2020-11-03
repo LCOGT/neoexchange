@@ -21,7 +21,7 @@ class DLDataForm(forms.Form):
 
 class EphemDataForm(forms.Form):
 
-    body = forms.MultipleChoiceField(label='Body', required=True)
+    body = forms.ChoiceField(label='Body', required=True)
     start_date = forms.DateField(label='Start', widget=forms.DateInput(attrs={'type': 'date'}))
     end_date = forms.DateField(label='End', widget=forms.DateInput(attrs={'type': 'date'}))
 

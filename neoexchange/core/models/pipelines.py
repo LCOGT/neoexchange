@@ -31,9 +31,10 @@ class DateTimeEncoder(json.JSONEncoder):
                 return obj.isoformat()
 
 def decode_datetime(empDict):
-   if 'obs_date' in empDict:
-      empDict["obs_date"] = dateutil.parser.parse(empDict["obs_date"])
-      return empDict
+    for date_key in ['obs_date', 'start_date', 'end_date']:
+        if date_key in empDict:
+            empDict[date_key] = dateutil.parser.parse(empDict[date_key])
+    return empDict
 
 class PipelineProcess(AsyncProcess):
     short_name = 'pipeline'
@@ -50,6 +51,9 @@ class PipelineProcess(AsyncProcess):
 
             # Do the actual work
             inputs = json.loads(self.inputs_json, object_hook=decode_datetime) if self.inputs_json else {}
+            if inputs is None or inputs == {}:
+                raise AsyncError("Error: empty inputs dictionary")
+
             try:
                 self.do_pipeline(tmpdir, **inputs)
             except Exception as e:
