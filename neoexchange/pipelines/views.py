@@ -57,7 +57,7 @@ class EphemSubmitView(PipelineSubmitView):
     form_class = EphemDataForm
 
 def overview(request):
-    pipelines = AsyncProcess.objects.all()
+    pipelines = AsyncProcess.objects.all().order_by('-terminal_timestamp')
     return render(request, 'pipelines/overview.html', {'pipelines' : pipelines})
 
 class AsyncStatusApi(ListAPIView):

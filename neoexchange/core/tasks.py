@@ -70,7 +70,6 @@ def run_process(process):
     """
     logger.info("running process")
     failure_message = None
-    process.run()
     try:
         process.run()
     except AsyncError as ex:

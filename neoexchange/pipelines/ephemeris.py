@@ -29,7 +29,7 @@ class LongTermEphemeris(PipelineProcess):
             'default' : None,
             'long_name' : 'Body id (PK) to compute the ephemeris for'
         }
-    }    
+    }
     class Meta:
         proxy = True
 
@@ -55,9 +55,14 @@ class LongTermEphemeris(PipelineProcess):
         body = Body.objects.get(pk=obj_id)
         orbelems = model_to_dict(body)
         date_range = end_date - start_date
+        self.log(f"Starting calculations for {body.current_name()}")
         visible_dates, emp_visible_dates, dark_and_up_time_all, max_alt_all = monitor_long_term_scheduling(site_code, orbelems, start_date, date_range.days, 1.0)
         self.log("Ephemeris for target {}".format(body.current_name()))
         self.log("Visible dates:")
+        logger.critical(visible_dates)
+        logger.critical(emp_visible_dates)
+        logger.critical(dark_and_up_time_all)
+        logger.critical(max_alt_all)
         for date in visible_dates:
             self.log(date)
         self.log("Start of night ephemeris entries for {}:".format(site_code))
