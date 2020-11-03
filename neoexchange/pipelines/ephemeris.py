@@ -52,6 +52,23 @@ class LongTermEphemeris(PipelineProcess):
         return
 
     def compute(self, obj_id, start_date, end_date, site_code='V37'):
-        orbelems = model_to_dict(Body.objects.get(pk=obj_id))
+        body = Body.objects.get(pk=obj_id)
+        orbelems = model_to_dict(body)
         date_range = end_date - start_date
         visible_dates, emp_visible_dates, dark_and_up_time_all, max_alt_all = monitor_long_term_scheduling(site_code, orbelems, start_date, date_range.days, 1.0)
+        self.log("Ephemeris for target {}".format(body.current_name()))
+        self.log("Visible dates:")
+        for date in visible_dates:
+            self.log(date)
+        self.log("Start of night ephemeris entries for {}:".format(site_code))
+        if len(emp_visible_dates) > 0:
+            self.log('  Date/Time (UTC)        RA              Dec        Mag     "/min    P.A.    Alt Moon Phase Moon Dist Moon Alt Score  H.A.')
+        for emp in emp_visible_dates:
+            self.log("  ".join(emp))
+        self.log("Maximum altitudes:")
+        for x, alt in enumerate(max_alt_all):
+            self.log("{}: {}".format(emp_visible_dates[x][0][0:10], alt))
+        self.log("Number of hours target is up and sky is dark:")
+        for x, time in enumerate(dark_and_up_time_all):
+            self.log("{}: {}".format(emp_visible_dates[x][0][0:10], round(time, 2)))
+        self.log("========================")
