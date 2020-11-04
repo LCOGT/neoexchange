@@ -228,7 +228,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', get_random_string(50, chars))
 DATABASES = {
     "default": {
         # Live DB
-        "ENGINE": "django.db.backends.mysql",
+        "ENGINE": os.environ.get('NEOX_DB_ENGINE', 'django.db.backends.mysql'),
         "NAME": os.environ.get('NEOX_DB_NAME', 'neoexchange'),
         "USER": os.environ.get('NEOX_DB_USER',''),
         "PASSWORD": os.environ.get('NEOX_DB_PASSWD',''),
