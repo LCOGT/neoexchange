@@ -233,12 +233,12 @@ DATABASES = {
         "USER": os.environ.get('NEOX_DB_USER',''),
         "PASSWORD": os.environ.get('NEOX_DB_PASSWD',''),
         "HOST": os.environ.get('NEOX_DB_HOST',''),
-        "OPTIONS": {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-        },
-
     }
 }
+
+# Set MySQL-specific options
+if DATABASES['default']['ENGINE'] =='django.db.backends.mysql':
+    DATABASES['default']['OPTIONS'] =  { 'init_command': "SET sql_mode='STRICT_TRANS_TABLES'" }
 
 ##################
 # Email settings #
@@ -332,3 +332,4 @@ if not CURRENT_PATH.startswith('/app'):
         if "local_settings" not in str(e):
             raise e
 
+print(DATABASES)
