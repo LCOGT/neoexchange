@@ -440,9 +440,9 @@ def lin_vis_plot(body):
         current time, the sun and the moon. Contains a help overview for first time viewers.
     """
 
-    site_code = ['LSC', 'CPT', 'COJ', 'ELP', 'TFN', 'OGG']
-    site_list = ['W85', 'K91', 'Q63', 'V37', 'Z21', 'F65']
-    color_list = ['darkviolet', 'forestgreen', 'saddlebrown', 'coral', 'darkslategray', 'dodgerblue']
+    site_code = ['LSC', 'CPT', 'COJ', 'ELP', 'TFN', 'OGG', 'UCMJO']
+    site_list = ['W85', 'K91', 'Q63', 'V37', 'Z21', 'F65', '474']
+    color_list = ['darkviolet', 'forestgreen', 'saddlebrown', 'coral', 'darkslategray', 'dodgerblue', 'black']
     d = datetime.utcnow()
     step_size = '30 m'
     alt_limit = 30
