@@ -42,7 +42,9 @@ SITES = (('1M0', '------------ Any 1.0m ------------'),
          ('Z21', 'TFN 0.4m - Z17,Z21; (Tenerife, Spain)'),
          ('2M0', '------------ Any 2.0m ------------'),
          ('E10', 'FTS 2.0m - E10; (Siding Spring, Aust.)'),
-         ('F65', 'FTN 2.0m - F65; (Maui, Hawaii )'))
+         ('F65', 'FTN 2.0m - F65; (Maui, Hawaii )'),
+         ('non', '------------ Non LCO  ------------'),
+         ('474', 'Mt John 1.8m - 474 (Mt John, NZ)'))
 
 
 SPECTRO_SITES = (('F65-FLOYDS', 'Maui, Hawaii (FTN - F65)'),
@@ -61,11 +63,36 @@ BIN_MODES = (('full_chip', 'Full Chip, 1x1'),
              ('2k_2x2', 'Central 2k, 2x2'))
 
 
+class SiteSelectWidget(forms.Select):
+    """
+    Subclass of Django's select widget that allows disabling options.
+    """
+    def __init__(self, *args, **kwargs):
+        self._disabled_choices = []
+        super(forms.Select, self).__init__(*args, **kwargs)
+
+    @property
+    def disabled_choices(self):
+        return self._disabled_choices
+
+    @disabled_choices.setter
+    def disabled_choices(self, other):
+        self._disabled_choices = other
+
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        option_dict = super(forms.Select, self).create_option(
+            name, value, label, selected, index, subindex=subindex, attrs=attrs
+        )
+        if value in self.disabled_choices:
+            option_dict['attrs']['disabled'] = 'disabled'
+        return option_dict
+
+
 class EphemQuery(forms.Form):
 
     target = forms.CharField(label="Enter target name...", max_length=14, required=True, widget=forms.TextInput(attrs={'size': '10'}),
                              error_messages={'required': _(u'Target name is required')})
-    site_code = forms.ChoiceField(required=True, choices=SITES)
+    site_code = forms.ChoiceField(required=True, choices=SITES, widget=SiteSelectWidget)
     utc_date = forms.DateField(input_formats=['%Y-%m-%d', ], initial=date.today, required=True, widget=forms.TextInput(attrs={'size': '10'}),
                                error_messages={'required': _(u'UTC date is required')})
     alt_limit = forms.FloatField(initial=30.0, required=True, widget=forms.TextInput(attrs={'size': '4'}))
@@ -84,6 +111,9 @@ class EphemQuery(forms.Form):
             else:
                 raise forms.ValidationError("Multiple objects found.")
 
+    def __init__(self, *args, **kwargs):
+        super(EphemQuery, self).__init__(*args, **kwargs)
+        self.fields['site_code'].widget.disabled_choices = ['non']
 
 class ScheduleForm(forms.Form):
     proposal_code = forms.ChoiceField(required=True)

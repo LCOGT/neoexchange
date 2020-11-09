@@ -142,8 +142,11 @@ class EphemQueryFormTest(TestCase):
         self.assertIn('value="W89"', form.as_p())
         self.assertIn('ELP 0.4m - V38; (McDonald, Texas)', form.as_p())
         self.assertIn('value="V38"', form.as_p())
-        self.assertIn('CPT 0.4m - L09; (Sutherland, S. Africa)', form.as_p())
-        self.assertIn('value="L09"', form.as_p())
+        self.assertIn('------------ Non LCO  ------------', form.as_p())
+        self.assertIn('value="non"', form.as_p())
+        self.assertIn('disabled="disabled"', form.as_p())
+        self.assertIn('Mt John 1.8m - 474 (Mt John, NZ)', form.as_p())
+        self.assertIn('value="474"', form.as_p())
 
     def test_form_handles_save_with_long_name(self):
         form = EphemQuery(data={'target' : 'P/2016 BA141',
