@@ -117,7 +117,7 @@ class EphemQuery(forms.Form):
 
 class ScheduleForm(forms.Form):
     proposal_code = forms.ChoiceField(required=True)
-    site_code = forms.ChoiceField(required=True, choices=SITES)
+    site_code = forms.ChoiceField(required=True, choices=SITES, widget=SiteSelectWidget)
     utc_date = forms.DateField(input_formats=['%Y-%m-%d', ], initial=date.today, required=True, widget=forms.TextInput(attrs={'size': '10'}),
                                error_messages={'required': _(u'UTC date is required')})
     too_mode = forms.BooleanField(initial=False, required=False)
@@ -134,11 +134,12 @@ class ScheduleForm(forms.Form):
         proposals = Proposal.objects.filter(active=True)
         proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
         self.fields['proposal_code'].choices = proposal_choices
+        self.fields['site_code'].widget.disabled_choices = ['non', '474']
 
 
 class ScheduleCadenceForm(forms.Form):
     proposal_code = forms.ChoiceField(required=True, widget=forms.Select(attrs={'id': 'id_proposal_code_cad', }))
-    site_code = forms.ChoiceField(required=True, choices=SITES, widget=forms.Select(attrs={'id': 'id_site_code_cad', }))
+    site_code = forms.ChoiceField(required=True, choices=SITES, widget=SiteSelectWidget(attrs={'id': 'id_site_code_cad', }))
     start_time = forms.DateTimeField(input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M'],
                                      initial=datetime.today, required=True, error_messages={'required': _(u'UTC start date is required')})
     end_time = forms.DateTimeField(input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M'],
@@ -184,6 +185,7 @@ class ScheduleCadenceForm(forms.Form):
         proposals = Proposal.objects.filter(active=True)
         proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
         self.fields['proposal_code'].choices = proposal_choices
+        self.fields['site_code'].widget.disabled_choices = ['non', '474']
 
 
 class ScheduleBlockForm(forms.Form):

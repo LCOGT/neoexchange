@@ -248,6 +248,8 @@ class TestScheduleForm(TestCase):
         self.assertIn('value="V38"', form.as_p())
         self.assertIn('CPT 0.4m - L09; (Sutherland, S. Africa)', form.as_p())
         self.assertIn('value="L09"', form.as_p())
+        self.assertIn('value="non" disabled="disabled"', form.as_p())
+        self.assertIn('value="474" disabled="disabled"', form.as_p())
 
     def test_sched_form_hides_inactive_proposals(self):
         form = ScheduleForm()
@@ -348,6 +350,8 @@ class TestScheduleCadenceForm(TestCase):
         self.assertIn('value="V38"', form.as_p())
         self.assertIn('CPT 0.4m - L09; (Sutherland, S. Africa)', form.as_p())
         self.assertIn('value="L09"', form.as_p())
+        self.assertIn('value="non" disabled="disabled"', form.as_p())
+        self.assertIn('value="474" disabled="disabled"', form.as_p())
 
     def test_sched_form_hides_inactive_proposals(self):
         form = ScheduleCadenceForm()
