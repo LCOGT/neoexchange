@@ -641,8 +641,10 @@ class ScheduleObservations(FunctionalTest):
         exp_num_box = self.get_item_input_box_and_clear('id_exp_count')
         exp_num_box.send_keys('10')
         sa_checkbox = self.get_item_input_box('id_solar_analog')
-        if sa_checkbox.is_selected(): # If checkbox is ticked
-            sa_checkbox.click() # to untick it
+        if sa_checkbox.is_selected():  # If checkbox is ticked
+            sa_checkbox.click()  # to untick it
+        tc_checkbox = self.get_item_input_box('id_too_mode')
+        self.assertEqual(tc_checkbox.is_selected(), False)
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_id('verify-scheduling').click()
 

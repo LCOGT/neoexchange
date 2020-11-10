@@ -115,6 +115,7 @@ class EphemQuery(forms.Form):
         super(EphemQuery, self).__init__(*args, **kwargs)
         self.fields['site_code'].widget.disabled_choices = ['non']
 
+
 class ScheduleForm(forms.Form):
     proposal_code = forms.ChoiceField(required=True)
     site_code = forms.ChoiceField(required=True, choices=SITES, widget=SiteSelectWidget)
@@ -346,6 +347,7 @@ class ScheduleSpectraForm(forms.Form):
     calibs = forms.ChoiceField(required=True, choices=CALIBS)
     solar_analog = forms.BooleanField(initial=True, required=False)
     spectroscopy = forms.BooleanField(initial=True, widget=forms.HiddenInput(), required=False)
+    too_mode = forms.BooleanField(initial=False, required=False)
 
     def clean_utc_date(self):
         start = self.cleaned_data['utc_date']

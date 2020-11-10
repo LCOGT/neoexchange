@@ -938,7 +938,7 @@ class ScheduleParametersSpectra(LoginRequiredMixin, LookUpBodyMixin, FormView):
     def post(self, request, *args, **kwargs):
         form = ScheduleSpectraForm(request.POST)
         if form.is_valid():
-            return self.form_valid(form,request)
+            return self.form_valid(form, request)
         else:
             return self.render_to_response(self.get_context_data(form=form, body=self.body))
 

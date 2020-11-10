@@ -6,6 +6,7 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ### 3.6.2
 * Add support for Mt John observatory (MPC site code 474) for ephemeris computation. (Issue #499)
+* Add a Time Critical option for scheduling spectroscopy (Issue #500)
 * Fix a rare case when position computation using `sla_planel()` fails (Issue #498)
 
 ### 3.6.1
