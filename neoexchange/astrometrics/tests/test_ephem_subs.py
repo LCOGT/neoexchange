@@ -2359,6 +2359,30 @@ class TestGetSitePos(TestCase):
         self.assertNotEqual(site_lat, 0.0)
         self.assertNotEqual(site_hgt, 0.0)
 
+    def test_mtjohn_by_code(self):
+        site_code = '474'
+
+        expected_site_name = 'MOA 1.8m at Mount John Observatory'
+
+        site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+
+        self.assertEqual(expected_site_name, site_name)
+        self.assertNotEqual(site_long, 0.0)
+        self.assertNotEqual(site_lat, 0.0)
+        self.assertNotEqual(site_hgt, 0.0)
+
+    def test_mtjohn_by_name(self):
+        site_code = 'NZTL-DOMA-1M8A'
+
+        expected_site_name = 'MOA 1.8m at Mount John Observatory'
+
+        site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+
+        self.assertEqual(expected_site_name, site_name)
+        self.assertNotEqual(site_long, 0.0)
+        self.assertNotEqual(site_lat, 0.0)
+        self.assertNotEqual(site_hgt, 0.0)
+
 
 class TestDetermineSitesToSchedule(TestCase):
 
