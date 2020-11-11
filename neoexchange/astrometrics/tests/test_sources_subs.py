@@ -4483,7 +4483,7 @@ class TestMakeconfiguration(TestCase):
 
         expected_configuration = {
                           'type': 'REPEAT_EXPOSE',
-                          'repeat_duration': 750,
+                          'repeat_duration': 551,
                           'instrument_type': '2M0-SCICAM-MUSCAT',
                           'target': {
                             'type': 'ICRS',

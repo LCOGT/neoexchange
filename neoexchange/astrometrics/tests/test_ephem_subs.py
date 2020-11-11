@@ -1682,7 +1682,7 @@ class TestDetermineSlotLength(TestCase):
 
 class TestGetSiteCamParams(TestCase):
 
-    twom_setup_overhead = 240.0
+    twom_setup_overhead = 180.0
     twom_exp_overhead = 19.0
     twom_fov = radians(10.0/60.0)
     twom_muscat_fov = radians(9.1/60.0)
@@ -1958,7 +1958,7 @@ class TestDetermineExpTimeCount(TestCase):
         mag = 17.58
 
         expected_exptime = 1.0
-        expected_expcount = 32
+        expected_expcount = 35
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
 
@@ -2018,7 +2018,7 @@ class TestDetermineSpectroSlotLength(TestCase):
         exp_time = 180.0
         calibs = 'none'
 
-        expected_slot_length = 612.0
+        expected_slot_length = 552.0
 
         slot_length = determine_spectro_slot_length(exp_time, calibs)
 
@@ -2029,7 +2029,7 @@ class TestDetermineSpectroSlotLength(TestCase):
         exp_time = 180.0
         calibs = 'before'
 
-        expected_slot_length = 935.0
+        expected_slot_length = 875.0
 
         slot_length = determine_spectro_slot_length(exp_time, calibs)
 
@@ -2040,7 +2040,7 @@ class TestDetermineSpectroSlotLength(TestCase):
         exp_time = 180.0
         calibs = 'after'
 
-        expected_slot_length = 935.0
+        expected_slot_length = 875.0
 
         slot_length = determine_spectro_slot_length(exp_time, calibs)
 
@@ -2051,7 +2051,7 @@ class TestDetermineSpectroSlotLength(TestCase):
         exp_time = 180.0
         calibs = 'both'
 
-        expected_slot_length = 1258.0
+        expected_slot_length = 1198.0
 
         slot_length = determine_spectro_slot_length(exp_time, calibs)
 
@@ -2062,7 +2062,7 @@ class TestDetermineSpectroSlotLength(TestCase):
         exp_time = 180.0
         calibs = 'BoTH'
 
-        expected_slot_length = 1258.0
+        expected_slot_length = 1198.0
 
         slot_length = determine_spectro_slot_length(exp_time, calibs)
 
@@ -2074,7 +2074,7 @@ class TestDetermineSpectroSlotLength(TestCase):
         calibs = 'none'
         num_exp = 10
 
-        expected_slot_length = 961.0
+        expected_slot_length = 901.0
 
         slot_length = determine_spectro_slot_length(exp_time, calibs, num_exp)
 
@@ -2086,7 +2086,7 @@ class TestDetermineSpectroSlotLength(TestCase):
         calibs = 'after'
         num_exp = 10
 
-        expected_slot_length = 1284.0
+        expected_slot_length = 1224.0
 
         slot_length = determine_spectro_slot_length(exp_time, calibs, num_exp)
 
@@ -2098,7 +2098,7 @@ class TestDetermineSpectroSlotLength(TestCase):
         calibs = 'both'
         num_exp = 10
 
-        expected_slot_length = 1607.0
+        expected_slot_length = 1547.0
 
         slot_length = determine_spectro_slot_length(exp_time, calibs, num_exp)
 

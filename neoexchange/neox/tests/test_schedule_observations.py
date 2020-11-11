@@ -641,14 +641,14 @@ class ScheduleObservations(FunctionalTest):
         exp_num_box = self.get_item_input_box_and_clear('id_exp_count')
         exp_num_box.send_keys('10')
         sa_checkbox = self.get_item_input_box('id_solar_analog')
-        if sa_checkbox.is_selected(): # If checkbox is ticked
-            sa_checkbox.click() # to untick it
+        if sa_checkbox.is_selected():  # If checkbox is ticked
+            sa_checkbox.click()  # to untick it
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_id('verify-scheduling').click()
 
         # The page refreshes and a series of values for the Spectroscopic observations
         slot_length = self.browser.find_element_by_id('id_slot_length_row').find_element_by_class_name('kv-value').text
-        self.assertIn('27 mins', slot_length)
+        self.assertIn('26 mins', slot_length)
 
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
@@ -1040,15 +1040,15 @@ class ScheduleObservations(FunctionalTest):
         self.assertIn('9.40', magnitude)
         speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
         self.assertIn('2.35 "/min', speed)
-        self.assertIn('0.61 "/exp', speed)
+        self.assertIn('1.19 "/exp', speed)
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('6', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
         self.assertIn('4', num_exp)
         gp_exp_length = self.browser.find_element_by_id('id_gp_explength').get_attribute('value')
-        self.assertIn('15.5', gp_exp_length)
+        self.assertIn('30.5', gp_exp_length)
         rp_exp_length = self.browser.find_element_by_id('id_rp_explength').get_attribute('value')
-        self.assertIn('15.5', rp_exp_length)
+        self.assertIn('30.5', rp_exp_length)
         moon_sep = self.browser.find_element_by_id('id_moon_row').find_element_by_class_name('kv-value').text
         self.assertIn('109.2', moon_sep)
 
@@ -1063,11 +1063,11 @@ class ScheduleObservations(FunctionalTest):
         speed_warn = self.browser.find_element_by_class_name('warning').text
         self.assertIn('29.32 "/exp', speed_warn)
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
-        self.assertIn('17.0', slot_length)
+        self.assertIn('16.0', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
         self.assertIn('1', num_exp)
         gp_exp_length = self.browser.find_element_by_id('id_gp_explength').get_attribute('value')
-        self.assertIn('15.5', gp_exp_length)
+        self.assertIn('30.5', gp_exp_length)
         ip_exp_length = self.browser.find_element_by_id('id_ip_explength').get_attribute('value')
         self.assertIn('750', ip_exp_length)
 

@@ -144,7 +144,7 @@ class ScheduleObservations(FunctionalTest):
         vis = self.browser.find_element_by_id('id_visibility_row').find_element_by_class_name('kv-value').text
         self.assertIn('7.6 hrs / 87°', vis)
         slot_length = self.browser.find_element_by_id('id_slot_length_row').find_element_by_class_name('kv-value').text
-        self.assertIn('21', slot_length)
+        self.assertIn('20', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
         self.assertIn('1', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
@@ -284,7 +284,7 @@ class ScheduleObservations(FunctionalTest):
         vis = self.browser.find_element_by_id('id_visibility_row').find_element_by_class_name('kv-value').text
         self.assertIn('2.8 hrs / 40°', vis)
         slot_length = self.browser.find_element_by_id('id_slot_length_row').find_element_by_class_name('kv-value').text
-        self.assertIn('21', slot_length)
+        self.assertIn('20', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
         self.assertIn('1', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
@@ -303,7 +303,7 @@ class ScheduleObservations(FunctionalTest):
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
         self.assertIn('25', exp_length)
         slot_length = self.browser.find_element_by_id('id_slot_length_row').find_element_by_class_name('kv-value').text
-        self.assertIn('19', slot_length)
+        self.assertIn('18', slot_length)
         snr = self.browser.find_element_by_id('id_snr_row').find_element_by_class_name('kv-value').text
         self.assertIn('770.9', snr)
 
