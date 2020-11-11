@@ -263,8 +263,8 @@ class Body(models.Model):
         else:
             return False
 
-    def compute_position(self):
-        d = datetime.utcnow()
+    def compute_position(self, d=None):
+        d = d or datetime.utcnow()
         if self.epochofel:
             orbelems = model_to_dict(self)
             sitecode = '500'

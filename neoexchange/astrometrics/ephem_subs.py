@@ -276,6 +276,16 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
 
         logger.debug("Sun->Asteroid [x,y,z]=%s %s" % (pv[0:3], status))
         logger.debug("Sun->Asteroid [xdot,ydot,zdot]=%s %s" % (pv[3:6], status))
+        if status != 0:
+            err_mapping = { -1 : 'illegal JFORM',
+                            -2 : 'illegal E',
+                            -3 : 'illegal AORQ',
+                            -4 : 'illegal DM',
+                            -5 : 'numerical error'
+                          }
+            msg = "Position (sla_planel) error={} {}".format(status, err_mapping.get(status, 'Unknown error'))
+            logger.error(msg)
+            return {}
 
         for i, e_pos in enumerate(e_pos_hel):
             pos[i] = pv[i] - e_pos
@@ -1555,6 +1565,13 @@ def get_sitepos(site_code, dbg=False):
         (site_long, status) = S.sla_daf2r(20, 48, 35.54)
         site_hgt = 1804.0
         site_name = 'LCO CPT Node 0m4a Aqawan A at Sutherland'
+    elif site_code == 'NZTL-DOMA-1M8A' or site_code == '474':
+        # Latitude, longitude from https://www.canterbury.ac.nz/science/facilities/field-and-research-stations/mount-john-observatory/facilities/
+        (site_lat, status) = S.sla_daf2r(43, 59, 14.6)
+        site_lat = -site_lat   # Southern hemisphere !
+        (site_long, status) = S.sla_daf2r(170, 27, 53.9)
+        site_hgt = 1027.1
+        site_name = 'MOA 1.8m at Mount John Observatory'
     elif site_code == '500' or site_code == '1M0' or site_code == '0M4' or site_code == '2M0':
         site_lat = 0.0
         site_long = 0.0

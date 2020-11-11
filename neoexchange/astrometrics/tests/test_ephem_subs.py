@@ -598,6 +598,49 @@ class TestComputeEphemerides(TestCase):
 
         self.assertEqual({}, emp_line)
 
+    def test_numerical_error(self):
+        orbelems = {
+                     'provisional_name': 'P10Ee5V',
+                     'provisional_packed': '',
+                     'name': 'C/2017 U1',
+                     'origin': 'M',
+                     'source_type': 'C',
+                     'source_subtype_1': 'H',
+                     'source_subtype_2': 'DN',
+                     'elements_type': 'MPC_COMET',
+                     'active': False,
+                     'fast_moving': False,
+                     'urgency': None,
+                     'epochofel': datetime(2017, 10, 20, 0, 0),
+                     'orbit_rms': 99.0,
+                     'orbinc': 122.48309,
+                     'longascnode': 24.60837,
+                     'argofperih': 241.31094,
+                     'eccentricity': 1.1938645,
+                     'meandist': None,
+                     'meananom': 0.0,
+                     'perihdist': 0.25316879,
+                     'epochofperih': datetime(2017, 9, 9, 10, 45, 27),
+                     'abs_mag': 22.2,
+                     'slope': 4.0,
+                     'score': 5,
+                     'discovery_date': datetime(2017, 10, 19, 7, 12),
+                     'num_obs': 57,
+                     'arc_length': 13.0,
+                     'not_seen': 0.908,
+                     'updated': True,
+                     'ingest': datetime(2017, 10, 19, 14, 20, 8),
+                     'update_time': datetime(2017, 10, 27, 17, 5, 51)}
+
+        start = datetime(2020, 11, 2, 9, 30)
+        site_code = 'W85'
+
+        try:
+            emp_line = compute_ephem(start, orbelems, site_code, perturb=False)
+            self.assertEqual({}, emp_line)
+        except ValueError:
+            self.fail("compute_ephem raised ValueError unexpectedly")
+
 
 class TestDarkAndObjectUp(TestCase):
 
@@ -2319,6 +2362,30 @@ class TestGetSitePos(TestCase):
         site_code = 'ELP-DOMB'
 
         expected_site_name = 'LCO ELP Node 1m0 Dome B at McDonald Observatory'
+
+        site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+
+        self.assertEqual(expected_site_name, site_name)
+        self.assertNotEqual(site_long, 0.0)
+        self.assertNotEqual(site_lat, 0.0)
+        self.assertNotEqual(site_hgt, 0.0)
+
+    def test_mtjohn_by_code(self):
+        site_code = '474'
+
+        expected_site_name = 'MOA 1.8m at Mount John Observatory'
+
+        site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+
+        self.assertEqual(expected_site_name, site_name)
+        self.assertNotEqual(site_long, 0.0)
+        self.assertNotEqual(site_lat, 0.0)
+        self.assertNotEqual(site_hgt, 0.0)
+
+    def test_mtjohn_by_name(self):
+        site_code = 'NZTL-DOMA-1M8A'
+
+        expected_site_name = 'MOA 1.8m at Mount John Observatory'
 
         site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
 
