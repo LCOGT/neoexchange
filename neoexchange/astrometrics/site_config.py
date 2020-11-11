@@ -30,7 +30,7 @@ molecule_overhead = {   'filter_change'     : 2.0,                         # tim
 
 # Per-Telescope overheads (s)
 tel_overhead = { 'onem_setup_overhead'      : 90.0,                  # front padding 
-                 'twom_setup_overhead'      : 240.0,                 # front padding
+                 'twom_setup_overhead'      : 180.0,                 # front padding
                  'point4m_setup_overhead'   : 90.0,                  # front padding
                }
 

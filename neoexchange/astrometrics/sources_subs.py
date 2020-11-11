@@ -1606,7 +1606,18 @@ def make_config(params, filter_list):
         'instrument_configs': []
     }
     if params['exp_type'] == 'REPEAT_EXPOSE':
-        conf['repeat_duration'] = params['slot_length']
+        # Remove overhead from slot_length so repeat_exposure matches predicted frames.
+        # This will allow a 2 hour slot to fit within a 2 hour window.
+        single_mol_overhead = cfg.molecule_overhead['filter_change'] + cfg.molecule_overhead['per_molecule_time']
+        if '2M0' in params['instrument']:
+            overhead = cfg.tel_overhead['twom_setup_overhead']
+        elif '0M4' in params['instrument']:
+            overhead = cfg.tel_overhead['point4m_setup_overhead']
+        elif '1M0' in params['instrument']:
+            overhead = cfg.tel_overhead['onem_setup_overhead']
+        else:
+            overhead = 0
+        conf['repeat_duration'] = params['slot_length'] - overhead - single_mol_overhead - 1
     for filt in filter_list:
         if params['exp_type'] == 'REPEAT_EXPOSE' and len(filter_list) == 1:
             exp_count = 1
@@ -1786,8 +1797,8 @@ def make_many(params, ipp_value, request, cal_request):
 
 def make_proposal(params):
     proposal = {
-                 'proposal_id' : params['proposal_id'],
-                 'user_id' : params['user_id']
+                 'proposal_id': params['proposal_id'],
+                 'user_id': params['user_id']
                }
     return proposal
 
