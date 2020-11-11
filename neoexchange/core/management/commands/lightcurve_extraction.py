@@ -470,7 +470,7 @@ class Command(BaseCommand):
                     data_path = make_data_dir(out_path, model_to_dict(frames_all_zp[0]))
                     frames_list = [os.path.join(data_path, f.filename) for f in frames_all_zp]
                     if not options['nogif']:
-                        movie_file = make_gif(frames_list, init_fr=100, center=3, out_path=out_path, plot_source=True,
+                        movie_file = make_gif(frames_list, sort=False, init_fr=100, center=3, out_path=out_path, plot_source=True,
                                               target_data=frame_data, show_reticle=True, progress=True)
                         if "WARNING" not in movie_file:
                             output_file_list.append('{},{}'.format(movie_file, data_path.lstrip(out_path)))

@@ -26,6 +26,7 @@ from core.models.frame import Frame
 
 logger = logging.getLogger(__name__)
 
+
 class SourceMeasurement(models.Model):
     """Class to represent the measurements (RA, Dec, Magnitude and errors)
     performed on a Frame (having site code, date/time etc.).

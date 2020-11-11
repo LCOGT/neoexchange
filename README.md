@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.7.0
+Add MuSCAT3 support and Repeat Exposure for long blocks
+
 ### 3.6.2
 * Add support for Mt John observatory (MPC site code 474) for ephemeris computation. (Issue #499)
 * Add a Time Critical option for scheduling spectroscopy (Issue #500)

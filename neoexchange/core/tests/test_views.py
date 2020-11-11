@@ -1823,21 +1823,21 @@ class TestScheduleCheck(TestCase):
     def test_mp_good_spectro(self):
         MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
 
-        data = { 'instrument_code' : 'E10-FLOYDS',
-                 'utc_date' : date(2016, 4, 6),
-                 'proposal_code' : self.neo_proposal.code,
-                 'spectroscopy' : True,
-                 'calibs' : 'both',
-                 'exp_length' : 300.0,
-                 'exp_count' : 1,
-                 'max_airmass': 2.0
-               }
+        data = {'instrument_code': 'E10-FLOYDS',
+                'utc_date': date(2016, 4, 6),
+                'proposal_code': self.neo_proposal.code,
+                'spectroscopy': True,
+                'calibs': 'both',
+                'exp_length': 300.0,
+                'exp_count': 1,
+                'max_airmass': 2.0
+                }
 
         expected_resp = {
                         'target_name': self.body_mp.current_name(),
                         'magnitude': 19.096949378287967,
                         'speed': 2.904309581894179,
-                        'slot_length': 23,
+                        'slot_length': 22,
                         'filter_pattern': 'slit_6.0as',
                         'pattern_iterations': 1.0,
                         'available_filters': 'slit_1.2as, slit_1.6as, slit_2.0as, slit_6.0as',
@@ -1856,19 +1856,19 @@ class TestScheduleCheck(TestCase):
                         'edit_window': False,
                         'ra_midpoint': 3.3125083797952244,
                         'dec_midpoint': -0.16076987807708198,
-                        'period' : None,
-                        'jitter' : None,
+                        'period': None,
+                        'jitter': None,
                         'bin_mode': None,
-                        'instrument_code' : 'E10-FLOYDS',
+                        'instrument_code': 'E10-FLOYDS',
                         'saturated': False,
-                        'snr' : 4.961338560320349,
-                        'calibs' : 'both',
-                        'spectroscopy' : True,
+                        'snr': 4.961338560320349,
+                        'calibs': 'both',
+                        'spectroscopy': True,
                         'too_mode': False,
-                        'calibsource' : {},
-                        'calibsource_id' : -1,
-                        'calibsource_exptime' : 60,
-                        'solar_analog' : False,
+                        'calibsource': {},
+                        'calibsource_id': -1,
+                        'calibsource_exptime': 60,
+                        'solar_analog': False,
                         'vis_time': 7.966666666666667,
                         'lco_enc': 'CLMA',
                         'lco_site': 'COJ',
@@ -1898,22 +1898,22 @@ class TestScheduleCheck(TestCase):
     def test_mp_good_spectro_solar_analog(self):
         MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
 
-        data = { 'instrument_code' : 'E10-FLOYDS',
-                 'utc_date' : date(2016, 4, 6),
-                 'proposal_code' : self.neo_proposal.code,
-                 'spectroscopy' : True,
-                 'calibs' : 'both',
-                 'exp_length' : 300.0,
-                 'exp_count' : 1,
-                 'solar_analog' : True,
-                 'max_airmass': 2.0
-               }
+        data = {'instrument_code': 'E10-FLOYDS',
+                'utc_date': date(2016, 4, 6),
+                'proposal_code': self.neo_proposal.code,
+                'spectroscopy': True,
+                'calibs': 'both',
+                'exp_length': 300.0,
+                'exp_count': 1,
+                'solar_analog': True,
+                'max_airmass': 2.0
+                }
 
         expected_resp = {
                         'target_name': self.body_mp.current_name(),
                         'magnitude': 19.096949378287967,
                         'speed': 2.904309581894179,
-                        'slot_length': 23,
+                        'slot_length': 22,
                         'filter_pattern': 'slit_6.0as',
                         'pattern_iterations': 1.0,
                         'available_filters': 'slit_1.2as, slit_1.6as, slit_2.0as, slit_6.0as',
@@ -1933,18 +1933,18 @@ class TestScheduleCheck(TestCase):
                         'edit_window': False,
                         'ra_midpoint': 3.3125083797952244,
                         'dec_midpoint': -0.16076987807708198,
-                        'period' : None,
-                        'jitter' : None,
-                        'instrument_code' : 'E10-FLOYDS',
+                        'period': None,
+                        'jitter': None,
+                        'instrument_code': 'E10-FLOYDS',
                         'saturated': False,
-                        'snr' : 4.961338560320349,
-                        'calibs' : 'both',
-                        'spectroscopy' : True,
+                        'snr': 4.961338560320349,
+                        'calibs': 'both',
+                        'spectroscopy': True,
                         'too_mode': False,
-                        'calibsource' : {'separation_deg' : 11.532781052438736, **model_to_dict(self.solar_analog)},
-                        'calibsource_id' : 1,
-                        'calibsource_exptime' : 180,
-                        'solar_analog' : True,
+                        'calibsource': {'separation_deg': 11.532781052438736, **model_to_dict(self.solar_analog)},
+                        'calibsource_id': 1,
+                        'calibsource_exptime': 180,
+                        'solar_analog': True,
                         'vis_time': 7.966666666666667,
                         'lco_enc': 'CLMA',
                         'lco_site': 'COJ',
@@ -2376,10 +2376,10 @@ class TestScheduleCheck(TestCase):
     def test_mp_semester_end_2018B_semester(self):
         MockDateTime.change_datetime(2018, 11, 29, 23, 0, 0)
 
-        data = { 'site_code' : 'Z17',
-                 'utc_date' : datetime(2018, 12, 1).date(),
-                 'proposal_code' : self.neo_proposal.code
-               }
+        data = {'site_code': 'Z17',
+                 'utc_date': datetime(2018, 12, 1).date(),
+                 'proposal_code': self.neo_proposal.code
+                }
 
         body = self.make_visible_obj(datetime(2018, 11, 30, 23, 0, 0))
 
@@ -2387,14 +2387,48 @@ class TestScheduleCheck(TestCase):
                         'target_name': body.current_name(),
                         'start_time' : '2018-11-30T20:38:00',
                         'end_time'   : '2018-11-30T23:59:00',
-                        'mid_time': '2018-11-30T22:18:00',
-
+                        'mid_time'   : '2018-11-30T22:18:00',
                         }
         resp = schedule_check(data, body)
 
         self.assertEqual(expected_resp['start_time'], resp['start_time'])
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_muscat_sub(self):
+        MockDateTime.change_datetime(2018, 11, 29, 23, 0, 0)
+
+        data = {'site_code': 'F65',
+                'utc_date': datetime(2018, 12, 1).date(),
+                'proposal_code': self.neo_proposal.code
+                }
+
+        body = self.make_visible_obj(datetime(2018, 11, 30, 23, 0, 0))
+
+        new_resp = {'site_code': 'F65',
+                    'available_filters': 'gp, rp, ip, zp',
+                    'exp_count': 4,
+                    'exp_length': 225.0,
+                    'slot_length': 22.5,
+                    'filter_pattern': 'gp',
+                    'pattern_iterations': 4.0,
+                    'gp_explength': 225.0,
+                    'rp_explength': 225.0,
+                    'ip_explength': 225.0,
+                    'zp_explength': 225.0,
+                    'muscat_sync': False,
+                    'group_name': 'over_there_F65-20181201',
+                    'lco_enc': 'CLMA',
+                    'lco_site': 'OGG',
+                    'lco_tel': '2M0',
+                    }
+
+        resp = schedule_check(data, body)
+
+        for key in new_resp:
+            self.assertEqual(new_resp[key], resp[key])
 
 
 class TestUpdateMPCOrbit(TestCase):
