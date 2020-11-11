@@ -1618,6 +1618,7 @@ def make_config(params, filter_list):
         else:
             overhead = 0
         conf['repeat_duration'] = params['slot_length'] - overhead - single_mol_overhead - 1
+        conf['repeat_duration'] = max(conf['repeat_duration'], 1)
     for filt in filter_list:
         if params['exp_type'] == 'REPEAT_EXPOSE' and len(filter_list) == 1:
             exp_count = 1
