@@ -660,7 +660,7 @@ class TestFetchYarkovskyTargets(TestCase):
 class TestSubmitBlockToScheduler(TestCase):
 
     def setUp(self):
-        params = {  'provisional_name' : 'N999r0q',
+        b_params = {'provisional_name' : 'N999r0q',
                     'abs_mag'       : 21.0,
                     'slope'         : 0.15,
                     'epochofel'     : datetime(2015, 3, 19, 00, 00, 00),
@@ -675,7 +675,7 @@ class TestSubmitBlockToScheduler(TestCase):
                     'active'        : True,
                     'origin'        : 'M',
                     }
-        self.body, created = Body.objects.get_or_create(**params)
+        self.body, created = Body.objects.get_or_create(**b_params)
         self.body_elements = model_to_dict(self.body)
         self.body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
         self.body_elements['current_name'] = self.body.current_name()
@@ -694,25 +694,28 @@ class TestSubmitBlockToScheduler(TestCase):
                         }
         self.ssource = StaticSource.objects.create(**ssource_params)
 
+        site_code = 'K92'
+        utc_date = datetime.now()+timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        self.obs_params = {'proposal_id': 'LCO2015A-009',
+                           'exp_count': 18,
+                           'exp_time': 50.0,
+                           'slot_length': 30,
+                           'site_code': site_code,
+                           'start_time': dark_start,
+                           'end_time': dark_end,
+                           'filter_pattern': 'w',
+                           'group_name': self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                           'user_id': 'bsimpson'
+                           }
+
     @patch('astrometrics.sources_subs.requests.post')
     def test_submit_body_for_cpt(self, mock_post):
         mock_post.return_value.status_code = 200
 
-        mock_post.return_value.json.return_value = {'id': '999', 'requests' : [{'id': '111', 'target' : {'type' : 'NON-SIDEREAL'}, 'duration' : 1820}]}
+        mock_post.return_value.json.return_value = {'id': '999', 'requests': [{'id': '111', 'target': {'type': 'NON-SIDEREAL'}, 'duration': 1820}]}
 
-        site_code = 'K92'
-        utc_date = datetime.now()+timedelta(days=1)
-        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 18,
-                    'exp_time' : 50.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'filter_pattern' : 'w',
-                    'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson'
-                 }
+        params = self.obs_params
 
         resp, sched_params = submit_block_to_scheduler(self.body_elements, params)
         self.assertEqual(resp, '999')
@@ -734,25 +737,16 @@ class TestSubmitBlockToScheduler(TestCase):
     def test_submit_body_for_cpt_V3(self, mock_post):
         mock_post.return_value.status_code = 200
 
-        mock_post.return_value.json.return_value = {'id': 999, 'requests' :
-            [{'id': 111, 'configurations' :
-                [{'id' : 222, 'target' : {'type' : 'ORBITAL-ELEMENTS'}}
-                ],
-            'duration' : 1820}]}
+        mock_post.return_value.json.return_value = {'id': 999,
+                                                    'requests': [
+                                                        {'id': 111,
+                                                         'configurations': [{'id': 222,
+                                                                             'target': {'type': 'ORBITAL-ELEMENTS'}
+                                                                             }],
+                                                         'duration': 1820}
+                                                    ]}
 
-        site_code = 'K92'
-        utc_date = datetime.now()+timedelta(days=1)
-        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 18,
-                    'exp_time' : 50.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'filter_pattern' : 'w',
-                    'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson'
-                 }
+        params = self.obs_params
 
         resp, sched_params = submit_block_to_scheduler(self.body_elements, params)
         self.assertEqual(resp, '999')
@@ -779,25 +773,19 @@ class TestSubmitBlockToScheduler(TestCase):
     def test_submit_cadence(self, mock_post):
         mock_post.return_value.status_code = 200
 
-        mock_post.return_value.json.return_value = {'id': '999', 'requests' : [{'id': '111', 'target' : {'type' : 'NON-SIDEREAL'}, 'duration' : 1820},
-                                                                               {'id': '222', 'target' : {'type' : 'NON-SIDEREAL'}, 'duration' : 1820},
-                                                                               {'id': '333', 'target' : {'type' : 'NON-SIDEREAL'}, 'duration' : 1820}]}
+        mock_post.return_value.json.return_value = {'id': '999', 'requests': [{'id': '111', 'target': {'type': 'NON-SIDEREAL'}, 'duration': 1820},
+                                                                              {'id': '222', 'target': {'type': 'NON-SIDEREAL'}, 'duration': 1820},
+                                                                              {'id': '333', 'target': {'type': 'NON-SIDEREAL'}, 'duration': 1820}]}
 
         site_code = 'V38'
         utc_date = datetime(2015, 3, 19, 00, 00, 00) + timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 18,
-                    'exp_time' : 50.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'filter_pattern' : 'w',
-                    'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson',
-                    'period'    : 2.0,
-                    'jitter'    : 0.25
-                 }
+        params = self.obs_params
+        params['start_time'] = dark_start
+        params['end_time'] = dark_end
+        params['period'] = 2.0
+        params['jitter'] = 0.25
+
         tracking_num, sched_params = submit_block_to_scheduler(self.body_elements, params)
 
         # store Blocks
@@ -820,7 +808,7 @@ class TestSubmitBlockToScheduler(TestCase):
     def test_submit_spectra_for_ogg(self, mock_post):
         mock_post.return_value.status_code = 200
 
-        mock_post.return_value.json.return_value = {'id': '999', 'requests' : [{'id': '111', 'duration' : 1820, 'target': {'type': 'ORBITAL_ELEMENTS'}}]}
+        mock_post.return_value.json.return_value = {'id': '999', 'requests': [{'id': '111', 'duration': 1820, 'target': {'type': 'ORBITAL_ELEMENTS'}}]}
 
         body_elements = model_to_dict(self.body)
         body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
@@ -828,18 +816,19 @@ class TestSubmitBlockToScheduler(TestCase):
         site_code = 'F65'
         utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 18,
-                    'exp_time' : 50.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'filter_pattern' : 'slit_6.0as',
-                    'group_name' : body_elements['current_name'] + '_' + 'ogg' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson',
-                    'spectroscopy' : True,
-                    'spectra_slit' : 'slit_6.0as'
-                 }
+        params = {'proposal_id': 'LCO2015A-009',
+                  'exp_count': 18,
+                  'exp_time': 50.0,
+                  'slot_length': 30,
+                  'site_code': site_code,
+                  'start_time': dark_start,
+                  'end_time': dark_end,
+                  'filter_pattern': 'slit_6.0as',
+                  'group_name': body_elements['current_name'] + '_' + 'ogg' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                  'user_id': 'bsimpson',
+                  'spectroscopy': True,
+                  'spectra_slit': 'slit_6.0as'
+                  }
 
         resp, sched_params = submit_block_to_scheduler(body_elements, params)
         self.assertEqual(resp, '999')
@@ -888,21 +877,22 @@ class TestSubmitBlockToScheduler(TestCase):
         site_code = 'F65'
         utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 1,
-                    'exp_time' : 150.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'filter_pattern' : 'slit_6.0as',
-                    'group_name' : body_elements['current_name'] + '_' + 'ogg' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson',
-                    'solar_analog' : True,
-                    'calibsource' : {'id' : 1, 'name' : 'SA107-684', 'ra_deg' : 234.3, 'dec_deg' : -0.16, 'calib_exptime' : 60},
-                    'calibsrc_exptime' : 60,
-                    'spectroscopy' : True,
-                    'spectra_slit' : 'slit_6.0as'
-                 }
+        params = {'proposal_id': 'LCO2015A-009',
+                  'exp_count': 1,
+                  'exp_time': 150.0,
+                  'slot_length': 30,
+                  'site_code': site_code,
+                  'start_time': dark_start,
+                  'end_time': dark_end,
+                  'filter_pattern': 'slit_6.0as',
+                  'group_name': body_elements['current_name'] + '_' + 'ogg' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                  'user_id': 'bsimpson',
+                  'solar_analog': True,
+                  'calibsource': {'id': 1, 'name': 'SA107-684', 'ra_deg': 234.3, 'dec_deg': -0.16, 'calib_exptime': 60},
+                  'calibsrc_exptime': 60,
+                  'spectroscopy': True,
+                  'spectra_slit': 'slit_6.0as'
+                  }
 
         resp, sched_params = submit_block_to_scheduler(body_elements, params)
         self.assertEqual(resp, '999')
@@ -930,23 +920,14 @@ class TestSubmitBlockToScheduler(TestCase):
         self.assertNotEqual(blocks[1].calibsource, None)
         self.assertEqual(blocks[1].calibsource.name, params['calibsource']['name'])
 
-
-
     def test_make_requestgroup(self):
 
         site_code = 'K92'
         utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 18,
-                    'exp_time' : 50.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson',
-                    'filter_pattern' : 'w'
-                 }
+        params = self.obs_params
+        params['start_time'] = dark_start
+        params['end_time'] = dark_end
 
         user_request = make_requestgroup(self.body_elements, params)
 
@@ -959,16 +940,10 @@ class TestSubmitBlockToScheduler(TestCase):
         site_code = '2M0'
         utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 18,
-                    'exp_time' : 50.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson',
-                    'filter_pattern' : 'w'
-                 }
+        params = self.obs_params
+        params['start_time'] = dark_start
+        params['end_time'] = dark_end
+        params['site_code'] = site_code
 
         user_request = make_requestgroup(self.body_elements, params)
 
@@ -1012,16 +987,10 @@ class TestSubmitBlockToScheduler(TestCase):
         site_code = 'W85'
         utc_date = datetime.now()+timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 18,
-                    'exp_time' : 50.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson',
-                    'filter_pattern' : 'w'
-                 }
+        params = self.obs_params
+        params['start_time'] = dark_start
+        params['end_time'] = dark_end
+        params['site_code'] = site_code
 
         user_request = make_requestgroup(self.body_elements, params)
 
@@ -1035,16 +1004,10 @@ class TestSubmitBlockToScheduler(TestCase):
         site_code = 'V39'
         utc_date = datetime.now()+timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 18,
-                    'exp_time' : 50.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'group_name' : self.body_elements['current_name'] + '_' + 'ELP' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson',
-                    'filter_pattern' : 'w'
-                 }
+        params = self.obs_params
+        params['start_time'] = dark_start
+        params['end_time'] = dark_end
+        params['site_code'] = site_code
 
         user_request = make_requestgroup(self.body_elements, params)
 
@@ -1061,17 +1024,11 @@ class TestSubmitBlockToScheduler(TestCase):
         site_code = 'Q63'
         utc_date = datetime.now()+timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 18,
-                    'exp_time' : 50.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'group_name' : body_elements['current_name'] + '_' + 'COJ' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson',
-                    'filter_pattern' : 'w',
-                    'too_mode' : True
-                 }
+        params = self.obs_params
+        params['start_time'] = dark_start
+        params['end_time'] = dark_end
+        params['site_code'] = site_code
+        params['too_mode'] = True
 
         user_request = make_requestgroup(body_elements, params)
 
@@ -1086,17 +1043,11 @@ class TestSubmitBlockToScheduler(TestCase):
         site_code = '1M0'
         utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 18,
-                    'exp_time' : 50.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson',
-                    'filter_pattern' : 'w',
-                    'bin_mode' : '2k_2x2'
-                 }
+        params = self.obs_params
+        params['start_time'] = dark_start
+        params['end_time'] = dark_end
+        params['site_code'] = site_code
+        params['bin_mode'] = '2k_2x2'
 
         user_request = make_requestgroup(self.body_elements, params)
 
@@ -1110,20 +1061,8 @@ class TestSubmitBlockToScheduler(TestCase):
 
     def test_ELP_1m_binning_requestgroup(self):
 
-        site_code = 'V39'
-        utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
-        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 18,
-                    'exp_time' : 50.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'group_name' : self.body_elements['current_name'] + '_' + 'ELP' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson',
-                    'filter_pattern' : 'w',
-                    'bin_mode' : '2k_2x2'
-                 }
+        params = self.obs_params
+        params['bin_mode'] = '2k_2x2'
 
         user_request = make_requestgroup(self.body_elements, params)
 
@@ -1136,20 +1075,8 @@ class TestSubmitBlockToScheduler(TestCase):
 
     def test_1m_no_binning_requestgroup(self):
 
-        site_code = 'V39'
-        utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
-        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 18,
-                    'exp_time' : 50.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'group_name' : self.body_elements['current_name'] + '_' + 'ELP' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson',
-                    'filter_pattern' : 'w',
-                    'bin_mode' : 'full_chip'
-                 }
+        params = self.obs_params
+        params['bin_mode'] = 'full_chip'
 
         user_request = make_requestgroup(self.body_elements, params)
 
@@ -1165,17 +1092,11 @@ class TestSubmitBlockToScheduler(TestCase):
         site_code = '2M0'
         utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 18,
-                    'exp_time' : 50.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'group_name' : self.body_elements['current_name'] + '_' + 'ELP' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson',
-                    'filter_pattern' : 'w',
-                    'bin_mode' : '2k_2x2'
-                 }
+        params = self.obs_params
+        params['start_time'] = dark_start
+        params['end_time'] = dark_end
+        params['site_code'] = site_code
+        params['bin_mode'] = '2k_2x2'
 
         user_request = make_requestgroup(self.body_elements, params)
 
@@ -1191,17 +1112,11 @@ class TestSubmitBlockToScheduler(TestCase):
         site_code = 'L09'
         utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 18,
-                    'exp_time' : 50.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'group_name' : self.body_elements['current_name'] + '_' + 'ELP' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson',
-                    'filter_pattern' : 'w',
-                    'bin_mode' : '2k_2x2'
-                 }
+        params = self.obs_params
+        params['start_time'] = dark_start
+        params['end_time'] = dark_end
+        params['site_code'] = site_code
+        params['bin_mode'] = '2k_2x2'
 
         user_request = make_requestgroup(self.body_elements, params)
 
@@ -1214,185 +1129,160 @@ class TestSubmitBlockToScheduler(TestCase):
 
     def test_multi_filter_requestgroup(self):
 
-            site_code = 'W85'
-            utc_date = datetime.now()+timedelta(days=1)
-            dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-            params = {  'proposal_id' : 'LCO2015A-009',
-                        'exp_count' : 18,
-                        'exp_time' : 50.0,
-                        'site_code' : site_code,
-                        'start_time' : dark_start,
-                        'end_time' : dark_end,
-                        'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                        'user_id'  : 'bsimpson',
-                        'filter_pattern' : 'V,V,R,R,I,I'
-                     }
+        params = self.obs_params
+        params['filter_pattern'] = 'V,V,R,R,I,I'
+        params['exp_count'] = 70
 
-            user_request = make_requestgroup(self.body_elements, params)
-            configurations = user_request.get('requests')[0].get('configurations')
-            expected_configuration_num = 9
-            expected_exp_count = 2
-            expected_filter = 'V'
+        user_request = make_requestgroup(self.body_elements, params)
+        configurations = user_request.get('requests')[0].get('configurations')
+        inst_configs = configurations[0].get('instrument_configs')
 
-            self.assertEqual(len(configurations), expected_configuration_num)
-            self.assertEqual(configurations[3]['instrument_configs'][0]['exposure_count'], expected_exp_count)
-            self.assertEqual(configurations[3]['instrument_configs'][0]['optical_elements']['filter'], expected_filter)
+        expected_configuration_num = 1
+        expected_inst_config_num = 3
+        expected_exp_count = 2
+        expected_filter = 'I'
+
+        self.assertEqual(len(configurations), expected_configuration_num)
+        self.assertEqual(len(inst_configs), expected_inst_config_num)
+        self.assertEqual(inst_configs[2]['exposure_count'], expected_exp_count)
+        self.assertEqual(inst_configs[2]['optical_elements']['filter'], expected_filter)
 
     def test_uneven_filter_requestgroup(self):
 
-            site_code = 'W85'
-            utc_date = datetime.now()+timedelta(days=1)
-            dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-            params = {  'proposal_id' : 'LCO2015A-009',
-                        'exp_count' : 18,
-                        'exp_time' : 50.0,
-                        'site_code' : site_code,
-                        'start_time' : dark_start,
-                        'end_time' : dark_end,
-                        'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                        'user_id'  : 'bsimpson',
-                        'filter_pattern' : 'V,V,R,I'
-                     }
+        params = self.obs_params
+        params['filter_pattern'] = 'V,V,R,I'
+        params['exp_count'] = 40
 
-            user_request = make_requestgroup(self.body_elements, params)
-            configurations = user_request.get('requests')[0].get('configurations')
-            expected_configuration_num = 13
-            expected_exp_count = 1
-            expected_filter = 'I'
+        user_request = make_requestgroup(self.body_elements, params)
+        configurations = user_request.get('requests')[0].get('configurations')
+        inst_configs = configurations[0].get('instrument_configs')
 
-            self.assertEqual(len(configurations), expected_configuration_num)
-            self.assertEqual(configurations[2]['instrument_configs'][0]['exposure_count'], expected_exp_count)
-            self.assertEqual(configurations[2]['instrument_configs'][0]['optical_elements']['filter'], expected_filter)
+        expected_configuration_num = 1
+        expected_inst_config_num = 3
+        expected_exp_count = 1
+        expected_filter = 'I'
+
+        self.assertEqual(len(configurations), expected_configuration_num)
+        self.assertEqual(len(inst_configs), expected_inst_config_num)
+        self.assertEqual(inst_configs[0]['exposure_count'], 2)
+        self.assertEqual(inst_configs[0]['optical_elements']['filter'], 'V')
+        self.assertEqual(inst_configs[2]['exposure_count'], expected_exp_count)
+        self.assertEqual(inst_configs[2]['optical_elements']['filter'], expected_filter)
 
     def test_single_filter_requestgroup(self):
 
-            site_code = 'W85'
-            utc_date = datetime.now()+timedelta(days=1)
-            dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-            params = {  'proposal_id' : 'LCO2015A-009',
-                        'exp_count' : 18,
-                        'exp_time' : 50.0,
-                        'site_code' : site_code,
-                        'start_time' : dark_start,
-                        'end_time' : dark_end,
-                        'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                        'user_id'  : 'bsimpson',
-                        'filter_pattern' : 'V'
-                     }
+        params = self.obs_params
+        params['filter_pattern'] = 'V'
 
-            user_request = make_requestgroup(self.body_elements, params)
-            configurations = user_request.get('requests')[0].get('configurations')
-            expected_configuration_num = 1
-            expected_exp_count = 18
-            expected_filter = 'V'
+        user_request = make_requestgroup(self.body_elements, params)
+        configurations = user_request.get('requests')[0].get('configurations')
+        expected_configuration_num = 1
+        expected_exp_count = 1
+        expected_filter = 'V'
 
-            self.assertEqual(len(configurations), expected_configuration_num)
-            self.assertEqual(configurations[0]['instrument_configs'][0]['exposure_count'], expected_exp_count)
-            self.assertEqual(configurations[0]['instrument_configs'][0]['optical_elements']['filter'], expected_filter)
+        self.assertEqual(len(configurations), expected_configuration_num)
+        self.assertEqual(configurations[0]['instrument_configs'][0]['exposure_count'], expected_exp_count)
+        self.assertEqual(configurations[0]['instrument_configs'][0]['optical_elements']['filter'], expected_filter)
 
     def test_overlap_filter_requestgroup(self):
 
-            site_code = 'W85'
-            utc_date = datetime.now()+timedelta(days=1)
-            dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-            params = {  'proposal_id' : 'LCO2015A-009',
-                        'exp_count' : 18,
-                        'exp_time' : 50.0,
-                        'site_code' : site_code,
-                        'start_time' : dark_start,
-                        'end_time' : dark_end,
-                        'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                        'user_id'  : 'bsimpson',
-                        'filter_pattern' : 'V,V,R,R,I,I,V'
-                     }
+        params = self.obs_params
+        params['filter_pattern'] = 'V,V,R,I,V'
+        params['exp_count'] = 9
 
-            user_request = make_requestgroup(self.body_elements, params)
-            configurations = user_request.get('requests')[0].get('configurations')
-            expected_configuration_num = 8
-            expected_exp_count = 3
-            expected_filter = 'V'
+        user_request = make_requestgroup(self.body_elements, params)
+        configurations = user_request.get('requests')[0].get('configurations')
+        inst_configs = configurations[0].get('instrument_configs')
 
-            self.assertEqual(len(configurations), expected_configuration_num)
-            self.assertEqual(configurations[3]['instrument_configs'][0]['exposure_count'], expected_exp_count)
-            self.assertEqual(configurations[3]['instrument_configs'][0]['optical_elements']['filter'], expected_filter)
+        expected_configuration_num = 1
+        expected_inst_config_num = 6
+        expected_exp_count = 3
+        expected_filter = 'V'
+
+        self.assertEqual(len(configurations), expected_configuration_num)
+        self.assertEqual(len(inst_configs), expected_inst_config_num)
+        self.assertEqual(inst_configs[3]['exposure_count'], expected_exp_count)
+        self.assertEqual(inst_configs[3]['optical_elements']['filter'], expected_filter)
 
     def test_overlap_nooverlap_filter_requestgroup(self):
 
-            site_code = 'W85'
-            utc_date = datetime.now()+timedelta(days=1)
-            dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-            params = {  'proposal_id' : 'LCO2015A-009',
-                        'exp_count' : 15,
-                        'exp_time' : 50.0,
-                        'site_code' : site_code,
-                        'start_time' : dark_start,
-                        'end_time' : dark_end,
-                        'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                        'user_id'  : 'bsimpson',
-                        'filter_pattern' : 'V,V,R,I,V'
-                     }
+        params = self.obs_params
+        params['filter_pattern'] = 'V,V,R,I,V'
+        params['exp_count'] = 10
 
-            user_request = make_requestgroup(self.body_elements, params)
-            configurations = user_request.get('requests')[0].get('configurations')
-            expected_configuration_num = 10
-            expected_exp_count = 1
-            expected_filter = 'V'
+        user_request = make_requestgroup(self.body_elements, params)
+        configurations = user_request.get('requests')[0].get('configurations')
+        inst_configs = configurations[0].get('instrument_configs')
 
-            self.assertEqual(len(configurations), expected_configuration_num)
-            self.assertEqual(configurations[9]['instrument_configs'][0]['exposure_count'], expected_exp_count)
-            self.assertEqual(configurations[9]['instrument_configs'][0]['optical_elements']['filter'], expected_filter)
+        expected_inst_config_num = 7
+        expected_configuration_num = 1
+        expected_exp_count = 1
+        expected_filter = 'V'
+
+        self.assertEqual(len(configurations), expected_configuration_num)
+        self.assertEqual(len(inst_configs), expected_inst_config_num)
+        self.assertEqual(inst_configs[6]['exposure_count'], expected_exp_count)
+        self.assertEqual(inst_configs[6]['optical_elements']['filter'], expected_filter)
 
     def test_partial_filter_requestgroup(self):
 
-            site_code = 'W85'
-            utc_date = datetime.now()+timedelta(days=1)
-            dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-            params = {  'proposal_id' : 'LCO2015A-009',
-                        'exp_count' : 15,
-                        'exp_time' : 50.0,
-                        'site_code' : site_code,
-                        'start_time' : dark_start,
-                        'end_time' : dark_end,
-                        'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                        'user_id'  : 'bsimpson',
-                        'filter_pattern' : 'V,V,V,V,V,V,R,R,R,R,R,I,I,I,I,I,I'
-                     }
+        params = self.obs_params
+        params['filter_pattern'] = 'V,V,V,V,V,V,R,R,R,R,R,I,I,I,I,I,I,B,B,B,B,B,B,B'
+        params['exp_count'] = 15
 
-            user_request = make_requestgroup(self.body_elements, params)
-            configurations = user_request.get('requests')[0].get('configurations')
-            expected_configuration_num = 3
-            expected_exp_count = 4
-            expected_filter = 'I'
+        user_request = make_requestgroup(self.body_elements, params)
+        configurations = user_request.get('requests')[0].get('configurations')
+        inst_configs = configurations[0].get('instrument_configs')
 
-            self.assertEqual(len(configurations), expected_configuration_num)
-            self.assertEqual(configurations[2]['instrument_configs'][0]['exposure_count'], expected_exp_count)
-            self.assertEqual(configurations[2]['instrument_configs'][0]['optical_elements']['filter'], expected_filter)
+        expected_inst_config_num = 3
+        expected_configuration_num = 1
+        expected_exp_count = 4
+        expected_filter = 'I'
+
+        self.assertEqual(len(configurations), expected_configuration_num)
+        self.assertEqual(len(inst_configs), expected_inst_config_num)
+        self.assertEqual(inst_configs[2]['exposure_count'], expected_exp_count)
+        self.assertEqual(inst_configs[2]['optical_elements']['filter'], expected_filter)
 
     def test_partial_overlap_filter_requestgroup(self):
 
-            site_code = 'W85'
-            utc_date = datetime.now()+timedelta(days=1)
-            dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-            params = {  'proposal_id' : 'LCO2015A-009',
-                        'exp_count' : 15,
-                        'exp_time' : 50.0,
-                        'site_code' : site_code,
-                        'start_time' : dark_start,
-                        'end_time' : dark_end,
-                        'group_name' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                        'user_id'  : 'bsimpson',
-                        'filter_pattern' : 'V,V,R,R,I,V'
-                     }
+        params = self.obs_params
+        params['filter_pattern'] = 'V,V,R,R,I,V'
+        params['exp_count'] = 10
 
-            user_request = make_requestgroup(self.body_elements, params)
-            configurations = user_request.get('requests')[0].get('configurations')
-            expected_configuration_num = 8
-            expected_exp_count = 3
-            expected_filter = 'V'
+        user_request = make_requestgroup(self.body_elements, params)
+        configurations = user_request.get('requests')[0].get('configurations')
+        inst_configs = configurations[0].get('instrument_configs')
 
-            self.assertEqual(len(configurations), expected_configuration_num)
-            self.assertEqual(configurations[6]['instrument_configs'][0]['exposure_count'], expected_exp_count)
-            self.assertEqual(configurations[6]['instrument_configs'][0]['optical_elements']['filter'], expected_filter)
+        expected_inst_config_num = 5
+        expected_configuration_num = 1
+        expected_exp_count = 3
+        expected_filter = 'V'
+
+        self.assertEqual(len(configurations), expected_configuration_num)
+        self.assertEqual(len(inst_configs), expected_inst_config_num)
+        self.assertEqual(inst_configs[3]['exposure_count'], expected_exp_count)
+        self.assertEqual(inst_configs[3]['optical_elements']['filter'], expected_filter)
+
+    def test_long_filterlist_largecount_requestgroup(self):
+
+        params = self.obs_params
+        params['filter_pattern'] = 'V,V,V,R,R,R,I,I,I'
+        params['exp_count'] = 91
+
+        user_request = make_requestgroup(self.body_elements, params)
+        configurations = user_request.get('requests')[0].get('configurations')
+        inst_configs = configurations[0].get('instrument_configs')
+
+        expected_inst_config_num = 3
+        expected_configuration_num = 1
+        expected_exp_count = 3
+        expected_filter = 'V'
+
+        self.assertEqual(len(configurations), expected_configuration_num)
+        self.assertEqual(len(inst_configs), expected_inst_config_num)
+        self.assertEqual(inst_configs[0]['exposure_count'], expected_exp_count)
+        self.assertEqual(inst_configs[0]['optical_elements']['filter'], expected_filter)
 
     def test_spectro_with_solar_analog(self):
 
@@ -4020,14 +3910,14 @@ class TestSFUFetch(TestCase):
 class TestConfigureDefaults(TestCase):
 
     def setUp(self):
-        pass
+        self.obs_params = {'exp_count': 10,
+                           'exp_time': 42.0
+                           }
 
     def test_tfn_point4m(self):
-        test_params = {
-              'exp_count': 42,
-              'exp_time': 42.0,
-              'site_code': 'Z21',
-              }
+
+        test_params = self.obs_params
+        test_params['site_code'] = 'Z21'
 
         expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
                             'pondtelescope': '0m4',
@@ -4042,11 +3932,8 @@ class TestConfigureDefaults(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_ogg_point4m(self):
-        test_params = {
-              'exp_count': 42,
-              'exp_time': 42.0,
-              'site_code': 'T04',
-              }
+        test_params = self.obs_params
+        test_params['site_code'] = 'T04'
 
         expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
                             'pondtelescope': '0m4',
@@ -4061,11 +3948,8 @@ class TestConfigureDefaults(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_coj_point4m(self):
-        test_params = {
-              'exp_count': 42,
-              'exp_time': 42.0,
-              'site_code': 'Q59',
-              }
+        test_params = self.obs_params
+        test_params['site_code'] = 'Q59'
 
         expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
                             'pondtelescope': '0m4',
@@ -4080,11 +3964,8 @@ class TestConfigureDefaults(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_cpt_point4m(self):
-        test_params = {
-              'exp_count': 42,
-              'exp_time': 42.0,
-              'site_code': 'L09',
-              }
+        test_params = self.obs_params
+        test_params['site_code'] = 'L09'
 
         expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
                             'pondtelescope': '0m4',
@@ -4099,11 +3980,8 @@ class TestConfigureDefaults(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_elp_point4m(self):
-        test_params = {
-              'exp_count': 42,
-              'exp_time': 42.0,
-              'site_code': 'V38',
-              }
+        test_params = self.obs_params
+        test_params['site_code'] = 'V38'
 
         expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
                             'pondtelescope': '0m4',
@@ -4118,11 +3996,8 @@ class TestConfigureDefaults(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_lsc_point4m_num1(self):
-        test_params = {
-              'exp_count': 42,
-              'exp_time': 42.0,
-              'site_code': 'W89',
-              }
+        test_params = self.obs_params
+        test_params['site_code'] = 'W89'
 
         expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
                             'pondtelescope': '0m4',
@@ -4137,11 +4012,8 @@ class TestConfigureDefaults(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_lsc_point4m_num2(self):
-        test_params = {
-              'exp_count': 42,
-              'exp_time': 42.0,
-              'site_code': 'W79',
-              }
+        test_params = self.obs_params
+        test_params['site_code'] = 'W79'
 
         expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
                             'pondtelescope': '0m4',
@@ -4156,11 +4028,8 @@ class TestConfigureDefaults(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_lsc_sinistro(self):
-        test_params = {
-              'exp_count': 42,
-              'exp_time': 42.0,
-              'site_code': 'W86',
-              }
+        test_params = self.obs_params
+        test_params['site_code'] = 'W86'
 
         expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
                             'pondtelescope': '1m0',
@@ -4175,11 +4044,8 @@ class TestConfigureDefaults(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_lsc_bad_sinistro(self):
-        test_params = {
-              'exp_count': 42,
-              'exp_time': 42.0,
-              'site_code': 'W87',
-              }
+        test_params = self.obs_params
+        test_params['site_code'] = 'W87'
 
         expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
                             'pondtelescope': '1m0',
@@ -4188,7 +4054,7 @@ class TestConfigureDefaults(TestCase):
                             'site': 'LSC',
                             'binning': 1,
                             'site_code': 'W87',
-                            'exp_count': 42,
+                            'exp_count': 10,
                             'exp_time': 42.0}
 
         params = configure_defaults(test_params)
@@ -4196,18 +4062,17 @@ class TestConfigureDefaults(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_ftn(self):
-        test_params = {
-              'exp_count': 42,
-              'exp_time': 42.0,
-              'site_code': 'F65',
-              }
+        test_params = self.obs_params
+        test_params['site_code'] = 'F65'
 
-        expected_params = { 'instrument':  '2M0-SCICAM-SPECTRAL',
-                            'pondtelescope': '2m0',
-                            'observatory': '',
-                            'exp_type': 'EXPOSE',
-                            'site': 'OGG',
-                            'binning': 2}
+        expected_params = {'instrument':  '2M0-SCICAM-MUSCAT',
+                           'pondtelescope': '2m0',
+                           'observatory': '',
+                           'exp_type': 'EXPOSE',
+                           'site': 'OGG',
+                           'binning': 1,
+                           'exp_count': 10,
+                           'exp_time': 42.0}
         expected_params.update(test_params)
 
         params = configure_defaults(test_params)
@@ -4215,18 +4080,17 @@ class TestConfigureDefaults(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_fts(self):
-        test_params = {
-              'exp_count': 42,
-              'exp_time': 42.0,
-              'site_code': 'E10',
-              }
+        test_params = self.obs_params
+        test_params['site_code'] = 'E10'
 
         expected_params = { 'instrument':  '2M0-SCICAM-SPECTRAL',
                             'pondtelescope': '2m0',
-                            'observatory' : '',
+                            'observatory': '',
                             'exp_type': 'EXPOSE',
-                            'site' : 'COJ',
-                            'binning' : 2}
+                            'site': 'COJ',
+                            'binning': 2,
+                            'exp_count': 10,
+                            'exp_time': 42.0}
         expected_params.update(test_params)
 
         params = configure_defaults(test_params)
@@ -4234,18 +4098,17 @@ class TestConfigureDefaults(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_elp_sinistro(self):
-        test_params = {
-              'exp_count': 42,
-              'exp_time': 42.0,
-              'site_code': 'V37',
-              }
+        test_params = self.obs_params
+        test_params['site_code'] = 'V37'
 
         expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
                             'pondtelescope': '1m0',
                             'observatory': '',
                             'exp_type': 'EXPOSE',
                             'site': 'ELP',
-                            'binning': 1}
+                            'binning': 1,
+                            'exp_count': 10,
+                            'exp_time': 42.0}
         expected_params.update(test_params)
 
         params = configure_defaults(test_params)
@@ -4253,18 +4116,55 @@ class TestConfigureDefaults(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_elp_num2_sinistro(self):
-        test_params = {
-              'exp_count': 42,
-              'exp_time': 42.0,
-              'site_code': 'V39',
-              }
+        test_params = self.obs_params
+        test_params['site_code'] = 'V39'
 
         expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
                             'pondtelescope': '1m0',
                             'observatory': '',
                             'exp_type': 'EXPOSE',
                             'site': 'ELP',
-                            'binning': 1}
+                            'binning': 1,
+                            'exp_count': 10,
+                            'exp_time': 42.0}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
+    def test_sinistro_many(self):
+        test_params = self.obs_params
+        test_params['site_code'] = '1M0'
+        test_params['exp_count'] = 45
+        test_params['filter_pattern'] = 'w'
+
+        expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
+                            'pondtelescope': '1m0',
+                            'observatory': '',
+                            'exp_type': 'REPEAT_EXPOSE',
+                            'binning': 1,
+                            'exp_count': 45,
+                            'exp_time': 42.0}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
+    def test_sinistro_many_plus_filters(self):
+        test_params = self.obs_params
+        test_params['site_code'] = '1M0'
+        test_params['exp_count'] = 15
+        test_params['filter_pattern'] = 'B,B,B,V,V,V,R,R,R,R,I,I,I'
+
+        expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
+                            'pondtelescope': '1m0',
+                            'observatory': '',
+                            'exp_type': 'EXPOSE',
+                            'binning': 1,
+                            'exp_count': 15,
+                            'exp_time': 42.0}
         expected_params.update(test_params)
 
         params = configure_defaults(test_params)
@@ -4278,9 +4178,12 @@ class TestConfigureDefaults(TestCase):
                             'exp_type': 'EXPOSE',
                             'pondtelescope': '1m0',
                             'site': 'CPT',
-                            'site_code': 'K92'}
+                            'site_code': 'K92',
+                            'exp_count': 10,
+                            'exp_time': 42.0}
 
-        params = {'site_code': 'K92'}
+        params = self.obs_params
+        params['site_code'] = 'K92'
 
         params = configure_defaults(params)
 
@@ -4293,9 +4196,12 @@ class TestConfigureDefaults(TestCase):
                             'exp_type': 'EXPOSE',
                             'pondtelescope': '1m0',
                             'site': 'LSC',
-                            'site_code': 'W85'}
+                            'site_code': 'W85',
+                            'exp_count': 10,
+                            'exp_time': 42.0}
 
-        params = {'site_code': 'W85'}
+        params = self.obs_params
+        params['site_code'] = 'W85'
 
         params = configure_defaults(params)
 
@@ -4308,9 +4214,12 @@ class TestConfigureDefaults(TestCase):
                             'exp_type': 'EXPOSE',
                             'pondtelescope': '1m0',
                             'site': 'LSC',
-                            'site_code': 'W86'}
+                            'site_code': 'W86',
+                            'exp_count': 10,
+                            'exp_time': 42.0}
 
-        params = {'site_code': 'W86'}
+        params = self.obs_params
+        params['site_code'] = 'W86'
 
         params = configure_defaults(params)
 
@@ -4323,9 +4232,12 @@ class TestConfigureDefaults(TestCase):
                             'exp_type': 'EXPOSE',
                             'pondtelescope': '1m0',
                             'site': 'ELP',
-                            'site_code': 'V37'}
+                            'site_code': 'V37',
+                            'exp_count': 10,
+                            'exp_time': 42.0}
 
-        params = {'site_code': 'V37'}
+        params = self.obs_params
+        params['site_code'] = 'V37'
 
         params = configure_defaults(params)
 
@@ -4338,9 +4250,12 @@ class TestConfigureDefaults(TestCase):
                             'exp_type': 'EXPOSE',
                             'pondtelescope': '1m0',
                             'site': 'LSC',
-                            'site_code': 'W87'}
+                            'site_code': 'W87',
+                            'exp_count': 10,
+                            'exp_time': 42.0}
 
-        params = {'site_code': 'W87'}
+        params = self.obs_params
+        params['site_code'] = 'W87'
 
         params = configure_defaults(params)
 
@@ -4353,24 +4268,30 @@ class TestConfigureDefaults(TestCase):
                             'exp_type': 'EXPOSE',
                             'pondtelescope': '1m0',
                             'site': 'CPT',
-                            'site_code': 'K93'}
+                            'site_code': 'K93',
+                            'exp_count': 10,
+                            'exp_time': 42.0}
 
-        params = {'site_code': 'K93'}
+        params = self.obs_params
+        params['site_code'] = 'K93'
 
         params = configure_defaults(params)
 
         self.assertEqual(params, expected_params)
 
     def test_2m_ogg(self):
-        expected_params = { 'binning': 2,
-                            'instrument': '2M0-SCICAM-SPECTRAL',
-                            'observatory': '',
-                            'exp_type': 'EXPOSE',
-                            'pondtelescope': '2m0',
-                            'site': 'OGG',
-                            'site_code': 'F65'}
+        expected_params = {'binning': 1,
+                           'instrument': '2M0-SCICAM-MUSCAT',
+                           'observatory': '',
+                           'exp_type': 'EXPOSE',
+                           'pondtelescope': '2m0',
+                           'site': 'OGG',
+                           'site_code': 'F65',
+                           'exp_count': 10,
+                           'exp_time': 42.0}
 
-        params = {'site_code': 'F65'}
+        params = self.obs_params
+        params['site_code'] = 'F65'
 
         params = configure_defaults(params)
 
@@ -4383,9 +4304,12 @@ class TestConfigureDefaults(TestCase):
                             'exp_type': 'EXPOSE',
                             'pondtelescope': '2m0',
                             'site': 'COJ',
-                            'site_code': 'E10'}
+                            'site_code': 'E10',
+                            'exp_count': 10,
+                            'exp_time': 42.0}
 
-        params = {'site_code': 'E10'}
+        params = self.obs_params
+        params['site_code'] = 'E10'
 
         params = configure_defaults(params)
 
@@ -4400,10 +4324,14 @@ class TestConfigureDefaults(TestCase):
                             'exp_type'    : 'SPECTRUM',
                             'pondtelescope' : '2m0',
                             'site'        : 'OGG',
+                            'exp_count': 1,
                             'site_code'   : 'F65',
                             'instrument_code' : 'F65-FLOYDS'}
 
-        params = { 'site_code' : 'F65', 'instrument_code' : 'F65-FLOYDS', 'spectroscopy' : True}
+        params = {'site_code': 'F65',
+                  'instrument_code': 'F65-FLOYDS',
+                  'spectroscopy': True,
+                  'exp_count': 1}
 
         params = configure_defaults(params)
 
@@ -4416,12 +4344,14 @@ class TestConfigureDefaults(TestCase):
                             'instrument'  : '2M0-FLOYDS-SCICAM',
                             'observatory' : '',
                             'exp_type'    : 'SPECTRUM',
+                            'exp_count': 1,
                             'pondtelescope': '2m0',
                             'site'        : 'COJ',
                             'site_code'   : 'E10',
                             'instrument_code' : 'E10-FLOYDS'}
 
-        params = { 'site_code' : 'E10', 'instrument_code' : 'E10-FLOYDS', 'spectroscopy' : True}
+        params = { 'site_code' : 'E10', 'instrument_code' : 'E10-FLOYDS', 'spectroscopy' : True,
+                   'exp_count': 1}
 
         params = configure_defaults(params)
 
@@ -4434,6 +4364,7 @@ class TestConfigureDefaults(TestCase):
                             'instrument'  : '2M0-FLOYDS-SCICAM',
                             'observatory' : '',
                             'exp_type'    : 'SPECTRUM',
+                            'exp_count'   : 1,
                             'pondtelescope' : '2m0',
                             'site'        : 'OGG',
                             'site_code'   : 'F65',
@@ -4442,11 +4373,12 @@ class TestConfigureDefaults(TestCase):
                             'calibsource' : {'name' : 'SA107-684'}
                             }
 
-        params = { 'site_code' : 'F65',
-                   'instrument_code' : 'F65-FLOYDS',
-                   'spectroscopy' : True,
-                   'solar_analog' : False,
-                   'calibsource' : {'name' : 'SA107-684'}
+        params = { 'site_code': 'F65',
+                   'instrument_code': 'F65-FLOYDS',
+                   'spectroscopy': True,
+                   'solar_analog': False,
+                   'calibsource': {'name': 'SA107-684'},
+                   'exp_count': 1
                    }
 
         params = configure_defaults(params)
@@ -4460,6 +4392,7 @@ class TestConfigureDefaults(TestCase):
                             'instrument'  : '2M0-FLOYDS-SCICAM',
                             'observatory' : '',
                             'exp_type'    : 'SPECTRUM',
+                            'exp_count': 1,
                             'pondtelescope' : '2m0',
                             'site'        : 'OGG',
                             'site_code'   : 'F65',
@@ -4472,7 +4405,8 @@ class TestConfigureDefaults(TestCase):
                    'instrument_code' : 'F65-FLOYDS',
                    'spectroscopy' : True,
                    'solar_analog' : False,
-                   'calibsource' : {}
+                   'calibsource' : {},
+                   'exp_count': 1
                    }
 
         params = configure_defaults(params)
@@ -4484,60 +4418,73 @@ class TestMakeconfiguration(TestCase):
 
     def setUp(self):
 
-        self.target = {'type': 'ICRS', 'name' : 'SA107-684', 'ra' : 234.3, 'dec' : -0.16}
+        self.target = {'type': 'ICRS', 'name': 'SA107-684', 'ra': 234.3, 'dec': -0.16}
 
-        self.params_2m0_imaging = configure_defaults({ 'site_code': 'F65',
-                                                       'exp_time' : 60.0,
-                                                       'exp_count' : 12,
-                                                       'filter_pattern' : 'solar',
-                                                       'target' : self.target,
-                                                       'constraints': {
-                                                         'max_airmass': 2.0,
-                                                         'min_lunar_distance': 30.0
+        self.params_2m0_imaging = configure_defaults({'site_code': 'F65',
+                                                      'exp_time': 60.0,
+                                                      'exp_count': 12,
+                                                      'slot_length': 750,
+                                                      'filter_pattern': 'solar',
+                                                      'muscat_exp_times':  {'gp_explength': 60,
+                                                                            'rp_explength': 30,
+                                                                            'ip_explength': 30,
+                                                                            'zp_explength': 60,
+                                                                            },
+                                                      'muscat_sync': True,
+                                                      'target': self.target,
+                                                      'constraints': {
+                                                          'max_airmass': 2.0,
+                                                          'min_lunar_distance': 30.0
                                                        }})
         self.filt_2m0_imaging = build_filter_blocks(self.params_2m0_imaging['filter_pattern'],
-                                                    self.params_2m0_imaging['exp_count'])[0]
+                                                    self.params_2m0_imaging['exp_count'],
+                                                    self.params_2m0_imaging['exp_type'])
 
-        self.params_1m0_imaging = configure_defaults({ 'site_code': 'K92',
-                                                       'exp_time' : 60.0,
-                                                       'exp_count' : 12,
-                                                       'filter_pattern' : 'w',
-                                                       'target' : self.target,
-                                                       'constraints': {
-                                                         'max_airmass': 2.0,
-                                                         'min_lunar_distance': 30.0
-                                                       }})
+        self.params_1m0_imaging = configure_defaults({'site_code': 'K92',
+                                                      'exp_time': 60.0,
+                                                      'exp_count': 10,
+                                                      'filter_pattern': 'w',
+                                                      'target': self.target,
+                                                      'constraints': {
+                                                          'max_airmass': 2.0,
+                                                          'min_lunar_distance': 30.0
+                                                      }})
         self.filt_1m0_imaging = build_filter_blocks(self.params_1m0_imaging['filter_pattern'],
-                                                    self.params_1m0_imaging['exp_count'])[0]
-        self.params_0m4_imaging = configure_defaults({ 'site_code': 'Z21',
-                                                       'exp_time' : 90.0,
-                                                       'exp_count' : 18,
-                                                       'filter_pattern' : 'w',
-                                                       'target' : self.target,
-                                                       'constraints': {
-                                                         'max_airmass': 2.0,
-                                                         'min_lunar_distance': 30.0
-                                                       }})
-        self.filt_0m4_imaging = build_filter_blocks(self.params_0m4_imaging['filter_pattern'],
-                                                    self.params_0m4_imaging['exp_count'])[0]
+                                                    self.params_1m0_imaging['exp_count'],
+                                                    self.params_1m0_imaging['exp_type'])
 
-        self.params_2m0_spectroscopy = configure_defaults({ 'site_code': 'F65',
-                                                            'instrument_code' : 'F65-FLOYDS',
-                                                            'spectroscopy' : True,
-                                                            'exp_time' : 180.0,
-                                                            'exp_count' : 1,
-                                                            'target' : self.target,
-                                                            'constraints': {
-                                                              'max_airmass': 2.0,
-                                                              'min_lunar_distance': 30.0
-                                                            }})
+        self.params_0m4_imaging = configure_defaults({'site_code': 'Z21',
+                                                      'exp_time': 90.0,
+                                                      'exp_count': 10,
+                                                      'filter_pattern': 'w',
+                                                      'target': self.target,
+                                                      'constraints': {
+                                                          'max_airmass': 2.0,
+                                                          'min_lunar_distance': 30.0
+                                                      }})
+        self.filt_0m4_imaging = build_filter_blocks(self.params_0m4_imaging['filter_pattern'],
+                                                    self.params_0m4_imaging['exp_count'],
+                                                    self.params_0m4_imaging['exp_type'])
+
+        self.params_2m0_spectroscopy = configure_defaults({'site_code': 'F65',
+                                                           'instrument_code': 'F65-FLOYDS',
+                                                           'spectroscopy': True,
+                                                           'exp_time': 180.0,
+                                                           'exp_count': 1,
+                                                           'target': self.target,
+                                                           'constraints': {
+                                                               'max_airmass': 2.0,
+                                                               'min_lunar_distance': 30.0
+                                                           }})
         self.filt_2m0_spectroscopy = ['slit_6.0as', 1]
+        self.maxDiff = None
 
     def test_2m_imaging(self):
 
         expected_configuration = {
-                          'type': 'EXPOSE',
-                          'instrument_type': '2M0-SCICAM-SPECTRAL',
+                          'type': 'REPEAT_EXPOSE',
+                          'repeat_duration': 551,
+                          'instrument_type': '2M0-SCICAM-MUSCAT',
                           'target': {
                             'type': 'ICRS',
                             'name': 'SA107-684',
@@ -4551,13 +4498,19 @@ class TestMakeconfiguration(TestCase):
                           'acquisition_config': {},
                           'guiding_config': {},
                           'instrument_configs': [{
-                            'exposure_count': 12,
-                            'exposure_time': 60.0,
-                            'bin_x': 2,
-                            'bin_y': 2,
-                            'optical_elements': {
-                              'filter': 'solar'
-                            }
+                              'optical_elements': {'diffuser_g_position': 'out',
+                                                   'diffuser_r_position': 'out',
+                                                   'diffuser_i_position': 'out',
+                                                   'diffuser_z_position': 'out'},
+                              'exposure_count': 1,
+                              'exposure_time': 60.0,
+                              'extra_params': {
+                                  'exposure_time_g': 60,
+                                  'exposure_time_r': 30,
+                                  'exposure_time_i': 30,
+                                  'exposure_time_z': 60,
+                                  'exposure_mode': 'SYNCHRONOUS'
+                              }
                           }]
                         }
 
@@ -4582,7 +4535,7 @@ class TestMakeconfiguration(TestCase):
                               'acquisition_config': {},
                               'guiding_config': {},
                               'instrument_configs': [{
-                                'exposure_count': 12,
+                                'exposure_count': 10,
                                 'exposure_time': 60.0,
                                 'bin_x': 1,
                                 'bin_y': 1,
@@ -4613,7 +4566,7 @@ class TestMakeconfiguration(TestCase):
                               'acquisition_config': {},
                               'guiding_config': {},
                               'instrument_configs': [{
-                                'exposure_count': 18,
+                                'exposure_count': 10,
                                 'exposure_time': 90.0,
                                 'bin_x': 1,
                                 'bin_y': 1,
@@ -4889,23 +4842,30 @@ class TestMakeconfiguration(TestCase):
 class TestMakeconfigurations(TestCase):
 
     def setUp(self):
-        self.target = {'type': 'ICRS', 'name' : 'SA107-684', 'ra' : 234.3, 'dec' : -0.16}
+        self.target = {'type': 'ICRS', 'name': 'SA107-684', 'ra': 234.3, 'dec': -0.16}
 
-        self.params_2m0_imaging = configure_defaults({ 'site_code': 'F65',
-                                                       'exp_time' : 60.0,
-                                                       'exp_count' : 12,
-                                                       'filter_pattern' : 'solar',
-                                                       'target' : self.target,
-                                                       'constraints': {
-                                                         'max_airmass': 2.0,
-                                                         'min_lunar_distance': 30.0
-                                                       }})
+        self.params_2m0_imaging = configure_defaults({'site_code': 'F65',
+                                                      'exp_time': 60.0,
+                                                      'exp_count': 10,
+                                                      'filter_pattern': 'solar',
+                                                      'target': self.target,
+                                                      'muscat_exp_times': {'gp_explength': 60,
+                                                                           'rp_explength': 30,
+                                                                           'ip_explength': 30,
+                                                                           'zp_explength': 60,
+                                                                           },
+                                                      'muscat_sync': True,
+                                                      'constraints': {
+                                                        'max_airmass': 2.0,
+                                                        'min_lunar_distance': 30.0
+                                                      }})
         self.filt_2m0_imaging = build_filter_blocks(self.params_2m0_imaging['filter_pattern'],
-                                                    self.params_2m0_imaging['exp_count'])[0]
+                                                    self.params_2m0_imaging['exp_count'],
+                                                    self.params_2m0_imaging['exp_type'])[0]
 
         self.params_1m0_imaging = configure_defaults({ 'site_code': 'K92',
                                                        'exp_time' : 60.0,
-                                                       'exp_count' : 12,
+                                                       'exp_count' : 10,
                                                        'filter_pattern' : 'w',
                                                        'target' : self.target,
                                                        'constraints': {
@@ -4914,10 +4874,12 @@ class TestMakeconfigurations(TestCase):
                                                        }})
 
         self.filt_1m0_imaging = build_filter_blocks(self.params_1m0_imaging['filter_pattern'],
-                                                    self.params_1m0_imaging['exp_count'])[0]
+                                                    self.params_1m0_imaging['exp_count'],
+                                                    self.params_1m0_imaging['exp_type'])[0]
         self.params_0m4_imaging = configure_defaults({ 'site_code': 'Z21',
                                                        'exp_time' : 90.0,
                                                        'exp_count' : 18,
+                                                       'slot_length': 220,
                                                        'filter_pattern' : 'w',
                                                        'target' : self.target,
                                                        'constraints': {
@@ -4925,7 +4887,8 @@ class TestMakeconfigurations(TestCase):
                                                          'min_lunar_distance': 30.0
                                                        }})
         self.filt_0m4_imaging = build_filter_blocks(self.params_0m4_imaging['filter_pattern'],
-                                                    self.params_0m4_imaging['exp_count'])[0]
+                                                    self.params_0m4_imaging['exp_count'],
+                                                    self.params_0m4_imaging['exp_type'])[0]
 
         self.params_2m0_spectroscopy = configure_defaults({ 'site_code': 'F65',
                                                             'instrument_code' : 'F65-FLOYDS',
@@ -4963,7 +4926,7 @@ class TestMakeconfigurations(TestCase):
     def test_0m4_imaging(self):
 
         expected_num_configurations = 1
-        expected_type = 'EXPOSE'
+        expected_type = 'REPEAT_EXPOSE'
 
         configurations = make_configs(self.params_0m4_imaging)
 

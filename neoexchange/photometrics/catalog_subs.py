@@ -1388,7 +1388,11 @@ def store_catalog_sources(catfile, catalog_type='LCOGT', std_zeropoint_tolerance
             # if bad, determine new zeropoint
             logger.debug("Refitting zeropoint, tolerance set to {}".format(std_zeropoint_tolerance))
             start = time.time()
-            header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, phot_cat_name = call_cross_match_and_zeropoint((header, table), std_zeropoint_tolerance, phot_cat_name)
+            if '2m0' in header.get('framename', ''):
+                rmag_limit = '<=18.0'
+            else:
+                rmag_limit = '<=15.0'
+            header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, phot_cat_name = call_cross_match_and_zeropoint((header, table), std_zeropoint_tolerance, phot_cat_name, rmag_limit=rmag_limit)
             end = time.time()
             logger.debug("TIME: compute_zeropoint took {:.1f} seconds".format(end-start))
             logger.debug("New zp={} {} {} {}".format(avg_zeropoint, std_zeropoint, count, num_in_calc))

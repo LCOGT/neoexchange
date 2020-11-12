@@ -93,7 +93,7 @@ class SpectroscopicFeasibility(FunctionalTest):
         new_passband = self.browser.find_element_by_id('id_newpassband').find_element_by_class_name('kv-value').text
         self.assertIn('V', new_passband)
         slot_length = self.browser.find_element_by_id('id_slot_length').find_element_by_class_name('kv-value').text
-        self.assertIn('23.0', slot_length)
+        self.assertIn('22.0', slot_length)
         sky_mag = self.browser.find_element_by_id('id_skymag').find_element_by_class_name('kv-value').text
         self.assertIn('19.4', sky_mag)
 
@@ -115,7 +115,7 @@ class SpectroscopicFeasibility(FunctionalTest):
         new_passband = self.browser.find_element_by_id('id_newpassband').find_element_by_class_name('kv-value').text
         self.assertIn('V', new_passband)
         slot_length = self.browser.find_element_by_id('id_slot_length').find_element_by_class_name('kv-value').text
-        self.assertIn('23.0', slot_length)
+        self.assertIn('22.0', slot_length)
         sky_mag = self.browser.find_element_by_id('id_skymag').find_element_by_class_name('kv-value').text
         self.assertIn('17.1', sky_mag)
 
@@ -137,7 +137,7 @@ class SpectroscopicFeasibility(FunctionalTest):
         new_passband = self.browser.find_element_by_id('id_newpassband').find_element_by_class_name('kv-value').text
         self.assertIn('V', new_passband)
         slot_length = self.browser.find_element_by_id('id_slot_length').find_element_by_class_name('kv-value').text
-        self.assertIn('23.0', slot_length)
+        self.assertIn('22.0', slot_length)
         sky_mag = self.browser.find_element_by_id('id_skymag').find_element_by_class_name('kv-value').text
         self.assertIn('17.1', sky_mag)
 
