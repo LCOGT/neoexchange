@@ -205,7 +205,7 @@ class LOOKProjectPageTest(FunctionalTest):
         self.browser.get(lookproject_page_url)
         self.wait_for_element_with_id('page')
 
-        newtarget_input = self.browser.find_element_by_id('id_newtarget')
+        newtarget_input = self.browser.find_element_by_id('id_target_name')
         newtarget_button = self.browser.find_element_by_id('add_new_target-btn')
 
         # She fills in the field with the new object name and clicks it
@@ -213,7 +213,7 @@ class LOOKProjectPageTest(FunctionalTest):
         newtarget_button.click()
 
         # The page refreshes and the new target appears as an active target
-        testlines = [u'191P Comet Hyperbolic, Dynamically New 03 57 50.41 +44 46 52.2 18.5 0.20 Nothing scheduled [-----]',
+        testlines = [u'191P Comet Jupiter Family 21 24 28.42 -23 49 36.4 18.6 0.78 Nothing scheduled [-----]',
                      ]
 
         self.check_for_row_in_table('active_targets', testlines[0])
