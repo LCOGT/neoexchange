@@ -63,7 +63,7 @@ COPY --from=findorbbuilder /root /root
 # Install Python dependencies
 
 # Add LCO RPM repository
-#COPY docker/etc/yum.repos.d/lcogt.repo /etc/yum.repos.d/lcogt.repo
+COPY docker/etc/yum.repos.d/lcogt.repo /etc/yum.repos.d/lcogt.repo
 
 # Install build dependencies for Python packages
 # XXX Need to install powertools repo
@@ -113,13 +113,13 @@ RUN curl -fsSLO "$SUPERCRONIC_URL" \
 # Install packages and update base system
 # XXX Need to install powertools repo
 RUN yum -y install \
-#            cdsclient \
+            cdsclient \
             ImageMagick \
             less \
-#            mtdlink \
-#            plplot \
-#            scamp \
-#            sextractor \
+            mtdlink \
+            plplot \
+            scamp \
+            sextractor \
             tcsh \
             wget \
             which \
