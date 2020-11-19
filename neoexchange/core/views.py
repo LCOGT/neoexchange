@@ -162,17 +162,6 @@ class AddTarget(LoginRequiredMixin, FormView):
     success_url = reverse_lazy('look_project')
     form_class = AddTargetForm
 
-    def get(self, request, *args, **kwargs):
-        # XXX Need to validate if the Body already exists in the DB and only
-        # try to add it if it isn't in the DB
-        try:
-            body = Body.objects.get(name=kwargs['target_name'])
-        except ObjectDoesNotExist:
-            # XXX Call form_valid ?
-            self.form_valid(form)
-        form = AddTargetForm(initial={'target_name': 'already exists', 'origin': 'O' })
-        return render(request, self.template_name, {'form': form, })
-
     def form_invalid(self, form, **kwargs):
         context = self.get_context_data(**kwargs)
         return render(context['view'].request, self.template_name, {'form': form, })
@@ -180,11 +169,18 @@ class AddTarget(LoginRequiredMixin, FormView):
     def form_valid(self, form):
         origin = form.cleaned_data['origin']
         target_name = form.cleaned_data['target_name']
-        target_created = update_MPC_orbit(target_name, origin=origin)
-        if target_created:
-            messages.success(self.request, 'Added new target %s' % form.cleaned_data['target_name'])
-        else:
-            messages.warning(self.request, 'Could not add target %s' % form.cleaned_data['target_name'])
+        try:
+            body = Body.objects.get(name=target_name)
+            messages.warning(self.request, '%s is already in the system' % target_name)
+        except ObjectDoesNotExist:
+            target_created = update_MPC_orbit(target_name, origin=origin)
+            if target_created:
+                messages.success(self.request, 'Added new target %s' % target_name)
+            else:
+                messages.warning(self.request, 'Could not add target %s' % target_name)
+        except Body.MultipleObjectsReturned:
+            messages.warning(self.request, 'Multiple targets called %s found' % target_name)
+
         return super(AddTarget, self).form_valid(form)
 
 

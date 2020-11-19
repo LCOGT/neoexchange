@@ -172,6 +172,7 @@ class LOOKProjectPageTest(FunctionalTest):
 
         self.check_for_row_in_table('new_comets', testlines[0])
 
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     @patch('core.models.body.datetime', MockDateTime)
     def test_add_lookproject_target(self):
 
@@ -202,6 +203,7 @@ class LOOKProjectPageTest(FunctionalTest):
             self.browser.find_element_by_id('login-btn').click()
         # Wait until response is received
         self.wait_for_element_with_id('page')
+        # Back to LOOK Project page
         self.browser.get(lookproject_page_url)
         self.wait_for_element_with_id('page')
 
@@ -217,3 +219,13 @@ class LOOKProjectPageTest(FunctionalTest):
                      ]
 
         self.check_for_row_in_table('active_targets', testlines[0])
+
+        # She retries adding the same object
+        newtarget_input = self.browser.find_element_by_id('id_target_name')
+        newtarget_button = self.browser.find_element_by_id('add_new_target-btn')
+        newtarget_input.send_keys("191P")
+        newtarget_button.click()
+
+        # The message box says that the target is already in the system
+        msg_box = self.browser.find_element_by_id('show-messages')
+        self.assertIn('191P is already in the system', msg_box.text)
