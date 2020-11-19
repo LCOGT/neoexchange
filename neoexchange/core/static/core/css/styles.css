@@ -410,7 +410,6 @@ li.dropdown-menu:after {
 }
 
 #main-holder { display: inline-block; }
-#main { width:100%; overflow-x: hidden; position: relative; z-index: 1;}
 .container-lg {
   margin: 0 auto;
 }
