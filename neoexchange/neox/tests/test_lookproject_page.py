@@ -19,7 +19,7 @@ from datetime import datetime
 from django.contrib.auth.models import User
 from django.urls import reverse
 
-from neox.tests.mocks import MockDateTime, mock_build_visibility_source, mock_lco_authenticate
+from neox.tests.mocks import MockDateTime, mock_build_visibility_source, mock_lco_authenticate, mock_fetchpage_and_make_soup
 from core.models import Body, PreviousSpectra, PhysicalParameters, Proposal, SuperBlock
 from neox.auth_backend import update_proposal_permissions
 
@@ -174,6 +174,7 @@ class LOOKProjectPageTest(FunctionalTest):
 
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     @patch('core.models.body.datetime', MockDateTime)
+    @patch('astrometrics.sources_subs.fetchpage_and_make_soup', mock_fetchpage_and_make_soup)
     def test_add_lookproject_target(self):
 
         MockDateTime.change_datetime(2020, 11, 14, 17, 0, 0)
