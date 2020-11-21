@@ -5,7 +5,7 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 ## History
 
 ### 3.8.0
-Add postgres support XXX
+Add postgres support.
 
 ### 3.7.0
 Add MuSCAT3 support and Repeat Exposure for long blocks
