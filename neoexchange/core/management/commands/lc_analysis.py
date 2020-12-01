@@ -12,10 +12,11 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
-Analyzes output of lightcurve_extraction for period and plots folded lightcurve
+Prepare LC to be analysed with DAMIT
 """
 
 import os
+from glob import glob
 from datetime import datetime, timedelta, time
 from math import floor
 import numpy as np
@@ -28,15 +29,20 @@ from astropy.stats import LombScargle
 import astropy.units as u
 from astropy.time import Time
 
+from core.views import import_alcdef
+from core.models import Body, model_to_dict
+from core.utils import search
+from astrometrics.time_subs import jd_utc2datetime
+from astrometrics.ephem_subs import compute_ephem
+
 
 class Command(BaseCommand):
 
-    help = 'Takes in the output of \'lightcurve_extraction\' and analyses it for period while producing phase folded lightcurve plots. \'lightcure_extraction\' must have been run first.'
+    help = 'Convert ALCDEF into format DAMIT can use.'
 
     def add_arguments(self, parser):
-        parser.add_argument('lc_file', type=str, help='location of lightcurve data (e.g. /apophis/eng/rocks/Reduction/aster123/aster123_###_lightcurve_data.txt)')
-        parser.add_argument('-p', '--period', type=float, default=0.0, help='Known Asteroid Rotation Period to fold plot against')
-        parser.add_argument('-e', '--epoch', type=float, default=0.0, help='Epoch (MJD) to set initial phase with respect to')
+        parser.add_argument('path', type=str, help='location of lightcurve data '
+                                                   '(e.g. /apophis/eng/rocks/Reduction/aster123/)')
 
     def read_data(self):
         """ reads lightcurve_data.txt output by lightcurve_extraction"""
@@ -101,48 +107,50 @@ class Command(BaseCommand):
 
         return
 
+    def write_input_lcs(self):
+        """
+        Create input lcs:
+        :input:
+        :return:
+        JD (Light-time corrected)
+        Brightness (intensity)
+        XYZ coordinates of Sun (astrocentric cartesian coordinates) AU
+        XYZ coordinates of Earth (astrocentric cartesian coordinates) AU
+        """
+
+    def astro_centric_coord(self, geocent_a, heliocent_e):
+        astrocent_e = [-1*x for x in geocent_a]
+        geocent_h = [-1*x for x in heliocent_e]
+        astrocent_h = [x_g - x_a for x_g, x_a in zip(geocent_h, geocent_a)]
+        return astrocent_e, astrocent_h
+
     def handle(self, *args, **options):
-        raise CommandError('This code requires more work before use.')
-
-        try:
-            times, mags, mag_errs, body = self.read_data()
-        except FileNotFoundError:
-            raise FileNotFoundError('{} not found. Please make sure you have included the correct directory and that lightcurve_extraction command has run'.format(options['lc_file']))
-        if options['period'] == 0:
-            period = self.find_period(times, mags, mag_errs)
-        else:
-            period = options['period']
-
-        if not options['epoch']:
-            epoch = times[np.argmin(times)]
-        else:
-            try:
-                epoch = Time(options['epoch'], format='mjd').mjd
-            except ValueError:
-                raise ValueError('Epoch input in unrecognized format. Please input as MJD')
-
-        subtime = times-epoch
-
-        divtime = (subtime*24)/period
-        phases = np.modf(divtime)[0]  # phases array built
-
-        data = sorted(zip(phases, mags, mag_errs))  # building buffers
-        end = np.array([])
-        start = np.array([])
-        for n in range(len(data)):
-            if data[n][0] >= .90:
-                start = np.append(start, [data[n][0]-1, data[n][1], data[n][2]])
-            if data[n][0] <= .1:
-                end = np.append(end, [data[n][0]+1, data[n][1], data[n][2]])
-        data = np.append(data, end)
-        data = np.append(start, data)
-        phases = data[::3]
-        mags = data[1::3]
-        mag_errs = data[2::3]
-
-        phasetitle = 'Phase Folded LC for %s' % body
-
-        self.plot_fold_phase(phases, mags, mag_errs, period, epoch, phasetitle)
-        plt.show()
+        path = options['path']
+        files = search(path, '.*.ALCDEF.txt')
+        meta_list = []
+        lc_list = []
+        bodies = Body.objects.filter(name='4709')
+        body = bodies[0]
+        body_elements = model_to_dict(body)
+        filt_name = "SG"
+        for file in files:
+            file = os.path.join(path, file)
+            # basename = os.path.basename(file)
+            meta_list, lc_list = import_alcdef(file, meta_list, lc_list)
+        print(len([x for x in meta_list if x['FILTER'] in filt_name]))
+        for k, dat in enumerate(meta_list):
+            site = dat['MPCCODE']
+            mean_intensity = 10 ** (0.4 * np.mean(lc_list[k]['mags']))
+            if dat['FILTER'] in filt_name:
+                print(f"{len(lc_list[k]['mags'])} 0")
+                for c, d in enumerate(lc_list[k]['date']):
+                    ephem_date = jd_utc2datetime(d)
+                    ephem = compute_ephem(ephem_date, body_elements, site)
+                    astrocent_e, astrocent_h = self.astro_centric_coord(ephem["geocnt_a_pos"], ephem["heliocnt_e_pos"])
+                    d = d - ephem['ltt']/60/60/24
+                    intensity = 10 ** (0.4 * lc_list[k]['mags'][c])
+                    rel_intensity = intensity / mean_intensity
+                    print(f"{d:.6f}   {rel_intensity:1.6E}   {astrocent_e[0]:.6E} {astrocent_e[1]:.6E} {astrocent_e[2]:.6E}"
+                          f"   {astrocent_h[0]:.6E} {astrocent_h[1]:.6E} {astrocent_h[2]:.6E}")
 
         return

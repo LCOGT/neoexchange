@@ -128,7 +128,9 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
         'southpole_sep':  Angular distance from the South Pole (degrees)
         'sun_sep':        Angular distance from the Solar position (radians)
         'earth_obj_dist': Delta, distance between Earth and target (AU)
-
+        'geocnt_a_pos':   Geocentric Asteroid Position [x,y,z] (AU)
+        'heliocnt_e_pos': Heliocentric Earth Position [x,y,z] (AU)
+        'ltt':            Light Travel time (s)
     """
 # Light travel time for 1 AU (in sec)
     tau = 499.004783806
@@ -277,12 +279,12 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
         logger.debug("Sun->Asteroid [x,y,z]=%s %s" % (pv[0:3], status))
         logger.debug("Sun->Asteroid [xdot,ydot,zdot]=%s %s" % (pv[3:6], status))
         if status != 0:
-            err_mapping = { -1 : 'illegal JFORM',
-                            -2 : 'illegal E',
-                            -3 : 'illegal AORQ',
-                            -4 : 'illegal DM',
-                            -5 : 'numerical error'
-                          }
+            err_mapping = {-1: 'illegal JFORM',
+                           -2: 'illegal E',
+                           -3: 'illegal AORQ',
+                           -4: 'illegal DM',
+                           -5: 'numerical error'
+                           }
             msg = "Position (sla_planel) error={} {}".format(status, err_mapping.get(status, 'Unknown error'))
             logger.error(msg)
             return {}
@@ -439,6 +441,9 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
                 'southpole_sep' : spd,
                 'sun_sep'       : separation,
                 'earth_obj_dist': delta,
+                'geocnt_a_pos'  : pos,
+                'heliocnt_e_pos': e_pos_hel,
+                'ltt'           : ltt,
                 }
 
     return emp_dict
