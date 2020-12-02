@@ -24,5 +24,7 @@ neoexchange/*mag_*.png
 neoexchange/*dist_*.png
 neoexchange/ALCDEF*.txt
 neoexchange/*.json
+neoexchange/*.json.gz
 neoexchange/environ.dat
-
+neoexchange/*.sql
+neoexchange/*.sql.gz
