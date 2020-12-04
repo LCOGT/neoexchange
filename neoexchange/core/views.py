@@ -2556,7 +2556,9 @@ def update_crossids(astobj, dbg=False):
         return False
 
     temp_id = astobj[0].rstrip()
-    desig = astobj[1]
+    # XXX TAL 2020/11/16: Hacky fix for the temporarily created `name` too long problem
+    # (which Postgres complains at but MySQL has being letting slide...)
+    desig = astobj[1][0:15]
 
     created = False
     # Find Bodies that have the 'provisional name' of <temp_id> OR (final)'name' of <desig>
