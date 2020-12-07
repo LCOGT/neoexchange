@@ -474,7 +474,9 @@ class Command(BaseCommand):
                                               target_data=frame_data, show_reticle=True, progress=True)
                         if "WARNING" not in movie_file:
                             output_file_list.append('{},{}'.format(movie_file, data_path.lstrip(out_path)))
-                        self.stdout.write("New gif created: {}".format(movie_file))
+                            self.stdout.write("New gif created: {}".format(movie_file))
+                        else:
+                            self.stdout.write(movie_file)
         alcdef_file.close()
         self.stdout.write("Found matches in %d of %d frames" % (len(times), total_frame_count))
 
