@@ -124,19 +124,7 @@ class Command(BaseCommand):
         astrocent_h = [x_g - x_a for x_g, x_a in zip(geocent_h, geocent_a)]
         return astrocent_e, astrocent_h
 
-    def handle(self, *args, **options):
-        path = options['path']
-        files = search(path, '.*.ALCDEF.txt')
-        meta_list = []
-        lc_list = []
-        bodies = Body.objects.filter(name='4709')
-        body = bodies[0]
-        body_elements = model_to_dict(body)
-        filt_name = "SG"
-        for file in files:
-            file = os.path.join(path, file)
-            # basename = os.path.basename(file)
-            meta_list, lc_list = import_alcdef(file, meta_list, lc_list)
+    def create_lcs_input(self, meta_list, lc_list, body_elements, filt_name):
         print(len([x for x in meta_list if x['FILTER'] in filt_name]))
         for k, dat in enumerate(meta_list):
             site = dat['MPCCODE']
@@ -150,7 +138,22 @@ class Command(BaseCommand):
                     d = d - ephem['ltt']/60/60/24
                     intensity = 10 ** (0.4 * lc_list[k]['mags'][c])
                     rel_intensity = intensity / mean_intensity
-                    print(f"{d:.6f}   {rel_intensity:1.6E}   {astrocent_e[0]:.6E} {astrocent_e[1]:.6E} {astrocent_e[2]:.6E}"
-                          f"   {astrocent_h[0]:.6E} {astrocent_h[1]:.6E} {astrocent_h[2]:.6E}")
+                    print(f"{d:.6f}   {rel_intensity:1.6E}   {astrocent_e[0]:.6E} {astrocent_e[1]:.6E}"
+                          f" {astrocent_e[2]:.6E}   {astrocent_h[0]:.6E} {astrocent_h[1]:.6E} {astrocent_h[2]:.6E}")
+
+    def handle(self, *args, **options):
+        path = options['path']
+        files = search(path, '.*.ALCDEF.txt')
+        meta_list = []
+        lc_list = []
+        bodies = Body.objects.filter(name='4709')
+        body = bodies[0]
+        body_elements = model_to_dict(body)
+        filt_name = "SG"
+        for file in files:
+            file = os.path.join(path, file)
+            # basename = os.path.basename(file)
+            meta_list, lc_list = import_alcdef(file, meta_list, lc_list)
+        create_lcs_input(meta_list, lc_list, body_elements, filt_name)
 
         return
