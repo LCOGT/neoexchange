@@ -22,6 +22,7 @@ from math import floor
 import numpy as np
 
 from django.core.management.base import BaseCommand, CommandError
+from django.core.files.storage import default_storage
 
 import matplotlib.pyplot as plt
 from matplotlib.dates import HourLocator, DateFormatter
@@ -34,6 +35,7 @@ from core.models import Body, model_to_dict
 from core.utils import search
 from astrometrics.time_subs import jd_utc2datetime
 from astrometrics.ephem_subs import compute_ephem
+from photometrics.catalog_subs import sanitize_object_name
 
 
 class Command(BaseCommand):
@@ -107,7 +109,13 @@ class Command(BaseCommand):
 
         return
 
-    def write_input_lcs(self):
+    def astro_centric_coord(self, geocent_a, heliocent_e):
+        astrocent_e = [-1*x for x in geocent_a]
+        geocent_h = [-1*x for x in heliocent_e]
+        astrocent_h = [x_g - x_a for x_g, x_a in zip(geocent_h, geocent_a)]
+        return astrocent_e, astrocent_h
+
+    def create_lcs_input(self,input_file, meta_list, lc_list, body_elements, filt_name):
         """
         Create input lcs:
         :input:
@@ -117,20 +125,12 @@ class Command(BaseCommand):
         XYZ coordinates of Sun (astrocentric cartesian coordinates) AU
         XYZ coordinates of Earth (astrocentric cartesian coordinates) AU
         """
-
-    def astro_centric_coord(self, geocent_a, heliocent_e):
-        astrocent_e = [-1*x for x in geocent_a]
-        geocent_h = [-1*x for x in heliocent_e]
-        astrocent_h = [x_g - x_a for x_g, x_a in zip(geocent_h, geocent_a)]
-        return astrocent_e, astrocent_h
-
-    def create_lcs_input(self, meta_list, lc_list, body_elements, filt_name):
-        print(len([x for x in meta_list if x['FILTER'] in filt_name]))
+        input_file.write(f"{len([x for x in meta_list if x['FILTER'] in filt_name])}\n")
         for k, dat in enumerate(meta_list):
             site = dat['MPCCODE']
             mean_intensity = 10 ** (0.4 * np.mean(lc_list[k]['mags']))
             if dat['FILTER'] in filt_name:
-                print(f"{len(lc_list[k]['mags'])} 0")
+                input_file.write(f"{len(lc_list[k]['mags'])} 0\n")
                 for c, d in enumerate(lc_list[k]['date']):
                     ephem_date = jd_utc2datetime(d)
                     ephem = compute_ephem(ephem_date, body_elements, site)
@@ -138,8 +138,9 @@ class Command(BaseCommand):
                     d = d - ephem['ltt']/60/60/24
                     intensity = 10 ** (0.4 * lc_list[k]['mags'][c])
                     rel_intensity = intensity / mean_intensity
-                    print(f"{d:.6f}   {rel_intensity:1.6E}   {astrocent_e[0]:.6E} {astrocent_e[1]:.6E}"
-                          f" {astrocent_e[2]:.6E}   {astrocent_h[0]:.6E} {astrocent_h[1]:.6E} {astrocent_h[2]:.6E}")
+                    input_file.write(f"{d:.6f}   {rel_intensity:1.6E}   {astrocent_e[0]:.6E} {astrocent_e[1]:.6E}"
+                                     f" {astrocent_e[2]:.6E}   {astrocent_h[0]:.6E} {astrocent_h[1]:.6E}"
+                                     f" {astrocent_h[2]:.6E}\n")
 
     def handle(self, *args, **options):
         path = options['path']
@@ -149,11 +150,13 @@ class Command(BaseCommand):
         bodies = Body.objects.filter(name='4709')
         body = bodies[0]
         body_elements = model_to_dict(body)
+        obj_name = sanitize_object_name(body.current_name())
         filt_name = "SG"
         for file in files:
             file = os.path.join(path, file)
-            # basename = os.path.basename(file)
             meta_list, lc_list = import_alcdef(file, meta_list, lc_list)
-        create_lcs_input(meta_list, lc_list, body_elements, filt_name)
+        lcs_input_filename = os.path.join(path, obj_name + '_input.lcs')
+        lcs_input_file = default_storage.open(lcs_input_filename, 'w')
+        self.create_lcs_input(lcs_input_file, meta_list, lc_list, body_elements, filt_name)
 
         return
