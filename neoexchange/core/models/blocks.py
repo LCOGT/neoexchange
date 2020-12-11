@@ -19,7 +19,7 @@ from django.db.models import Sum
 from django.utils.translation import gettext_lazy as _
 from django.utils.functional import cached_property
 from requests.compat import urljoin
-from numpy import fromstring
+from numpy import frombuffer
 
 from astrometrics.ephem_subs import compute_ephem, comp_sep
 from core.archive_subs import check_for_archive_images
@@ -290,7 +290,7 @@ class Candidate(models.Model):
         """Unpacks the binary BLOB from the detections field into a numpy
         structured array"""
         dtypes = detections_array_dtypes()
-        dets = fromstring(self.detections, dtype=dtypes)
+        dets = frombuffer(self.detections, dtype=dtypes)
         return dets
 
     def compute_separation(self, body=None, time=None):
