@@ -147,16 +147,18 @@ class Command(BaseCommand):
         files = search(path, '.*.ALCDEF.txt')
         meta_list = []
         lc_list = []
+        for file in files:
+            file = os.path.join(path, file)
+            meta_list, lc_list = import_alcdef(file, meta_list, lc_list)
         bodies = Body.objects.filter(name='4709')
         body = bodies[0]
         body_elements = model_to_dict(body)
         obj_name = sanitize_object_name(body.current_name())
         filt_name = "SG"
-        for file in files:
-            file = os.path.join(path, file)
-            meta_list, lc_list = import_alcdef(file, meta_list, lc_list)
         lcs_input_filename = os.path.join(path, obj_name + '_input.lcs')
         lcs_input_file = default_storage.open(lcs_input_filename, 'w')
         self.create_lcs_input(lcs_input_file, meta_list, lc_list, body_elements, filt_name)
+        lcs_input_file.close()
+
 
         return
