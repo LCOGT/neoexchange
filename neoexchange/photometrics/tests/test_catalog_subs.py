@@ -1240,6 +1240,7 @@ class FITSUnitTest(TestCase):
         self.table_item_flags24 = self.test_table[2:3]
         self.table_num_flags0 = len(where(self.test_table['flags'] == 0)[0])
 
+        self.test_bad_ldacfilename = os.path.join('photometrics', 'tests', 'ldac_test_catalog_corrupt.fits')
         self.test_ldacfilename = os.path.join('photometrics', 'tests', 'ldac_test_catalog.fits')
         hdulist = fits.open(self.test_ldacfilename)
         self.test_ldactable = hdulist[2].data
@@ -1408,6 +1409,14 @@ class OpenFITSCatalog(FITSUnitTest):
 
         self.assertAlmostEqual(expected_x, tbl[-1]['XWIN_IMAGE'], self.precision)
         self.assertAlmostEqual(expected_y, tbl[-1]['YWIN_IMAGE'], self.precision)
+
+
+    def test_ldac_catalog_bad(self):
+
+        try:
+            hdr, tbl, cattype = open_fits_catalog(self.test_bad_ldacfilename)
+        except OSError:
+            self.fail("open_fits_catalog raised OSError unexpectedly")
 
     def test_banzai_read_catalog(self):
         unexpected_value = {}
