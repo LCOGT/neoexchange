@@ -1412,11 +1412,16 @@ class OpenFITSCatalog(FITSUnitTest):
 
 
     def test_ldac_catalog_bad(self):
+        expected_value = {}
+        expected_cattype = 'CORRUPT'
 
         try:
             hdr, tbl, cattype = open_fits_catalog(self.test_bad_ldacfilename)
         except OSError:
             self.fail("open_fits_catalog raised OSError unexpectedly")
+        self.assertEqual(expected_value, hdr)
+        self.assertEqual(expected_value, tbl)
+        self.assertEqual(expected_cattype, cattype)
 
     def test_banzai_read_catalog(self):
         unexpected_value = {}

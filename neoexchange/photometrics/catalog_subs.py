@@ -855,6 +855,14 @@ def open_fits_catalog(catfile, header_only=False):
         logger.error("Unable to open FITS catalog %s (Reason=%s)" % (catfile, e))
         return header, table, cattype
 
+    # Verify HDUs first
+    try:
+        for hdu in hdulist:
+            hdu.verify('exception')
+    except OSError:
+        logger.error("Verification of FITS catalog {} failed".format(catfile))
+        return header, table, 'CORRUPT'
+
     if len(hdulist) == 2:
         header = hdulist[0].header
         cattype = 'LCOGT'
