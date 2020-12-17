@@ -1297,14 +1297,22 @@ def update_ldac_catalog_wcs(fits_image_file, fits_catalog, overwrite=True):
     return status
 
 
-def extract_catalog(catfile, catalog_type='LCOGT', flag_filter=0, new=True):
+def extract_catalog(catfile, catalog_type='LCOGT', flag_filter=0, new=True, remove=False):
     """High-level routine to read LCOGT FITS catalogs from <catfile>.
     This returns a dictionary of needed header items and an AstroPy table of
     the sources that pass the [flag_filter] cut-off or None if the file could
-    not be opened."""
+    not be opened. If [remove]=True, then if the <catfile> fails header
+    verification in open_fits_catalog(), it will be deleted here."""
 
     header = table = None
     fits_header, fits_table, cattype = open_fits_catalog(catfile)
+
+    if cattype == 'CORRUPT' and remove is True:
+        try:
+            os.unlink(catfile)
+            logger.warning(f'Removed corrupted file {catfile}')
+        except OSError as e:
+            logger.error(f'Unable to remove corrupted {catfile}')
 
     if len(fits_header) != 0 and len(fits_table) != 0:
         header = get_catalog_header(fits_header, catalog_type)

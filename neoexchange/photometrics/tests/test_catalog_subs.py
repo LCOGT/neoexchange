@@ -19,6 +19,8 @@ from math import sqrt, log10, log
 import os
 from glob import glob
 import tempfile
+import shutil
+import stat
 
 from mock import patch
 from django.test import TestCase
@@ -2282,6 +2284,103 @@ class FITSReadCatalog(FITSUnitTest):
         header_items = get_catalog_header(header, cattype)
         catalog_items = get_catalog_items_old(header_items, self.ldac_table_firstitem, "FITS_LDAC")
         self.compare_tables(expected_catalog, catalog_items, 4)
+
+
+class TestExtractCatalog(FITSUnitTest):
+
+    def setUp(self):
+        super(TestExtractCatalog, self).setUp()
+        self.temp_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+
+        shutil.copy(os.path.abspath(self.test_bad_ldacfilename), self.temp_dir)
+        self.test_bad_ldacfilename = os.path.join(self.temp_dir, os.path.basename(self.test_bad_ldacfilename))
+        self.remove = True
+        self.debug_print = False
+
+        self.expected_hdrtbl = None
+        self.maxDiff = None
+
+    def tearDown(self):
+        if self.remove:
+            try:
+                files_to_remove = glob(os.path.join(self.temp_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.chmod(file_to_rm, stat.S_IWUSR)
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.temp_dir)
+            try:
+                os.rmdir(self.temp_dir)
+                if self.debug_print:
+                    print("Removed", self.temp_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.temp_dir)
+        else:
+            print("Temporary test directory=", self.temp_dir)
+
+    def test_bad_ldac_dontremove_default(self):
+
+        header, table = extract_catalog(self.test_bad_ldacfilename, 'BANZAI_LDAC')
+
+        self.assertTrue(os.path.exists(self.test_bad_ldacfilename))
+        self.assertEqual(self.expected_hdrtbl, header)
+        self.assertEqual(self.expected_hdrtbl, table)
+
+    def test_bad_ldac_dontremove(self):
+
+        header, table = extract_catalog(self.test_bad_ldacfilename, 'BANZAI_LDAC', remove=False)
+
+        self.assertTrue(os.path.exists(self.test_bad_ldacfilename))
+        self.assertEqual(self.expected_hdrtbl, header)
+        self.assertEqual(self.expected_hdrtbl, table)
+
+    def test_bad_ldac_remove_bad_perms(self):
+
+        os.chmod(self.test_bad_ldacfilename, 0o000)
+        header, table = extract_catalog(self.test_bad_ldacfilename, 'BANZAI_LDAC', remove=True)
+
+        self.assertTrue(os.path.exists(self.test_bad_ldacfilename))
+        self.assertEqual(self.expected_hdrtbl, header)
+        self.assertEqual(self.expected_hdrtbl, table)
+
+    def test_bad_ldac_remove(self):
+
+        header, table = extract_catalog(self.test_bad_ldacfilename, 'BANZAI_LDAC', remove=True)
+
+        self.assertFalse(os.path.exists(self.test_bad_ldacfilename))
+        self.assertEqual(self.expected_hdrtbl, header)
+        self.assertEqual(self.expected_hdrtbl, table)
+
+    def test_good_ldac_remove_on(self):
+
+        expected_hdr = {'astrometric_catalog': 'UCAC4',
+                       'astrometric_fit_nstars': 22,
+                       'astrometric_fit_rms': 0.14473999999999998,
+                       'astrometric_fit_status': 0,
+                       'exptime': 115.0,
+                       'field_center_dec': -9.767727777777779,
+                       'field_center_ra': 219.83084166666666,
+                       'field_height': '15.8624m',
+                       'field_width': '15.7846m',
+                       'filter': 'w',
+                       'framename': 'cpt1m013-kb76-20160428-0141-e00.fits',
+                       'fwhm': 2.886,
+                       'instrument': 'kb76',
+                       'obs_date': datetime(2016, 4, 28, 20, 11, 54, 303000),
+                       'obs_midpoint': datetime(2016, 4, 28, 20, 12, 51, 803000),
+                       'pixel_scale': 0.467,
+                       'site_code': 'K92',
+                       'zeropoint': -99.0,
+                       'zeropoint_err': -99.0,
+                       'zeropoint_src': 'NOT_FIT(LCOGTCAL-V0.0.2-r8174)'}
+
+        shutil.copy(os.path.abspath(self.test_ldacfilename), self.temp_dir)
+        test_ldacfilename = os.path.join(self.temp_dir, os.path.basename(self.test_ldacfilename))
+        header, table = extract_catalog(test_ldacfilename, 'FITS_LDAC', remove=True)
+
+        self.assertTrue(os.path.exists(test_ldacfilename))
+        self.assertEqual(expected_hdr, header)
+        self.assertEqual(883, len(table))
 
 
 class TestUpdateLDACCatalogWCS(FITSUnitTest):
