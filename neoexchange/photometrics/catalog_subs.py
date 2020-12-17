@@ -1391,9 +1391,9 @@ def store_catalog_sources(catfile, catalog_type='LCOGT', std_zeropoint_tolerance
     num_in_table = 0
     num_sources_created = 0
 
-    # read the catalog file
+    # read the catalog file. Allow removal of corrupted LDAC files.
     start = time.time()
-    header, table = extract_catalog(catfile, catalog_type)
+    header, table = extract_catalog(catfile, catalog_type, remove=True)
     end = time.time()
     logger.debug("TIME: extract_catalog took {:.1f} seconds".format(end-start))
 
