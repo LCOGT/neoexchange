@@ -219,11 +219,6 @@ LOGGING = {
         }
     },
     'loggers': {
-        # 'django.request': {
-        #     'handlers': ['mail_admins'],
-        #     'level': 'ERROR',
-        #     'propagate': True,
-        # },
         'django.request': {
             'handlers':['console'],
             'propagate': True,
@@ -244,6 +239,10 @@ LOGGING = {
         'neox': {
             'handlers': ['console'],
             'level' : 'ERROR'
+        },
+        'pipelines': {
+            'handlers': ['console'],
+            'level' : 'INFO'
         }
     }
 }

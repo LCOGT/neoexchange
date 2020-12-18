@@ -6,6 +6,7 @@ import dateutil.parser
 import tempfile
 from pathlib import Path
 import re
+import logging
 
 from django.conf import settings
 from django.core.files.base import ContentFile
@@ -15,6 +16,7 @@ from core.models.frame import Frame
 
 from core.models.async_process import AsyncError, AsyncProcess, ASYNC_STATUS_CREATED
 
+logger = logging.getLogger('pipelines')
 
 class InvalidPipelineError(Exception):
     """
@@ -81,6 +83,7 @@ class PipelineProcess(AsyncProcess):
         if not self.logs:
             self.logs = ''
         self.logs += msg + end
+        logger.debug(msg)
         self.save()
 
     @classmethod

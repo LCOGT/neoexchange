@@ -5,17 +5,21 @@ from datetime import datetime, timedelta
 from tempfile import mkdtemp, gettempdir
 import shutil
 from glob import glob
+from pathlib import Path
 
 from django.conf import settings
 from django.core.files import File
 from django.core.files.storage import default_storage
 from dramatiq.middleware.time_limit import TimeLimitExceeded
 
+from astrometrics.ephem_subs import determine_rates_pa
 from core.archive_subs import archive_login, get_frame_data, get_catalog_data, \
     determine_archive_start_end, download_files, make_data_dir
+from core.models import Frame
 from core.models.pipelines import PipelineProcess, PipelineOutput
 from core.utils import save_to_default, NeoException
 from core.views import determine_active_proposals
+from photometrics.catalog_subs import get_fits_files, sort_rocks, find_first_last_frames
 from photometrics.gf_movie import make_movie
 
 logger = logging.getLogger(__name__)
@@ -85,11 +89,12 @@ class DownloadProcessPipeline(PipelineProcess):
     def download(self, obs_date, proposals, out_path, dlengimaging=False, spectraonly=False):
         self.frames = {}
         if not hasattr(self, 'out_path'):
-            self.out_path = out_path
+            self.out_path = Path(out_path) / obs_date.strftime('%Y%m%d')
+        if not hasattr(self, 'obs_date'):
+            self.obs_date = obs_date
         auth_headers = archive_login()
         start_date, end_date = determine_archive_start_end(obs_date)
         for proposal in proposals:
-            logger.info("Looking for frames between %s->%s from %s" % ( start_date, end_date, proposal ))
             self.log("Looking for frames between %s->%s from %s" % ( start_date, end_date, proposal ))
             obstypes = self.OBSTYPES
             if (proposal == 'LCOEngineering' and not dlengimaging) or spectraonly:
@@ -102,7 +107,6 @@ class DownloadProcessPipeline(PipelineProcess):
                 else:
                     # '' seems to be needed to get the tarball of FLOYDS products
                     redlevel = ['0', '']
-                logger.info(f"Looking for {obstype} data")
                 self.log(f"Looking for {obstype} data")
                 frames = get_frame_data(start_date, end_date, auth_headers, obstype, proposal, red_lvls=redlevel)
                 for red_lvl in frames.keys():
@@ -118,11 +122,18 @@ class DownloadProcessPipeline(PipelineProcess):
                         else:
                             self.frames[red_lvl] = catalogs[red_lvl]
                 for red_lvl in self.frames.keys():
-                    logger.info("Found %d frames for reduction level: %s" % ( len(self.frames[red_lvl]), red_lvl ))
                     self.log("Found %d frames for reduction level: %s" % ( len(self.frames[red_lvl]), red_lvl ))
                 dl_frames = download_files(self.frames, out_path)
-                logger.info("Downloaded %d frames" % ( len(dl_frames) ))
                 self.log("Downloaded %d frames" % ( len(dl_frames) ))
+        return
+
+    def sort_objects(self):
+        self.log('Sorting rocks')
+        fits_files = get_fits_files(self.out_path)
+        self.log("Found %d FITS files in %s" % (len(fits_files), self.out_path))
+        objects = sort_rocks(fits_files)
+        logger.info(objects)
+        self.objects = objects
         return
 
     def create_movies(self):
@@ -138,7 +149,72 @@ class DownloadProcessPipeline(PipelineProcess):
                         save_to_default(filename, self.out_path)
         return
 
+    def process(self, objectid=None):
+# Step 3: For each object:
+        for rock in self.objects:
+            # Skip if a specific object was specified on the commandline and this isn't it
+            if objectid and objectid not in rock:
+                    continue
+            datadir = os.path.join(self.out_path, rock)
+            self.log('Processing target %s in %s' % (rock, datadir))
+
+# Step 3a: Check data is in DB
+            fits_files = get_fits_files(datadir)
+            self.log("Found %d FITS files in %s" % (len(fits_files), datadir))
+            first_frame, last_frame = find_first_last_frames(fits_files)
+            if not first_frame or not last_frame:
+                self.log("Couldn't determine first and last frames, skipping target")
+                continue
+            self.log("Timespan %s->%s" % (first_frame.midpoint, last_frame.midpoint))
+# Step 3b: Calculate mean PA and speed
+            if first_frame.block:
+                astrometry_lightcurve(first_frame, last_frame, elements, body=first_frame.block.body)
+            else:
+                self.log(f"No Block found for object {rock}")
+        return
+
     def cleanup():
         # Check if we're using a temp dir and then delete it
         if gettempdir() in self.out_path:
             shutil.rmtree(self.out_path)
+
+def astrometry_lightcurve(first_frame, last_frame, elements, body):
+    if body.epochofel:
+        elements = model_to_dict(body)
+        min_rate, max_rate, pa, deltapa = determine_rates_pa(first_frame.midpoint, last_frame.midpoint, elements, first_frame.sitecode)
+
+# Step 3c: Run pipeline_astrometry
+        mtdlink_args = "datadir=%s pa=%03d deltapa=%03d minrate=%.3f maxrate=%.3f" % (datadir, pa, deltapa, min_rate, max_rate)
+        skip_mtdlink = False
+        keep_temp_dir = False
+        if len(fits_files) > options['mtdlink_file_limit']:
+            self.log("Too many frames to run mtd_link")
+            skip_mtdlink = True
+# Compulsory arguments need to go here as a list
+        mtdlink_args = [datadir, pa, deltapa, min_rate, max_rate]
+
+# Optional arguments go here, minus the leading double minus signs and with
+# hyphens replaced by underscores for...reasons.
+# e.g. '--keep-temp-dir' becomes 'temp_dir'
+        mtdlink_kwargs = {'temp_dir': os.path.join(datadir, 'Temp'),
+                          'skip_mtdlink': skip_mtdlink,
+                          'keep_temp_dir': False
+                          }
+        self.log("Calling pipeline_astrometry with: %s %s" % (mtdlink_args, mtdlink_kwargs))
+        status = call_command('pipeline_astrometry', *mtdlink_args, **mtdlink_kwargs)
+        self.stderr.write("\n")
+    else:
+        self.stderr.write("Object %s does not have updated elements" % body.current_name())
+
+# Step 4: Run Lightcurve Extraction
+    if first_frame.block.superblock.tracking_number == last_frame.block.superblock.tracking_number:
+        status = call_command('lightcurve_extraction', int(first_frame.block.superblock.tracking_number),
+                              '--single', '--date', options['date'])
+    else:
+        tn_list = []
+        for fits in fits_files:
+            if fits.block.superblock.tracking_number not in tn_list:
+                status = call_command('lightcurve_extraction', int(fits.block.superblock.tracking_number),
+                                      '--single', '--date', options['date'])
+                tn_list.append(fits.block.superblock.tracking_number)
+    return

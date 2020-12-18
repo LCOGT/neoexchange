@@ -146,7 +146,7 @@ Sometimes it is useful to have a representative snapshot of the live database. T
 To log in to a shell on the deployed pod:
 
 ```
-kubectl -n prod exec <NAME OF POD> -c backend -it /bin/sh
+kubectl exec -it <NAME OF POD> -n prod -c backend -- /bin/sh
 ```
 
 When in the shell run:

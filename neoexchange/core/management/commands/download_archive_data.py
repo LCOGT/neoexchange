@@ -14,7 +14,7 @@ GNU General Public License for more details.
 """
 
 import os
-from sys import argv
+import sys
 from datetime import datetime, timedelta
 from tempfile import mkdtemp, gettempdir
 import shutil
@@ -25,12 +25,13 @@ from django.conf import settings
 from django.core.files import File
 from django.core.files.storage import default_storage
 
+from core.views import determine_active_proposals
 from pipelines.downloaddata import DownloadProcessPipeline
 
 
 class Command(BaseCommand):
 
-    help = 'Download data from the LCO Archive'
+    help = 'Download  and pipeline process data from the LCO Archive'
 
     def add_arguments(self, parser):
         if not settings.USE_S3:
@@ -43,9 +44,14 @@ class Command(BaseCommand):
         parser.add_argument('--spectraonly', default=False, action='store_true', help='Whether to only download spectra')
         parser.add_argument('--dlengimaging', default=False, action='store_true', help='Whether to download imaging for LCOEngineering')
         parser.add_argument('--numdays', action="store", default=0.0, type=float, help='How many extra days to look for')
+        parser.add_argument('--mtdlink_file_limit', action="store", type=int, default=9, help='Maximum number of images for running mtdlink')
+        parser.add_argument('--keep-temp-dir', action="store_true", help='Whether to remove the temporary directories')
+        parser.add_argument('--object', action="store", help="Which object to analyze (replace spaces with underscores)")
+        parser.add_argument('--downloadonly', default=False, action="store_true", help='Just download data')
+
 
     def handle(self, *args, **options):
-        usage = "Incorrect usage. Usage: %s [YYYYMMDD] [proposal code]" % ( argv[1] )
+        usage = "Incorrect usage. Usage: %s [YYYYMMDD] [proposal code]" % ( sys.argv[1] )
 
         if isinstance(options['date'], str):
             try:
@@ -56,10 +62,18 @@ class Command(BaseCommand):
         else:
             obs_date = options['date']
 
-        pipe = DownloadProcessPipeline()
+        proposals = determine_active_proposals(options['proposal'])
+
+        dl = DownloadProcessPipeline()
+        pipe = dl.create_timestamped()
         pipe.download(obs_date=obs_date,
-                    proposals=[options['proposal']],
+                    proposals=proposals,
                     out_path=options['datadir'],
                     spectraonly=options['spectraonly'],
                     dlengimaging=options['dlengimaging'])
+        if options['downloadonly']:
+            sys.stdout.write('Download complete')
+            sys.exit(0)
+        pipe.sort_objects()
+        pipe.process(objectid=options['object'])
         pipe.create_movies()
