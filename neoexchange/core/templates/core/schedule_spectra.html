@@ -49,9 +49,12 @@
                         </div>
                         {% if body.ingest %}
                         <div class="compact-field">
-                            {{ form.solar_analog }}<label for="id_solaranalog">Solar analog</label>
+                            {{ form.solar_analog }}<label for="id_solaranalog">Solar <br>Analog</label>
                         </div>
                         {% endif %}
+                        <div class="compact-field">
+                            {{ form.too_mode }}<label for="id_too_mode">Use RR/TC time?</label>
+                        </div>
                     </div>
                   </div>
                   {% for key, error in form.errors.items %}

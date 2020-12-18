@@ -650,6 +650,7 @@ class StaticSourceView(ListView):
 class BestStandardsView(ListView):
     template_name = 'core/best_calibsource_list.html'
     model = StaticSource
+    ordering = ['ra']
     paginate_by = 20
 
     def determine_ra_range(self, utc_dt=datetime.utcnow(), HA_hours=3, dbg=False):
@@ -937,7 +938,7 @@ class ScheduleParametersSpectra(LoginRequiredMixin, LookUpBodyMixin, FormView):
     def post(self, request, *args, **kwargs):
         form = ScheduleSpectraForm(request.POST)
         if form.is_valid():
-            return self.form_valid(form,request)
+            return self.form_valid(form, request)
         else:
             return self.render_to_response(self.get_context_data(form=form, body=self.body))
 
@@ -1264,6 +1265,8 @@ def schedule_check(data, body, ok_to_schedule=True):
     elif data['site_code'] == 'E10' or data['site_code'] == 'F65' or data['site_code'] == '2M0':
         if spectroscopy:
             filter_pattern = 'slit_6.0as'
+        elif data['site_code'] == 'F65':
+            filter_pattern = 'gp'
         else:
             filter_pattern = 'solar'
     else:
@@ -1271,7 +1274,7 @@ def schedule_check(data, body, ok_to_schedule=True):
 
     # Get string of available filters
     available_filters = ''
-    filter_list = fetch_filter_list(data['site_code'], spectroscopy)
+    filter_list, fetch_error = fetch_filter_list(data['site_code'], spectroscopy)
     for filt in filter_list:
         available_filters = available_filters + filt + ', '
     available_filters = available_filters[:-2]
@@ -1337,6 +1340,21 @@ def schedule_check(data, body, ok_to_schedule=True):
             slot_length, exp_count = determine_exp_count(slot_length, exp_length, data['site_code'], filter_pattern, exp_count, bin_mode=bin_mode)
         if exp_length is None or exp_count is None:
             ok_to_schedule = False
+        # Set MuSCAT Exptimes
+        if 'F65' in data['site_code']:
+            muscat_exp_times = {}
+            muscat_filt_list = ['gp_explength', 'rp_explength', 'ip_explength', 'zp_explength']
+            for filt in muscat_filt_list:
+                if data.get(filt, None):
+                    muscat_exp_times[filt] = data.get(filt)
+                else:
+                    muscat_exp_times[filt] = exp_length
+            exp_length = max(muscat_exp_times.values())
+            slot_length, exp_count = determine_exp_count(slot_length, exp_length, data['site_code'], filter_pattern, bin_mode=bin_mode)
+            if data.get('muscat_sync', None):
+                muscat_sync = data.get('muscat_sync')
+            else:
+                muscat_sync = False
 
     # determine stellar trailing
     if spectroscopy:
@@ -1459,6 +1477,11 @@ def schedule_check(data, body, ok_to_schedule=True):
         'calibsource_exptime': solar_analog_exptime,
     }
 
+    if not spectroscopy and 'F65' in data['site_code']:
+        resp['muscat_sync'] = muscat_sync
+        for filt in muscat_filt_list:
+            resp[filt] = muscat_exp_times[filt]
+
     if period and jitter:
         resp['num_times'] = total_requests
         resp['total_time'] = total_time
@@ -1547,6 +1570,7 @@ def schedule_submit(data, body, username):
               'bin_mode': data['bin_mode'],
               'filter_pattern': data['filter_pattern'],
               'exp_count': data['exp_count'],
+              'slot_length': data['slot_length']*60,
               'exp_time': data['exp_length'],
               'site_code': data['site_code'],
               'start_time': data['start_time'],
@@ -1568,6 +1592,13 @@ def schedule_submit(data, body, username):
     if data['period'] or data['jitter']:
         params['period'] = data['period']
         params['jitter'] = data['jitter']
+    if data.get('gp_explength', None):
+        params['muscat_sync'] = data['muscat_sync']
+        params['muscat_exp_times'] = {}
+        muscat_filt_list = ['gp_explength', 'rp_explength', 'ip_explength', 'zp_explength']
+        for filt in muscat_filt_list:
+            params['muscat_exp_times'][filt] = data[filt]
+
     # If we have a (static) StaticSource object, fill in details needed by make_target
     if type(body) == StaticSource:
         params['ra_deg'] = body.ra
@@ -2498,7 +2529,9 @@ def update_crossids(astobj, dbg=False):
         return False
 
     temp_id = astobj[0].rstrip()
-    desig = astobj[1]
+    # XXX TAL 2020/11/16: Hacky fix for the temporarily created `name` too long problem
+    # (which Postgres complains at but MySQL has being letting slide...)
+    desig = astobj[1][0:15]
 
     created = False
     # Find Bodies that have the 'provisional name' of <temp_id> OR (final)'name' of <desig>
@@ -3566,7 +3599,10 @@ def find_spec(pk):
     frames = Frame.objects.filter(block=block)
     first_frames = [f.frameid for f in frames if f.frameid]
     if first_frames:
-        url = urljoin(settings.ARCHIVE_FRAMES_URL, first_frames[0], 'headers')
+        # urljoin() is stupid and can't join multiple items together or be
+        # chained together in multiple calls
+        frame_header_url = "/".join([str(first_frames[0]), 'headers'])
+        url = urljoin(settings.ARCHIVE_FRAMES_URL, frame_header_url)
     else:
         return '', '', '', '', ''
 

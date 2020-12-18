@@ -7,7 +7,7 @@ from django.utils.crypto import get_random_string
 import rollbar
 
 
-VERSION = '3.6.0'
+VERSION = '3.8.0.1'
 
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
@@ -253,17 +253,17 @@ SECRET_KEY = os.environ.get('SECRET_KEY', get_random_string(50, chars))
 DATABASES = {
     "default": {
         # Live DB
-        "ENGINE": "django.db.backends.mysql",
+        "ENGINE": os.environ.get('NEOX_DB_ENGINE', 'django.db.backends.mysql'),
         "NAME": os.environ.get('NEOX_DB_NAME', 'neoexchange'),
         "USER": os.environ.get('NEOX_DB_USER',''),
         "PASSWORD": os.environ.get('NEOX_DB_PASSWD',''),
         "HOST": os.environ.get('NEOX_DB_HOST',''),
-        "OPTIONS": {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-        },
-
     }
 }
+
+# Set MySQL-specific options
+if DATABASES['default']['ENGINE'] =='django.db.backends.mysql':
+    DATABASES['default']['OPTIONS'] =  { 'init_command': "SET sql_mode='STRICT_TRANS_TABLES'" }
 
 ##################
 # Email settings #
@@ -356,3 +356,4 @@ if not CURRENT_PATH.startswith('/app'):
     except ImportError as e:
         if "local_settings" not in str(e):
             raise e
+

@@ -1429,7 +1429,7 @@ def get_site_status(site_code):
 # Get dictionary mapping LCO code (site-enclosure-telescope) to MPC site code
 # and reverse it
     site_codes = cfg.valid_site_codes
-    lco_codes = {mpc_code:lco_code.lower().replace('-', '.') for lco_code, mpc_code in site_codes.items()}
+    lco_codes = {mpc_code: lco_code.lower().replace('-', '.') for lco_code, mpc_code in site_codes.items()}
 
     response = get_telescope_states()
 
@@ -1511,7 +1511,7 @@ def fetch_sfu(page=None):
 
 
 def make_location(params):
-    location = {'telescope_class' : params['pondtelescope'][0:3]}
+    location = {'telescope_class': params['pondtelescope'][0:3]}
     if params.get('site', None):
         location['site'] = params['site'].lower()
     if params['site_code'] == 'W85':
@@ -1594,30 +1594,66 @@ def make_window(params):
     return window
 
 
-def make_config(params, exp_filter):
+def make_config(params, filter_list):
     # Common part of a molecule
-    exp_count = exp_filter[1]
     conf = {
-        'type' : params['exp_type'],
-        'instrument_type'   : params['instrument'],
+        'type': params['exp_type'],
+        'instrument_type': params['instrument'],
         'target': params['target'],
         'constraints': params['constraints'],
         'acquisition_config': {},
         'guiding_config': {},
-        'instrument_configs': [
-            {
-                'exposure_count'  : exp_count,
-                'exposure_time' : params['exp_time'],
-                'bin_x'       : params['binning'],
-                'bin_y'       : params['binning'],
-                'optical_elements': {
-                    'filter': exp_filter[0]
-                }
-            }
-        ]
+        'instrument_configs': []
     }
-    if params.get('bin_mode', None) == '2k_2x2' and params['pondtelescope'] == '1m0':
-        conf['instrument_configs'][0]['mode'] = 'central_2k_2x2'
+    if params['exp_type'] == 'REPEAT_EXPOSE':
+        # Remove overhead from slot_length so repeat_exposure matches predicted frames.
+        # This will allow a 2 hour slot to fit within a 2 hour window.
+        single_mol_overhead = cfg.molecule_overhead['filter_change'] + cfg.molecule_overhead['per_molecule_time']
+        if '2M0' in params['instrument']:
+            overhead = cfg.tel_overhead['twom_setup_overhead']
+        elif '0M4' in params['instrument']:
+            overhead = cfg.tel_overhead['point4m_setup_overhead']
+        elif '1M0' in params['instrument']:
+            overhead = cfg.tel_overhead['onem_setup_overhead']
+        else:
+            overhead = 0
+        conf['repeat_duration'] = params['slot_length'] - overhead - single_mol_overhead - 1
+        conf['repeat_duration'] = max(conf['repeat_duration'], 1)
+    for filt in filter_list:
+        if params['exp_type'] == 'REPEAT_EXPOSE' and len(filter_list) == 1:
+            exp_count = 1
+        else:
+            exp_count = filt[1]
+
+        instrument_config = {'exposure_count': exp_count,
+                             'exposure_time': params['exp_time'],
+                             'bin_x': params['binning'],
+                             'bin_y': params['binning'],
+                             'optical_elements': {'filter': filt[0]}
+                             }
+
+        if params.get('bin_mode', None) == '2k_2x2' and params['pondtelescope'] == '1m0':
+            instrument_config['mode'] = 'central_2k_2x2'
+
+        if params['instrument'] == '2M0-SCICAM-MUSCAT':
+            if params.get('muscat_sync', False):
+                exposure_mode = 'SYNCHRONOUS'
+            else:
+                exposure_mode = 'ASYNCHRONOUS'
+            extra_params = {'exposure_time_g': params['muscat_exp_times']['gp_explength'],
+                            'exposure_time_r': params['muscat_exp_times']['rp_explength'],
+                            'exposure_time_i': params['muscat_exp_times']['ip_explength'],
+                            'exposure_time_z': params['muscat_exp_times']['zp_explength'],
+                            'exposure_mode': exposure_mode}
+            instrument_config['optical_elements'] = {'diffuser_g_position': 'out',
+                                                     'diffuser_r_position': 'out',
+                                                     'diffuser_i_position': 'out',
+                                                     'diffuser_z_position': 'out'}
+            instrument_config.pop('bin_x', None)
+            instrument_config.pop('bin_y', None)
+            instrument_config['extra_params'] = extra_params
+        conf['instrument_configs'].append(instrument_config)
+
     return conf
 
 
@@ -1682,7 +1718,7 @@ def make_configs(params):
     In spectroscopy mode, this will produce 1, 3 or 5 molecules depending on whether
     `params['calibs']` is 'none, 'before'/'after' or 'both'."""
 
-    filt_list = build_filter_blocks(params['filter_pattern'], params['exp_count'])
+    filt_list = build_filter_blocks(params['filter_pattern'], params['exp_count'], params['exp_type'])
 
     calib_mode = params.get('calibs', 'none').lower()
     if params.get('spectroscopy', False) is True:
@@ -1705,7 +1741,7 @@ def make_configs(params):
         else:
             configs = [spectrum_molecule, ]
     else:
-        configs = [make_config(params, filt) for filt in filt_list]
+        configs = [make_config(params, filt_list)]
 
     return configs
 
@@ -1717,8 +1753,8 @@ def make_constraints(params):
                     # 'max_airmass' : 1.55,   # 40 deg altitude (The maximum airmass you are willing to accept)
                     # 'max_airmass' : 2.37,   # 25 deg altitude (The maximum airmass you are willing to accept)
                     # 'min_lunar_distance': 30
-                    'max_airmass' : params.get('max_airmass', 1.74),
-                    'min_lunar_distance' : params.get('min_lunar_distance', 30)
+                    'max_airmass': params.get('max_airmass', 1.74),
+                    'min_lunar_distance': params.get('min_lunar_distance', 30)
                   }
     return constraints
 
@@ -1762,8 +1798,8 @@ def make_many(params, ipp_value, request, cal_request):
 
 def make_proposal(params):
     proposal = {
-                 'proposal_id' : params['proposal_id'],
-                 'user_id' : params['user_id']
+                 'proposal_id': params['proposal_id'],
+                 'user_id': params['user_id']
                }
     return proposal
 
@@ -1874,11 +1910,19 @@ def configure_defaults(params):
         pass
     params['binning'] = 1
     params['instrument'] = '1M0-SCICAM-SINISTRO'
-    params['exp_type'] = 'EXPOSE'
+
+    # Perform Repeated exposures if many exposures compared to number of filter changes.
+    if params['exp_count'] <= 10 or params['exp_count'] < 10*len(list(filter(None, params['filter_pattern'].split(',')))):
+        params['exp_type'] = 'EXPOSE'
+    else:
+        params['exp_type'] = 'REPEAT_EXPOSE'
 
     if params['site_code'] in ['F65', 'E10', '2M0']:
-        params['instrument'] = '2M0-SCICAM-SPECTRAL'
-        params['binning'] = 2
+        if 'F65' in params['site_code']:
+            params['instrument'] = '2M0-SCICAM-MUSCAT'
+        else:
+            params['instrument'] = '2M0-SCICAM-SPECTRAL'
+            params['binning'] = 2
         params['pondtelescope'] = '2m0'
         if params.get('spectroscopy', False) is True and 'FLOYDS' in params.get('instrument_code', ''):
             params['exp_type'] = 'SPECTRUM'
@@ -1912,6 +1956,7 @@ def configure_defaults(params):
 def make_requestgroup(elements, params):
 
     params = configure_defaults(params)
+
 # Create Location (site, observatory etc)
     location = make_location(params)
     logger.debug("Location=%s" % location)
@@ -2075,6 +2120,8 @@ def fetch_filter_list(site, spec):
     elif '2m0' in telid.lower():
         if spec:
             camid = "2m0-FLOYDS-SciCam"
+        elif "OGG" in siteid.upper():
+            camid = "2M0-SCICAM-MUSCAT"
         else:
             camid = "2m0-SciCam-Spectral"
     else:
@@ -2102,14 +2149,19 @@ def fetch_filter_list(site, spec):
     if response.status_code in [200, 201]:
         resp = response.json()
 
+    fetch_error = ''
+    data_out = []
     if not resp:
-        logger.error('Could not find any telescopes at {}'.format(site))
-        data_out = []
+        fetch_error = 'The {} at {} is not schedulable.'.format(camid, site)
+    elif 'MUSCAT' in camid:
+        data_out = ['gp', 'rp', 'ip', 'zp']
     else:
         data_out = parse_filter_file(resp, spec)
         if not data_out:
-            logger.error('Could not find any filters for {}'.format(site))
-    return data_out
+            fetch_error = 'Could not find any filters for the {} at {}'.format(camid, site)
+    if fetch_error:
+        logger.error(fetch_error)
+    return data_out, fetch_error
 
 
 def parse_filter_file(resp, spec):

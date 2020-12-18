@@ -15,7 +15,7 @@ GNU General Public License for more details.
 
 import sys
 import numpy as np
-from math import degrees, cos, radians
+from math import degrees, cos, radians, copysign
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
@@ -226,6 +226,10 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
                 if target_source:
                     x_offset = int(target_source.obs_x - header_n['CRPIX1'])
                     y_offset = int(target_source.obs_y - header_n['CRPIX2'])
+                    if abs(x_offset) > x_frac:
+                        x_offset = int(copysign(x_frac, x_offset))
+                    if abs(y_offset) > y_frac:
+                        y_offset = int(copysign(y_frac, y_offset))
                 data_x_range = [x + x_offset for x in data_x_range]
                 data_y_range = [y + y_offset for y in data_y_range]
                 x_frac += x_offset
