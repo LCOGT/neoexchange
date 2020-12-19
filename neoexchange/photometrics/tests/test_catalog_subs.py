@@ -2383,6 +2383,118 @@ class TestExtractCatalog(FITSUnitTest):
         self.assertEqual(883, len(table))
 
 
+class TestRemoveCorruptCatalog(FITSUnitTest):
+
+    def setUp(self):
+        super(TestRemoveCorruptCatalog, self).setUp()
+        self.temp_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+
+        shutil.copy(os.path.abspath(self.test_bad_ldacfilename), self.temp_dir)
+        self.test_bad_ldacfilename = os.path.join(self.temp_dir, os.path.basename(self.test_bad_ldacfilename))
+
+        frame_params = { 'filename' : os.path.basename(self.test_bad_ldacfilename),
+                         'midpoint' : datetime(2020, 12, 3, 1, 30, 0),
+                         'frametype' : Frame.BANZAI_LDAC_CATALOG
+                       }
+        self.frame, created = Frame.objects.get_or_create(**frame_params)
+        self.expected_hdrtbl = None
+
+        self.remove = True
+        self.debug_print = False
+        self.maxDiff = None
+
+    def tearDown(self):
+        if self.remove:
+            try:
+                files_to_remove = glob(os.path.join(self.temp_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.chmod(file_to_rm, stat.S_IWUSR)
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.temp_dir)
+            try:
+                os.rmdir(self.temp_dir)
+                if self.debug_print:
+                    print("Removed", self.temp_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.temp_dir)
+        else:
+            print("Temporary test directory=", self.temp_dir)
+
+    def test_single_catalog(self):
+        expected_num_removed = 1
+
+        self.assertEqual(1, Frame.objects.count())
+
+        removed, num_removed = remove_corrupt_catalog(self.test_bad_ldacfilename)
+
+        self.assertTrue(removed)
+        self.assertEqual(0, Frame.objects.count())
+        self.assertEqual(expected_num_removed, num_removed)
+
+    def test_single_catalog_disk_not_found(self):
+        expected_num_removed = 1
+
+        frames = Frame.objects.all()
+        frame = frames[0]
+        frame.filename = 'elp1m006-fa07-20201203-0225-e92_ldac.fits'
+        frame.save()
+
+        self.assertEqual(1, frames.count())
+        removed, num_removed = remove_corrupt_catalog(os.path.join(self.temp_dir, frame.filename))
+
+        self.assertFalse(removed)
+        self.assertEqual(0, Frame.objects.count())
+        self.assertEqual(expected_num_removed, num_removed)
+
+    def test_multiple_catalogs_disk_not_found(self):
+        expected_num_removed = 2
+
+        frames = Frame.objects.all()
+        frame = frames[0]
+        frame.filename = 'elp1m006-fa07-20201203-0225-e91_ldac.fits'
+        frame.save()
+
+        frame.pk = None
+        frame.filename = 'elp1m006-fa07-20201203-0225-e92_ldac.fits'
+        frame.save()
+        frames = Frame.objects.all()
+
+        self.assertEqual(2, frames.count())
+        removed, num_removed = remove_corrupt_catalog(os.path.join(self.temp_dir, frame.filename))
+
+        self.assertFalse(removed)
+        self.assertEqual(0, Frame.objects.count())
+        self.assertEqual(expected_num_removed, num_removed)
+
+    def test_multiple_catalogs_existing_frame(self):
+        expected_num_removed = 2
+
+        frames = Frame.objects.all()
+        frame = frames[0]
+        frame.filename = 'elp1m006-fa07-20201203-0225-e91.fits'
+        frame.frametype = Frame.BANZAI_RED_FRAMETYPE
+        frame.save()
+
+        frame.pk = None
+        frame.filename = 'elp1m006-fa07-20201203-0225-e91_ldac.fits'
+        frame.frametype = Frame.BANZAI_LDAC_CATALOG
+        frame.save()
+
+        frame.pk = None
+        frame.filename = 'elp1m006-fa07-20201203-0225-e92_ldac.fits'
+        frame.frametype = Frame.BANZAI_LDAC_CATALOG
+        frame.save()
+
+        frames = Frame.objects.all()
+        self.assertEqual(3, frames.count())
+        removed, num_removed = remove_corrupt_catalog(os.path.join(self.temp_dir, frame.filename))
+
+        self.assertFalse(removed)
+        self.assertEqual(1, Frame.objects.count())
+        self.assertEqual(expected_num_removed, num_removed)
+
+
 class TestUpdateLDACCatalogWCS(FITSUnitTest):
 
     def setUp(self):

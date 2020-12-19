@@ -1297,6 +1297,37 @@ def update_ldac_catalog_wcs(fits_image_file, fits_catalog, overwrite=True):
     return status
 
 
+def remove_corrupt_catalog(catfile):
+    """Removes the corrupted file <catfile> from disk and from the DB (if able).
+    Returns a tuple of whether the disk files was removed (True/False) and the
+    number of db records deleted (or -1 if the Frame wasn't found in the db)
+    """
+
+    removed = False
+    try:
+        os.unlink(catfile)
+        logger.warning(f'Removed corrupted file {catfile}')
+        removed = True
+    except OSError as e:
+        logger.error(f'Unable to remove corrupted {catfile}')
+
+    num_deleted = 0
+    fileroot = os.path.basename(catfile)
+    split_loc = fileroot.rfind('-e9')
+    if split_loc > 0:
+        fileroot = fileroot[:split_loc]
+    try:
+        frames = Frame.objects.filter(filename__startswith=fileroot, \
+            frametype__in=(Frame.BANZAI_LDAC_CATALOG, Frame.FITS_LDAC_CATALOG))
+        # No way will this ever end badly...
+        num_deleted, types_deleted = frames.delete()
+    except Frame.DoesNotExist:
+        print(f'Unable to delete DB records associated with {fileroot}')
+        logger.warning(f'Unable to delete DB records associated with {fileroot}')
+        num_deleted = -1
+
+    return removed, num_deleted
+
 def extract_catalog(catfile, catalog_type='LCOGT', flag_filter=0, new=True, remove=False):
     """High-level routine to read LCOGT FITS catalogs from <catfile>.
     This returns a dictionary of needed header items and an AstroPy table of
@@ -1308,11 +1339,11 @@ def extract_catalog(catfile, catalog_type='LCOGT', flag_filter=0, new=True, remo
     fits_header, fits_table, cattype = open_fits_catalog(catfile)
 
     if cattype == 'CORRUPT' and remove is True:
-        try:
-            os.unlink(catfile)
-            logger.warning(f'Removed corrupted file {catfile}')
-        except OSError as e:
-            logger.error(f'Unable to remove corrupted {catfile}')
+        removed, num_db_deleted = remove_corrupt_catalog(catfile)
+        remove_str = 'was not'
+        if removed:
+            remove_str = 'was'
+        logger.warning(f'Corrupt {catfile} {remove_str} removed from disk. {num_db_deleted} Frame records removed from DB')
 
     if len(fits_header) != 0 and len(fits_table) != 0:
         header = get_catalog_header(fits_header, catalog_type)
