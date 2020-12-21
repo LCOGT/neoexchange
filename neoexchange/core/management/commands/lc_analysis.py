@@ -36,6 +36,7 @@ from core.utils import search
 from astrometrics.time_subs import jd_utc2datetime
 from astrometrics.ephem_subs import compute_ephem
 from photometrics.catalog_subs import sanitize_object_name
+from photometrics.external_codes import run_damit_periodscan
 
 
 class Command(BaseCommand):
@@ -183,7 +184,7 @@ class Command(BaseCommand):
         :param pmax: maximum period
         :return: filename for input_period_scan
         """
-        base_name = obj_name + '_input_period_scan'
+        base_name = obj_name + '_period_scan.in'
         ps_input_filename = os.path.join(path, base_name)
         ps_input_file = default_storage.open(ps_input_filename, 'w+')
         lines = ps_input_file.readlines()
@@ -221,11 +222,16 @@ class Command(BaseCommand):
         body_elements = model_to_dict(body)
         obj_name = sanitize_object_name(body.current_name())
         filt_name = "SG"
+        # Create lightcurve input file
         lcs_input_filename = os.path.join(path, obj_name + '_input.lcs')
         lcs_input_file = default_storage.open(lcs_input_filename, 'w')
         self.create_lcs_input(lcs_input_file, meta_list, lc_list, body_elements, filt_name)
         lcs_input_file.close()
+        # Create period_scan input file
         pmin, pmax = self.get_period_range(body, options)
         psinput_filename = self.import_or_create_psinput(path, obj_name, pmin, pmax)
+        # Run Period Scan
+        psoutput_filename = os.path.join(path, obj_name + '_period_scan.out')
+        retcode_or_cmdline = run_damit_periodscan(lcs_input_filename, psinput_filename, psoutput_filename)
 
         return

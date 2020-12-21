@@ -17,7 +17,7 @@ import logging
 import os
 from math import floor
 from datetime import datetime, timedelta
-from subprocess import call
+from subprocess import call, PIPE
 from collections import OrderedDict
 import warnings
 from shutil import unpack_archive
@@ -761,3 +761,29 @@ def unpack_tarball(tar_path, unpack_dir):
         os.chmod(file, 0o664)
 
     return files
+
+
+def run_damit_periodscan(lcs_input_filename, psinput_filename, psoutput_filename, binary=None, dbg=False):
+    binary = binary or find_binary("period_scan")
+    if binary is None:
+        logger.error("Could not locate 'period_scan' executable in PATH")
+        return -42
+    dest_dir = '/home/jchatelain/rocks/Reduction/test'
+    cmdline = f"{binary} -v {psinput_filename} {psoutput_filename}"
+    catline = f"cat {lcs_input_filename}"
+    cmdline = cmdline.rstrip()
+    catline = catline.rstrip()
+    if dbg:
+        print(cmdline)
+
+    if dbg is True:
+        retcode_or_cmdline = cmdline
+    else:
+        logger.debug("cmdline=%s" % cmdline)
+        cmd_args = cmdline.split()
+        cat_args = catline.split()
+        cat_call = call(cat_args, cwd=dest_dir, stdout=PIPE)
+        cmd_call = call(cmd_args, cwd=dest_dir, stdin=PIPE)
+        retcode_or_cmdline = cmd_call
+
+    return retcode_or_cmdline
