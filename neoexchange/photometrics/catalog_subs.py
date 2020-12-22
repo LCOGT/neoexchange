@@ -1321,8 +1321,8 @@ def remove_corrupt_catalog(catfile):
             frametype__in=(Frame.BANZAI_LDAC_CATALOG, Frame.FITS_LDAC_CATALOG))
         # No way will this ever end badly...
         num_deleted, types_deleted = frames.delete()
+        logger.info(f'Deleted Frames {frames}')
     except Frame.DoesNotExist:
-        print(f'Unable to delete DB records associated with {fileroot}')
         logger.warning(f'Unable to delete DB records associated with {fileroot}')
         num_deleted = -1
 
