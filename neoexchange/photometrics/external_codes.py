@@ -17,7 +17,7 @@ import logging
 import os
 from math import floor
 from datetime import datetime, timedelta
-from subprocess import call, PIPE
+from subprocess import call, PIPE, Popen
 from collections import OrderedDict
 import warnings
 from shutil import unpack_archive
@@ -782,8 +782,8 @@ def run_damit_periodscan(lcs_input_filename, psinput_filename, psoutput_filename
         logger.debug("cmdline=%s" % cmdline)
         cmd_args = cmdline.split()
         cat_args = catline.split()
-        cat_call = call(cat_args, cwd=dest_dir, stdout=PIPE)
-        cmd_call = call(cmd_args, cwd=dest_dir, stdin=PIPE)
+        cat_call = Popen(cat_args, cwd=dest_dir, stdout=PIPE)
+        cmd_call = Popen(cmd_args, cwd=dest_dir, stdin=cat_call.stdout, stdout=PIPE)
         retcode_or_cmdline = cmd_call
 
     return retcode_or_cmdline
