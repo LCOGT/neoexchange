@@ -768,7 +768,7 @@ def run_damit_periodscan(lcs_input_filename, psinput_filename, psoutput_filename
     if binary is None:
         logger.error("Could not locate 'period_scan' executable in PATH")
         return -42
-    dest_dir = '/home/jchatelain/rocks/Reduction/test'
+    dest_dir = os.path.dirname(psoutput_filename)
     cmdline = f"{binary} -v {psinput_filename} {psoutput_filename}"
     catline = f"cat {lcs_input_filename}"
     cmdline = cmdline.rstrip()
@@ -779,7 +779,7 @@ def run_damit_periodscan(lcs_input_filename, psinput_filename, psoutput_filename
     if dbg is True:
         retcode_or_cmdline = cmdline
     else:
-        logger.debug("cmdline=%s" % cmdline)
+        logger.debug(f"cmdline={catline} | {cmdline}")
         cmd_args = cmdline.split()
         cat_args = catline.split()
         cat_call = Popen(cat_args, cwd=dest_dir, stdout=PIPE)
