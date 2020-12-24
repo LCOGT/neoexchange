@@ -3873,6 +3873,20 @@ def import_alcdef(file, meta_list, lc_list):
     return meta_list, lc_list
 
 
+def import_period_scan(file, scan_list):
+    """Pull Period data from Period Scan files."""
+
+    ps_file = default_storage.open(file, 'rb')
+    lines = ps_file.readlines()
+    for line in lines:
+        chunks = line.split()
+        if len(chunks) >= 3:
+            scan_list['period'].append(float(chunks[0]))
+            scan_list['rms'].append(float(chunks[1]))
+            scan_list['chi2'].append(float(chunks[2]))
+    return scan_list
+
+
 def get_lc_plot(body, data):
     """Plot all lightcurve data for given source.
     """
@@ -3881,6 +3895,7 @@ def get_lc_plot(body, data):
     obj_name = sanitize_object_name(body.current_name())
     datadir = os.path.join(base_dir, obj_name)
     filenames = search(datadir, '.*.ALCDEF.txt')
+    period_scans = search(datadir, '.*.period_scan.out')
     if data.get('period', None):
         period = data['period']
     else:
@@ -3893,6 +3908,14 @@ def get_lc_plot(body, data):
             meta_list, lc_list = import_alcdef(os.path.join(datadir, file), meta_list, lc_list)
     else:
         meta_list = lc_list = []
+
+    period_scan_dict = {"period": [], "rms": [], "chi2": []}
+    if period_scans:
+        for scan in period_scans:
+            period_scan_dict = import_period_scan(os.path.join(datadir, scan), period_scan_dict)
+        period_scan_dict["rms"] = [x for _, x in sorted(zip(period_scan_dict["period"], period_scan_dict["rms"]))]
+        period_scan_dict["chi2"] = [x for _, x in sorted(zip(period_scan_dict["period"], period_scan_dict["chi2"]))]
+        period_scan_dict["period"].sort()
 
     meta_list = [x for _, x in sorted(zip(lc_list, meta_list), key=lambda i: i[0]['date'][0])]
     lc_list = sorted(lc_list, key=lambda i: i['date'][0])
@@ -3910,7 +3933,7 @@ def get_lc_plot(body, data):
         ephem = []
 
     if lc_list:
-        script, div = lc_plot(lc_list, meta_list, period, jpl_ephem=ephem)
+        script, div = lc_plot(lc_list, meta_list, period, period_scan_dict, jpl_ephem=ephem)
     else:
         script = None
         div = """

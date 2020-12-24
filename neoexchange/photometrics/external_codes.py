@@ -784,6 +784,6 @@ def run_damit_periodscan(lcs_input_filename, psinput_filename, psoutput_filename
         cat_args = catline.split()
         cat_call = Popen(cat_args, cwd=dest_dir, stdout=PIPE)
         cmd_call = Popen(cmd_args, cwd=dest_dir, stdin=cat_call.stdout, stdout=PIPE)
-        retcode_or_cmdline = cmd_call
+        retcode_or_cmdline = cmd_call.communicate()
 
     return retcode_or_cmdline

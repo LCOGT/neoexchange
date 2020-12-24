@@ -104,7 +104,7 @@ function remove_shift_data(source, dataset_source, osource, plot){
 }
 
 
-function link_period(period_box, period_slider, p_max, p_min){
+function link_period(p_source, period_box, period_slider, p_max, p_min){
     if (p_min.value < 0){
         p_min.value = 0;
     }
@@ -124,13 +124,14 @@ function link_period(period_box, period_slider, p_max, p_min){
 }
 
 
-function phase_data(source, period_box, period_slider, plot, osource, phase_shift, base_date){
+function phase_data(source, period_box, period_slider, plot, osource, phase_shift, base_date, p_mark_source){
     if (period_box.value <= 0){
         period_box.value = 0;
     }
     const B = phase_shift.value;
     const data = source.data;
     const base = osource.data;
+    const mark = p_mark_source.data;
     const x = data['time'];
     const d = base['time'];
     const y = data['mag'];
@@ -141,6 +142,7 @@ function phase_data(source, period_box, period_slider, plot, osource, phase_shif
     const t = data['title'];
     const a = data['alpha'];
     const c = data['color'];
+    const pm = mark['period']
     const period = period_box.value;
     period_slider.value = period_box.value;
     let pos = d.length - 1;
@@ -186,4 +188,8 @@ function phase_data(source, period_box, period_slider, plot, osource, phase_shif
     let epoch = base_date + (B * period / 24);
     plot.below[0].axis_label = 'Phase (Period = ' + period + 'h / Epoch = '+ epoch + ')';
     source.change.emit();
+    for (var i = 0; i < pm.length; i++){
+        pm[i] = period;
+    }
+    p_mark_source.change.emit();
 }

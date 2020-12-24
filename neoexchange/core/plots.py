@@ -594,7 +594,7 @@ def get_name(meta_dat):
     return out_string, name, number
 
 
-def lc_plot(lc_list, meta_list, period=1, jpl_ephem=None):
+def lc_plot(lc_list, meta_list, period=1, pscan_dict={}, jpl_ephem=None):
     """Creates an interactive Bokeh LC plot:
     Inputs:
     [lc_list] --- A list of LC dictionaries, each one containing the following keys:
@@ -629,12 +629,16 @@ def lc_plot(lc_list, meta_list, period=1, jpl_ephem=None):
     plot_u.y_range.flipped = True
     plot_p.x_range = Range1d(0, 1.1, bounds=(-.2, 1.2))
     plot_p.y_range = DataRange1d(names=['mags'], flipped=True)
+    plot_period = figure(plot_width=900, plot_height=400)
+    plot_period.y_range = DataRange1d(names=['period'])
 
     # Create Column Data Source that will be used by the plots
     source = ColumnDataSource(data=dict(time=[], mag=[], color=[], title=[], err_high=[], err_low=[], alpha=[]))  # phased LC data Source
     orig_source = ColumnDataSource(data=dict(time=[], mag=[], mag_err=[], color=[], title=[], err_high=[], err_low=[], alpha=[]))  # unphased LC data source
     dataset_source = ColumnDataSource(data=dict(symbol=[], date=[], time=[], site=[], filter=[], color=[], title=[], offset=[]))  # dataset info
     horizons_source = ColumnDataSource(data=dict(date=[], v_mag=[]))  # V-mag info
+    periodogram_source = ColumnDataSource(data=dict(period=pscan_dict['period'], chi2=pscan_dict['chi2']))  # periodogram info
+    p_mark_source = ColumnDataSource(data=dict(period=[period], y=[-10]))
 
     # Create Input controls
     phase_shift = Slider(title="Phase Offset", value=0, start=-1, end=1, step=.01, width=200, tooltips=False)  # Slider bar to change base_date by +/- 1 period
@@ -667,6 +671,9 @@ def lc_plot(lc_list, meta_list, period=1, jpl_ephem=None):
                 lower_head=error_cap, upper_head=error_cap))
     data_plot = plot_p.circle(x="time", y="mag", source=source, size=3, color="color", alpha="alpha", name='mags')
     base_line = plot_p.line([-2, 2], [base_date, base_date], alpha=0, name="phase_line")
+    # Build periodogram:
+    period_data = plot_period.line(x="period", y="chi2", source=periodogram_source, color="red", name='period')
+    period_mark = plot_period.ray(x="period", y="y", length=10, angle=pi/2, source=p_mark_source)
 
     # Write custom JavaScript Code to print the time to the next iteration of the given phase in a HoverTool
     js_hover_text = get_js_as_text(js_file, "next_time_phased")
@@ -677,8 +684,11 @@ def lc_plot(lc_list, meta_list, period=1, jpl_ephem=None):
                        formatters=dict(y=next_time), point_policy="none", line_policy="none", show_arrow=False,
                        mode="vline", renderers=[base_line], attachment='above')
     hover2 = HoverTool(tooltips='@title', renderers=[data_plot], point_policy="snap_to_data", attachment='below')
+    period_hover = HoverTool(tooltips='$x{0.0000}', renderers=[period_data], point_policy="none", mode="vline",
+                             line_policy="none", attachment='above')
     crosshair = CrosshairTool()
     plot_p.add_tools(hover1, crosshair, hover2)
+    plot_period.add_tools(period_hover, crosshair)
 
     # Set Axis and Title Text
     plot_u.yaxis.axis_label = 'Apparent Magnitude'
@@ -686,6 +696,9 @@ def lc_plot(lc_list, meta_list, period=1, jpl_ephem=None):
     plot_u.xaxis.axis_label = 'Date (Hours from {}.5/{}.0)'.format(jd_utc2datetime(base_date).strftime("%Y-%m-%d"), base_date)
     plot_p.yaxis.axis_label = 'Apparent Magnitude'
     plot_p.title.text = 'LC for {} ({})'.format(obj, date_range)
+    plot_period.title.text = f'Periodogram for {obj}'
+    plot_period.xaxis.axis_label = "Period (h)"
+    plot_period.yaxis.axis_label = "Chi^2"
     # plot_p.title.text_font_size = '20pt'
     # plot_p.xaxis.axis_label_text_font_size = "18pt"
     # plot_p.yaxis.axis_label_text_font_size = "18pt"
@@ -735,7 +748,7 @@ def lc_plot(lc_list, meta_list, period=1, jpl_ephem=None):
 
         phased_dict = build_data_sets(phased_lc_list, sess_title)
         for k, phase in enumerate(phased_dict['time']):
-            if 0 < phase < 1 :
+            if 0 < phase < 1:
                 for key in phased_dict.keys():
                     if key == 'time':
                         if 0 < phase < 0.5:
@@ -802,9 +815,13 @@ def lc_plot(lc_list, meta_list, period=1, jpl_ephem=None):
     # JS call back to handle phasing of data to given period/epoch
     js_phase_data = get_js_as_text(js_file, "phase_data")
     phased_callback = CustomJS(args=dict(source=source, period_box=period_box, period_slider=period_slider, plot=plot_p,
-                                         osource=orig_source, phase_shift=phase_shift, base_date=base_date), code=js_phase_data)
+                                         osource=orig_source, phase_shift=phase_shift, base_date=base_date,
+                                         p_mark_source=p_mark_source), code=js_phase_data)
     period_box.js_on_change('value', phased_callback)
     phase_shift.js_on_change('value', phased_callback)
+
+    # # JS Call back to move period marker on period plot.
+    # period_slider.js_link('value', period_mark, 'x')
 
     # Build layout tables:
     phased_layout = column(plot_p,
@@ -819,11 +836,19 @@ def lc_plot(lc_list, meta_list, period=1, jpl_ephem=None):
     unphased_layout = column(plot_u,
                              row(column(row(table_title),
                                         data_table)))
+    periodogram_layout = column(plot_period,
+                                row(column(row(table_title),
+                                           data_table),
+                                    column(row(column(row(period_box),
+                                                      period_slider),
+                                               column(p_slider_min,
+                                                      p_slider_max)))))
 
     # Set Tabs
     tabu = Panel(child=unphased_layout, title="Unphased")
     tabp = Panel(child=phased_layout, title="Phased")
-    tabs = Tabs(tabs=[tabu, tabp])
+    tab_per = Panel(child=periodogram_layout, title="Periodogram")
+    tabs = Tabs(tabs=[tabu, tabp, tab_per])
 
     script, div = components({'plot': tabs}, CDN)
 

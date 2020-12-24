@@ -231,7 +231,7 @@ class Command(BaseCommand):
         pmin, pmax = self.get_period_range(body, options)
         psinput_filename = self.import_or_create_psinput(path, obj_name, pmin, pmax)
         # Run Period Scan
-        psoutput_filename = os.path.join(path, obj_name + '_period_scan.out')
+        psoutput_filename = os.path.join(path, f'{obj_name}_{pmin}T{pmax}_period_scan.out')
         retcode_or_cmdline = run_damit_periodscan(lcs_input_filename, psinput_filename, psoutput_filename)
 
         return
