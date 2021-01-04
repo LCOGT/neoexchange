@@ -49,6 +49,7 @@ class Command(BaseCommand):
         parser.add_argument('-pmin', '--period_min', type=float, default=None, help='min period for period search (h)')
         parser.add_argument('-pmax', '--period_max', type=float, default=None, help='max period for period search (h)')
         parser.add_argument('-p', '--period', type=float, default=None, help='base period to search around (h)')
+        parser.add_argument('--filters', type=str, default=None, help='comma separated list of filters to use (SG,SR,W)')
 
     # def read_data(self):
     #     """ reads lightcurve_data.txt output by lightcurve_extraction"""
@@ -216,16 +217,19 @@ class Command(BaseCommand):
             meta_list, lc_list = import_alcdef(file, meta_list, lc_list)
         names = list(set([x['OBJECTNUMBER'] for x in meta_list]))
         if len(names) != 1:
-            self.stdout.write("Multiple objects Found.")
+            self.stdout.write(f"Multiple objects Found: {names}")
         bodies = Body.objects.filter(name=names[0])
         body = bodies[0]
         body_elements = model_to_dict(body)
         obj_name = sanitize_object_name(body.current_name())
-        filt_name = "SG"
+        if options['filters']:
+            filt_list = options['filters'].upper()
+        else:
+            filt_list = list(set([meta['FILTER'] for meta in meta_list]))
         # Create lightcurve input file
         lcs_input_filename = os.path.join(path, obj_name + '_input.lcs')
         lcs_input_file = default_storage.open(lcs_input_filename, 'w')
-        self.create_lcs_input(lcs_input_file, meta_list, lc_list, body_elements, filt_name)
+        self.create_lcs_input(lcs_input_file, meta_list, lc_list, body_elements, filt_list)
         lcs_input_file.close()
         # Create period_scan input file
         pmin, pmax = self.get_period_range(body, options)

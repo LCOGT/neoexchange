@@ -638,7 +638,7 @@ def lc_plot(lc_list, meta_list, period=1, pscan_dict={}, jpl_ephem=None):
     dataset_source = ColumnDataSource(data=dict(symbol=[], date=[], time=[], site=[], filter=[], color=[], title=[], offset=[]))  # dataset info
     horizons_source = ColumnDataSource(data=dict(date=[], v_mag=[]))  # V-mag info
     periodogram_source = ColumnDataSource(data=dict(period=pscan_dict['period'], chi2=pscan_dict['chi2']))  # periodogram info
-    p_mark_source = ColumnDataSource(data=dict(period=[period], y=[-10]))
+    p_mark_source = ColumnDataSource(data=dict(period=[period], y=[-1]))
 
     # Create Input controls
     phase_shift = Slider(title="Phase Offset", value=0, start=-1, end=1, step=.01, width=200, tooltips=False)  # Slider bar to change base_date by +/- 1 period
