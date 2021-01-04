@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.8.0.1
+make Gif creation more robust.
+
 ### 3.8.0
 Add postgres support.
 
