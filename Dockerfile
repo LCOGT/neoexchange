@@ -78,7 +78,8 @@ RUN yum -y install epel-release glibc-langpack-en\
             libffi-devel \
             libjpeg-devel \
             libpng-devel \
-            mariadb-devel
+            mariadb-devel \
+            make diffutils file
 
 # Copy Python dependencies manifest
 COPY neoexchange/requirements.txt .
