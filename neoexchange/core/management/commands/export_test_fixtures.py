@@ -47,7 +47,7 @@ class Command(BaseCommand):
         frame_ids = []
         for name, fc in frame_content.items():
             qs = fc.objects.all().order_by('-id')[0:50]
-            ids = list(qs.values_list('id',flat=True))
+            ids = list(qs.values_list('frame__id',flat=True))
             # Find IDs of the frames referenced by these objects
             frame_ids += ids
             data = serializers.serialize('xml', qs)

@@ -68,9 +68,9 @@ class Command(BaseCommand):
         pipe = dl.create_timestamped()
         pipe.download(obs_date=obs_date,
                     proposals=proposals,
+                    maxfiles_mtd=options['mtdlink_file_limit'],
                     out_path=options['datadir'],
-                    spectraonly=options['spectraonly'],
-                    dlengimaging=options['dlengimaging'])
+                    spectraonly=options['spectraonly'])
         if options['downloadonly']:
             sys.stdout.write('Download complete')
             sys.exit(0)

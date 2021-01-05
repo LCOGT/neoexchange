@@ -10,6 +10,8 @@ from pathlib import Path
 from django.conf import settings
 from django.core.files import File
 from django.core.files.storage import default_storage
+from django.core.management import call_command
+from django.forms import model_to_dict
 from dramatiq.middleware.time_limit import TimeLimitExceeded
 
 from astrometrics.ephem_subs import determine_rates_pa
@@ -86,8 +88,9 @@ class DownloadProcessPipeline(PipelineProcess):
         self.log('Pipeline Completed')
         return
 
-    def download(self, obs_date, proposals, out_path, dlengimaging=False, spectraonly=False):
+    def download(self, obs_date, proposals, out_path, maxfiles_mtd, dlengimaging=False, spectraonly=False):
         self.frames = {}
+        self.maxfiles_mtd = maxfiles_mtd
         if not hasattr(self, 'out_path'):
             self.out_path = Path(out_path) / obs_date.strftime('%Y%m%d')
         if not hasattr(self, 'obs_date'):
@@ -168,7 +171,7 @@ class DownloadProcessPipeline(PipelineProcess):
             self.log("Timespan %s->%s" % (first_frame.midpoint, last_frame.midpoint))
 # Step 3b: Calculate mean PA and speed
             if first_frame.block:
-                astrometry_lightcurve(first_frame, last_frame, elements, body=first_frame.block.body)
+                astrometry_lightcurve(first_frame, last_frame, body=first_frame.block.body, datadir=datadir, fits_files=fits_files, date=self.obs_date, maxfiles_mtd=self.maxfiles_mtd)
             else:
                 self.log(f"No Block found for object {rock}")
         return
@@ -178,7 +181,7 @@ class DownloadProcessPipeline(PipelineProcess):
         if gettempdir() in self.out_path:
             shutil.rmtree(self.out_path)
 
-def astrometry_lightcurve(first_frame, last_frame, elements, body):
+def astrometry_lightcurve(first_frame, last_frame, body, datadir, fits_files, date, maxfiles_mtd):
     if body.epochofel:
         elements = model_to_dict(body)
         min_rate, max_rate, pa, deltapa = determine_rates_pa(first_frame.midpoint, last_frame.midpoint, elements, first_frame.sitecode)
@@ -187,8 +190,8 @@ def astrometry_lightcurve(first_frame, last_frame, elements, body):
         mtdlink_args = "datadir=%s pa=%03d deltapa=%03d minrate=%.3f maxrate=%.3f" % (datadir, pa, deltapa, min_rate, max_rate)
         skip_mtdlink = False
         keep_temp_dir = False
-        if len(fits_files) > options['mtdlink_file_limit']:
-            self.log("Too many frames to run mtd_link")
+        if len(fits_files) > maxfiles_mtd:
+            logger.info("Too many frames to run mtd_link")
             skip_mtdlink = True
 # Compulsory arguments need to go here as a list
         mtdlink_args = [datadir, pa, deltapa, min_rate, max_rate]
@@ -200,21 +203,23 @@ def astrometry_lightcurve(first_frame, last_frame, elements, body):
                           'skip_mtdlink': skip_mtdlink,
                           'keep_temp_dir': False
                           }
-        self.log("Calling pipeline_astrometry with: %s %s" % (mtdlink_args, mtdlink_kwargs))
-        status = call_command('pipeline_astrometry', *mtdlink_args, **mtdlink_kwargs)
-        self.stderr.write("\n")
+        logger.info("Calling pipeline_astrometry with: %s %s" % (mtdlink_args, mtdlink_kwargs))
+        try:
+            status = call_command('pipeline_astrometry', *mtdlink_args, **mtdlink_kwargs)
+        except NeoException as e:
+            logger.error(f"ERROR: {e}")
     else:
-        self.stderr.write("Object %s does not have updated elements" % body.current_name())
-
+        logger.error("Object %s does not have updated elements" % body.current_name())
+    shortdate = date.strftime('%Y%m%d')
 # Step 4: Run Lightcurve Extraction
     if first_frame.block.superblock.tracking_number == last_frame.block.superblock.tracking_number:
         status = call_command('lightcurve_extraction', int(first_frame.block.superblock.tracking_number),
-                              '--single', '--date', options['date'])
+                              '--single', '--date', shortdate)
     else:
         tn_list = []
         for fits in fits_files:
             if fits.block.superblock.tracking_number not in tn_list:
                 status = call_command('lightcurve_extraction', int(fits.block.superblock.tracking_number),
-                                      '--single', '--date', options['date'])
+                                      '--single', '--date', shortdate)
                 tn_list.append(fits.block.superblock.tracking_number)
     return

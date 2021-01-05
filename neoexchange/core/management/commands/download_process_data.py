@@ -24,6 +24,7 @@ from django.conf import settings
 
 from core.models import Frame
 from core.management.commands import download_archive_data, pipeline_astrometry
+from core.utils import NeoException
 from astrometrics.ephem_subs import determine_rates_pa
 from photometrics.catalog_subs import get_fits_files, sort_rocks, find_first_last_frames
 from core.views import determine_active_proposals
@@ -142,7 +143,10 @@ class Command(BaseCommand):
                                       'keep_temp_dir': keep_temp_dir
                                       }
                     self.stdout.write("Calling pipeline_astrometry with: %s %s" % (mtdlink_args, mtdlink_kwargs))
-                    status = call_command('pipeline_astrometry', *mtdlink_args, **mtdlink_kwargs)
+                    try:
+                        status = call_command('pipeline_astrometry', *mtdlink_args, **mtdlink_kwargs)
+                    except NeoException as e:
+                        self.stderr.write(f"ERROR: {e}")
                     self.stderr.write("\n")
                 else:
                     self.stderr.write("Object %s does not have updated elements" % body.current_name())
