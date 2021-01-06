@@ -74,7 +74,7 @@ class DownloadProcessPipeline(PipelineProcess):
         numdays = inputs.get('numdays')
 
         try:
-            self.download(obs_date, proposals, out_path, dlengimaging, spectraonly)
+            self.download(obs_date, proposals, out_path, numdays, dlengimaging, spectraonly)
             # unpack tarballs and make movie.
             self.create_movies()
         except NeoException as ex:
@@ -88,7 +88,7 @@ class DownloadProcessPipeline(PipelineProcess):
         self.log('Pipeline Completed')
         return
 
-    def download(self, obs_date, proposals, out_path, maxfiles_mtd, dlengimaging=False, spectraonly=False):
+    def download(self, obs_date, proposals, out_path, maxfiles_mtd, numdays=0.0, dlengimaging=False, spectraonly=False):
         self.frames = {}
         self.maxfiles_mtd = maxfiles_mtd
         if not hasattr(self, 'out_path'):
@@ -97,6 +97,7 @@ class DownloadProcessPipeline(PipelineProcess):
             self.obs_date = obs_date
         auth_headers = archive_login()
         start_date, end_date = determine_archive_start_end(obs_date)
+        end_date = end_date + timedelta(days=numdays)
         for proposal in proposals:
             self.log("Looking for frames between %s->%s from %s" % ( start_date, end_date, proposal ))
             obstypes = self.OBSTYPES
