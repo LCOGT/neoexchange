@@ -36,7 +36,7 @@ from core.utils import search
 from astrometrics.time_subs import jd_utc2datetime
 from astrometrics.ephem_subs import compute_ephem
 from photometrics.catalog_subs import sanitize_object_name
-from photometrics.external_codes import run_damit_periodscan
+from photometrics.external_codes import run_damit_periodscan, run_damit_convinv
 
 
 class Command(BaseCommand):
@@ -50,6 +50,7 @@ class Command(BaseCommand):
         parser.add_argument('-pmax', '--period_max', type=float, default=None, help='max period for period search (h)')
         parser.add_argument('-p', '--period', type=float, default=None, help='base period to search around (h)')
         parser.add_argument('--filters', type=str, default=None, help='comma separated list of filters to use (SG,SR,W)')
+        parser.add_argument('--period_scan', action="store_true", default=False, help='run Period Scan')
 
     # def read_data(self):
     #     """ reads lightcurve_data.txt output by lightcurve_extraction"""
@@ -119,7 +120,7 @@ class Command(BaseCommand):
         Calculate period range to search from optional input parameters and known period
         :param body: Body object
         :param options: input options
-        :return: pmin and pmax
+        :return: pmin, pmax, period
         """
         pmin = options['period_min']
         pmax = options['period_max']
@@ -141,7 +142,7 @@ class Command(BaseCommand):
             pmin = pmax - 1
         if pmin <= 0:
             pmin = .5 * pmax
-        return pmin, pmax
+        return pmin, pmax, period
 
     def astro_centric_coord(self, geocent_a, heliocent_e):
         astrocent_e = [-1*x for x in geocent_a]
@@ -207,6 +208,39 @@ class Command(BaseCommand):
         ps_input_file.close()
         return ps_input_filename
 
+    def import_or_create_cinv_input(self, path, obj_name, period):
+        """
+        If input_period_scan file exists, update period range, else create file from scratch
+        :param path: path to working directory
+        :param obj_name: sanitized object name
+        :param period: best period
+        :return: filename for input_period_scan
+        """
+        base_name = obj_name + '_convex_inv.in'
+        cinv_input_filename = os.path.join(path, base_name)
+        cinv_input_file = default_storage.open(cinv_input_filename, 'w+')
+        lines = cinv_input_file.readlines()
+        if lines:
+            lines[2] = f"{period}		1	inital period [hours] (0/1 - fixed/free)\n"
+            for line in lines:
+                cinv_input_file.write(line)
+        else:
+            cinv_input_file.write(f"220		1	inital lambda [deg] (0/1 - fixed/free)\n")
+            cinv_input_file.write(f"0		1	initial beta [deg] (0/1 - fixed/free)\n")
+            cinv_input_file.write(f"{period}		1	inital period [hours] (0/1 - fixed/free)\n")
+            cinv_input_file.write(f"0			zero time [JD]\n")
+            cinv_input_file.write(f"0			initial rotation angle [deg]\n")
+            cinv_input_file.write(f"0.1			convexity regularization\n")
+            cinv_input_file.write(f"6 6			degree and order of spherical harmonics expansion\n")
+            cinv_input_file.write(f"8			number of rows\n")
+            cinv_input_file.write(f"0.5		0	phase funct. param. 'a' (0/1 - fixed/free)\n")
+            cinv_input_file.write(f"0.1		0	phase funct. param. 'd' (0/1 - fixed/free)\n")
+            cinv_input_file.write(f"-0.5		0	phase funct. param. 'k' (0/1 - fixed/free)\n")
+            cinv_input_file.write(f"0.1		0	Lambert coefficient 'c' (0/1 - fixed/free)\n")
+            cinv_input_file.write(f"50			iteration stop condition\n")
+        cinv_input_file.close()
+        return cinv_input_filename
+
     def handle(self, *args, **options):
         path = options['path']
         files = search(path, '.*.ALCDEF.txt')
@@ -231,11 +265,20 @@ class Command(BaseCommand):
         lcs_input_file = default_storage.open(lcs_input_filename, 'w')
         self.create_lcs_input(lcs_input_file, meta_list, lc_list, body_elements, filt_list)
         lcs_input_file.close()
-        # Create period_scan input file
-        pmin, pmax = self.get_period_range(body, options)
-        psinput_filename = self.import_or_create_psinput(path, obj_name, pmin, pmax)
-        # Run Period Scan
-        psoutput_filename = os.path.join(path, f'{obj_name}_{pmin}T{pmax}_period_scan.out')
-        retcode_or_cmdline = run_damit_periodscan(lcs_input_filename, psinput_filename, psoutput_filename)
+        pmin, pmax, period = self.get_period_range(body, options)
+        if options['period_scan']:
+            # Create period_scan input file
+            psinput_filename = self.import_or_create_psinput(path, obj_name, pmin, pmax)
+            # Run Period Scan
+            psoutput_filename = os.path.join(path, f'{obj_name}_{pmin}T{pmax}_period_scan.out')
+            retcode_or_cmdline = run_damit_periodscan(lcs_input_filename, psinput_filename, psoutput_filename)
+        else:
+            # Create convinv input file
+            convinv_input_filename = self.import_or_create_cinv_input(path, obj_name, period)
+            convinv_outpar_filename = os.path.join(path, f'{obj_name}_{period}_convinv_par.out')
+            convinv_outlcs_filename = os.path.join(path, f'{obj_name}_{period}_convinv_lcs.out')
+            convinv_outareas_filename = os.path.join(path, f'{obj_name}_{period}_convinv_areas.out')
+            retcode_or_cmdline = run_damit_convinv(lcs_input_filename, convinv_input_filename, convinv_outpar_filename,
+                                                   convinv_outlcs_filename, convinv_outareas_filename)
 
         return

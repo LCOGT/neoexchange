@@ -250,10 +250,10 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
 
     # Check we have everything we need before computing positions
     if p_orbelems['Inc'] is None or p_orbelems['LongNode'] is None or p_orbelems['ArgPeri'] is None\
-        or p_orbelems['SemiAxisOrQ'] is None or p_orbelems['Ecc'] is None:
-            logger.error("Missing parameter for %s (%s)" % (orbelems['name'], orbelems['provisional_name']))
-            logger.error(p_orbelems)
-            return {}
+            or p_orbelems['SemiAxisOrQ'] is None or p_orbelems['Ecc'] is None:
+        logger.error("Missing parameter for %s (%s)" % (orbelems['name'], orbelems['provisional_name']))
+        logger.error(p_orbelems)
+        return {}
 
     r3 = -100.
     delta = 0.0
@@ -2199,3 +2199,78 @@ def get_visibility(ra, dec, date, site_code, step_size='30 m', alt_limit=30, qui
             stop_time = set_time
 
     return dark_and_up_time, max_alt, start_time, stop_time
+
+
+def orbital_pos_from_true_anomaly(nu, body_elements):
+    """Give Cartesian coordinates for a given true anomaly in radians for s given set of orbital elements"""
+    a = body_elements['meandist']
+    e = body_elements['eccentricity']
+    i = radians(body_elements['orbinc'])
+    om = radians(body_elements['longascnode'])
+    w = radians(body_elements['argofperih'])
+
+    # Calculate radial distance and heliocentric, ecliptic Cartesian Coordinates based on orbital elements
+    r = a * (1 - e ** 2) / (1 + e * cos(nu))
+    x_h_ecl = r * (cos(om) * cos(w + nu) - sin(om) * sin(w + nu) * cos(i))
+    y_h_ecl = r * (sin(om) * cos(w + nu) + cos(om) * sin(w + nu) * cos(i))
+    z_h_ecl = r * (sin(w + nu) * sin(i))
+
+    # Convert heliocentric, ecliptic Cartesian Coordinates to spherical coordinates
+    l, b = S.sla_dcc2s([x_h_ecl, y_h_ecl, z_h_ecl])
+    # Convert Ecliptic spherical Coordinates to BCRS Spherical coordinates
+    alpha, delta = S.sla_ecleq(l, b, datetime2mjd_utc(datetime.utcnow()))
+    # Convert BCRS Spherical coordinates to Unit cartesian coordinates
+    unit_cartesian_coords = S.sla_dcs2c(alpha, delta)
+    # Convert Unit coordinates into real coordinates
+    final_cartesian_coords = [pos * r for pos in unit_cartesian_coords]
+
+    return final_cartesian_coords
+
+
+def get_planetary_elements(planet=None):
+    planet_elements = {'mercury': {'meandist': 0.38709893,
+                                   'eccentricity': 0.20563069,
+                                   'orbinc': 7.00487,
+                                   'longascnode': 48.33167,
+                                   'argofperih': 77.45645},
+                       'venus':   {'meandist': 0.72333199,
+                                   'eccentricity': 0.00677323,
+                                   'orbinc': 3.39471,
+                                   'longascnode': 76.68069,
+                                   'argofperih': 131.53298},
+                       'earth':   {'meandist': 1.00000011,
+                                   'eccentricity': 0.01671022,
+                                   'orbinc': 0.00005,
+                                   'longascnode': -11.26064,
+                                   'argofperih': 102.94719},
+                       'mars':    {'meandist': 1.52366231,
+                                   'eccentricity': 0.09341233,
+                                   'orbinc': 1.85061,
+                                   'longascnode': 49.57854,
+                                   'argofperih': 336.04084},
+                       'jupiter': {'meandist': 5.20336301,
+                                   'eccentricity': 0.04839266,
+                                   'orbinc': 1.30530,
+                                   'longascnode': 100.55615,
+                                   'argofperih': 14.75385},
+                       'saturn':  {'meandist': 9.53707032,
+                                   'eccentricity': 0.05415060,
+                                   'orbinc': 2.48446,
+                                   'longascnode': 113.71504,
+                                   'argofperih': 92.43194},
+                       'uranus':  {'meandist': 19.19126393,
+                                   'eccentricity': 0.04716771,
+                                   'orbinc': 0.76986,
+                                   'longascnode': 74.22988,
+                                   'argofperih': 170.96424},
+                       'neptune': {'meandist': 30.06896348,
+                                   'eccentricity': 0.00858587,
+                                   'orbinc': 1.76917,
+                                   'longascnode': 131.72169,
+                                   'argofperih': 44.97135}
+                       }
+    try:
+        return_elements = planet_elements[planet.lower()]
+    except (KeyError, AttributeError):
+        return_elements = planet_elements
+    return return_elements

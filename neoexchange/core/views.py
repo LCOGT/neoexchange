@@ -3933,7 +3933,7 @@ def get_lc_plot(body, data):
         ephem = []
 
     if lc_list:
-        script, div = lc_plot(lc_list, meta_list, period, period_scan_dict, jpl_ephem=ephem)
+        script, div = lc_plot(lc_list, meta_list, period, period_scan_dict, body, jpl_ephem=ephem)
     else:
         script = None
         div = """

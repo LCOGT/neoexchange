@@ -38,14 +38,16 @@ from bokeh.layouts import layout, column, row
 from bokeh.plotting import figure, ColumnDataSource
 from bokeh.resources import CDN, INLINE
 from bokeh.embed import components, file_html
-from bokeh.models import HoverTool, Label, CrosshairTool, Whisker, TeeHead, Range1d, CustomJS, Title, CustomJSHover, DataRange1d
+from bokeh.models import HoverTool, Label, CrosshairTool, Whisker, TeeHead, Range1d, CustomJS, Title, CustomJSHover,\
+    DataRange1d, Tool
 from bokeh.models.widgets import CheckboxGroup, Slider, TableColumn, DataTable, HTMLTemplateFormatter, NumberEditor,\
     NumberFormatter, Spinner, Button, Panel, Tabs, Div, Toggle
 from bokeh.palettes import Category20, Category10
 
 from .models import Body, CatalogSources, StaticSource, Block, model_to_dict, PreviousSpectra
 from astrometrics.ephem_subs import horizons_ephem, call_compute_ephem, determine_darkness_times, get_sitepos,\
-    moon_ra_dec, target_rise_set, moonphase, dark_and_object_up, compute_dark_and_up_time, get_visibility
+    moon_ra_dec, target_rise_set, moonphase, dark_and_object_up, compute_dark_and_up_time, get_visibility,\
+    compute_ephem, orbital_pos_from_true_anomaly, get_planetary_elements
 from astrometrics.time_subs import jd_utc2datetime
 from photometrics.obsgeomplot import plot_ra_dec, plot_brightness, plot_helio_geo_dist, \
     plot_uncertainty, plot_hoursup
@@ -594,7 +596,7 @@ def get_name(meta_dat):
     return out_string, name, number
 
 
-def lc_plot(lc_list, meta_list, period=1, pscan_dict={}, jpl_ephem=None):
+def lc_plot(lc_list, meta_list, period=1, pscan_dict={}, body=None, jpl_ephem=None):
     """Creates an interactive Bokeh LC plot:
     Inputs:
     [lc_list] --- A list of LC dictionaries, each one containing the following keys:
@@ -619,7 +621,10 @@ def lc_plot(lc_list, meta_list, period=1, pscan_dict={}, jpl_ephem=None):
     js_file = os.path.abspath(os.path.join('core', 'static', 'core', 'js', 'bokeh_custom_javascript.js'))
 
     # Pull general info from metadata
-    obj, name, num = get_name(meta_list[0])
+    if body is None:
+        obj, name, num = get_name(meta_list[0])
+    else:
+        obj = body.current_name()
     date_range = meta_list[0]['SESSIONDATE'].replace('-', '') + '-' + meta_list[-1]['SESSIONDATE'].replace('-', '')
     base_date = floor(min(sorted([jd for lc in lc_list for jd in lc['date']])))
 
@@ -631,6 +636,9 @@ def lc_plot(lc_list, meta_list, period=1, pscan_dict={}, jpl_ephem=None):
     plot_p.y_range = DataRange1d(names=['mags'], flipped=True)
     plot_period = figure(plot_width=900, plot_height=400)
     plot_period.y_range = DataRange1d(names=['period'])
+    plot_orbit = figure(plot_width=900, plot_height=900)
+    plot_orbit.y_range = Range1d(-1.1 * body.meandist, 1.1 * body.meandist)
+    plot_orbit.x_range = Range1d(-1.1 * body.meandist, 1.1 * body.meandist)
 
     # Create Column Data Source that will be used by the plots
     source = ColumnDataSource(data=dict(time=[], mag=[], color=[], title=[], err_high=[], err_low=[], alpha=[]))  # phased LC data Source
@@ -639,6 +647,8 @@ def lc_plot(lc_list, meta_list, period=1, pscan_dict={}, jpl_ephem=None):
     horizons_source = ColumnDataSource(data=dict(date=[], v_mag=[]))  # V-mag info
     periodogram_source = ColumnDataSource(data=dict(period=pscan_dict['period'], chi2=pscan_dict['chi2']))  # periodogram info
     p_mark_source = ColumnDataSource(data=dict(period=[period], y=[-1]))
+    orbit_source = ColumnDataSource(data=get_orbit_position(meta_list, lc_list, body))
+    full_orbit_source = ColumnDataSource(data=get_full_orbit(body))
 
     # Create Input controls
     phase_shift = Slider(title="Phase Offset", value=0, start=-1, end=1, step=.01, width=200, tooltips=False)  # Slider bar to change base_date by +/- 1 period
@@ -674,6 +684,13 @@ def lc_plot(lc_list, meta_list, period=1, pscan_dict={}, jpl_ephem=None):
     # Build periodogram:
     period_data = plot_period.line(x="period", y="chi2", source=periodogram_source, color="red", name='period')
     period_mark = plot_period.ray(x="period", y="y", length=10, angle=pi/2, source=p_mark_source)
+    # Build orbit plot:
+    ast_pos = plot_orbit.circle(x="a_x", y="a_y", source=orbit_source, color="red", name=body.full_name())
+    earth_pos = plot_orbit.circle(x="e_x", y="e_y", source=orbit_source, name="Earth")
+    sun_pos = plot_orbit.circle([0], [0], size=10, color="black")
+    ast_orbit = plot_orbit.line(x="full_a_x", y="full_a_y", source=full_orbit_source, color="gray")
+    for planet in get_planetary_elements():
+        plot_orbit.line(x=f"{planet}_x", y=f"{planet}_y", source=full_orbit_source, color="gray", alpha=.5)
 
     # Write custom JavaScript Code to print the time to the next iteration of the given phase in a HoverTool
     js_hover_text = get_js_as_text(js_file, "next_time_phased")
@@ -696,6 +713,7 @@ def lc_plot(lc_list, meta_list, period=1, pscan_dict={}, jpl_ephem=None):
     plot_u.xaxis.axis_label = 'Date (Hours from {}.5/{}.0)'.format(jd_utc2datetime(base_date).strftime("%Y-%m-%d"), base_date)
     plot_p.yaxis.axis_label = 'Apparent Magnitude'
     plot_p.title.text = 'LC for {} ({})'.format(obj, date_range)
+    plot_p.xaxis.axis_label = 'Phase (Period = {}h / Epoch = {})'.format(period, base_date)
     plot_period.title.text = f'Periodogram for {obj}'
     plot_period.xaxis.axis_label = "Period (h)"
     plot_period.yaxis.axis_label = "Chi^2"
@@ -706,7 +724,6 @@ def lc_plot(lc_list, meta_list, period=1, pscan_dict={}, jpl_ephem=None):
     # plot_p.yaxis.major_label_text_font_size = "14pt"
     # plot_p.xaxis.major_label_text_font_size = "14pt"
     # plot_p.axis.major_tick_line_width = 2
-    plot_p.xaxis.axis_label = 'Phase (Period = {}h / Epoch = {})'.format(period, base_date)
 
     # Create update function to fill datasets. This is currently unnecessary, but could be used if we ever got a
     # Bokeh Server up and running. Then we would run this function instead of all of the JS below
@@ -820,8 +837,8 @@ def lc_plot(lc_list, meta_list, period=1, pscan_dict={}, jpl_ephem=None):
     period_box.js_on_change('value', phased_callback)
     phase_shift.js_on_change('value', phased_callback)
 
-    # # JS Call back to move period marker on period plot.
-    # period_slider.js_link('value', period_mark, 'x')
+    # JS Call back to cause rotation
+
 
     # Build layout tables:
     phased_layout = column(plot_p,
@@ -843,12 +860,14 @@ def lc_plot(lc_list, meta_list, period=1, pscan_dict={}, jpl_ephem=None):
                                                       period_slider),
                                                column(p_slider_min,
                                                       p_slider_max)))))
+    orbit_layout = column(plot_orbit)
 
     # Set Tabs
     tabu = Panel(child=unphased_layout, title="Unphased")
     tabp = Panel(child=phased_layout, title="Phased")
     tab_per = Panel(child=periodogram_layout, title="Periodogram")
-    tabs = Tabs(tabs=[tabu, tabp, tab_per])
+    tab_orb = Panel(child=orbit_layout, title="Orbital Diagram")
+    tabs = Tabs(tabs=[tabu, tabp, tab_per, tab_orb])
 
     script, div = components({'plot': tabs}, CDN)
 
@@ -889,6 +908,56 @@ def build_data_sets(lc_list, title_list):
     return data
 
 
+def get_orbit_position(meta_list, lc_list, body):
+    body_elements = model_to_dict(body)
+    dates = []
+    hcnt_a_x = []
+    hcnt_a_y = []
+    hcnt_a_z = []
+    hcnt_e_x = []
+    hcnt_e_y = []
+    hcnt_e_z = []
+    for k, dat in enumerate(meta_list):
+        site = dat['MPCCODE']
+        if len(lc_list[k]['date']) > 2:
+            date_list = [lc_list[k]['date'][0], lc_list[k]['date'][-1]]
+        else:
+            date_list = lc_list[k]['date']
+        for c, d in enumerate(date_list):
+            ephem_date = jd_utc2datetime(d)
+            dates.append(ephem_date)
+            ephem = compute_ephem(ephem_date, body_elements, site)
+            geocnt_a_pos = ephem["geocnt_a_pos"]
+            heliocnt_e_pos = ephem["heliocnt_e_pos"]
+            heliocnt_a_pos = [x_a + x_g for x_a, x_g in zip(geocnt_a_pos, heliocnt_e_pos)]
+            hcnt_a_x.append(heliocnt_a_pos[0])
+            hcnt_a_y.append(heliocnt_a_pos[1])
+            hcnt_a_z.append(heliocnt_a_pos[2])
+            hcnt_e_x.append(heliocnt_e_pos[0])
+            hcnt_e_y.append(heliocnt_e_pos[1])
+            hcnt_e_z.append(heliocnt_e_pos[2])
+
+    position_data = dict(time=dates, a_x=hcnt_a_x, a_y=hcnt_a_y, a_z=hcnt_a_z, e_x=hcnt_e_x, e_y=hcnt_e_y, e_z=hcnt_e_z)
+    return position_data
+
+
+def get_full_orbit(body):
+    body_elements = model_to_dict(body)
+    full_orbit = [orbital_pos_from_true_anomaly(nu, body_elements) for nu in np.arange(0, 7, .01)]
+    full_orbit_x = [pos[0] for pos in full_orbit]
+    full_orbit_y = [pos[1] for pos in full_orbit]
+    full_orbit_z = [pos[2] for pos in full_orbit]
+    position_data = dict(full_a_x=full_orbit_x, full_a_y=full_orbit_y, full_a_z=full_orbit_z)
+
+    planetary_elements = get_planetary_elements()
+    for planet in planetary_elements:
+        p_orb = [orbital_pos_from_true_anomaly(nu, planetary_elements[planet]) for nu in np.arange(0, 7, .01)]
+        position_data[f'{planet}_x'] = [pos[0] for pos in p_orb]
+        position_data[f'{planet}_y'] = [pos[1] for pos in p_orb]
+        position_data[f'{planet}_z'] = [pos[2] for pos in p_orb]
+    return position_data
+
+
 def phase_lc(lc_data, period, base_date):
     """Remove base JD, convert to hours, and fold LC around period.
         If Period=None, Just remove Base JD and convert to Hours.
@@ -926,7 +995,7 @@ def get_js_as_text(file, funct):
     js_text = ''
     print_js = False
     for line in lines:
-        if print_js and line == '}\n' or print_js and line == '}':
+        if print_js and (line == '}\n' or line == '}'):
             break
         if print_js:
             js_text += line
