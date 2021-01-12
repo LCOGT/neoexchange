@@ -395,10 +395,10 @@ def write_ldac(table, output_file):
                     'mag'       : '1E',
                     'e_mag'     : '1E'
                   }
-    disp_dict = { 'RAJ2000'   : 'E15',
-                  'DEJ2000'   : 'E15',
-                  'e_RAJ2000' : 'E12',
-                  'e_DEJ2000' : 'E12',
+    disp_dict = { 'RAJ2000'   : 'F13.8',
+                  'DEJ2000'   : 'F13.8',
+                  'e_RAJ2000' : 'F13.8',
+                  'e_DEJ2000' : 'F13.8',
                   'mag'       : 'F8.4',
                   'e_mag'     : 'F8.5'
                 }
