@@ -14,8 +14,8 @@
 {% block main-content %}
 <div class="container" id="main">
   <div class="eight columns">
-    <h2>{{object.process_type}}</h2>
-    <h4>Name: {{ object.identifier }}: {{object.status|upper}}</h4>
+    <h2>{{title}}</h2>
+    <h4>Name: {{ object.identifier }}: <span id="process-status">{{object.status|upper}}</span></h4>
   </div>
   <div class="four columns rightsidebar">
     <a href="{% url 'pipelines' %}" class="button button-primary" >Pipeline List</a>

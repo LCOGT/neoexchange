@@ -31,6 +31,7 @@ class DownloadProcessPipeline(PipelineProcess):
     Download and process FITS image and spectra data
     """
     short_name = 'dlp'
+    long_name = 'Download and Process observation data'
     inputs = {
         'obs_date': {
             'default': None,

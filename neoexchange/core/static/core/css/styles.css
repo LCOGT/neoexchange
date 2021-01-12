@@ -574,6 +574,7 @@ fieldset legend { font-weight: bold; }
 #show-messages li, .messages li { padding: 8px 0; border-top: 1px solid white; list-style: none;}
 #show-messages li:first-child, .messages li:first-child { border-top: 0; }
 .success { background-color: white; }
+.success-alt { background-color:#21DC5F; color:#fff;}
 
 /* Sprites */
 img.icon, img.iconbig { opacity: 0.7; filter: alpha(opacity=70); }

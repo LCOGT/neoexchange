@@ -1,3 +1,4 @@
+from django.contrib.contenttypes.models import ContentType
 from django.http import JsonResponse, HttpResponseBadRequest
 from django.shortcuts import render, redirect
 from django.urls import reverse_lazy
@@ -7,7 +8,6 @@ from rest_framework.exceptions import NotFound
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework import serializers
 from rest_framework.response import Response
-
 
 from core.models import PipelineProcess, AsyncProcess
 from core.tasks import run_pipeline, send_task
