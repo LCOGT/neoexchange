@@ -147,3 +147,6 @@ class PipelineProcess(AsyncProcess):
         pipe = cls.objects.create(**kwargs)
         pipe.save()
         return pipe
+
+    def inputs_dict(self):
+        return json.loads(self.inputs_json)

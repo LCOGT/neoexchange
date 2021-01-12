@@ -136,6 +136,12 @@ def addstr(arg1, arg2):
     out_string = str(arg1) + str(arg2)
     return out_string
 
+@register.filter()
+def booleanicon(val):
+    if val:
+        return '<i class="fas fa-check"></i>'
+    else:
+        return '<i class="fas fa-times"></i>'
 
 register.filter('make_int_list', make_int_list)
 register.filter('dictsortreversed_with_none', dictsortreversed_with_none)

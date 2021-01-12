@@ -16,6 +16,14 @@
   <div class="eight columns">
     <h2>{{title}}</h2>
     <h4>Name: {{ object.identifier }}: <span id="process-status">{{object.status|upper}}</span></h4>
+    <h5>Inputs</h5>
+    <table class="table">
+    {% for k, v in object.inputs_dict.items %}
+    <tr>
+      <td>{{k}}</td><td>{{v|booleanicon|safe}}</td>
+    </tr>
+    {% endfor %}
+    </table>
   </div>
   <div class="four columns rightsidebar">
     <a href="{% url 'pipelines' %}" class="button button-primary" >Pipeline List</a>
