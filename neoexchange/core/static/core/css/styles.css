@@ -559,7 +559,7 @@ fieldset legend { font-weight: bold; }
 .yes, .no { margin-left: 8px; }
 #show-messages, .messages { text-align: center; position: relative; }
 .warning {  background-color: #fee57f; }
-.error {  background-color: #df0000; color: white; }
+.error, .errorlist {  background-color: #df0000; color: white; }
 .msgpadded {
 	clear:both;
 	float:none;

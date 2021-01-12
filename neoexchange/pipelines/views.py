@@ -40,7 +40,7 @@ class PipelineSubmitView(FormView):
     def get_success_url(self):
         return reverse_lazy('pipelinedetail', kwargs={'pk':pipe.pk})
 
-    def get_context_data(self):
+    def get_context_data(self, **kwargs):
         data = super().get_context_data()
         data['form_title'] = self.title
         return data

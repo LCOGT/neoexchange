@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from django import forms
+from django.db.models import Q
 
 from core.models import Proposal, Body
 
@@ -10,7 +11,23 @@ class DLDataForm(forms.Form):
     spectraonly = forms.BooleanField(label="Only download Spectra", required=False)
     dlengimaging = forms.BooleanField(label="Download imaging for LCOEngineering", required=False)
     numdays = forms.FloatField(label="How many extra days to search", required=False)
+    object = forms.CharField(label="Object name [optional]", required=False)
 
+    def clean_object(self):
+        name = self.cleaned_data['object']
+        if not name:
+            return name
+        body = Body.objects.filter(Q(provisional_name__startswith=name) | Q(provisional_packed__startswith=name) | Q(name__startswith=name))
+        if body.count() == 1 :
+            return body[0]
+        elif body.count() == 0:
+            raise forms.ValidationError("Object not found.")
+        elif body.count() > 1:
+            newbody = Body.objects.filter(Q(provisional_name__exact=name) | Q(provisional_packed__exact=name) | Q(name__exact=name))
+            if newbody.count() == 1:
+                return newbody[0]
+            else:
+                raise forms.ValidationError("Multiple objects found.")
 
     def __init__(self, *args, **kwargs):
         self.proposal = kwargs.pop('proposal', None)

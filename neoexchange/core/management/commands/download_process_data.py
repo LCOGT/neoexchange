@@ -45,7 +45,7 @@ class Command(BaseCommand):
         parser.add_argument('--dlengimaging', default=False, action='store_true', help='Whether to download imaging for LCOEngineering')
         parser.add_argument('--numdays', action="store", default=0.0, type=float, help='How many extra days to look for')
         parser.add_argument('--mtdlink_file_limit', action="store", type=int, default=9, help='Maximum number of images for running mtdlink')
-        parser.add_argument('--keep-temp-dir', action="store_true", help='Whether to remove the temporary directories')
+        parser.add_argument('--keep-temp-dir', default=False, action="store_true", help='Whether to remove the temporary directories')
         parser.add_argument('--object', action="store", help="Which object to analyze (replace spaces with underscores)")
         parser.add_argument('--downloadonly', default=False, action="store_true", help='Just download data')
 
@@ -79,3 +79,5 @@ class Command(BaseCommand):
         pipe.sort_objects()
         pipe.process(objectid=options['object'])
         pipe.create_movies()
+        if not options['keep_temp_dir']:
+            pipe.cleanup()

@@ -40,10 +40,6 @@ class DownloadProcessPipeline(PipelineProcess):
             'default': None,
             'long_name' : 'Proposal code to query for data (e.g. LCO2019B-023; default is for all active proposals)'
         },
-        'datadir' : {
-            'default' : None,
-            'long_name' : 'Place to save data'
-        },
         'spectraonly': {
             'default' : False,
             'long_name' : 'Whether to only download spectra'
@@ -55,6 +51,10 @@ class DownloadProcessPipeline(PipelineProcess):
         'numdays' : {
             'default' : 0.0,
             'long_name' : 'How many extra days to look for'
+        },
+        'object' : {
+            'default' : '',
+            'long_name' : 'Download data for specific object'
         }
     }
     OBSTYPES = ['EXPOSE', 'ARC', 'LAMPFLAT', 'SPECTRUM']
@@ -72,11 +72,14 @@ class DownloadProcessPipeline(PipelineProcess):
         dlengimaging = inputs.get('dlengimaging')
         spectraonly = inputs.get('spectraonly')
         numdays = inputs.get('numdays')
+        object = inputs.get('object')
 
         try:
             self.download(obs_date, proposals, out_path, numdays, dlengimaging, spectraonly)
             # unpack tarballs and make movie.
             self.create_movies()
+            self.sort_objects()
+            self.process(objectid=object)
         except NeoException as ex:
             logger.error('Error with Movie: {}'.format(ex))
             self.log('Error with Movie: {}'.format(ex))
@@ -177,8 +180,10 @@ class DownloadProcessPipeline(PipelineProcess):
                 self.log(f"No Block found for object {rock}")
         return
 
-    def cleanup():
+    def cleanup(self):
         # Check if we're using a temp dir and then delete it
+        # This is only needed when running as management command version
+        # Async pipeline uses autoclosing syntax
         if gettempdir() in self.out_path:
             shutil.rmtree(self.out_path)
 

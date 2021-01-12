@@ -61,8 +61,8 @@ class PipelineProcess(AsyncProcess):
             except Exception as e:
                 raise AsyncError(f"Error: '{e}'")
 
-        self.status = ASYNC_STATUS_CREATED
-        self.save()
+            self.status = ASYNC_STATUS_CREATED
+            self.save()
 
     def do_pipeline(self, tmpdir):
         """
