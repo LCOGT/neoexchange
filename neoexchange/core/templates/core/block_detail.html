@@ -111,11 +111,11 @@
                             <span class="block-status-line">
                               <span class="block-status-item">
                               {% if blk.reported and blk.when_observed %}
-                              <i class="fa fa-check-circle-o fa-lg" style="color:#339933;"></i>
+                              <i class="fas fa-check-circle fa-lg" style="color:#339933;"></i>
                               {% elif blk.when_observed and not blk.reported %}
-                              <i class="fa fa-clock-o fa-lg" style="color: #FF9933;"></i>
+                              <i class="far fa-clock fa-lg" style="color: #FF9933;"></i>
                               {% elif not blk.reported and not blk.when_observed and blk.active %}
-                              <i class="fa fa-circle-o fa-lg" style="color:#263c6f;"></i>
+                              <i class="far fa-circle fa-lg" style="color:#263c6f;"></i>
                               {% elif not blk.reported and not blk.when_observed and  not blk.active %}
                               <i class="fa fa-minus-circle fa-lg" style="color:#df0000;"></i>
                               {% endif %}
