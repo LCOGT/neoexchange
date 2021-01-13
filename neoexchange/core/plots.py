@@ -35,14 +35,16 @@ import matplotlib.pyplot as plt
 
 from bokeh.io import curdoc
 from bokeh.layouts import layout, column, row
-from bokeh.plotting import figure, ColumnDataSource
+from bokeh.plotting import figure
 from bokeh.resources import CDN, INLINE
 from bokeh.embed import components, file_html
 from bokeh.models import HoverTool, Label, CrosshairTool, Whisker, TeeHead, Range1d, CustomJS, Title, CustomJSHover,\
-    DataRange1d, Tool
+    DataRange1d, Tool, ColumnDataSource
 from bokeh.models.widgets import CheckboxGroup, Slider, TableColumn, DataTable, HTMLTemplateFormatter, NumberEditor,\
     NumberFormatter, Spinner, Button, Panel, Tabs, Div, Toggle
 from bokeh.palettes import Category20, Category10
+from bokeh.core.properties import Instance, String
+from bokeh.util.compiler import TypeScript
 
 from .models import Body, CatalogSources, StaticSource, Block, model_to_dict, PreviousSpectra
 from astrometrics.ephem_subs import horizons_ephem, call_compute_ephem, determine_darkness_times, get_sitepos,\
@@ -596,6 +598,139 @@ def get_name(meta_dat):
     return out_string, name, number
 
 
+TS_CODE = """
+import {GestureTool, GestureToolView} from "models/tools/gestures/gesture_tool"
+import {ColumnDataSource} from "models/sources/column_data_source"
+import {PanEvent} from "core/ui_events"
+import * as p from "core/properties"
+
+function rotate(coords:any, omega:number, phi:number) {
+    const theta = 0
+    const ct = Math.cos(theta)
+    const st = Math.sin(theta)
+    const cp = Math.cos(phi)
+    const sp = Math.sin(phi)
+    const co = Math.cos(omega)
+    const so = Math.sin(omega)
+    const keys = Object.keys(coords.data) as string[]
+    const unique_keys = [] as string[]
+    var key
+    for (key of keys) {
+        const first = key.split("_")
+        if (first.length > 1 && unique_keys.indexOf(first[0]) == -1) {
+            unique_keys.push(first[0])
+            var xx = coords.get_array(first[0].concat("_x")) as number[]
+            var yy = coords.get_array(first[0].concat("_y")) as number[]
+            var zz = coords.get_array(first[0].concat("_z")) as number[]
+            for (var i = 0; i < xx.length; i++){
+                //xx[i] = xx[i] * Math.cos(theta) + yy[i] * Math.sin(theta)
+                //yy[i] = yy[i] * Math.cos(theta) - xx[i] * Math.sin(theta)
+                //yy[i] = yy[i] * Math.cos(phi) - zz[i] * Math.sin(phi)
+                //zz[i] = zz[i] * Math.cos(phi) + yy[i] * Math.sin(phi)
+                const xx_out = (xx[i] * ct * co) + (yy[i] * (ct * so * sp - st * cp)) + (zz[i] * (ct * so * cp + st * sp))
+                const yy_out = (xx[i] * st * co) + (yy[i] * (st * so * sp + ct * cp)) + (zz[i] * (st * so * cp - ct * sp))
+                const zz_out = (yy[i] * (co * sp)) + (zz[i] * (co * cp)) - (xx[i] * so)
+                xx[i] = xx_out
+                yy[i] = yy_out
+                zz[i] = zz_out
+            }
+        }
+    }
+}
+
+export class RotToolView extends GestureToolView {
+  model: RotTool
+
+  //this is executed when the pan/drag event starts
+  _pan_start(_ev: PanEvent): void {
+    this.model.source.data = {x: [], y: []}
+  }
+
+  //this is executed on subsequent mouse/touch moves
+  _pan(ev: PanEvent): void {
+    const {frame} = this.plot_view
+
+    const {sx, sy} = ev
+
+    if (!frame.bbox.contains(sx, sy))
+      return
+
+    const {source, obs, orbs} = this.model
+
+    const x_list = source.get_array("x") as number[]
+    const y_list = source.get_array("y") as number[]
+
+    var theta = 0
+    var phi = 0
+    const scale = .01
+
+    x_list.push(sx)
+    y_list.push(sy)
+
+    if (x_list.length > 2) {
+        x_list.shift()
+        y_list.shift()
+        var theta = (x_list[1] - x_list[0]) * scale
+        var phi = (y_list[1] - y_list[0]) * scale
+        }
+
+    rotate(obs, theta, phi)
+    rotate(orbs, theta, phi)
+
+    obs.change.emit()
+    orbs.change.emit()
+    source.change.emit()
+  }
+
+  // this is executed then the pan/drag ends
+  _pan_end(_ev: PanEvent): void {}
+}
+
+export namespace RotTool {
+  export type Attrs = p.AttrsOf<Props>
+
+  export type Props = GestureTool.Props & {
+    source: p.Property<ColumnDataSource>,
+    obs: p.Property<ColumnDataSource>
+    orbs: p.Property<ColumnDataSource>
+  }
+}
+
+export interface RotTool extends RotTool.Attrs {}
+
+export class RotTool extends GestureTool {
+  properties: RotTool.Props
+  __view_type__: RotToolView
+
+  constructor(attrs?: Partial<RotTool.Attrs>) {
+    super(attrs)
+  }
+
+  tool_name = "Rotate Tool"
+  icon = "bk-tool-icon-wheel-pan"
+  event_type = "pan" as "pan"
+  default_order = 12
+
+  static init_RotTool(): void {
+    this.prototype.default_view = RotToolView
+
+    this.define<RotTool.Props>({
+      source: [ p.Instance ],
+      obs: [ p.Instance ],
+      orbs: [ p.Instance ],
+    })
+  }
+}
+"""
+
+
+class RotTool(Tool):
+    __implementation__ = TypeScript(TS_CODE)
+    source = Instance(ColumnDataSource)
+    obs = Instance(ColumnDataSource)
+    orbs = Instance(ColumnDataSource)
+
+
 def lc_plot(lc_list, meta_list, period=1, pscan_dict={}, body=None, jpl_ephem=None):
     """Creates an interactive Bokeh LC plot:
     Inputs:
@@ -636,9 +771,11 @@ def lc_plot(lc_list, meta_list, period=1, pscan_dict={}, body=None, jpl_ephem=No
     plot_p.y_range = DataRange1d(names=['mags'], flipped=True)
     plot_period = figure(plot_width=900, plot_height=400)
     plot_period.y_range = DataRange1d(names=['period'])
-    plot_orbit = figure(plot_width=900, plot_height=900)
+    plot_period.x_range = DataRange1d(names=['period'], bounds=(0, None))
+    plot_orbit = figure(plot_width=900, plot_height=900, x_axis_location=None, y_axis_location=None)
     plot_orbit.y_range = Range1d(-1.1 * body.meandist, 1.1 * body.meandist)
     plot_orbit.x_range = Range1d(-1.1 * body.meandist, 1.1 * body.meandist)
+    plot_orbit.grid.grid_line_color = None
 
     # Create Column Data Source that will be used by the plots
     source = ColumnDataSource(data=dict(time=[], mag=[], color=[], title=[], err_high=[], err_low=[], alpha=[]))  # phased LC data Source
@@ -683,14 +820,17 @@ def lc_plot(lc_list, meta_list, period=1, pscan_dict={}, body=None, jpl_ephem=No
     base_line = plot_p.line([-2, 2], [base_date, base_date], alpha=0, name="phase_line")
     # Build periodogram:
     period_data = plot_period.line(x="period", y="chi2", source=periodogram_source, color="red", name='period')
-    period_mark = plot_period.ray(x="period", y="y", length=10, angle=pi/2, source=p_mark_source)
+    period_mark = plot_period.ray(x="period", y="y", length=10, angle=pi/2, source=p_mark_source, line_width=2)
     # Build orbit plot:
     ast_pos = plot_orbit.circle(x="a_x", y="a_y", source=orbit_source, color="red", name=body.full_name())
     earth_pos = plot_orbit.circle(x="e_x", y="e_y", source=orbit_source, name="Earth")
     sun_pos = plot_orbit.circle([0], [0], size=10, color="black")
-    ast_orbit = plot_orbit.line(x="full_a_x", y="full_a_y", source=full_orbit_source, color="gray")
+    ast_orbit = plot_orbit.line(x="asteroid_x", y="asteroid_y", source=full_orbit_source, color="gray")
     for planet in get_planetary_elements():
         plot_orbit.line(x=f"{planet}_x", y=f"{planet}_y", source=full_orbit_source, color="gray", alpha=.5)
+
+    cursor_change_source = ColumnDataSource(data=dict(x=[], y=[]))
+    plot_orbit.add_tools(RotTool(source=cursor_change_source, orbs=full_orbit_source, obs=orbit_source))
 
     # Write custom JavaScript Code to print the time to the next iteration of the given phase in a HoverTool
     js_hover_text = get_js_as_text(js_file, "next_time_phased")
@@ -838,7 +978,10 @@ def lc_plot(lc_list, meta_list, period=1, pscan_dict={}, body=None, jpl_ephem=No
     phase_shift.js_on_change('value', phased_callback)
 
     # JS Call back to cause rotation
-
+    # js_rotation = get_js_as_text(js_file, "rotation")
+    # rotate_callback = CustomJS(args=dict(source=orbit_source, orb_source=full_orbit_source, pos=cursor_change_source),
+    #                            code=js_rotation)
+    # cursor_change_source.js_on_change('data', rotate_callback)
 
     # Build layout tables:
     phased_layout = column(plot_p,
@@ -947,7 +1090,7 @@ def get_full_orbit(body):
     full_orbit_x = [pos[0] for pos in full_orbit]
     full_orbit_y = [pos[1] for pos in full_orbit]
     full_orbit_z = [pos[2] for pos in full_orbit]
-    position_data = dict(full_a_x=full_orbit_x, full_a_y=full_orbit_y, full_a_z=full_orbit_z)
+    position_data = dict(asteroid_x=full_orbit_x, asteroid_y=full_orbit_y, asteroid_z=full_orbit_z)
 
     planetary_elements = get_planetary_elements()
     for planet in planetary_elements:

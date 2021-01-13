@@ -250,6 +250,8 @@ class Command(BaseCommand):
             file = os.path.join(path, file)
             meta_list, lc_list = import_alcdef(file, meta_list, lc_list)
         names = list(set([x['OBJECTNUMBER'] for x in meta_list]))
+        if names == ['0']:
+            names = list(set([x['OBJECTNAME'] for x in meta_list]))
         if len(names) != 1:
             self.stdout.write(f"Multiple objects Found: {names}")
         bodies = Body.objects.filter(name=names[0])

@@ -46,7 +46,6 @@ SITE_CHOICES = (
     )
 
 
-
 class SuperBlock(models.Model):
 
     cadence         = models.BooleanField(default=False)
@@ -260,7 +259,6 @@ class Block(models.Model):
             text = 'not '
 
         return '%s is %sactive' % (self.request_number, text)
-
 
 
 class Candidate(models.Model):
