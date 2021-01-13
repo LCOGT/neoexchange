@@ -441,8 +441,8 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
                 'southpole_sep' : spd,
                 'sun_sep'       : separation,
                 'earth_obj_dist': delta,
-                'geocnt_a_pos'  : pos,
-                'heliocnt_e_pos': e_pos_hel,
+                'geocnt_a_pos'  : convert_to_ecliptic(pos, mjd_tt),
+                'heliocnt_e_pos': convert_to_ecliptic(e_pos_hel, mjd_tt),
                 'ltt'           : ltt,
                 }
 
@@ -2201,6 +2201,25 @@ def get_visibility(ra, dec, date, site_code, step_size='30 m', alt_limit=30, qui
     return dark_and_up_time, max_alt, start_time, stop_time
 
 
+def convert_to_ecliptic(equatorial_coords, coord_date):
+    # Calculate radial distance for cartesian coordinates
+    r = sqrt(sum([coord ** 2 for coord in equatorial_coords]))
+
+    # Convert heliocentric, equatorial Cartesian Coordinates to spherical coordinates
+    alpha, delta = S.sla_dcc2s(equatorial_coords)
+
+    # Convert Equatorial spherical Coordinates to Ecliptic Spherical coordinates
+    l, b = S.sla_eqecl(alpha, delta, coord_date)
+
+    # Convert Ecliptic Spherical coordinates to Unit cartesian coordinates
+    unit_cartesian_coords = S.sla_dcs2c(l, b)
+
+    # Convert Unit coordinates into real coordinates
+    final_cartesian_coords = [pos * r for pos in unit_cartesian_coords]
+
+    return final_cartesian_coords
+
+
 def orbital_pos_from_true_anomaly(nu, body_elements):
     """Give Cartesian coordinates for a given true anomaly in radians for s given set of orbital elements"""
     a = body_elements['meandist']
@@ -2215,14 +2234,7 @@ def orbital_pos_from_true_anomaly(nu, body_elements):
     y_h_ecl = r * (sin(om) * cos(w + nu) + cos(om) * sin(w + nu) * cos(i))
     z_h_ecl = r * (sin(w + nu) * sin(i))
 
-    # Convert heliocentric, ecliptic Cartesian Coordinates to spherical coordinates
-    l, b = S.sla_dcc2s([x_h_ecl, y_h_ecl, z_h_ecl])
-    # Convert Ecliptic spherical Coordinates to BCRS Spherical coordinates
-    alpha, delta = S.sla_ecleq(l, b, datetime2mjd_utc(datetime.utcnow()))
-    # Convert BCRS Spherical coordinates to Unit cartesian coordinates
-    unit_cartesian_coords = S.sla_dcs2c(alpha, delta)
-    # Convert Unit coordinates into real coordinates
-    final_cartesian_coords = [pos * r for pos in unit_cartesian_coords]
+    final_cartesian_coords = [x_h_ecl, y_h_ecl, z_h_ecl]
 
     return final_cartesian_coords
 
