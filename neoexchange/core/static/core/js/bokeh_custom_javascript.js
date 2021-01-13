@@ -193,3 +193,132 @@ function phase_data(source, period_box, period_slider, plot, osource, phase_shif
     }
     p_mark_source.change.emit();
 }
+
+
+function rotation_tool(){
+    // Javascript function to rotate a DataSource based on mouse movement
+    import {GestureTool, GestureToolView} from "models/tools/gestures/gesture_tool"
+    import {ColumnDataSource} from "models/sources/column_data_source"
+    import {PanEvent} from "core/ui_events"
+    import * as p from "core/properties"
+
+    function rotate(coords:any, omega:number, phi:number) {
+        //Function to perform actual rotation
+        // omega => rotation angle around y axis
+        // phi => rotation angle around x axis
+        const theta = 0  // rotation angle around z axis
+        const ct = Math.cos(theta)
+        const st = Math.sin(theta)
+        const cp = Math.cos(phi)
+        const sp = Math.sin(phi)
+        const co = Math.cos(omega)
+        const so = Math.sin(omega)
+        const keys = Object.keys(coords.data) as string[]
+        const unique_keys = [] as string[]
+        var key
+        for (key of keys) {
+            const first = key.split("_")
+            if (first.length > 1 && unique_keys.indexOf(first[0]) == -1) {
+                unique_keys.push(first[0])
+                var xx = coords.get_array(first[0].concat("_x")) as number[]
+                var yy = coords.get_array(first[0].concat("_y")) as number[]
+                var zz = coords.get_array(first[0].concat("_z")) as number[]
+                for (var i = 0; i < xx.length; i++){
+                    const xx_out = (xx[i] * ct * co) + (yy[i] * (ct * so * sp - st * cp)) + (zz[i] * (ct * so * cp + st * sp))
+                    const yy_out = (xx[i] * st * co) + (yy[i] * (st * so * sp + ct * cp)) + (zz[i] * (st * so * cp - ct * sp))
+                    const zz_out = (yy[i] * (co * sp)) + (zz[i] * (co * cp)) - (xx[i] * so)
+                    xx[i] = xx_out
+                    yy[i] = yy_out
+                    zz[i] = zz_out
+                }
+            }
+        }
+    }
+
+    export class RotToolView extends GestureToolView {
+      model: RotTool
+
+      //this is executed when the pan/drag event starts
+      _pan_start(_ev: PanEvent): void {
+        this.model.source.data = {x: [], y: []}
+      }
+
+      //this is executed on subsequent mouse/touch moves
+      _pan(ev: PanEvent): void {
+        const {frame} = this.plot_view
+
+        const {sx, sy} = ev
+
+        if (!frame.bbox.contains(sx, sy))
+          return
+
+        const {source, obs, orbs} = this.model
+
+        const x_list = source.get_array("x") as number[]
+        const y_list = source.get_array("y") as number[]
+
+        var omega = 0
+        var phi = 0
+        const scale = .01
+
+        x_list.push(sx)
+        y_list.push(sy)
+
+        //Translate x/y mouse movement from pixel position to rotation angle
+        if (x_list.length > 2) {
+            x_list.shift()
+            y_list.shift()
+            var omega = (x_list[1] - x_list[0]) * scale
+            var phi = (y_list[1] - y_list[0]) * scale
+            }
+
+        // Perform Rotation
+        rotate(obs, omega, phi)
+        rotate(orbs, omega, phi)
+
+        //Update DataSources
+        obs.change.emit()
+        orbs.change.emit()
+        source.change.emit()
+      }
+
+      // this is executed then the pan/drag ends
+      _pan_end(_ev: PanEvent): void {}
+    }
+
+    export namespace RotTool {
+      export type Attrs = p.AttrsOf<Props>
+
+      export type Props = GestureTool.Props & {
+        source: p.Property<ColumnDataSource>,
+        obs: p.Property<ColumnDataSource>
+        orbs: p.Property<ColumnDataSource>
+      }
+    }
+
+    export interface RotTool extends RotTool.Attrs {}
+
+    export class RotTool extends GestureTool {
+      properties: RotTool.Props
+      __view_type__: RotToolView
+
+      constructor(attrs?: Partial<RotTool.Attrs>) {
+        super(attrs)
+      }
+
+      tool_name = "Rotate Tool"
+      icon = "bk-tool-icon-wheel-pan"
+      event_type = "pan" as "pan"
+      default_order = 12
+
+      static init_RotTool(): void {
+        this.prototype.default_view = RotToolView
+
+        this.define<RotTool.Props>({
+          source: [ p.Instance ],
+          obs: [ p.Instance ],
+          orbs: [ p.Instance ],
+        })
+      }
+    }
+}
