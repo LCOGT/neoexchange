@@ -1181,24 +1181,25 @@ def determine_slot_length(mag, site_code, debug=False):
     raise MagRangeError("Target magnitude outside bins")
 
 
-def estimate_exptime(rate, pixscale=0.304, roundtime=10.0):
-    """Gives the estimated exposure time (in seconds) for the given rate and
-    pixelscale"""
+def estimate_exptime(rate, roundtime=10.0):
+    """Gives the estimated exposure time (in seconds) for the given rate and pixelscale.
+        exptime is equal to seconds for 2".
+    """
 
-    exptime = (60.0 / rate / pixscale)*1.0
+    exptime = (60.0 / rate)*2.0
     round_exptime = max(int(exptime/roundtime)*roundtime, 1.0)
     return round_exptime, exptime
 
 
-def determine_exptime(speed, pixel_scale, max_exp_time=300.0):
-    (round_exptime, full_exptime) = estimate_exptime(speed, pixel_scale, 5.0)
+def determine_exptime(speed, max_exp_time=300.0):
+    (round_exptime, full_exptime) = estimate_exptime(speed, 5.0)
 
     if round_exptime > max_exp_time:
         logger.debug("Capping exposure time at %.1f seconds (Was %1.f seconds)" % (round_exptime, max_exp_time))
         round_exptime = full_exptime = max_exp_time
     if round_exptime < 10.0:
         # If under 10 seconds, re-round to nearest half second
-        (round_exptime, full_exptime) = estimate_exptime(speed, pixel_scale, 0.5)
+        (round_exptime, full_exptime) = estimate_exptime(speed, 0.5)
     logger.debug("Estimated exptime=%.1f seconds (%.1f)" % (round_exptime, full_exptime))
 
     return round_exptime
@@ -1222,7 +1223,7 @@ def determine_exp_time_count(speed, site_code, slot_length_in_mins, mag, filter_
     # pretify max exposure time to nearest 5 seconds
     max_exp_time = ceil(max_exp_time/5)*5
 
-    exp_time = determine_exptime(speed, pixel_scale, max_exp_time)
+    exp_time = determine_exptime(speed, max_exp_time)
     # Make first estimate for exposure count ignoring molecule creation
     exp_count = int((slot_length - setup_overhead)/(exp_time + exp_overhead))
     # Reduce exposure count by number of exposures necessary to accomidate molecule overhead
