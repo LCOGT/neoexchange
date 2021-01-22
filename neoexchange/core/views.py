@@ -3688,7 +3688,7 @@ def plot_all_spec(source):
         body = source
         p_spec = PreviousSpectra.objects.filter(body=body)
         for spec in p_spec:
-            if spec.spec_ir:
+            if spec.spec_ir and '.txt' in spec.spec_ir:
                 wav, flux, err = pull_data_from_text(spec.spec_ir)
                 label = "{} -- {}, {}(IR)".format(body.current_name(), spec.spec_date, spec.spec_source)
                 new_spec = {'label': label,
@@ -3697,7 +3697,7 @@ def plot_all_spec(source):
                      'err': err,
                      'filename': spec.spec_ir}
                 data_spec.append(new_spec)
-            if spec.spec_vis:
+            if spec.spec_vis and '.txt' in spec.spec_vis:
                 wav, flux, err = pull_data_from_text(spec.spec_vis)
                 label = "{} -- {}, {}(Vis)".format(body.current_name(), spec.spec_date, spec.spec_ref)
                 new_spec = {'label': label,
