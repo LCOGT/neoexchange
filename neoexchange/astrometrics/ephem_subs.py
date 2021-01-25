@@ -1182,8 +1182,8 @@ def determine_slot_length(mag, site_code, debug=False):
 
 
 def estimate_exptime(rate, roundtime=10.0):
-    """Gives the estimated exposure time (in seconds) for the given rate and pixelscale.
-        exptime is equal to seconds for 2".
+    """Gives the estimated exposure time (in seconds) for the given rate.
+        exptime is equal to seconds for 2" of movement.
     """
 
     exptime = (60.0 / rate)*2.0
