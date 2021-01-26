@@ -401,8 +401,8 @@ class Command(BaseCommand):
         alcdef_filename = os.path.join(datadir, base_name + 'ALCDEF.txt')
         output_file_list.append('{},{}'.format(alcdef_filename, datadir.lstrip(out_path)))
         alcdef_file = default_storage.open(alcdef_filename, 'w')
-        for super_block in super_blocks:
-            block_list = Block.objects.filter(superblock=super_block.id, num_observed__gte=1)
+        for super_block in super_blocks.order_by('block_start'):
+            block_list = Block.objects.filter(superblock=super_block.id, num_observed__gte=1).order_by('block_start')
             if obs_date:
                 block_list = block_list.filter(when_observed__lt=obs_date+timedelta(days=2)).filter(when_observed__gt=obs_date)
             self.stdout.write("Analyzing SuperblockBlock# %s for %s" % (super_block.tracking_number, super_block.body.current_name()))
