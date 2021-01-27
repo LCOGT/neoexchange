@@ -1731,6 +1731,9 @@ def mock_expand_cadence(user_request):
                 }
     return True, cadence
 
+def mock_expand_cadence_novis(user_request):
+
+    return False, {'errors': 'No visible requests within cadence window parameters'}
 
 def mock_fetch_sfu(sfu_value=None):
     if sfu_value is None:

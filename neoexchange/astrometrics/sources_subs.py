@@ -2047,6 +2047,13 @@ def submit_block_to_scheduler(elements, params):
 
     user_request = make_requestgroup(elements, params)
 
+    if user_request.get('errors', None):
+        # Error came back from make_requestgroup() , probably cadence-related
+        msg = user_request['errors']
+        logger.error(msg)
+        params['error_msg'] = msg
+        return False, params
+
 # Make an endpoint and submit the thing
     try:
         resp = requests.post(
