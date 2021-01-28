@@ -3837,8 +3837,12 @@ def import_alcdef(file, meta_list, lc_list):
     met_dat = False
 
     for line in lines:
+        line = line.rstrip()
         line = str(line, 'utf-8')
-        if line[0] == '#':
+        try:
+            if line[0] == '#':
+                continue
+        except IndexError:
             continue
         if '=' in line:
             if 'DATA=' in line and met_dat is False:
