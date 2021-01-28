@@ -2059,7 +2059,7 @@ def submit_block_to_scheduler(elements, params):
             if x != {}:
                 for key, value in x.items():
                     error_msg[key] = value
-            params['error_msg'] = msg
+            params['error_msg'] = error_msg
         return False, params
 
 # Make an endpoint and submit the thing
