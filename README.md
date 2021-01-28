@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.8.2
+Fix for cadences crossing semester boundaries.
+
 ### 3.8.1
 Update default exposure time estimate to be instrument agnostic
 

@@ -1309,8 +1309,26 @@ class TestSubmitBlockToScheduler(TestCase):
         self.assertEqual(inst_configs[0]['exposure_count'], expected_exp_count)
         self.assertEqual(inst_configs[0]['optical_elements']['filter'], expected_filter)
 
-    def test_semester_crossing(self):
-        pass
+    @patch('astrometrics.sources_subs.expand_cadence', mock_expand_cadence_novis)
+    @patch('astrometrics.sources_subs.requests.post')
+    def test_semester_crossing(self, mock_post):
+        """Test for issue of 2021-01-25 where cadence crossed semester boundary
+        so no valid windows were available"""
+
+        mock_post.return_value.status_code = 400
+
+        body_elements = model_to_dict(self.body)
+        body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+        body_elements['current_name'] = self.body.current_name()
+        params = self.obs_params
+        params['start_time'] = datetime(2021,1,27,0,0,0)
+        params['end_time'] = datetime(2021,2,27,23,59,59)
+        params['period'] = 72.0
+        params['jitter'] = 24.0
+
+        resp, sched_params = submit_block_to_scheduler(body_elements, params)
+        self.assertEqual(resp, False)
+        self.assertEqual(sched_params['error_msg'], 'No visible requests within cadence window parameters')
 
     def test_spectro_with_solar_analog(self):
 
