@@ -2047,6 +2047,21 @@ def submit_block_to_scheduler(elements, params):
 
     user_request = make_requestgroup(elements, params)
 
+    # Errors or mostly blank dict came back from make_requestgroup(), probably cadence-related
+    if user_request.get('errors', None):
+        msg = user_request['errors']
+        logger.error(msg)
+        params['error_msg'] = msg
+        return False, params
+    elif 'name' not in user_request and 'proposal' not in user_request:
+        error_msg = {}
+        for x in user_request['requests']:
+            if x != {}:
+                for key, value in x.items():
+                    error_msg[key] = value
+            params['error_msg'] = error_msg
+        return False, params
+
 # Make an endpoint and submit the thing
     try:
         resp = requests.post(
