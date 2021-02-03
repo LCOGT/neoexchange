@@ -1940,8 +1940,8 @@ class TestDetermineExpTimeCount(TestCase):
         name = 'WH2845B'
         mag = 17.58
 
-        expected_exptime = 60.0
-        expected_expcount = 14
+        expected_exptime = 45.0
+        expected_expcount = 17
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
 
@@ -1970,8 +1970,8 @@ class TestDetermineExpTimeCount(TestCase):
         name = 'WH2845B'
         mag = 16.58
 
-        expected_exptime = 6.5
-        expected_expcount = 31
+        expected_exptime = 5.0
+        expected_expcount = 33
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
 
@@ -2030,8 +2030,8 @@ class TestDetermineExpTimeCount(TestCase):
         name = 'WH2845B'
         mag = 17.58
 
-        expected_exptime = 40.0
-        expected_expcount = 23
+        expected_exptime = 45.0
+        expected_expcount = 21
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
 
@@ -2045,8 +2045,8 @@ class TestDetermineExpTimeCount(TestCase):
         name = 'WH2845B'
         mag = 17.58
 
-        expected_exptime = 4.0
-        expected_expcount = 60
+        expected_exptime = 5.0
+        expected_expcount = 57
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
 
@@ -2609,8 +2609,8 @@ class TestDetermineExpTimeCount_WithFilters(TestCase):
         mag = 17.58
         filter_pattern = 'V,I'
 
-        expected_exptime = 60.0
-        expected_expcount = 11
+        expected_exptime = 45.0
+        expected_expcount = 13
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, filter_pattern)
 
@@ -2625,8 +2625,8 @@ class TestDetermineExpTimeCount_WithFilters(TestCase):
         mag = 17.58
         filter_pattern = 'V,V,V,R,R,R,I,I,I,V'
 
-        expected_exptime = 60.0
-        expected_expcount = 13
+        expected_exptime = 45.0
+        expected_expcount = 16
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, filter_pattern)
 
@@ -2641,8 +2641,8 @@ class TestDetermineExpTimeCount_WithFilters(TestCase):
         mag = 17.58
         filter_pattern = 'V,V,I,I'
 
-        expected_exptime = 60.0
-        expected_expcount = 12
+        expected_exptime = 45.0
+        expected_expcount = 15
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, filter_pattern)
 
@@ -2657,7 +2657,7 @@ class TestDetermineExpTimeCount_WithFilters(TestCase):
         mag = 17.58
         filter_pattern = 'V,I,V,I'
 
-        expected_exptime = 4.0
+        expected_exptime = 5.0
         expected_expcount = 30
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, filter_pattern)
@@ -2673,8 +2673,8 @@ class TestDetermineExpTimeCount_WithFilters(TestCase):
         mag = 17.58
         filter_pattern = 'V,V,V,V,V,V,R,R,R,R,R,R,I,I,I,I,I,I,I'
 
-        expected_exptime = 4.0
-        expected_expcount = 52
+        expected_exptime = 5.0
+        expected_expcount = 50
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, filter_pattern)
 
@@ -2689,8 +2689,8 @@ class TestDetermineExpTimeCount_WithFilters(TestCase):
         mag = 17.58
         filter_pattern = 'V,V,I,I'
 
-        expected_exptime = 4.0
-        expected_expcount = 40
+        expected_exptime = 5.0
+        expected_expcount = 39
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, filter_pattern)
 

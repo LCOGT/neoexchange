@@ -140,9 +140,9 @@ class ScheduleObservations(FunctionalTest):
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
-        self.assertIn('13', num_exp)
+        self.assertIn('15', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
-        self.assertIn('65.0', exp_length)
+        self.assertIn('50.0', exp_length)
 
         # At this point, a 'Schedule this object' button appears
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
@@ -276,9 +276,9 @@ class ScheduleObservations(FunctionalTest):
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
-        self.assertIn('13', num_exp)
+        self.assertIn('15', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
-        self.assertIn('65.0', exp_length)
+        self.assertIn('50.0', exp_length)
 
         # Bart wants to change the slot length and recalculate the number of exposures
         slot_length_box = self.browser.find_element_by_id('id_slot_length')
@@ -348,9 +348,9 @@ class ScheduleObservations(FunctionalTest):
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
-        self.assertIn('13', num_exp)
+        self.assertIn('15', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
-        self.assertIn('65.0', exp_length)
+        self.assertIn('50.0', exp_length)
 
         # Bart wants to change the slot length so it is very short and recalculate the number of exposures
         slot_length_box = self.browser.find_element_by_id('id_slot_length')
@@ -705,15 +705,13 @@ class ScheduleObservations(FunctionalTest):
         self.assertIn('20.40', magnitude)
         speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
         self.assertIn('2.37 "/min', speed)
-        self.assertIn('2.57 "/exp', speed)
-        speed_warn = self.browser.find_element_by_class_name('warning').text
-        self.assertIn('2.57 "/exp', speed_warn)
+        self.assertIn('1.98 "/exp', speed)
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
-        self.assertIn('13', num_exp)
+        self.assertIn('15', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
-        self.assertIn('65.0', exp_length)
+        self.assertIn('50.0', exp_length)
         vis = self.browser.find_element_by_id('id_visibility_row').find_element_by_class_name('kv-value').text
         self.assertIn('63', vis)
         self.assertIn('2.2 hrs', vis)
@@ -846,15 +844,13 @@ class ScheduleObservations(FunctionalTest):
         self.assertIn('20.40', magnitude)
         speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
         self.assertIn('2.49 "/min', speed)
-        self.assertIn('2.49 "/exp', speed)
-        speed_warn = self.browser.find_element_by_class_name('warning').text
-        self.assertIn('2.49 "/exp', speed_warn)
+        self.assertIn('1.87 "/exp', speed)
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
-        self.assertIn('14', num_exp)
+        self.assertIn('17', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
-        self.assertIn('60.0', exp_length)
+        self.assertIn('45.0', exp_length)
         moon_sep = self.browser.find_element_by_id('id_moon_row').find_element_by_class_name('kv-value').text
         self.assertIn('108.4', moon_sep)
 
@@ -866,7 +862,7 @@ class ScheduleObservations(FunctionalTest):
 
         # The page refreshes and we get correct exp_count
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
-        self.assertIn('18', num_exp)
+        self.assertIn('23', num_exp)
 
         # Bart wants to change the slot length to less than 1 exposure.
         slot_length_box = self.browser.find_element_by_id('id_slot_length')
@@ -878,6 +874,15 @@ class ScheduleObservations(FunctionalTest):
         # The page refreshes and we get correct slot length
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('3.0', slot_length)
+
+        # Bart wants streaks
+        exp_length_box = self.browser.find_element_by_id('id_exp_length')
+        exp_length_box.clear()
+        exp_length_box.send_keys('100')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
+        speed_warn = self.browser.find_element_by_class_name('warning').text
+        self.assertIn('4.16 "/exp', speed_warn)
 
         # Bart wants to change the min moon dist to 160.
         self.browser.find_element_by_id("advanced-switch").click()
@@ -1140,13 +1145,13 @@ class ScheduleObservations(FunctionalTest):
         self.assertIn('20.40', magnitude)
         speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
         self.assertIn('2.49 "/min', speed)
-        self.assertIn('1.66 "/exp', speed)
+        self.assertIn('1.87 "/exp', speed)
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('32.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
-        self.assertIn('34', num_exp)
+        self.assertIn('31', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
-        self.assertIn('40', exp_length)
+        self.assertIn('45', exp_length)
         moon_sep = self.browser.find_element_by_id('id_moon_row').find_element_by_class_name('kv-value').text
         self.assertIn('108.4', moon_sep)
 
@@ -1245,15 +1250,13 @@ class ScheduleObservations(FunctionalTest):
         self.assertIn('20.40', magnitude)
         speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
         self.assertIn('2.49 "/min', speed)
-        self.assertIn('2.49 "/exp', speed)
-        speed_warn = self.browser.find_element_by_class_name('warning').text
-        self.assertIn('2.49 "/exp', speed_warn)
+        self.assertIn('1.87 "/exp', speed)
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
-        self.assertIn('14', num_exp)
+        self.assertIn('17', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
-        self.assertIn('60.0', exp_length)
+        self.assertIn('45.0', exp_length)
         moon_sep = self.browser.find_element_by_id('id_moon_row').find_element_by_class_name('kv-value').text
         self.assertIn('108.4', moon_sep)
 

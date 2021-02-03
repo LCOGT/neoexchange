@@ -1736,6 +1736,24 @@ def mock_expand_cadence(user_request):
                 }
     return True, cadence
 
+def mock_expand_cadence_novis(user_request):
+
+    cadence = {'errors': 'No visible requests within cadence window parameters'}
+    start_date = datetime.strptime(user_request['requests'][0]['cadence']['start'], '%Y-%m-%dT%H:%M:%S')
+    end_date = datetime.strptime(user_request['requests'][0]['cadence']['end'], '%Y-%m-%dT%H:%M:%S')
+    if end_date.month > start_date.month:
+        # Fake a semester-spanning invalid request
+        cadence = {'requests': [{},
+                  {'windows': [{'non_field_errors': ['The observation window does not fit within any defined semester.']}]},
+                  {},
+                  {},
+                  {},
+                  {},
+                  {},
+                  {},
+                  {}]}
+
+    return False, cadence
 
 def mock_fetch_sfu(sfu_value=None):
     if sfu_value is None:
