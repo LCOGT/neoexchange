@@ -21,7 +21,7 @@
               <h3>Active Targets</h3>
           </div>
           <div class="six columns">
-            {% if request.user.is_authenticated %}
+            {% if request.user.is_authenticated and perms.core.add_body %}
                 <form action="{% url 'add_target' %}" method="POST" style="display:inline-block;">
                     {% csrf_token %}
                     <input type="hidden" name="{{ form.origin.name }}" id="id_origin" value="O" />
