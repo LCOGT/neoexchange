@@ -20,7 +20,7 @@ from unittest import skipIf
 
 from django.core.management import call_command
 from django.test import TestCase
-from django.utils.six import StringIO
+from io import StringIO
 
 from astropy.io import fits
 import numpy as np

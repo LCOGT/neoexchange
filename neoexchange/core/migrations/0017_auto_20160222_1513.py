@@ -17,8 +17,8 @@ class Migration(migrations.Migration):
             name='ProposalPermission',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('proposal', models.ForeignKey(to='core.Proposal')),
-                ('user', models.ForeignKey(to=settings.AUTH_USER_MODEL)),
+                ('proposal', models.ForeignKey(to='core.Proposal', on_delete=models.deletion.CASCADE)),
+                ('user', models.ForeignKey(to=settings.AUTH_USER_MODEL, on_delete=models.deletion.CASCADE)),
             ],
             options={
                 'verbose_name': 'Proposal Permission',

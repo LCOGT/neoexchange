@@ -4,6 +4,83 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.8.2
+Fix for cadences crossing semester boundaries.
+
+### 3.8.1
+Update default exposure time estimate to be instrument agnostic
+
+### 3.8.0.2
+Fix for occasional OSError on LDAC catalogs.
+
+### 3.8.0.1
+make Gif creation more robust.
+
+### 3.8.0
+Add postgres support.
+
+### 3.7.0
+Add MuSCAT3 support and Repeat Exposure for long blocks
+
+### 3.6.2
+* Add support for Mt John observatory (MPC site code 474) for ephemeris computation. (Issue #499)
+* Add a Time Critical option for scheduling spectroscopy (Issue #500)
+* Fix a rare case when position computation using `sla_planel()` fails (Issue #498)
+
+### 3.6.1
+Change the retrieval or creation of new Frame records to eliminate chance of creating duplicates.
+
+### 3.6.0
+Update to Django 3.1 (and CentOS 8 for the Docker build)
+
+### 3.5.2
+Various small backend fixes:
+* Fix HORIZONS SPK lookup on some comets (Issue #480)
+* Prevent objects inheriting old elements when refitting with `find_orb` fails
+* Fix crazy time from perihelion when mean anomaly is extremely close to 0/360.0 (Issue #484)
+* Catch various URL connection errors
+* Update internal links to SMASS datasets if they change after ingestion (Issue #486)
+
+### 3.5.1.4
+Limit Solar Analog spectra to 1 regardless of frames requested for Target
+Fix more Server Error Bugs
+
+### 3.5.1.3
+A couple bug fixes
+
+### 3.5.1.2
+Implement lc_plot fix to read in comet mags from Horizons.
+
+### 3.5.1.1
+Fix creation of hours-up plots (Due to a need to work around [astropy/numpy bug](https://github.com/astropy/astropy/issues/9374) with filtering on `datetime`s in AstroPy `Table`s with AstroPy >= 3.2.2)
+
+### 3.5.1
+* Allow editing of window for spectroscopic calibration targets.
+* Fix for incorrect slot length calculation with multiple spectra exposures.
+* Upgrades astropy minimum version to 3.2.3 for updated USNO Earth Orientation Parameter URLs and also the minimum version that works on python 3.8
+* Adds storage of the orbit RMS from MPC DB
+* LOOK Project updates:
+  * Adds storage of reciprocal semi-major axis from MPC DB as a PhysicalParameter
+  * Adds additional Body attribute to return reciprocal semi-major axis
+  * Adds new get_cadence_info() method to summarize whether an object's cadence is underway or has halted and adds this into the LOOK Project template
+* Allow search of static (sidereal) calibration sources.
+
+### 3.5.0
+Add Light curve analysis tools
+* active plotting of light curves
+* uploading and displaying annotated gifs for images
+* automatic light curve extraction for all image sets
+* uploading ALCDEF files to S3
+
+### 3.4.1
+Add Parallactic angle option for spectroscopic observations.
+
+### 3.4.0
+Update Photometry to use GAIA-DR2
+
+### 3.3.2
+Initial support for the LCO Outbursting Objects Key (LOOK) Project
+
 ### 3.3.0
 * Send proper motion details for solar analogs through to the LCO observing system.
 * Display the most recent time of ingest or update on the Body details page.

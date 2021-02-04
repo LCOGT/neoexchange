@@ -57,6 +57,16 @@ def dictsortreversed_with_none(value, arg):
         return ''
 
 
+@register.simple_tag
+def format_mpc_line_upload(measure):
+    return measure.format_mpc_line(include_catcode=False)
+
+
+@register.simple_tag
+def format_mpc_line_catcode(measure):
+    return measure.format_mpc_line(include_catcode=True)
+
+
 def make_int_list(value):
     """
     Filter - returns a list of integers 1 -> n where n is the given value
@@ -118,6 +128,13 @@ def mjd_utc2date(mjd):
     if mjd is not None:
         utc_date = mjd_utc2datetime(mjd).date()
     return utc_date
+
+
+@register.filter(is_safe=False)
+def addstr(arg1, arg2):
+    """Concatenate 2 strings"""
+    out_string = str(arg1) + str(arg2)
+    return out_string
 
 
 register.filter('make_int_list', make_int_list)

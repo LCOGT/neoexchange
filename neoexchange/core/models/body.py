@@ -16,8 +16,7 @@ import logging
 
 from astropy.time import Time
 from django.db import models
-from django.utils.translation import ugettext_lazy as _
-from django.utils.encoding import python_2_unicode_compatible
+from django.utils.translation import gettext_lazy as _
 from django.forms.models import model_to_dict
 
 from astrometrics.ephem_subs import compute_ephem, comp_FOM, comp_sep
@@ -70,7 +69,9 @@ OBJECT_SUBTYPES = (
                 ('PA', 'Parabolic'),
                 ('JF', 'Jupiter Family'),   # P < 20 y
                 ('HT', 'Halley-Type'),      # 20 y < P < 200 y
-                ('LP', 'Long Period')       # P > 200 y
+                ('LP', 'Long Period'),      # P > 200 y
+                ('DN', 'Dynamically New'),  # Dynamically New Comet
+                ('DO', 'Dynamically Old')   # Dynamically Old Comet
             )
 
 
@@ -86,7 +87,8 @@ ORIGINS = (
             ('R', 'Goldstone & Arecibo'),
             ('L', 'LCOGT'),
             ('Y', 'Yarkovsky'),
-            ('T', 'Trojan')
+            ('T', 'Trojan'),
+            ('O', 'LOOK Project')
             )
 
 DESIG_CHOICES = (
@@ -108,13 +110,13 @@ PARAM_CHOICES = (
                 ('ab', 'Albedo'),
                 ('Y', 'Yarkovsky Drift'),
                 ('E', 'Coma Extent'),
-                ('M', 'Mass')
+                ('M', 'Mass'),
+                ('/a', 'Reciprocal of semimajor axis')
                 )
 
 logger = logging.getLogger(__name__)
 
 
-@python_2_unicode_compatible
 class Body(models.Model):
     provisional_name    = models.CharField('Provisional MPC designation', max_length=15, blank=True, null=True, db_index=True)
     provisional_packed  = models.CharField('MPC name in packed format', max_length=7, blank=True, null=True, db_index=True)
@@ -147,6 +149,35 @@ class Body(models.Model):
     updated             = models.BooleanField('Has this object been updated?', default=False)
     ingest              = models.DateTimeField(default=datetime.utcnow, db_index=True)
     update_time         = models.DateTimeField(blank=True, null=True, db_index=True)
+
+    def _compute_period(self):
+        period = None
+        if self.eccentricity:
+            period = 1e99
+            if self.eccentricity < 1.0:
+                if self.perihdist:
+                    a_au = self.perihdist / (1.0 - self.eccentricity)
+                else:
+                    a_au = self.meandist
+                period = pow(a_au, (3.0/2.0))
+        return period
+
+    def _compute_one_over_a(self):
+        # Returns the reciprocal semi-major axis (1/a) from the PhysicalProperties if present
+        recip_a = None
+        try:
+            recip_a_par = PhysicalParameters.objects.get(body=self.id, parameter_type='/a', preferred=True, value__isnull=False)
+            recip_a = recip_a_par.value
+        except PhysicalParameters.DoesNotExist:
+            recip_a = None
+        except PhysicalParameters.MultipleObjectsReturned:
+            logger.warning("Multiple preferred values exist for 1/a parameter for %s", self.current_name())
+            recip_a = None
+        return recip_a
+
+    period = property(_compute_period)
+    recip_a = property(_compute_one_over_a)
+    one_over_a  = property(_compute_one_over_a)
 
     def characterization_target(self):
         # If we change the definition of Characterization Target,
@@ -195,6 +226,7 @@ class Body(models.Model):
             pass
         return mjd
 
+
     def current_name(self):
         if self.name:
             return self.name
@@ -231,8 +263,8 @@ class Body(models.Model):
         else:
             return False
 
-    def compute_position(self):
-        d = datetime.utcnow()
+    def compute_position(self, d=None):
+        d = d or datetime.utcnow()
         if self.epochofel:
             orbelems = model_to_dict(self)
             sitecode = '500'
@@ -372,6 +404,34 @@ class Body(models.Model):
             reported = 'Not yet'
         return observed, reported
 
+    def get_cadence_info(self):
+        cad_blocks = self.superblock_set.filter(cadence=True)
+        num_cad_blocks = cad_blocks.count()
+        if num_cad_blocks > 0:
+            active_sblocks = cad_blocks.filter(active=True)
+            prefix = "Division by cucumber"
+            if active_sblocks.count() > 0:
+                last_sblock = active_sblocks.latest('block_end')
+                prefix = "Active until"
+                if datetime.utcnow() > last_sblock.block_end:
+                    prefix = "Inactive since"
+                block_time = last_sblock.block_end.strftime("%m/%d")
+            else:
+                # There are SBlocks but none are active
+                last_sblock = cad_blocks.filter(active=False).latest('block_end')
+                prefix = "Inactive"
+                block_time = ""
+                if datetime.utcnow() > last_sblock.block_end:
+                    prefix = "Inactive since"
+                    block_time = last_sblock.block_end.strftime("%m/%d")
+
+            scheduled = "{} {}".format(prefix, block_time)
+            scheduled = scheduled.rstrip()
+        else:
+            scheduled = 'Nothing scheduled'
+
+        return scheduled
+
     def get_physical_parameters(self, param_type=None, return_all=True):
         phys_params = PhysicalParameters.objects.filter(body=self.id)
         color_params = ColorValues.objects.filter(body=self.id)
@@ -489,7 +549,6 @@ class Body(models.Model):
             return_name = self.name
         return u'%s is %sactive' % (return_name, text)
 
-@python_2_unicode_compatible
 class Designations(models.Model):
     body        = models.ForeignKey(Body, on_delete=models.CASCADE)
     value       = models.CharField('Designation', blank=True, null=True, max_length=30, db_index=True)
@@ -508,7 +567,6 @@ class Designations(models.Model):
         return "%s is a designation for %s (pk=%s)" % (self.value, self.body.full_name(), self.body.id)
 
 
-@python_2_unicode_compatible
 class PhysicalParameters(models.Model):
     body           = models.ForeignKey(Body, on_delete=models.CASCADE)
     parameter_type = models.CharField('Physical Parameter Type', blank=True, null=True, choices=PARAM_CHOICES, max_length=2)
@@ -537,7 +595,6 @@ class PhysicalParameters(models.Model):
             return "{} is the {} for {} (pk={})".format(self.value, self.get_parameter_type_display(), self.body.full_name(), self.body.id)
 
 
-@python_2_unicode_compatible
 class ColorValues(models.Model):
     body          = models.ForeignKey(Body, on_delete=models.CASCADE)
     color_band    = models.CharField('X-X filter combination', blank=True, null=True, max_length=30)

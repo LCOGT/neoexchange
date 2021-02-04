@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load staticfiles basic_tags %}
+{% load static basic_tags %}
 {% block header %}NEOx calibration scheduling{% endblock %}
 
 {% block bodyclass %}page{% endblock %}
@@ -9,9 +9,22 @@
   $(document).ready(function(){
     // Initially hide the advanced options
     $('#advanced_options').hide();
+    // Set window switch initial conditions
+    var ws = document.getElementById("id_edit_window");
+    if(ws.checked){
+        $('#data_window').hide();
+        $('#form_window').show();
+    } else {
+        $('#form_window').hide();
+        $('#data_window').show();
+    }
 
     $('a.mode-switch').click(function(event){
       $('.mode-container').toggle();
+    });
+
+    $('.window-switch').click(function(event){
+      $('.mode-window').toggle();
     });
 
   });
@@ -206,9 +219,16 @@
                                 <br>You cannot fit multiple observations within this observing window. Consider increasing window, decreasing period, or using single observation. <br>
                                 </span></div></td></tr></table></td>
                         {% else %}
-                            <td class="kv-key">Window (UTC)</td>
+                           <td class="kv-key">Window (UTC)
+                                <div class="compact-field">
+                                    {{ form.edit_window }}<label for="id_edit_window">(Edit)</label>
+                                </div>
+                            </td>
                         {% endif %}
-                        <td class="kv-value">{{ form.start_time }} -> {{ form.end_time }}</td>
+                        <td class="kv-value">
+                            <div id="data_window" class="mode-window">{{ data.start_time }} -> {{ data.end_time }}</div>
+                            <div id="form_window" class="mode-window">{{ form.start_time }} -> {{ form.end_time }}</div>
+                        </td>
                     </tr>
                     {% if data.jitter %}
                     <tr id="id_jitter_row">

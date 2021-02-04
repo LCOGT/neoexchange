@@ -32,9 +32,10 @@ import re
 import warnings
 
 from astropy.utils.exceptions import AstropyDeprecationWarning
-warnings.simplefilter('ignore', category = AstropyDeprecationWarning)
+warnings.simplefilter('ignore', category=AstropyDeprecationWarning)
 from astroquery.jplhorizons import Horizons
 from astropy.table import Column
+from astropy.time import Time
 
 # Local imports
 from astrometrics.time_subs import datetime2mjd_utc, datetime2mjd_tdb, mjd_utc2mjd_tt, ut1_minus_utc, round_datetime
@@ -275,6 +276,16 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
 
         logger.debug("Sun->Asteroid [x,y,z]=%s %s" % (pv[0:3], status))
         logger.debug("Sun->Asteroid [xdot,ydot,zdot]=%s %s" % (pv[3:6], status))
+        if status != 0:
+            err_mapping = { -1 : 'illegal JFORM',
+                            -2 : 'illegal E',
+                            -3 : 'illegal AORQ',
+                            -4 : 'illegal DM',
+                            -5 : 'numerical error'
+                          }
+            msg = "Position (sla_planel) error={} {}".format(status, err_mapping.get(status, 'Unknown error'))
+            logger.error(msg)
+            return {}
 
         for i, e_pos in enumerate(e_pos_hel):
             pos[i] = pv[i] - e_pos
@@ -636,8 +647,8 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
     to the table.
     """
 
-    eph = Horizons(id=obj_name, id_type= 'smallbody', epochs={'start' : start.strftime("%Y-%m-%d %H:%M:%S"),
-            'stop' : end.strftime("%Y-%m-%d %H:%M:%S"), 'step' : ephem_step_size}, location=site_code)
+    eph = Horizons(id=obj_name, id_type='smallbody', epochs={'start' : start.strftime("%Y-%m-%d %H:%M"),
+            'stop' : end.strftime("%Y-%m-%d %H:%M"), 'step' : ephem_step_size}, location=site_code)
 
     airmass_limit = 99
     if alt_limit > 0:
@@ -654,6 +665,8 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
             skip_daylight=should_skip_daylight, airmass_lessthan=airmass_limit,
             max_hour_angle=ha_limit)
         ephem = convert_horizons_table(ephem, include_moon)
+    except ConnectionError as e:
+        logger.error("Unable to connect to HORIZONS")
     except ValueError as e:
         logger.debug("Ambiguous object, trying to determine HORIZONS id")
         ephem = None
@@ -663,7 +676,7 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
             logger.debug("HORIZONS id=", horizons_id)
             if horizons_id:
                 try:
-                    eph = Horizons(id=horizons_id, id_type= 'id', epochs={'start' : start.strftime("%Y-%m-%d %H:%M:%S"),
+                    eph = Horizons(id=horizons_id, id_type='id', epochs={'start' : start.strftime("%Y-%m-%d %H:%M:%S"),
                         'stop' : end.strftime("%Y-%m-%d %H:%M:%S"), 'step' : ephem_step_size}, location=site_code)
                     ephem = eph.ephemerides(quantities='1,3,4,9,19,20,23,24,38,42',
                         skip_daylight=should_skip_daylight, airmass_lessthan=airmass_limit,
@@ -684,7 +697,7 @@ def convert_horizons_table(ephem, include_moon=False):
     columns (if [include_moon] is True).
     The modified Astropy Table is returned"""
 
-    dates = Column([datetime.strptime(d, "%Y-%b-%d %H:%M") for d in ephem['datetime_str']])
+    dates = Time([datetime.strptime(d, "%Y-%b-%d %H:%M") for d in ephem['datetime_str']])
     if 'datetime' not in ephem.colnames:
         ephem.add_column(dates, name='datetime')
     # Convert units of RA/Dec rate from arcsec/hr to arcsec/min and compute
@@ -699,12 +712,13 @@ def convert_horizons_table(ephem, include_moon=False):
         moon_seps = []
         moon_phases = []
         for date, obj_ra, obj_dec in ephem[('datetime', 'RA', 'DEC')]:
-            moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(date, radians(obj_ra), radians(obj_dec), '-1')
+            moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(date.datetime, radians(obj_ra), radians(obj_dec), '-1')
             moon_seps.append(moon_obj_sep)
             moon_phases.append(moon_phase)
         ephem.add_columns(cols=(Column(moon_seps), Column(moon_phases)), names=('moon_sep', 'moon_phase'))
 
     return ephem
+
 
 def determine_horizons_id(lines, now=None):
     """Attempts to determine the HORIZONS id of a target body that has multiple
@@ -717,7 +731,7 @@ def determine_horizons_id(lines, now=None):
     horizons_id = None
     for line in lines:
         chunks = line.split()
-        if len(chunks) == 5 and chunks[0].isdigit() is True and chunks[1].isdigit() is True:
+        if len(chunks) >= 5 and chunks[0].isdigit() is True and chunks[1].isdigit() is True:
             try:
                 epoch_yr = datetime.strptime(chunks[1], "%Y")
                 if abs(now-epoch_yr) <= timespan:
@@ -1167,26 +1181,26 @@ def determine_slot_length(mag, site_code, debug=False):
     raise MagRangeError("Target magnitude outside bins")
 
 
-def estimate_exptime(rate, pixscale=0.304, roundtime=10.0):
-    """Gives the estimated exposure time (in seconds) for the given rate and
-    pixelscale"""
+def estimate_exptime(rate, roundtime=10.0):
+    """Gives the estimated exposure time (in seconds) for the given rate.
+        exptime is equal to seconds for 2" of movement.
+    """
 
-    exptime = (60.0 / rate / pixscale)*1.0
+    exptime = (60.0 / rate)*2.0
     round_exptime = max(int(exptime/roundtime)*roundtime, 1.0)
     return round_exptime, exptime
 
 
-def determine_exptime(speed, pixel_scale, max_exp_time=300.0):
-    (round_exptime, full_exptime) = estimate_exptime(speed, pixel_scale, 5.0)
+def determine_exptime(speed, max_exp_time=300.0):
+    (round_exptime, full_exptime) = estimate_exptime(speed, 5.0)
 
     if round_exptime > max_exp_time:
-        logger.debug("Capping exposure time at %.1f seconds (Was %1.f seconds)" % \
-            (round_exptime, max_exp_time))
+        logger.debug("Capping exposure time at %.1f seconds (Was %1.f seconds)" % (round_exptime, max_exp_time))
         round_exptime = full_exptime = max_exp_time
-    if round_exptime < 10.0 :
+    if round_exptime < 10.0:
         # If under 10 seconds, re-round to nearest half second
-        (round_exptime, full_exptime) = estimate_exptime(speed, pixel_scale, 0.5)
-    logger.debug("Estimated exptime=%.1f seconds (%.1f)" % (round_exptime , full_exptime))
+        (round_exptime, full_exptime) = estimate_exptime(speed, 0.5)
+    logger.debug("Estimated exptime=%.1f seconds (%.1f)" % (round_exptime, full_exptime))
 
     return round_exptime
 
@@ -1209,12 +1223,12 @@ def determine_exp_time_count(speed, site_code, slot_length_in_mins, mag, filter_
     # pretify max exposure time to nearest 5 seconds
     max_exp_time = ceil(max_exp_time/5)*5
 
-    exp_time = determine_exptime(speed, pixel_scale, max_exp_time)
+    exp_time = determine_exptime(speed, max_exp_time)
     # Make first estimate for exposure count ignoring molecule creation
     exp_count = int((slot_length - setup_overhead)/(exp_time + exp_overhead))
     # Reduce exposure count by number of exposures necessary to accomidate molecule overhead
     mol_overhead = molecule_overhead(build_filter_blocks(filter_pattern, exp_count))
-    exp_count = int(ceil(exp_count * (1.0-(mol_overhead / ((( exp_time + exp_overhead ) * exp_count) + mol_overhead)))))
+    exp_count = int(ceil(exp_count * (1.0-(mol_overhead / (((exp_time + exp_overhead) * exp_count) + mol_overhead)))))
     # Safety while loop for edge cases
     while setup_overhead + molecule_overhead(build_filter_blocks(filter_pattern, exp_count)) + (exp_overhead * float(exp_count)) + exp_time * float(exp_count) > slot_length:
         exp_count -= 1
@@ -1242,7 +1256,7 @@ def determine_exp_count(slot_length_in_mins, exp_time, site_code, filter_pattern
     exp_count = int((slot_length - setup_overhead)/(exp_time + exp_overhead))
     # Reduce exposure count by number of exposures necessary to accommodate molecule overhead
     mol_overhead = molecule_overhead(build_filter_blocks(filter_pattern, exp_count))
-    exp_count = int(ceil(exp_count * (1.0-(mol_overhead / ((( exp_time + exp_overhead ) * exp_count) + mol_overhead)))))
+    exp_count = int(ceil(exp_count * (1.0-(mol_overhead / (((exp_time + exp_overhead) * exp_count) + mol_overhead)))))
     # Safety while loop for edge cases
     while setup_overhead + molecule_overhead(build_filter_blocks(filter_pattern, exp_count)) + (exp_overhead * float(exp_count)) + exp_time * float(exp_count) > slot_length:
         exp_count -= 1
@@ -1250,8 +1264,8 @@ def determine_exp_count(slot_length_in_mins, exp_time, site_code, filter_pattern
     if exp_count < min_exp_count:
         exp_count = min_exp_count
         slot_length = ((exp_time + exp_overhead) * float(exp_count)) + (setup_overhead + molecule_overhead(build_filter_blocks(filter_pattern, min_exp_count)))
-        logger.debug("increasing slot length to %.1f minutes to allow %.1f exposure time" % ( slot_length/60.0, exp_time))
-    logger.debug("Slot length of %.1f mins (%.1f secs) allows %d x %.1f second exposures" % ( slot_length/60.0, slot_length, exp_count, exp_time))
+        logger.debug("increasing slot length to %.1f minutes to allow %.1f exposure time" % (slot_length/60.0, exp_time))
+    logger.debug("Slot length of %.1f mins (%.1f secs) allows %d x %.1f second exposures" % (slot_length/60.0, slot_length, exp_count, exp_time))
     if exp_time is None or exp_time <= 0.0 or exp_count < 1:
         logger.debug("Invalid exposure count")
         exp_count = None
@@ -1312,15 +1326,18 @@ def molecule_overhead(filter_blocks):
     return molecule_setup_overhead
 
 
-def build_filter_blocks(filter_pattern, exp_count):
+def build_filter_blocks(filter_pattern, exp_count, exp_type="EXPOSE"):
     """Take in filter pattern string, export list of [filter, # of exposures in filter] """
     filter_bits = filter_pattern.split(',')
     filter_bits = list(filter(None, filter_bits))
     filter_list = []
     filter_blocks = []
-    while exp_count > 0:
-        filter_list += filter_bits[:exp_count]
-        exp_count -= len(filter_bits)
+    if exp_type == 'REPEAT_EXPOSE':
+        filter_list = filter_bits
+    else:
+        while exp_count > 0:
+            filter_list += filter_bits[:exp_count]
+            exp_count -= len(filter_bits)
     for f, m in groupby(filter_list):
         filter_blocks.append(list(m))
     if len(filter_blocks) == 0:
@@ -1374,181 +1391,188 @@ def get_sitepos(site_code, dbg=False):
     if site_code == 'F65' or site_code == 'FTN':
         # MPC code for FTN. Positions from JPL HORIZONS, longitude converted from 203d 44' 32.6" East
         # 156d 15' 27.4" W
-        (site_lat, status)  =  S.sla_daf2r(20, 42, 25.5)
-        (site_long, status) =  S.sla_daf2r(156, 15, 27.4)
+        (site_lat, status) = S.sla_daf2r(20, 42, 25.5)
+        (site_long, status) = S.sla_daf2r(156, 15, 27.4)
         site_long = -site_long
         site_hgt = 3055.0
         site_name = 'Haleakala-Faulkes Telescope North (FTN)'
     elif site_code == 'E10' or site_code == 'FTS':
         # MPC code for FTS. Positions from JPL HORIZONS ( 149d04'13.0''E, 31d16'23.4''S, 1111.8 m )
-        (site_lat, status)  =  (S.sla_daf2r(31, 16, 23.4))
+        (site_lat, status) = (S.sla_daf2r(31, 16, 23.4))
         site_lat = -site_lat
         (site_long, status) = S.sla_daf2r(149, 4., 13.0)
         site_hgt = 1111.8
         site_name = 'Siding Spring-Faulkes Telescope South (FTS)'
     elif site_code == 'SQA' or site_code == 'G51':
-        (site_lat, status)  =  S.sla_daf2r(34, 41, 29.23)
-        (site_long, status) =  S.sla_daf2r(120, 2., 32.0)
+        (site_lat, status) = S.sla_daf2r(34, 41, 29.23)
+        (site_long, status) = S.sla_daf2r(120, 2., 32.0)
         site_long = -site_long
         site_hgt = 328.0
         site_name = 'Sedgwick Observatory (SQA)'
     elif site_code == 'ELP-DOMA' or site_code == 'V37':
-        (site_lat, status)  =  S.sla_daf2r(30, 40, 47.53)
-        (site_long, status) =  S.sla_daf2r(104, 0., 54.63)
+        (site_lat, status) = S.sla_daf2r(30, 40, 47.53)
+        (site_long, status) = S.sla_daf2r(104, 0., 54.63)
         site_long = -site_long
         site_hgt = 2010.0
         site_name = 'LCO ELP Node 1m0 Dome A at McDonald Observatory'
     elif site_code == 'ELP-DOMB' or site_code == 'V39':
         # Position from screenshot of Annie's GPS on mount at site...
-        (site_lat, status)  =  S.sla_daf2r(30, 40, 48.00)
-        (site_long, status) =  S.sla_daf2r(104, 0.0, 55.74)
+        (site_lat, status) = S.sla_daf2r(30, 40, 48.00)
+        (site_long, status) = S.sla_daf2r(104, 0.0, 55.74)
         site_long = -site_long
         site_hgt = 2029.4
         site_name = 'LCO ELP Node 1m0 Dome B at McDonald Observatory'
     elif site_code == 'ELP-AQWA-0M4A' or site_code == 'V38':
-        (site_lat, status)  =  S.sla_daf2r(30, 40, 48.15)
-        (site_long, status) =  S.sla_daf2r(104, 0., 54.24)
+        (site_lat, status) = S.sla_daf2r(30, 40, 48.15)
+        (site_long, status) = S.sla_daf2r(104, 0., 54.24)
         site_long = -site_long
         site_hgt = 2027.0
         site_name = 'LCO ELP Node 0m4a Aqawan A at McDonald Observatory'
     elif site_code == 'BPL':
-        (site_lat, status)  =  S.sla_daf2r(34, 25, 57)
-        (site_long, status) =  S.sla_daf2r(119, 51, 46)
+        (site_lat, status) = S.sla_daf2r(34, 25, 57)
+        (site_long, status) = S.sla_daf2r(119, 51, 46)
         site_long = -site_long
         site_hgt = 7.0
         site_name = 'LCO Back Parking Lot Node (BPL)'
     elif site_code == 'LSC-DOMA-1M0A' or site_code == 'W85':
         # Latitude, longitude from Eric Mamajek (astro-ph: 1210.1616) Table 6. Height
         # corrected by +3m for telescope height from Vince.
-        (site_lat, status)  =  S.sla_daf2r(30, 10, 2.58)
+        (site_lat, status) = S.sla_daf2r(30, 10, 2.58)
         site_lat = -site_lat   # Southern hemisphere !
-        (site_long, status) =  S.sla_daf2r(70, 48, 17.24)
-        site_long = -site_long # West of Greenwich !
+        (site_long, status) = S.sla_daf2r(70, 48, 17.24)
+        site_long = -site_long  # West of Greenwich !
         site_hgt = 2201.0
         site_name = 'LCO LSC Node 1m0 Dome A at Cerro Tololo'
     elif site_code == 'LSC-DOMB-1M0A' or site_code == 'W86':
         # Latitude, longitude from Eric Mamajek (astro-ph: 1210.1616) Table 6. Height
         # corrected by +3m for telescope height from Vince.
-        (site_lat, status)  =  S.sla_daf2r(30, 10, 2.39)
+        (site_lat, status) = S.sla_daf2r(30, 10, 2.39)
         site_lat = -site_lat   # Southern hemisphere !
-        (site_long, status) =  S.sla_daf2r(70, 48, 16.78)
-        site_long = -site_long # West of Greenwich !
+        (site_long, status) = S.sla_daf2r(70, 48, 16.78)
+        site_long = -site_long  # West of Greenwich !
         site_hgt = 2201.0
         site_name = 'LCO LSC Node 1m0 Dome B at Cerro Tololo'
     elif site_code == 'LSC-DOMC-1M0A' or site_code == 'W87':
         # Latitude, longitude from Eric Mamajek (astro-ph: 1210.1616) Table 6. Height
         # corrected by +3m for telescope height from Vince.
-        (site_lat, status)  =  S.sla_daf2r(30, 10, 2.81)
+        (site_lat, status) = S.sla_daf2r(30, 10, 2.81)
         site_lat = -site_lat   # Southern hemisphere !
-        (site_long, status) =  S.sla_daf2r(70, 48, 16.85)
-        site_long = -site_long # West of Greenwich !
+        (site_long, status) = S.sla_daf2r(70, 48, 16.85)
+        site_long = -site_long  # West of Greenwich !
         site_hgt = 2201.0
         site_name = 'LCO LSC Node 1m0 Dome C at Cerro Tololo'
     elif site_code == 'LSC-AQWA-0M4A' or site_code == 'W89':
         # Latitude, longitude from somewhere
-        (site_lat, status)  =  S.sla_daf2r(30, 10, 3.79)
+        (site_lat, status) = S.sla_daf2r(30, 10, 3.79)
         site_lat = -site_lat   # Southern hemisphere !
-        (site_long, status) =  S.sla_daf2r(70, 48, 16.88)
-        site_long = -site_long # West of Greenwich !
+        (site_long, status) = S.sla_daf2r(70, 48, 16.88)
+        site_long = -site_long  # West of Greenwich !
         site_hgt = 2202.5
         site_name = 'LCO LSC Node 0m4a Aqawan A at Cerro Tololo'
     elif site_code == 'LSC-AQWB-0M4A' or site_code == 'W79':
         # Latitude, longitude from Nikolaus/Google Earth
-        (site_lat, status)  =  S.sla_daf2r(30, 10, 3.56)
+        (site_lat, status) = S.sla_daf2r(30, 10, 3.56)
         site_lat = -site_lat   # Southern hemisphere !
-        (site_long, status) =  S.sla_daf2r(70, 48, 16.74)
-        site_long = -site_long # West of Greenwich !
+        (site_long, status) = S.sla_daf2r(70, 48, 16.74)
+        site_long = -site_long  # West of Greenwich !
         site_hgt = 2202.5
         site_name = 'LCO LSC Node 0m4a Aqawan A at Cerro Tololo'
     elif site_code == 'CPT-DOMA-1M0A' or site_code == 'K91':
         # Latitude, longitude from site GPS co-ords plus offsets from site plan. Height
         # corrected by +3m for telescope height from Vince.
-        (site_lat, status)  =  S.sla_daf2r(32, 22, 50.0)
+        (site_lat, status) = S.sla_daf2r(32, 22, 50.0)
         site_lat = -site_lat   # Southern hemisphere !
-        (site_long, status) =  S.sla_daf2r(20, 48, 36.65)
+        (site_long, status) = S.sla_daf2r(20, 48, 36.65)
         site_hgt = 1807.0
         site_name = 'LCO CPT Node 1m0 Dome A at Sutherland'
     elif site_code == 'CPT-DOMB-1M0A' or site_code == 'K92':
         # Latitude, longitude from site GPS co-ords plus offsets from site plan. Height
         # corrected by +3m for telescope height from Vince.
-        (site_lat, status)  =  S.sla_daf2r(32, 22, 50.0)
+        (site_lat, status) = S.sla_daf2r(32, 22, 50.0)
         site_lat = -site_lat   # Southern hemisphere !
-        (site_long, status) =  S.sla_daf2r(20, 48, 36.13)
+        (site_long, status) = S.sla_daf2r(20, 48, 36.13)
         site_hgt = 1807.0
         site_name = 'LCO CPT Node 1m0 Dome B at Sutherland'
     elif site_code == 'CPT-DOMC-1M0A' or site_code == 'K93':
         # Latitude, longitude from site GPS co-ords plus offsets from site plan. Height
         # corrected by +3m for telescope height from Vince.
-        (site_lat, status)  =  S.sla_daf2r(32, 22, 50.38)
+        (site_lat, status) = S.sla_daf2r(32, 22, 50.38)
         site_lat = -site_lat   # Southern hemisphere !
-        (site_long, status) =  S.sla_daf2r(20, 48, 36.39)
+        (site_long, status) = S.sla_daf2r(20, 48, 36.39)
         site_hgt = 1807.0
         site_name = 'LCO CPT Node 1m0 Dome C at Sutherland'
     elif site_code == 'COJ-DOMA-1M0A' or site_code == 'Q63':
         # Latitude, longitude from Google Earth guesswork. Height
         # corrected by +3m for telescope height from Vince.
-        (site_lat, status)  =  S.sla_daf2r(31, 16, 22.56)
+        (site_lat, status) = S.sla_daf2r(31, 16, 22.56)
         site_lat = -site_lat   # Southern hemisphere !
-        (site_long, status) =  S.sla_daf2r(149, 4., 14.33)
+        (site_long, status) = S.sla_daf2r(149, 4., 14.33)
         site_hgt = 1168.0
         site_name = 'LCO COJ Node 1m0 Dome A at Siding Spring'
     elif site_code == 'COJ-DOMB-1M0A' or site_code == 'Q64':
         # Latitude, longitude from Google Earth guesswork. Height
         # corrected by +3m for telescope height from Vince.
-        (site_lat, status)  =  S.sla_daf2r(31, 16, 22.89)
+        (site_lat, status) = S.sla_daf2r(31, 16, 22.89)
         site_lat = -site_lat   # Southern hemisphere !
-        (site_long, status) =  S.sla_daf2r(149, 4., 14.75)
+        (site_long, status) = S.sla_daf2r(149, 4., 14.75)
         site_hgt = 1168.0
         site_name = 'LCO COJ Node 1m0 Dome B at Siding Spring'
     elif site_code == 'TFN-AQWA-0M4A' or site_code == 'Z21':
         # Latitude, longitude from Todd B./Google Earth
-        (site_lat, status)  =  S.sla_daf2r(28, 18, 1.11)
-        (site_long, status) =  S.sla_daf2r(16, 30, 42.13)
-        site_long = -site_long # West of Greenwich !
+        (site_lat, status) = S.sla_daf2r(28, 18, 1.11)
+        (site_long, status) = S.sla_daf2r(16, 30, 42.13)
+        site_long = -site_long  # West of Greenwich !
         site_hgt = 2390.0
         site_name = 'LCO TFN Node 0m4a Aqawan A at Tenerife'
     elif site_code == 'TFN-AQWA-0M4B' or site_code == 'Z17':
         # Latitude, longitude from Todd B./Google Earth
-        (site_lat, status)  =  S.sla_daf2r(28, 18, 1.11)
-        (site_long, status) =  S.sla_daf2r(16, 30, 42.21)
-        site_long = -site_long # West of Greenwich !
+        (site_lat, status) = S.sla_daf2r(28, 18, 1.11)
+        (site_long, status) = S.sla_daf2r(16, 30, 42.21)
+        site_long = -site_long  # West of Greenwich !
         site_hgt = 2390.0
         site_name = 'LCO TFN Node 0m4b Aqawan A at Tenerife'
     elif site_code == 'OGG-CLMA-0M4B' or site_code == 'T04':
         # Latitude, longitude from Google Earth, SW corner of clamshell, probably wrong
-        (site_lat, status)  =  S.sla_daf2r(20, 42, 25.1)
-        (site_long, status) =  S.sla_daf2r(156, 15, 27.11)
-        site_long = -site_long # West of Greenwich !
+        (site_lat, status) = S.sla_daf2r(20, 42, 25.1)
+        (site_long, status) = S.sla_daf2r(156, 15, 27.11)
+        site_long = -site_long  # West of Greenwich !
         site_hgt = 3037.0
         site_name = 'LCO OGG Node 0m4b at Maui'
     elif site_code == 'OGG-CLMA-0M4C' or site_code == 'T03':
         # Latitude, longitude from Google Earth, SW corner of clamshell, probably wrong
-        (site_lat, status)  =  S.sla_daf2r(20, 42, 25.1)
-        (site_long, status) =  S.sla_daf2r(156, 15, 27.12)
-        site_long = -site_long # West of Greenwich !
+        (site_lat, status) = S.sla_daf2r(20, 42, 25.1)
+        (site_long, status) = S.sla_daf2r(156, 15, 27.12)
+        site_long = -site_long  # West of Greenwich !
         site_hgt = 3037.0
         site_name = 'LCO OGG Node 0m4c at Maui'
     elif site_code == 'COJ-CLMA-0M4A' or site_code == 'Q58':
         # Latitude, longitude from Google Earth, SE corner of clamshell, probably wrong
-        (site_lat, status)  =  S.sla_daf2r(31, 16, 22.38)
+        (site_lat, status) = S.sla_daf2r(31, 16, 22.38)
         site_lat = -site_lat   # Southern hemisphere !
-        (site_long, status) =  S.sla_daf2r(149, 4., 15.05)
+        (site_long, status) = S.sla_daf2r(149, 4., 15.05)
         site_hgt = 1191.0
         site_name = 'LCO COJ Node 0m4a at Siding Spring'
     elif site_code == 'COJ-CLMA-0M4B' or site_code == 'Q59':
         # Latitude, longitude from Google Earth, SW corner of clamshell, probably wrong
-        (site_lat, status)  =  S.sla_daf2r(31, 16, 22.48)
+        (site_lat, status) = S.sla_daf2r(31, 16, 22.48)
         site_lat = -site_lat   # Southern hemisphere !
-        (site_long, status) =  S.sla_daf2r(149, 4., 14.91)
+        (site_long, status) = S.sla_daf2r(149, 4., 14.91)
         site_hgt = 1191.0
         site_name = 'LCO COJ Node 0m4b at Siding Spring'
     elif site_code == 'CPT-AQWA-0M4A' or site_code == 'L09':
         # Latitude, longitude from Nikolaus/Google Earth
-        (site_lat, status)  =  S.sla_daf2r(32, 22, 50.25)
+        (site_lat, status) = S.sla_daf2r(32, 22, 50.25)
         site_lat = -site_lat   # Southern hemisphere !
-        (site_long, status) =  S.sla_daf2r(20, 48, 35.54)
+        (site_long, status) = S.sla_daf2r(20, 48, 35.54)
         site_hgt = 1804.0
         site_name = 'LCO CPT Node 0m4a Aqawan A at Sutherland'
+    elif site_code == 'NZTL-DOMA-1M8A' or site_code == '474':
+        # Latitude, longitude from https://www.canterbury.ac.nz/science/facilities/field-and-research-stations/mount-john-observatory/facilities/
+        (site_lat, status) = S.sla_daf2r(43, 59, 14.6)
+        site_lat = -site_lat   # Southern hemisphere !
+        (site_long, status) = S.sla_daf2r(170, 27, 53.9)
+        site_hgt = 1027.1
+        site_name = 'MOA 1.8m at Mount John Observatory'
     elif site_code == '500' or site_code == '1M0' or site_code == '0M4' or site_code == '2M0':
         site_lat = 0.0
         site_long = 0.0
@@ -1655,8 +1679,7 @@ def moonphase(date, obsvr_long, obsvr_lat, obsvr_hgt, dbg=False):
 
     (sun_ra, sun_dec, sun_diam) = S.sla_rdplan (mjd_tdb, 0, obsvr_long, obsvr_lat)
 
-    cosphi = ( sin(sun_dec) * sin(moon_dec) + cos(sun_dec) \
-        * cos(moon_dec) * cos(sun_ra - moon_ra) )
+    cosphi = ( sin(sun_dec) * sin(moon_dec) + cos(sun_dec) * cos(moon_dec) * cos(sun_ra - moon_ra))
     logger.debug("cos(phi)=%s" % cosphi)
 
 # Full formula for phase angle, i. Requires r (Earth-Sun distance) and del(ta) (the
@@ -1782,8 +1805,8 @@ def radec2strings(ra_radians, dec_radians, seperator=' '):
 
     if rsign == '+' and ra_radians != dec_radians:
         rsign = ''
-    ra_str = ra_format % ( rsign, ra[0], seperator, ra[1], seperator, ra[2],  ra[3] )
-    dec_str = dec_format % ( dsign, dec[0], seperator, dec[1], seperator, dec[2], dec[3] )
+    ra_str = ra_format % (rsign, ra[0], seperator, ra[1], seperator, ra[2],  ra[3])
+    dec_str = dec_format % (dsign, dec[0], seperator, dec[1], seperator, dec[2], dec[3])
 
     return ra_str, dec_str
 
@@ -1862,9 +1885,9 @@ def get_sitecam_params(site, bin_mode=None):
     elif site == 'FTN' or 'OGG-CLMA-2M0' in site or site == 'F65':
         site_code = 'F65'
         setup_overhead = cfg.tel_overhead['twom_setup_overhead']
-        exp_overhead = cfg.inst_overhead['twom_exp_overhead']
-        pixel_scale = cfg.tel_field['twom_pixscale']
-        fov = arcmins_to_radians(cfg.tel_field['twom_fov'])
+        exp_overhead = cfg.inst_overhead['muscat_exp_overhead']
+        pixel_scale = cfg.tel_field['twom_muscat_pixscale']
+        fov = arcmins_to_radians(cfg.tel_field['twom_muscat_fov'])
         max_exp_length = 300.0
         alt_limit = cfg.tel_alt['twom_alt_limit']
     elif site == 'FTS' or 'COJ-CLMA-2M0' in site or site == 'E10':

@@ -144,7 +144,7 @@ class ScheduleObservations(FunctionalTest):
         vis = self.browser.find_element_by_id('id_visibility_row').find_element_by_class_name('kv-value').text
         self.assertIn('7.6 hrs / 87°', vis)
         slot_length = self.browser.find_element_by_id('id_slot_length_row').find_element_by_class_name('kv-value').text
-        self.assertIn('21', slot_length)
+        self.assertIn('20', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
         self.assertIn('1', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
@@ -284,7 +284,7 @@ class ScheduleObservations(FunctionalTest):
         vis = self.browser.find_element_by_id('id_visibility_row').find_element_by_class_name('kv-value').text
         self.assertIn('2.8 hrs / 40°', vis)
         slot_length = self.browser.find_element_by_id('id_slot_length_row').find_element_by_class_name('kv-value').text
-        self.assertIn('21', slot_length)
+        self.assertIn('20', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
         self.assertIn('1', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
@@ -303,7 +303,7 @@ class ScheduleObservations(FunctionalTest):
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
         self.assertIn('25', exp_length)
         slot_length = self.browser.find_element_by_id('id_slot_length_row').find_element_by_class_name('kv-value').text
-        self.assertIn('19', slot_length)
+        self.assertIn('18', slot_length)
         snr = self.browser.find_element_by_id('id_snr_row').find_element_by_class_name('kv-value').text
         self.assertIn('770.9', snr)
 
@@ -337,6 +337,21 @@ class ScheduleObservations(FunctionalTest):
         vis = self.browser.find_element_by_id('id_visibility_row').find_element_by_class_name('warning').text
         self.assertIn('Target Not Visible', vis)
 
+        # Fix issue:
+        self.browser.find_element_by_id("advanced-switch").click()
+        airmass_box = self.browser.find_element_by_id('id_max_airmass')
+        airmass_box.clear()
+        airmass_box.send_keys('2.0')
+        self.browser.find_element_by_id("id_edit_window").click()
+        start_time_box = self.browser.find_element_by_id('id_start_time')
+        start_time_box.clear()
+        start_time_box.send_keys('2015-12-21T13:13:00')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
+        start_time = self.browser.find_element_by_id('id_start_time').get_attribute('value')
+        self.assertEqual(start_time, '2015-12-21T13:13:00')
+
+
         # Bart wants to be a little &^%$ and stress test our group ID input
         group_id_box = self.browser.find_element_by_name("group_name")
         group_id_box.clear()
@@ -354,7 +369,6 @@ class ScheduleObservations(FunctionalTest):
             self.browser.find_element_by_id("id_edit_button").click()
         group_id = self.browser.find_element_by_id('id_group_name').get_attribute('value')
         self.assertEqual(bs_string[:50], group_id)
-
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list_no2m)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list_no2m)
@@ -389,7 +403,7 @@ class ScheduleObservations(FunctionalTest):
 
         # The page refreshes and an error appears.
         error_msg = self.browser.find_element_by_class_name('errorlist').text
-        self.assertIn('This Site/Instrument combination is not currently available.', error_msg)
+        self.assertIn('The 2m0-FLOYDS-SciCam at E10 is not schedulable.', error_msg)
 
         # Bart has heard about a new website for NEOs. He goes to the
         # page of the first target
@@ -435,4 +449,4 @@ class ScheduleObservations(FunctionalTest):
 
         # The page refreshes and an error appears.
         error_msg = self.browser.find_element_by_class_name('errorlist').text
-        self.assertIn('This Site/Instrument combination is not currently available.', error_msg)
+        self.assertIn('The 2m0-FLOYDS-SciCam at E10 is not schedulable.', error_msg)

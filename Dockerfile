@@ -1,7 +1,7 @@
 ################################################################################
 # Findorb Builder Container
 ################################################################################
-FROM centos:7 AS findorbbuilder
+FROM centos:8 AS findorbbuilder
 
 # Choose specific release versions of each piece of software
 ENV LUNAR_VERSION=016b82f80bd509929e0d55136ed6882e61831dfb \
@@ -10,12 +10,8 @@ ENV LUNAR_VERSION=016b82f80bd509929e0d55136ed6882e61831dfb \
     FIND_ORB_VERSION=e45ba9f0b92eb783848711d69c33e20c607124d4
 
 # This software requires GCC >= 7.0 to build
-RUN yum -y install centos-release-scl \
-        && yum -y install devtoolset-7 git ncurses-devel \
+RUN yum -y install gcc gcc-c++ make git ncurses-devel \
         && yum -y clean all
-
-# Use the Software Collections Library devtoolset-7 to build the software
-SHELL [ "scl", "enable", "devtoolset-7" ]
 
 # Build "lunar". No need to clean up, as this is a builder container.
 # The contents will be discarded from the final image.
@@ -50,35 +46,40 @@ RUN curl -fsSL https://github.com/Bill-Gray/find_orb/archive/${FIND_ORB_VERSION}
         && cd find_orb-${FIND_ORB_VERSION} \
         && make \
         && make install \
+        && curl -fsSL https://www.minorplanetcenter.net/iau/lists/ObsCodes.html > /root/.find_orb/ObsCodes.htm \
         && if [[ -f "ps_1996.dat" && -f "elp82.dat" ]]; then cp ps_1996.dat elp82.dat /root/.find_orb; fi
 
 # Copy default findorb config file
 COPY neoexchange/photometrics/configs/environ.def /root/.find_orb/
 
 ################################################################################
-# Python dependencies build container
+# Production Container
 ################################################################################
-FROM centos:7 as pythonbuilder
+FROM centos:8
 
-# Add path for lcogt-python36 package
-ENV PATH=/opt/lcogt-python36/bin:$PATH
+# Copy findorb from builder container
+COPY --from=findorbbuilder /root /root
+
+# Install Python dependencies
 
 # Add LCO RPM repository
 COPY docker/etc/yum.repos.d/lcogt.repo /etc/yum.repos.d/lcogt.repo
 
 # Install build dependencies for Python packages
-RUN yum -y install epel-release \
+# XXX Need to install powertools repo
+# 'glibc-langpack-en' is needed to prevent locale complaints (https://www.tecmint.com/fix-failed-to-set-locale-defaulting-to-c-utf-8-in-centos/)
+RUN yum -y install epel-release glibc-langpack-en\
         && yum -y install \
             gcc \
             gcc-c++ \
             gcc-gfortran \
-            lcogt-python36 \
+            python36 \
+            python36-devel \
             libffi-devel \
             libjpeg-devel \
             libpng-devel \
             mariadb-devel \
-            plplot-devel \
-        && yum -y clean all
+            make diffutils file
 
 # Copy Python dependencies manifest
 COPY neoexchange/requirements.txt .
@@ -89,22 +90,11 @@ COPY neoexchange/requirements.txt .
 # numpy needs to be explicitly installed first otherwise pySLALIB fails with a
 # missing numpy.distutils.core reference because the package's setup.py is broken
 RUN pip3 --no-cache-dir install --upgrade pip \
-    && pip3 --no-cache-dir install --upgrade numpy \
-    && pip3 --no-cache-dir install --trusted-host buildsba.lco.gtn -r requirements.txt
+    && python3 -m pip --no-cache-dir install --upgrade numpy wheel \
+    && python3 -m pip --no-cache-dir install --trusted-host buildsba.lco.gtn -r requirements.txt
 
-################################################################################
-# Production Container
-################################################################################
-FROM centos:7
-
-# Copy findorb from builder container
-COPY --from=findorbbuilder /root /root
-
-# Copy python3.6 and dependencies from builder container
-COPY --from=pythonbuilder /opt/lcogt-python36 /opt/lcogt-python36
-
-# Add path to python3.6 and findorb
-ENV PATH=/opt/lcogt-python36/bin:/root/bin:$PATH
+# Add path to findorb
+ENV PATH=/root/bin:$PATH
 
 # The entry point is our init script, which runs startup tasks, then starts gunicorn
 ENTRYPOINT [ "/init" ]
@@ -122,12 +112,11 @@ RUN curl -fsSLO "$SUPERCRONIC_URL" \
         && ln -s "/usr/local/bin/${SUPERCRONIC}" /usr/local/bin/supercronic
 
 # Install packages and update base system
-RUN yum -y install epel-release \
-        && yum -y install \
+# XXX Need to install powertools repo
+RUN yum -y install \
             cdsclient \
             ImageMagick \
             less \
-            mariadb-libs \
             mtdlink \
             plplot \
             scamp \

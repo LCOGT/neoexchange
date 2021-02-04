@@ -68,6 +68,8 @@ data/
 neox.db
 neox.log
 geckodriver.log
+*.sql
+*.json.gz
 
 spectra.png
 lightcurve*.png
@@ -83,7 +85,6 @@ ALCDEF*.txt
 mpc_positions.txt
 *.json
 environ.dat
-
 
 ingest/static/ingest/css/admin.css
 ingest/static/ingest/css/dashboard.css

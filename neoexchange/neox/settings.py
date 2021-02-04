@@ -7,7 +7,8 @@ from django.utils.crypto import get_random_string
 import rollbar
 
 
-VERSION = '3.3.1.1'
+VERSION = '3.8.2'
+
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
@@ -83,7 +84,7 @@ STATICFILES_FINDERS = (
     "django.contrib.staticfiles.finders.AppDirectoriesFinder"
  )
 
-MIDDLEWARE_CLASSES = (
+MIDDLEWARE = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -228,17 +229,17 @@ SECRET_KEY = os.environ.get('SECRET_KEY', get_random_string(50, chars))
 DATABASES = {
     "default": {
         # Live DB
-        "ENGINE": "django.db.backends.mysql",
+        "ENGINE": os.environ.get('NEOX_DB_ENGINE', 'django.db.backends.mysql'),
         "NAME": os.environ.get('NEOX_DB_NAME', 'neoexchange'),
         "USER": os.environ.get('NEOX_DB_USER',''),
         "PASSWORD": os.environ.get('NEOX_DB_PASSWD',''),
         "HOST": os.environ.get('NEOX_DB_HOST',''),
-        "OPTIONS": {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-        },
-
     }
 }
+
+# Set MySQL-specific options
+if DATABASES['default']['ENGINE'] =='django.db.backends.mysql':
+    DATABASES['default']['OPTIONS'] =  { 'init_command': "SET sql_mode='STRICT_TRANS_TABLES'" }
 
 ##################
 # Email settings #
@@ -258,8 +259,6 @@ EMAIL_MPC_RECIPIENTS = ['tlister@lco.global', 'jchatelain@lco.global']
 
 THUMBNAIL_URL = 'https://thumbnails.lco.global/'
 
-CONFIGDB_API_URL = 'http://configdb.lco.gtn/'
-
 ARCHIVE_API_URL = 'https://archive-api.lco.global/'
 ARCHIVE_FRAMES_URL = ARCHIVE_API_URL + 'frames/'
 ARCHIVE_TOKEN_URL = ARCHIVE_API_URL + 'api-token-auth/'
@@ -272,6 +271,7 @@ PORTAL_REQUEST_URL = 'https://observe.lco.global/requests/'
 PORTAL_TOKEN_URL = PORTAL_API_URL + 'api-token-auth/'
 PORTAL_TOKEN = os.environ.get('VALHALLA_TOKEN', '')
 PORTAL_PROFILE_URL = PORTAL_API_URL + 'profile/'
+PORTAL_INSTRUMENTS_URL = PORTAL_API_URL + 'instruments/'
 
 ZOONIVERSE_USER = os.environ.get('ZOONIVERSE_USER', '')
 ZOONIVERSE_PASSWD = os.environ.get('ZOONIVERSE_PASSWD', '')
@@ -332,3 +332,4 @@ if not CURRENT_PATH.startswith('/app'):
     except ImportError as e:
         if "local_settings" not in str(e):
             raise e
+

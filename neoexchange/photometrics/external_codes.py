@@ -17,7 +17,7 @@ import logging
 import os
 from math import floor
 from datetime import datetime, timedelta
-from subprocess import call
+from subprocess import call, TimeoutExpired
 from collections import OrderedDict
 import warnings
 from shutil import unpack_archive
@@ -47,7 +47,7 @@ def default_scamp_config_files():
     """Return a list of the needed files for SCAMP. The config file should be in
     element 0"""
 
-    config_files = ['scamp_neox.cfg']
+    config_files = ['scamp_neox_gaiadr2.cfg']
 
     return config_files
 
@@ -63,7 +63,7 @@ def default_sextractor_config_files(catalog_type='ASCII'):
         config_files = ['sextractor_neox_ldac.conf',
                         'sextractor_ldac.params']
 
-    config_files = config_files + common_config_files
+    config_files += common_config_files
     return config_files
 
 
@@ -260,9 +260,23 @@ def determine_mtdlink_options(num_fits_files, param_file, pa_rate_dict):
     return options
 
 
-def determine_scamp_options(fits_catalog):
-
-    options = ''
+def determine_scamp_options(fits_catalog, external_cat_name='GAIA-DR2.cat', distort_degrees=None):
+    """Assemble the command line options for SCAMP.
+    Focal plane distortions are turned on by default if the filename contains
+    '1m0' - this can be overridden by setting [distort_degrees].
+    If [distort_degrees] is not equal to 1 (the default), then additional
+    options are set to change the degree of polynomial order and switch to
+    the TPV distorted tangent plane projection.
+    Reference: https://fits.gsfc.nasa.gov/registry/tpvwcs/tpv.html
+    """
+    options = "-ASTREF_CATALOG FILE -ASTREFCAT_NAME {}".format(os.path.basename(external_cat_name))
+    if ('1m0' in fits_catalog and ('-fl' in fits_catalog or '-fa' in fits_catalog)) or distort_degrees is not None:
+        if distort_degrees is None:
+            distort_degrees = 3
+    else:
+        distort_degrees = 1
+    if distort_degrees != 1 and distort_degrees <= 7:
+            options += " -DISTORT_DEGREES {} -PROJECTION_TYPE TPV".format(distort_degrees)
 
     return options
 
@@ -343,7 +357,7 @@ def run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type='A
 
 
 @timeit
-def run_scamp(source_dir, dest_dir, fits_catalog_path, binary=None, dbg=False):
+def run_scamp(source_dir, dest_dir, fits_catalog_path, refcatalog='GAIA-DR2.cat', binary=None, dbg=False, distort_degrees=None):
     """Run SCAMP (using either the binary specified by [binary] or by
     looking for 'scamp' in the PATH) on the passed <fits_catalog_path> with the
     results and any temporary files created in <dest_dir>. <source_dir> is the
@@ -359,7 +373,7 @@ def run_scamp(source_dir, dest_dir, fits_catalog_path, binary=None, dbg=False):
         return -42
 
     scamp_config_file = default_scamp_config_files()[0]
-    options = determine_scamp_options(fits_catalog_path)
+    options = determine_scamp_options(fits_catalog_path, external_cat_name=refcatalog, distort_degrees=distort_degrees)
 
     # SCAMP writes the output header file to the path that the FITS file is in,
     # not to the directory SCAMP is being run from...
@@ -368,10 +382,11 @@ def run_scamp(source_dir, dest_dir, fits_catalog_path, binary=None, dbg=False):
     if fits_catalog != fits_catalog_path:
         fits_catalog = os.path.join(dest_dir, fits_catalog)
         # If the file exists and is a link (or a broken link), then remove it
-        if os.path.lexists(fits_catalog) and os.path.islink(fits_catalog):
-            os.unlink(fits_catalog)
-        os.symlink(fits_catalog_path, fits_catalog)
-    cmdline = "%s %s -c %s %s" % ( binary, fits_catalog, scamp_config_file, options)
+        if os.path.lexists(fits_catalog):
+            if os.path.islink(fits_catalog):
+                os.unlink(fits_catalog)
+                os.symlink(fits_catalog_path, fits_catalog)
+    cmdline = "%s %s -c %s %s" % ( binary, fits_catalog, scamp_config_file, options )
     cmdline = cmdline.rstrip()
 
     if dbg is True:
@@ -379,10 +394,14 @@ def run_scamp(source_dir, dest_dir, fits_catalog_path, binary=None, dbg=False):
     else:
         logger.debug("cmdline=%s" % cmdline)
         args = cmdline.split()
-        # Open /dev/null for writing to lose the SCAMP output into
-        DEVNULL = open(os.devnull, 'w')
-        retcode_or_cmdline = call(args, cwd=dest_dir, stdout=DEVNULL, stderr=DEVNULL)
-        DEVNULL.close()
+        try:
+            # Open /dev/null for writing to lose the SCAMP output into
+            DEVNULL = open(os.devnull, 'w')
+            retcode_or_cmdline = call(args, cwd=dest_dir, stdout=DEVNULL, stderr=DEVNULL, timeout=300)
+            DEVNULL.close()
+        except TimeoutExpired:
+            logger.warning(f'SCAMP timeout reached for {fits_catalog}')
+            retcode_or_cmdline = -2
 
     return retcode_or_cmdline
 
@@ -475,6 +494,13 @@ def run_findorb(source_dir, dest_dir, obs_file, site_code=500, start_time=dateti
 
     setup_findorb_environ_file(source_dir, site_code, start_time)
 
+    # Remove any old version of mpc_fmt.txt
+    orbit_file = os.path.join(os.getenv('HOME'), '.find_orb', 'mpc_fmt.txt')
+    try:
+        os.remove(orbit_file)
+    except FileNotFoundError:
+        pass
+
     options = determine_findorb_options(site_code, start_time)
     cmdline = "%s %s %s" % ( binary, obs_file, options)
     cmdline = cmdline.rstrip()
@@ -510,9 +536,22 @@ def get_scamp_xml_info(scamp_xml_file):
     reference_catalog = fgroups_table.array['AstRef_Catalog'].data[0]
     reference_catalog = reference_catalog.decode("utf-8")
     reference_catalog = reference_catalog.replace('-', '')
+    if reference_catalog == 'file':
+        # SCAMP was fed a reference catalog file, we have more digging to do
+        # to get the actual catalog used
+        reference_catalog = votable.get_field_by_id_or_name('AstRefCat_Name').value
+        reference_catalog = reference_catalog.decode("utf-8")
+        wcs_refcat_name = reference_catalog
+        if '_' in reference_catalog:
+            # If it's new format catalog file with position and size, strip
+            # these out.
+            reference_catalog = reference_catalog.split('_')[0]
+        reference_catalog = reference_catalog.replace('.cat', '')
+    else:
+        wcs_refcat_name = "<Vizier/aserver.cgi?%s@cds>" % reference_catalog.lower()
     info = { 'num_match'    : fgroups_table.array['AstromNDets_Internal_HighSN'].data[0],
              'num_refstars' : fields_table.array['NDetect'].data[0],
-             'wcs_refcat'   : "<Vizier/aserver.cgi?%s@cds>" % reference_catalog.lower(),
+             'wcs_refcat'   : wcs_refcat_name,
              'wcs_cattype'  : "%s@CDS" % reference_catalog.upper(),
              'wcs_imagecat' : fields_table.array['Catalog_Name'].data[0].decode("utf-8"),
              'pixel_scale'  : fields_table.array['Pixel_Scale'].data[0].mean()
@@ -526,28 +565,35 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
     using the SCAMP generated FITS-like .head ascii file.
     <fits_file> should the processed CCD image to update, <scamp_file> is
     the SCAMP-produced .head file, <scamp_xml_file> is the SCAMP-produced
-    XML output file and <fits_file_output> is the new output FITS file."""
+    XML output file and <fits_file_output> is the new output FITS file.
+    A return status and the updated header are returned; in the event of a
+    problem, the status will be -ve and the header will be None"""
 
     try:
         data, header = fits.getdata(fits_file, header=True)
     except IOError as e:
         logger.error("Unable to open FITS image %s (Reason=%s)" % (fits_file, e))
-        return -1
+        return -1, None
 
     scamp_info = get_scamp_xml_info(scamp_xml_file)
     if scamp_info is None:
-        return -2
+        return -2, None
 
     try:
         scamp_head_fh = open(scamp_file, 'r')
     except IOError as e:
         logger.error("Unable to open SCAMP header file %s (Reason=%s)" % (scamp_file, e))
-        return -3
+        return -3, None
 
+    pv_terms = []
     # Read in SCAMP .head file
     for line in scamp_head_fh:
         if 'HISTORY' in line:
             wcssolvr = str(line[34:39]+'-'+line[48:53])
+        if 'CTYPE1' in line:
+            ctype1 = line[9:31].strip().replace("'", "")
+        if 'CTYPE2' in line:
+            ctype2 = line[9:31].strip().replace("'", "")
         if 'CUNIT1' in line:
             # Trim spaces, remove single quotes
             cunit1 = line[9:31].strip().replace("'", "")
@@ -577,6 +623,10 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
             astrrms1 = round(float(line[9:31])*3600.0, 5)
         if 'ASTRRMS2' in line:
             astrrms2 = round(float(line[9:31])*3600.0, 5)
+        if 'PV1_' in line or 'PV2_' in line:
+            keyword = line[0:8].rstrip()
+            value = float(line[9:31])
+            pv_terms.append((keyword, value))
     scamp_head_fh.close()
 
     # update from scamp xml VOTable
@@ -590,6 +640,8 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
     # header keywords we have
     header['WCSDELRA'] = header['CRVAL1'] - crval1
     header['WCSDELDE'] = header['CRVAL2'] - crval2
+    header['CTYPE1'] = ctype1
+    header['CTYPE2'] = ctype2
     header['CRVAL1'] = crval1
     header['CRVAL2'] = crval2
     header['CRPIX1'] = crpix1
@@ -614,10 +666,15 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
     if header.get('CUNIT2', None) is None:
         header.insert('CUNIT1', ('CUNIT2', cunit2, 'Unit of 2nd axis'), after=True)
 
+    # Add distortion keywords if present
+    prior_keyword = 'CD2_2'
+    for keyword, value in pv_terms:
+        header.insert(prior_keyword, (keyword, value, 'TPV distortion coefficient'), after=True)
+        prior_keyword = keyword
     # Need to force the CHECKSUM to be recomputed. Trap for young players..
     fits.writeto(fits_file_output, data, header, overwrite=True, checksum=True)
 
-    return 0
+    return 0, header
 
 
 def read_mtds_file(mtdsfile, dbg=False):

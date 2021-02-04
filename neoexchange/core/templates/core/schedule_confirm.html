@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load staticfiles basic_tags %}
+{% load static basic_tags %}
 {% block header %}NEOx scheduling{% endblock %}
 
 {% block bodyclass %}page{% endblock %}
@@ -202,14 +202,18 @@
                         <td class="kv-value">{{ form.filter_pattern }}</td>
                     </tr>
                     {% else %}
-                    <tr id="id_filter_pattern_row"><td ><table align="left"  style="margin: 0px"><tr><td class="kv-key" name="{{data.available_filters}}">
-                            <div class="tooltip">Filter Pattern
-                            <span class="tooltiptext" style="left:75%">Comma Separated Pattern
-                            <br>(e.g.: rp,gp,rp,ip,rp)<br>
-                            <br><u>Filters Available at {{data.site_code}}:</u>
-                            <br><span name="filters">{{data.available_filters}}</span></span></div></td><td></td></tr></table></td>
-                        <td class="kv-value" id="">{{ form.filter_pattern }}</td>
-                    </tr>
+                        {% if 'F65' not in data.site_code %}
+                            <tr id="id_filter_pattern_row"><td ><table align="left"  style="margin: 0px"><tr><td class="kv-key" name="{{data.available_filters}}">
+                                    <div class="tooltip">Filter Pattern
+                                    <span class="tooltiptext" style="left:75%">Comma Separated Pattern
+                                    <br>(e.g.: rp,gp,rp,ip,rp)<br>
+                                    <br><u>Filters Available at {{data.site_code}}:</u>
+                                    <br><span name="filters">{{data.available_filters}}</span></span></div></td><td></td></tr></table></td>
+                                <td class="kv-value" id="">{{ form.filter_pattern }}</td>
+                            </tr>
+                        {% else %}
+                            {{ form.filter_pattern.as_hidden }}
+                        {% endif %}
                     {% endif %}
                     {% if data.pattern_iterations != data.exp_count %}
                         <tr id="id_pattern_iterations_row">
@@ -233,8 +237,12 @@
                         {% endif %}
                     </tr>
                     <tr id="id_no_of_exps_row">
-                        <td class="kv-key">No. of exposures</td>
-                        {% if data.exp_count < 4 and not data.spectroscopy%}
+                        <td class="kv-key">No. of exposures
+                        {% if 'F65' in data.site_code and not data.spectroscopy %}
+                            (single filter)
+                        {% endif %}
+                        </td>
+                        {% if data.exp_count < 4 and not data.spectroscopy %}
                             <td ><table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip"><span class="warning msgpadded"> {{ data.exp_count }} </span>
                                 <span class="tooltiptext" style="width: 150px;"><u>Fewer than 4 exposures will be taken!</u>
                                 <br>4 or more observations required if reporting astrometry to the MPC. <br></span></div></td></tr></table></td>
@@ -243,8 +251,24 @@
                         {% endif %}
                     </tr>
                     <tr id="id_expose_length_row">
+                    {% if 'F65' not in data.site_code or data.spectroscopy%}
                         <td class="kv-key">Exposure length</td>
                         <td class="kv-value">{{ form.exp_length }} secs</td>
+                    {% else %}
+                        <td class="kv-key">MuSCAT Exposure lengths
+                            </br></br>
+                            <div class="compact-field">
+                                <label for="id_expose_length_row">Synchronous observations? {{ form.muscat_sync }}</label>
+                            </div>
+                        </td>
+                        <td class="kv-value">
+                            {{ form.exp_length.as_hidden }}
+                            g' : {{ form.gp_explength }} secs <br>
+                            r' : {{ form.rp_explength }} secs <br>
+                            i' : {{ form.ip_explength }} secs <br>
+                            z' : {{ form.zp_explength }} secs
+                        </td>
+                    {% endif %}
                     </tr>
                     {% if data.snr %}
                     <tr id="id_snr_row">
@@ -426,6 +450,18 @@
               <tr id="id_ag_exp_time_row">
                   <td class="kv-key">GuideCam Exposure time (s)</td>
                   <td class="kv-value">{{ form.ag_exp_time }}</td>
+              </tr>
+              <tr id="id_para_angle_row">
+                  <td >
+                      <table align="left"  style="margin: 0px"><tr><td class="kv-key">
+                            <div class="tooltip">Use Parallactic Angle
+                            <span class="tooltiptext" style="left:60%;"><u>Parallactic Angle:</u>
+                                Slit Orientation Perpendicular to Horizon. <br>
+                                By Default slit orientation in direction of motion.
+                            </span></div></td><td></td></tr>
+                      </table>
+                  </td>
+                  <td class="kv-value">{{ form.para_angle }}</td>
               </tr>
               {% endif %}
           </table>

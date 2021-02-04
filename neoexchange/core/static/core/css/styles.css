@@ -1177,3 +1177,13 @@ ul.candidate-controls li:hover {background-color:#eee; }
 
 .moon { fill:#D6D5C0; }
 .moonback { fill:black;stroke:#fff;stroke-width:1px; }
+
+.bk-root .slick-cell.selected {
+    background: white;
+    color: black;
+}
+
+.bk-root .slick-cell {
+    background: white;
+    color: silver;
+}

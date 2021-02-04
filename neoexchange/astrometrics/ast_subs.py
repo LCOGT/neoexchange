@@ -104,6 +104,7 @@ def normal_to_packed(obj_name, dbg=False):
         obj_name = obj_name.rstrip()[:-1]
 
     buff = obj_name.replace(" ", "")
+
     if dbg:
         print("len(buff)=", len(buff))
 
@@ -141,7 +142,8 @@ def normal_to_packed(obj_name, dbg=False):
             pack9 = chr(ord('A') + sub_designator // 10 - 10)
         else:
             pack9 = chr(ord('a') + sub_designator // 10 - 36)
-        packed_desig = "    %c%c%02d%c%c%c%c" % (comet_type, ord('A') - 10 + year // 100, year % 100, str(buff[4]).upper(), pack9, pack10, pack11)
+        packed_desig = "    %c%c%02d%c%c%c%c" % (comet_type, ord('A') - 10 + year // 100, year % 100,
+                                                 str(buff[4]).upper(), pack9, pack10, pack11)
     else:
         # Bad id
         packed_desig = ' ' * 12
@@ -198,8 +200,11 @@ def determine_time_of_perih(meandist, meananom, epochofel):
         days_from_perihelion = (360.0 - meananom) / n
     else:
         days_from_perihelion = -(meananom / n)
-    epochofperih = epochofel + timedelta(days=days_from_perihelion)
-#    print n, days_from_perihelion, epochofperih
+    if days_from_perihelion < timedelta.min.days or days_from_perihelion > timedelta.max.days:
+        epochofperih = None
+    else:
+        epochofperih = epochofel + timedelta(days=days_from_perihelion)
+#    print(n, days_from_perihelion, epochofperih)
 
     return epochofperih
 
@@ -224,6 +229,11 @@ def convert_ast_to_comet(kwargs, body):
         if params['eccentricity'] is not None and params['meandist'] is not None and params['meananom'] is not None and params['epochofel'] is not None:
             if params['eccentricity'] < 1.0:
                 params['perihdist'] = params['meandist'] * (1.0 - params['eccentricity'])
-            params['epochofperih'] = determine_time_of_perih(params['meandist'], params['meananom'], params['epochofel'])
-            params['meananom'] = None
+            time_of_perih = determine_time_of_perih(params['meandist'], params['meananom'], params['epochofel'])
+            if time_of_perih is not None:
+                params['epochofperih'] = determine_time_of_perih(params['meandist'], params['meananom'], params['epochofel'])
+                params['meananom'] = None
+            else:
+                # Something went badly wrong in there (see Issue #484), bail out of updating
+                params = None
     return params

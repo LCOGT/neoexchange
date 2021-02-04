@@ -187,7 +187,7 @@ class SpectraplotTest(FunctionalTest):
             'midpoint'      : '2018-01-01 01:00:00',
             'frametype'     : Frame.SPECTRUM_FRAMETYPE,
             'block'         : self.test_mblock1,
-            'frameid'       : 1,
+            'frameid'       : 10,
            }
         self.mspec_frame1 = Frame.objects.create(**mfparams1)
         mblock2_params = {
@@ -213,7 +213,7 @@ class SpectraplotTest(FunctionalTest):
             'midpoint'      : '2018-01-01 02:00:00',
             'frametype'     : Frame.SPECTRUM_FRAMETYPE,
             'block'         : self.test_mblock2,
-            'frameid'       : 1,
+            'frameid'       : 11,
            }
         self.mspec_frame2 = Frame.objects.create(**mfparams2)
 

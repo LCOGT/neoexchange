@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% load static basic_tags %}
+
+{% block css-content %}<link rel="stylesheet" href="{% static "core/css/forms.css" %}">{% endblock %}
+
+{% block header %}LOOK Project Page{% endblock %}
+
+{% block bodyclass %}page{% endblock %}
+
+{% block extramenu %}
+    <div class="headingleft">
+        <h1>LOOK Project Target Overview</h1>
+    </div>
+{% endblock%}
+
+{% block main-content %}
+    <div id="main" class="fullwidth">
+        <div id="active_targets" class="fullwidth">
+        <h3>Active Targets</h3>
+            <table id="active_targets" class="datatable" cellpadding="0" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th class="list_title">
+                            <span class="sortable" id="name_id">Target Name</span><br>
+                        </th>
+                        <th>
+                            <span class="sortable" id="target_type">Target Type</span><br>
+                        </th>
+                        <th>
+                            <span class="sortable" id="target_subtype">Target Subtype</span><br>
+                        </th>
+                        <th>
+                            <span class="sortable" id="ra">R.A.</span><br>
+                        </th>
+                        <th>
+                            <span class="sortable" id="dec">Dec.</span><br>
+                        </th>
+                        <th>
+                            <span class="sortable" id="Vmag">V Mag.</span><br>
+                        </th>
+                        <th>
+                            <span class="sortable" id="motion">Rate ("/min)</span><br>
+                        </th>
+                        <th>
+                            <span class="sortable" id="obsdate">Observations Scheduled</span><br>
+                            <span style="font-size:75%" > (for next 30 days) </span>
+                        </th>
+                        <th>
+                            <span class="sortable" id="obsdate">Observation Window</span><br>
+                            <span style="font-size:75%" > (for next 90 days) </span>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="char_table">
+                    {% for body in look_targets %}
+                    <tr class="{% cycle 'odd' 'even' %}">
+                        <td class="list_title"><a href="{% url 'target' body.id %}">{{body.current_name}}</a></td>
+                        <td data-label="Type">{{body.source_type}}</td>
+                        <td data-label="SubType">{{body.subtypes}}</td>
+                        <td data-label="RA">{{body.ra|radianstohms:" "}}</td>
+                        <td data-label="Dec">{{body.dec|radianstodms:" "}}</td>
+                        <td data-label="Vmag">{{body.v_mag|floatformat:1 }}</td>
+                        <td data-label="motion">{{body.motion|floatformat:2 }}</td>
+                        <td data-label="Observations Scheduled"><span class="">
+                            {% if "Inactive" in body.cadence_info %}
+                                <span class="warning msgpadded">{{body.cadence_info}}</td></span>
+                            {% else %}
+                                {{body.cadence_info}}
+                            {% endif %}
+                            </span></td>
+                        <td data-label="Observation Window"><a href="{%url 'visibility' body.id %}">{{body.obs_start}}-{{body.obs_end}}</a>  </td>
+                        </tr>
+                    {% empty%}
+                        <tr><td colspan=9> No new targets</td></tr>
+                    {% endfor%}
+                </tbody>
+            </table>
+        </div>
+        <hr>
+        <div id="new_comets" class="fullwidth">
+            <h3>New Comet Targets</h3>
+            <table id="new_comets" class="datatable" cellpadding="0" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th class="list_title">
+                            <span class="sortable" id="name_id">Target Name</span><br>
+                        </th>
+                        <th>
+                            <span class="sortable" id="target_subtype">Target Subtype</span><br>
+                        </th>
+                        <th>
+                            <span class="sortable" id="ra">R.A.</span><br>
+                        </th>
+                        <th>
+                            <span class="sortable" id="dec">Dec.</span><br>
+                        </th>
+                        <th>
+                            <span class="sortable" id="Vmag">V Mag.</span><br>
+                        </th>
+                        <th>
+                            <span class="sortable" id="motion">Rate ("/min)</span><br>
+                        </th>
+                        <th>
+                            <span class="sortable" id="e">Eccentricity</span><br>
+                        </th>
+                        <th>
+                            <span class="sortable" id="period">Period (years)</span><br>
+                        </th>
+                        <th>
+                            <span class="sortable" id="q">Perihelion</span><br>
+                            <span class="sortable" id="q">Distance (AU)</span><br>
+                        </th>
+                        <th>
+                            <span class="sortable" id="q">Reciprocal Semi-</span><br>
+                            <span class="sortable" id="q">Major Axis (1/a; AU)</span><br>
+                        </th>
+                        <th>
+                            <span class="sortable" id="obsdate">Observation Window</span><br>
+                            <span style="font-size:75%" > (for next 90 days) </span>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="char_table">
+                    {% for body in new_comets %}
+                    <tr class="{% cycle 'odd' 'even' %}">
+                        <td class="list_title"><a href="{% url 'target' body.id %}">{{body.current_name}}</a></td>
+                        <td data-label="SubType">{{body.subtypes}}</td>
+                        <td data-label="RA">{{body.ra|radianstohms:" "}}</td>
+                        <td data-label="Dec">{{body.dec|radianstodms:" "}}</td>
+                        <td data-label="Vmag">{{body.v_mag|floatformat:1 }}</td>
+                        <td data-label="motion">{{body.motion|floatformat:2 }}</td>
+                        <td data-label="Eccentricity">{{body.eccentricity|floatformat:5 }}</td>
+                        <td data-label="Period">{{body.period|stringformat:".4g" }}</td>
+                        <td data-label="Perihelion distance">{{body.perihdist|floatformat:4 }}</td>
+                        <td data-label="1/a">{{body.recip_a|stringformat:".4g" }}</td>
+                        <td data-label="Observation Window"><a href="{%url 'visibility' body.id %}">{{body.obs_start}}-{{body.obs_end}}</a>  </td>
+                        </tr>
+                    {% empty%}
+                        <tr><td colspan=10> No new targets</td></tr>
+                    {% endfor%}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

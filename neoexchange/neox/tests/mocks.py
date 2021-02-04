@@ -19,6 +19,8 @@ from datetime import date
 import os
 
 import astropy.units as u
+from astropy.table import Table
+from bs4 import BeautifulSoup
 from django.contrib.auth import authenticate
 import logging
 from astrometrics.sources_subs import parse_filter_file
@@ -84,6 +86,46 @@ def mock_fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.p
     logger.warning("Page retrieval failed because this is a test and no page was attempted.")
     return None
 
+
+def mock_fetchpage_and_make_soup_pccp(url, fakeagent=False, dbg=False, parser="html.parser"):
+
+        table_header = '''<table class="tablesorter">
+          <thead>
+            <tr>
+              <th>&nbsp;&nbsp;Temp Desig&nbsp;&nbsp;&nbsp;</th>
+              <th>&nbsp;&nbsp;Score&nbsp;&nbsp;&nbsp;</th>
+              <th>&nbsp;&nbsp;Discovery</th>
+              <th>&nbsp;&nbsp;R.A.&nbsp;&nbsp;</th>
+              <th>&nbsp;&nbsp;Decl.&nbsp;&nbsp;</th>
+              <th>&nbsp;&nbsp;V&nbsp;&nbsp;</th>
+              <th>Updated</th>
+              <th>&nbsp;Note&nbsp;&nbsp;&nbsp;</th>
+              <th>&nbsp;NObs&nbsp;&nbsp;&nbsp;</th>
+              <th>&nbsp;Arc&nbsp;&nbsp;</th>
+              <th>&nbsp;H&nbsp;&nbsp;</th>
+              <th>&nbsp;Not Seen/dys&nbsp;&nbsp;</th>
+            </tr>
+          </thead>
+
+          <tbody>'''
+        table_footer = "</tbody>\n</table>"
+
+        html = BeautifulSoup(table_header +
+                             '''
+        <tr><td><span style="display:none">WR0159E</span>&nbsp;<input type="checkbox" name="obj" VALUE="WR0159E"> WR0159E</td>
+        <td align="right"><span style="display:none">010</span> 10&nbsp;&nbsp;&nbsp;</td>
+        <td>&nbsp;&nbsp;2015 09 13.4&nbsp;&nbsp;</td>
+        <td><span style="display:none">190.5617</span>&nbsp;&nbsp;01 01.5 &nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">089.7649</span>&nbsp;&nbsp;-00 14&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">31.2</span>&nbsp;&nbsp;18.8&nbsp;&nbsp;</td>
+        <td><span style="display:none">U2457294.241781</span>&nbsp;Updated Sept. 28.74 UT&nbsp;</td>
+        <td align="center">&nbsp;&nbsp;</td>
+        <td align="right">&nbsp; 222&nbsp;</td>
+        <td align="right">&nbsp; 15.44&nbsp;</td>
+        <td align="right">&nbsp;14.4&nbsp;</td>
+        <td align="right">&nbsp; 0.726&nbsp;</td>
+        ''' + table_footer, "html.parser")
+        return html
 
 def mock_check_request_status(tracking_num):
     status = {'created' : '2015-10-21T19:07:26.023049Z',
@@ -1434,95 +1476,166 @@ class MockCandidate(object):
 def mock_fetch_filter_list(site, spec):
 
     siteid, encid, telid = MPC_site_code_to_domes(site)
+    if '1m0' in telid.lower():
+        camid = "1m0-SciCam-Sinistro"
+    elif '0m4' in telid.lower():
+        camid = "0m4-SciCam-SBIG"
+    elif '2m0' in telid.lower():
+        if spec:
+            camid = "2m0-FLOYDS-SciCam"
+        elif "OGG" in siteid.upper():
+            camid = "2M0-SCICAM-MUSCAT"
+        else:
+            camid = "2m0-SciCam-Spectral"
+    else:
+        camid = ''
 
-    lsc_1m_rsp = {
-                        "count": 1,
-                        "next": 'null',
-                        "previous": 'null',
-                        "results": [
-                            {
-                                "id": 92,
-                                "code": "fa15",
-                                "state": "SCHEDULABLE",
-                                "telescope": "http://configdb.lco.gtn/telescopes/10/",
-                                "science_camera": {
-                                    "id": 93,
-                                    "code": "fa15",
-                                    "camera_type": {
-                                        "id": 3,
-                                        "name": "1.0 meter Sinistro",
-                                        "code": "1m0-SciCam-Sinistro",
-                                    },
-                                    "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,ND,400um-Pinhole,150um-Pinhole",
-                                    "host": "inst.1m0a.doma.lsc.lco.gtn"
-                                },
-                                "__str__": "lsc.doma.1m0a.fa15-ef06"
-                            }
-                        ]
-                    }
-    all_2m_rsp = {
-                        "count": 2,
-                        "next": 'null',
-                        "previous": 'null',
-                        "results": [
-                            {
-                                "id": 40,
-                                "code": "floyds01",
-                                "state": "SCHEDULABLE",
-                                "telescope": "http://configdb.lco.gtn/telescopes/14/",
-                                "science_camera": {
-                                    "id": 17,
-                                    "code": "floyds01",
-                                    "camera_type": {
-                                        "name": "2.0 meter FLOYDS",
-                                        "code": "2m0-FLOYDS-SciCam",
-                                    },
-                                    "filters": "slit_6.0as,slit_1.6as,slit_2.0as,slit_1.2as",
-                                    "host": "floyds.ogg.lco.gtn"
-                                },
-                                "__str__": "ogg.clma.2m0a.floyds01-kb42"
-                            },
-                            {
-                                "id": 7,
-                                "code": "fs01",
-                                "state": "SCHEDULABLE",
-                                "telescope": "http://configdb.lco.gtn/telescopes/3/",
-                                "science_camera": {
-                                    "id": 19,
-                                    "code": "fs01",
-                                    "camera_type": {
-                                        "name": "2.0 meter Spectral",
-                                        "code": "2m0-SciCam-Spectral",
-                                    },
-                                    "filters": "D51,H-Beta,OIII,H-Alpha,Skymapper-VS,solar,Astrodon-UV,I,R,Y,up,air,rp,ip,gp,zs,V,B,200um-Pinhole",
-                                    "host": "fs.coj.lco.gtn"
-                                },
-                                "__str__": "coj.clma.2m0a.fs01-kb34"
-                            }
-                        ]
-                    }
+    coj_1m_rsp = {'1M0-SCICAM-SINISTRO': {
+        'type': 'IMAGE',
+        'class': '1m0',
+        'name': '1.0 meter Sinistro',
+        'optical_elements':
+            {'filters': [
+                {'name': 'Bessell-I', 'code': 'I', 'schedulable': True, 'default': False},
+                {'name': 'Bessell-R', 'code': 'R', 'schedulable': True, 'default': False},
+                {'name': 'Bessell-U', 'code': 'U', 'schedulable': True, 'default': False},
+                {'name': 'PanSTARRS-w', 'code': 'w', 'schedulable': True, 'default': False},
+                {'name': 'PanSTARRS-Y', 'code': 'Y', 'schedulable': True, 'default': False},
+                {'name': 'SDSS-up', 'code': 'up', 'schedulable': True, 'default': False},
+                {'name': 'Clear', 'code': 'air', 'schedulable': True, 'default': False},
+                {'name': 'SDSS-rp', 'code': 'rp', 'schedulable': True, 'default': False},
+                {'name': 'SDSS-ip', 'code': 'ip', 'schedulable': True, 'default': False},
+                {'name': 'SDSS-gp', 'code': 'gp', 'schedulable': True, 'default': False},
+                {'name': 'PanSTARRS-Z', 'code': 'zs', 'schedulable': True, 'default': False},
+                {'name': 'Bessell-V', 'code': 'V', 'schedulable': True, 'default': False},
+                {'name': 'Bessell-B', 'code': 'B', 'schedulable': True, 'default': False},
+                {'name': '400um Pinhole', 'code': '400um-Pinhole', 'schedulable': False, 'default': False},
+                {'name': '150um Pinhole', 'code': '150um-Pinhole', 'schedulable': False, 'default': False},
+                {'name': 'ND', 'code': 'ND', 'schedulable': True, 'default': False},
+                {'name': 'B*ND', 'code': 'B*ND', 'schedulable': False, 'default': False},
+                {'name': 'V*ND', 'code': 'V*ND', 'schedulable': False, 'default': False},
+                {'name': 'R*ND', 'code': 'R*ND', 'schedulable': False, 'default': False},
+                {'name': 'I*ND', 'code': 'I*ND', 'schedulable': False, 'default': False},
+                {'name': 'rp*Diffuser', 'code': 'rp*Diffuser', 'schedulable': False, 'default': False},
+                {'name': 'Diffuser_PennState', 'code': 'Diffuser', 'schedulable': False, 'default': False},
+                {'name': 'gp*Diffuser', 'code': 'gp*Diffuser', 'schedulable': False, 'default': False}]}}}
 
-    empty = {
-                        "count": 0,
-                        "next": 'null',
-                        "previous": 'null',
-                        "results": []
-                    }
+    spec_2m_rsp = {'2M0-FLOYDS-SCICAM': {
+        'type': 'SPECTRA',
+        'class': '2m0',
+        'name': '2.0 meter FLOYDS',
+        'optical_elements':
+            {'slits': [
+                {'name': '6.0 arcsec slit', 'code': 'slit_6.0as', 'schedulable': True, 'default': False},
+                {'name': '1.6 arcsec slit', 'code': 'slit_1.6as', 'schedulable': True, 'default': False},
+                {'name': '2.0 arcsec slit', 'code': 'slit_2.0as', 'schedulable': True, 'default': False},
+                {'name': '1.2 arcsec slit', 'code': 'slit_1.2as', 'schedulable': True, 'default': False}],
+             }}}
+
+    phot_2m_rsp = {"2M0-SCICAM-SPECTRAL": {
+        "type": "IMAGE",
+        "class": "2m0",
+        "name": "2.0 meter Spectral",
+        "optical_elements": {'filters': [
+             {'name': 'D51', 'code': 'D51', 'schedulable': True, 'default': False},
+             {'name': 'H Beta', 'code': 'H-Beta', 'schedulable': True, 'default': False},
+             {'name': 'OIII', 'code': 'OIII', 'schedulable': True, 'default': False},
+             {'name': 'H Alpha', 'code': 'H-Alpha', 'schedulable': True, 'default': False},
+             {'name': 'Skymapper CaV', 'code': 'Skymapper-VS', 'schedulable': True, 'default': False},
+             {'name': 'Solar (V+R)', 'code': 'solar', 'schedulable': True, 'default': False},
+             {'name': 'Astrodon UV', 'code': 'Astrodon-UV', 'schedulable': True, 'default': False},
+             {'name': 'Bessell-I', 'code': 'I', 'schedulable': True, 'default': False},
+             {'name': 'Bessell-R', 'code': 'R', 'schedulable': True, 'default': False},
+             {'name': 'PanSTARRS-Y', 'code': 'Y', 'schedulable': True, 'default': False},
+             {'name': 'SDSS-up', 'code': 'up', 'schedulable': True, 'default': False},
+             {'name': 'Clear', 'code': 'air', 'schedulable': True, 'default': False},
+             {'name': 'SDSS-rp', 'code': 'rp', 'schedulable': True, 'default': False},
+             {'name': 'SDSS-ip', 'code': 'ip', 'schedulable': True, 'default': False},
+             {'name': 'SDSS-gp', 'code': 'gp', 'schedulable': True, 'default': False},
+             {'name': 'PanSTARRS-Z', 'code': 'zs', 'schedulable': True, 'default': False},
+             {'name': 'Bessell-V', 'code': 'V', 'schedulable': True, 'default': False},
+             {'name': 'Bessell-B', 'code': 'B', 'schedulable': True, 'default': False},
+             {'name': '200um Pinhole', 'code': '200um-Pinhole', 'schedulable': False, 'default': False}]}}}
+
+    muscat_2m_rsp = {"2M0-SCICAM-MUSCAT": {
+        "type": "IMAGE",
+        "class": "2m0",
+        "name": "2.0 meter Muscat",
+        "optical_elements": {
+            "diffuser_z_positions": [
+                {"name": "In Beam",
+                 "code": "in",
+                 "schedulable": True,
+                 "default": False},
+                {"name": "Out of Beam",
+                 "code": "out",
+                 "schedulable": True,
+                 "default": True}
+            ],
+            "diffuser_r_positions": [
+                {"name": "In Beam",
+                 "code": "in",
+                 "schedulable": True,
+                 "default": False},
+                {"name": "Out of Beam",
+                 "code": "out",
+                 "schedulable": True,
+                 "default": True}
+            ],
+            "diffuser_i_positions": [
+                {"name": "In Beam",
+                 "code": "in",
+                 "schedulable": True,
+                    "default": False},
+                {"name": "Out of Beam",
+                 "code": "out",
+                 "schedulable": True,
+                 "default": True}
+            ],
+            "diffuser_g_positions": [
+                {"name": "In Beam",
+                 "code": "in",
+                 "schedulable": True,
+                 "default": False},
+                {"name": "Out of Beam",
+                 "code": "out",
+                 "schedulable": True,
+                 "default": True}
+            ]
+        }}}
+
+    empty = {}
+    fetch_error = ''
 
     if '2m0' in telid.lower():
-        resp = all_2m_rsp
+        if spec:
+            resp = spec_2m_rsp
+        elif 'OGG' in siteid.upper():
+            resp = muscat_2m_rsp
+        else:
+            resp = phot_2m_rsp
     elif '1m0' in telid.lower() or '0m4' in telid.lower():
-        resp = lsc_1m_rsp
+        resp = coj_1m_rsp
     else:
         resp = empty
+        fetch_error = 'The {} at {} is not schedulable'.format(camid, site)
 
-    out_data = parse_filter_file(resp, spec)
-    return out_data
+    if 'MUSCAT' in camid:
+        out_data = ['gp', 'rp', 'ip', 'zp']
+    else:
+        out_data = parse_filter_file(resp, spec)
+    return out_data, fetch_error
 
 
 def mock_fetch_filter_list_no2m(site, spec):
+    if spec:
+        camid = "2m0-FLOYDS-SciCam"
+    elif "F65" in site.upper():
+        camid = "2M0-SCICAM-MUSCAT"
+    else:
+        camid = "2M0-SCICAM-SPECTRAL"
 
-    return []
+    return [], "The {} at {} is not schedulable.".format(camid, site)
 
 
 def mock_expand_cadence(user_request):
@@ -1618,6 +1731,24 @@ def mock_expand_cadence(user_request):
                 }
     return True, cadence
 
+def mock_expand_cadence_novis(user_request):
+
+    cadence = {'errors': 'No visible requests within cadence window parameters'}
+    start_date = datetime.strptime(user_request['requests'][0]['cadence']['start'], '%Y-%m-%dT%H:%M:%S')
+    end_date = datetime.strptime(user_request['requests'][0]['cadence']['end'], '%Y-%m-%dT%H:%M:%S')
+    if end_date.month > start_date.month:
+        # Fake a semester-spanning invalid request
+        cadence = {'requests': [{},
+                  {'windows': [{'non_field_errors': ['The observation window does not fit within any defined semester.']}]},
+                  {},
+                  {},
+                  {},
+                  {},
+                  {},
+                  {},
+                  {}]}
+
+    return False, cadence
 
 def mock_fetch_sfu(sfu_value=None):
     if sfu_value is None:
@@ -1625,6 +1756,23 @@ def mock_fetch_sfu(sfu_value=None):
         sfu_value = 42.0 * sfu
 
     return datetime(2018, 4, 20, 5, 0, 0), sfu_value
+
+
+def mock_get_vizier_catalog_table(ra, dec, ref_width, ref_height, cat_name="GAIA-DR2", set_row_limit=10, rmag_limit="<=15.0"):
+    row_data = [(122.87969710600, -58.07853650240,    4.0395,    3.8507, 17.9948,  0.0019,     0),
+                (122.61441851900, -58.07346919930,    1.8437,    1.8947, 16.8281,  0.0009,     0)
+               ]
+
+    column_units = { 'RAJ2000' : u.deg, 'DEJ2000' : u.deg, 'e_RAJ2000' : u.mas, 'e_DEJ2000' : u.mas,
+                     'Gmag' : u.mag, 'e_Gmag' : u.mag, 'Dup' : ''
+                   }
+    fake_table = Table(rows=row_data, names=('RAJ2000', 'DEJ2000', 'e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup'),
+                       dtype=('<f8', '<f8', '<f8', '<f8', '<f8', '<f8', 'u1'))
+    for column in fake_table.colnames:
+        unit = column_units[column]
+        fake_table[column].unit = unit
+
+    return fake_table, cat_name
 
 
 def mock_submit_to_scheduler(elements, params):
