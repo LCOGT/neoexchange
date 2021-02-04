@@ -7,7 +7,7 @@ from django.shortcuts import render
 from django.http import JsonResponse, Http404
 from django.urls import reverse
 
-from astrometrics.sources_subs import fetch_arecibo_calendar_targets, fetch_goldstone_targets
+from astrometrics.sources_subs import fetch_goldstone_targets
 from core.models import SuperBlock, Block
 
 logger = logging.getLogger(__name__)
@@ -27,18 +27,6 @@ class NeoxEvents(View):
         targets = [{'title':d.current_name(), 'start' : d.block_start, 'end' : d.block_end ,'url':reverse('block-view', kwargs={'pk':d.superblock.id})}  for d in blocks]
         return JsonResponse(targets, safe=False)
 
-def arecibo_events(request):
-    data = fetch_arecibo_calendar_targets()
-    targets = []
-    for d in data:
-        target = {'title': d['target'], 'start' : d['windows'][0]['start'], 'end' : d['windows'][0]['end']}
-        if d.get('extrainfo', None):
-            # See if uncertainty is greater than Arecibo beam width (~2 arcmin)
-            # If so, set border colo(u)r to red
-            if d['extrainfo'].get('uncertainty', 0) >= 120:
-                target['className'] = 'neox-arecibo'
-        targets.append(target)
-    return JsonResponse(targets, safe=False)
 
 def goldstone_events(request):
     data = fetch_goldstone_targets(calendar_format=True)

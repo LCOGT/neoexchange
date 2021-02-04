@@ -1944,14 +1944,14 @@ def mock_build_visibility_source(body, site_list, site_code, color_list, d, alt_
 
     return vis, emp
 
-
-def mock_fetch_arecibo_calendar_targets():
+### XXX Rewrite for more likely Goldstone information, removed `extrainfo` on uncertainty for now.
+def mock_fetch_goldstone_calendar_targets(page=None, calendar_format=True):
     targets = [ { 'target': '2020 RY',
-                  'windows' : [ {'start': '2020-09-03T01:17:00', 'end': '2020-09-03T03:06:00'} ],
-                  'extrainfo': {'uncertainty': 31014.0}},
+                  'windows' : [ {'start': '2020-09-03T00:00:00', 'end': '2020-09-03T23:59:59'} ],
+                },
                 { "target": "2020 RK",
-                  'windows' : [ {"start": "2020-09-03T01:29:00", "end": "2020-09-03T03:56:00"} ],
-                  'extrainfo': {'uncertainty': 54.0}},
+                  'windows' : [ {"start": "2020-09-03T00:00:00", "end": "2020-09-03T23:59:59"} ],
+                },
               ]
 
     return targets

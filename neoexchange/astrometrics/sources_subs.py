@@ -1386,61 +1386,6 @@ def fetch_arecibo_targets(page=None):
     return targets
 
 
-def fetch_arecibo_calendar_targets(page=None):
-    """Parses the Arecibo radar targets webpage for details of these targets and returns a list
-    of these targets back, along with the calendar times when it will be observed. The format of
-    each target is a dictionary with the following format:
-      { 'target' : '<target name>',
-        'windows' : { 'start' : <start `datetime`>, 'end' : <end `datetime`> }
-      }
-    Takes either a BeautifulSoup page version of the Arecibo target page (from
-    a call to fetch_arecibo_page('calendar') or a static capture parsed with
-    BeautifulSoup (to allow  standalone testing)) or calls the fetch_arecibo_page('calendar')
-    routine and then parses the resulting page.
-    """
-
-    if type(page) != BeautifulSoup:
-        page = fetch_arecibo_page('calendar')
-
-    targets = []
-
-    if type(page) == BeautifulSoup:
-        # Find the tables
-        tables = page.find_all('table')
-        if len(tables) > 1:
-            targets_table = tables[0]
-            rows = targets_table.find_all('tr')
-            header = rows[0].find_all('th')
-            if len(rows) > 2 and header[0].text.upper() == 'ASTEROID' and \
-              (header[4].text.upper() == 'WINDOW (UTC)' or header[4].text.upper() == 'TRACK (UTC)'):
-                for row in rows[2:-1]:
-                    items = row.find_all('td')
-                    target_object = parse_arecibo_targetnames(items[0].text.strip())
-                    try:
-                        window_start = datetime.strptime(items[5].text+items[6].text, "%Y-%b-%d%H:%M")
-                    except ValueError:
-                        window_start = None
-                    try:
-                        window_end = datetime.strptime(items[5].text+items[7].text, "%Y-%b-%d%H:%M")
-                        if window_start and window_end < window_start:
-                            window_end += timedelta(days=1)
-                    except ValueError:
-                        window_end = None
-                    try:
-                        uncertainty = float(items[15].text)
-                    except ValueError:
-                        uncertainty = None
-
-                    if target_object and window_start and window_end:
-                        target = {'target': target_object, 'windows' : [{'start' : window_start.isoformat('T'), 'end' : window_end.isoformat('T')}] }
-                        if uncertainty is not None:
-                            target['extrainfo'] = {'uncertainty' : uncertainty }
-                        targets.append(target)
-        else:
-            logger.warning("No tables found in Arecibo page")
-    return targets
-
-
 def imap_login(username, password, server='imap.gmail.com'):
     """Logs into the specified IMAP [server] (Google's gmail is assumed if not
     specified) with the provide username and password.

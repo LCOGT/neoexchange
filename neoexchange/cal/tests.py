@@ -2,7 +2,7 @@ from django.test import TestCase
 from mock import patch
 
 from core.models import Body, SuperBlock, Proposal, Block
-from neox.tests.mocks import mock_fetch_arecibo_calendar_targets
+from neox.tests.mocks import mock_fetch_goldstone_calendar_targets
 
 class CalNeoxApiTest(TestCase):
 
@@ -74,25 +74,24 @@ class CalNeoxApiTest(TestCase):
         )
 
 
-class CalAreciboApiTest(TestCase):
+class CalGoldstoneApiTest(TestCase):
 
     def setUp(self):
         self.maxDiff = None
 
-    @patch('cal.views.fetch_arecibo_calendar_targets', mock_fetch_arecibo_calendar_targets)
+    @patch('cal.views.fetch_goldstone_targets', mock_fetch_goldstone_calendar_targets)
     def test_low_uncertainty(self):
-        response = self.client.get('/api/arecibo/')
+        response = self.client.get('/api/goldstone/')
         self.assertEqual(response.status_code, 200)
         self.assertJSONEqual(
             str(response.content, encoding='utf8'),
              [ {"title": "2020 RY",
-                 "start": "2020-09-03T01:17:00",
-                 "end": "2020-09-03T03:06:00",
-                 "borderColor": "red"
+                 "start": "2020-09-03T00:00:00",
+                 "end": "2020-09-03T23:59:59",
                 },
                 {"title": "2020 RK",
-                 "start": "2020-09-03T01:29:00",
-                 "end": "2020-09-03T03:56:00"
+                 "start": "2020-09-03T00:00:00",
+                 "end": "2020-09-03T23:59:59"
                 }
               ]
         )

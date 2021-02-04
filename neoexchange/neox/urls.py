@@ -35,7 +35,7 @@ from core.views import BodySearchView, BodyDetailView, BlockDetailView, Schedule
     look_project
 from core.plots import make_visibility_plot, \
     make_standards_plot, make_solar_standards_plot
-from cal.views import arecibo_events, goldstone_events, NeoxEvents
+from cal.views import goldstone_events, NeoxEvents
 
 from analyser.views import BlockFramesView, ProcessCandidates
 
@@ -96,13 +96,11 @@ urlpatterns = [
     url(r'^schedule/(?P<pk>\d+)/spectra/$', ScheduleParametersSpectra.as_view(), name='schedule-body-spectra'),
     url(r'^calib-schedule/(?P<instrument_code>[A-Z,0-9,\-]*)/(?P<pk>[-\d]+)/$', ScheduleCalibSpectra.as_view(), name='schedule-calib-spectra'),
     url(r'^calib-schedule/(?P<pk>\d+)/confirm/$', ScheduleCalibSubmit.as_view(), name='schedule-calib-confirm'),
-    url(r'^accounts/login/$', login, {'template_name': 'core/login.html'}, name='auth_login'),
-    url(r'^accounts/logout/$', logout, {'template_name': 'core/logout.html'}, name='auth_logout'),
+    url(r'^accounts/login/$', LoginView.as_view(template_name='core/login.html'), name='auth_login'),
+    url(r'^accounts/logout/$', LogoutView.as_view(template_name='core/logout.html'), name='auth_logout'),
     url(r'^calendar/$', TemplateView.as_view(template_name='cal/calendar.html')),
-    url(r'^api/arecibo/$',  arecibo_events),
     url(r'^api/goldstone/$',  goldstone_events),
     url(r'^api/neox/$',  NeoxEvents.as_view()),
-    url(r'^admin/', include(admin.site.urls)),
     url(r'^admin/', admin.site.urls),
 ]
 
