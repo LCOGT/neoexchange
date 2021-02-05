@@ -41,14 +41,6 @@ Calendar
       eventLimit: true, // allow "more" link when too many events
       eventSources: [
       {
-        url: '/api/arecibo/',
-        failure: function() {
-          document.getElementById('script-warning').style.display = 'block'
-        },
-        color: 'green',
-        textColor: 'black',
-      },
-      {
         url: '/api/goldstone/',
         failure: function() {
           document.getElementById('script-warning').style.display = 'block'
