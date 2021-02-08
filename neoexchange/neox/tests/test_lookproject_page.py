@@ -16,12 +16,12 @@ GNU General Public License for more details.
 from .base import FunctionalTest
 from mock import patch
 from datetime import datetime
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Permission
 from django.urls import reverse
 
 from neox.tests.mocks import MockDateTime, mock_build_visibility_source, mock_lco_authenticate, mock_fetchpage_and_make_soup
 from core.models import Body, PreviousSpectra, PhysicalParameters, Proposal, SuperBlock
-from neox.auth_backend import update_proposal_permissions
+from neox.auth_backend import update_proposal_permissions, update_user_permissions
 
 
 class LOOKProjectPageTest(FunctionalTest):
@@ -31,14 +31,15 @@ class LOOKProjectPageTest(FunctionalTest):
         self.insert_test_proposals()
         self.username = 'lisa'
         self.password = 'simpson'
-        self.email = 'lise@simpson.org'
+        self.email = 'lisa@simpson.org'
         self.lisa = User.objects.create_user(username=self.username, password=self.password, email=self.email)
         self.lisa.first_name = 'Lisa'
         self.lisa.last_name = 'Simpson'
         self.lisa.is_active = 1
         self.lisa.save()
-        # Add Lisa to the right proposal
+        # Add Lisa to the right proposal and add permissions to add Body's
         update_proposal_permissions(self.lisa, [{'code': self.neo_proposal.code}])
+        update_user_permissions(self.lisa, 'core.add_body')
         super(LOOKProjectPageTest, self).setUp()
 
     def tearDown(self):
