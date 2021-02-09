@@ -15,8 +15,31 @@
 
 {% block main-content %}
     <div id="main" class="fullwidth">
-        <div id="active_targets" class="fullwidth">
-        <h3>Active Targets</h3>
+        <div id="active_targets">
+        <div class="row">
+          <div class="six columns">
+              <h3>Active Targets</h3>
+          </div>
+          <div class="six columns">
+            {% if request.user.is_authenticated and perms.core.add_body %}
+                <form action="{% url 'add_target' %}" method="POST" style="display:inline-block;">
+                    {% csrf_token %}
+                    <input type="hidden" name="{{ form.origin.name }}" id="id_origin" value="O" />
+                        <div class="inline-fields">
+                            <div class="compact-field">
+                            {{ form.target_name }}<label for="id_newtarget">Target to add</label>
+                            </div>
+                            <input type="submit" class="button button-primary" value="Add new LOOK Target" id="add_new_target-btn">
+                        </div>
+                    {% for key, error in form.errors.items %}
+                        <div class="messages error">
+                            {{ error }}
+                        </div>
+                    {% endfor %}
+                    </form>
+            {% endif %}
+          </div>
+        </div>
             <table id="active_targets" class="datatable" cellpadding="0" cellspacing="0">
                 <thead>
                     <tr>
@@ -76,8 +99,8 @@
                 </tbody>
             </table>
         </div>
-        <hr>
-        <div id="new_comets" class="fullwidth">
+
+        <div id="new_comets">
             <h3>New Comet Targets</h3>
             <table id="new_comets" class="datatable" cellpadding="0" cellspacing="0">
                 <thead>

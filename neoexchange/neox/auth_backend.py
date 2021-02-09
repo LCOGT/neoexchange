@@ -15,7 +15,7 @@ GNU General Public License for more details.
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Permission
 from django.contrib.auth.hashers import check_password
 from django.utils.translation import ugettext as _
 import requests
@@ -142,4 +142,16 @@ def update_proposal_permissions(user, proposals):
     for p in Proposal.objects.filter(code__in=proposal_list, active=True).exclude(code__in=my_proposals):
         pp = ProposalPermission(user=user, proposal=p)
         pp.save()
+    return
+
+def update_user_permissions(user, perm):
+    if not isinstance(perm, Permission):
+        try:
+            app_label, codename = perm.split('.', 1)
+        except ValueError:
+            raise ValueError("For global permissions, first argument must be in"
+                             " format: 'app_label.codename' (is %r)" % perm)
+        perm = Permission.objects.get(content_type__app_label=app_label,
+                                      codename=codename)
+    user.user_permissions.add(perm)
     return
