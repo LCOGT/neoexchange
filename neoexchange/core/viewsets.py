@@ -1,6 +1,6 @@
 from rest_framework import serializers, viewsets, generics
 from rest_framework.response import Response
-from rest_framework.decorators import list_route, detail_route
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -82,7 +82,7 @@ class BlockViewSet(viewsets.ModelViewSet):
 
         return qs
 
-    @detail_route(methods=['get'], permission_classes=(IsAuthenticated,))
+    @action(detail=True, methods=['get'], permission_classes=(IsAuthenticated,))
     def frames(self, request, pk=None):
         '''Return the Frames for the Block'''
         frames = Frame.objects.filter(block=pk)
