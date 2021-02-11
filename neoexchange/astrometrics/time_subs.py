@@ -333,6 +333,7 @@ def compute_ut1(mjd_utc, dbg=False):
 
     return ut1
 
+
 def datetime2st(d, obsvr_long=0.0):
     """Converts the passed datetime object in UTC to a Sidereal Time.
     If the site longitude [obsvr_long] (East +ve; radians) is passed, then
@@ -357,6 +358,7 @@ def datetime2st(d, obsvr_long=0.0):
     stl = S.sla_dranrm(stl)
 
     return stl
+
 
 def hourstodegrees(value, arg):
     """Converts decimal hours to decimal degrees"""

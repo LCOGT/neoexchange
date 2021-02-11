@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static basic_tags %}
 {% block header %}Blocks{% endblock %}
 
 {% block bodyclass %}page{% endblock %}
@@ -8,9 +9,7 @@
         </div>
 {% endblock%}
 {% block main-content %}
-        <div id="main" class="fill-height">
-                <div class="container">
-                    <div class="row">
+        <div id="main" class="fill-height fullwidth">
                         <table class="datatable u-full-width" id="id_blocks">
                                 <thead>
                                         <tr>
@@ -52,45 +51,19 @@
                                 <tbody>
                                 {% for block in block_list %}
                                         <tr class="{% cycle 'odd' 'even' %}">
-                                                <td class="list_title"  data-label="Block #"><a href="{% url 'block-view' block.pk %}">{{block.pk}}</a></td>
-                                                {% if block.body %}
-                                                    <td class="list_title"  data-label="Target Name"><a href="{% url 'target' block.body.pk %}">{{block.body.current_name}}</a></td>
-                                                {% elif block.calibsource %}
-                                                    <td class="list_title"  data-label="Target Name"><a href="{% url 'calibsource' block.calibsource.pk %}">{{block.calibsource.current_name}}</a></td>
-                                                {% else %}
-                                                    <td class="list_title"  data-label="Target Name">None!?</td>
-                                                {% endif %}
-                                                <td data-label="Site">{{block.get_sites|upper}}</td>
-                                                <td data-label="Telescope Type">{{block.get_telclass}}</td>
-                                                <td data-label="Proposal">{{block.proposal.code}}</td>
-                                                <td data-label="Tracking #"><a href="{{block.make_obsblock_link}}">{{block.tracking_number}}</a></td>
-                                                <td data-label="Obs. details">{{block.get_obsdetails}}</td>
-                                                <td data-label="Cadence?"><span class="">{% if block.cadence %}<span class="warning msgpadded">Yes</span>{% else %}No{% endif %}</span></td>
-                                                <td data-label="Active?"><span class="">{% if block.active %}<span class="warning msgpadded">Active</span>{% else %}Not Active{% endif %}</span></td>
-                                                <td data-label="Observed?">{{block.get_num_observed.0}} / {{block.get_num_observed.1}}</td>
-                                                <td data-label="Reported?"><span class="">{% if block.get_num_reported.0 >= 1 %}<span class="warning msgpadded">{{block.get_num_reported.0}} / {{block.get_num_reported.1}}</span>{% else %}{{block.get_num_reported.0}} / {{block.get_num_reported.1}}{% endif %}</span></td>
-                        </tr>
+                                            {% build_block_row block %}
+                                        </tr>
                                 {% endfor %}
                                 </tbody>
                         </table>
                 </div>
                 <div class="row">
-                  {% if is_paginated %}
-                  <div class="pagination">
-                      <span class="page-links">
-                          {% if page_obj.has_previous %}
-                              <a href="{% url 'blocklist' %}?page={{ page_obj.previous_page_number }}"><i class="fa fa-arrow-left fa-2x"></i></a>
-                          {% endif %}
-                          <span class="page-current">
-                              Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-                          </span>
-                          {% if page_obj.has_next %}
-                              <a href="{% url 'blocklist' %}?page={{ page_obj.next_page_number }}"><i class="fa fa-arrow-right fa-2x"></i></a>
-                          {% endif %}
-                      </span>
-                  </div>
-                {% endif %}
-              </div>
+                    {% if is_paginated %}
+                        <!-- start -->
+                            {% include '_pagination.html' with items=items %}
+                        <!-- end -->
+                    {% endif %}
+                </div>
             </div>
         </div>
 {% endblock %}

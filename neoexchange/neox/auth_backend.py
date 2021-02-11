@@ -15,7 +15,7 @@ GNU General Public License for more details.
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Permission
 from django.contrib.auth.hashers import check_password
 from django.utils.translation import ugettext as _
 import requests
@@ -24,6 +24,7 @@ import logging
 from core.models import Proposal, ProposalPermission
 
 logger = logging.getLogger(__name__)
+
 
 class ValhallaBackend(object):
     """
@@ -38,6 +39,7 @@ class ValhallaBackend(object):
             return User.objects.get(pk=user_id)
         except User.DoesNotExist:
             return None
+
 
 def lco_authenticate(request, username, password):
     token = api_auth(settings.PORTAL_TOKEN_URL, username, password)
@@ -65,14 +67,11 @@ def lco_authenticate(request, username, password):
 
 
 def api_auth(url, username, password):
-    '''
+    """
     Request authentication cookie from the Scheduler API
-    '''
+    """
     try:
-        r= requests.post(url,data = {
-            'username': username,
-            'password': password
-            }, timeout=20.0);
+        r = requests.post(url, data={'username': username, 'password': password}, timeout=20.0)
     except requests.exceptions.Timeout:
         msg = "Observing portal API timed out"
         logger.error(msg)
@@ -82,24 +81,25 @@ def api_auth(url, username, password):
         logger.error(msg)
         return False
 
-    if r.status_code in [200,201]:
+    if r.status_code in [200, 201]:
         logger.debug('Login successful for {}'.format(username))
         return r.json()['token']
     else:
         logger.error("Could not login {}: {}".format(username, r.json()['non_field_errors']))
         return False
 
+
 def get_profile(token):
     url = settings.PORTAL_PROFILE_URL
     token = {'Authorization': 'Token {}'.format(token)}
     try:
-        r = requests.get(url, headers=token, timeout=20.0);
+        r = requests.get(url, headers=token, timeout=20.0)
     except requests.exceptions.Timeout:
         msg = "Observing portal API timed out"
         logger.error(msg)
         return False, _("We are currently having problems. Please bear with us")
 
-    if r.status_code in [200,201]:
+    if r.status_code in [200, 201]:
         logger.debug('Profile successful')
         proposal = check_proposal_membership(r.json()['proposals'])
         if proposal:
@@ -111,19 +111,21 @@ def get_profile(token):
         logger.error("Could not get profile {}".format(r.content))
         return False, _("Please check your login details")
 
+
 def check_proposal_membership(proposals):
     # Check user has a proposal we authorize
-    proposals = [p['id'] for p in proposals if p['current'] == True]
+    proposals = [p['id'] for p in proposals if p['current'] is True]
     my_proposals = Proposal.objects.filter(code__in=proposals, active=True)
     if my_proposals:
         return my_proposals[0]
     else:
         return False
 
+
 def parse_proposals(proposals):
-    '''
+    """
     Check if proposals user is attached to matches NEOx proposals
-    '''
+    """
     proposal_list = [p['code'] for p in proposals]
     neox_proposals = Proposal.objects.filter(active=True, code__in=proposal_list)
     if neox_proposals > 0:
@@ -131,12 +133,25 @@ def parse_proposals(proposals):
     else:
         return False
 
-def update_proposal_permissions(user,proposals):
+
+def update_proposal_permissions(user, proposals):
     proposal_list = [p['code'] for p in proposals]
     inactive = ProposalPermission.objects.filter(user=user).exclude(proposal__code__in=proposal_list)
     inactive.delete()
     my_proposals = Proposal.objects.filter(proposalpermission__user=user, active=True).values_list('code', flat=True)
     for p in Proposal.objects.filter(code__in=proposal_list, active=True).exclude(code__in=my_proposals):
-        pp = ProposalPermission(user=user,proposal=p)
+        pp = ProposalPermission(user=user, proposal=p)
         pp.save()
+    return
+
+def update_user_permissions(user, perm):
+    if not isinstance(perm, Permission):
+        try:
+            app_label, codename = perm.split('.', 1)
+        except ValueError:
+            raise ValueError("For global permissions, first argument must be in"
+                             " format: 'app_label.codename' (is %r)" % perm)
+        perm = Permission.objects.get(content_type__app_label=app_label,
+                                      codename=codename)
+    user.user_permissions.add(perm)
     return

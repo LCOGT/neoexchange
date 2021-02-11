@@ -40,11 +40,11 @@ class Command(BaseCommand):
         parser.add_argument('--datadir', action="store", default=out_path, help='Path for processed data (e.g. %s)' % out_path)
         parser.add_argument('--mtdlink_file_limit', action="store", type=int, default=9, help='Maximum number of images for running mtdlink')
         parser.add_argument('--keep-temp-dir', action="store_true", help='Whether to remove the temporary directories')
-        parser.add_argument('--object', action="store", help="Which object to analyze")
+        parser.add_argument('--object', action="store", help="Which object to analyze (replace spaces with underscores)")
         parser.add_argument('--skip-download', action="store_true", help='Whether to skip downloading data')
 
     def handle(self, *args, **options):
-        usage = "Incorrect usage. Usage: %s --date [YYYYMMDD] --proposal [proposal code] --datadir [path]" % ( argv[1] )
+        usage = "Incorrect usage. Usage: %s --date [YYYYMMDD] --proposal [proposal code] --datadir [path]" % ( argv[1])
 
         self.stdout.write("==== Download and process astrometry %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
 
@@ -81,21 +81,20 @@ class Command(BaseCommand):
             # Single proposal specified
             proposal_text = " from" + proposals[0]
         if options['skip_download']:
-            self.stdout.write("Skipping download data for %s%s" % ( obs_date, proposal_text))
+            self.stdout.write("Skipping download data for %s%s" % (obs_date, proposal_text))
         else:
-            self.stdout.write("Downloading data for %s%s" % ( obs_date, proposal_text ))
+            self.stdout.write("Downloading data for %s%s" % (obs_date, proposal_text))
             if len(proposals) == 1:
-                call_command('download_archive_data', '--date', obs_date, '--proposal', proposals[0], '--datadir', dataroot )
+                call_command('download_archive_data', '--date', obs_date, '--proposal', proposals[0], '--datadir', dataroot)
             else:
-                call_command('download_archive_data', '--date', obs_date, '--datadir', dataroot )
+                call_command('download_archive_data', '--date', obs_date, '--datadir', dataroot)
 
         # Append date to the data directory
         dataroot = os.path.join(dataroot, obs_date)
 
 # Step 2: Sort data into directories per-object
-
         fits_files = get_fits_files(dataroot)
-        self.stdout.write("Found %d FITS files in %s" % (len(fits_files), dataroot) )
+        self.stdout.write("Found %d FITS files in %s" % (len(fits_files), dataroot))
         objects = sort_rocks(fits_files)
         print(objects)
 
@@ -110,12 +109,12 @@ class Command(BaseCommand):
 
 # Step 3a: Check data is in DB
             fits_files = get_fits_files(datadir)
-            self.stdout.write("Found %d FITS files in %s" % (len(fits_files), datadir) )
+            self.stdout.write("Found %d FITS files in %s" % (len(fits_files), datadir))
             first_frame, last_frame = find_first_last_frames(fits_files)
             if first_frame is None or last_frame is None:
                 self.stderr.write("Couldn't determine first and last frames, skipping target")
                 continue
-            self.stdout.write("Timespan %s->%s" % ( first_frame.midpoint, last_frame.midpoint))
+            self.stdout.write("Timespan %s->%s" % (first_frame.midpoint, last_frame.midpoint))
 # Step 3b: Calculate mean PA and speed
             if first_frame.block:
                 body = first_frame.block.body
@@ -129,7 +128,7 @@ class Command(BaseCommand):
                     keep_temp_dir = False
                     if len(fits_files) > options['mtdlink_file_limit']:
                         self.stdout.write("Too many frames to run mtd_link")
-                        skip_mtdlink= True
+                        skip_mtdlink = True
                     if options['keep_temp_dir']:
                         keep_temp_dir = True
 # Compulsory arguments need to go here as a list
@@ -138,15 +137,28 @@ class Command(BaseCommand):
 # Optional arguments go here, minus the leading double minus signs and with
 # hyphens replaced by underscores for...reasons.
 # e.g. '--keep-temp-dir' becomes 'temp_dir'
-                    mtdlink_kwargs = {  'temp_dir' : os.path.join(datadir, 'Temp'),
-                                        'skip_mtdlink' : skip_mtdlink,
-                                        'keep_temp_dir' : keep_temp_dir
-                                     }
+                    mtdlink_kwargs = {'temp_dir': os.path.join(datadir, 'Temp'),
+                                      'skip_mtdlink': skip_mtdlink,
+                                      'keep_temp_dir': keep_temp_dir
+                                      }
                     self.stdout.write("Calling pipeline_astrometry with: %s %s" % (mtdlink_args, mtdlink_kwargs))
-                    status = call_command('pipeline_astrometry', *mtdlink_args , **mtdlink_kwargs)
+                    status = call_command('pipeline_astrometry', *mtdlink_args, **mtdlink_kwargs)
                     self.stderr.write("\n")
                 else:
-                    self.stderr.write("Object %s does not have updated elements" % body.current_name() )
+                    self.stderr.write("Object %s does not have updated elements" % body.current_name())
+
+# Step 4: Run Lightcurve Extraction
+                if first_frame.block.superblock.tracking_number == last_frame.block.superblock.tracking_number:
+                    status = call_command('lightcurve_extraction', int(first_frame.block.superblock.tracking_number),
+                                          '--single', '--date', options['date'])
+                else:
+                    tn_list = []
+                    for fits in fits_files:
+                        if fits.block.superblock.tracking_number not in tn_list:
+                            status = call_command('lightcurve_extraction', int(fits.block.superblock.tracking_number),
+                                                  '--single', '--date', options['date'])
+                            tn_list.append(fits.block.superblock.tracking_number)
+
             else:
                 self.stderr.write("No Block found for the object")
 

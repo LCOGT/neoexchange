@@ -26,7 +26,7 @@ from astropy.coordinates import Angle
 import astropy.units as u
 from numpy import where
 
-from core.models import Body, Proposal, Block, CatalogSources
+from core.models import Body, Proposal, SuperBlock, Block, CatalogSources
 from .test_catalog_subs import FITSUnitTest
 
 # Import module to test
@@ -44,7 +44,9 @@ class StoreCatalogSourcesTest(FITSUnitTest):
         self.table_firstitem_ldac = self.test_ldactable[0:1]
         self.table_lastitem_ldac = self.test_ldactable[-1:]
         self.table_item_flags24_ldac = self.test_ldactable[2:3]
-        self.table_num_flags0_ldac = len(where(self.test_ldactable['flags'] == 0)[0])
+        self.table_flags0_ldac = self.test_ldactable[where(self.test_ldactable['flags'] == 0)]
+        self.table_num_flags0_ldac = len(self.table_flags0_ldac)
+        self.table_num_flags0_posve_ldac = len(where(self.table_flags0_ldac['FLUX_AUTO'] > 0.0)[0])
 
         body_params = {    'provisional_name': '67P',
                             'origin': 'M',
@@ -71,14 +73,25 @@ class StoreCatalogSourcesTest(FITSUnitTest):
                           }
         self.test_proposal, created = Proposal.objects.get_or_create(**proposal_params)
 
-        block_params = {   'telclass': '1m0',
-                            'site': 'K92',
+        sblock_params = {   'cadence': False,
+                            'rapid_response': False,
                             'body': self.test_body,
-                            'proposal': self.test_proposal,
+                            'proposal' : self.test_proposal,
                             'groupid': None,
                             'block_start': datetime(2016, 5, 5, 19),
                             'block_end': datetime(2016, 5, 5, 21),
                             'tracking_number': '0009',
+                            'active': False,
+                        }
+        self.test_sblock, created = SuperBlock.objects.get_or_create(**sblock_params)
+
+        block_params = {   'telclass': '1m0',
+                            'site': 'K92',
+                            'body': self.test_body,
+                            'block_start': datetime(2016, 5, 5, 19),
+                            'block_end': datetime(2016, 5, 5, 21),
+                            'superblock' : self.test_sblock,
+                            'request_number': '0009',
                             'num_exposures': 6,
                             'exp_length': 60.0,
                             'num_observed': 1,
@@ -109,9 +122,9 @@ class StoreCatalogSourcesTest(FITSUnitTest):
 
         num_sources_created, num_in_table = store_catalog_sources(self.test_ldacfilename, catalog_type='FITS_LDAC', std_zeropoint_tolerance=0.1)
 
-        self.assertEqual(CatalogSources.objects.count(), self.table_num_flags0_ldac)
-        self.assertEqual(num_sources_created, self.table_num_flags0_ldac)
-        self.assertEqual(num_in_table, self.table_num_flags0_ldac)
+        self.assertEqual(CatalogSources.objects.count(), self.table_num_flags0_posve_ldac)
+        self.assertEqual(num_sources_created, self.table_num_flags0_posve_ldac)
+        self.assertEqual(num_in_table, self.table_num_flags0_posve_ldac)
 
         last_catsrc = CatalogSources.objects.last()
 
@@ -122,7 +135,7 @@ class StoreCatalogSourcesTest(FITSUnitTest):
 
         num_sources_created, num_in_table = store_catalog_sources(self.test_ldacfilename, catalog_type='FITS_LDAC', std_zeropoint_tolerance=0.1)
 
-        self.assertEqual(CatalogSources.objects.count(), self.table_num_flags0_ldac)
+        self.assertEqual(CatalogSources.objects.count(), self.table_num_flags0_posve_ldac)
 
         header, table = extract_catalog(self.test_ldacfilename, catalog_type='FITS_LDAC')
 
@@ -139,21 +152,21 @@ class StoreCatalogSourcesTest(FITSUnitTest):
         first_catsrc = CatalogSources.objects.first()
 
         self.assertGreater(first_catsrc.obs_mag, 0.0)
-        self.assertAlmostEqual(first_catsrc.err_obs_mag, 0.0023, 4)
+        self.assertAlmostEqual(first_catsrc.err_obs_mag, sqrt(header['zeropoint_err']**2 + 0.0034573015**2), 4)
 
     def test_duplicate_entries(self):
 
         num_sources_created, num_in_table = store_catalog_sources(self.test_ldacfilename, catalog_type='FITS_LDAC', std_zeropoint_tolerance=0.1)
 
-        self.assertEqual(CatalogSources.objects.count(), self.table_num_flags0_ldac)
-        self.assertEqual(num_sources_created, self.table_num_flags0_ldac)
-        self.assertEqual(num_in_table, self.table_num_flags0_ldac)
+        self.assertEqual(CatalogSources.objects.count(), self.table_num_flags0_posve_ldac)
+        self.assertEqual(num_sources_created, self.table_num_flags0_posve_ldac)
+        self.assertEqual(num_in_table, self.table_num_flags0_posve_ldac)
 
         num_sources_created, num_in_table = store_catalog_sources(self.test_ldacfilename, catalog_type='FITS_LDAC', std_zeropoint_tolerance=0.1)
 
-        self.assertEqual(CatalogSources.objects.count(), self.table_num_flags0_ldac)
+        self.assertEqual(CatalogSources.objects.count(), self.table_num_flags0_posve_ldac)
         self.assertEqual(num_sources_created, 0)
-        self.assertEqual(num_in_table, self.table_num_flags0_ldac)
+        self.assertEqual(num_in_table, self.table_num_flags0_posve_ldac)
 
     def test_bad_catalog(self):
 
@@ -186,8 +199,8 @@ class StoreCatalogSourcesTest(FITSUnitTest):
                         }
         self.test_frame3, created = Frame.objects.get_or_create(**frame_params3)
 
-        expected_num_sources_created = 885
-        expected_num_in_table = 885
+        expected_num_sources_created = self.table_num_flags0_posve_ldac
+        expected_num_in_table = self.table_num_flags0_posve_ldac
 
         num_sources_created, num_in_table = store_catalog_sources(self.test_ldacfilename, catalog_type='FITS_LDAC', std_zeropoint_tolerance=0.1)
 
@@ -204,49 +217,10 @@ class StoreCatalogSourcesTest(FITSUnitTest):
         self.assertAlmostEqual(last_frame.zeropoint_err, 0.0641, 4)
         self.assertEqual(last_frame.photometric_catalog, 'UCAC4')
 
-#    def test_store_catalog_sources_multiple_frames(self):
-
-#        frame_params3 = {   'sitecode':'K92',
-#                            'instrument':'kb76',
-#                            'filter':'w',
-#                            'filename':'ldac_test_catalog.fits',
-#                            'exptime':60.0,
-#                            'midpoint':datetime(2016, 5, 5, 20, 2, 29),
-#                            'block':self.test_block,
-#                            'zeropoint':None,
-#                            'zeropoint_err':None,
-#                            'fwhm':2.825,
-#                            'frametype':0,
-#                            'rms_of_fit':None,
-#                            'nstars_in_fit':3.0,
-#                        }
-#        self.test_frame3, created = Frame.objects.get_or_create(**frame_params3)
-
-#        expected_num_sources_created = -3
-#        expected_num_in_table = -3
-
-#        num_sources_created, num_in_table = store_catalog_sources(self.test_ldacfilename, catalog_type='FITS_LDAC', std_zeropoint_tolerance=0.1)
-
-#        self.assertEqual(expected_num_sources_created, num_sources_created)
-#        self.assertEqual(expected_num_in_table, num_in_table)
-
-#    def test_store_catalog_sources_frame_DNE(self):
-
-#       frame = Frame.objects.last()
-#       frame.delete()
-
-#        expected_num_sources_created = -3
-#        expected_num_in_table = -3
-
-#        num_sources_created, num_in_table = store_catalog_sources(self.test_ldacfilename, catalog_type='FITS_LDAC', std_zeropoint_tolerance=0.1)
-
-#        self.assertEqual(expected_num_sources_created, num_sources_created)
-#        self.assertEqual(expected_num_in_table, num_in_table)
-
     def test_store_catalog_sources_update_frames_zeropoint_lt0(self):
 
-        expected_num_sources_created = 885
-        expected_num_in_table = 885
+        expected_num_sources_created = self.table_num_flags0_posve_ldac
+        expected_num_in_table = self.table_num_flags0_posve_ldac
 
         num_sources_created, num_in_table = store_catalog_sources(self.test_ldacfilename, catalog_type='FITS_LDAC', std_zeropoint_tolerance=0.1)
 
@@ -284,8 +258,8 @@ class StoreCatalogSourcesTest(FITSUnitTest):
                         }
         self.test_frame3, created = Frame.objects.get_or_create(**frame_params3)
 
-        expected_num_sources_created = 885
-        expected_num_in_table = 885
+        expected_num_sources_created = self.table_num_flags0_posve_ldac
+        expected_num_in_table = self.table_num_flags0_posve_ldac
 
         num_sources_created, num_in_table = store_catalog_sources(self.test_ldacfilename, catalog_type='FITS_LDAC', std_zeropoint_tolerance=0.1)
 

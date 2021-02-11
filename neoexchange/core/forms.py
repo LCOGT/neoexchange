@@ -20,9 +20,9 @@ from django import forms
 from django.db.models import Q
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from astrometrics.sources_subs import fetch_sfu, fetch_filter_list
-from .models import Body, Proposal, Block, StaticSource
+from .models import Body, Proposal, Block, StaticSource, ORIGINS
 from astrometrics.time_subs import tomorrow
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 SITES = (('1M0', '------------ Any 1.0m ------------'),
          ('W86', 'LSC 1.0m - W85-87; (CTIO, Chile)'),
-         ('V37', 'ELP 1.0m - V37; (McDonald, Texas)'),
+         ('V37', 'ELP 1.0m - V37,V39; (McDonald, Texas)'),
          ('Q63', 'COJ 1.0m - Q63-64; (Siding Spring, Aust.)'),
          ('K92', 'CPT 1.0m - K91-93; (Sutherland, S. Africa)'),
          ('0M4', '------------ Any 0.4m ------------'),
@@ -42,7 +42,9 @@ SITES = (('1M0', '------------ Any 1.0m ------------'),
          ('Z21', 'TFN 0.4m - Z17,Z21; (Tenerife, Spain)'),
          ('2M0', '------------ Any 2.0m ------------'),
          ('E10', 'FTS 2.0m - E10; (Siding Spring, Aust.)'),
-         ('F65', 'FTN 2.0m - F65; (Maui, Hawaii )'))
+         ('F65', 'FTN 2.0m - F65; (Maui, Hawaii ) [MuSCAT3]'),
+         ('non', '------------ Non LCO  ------------'),
+         ('474', 'Mt John 1.8m - 474 (Mt John, NZ)'))
 
 
 SPECTRO_SITES = (('F65-FLOYDS', 'Maui, Hawaii (FTN - F65)'),
@@ -57,12 +59,40 @@ MOON = (('G', 'Grey',),
         ('B', 'Bright'),
         ('D', 'Dark'))
 
+BIN_MODES = (('full_chip', 'Full Chip, 1x1'),
+             ('2k_2x2', 'Central 2k, 2x2'))
+
+
+class SiteSelectWidget(forms.Select):
+    """
+    Subclass of Django's select widget that allows disabling options.
+    """
+    def __init__(self, *args, **kwargs):
+        self._disabled_choices = []
+        super(forms.Select, self).__init__(*args, **kwargs)
+
+    @property
+    def disabled_choices(self):
+        return self._disabled_choices
+
+    @disabled_choices.setter
+    def disabled_choices(self, other):
+        self._disabled_choices = other
+
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        option_dict = super(forms.Select, self).create_option(
+            name, value, label, selected, index, subindex=subindex, attrs=attrs
+        )
+        if value in self.disabled_choices:
+            option_dict['attrs']['disabled'] = 'disabled'
+        return option_dict
+
 
 class EphemQuery(forms.Form):
 
     target = forms.CharField(label="Enter target name...", max_length=14, required=True, widget=forms.TextInput(attrs={'size': '10'}),
                              error_messages={'required': _(u'Target name is required')})
-    site_code = forms.ChoiceField(required=True, choices=SITES)
+    site_code = forms.ChoiceField(required=True, choices=SITES, widget=SiteSelectWidget)
     utc_date = forms.DateField(input_formats=['%Y-%m-%d', ], initial=date.today, required=True, widget=forms.TextInput(attrs={'size': '10'}),
                                error_messages={'required': _(u'UTC date is required')})
     alt_limit = forms.FloatField(initial=30.0, required=True, widget=forms.TextInput(attrs={'size': '4'}))
@@ -81,12 +111,17 @@ class EphemQuery(forms.Form):
             else:
                 raise forms.ValidationError("Multiple objects found.")
 
+    def __init__(self, *args, **kwargs):
+        super(EphemQuery, self).__init__(*args, **kwargs)
+        self.fields['site_code'].widget.disabled_choices = ['non']
+
 
 class ScheduleForm(forms.Form):
     proposal_code = forms.ChoiceField(required=True)
-    site_code = forms.ChoiceField(required=True, choices=SITES)
+    site_code = forms.ChoiceField(required=True, choices=SITES, widget=SiteSelectWidget)
     utc_date = forms.DateField(input_formats=['%Y-%m-%d', ], initial=date.today, required=True, widget=forms.TextInput(attrs={'size': '10'}),
                                error_messages={'required': _(u'UTC date is required')})
+    too_mode = forms.BooleanField(initial=False, required=False)
 
     def clean_utc_date(self):
         start = self.cleaned_data['utc_date']
@@ -100,29 +135,33 @@ class ScheduleForm(forms.Form):
         proposals = Proposal.objects.filter(active=True)
         proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
         self.fields['proposal_code'].choices = proposal_choices
+        self.fields['site_code'].widget.disabled_choices = ['non', '474', '2M0']
 
 
 class ScheduleCadenceForm(forms.Form):
     proposal_code = forms.ChoiceField(required=True, widget=forms.Select(attrs={'id': 'id_proposal_code_cad', }))
-    site_code = forms.ChoiceField(required=True, choices=SITES, widget=forms.Select(attrs={'id': 'id_site_code_cad', }))
+    site_code = forms.ChoiceField(required=True, choices=SITES, widget=SiteSelectWidget(attrs={'id': 'id_site_code_cad', }))
     start_time = forms.DateTimeField(input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M'],
                                      initial=datetime.today, required=True, error_messages={'required': _(u'UTC start date is required')})
     end_time = forms.DateTimeField(input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M'],
                                    initial=tomorrow, required=True, error_messages={'required': _(u'UTC end date is required')})
     period = forms.FloatField(initial=2.0, required=True, widget=forms.TextInput(attrs={'size': '10'}), error_messages={'required': _(u'Period is required')})
     jitter = forms.FloatField(initial=0.25, required=True, widget=forms.TextInput(attrs={'size': '10'}), error_messages={'required': _(u'Jitter is required')})
+    too_mode = forms.BooleanField(initial=False, required=False)
 
-    # def clean_start_time(self):
-    #     start = self.cleaned_data['start_time']
-    #     if start < datetime.utcnow():
-    #         raise forms.ValidationError("Window cannot start in the past")
-    #     return start
-    #
     # def clean_end_time(self):
     #     end = self.cleaned_data['end_time']
     #     if end < datetime.utcnow():
     #         raise forms.ValidationError("Window cannot end in the past")
     #     return end
+
+    def clean_start_time(self):
+        start = self.cleaned_data['start_time']
+        window_cutoff = datetime.utcnow() - timedelta(days=1)
+        if start <= window_cutoff:
+            return datetime.utcnow().replace(microsecond=0)
+        else:
+            return self.cleaned_data['start_time']
 
     def clean_period(self):
         if self.cleaned_data['period'] is not None and self.cleaned_data['period'] < 0.02:
@@ -147,11 +186,12 @@ class ScheduleCadenceForm(forms.Form):
         proposals = Proposal.objects.filter(active=True)
         proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
         self.fields['proposal_code'].choices = proposal_choices
+        self.fields['site_code'].widget.disabled_choices = ['non', '474']
 
 
 class ScheduleBlockForm(forms.Form):
-    start_time = forms.DateTimeField(widget=forms.HiddenInput(), input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'])
-    end_time = forms.DateTimeField(widget=forms.HiddenInput(), input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'])
+    start_time = forms.DateTimeField(widget=forms.DateTimeInput(attrs={'style': 'width: 200px;'}), input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'])
+    end_time = forms.DateTimeField(widget=forms.DateTimeInput(attrs={'style': 'width: 200px;'}), input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'])
     exp_count = forms.IntegerField(widget=forms.HiddenInput(), required=False)
     exp_length = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}))
     slot_length = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}), required=False)
@@ -159,11 +199,13 @@ class ScheduleBlockForm(forms.Form):
     pattern_iterations = forms.FloatField(widget=forms.HiddenInput(), required=False)
     proposal_code = forms.CharField(max_length=20, widget=forms.HiddenInput())
     site_code = forms.CharField(max_length=5, widget=forms.HiddenInput())
-    group_id = forms.CharField(max_length=50, widget=forms.TextInput(attrs={'style': 'text-align: right; width: -webkit-fill-available; width: -moz-available;'}))
+    group_name = forms.CharField(max_length=50, widget=forms.TextInput(attrs={'style': 'text-align: right; width: -webkit-fill-available; width: -moz-available;'}))
     utc_date = forms.DateField(input_formats=['%Y-%m-%d', ], widget=forms.HiddenInput(), required=False)
     jitter = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}), required=False)
     period = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}), required=False)
+    bin_mode = forms.ChoiceField(required=False, choices=BIN_MODES)
     spectroscopy = forms.BooleanField(required=False, widget=forms.HiddenInput())
+    too_mode = forms.BooleanField(required=False, widget=forms.HiddenInput())
     calibs = forms.ChoiceField(required=False, widget=forms.HiddenInput(), choices=CALIBS)
     instrument_code = forms.CharField(max_length=10, widget=forms.HiddenInput(), required=False)
     solar_analog = forms.BooleanField(initial=True, widget=forms.HiddenInput(), required=False)
@@ -171,9 +213,16 @@ class ScheduleBlockForm(forms.Form):
     calibsource_exptime = forms.IntegerField(widget=forms.NumberInput(attrs={'size': '5'}), required=False)
     max_airmass = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     ipp_value = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
+    para_angle = forms.BooleanField(initial=False, required=False)
     min_lunar_dist = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     acceptability_threshold = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     ag_exp_time = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
+    edit_window = forms.BooleanField(initial=False, required=False, widget=forms.CheckboxInput(attrs={'class': 'window-switch'}))
+    gp_explength = forms.FloatField(required=False, widget=forms.NumberInput(attrs={'size': '5'}))
+    rp_explength = forms.FloatField(required=False, widget=forms.NumberInput(attrs={'size': '5'}))
+    ip_explength = forms.FloatField(required=False, widget=forms.NumberInput(attrs={'size': '5'}))
+    zp_explength = forms.FloatField(required=False, widget=forms.NumberInput(attrs={'size': '5'}))
+    muscat_sync = forms.BooleanField(initial=False, required=False)
 
     def clean_exp_length(self):
         if not self.cleaned_data['exp_length'] or self.cleaned_data['exp_length'] < 0.1:
@@ -223,7 +272,7 @@ class ScheduleBlockForm(forms.Form):
         start = self.cleaned_data['start_time']
         window_cutoff = datetime.utcnow() - timedelta(days=1)
         if start <= window_cutoff:
-            raise forms.ValidationError("Window cannot start in the past")
+            return datetime.utcnow().replace(microsecond=0)
         else:
             return self.cleaned_data['start_time']
 
@@ -256,21 +305,28 @@ class ScheduleBlockForm(forms.Form):
         else:
             return self.cleaned_data['period']
 
+    def clean_slot_length(self):
+        if self.cleaned_data['slot_length'] is None:
+            return 0
+        else:
+            return self.cleaned_data['slot_length']
+
     def clean(self):
         cleaned_data = super(ScheduleBlockForm, self).clean()
         site = self.cleaned_data['site_code']
         spectra = self.cleaned_data['spectroscopy']
-        if not fetch_filter_list(site, spectra):
-            raise forms.ValidationError("This Site/Telescope combination is not currently available.")
+        filter_list, fetch_error = fetch_filter_list(site, spectra)
+        if fetch_error:
+            raise forms.ValidationError(fetch_error)
         try:
             if not self.cleaned_data['filter_pattern']:
                 raise forms.ValidationError("You must select a filter.")
         except KeyError:
             raise forms.ValidationError('Dude, you had to actively input a bunch of spaces and nothing else to see this error. '
-                                        'Why?? Just pick a filter from the list! %(filters)s', params={'filters': ",".join(fetch_filter_list(site, spectra))})
+                                        'Why?? Just pick a filter from the list! %(filters)s', params={'filters': ",".join(filter_list)})
         pattern = self.cleaned_data['filter_pattern']
         chunks = pattern.split(',')
-        bad_filters = [x for x in chunks if x not in fetch_filter_list(site, spectra)]
+        bad_filters = [x for x in chunks if x not in filter_list]
         if len(bad_filters) > 0:
             if len(bad_filters) == 1:
                 raise forms.ValidationError('%(bad)s is not an acceptable filter at this site.', params={'bad': ",".join(bad_filters)})
@@ -278,6 +334,13 @@ class ScheduleBlockForm(forms.Form):
                 raise forms.ValidationError('%(bad)s are not acceptable filters at this site.', params={'bad': ",".join(bad_filters)})
         elif self.cleaned_data['exp_count'] == 0:
             raise forms.ValidationError("There must be more than 1 exposure")
+        if self.cleaned_data.get('end_time') and self.cleaned_data.get('start_time'):
+            window_width = self.cleaned_data['end_time'] - self.cleaned_data['start_time']
+            window_width = window_width.total_seconds() / 60
+            if window_width < self.cleaned_data['slot_length']:
+                raise forms.ValidationError("Requested Observations will not fit within Scheduling Window.")
+            if self.cleaned_data.get('end_time') < self.cleaned_data.get('start_time'):
+                raise forms.ValidationError("Scheduling Window cannot end before it begins without breaking causality. Please Fix.")
         return cleaned_data
 
 
@@ -288,8 +351,9 @@ class ScheduleSpectraForm(forms.Form):
     exp_count = forms.IntegerField(initial=1, widget=forms.NumberInput(attrs={'size': '5'}), required=True)
     exp_length = forms.FloatField(initial=1800.0, required=True)
     calibs = forms.ChoiceField(required=True, choices=CALIBS)
-    solar_analog = forms.BooleanField(initial=False, required=False)
+    solar_analog = forms.BooleanField(initial=True, required=False)
     spectroscopy = forms.BooleanField(initial=True, widget=forms.HiddenInput(), required=False)
+    too_mode = forms.BooleanField(initial=False, required=False)
 
     def clean_utc_date(self):
         start = self.cleaned_data['utc_date']
@@ -301,8 +365,9 @@ class ScheduleSpectraForm(forms.Form):
         cleaned_data = super(ScheduleSpectraForm, self).clean()
         site = self.cleaned_data['instrument_code']
         spectra = self.cleaned_data['spectroscopy']
-        if not fetch_filter_list(site[0:3], spectra):
-            raise forms.ValidationError("This Site/Instrument combination is not currently available.")
+        filter_list, fetch_error = fetch_filter_list(site[0:3], spectra)
+        if fetch_error:
+            raise forms.ValidationError(fetch_error)
 
     def __init__(self, *args, **kwargs):
         self.proposal_code = kwargs.pop('proposal_code', None)
@@ -347,3 +412,9 @@ class SpectroFeasibilityForm(forms.Form):
         # Set default SFU value of 70; replace with value from fetch if it isn't None
         self.fields['sfu'].initial = 70.0
         self.fields['sfu'].initial = self.fields['sfu'].initial if sfu_values[1] is None else sfu_values[1].value
+
+
+class AddTargetForm(forms.Form):
+    origin = forms.ChoiceField(choices=ORIGINS, widget=forms.HiddenInput())
+    target_name = forms.CharField(label="Enter target to add...", max_length=30, required=True, widget=forms.TextInput(attrs={'size': '20'}),
+                             error_messages={'required': _(u'Target name is required')})

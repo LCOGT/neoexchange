@@ -120,7 +120,7 @@ class EphemQueryFormTest(TestCase):
     def test_ephem_form_has_all_sites(self):
         form = EphemQuery()
         self.assertIsInstance(form, EphemQuery)
-        self.assertIn('ELP 1.0m - V37; (McDonald, Texas)', form.as_p())
+        self.assertIn('ELP 1.0m - V37,V39; (McDonald, Texas)', form.as_p())
         self.assertIn('value="V37"', form.as_p())
         self.assertIn('FTN 2.0m - F65; (Maui, Hawaii )', form.as_p())
         self.assertIn('value="F65"', form.as_p())
@@ -142,8 +142,11 @@ class EphemQueryFormTest(TestCase):
         self.assertIn('value="W89"', form.as_p())
         self.assertIn('ELP 0.4m - V38; (McDonald, Texas)', form.as_p())
         self.assertIn('value="V38"', form.as_p())
-        self.assertIn('CPT 0.4m - L09; (Sutherland, S. Africa)', form.as_p())
-        self.assertIn('value="L09"', form.as_p())
+        self.assertIn('------------ Non LCO  ------------', form.as_p())
+        self.assertIn('value="non"', form.as_p())
+        self.assertIn('disabled="disabled"', form.as_p())
+        self.assertIn('Mt John 1.8m - 474 (Mt John, NZ)', form.as_p())
+        self.assertIn('value="474"', form.as_p())
 
     def test_form_handles_save_with_long_name(self):
         form = EphemQuery(data={'target' : 'P/2016 BA141',
@@ -221,7 +224,7 @@ class TestScheduleForm(TestCase):
     def test_sched_form_has_all_sites(self):
         form = ScheduleForm()
         self.assertIsInstance(form, ScheduleForm)
-        self.assertIn('ELP 1.0m - V37; (McDonald, Texas)', form.as_p())
+        self.assertIn('ELP 1.0m - V37,V39; (McDonald, Texas)', form.as_p())
         self.assertIn('value="V37"', form.as_p())
         self.assertIn('FTN 2.0m - F65; (Maui, Hawaii )', form.as_p())
         self.assertIn('value="F65"', form.as_p())
@@ -245,6 +248,8 @@ class TestScheduleForm(TestCase):
         self.assertIn('value="V38"', form.as_p())
         self.assertIn('CPT 0.4m - L09; (Sutherland, S. Africa)', form.as_p())
         self.assertIn('value="L09"', form.as_p())
+        self.assertIn('value="non" disabled="disabled"', form.as_p())
+        self.assertIn('value="474" disabled="disabled"', form.as_p())
 
     def test_sched_form_hides_inactive_proposals(self):
         form = ScheduleForm()
@@ -321,7 +326,7 @@ class TestScheduleCadenceForm(TestCase):
     def test_sched_form_has_all_sites(self):
         form = ScheduleCadenceForm()
         self.assertIsInstance(form, ScheduleCadenceForm)
-        self.assertIn('ELP 1.0m - V37; (McDonald, Texas)', form.as_p())
+        self.assertIn('ELP 1.0m - V37,V39; (McDonald, Texas)', form.as_p())
         self.assertIn('value="V37"', form.as_p())
         self.assertIn('FTN 2.0m - F65; (Maui, Hawaii )', form.as_p())
         self.assertIn('value="F65"', form.as_p())
@@ -345,6 +350,8 @@ class TestScheduleCadenceForm(TestCase):
         self.assertIn('value="V38"', form.as_p())
         self.assertIn('CPT 0.4m - L09; (Sutherland, S. Africa)', form.as_p())
         self.assertIn('value="L09"', form.as_p())
+        self.assertIn('value="non" disabled="disabled"', form.as_p())
+        self.assertIn('value="474" disabled="disabled"', form.as_p())
 
     def test_sched_form_hides_inactive_proposals(self):
         form = ScheduleCadenceForm()

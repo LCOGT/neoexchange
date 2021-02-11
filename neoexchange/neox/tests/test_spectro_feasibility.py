@@ -18,10 +18,10 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
 
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from mock import patch
 
-from neox.tests.mocks import mock_fetch_sfu, mock_fetchpage_and_make_soup
+from neox.tests.mocks import mock_fetch_sfu, mock_fetchpage_and_make_soup, mock_build_visibility_source
 
 
 # Imported in the form creation so need to patch there
@@ -33,6 +33,7 @@ class SpectroscopicFeasibility(FunctionalTest):
         # Just quit otherwise alerts will pop-up on refresh
         self.browser.quit()
 
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.forms.fetch_sfu', mock_fetch_sfu)
     def test_feasibility(self):
         # Jose has heard about a new website for NEOs. He goes to the
@@ -92,7 +93,7 @@ class SpectroscopicFeasibility(FunctionalTest):
         new_passband = self.browser.find_element_by_id('id_newpassband').find_element_by_class_name('kv-value').text
         self.assertIn('V', new_passband)
         slot_length = self.browser.find_element_by_id('id_slot_length').find_element_by_class_name('kv-value').text
-        self.assertIn('23.0', slot_length)
+        self.assertIn('22.0', slot_length)
         sky_mag = self.browser.find_element_by_id('id_skymag').find_element_by_class_name('kv-value').text
         self.assertIn('19.4', sky_mag)
 
@@ -114,7 +115,7 @@ class SpectroscopicFeasibility(FunctionalTest):
         new_passband = self.browser.find_element_by_id('id_newpassband').find_element_by_class_name('kv-value').text
         self.assertIn('V', new_passband)
         slot_length = self.browser.find_element_by_id('id_slot_length').find_element_by_class_name('kv-value').text
-        self.assertIn('23.0', slot_length)
+        self.assertIn('22.0', slot_length)
         sky_mag = self.browser.find_element_by_id('id_skymag').find_element_by_class_name('kv-value').text
         self.assertIn('17.1', sky_mag)
 
@@ -136,13 +137,14 @@ class SpectroscopicFeasibility(FunctionalTest):
         new_passband = self.browser.find_element_by_id('id_newpassband').find_element_by_class_name('kv-value').text
         self.assertIn('V', new_passband)
         slot_length = self.browser.find_element_by_id('id_slot_length').find_element_by_class_name('kv-value').text
-        self.assertIn('23.0', slot_length)
+        self.assertIn('22.0', slot_length)
         sky_mag = self.browser.find_element_by_id('id_skymag').find_element_by_class_name('kv-value').text
         self.assertIn('17.1', sky_mag)
 
         # Satisfied that the observations will be possible no matter the Moon or altitude,
         # he goes ahead and schedules the observations
 
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('astrometrics.sources_subs.fetchpage_and_make_soup', mock_fetchpage_and_make_soup)
     def test_sfu_page_Down(self):
         # Jose has heard about a new website for NEOs. He goes to the

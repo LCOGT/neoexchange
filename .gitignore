@@ -63,14 +63,19 @@ target/
 
 neox/local_settings.py
 Diffs
+data/
 
 neox.db
 neox.log
 geckodriver.log
+*.sql
+*.json.gz
 
+spectra.png
 lightcurve*.png
 lightcurve_data.txt
 phased_lc.png
+phasecurve*png
 *uncertainty_*.png
 *timeup_*.png
 *radec_*.png
@@ -86,6 +91,7 @@ ingest/static/ingest/css/dashboard.css
 neoexchange/neox/local_settings.py
 *.db
 docker-compose.yml
+core/fixtures/
 
 *.clk
 *rinex*

@@ -1,8 +1,159 @@
 ## NEO Exchange
 
-Portal for scheduling observations of NEOs using Las Cumbres Observatory.
+Portal for scheduling observations of NEOs (and other Solar System objects) using Las Cumbres Observatory.
 
 ## History
+
+### 3.8.3
+Add support for adding new LOOK project targets.
+
+### 3.8.2
+Fix for cadences crossing semester boundaries.
+
+### 3.8.1
+Update default exposure time estimate to be instrument agnostic
+
+### 3.8.0.2
+Fix for occasional OSError on LDAC catalogs.
+
+### 3.8.0.1
+make Gif creation more robust.
+
+### 3.8.0
+Add postgres support.
+
+### 3.7.0
+Add MuSCAT3 support and Repeat Exposure for long blocks
+
+### 3.6.2
+* Add support for Mt John observatory (MPC site code 474) for ephemeris computation. (Issue #499)
+* Add a Time Critical option for scheduling spectroscopy (Issue #500)
+* Fix a rare case when position computation using `sla_planel()` fails (Issue #498)
+
+### 3.6.1
+Change the retrieval or creation of new Frame records to eliminate chance of creating duplicates.
+
+### 3.6.0
+Update to Django 3.1 (and CentOS 8 for the Docker build)
+
+### 3.5.2
+Various small backend fixes:
+* Fix HORIZONS SPK lookup on some comets (Issue #480)
+* Prevent objects inheriting old elements when refitting with `find_orb` fails
+* Fix crazy time from perihelion when mean anomaly is extremely close to 0/360.0 (Issue #484)
+* Catch various URL connection errors
+* Update internal links to SMASS datasets if they change after ingestion (Issue #486)
+
+### 3.5.1.4
+Limit Solar Analog spectra to 1 regardless of frames requested for Target
+Fix more Server Error Bugs
+
+### 3.5.1.3
+A couple bug fixes
+
+### 3.5.1.2
+Implement lc_plot fix to read in comet mags from Horizons.
+
+### 3.5.1.1
+Fix creation of hours-up plots (Due to a need to work around [astropy/numpy bug](https://github.com/astropy/astropy/issues/9374) with filtering on `datetime`s in AstroPy `Table`s with AstroPy >= 3.2.2)
+
+### 3.5.1
+* Allow editing of window for spectroscopic calibration targets.
+* Fix for incorrect slot length calculation with multiple spectra exposures.
+* Upgrades astropy minimum version to 3.2.3 for updated USNO Earth Orientation Parameter URLs and also the minimum version that works on python 3.8
+* Adds storage of the orbit RMS from MPC DB
+* LOOK Project updates:
+  * Adds storage of reciprocal semi-major axis from MPC DB as a PhysicalParameter
+  * Adds additional Body attribute to return reciprocal semi-major axis
+  * Adds new get_cadence_info() method to summarize whether an object's cadence is underway or has halted and adds this into the LOOK Project template
+* Allow search of static (sidereal) calibration sources.
+
+### 3.5.0
+Add Light curve analysis tools
+* active plotting of light curves
+* uploading and displaying annotated gifs for images
+* automatic light curve extraction for all image sets
+* uploading ALCDEF files to S3
+
+### 3.4.1
+Add Parallactic angle option for spectroscopic observations.
+
+### 3.4.0
+Update Photometry to use GAIA-DR2
+
+### 3.3.2
+Initial support for the LCO Outbursting Objects Key (LOOK) Project
+
+### 3.3.0
+* Send proper motion details for solar analogs through to the LCO observing system.
+* Display the most recent time of ingest or update on the Body details page.
+* Truncate observing windows by the object's visibility as well as the site's darkness times.
+* Warn about scheduling of objects that would fail lunar distance constrains before submitting.
+* Fix the light curve extraction code to work with comet names
+* Refactor all the Django models into separate domain-specific files.
+
+### 3.2.9
+Add ability to cancel observations.
+
+### 3.2.8
+* Add 2x2 binning & central chip section mode suppport (for faster readout on speedy rocks).
+* Fix table parsing of Arecibo targets.
+
+### 3.2.7
+* Allow ingestion of numbered comet and comet fragment observations.
+* Fix various time out issues with prefetching.
+* Update pagination format.
+* Fix parsing of comets in Arecibo target lists.
+* Add ability to query HORIZONS for comets which have multiple element sets/target bodies available.
+
+### 3.2.6.1
+Index frequently used model fields.
+
+### 3.2.6
+Fix broken spectra plot
+Update Minimum Django Requirements
+
+### 3.2.5
+Fix a rare comet bug.
+
+### 3.2.4
+Fix a few rare bugs.
+
+### 3.2.3
+Allow Time Critical observations within the same proposal and allow selection of this from the scheduling form.
+
+### 3.2.2
+Add observation timeline.
+
+### 3.2.0
+Add models for physical parameters and Designations
+*Includes specific model for colors
+*Search includes any of a body's several designations
+*Does not remove anything from the Body model
+
+### 3.1.1
+Convert Spectroscopy plots into Bokeh for added interactivity.
+
+### 3.0.5
+Fix lingering tests for the LCO Request V3 language change
+
+### 3.0.4
+Change to LCO Request V3 language
+
+### 3.0.3
+Add long-term planning plots showing how the sky position, helio/geocentric distance, magnitude, elongation, Moon-object separation and Moon phase, positional uncertainty and visibility and on-sky rate of motion change with time.
+
+### 3.0.2
+Minor bug fixes
+
+### 3.0.1
+Minor bug fixes
+
+### 3.0.0
+Support for deploying into Amazon Web Services (AWS) using Kubernetes and Helm
+
+### 2.8.9
+Add support for the ELP Dome B 1-meter telescope.
 
 ### 2.8.6
 Change URL scheme for new prefix

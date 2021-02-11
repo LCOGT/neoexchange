@@ -4,11 +4,15 @@
 tel_field = {   'onem_fov'              : 15.5,
                 'onem_pixscale'         : 0.464,
                 'onem_sinistro_fov'     : 26.4,
-                'onem_sinistro_pixscale' : 0.389,
+                'onem_sinistro_pixscale': 0.389,
+                'onem_2x2_sinistro_fov' : 13.2,
+                'onem_2x2_sin_pixscale' : 0.778,
                 'point4m_pixscale'      : 0.571,        # bin 2, from average kb29 values = 1.139/ 1x1 nominal = 0.58 / 1x1 from average of kb27 = 0.571
                 'point4m_fov'           : 29.1,
                 'twom_pixscale'         : 0.304,
                 'twom_fov'              : 10.0,
+                'twom_muscat_pixscale'  : 0.27,
+                'twom_muscat_fov'       : 9.1,
                 'twom_floyds_pixscale'  : 0.337,
                 'twom_floyds_fov'       : 2.0
             }
@@ -26,7 +30,7 @@ molecule_overhead = {   'filter_change'     : 2.0,                         # tim
 
 # Per-Telescope overheads (s)
 tel_overhead = { 'onem_setup_overhead'      : 90.0,                  # front padding 
-                 'twom_setup_overhead'      : 240.0,                 # front padding
+                 'twom_setup_overhead'      : 180.0,                 # front padding
                  'point4m_setup_overhead'   : 90.0,                  # front padding
                }
 
@@ -34,7 +38,9 @@ tel_overhead = { 'onem_setup_overhead'      : 90.0,                  # front pad
 inst_overhead = {   'onemsbig_exp_overhead'         : 15.5,
                     'point4m_exp_overhead'          : 13.0 + 1.0,       # readout + fixed overhead/exposure
                     'sinistro_exp_overhead'         : 27.0 + 1.0,       # readout + fixed overhead/exposure
+                    'sinistro_2x2_exp_overhead'     : 8.0 + 1.0,        # readout + fixed overhead/exposure
                     'twom_exp_overhead'             : 10.5 + 8.5,       # readout + fixed overhead/exposure
+                    'muscat_exp_overhead'           : 10,               # TBD
                     'floyds_exp_overhead'           : 25.0 + 0.5,       # readout + fixed overhead/exposure
                     'floyds_config_change_overhead' : 60.0,
                     'floyds_acq_proc_overhead'      : 60.0,
@@ -44,6 +50,7 @@ inst_overhead = {   'onemsbig_exp_overhead'         : 15.5,
 
 # Telescope sites
 valid_site_codes = { 'ELP-DOMA-1M0A' : 'V37',
+                     'ELP-DOMB-1M0A' : 'V39',
                      'LSC-DOMA-1M0A' : 'W85',
                      'LSC-DOMB-1M0A' : 'W86',
                      'LSC-DOMC-1M0A' : 'W87',
@@ -101,4 +108,11 @@ spec_filters = [    "slit_1.2as",
                     "slit_1.6as",
                     "slit_2.0as",
                     "slit_6.0as"
+                ]
+
+science_cams = [    "1m0-SciCam-Sinistro",
+                    "2m0-FLOYDS-SciCam",
+                    "2m0-SciCam-Spectral",
+                    "2m0-SciCam-MuSCAT",
+                    "0m4-SciCam-SBIG"
                 ]

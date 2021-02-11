@@ -15,7 +15,7 @@ GNU General Public License for more details.
 
 from .base import FunctionalTest
 from django.test import TestCase
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.contrib.auth.models import User
 from neox.auth_backend import update_proposal_permissions
 from selenium import webdriver
@@ -58,12 +58,11 @@ class GuideMovieTest(FunctionalTest):
                  'telclass'        : '2m0',
                  'site'            : 'ogg',
                  'body'            : self.body,
-                 'proposal'        : self.test_proposal,
                  'superblock'      : self.test_sblock,
                  'obstype'         : Block.OPT_SPECTRA,
                  'block_start'     : '2015-04-20 13:00:00',
                  'block_end'       : '2015-04-21 03:00:00',
-                 'tracking_number' : '12345',
+                 'request_number' : '12345',
                  'num_exposures'   : 1,
                  'exp_length'      : 1800.0,
                  'active'          : True,
@@ -95,12 +94,11 @@ class GuideMovieTest(FunctionalTest):
                  'telclass'        : '2m0',
                  'site'            : 'ogg',
                  'body'            : self.body,
-                 'proposal'        : self.test_proposal,
                  'superblock'      : self.test_sblock2,
-                 'obstype'         : 0,
+                 'obstype'         : Block.OPT_IMAGING,
                  'block_start'     : '2015-04-22 13:00:00',
                  'block_end'       : '2015-04-24 03:00:00',
-                 'tracking_number' : '54321',
+                 'request_number' : '54321',
                  'num_exposures'   : 1,
                  'exp_length'      : 1800.0,
                  'active'          : False,
@@ -121,12 +119,11 @@ class GuideMovieTest(FunctionalTest):
                  'telclass'        : '2m0',
                  'site'            : 'ogg',
                  'body'            : self.body,
-                 'proposal'        : self.test_proposal,
                  'superblock'      : self.test_msblock,
                  'obstype'         : Block.OPT_SPECTRA,
                  'block_start'     : '2018-01-01 00:00:00',
                  'block_end'       : '2018-01-01 02:00:00',
-                 'tracking_number' : '54322',
+                 'request_number' : '54322',
                  'num_exposures'   : 1,
                  'num_observed'    : 1,
                  'exp_length'      : 1800.0,
@@ -147,12 +144,11 @@ class GuideMovieTest(FunctionalTest):
                  'telclass'        : '2m0',
                  'site'            : 'ogg',
                  'body'            : self.body,
-                 'proposal'        : self.test_proposal,
                  'superblock'      : self.test_msblock,
                  'obstype'         : Block.OPT_SPECTRA,
                  'block_start'     : '2018-01-01 01:00:00',
                  'block_end'       : '2018-01-01 03:00:00',
-                 'tracking_number' : '54323',
+                 'request_number' : '54323',
                  'num_exposures'   : 1,
                  'num_observed'    : 1,
                  'exp_length'      : 1800.0,

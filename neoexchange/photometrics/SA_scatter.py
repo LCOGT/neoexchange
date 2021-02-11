@@ -21,6 +21,8 @@ from astropy.coordinates import SkyCoord, Galactic
 from astropy import coordinates
 from astropy import units as u
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from core.models import StaticSource
@@ -40,11 +42,11 @@ def readSources(standard='Solar'):
        input: [standard] standard option
        output: coords
    """
-    if standard is 'Solar':
+    if standard == 'Solar':
         coords = np.array([])
         for body in StaticSource.objects.filter(source_type=StaticSource.SOLAR_STANDARD):
             coords = np.append(coords, SkyCoord(body.ra,body.dec,unit=(u.deg,u.deg)))
-    elif standard is 'Flux':
+    elif standard == 'Flux':
         coords = np.array([])
         for body in StaticSource.objects.filter(source_type=StaticSource.FLUX_STANDARD):
             coords = np.append(coords, SkyCoord(body.ra,body.dec,unit=(u.deg,u.deg)))

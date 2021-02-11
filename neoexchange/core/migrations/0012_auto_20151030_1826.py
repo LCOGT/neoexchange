@@ -29,7 +29,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='sourcemeasurement',
             name='frame',
-            field=models.ForeignKey(to='core.Frame'),
+            field=models.ForeignKey(to='core.Frame', on_delete=models.deletion.CASCADE),
             preserve_default=False,
         ),
         migrations.AddField(

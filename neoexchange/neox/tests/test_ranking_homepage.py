@@ -19,11 +19,11 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.common.by import By
 from mock import patch
-from neox.tests.mocks import MockDateTime
+from neox.tests.mocks import MockDateTime, mock_build_visibility_source
 # from datetime import datetime as real_datetime
 from datetime import datetime
 from core.models import Body
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 
 
 class NewVisitorTest(FunctionalTest):
@@ -89,7 +89,8 @@ class NewVisitorTest(FunctionalTest):
 
         self.body3, created = Body.objects.get_or_create(pk=3, **params)
 
-    @patch('core.models.datetime', MockDateTime)
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
+    @patch('core.models.body.datetime', MockDateTime)
     def test_homepage_has_ranking(self):
 
         MockDateTime.change_datetime(2015, 7, 1, 17, 0, 0)
@@ -128,9 +129,10 @@ class NewVisitorTest(FunctionalTest):
         # mentions the current target
         self.assertIn(self.body.current_name() + ' details | LCO NEOx', self.browser.title)
         header_text = self.browser.find_element_by_class_name('headingleft').text
-        self.assertIn('Object: ' + self.body.current_name(), header_text)
+        self.assertIn(self.body.full_name(), header_text)
 
-    @patch('core.models.datetime', MockDateTime)
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
+    @patch('core.models.body.datetime', MockDateTime)
     def test_homepage_rounds_arc_notseen(self):
 
         MockDateTime.change_datetime(2017, 2, 1, 17, 0, 0)
@@ -168,4 +170,4 @@ class NewVisitorTest(FunctionalTest):
         # mentions the current target
         self.assertIn(self.body3.current_name() + ' details | LCO NEOx', self.browser.title)
         header_text = self.browser.find_element_by_class_name('headingleft').text
-        self.assertIn('Object: ' + self.body3.current_name(), header_text)
+        self.assertIn(self.body3.full_name(), header_text)

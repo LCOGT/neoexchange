@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load staticfiles basic_tags %}
+{% load static basic_tags %}
 
 {% block css-content %}<link rel="stylesheet" href="{% static "core/css/forms.css" %}">{% endblock %}
 
@@ -61,7 +61,7 @@
                                 <input id='filter_all' onchange="this.form.submit();" style= "width:10px!important;vertical-align:middle!important;" type="radio" name="filter" value="" checked>
                             {% endif %}
                              All</label>
-					    </form></span>
+                        </form></span>
                     </th>
                     <th>
                         <span class="sortable" id="Hmag">H Mag.</span><br>
@@ -97,47 +97,7 @@
                     <td data-label="obsneeded"> {{body.obs_needed}}</td>
                     <td data-label="Hmag">{{body.abs_mag}}</td>
                     <td data-label="origin">{{body.origin}}</td>
-                    {% if body.s_wav == 'Vis+NIR'%}
-                        {% if body.s_vis_link%}
-                            {% if body.s_nir_link%}
-                                <td data-label="SMASS Obs" >
-                                    <ul style="margin: 0px;">
-                                        <li style="display: inline-block;margin: 0px;"><a href={{body.s_vis_link}}>Vis</a>
-                                        </li><li style="display: inline-block;margin: 0px;">+
-                                        </li><li style="display: inline-block;margin: 0px;"><a href={{body.s_nir_link}}>NIR</a></li>
-                                    </ul>
-                                </td>
-                            {% else %}
-                                <td data-label="SMASS Obs">
-                                    <ul style="margin: 0px;">
-                                        <li style="display: inline-block;margin: 0px;"><a href={{body.s_vis_link}}>Vis</a>
-                                        </li><li style="display: inline-block;margin: 0px;">+NIR</li>
-                                    </ul>
-                                </td>
-                            {% endif %}
-                        {% else %}
-                            {% if body.s_nir_link%}
-                                <td data-label="SMASS Obs">
-                                    <ul style="margin: 0px;">
-                                        <li style="display: inline-block;margin: 0px;">Vis+
-                                        </li><li style="display: inline-block;margin: 0px;"><a href={{body.s_nir_link}}>NIR</a></li>
-                                    </ul>
-                                </td>
-                            {% else %}
-                                <td data-label="SMASS Obs">{{body.s_wav}}</td>
-                            {% endif %}
-                        {% endif %}
-                    {% else %}
-                        {% if body.s_vis_link and body.s_wav == 'Vis'%}
-                            <td data-label="SMASS Obs"><a href={{body.s_vis_link}}>{{body.s_wav}}</a> </td>
-                        {% else %}
-                            {% if body.s_nir_link and body.s_wav == 'NIR'%}
-                                <td data-label="SMASS Obs"><a href={{body.s_nir_link}}>{{body.s_wav}}</a> </td>
-                            {% else %}
-                                <td data-label="SMASS Obs">{{body.s_wav}}</td>
-                            {% endif %}
-                        {% endif %}
-                    {% endif %}
+                    <td data-label="SMASS Obs" ><a href="{% url 'plotspec' body.id %}">{{body.s_wav}}</a>
                     {% if body.m_wav == 'Vis+NIR'%}
                         {% if body.m_nir_link %}
                             {% if body.m_vis_link %}
@@ -173,13 +133,13 @@
                             <td data-label="MANOS Target?"> <a href={{body.m_nir_link}}>{{body.m_wav}}</a></td>
                         {% else %}
                             {% if body.m_vis_link %}
-                            <td data-label="MANOS Target?"> <a href={{body.m_vis_link}}>{{body.m_wav}}</a></td>
+                                <td data-label="MANOS Target?"> <a href={{body.m_vis_link}}>{{body.m_wav}}</a></td>
                             {% else %}
                                 <td data-label="MANOS Target?"> {{body.m_wav}}</td>
                             {% endif %}
                         {% endif %}
                     {% endif %}
-                    <td data-label="Observation Window">{{body.obs_start}}-{{body.obs_end}} </td>
+                    <td data-label="Observation Window"><a href="{%url 'visibility' body.id %}">{{body.obs_start}}-{{body.obs_end}}</a>  </td>
                     <td data-label="Reported?"></td>
                     </tr>
                 {% empty%}

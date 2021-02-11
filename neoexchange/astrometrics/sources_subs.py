@@ -35,7 +35,7 @@ from bs4 import BeautifulSoup
 import astropy.units as u
 try:
     import pyslalib.slalib as S
-except:
+except ModuleNotFoundError:
     pass
 from django.conf import settings
 from astropy.io import ascii
@@ -115,6 +115,9 @@ def fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser
         else:
             logger.warning("Page retrieval failed with HTTP Error: %s" % (e.reason,))
         return None
+    except (BrokenPipeError, ConnectionAbortedError, ConnectionRefusedError, ConnectionResetError) as sock_e:
+        logger.warning("Page retrieval failed with socket Error %d: %s" % (sock_e.errno, sock_e.strerror))
+        return None
 
     # Suck the HTML down
     neo_page = response.read()
@@ -157,8 +160,15 @@ def parse_previous_NEOCP_id(items, dbg=False):
         crossmatch = [body, none_id, '', ' '.join(chunks[-3:])]
     elif len(items) == 3:
         if dbg: print("3 items found")
-        # Is of the form "<foo> = <bar>(<date> UT)"
-        if items[0].find('Comet') != 1 and len(ast.findall(items[0])) != 1:
+        if items[0].lower().find('was not confirmed') != -1:
+            # Is an odd case of not confirmed but with an MPEC...
+            chunks = items[0].split()
+            newid = 'wasnotconfirmed'
+            provid = chunks[0]
+            mpec = ''
+            date = ' '.join(chunks[-4:-1])
+        elif items[0].find('Comet') != 1 and len(ast.findall(items[0])) != 1:
+            # Is of the form "<foo> = <bar>(<date> UT)"
             if items[1].string is not None:
                 newid = str(items[0]).lstrip()+items[1].string.strip()
                 provid_date = items[2].split('(')
@@ -258,7 +268,7 @@ def fetch_NEOCP(dbg=False):
 
     NEOCP_url = 'https://www.minorplanetcenter.net/iau/NEO/toconfirm_tabular.html'
 
-    neocp_page = fetchpage_and_make_soup(NEOCP_url)
+    neocp_page = fetchpage_and_make_soup(NEOCP_url, parser='html5lib')
     return neocp_page
 
 
@@ -309,7 +319,7 @@ def parse_NEOCP_extra_params(neocp_page, dbg=False):
             # Turn the HTML non-breaking spaces (&nbsp;) into regular spaces
             cols = [ele.text.replace(u'\xa0', u' ').strip() for ele in cols]
             if dbg:
-                print("Cols=", cols, len(cols))
+                print(len(new_objects), len(cols))
             pccp = False
             try:
                 update_date = cols[6].split()[0]
@@ -341,7 +351,12 @@ def parse_NEOCP_extra_params(neocp_page, dbg=False):
                     score = int(cols[1][0:3])
                 except:
                     score = None
-                neocp_datetime = parse_neocp_decimal_date(cols[2])
+                try:
+                    neocp_datetime = parse_neocp_decimal_date(cols[2])
+                except ValueError:
+                    neocp_datetime = None
+                    logger.warning("Date Parsing error:" + cols[2])
+                    logger.warning(cols)
                 try:
                     nobs = int(cols[8])
                 except:
@@ -618,7 +633,7 @@ def translate_catalog_code(code_or_name, ades_code=False):
             logger.warning("{} is not in our accepted list of astrometric catalog codes.".format(code_or_name))
     else:
         if ades_code is True:
-            catalog_or_code = catalog_mapping.get(code_or_name.upper(),'')
+            catalog_or_code = catalog_mapping.get(code_or_name.upper(), '')
         else:
             for code, catalog in catalog_codes.items():
                 if code_or_name == catalog:
@@ -646,12 +661,22 @@ def parse_mpcobs(line):
     prov_or_temp = str(line[5:12])
     comet_desig = ['C', 'P', 'D', 'X', 'A']
 
+    fragment = None
     if number.strip() in comet_desig and len(prov_or_temp.strip()) != 0:
         # Comet with no number
         body = number.strip() + prov_or_temp.strip()
     elif len(number.strip()) != 0 and len(prov_or_temp.strip()) != 0:
         # Number and provisional/temp. designation
         body = number
+        if prov_or_temp.lstrip(' ').islower():
+            # If the last characters of the provisional desigination is a
+            # lowercase letter (with spaces to the left) OR
+            # the last letter only of the provisional desigination is lowecase,
+            # with everything uppercase (or numbers):
+            #   it is a comet fragment (probably...)
+            fragment = prov_or_temp.lstrip(' ')
+        elif (prov_or_temp[-1] != '0' and prov_or_temp[-1].islower() and prov_or_temp[:-1].isupper()):
+            fragment = prov_or_temp[-1]
     elif len(number.strip()) == 0 or len(prov_or_temp.strip()) != 0:
         # No number but provisional/temp. designation
         body = prov_or_temp
@@ -659,6 +684,11 @@ def parse_mpcobs(line):
         body = number
 
     body = body.rstrip()
+    # Strip leading zeros off comets
+    if body[-1] == 'P' and body[:-1].isdigit():
+        body = body.lstrip('0')
+        if fragment is not None:
+            body += '-' + fragment.upper()
     obs_type = str(line[14])
     flag_char = str(line[13])
 
@@ -792,7 +822,8 @@ def parse_mpcorbit(page, epoch_now=None, dbg=False):
         elements = dict(clean_element(elem) for elem in data)
         # Look for nearest element set in time
         epoch = elements.get('epoch', None)
-        if dbg: print(epoch)
+        if dbg:
+            print(epoch)
         if epoch is not None:
             try:
                 epoch_datetime = datetime.strptime(epoch, "%Y-%m-%d.0")
@@ -800,17 +831,19 @@ def parse_mpcorbit(page, epoch_now=None, dbg=False):
                 if epoch_dt < min_elements_dt:
                     # Closer match found, update best elements and minimum time
                     # separation
-                    if dbg: print("Found closer element match", epoch_dt, min_elements_dt, epoch)
+                    if dbg:
+                        print("Found closer element match", epoch_dt, min_elements_dt, epoch)
                     best_elements = elements
                     min_elements_dt = abs(epoch_dt)
                 else:
-                    if dbg: print("No closer match found")
+                    if dbg:
+                        print("No closer match found")
             except ValueError:
                 msg = "Couldn't parse epoch: " + epoch
                 logger.warning(msg)
-    name_element = page.find('h3')
-    if name_element is not None:
-        best_elements['obj_id'] = name_element.text.strip()
+            name_element = page.find('h3')
+            if name_element is not None:
+                best_elements['obj_id'] = name_element.text.strip()
 
     return best_elements
 
@@ -820,7 +853,7 @@ def read_mpcorbit_file(orbit_file):
     try:
         orbfile_fh = open(orbit_file, 'r')
     except IOError:
-        logger.warn("File %s not found" % orbit_file)
+        logger.warning("File %s not found" % orbit_file)
         return None
 
     orblines = orbfile_fh.readlines()
@@ -897,7 +930,6 @@ def packed_to_normal(packcode):
 
     if not validate_packcode(packcode):
         raise PackedError("Invalid packcode %s" % packcode)
-        return None
     elif len(packcode) == 5 and packcode.isdigit():
         # Just a number
         return str(int(packcode))
@@ -941,113 +973,112 @@ def cycle_mpc_character_code(char):
     """Convert MPC character code into a number 0--9, A--Z, a--z and return integer"""
     cycle = ord(char)
     if cycle >= ord('a'):
-        cycle = cycle - 61
-    elif ord('A') <= cycle < ord('Z'):
-        cycle = cycle - 55
+        cycle -= 61
+    elif ord('A') <= cycle <= ord('Z'):
+        cycle -= 55
     else:
-        cycle = cycle - ord('0')
+        cycle -= ord('0')
     return cycle
 
+
 def psv_padding(s, l, jtype, dpos=0):
-   """#
-      # PSV formatting routine (adapted from ADESMaster.adesutility.applyPaddingAndJustification)
-      #
+    """PSV formatting routine (adapted from ADESMaster.adesutility.applyPaddingAndJustification)
+
     psv_padding(s, l, jtype, dpos)
 
-       Inputs:
-          s: input string
-          l: output length (pad with blanks)
-             If string is too long it is returned without change
-          jtype: justification type
-                L: left
-                R: right
-             D<n>: decimal point in column <n>
-          dpos: decimal point in column <dpos> (for jtype = "D")
+    Inputs:
+        s: input string
+        l: output length (pad with blanks)
+            If string is too long it is returned without change
+        jtype: justification type
+            L: left
+            R: right
+            C: center
+            D: Justify on Decimal
+        dpos: decimal point in column <dpos> (for jtype = "D")
 
-       Return Value:
-            (padded string, l, dpos)
-            l is the achieved width.  It may be longer than l
-            dpos is the achieved dpos.  It may be different from dpos
+    Return Value:
+        (padded string, l, dpos)
+        l is the achieved width.  It may be longer than l
+        dpos is the achieved dpos.  It may be different from dpos
 
-       The width and dpos may be different. These should be used to
-       update the headerInfo array if one is trying to achieve alignment
-       over multiple lines.
-   """
+        The width and dpos may be different. These should be used to
+        update the headerInfo array if one is trying to achieve alignment
+        over multiple lines.
+    """
 
-   ll = len(s)
-   if jtype.upper() == 'L': # negative multipliers result in ''
-      outs = s + (l - ll)*' '
-      return (outs, len(outs), dpos)
-   elif jtype.upper() == 'R':
-      outs =  (l - ll)*' ' + s
-      return (outs, len(outs), dpos)
-   elif jtype.upper() == 'C':
-      i = (l-ll)//2
-      j = i
-      if i*2 != l-ll: j = j + 1
-      outs =  i*' ' + s + j*' '
-      return (outs, len(outs), dpos)
-   elif jtype.upper() == 'D':  # null strings not allowed
-      try:
-         if dpos < 0:
-           raise RuntimeError("Invalid negative value of dpos ("+ dpos + ")")
-      except:
-         raise RuntimeError("Illegal justification string " + jtype)
-      #
-      # pad only with spaces on both sides
-      # and do not change s
-      #
-      # if s has no decimal point don't add one
-      # but line up as if it were to the right
-      # of s.
-      #
-      # the result may be too wide.  This is OK
-      # we will do a fix-up on width in the caller.
-      # Note this means we have to do it twice but
-      # we never will get wider as a result of the
-      # second pass.
-      #
-      # Also, we assume s is a decimal for xsd.  If
-      # not, validation will fail later.  If there
-      # is more than one decimal point, it will fail
-      # here.
-      #
-      sp = s.split('.')
-      if (len(sp) == 1):  #No decimal point
-         sleft = s
-         sright = ''
-      elif (len(sp) == 2): #has decimal point
-         (sleft, sright) = sp
-      else:
-         raise RuntimeError('Illegal string ' + s + ' for decimal value')
-      #
-      # now re-pack with width
-      #
-      leftpad = dpos - 1 - len(sleft)
-      #
-      # figure out dpos extension
-      #
-      if leftpad < 0: # <n> needs adjusting
-          ndpos = dpos - leftpad
-          rightpad = (l - ndpos)  - len(sright)
-          dpos = ndpos
-      rightpad = (l - dpos)  - len(sright)
-      if (len(s) > 0) and (s[-1] == '.'): # trailing decimal point adjustment
-        sleft = s
-        rightpad = rightpad - 1
-      #
-      # works for negative values of leftpad and rightpad
-      # adding no characters
-         #
-      if sright:  # don't add '.' if sright is ''
-        retval =  leftpad * ' ' + sleft + '.' + sright + rightpad * ' '
-      else:
-        rightpad += 1
-        retval =  leftpad * ' ' + sleft + rightpad * ' '
-      return (retval, len(retval), dpos);
+    ll = len(s)
+    if jtype.upper() == 'L':  # negative multipliers result in ''
+        outs = s + (l - ll)*' '
+        return outs, len(outs), dpos
+    elif jtype.upper() == 'R':
+        outs = (l - ll)*' ' + s
+        return outs, len(outs), dpos
+    elif jtype.upper() == 'C':
+        i = (l-ll)//2
+        j = i
+        if i*2 != l-ll:
+            j += 1
+        outs = i*' ' + s + j*' '
+        return outs, len(outs), dpos
+    elif jtype.upper() == 'D':  # null strings not allowed
+        try:
+            if dpos < 0:
+                raise RuntimeError("Invalid negative value of dpos ({})".format(dpos))
+        except TypeError:
+            raise RuntimeError("Illegal Decimal position: {} ".format(dpos))
 
-   else:
-      raise RuntimeError ("Illegal justification string " + jtype)
+        # pad only with spaces on both sides
+        # and do not change s
+        #
+        # if s has no decimal point don't add one
+        # but line up as if it were to the right
+        # of s.
+        #
+        # the result may be too wide.  This is OK
+        # we will do a fix-up on width in the caller.
+        # Note this means we have to do it twice but
+        # we never will get wider as a result of the
+        # second pass.
+        #
+        # Also, we assume s is a decimal for xsd.  If
+        # not, validation will fail later.  If there
+        # is more than one decimal point, it will fail
+        # here.
+
+        sp = s.split('.')
+        if len(sp) == 1:  # No decimal point
+            sleft = s
+            sright = ''
+        elif len(sp) == 2:  # has decimal point
+            (sleft, sright) = sp
+        else:
+            raise RuntimeError('Illegal string for decimal justification: {}'.format(s))
+
+        # now re-pack with width
+        leftpad = dpos - 1 - len(sleft)
+
+        # figure out dpos extension
+        if leftpad < 0:  # <n> needs adjusting
+            ndpos = dpos - leftpad
+            dpos = ndpos
+        rightpad = (l - dpos) - len(sright)
+        if (len(s) > 0) and (s[-1] == '.'):  # trailing decimal point adjustment
+            sleft = s
+            rightpad -= 1
+
+        # works for negative values of leftpad and rightpad
+        # adding no characters
+        if sright:  # don't add '.' if sright is ''
+            retval = leftpad * ' ' + sleft + '.' + sright + rightpad * ' '
+        else:
+            rightpad += 1
+            retval = leftpad * ' ' + sleft + rightpad * ' '
+        return retval, len(retval), dpos
+
+    else:
+        raise RuntimeError("Illegal justification string: {} ".format(jtype))
+
 
 def parse_goldstone_chunks(chunks, dbg=False):
     """Tries to parse the Goldstone target line (a split()'ed list of fields)
@@ -1229,52 +1260,52 @@ def fetch_arecibo_targets(page=None):
     targets = []
 
     if type(page) == BeautifulSoup:
-        # Find the tables, we want the second one
+        # Find the tables
         tables = page.find_all('table')
-        if len(tables) != 2 and len(tables) != 3 :
-            logger.warning("Unexpected number of tables found in Arecibo page (Found %d)" % len(tables))
-        else:
-            for targets_table in tables[1:]:
-                rows = targets_table.find_all('tr')
-                if len(rows) > 1:
-                    for row in rows[1:]:
-                        items = row.find_all('td')
-                        target_object = items[0].text
+        for t, targets_table in enumerate(tables):
+            rows = targets_table.find_all('tr')
+            header = rows[0].find_all('td')[0].text.upper()
+            if len(rows) > 1 and 'OBJECT' in header or 'ASTEROID' in header:
+                for row in rows[1:]:
+                    items = row.find_all('td')
+                    target_object = items[0].text
+                    target_object = target_object.strip()
+                    # See if it is the form "(12345) 2008 FOO". If so, extract
+                    # just the asteroid number
+                    if '(' in target_object and ')' in target_object:
+                        # See if we have parentheses around the number or around the
+                        # temporary designation.
+                        # If the first character in the string is a '(' we have the first
+                        # case and should split on the closing ')' and take the 0th chunk
+                        # If the first char is not a '(', then we have parentheses around
+                        # the temporary designation and we should split on the '(', take
+                        # the 0th chunk and strip whitespace
+                        split_char = ')'
+                        if target_object[0] != '(':
+                            split_char = '('
+                        target_object = target_object.split(split_char)[0].replace('(', '')
                         target_object = target_object.strip()
-                        # See if it is the form "(12345) 2008 FOO". If so, extract
-                        # just the asteroid number
-                        if '(' in target_object and ')' in target_object:
-                            # See if we have parentheses around the number or around the
-                            # temporary desigination.
-                            # If the first character in the string is a '(' we have the first
-                            # case and should split on the closing ')' and take the 0th chunk
-                            # If the first char is not a '(', then we have parentheses around
-                            # the temporary desigination and we should split on the '(', take
-                            # the 0th chunk and strip whitespace
-                            split_char = ')'
-                            if target_object[0] != '(':
-                                split_char = '('
-                            target_object = target_object.split(split_char)[0].replace('(', '')
-                            target_object = target_object.strip()
-                        else:
-                            # No parentheses, either just a number or a number and name
-                            chunks = target_object.split(' ')
-                            if len(chunks) >= 2:
-                                if chunks[0].isalpha() and chunks[1].isalpha():
-                                    logger.warning("All text object found: " + target_object)
-                                    target_object = None
-                                else:
-                                    if chunks[1].replace('-', '').isalpha() and len(chunks[1]) != 2:
-                                        target_object = chunks[0]
-                                    else:
-                                        target_object = chunks[0] + " " + chunks[1]
-                            else:
-                                logger.warning("Unable to parse Arecibo target %s" % target_object)
+                    else:
+                        # No parentheses, either just a number or a number and name
+                        chunks = target_object.split(' ')
+                        if len(chunks) >= 2:
+                            if chunks[0].isalpha() and chunks[1].isalpha():
+                                logger.warning("All text object found: " + target_object)
                                 target_object = None
-                        if target_object:
-                            targets.append(target_object)
-                else:
-                    logger.warning("No targets found in Arecibo page")
+                            else:
+                                if chunks[1].replace('-', '').isalpha() and len(chunks[1]) != 2:
+                                    target_object = chunks[0]
+                                elif 'Comet' in chunks[0] and '/P' in chunks[1].rstrip()[-2:]:
+                                    target_object = chunks[1].replace('/', '')
+                                else:
+                                    target_object = chunks[0] + " " + chunks[1]
+                        else:
+                            logger.warning("Unable to parse Arecibo target %s" % target_object)
+                            target_object = None
+                    if target_object:
+                        targets.append(target_object)
+            else:
+                logger.warning("No targets found in Arecibo page table {}.".format(t+1))
     return targets
 
 
@@ -1307,8 +1338,11 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
 
     list_address = '"small-bodies-observations@lists.nasa.gov"'
     list_authors = [ '"paul.a.abell@nasa.gov"',
-                        '"paul.w.chodas@jpl.nasa.gov"',
-                        '"brent.w.barbee@nasa.gov"']
+                     '"Abell, Paul A. (JSC-XI111) via small-bodies-observations"',
+                     '"paul.w.chodas@jpl.nasa.gov"',
+                     '"brent.w.barbee@nasa.gov"',
+                     '"Barbee, Brent W. (GSFC-5950) via small-bodies-observations"']
+
     list_prefix = '[' + list_address.replace('"', '').split('@')[0] + ']'
     list_suffix = 'Observations Requested'
 
@@ -1395,7 +1429,7 @@ def get_site_status(site_code):
 # Get dictionary mapping LCO code (site-enclosure-telescope) to MPC site code
 # and reverse it
     site_codes = cfg.valid_site_codes
-    lco_codes = {mpc_code:lco_code.lower().replace('-', '.') for lco_code,mpc_code in site_codes.items()}
+    lco_codes = {mpc_code: lco_code.lower().replace('-', '.') for lco_code, mpc_code in site_codes.items()}
 
     response = get_telescope_states()
 
@@ -1411,19 +1445,23 @@ def get_site_status(site_code):
             good_to_schedule = False
             reason = 'Not available for scheduling'
 
-    return (good_to_schedule, reason)
+    return good_to_schedule, reason
 
 
 def fetch_yarkovsky_targets(yark_targets):
-    """Fetches yarkovsky targets from command line and returns a list of targets"""
+    """Fetches Yarkovsky targets from command line and returns a list of targets"""
 
     yark_target_list = []
 
     for obj_id in yark_targets:
         obj_id = obj_id.strip()
+        comment_loc = obj_id.find('#')
+        if comment_loc >= 0:
+            obj_id = obj_id[0:comment_loc].strip()
         if '_' in obj_id:
             obj_id = str(obj_id).replace('_', ' ')
-        yark_target_list.append(obj_id)
+        if len(obj_id) > 0:
+            yark_target_list.append(obj_id)
 
     return yark_target_list
 
@@ -1473,7 +1511,7 @@ def fetch_sfu(page=None):
 
 
 def make_location(params):
-    location = {'telescope_class' : params['pondtelescope'][0:3]}
+    location = {'telescope_class': params['pondtelescope'][0:3]}
     if params.get('site', None):
         location['site'] = params['site'].lower()
     if params['site_code'] == 'W85':
@@ -1482,6 +1520,9 @@ def make_location(params):
     elif params['site_code'] == 'W87':
         location['telescope'] = '1m0a'
         location['observatory'] = 'domc'
+    elif params['site_code'] == 'V39':
+        location['telescope'] = '1m0a'
+        location['observatory'] = 'domb'
     return location
 
 
@@ -1493,14 +1534,14 @@ def make_target(params):
     dec_degs = params['dec_deg']
     # XXX Todo: Add in proper motion and parallax if present
     target = {
-               'type' : 'SIDEREAL',
+               'type' : 'ICRS',
                'name' : params['source_id'],
                'ra'   : ra_degs,
                'dec'  : dec_degs,
-               'rot_mode' : 'VFLOAT'
+               'extra_params' : {}
              }
     if 'vmag' in params:
-        target['vmag'] = params['vmag']
+        target['extra_params']['v_magnitude'] = params['vmag']
     if 'pm_ra' in params:
         target['proper_motion_ra'] = params['pm_ra']
     if 'pm_dec' in params:
@@ -1513,11 +1554,10 @@ def make_target(params):
 def make_moving_target(elements):
     """Make a target dictionary for the request from an element set"""
 
-#    print(elements)
     # Generate initial dictionary of things in common
     target = {
                   'name'                : elements['current_name'],
-                  'type'                : 'NON_SIDEREAL',
+                  'type'                : 'ORBITAL_ELEMENTS',
                   'scheme'              : elements['elements_type'],
                   # Moving object param
                   'epochofel'         : elements['epochofel_mjd'],
@@ -1525,6 +1565,7 @@ def make_moving_target(elements):
                   'longascnode'       : elements['longascnode'],
                   'argofperih'        : elements['argofperih'],
                   'eccentricity'      : elements['eccentricity'],
+                  'extra_params'      : {}
             }
 
     if elements['elements_type'].upper() == 'MPC_COMET':
@@ -1534,10 +1575,7 @@ def make_moving_target(elements):
         target['meandist'] = elements['meandist']
         target['meananom'] = elements['meananom']
     if 'v_mag' in elements:
-        target['vmag'] = round(elements['v_mag'], 2)
-    if 'sky_pa' in elements:
-        target['rot_mode'] = 'SKY'
-        target['rot_angle'] = round(elements['sky_pa'], 1)
+        target['extra_params']['v_magnitude'] = round(elements['v_mag'], 2)
 
     return target
 
@@ -1556,81 +1594,156 @@ def make_window(params):
     return window
 
 
-def make_molecule(params, exp_filter):
-
+def make_config(params, filter_list):
     # Common part of a molecule
-    exp_count = exp_filter[1]
-    molecule = {
-                'type' : params['exp_type'],
-                'exposure_count'  : exp_count,
-                'exposure_time' : params['exp_time'],
-                'bin_x'       : params['binning'],
-                'bin_y'       : params['binning'],
-                'instrument_name'   : params['instrument'],
-                }
-
-    if params.get('spectroscopy', False):
-        # Autoguider mode, one of ON, OFF, or OPTIONAL.
-        # Must be uppercase now and ON for spectra, and OFF for arcs and lamp flats
-        params['spectra_slit'] = exp_filter[0]
-        ag_mode = 'ON'
-        if params['exp_type'].upper() in ['ARC', 'LAMP_FLAT']:
-            ag_mode = 'OFF'
-            molecule['exposure_count'] = 1
-            molecule['exposure_time'] = 60.0
-            if params['exp_type'].upper() == 'LAMP_FLAT' and 'slit_6.0as' in params['spectra_slit']:
-                molecule['exposure_time'] = 20.0
-        molecule['spectra_slit'] = params['spectra_slit']
-        molecule['ag_mode'] = ag_mode
-        molecule['ag_name'] = ''
-        molecule['acquire_mode'] = 'BRIGHTEST'
-        molecule['ag_exp_time'] = params.get('ag_exp_time', 10)
-        molecule['acquire_exp_time'] = params.get('ag_exp_time', 10)
-        if 'source_type' in params:  # then Sidereal target (use smaller window)
-            molecule['acquire_radius_arcsec'] = 5.0
+    conf = {
+        'type': params['exp_type'],
+        'instrument_type': params['instrument'],
+        'target': params['target'],
+        'constraints': params['constraints'],
+        'acquisition_config': {},
+        'guiding_config': {},
+        'instrument_configs': []
+    }
+    if params['exp_type'] == 'REPEAT_EXPOSE':
+        # Remove overhead from slot_length so repeat_exposure matches predicted frames.
+        # This will allow a 2 hour slot to fit within a 2 hour window.
+        single_mol_overhead = cfg.molecule_overhead['filter_change'] + cfg.molecule_overhead['per_molecule_time']
+        if '2M0' in params['instrument']:
+            overhead = cfg.tel_overhead['twom_setup_overhead']
+        elif '0M4' in params['instrument']:
+            overhead = cfg.tel_overhead['point4m_setup_overhead']
+        elif '1M0' in params['instrument']:
+            overhead = cfg.tel_overhead['onem_setup_overhead']
         else:
-            molecule['acquire_radius_arcsec'] = 15.0  # NOTE: if this keyword exists, 'acquire_mode' is ignored, and will acquire on brightest
+            overhead = 0
+        conf['repeat_duration'] = params['slot_length'] - overhead - single_mol_overhead - 1
+        conf['repeat_duration'] = max(conf['repeat_duration'], 1)
+    for filt in filter_list:
+        if params['exp_type'] == 'REPEAT_EXPOSE' and len(filter_list) == 1:
+            exp_count = 1
+        else:
+            exp_count = filt[1]
+
+        instrument_config = {'exposure_count': exp_count,
+                             'exposure_time': params['exp_time'],
+                             'bin_x': params['binning'],
+                             'bin_y': params['binning'],
+                             'optical_elements': {'filter': filt[0]}
+                             }
+
+        if params.get('bin_mode', None) == '2k_2x2' and params['pondtelescope'] == '1m0':
+            instrument_config['mode'] = 'central_2k_2x2'
+
+        if params['instrument'] == '2M0-SCICAM-MUSCAT':
+            if params.get('muscat_sync', False):
+                exposure_mode = 'SYNCHRONOUS'
+            else:
+                exposure_mode = 'ASYNCHRONOUS'
+            extra_params = {'exposure_time_g': params['muscat_exp_times']['gp_explength'],
+                            'exposure_time_r': params['muscat_exp_times']['rp_explength'],
+                            'exposure_time_i': params['muscat_exp_times']['ip_explength'],
+                            'exposure_time_z': params['muscat_exp_times']['zp_explength'],
+                            'exposure_mode': exposure_mode}
+            instrument_config['optical_elements'] = {'diffuser_g_position': 'out',
+                                                     'diffuser_r_position': 'out',
+                                                     'diffuser_i_position': 'out',
+                                                     'diffuser_z_position': 'out'}
+            instrument_config.pop('bin_x', None)
+            instrument_config.pop('bin_y', None)
+            instrument_config['extra_params'] = extra_params
+        conf['instrument_configs'].append(instrument_config)
+
+    return conf
+
+
+def make_spect_config(params, exp_filter):
+
+    if 'ORBITAL_ELEMENTS' in params['target']['type']:  # then non-sidereal target (use larger window)
+        acq_rad = 15.0
     else:
-        molecule['filter'] = exp_filter[0]
-        molecule['ag_mode'] = 'OPTIONAL'  # ON, OFF, or OPTIONAL. Must be uppercase now...
-        molecule['ag_name'] = ''
+        acq_rad = 5.0
 
-    return molecule
+    if params['exp_type'].upper() in ['ARC', 'LAMP_FLAT']:
+        ag_mode = 'OFF'
+        exp_count = 1
+        exp_time = 60.0
+        if params['exp_type'].upper() == 'LAMP_FLAT' and 'slit_6.0as' in params['spectra_slit']:
+            exp_time = 20.0
+    else:
+        exp_count = params['exp_count']
+        exp_time = params['exp_time']
+
+    if params.get('rot_mode', 'VFLOAT') == 'SKY':
+        inst_extra = {'rotator_angle': params.get('rot_angle', 0)}
+    else:
+        inst_extra = {}
+
+    configurations = {
+        'type': params['exp_type'],
+        'instrument_type': '2M0-FLOYDS-SCICAM',
+        'constraints': params['constraints'],
+        'target': params['target'],
+        'acquisition_config': {
+            'mode': 'BRIGHTEST',
+            'exposure_time': params.get('ag_exp_time', 10),
+            "extra_params": {
+              "acquire_radius": acq_rad,
+            }
+        },
+        'guiding_config': {
+            'mode': 'ON',
+            'optional': False,
+            'exposure_time': params.get('ag_exp_time', 10)
+        },
+        'instrument_configs': [
+            {
+                'exposure_time': exp_time,
+                'exposure_count': exp_count,
+                'rotator_mode': params.get('rot_mode', 'VFLOAT'),
+                'optical_elements': {
+                    'slit': exp_filter[0]
+                },
+                'extra_params': inst_extra
+            }
+        ]
+    }
+    return configurations
 
 
-def make_molecules(params):
+def make_configs(params):
     """Handles creating the potentially multiple molecules. Returns a list of the molecules.
     In imaging mode (`params['spectroscopy'] = False` or not present), this just calls
-    the regular make_molecule().
+    the regular make_config().
     In spectroscopy mode, this will produce 1, 3 or 5 molecules depending on whether
     `params['calibs']` is 'none, 'before'/'after' or 'both'."""
 
-    filt_list = build_filter_blocks(params['filter_pattern'], params['exp_count'])
+    filt_list = build_filter_blocks(params['filter_pattern'], params['exp_count'], params['exp_type'])
 
     calib_mode = params.get('calibs', 'none').lower()
     if params.get('spectroscopy', False) is True:
         # Spectroscopy mode
         params['spectra_slit'] = params['filter_pattern']
-        spectrum_molecule = make_molecule(params, filt_list[0])
+        spectrum_molecule = make_spect_config(params, filt_list[0])
         if calib_mode != 'none':
             old_type = params['exp_type']
             params['exp_type'] = 'ARC'
-            arc_molecule = make_molecule(params, filt_list[0])
+            arc_molecule = make_spect_config(params, filt_list[0])
             params['exp_type'] = 'LAMP_FLAT'
-            flat_molecule = make_molecule(params, filt_list[0])
+            flat_molecule = make_spect_config(params, filt_list[0])
             params['exp_type'] = old_type
         if calib_mode == 'before':
-            molecules = [flat_molecule, arc_molecule, spectrum_molecule]
+            configs = [flat_molecule, arc_molecule, spectrum_molecule]
         elif calib_mode == 'after':
-            molecules = [spectrum_molecule, arc_molecule, flat_molecule]
+            configs = [spectrum_molecule, arc_molecule, flat_molecule]
         elif calib_mode == 'both':
-            molecules = [flat_molecule, arc_molecule, spectrum_molecule, arc_molecule, flat_molecule]
+            configs = [flat_molecule, arc_molecule, spectrum_molecule, arc_molecule, flat_molecule]
         else:
-            molecules = [spectrum_molecule, ]
+            configs = [spectrum_molecule, ]
     else:
-        molecules = [make_molecule(params, filt) for filt in filt_list]
+        configs = [make_config(params, filt_list)]
 
-    return molecules
+    return configs
 
 
 def make_constraints(params):
@@ -1640,8 +1753,8 @@ def make_constraints(params):
                     # 'max_airmass' : 1.55,   # 40 deg altitude (The maximum airmass you are willing to accept)
                     # 'max_airmass' : 2.37,   # 25 deg altitude (The maximum airmass you are willing to accept)
                     # 'min_lunar_distance': 30
-                    'max_airmass' : params.get('max_airmass', 1.74),
-                    'min_lunar_distance' : params.get('min_lunar_distance', 30)
+                    'max_airmass': params.get('max_airmass', 1.74),
+                    'min_lunar_distance': params.get('min_lunar_distance', 30)
                   }
     return constraints
 
@@ -1649,10 +1762,10 @@ def make_constraints(params):
 def make_single(params, ipp_value, request):
     """Create a user_request for a single observation"""
 
-    user_request = {
+    requestgroup = {
                     'submitter' : params['user_id'],
                     'requests'  : [request],
-                    'group_id'  : params['group_id'],
+                    'name'  : params['group_name'],
                     'observation_type': "NORMAL",
                     'operator'  : "SINGLE",
                     'ipp_value' : ipp_value,
@@ -1661,42 +1774,34 @@ def make_single(params, ipp_value, request):
 
 # If the ToO mode is set, change the observation_type
     if params.get('too_mode', False) is True:
-        user_request['observation_type'] = 'TARGET_OF_OPPORTUNITY'
+        requestgroup['observation_type'] = 'TIME_CRITICAL'
 
-    return user_request
+    return requestgroup
 
 
 def make_many(params, ipp_value, request, cal_request):
-    """Create a user_request for a MANY observation of the asteroid
+    """Create a request for a MANY observation of the asteroidgroup
     target (<request>) and calibration source (<cal_request>)"""
 
-    user_request = {
+    requestgroup = {
                     'submitter' : params['user_id'],
                     'requests'  : [request, cal_request],
-                    'group_id'  : params['group_id'],
+                    'name'  : params['group_name'],
                     'observation_type': "NORMAL",
                     'operator'  : "MANY",
                     'ipp_value' : ipp_value,
                     'proposal'  : params['proposal_id']
     }
 
-    return user_request
+    return requestgroup
 
 
 def make_proposal(params):
-    proposal = { 
-                 'proposal_id' : params['proposal_id'],
-                 'user_id' : params['user_id']
+    proposal = {
+                 'proposal_id': params['proposal_id'],
+                 'user_id': params['user_id']
                }
     return proposal
-
-
-def make_cadence(elements, params, ipp_value, request=None):
-    """Generate a cadence user request from the <elements> and <params>."""
-
-    ur = make_cadence_valhalla(request, params, ipp_value)
-
-    return ur
 
 
 def expand_cadence(user_request):
@@ -1708,7 +1813,7 @@ def expand_cadence(user_request):
             cadence_url,
             json=user_request,
             headers={'Authorization': 'Token {}'.format(settings.PORTAL_TOKEN)},
-            timeout=20.0
+            timeout=120.0
          )
     except requests.exceptions.Timeout:
         msg = "Observing portal API timed out"
@@ -1726,27 +1831,35 @@ def expand_cadence(user_request):
     return True, cadence_user_request
 
 
-def make_cadence_valhalla(request, params, ipp_value, debug=False):
-    """Create a user_request for a cadence observation"""
+def make_cadence(request, params, ipp_value, debug=False):
 
+    """Create a user_request for a cadence observation"""
     # Add cadence parameters into Request
-    request['cadence'] = {
-                            'start' : datetime.strftime(params['start_time'], '%Y-%m-%dT%H:%M:%S'),
-                            'end'   : datetime.strftime(params['end_time'], '%Y-%m-%dT%H:%M:%S'),
-                            'period': params['period'],
-                            'jitter': params['jitter']
-                         }
-    del(request['windows'])
+    cadence = {
+                'start' : datetime.strftime(params['start_time'], '%Y-%m-%dT%H:%M:%S'),
+                'end'   : datetime.strftime(params['end_time'], '%Y-%m-%dT%H:%M:%S'),
+                'period': params['period'],
+                'jitter': params['jitter']
+             }
+    request = [{'cadence': cadence,
+                'configurations': request['configurations'],
+                'windows': [],
+                'location': request['location'],
+                }]
 
     user_request = {
-                    'submitter': params['user_id'],
-                    'requests' : [request],
-                    'group_id' : params['group_id'],
+                    'requests' : request,
+                    'name' : params['group_name'],
                     'observation_type': "NORMAL",
                     'operator' : "SINGLE",
                     'ipp_value': ipp_value,
                     'proposal' : params['proposal_id']
                    }
+
+# If the ToO mode is set, change the observation_type
+    if params.get('too_mode', False) is True:
+        user_request['observation_type'] = 'TIME_CRITICAL'
+
 # Submit the UserRequest with the cadence
     status, cadence_user_request = expand_cadence(user_request)
 
@@ -1765,6 +1878,7 @@ def make_cadence_valhalla(request, params, ipp_value, debug=False):
 def configure_defaults(params):
 
     site_list = { 'V37' : 'ELP',
+                  'V39' : 'ELP',
                   'K91' : 'CPT',
                   'K92' : 'CPT',
                   'K93' : 'CPT',
@@ -1796,11 +1910,19 @@ def configure_defaults(params):
         pass
     params['binning'] = 1
     params['instrument'] = '1M0-SCICAM-SINISTRO'
-    params['exp_type'] = 'EXPOSE'
+
+    # Perform Repeated exposures if many exposures compared to number of filter changes.
+    if params['exp_count'] <= 10 or params['exp_count'] < 10*len(list(filter(None, params['filter_pattern'].split(',')))):
+        params['exp_type'] = 'EXPOSE'
+    else:
+        params['exp_type'] = 'REPEAT_EXPOSE'
 
     if params['site_code'] in ['F65', 'E10', '2M0']:
-        params['instrument'] = '2M0-SCICAM-SPECTRAL'
-        params['binning'] = 2
+        if 'F65' in params['site_code']:
+            params['instrument'] = '2M0-SCICAM-MUSCAT'
+        else:
+            params['instrument'] = '2M0-SCICAM-SPECTRAL'
+            params['binning'] = 2
         params['pondtelescope'] = '2m0'
         if params.get('spectroscopy', False) is True and 'FLOYDS' in params.get('instrument_code', ''):
             params['exp_type'] = 'SPECTRUM'
@@ -1825,68 +1947,81 @@ def configure_defaults(params):
         if params['site_code'] == 'V38':
             # elp-aqwa-0m4a kb80
             params['observatory'] = 'aqwa'
+    elif params.get('bin_mode', None) == '2k_2x2':
+        params['binning'] = 2
 
     return params
 
 
-def make_userrequest(elements, params):
+def make_requestgroup(elements, params):
 
     params = configure_defaults(params)
+
 # Create Location (site, observatory etc)
     location = make_location(params)
     logger.debug("Location=%s" % location)
 # Create Target (pointing)
     if len(elements) > 0:
         logger.debug("Making a moving object")
-        target = make_moving_target(elements)
+        params['target'] = make_moving_target(elements)
+        if 'sky_pa' in elements and params['para_angle'] is False:
+            params['rot_mode'] = 'SKY'
+            params['rot_angle'] = round(elements['sky_pa'], 1)
     else:
         logger.debug("Making a static object")
-        target = make_target(params)
-    logger.debug("Target=%s" % target)
+        params['target'] = make_target(params)
+    logger.debug(f"Target={params['target']}")
 # Create Window
     window = make_window(params)
     logger.debug("Window=%s" % window)
 # Create Molecule(s)
-    molecule_list = make_molecules(params)
+    params['constraints'] = make_constraints(params)
+    configurations = make_configs(params)
 
     submitter = ''
     submitter_id = params.get('submitter_id', '')
     if submitter_id != '':
-        submitter = '(by %s)' % submitter_id
-    note = ('Submitted by NEOexchange {}'.format(submitter))
+        submitter = f'(by {submitter_id})'
+    note = f'Submitted by NEOexchange {submitter}'
     note = note.rstrip()
 
-    constraints = make_constraints(params)
-
     request = {
-            "location": location,
-            "acceptability_threshold": params.get('acceptability_threshold', 90),
-            "constraints": constraints,
-            "target": target,
-            "molecules": molecule_list,
-            "windows": [window],
-            "observation_note": note,
-        }
+        'configurations': configurations,
+        "acceptability_threshold": params.get('acceptability_threshold', 90),
+        'windows': [window],
+        'location': location,
+        "observation_note": note,
+    }
+
     if params.get('solar_analog', False) and len(params.get('calibsource', {})) > 0:
         # Assemble solar analog request
-        params['group_id'] += "+solstd"
+        params['group_name'] += "+solstd"
         params['source_id'] = params['calibsource']['name']
         params['ra_deg'] = params['calibsource']['ra_deg']
         params['dec_deg'] = params['calibsource']['dec_deg']
-        cal_target = make_target(params)
+        if 'pm_ra' in params['calibsource']:
+            params['pm_ra'] = params['calibsource']['pm_ra']
+        if 'pm_dec' in params['calibsource']:
+            params['pm_dec'] = params['calibsource']['pm_dec']
+        params['target'] = make_target(params)
+        # save target exposure settings
         exp_time = params['exp_time']
-        params['exp_time'] = params['calibsrc_exptime']
+        exp_count = params['exp_count']
         ag_exptime = params.get('ag_exp_time', 10)
+        # update exposure settings for analog and create configurations
+        params['exp_time'] = params['calibsrc_exptime']
+        params['exp_count'] = 1
         params['ag_exp_time'] = 10
-        cal_molecule_list = make_molecules(params)
+        params['rot_mode'] = 'VFLOAT'
+        cal_configurations = make_configs(params)
+        # reinstate target exposure settings
         params['exp_time'] = exp_time
+        params['exp_count'] = exp_count
         params['ag_exp_time'] = ag_exptime
 
         cal_request = {
                         "location": location,
-                        "constraints": constraints,
-                        "target": cal_target,
-                        "molecules": cal_molecule_list,
+                        "configurations": cal_configurations,
                         "windows": [window],
                         "observation_note": note,
                     }
@@ -1897,7 +2032,7 @@ def make_userrequest(elements, params):
 
 # Add the Request to the outer User Request
     if 'period' in params.keys() and 'jitter' in params.keys():
-        user_request = make_cadence(elements, params, ipp_value, request)
+        user_request = make_cadence(request, params, ipp_value)
     elif len(cal_request) > 0:
         user_request = make_many(params, ipp_value, request, cal_request)
     else:
@@ -1910,7 +2045,22 @@ def make_userrequest(elements, params):
 
 def submit_block_to_scheduler(elements, params):
 
-    user_request = make_userrequest(elements, params)
+    user_request = make_requestgroup(elements, params)
+
+    # Errors or mostly blank dict came back from make_requestgroup(), probably cadence-related
+    if user_request.get('errors', None):
+        msg = user_request['errors']
+        logger.error(msg)
+        params['error_msg'] = msg
+        return False, params
+    elif 'name' not in user_request and 'proposal' not in user_request:
+        error_msg = {}
+        for x in user_request['requests']:
+            if x != {}:
+                for key, value in x.items():
+                    error_msg[key] = value
+            params['error_msg'] = error_msg
+        return False, params
 
 # Make an endpoint and submit the thing
     try:
@@ -1918,7 +2068,7 @@ def submit_block_to_scheduler(elements, params):
             settings.PORTAL_REQUEST_API,
             json=user_request,
             headers={'Authorization': 'Token {}'.format(settings.PORTAL_TOKEN)},
-            timeout=20.0
+            timeout=120.0
          )
     except requests.exceptions.Timeout:
         msg = "Observing portal API timed out"
@@ -1928,16 +2078,9 @@ def submit_block_to_scheduler(elements, params):
 
     if resp.status_code not in [200, 201]:
         logger.error(resp.json())
-        msg = "Parsing error"
+        # msg = "Parsing error"
         try:
-            error_json = resp.json()
-            error_msg = error_json.get('requests', msg)
-            if len(error_msg) >= 1:
-                error_msg = error_msg[0].get('non_field_errors', msg)
-                msg = error_msg[0]
-            elif error_json.get('non_field_errors', None) is not None:
-                error_msg = error_json.get('non_field_errors', msg)
-                msg = error_msg[0]
+            msg = resp.json()
         except AttributeError:
             try:
                 msg = user_request['errors']
@@ -1945,13 +2088,13 @@ def submit_block_to_scheduler(elements, params):
                 try:
                     msg = user_request['proposal'][0]
                 except KeyError:
-                    msg = "Unable to decode response from Valhalla"
+                    msg = "Unable to decode response from Observing Portal"
         params['error_msg'] = msg
         logger.error(msg)
         return False, params
 
     response = resp.json()
-    tracking_number = response.get('id', '')
+    tracking_number = str(response.get('id', ''))
 
     request_items = response.get('requests', '')
 
@@ -1963,7 +2106,12 @@ def submit_block_to_scheduler(elements, params):
         params['error_msg'] = msg
         return False, params
 
-    request_types = dict([(r['id'], r['target']['type']) for r in request_items])
+    request_types = {}
+    if len(request_items) > 0:
+        if 'configurations' in request_items[0]:
+            request_types = dict([(str(r['id']), r['configurations'][0]['target']['type']) for r in request_items])
+        else:
+            request_types = dict([(r['id'], r['target']['type']) for r in request_items])
     request_windows = [r['windows'] for r in user_request['requests']]
 
     params['block_duration'] = sum([float(_['duration']) for _ in request_items])
@@ -1976,47 +2124,83 @@ def submit_block_to_scheduler(elements, params):
     return tracking_number, params
 
 
-def fetch_filter_list(site, spec, page=None):
-    """Fetches the camera mappings page"""
+def fetch_filter_list(site, spec):
+    """Fetches the filter list from the observation portal instruments endpoint"""
 
-    if page is None:
-        camera_mappings = 'http://configdb.lco.gtn/camera_mappings/'
-        data_file = fetchpage_and_make_soup(camera_mappings)
-        data_out = parse_filter_file(site, spec, data_file)
+    siteid, encid, telid = MPC_site_code_to_domes(site)
+    if '1m0' in telid.lower():
+        camid = "1m0-SciCam-Sinistro"
+    elif '0m4' in telid.lower():
+        camid = "0m4-SciCam-SBIG"
+    elif '2m0' in telid.lower():
+        if spec:
+            camid = "2m0-FLOYDS-SciCam"
+        elif "OGG" in siteid.upper():
+            camid = "2M0-SCICAM-MUSCAT"
+        else:
+            camid = "2m0-SciCam-Spectral"
     else:
-        with open(page, 'r') as input_file:
-            data_out = parse_filter_file(site, spec, input_file.read())
-    return data_out
+        camid = ''
+
+    if siteid == 'xxx':
+        siteid = encid = telid = ''
+
+    # Disable specific telescope check, use all telescopes of appropriate class at a site.
+    encid = telid = ''
+
+    request_url = (
+        '{instruments_url}?site={site}&enclosure={enclosure}&telescope={telescope}&instrument_type={instrument_type}'
+        '&only_schedulable=true'
+    ).format(
+        instruments_url=settings.PORTAL_INSTRUMENTS_URL,
+        site=siteid.lower(),
+        enclosure=encid.lower(),
+        telescope=telid.lower(),
+        instrument_type=camid
+    )
+    response = requests.get(request_url, timeout=20, verify=True)
+
+    resp = {}
+    if response.status_code in [200, 201]:
+        resp = response.json()
+
+    fetch_error = ''
+    data_out = []
+    if not resp:
+        fetch_error = 'The {} at {} is not schedulable.'.format(camid, site)
+    elif 'MUSCAT' in camid:
+        data_out = ['gp', 'rp', 'ip', 'zp']
+    else:
+        data_out = parse_filter_file(resp, spec)
+        if not data_out:
+            fetch_error = 'Could not find any filters for the {} at {}'.format(camid, site)
+    if fetch_error:
+        logger.error(fetch_error)
+    return data_out, fetch_error
 
 
-def parse_filter_file(site, spec, camera_list=None):
-    """Parses the camera mappings page and sends back a list of filters at the given site code.
+def parse_filter_file(resp, spec):
+    """Parses the returned json dictionary and pull out the list of approved filters
     """
     if spec is not True:
         filter_list = cfg.phot_filters
     else:
         filter_list = cfg.spec_filters
 
-    siteid, encid, telid = MPC_site_code_to_domes(site)
-
-    camera_list = str(camera_list).split("\n")
     site_filters = []
-    try:
-        for line in camera_list:
-            chunks = line.split(' ')
-            chunks = list(filter(None, chunks))
-            if len(chunks) == 13:
-                if (chunks[0] == siteid or siteid == 'xxx') and chunks[2][:-1] == telid[:-1]:
-                    filt_list = chunks[12].split(',')
-                    for filt in filter_list:
-                        if filt in filt_list and filt not in site_filters:
-                            site_filters.append(filt)
-    except Exception as e:
-        msg = "Could not read camera mappings file"
-        logger.error(msg)
-        logger.error(e)
-    if not site_filters:
-        logger.error('Could not find any filters for {}'.format(site))
+    for instrument_type_config in resp.values():
+        try:
+            filt_list = []
+            for optical_elements in instrument_type_config['optical_elements'].values():
+                for optical_element in optical_elements:
+                    if optical_element['schedulable'] is True:
+                        filt_list.append(optical_element['code'])
+        except KeyError:
+            filt_list = []
+        for filt in filter_list:
+            if filt in filt_list and filt not in site_filters:
+                site_filters.append(filt)
+
     return site_filters
 
 
@@ -2161,9 +2345,9 @@ def fetch_smass_targets(page=None, cut_off=None):
 
                     if t_link.split('.')[-1] != 'txt':
                         if t_link.split('.')[-1] == 'tx':
-                            t_link = t_link + 't'
+                            t_link += 't'
                         else:
-                            t_link = t_link + '.txt'
+                            t_link += '.txt'
                     t_link = 'http://smass.mit.edu/' + t_link
                     if 'Vis' in t_wav:
                         v_link = t_link
@@ -2316,7 +2500,6 @@ def fetch_flux_standards(page=None, filter_optical_model=True, dbg=False):
                 name = link.text.strip()
                 if dbg:
                     print("Standard=", name)
-                standard_details = {}
                 if link.next_sibling:
                     string = link.next_sibling.encode('ascii', 'ignore')
                     if dbg:
@@ -2324,7 +2507,7 @@ def fetch_flux_standards(page=None, filter_optical_model=True, dbg=False):
                     nstart = 1
                     nstart, ra, status = S.sla_dafin(string, nstart)
                     if status == 0:
-                        ra = ra * 15.0
+                        ra *= 15.0
                     else:
                         ra = None
                     nstart, dec, status = S.sla_dafin(string, nstart)
@@ -2373,3 +2556,248 @@ def read_solar_standards(standards_file):
         v_mag = row['Vmag']
         standards[name] = { 'ra_rad' : ra, 'dec_rad' : dec, 'mag' : v_mag, 'spectral_type' : 'G2V'}
     return standards
+
+
+def fetch_jpl_physparams_altdes(body):
+    """Function to fetch physical parameters, designations, source types, and subtypes from JPL Horizons (online)"""
+    jpl_url_base = 'https://ssd-api.jpl.nasa.gov/sbdb.api'
+    request_url = jpl_url_base + '?sstr={}&phys-par=Y&alt-des=Y&no-orbit=Y'.format(body.current_name())
+    resp = requests.get(request_url, timeout=20, verify=True).json()
+
+    return resp
+
+
+def store_jpl_physparams(phys_par, body):
+    """Function to store object physical parameters from JPL Horizons"""
+
+    # parsing the JPL physparams dictionary
+    for p in phys_par:   
+        if 'H' == p['name']:  # absolute magnitude
+            p_type = 'H'
+        elif 'G' == p['name']:  # magnitude (phase) slope
+            p_type = 'G'
+        elif 'diameter' in p['name']:  # diameter
+            p_type = 'D'     
+        elif 'extent' in p['name']:  # extent
+            continue        
+        elif 'GM' in p['name']:  # GM
+            p_type = 'M'
+        elif 'density' in p['name']:  # density
+            p_type = 'R'
+        elif 'rot_per' in p['name']:  # rotation period
+            p_type = 'P'
+        elif 'pole' in p['name']:  # pole direction
+            p_type = 'O'
+        elif 'albedo' in p['name']:  # geometric albedo
+            p_type = 'ab'
+        # Parameters available from JPL, but not explicitly stored by us at the moment.
+        # TAL 2020/7/8: Thought about mapping M1,K1->H,G here but decided against
+#        elif 'M1' == p['name']: # absolute magnitude of comet and coma (total)
+#            p_type = 'H'
+#        elif 'K1' == p['name']: # comet total magnitude slope parameter
+#            p_type = 'G'
+#        elif 'M2' == p['name']: # comet total magnitude parameter
+#        elif 'K2' == p['name']: # comet nuclear magnitude slope parameter
+#        elif 'PC' == p['name']: # comet nuclear magnitude law - phase coefficient
+        elif 'spectral' in p['desc']:
+            continue
+        else:
+            p_type = p['name']
+
+        # Making sure we're storing float, not string
+        try:
+            jpl_value = float(p['value'])
+        except (TypeError, ValueError):
+            jpl_value = p['value']
+        try:
+            jpl_error = float(p['sigma'])
+        except (TypeError, ValueError):
+            jpl_error = p['sigma']
+
+        # Splitting values that are connected values
+        jpl_value2 = jpl_error2 = None
+
+        if isinstance(jpl_value, str) and '/' in jpl_value:
+            jpl_value, jpl_value2 = jpl_value.split('/')
+
+        if isinstance(jpl_error, str) and '/' in jpl_error:
+            jpl_error, jpl_error2 = jpl_error.split('/')
+
+        # Build physparams dictionary
+        phys_params = {'parameter_type': p_type,
+                       'value': jpl_value,
+                       'error': jpl_error,
+                       'units': p.get('units', None),
+                       'reference': p.get('ref', None),
+                       'notes': p.get('notes', None),
+                       'preferred': True
+                       }
+
+        # Change dictionary if color
+        if 'color' in p.get('desc', ''):
+            phys_params['color_band'] = p['title']
+            del phys_params['parameter_type']
+        else:
+            phys_params['value2'] = jpl_value2
+            phys_params['error2'] = jpl_error2  
+
+        saved = body.save_physical_parameters(phys_params)
+        if saved:
+            logger.info('New Physical Parameter saved for {}: {}'.format(body.current_name(), p.get('desc', 'unknown')))
+
+
+def store_jpl_desigs(obj, body):
+    """Function to store object name, number, and designations from JPL Horizons"""
+
+    # parsing through JPL designations
+    des_dict_list = parse_jpl_fullname(obj)
+
+    des_alt = obj['des_alt']
+    preferred = False
+    if len(des_alt) >= 1:
+        for d in des_alt:
+            alt_des = None
+            for des in d:
+                if des == 'pri':
+                    preferred = True
+                    alt_des = d[des]
+                elif des == 'des':
+                    preferred = False
+                    alt_des = d[des]
+                elif des == 'rn':
+                    continue
+                elif des == 'yl':
+                    continue
+
+            if alt_des:
+                prov_des_dict = {'value': alt_des,
+                                 'desig_type': 'P',
+                                 'preferred': preferred}
+                des_dict_list.append(prov_des_dict)
+
+    for D in des_dict_list:
+        if D['value']:
+            saved = body.save_physical_parameters(D)
+            if saved:
+                logger.info('New Designation saved for {}: {}'.format(body.current_name(), D['value']))
+
+
+def parse_jpl_fullname(obj):
+    """Given a JPL object, return parsed full name"""
+    fullname = obj['fullname']
+    number = name = prov_des = None
+    if fullname[0] == '(':
+        prov_des = fullname.strip('()')
+    elif '/' in fullname:  # comet
+        parts = fullname.split('/')
+        if len(parts) == 2:
+            part1 = parts[0]
+            part2 = parts[1]
+            if len(part1) == 1 and part1.isalpha():
+                prov_des = fullname
+            elif '(' in part1:
+                part11, part12 = part1.split('(')
+                name = part11.rstrip()
+                prov_des = part12 + '/' + part2.strip('()')
+            else:
+                number = part1
+            if '(' in part2:
+                part21, part22 = part2.split('(')
+                prov_des = part1 + '/' + part21.rstrip()
+                name = part22.strip('()')
+            elif number:
+                name = part2
+    elif ' ' in fullname:
+        space_num = fullname.count(' ')
+        if space_num == 3:
+            part1, part2, part3, part4 = fullname.split(' ')
+            number = part1
+            if part2[0].isalpha:
+                name = part2
+        elif space_num == 2:
+            part1, part2, part3 = fullname.split(' ')
+            number = part1
+        elif space_num == 1:
+            part1, part2 = fullname.split(' ')
+            number = part1
+            name = part2
+
+    # designation dictionary
+    des_dict_list = [{'value': number, 'desig_type': '#', 'preferred': True},
+                     {'value': name, 'desig_type': 'N', 'preferred': True},
+                     {'value': prov_des, 'desig_type': 'P', 'preferred': True}]
+    return des_dict_list
+
+
+def store_jpl_sourcetypes(code, obj, body):
+    """Function to store object source types and subtypes from JPL Horizons"""
+
+    source_type = source_subtype_1 = source_subtype_2 = None
+    if 'CEN' in code:  # Centaur
+        source_type = 'E'
+    elif 'TJN' in code:  # Jupiter trojan
+        source_type = 'T'
+        source_subtype_1 = 'P5'
+    elif 'TNO' in code:  # Trans-Neptunian Object
+        source_type = 'K'        
+    elif 'IEO' in code:  # Atira
+        source_subtype_1 = 'N1'
+    elif 'ATE' in code:  # Aten
+        source_subtype_1 = 'N2'
+    elif 'APO' in code:  # Apollo
+        source_subtype_1 = 'N3'   
+    elif 'AMO' in code:  # Amor
+        source_subtype_1 = 'N4'
+    elif 'IMB' in code:  # inner main belt
+        source_subtype_1 = 'MI'
+    elif 'MBA' in code:  # main belt
+        source_subtype_1 = 'M'
+    elif 'OMB' in code:  # outer main belt
+        source_subtype_1 = 'MO'
+    # No current way to tell if L4/L5 Trojan from JPL
+#    if code is '##': # L4
+#        source_subtype_1 = 'T4'
+#    if code is '##': # L5
+#        source_subtype_1 = 'T5'
+    # We do not have category for "Mars Crossing Asteroid"
+#    if code is 'MCA': # MCA = mars crossing asteroid
+#        source_subtype_1 = 'P4'
+    elif 'HYA' in code:  # hyperbolic asteroid
+        source_subtype_1 = 'H'
+    elif 'HYP' in code:  # hyperbolic comet
+        source_subtype_1 = 'H'
+    elif 'PAA' in code:  # parabolic asteroid
+        source_subtype_1 = 'PA'
+    elif 'PAR' in code:  # parabolic comet
+        source_subtype_1 = 'PA'
+    elif 'JFC' in code:  # Jupiter family comet P<20yrs
+        source_subtype_1 = 'JF'
+    elif 'JFc' in code:  # Jupiter family comet 2<Tjupiter<3
+        source_subtype_1 = 'JF'
+    elif 'HTC' in code:  # Halley type comet
+        source_subtype_1 = 'HT'
+    elif 'COM' in code:  # Long Period comet
+        source_subtype_1 = 'LP'
+    else:
+        source_subtype_1 = None
+
+    if obj['neo'] is True:
+        source_type = body.source_type
+        if not source_type:
+            source_type = 'N'
+        if obj['pha'] is True:
+            source_subtype_2 = 'PH'
+        if source_type != 'N':
+            if not source_subtype_1:
+                source_subtype_1 = 'N'
+            elif not source_subtype_2:
+                source_subtype_2 = 'N'
+
+    if source_type:
+        body.source_type = source_type        
+    body.source_subtype_1 = source_subtype_1
+    body.source_subtype_2 = source_subtype_2
+    body.save()
+        
+
+

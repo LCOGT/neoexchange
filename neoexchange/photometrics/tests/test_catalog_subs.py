@@ -19,8 +19,10 @@ from math import sqrt, log10, log
 import os
 from glob import glob
 import tempfile
+import shutil
+import stat
 
-import mock
+from mock import patch
 from django.test import TestCase
 from django.forms.models import model_to_dict
 from astropy.io import fits
@@ -31,7 +33,8 @@ import astropy.units as u
 from numpy import where, array
 from numpy.testing import assert_allclose
 
-from core.models import Body, Proposal, Block, Frame
+from core.models import Body, Proposal, Block, Frame, SuperBlock
+from neox.tests.mocks import mock_get_vizier_catalog_table
 
 # Import module to test
 from photometrics.catalog_subs import *
@@ -43,21 +46,35 @@ logger = logging.getLogger(__name__)
 # Disable anything below CRITICAL level
 logging.disable(logging.CRITICAL)
 
+
 class ZeropointUnitTest(TestCase):
 
-    # @mock.patch('photometrics.catalog_subs.Vizier')
+    def setUp(self):
+        # Maybe do some static test catalog reading later
+        # test if no catalog input, use default catalog
+        # test_data = __file__.replace('.py', '_UCAC4.dat') #test_data_file captured with cat_table.write('test_ca
+        # test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.d
+        # mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
+        pass
+
+    def compare_tables(self, expected_table, table, column, num_to_check=6, precision=6):
+
+        for i in range(0, num_to_check+1):
+            self.assertAlmostEqual(expected_table[column][i], table[column][i], precision)
+
+    # @patch('photometrics.catalog_subs.Vizier')
     # def test_get_cat_ra_dec(self, mock_vizier):
     def test_get_cat_ra_dec(self):
         # test getting a single ra, dec, and rmag out of the default UCAC4 catalog
         # test_data = __file__.replace('.py', '_UCAC4.dat') #test_data_file captured with cat_table.write('test_catalog_subs_UCAC4.dat', format='csv')
         #        test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
-        ## test_query_result = []
-        ## test_query_result.append(Table.read(test_data, format='csv'))
-        ## mock_vizier().query_region().__getitem__.return_value=test_query_result
-        ## print mock_vizier().query_region().__getitem__.return_value#['_RAJ2000'][0]
-        ## print len(mock_vizier().query_region().__getitem__.return_value)
-        ## print mock_vizier().query_region().__getitem__(0)
-        ## print test_query_result.__getitem__(0)
+        # test_query_result = []
+        # test_query_result.append(Table.read(test_data, format='csv'))
+        # mock_vizier().query_region().__getitem__.return_value=test_query_result
+        # print mock_vizier().query_region().__getitem__.return_value#['_RAJ2000'][0]
+        # print len(mock_vizier().query_region().__getitem__.return_value)
+        # print mock_vizier().query_region().__getitem__(0)
+        # print test_query_result.__getitem__(0)
         # print test_query_result[0]
         # print len(test_query_result)
         # mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
@@ -73,9 +90,9 @@ class ZeropointUnitTest(TestCase):
         expected_len_cat_table = 1607
 
         cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", "UCAC4")
-#        print cat_table['_RAJ2000'][0], cat_table['_DEJ2000'][0]#, cat_table['rmag'][2]
-#        print cat_name
-#        print cat_table
+        # print(cat_table['_RAJ2000'][0], cat_table['_DEJ2000'][0]#, cat_table['rmag'][2])
+        # print(cat_name)
+        # print(cat_table)
 
         ra_first_source = cat_table['RAJ2000'][0]
 
@@ -88,13 +105,9 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_rmag_third_source, rmag_third_source, 2)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
-#    @mock.patch('photometrics.catalog_subs.Vizier')
-#    def test_no_cat(self, mock_vizier):
+    # @patch('photometrics.catalog_subs.Vizier')
+    # def test_no_cat(self, mock_vizier):
     def test_no_cat(self):
-        # test if no catalog input, use default catalog
-        # test_data = __file__.replace('.py', '_UCAC4.dat') #test_data_file captured with cat_table.write('test_catalog_subs_UCAC4.dat', format='csv')
-        # test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
-        # mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
 
         expected_ra_first_source = 299.29474599999998
 
@@ -117,13 +130,9 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_rmag_third_source, rmag_third_source, 2)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
-#    @mock.patch('photometrics.catalog_subs.Vizier')
+#    @patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_ra_dec_not_default(self, mock_vizier):
     def test_get_cat_ra_dec_not_default(self):
-        # test a catalog other than the default
-        # test_data = __file__.replace('.py', '_PPMXL.dat') #test_data_file captured with cat_table.write('test_catalog_subs_PPMXL.dat', format='csv')
-        # test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
-        # mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
 
         expected_ra_first_source = 299.29136599999998
 
@@ -146,13 +155,9 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_rmag_first_source, rmag_first_source, 3)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
-#    @mock.patch('photometrics.catalog_subs.Vizier')
+#    @patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_diff_rmag_limit(self, mock_vizier):
     def test_get_cat_diff_rmag_limit(self):
-        # test a catalog with an r mag limit
-        # test_data = __file__.replace('.py', '_PPMXL_diff_rmag_limit.dat') #test_data_file captured with cat_table.write('test_catalog_subs_PPMXL_diff_rmag_limit.dat', format='csv')
-        # test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
-        # mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
 
         expected_ra_last_source = 299.82885099999999
 
@@ -175,13 +180,9 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_rmag_last_source, rmag_last_source, 1)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
-#    @mock.patch('photometrics.catalog_subs.Vizier')
+#    @patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_diff_row_limit(self, mock_vizier):
     def test_get_cat_diff_row_limit(self):
-        # test a catalog with a different row limit
-        # test_data = __file__.replace('.py', '_PPMXL_diff_row_limit.dat') #test_data_file captured with cat_table.write('test_catalog_subs_PPMXL_diff_row_limit.dat', format='csv')
-        # test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
-        # mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
 
         expected_ra_first_source = 299.29136599999998
 
@@ -204,13 +205,9 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_rmag_first_source, rmag_first_source, 2)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
-#    @mock.patch('photometrics.catalog_subs.Vizier')
+#    @patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_diff_width(self, mock_vizier):
     def test_get_cat_diff_width(self):
-        # test a catalog with a different width and height
-        # test_data = __file__.replace('.py', '_UCAC4_diff_width_height.dat') #test_data_file captured with cat_table.write('test_catalog_subs_UCAC4_diff_width_height.dat', format='csv')
-        # test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
-        # mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
 
         expected_ra_last_source = 299.74110200000001
 
@@ -233,13 +230,9 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_rmag_3rdlast_source, rmag_3rdlast_source, 2)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
-#    @mock.patch('photometrics.catalog_subs.Vizier')
+#    @patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_ra_dec_above_row_limit(self, mock_vizier):
     def test_get_cat_ra_dec_above_row_limit(self):
-        # test a catalog with a different width and height
-        # test_data = __file__.replace('.py', '_PPMXL_above_row_limit.dat') #test_data_file captured with cat_table.write('test_catalog_subs_PPMXL_above_row_limit.dat', format='csv')
-        # test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
-        # mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
 
         expected_ra_last_source = 267.35990700000002
 
@@ -262,13 +255,9 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_rmag_last_source, rmag_last_source, 2)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
-#    @mock.patch('photometrics.catalog_subs.Vizier')
+#    @patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_ra_dec_empty_list_PPMXL(self, mock_vizier):
     def test_get_cat_ra_dec_empty_list_PPMXL(self):
-        # test a catalog with a different width and height
-        # test_data = __file__.replace('.py', '_UCAC4_empty.dat') #test_data_file captured with cat_table.write('test_catalog_subs_UCAC4_empty.dat', format='csv')
-        # test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
-        # mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
 
         expected_ra_last_source = 0.0
 
@@ -291,13 +280,9 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_rmag_last_source, rmag_last_source, 2)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
-#    @mock.patch('photometrics.catalog_subs.Vizier')
+#    @patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_ra_dec_empty_list_UCAC4(self, mock_vizier):
     def test_get_cat_ra_dec_empty_list_UCAC4(self):
-        # test a catalog with a different width and height
-        # test_data = __file__.replace('.py', '_PPMXL_empty.dat') #test_data_file captured with cat_table.write('test_catalog_subs_PPMXL_empty.dat', format='csv')
-        # test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
-        # mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
 
         expected_ra_last_source = 0.0
 
@@ -343,6 +328,30 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_rmag_last_source, rmag_last_source, 2)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
+    def test_get_cat_ra_dec_GAIA_DR2(self):
+
+        expected_ra_first_source = 299.84644068600
+        expected_dec_first_source = 34.96403374990
+        expected_rmag_first_source = 14.7231
+        expected_e_rmag_first_source = 0.0003
+        expected_flags_first_source = 0
+        expected_len_cat_table = 585
+
+        cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", "GAIA-DR2")
+
+        ra_first_source = cat_table['RAJ2000'][0]
+        dec_first_source = cat_table['DEJ2000'][0]
+        rmag_first_source = cat_table['Gmag'][0]
+        e_rmag_first_source = cat_table['e_Gmag'][0]
+        flags_first_source = cat_table['Dup'][0]
+
+        self.assertAlmostEqual(expected_ra_first_source, ra_first_source, 8)
+        self.assertAlmostEqual(expected_dec_first_source, dec_first_source, 8)
+        self.assertAlmostEqual(expected_rmag_first_source, rmag_first_source, 5)
+        self.assertAlmostEqual(expected_e_rmag_first_source, e_rmag_first_source, 5)
+        self.assertEqual(expected_flags_first_source, flags_first_source)
+        self.assertEqual(expected_len_cat_table, len(cat_table))
+
     def test_cross_match_UCAC4_longerThan_testFITS(self):
         # test with cat 1 as longer UCAC4 table values and cat 2 as shorter test FITS table values
 
@@ -382,85 +391,16 @@ class ZeropointUnitTest(TestCase):
 
         cross_match_table = cross_match(table_cat_1, table_cat_2)
 
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][0], cross_match_table['RA Cat 1'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][1], cross_match_table['RA Cat 1'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][2], cross_match_table['RA Cat 1'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][3], cross_match_table['RA Cat 1'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][4], cross_match_table['RA Cat 1'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][5], cross_match_table['RA Cat 1'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][6], cross_match_table['RA Cat 1'][6], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][0], cross_match_table['RA Cat 2'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][1], cross_match_table['RA Cat 2'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][2], cross_match_table['RA Cat 2'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][3], cross_match_table['RA Cat 2'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][4], cross_match_table['RA Cat 2'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][5], cross_match_table['RA Cat 2'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][6], cross_match_table['RA Cat 2'][6], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][0], cross_match_table['RA diff'][0], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][1], cross_match_table['RA diff'][1], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][2], cross_match_table['RA diff'][2], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][3], cross_match_table['RA diff'][3], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][4], cross_match_table['RA diff'][4], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][5], cross_match_table['RA diff'][5], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][6], cross_match_table['RA diff'][6], 9)
-
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][0], cross_match_table['Dec Cat 1'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][1], cross_match_table['Dec Cat 1'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][2], cross_match_table['Dec Cat 1'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][3], cross_match_table['Dec Cat 1'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][4], cross_match_table['Dec Cat 1'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][5], cross_match_table['Dec Cat 1'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][6], cross_match_table['Dec Cat 1'][6], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][0], cross_match_table['Dec Cat 2'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][1], cross_match_table['Dec Cat 2'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][2], cross_match_table['Dec Cat 2'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][3], cross_match_table['Dec Cat 2'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][4], cross_match_table['Dec Cat 2'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][5], cross_match_table['Dec Cat 2'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][6], cross_match_table['Dec Cat 2'][6], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][0], cross_match_table['Dec diff'][0], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][1], cross_match_table['Dec diff'][1], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][2], cross_match_table['Dec diff'][2], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][3], cross_match_table['Dec diff'][3], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][4], cross_match_table['Dec diff'][4], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][5], cross_match_table['Dec diff'][5], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][6], cross_match_table['Dec diff'][6], 9)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][0], cross_match_table['r mag Cat 1'][0], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][1], cross_match_table['r mag Cat 1'][1], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][2], cross_match_table['r mag Cat 1'][2], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][3], cross_match_table['r mag Cat 1'][3], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][4], cross_match_table['r mag Cat 1'][4], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][5], cross_match_table['r mag Cat 1'][5], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][6], cross_match_table['r mag Cat 1'][6], 10)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][0], cross_match_table['r mag Cat 2'][0], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][1], cross_match_table['r mag Cat 2'][1], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][2], cross_match_table['r mag Cat 2'][2], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][3], cross_match_table['r mag Cat 2'][3], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][4], cross_match_table['r mag Cat 2'][4], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][5], cross_match_table['r mag Cat 2'][5], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][6], cross_match_table['r mag Cat 2'][6], 10)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][0], cross_match_table['r mag err'][0], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][1], cross_match_table['r mag err'][1], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][2], cross_match_table['r mag err'][2], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][3], cross_match_table['r mag err'][3], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][4], cross_match_table['r mag err'][4], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][5], cross_match_table['r mag err'][5], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][6], cross_match_table['r mag err'][6], 2)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][0], cross_match_table['r mag diff'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][1], cross_match_table['r mag diff'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][2], cross_match_table['r mag diff'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][3], cross_match_table['r mag diff'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][4], cross_match_table['r mag diff'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][5], cross_match_table['r mag diff'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][6], cross_match_table['r mag diff'][6], 6)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 1')
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 2')
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA diff', precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 1')
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 2')
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec diff', precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 1', precision=10)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 2', precision=10)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag err', precision=2)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag diff')
 
     def test_cross_match_UCAC4_shorterThan_testFITS(self):
         # test with cat 1 as longer test FITS table values and cat 2 as shorter UCAC4 table values to test cat reordering
@@ -505,95 +445,16 @@ class ZeropointUnitTest(TestCase):
 
         cross_match_table = cross_match(table_cat_1, table_cat_2)
 
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][0], cross_match_table['RA Cat 1'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][1], cross_match_table['RA Cat 1'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][2], cross_match_table['RA Cat 1'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][3], cross_match_table['RA Cat 1'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][4], cross_match_table['RA Cat 1'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][5], cross_match_table['RA Cat 1'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][6], cross_match_table['RA Cat 1'][6], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][7], cross_match_table['RA Cat 1'][7], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][0], cross_match_table['RA Cat 2'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][1], cross_match_table['RA Cat 2'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][2], cross_match_table['RA Cat 2'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][3], cross_match_table['RA Cat 2'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][4], cross_match_table['RA Cat 2'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][5], cross_match_table['RA Cat 2'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][6], cross_match_table['RA Cat 2'][6], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][7], cross_match_table['RA Cat 2'][7], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][0], cross_match_table['RA diff'][0], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][1], cross_match_table['RA diff'][1], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][2], cross_match_table['RA diff'][2], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][3], cross_match_table['RA diff'][3], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][4], cross_match_table['RA diff'][4], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][5], cross_match_table['RA diff'][5], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][6], cross_match_table['RA diff'][6], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][7], cross_match_table['RA diff'][7], 9)
-
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][0], cross_match_table['Dec Cat 1'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][1], cross_match_table['Dec Cat 1'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][2], cross_match_table['Dec Cat 1'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][3], cross_match_table['Dec Cat 1'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][4], cross_match_table['Dec Cat 1'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][5], cross_match_table['Dec Cat 1'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][6], cross_match_table['Dec Cat 1'][6], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][7], cross_match_table['Dec Cat 1'][7], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][0], cross_match_table['Dec Cat 2'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][1], cross_match_table['Dec Cat 2'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][2], cross_match_table['Dec Cat 2'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][3], cross_match_table['Dec Cat 2'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][4], cross_match_table['Dec Cat 2'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][5], cross_match_table['Dec Cat 2'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][6], cross_match_table['Dec Cat 2'][6], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][7], cross_match_table['Dec Cat 2'][7], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][0], cross_match_table['Dec diff'][0], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][1], cross_match_table['Dec diff'][1], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][2], cross_match_table['Dec diff'][2], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][3], cross_match_table['Dec diff'][3], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][4], cross_match_table['Dec diff'][4], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][5], cross_match_table['Dec diff'][5], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][6], cross_match_table['Dec diff'][6], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][7], cross_match_table['Dec diff'][7], 9)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][0], cross_match_table['r mag Cat 1'][0], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][1], cross_match_table['r mag Cat 1'][1], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][2], cross_match_table['r mag Cat 1'][2], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][3], cross_match_table['r mag Cat 1'][3], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][4], cross_match_table['r mag Cat 1'][4], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][5], cross_match_table['r mag Cat 1'][5], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][6], cross_match_table['r mag Cat 1'][6], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][7], cross_match_table['r mag Cat 1'][7], 10)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][0], cross_match_table['r mag Cat 2'][0], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][1], cross_match_table['r mag Cat 2'][1], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][2], cross_match_table['r mag Cat 2'][2], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][3], cross_match_table['r mag Cat 2'][3], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][4], cross_match_table['r mag Cat 2'][4], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][5], cross_match_table['r mag Cat 2'][5], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][6], cross_match_table['r mag Cat 2'][6], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][7], cross_match_table['r mag Cat 2'][7], 10)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][0], cross_match_table['r mag err'][0], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][1], cross_match_table['r mag err'][1], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][2], cross_match_table['r mag err'][2], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][3], cross_match_table['r mag err'][3], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][4], cross_match_table['r mag err'][4], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][5], cross_match_table['r mag err'][5], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][6], cross_match_table['r mag err'][6], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][7], cross_match_table['r mag err'][7], 2)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][0], cross_match_table['r mag diff'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][1], cross_match_table['r mag diff'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][2], cross_match_table['r mag diff'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][3], cross_match_table['r mag diff'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][4], cross_match_table['r mag diff'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][5], cross_match_table['r mag diff'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][6], cross_match_table['r mag diff'][6], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][7], cross_match_table['r mag diff'][7], 6)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 1', 7)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 2', 7)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA diff', num_to_check=7, precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 1', 7)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 2', 7)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec diff', num_to_check=7, precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 1', num_to_check=7, precision=10)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 2', num_to_check=7, precision=10)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag err', num_to_check=7, precision=2)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag diff', 7)
 
     def test_cross_match_PPMXL_shorterThan_testFITS(self):
         # test with cat 1 as longer test FITS table values and cat 2 as shorter PPMXL table values to test cat reordering
@@ -638,95 +499,16 @@ class ZeropointUnitTest(TestCase):
 
         cross_match_table = cross_match(table_cat_1, table_cat_2, "PPMXL")
 
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][0], cross_match_table['RA Cat 1'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][1], cross_match_table['RA Cat 1'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][2], cross_match_table['RA Cat 1'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][3], cross_match_table['RA Cat 1'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][4], cross_match_table['RA Cat 1'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][5], cross_match_table['RA Cat 1'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][6], cross_match_table['RA Cat 1'][6], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][7], cross_match_table['RA Cat 1'][7], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][0], cross_match_table['RA Cat 2'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][1], cross_match_table['RA Cat 2'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][2], cross_match_table['RA Cat 2'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][3], cross_match_table['RA Cat 2'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][4], cross_match_table['RA Cat 2'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][5], cross_match_table['RA Cat 2'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][6], cross_match_table['RA Cat 2'][6], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][7], cross_match_table['RA Cat 2'][7], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][0], cross_match_table['RA diff'][0], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][1], cross_match_table['RA diff'][1], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][2], cross_match_table['RA diff'][2], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][3], cross_match_table['RA diff'][3], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][4], cross_match_table['RA diff'][4], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][5], cross_match_table['RA diff'][5], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][6], cross_match_table['RA diff'][6], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][7], cross_match_table['RA diff'][7], 9)
-
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][0], cross_match_table['Dec Cat 1'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][1], cross_match_table['Dec Cat 1'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][2], cross_match_table['Dec Cat 1'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][3], cross_match_table['Dec Cat 1'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][4], cross_match_table['Dec Cat 1'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][5], cross_match_table['Dec Cat 1'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][6], cross_match_table['Dec Cat 1'][6], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][7], cross_match_table['Dec Cat 1'][7], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][0], cross_match_table['Dec Cat 2'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][1], cross_match_table['Dec Cat 2'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][2], cross_match_table['Dec Cat 2'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][3], cross_match_table['Dec Cat 2'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][4], cross_match_table['Dec Cat 2'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][5], cross_match_table['Dec Cat 2'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][6], cross_match_table['Dec Cat 2'][6], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][7], cross_match_table['Dec Cat 2'][7], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][0], cross_match_table['Dec diff'][0], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][1], cross_match_table['Dec diff'][1], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][2], cross_match_table['Dec diff'][2], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][3], cross_match_table['Dec diff'][3], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][4], cross_match_table['Dec diff'][4], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][5], cross_match_table['Dec diff'][5], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][6], cross_match_table['Dec diff'][6], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][7], cross_match_table['Dec diff'][7], 9)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][0], cross_match_table['r mag Cat 1'][0], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][1], cross_match_table['r mag Cat 1'][1], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][2], cross_match_table['r mag Cat 1'][2], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][3], cross_match_table['r mag Cat 1'][3], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][4], cross_match_table['r mag Cat 1'][4], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][5], cross_match_table['r mag Cat 1'][5], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][6], cross_match_table['r mag Cat 1'][6], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][7], cross_match_table['r mag Cat 1'][7], 10)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][0], cross_match_table['r mag Cat 2'][0], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][1], cross_match_table['r mag Cat 2'][1], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][2], cross_match_table['r mag Cat 2'][2], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][3], cross_match_table['r mag Cat 2'][3], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][4], cross_match_table['r mag Cat 2'][4], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][5], cross_match_table['r mag Cat 2'][5], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][6], cross_match_table['r mag Cat 2'][6], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][7], cross_match_table['r mag Cat 2'][7], 10)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][0], cross_match_table['r mag err'][0], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][1], cross_match_table['r mag err'][1], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][2], cross_match_table['r mag err'][2], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][3], cross_match_table['r mag err'][3], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][4], cross_match_table['r mag err'][4], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][5], cross_match_table['r mag err'][5], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][6], cross_match_table['r mag err'][6], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][7], cross_match_table['r mag err'][7], 2)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][0], cross_match_table['r mag diff'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][1], cross_match_table['r mag diff'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][2], cross_match_table['r mag diff'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][3], cross_match_table['r mag diff'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][4], cross_match_table['r mag diff'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][5], cross_match_table['r mag diff'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][6], cross_match_table['r mag diff'][6], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][7], cross_match_table['r mag diff'][7], 6)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 1', 7)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 2', 7)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA diff', num_to_check=7, precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 1', 7)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 2', 7)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec diff', num_to_check=7, precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 1', num_to_check=7, precision=10)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 2', num_to_check=7, precision=10)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag err', num_to_check=7, precision=2)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag diff', 7)
 
     def test_cross_match_UCAC_shorterThan_testFITS(self):
         # test with cat 1 as longer test FITS table values and cat 2 as shorter UCAC table values to test cat reordering NOTE: UCAC not UCAC4 tested here...need to add a test for something other than a variation of PPMXL or UCAC.
@@ -771,95 +553,16 @@ class ZeropointUnitTest(TestCase):
 
         cross_match_table = cross_match(table_cat_1, table_cat_2, "UCAC")
 
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][0], cross_match_table['RA Cat 1'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][1], cross_match_table['RA Cat 1'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][2], cross_match_table['RA Cat 1'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][3], cross_match_table['RA Cat 1'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][4], cross_match_table['RA Cat 1'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][5], cross_match_table['RA Cat 1'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][6], cross_match_table['RA Cat 1'][6], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][7], cross_match_table['RA Cat 1'][7], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][0], cross_match_table['RA Cat 2'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][1], cross_match_table['RA Cat 2'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][2], cross_match_table['RA Cat 2'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][3], cross_match_table['RA Cat 2'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][4], cross_match_table['RA Cat 2'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][5], cross_match_table['RA Cat 2'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][6], cross_match_table['RA Cat 2'][6], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][7], cross_match_table['RA Cat 2'][7], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][0], cross_match_table['RA diff'][0], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][1], cross_match_table['RA diff'][1], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][2], cross_match_table['RA diff'][2], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][3], cross_match_table['RA diff'][3], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][4], cross_match_table['RA diff'][4], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][5], cross_match_table['RA diff'][5], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][6], cross_match_table['RA diff'][6], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][7], cross_match_table['RA diff'][7], 9)
-
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][0], cross_match_table['Dec Cat 1'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][1], cross_match_table['Dec Cat 1'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][2], cross_match_table['Dec Cat 1'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][3], cross_match_table['Dec Cat 1'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][4], cross_match_table['Dec Cat 1'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][5], cross_match_table['Dec Cat 1'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][6], cross_match_table['Dec Cat 1'][6], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][7], cross_match_table['Dec Cat 1'][7], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][0], cross_match_table['Dec Cat 2'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][1], cross_match_table['Dec Cat 2'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][2], cross_match_table['Dec Cat 2'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][3], cross_match_table['Dec Cat 2'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][4], cross_match_table['Dec Cat 2'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][5], cross_match_table['Dec Cat 2'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][6], cross_match_table['Dec Cat 2'][6], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][7], cross_match_table['Dec Cat 2'][7], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][0], cross_match_table['Dec diff'][0], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][1], cross_match_table['Dec diff'][1], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][2], cross_match_table['Dec diff'][2], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][3], cross_match_table['Dec diff'][3], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][4], cross_match_table['Dec diff'][4], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][5], cross_match_table['Dec diff'][5], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][6], cross_match_table['Dec diff'][6], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][7], cross_match_table['Dec diff'][7], 9)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][0], cross_match_table['r mag Cat 1'][0], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][1], cross_match_table['r mag Cat 1'][1], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][2], cross_match_table['r mag Cat 1'][2], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][3], cross_match_table['r mag Cat 1'][3], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][4], cross_match_table['r mag Cat 1'][4], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][5], cross_match_table['r mag Cat 1'][5], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][6], cross_match_table['r mag Cat 1'][6], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][7], cross_match_table['r mag Cat 1'][7], 10)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][0], cross_match_table['r mag Cat 2'][0], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][1], cross_match_table['r mag Cat 2'][1], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][2], cross_match_table['r mag Cat 2'][2], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][3], cross_match_table['r mag Cat 2'][3], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][4], cross_match_table['r mag Cat 2'][4], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][5], cross_match_table['r mag Cat 2'][5], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][6], cross_match_table['r mag Cat 2'][6], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][7], cross_match_table['r mag Cat 2'][7], 10)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][0], cross_match_table['r mag err'][0], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][1], cross_match_table['r mag err'][1], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][2], cross_match_table['r mag err'][2], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][3], cross_match_table['r mag err'][3], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][4], cross_match_table['r mag err'][4], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][5], cross_match_table['r mag err'][5], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][6], cross_match_table['r mag err'][6], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][7], cross_match_table['r mag err'][7], 2)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][0], cross_match_table['r mag diff'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][1], cross_match_table['r mag diff'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][2], cross_match_table['r mag diff'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][3], cross_match_table['r mag diff'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][4], cross_match_table['r mag diff'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][5], cross_match_table['r mag diff'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][6], cross_match_table['r mag diff'][6], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][7], cross_match_table['r mag diff'][7], 6)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 1', 7)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 2', 7)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA diff', num_to_check=7, precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 1', 7)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 2', 7)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec diff', num_to_check=7, precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 1', num_to_check=7, precision=10)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 2', num_to_check=7, precision=10)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag err', num_to_check=7, precision=2)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag diff', 7)
 
     def test_cross_match_filtering(self):
         # test filtering of poor catalog cross matches
@@ -904,59 +607,65 @@ class ZeropointUnitTest(TestCase):
 
         cross_match_table = cross_match(table_cat_1, table_cat_2, "PPMXL")
 
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][0], cross_match_table['RA Cat 1'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][1], cross_match_table['RA Cat 1'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][2], cross_match_table['RA Cat 1'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][3], cross_match_table['RA Cat 1'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][4], cross_match_table['RA Cat 1'][4], 6)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 1', num_to_check=4)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 2', num_to_check=4)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA diff', num_to_check=4, precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 1', 4)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 2', 4)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec diff', num_to_check=4, precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 1', num_to_check=4, precision=10)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 2', num_to_check=4, precision=10)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag diff', 4)
 
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][0], cross_match_table['RA Cat 2'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][1], cross_match_table['RA Cat 2'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][2], cross_match_table['RA Cat 2'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][3], cross_match_table['RA Cat 2'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][4], cross_match_table['RA Cat 2'][4], 6)
+    def test_cross_match_GAIA_longerThan_testFITS(self):
+        # test with cat 1 as longer GAIA table values and cat 2 as shorter test FITS table values
 
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][0], cross_match_table['RA diff'][0], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][1], cross_match_table['RA diff'][1], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][2], cross_match_table['RA diff'][2], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][3], cross_match_table['RA diff'][3], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][4], cross_match_table['RA diff'][4], 9)
+        expected_cross_match_table_data = [(299.303973, 299.304084, 1.11e-04, 35.20152, 35.201634, 1.1400e-04, 0.0, 13.8500003815, 0.05, 13.8500003815),
+                                           (299.828851, 299.828851, 0.0, 34.99841, 34.998407, 3.0000e-06, 0.0, 14.5, 0.01, 14.5),
+                                           (299.291455, 299.291366, 8.9000e-5, 35.242368, 35.242404, 3.6000e-05, 0.0, 14.3199996948, 0.03, 14.3199996948),
+                                           (299.510127, 299.510143, 1.6000e-05, 34.960327, 34.960303, 2.4000e-05, 15.5469999313, 14.4499998093, 0.05, 1.097000),
+                                           (299.308515, 299.308579, 6.4000e-05, 35.165529, 35.165495, 3.4000e-05, 15.0059995651, 14.8900003433, 0.02, 0.115999),
+                                           (299.709162, 299.709139, 2.3000e-05, 35.218112, 35.218109, 3.0000e-06, 13.3520002365, 12.7700004578, 0.0, 0.582000),
+                                           (299.860889, 299.860871, 1.8000e-05, 35.381485, 35.381474, 1.1000e-05, 14.9130001068, 14.0799999237, 0.0, 0.833000)]
 
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][0], cross_match_table['Dec Cat 1'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][1], cross_match_table['Dec Cat 1'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][2], cross_match_table['Dec Cat 1'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][3], cross_match_table['Dec Cat 1'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][4], cross_match_table['Dec Cat 1'][4], 6)
+        expected_cross_match_table = Table(rows=expected_cross_match_table_data, names=('RA Cat 1', 'RA Cat 2', 'RA diff',
+                                                                                        'Dec Cat 1', 'Dec Cat 2', 'Dec diff',
+                                                                                        'r mag Cat 1', 'r mag Cat 2', 'r mag err',
+                                                                                        'r mag diff'), dtype=('f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8'))
 
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][0], cross_match_table['Dec Cat 2'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][1], cross_match_table['Dec Cat 2'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][2], cross_match_table['Dec Cat 2'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][3], cross_match_table['Dec Cat 2'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][4], cross_match_table['Dec Cat 2'][4], 6)
+        table_cat_1_data = [(299.303973, 35.20152, 0.0, 0),
+                            (299.828851, 34.99841, 0.0, 0),
+                            (299.291455, 35.242368, 0.0, 0),
+                            (299.510127, 34.960327, 15.5469999313, 0),
+                            (299.308515, 35.165529, 15.0059995651, 0),
+                            (299.709162, 35.218112, 13.3520002365, 0),
+                            (299.860889, 35.381485, 14.9130001068, 0)]
 
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][0], cross_match_table['Dec diff'][0], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][1], cross_match_table['Dec diff'][1], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][2], cross_match_table['Dec diff'][2], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][3], cross_match_table['Dec diff'][3], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][4], cross_match_table['Dec diff'][4], 9)
+        table_cat_1 = Table(rows=table_cat_1_data, names=('obs_ra', 'obs_dec', 'obs_mag', 'flags'), dtype=('f8', 'f8', 'f8', 'i2'))
 
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][0], cross_match_table['r mag Cat 1'][0], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][1], cross_match_table['r mag Cat 1'][1], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][2], cross_match_table['r mag Cat 1'][2], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][3], cross_match_table['r mag Cat 1'][3], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][4], cross_match_table['r mag Cat 1'][4], 10)
+        table_cat_2_data = [(299.291366, 35.242404, 14.3199996948, 3, 0),
+                            (299.304084, 35.201634, 13.8500003815, 5, 0),
+                            (299.480004, 34.965488, 14.3800001144, 3, 0),
+                            (299.308579, 35.165495, 14.8900003433, 2, 0),
+                            (299.828851, 34.998407, 14.5, 1, 0),
+                            (299.510143, 34.960303, 14.4499998093, 5, 0),
+                            (299.709139, 35.218109, 12.7700004578, 0, 0),
+                            (299.860871, 35.381474, 14.0799999237, 0, 0)]
 
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][0], cross_match_table['r mag Cat 2'][0], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][1], cross_match_table['r mag Cat 2'][1], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][2], cross_match_table['r mag Cat 2'][2], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][3], cross_match_table['r mag Cat 2'][3], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][4], cross_match_table['r mag Cat 2'][4], 10)
+        table_cat_2 = Table(rows=table_cat_2_data, names=('RAJ2000', 'DEJ2000', 'Gmag', 'e_Gmag', 'Dup'), dtype=('f8', 'f8', 'f8', 'f8', 'i2'))
 
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][0], cross_match_table['r mag diff'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][1], cross_match_table['r mag diff'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][2], cross_match_table['r mag diff'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][3], cross_match_table['r mag diff'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][4], cross_match_table['r mag diff'][4], 6)
+        cross_match_table = cross_match(table_cat_1, table_cat_2, cat_name='GAIA-DR2')
+
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 1')
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 2')
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA diff', precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 1')
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 2')
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec diff', precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 1', precision=10)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 2', precision=10)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag err', precision=2)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag diff')
 
     def test_get_zeropoint(self):
         # test zeropoint calculation
@@ -1044,7 +753,7 @@ class ZeropointUnitTest(TestCase):
 
         expected_avg_zeropoint = 27.389040152231853
 
-        expected_std_zeropoint = 0.08511626631873609
+        expected_std_zeropoint = 0.08511636159289811
 
         expected_count = 12
 
@@ -1067,9 +776,9 @@ class ZeropointUnitTest(TestCase):
 
     def test_call_cross_match_and_zeropoint_with_UCAC4(self):
 
-        expected_avg_zeropoint = 27.3076036537
+        expected_avg_zeropoint = 27.307603618677927
 
-        expected_std_zeropoint = 0.0818534024596
+        expected_std_zeropoint = 0.0818536464006553
 
         expected_count = 26
 
@@ -1090,15 +799,40 @@ class ZeropointUnitTest(TestCase):
         self.assertEqual(expected_cat_name, cat_name)
         self.assertAlmostEqual(expected_len_cross_match_table, len(cross_match_table))
 
+    def test_call_cross_match_and_zeropoint_with_GAIADR2(self):
+
+        expected_avg_zeropoint = 27.368678593401157
+
+        expected_std_zeropoint = 0.01825025160423379
+
+        expected_count = 10
+
+        expected_num_in_calc = 10
+
+        expected_cat_name = "GAIA-DR2"
+
+        expected_len_cross_match_table = 20
+
+        catfile = os.path.join('photometrics', 'tests', 'oracdr_test_catalog.fits')
+
+        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, cat_name = call_cross_match_and_zeropoint(catfile, cat_name='GAIA-DR2')
+
+        self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 8)
+        self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 8)
+        self.assertAlmostEqual(expected_count, count, 1)
+        self.assertAlmostEqual(expected_num_in_calc, num_in_calc, 1)
+        self.assertEqual(expected_cat_name, cat_name)
+        self.assertAlmostEqual(expected_len_cross_match_table, len(cross_match_table))
+
     def test_call_with_diff_test_cat_force_to_UCAC4(self):
         """test the call with a different FITS catalog file that will return an empty vizier query table for the PPMXL
         catalog and a zeropoint already in the header, so that the computed avg_zeropoint is the difference between
         the FITS catalog ZP (in the header) and the Vizier catalog computed ZP
         """
 
-        expected_avg_zeropoint = 0.276944994033
+        expected_avg_zeropoint = 0.27694574038664266
 
-        expected_std_zeropoint = 0.0857935965306
+        expected_std_zeropoint = 0.0857936711126839
 
         expected_count = 9
 
@@ -1122,9 +856,9 @@ class ZeropointUnitTest(TestCase):
     def test_call_with_diff_test_cat_UCAC4(self):
         # test the call with a different FITS catalog file and the default UCAC4 catalog
 
-        expected_avg_zeropoint = 27.2969494845
+        expected_avg_zeropoint = 27.296948986142457
 
-        expected_std_zeropoint = 0.0512114572605
+        expected_std_zeropoint = 0.05121113268467079
 
         expected_count = 8
 
@@ -1148,9 +882,9 @@ class ZeropointUnitTest(TestCase):
     def test_call_with_diff_test_cat_PPMXL(self):
         # test the call with a different FITS catalog file and the default UCAC4 catalog
 
-        expected_avg_zeropoint = 27.0946609497
+        expected_avg_zeropoint = 27.094661331176756
 
-        expected_std_zeropoint = 0.0643614354292
+        expected_std_zeropoint = 0.06436118777919021
 
         expected_count = 5
 
@@ -1176,6 +910,322 @@ class ZeropointUnitTest(TestCase):
         self.fail("write test for no internet")
 
 
+class TestGetReferenceCatalog(TestCase):
+
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+
+        self.header = { 'ra' : 228.33284875,
+                        'dec': 38.395874166666665,
+                        'width': '4.5m',
+                        'height': '3.0m',
+                      }
+        self.expected_ref_catalog = os.path.join(self.temp_dir, 'GAIA-DR2_228.33+38.40_6.7500mx4.5000m.cat')
+
+        self.remove = True
+        self.debug_print = False
+
+    def tearDown(self):
+        if self.remove:
+            try:
+                files_to_remove = glob(os.path.join(self.temp_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.temp_dir)
+            try:
+                os.rmdir(self.temp_dir)
+                if self.debug_print:
+                    print("Removed", self.temp_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.temp_dir)
+        else:
+            print("Temporary test directory=", self.temp_dir)
+
+    def touch(self, fname, times=None):
+        with open(fname, 'a'):
+            os.utime(fname, times)
+
+    def test_fetch_catalog(self):
+
+        expected_num_sources = 10
+
+        refcat, num_sources = get_reference_catalog(self.temp_dir, self.header['ra'], self.header['dec'], self.header['width'], self.header['height'])
+
+        self.assertTrue(os.path.exists(self.expected_ref_catalog))
+        self.assertEqual(self.expected_ref_catalog, refcat)
+        self.assertEqual(expected_num_sources, num_sources)
+
+    def test_fetch_catalog_existing(self):
+
+        self.touch(self.expected_ref_catalog)
+        expected_num_sources = -1
+
+        refcat, num_sources = get_reference_catalog(self.temp_dir, self.header['ra'], self.header['dec'], self.header['width'], self.header['height'])
+
+        self.assertTrue(os.path.exists(self.expected_ref_catalog))
+        self.assertEqual(self.expected_ref_catalog, refcat)
+        self.assertEqual(expected_num_sources, num_sources)
+
+    @patch('photometrics.catalog_subs.get_vizier_catalog_table', mock_get_vizier_catalog_table)
+    def test_Sinistro_SH(self):
+
+        expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_122.50-57.75_39.7500mx39.7500m.cat')
+        expected_numsrcs = 2
+
+        ra = 122.5
+        dec = -57.75
+        frame_width = '26.5m'
+        frame_height = '26.5m'
+        refcat, num_ref_srcs = get_reference_catalog(self.temp_dir, ra, dec, frame_width, frame_height, cat_name="GAIA-DR2")
+
+        self.assertEqual(expected_refcat, refcat)
+        self.assertEqual(expected_numsrcs, num_ref_srcs)
+
+    @patch('photometrics.catalog_subs.get_vizier_catalog_table', mock_get_vizier_catalog_table)
+    def test_Sinistro_NH(self):
+
+        expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_0.12+0.75_39.7200mx39.7200m.cat')
+        expected_numsrcs = 2
+
+        ra = 0.12345
+        dec = 0.752
+        frame_width = '26.48m'
+        frame_height = '26.48m'
+        refcat, num_ref_srcs = get_reference_catalog(self.temp_dir, ra, dec, frame_width, frame_height, cat_name="GAIA-DR2")
+
+        self.assertEqual(expected_refcat, refcat)
+        self.assertEqual(expected_numsrcs, num_ref_srcs)
+
+    @patch('photometrics.catalog_subs.get_vizier_catalog_table', mock_get_vizier_catalog_table)
+    def test_Sinistro_NH_existing(self):
+
+        expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_10.12+0.75_39.7200mx39.7200m.cat')
+        expected_numsrcs = -1
+
+        self.touch(expected_refcat)
+        ra = 10.12345
+        dec = 0.752
+        frame_width = '26.48m'
+        frame_height = '26.48m'
+        refcat, num_ref_srcs = get_reference_catalog(self.temp_dir, ra, dec, frame_width, frame_height, cat_name="GAIA-DR2")
+
+        self.assertEqual(expected_refcat, refcat)
+        self.assertEqual(expected_numsrcs, num_ref_srcs)
+
+    @patch('photometrics.catalog_subs.get_vizier_catalog_table', mock_get_vizier_catalog_table)
+    def test_Sinistro_NH_existing_RAwrap(self):
+
+        expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_0.12+0.75_39.7200mx39.7200m.cat')
+        expected_numsrcs = -1
+
+        self.touch(expected_refcat)
+        ra = 0.12345
+        dec = 0.752
+        frame_width = '26.48m'
+        frame_height = '26.48m'
+        refcat, num_ref_srcs = get_reference_catalog(self.temp_dir, ra, dec, frame_width, frame_height, cat_name="GAIA-DR2")
+
+        self.assertEqual(expected_refcat, refcat)
+        self.assertEqual(expected_numsrcs, num_ref_srcs)
+
+    @patch('photometrics.catalog_subs.get_vizier_catalog_table', mock_get_vizier_catalog_table)
+    def test_Sinistro_NH_existing_overlap(self):
+
+        expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_0.12+0.75_39.72mx39.72m.cat')
+        expected_numsrcs = -1
+
+        self.touch(expected_refcat)
+        ra = 0.134
+        dec = 0.743
+        frame_width = '26.48m'
+        frame_height = '26.48m'
+        refcat, num_ref_srcs = get_reference_catalog(self.temp_dir, ra, dec, frame_width, frame_height, cat_name="GAIA-DR2")
+
+        self.assertEqual(expected_refcat, refcat)
+        self.assertEqual(expected_numsrcs, num_ref_srcs)
+
+
+class TestExistingCatalogCoverage(TestCase):
+
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+
+        self.header = { 'ra' : 228.25,
+                        'dec': 38.40,
+                        'width': '4.5m',
+                        'height': '3.0m',
+                      }
+        self.expected_ref_catalog = os.path.join(self.temp_dir, 'GAIA-DR2_228.25+38.40_6.7500mx4.5000m.cat')
+
+        self.remove = True
+        self.debug_print = False
+
+    def tearDown(self):
+        if self.remove:
+            try:
+                files_to_remove = glob(os.path.join(self.temp_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.temp_dir)
+            try:
+                os.rmdir(self.temp_dir)
+                if self.debug_print:
+                    print("Removed", self.temp_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.temp_dir)
+        else:
+            print("Temporary test directory=", self.temp_dir)
+
+    def touch(self, fname, times=None):
+        with open(fname, 'a'):
+            os.utime(fname, times)
+
+    def test_empty_dir(self):
+
+        existing_catalog = existing_catalog_coverage(self.temp_dir, self.header['ra'], self.header['dec'], self.header['width'], self.header['height'])
+
+        self.assertEqual(None, existing_catalog)
+
+    def test_not_a_dir(self):
+
+        existing_catalog = existing_catalog_coverage(self.expected_ref_catalog, self.header['ra'], self.header['dec'], self.header['width'], self.header['height'])
+
+        self.assertEqual(None, existing_catalog)
+
+    def test_wrong_cattype(self):
+        self.touch(self.expected_ref_catalog)
+
+        ra = self.header['ra'] + 0.25
+        dec = self.header['dec'] - 0.01
+        existing_catalog = existing_catalog_coverage(self.temp_dir, ra, dec, self.header['width'], self.header['height'], cat_name='PPMXL')
+
+        self.assertEqual(None, existing_catalog)
+
+    def test_1cat(self):
+        self.touch(self.expected_ref_catalog)
+
+        ra = self.header['ra'] + 0.0125
+        dec = self.header['dec'] - 0.005
+        existing_catalog = existing_catalog_coverage(self.temp_dir, ra, dec, self.header['width'], self.header['height'])
+
+        self.assertEqual(self.expected_ref_catalog, existing_catalog)
+
+    def test_1cat_nooverlap(self):
+        self.touch(self.expected_ref_catalog)
+
+        ra = self.header['ra'] + 10
+        dec = self.header['dec'] - 10
+        existing_catalog = existing_catalog_coverage(self.temp_dir, ra, dec, self.header['width'], self.header['height'])
+
+        self.assertEqual(None, existing_catalog)
+
+    def test_2cat_lhs(self):
+        self.touch(self.expected_ref_catalog)
+        second_cat = os.path.join(self.temp_dir, 'GAIA-DR2_228.14+38.40_6.7500mx4.500m.cat')
+        self.touch(second_cat)
+
+        ra = self.header['ra'] + 0.01
+        dec = self.header['dec'] - 0.01
+        existing_catalog = existing_catalog_coverage(self.temp_dir, ra, dec, self.header['width'], self.header['height'])
+
+        self.assertEqual(self.expected_ref_catalog, existing_catalog)
+
+    def test_2cat_rhs(self):
+        self.touch(self.expected_ref_catalog)
+        second_cat = os.path.join(self.temp_dir, 'GAIA-DR2_228.14+38.40_6.7500mx4.500m.cat')
+        self.touch(second_cat)
+
+        ra = self.header['ra'] - 0.10
+        dec = self.header['dec'] + 0.01
+        existing_catalog = existing_catalog_coverage(self.temp_dir, ra, dec, self.header['width'], self.header['height'])
+
+        self.assertEqual(second_cat, existing_catalog)
+
+    def test_1cat_SH(self):
+        ref_catalog = os.path.join(self.temp_dir, 'GAIA-DR2_120.55-59.00_40.000mx40.000m.cat')
+
+        self.touch(ref_catalog)
+
+        ra = 120.58
+        dec = -59.01
+        width = '26.4m'
+        height = '26.4m'
+        existing_catalog = existing_catalog_coverage(self.temp_dir, ra, dec, width, height)
+
+        self.assertEqual(ref_catalog, existing_catalog)
+
+
+class TestConvertCatfileToCorners(TestCase):
+
+    def test_nopath1(self):
+        expected_tl = (228.5, 38.65)
+        expected_br = (228.0, 38.15)
+
+        cat_file = 'GAIA-DR2_228.25+38.40_30.0000mx30.0000m.cat'
+
+        top_left, bottom_right = convert_catfile_to_corners(cat_file)
+
+        self.assertEqual(expected_tl, top_left)
+        self.assertEqual(expected_br, bottom_right)
+
+    def test_nopath2(self):
+        expected_tl = (28.5, -38.15)
+        expected_br = (28.0, -38.65)
+
+        cat_file = 'GAIA-DR2_28.25-38.40_30.0000mx30.0000m.cat'
+
+        top_left, bottom_right = convert_catfile_to_corners(cat_file)
+
+        self.assertEqual(expected_tl, top_left)
+        self.assertEqual(expected_br, bottom_right)
+
+    def test_nopath3(self):
+        expected_tl = (328.503525, -38.229465)
+        expected_br = (327.996475, -38.570535)
+
+        cat_file = 'GAIA-DR2_328.25-38.40_30.4230mx20.4642m.cat'
+
+        top_left, bottom_right = convert_catfile_to_corners(cat_file)
+
+        self.assertEqual(expected_tl, top_left)
+        self.assertEqual(expected_br, bottom_right)
+
+    def test_withpath1(self):
+        expected_tl = (228.5, 38.65)
+        expected_br = (228.0, 38.15)
+
+        cat_file = os.path.join('/tmp', 'tmp_neox_cucumber', 'GAIA-DR2_228.25+38.40_30.0000mx30.0000m.cat')
+
+        top_left, bottom_right = convert_catfile_to_corners(cat_file)
+
+        self.assertEqual(expected_tl, top_left)
+        self.assertEqual(expected_br, bottom_right)
+
+    def test_withpath2(self):
+        expected_tl = (120.8, -58.75)
+        expected_br = (120.3, -59.25)
+
+        cat_file = os.path.join('/tmp', 'tmp_neox_cucumber', 'GAIA-DR2_120.55-59.00_30.0000mx30.0000m.cat')
+
+        top_left, bottom_right = convert_catfile_to_corners(cat_file)
+
+        self.assertEqual(expected_tl, top_left)
+        self.assertEqual(expected_br, bottom_right)
+
+    def test_withpath3(self):
+        expected_tl = None
+        expected_br = None
+
+        cat_file = os.path.join('/tmp', 'tmp_neox_cucumber', 'GAIA-DR2.cat')
+
+        top_left, bottom_right = convert_catfile_to_corners(cat_file)
+
+        self.assertEqual(expected_tl, top_left)
+        self.assertEqual(expected_br, bottom_right)
+
+
 class FITSUnitTest(TestCase):
     def __init__(self, *args, **kwargs):
         super(FITSUnitTest, self).__init__(*args, **kwargs)
@@ -1192,6 +1242,7 @@ class FITSUnitTest(TestCase):
         self.table_item_flags24 = self.test_table[2:3]
         self.table_num_flags0 = len(where(self.test_table['flags'] == 0)[0])
 
+        self.test_bad_ldacfilename = os.path.join('photometrics', 'tests', 'ldac_test_catalog_corrupt.fits')
         self.test_ldacfilename = os.path.join('photometrics', 'tests', 'ldac_test_catalog.fits')
         hdulist = fits.open(self.test_ldacfilename)
         self.test_ldactable = hdulist[2].data
@@ -1361,6 +1412,19 @@ class OpenFITSCatalog(FITSUnitTest):
         self.assertAlmostEqual(expected_x, tbl[-1]['XWIN_IMAGE'], self.precision)
         self.assertAlmostEqual(expected_y, tbl[-1]['YWIN_IMAGE'], self.precision)
 
+
+    def test_ldac_catalog_bad(self):
+        expected_value = {}
+        expected_cattype = 'CORRUPT'
+
+        try:
+            hdr, tbl, cattype = open_fits_catalog(self.test_bad_ldacfilename)
+        except OSError:
+            self.fail("open_fits_catalog raised OSError unexpectedly")
+        self.assertEqual(expected_value, hdr)
+        self.assertEqual(expected_value, tbl)
+        self.assertEqual(expected_cattype, cattype)
+
     def test_banzai_read_catalog(self):
         unexpected_value = {}
 
@@ -1452,7 +1516,7 @@ class OpenFITSCatalog(FITSUnitTest):
         self.assertAlmostEqual(expected_y, tbl[-1]['YWIN'], self.precision)
 
 
-class Test_Convert_Values(FITSUnitTest):
+class TestConvertValues(FITSUnitTest):
 
     def test_dateobs_conversion(self):
 
@@ -1674,6 +1738,314 @@ class FITSReadHeader(FITSUnitTest):
                 assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
                 assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
 
+    def test_banzai_header_gaiadr2(self):
+        obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
+        expected_params = { 'site_code'  : 'K92',
+                            'instrument' : 'kb76',
+                            'filter'     : 'w',
+                            'framename'  : 'cpt1m013-kb76-20160606-0396-e00.fits',
+                            'exptime'    : 100.0,
+                            'obs_date'      : obs_date,
+                            'obs_midpoint'  : obs_date + timedelta(seconds=100.0 / 2.0),
+                            'field_center_ra'  : Angle('18:11:47.017', unit=u.hour).deg,
+                            'field_center_dec' : Angle('+01:16:54.21', unit=u.deg).deg,
+                            'field_width'   : '15.8715m',
+                            'field_height'  : '15.9497m',
+                            'pixel_scale'   : 0.46957,
+                            'fwhm'          : 2.110443536975972,
+                            'astrometric_fit_status' : 0,
+                            'astrometric_catalog'    : 'GAIA-DR2',
+                            'astrometric_fit_rms'    : 0.3,
+                            'astrometric_fit_nstars' : -4,
+                            'zeropoint'     : -99,
+                            'zeropoint_err' : -99,
+                            'zeropoint_src' : 'N/A',
+                            'wcs'           : self.test_banzaiwcs,
+                            'reduction_level' : 91
+                          }
+        expected_cattype = "BANZAI"
+
+        header, table, cattype = open_fits_catalog(self.test_banzaifilename)
+        self.assertEqual(expected_cattype, cattype)
+        # Modify PIPEVER to version number after switch to solving with GAIA-DR2
+        header['PIPEVER'] = '0.20.0  '
+        frame_header = get_catalog_header(header, "BANZAI")
+
+        self.assertEqual(len(expected_params), len(frame_header))
+        for key in expected_params:
+            if key != 'wcs':
+                self.assertEqual(expected_params[key], frame_header[key])
+            else:
+                expected_wcs = expected_params[key].wcs
+                frame_wcs = frame_header[key].wcs
+                assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
+                assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
+                assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
+
+    def test_banzai_header_gaiadr2_devversion(self):
+        obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
+        expected_params = { 'site_code'  : 'K92',
+                            'instrument' : 'kb76',
+                            'filter'     : 'w',
+                            'framename'  : 'cpt1m013-kb76-20160606-0396-e00.fits',
+                            'exptime'    : 100.0,
+                            'obs_date'      : obs_date,
+                            'obs_midpoint'  : obs_date + timedelta(seconds=100.0 / 2.0),
+                            'field_center_ra'  : Angle('18:11:47.017', unit=u.hour).deg,
+                            'field_center_dec' : Angle('+01:16:54.21', unit=u.deg).deg,
+                            'field_width'   : '15.8715m',
+                            'field_height'  : '15.9497m',
+                            'pixel_scale'   : 0.46957,
+                            'fwhm'          : 2.110443536975972,
+                            'astrometric_fit_status' : 0,
+                            'astrometric_catalog'    : 'GAIA-DR2',
+                            'astrometric_fit_rms'    : 0.3,
+                            'astrometric_fit_nstars' : -4,
+                            'zeropoint'     : -99,
+                            'zeropoint_err' : -99,
+                            'zeropoint_src' : 'N/A',
+                            'wcs'           : self.test_banzaiwcs,
+                            'reduction_level' : 91
+                          }
+        expected_cattype = "BANZAI"
+
+        header, table, cattype = open_fits_catalog(self.test_banzaifilename)
+        self.assertEqual(expected_cattype, cattype)
+        # Modify PIPEVER to version number after switch to solving with GAIA-DR2
+        header['PIPEVER'] = '0.20.0dev1234'
+        frame_header = get_catalog_header(header, "BANZAI")
+
+        self.assertEqual(len(expected_params), len(frame_header))
+        for key in expected_params:
+            if key != 'wcs':
+                self.assertEqual(expected_params[key], frame_header[key])
+            else:
+                expected_wcs = expected_params[key].wcs
+                frame_wcs = frame_header[key].wcs
+                assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
+                assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
+                assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
+
+    def test_banzai_header_gaiadr2_version1_0(self):
+        obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
+        expected_params = { 'site_code'  : 'K92',
+                            'instrument' : 'kb76',
+                            'filter'     : 'w',
+                            'framename'  : 'cpt1m013-kb76-20160606-0396-e00.fits',
+                            'exptime'    : 100.0,
+                            'obs_date'      : obs_date,
+                            'obs_midpoint'  : obs_date + timedelta(seconds=100.0 / 2.0),
+                            'field_center_ra'  : Angle('18:11:47.017', unit=u.hour).deg,
+                            'field_center_dec' : Angle('+01:16:54.21', unit=u.deg).deg,
+                            'field_width'   : '15.8715m',
+                            'field_height'  : '15.9497m',
+                            'pixel_scale'   : 0.46957,
+                            'fwhm'          : 2.110443536975972,
+                            'astrometric_fit_status' : 0,
+                            'astrometric_catalog'    : 'GAIA-DR2',
+                            'astrometric_fit_rms'    : 0.3,
+                            'astrometric_fit_nstars' : -4,
+                            'zeropoint'     : -99,
+                            'zeropoint_err' : -99,
+                            'zeropoint_src' : 'N/A',
+                            'wcs'           : self.test_banzaiwcs,
+                            'reduction_level' : 91
+                          }
+        expected_cattype = "BANZAI"
+
+        header, table, cattype = open_fits_catalog(self.test_banzaifilename)
+        self.assertEqual(expected_cattype, cattype)
+        # Modify PIPEVER to version number after switch to solving with GAIA-DR2
+        header['PIPEVER'] = '1.0.42'
+        frame_header = get_catalog_header(header, "BANZAI")
+
+        self.assertEqual(len(expected_params), len(frame_header))
+        for key in expected_params:
+            if key != 'wcs':
+                self.assertEqual(expected_params[key], frame_header[key])
+            else:
+                expected_wcs = expected_params[key].wcs
+                frame_wcs = frame_header[key].wcs
+                assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
+                assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
+                assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
+
+    def test_banzai_header_bad_version(self):
+        obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
+        expected_params = { 'site_code'  : 'K92',
+                            'instrument' : 'kb76',
+                            'filter'     : 'w',
+                            'framename'  : 'cpt1m013-kb76-20160606-0396-e00.fits',
+                            'exptime'    : 100.0,
+                            'obs_date'      : obs_date,
+                            'obs_midpoint'  : obs_date + timedelta(seconds=100.0 / 2.0),
+                            'field_center_ra'  : Angle('18:11:47.017', unit=u.hour).deg,
+                            'field_center_dec' : Angle('+01:16:54.21', unit=u.deg).deg,
+                            'field_width'   : '15.8715m',
+                            'field_height'  : '15.9497m',
+                            'pixel_scale'   : 0.46957,
+                            'fwhm'          : 2.110443536975972,
+                            'astrometric_fit_status' : 0,
+                            'astrometric_catalog'    : '2MASS',
+                            'astrometric_fit_rms'    : 0.3,
+                            'astrometric_fit_nstars' : -4,
+                            'zeropoint'     : -99,
+                            'zeropoint_err' : -99,
+                            'zeropoint_src' : 'N/A',
+                            'wcs'           : self.test_banzaiwcs,
+                            'reduction_level' : 91
+                          }
+        expected_cattype = "BANZAI"
+
+        header, table, cattype = open_fits_catalog(self.test_banzaifilename)
+        self.assertEqual(expected_cattype, cattype)
+        # Modify PIPEVER to version number after switch to solving with GAIA-DR2
+        header['PIPEVER'] = 'wibble'
+        frame_header = get_catalog_header(header, "BANZAI")
+
+        self.assertEqual(len(expected_params), len(frame_header))
+        for key in expected_params:
+            if key != 'wcs':
+                self.assertEqual(expected_params[key], frame_header[key])
+            else:
+                expected_wcs = expected_params[key].wcs
+                frame_wcs = frame_header[key].wcs
+                assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
+                assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
+                assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
+
+    def test_banzai_header_blank_version(self):
+        obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
+        expected_params = { 'site_code'  : 'K92',
+                            'instrument' : 'kb76',
+                            'filter'     : 'w',
+                            'framename'  : 'cpt1m013-kb76-20160606-0396-e00.fits',
+                            'exptime'    : 100.0,
+                            'obs_date'      : obs_date,
+                            'obs_midpoint'  : obs_date + timedelta(seconds=100.0 / 2.0),
+                            'field_center_ra'  : Angle('18:11:47.017', unit=u.hour).deg,
+                            'field_center_dec' : Angle('+01:16:54.21', unit=u.deg).deg,
+                            'field_width'   : '15.8715m',
+                            'field_height'  : '15.9497m',
+                            'pixel_scale'   : 0.46957,
+                            'fwhm'          : 2.110443536975972,
+                            'astrometric_fit_status' : 0,
+                            'astrometric_catalog'    : '2MASS',
+                            'astrometric_fit_rms'    : 0.3,
+                            'astrometric_fit_nstars' : -4,
+                            'zeropoint'     : -99,
+                            'zeropoint_err' : -99,
+                            'zeropoint_src' : 'N/A',
+                            'wcs'           : self.test_banzaiwcs,
+                            'reduction_level' : 91
+                          }
+        expected_cattype = "BANZAI"
+
+        header, table, cattype = open_fits_catalog(self.test_banzaifilename)
+        self.assertEqual(expected_cattype, cattype)
+        # Modify PIPEVER to blank bad version number
+        header['PIPEVER'] = '      '
+        frame_header = get_catalog_header(header, "BANZAI")
+
+        self.assertEqual(len(expected_params), len(frame_header))
+        for key in expected_params:
+            if key != 'wcs':
+                self.assertEqual(expected_params[key], frame_header[key])
+            else:
+                expected_wcs = expected_params[key].wcs
+                frame_wcs = frame_header[key].wcs
+                assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
+                assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
+                assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
+
+    def test_banzai_header_bad_major_version(self):
+        obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
+        expected_params = { 'site_code'  : 'K92',
+                            'instrument' : 'kb76',
+                            'filter'     : 'w',
+                            'framename'  : 'cpt1m013-kb76-20160606-0396-e00.fits',
+                            'exptime'    : 100.0,
+                            'obs_date'      : obs_date,
+                            'obs_midpoint'  : obs_date + timedelta(seconds=100.0 / 2.0),
+                            'field_center_ra'  : Angle('18:11:47.017', unit=u.hour).deg,
+                            'field_center_dec' : Angle('+01:16:54.21', unit=u.deg).deg,
+                            'field_width'   : '15.8715m',
+                            'field_height'  : '15.9497m',
+                            'pixel_scale'   : 0.46957,
+                            'fwhm'          : 2.110443536975972,
+                            'astrometric_fit_status' : 0,
+                            'astrometric_catalog'    : '2MASS',
+                            'astrometric_fit_rms'    : 0.3,
+                            'astrometric_fit_nstars' : -4,
+                            'zeropoint'     : -99,
+                            'zeropoint_err' : -99,
+                            'zeropoint_src' : 'N/A',
+                            'wcs'           : self.test_banzaiwcs,
+                            'reduction_level' : 91
+                          }
+        expected_cattype = "BANZAI"
+
+        header, table, cattype = open_fits_catalog(self.test_banzaifilename)
+        self.assertEqual(expected_cattype, cattype)
+        # Modify PIPEVER to blank bad version number
+        header['PIPEVER'] = 'FOO.42.0'
+        frame_header = get_catalog_header(header, "BANZAI")
+
+        self.assertEqual(len(expected_params), len(frame_header))
+        for key in expected_params:
+            if key != 'wcs':
+                self.assertEqual(expected_params[key], frame_header[key])
+            else:
+                expected_wcs = expected_params[key].wcs
+                frame_wcs = frame_header[key].wcs
+                assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
+                assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
+                assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
+
+    def test_banzai_header_bad_minor_version(self):
+        obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
+        expected_params = { 'site_code'  : 'K92',
+                            'instrument' : 'kb76',
+                            'filter'     : 'w',
+                            'framename'  : 'cpt1m013-kb76-20160606-0396-e00.fits',
+                            'exptime'    : 100.0,
+                            'obs_date'      : obs_date,
+                            'obs_midpoint'  : obs_date + timedelta(seconds=100.0 / 2.0),
+                            'field_center_ra'  : Angle('18:11:47.017', unit=u.hour).deg,
+                            'field_center_dec' : Angle('+01:16:54.21', unit=u.deg).deg,
+                            'field_width'   : '15.8715m',
+                            'field_height'  : '15.9497m',
+                            'pixel_scale'   : 0.46957,
+                            'fwhm'          : 2.110443536975972,
+                            'astrometric_fit_status' : 0,
+                            'astrometric_catalog'    : '2MASS',
+                            'astrometric_fit_rms'    : 0.3,
+                            'astrometric_fit_nstars' : -4,
+                            'zeropoint'     : -99,
+                            'zeropoint_err' : -99,
+                            'zeropoint_src' : 'N/A',
+                            'wcs'           : self.test_banzaiwcs,
+                            'reduction_level' : 91
+                          }
+        expected_cattype = "BANZAI"
+
+        header, table, cattype = open_fits_catalog(self.test_banzaifilename)
+        self.assertEqual(expected_cattype, cattype)
+        # Modify PIPEVER to blank bad version number
+        header['PIPEVER'] = '0.BAR.42    '
+        frame_header = get_catalog_header(header, "BANZAI")
+
+        self.assertEqual(len(expected_params), len(frame_header))
+        for key in expected_params:
+            if key != 'wcs':
+                self.assertEqual(expected_params[key], frame_header[key])
+            else:
+                expected_wcs = expected_params[key].wcs
+                frame_wcs = frame_header[key].wcs
+                assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
+                assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
+                assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
+
 
 class FITSLDACToHeader(FITSUnitTest):
 
@@ -1753,7 +2125,7 @@ class FITSReadCatalog(FITSUnitTest):
                                    'threshold' : 43.438805,
                                  })
 
-        catalog_items = get_catalog_items(self.test_header, self.table_firstitem)
+        catalog_items = get_catalog_items_old(self.test_header, self.table_firstitem)
 
         self.assertEqual(expected_catalog, catalog_items)
 
@@ -1777,7 +2149,7 @@ class FITSReadCatalog(FITSUnitTest):
                                    'threshold' : 43.438805,
                                  })
 
-        catalog_items = get_catalog_items(self.test_header, self.table_lastitem)
+        catalog_items = get_catalog_items_old(self.test_header, self.table_lastitem)
 
         self.assertEqual(expected_catalog, catalog_items)
 
@@ -1785,7 +2157,7 @@ class FITSReadCatalog(FITSUnitTest):
 
         expected_catalog = self.basic_table
 
-        catalog_items = get_catalog_items(self.test_header, self.table_item_flags24)
+        catalog_items = get_catalog_items_old(self.test_header, self.table_item_flags24)
 
         self.assertEqual(len(expected_catalog), len(catalog_items))
 
@@ -1809,10 +2181,9 @@ class FITSReadCatalog(FITSUnitTest):
                                    'threshold' : 43.438805,
                                  })
 
-        catalog_items = get_catalog_items(self.test_header, self.table_item_flags24, flag_filter=24)
+        catalog_items = get_catalog_items_old(self.test_header, self.table_item_flags24, flag_filter=24)
 
         self.compare_tables(expected_catalog, catalog_items, 9)
-
 
     def test_first_item_with_bad_zeropoint(self):
 
@@ -1835,7 +2206,7 @@ class FITSReadCatalog(FITSUnitTest):
                                  })
 
         header_items = {'zeropoint' : -99}
-        catalog_items = get_catalog_items(header_items, self.table_firstitem)
+        catalog_items = get_catalog_items_old(header_items, self.table_firstitem)
 
         self.assertEqual(expected_catalog, catalog_items)
 
@@ -1860,7 +2231,7 @@ class FITSReadCatalog(FITSUnitTest):
                                    'threshold' : 43.438805,
                                  })
 
-        catalog_items = get_catalog_items(header_items, self.table_firstitem)
+        catalog_items = get_catalog_items_old(header_items, self.table_firstitem)
 
         self.assertEqual(expected_catalog, catalog_items)
 
@@ -1873,7 +2244,7 @@ class FITSReadCatalog(FITSUnitTest):
                                    'major_axis'  : 1.87925231,
                                    'minor_axis'  : 1.74675643,
                                    'ccd_pa'      : -79.38792419,
-                                   'obs_ra'  :  86.868051829832439,
+                                   'obs_ra'  : 86.868051829832439,
                                    'obs_dec' : -27.575127242664802,
                                    'obs_ra_err'  : 7.464116913258858e-06,
                                    'obs_dec_err' : 7.516842315248245e-06,
@@ -1885,7 +2256,7 @@ class FITSReadCatalog(FITSUnitTest):
                                    'threshold' : 43.438805,
                                  })
 
-        catalog_items = get_catalog_items(header_items, self.table_firstitem)
+        catalog_items = get_catalog_items_old(header_items, self.table_firstitem)
 
         self.assertEqual(expected_catalog, catalog_items)
 
@@ -1898,7 +2269,7 @@ class FITSReadCatalog(FITSUnitTest):
                                    'minor_axis'  : 1.73628092,
                                    'ccd_pa'      : 7.76751757,
                                    'obs_ra'  :  219.7877046646191,
-                                   'obs_dec' :  -9.6401399241501036,
+                                   'obs_dec' : -9.6401399241501036,
                                    'obs_ra_err'  : 8.92232262319e-06,
                                    'obs_dec_err' : 8.12455029148e-06,
                                    'obs_mag'      : -2.5*log10(206447.5625) + 00.00,
@@ -1911,8 +2282,217 @@ class FITSReadCatalog(FITSUnitTest):
 
         header, table, cattype = open_fits_catalog(self.test_ldacfilename)
         header_items = get_catalog_header(header, cattype)
-        catalog_items = get_catalog_items(header_items, self.ldac_table_firstitem, "FITS_LDAC")
+        catalog_items = get_catalog_items_old(header_items, self.ldac_table_firstitem, "FITS_LDAC")
         self.compare_tables(expected_catalog, catalog_items, 4)
+
+
+class TestExtractCatalog(FITSUnitTest):
+
+    def setUp(self):
+        super(TestExtractCatalog, self).setUp()
+        self.temp_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+
+        shutil.copy(os.path.abspath(self.test_bad_ldacfilename), self.temp_dir)
+        self.test_bad_ldacfilename = os.path.join(self.temp_dir, os.path.basename(self.test_bad_ldacfilename))
+        self.remove = True
+        self.debug_print = False
+
+        self.expected_hdrtbl = None
+        self.maxDiff = None
+
+    def tearDown(self):
+        if self.remove:
+            try:
+                files_to_remove = glob(os.path.join(self.temp_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.chmod(file_to_rm, stat.S_IWUSR)
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.temp_dir)
+            try:
+                os.rmdir(self.temp_dir)
+                if self.debug_print:
+                    print("Removed", self.temp_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.temp_dir)
+        else:
+            print("Temporary test directory=", self.temp_dir)
+
+    def test_bad_ldac_dontremove_default(self):
+
+        header, table = extract_catalog(self.test_bad_ldacfilename, 'BANZAI_LDAC')
+
+        self.assertTrue(os.path.exists(self.test_bad_ldacfilename))
+        self.assertEqual(self.expected_hdrtbl, header)
+        self.assertEqual(self.expected_hdrtbl, table)
+
+    def test_bad_ldac_dontremove(self):
+
+        header, table = extract_catalog(self.test_bad_ldacfilename, 'BANZAI_LDAC', remove=False)
+
+        self.assertTrue(os.path.exists(self.test_bad_ldacfilename))
+        self.assertEqual(self.expected_hdrtbl, header)
+        self.assertEqual(self.expected_hdrtbl, table)
+
+    def test_bad_ldac_remove_bad_perms(self):
+
+        os.chmod(self.test_bad_ldacfilename, 0o000)
+        header, table = extract_catalog(self.test_bad_ldacfilename, 'BANZAI_LDAC', remove=True)
+
+        self.assertTrue(os.path.exists(self.test_bad_ldacfilename))
+        self.assertEqual(self.expected_hdrtbl, header)
+        self.assertEqual(self.expected_hdrtbl, table)
+
+    def test_bad_ldac_remove(self):
+
+        header, table = extract_catalog(self.test_bad_ldacfilename, 'BANZAI_LDAC', remove=True)
+
+        self.assertFalse(os.path.exists(self.test_bad_ldacfilename))
+        self.assertEqual(self.expected_hdrtbl, header)
+        self.assertEqual(self.expected_hdrtbl, table)
+
+    def test_good_ldac_remove_on(self):
+
+        expected_hdr = {'astrometric_catalog': 'UCAC4',
+                       'astrometric_fit_nstars': 22,
+                       'astrometric_fit_rms': 0.14473999999999998,
+                       'astrometric_fit_status': 0,
+                       'exptime': 115.0,
+                       'field_center_dec': -9.767727777777779,
+                       'field_center_ra': 219.83084166666666,
+                       'field_height': '15.8624m',
+                       'field_width': '15.7846m',
+                       'filter': 'w',
+                       'framename': 'cpt1m013-kb76-20160428-0141-e00.fits',
+                       'fwhm': 2.886,
+                       'instrument': 'kb76',
+                       'obs_date': datetime(2016, 4, 28, 20, 11, 54, 303000),
+                       'obs_midpoint': datetime(2016, 4, 28, 20, 12, 51, 803000),
+                       'pixel_scale': 0.467,
+                       'site_code': 'K92',
+                       'zeropoint': -99.0,
+                       'zeropoint_err': -99.0,
+                       'zeropoint_src': 'NOT_FIT(LCOGTCAL-V0.0.2-r8174)'}
+
+        shutil.copy(os.path.abspath(self.test_ldacfilename), self.temp_dir)
+        test_ldacfilename = os.path.join(self.temp_dir, os.path.basename(self.test_ldacfilename))
+        header, table = extract_catalog(test_ldacfilename, 'FITS_LDAC', remove=True)
+
+        self.assertTrue(os.path.exists(test_ldacfilename))
+        self.assertEqual(expected_hdr, header)
+        self.assertEqual(883, len(table))
+
+
+class TestRemoveCorruptCatalog(FITSUnitTest):
+
+    def setUp(self):
+        super(TestRemoveCorruptCatalog, self).setUp()
+        self.temp_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+
+        shutil.copy(os.path.abspath(self.test_bad_ldacfilename), self.temp_dir)
+        self.test_bad_ldacfilename = os.path.join(self.temp_dir, os.path.basename(self.test_bad_ldacfilename))
+
+        frame_params = { 'filename' : os.path.basename(self.test_bad_ldacfilename),
+                         'midpoint' : datetime(2020, 12, 3, 1, 30, 0),
+                         'frametype' : Frame.BANZAI_LDAC_CATALOG
+                       }
+        self.frame, created = Frame.objects.get_or_create(**frame_params)
+        self.expected_hdrtbl = None
+
+        self.remove = True
+        self.debug_print = False
+        self.maxDiff = None
+
+    def tearDown(self):
+        if self.remove:
+            try:
+                files_to_remove = glob(os.path.join(self.temp_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.chmod(file_to_rm, stat.S_IWUSR)
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.temp_dir)
+            try:
+                os.rmdir(self.temp_dir)
+                if self.debug_print:
+                    print("Removed", self.temp_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.temp_dir)
+        else:
+            print("Temporary test directory=", self.temp_dir)
+
+    def test_single_catalog(self):
+        expected_num_removed = 1
+
+        self.assertEqual(1, Frame.objects.count())
+
+        removed, num_removed = remove_corrupt_catalog(self.test_bad_ldacfilename)
+
+        self.assertTrue(removed)
+        self.assertEqual(0, Frame.objects.count())
+        self.assertEqual(expected_num_removed, num_removed)
+
+    def test_single_catalog_disk_not_found(self):
+        expected_num_removed = 1
+
+        frames = Frame.objects.all()
+        frame = frames[0]
+        frame.filename = 'elp1m006-fa07-20201203-0225-e92_ldac.fits'
+        frame.save()
+
+        self.assertEqual(1, frames.count())
+        removed, num_removed = remove_corrupt_catalog(os.path.join(self.temp_dir, frame.filename))
+
+        self.assertFalse(removed)
+        self.assertEqual(0, Frame.objects.count())
+        self.assertEqual(expected_num_removed, num_removed)
+
+    def test_multiple_catalogs_disk_not_found(self):
+        expected_num_removed = 2
+
+        frames = Frame.objects.all()
+        frame = frames[0]
+        frame.filename = 'elp1m006-fa07-20201203-0225-e91_ldac.fits'
+        frame.save()
+
+        frame.pk = None
+        frame.filename = 'elp1m006-fa07-20201203-0225-e92_ldac.fits'
+        frame.save()
+        frames = Frame.objects.all()
+
+        self.assertEqual(2, frames.count())
+        removed, num_removed = remove_corrupt_catalog(os.path.join(self.temp_dir, frame.filename))
+
+        self.assertFalse(removed)
+        self.assertEqual(0, Frame.objects.count())
+        self.assertEqual(expected_num_removed, num_removed)
+
+    def test_multiple_catalogs_existing_frame(self):
+        expected_num_removed = 2
+
+        frames = Frame.objects.all()
+        frame = frames[0]
+        frame.filename = 'elp1m006-fa07-20201203-0225-e91.fits'
+        frame.frametype = Frame.BANZAI_RED_FRAMETYPE
+        frame.save()
+
+        frame.pk = None
+        frame.filename = 'elp1m006-fa07-20201203-0225-e91_ldac.fits'
+        frame.frametype = Frame.BANZAI_LDAC_CATALOG
+        frame.save()
+
+        frame.pk = None
+        frame.filename = 'elp1m006-fa07-20201203-0225-e92_ldac.fits'
+        frame.frametype = Frame.BANZAI_LDAC_CATALOG
+        frame.save()
+
+        frames = Frame.objects.all()
+        self.assertEqual(3, frames.count())
+        removed, num_removed = remove_corrupt_catalog(os.path.join(self.temp_dir, frame.filename))
+
+        self.assertFalse(removed)
+        self.assertEqual(1, Frame.objects.count())
+        self.assertEqual(expected_num_removed, num_removed)
 
 
 class TestUpdateLDACCatalogWCS(FITSUnitTest):
@@ -2121,7 +2701,8 @@ class TestIncrementRedLevel(TestCase):
 
 class ExternalCodeUnitTest(TestCase):
 
-    def setUp(self):
+    def __init__(self, *args, **kwargs):
+        super(ExternalCodeUnitTest, self).__init__(*args, **kwargs)
         self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
 
         self.debug_print = False
@@ -2172,14 +2753,23 @@ class UpdateFrameZeropointTest(FITSUnitTest):
         self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
 
         # Create test block
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'LSC',
+        sblock_params = {
                          'body'     : self.body_with_provname,
                          'proposal' : self.neo_proposal,
                          'groupid'  : self.body_with_provname.current_name() + '_CPT-20150420',
                          'block_start' : '2017-03-08 05:05:00',
                          'block_end'   : '2017-03-08 05:22:36',
                          'tracking_number' : '0000358587',
+                         'active'   : False
+                       }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'LSC',
+                         'body'     : self.body_with_provname,
+                         'superblock' : self.test_sblock,
+                         'block_start' : '2017-03-08 05:05:00',
+                         'block_end'   : '2017-03-08 05:22:36',
+                         'request_number' : '0001358587',
                          'num_exposures' : 6,
                          'exp_length' : 120.0,
                          'active'   : False
@@ -2793,3 +3383,335 @@ class MakeSEXTFileTest(FITSUnitTest):
         self.assertEqual(len(sext_line_list), 2)
         self.assertEqual(sext_line_list[0], test_line_list[0])
         self.assertEqual(sext_line_list[-1], test_line_list[1])
+
+
+class TestDetermineImageForCatalog(TestCase):
+
+    def setUp(self):
+        pass
+
+    def test_ql_ldac_no_path(self):
+        expected_filename = 'lsc1m005-fl15-20171109-0139-e11.fits'
+        expected_filepath = 'lsc1m005-fl15-20171109-0139-e11.fits'
+
+        fits_filename, fits_filepath = determine_image_for_catalog('lsc1m005-fl15-20171109-0139-e11_ldac.fits')
+
+        self.assertEqual(expected_filename, fits_filename)
+        self.assertEqual(expected_filepath, fits_filepath)
+
+    def test_red_ldac_no_path(self):
+        expected_filename = 'lsc1m005-fl15-20171109-0139-e91.fits'
+        expected_filepath = 'lsc1m005-fl15-20171109-0139-e91.fits'
+
+        fits_filename, fits_filepath = determine_image_for_catalog('lsc1m005-fl15-20171109-0139-e91_ldac.fits')
+
+        self.assertEqual(expected_filename, fits_filename)
+        self.assertEqual(expected_filepath, fits_filepath)
+
+    def test_ql_ldac_path(self):
+        expected_filename = 'lsc1m005-fl15-20171109-0139-e11.fits'
+        expected_filepath = '/apophis/eng/rocks/20171109/lsc1m005-fl15-20171109-0139-e11.fits'
+
+        fits_filename, fits_filepath = determine_image_for_catalog('/apophis/eng/rocks/20171109/lsc1m005-fl15-20171109-0139-e11_ldac.fits')
+
+        self.assertEqual(expected_filename, fits_filename)
+        self.assertEqual(expected_filepath, fits_filepath)
+
+    def test_red_ldac_path(self):
+        expected_filename = 'lsc1m005-fl15-20171109-0139-e91.fits'
+        expected_filepath = '/apophis/eng/rocks/20171109/lsc1m005-fl15-20171109-0139-e91.fits'
+
+        fits_filename, fits_filepath = determine_image_for_catalog('/apophis/eng/rocks/20171109/lsc1m005-fl15-20171109-0139-e91_ldac.fits')
+
+        self.assertEqual(expected_filename, fits_filename)
+        self.assertEqual(expected_filepath, fits_filepath)
+
+    def test_ql_cat_no_path(self):
+        expected_filename = 'lsc1m005-fl15-20171109-0139-e11.fits'
+        expected_filepath = 'lsc1m005-fl15-20171109-0139-e11.fits'
+
+        fits_filename, fits_filepath = determine_image_for_catalog('lsc1m005-fl15-20171109-0139-e11_cat.fits')
+
+        self.assertEqual(expected_filename, fits_filename)
+        self.assertEqual(expected_filepath, fits_filepath)
+
+    def test_red_cat_no_path(self):
+        expected_filename = 'lsc1m005-fl15-20171109-0139-e91.fits'
+        expected_filepath = 'lsc1m005-fl15-20171109-0139-e91.fits'
+
+        fits_filename, fits_filepath = determine_image_for_catalog('lsc1m005-fl15-20171109-0139-e91_cat.fits')
+
+        self.assertEqual(expected_filename, fits_filename)
+        self.assertEqual(expected_filepath, fits_filepath)
+
+    def test_ql_cat_path(self):
+        expected_filename = 'lsc1m005-fl15-20171109-0139-e11.fits'
+        expected_filepath = '/apophis/eng/rocks/20171109/lsc1m005-fl15-20171109-0139-e11.fits'
+
+        fits_filename, fits_filepath = determine_image_for_catalog('/apophis/eng/rocks/20171109/lsc1m005-fl15-20171109-0139-e11_cat.fits')
+
+        self.assertEqual(expected_filename, fits_filename)
+        self.assertEqual(expected_filepath, fits_filepath)
+
+    def test_red_cat_path(self):
+        expected_filename = 'lsc1m005-fl15-20171109-0139-e91.fits'
+        expected_filepath = '/apophis/eng/rocks/20171109/lsc1m005-fl15-20171109-0139-e91.fits'
+
+        fits_filename, fits_filepath = determine_image_for_catalog('/apophis/eng/rocks/20171109/lsc1m005-fl15-20171109-0139-e91_cat.fits')
+
+        self.assertEqual(expected_filename, fits_filename)
+        self.assertEqual(expected_filepath, fits_filepath)
+
+    def test_ql_no_path(self):
+        expected_filename = 'lsc1m005-fl15-20171109-0139-e11.fits'
+        expected_filepath = 'lsc1m005-fl15-20171109-0139-e11.fits'
+
+        fits_filename, fits_filepath = determine_image_for_catalog('lsc1m005-fl15-20171109-0139-e11.fits')
+
+        self.assertEqual(expected_filename, fits_filename)
+        self.assertEqual(expected_filepath, fits_filepath)
+
+    def test_red_no_path(self):
+        expected_filename = 'lsc1m005-fl15-20171109-0139-e91.fits'
+        expected_filepath = 'lsc1m005-fl15-20171109-0139-e91.fits'
+
+        fits_filename, fits_filepath = determine_image_for_catalog('lsc1m005-fl15-20171109-0139-e91.fits')
+
+        self.assertEqual(expected_filename, fits_filename)
+        self.assertEqual(expected_filepath, fits_filepath)
+
+    def test_ql_path(self):
+        expected_filename = 'lsc1m005-fl15-20171109-0139-e11.fits'
+        expected_filepath = '/apophis/eng/rocks/20171109/lsc1m005-fl15-20171109-0139-e11.fits'
+
+        fits_filename, fits_filepath = determine_image_for_catalog('/apophis/eng/rocks/20171109/lsc1m005-fl15-20171109-0139-e11.fits')
+
+        self.assertEqual(expected_filename, fits_filename)
+        self.assertEqual(expected_filepath, fits_filepath)
+
+    def test_red_path(self):
+        expected_filename = 'lsc1m005-fl15-20171109-0139-e91.fits'
+        expected_filepath = '/apophis/eng/rocks/20171109/lsc1m005-fl15-20171109-0139-e91.fits'
+
+        fits_filename, fits_filepath = determine_image_for_catalog('/apophis/eng/rocks/20171109/lsc1m005-fl15-20171109-0139-e91.fits')
+
+        self.assertEqual(expected_filename, fits_filename)
+        self.assertEqual(expected_filepath, fits_filepath)
+
+    def test_ql_gaia_ldac_no_path(self):
+        expected_filename = 'lsc1m005-fl15-20171109-0139-e11.fits'
+        expected_filepath = 'lsc1m005-fl15-20171109-0139-e11.fits'
+
+        fits_filename, fits_filepath = determine_image_for_catalog('lsc1m005-fl15-20171109-0139-e12_ldac.fits')
+
+        self.assertEqual(expected_filename, fits_filename)
+        self.assertEqual(expected_filepath, fits_filepath)
+
+    def test_red_gaia_ldac_no_path(self):
+        expected_filename = 'lsc1m005-fl15-20171109-0139-e91.fits'
+        expected_filepath = 'lsc1m005-fl15-20171109-0139-e91.fits'
+
+        fits_filename, fits_filepath = determine_image_for_catalog('lsc1m005-fl15-20171109-0139-e92_ldac.fits')
+
+        self.assertEqual(expected_filename, fits_filename)
+        self.assertEqual(expected_filepath, fits_filepath)
+
+    def test_ql_gaia_ldac_path(self):
+        expected_filename = 'lsc1m005-fl15-20171109-0139-e11.fits'
+        expected_filepath = '/apophis/eng/rocks/20171109/lsc1m005-fl15-20171109-0139-e11.fits'
+
+        fits_filename, fits_filepath = determine_image_for_catalog('/apophis/eng/rocks/20171109/lsc1m005-fl15-20171109-0139-e12_ldac.fits')
+
+        self.assertEqual(expected_filename, fits_filename)
+        self.assertEqual(expected_filepath, fits_filepath)
+
+    def test_red_gaia_ldac_path(self):
+        expected_filename = 'lsc1m005-fl15-20171109-0139-e91.fits'
+        expected_filepath = '/apophis/eng/rocks/20171109/lsc1m005-fl15-20171109-0139-e91.fits'
+
+        fits_filename, fits_filepath = determine_image_for_catalog('/apophis/eng/rocks/20171109/lsc1m005-fl15-20171109-0139-e92_ldac.fits')
+
+        self.assertEqual(expected_filename, fits_filename)
+        self.assertEqual(expected_filepath, fits_filepath)
+
+
+class TestSanitizeObjectName(TestCase):
+
+    def test_none(self):
+        expected_obj_name = None
+
+        object_name = sanitize_object_name(None)
+
+        self.assertEqual(expected_obj_name, object_name)
+
+    def test_nonstring(self):
+        expected_obj_name = None
+
+        object_name = sanitize_object_name(12345)
+
+        self.assertEqual(expected_obj_name, object_name)
+
+    def test_numpy_string(self):
+        expected_obj_name = '2016WW2'
+
+        name_array = array(['(2016 WW2)'])
+        object_name = sanitize_object_name(name_array[0])
+
+        self.assertEqual(expected_obj_name, object_name)
+
+    def test_regular_asteroid(self):
+        expected_obj_name = '12345'
+
+        object_name = sanitize_object_name('12345')
+
+        self.assertEqual(expected_obj_name, object_name)
+
+    def test_asteroid_with_space(self):
+        expected_obj_name = '2020BR10'
+
+        object_name = sanitize_object_name('2020 BR10')
+
+        self.assertEqual(expected_obj_name, object_name)
+
+    def test_asteroid_with_two_desigs(self):
+        expected_obj_name = '85989_1999JD6'
+
+        object_name = sanitize_object_name('85989 (1999 JD6)')
+
+        self.assertEqual(expected_obj_name, object_name)
+
+    def test_asteroid_with_brackets(self):
+        expected_obj_name = '123456'
+
+        object_name = sanitize_object_name('(123456)')
+
+        self.assertEqual(expected_obj_name, object_name)
+
+    def test_comet_periodic(self):
+        expected_obj_name = '46P'
+
+        object_name = sanitize_object_name('46/P')
+
+        self.assertEqual(expected_obj_name, object_name)
+
+    def test_comet_nonperiodic(self):
+        expected_obj_name = 'C_2019Y4'
+
+        object_name = sanitize_object_name('C/2019 Y4')
+
+        self.assertEqual(expected_obj_name, object_name)
+
+    def test_comet_whitespace(self):
+        expected_obj_name = 'C_2019Y4'
+
+        object_name = sanitize_object_name('  C/2019 Y4 ')
+
+        self.assertEqual(expected_obj_name, object_name)
+
+    def test_unnumbered_comet_with_longname(self):
+        name = 'Machholz-Fujikawa-Iwamo (C/2018 V1'
+        expected_name = 'Machholz_Fujikawa_Iwamo_C_2018V1'
+
+        new_name = sanitize_object_name(name)
+
+        self.assertEqual(expected_name, new_name)
+
+    def test_staticsource_names(self):
+        expected_obj_names = ['agk81d266', 'bd25d4655', 'cd_34d241', 'eg21', 'feige110', 'g138_31', 'g191_b2b', 'gd108', 'grw70d5824',
+            'hd49798', 'hd60753', 'hilt600', 'hr153', 'hr1544', 'hz2', 'hz21', 'lb227', 'lds749b', 'ltt1020', 'ngc7293']
+
+        statsrc_names = ['AGK+81d266', 'BD+25d4655', 'CD-34d241', 'EG21', 'Feige110', 'G138-31', 'G191-B2B', 'GD108', 'GRW+70d5824',
+            'HD 49798', 'HD60753', 'HILT600', 'HR153', 'HR1544', 'HZ2', 'HZ21', 'LB227', 'LDS749B', 'LTT1020', 'NGC 7293']
+
+        for i,stat_src in enumerate(statsrc_names):
+            object_name = sanitize_object_name(stat_src)
+            self.assertEqual(expected_obj_names[i], object_name.lower())
+
+    def test_horizons_names(self):
+        expected_obj_names = ['2016WW2', '5604_1992FE', 'PANSTARRS_C_2017D5', '66391_Moshup_1999KW4', 'PANSTARRS_C_2015ER61',
+            'Lemmon_C_2017S7', 'ATLAS_C_2017M4', '11Parthenope', '328P_LONEOS_Tucker', 'A_2018V3', '155P_Shoemaker3',
+            '29P_Schwassmann_Wachmann1', 'Groeller_P_2019V2', 'Pruyne_P_2019X1', '4581_Asclepius_1989FC', '289P_Blanpain',
+            '469219_Kamo`oalewa_2016HO3', '2100_Ra_Shalom_1978RA', 'NEOWISE_C_2016U1']
+
+        horizons_names = ['(2016 WW2)',
+                          '5604 (1992 FE)',
+                          'PANSTARRS (C/2017 D5)',
+                          '66391 Moshup (1999 KW4)',
+                          'PANSTARRS (C/2015 ER61)',
+                          'Lemmon (C/2017 S7)',
+                          'ATLAS (C/2017 M4)',
+                          '11 Parthenope',
+                          '328P/LONEOS-Tucker',
+                          'A/2018 V3',
+                          '155P/Shoemaker 3',
+                          '29P/Schwassmann-Wachmann 1',
+                          'Groeller (P/2019 V2)',
+                          'Pruyne (P/2019 X1)',
+                          '4581 Asclepius (1989 FC)',
+                          '289P/Blanpain',
+                          '469219 Kamo`oalewa (2016 HO3)',
+                          '2100 Ra-Shalom (1978 RA)',
+                          'NEOWISE (C/2016 U1)']
+
+        for i, name in enumerate(horizons_names):
+            object_name = sanitize_object_name(name)
+            self.assertEqual(expected_obj_names[i], object_name)
+
+
+class TestMakeObjectDirectory(ExternalCodeUnitTest):
+
+    def __init__(self, *args, **kwargs):
+        super(TestMakeObjectDirectory, self).__init__(*args, **kwargs)
+
+        self.test_filepath = os.path.join(self.test_dir, 'lsc1m004-fa03-20200212-0088-e91.fits')
+
+    def tearDown(self):
+        remove = True
+        if remove:
+            try:
+                files_to_remove = glob(os.path.join(self.test_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.rmdir(file_to_rm)
+            except OSError:
+                print("Error removing directories in temporary test directory", self.test_dir)
+            try:
+                os.rmdir(self.test_dir)
+                if self.debug_print:
+                    print("Removed", self.test_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.test_dir)
+
+    def test_regular_object_noblock(self):
+        object_name = 'N999q0q'
+        expected_object_dir = os.path.join(self.test_dir, object_name)
+
+        object_dir = make_object_directory(self.test_filepath, object_name, '')
+
+        self.assertEqual(expected_object_dir, object_dir)
+
+    def test_regular_object(self):
+        object_name = 'N999q0q'
+        block_id = '12345'
+        expected_object_dir = os.path.join(self.test_dir, object_name+'_'+block_id)
+
+        object_dir = make_object_directory(self.test_filepath, object_name, block_id)
+
+        self.assertEqual(expected_object_dir, object_dir)
+
+    def test_object_with_space(self):
+        object_name = '2020 BR10'
+        block_id = '12345'
+        expected_object_dir = os.path.join(self.test_dir, object_name.replace(' ', '')+'_'+block_id)
+
+        object_dir = make_object_directory(self.test_filepath, object_name, block_id)
+
+        self.assertEqual(expected_object_dir, object_dir)
+
+    def test_comet(self):
+        object_name = 'C/2019 Y4'
+        block_id = '12345'
+        expected_object_dir = os.path.join(self.test_dir, object_name.replace(' ', '').replace('/', '_')+'_'+block_id)
+
+        object_dir = make_object_directory(self.test_filepath, object_name, block_id)
+
+        self.assertEqual(expected_object_dir, object_dir)

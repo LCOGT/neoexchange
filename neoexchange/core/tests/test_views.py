@@ -23,29 +23,35 @@ from math import degrees
 
 from django.test import TestCase
 from django.forms.models import model_to_dict
+from django.conf import settings
 from bs4 import BeautifulSoup
 from mock import patch
 from astropy.io import fits
+from astropy.wcs import WCS
+from numpy.testing import assert_allclose
 
 from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check_for_images, \
     mock_check_request_status_null, mock_check_request_status_notfound, \
     mock_check_for_images_no_millisecs, \
     mock_check_for_images_bad_date, mock_ingest_frames, mock_archive_frame_header, \
+    mock_archive_spectra_header, \
     mock_odin_login, mock_run_sextractor_make_catalog, mock_fetch_filter_list, \
     mock_update_elements_with_findorb, mock_update_elements_with_findorb_badrms, \
-    mock_update_elements_with_findorb_badepoch
+    mock_update_elements_with_findorb_badepoch, mock_get_vizier_catalog_table, mock_lco_api_fail
+
+from neox.tests.base import assertDeepAlmostEqual
 
 from astrometrics.ephem_subs import compute_ephem, determine_darkness_times
 from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs, \
     fetch_flux_standards, read_solar_standards
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header
-from core.frames import block_status, create_frame, frame_params_from_block
+from core.frames import block_status, create_frame
 from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate,\
     SuperBlock, SpectralInfo, PreviousSpectra, StaticSource
-from core.frames import block_status, create_frame, frame_params_from_block
 from core.forms import EphemQuery
 # Import modules to test
 from core.views import *
+from core.plots import *
 
 # Disable logging during testing
 import logging
@@ -53,7 +59,8 @@ logger = logging.getLogger(__name__)
 # Disable anything below CRITICAL level
 logging.disable(logging.CRITICAL)
 
-class TestClean_NEOCP_Object(TestCase):
+
+class TestCleanNEOCPObject(TestCase):
 
     def test_X33656(self):
         obs_page = [u'X33656  23.9  0.15  K1548 330.99052  282.94050   31.81272   13.02458  0.7021329  0.45261672   1.6800247                  3   1    0 days 0.21         NEOCPNomin',
@@ -307,7 +314,7 @@ class TestClean_NEOCP_Object(TestCase):
         expected_elements = { 'provisional_name' : 'LSCTLGj',
                               'abs_mag'     : 16.54,
                               'slope'       : 0.15,
-                              'epochofel'   : datetime(2016,11,  8, 0, 0, 0),
+                              'epochofel'   : datetime(2016, 11,  8, 0, 0, 0),
                               'meananom'    : 258.25752,
                               'argofperih'  :  52.27105,
                               'longascnode' : 101.57581,
@@ -371,7 +378,7 @@ class TestClean_NEOCP_Object(TestCase):
         self.assertEqual(False, created)
         resp = save_and_make_revision(body, elements)
         # Saving the new elements
-        self.assertEqual(True,resp)
+        self.assertEqual(True, resp)
 
     def test_update_MPC_duplicate(self):
         self.save_N007riz()
@@ -379,7 +386,7 @@ class TestClean_NEOCP_Object(TestCase):
         update_MPC_orbit(obj_id)
 
     def test_create_discovered_object(self):
-        obj_id ='LSCTLF8'
+        obj_id = 'LSCTLF8'
         elements = { 'abs_mag'     : 16.2,
                       'slope'       : 0.15,
                       'epochofel'   : datetime(2015, 6, 23, 0, 0, 0),
@@ -396,7 +403,7 @@ class TestClean_NEOCP_Object(TestCase):
                     }
         body, created = Body.objects.get_or_create(provisional_name=obj_id)
         # We are creating this object
-        self.assertEqual(True,created)
+        self.assertEqual(True, created)
         resp = save_and_make_revision(body, elements)
         # Need to call full_clean() to validate the fields as this is not
         # done on save() (called by get_or_create() or save_and_make_revision())
@@ -524,7 +531,7 @@ class TestClean_NEOCP_Object(TestCase):
             self.assertEqual(expected_elements[element], elements[element])
 
 
-class TestCheck_for_block(TestCase):
+class TestCheckForBlock(TestCase):
 
     def setUp(self):
         # Initialise with three test bodies a test proposal and several blocks.
@@ -567,28 +574,46 @@ class TestCheck_for_block(TestCase):
         self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
 
         # Create test blocks
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'CPT',
+        sblock_params = {
                          'body'     : self.body_with_provname,
                          'proposal' : self.neo_proposal,
                          'groupid'  : self.body_with_provname.current_name() + '_CPT-20150420',
                          'block_start' : '2015-04-20 13:00:00',
                          'block_end'   : '2015-04-21 03:00:00',
                          'tracking_number' : '00042',
+                         'active'   : True
+                       }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'CPT',
+                         'body'     : self.body_with_provname,
+                         'superblock' : self.test_sblock,
+                         'block_start' : '2015-04-20 13:00:00',
+                         'block_end'   : '2015-04-21 03:00:00',
+                         'request_number' : '10042',
                          'num_exposures' : 5,
                          'exp_length' : 42.0,
                          'active'   : True
                        }
         self.test_block = Block.objects.create(**block_params)
 
-        block_params2 = { 'telclass' : '1m0',
-                         'site'     : 'CPT',
+        sblock_params2 = {
                          'body'     : self.body_with_provname,
                          'proposal' : self.neo_proposal,
                          'groupid'  : self.body_with_provname.current_name() + '_CPT-20150420',
                          'block_start' : '2015-04-20 03:00:00',
                          'block_end'   : '2015-04-20 13:00:00',
                          'tracking_number' : '00043',
+                         'active'   : False,
+                       }
+        self.test_sblock2 = SuperBlock.objects.create(**sblock_params2)
+        block_params2 = { 'telclass' : '1m0',
+                         'site'     : 'CPT',
+                         'body'     : self.body_with_provname,
+                         'superblock' : self.test_sblock2,
+                         'block_start' : '2015-04-20 03:00:00',
+                         'block_end'   : '2015-04-20 13:00:00',
+                         'request_number' : '10043',
                          'num_exposures' : 7,
                          'exp_length' : 30.0,
                          'active'   : False,
@@ -597,15 +622,23 @@ class TestCheck_for_block(TestCase):
                        }
         self.test_block2 = Block.objects.create(**block_params2)
 
-        block_params3 = { 'telclass' : '1m0',
-                         'site'     : 'LSC',
+        sblock_params3 = {
                          'body'     : self.body_with_provname,
                          'proposal' : self.neo_proposal,
-                         'groupid'  : self.body_with_provname.current_name() + \
-                            '_LSC-20150421',
+                         'groupid'  : self.body_with_provname.current_name() + '_LSC-20150421',
                          'block_start' : '2015-04-21 23:00:00',
                          'block_end'   : '2015-04-22 03:00:00',
                          'tracking_number' : '00044',
+                         'active'   : True,
+                       }
+        self.test_sblock3 = SuperBlock.objects.create(**sblock_params3)
+        block_params3 = { 'telclass' : '1m0',
+                         'site'     : 'LSC',
+                         'body'     : self.body_with_provname,
+                         'superblock' : self.test_sblock3,
+                         'block_start' : '2015-04-21 23:00:00',
+                         'block_end'   : '2015-04-22 03:00:00',
+                         'request_number' : '10044',
                          'num_exposures' : 7,
                          'exp_length' : 30.0,
                          'active'   : True,
@@ -614,15 +647,23 @@ class TestCheck_for_block(TestCase):
                        }
         self.test_block3 = Block.objects.create(**block_params3)
 
-        block_params4 = { 'telclass' : '1m0',
-                         'site'     : 'LSC',
+        sblock_params4 = {
                          'body'     : self.body_no_provname1,
                          'proposal' : self.neo_proposal,
-                         'groupid'  : self.body_no_provname1.current_name() + \
-                            '_LSC-20150421',
+                         'groupid'  : self.body_no_provname1.current_name() + '_LSC-20150421',
                          'block_start' : '2015-04-21 23:00:00',
                          'block_end'   : '2015-04-22 03:00:00',
                          'tracking_number' : '00045',
+                         'active'   : True,
+                       }
+        self.test_sblock4 = SuperBlock.objects.create(**sblock_params4)
+        block_params4 = { 'telclass' : '1m0',
+                         'site'     : 'LSC',
+                         'body'     : self.body_no_provname1,
+                         'superblock' : self.test_sblock4,
+                         'block_start' : '2015-04-21 23:00:00',
+                         'block_end'   : '2015-04-22 03:00:00',
+                         'request_number' : '10045',
                          'num_exposures' : 7,
                          'exp_length' : 30.0,
                          'active'   : True,
@@ -631,15 +672,23 @@ class TestCheck_for_block(TestCase):
                        }
         self.test_block4 = Block.objects.create(**block_params4)
 
-        block_params5 = { 'telclass' : '1m0',
-                         'site'     : 'ELP',
+        sblock_params5 = {
                          'body'     : self.body_no_provname2,
                          'proposal' : self.neo_proposal,
-                         'groupid'  : self.body_no_provname2.current_name() + \
-                            '_ELP-20141121_lc',
+                         'groupid'  : self.body_no_provname2.current_name() + '_ELP-20141121_lc',
                          'block_start' : '2014-11-21 03:00:00',
                          'block_end'   : '2014-11-21 13:00:00',
                          'tracking_number' : '00006',
+                         'active'   : True,
+                       }
+        self.test_sblock5 = SuperBlock.objects.create(**sblock_params5)
+        block_params5 = { 'telclass' : '1m0',
+                         'site'     : 'ELP',
+                         'body'     : self.body_no_provname2,
+                         'superblock' : self.test_sblock5,
+                         'block_start' : '2014-11-21 03:00:00',
+                         'block_end'   : '2014-11-21 13:00:00',
+                         'request_number' : '10006',
                          'num_exposures' : 77,
                          'exp_length' : 30.0,
                          'active'   : True,
@@ -648,15 +697,23 @@ class TestCheck_for_block(TestCase):
                        }
         self.test_block5 = Block.objects.create(**block_params5)
 
-        block_params6 = { 'telclass' : '1m0',
-                         'site'     : 'ELP',
+        sblock_params6 = {
                          'body'     : self.body_no_provname2,
                          'proposal' : self.neo_proposal,
-                         'groupid'  : self.body_no_provname2.current_name() + \
-                            '_ELP-20141121',
+                         'groupid'  : self.body_no_provname2.current_name() + '_ELP-20141121',
                          'block_start' : '2014-11-21 03:00:00',
                          'block_end'   : '2014-11-21 13:00:00',
                          'tracking_number' : '00007',
+                         'active'   : True,
+                       }
+        self.test_sblock6 = SuperBlock.objects.create(**sblock_params6)
+        block_params6 = { 'telclass' : '1m0',
+                         'site'     : 'ELP',
+                         'body'     : self.body_no_provname2,
+                         'superblock' : self.test_sblock6,
+                         'block_start' : '2014-11-21 03:00:00',
+                         'block_end'   : '2014-11-21 13:00:00',
+                         'request_number' : '10007',
                          'num_exposures' : 7,
                          'exp_length' : 30.0,
                          'active'   : True,
@@ -665,21 +722,30 @@ class TestCheck_for_block(TestCase):
                        }
         self.test_block6 = Block.objects.create(**block_params6)
 
-        block_params7 = { 'telclass' : '1m0',
-                         'site'     : 'CPT',
+        sblock_params7 = {
                          'body'     : self.body_with_uppername,
                          'proposal' : self.neo_proposal,
                          'groupid'  : self.body_with_uppername.current_name() + '_CPT-20150420',
                          'block_start' : '2015-04-20 03:00:00',
                          'block_end'   : '2015-04-20 13:00:00',
                          'tracking_number' : '00069',
+                         'active'   : False,
+                       }
+        self.test_sblock7 = SuperBlock.objects.create(**sblock_params7)
+        block_params7 = { 'telclass' : '1m0',
+                         'site'     : 'CPT',
+                         'body'     : self.body_with_uppername,
+                         'superblock' : self.test_sblock7,
+                         'block_start' : '2015-04-20 03:00:00',
+                         'block_end'   : '2015-04-20 13:00:00',
+                         'request_number' : '10069',
                          'num_exposures' : 5,
                          'exp_length' : 130.0,
                          'active'   : False,
                          'num_observed' : 1,
                          'reported' : True
                        }
-        self.test_block2 = Block.objects.create(**block_params2)
+        self.test_block7 = Block.objects.create(**block_params7)
 
     def test_db_storage(self):
         expected_body_count = 5  # Pew, pew, bang, bang...
@@ -700,7 +766,7 @@ class TestCheck_for_block(TestCase):
         params = { 'site_code' : 'K92'
                  }
         form_data = { 'proposal_code' : self.neo_proposal.code,
-                      'group_id' : self.body_with_provname.current_name() + '_CPT-20150422'
+                      'group_name' : self.body_with_provname.current_name() + '_CPT-20150422'
                     }
         expected_state = 0
 
@@ -714,7 +780,7 @@ class TestCheck_for_block(TestCase):
         params = { 'site_code' : 'W86'
                  }
         form_data = { 'proposal_code' : self.neo_proposal.code,
-                      'group_id' : self.body_with_provname.current_name() + '_LSC-20150421'
+                      'group_name' : self.body_with_provname.current_name() + '_LSC-20150421'
                     }
         expected_state = 1
 
@@ -728,7 +794,7 @@ class TestCheck_for_block(TestCase):
         params = { 'site_code' : 'K92'
                  }
         form_data = { 'proposal_code' : self.neo_proposal.code,
-                      'group_id' : self.body_with_provname.current_name() + '_CPT-20150420'
+                      'group_name' : self.body_with_provname.current_name() + '_CPT-20150420'
                     }
         expected_state = 2
 
@@ -742,7 +808,7 @@ class TestCheck_for_block(TestCase):
         params = { 'site_code' : 'K92'
                  }
         form_data = { 'proposal_code' : self.neo_proposal.code,
-                      'group_id' : self.body_no_provname1.current_name() + '_CPT-20150422'
+                      'group_name' : self.body_no_provname1.current_name() + '_CPT-20150422'
                     }
         expected_state = 0
 
@@ -756,7 +822,7 @@ class TestCheck_for_block(TestCase):
         params = { 'site_code' : 'K93'
                  }
         form_data = { 'proposal_code' : self.neo_proposal.code,
-                      'group_id' : self.body_no_provname1.current_name() + '_CPT-20150422'
+                      'group_name' : self.body_no_provname1.current_name() + '_CPT-20150422'
                     }
         expected_state = 0
 
@@ -770,7 +836,7 @@ class TestCheck_for_block(TestCase):
         params = { 'site_code' : 'W86'
                  }
         form_data = { 'proposal_code' : self.neo_proposal.code,
-                      'group_id' : self.body_no_provname1.current_name() + '_LSC-20150421'
+                      'group_name' : self.body_no_provname1.current_name() + '_LSC-20150421'
                     }
         expected_state = 1
 
@@ -784,7 +850,7 @@ class TestCheck_for_block(TestCase):
         params = { 'site_code' : 'V37'
                  }
         form_data = { 'proposal_code' : self.neo_proposal.code,
-                      'group_id' : self.body_no_provname2.current_name() + '_ELP-20141121'
+                      'group_name' : self.body_no_provname2.current_name() + '_ELP-20141121'
                     }
         expected_state = 2
 
@@ -798,7 +864,7 @@ class TestCheck_for_block(TestCase):
         params = { 'site_code' : 'K92'
                  }
         form_data = { 'proposal_code' : self.neo_proposal.code,
-                      'group_id' : self.body_with_uppername2.current_name() + '_CPT-20150420'
+                      'group_name' : self.body_with_uppername2.current_name() + '_CPT-20150420'
                     }
         expected_state = 0
 
@@ -881,7 +947,7 @@ class TestCheck_for_block(TestCase):
         bid = 1
         resp = block_status(block_id=bid)
         blk = Block.objects.get(id=bid)
-        self.assertEqual(blk.num_observed,1)
+        self.assertEqual(blk.num_observed, 1)
 
     @patch('core.frames.check_request_status', mock_check_request_status_notfound)
     def test_block_not_found(self):
@@ -903,7 +969,7 @@ class TestRecordBlock(TestCase):
                               'exp_count': 1,
                               'exp_time': 180.0,
                               'exp_type': 'SPECTRUM',
-                              'group_id': '4_E10-20180316_spectra',
+                              'group_name': '4_E10-20180316_spectra',
                               'instrument': '2M0-FLOYDS-SCICAM',
                               'instrument_code': 'E10-FLOYDS',
                               'observatory': '',
@@ -922,11 +988,11 @@ class TestRecordBlock(TestCase):
         self.spectro_form = { 'start_time' : self.spectro_params['start_time'],
                               'end_time' : self.spectro_params['end_time'],
                               'proposal_code' : self.spectro_params['proposal_id'],
-                              'group_id' : self.spectro_params['group_id'],
+                              'group_name' : self.spectro_params['group_name'],
                               'exp_count' : self.spectro_params['exp_count'],
                               'exp_length' : self.spectro_params['exp_time'],
                             }
-        body_params = { 'name' : '4' }
+        body_params = {'name' : '4'}
         self.spectro_body = Body.objects.create(**body_params)
 
         proposal_params = { 'code' : self.spectro_params['proposal_id'], }
@@ -944,14 +1010,14 @@ class TestRecordBlock(TestCase):
                               'exp_count': 12,
                               'exp_time': 42.0,
                               'exp_type': 'EXPOSE',
-                              'group_id': 'N999r0q_K91-20180316',
+                              'group_name': 'N999r0q_K91-20180316',
                               'instrument': '1M0-SCICAM-SINISTRO',
                               'observatory': '',
                               'pondtelescope': '1m0',
                               'proposal_id': 'LCO2019A-001',
                               'request_numbers': {1440123: 'NON_SIDEREAL'},
-                              'request_windows': [[{'end': '2018-03-16T03:30:00',
-                                 'start': '2018-03-15T20:20:00'}]],
+                              'request_windows': [[{'end': '2018-03-16T03:30:00.600000Z',
+                                 'start': '2018-03-15T20:20:00.400000Z'}]],
                               'site': 'CPT',
                               'site_code': 'K91',
                               'start_time': datetime(2018, 3, 15, 18, 20),
@@ -960,7 +1026,7 @@ class TestRecordBlock(TestCase):
         self.imaging_form = { 'start_time' : self.imaging_params['start_time'],
                               'end_time' : self.imaging_params['end_time'],
                               'proposal_code' : self.imaging_params['proposal_id'],
-                              'group_id' : self.imaging_params['group_id'],
+                              'group_name' : self.imaging_params['group_name'],
                               'exp_count' : self.imaging_params['exp_count'],
                               'exp_length' : self.imaging_params['exp_time'],
                             }
@@ -992,7 +1058,7 @@ class TestRecordBlock(TestCase):
         self.assertEqual(datetime(2018, 3, 16, 11, 20, 0), blocks[0].block_start)
         self.assertEqual(datetime(2018, 3, 16, 18, 30, 0), blocks[0].block_end)
         self.assertEqual(self.spectro_tracknum, sblocks[0].tracking_number)
-        self.assertTrue(self.spectro_tracknum != blocks[0].tracking_number)
+        self.assertTrue(self.spectro_tracknum != blocks[0].request_number)
         self.assertEqual(self.spectro_params['block_duration'], sblocks[0].timeused)
 
     def test_imaging_block(self):
@@ -1008,18 +1074,18 @@ class TestRecordBlock(TestCase):
         # the (potentially) narrower per-Request windows
         self.assertEqual(self.imaging_form['start_time'], sblocks[0].block_start)
         self.assertEqual(self.imaging_form['end_time'], sblocks[0].block_end)
-        self.assertEqual(datetime(2018, 3, 15, 20, 20, 0), blocks[0].block_start)
-        self.assertEqual(datetime(2018, 3, 16, 3, 30, 0), blocks[0].block_end)
+        self.assertEqual(datetime(2018, 3, 15, 20, 20, 0, 400000), blocks[0].block_start)
+        self.assertEqual(datetime(2018, 3, 16, 3, 30, 0, 600000), blocks[0].block_end)
         self.assertEqual(self.imaging_tracknum, sblocks[0].tracking_number)
-        self.assertTrue(self.imaging_tracknum != blocks[0].tracking_number)
+        self.assertTrue(self.imaging_tracknum != blocks[0].request_number)
         self.assertEqual(self.imaging_params['block_duration'], sblocks[0].timeused)
         self.assertEqual(False, sblocks[0].rapid_response)
 
     def test_imaging_block_rr_proposal(self):
         imaging_params = self.imaging_params
-        imaging_params['proposal_id'] = imaging_params['proposal_id'] + 'b'
+        imaging_params['proposal_id'] += 'b'
         imaging_form = self.imaging_form
-        imaging_form['proposal_code'] = imaging_form['proposal_code'] + 'b'
+        imaging_form['proposal_code'] += 'b'
 
         block_resp = record_block(self.imaging_tracknum, imaging_params, imaging_form, self.imaging_body)
 
@@ -1033,23 +1099,22 @@ class TestRecordBlock(TestCase):
         # the (potentially) narrower per-Request windows
         self.assertEqual(self.imaging_form['start_time'], sblocks[0].block_start)
         self.assertEqual(self.imaging_form['end_time'], sblocks[0].block_end)
-        self.assertEqual(datetime(2018, 3, 15, 20, 20, 0), blocks[0].block_start)
-        self.assertEqual(datetime(2018, 3, 16, 3, 30, 0), blocks[0].block_end)
+        self.assertEqual(datetime(2018, 3, 15, 20, 20, 0, 400000), blocks[0].block_start)
+        self.assertEqual(datetime(2018, 3, 16, 3, 30, 0, 600000), blocks[0].block_end)
         self.assertEqual(self.imaging_tracknum, sblocks[0].tracking_number)
-        self.assertTrue(self.imaging_tracknum != blocks[0].tracking_number)
+        self.assertTrue(self.imaging_tracknum != blocks[0].request_number)
         self.assertEqual(self.imaging_params['block_duration'], sblocks[0].timeused)
         self.assertEqual(self.proposal_tc, sblocks[0].proposal)
-        self.assertEqual(self.proposal_tc, blocks[0].proposal)
         self.assertEqual(True, sblocks[0].rapid_response)
 
     def test_spectro_and_solar_block(self):
-        new_params =  { 'calibsource' : {  'id': 1,
-                                           'name': 'Landolt SA107-684',
-                                           'ra_deg': 234.325,
-                                           'dec_deg': -0.164,
-                                           'pm_ra': 0.0,
-                                           'pm_dec': 0.0,
-                                           'parallax': 0.0
+        new_params = { 'calibsource' : {'id': 1,
+                                        'name': 'Landolt SA107-684',
+                                        'ra_deg': 234.325,
+                                        'dec_deg': -0.164,
+                                        'pm_ra': 0.0,
+                                        'pm_dec': 0.0,
+                                        'parallax': 0.0
                                         },
                         'calibsrc_exptime' : 60.0,
                         'dec_deg' : -0.164,
@@ -1057,7 +1122,7 @@ class TestRecordBlock(TestCase):
                         'solar_analog' : True
                         }
         spectro_params = {**new_params, **self.spectro_params}
-        spectro_params['group_id'] = self.spectro_params['group_id'] + '+solstd'
+        spectro_params['group_name'] = self.spectro_params['group_name'] + '+solstd'
         spectro_params['request_numbers'] = {1450339: 'NON_SIDEREAL', 1450340: 'SIDEREAL'}
         spectro_params['request_windows'] = [[{'end': '2018-03-16T18:30:00', 'start': '2018-03-16T11:20:00'}],
                                             [{'end': '2018-03-16T18:30:00', 'start': '2018-03-16T11:20:00'}]
@@ -1079,7 +1144,7 @@ class TestRecordBlock(TestCase):
         self.assertEqual(self.spectro_form['end_time'], sblocks[0].block_end)
         self.assertFalse(sblocks[0].cadence)
         self.assertEqual(self.spectro_tracknum, sblocks[0].tracking_number)
-        self.assertTrue(self.spectro_tracknum != blocks[0].tracking_number)
+        self.assertTrue(self.spectro_tracknum != blocks[0].request_number)
         self.assertEqual(self.spectro_params['block_duration'], sblocks[0].timeused)
 
         self.assertEqual(datetime(2018, 3, 16, 11, 20, 0), blocks[0].block_start)
@@ -1093,8 +1158,8 @@ class TestRecordBlock(TestCase):
     def test_solo_solar_spectro_block(self):
         # adjust parameters for sidereal target
         self.spectro_params['request_numbers'] = {1450339: 'SIDEREAL'}
-        self.spectro_params['group_id'] = 'Landolt SA107-684_E10-20180316_spectra'
-        self.spectro_form['group_id'] = self.spectro_params['group_id']
+        self.spectro_params['group_name'] = 'Landolt SA107-684_E10-20180316_spectra'
+        self.spectro_form['group_name'] = self.spectro_params['group_name']
         block_resp = record_block(self.spectro_tracknum, self.spectro_params, self.spectro_form, self.solar_analog)
 
         self.assertTrue(block_resp)
@@ -1110,11 +1175,11 @@ class TestRecordBlock(TestCase):
         self.assertEqual(datetime(2018, 3, 16, 11, 20, 0), blocks[0].block_start)
         self.assertEqual(datetime(2018, 3, 16, 18, 30, 0), blocks[0].block_end)
         self.assertEqual(self.spectro_tracknum, sblocks[0].tracking_number)
-        self.assertTrue(self.spectro_tracknum != blocks[0].tracking_number)
+        self.assertTrue(self.spectro_tracknum != blocks[0].request_number)
         self.assertEqual(self.spectro_params['block_duration'], sblocks[0].timeused)
 
 
-class TestSchedule_Check(TestCase):
+class TestScheduleCheck(TestCase):
 
     def setUp(self):
         # Initialise with three test bodies a test proposal and several blocks.
@@ -1164,91 +1229,615 @@ class TestSchedule_Check(TestCase):
         self.solar_analog, created = StaticSource.objects.get_or_create(pk=1, **src_params)
         self.maxDiff = None
 
+        self.expected_resp = {
+                            'target_name': self.body_mp.current_name(),
+                            'magnitude': 19.09694937750832,
+                            'speed': 2.904310588055287,
+                            'slot_length': 20.0,
+                            'filter_pattern': 'w',
+                            'pattern_iterations': 16.0,
+                            'available_filters': 'air, ND, U, B, V, R, I, up, gp, rp, ip, zs, Y, w',
+                            'bin_mode': None,
+                            'exp_count': 16,
+                            'exp_length': 40.0,
+                            'schedule_ok': True,
+                            'start_time': '2016-04-06T10:10:00',
+                            'end_time': '2016-04-06T17:12:00',
+                            'mid_time': '2016-04-06T13:41:00',
+                            'vis_start': '2016-04-06T10:10:00',
+                            'vis_end': '2016-04-06T17:12:00',
+                            'edit_window': False,
+                            'ra_midpoint': 3.3125083790342504,
+                            'dec_midpoint': -0.16076987814455768,
+                            'period': None,
+                            'jitter': None,
+                            'instrument_code': '',
+                            'saturated': None,
+                            'snr': None,
+                            'too_mode': False,
+                            'calibs': '',
+                            'spectroscopy': False,
+                            'calibsource': {},
+                            'calibsource_id': -1,
+                            'calibsource_exptime': 60,
+                            'solar_analog': False,
+                            'vis_time': 7.033333333333333,
+                            'lco_enc': 'DOMA',
+                            'lco_site': 'COJ',
+                            'lco_tel': '1M0',
+                            'max_alt': 67,
+                            'moon_alt': -59.5216514230195,
+                            'moon_phase': 1.2020664612667709,
+                            'moon_sep': 170.4033428302428,
+                            'trail_len': 1.9362070587035247,
+                            'typical_seeing': 2.0,
+                            'ipp_value': 1.0,
+                            'para_angle': False,
+                            'ag_exp_time': None,
+                            'max_airmass': 1.74,
+                            'max_alt_airmass': 1.0861815238132588,
+                            'min_lunar_dist': 30,
+                            'acceptability_threshold': 90
+                        }
+
+    def make_visible_obj(self, test_date):
+        """
+        Create Test Body named "over_there" that will always be visible on the given date.
+        Assumes Ecliptic is always visible. Will not work from poles during winter.
+        :param test_date: datetime upon which the object must be visible
+        :return: body object
+        """
+        sun_ra, sun_dec = accurate_astro_darkness('500', test_date, solar_pos=True)
+        params = {  'provisional_name' : 'vis',
+                    'name'          : 'over_there',
+                    'abs_mag'       : 20.7,
+                    'slope'         : 0.15,
+                    'epochofel'     : test_date,
+                    'meananom'      : 0,
+                    'argofperih'    : 0,
+                    'longascnode'   : degrees(sun_ra - pi),
+                    'orbinc'        : 0,
+                    'eccentricity'  : 0,
+                    'meandist'      : 1.4607441,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    }
+        vis_body, created = Body.objects.get_or_create(**params)
+        return vis_body
+
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_good(self):
         MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
 
-        data = { 'site_code' : 'Q63',
-                 'utc_date' : datetime(2016, 4, 6),
-                 'proposal_code' : self.neo_proposal.code
+        data = { 'site_code': 'Q63',
+                 'utc_date': date(2016, 4, 6),
+                 'proposal_code': self.neo_proposal.code
                }
 
-        expected_resp = {
-                        'target_name': self.body_mp.current_name(),
-                        'magnitude': 19.099441743160916,
-                        'speed': 2.9012947050834836,
-                        'slot_length': 20.0,
-                        'filter_pattern': 'w',
-                        'pattern_iterations': 14.0,
-                        'available_filters': 'air, U, B, V, R, I, up, gp, rp, ip, zs, Y, w',
-                        'exp_count': 14,
-                        'exp_length': 50.0,
-                        'schedule_ok': True,
-                        'site_code': data['site_code'],
-                        'proposal_code': data['proposal_code'],
-                        'group_id': self.body_mp.current_name() + '_' + data['site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d'),
-                        'utc_date': data['utc_date'].isoformat(),
-                        'start_time': '2016-04-06T09:00:00',
-                        'end_time': '2016-04-06T19:10:00',
-                        'mid_time': '2016-04-06T14:05:00',
-                        'ra_midpoint': 3.312248725288052,
-                        'dec_midpoint': -0.1605498546995108,
-                        'period' : None,
-                        'jitter' : None,
-                        'instrument_code' : '',
-                        'saturated': None,
-                        'snr' : None,
-                        'too_mode': False,
-                        'calibs' : '',
-                        'spectroscopy' : False,
-                        'calibsource' : {},
-                        'calibsource_id' : -1,
-                        'calibsource_exptime' : 60,
-                        'solar_analog' : False,
-                        'vis_time': 7.2,
-                        'lco_enc': 'DOMA',
-                        'lco_site': 'COJ',
-                        'lco_tel': '1M0',
-                        'max_alt': 67.92580631422568,
-                        'moon_alt': -58.300710434796706,
-                        'moon_phase': 1.1439155504957221,
-                        'moon_sep': 170.66180769265674,
-                        'trail_len': 2.41774558756957,
-                        'typical_seeing': 2.0,
-                        'ipp_value': 1.0,
-                        'ag_exp_time': None,
-                        'max_airmass': 1.74,
-                        'max_alt_airmass': 1.0789381246330223,
-                        'min_lunar_dist': 30,
-                        'acceptability_threshold': 90
-                        }
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data['site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d')
+        expected_resp1['utc_date'] = data['utc_date'].isoformat()
 
         resp = schedule_check(data, self.body_mp)
 
-        self.assertEqual(expected_resp, resp)
-        self.assertLessEqual(len(resp['group_id']), 50)
+        assertDeepAlmostEqual(self, expected_resp1, resp)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_no_changes_if_good(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = { 'site_code' : 'Q63',
+                 'utc_date' : date(2016, 4, 6),
+                 'proposal_code' : self.neo_proposal.code
+               }
+
+        expected_resp = schedule_check(data, self.body_mp)
+        data2 = expected_resp.copy()
+        data2['start_time'] = datetime.strptime(data2['start_time'], '%Y-%m-%dT%H:%M:%S')
+        data2['mid_time'] = datetime.strptime(data2['mid_time'], '%Y-%m-%dT%H:%M:%S')
+        data2['utc_date'] = datetime.strptime(data2['utc_date'], '%Y-%m-%d').date()
+        data2['end_time'] = datetime.strptime(data2['end_time'], '%Y-%m-%dT%H:%M:%S')
+
+        resp = schedule_check(data2, self.body_mp)
+
+        assertDeepAlmostEqual(self, expected_resp, resp)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_change_start_time(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = {'site_code': 'Q63',
+                'utc_date': date(2016, 4, 6),
+                'proposal_code': self.neo_proposal.code,
+                'start_time': datetime(2016, 4, 6, 15, 10, 0),
+                'end_time': datetime(2016, 4, 6, 17, 12, 0),
+                'edit_window': True
+                }
+
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data[
+            'site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d')
+        expected_resp1['utc_date'] = data['utc_date'].isoformat()
+        expected_resp1['start_time'] = data['start_time'].isoformat()
+        expected_resp1['mid_time'] = '2016-04-06T16:11:00'
+
+        check_list = ['utc_date', 'start_time', 'mid_time', 'end_time']
+
+        resp = schedule_check(data, self.body_mp)
+
+        for check in check_list:
+            self.assertEqual(expected_resp1[check], resp[check], msg=check)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_change_start_time_early(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = {'site_code': 'Q63',
+                'utc_date': date(2016, 4, 6),
+                'proposal_code': self.neo_proposal.code,
+                'start_time': datetime(2016, 4, 6, 5, 10, 0),
+                'end_time': datetime(2016, 4, 6, 17, 12, 0),
+                'edit_window': True
+                }
+
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data[
+            'site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d')
+        expected_resp1['utc_date'] = data['utc_date'].isoformat()
+
+        check_list = ['utc_date', 'start_time', 'mid_time', 'end_time']
+
+        resp = schedule_check(data, self.body_mp)
+
+        for check in check_list:
+            self.assertEqual(expected_resp1[check], resp[check], msg=check)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_change_start_time_late(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = {'site_code': 'Q63',
+                'utc_date': date(2016, 4, 6),
+                'proposal_code': self.neo_proposal.code,
+                'start_time': datetime(2016, 4, 7, 5, 10, 0),
+                'end_time': datetime(2016, 4, 6, 17, 12, 0),
+                'edit_window': True
+                }
+
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data[
+            'site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d')
+        expected_resp1['utc_date'] = date(2016, 4, 7).isoformat()
+        expected_resp1['start_time'] = datetime(2016, 4, 7, 10, 6, 0).isoformat()
+        expected_resp1['mid_time'] = '2016-04-07T13:35:00'
+        expected_resp1['end_time'] = datetime(2016, 4, 7, 17, 4, 0).isoformat()
+
+        check_list = ['utc_date', 'start_time', 'mid_time', 'end_time']
+
+        resp = schedule_check(data, self.body_mp)
+
+        for check in check_list:
+            self.assertEqual(expected_resp1[check], resp[check], msg=check)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_change_end_time_late(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = {'site_code': 'Q63',
+                'utc_date': date(2016, 4, 6),
+                'proposal_code': self.neo_proposal.code,
+                'start_time': datetime(2016, 4, 6, 10, 10, 0),
+                'end_time': datetime(2016, 4, 8, 17, 12, 0),
+                'edit_window': True
+                }
+
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data[
+            'site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d')
+        expected_resp1['utc_date'] = date(2016, 4, 6).isoformat()
+
+        check_list = ['utc_date', 'start_time', 'mid_time', 'end_time', 'group_name']
+
+        resp = schedule_check(data, self.body_mp)
+
+        for check in check_list:
+            self.assertEqual(expected_resp1[check], resp[check], msg=check)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_change_end_time_less(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = {'site_code': 'Q63',
+                'utc_date': date(2016, 4, 6),
+                'proposal_code': self.neo_proposal.code,
+                'start_time': datetime(2016, 4, 6, 10, 10, 0),
+                'end_time': datetime(2016, 4, 6, 12, 10, 0),
+                'edit_window': True
+                }
+
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data[
+            'site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d')
+        expected_resp1['utc_date'] = date(2016, 4, 6).isoformat()
+        expected_resp1['end_time'] = data['end_time'].isoformat()
+        expected_resp1['mid_time'] = '2016-04-06T11:10:00'
+
+        check_list = ['utc_date', 'start_time', 'mid_time', 'end_time']
+
+        resp = schedule_check(data, self.body_mp)
+
+        for check in check_list:
+            self.assertEqual(expected_resp1[check], resp[check], msg=check)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_change_end_time_early(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = {'site_code': 'Q63',
+                'utc_date': date(2016, 4, 6),
+                'proposal_code': self.neo_proposal.code,
+                'start_time': datetime(2016, 4, 6, 10, 10, 0),
+                'end_time': datetime(2016, 4, 2, 12, 10, 0),
+                'edit_window': True
+                }
+
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data[
+            'site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d')
+        expected_resp1['utc_date'] = date(2016, 4, 6).isoformat()
+
+        check_list = ['utc_date', 'start_time', 'mid_time', 'end_time']
+
+        resp = schedule_check(data, self.body_mp)
+
+        for check in check_list:
+            self.assertEqual(expected_resp1[check], resp[check], msg=check)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_time_generic(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = {'site_code': '1M0',
+                'utc_date': date(2016, 4, 6),
+                'proposal_code': self.neo_proposal.code,
+                }
+
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data[
+            'site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d')
+        expected_resp1['utc_date'] = date(2016, 4, 6).isoformat()
+        expected_resp1['start_time'] = datetime(2016, 4, 6, 2, 0, 0).isoformat()
+        expected_resp1['mid_time'] = '2016-04-06T14:00:00'
+        expected_resp1['end_time'] = datetime(2016, 4, 7, 2, 0, 0).isoformat()
+
+        check_list = ['utc_date', 'start_time', 'mid_time', 'end_time']
+
+        resp = schedule_check(data, self.body_mp)
+
+        for check in check_list:
+            self.assertEqual(expected_resp1[check], resp[check], msg=check)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_time_generic_change_start(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = {'site_code': '1M0',
+                'utc_date': date(2016, 4, 6),
+                'proposal_code': self.neo_proposal.code,
+                'start_time': datetime(2016, 4, 6, 10, 0, 0),
+                'end_time': datetime(2016, 4, 7, 0, 0, 0),
+                'edit_window': True
+                }
+
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data[
+            'site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d')
+        expected_resp1['utc_date'] = date(2016, 4, 6).isoformat()
+        expected_resp1['start_time'] = datetime(2016, 4, 6, 10, 0, 0).isoformat()
+        expected_resp1['mid_time'] = '2016-04-06T17:00:00'
+        expected_resp1['end_time'] = datetime(2016, 4, 7, 0, 0, 0).isoformat()
+
+        check_list = ['utc_date', 'start_time', 'mid_time', 'end_time']
+
+        resp = schedule_check(data, self.body_mp)
+
+        for check in check_list:
+            self.assertEqual(expected_resp1[check], resp[check], msg=check)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_time_generic_change_start_late(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = {'site_code': '1M0',
+                'utc_date': date(2016, 4, 6),
+                'proposal_code': self.neo_proposal.code,
+                'start_time': datetime(2016, 4, 18, 0, 0, 0),
+                'end_time': datetime(2016, 4, 7, 0, 0, 0),
+                'edit_window': True
+                }
+
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data[
+            'site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d')
+        expected_resp1['utc_date'] = date(2016, 4, 18).isoformat()
+        expected_resp1['start_time'] = datetime(2016, 4, 18, 0, 0, 0).isoformat()
+        expected_resp1['mid_time'] = '2016-04-18T00:00:00'
+        expected_resp1['end_time'] = datetime(2016, 4, 18, 0, 0, 0).isoformat()
+
+        check_list = ['utc_date', 'start_time', 'mid_time', 'end_time']
+
+        resp = schedule_check(data, self.body_mp)
+
+        for check in check_list:
+            self.assertEqual(expected_resp1[check], resp[check], msg=check)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_time_generic_change_end_late(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = {'site_code': '1M0',
+                'utc_date': date(2016, 4, 6),
+                'proposal_code': self.neo_proposal.code,
+                'start_time' : datetime(2016, 4, 6, 0, 0, 0),
+                'end_time': datetime(2016, 4, 17, 0, 0, 0),
+                'edit_window': True
+                }
+
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data[
+            'site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d')
+        expected_resp1['utc_date'] = date(2016, 4, 11).isoformat()
+        expected_resp1['start_time'] = datetime(2016, 4, 6, 2, 0, 0).isoformat()
+        expected_resp1['mid_time'] = '2016-04-11T13:00:00'
+        expected_resp1['end_time'] = datetime(2016, 4, 17, 0, 0, 0).isoformat()
+
+        check_list = ['utc_date', 'start_time', 'mid_time', 'end_time']
+
+        resp = schedule_check(data, self.body_mp)
+
+        for check in check_list:
+            self.assertEqual(expected_resp1[check], resp[check], msg=check)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_time_generic_change_end_early(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = {'site_code': '1M0',
+                'utc_date': date(2016, 4, 6),
+                'proposal_code': self.neo_proposal.code,
+                'start_time': datetime(2016, 4, 6, 0, 0, 0),
+                'end_time': datetime(2016, 4, 2, 0, 0, 0),
+                'edit_window': True
+                }
+
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data[
+            'site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d')
+        expected_resp1['utc_date'] = date(2016, 4, 6).isoformat()
+        expected_resp1['start_time'] = datetime(2016, 4, 6, 2, 0, 0).isoformat()
+        expected_resp1['mid_time'] = '2016-04-06T02:00:00'
+        expected_resp1['end_time'] = datetime(2016, 4, 6, 2, 0, 0).isoformat()
+
+        check_list = ['utc_date', 'start_time', 'mid_time', 'end_time']
+
+        resp = schedule_check(data, self.body_mp)
+
+        for check in check_list:
+            self.assertEqual(expected_resp1[check], resp[check], msg=check)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_time_cadence(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = {'site_code': 'Q63',
+                'utc_date': date(2016, 4, 6),
+                'period': 2,
+                'jitter': 2,
+                'proposal_code': self.neo_proposal.code,
+                }
+
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data['site_code'].upper() + '-' +\
+                                       'cad-{}-{}'.format(datetime.strftime(data['utc_date'], '%Y%m%d'), datetime.strftime(data['utc_date'], '%m%d'))
+        expected_resp1['utc_date'] = date(2016, 4, 6).isoformat()
+
+        check_list = ['utc_date', 'start_time', 'mid_time', 'end_time', 'group_name']
+
+        resp = schedule_check(data, self.body_mp)
+
+        for check in check_list:
+            self.assertEqual(expected_resp1[check], resp[check], msg=check)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_time_cadence_change_much(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = {'site_code': 'Q63',
+                'utc_date': date(2016, 4, 7),
+                'proposal_code': self.neo_proposal.code,
+                'period': 2,
+                'jitter': 2,
+                'start_time': datetime(2016, 4, 6, 12, 0, 0),
+                'end_time': datetime(2016, 4, 8, 12, 0, 0),
+                'edit_window': True
+                }
+
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data[
+            'site_code'].upper() + '-' + 'cad-{}-{}'.format(datetime.strftime(data['start_time'], '%Y%m%d'), datetime.strftime(data['end_time'], '%m%d'))
+        expected_resp1['utc_date'] = date(2016, 4, 7).isoformat()
+        expected_resp1['start_time'] = datetime(2016, 4, 6, 12, 0, 0).isoformat()
+        expected_resp1['mid_time'] = '2016-04-07T12:00:00'
+        expected_resp1['end_time'] = datetime(2016, 4, 8, 12, 0, 0).isoformat()
+
+        check_list = ['utc_date', 'start_time', 'mid_time', 'end_time', 'group_name']
+
+        resp = schedule_check(data, self.body_mp)
+
+        for check in check_list:
+            self.assertEqual(expected_resp1[check], resp[check], msg=check)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_time_cadence_change_little(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = {'site_code': 'Q63',
+                'utc_date': date(2016, 4, 6),
+                'proposal_code': self.neo_proposal.code,
+                'period': 2,
+                'jitter': 2,
+                'start_time': datetime(2016, 4, 6, 12, 0, 0),
+                'end_time': datetime(2016, 4, 6, 19, 0, 0),
+                'edit_window': True
+                }
+
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data[
+            'site_code'].upper() + '-' + 'cad-{}-{}'.format(datetime.strftime(data['start_time'], '%Y%m%d'), datetime.strftime(data['end_time'], '%m%d'))
+        expected_resp1['utc_date'] = date(2016, 4, 6).isoformat()
+        expected_resp1['start_time'] = datetime(2016, 4, 6, 12, 0, 0).isoformat()
+        expected_resp1['mid_time'] = '2016-04-06T14:36:00'
+        expected_resp1['end_time'] = datetime(2016, 4, 6, 17, 12, 0).isoformat()
+
+        check_list = ['utc_date', 'start_time', 'mid_time', 'end_time', 'group_name']
+
+        resp = schedule_check(data, self.body_mp)
+
+        for check in check_list:
+            self.assertEqual(expected_resp1[check], resp[check], msg=check)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_mp_good_too(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+        # Turn on ToO mode on proposal
+        self.neo_proposal.time_critical = True
+        self.neo_proposal.save()
+
+        data = { 'site_code' : 'Q63',
+                 'utc_date' : date(2016, 4, 6),
+                 'proposal_code' : self.neo_proposal.code,
+                 'too_mode' : True
+               }
+
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data['site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d') + '_ToO'
+        expected_resp1['utc_date'] = data['utc_date'].isoformat()
+        expected_resp1['too_mode'] = True
+
+        resp = schedule_check(data, self.body_mp)
+
+        assertDeepAlmostEqual(self, expected_resp1, resp)
+        self.assertLessEqual(len(resp['group_name']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_mp_bad_too(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = { 'site_code' : 'Q63',
+                 'utc_date' : datetime(2016, 4, 6).date(),
+                 'proposal_code' : self.neo_proposal.code,
+                 'too_mode' : True
+               }
+
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data['site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d')
+        expected_resp1['utc_date'] = data['utc_date'].isoformat()
+
+        resp = schedule_check(data, self.body_mp)
+
+        assertDeepAlmostEqual(self, expected_resp1, resp)
+        self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_good_spectro(self):
         MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
 
-        data = { 'instrument_code' : 'E10-FLOYDS',
-                 'utc_date' : datetime(2016, 4, 6),
-                 'proposal_code' : self.neo_proposal.code,
-                 'spectroscopy' : True,
-                 'calibs' : 'both',
-                 'exp_length' : 300.0,
-                 'exp_count' : 1,
-                 'max_airmass': 2.0
-               }
+        data = {'instrument_code': 'E10-FLOYDS',
+                'utc_date': date(2016, 4, 6),
+                'proposal_code': self.neo_proposal.code,
+                'spectroscopy': True,
+                'calibs': 'both',
+                'exp_length': 300.0,
+                'exp_count': 1,
+                'max_airmass': 2.0
+                }
 
         expected_resp = {
                         'target_name': self.body_mp.current_name(),
-                        'magnitude': 19.09944174338544,
-                        'speed': 2.901293748154893,
-                        'slot_length': 23,
+                        'magnitude': 19.096949378287967,
+                        'speed': 2.904309581894179,
+                        'slot_length': 22,
                         'filter_pattern': 'slit_6.0as',
                         'pattern_iterations': 1.0,
                         'available_filters': 'slit_1.2as, slit_1.6as, slit_2.0as, slit_6.0as',
@@ -1257,39 +1846,44 @@ class TestSchedule_Check(TestCase):
                         'schedule_ok': True,
                         'site_code': data['instrument_code'][0:3],
                         'proposal_code': data['proposal_code'],
-                        'group_id': self.body_mp.current_name() + '_' + data['instrument_code'][0:3].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d') + '_spectra',
+                        'group_name': self.body_mp.current_name() + '_' + data['instrument_code'][0:3].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d') + '_spectra',
                         'utc_date': data['utc_date'].isoformat(),
-                        'start_time': '2016-04-06T09:00:00',
-                        'end_time': '2016-04-06T19:10:00',
-                        'mid_time': '2016-04-06T14:05:00',
-                        'ra_midpoint': 3.31224872619019,
-                        'dec_midpoint': -0.16054985464643165,
-                        'period' : None,
-                        'jitter' : None,
-                        'instrument_code' : 'E10-FLOYDS',
+                        'start_time': '2016-04-06T09:42:00',
+                        'end_time': '2016-04-06T17:40:00',
+                        'vis_start': '2016-04-06T09:42:00',
+                        'vis_end': '2016-04-06T17:40:00',
+                        'mid_time': '2016-04-06T13:41:00',
+                        'edit_window': False,
+                        'ra_midpoint': 3.3125083797952244,
+                        'dec_midpoint': -0.16076987807708198,
+                        'period': None,
+                        'jitter': None,
+                        'bin_mode': None,
+                        'instrument_code': 'E10-FLOYDS',
                         'saturated': False,
-                        'snr' : 4.954398764579462,
-                        'calibs' : 'both',
-                        'spectroscopy' : True,
+                        'snr': 4.961338560320349,
+                        'calibs': 'both',
+                        'spectroscopy': True,
                         'too_mode': False,
-                        'calibsource' : {},
-                        'calibsource_id' : -1,
-                        'calibsource_exptime' : 60,
-                        'solar_analog' : False,
-                        'vis_time': 8.0,
+                        'calibsource': {},
+                        'calibsource_id': -1,
+                        'calibsource_exptime': 60,
+                        'solar_analog': False,
+                        'vis_time': 7.966666666666667,
                         'lco_enc': 'CLMA',
                         'lco_site': 'COJ',
                         'lco_tel': '2M0',
-                        'max_alt': 67.92557395445273,
-                        'moon_alt': -58.30060609532361,
-                        'moon_phase': 1.1439162208279174,
-                        'moon_sep': 170.66180760224114,
-                        'trail_len': 0.48354895802581555,
+                        'max_alt': 67,
+                        'moon_alt': -59.52147932253441,
+                        'moon_phase': 1.2020671312553743,
+                        'moon_sep': 170.40334265453788,
+                        'trail_len': 0.4840515969823632,
                         'typical_seeing': 2.0,
                         'ipp_value': 1.0,
+                        'para_angle': False,
                         'ag_exp_time': 10,
                         'max_airmass': 2.0,
-                        'max_alt_airmass': 1.078939895293435,
+                        'max_alt_airmass': 1.0861815238132588,
                         'min_lunar_dist': 30,
                         'acceptability_threshold': 90
                         }
@@ -1297,69 +1891,75 @@ class TestSchedule_Check(TestCase):
         resp = schedule_check(data, self.body_mp)
 
         self.assertEqual(expected_resp, resp)
-        self.assertLessEqual(len(resp['group_id']), 50)
+        self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_good_spectro_solar_analog(self):
         MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
 
-        data = { 'instrument_code' : 'E10-FLOYDS',
-                 'utc_date' : datetime(2016, 4, 6),
-                 'proposal_code' : self.neo_proposal.code,
-                 'spectroscopy' : True,
-                 'calibs' : 'both',
-                 'exp_length' : 300.0,
-                 'exp_count' : 1,
-                 'solar_analog' : True
-               }
+        data = {'instrument_code': 'E10-FLOYDS',
+                'utc_date': date(2016, 4, 6),
+                'proposal_code': self.neo_proposal.code,
+                'spectroscopy': True,
+                'calibs': 'both',
+                'exp_length': 300.0,
+                'exp_count': 1,
+                'solar_analog': True,
+                'max_airmass': 2.0
+                }
 
         expected_resp = {
                         'target_name': self.body_mp.current_name(),
-                        'magnitude': 19.09944174338544,
-                        'speed': 2.901293748154893,
-                        'slot_length': 23,
+                        'magnitude': 19.096949378287967,
+                        'speed': 2.904309581894179,
+                        'slot_length': 22,
                         'filter_pattern': 'slit_6.0as',
                         'pattern_iterations': 1.0,
                         'available_filters': 'slit_1.2as, slit_1.6as, slit_2.0as, slit_6.0as',
+                        'bin_mode': None,
                         'exp_count': 1,
                         'exp_length': 300.0,
                         'schedule_ok': True,
                         'site_code': data['instrument_code'][0:3],
                         'proposal_code': data['proposal_code'],
-                        'group_id': self.body_mp.current_name() + '_' + data['instrument_code'][0:3].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d') + '_spectra',
+                        'group_name': self.body_mp.current_name() + '_' + data['instrument_code'][0:3].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d') + '_spectra',
                         'utc_date': data['utc_date'].isoformat(),
-                        'start_time': '2016-04-06T09:00:00',
-                        'end_time': '2016-04-06T19:10:00',
-                        'mid_time': '2016-04-06T14:05:00',
-                        'ra_midpoint': 3.31224872619019,
-                        'dec_midpoint': -0.16054985464643165,
-                        'period' : None,
-                        'jitter' : None,
-                        'instrument_code' : 'E10-FLOYDS',
+                        'start_time': '2016-04-06T09:42:00',
+                        'end_time': '2016-04-06T17:40:00',
+                        'mid_time': '2016-04-06T13:41:00',
+                        'vis_start': '2016-04-06T09:42:00',
+                        'vis_end': '2016-04-06T17:40:00',
+                        'edit_window': False,
+                        'ra_midpoint': 3.3125083797952244,
+                        'dec_midpoint': -0.16076987807708198,
+                        'period': None,
+                        'jitter': None,
+                        'instrument_code': 'E10-FLOYDS',
                         'saturated': False,
-                        'snr' : 4.954398764579462,
-                        'calibs' : 'both',
-                        'spectroscopy' : True,
+                        'snr': 4.961338560320349,
+                        'calibs': 'both',
+                        'spectroscopy': True,
                         'too_mode': False,
-                        'calibsource' : {'separation_deg' : 11.551868532224177, **model_to_dict(self.solar_analog)},
-                        'calibsource_id' : 1,
-                        'calibsource_exptime' : 180,
-                        'solar_analog' : True,
-                        'vis_time': 7.2,
+                        'calibsource': {'separation_deg': 11.532781052438736, **model_to_dict(self.solar_analog)},
+                        'calibsource_id': 1,
+                        'calibsource_exptime': 180,
+                        'solar_analog': True,
+                        'vis_time': 7.966666666666667,
                         'lco_enc': 'CLMA',
                         'lco_site': 'COJ',
                         'lco_tel': '2M0',
-                        'max_alt': 67.92557395445273,
-                        'moon_alt': -58.30060609532361,
-                        'moon_phase': 1.1439162208279174,
-                        'moon_sep': 170.66180760224114,
-                        'trail_len': 0.48354895802581555,
+                        'max_alt': 67,
+                        'moon_alt': -59.52147932253441,
+                        'moon_phase': 1.2020671312553743,
+                        'moon_sep': 170.40334265453788,
+                        'trail_len': 0.4840515969823632,
                         'typical_seeing': 2.0,
                         'ipp_value': 1.0,
+                        'para_angle': False,
                         'ag_exp_time': 10,
-                        'max_airmass': 1.74,
-                        'max_alt_airmass': 1.078939895293435,
+                        'max_airmass': 2.0,
+                        'max_alt_airmass': 1.0861815238132588,
                         'min_lunar_dist': 30,
                         'acceptability_threshold': 90
                         }
@@ -1367,228 +1967,123 @@ class TestSchedule_Check(TestCase):
         resp = schedule_check(data, self.body_mp)
 
         self.assertEqual(expected_resp, resp)
-        self.assertLessEqual(len(resp['group_id']), 50)
+        self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_cadence_short_name(self):
-        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+        MockDateTime.change_datetime(2016, 4, 4, 2, 0, 0)
         self.body_mp.name = '2009 HA'
         self.body_mp.save()
 
-        data = { 'site_code' : 'Q63',
-                 'utc_date' : datetime(2016, 4, 6),
-                 'proposal_code' : self.neo_proposal.code,
-                 'period' : 4.0,
-                 'jitter' : 1.0,
-                 'start_time' : datetime(2016, 4, 6, 9, 0, 0),
-                 'end_time' : datetime(2016, 4, 6, 23, 0, 0),
+        data = { 'site_code': 'Q63',
+                 'utc_date': date(2016, 4, 6),
+                 'proposal_code': self.neo_proposal.code,
+                 'period': 4.0,
+                 'jitter': 1.0,
+                 'start_time': datetime(2016, 4, 5, 4, 22, 0),
+                 'end_time': datetime(2016, 4, 7, 23, 0, 0),
+                 'edit_window': True
                }
 
-        expected_resp = {
-                        'target_name': self.body_mp.current_name(),
-                        'magnitude': 19.111452844407932,
-                        'speed': 2.8743096178906367,
-                        'slot_length': 20.0,
-                        'filter_pattern': 'w',
-                        'pattern_iterations': 14.0,
-                        'available_filters': 'air, U, B, V, R, I, up, gp, rp, ip, zs, Y, w',
-                        'exp_count': 14,
-                        'exp_length': 50.0,
-                        'schedule_ok': True,
-                        'site_code': data['site_code'],
-                        'proposal_code': data['proposal_code'],
-                        'group_id': '2009 HA_Q63-cad-20160406-0406',
-                        'utc_date': data['utc_date'].isoformat(),
-                        'start_time': '2016-04-06T09:00:00',
-                        'end_time': '2016-04-06T23:00:00',
-                        'mid_time': '2016-04-06T16:00:00',
-                        'ra_midpoint': 3.3110137022045336,
-                        'dec_midpoint': -0.15949643713664577,
-                        'period' : 4.0,
-                        'jitter' : 1.0,
-                        'num_times' : 3,
-                        'total_time' : 1.0,
-                        'instrument_code' : '',
-                        'saturated': None,
-                        'snr' : None,
-                        'too_mode': False,
-                        'calibs' : '',
-                        'spectroscopy' : False,
-                        'calibsource' : {},
-                        'calibsource_id' : -1,
-                        'calibsource_exptime' : 60,
-                        'solar_analog' : False,
-                        'vis_time': 7.2,
-                        'lco_enc': 'DOMA',
-                        'lco_site': 'COJ',
-                        'lco_tel': '1M0',
-                        'max_alt': 67.86516541407252,
-                        'moon_alt': -43.42555786736966,
-                        'moon_phase': 0.8909971657737881,
-                        'moon_sep': 171.79313958425425,
-                        'trail_len': 2.395258014908864,
-                        'typical_seeing': 2.0,
-                        'ipp_value': 1.0,
-                        'ag_exp_time': None,
-                        'max_airmass': 1.74,
-                        'max_alt_airmass': 1.0794010270302936,
-                        'min_lunar_dist': 30,
-                        'acceptability_threshold': 90
-                        }
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data['site_code'].upper() + '-cad-' + datetime.strftime(data['start_time'], '%Y%m%d') + '-' + datetime.strftime(data['end_time'], '%m%d')
+        expected_resp1['utc_date'] = data['utc_date'].isoformat()
+        expected_resp1['jitter'] = data['jitter']
+        expected_resp1['period'] = data['period']
+        expected_resp1['start_time'] = datetime(2016, 4, 5, 4, 22, 0).isoformat()
+        expected_resp1['end_time'] = datetime(2016, 4, 7, 23, 0, 0).isoformat()
+        expected_resp1['vis_start'] = datetime(2016, 4, 5, 4, 22, 0).isoformat()
+        expected_resp1['vis_end'] = datetime(2016, 4, 7, 23, 0, 0).isoformat()
+        expected_resp1['edit_window'] = True
+        expected_resp1['num_times'] = 16
+        expected_resp1['total_time'] = 5.333333333333333
+        expected_resp1['target_name'] = self.body_mp.name
 
         resp = schedule_check(data, self.body_mp)
 
-        self.assertEqual(expected_resp, resp)
-        self.assertLessEqual(len(resp['group_id']), 50)
+        self.assertEqual(expected_resp1, resp)
+        self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_cadence_bad_jitter(self):
-        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+        MockDateTime.change_datetime(2016, 4, 4, 2, 0, 0)
         self.body_mp.name = '2009 HA'
         self.body_mp.save()
 
-        data = { 'site_code' : 'Q63',
-                 'utc_date' : datetime(2016, 4, 6),
-                 'proposal_code' : self.neo_proposal.code,
-                 'period' : 4.0,
-                 'jitter' : 0.1,
-                 'start_time' : datetime(2016, 4, 6, 9, 0, 0),
-                 'end_time' : datetime(2016, 4, 6, 23, 0, 0),
+        data = { 'site_code': 'Q63',
+                 'utc_date': date(2016, 4, 6),
+                 'proposal_code': self.neo_proposal.code,
+                 'period': 4.0,
+                 'jitter': 0.1,
+                 'start_time': datetime(2016, 4, 5, 4, 22, 0),
+                 'end_time': datetime(2016, 4, 7, 23, 0, 0),
+                 'edit_window': True
                }
 
-        expected_resp = {
-                        'target_name': self.body_mp.current_name(),
-                        'magnitude': 19.111452844407932,
-                        'speed': 2.8743096178906367,
-                        'slot_length': 20.0,
-                        'filter_pattern': 'w',
-                        'pattern_iterations': 14.0,
-                        'available_filters': 'air, U, B, V, R, I, up, gp, rp, ip, zs, Y, w',
-                        'exp_count': 14,
-                        'exp_length': 50.0,
-                        'schedule_ok': True,
-                        'site_code': data['site_code'],
-                        'proposal_code': data['proposal_code'],
-                        'group_id': '2009 HA_Q63-cad-20160406-0406',
-                        'utc_date': data['utc_date'].isoformat(),
-                        'start_time': '2016-04-06T09:00:00',
-                        'end_time': '2016-04-06T23:00:00',
-                        'mid_time': '2016-04-06T16:00:00',
-                        'ra_midpoint': 3.3110137022045336,
-                        'dec_midpoint': -0.15949643713664577,
-                        'period' : 4.0,
-                        'jitter' : .34,
-                        'num_times' : 3,
-                        'total_time' : 1.0,
-                        'instrument_code' : '',
-                        'saturated': None,
-                        'snr' : None,
-                        'too_mode': False,
-                        'calibs' : '',
-                        'spectroscopy' : False,
-                        'calibsource' : {},
-                        'calibsource_id' : -1,
-                        'calibsource_exptime' : 60,
-                        'solar_analog' : False,
-                        'vis_time': 7.2,
-                        'lco_enc': 'DOMA',
-                        'lco_site': 'COJ',
-                        'lco_tel': '1M0',
-                        'max_alt': 67.86516541407252,
-                        'moon_alt': -43.42555786736966,
-                        'moon_phase': 0.8909971657737881,
-                        'moon_sep': 171.79313958425425,
-                        'trail_len': 2.395258014908864,
-                        'typical_seeing': 2.0,
-                        'ipp_value': 1.0,
-                        'ag_exp_time': None,
-                        'max_airmass': 1.74,
-                        'max_alt_airmass': 1.0794010270302936,
-                        'min_lunar_dist': 30,
-                        'acceptability_threshold': 90
-                        }
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data['site_code'].upper() + '-cad-' + datetime.strftime(data['start_time'], '%Y%m%d') + '-' + datetime.strftime(data['end_time'], '%m%d')
+        expected_resp1['utc_date'] = data['utc_date'].isoformat()
+        expected_resp1['jitter'] = .34
+        expected_resp1['period'] = data['period']
+        expected_resp1['start_time'] = datetime(2016, 4, 5, 4, 22, 0).isoformat()
+        expected_resp1['end_time'] = datetime(2016, 4, 7, 23, 0, 0).isoformat()
+        expected_resp1['vis_start'] = datetime(2016, 4, 5, 4, 22, 0).isoformat()
+        expected_resp1['vis_end'] = datetime(2016, 4, 7, 23, 0, 0).isoformat()
+        expected_resp1['edit_window'] = True
+        expected_resp1['num_times'] = 16
+        expected_resp1['total_time'] = 5.333333333333333
+        expected_resp1['target_name'] = self.body_mp.name
 
         resp = schedule_check(data, self.body_mp)
 
-        self.assertEqual(expected_resp, resp)
-        self.assertLessEqual(len(resp['group_id']), 50)
+        self.assertEqual(expected_resp1, resp)
+        self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_cadence_long_name(self):
-        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+        MockDateTime.change_datetime(2016, 4, 4, 2, 0, 0)
 
-        data = { 'site_code' : 'Q63',
-                 'utc_date' : date(2016, 4, 6),
-                 'proposal_code' : self.neo_proposal.code,
-                 'period' : 4.0,
-                 'jitter' : 1.0,
-                 'start_time' : datetime(2016, 4, 6, 9, 0, 0),
-                 'end_time' : datetime(2016, 4, 6, 23, 0, 0),
+        data = { 'site_code': 'Q63',
+                 'utc_date': date(2016, 4, 6),
+                 'proposal_code': self.neo_proposal.code,
+                 'period': 4.0,
+                 'jitter': 1.0,
+                 'start_time': datetime(2016, 4, 5, 4, 22, 0),
+                 'end_time': datetime(2016, 4, 7, 23, 0, 0),
+                 'edit_window': True
                }
 
-        expected_resp = {
-                        'target_name': self.body_mp.current_name(),
-                        'magnitude': 19.111452844407932,
-                        'speed': 2.8743096178906367,
-                        'slot_length': 20.0,
-                        'filter_pattern': 'w',
-                        'pattern_iterations': 14.0,
-                        'available_filters': 'air, U, B, V, R, I, up, gp, rp, ip, zs, Y, w',
-                        'exp_count': 14,
-                        'exp_length': 50.0,
-                        'schedule_ok': True,
-                        'site_code': data['site_code'],
-                        'proposal_code': data['proposal_code'],
-                        'group_id': '2009 HA21_Q63-cad-20160406-0406',
-                        'utc_date': data['utc_date'].isoformat(),
-                        'start_time': '2016-04-06T09:00:00',
-                        'end_time': '2016-04-06T23:00:00',
-                        'mid_time': '2016-04-06T16:00:00',
-                        'ra_midpoint': 3.3110137022045336,
-                        'dec_midpoint': -0.15949643713664577,
-                        'period' : 4.0,
-                        'jitter' : 1.0,
-                        'num_times' : 3,
-                        'total_time' : 1.0,
-                        'instrument_code' : '',
-                        'too_mode': False,
-                        'saturated': None,
-                        'snr' : None,
-                        'calibs' : '',
-                        'spectroscopy' : False,
-                        'calibsource' : {},
-                        'calibsource_id' : -1,
-                        'calibsource_exptime' : 60,
-                        'solar_analog' : False,
-                        'vis_time': 7.2,
-                        'lco_enc': 'DOMA',
-                        'lco_site': 'COJ',
-                        'lco_tel': '1M0',
-                        'max_alt': 67.86516541407252,
-                        'moon_alt': -43.42555786736966,
-                        'moon_phase': 0.8909971657737881,
-                        'moon_sep': 171.79313958425425,
-                        'trail_len': 2.395258014908864,
-                        'typical_seeing': 2.0,
-                        'ipp_value': 1.0,
-                        'ag_exp_time': None,
-                        'max_airmass': 1.74,
-                        'max_alt_airmass': 1.0794010270302936,
-                        'min_lunar_dist': 30,
-                        'acceptability_threshold': 90
-                        }
+        expected_resp1 = self.expected_resp
+        expected_resp1['site_code'] = data['site_code']
+        expected_resp1['proposal_code'] = data['proposal_code']
+        expected_resp1['group_name'] = self.body_mp.current_name() + '_' + data['site_code'].upper() + '-cad-' + datetime.strftime(data['start_time'], '%Y%m%d') + '-' + datetime.strftime(data['end_time'], '%m%d')
+        expected_resp1['utc_date'] = data['utc_date'].isoformat()
+        expected_resp1['start_time'] = datetime(2016, 4, 5, 4, 22, 0).isoformat()
+        expected_resp1['end_time'] = datetime(2016, 4, 7, 23, 0, 0).isoformat()
+        expected_resp1['edit_window'] = True
+        expected_resp1['vis_start'] = datetime(2016, 4, 5, 4, 22, 0).isoformat()
+        expected_resp1['vis_end'] = datetime(2016, 4, 7, 23, 0, 0).isoformat()
+        expected_resp1['jitter'] = data['jitter']
+        expected_resp1['period'] = data['period']
+        expected_resp1['num_times'] = 16
+        expected_resp1['total_time'] = 5.333333333333333
 
         resp = schedule_check(data, self.body_mp)
 
-        self.assertEqual(expected_resp, resp)
-        self.assertLessEqual(len(resp['group_id']), 50)
+        self.assertEqual(expected_resp1, resp)
+        self.assertLessEqual(len(resp['group_name']), 50)
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_end_B_semester(self):
-        MockDateTime.change_datetime(2016, 3, 31, 22, 0, 0)
+        MockDateTime.change_datetime(2016, 3, 30, 22, 0, 0)
 
         data = { 'site_code' : 'K92',
                  'utc_date' : date(2016, 4, 1),
@@ -1597,11 +2092,11 @@ class TestSchedule_Check(TestCase):
 
         expected_resp = {
                         'target_name': self.body_mp.current_name(),
-                        'start_time' : '2016-03-31T17:40:00',
-                        'end_time'   : '2016-03-31T23:59:59',
-                        'exp_count'  : 18,
-                        'exp_length' : 30.0,
-                        'mid_time': '2016-03-31T20:49:59.500000',
+                        'start_time' : '2016-03-31T19:18:00',
+                        'end_time'   : '2016-03-31T23:59:00',
+                        'exp_count'  : 20,
+                        'exp_length' : 25.0,
+                        'mid_time': '2016-03-31T21:38:00',
 
                         }
         resp = schedule_check(data, self.body_mp)
@@ -1612,22 +2107,23 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['exp_count'], resp['exp_count'])
         self.assertEqual(expected_resp['exp_length'], resp['exp_length'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_start_A_semester(self):
-        MockDateTime.change_datetime(2016, 4, 1, 0, 0, 1)
+        MockDateTime.change_datetime(2016, 4, 1, 0, 0, 2)
 
         data = { 'site_code' : 'K92',
-                 'utc_date' : datetime(2016, 4, 1),
+                 'utc_date' : datetime(2016, 4, 1).date(),
                  'proposal_code' : self.neo_proposal.code
                }
 
         expected_resp = {
                         'target_name': self.body_mp.current_name(),
                         'start_time' : '2016-04-01T00:00:00',
-                        'end_time'   : '2016-04-01T03:40:00',
-                        'exp_count'  : 18,
-                        'exp_length' : 30.0,
-                        'mid_time': '2016-04-01T01:50:00',
+                        'end_time'   : '2016-04-01T02:44:00',
+                        'exp_count'  : 20,
+                        'exp_length' : 25.0,
+                        'mid_time': '2016-04-01T01:22:00',
 
                         }
         resp = schedule_check(data, self.body_mp)
@@ -1639,22 +2135,25 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['exp_count'], resp['exp_count'])
         self.assertEqual(expected_resp['exp_length'], resp['exp_length'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_mid_A_semester(self):
         MockDateTime.change_datetime(2016, 4, 20, 23, 0, 0)
 
         data = { 'site_code' : 'V37',
-                 'utc_date' : datetime(2016, 4, 21),
+                 'utc_date' : datetime(2016, 4, 21).date(),
                  'proposal_code' : self.neo_proposal.code
                }
 
         expected_resp = {
                         'target_name': self.body_mp.current_name(),
                         'start_time' : '2016-04-21T02:30:00',
-                        'end_time'   : '2016-04-21T11:10:00',
-                        'exp_count'  : 7,
-                        'exp_length' : 165,
-                        'mid_time': '2016-04-21T06:50:00',
+                        'end_time'   : '2016-04-21T08:06:00',
+                        'vis_start' : '2016-04-21T02:30:00',
+                        'vis_end'   : '2016-04-21T08:06:00',
+                        'exp_count'  : 9,
+                        'exp_length' : 125,
+                        'mid_time': '2016-04-21T05:18:00',
                         'magnitude' : 20.97
                         }
         resp = schedule_check(data, self.body_mp)
@@ -1667,22 +2166,25 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['exp_length'], resp['exp_length'])
         self.assertAlmostEqual(expected_resp['magnitude'], resp['magnitude'], 2)
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_mid_past_A_semester(self):
         MockDateTime.change_datetime(2015, 4, 20, 23, 1, 0)
 
         data = { 'site_code' : 'V37',
-                 'utc_date' : datetime(2015, 4, 21),
+                 'utc_date' : datetime(2015, 4, 21).date(),
                  'proposal_code' : self.neo_proposal.code
                }
 
         expected_resp = {
                         'target_name': self.body_mp.current_name(),
-                        'start_time' : '2015-04-21T02:30:00',
-                        'end_time'   : '2015-04-21T11:10:00',
+                        'start_time' : '2015-04-21T09:22:00',
+                        'end_time'   : '2015-04-21T11:08:00',
+                        'vis_start' : '2015-04-21T09:22:00',
+                        'vis_end'   : '2015-04-21T11:08:00',
                         'exp_count'  : 6,
-                        'exp_length' : 165,
-                        'mid_time': '2015-04-21T06:50:00',
+                        'exp_length' : 125,
+                        'mid_time': '2015-04-21T10:15:00',
                         'magnitude' : 20.97
                         }
         resp = schedule_check(data, self.body_mp)
@@ -1692,43 +2194,48 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_end_A_semester(self):
-        MockDateTime.change_datetime(2016, 9, 30, 23, 0, 0)
+        MockDateTime.change_datetime(2016, 9, 29, 23, 0, 0)
 
         data = { 'site_code' : 'K92',
-                 'utc_date' : datetime(2016, 10, 1),
+                 'utc_date' : datetime(2016, 10, 1).date(),
                  'proposal_code' : self.neo_proposal.code
                }
 
-        expected_resp = {
-                        'target_name': self.body_mp.current_name(),
-                        'start_time' : '2016-09-30T17:40:00',
-                        'end_time'   : '2016-09-30T23:59:59',
-                        'mid_time': '2016-09-30T20:49:59.500000',
+        body = self.make_visible_obj(datetime(2016, 9, 30, 23, 0, 0))
 
+        expected_resp = {
+                        'target_name': body.current_name(),
+                        'start_time' : '2016-09-30T19:28:00',
+                        'end_time'   : '2016-09-30T23:59:00',
+                        'mid_time': '2016-09-30T21:43:00',
+                        'vis_start' : '2016-09-30T19:28:00',
+                        'vis_end'   : '2016-09-30T23:59:00',
                         }
-        resp = schedule_check(data, self.body_mp)
+        resp = schedule_check(data, body)
 #        self.assertEqual(expected_resp, resp)
 
         self.assertEqual(expected_resp['start_time'], resp['start_time'])
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_schedule_for_B_at_A_semester_end(self):
         MockDateTime.change_datetime(2017, 3, 31, 23, 0, 0)
 
         data = { 'site_code' : 'K92',
-                 'utc_date' : datetime(2017,  4, 2),
+                 'utc_date' : datetime(2017, 4, 2).date(),
                  'proposal_code' : self.neo_proposal.code
                }
 
         expected_resp = {
                         'target_name': self.body_mp.current_name(),
-                        'start_time' : '2017-04-01T17:40:00',
-                        'end_time'   : '2017-04-02T03:40:00',
-                        'mid_time': '2017-04-01T22:40:00',
+                        'start_time' : '2017-04-02T01:10:00',
+                        'end_time'   : '2017-04-02T03:38:00',
+                        'mid_time': '2017-04-02T02:24:00',
 
                         }
         resp = schedule_check(data, self.body_mp)
@@ -1738,195 +2245,261 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_schedule_for_B_at_A_semester_end2(self):
 
         data = { 'site_code' : 'K92',
-                 'utc_date' : datetime(2017,  4, 1),
+                 'utc_date' : datetime(2017, 4, 1).date(),
                  'proposal_code' : self.neo_proposal.code
                }
 
         MockDateTime.change_datetime(2017, 3, 31, 23, 0, 0)
 
+        body = self.make_visible_obj(datetime(2017, 3, 31, 23, 0, 0))
+
         expected_resp = {
-                        'target_name': self.body_mp.current_name(),
+                        'target_name': body.current_name(),
                         'start_time' : '2017-04-01T00:00:00',
-                        'end_time'   : '2017-04-01T03:40:00',
-                        'mid_time': '2017-04-01T01:50:00',
+                        'end_time'   : '2017-04-01T01:46:00',
+                        'mid_time': '2017-04-01T00:53:00',
 
                         }
-        resp = schedule_check(data, self.body_mp)
+        resp = schedule_check(data, body)
 #        self.assertEqual(expected_resp, resp)
 
         self.assertEqual(expected_resp['start_time'], resp['start_time'])
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
-    @patch('core.views.datetime', MockDateTime)
-    def test_mp_semester_start_B_semester(self):
-        MockDateTime.change_datetime(2016, 10, 1, 0, 0, 1)
-
-        data = { 'site_code' : 'K92',
-                 'utc_date' : datetime(2016, 10, 1),
-                 'proposal_code' : self.neo_proposal.code
-               }
-
-        expected_resp = {
-                        'target_name': self.body_mp.current_name(),
-                        'start_time' : '2016-10-01T00:00:00',
-                        'end_time'   : '2016-10-01T03:00:00',
-                        'mid_time': '2016-10-01T01:30:00',
-
-                        }
-        resp = schedule_check(data, self.body_mp)
-#        self.assertEqual(expected_resp, resp)
-
-        self.assertEqual(expected_resp['start_time'], resp['start_time'])
-        self.assertEqual(expected_resp['end_time'], resp['end_time'])
-        self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
-
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_2017AB_semester(self):
         MockDateTime.change_datetime(2017, 9, 28, 19, 0, 0)
 
         data = { 'site_code' : 'Z17',
-                 'utc_date' : datetime(2017, 10, 1),
+                 'utc_date' : datetime(2017, 10, 1).date(),
                  'proposal_code' : self.neo_proposal.code
                }
 
+        body = self.make_visible_obj(datetime(2017, 9, 28, 19, 0, 0))
+
         expected_resp = {
-                        'target_name': self.body_mp.current_name(),
-                        'start_time' : '2017-09-30T19:50:00',
-                        'end_time'   : '2017-10-01T05:50:00',
-                        'mid_time': '2017-10-01T00:50:00',
+                        'target_name': body.current_name(),
+                        'start_time' : '2017-09-30T21:26:00',
+                        'end_time'   : '2017-10-01T03:56:00',
+                        'mid_time': '2017-10-01T00:41:00',
 
                         }
-        resp = schedule_check(data, self.body_mp)
+        resp = schedule_check(data, body)
 
         self.assertEqual(expected_resp['start_time'], resp['start_time'])
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_end_2017AB_semester(self):
         MockDateTime.change_datetime(2017, 11, 30, 19, 0, 0)
 
         data = { 'site_code' : 'Z17',
-                 'utc_date' : datetime(2017, 12, 1),
+                 'utc_date' : datetime(2017, 12, 1).date(),
                  'proposal_code' : self.neo_proposal.code
                }
 
+        body = self.make_visible_obj(datetime(2017, 11, 30, 19, 0, 0))
+
         expected_resp = {
-                        'target_name': self.body_mp.current_name(),
-                        'start_time' : '2017-11-30T19:10:00',
-                        'end_time'   : '2017-11-30T23:59:59',
-                        'mid_time': '2017-11-30T21:34:59.500000',
+                        'target_name': body.current_name(),
+                        'start_time' : '2017-11-30T20:38:00',
+                        'end_time'   : '2017-11-30T23:59:00',
+                        'mid_time': '2017-11-30T22:18:00',
 
                         }
-        resp = schedule_check(data, self.body_mp)
+        resp = schedule_check(data, body)
 
         self.assertEqual(expected_resp['start_time'], resp['start_time'])
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
-    def test_mp_semester_start_2018A_semester(self):
+    def test_mp_semester_start_2018A_semester_window_too_small(self):
         MockDateTime.change_datetime(2017, 12,  1,  1, 0, 0)
 
         data = { 'site_code' : 'K91',
-                 'utc_date' : datetime(2017, 12, 1),
-                 'proposal_code' : self.neo_proposal.code
+                 'utc_date' : datetime(2017, 12, 1).date(),
+                 'proposal_code' : self.neo_proposal.code,
                }
 
-        expected_resp = {
-                        'target_name': self.body_mp.current_name(),
-                        'start_time' : '2017-12-01T00:00:00',
-                        'end_time'   : '2017-12-01T02:00:00',
-                        'mid_time': '2017-12-01T01:00:00',
+        body = self.make_visible_obj(datetime(2017, 12,  1,  1, 0, 0))
 
+        expected_resp = {
+                        'target_name': body.current_name(),
+                        'start_time' : '2017-12-01T01:00:00',
+                        'end_time'   : '2017-12-01T01:00:00',
+                        'mid_time': '2017-12-01T01:00:00',
                         }
-        resp = schedule_check(data, self.body_mp)
+        resp = schedule_check(data, body)
 
         self.assertEqual(expected_resp['start_time'], resp['start_time'])
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_end_2018A_semester(self):
-        MockDateTime.change_datetime(2018,  5, 31, 23, 0, 0)
+        MockDateTime.change_datetime(2018, 5, 30, 23, 0, 0)
 
         data = { 'site_code' : 'K91',
-                 'utc_date' : datetime(2018,  6, 1),
+                 'utc_date' : datetime(2018,  6, 1).date(),
                  'proposal_code' : self.neo_proposal.code
                }
 
+        body = self.make_visible_obj(datetime(2018,  5, 31, 23, 0, 0))
+
         expected_resp = {
-                        'target_name': self.body_mp.current_name(),
-                        'start_time' : '2018-05-31T16:50:00',
-                        'end_time'   : '2018-05-31T23:59:59',
-                        'mid_time': '2018-05-31T20:24:59.500000',
+                        'target_name': body.current_name(),
+                        'start_time' : '2018-05-31T18:16:00',
+                        'end_time'   : '2018-05-31T23:59:00',
+                        'mid_time': '2018-05-31T21:07:00',
 
                         }
-        resp = schedule_check(data, self.body_mp)
+        resp = schedule_check(data, body)
 
         self.assertEqual(expected_resp['start_time'], resp['start_time'])
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
-    @patch('core.views.datetime', MockDateTime)
-    def test_mp_semester_start_2018B_semester(self):
-        MockDateTime.change_datetime(2018,  6,  1,  1, 0, 0)
-
-        data = { 'site_code' : 'K91',
-                 'utc_date' : datetime(2018,  6, 1),
-                 'proposal_code' : self.neo_proposal.code
-               }
-
-        expected_resp = {
-                        'target_name': self.body_mp.current_name(),
-                        'start_time' : '2018-06-01T00:00:00',
-                        'end_time'   : '2018-06-01T04:10:00',
-                        'mid_time': '2018-06-01T02:05:00',
-
-                        }
-        resp = schedule_check(data, self.body_mp)
-
-        self.assertEqual(expected_resp['start_time'], resp['start_time'])
-        self.assertEqual(expected_resp['end_time'], resp['end_time'])
-        self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
-
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_end_2018B_semester(self):
-        MockDateTime.change_datetime(2018, 11, 30, 23, 0, 0)
+        MockDateTime.change_datetime(2018, 11, 29, 23, 0, 0)
 
-        data = { 'site_code' : 'K91',
-                 'utc_date' : datetime(2018, 12, 1),
-                 'proposal_code' : self.neo_proposal.code
-               }
+        data = {'site_code': 'Z17',
+                 'utc_date': datetime(2018, 12, 1).date(),
+                 'proposal_code': self.neo_proposal.code
+                }
+
+        body = self.make_visible_obj(datetime(2018, 11, 30, 23, 0, 0))
 
         expected_resp = {
-                        'target_name': self.body_mp.current_name(),
-                        'start_time' : '2018-11-30T18:40:00',
-                        'end_time'   : '2018-11-30T23:59:59',
-                        'mid_time': '2018-11-30T21:19:59.500000',
-
+                        'target_name': body.current_name(),
+                        'start_time' : '2018-11-30T20:38:00',
+                        'end_time'   : '2018-11-30T23:59:00',
+                        'mid_time'   : '2018-11-30T22:18:00',
                         }
-        resp = schedule_check(data, self.body_mp)
+        resp = schedule_check(data, body)
 
         self.assertEqual(expected_resp['start_time'], resp['start_time'])
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_muscat_sub(self):
+        MockDateTime.change_datetime(2018, 11, 29, 23, 0, 0)
 
-class TestUpdate_MPC_orbit(TestCase):
+        data = {'site_code': 'F65',
+                'utc_date': datetime(2018, 12, 1).date(),
+                'proposal_code': self.neo_proposal.code
+                }
+
+        body = self.make_visible_obj(datetime(2018, 11, 30, 23, 0, 0))
+
+        new_resp = {'site_code': 'F65',
+                    'available_filters': 'gp, rp, ip, zp',
+                    'exp_count': 8,
+                    'exp_length': 120.0,
+                    'slot_length': 22.5,
+                    'filter_pattern': 'gp',
+                    'pattern_iterations': 8.0,
+                    'gp_explength': 120.0,
+                    'rp_explength': 120.0,
+                    'ip_explength': 120.0,
+                    'zp_explength': 120.0,
+                    'muscat_sync': False,
+                    'group_name': 'over_there_F65-20181201',
+                    'lco_enc': 'CLMA',
+                    'lco_site': 'OGG',
+                    'lco_tel': '2M0',
+                    }
+
+        resp = schedule_check(data, body)
+
+        for key in new_resp:
+            self.assertEqual(new_resp[key], resp[key])
+
+
+class TestUpdateMPCOrbit(TestCase):
 
     def setUp(self):
 
-        # Read and make soup from a static version of the HTML table/page for
-        # an object
+        # Read and make soup from a static version of the HTML tables/pages for
+        # 3 objects
         test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcdb_2014UR.html'), 'r')
         self.test_mpcdb_page = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
+
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcdb_Comet243P.html'), 'r')
+        self.test_mpcdb_page_spcomet = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcdb_Comet2016C2.html'), 'r')
+        self.test_mpcdb_page_comet = BeautifulSoup(test_fh, "html.parser")
+
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcdb_Comet2017K2.html'), 'r')
+        self.test_mpcdb_page_dnc_comet = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+
+        # We preset some things here to avoid having to actually call JPL in the test
+        self.test_body_2014UR, created = Body.objects.get_or_create(id=1, name='2014 UR')
+        self.test_body_243P, created = Body.objects.get_or_create(id=2, name='243P/NEAT', source_subtype_1='JF')
+        params = {  'parameter_type' : 'M1',
+                    'value' : 10.4,
+                    'preferred' : True
+                 }
+        pp = PhysicalParameters.objects.create(body=self.test_body_243P, **params)
+        params = {  'parameter_type' : 'K1',
+                    'value' : 15.5,
+                    'preferred' : True
+                 }
+        pp = PhysicalParameters.objects.create(body=self.test_body_243P, **params)
+
+        self.test_body_C2016C2, created = Body.objects.get_or_create(id=3, name='C/2016 C2', source_subtype_1='LP')
+        params = {  'parameter_type' : 'M1',
+                    'value' : 13.8,
+                    'preferred' : True
+                 }
+        pp = PhysicalParameters.objects.create(body=self.test_body_C2016C2, **params)
+        params = {  'parameter_type' : 'K1',
+                    'value' : 21.0,
+                    'preferred' : True
+                 }
+        pp = PhysicalParameters.objects.create(body=self.test_body_C2016C2, **params)
+        params = {  'parameter_type' : 'M2',
+                    'value' : 17.5,
+                    'preferred' : True
+                 }
+        pp = PhysicalParameters.objects.create(body=self.test_body_C2016C2, **params)
+        params = {  'parameter_type' : 'K2',
+                    'value' : 5.0,
+                    'preferred' : True
+                 }
+        pp = PhysicalParameters.objects.create(body=self.test_body_C2016C2, **params)
+
+        self.test_body_C2017K2, created = Body.objects.get_or_create(id=4, name='C/2017 K2', source_subtype_1='LP')
+        params = {  'parameter_type' : 'M1',
+                    'value' : 6.3,
+                    'preferred' : True
+                 }
+        pp = PhysicalParameters.objects.create(body=self.test_body_C2017K2, **params)
+        params = {  'parameter_type' : 'K1',
+                    'value' : 5.75,
+                    'preferred' : True
+                 }
+        pp = PhysicalParameters.objects.create(body=self.test_body_C2017K2, **params)
 
         self.nocheck_keys = ['ingest']   # Involves datetime.utcnow(), hard to check
 
@@ -1944,7 +2517,6 @@ class TestUpdate_MPC_orbit(TestCase):
                              'meandist': 0.9967710,
                              'orbinc': 8.25708,
                              'meananom': 221.74204,
-                             'num_obs': None ,  # '147',
                              'epochofperih': None,
                              'perihdist': None,
                              'slope': 0.15,
@@ -1954,13 +2526,160 @@ class TestUpdate_MPC_orbit(TestCase):
                              'discovery_date': datetime(2014, 10, 17, 0),
                              'num_obs' : 147,
                              'not_seen' : 5.5,
+                             'orbit_rms' : 0.57,
                              'fast_moving' : False,
                              'score' : None,
                              'source_type' : 'N',
+                             'source_subtype_1' : None,
+                             'source_subtype_2': None,
                              'update_time' : datetime(2015, 10, 9, 0),
                              'updated' : True,
                              'urgency' : None
                              }
+
+        # Elements from epoch=2018-03-23 set
+        self.expected_elements_sp_comet = {
+                                             'id' : 2,
+                                             'name' : u'243P/NEAT',
+                                             'provisional_name': None,
+                                             'provisional_packed': None,
+                                             'elements_type': u'MPC_COMET',
+                                             'abs_mag' : 10.4,
+                                             'argofperih': 283.56217,
+                                             'longascnode': 87.66076,
+                                             'eccentricity': 0.3591386,
+                                             'epochofel': datetime(2018, 3, 23, 0),
+                                             'orbit_rms': 99.0,
+                                             'meandist': None,
+                                             'orbinc': 7.64150,
+                                             'meananom': None,
+                                             'epochofperih': datetime(2018, 8, 26, 0, 59, 55, int(0.968*1e6)),
+                                             'perihdist': 2.4544160,
+                                             'slope': 15.5/2.5,
+                                             'origin' : u'M',
+                                             'active' : True,
+                                             'arc_length': 5528.0,
+                                             'discovery_date': datetime(2003,  8,  1, 0),
+                                             'num_obs' : 334,
+                                             'not_seen' : -151.5,
+                                             'orbit_rms' : 0.60,
+                                             'fast_moving' : False,
+                                             'score' : None,
+                                             'source_type' : 'C',
+                                             'source_subtype_1' : 'JF',
+                                             'source_subtype_2': None,
+                                             'update_time' : datetime(2018,  9,19, 0),
+                                             'updated' : True,
+                                             'urgency' : None
+                                             }
+
+        # Elements from epoch=2016-04-19 set
+        self.expected_elements_comet_set1 = {
+                                             'id' : 3,
+                                             'name' : u'C/2016 C2',
+                                             'provisional_name': None,
+                                             'provisional_packed': None,
+                                             'elements_type': u'MPC_COMET',
+                                             'abs_mag' : 13.8,
+                                             'argofperih': 214.01052,
+                                             'longascnode': 24.55858,
+                                             'eccentricity': 1.0000000,
+                                             'epochofel': datetime(2016, 4, 19, 0),
+                                             'orbit_rms': 99.0,
+                                             'meandist': None,
+                                             'orbinc': 38.19233,
+                                             'meananom': None,
+                                             'epochofperih': datetime(2016, 4, 19, 0, 41, 44, int(0.736*1e6)),
+                                             'perihdist': 1.5671127,
+                                             'slope': 21/2.5,
+                                             'origin' : u'M',
+                                             'active' : True,
+                                             'arc_length': 10.0,
+                                             'discovery_date': datetime(2016, 2, 8, 0),
+                                             'num_obs' : 89,
+                                             'not_seen' : 62.5,
+                                             'orbit_rms' : 99.0,
+                                             'fast_moving' : False,
+                                             'score' : None,
+                                             'source_type' : 'C',
+                                             'source_subtype_1' : 'LP',
+                                             'source_subtype_2': None,
+                                             'update_time' : datetime(2016, 2, 18, 0),
+                                             'updated' : True,
+                                             'urgency' : None
+                                             }
+
+        # Elements from epoch=2016-07-30 set
+        self.expected_elements_comet_set2 = {
+                                             'id' : 3,
+                                             'name' : u'C/2016 C2',
+                                             'provisional_name': None,
+                                             'provisional_packed': None,
+                                             'elements_type': u'MPC_COMET',
+                                             'abs_mag' : 13.8,
+                                             'argofperih': 214.40704,
+                                             'longascnode': 24.40401,
+                                             'eccentricity': 0.9755678,
+                                             'epochofel': datetime(2016, 7, 31, 0),
+                                             'orbit_rms': 99.0,
+                                             'meandist': None,
+                                             'orbinc': 38.15649,
+                                             'meananom': None,
+                                             'epochofperih': datetime(2016, 4, 19, 14, 26, 29, int(0.472*1e6)),
+                                             'perihdist': 1.5597633,
+                                             'slope': 21.0/2.5,
+                                             'origin' : u'M',
+                                             'active' : True,
+                                             'arc_length': 126,
+                                             'discovery_date': datetime(2016, 2, 8, 0),
+                                             'num_obs' : 138,
+                                             'not_seen' : 311.5,
+                                             'orbit_rms' : 0.40,
+                                             'fast_moving' : False,
+                                             'score' : None,
+                                             'source_type' : 'C',
+                                             'source_subtype_1' : 'LP',
+                                             'source_subtype_2': None,
+                                             'update_time' : datetime(2016, 6, 13, 0),
+                                             'updated' : True,
+                                             'urgency' : None
+                                             }
+
+        # Elements from epoch=2019-04-27 set
+        self.expected_elements_dnc_comet_set1 = {
+                                             'id' : 4,
+                                             'name' : u'C/2017 K2',
+                                             'provisional_name': None,
+                                             'provisional_packed': None,
+                                             'elements_type': u'MPC_COMET',
+                                             'abs_mag' : 6.3,
+                                             'argofperih': 236.10242,
+                                             'longascnode': 88.27001,
+                                             'eccentricity': 1.0003739,
+                                             'epochofel': datetime(2019, 4, 27, 0),
+                                             'orbit_rms': 99.0,
+                                             'meandist': None,
+                                             'orbinc': 87.54153,
+                                             'meananom': None,
+                                             'epochofperih': datetime(2022, 12, 20, 10, 25, 51, int(0.168*1e6)),
+                                             'perihdist': 1.8037084,
+                                             'slope': 5.75/2.5,
+                                             'origin' : u'O',
+                                             'active' : True,
+                                             'arc_length': 2339,
+                                             'discovery_date': datetime(2013, 5, 12, 0),
+                                             'num_obs' : 1452,
+                                             'not_seen' : -169.5,
+                                             'orbit_rms' : 0.40,
+                                             'fast_moving' : False,
+                                             'score' : None,
+                                             'source_type' : 'C',
+                                             'source_subtype_1' : 'LP',
+                                             'source_subtype_2': 'DN',
+                                             'update_time' : datetime(2019, 10, 7, 0),
+                                             'updated' : True,
+                                             'urgency' : None
+                                             }
 
         self.maxDiff = None
 
@@ -1979,7 +2698,7 @@ class TestUpdate_MPC_orbit(TestCase):
         status = update_MPC_orbit(self.test_mpcdb_page, origin='M')
         self.assertEqual(True, status)
 
-        new_body = Body.objects.last()
+        new_body = Body.objects.get(id=self.test_body_2014UR.id)
         new_body_elements = model_to_dict(new_body)
 
         self.assertEqual(len(self.expected_elements)+len(self.nocheck_keys), len(new_body_elements))
@@ -1988,7 +2707,28 @@ class TestUpdate_MPC_orbit(TestCase):
                 self.assertEqual(self.expected_elements[key], new_body_elements[key])
 
     @patch('core.views.datetime', MockDateTime)
-    def test_2014UR_Goldstone(self):
+    def test_2014UR_MPC_physparams(self):
+
+        expected_types = ['H', 'D', 'G']
+        expected_values = [26.6, 17.0, 0.15]
+        expected_params = list(zip(expected_types, expected_values))
+
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
+        status = update_MPC_orbit(self.test_mpcdb_page, origin='M')
+        self.assertEqual(True, status)
+
+        body = Body.objects.get(id=self.test_body_2014UR.id)
+        phys_params = body.get_physical_parameters
+
+        for param in phys_params():
+            test_list = (param['parameter_type'], param['value'])
+            self.assertIn(test_list, expected_params)
+            expected_params.remove(test_list)
+        self.assertEqual(expected_params, [])
+
+    @patch('core.views.update_jpl_phys_params')
+    @patch('core.views.datetime', MockDateTime)
+    def test_2014UR_Goldstone(self, mock_class):
 
         expected_elements = self.expected_elements
         expected_elements['origin'] = 'G'
@@ -1997,7 +2737,7 @@ class TestUpdate_MPC_orbit(TestCase):
         status = update_MPC_orbit(self.test_mpcdb_page, origin='G')
         self.assertEqual(True, status)
 
-        new_body = Body.objects.last()
+        new_body = Body.objects.get(id=self.test_body_2014UR.id)
         new_body_elements = model_to_dict(new_body)
 
         self.assertEqual(len(expected_elements)+len(self.nocheck_keys), len(new_body_elements))
@@ -2005,8 +2745,9 @@ class TestUpdate_MPC_orbit(TestCase):
             if key not in self.nocheck_keys and key != 'id':
                 self.assertEqual(expected_elements[key], new_body_elements[key])
 
+    @patch('core.views.update_jpl_phys_params')
     @patch('core.views.datetime', MockDateTime)
-    def test_2014UR_Arecibo(self):
+    def test_2014UR_Arecibo(self, mock_class):
 
         expected_elements = self.expected_elements
         expected_elements['origin'] = 'A'
@@ -2058,9 +2799,61 @@ class TestUpdate_MPC_orbit(TestCase):
         for key in test_elements:
             self.assertNotEqual(expected_elements[key], new_body_elements[key])
 
+    @patch('core.views.update_jpl_phys_params')
     @patch('core.views.datetime', MockDateTime)
-    def test_2014UR_Arecibo_older_exists(self):
+    def test_physparams_given_albedo(self, mock_class):
         params = {'name': '2014 UR',
+                  'abs_mag': 21.0,
+                  'slope': 0.1,
+                  'epochofel': '2012-03-19 00:00:00',
+                  'elements_type': u'MPC_MINOR_PLANET',
+                  'meananom': 325.2636,
+                  'argofperih': 85.19251,
+                  'longascnode': 147.81325,
+                  'orbinc': 8.34739,
+                  'eccentricity': 0.1896865,
+                  'meandist': 1.2176312,
+                  'source_type': 'U',
+                  'num_obs': 1596,
+                  'origin': 'M',
+                  }
+
+        Body.objects.filter(id=self.test_body_2014UR.id).update(**params)
+
+        expected_types = ['H', 'D', 'G', 'ab']
+        expected_values = [26.6, 28.45, 0.15, 0.05]
+        expected_params = list(zip(expected_types, expected_values))
+
+        body = Body.objects.last()
+        phys_params = body.get_physical_parameters
+        albedo_dict = {'value': 0.2,
+                       'parameter_type': 'ab',
+                       'preferred': True
+                       }
+
+        # Save first albedo
+        body.save_physical_parameters(albedo_dict)
+
+        # update albedo
+        albedo_dict['value'] = 0.05
+        body.save_physical_parameters(albedo_dict)
+
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
+        status = update_MPC_orbit(self.test_mpcdb_page, origin='A')
+        self.assertEqual(True, status)
+
+        # test diameter uses only updated albedo and not default or old albedo
+        for param in phys_params(return_all=False):
+            test_list = (param['parameter_type'], param['value'])
+            self.assertIn(test_list, expected_params)
+            expected_params.remove(test_list)
+        self.assertEqual(expected_params, [])
+
+    @patch('core.views.update_jpl_phys_params')
+    @patch('core.views.datetime', MockDateTime)
+    def test_2014UR_Arecibo_older_exists(self, mock_class):
+        params = {
+                  'name': '2014 UR',
                   'abs_mag': 26.6,
                   'slope': 0.1,
                   'epochofel': '2013-03-19 00:00:00',
@@ -2076,7 +2869,7 @@ class TestUpdate_MPC_orbit(TestCase):
                   'origin': 'M',
                   }
 
-        self.body, created = Body.objects.get_or_create(**params)
+        Body.objects.filter(id=self.test_body_2014UR.id).update(**params)
         expected_elements = self.expected_elements
         expected_elements['origin'] = 'A'
 
@@ -2093,8 +2886,9 @@ class TestUpdate_MPC_orbit(TestCase):
             if key not in self.nocheck_keys and key != 'id':
                 self.assertEqual(expected_elements[key], new_body_elements[key])
 
+    @patch('core.views.update_jpl_phys_params')
     @patch('core.views.datetime', MockDateTime)
-    def test_2014UR_goldstone_then_arecibo(self):
+    def test_2014UR_goldstone_then_arecibo(self, mock_class):
 
         expected_elements = self.expected_elements
         expected_elements['origin'] = 'R'
@@ -2115,8 +2909,9 @@ class TestUpdate_MPC_orbit(TestCase):
             if key not in self.nocheck_keys and key != 'id':
                 self.assertEqual(expected_elements[key], new_body_elements[key])
 
+    @patch('core.views.update_jpl_phys_params')
     @patch('core.views.datetime', MockDateTime)
-    def test_2014UR_arecibo_then_goldstone(self):
+    def test_2014UR_arecibo_then_goldstone(self, mock_class):
 
         expected_elements = self.expected_elements
         expected_elements['origin'] = 'R'
@@ -2137,8 +2932,9 @@ class TestUpdate_MPC_orbit(TestCase):
             if key not in self.nocheck_keys and key != 'id':
                 self.assertEqual(expected_elements[key], new_body_elements[key])
 
+    @patch('core.views.update_jpl_phys_params')
     @patch('core.views.datetime', MockDateTime)
-    def test_2014UR_arecibo_then_NASA(self):
+    def test_2014UR_arecibo_then_NASA(self, mock_class):
 
         expected_elements = self.expected_elements
         expected_elements['origin'] = 'N'
@@ -2158,6 +2954,121 @@ class TestUpdate_MPC_orbit(TestCase):
         for key in expected_elements:
             if key not in self.nocheck_keys and key != 'id':
                 self.assertEqual(expected_elements[key], new_body_elements[key])
+
+    @patch('core.views.update_jpl_phys_params')
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.sources_subs.datetime', MockDateTime)
+    def test_243P_MPC(self, mock_class):
+
+        MockDateTime.change_datetime(2018,  4, 20, 12, 0, 0)
+
+        status = update_MPC_orbit(self.test_mpcdb_page_spcomet, origin='M')
+        self.assertEqual(True, status)
+
+        new_body = Body.objects.get(id=self.test_body_243P.id)
+        new_body_elements = model_to_dict(new_body)
+
+        self.assertEqual(len(self.expected_elements_sp_comet)+len(self.nocheck_keys), len(new_body_elements))
+        for key in self.expected_elements_sp_comet:
+            if key not in self.nocheck_keys and key != 'id':
+                self.assertEqual(self.expected_elements_sp_comet[key], new_body_elements[key], msg="Failure on key: " + key)
+
+    @patch('core.views.update_jpl_phys_params')
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.sources_subs.datetime', MockDateTime)
+    def test_243P_MPC_physpar(self, mock_class):
+
+        MockDateTime.change_datetime(2018,  4, 20, 12, 0, 0)
+
+        expected_types = ['M1', 'K1', 'G']
+        expected_values = [10.4, 15.5, 4,0]
+        expected_params = list(zip(expected_types, expected_values))
+
+        status = update_MPC_orbit(self.test_mpcdb_page_spcomet, origin='M')
+        self.assertEqual(True, status)
+
+        new_body = Body.objects.get(id=self.test_body_243P.id)
+        phys_params = new_body.get_physical_parameters()
+        self.assertEqual(len(expected_types), len(phys_params))
+        for param in phys_params:
+            test_list = (param['parameter_type'], param['value'])
+            self.assertIn(test_list, expected_params)
+
+    @patch('core.views.update_jpl_phys_params')
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.sources_subs.datetime', MockDateTime)
+    def test_C2016C2_April_epoch(self, mock_class):
+
+        MockDateTime.change_datetime(2016,  4, 20, 12, 0, 0)
+
+        status = update_MPC_orbit(self.test_mpcdb_page_comet, origin='M')
+        self.assertEqual(True, status)
+
+        new_body = Body.objects.get(id=self.test_body_C2016C2.id)
+        new_body_elements = model_to_dict(new_body)
+
+        self.assertEqual(len(self.expected_elements_comet_set1)+len(self.nocheck_keys), len(new_body_elements))
+        for key in self.expected_elements_comet_set1:
+            if key not in self.nocheck_keys and key != 'id':
+                self.assertEqual(self.expected_elements_comet_set1[key], new_body_elements[key], msg="Failure on key: " + key)
+
+    @patch('core.views.update_jpl_phys_params')
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.sources_subs.datetime', MockDateTime)
+    def test_C2016C2_July_epoch(self, mock_class):
+
+        MockDateTime.change_datetime(2017,  4, 20, 12, 0, 0)
+
+        status = update_MPC_orbit(self.test_mpcdb_page_comet, origin='M')
+        self.assertEqual(True, status)
+
+        new_body = Body.objects.get(id=self.test_body_C2016C2.id)
+        new_body_elements = model_to_dict(new_body)
+
+        self.assertEqual(len(self.expected_elements_comet_set2)+len(self.nocheck_keys), len(new_body_elements))
+        for key in self.expected_elements_comet_set2:
+            if key not in self.nocheck_keys and key != 'id':
+                self.assertEqual(self.expected_elements_comet_set2[key], new_body_elements[key], msg="Failure on key: " + key)
+
+    @patch('core.views.update_jpl_phys_params')
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.sources_subs.datetime', MockDateTime)
+    def test_C2016C2_physpar(self, mock_class):
+
+        MockDateTime.change_datetime(2017,  4, 20, 12, 0, 0)
+
+        expected_types = ['M1', 'K1', 'M2', 'K2', 'G', '/a']
+        expected_values = [13.8, 21.0, 17.5, 5.0, 4.0, 0.01664452]
+        expected_units = [None, None, None, None, None, 'au']
+        expected_params = list(zip(expected_types, expected_values, expected_units))
+
+        status = update_MPC_orbit(self.test_mpcdb_page_comet, origin='M')
+        self.assertEqual(True, status)
+
+        new_body = Body.objects.get(id=self.test_body_C2016C2.id)
+        phys_params = new_body.get_physical_parameters()
+        self.assertEqual(len(expected_types), len(phys_params))
+        for param in phys_params:
+            test_list = (param['parameter_type'], param['value'], param['units'])
+            self.assertIn(test_list, expected_params)
+
+    @patch('core.views.update_jpl_phys_params')
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.sources_subs.datetime', MockDateTime)
+    def test_C2017K2_April_epoch(self, mock_class):
+
+        MockDateTime.change_datetime(2019, 4, 20, 12, 0, 0)
+
+        status = update_MPC_orbit(self.test_mpcdb_page_dnc_comet, origin='O')
+        self.assertEqual(True, status)
+
+        new_body = Body.objects.get(id=self.test_body_C2017K2.id)
+        new_body_elements = model_to_dict(new_body)
+
+        self.assertEqual(len(self.expected_elements_dnc_comet_set1)+len(self.nocheck_keys), len(new_body_elements))
+        for key in self.expected_elements_dnc_comet_set1:
+            if key not in self.nocheck_keys and key != 'id':
+                self.assertEqual(self.expected_elements_dnc_comet_set1[key], new_body_elements[key], msg="Failure on key: " + key)
 
 
 class TestIngestNewObject(TestCase):
@@ -2229,13 +3140,13 @@ class TestIngestNewObject(TestCase):
         self.body_LSCTLZZ = Body(**self.params_LSCTLZZ)
 
         self.eros_params = { 'id' : 1,
-                        'provisional_name' : '433',
+                        'provisional_name' : None,
                         'provisional_packed' : '00433',
                         'name' : '433',
                         'source_type' : 'N',
                         'abs_mag': 10.59,
                         'slope'  : 0.15,
-                        'epochofel' : datetime(2019, 2,10, 0, 0),
+                        'epochofel' : datetime(2019, 2, 10, 0, 0),
                         'meananom'  :   4.70349,
                         'argofperih' : 178.80773,
                         'longascnode' : 304.30790,
@@ -2260,7 +3171,7 @@ class TestIngestNewObject(TestCase):
                         'source_type' : 'N',
                         'abs_mag': 22.23,
                         'slope'  : 0.15,
-                        'epochofel' : datetime(2011,10, 1, 0, 0),
+                        'epochofel' : datetime(2011, 10, 1, 0, 0),
                         'meananom'  :  37.31731,
                         'argofperih' :  45.96308,
                         'longascnode' : 229.74785,
@@ -2300,9 +3211,9 @@ class TestIngestNewObject(TestCase):
         else:
             print("Not removing. Temporary test directory=", self.test_dir)
 
-    def _compare_bodies(self, body1, body2, excluded_keys={'_state', 'not_seen', 'ingest', 'update_time'}):
+    def _compare_bodies(self, body1, body2, excluded_keys={'_state', '_prefetched_objects_cache', 'not_seen', 'ingest', 'update_time'}):
         d1, d2 = body1.__dict__, body2.__dict__
-        for key,value in d1.items():
+        for key, value in d1.items():
             if key in excluded_keys:
                 continue
             self.assertEqual(value, d2[key], "Compare failure on " + key)
@@ -2328,6 +3239,37 @@ class TestIngestNewObject(TestCase):
         self.assertTrue(created)
         self.assertEqual(expected_msg, msg)
 
+    def test_phys_params_new_body(self):
+        body = self.body_LSCTLZZ
+        self.assertEqual(body.get_physical_parameters(), [])
+
+        expected_types = ['H', 'D', 'G']
+        expected_values = [21.17, 207.23, 0.15]
+        expected_params = list(zip(expected_types, expected_values))
+        expected_diam_range = [568, 98]
+
+        expected_names = [['C', 'LSCTLZZ']]
+
+        ingest_new_object(self.disc_orbit_file)
+
+        phys_params = body.get_physical_parameters()
+        names = Designations.objects.filter(body=body)
+
+        for param in phys_params:
+            test_list = (param['parameter_type'], param['value'])
+            self.assertIn(test_list, expected_params)
+            expected_params.remove(test_list)
+            if param['parameter_type'] == 'D':
+                self.assertEqual(param['error'], expected_diam_range[0])
+                self.assertEqual(param['error2'], expected_diam_range[1])
+        self.assertEqual(expected_params, [])
+
+        for name in names:
+            test_list = [name.desig_type, name.value]
+            self.assertIn(test_list, expected_names)
+            expected_names.remove(test_list)
+        self.assertEqual(expected_names, [])
+
     def test_discovery_existing_no_changes(self):
 
         expected_body = self.body_LSCTLZZ
@@ -2345,6 +3287,24 @@ class TestIngestNewObject(TestCase):
         self._compare_bodies(expected_body, body)
         self.assertFalse(created)
         self.assertEqual(expected_msg, msg)
+
+    def test_phys_params_no_changes(self):
+        body = self.body_LSCTLZZ
+        expected_params = 3
+        expected_names = 1
+
+        ingest_new_object(self.disc_orbit_file)
+
+        phys_params = body.get_physical_parameters
+        names = Designations.objects.filter(body=body)
+
+        self.assertEqual(len(phys_params()), expected_params)
+        self.assertEqual(len(names), expected_names)
+
+        ingest_new_object(self.disc_orbit_file)
+
+        self.assertEqual(len(phys_params()), expected_params)
+        self.assertEqual(len(names), expected_names)
 
     def test_discovery_existing_new_provname(self):
 
@@ -2377,6 +3337,29 @@ class TestIngestNewObject(TestCase):
         self.assertFalse(created)
         self.assertEqual(expected_msg, msg)
 
+    def test_designation_new_provname(self):
+        body = self.body_LSCTLZZ
+        expected_types = ['C', 'P']
+        expected_desigs = ['LSCTLZZ', '2019 EN']
+        expected_names = list(zip(expected_types, expected_desigs))
+
+        ingest_new_object(self.disc_orbit_file)
+
+        names = Designations.objects.filter(body=body)
+
+        # Remove symlink to LSCTLZZ.neocp orbit file and re-symlink to the 2019EN.neocp one
+        # so desigination inside the file changes but it stays as LSCTLZZ.neocp
+        os.unlink(self.disc_orbit_file)
+        os.symlink(self.orig_orbit_file, self.disc_orbit_file)
+
+        ingest_new_object(self.disc_orbit_file)
+
+        for name in names:
+            test_list = (name.desig_type, name.value)
+            self.assertIn(test_list, expected_names)
+            expected_names.remove(test_list)
+        self.assertEqual(expected_names, [])
+
     def test_knownNEO_not_existing(self):
 
         expected_body = self.body_2019EN
@@ -2394,6 +3377,22 @@ class TestIngestNewObject(TestCase):
         self._compare_bodies(expected_body, body)
         self.assertTrue(created)
         self.assertEqual(expected_msg, msg)
+
+    def test_designation_knownNEO(self):
+        body = self.body_2019EN
+        expected_types = ['P']
+        expected_desigs = ['2019 EN']
+        expected_names = list(zip(expected_types, expected_desigs))
+
+        ingest_new_object(self.orbit_file)
+
+        names = Designations.objects.filter(body=body)
+
+        for name in names:
+            test_list = (name.desig_type, name.value)
+            self.assertIn(test_list, expected_names)
+            expected_names.remove(test_list)
+        self.assertEqual(expected_names, [])
 
     def test_knownNEO_not_existing_no_obsfile(self):
 
@@ -2478,6 +3477,22 @@ class TestIngestNewObject(TestCase):
         self.assertFalse(created)
         self.assertEqual(expected_msg, msg)
 
+    def test_designation_known_num_NEO(self):
+        body = self.body_433
+        expected_types = ['#']
+        expected_desigs = ['433']
+        expected_names = list(zip(expected_types, expected_desigs))
+
+        ingest_new_object(self.eros_orbit_file)
+
+        names = Designations.objects.filter(body=body)
+
+        for name in names:
+            test_list = (name.desig_type, name.value)
+            self.assertIn(test_list, expected_names)
+            expected_names.remove(test_list)
+        self.assertEqual(expected_names, [])
+
     def test_known_provNEO_not_existing(self):
 
         expected_body = self.body_K11H00P
@@ -2518,7 +3533,8 @@ class TestIngestNewObject(TestCase):
         self.assertFalse(created)
         self.assertEqual(expected_msg, msg)
 
-class TestUpdate_MPC_obs(TestCase):
+
+class TestUpdateMPCObs(TestCase):
     def setUp(self):
         self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
 
@@ -2648,7 +3664,7 @@ class TestUpdate_MPC_obs(TestCase):
         self.assertEqual(num_lines, len(lines)-1)
 
 
-class TestClean_mpcorbit(TestCase):
+class TestCleanMPCOrbit(TestCase):
 
     def setUp(self):
         # Read and make soup from a static version of the HTML table/page for
@@ -2663,13 +3679,13 @@ class TestClean_mpcorbit(TestCase):
         test_mpcdb_page = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
 
-        self.test_comet_elements = parse_mpcorbit(test_mpcdb_page)
+        self.test_comet_elements = parse_mpcorbit(test_mpcdb_page, epoch_now=datetime(2016, 4, 24, 18, 0, 0))
 
         test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcdb_Comet243P.html'), 'r')
         self.test_multiple_epochs_page = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
-        self.test_comet_elements_2018Aug_epoch = parse_mpcorbit(self.test_multiple_epochs_page, epoch_now=datetime(2018,9,25))
-        self.test_comet_elements_2018Mar_epoch = parse_mpcorbit(self.test_multiple_epochs_page, epoch_now=datetime(2018,2,14))
+        self.test_comet_elements_2018Aug_epoch = parse_mpcorbit(self.test_multiple_epochs_page, epoch_now=datetime(2018, 9, 25))
+        self.test_comet_elements_2018Mar_epoch = parse_mpcorbit(self.test_multiple_epochs_page, epoch_now=datetime(2018, 2, 14))
 
         self.test_hyperbolic_elements = {
                                          'argument of perihelion': '325.96205',
@@ -2718,6 +3734,7 @@ class TestClean_mpcorbit(TestCase):
                              'arc_length': '357',
                              'not_seen' : 5.5,
                              # 'score' : None,
+                             'orbit_rms' : 0.57,
                              'update_time' : datetime(2015, 10, 9, 0),
                              'updated' : True
                              }
@@ -2739,7 +3756,7 @@ class TestClean_mpcorbit(TestCase):
                                         'discovery_date': datetime(2016, 2, 8, 0),
                                         'num_obs': '89',
                                         'arc_length': '10',
-                                        'not_seen' : 6.75,
+                                        'not_seen' : 66.75,
                                         'update_time' : datetime(2016, 2, 18, 0),
                                         'updated' : True
                                      }
@@ -2762,6 +3779,7 @@ class TestClean_mpcorbit(TestCase):
                                         'num_obs': '87',
                                         'arc_length': '145',
                                         'not_seen' : 23.75,
+                                        'orbit_rms' : 0.2,
                                         'update_time' : datetime(2018, 2, 10, 0),
                                         'updated' : True
                                      }
@@ -2785,6 +3803,7 @@ class TestClean_mpcorbit(TestCase):
                                         'num_obs': '334',
                                         'arc_length': '5528',
                                         'not_seen' :  6.75,
+                                        'orbit_rms' : 0.60,
                                         'update_time' : datetime(2018, 9, 19, 0),
                                         'updated' : True
                                     }
@@ -2807,7 +3826,8 @@ class TestClean_mpcorbit(TestCase):
                                         'discovery_date': datetime(2003, 8, 1, 0),
                                         'num_obs': '334',
                                         'arc_length': '5528',
-                                        'not_seen' :  -216.87383101851853,
+                                        'not_seen' : -216.87383101851853,
+                                        'orbit_rms' : 0.60,
                                         'update_time' : datetime(2018, 9, 19, 0),
                                         'updated' : True
                                     }
@@ -2858,7 +3878,7 @@ class TestClean_mpcorbit(TestCase):
     @patch('core.views.datetime', MockDateTime)
     def test_clean_C_2016C2(self):
 
-        MockDateTime.change_datetime(2016, 2, 24, 18, 0, 0)
+        MockDateTime.change_datetime(2016, 4, 24, 18, 0, 0)
         params = clean_mpcorbit(self.test_comet_elements)
 
         self.assertEqual(self.expected_comet_params, params)
@@ -3297,43 +4317,70 @@ class TestFrames(TestCase):
                               }
         self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
         # Create test blocks
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'CPT',
+        sblock_params = {
                          'body'     : self.test_body,
                          'proposal' : self.neo_proposal,
                          'groupid'  : 'TEMP_GROUP',
                          'block_start' : '2015-09-20 13:00:00',
                          'block_end'   : '2015-09-21 03:00:00',
                          'tracking_number' : '00001',
+                         'active'   : True
+                       }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'CPT',
+                         'body'     : self.test_body,
+                         'superblock' : self.test_sblock,
+                         'block_start' : '2015-09-20 13:00:00',
+                         'block_end'   : '2015-09-21 03:00:00',
+                         'request_number' : '00001',
                          'num_exposures' : 5,
                          'exp_length' : 42.0,
                          'active'   : True
                        }
         self.test_block = Block.objects.create(**block_params)
 
-        block_params = { 'telclass' : '0m4',
-                         'site'     : 'CPT',
+        sblock_params = {
                          'body'     : self.test_body,
                          'proposal' : self.neo_proposal,
                          'groupid'  : 'TEMP_GROUP',
                          'block_start' : '2017-12-11 13:00:00',
                          'block_end'   : '2017-12-12 03:00:00',
                          'tracking_number' : '522289',
+                         'active'   : True
+                       }
+        self.test_sblock_0m4 = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '0m4',
+                         'site'     : 'CPT',
+                         'body'     : self.test_body,
+                         'superblock' : self.test_sblock_0m4,
+                         'block_start' : '2017-12-11 13:00:00',
+                         'block_end'   : '2017-12-12 03:00:00',
+                         'request_number' : '522289',
                          'num_exposures' : 5,
                          'exp_length' : 145.0,
                          'active'   : True
                        }
         self.test_block_0m4 = Block.objects.create(**block_params)
 
-        block_params = { 'obstype' : Block.OPT_SPECTRA,
-                         'telclass' : '2m0',
-                         'site'     : 'coj',
+        sblock_params = {
                          'body'     : self.test_body,
                          'proposal' : self.neo_proposal,
                          'groupid'  : 'TEMP_GROUP_spectra',
                          'block_start' : '2017-12-11 13:00:00',
                          'block_end'   : '2017-12-12 03:00:00',
                          'tracking_number' : '1509481',
+                         'active'   : True
+                       }
+        self.test_sblock_spec = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'obstype' : Block.OPT_SPECTRA,
+                         'telclass' : '2m0',
+                         'site'     : 'coj',
+                         'body'     : self.test_body,
+                         'superblock' : self.test_sblock_spec,
+                         'block_start' : '2017-12-11 13:00:00',
+                         'block_end'   : '2017-12-12 03:00:00',
+                         'request_number' : '1509481',
                          'num_exposures' : 1,
                          'exp_length' : 1800.0,
                          'active'   : True
@@ -3356,23 +4403,6 @@ class TestFrames(TestCase):
         frames = Frame.objects.filter(sitecode='K93', block__isnull=False)
         # Although there are 4 sources in the file 2 are in the same frame
         self.assertEqual(3, frames.count())
-
-    def test_add_frames_block(self):
-        params = {
-                    'date_obs': "2015-04-20 21:41:05",
-                    'siteid': 'cpt',
-                    'encid': 'doma',
-                    'telid': '1m0a',
-                    'filter_name': 'R',
-                    'instrume': "kb70",
-                    'origname': "cpt1m010-kb70-20150420-0001-e00.fits",
-                    'exptime': '30'
-                 }
-        frame_params = frame_params_from_block(params, self.test_block)
-        frame, frame_created = Frame.objects.get_or_create(**frame_params)
-        frames = Frame.objects.filter(sitecode='K91')
-        self.assertEqual(1, frames.count())
-        self.assertEqual(frames[0].frametype, Frame.SINGLE_FRAMETYPE)
 
     def test_ingest_frames_block(self):
         params = {
@@ -3444,6 +4474,30 @@ class TestFrames(TestCase):
         self.assertEqual(frames[0].midpoint, midpoint)
         self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
 
+    def test_ingest_frames_block_bad_fwhm(self):
+        params = {
+                        "DATE_OBS": "2015-12-31T23:59:28.067",
+                        "ENCID": "doma",
+                        "SITEID": "cpt",
+                        "TELID": "1m0a",
+                        "FILTER": "R",
+                        "INSTRUME" : "kb70",
+                        "ORIGNAME" : "cpt1m010-kb70-20150420-0001-e00.fits",
+                        "EXPTIME"  : "145",
+                        "GROUPID"  : "TEMP",
+                        "L1FWHM"   : "NaN"
+                }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) / 2.0)
+
+        frame = create_frame(params, self.test_block)
+        frames = Frame.objects.filter(sitecode='K91')
+        self.assertEqual(1, frames.count())
+        self.assertEqual(frames[0].frametype, Frame.SINGLE_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'K91')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].fwhm, None)
+
     def test_ingest_frames_banzai_ql(self):
         params = {
                         "DATE_OBS": "2015-12-31T23:59:28.067",
@@ -3484,6 +4538,7 @@ class TestFrames(TestCase):
                         "GROUPID"  : "TEMP",
                         "RLEVEL"   : 91,
                         "L1FWHM"   : "2.42433",
+                        "CONFMODE" : "full_frame",
                         "UTSTOP"   : "00:01:53.067"
                 }
         midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
@@ -3498,6 +4553,37 @@ class TestFrames(TestCase):
         self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
         self.assertEqual(frames[0].instrument, params['INSTRUME'])
         self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e91.fits'))
+        self.assertEqual(frames[0].extrainfo, None)
+
+    def test_ingest_frames_2x2_red(self):
+        params = {
+                        "DATE_OBS": "2015-12-31T23:59:28.067",
+                        "ENCID": "doma",
+                        "SITEID": "cpt",
+                        "TELID": "1m0a",
+                        "FILTER": "R",
+                        "INSTRUME" : "kb70",
+                        "ORIGNAME" : "cpt1m010-kb70-20150420-0001-e00",
+                        "EXPTIME"  : "145",
+                        "GROUPID"  : "TEMP",
+                        "RLEVEL"   : 91,
+                        "L1FWHM"   : "2.42433",
+                        "CONFMODE" : "central_2k_2x2",
+                        "UTSTOP"   : "00:01:53.067"
+                }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) / 2.0)
+
+        frame = create_frame(params, self.test_block)
+        frames = Frame.objects.filter(sitecode='K91')
+        self.assertEqual(1, frames.count())
+        self.assertEqual(frames[0].frametype, Frame.BANZAI_RED_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'K91')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].instrument, params['INSTRUME'])
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e91.fits'))
+        self.assertEqual(frames[0].extrainfo, params['CONFMODE'])
 
     def test_ingest_frames_banzai_red_badexptime(self):
         """Test that we preferentially take midpoint from UTSTOP over EXPTIME"""
@@ -3676,6 +4762,7 @@ class TestFrames(TestCase):
                         "EXPTIME"  : "145",
                         "GROUPID"  : "TEMP",
                         "RLEVEL"   : 91,
+                        "CONFMODE" : 'default',
                         "L1FWHM"   : "2.42433"
                 }
         midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
@@ -3690,6 +4777,7 @@ class TestFrames(TestCase):
         self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
         self.assertEqual(frames[0].instrument, params['INSTRUME'])
         self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e91.fits'))
+        self.assertEqual(frames[0].extrainfo, None)
 
     def test_ingest_frames_spectro_spectrum(self):
         params = {
@@ -3714,7 +4802,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_spec_block)
         frames = Frame.objects.filter(sitecode='E10')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.SPECTRUM_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'E10')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -3778,7 +4866,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_spec_block)
         frames = Frame.objects.filter(sitecode='E10')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.SPECTRUM_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'E10')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -3808,7 +4896,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_spec_block)
         frames = Frame.objects.filter(sitecode='E10')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.SPECTRUM_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'E10')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -3839,7 +4927,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_spec_block)
         frames = Frame.objects.filter(sitecode='E10')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.SPECTRUM_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'E10')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -3869,7 +4957,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_spec_block)
         frames = Frame.objects.filter(sitecode='E10')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.SPECTRUM_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'E10')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -3881,19 +4969,16 @@ class TestFrames(TestCase):
     def test_add_source_measurements(self):
         # Test we don't get duplicate frames when adding new source measurements
         # if the sources are in the same frame
-        for line in self.test_obslines:
-            resp = create_source_measurement(line, self.test_block)
+        resp = create_source_measurement(self.test_obslines, self.test_block)
         frames = Frame.objects.filter(sitecode='K93', block__isnull=False)
         self.assertEqual(3, frames.count())
 
     def test_add_source_measurements_twice(self):
         # Test we don't get duplicate frames when adding new source measurements
         # if the sources are in the same frame
-        for line in self.test_obslines:
-            resp = create_source_measurement(line, self.test_block)
+        resp = create_source_measurement(self.test_obslines, self.test_block)
         # And we forgot that we've already done this, so we do it again
-        for line in self.test_obslines:
-            resp = create_source_measurement(line, self.test_block)
+        resp = create_source_measurement(self.test_obslines, self.test_block)
         frames = Frame.objects.filter(sitecode='K93', block__isnull=False)
         # We should get the same number in the previous test,
         # i.e. on the second run the frames are not created
@@ -3902,7 +4987,7 @@ class TestFrames(TestCase):
 
 @patch('core.views.datetime', MockDateTime)
 @patch('astrometrics.time_subs.datetime', MockDateTime)
-class TestClean_crossid(TestCase):
+class TestCleanCrossid(TestCase):
 
     def setUp(self):
         MockDateTime.change_datetime(2015, 11, 5, 18, 0, 0)
@@ -3911,7 +4996,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'P10p9py', u'2015 VV1', '', u'(Nov. 5.30 UT)']
         expected_params = { 'active' : False,
                             'name' : '2015 VV1',
-                            'source_type' : 'A'
+                            'source_type' : 'A',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -3922,7 +5008,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'WV82468', u'2015 VB2', u'MPEC 2015-V51', u'(Nov. 5.60 UT)']
         expected_params = { 'active' : True,
                             'name' : '2015 VB2',
-                            'source_type' : 'N'
+                            'source_type' : 'N',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -3933,7 +5020,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'P10o0Ha', u'2015 SE20', u'MPEC 2015-T29', u'(Oct. 8.59 UT)']
         expected_params = { 'active' : False,
                             'name' : '2015 SE20',
-                            'source_type' : 'N'
+                            'source_type' : 'N',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -3944,7 +5032,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'WTB842B', 'doesnotexist', '', u'(Oct. 9.19 UT)']
         expected_params = { 'active' : False,
                             'name' : '',
-                            'source_type' : 'X'
+                            'source_type' : 'X',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -3955,7 +5044,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'P10oYZI', 'wasnotconfirmed', '', u'(Nov. 4.81 UT)']
         expected_params = { 'active' : False,
                             'name' : '',
-                            'source_type' : 'U'
+                            'source_type' : 'U',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -3966,7 +5056,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'P10oYZI', '', '', u'(Nov. 4.81 UT)']
         expected_params = { 'active' : False,
                             'name' : '',
-                            'source_type' : 'W'
+                            'source_type' : 'W',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -3977,7 +5068,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'A10422t', 'wasnotminorplanet', '', u'(Sept. 20.89 UT)']
         expected_params = { 'active' : False,
                             'name' : '',
-                            'source_type' : 'J'
+                            'source_type' : 'J',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -3988,7 +5080,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'WV2B5A8', u'C/2015 V2', u'CBET 5432', u'(Nov. 5.49 UT)']
         expected_params = { 'active' : True,
                             'name' : 'C/2015 V2',
-                            'source_type' : 'C'
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -3999,7 +5092,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'WV2B5A8', u'C/2015 V2', u'CBET 5432', u'(Nov. 1.49 UT)']
         expected_params = { 'active' : False,
                             'name' : 'C/2015 V2',
-                            'source_type' : 'C'
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4010,7 +5104,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'WV2B5A8', u'C/2015 V2', u'IAUC-', u'(Nov. 5.49 UT)']
         expected_params = { 'active' : True,
                             'name' : 'C/2015 V2',
-                            'source_type' : 'C'
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4021,7 +5116,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'WV2B5A8', u'C/2015 V2', u'IAUC-', u'(Nov. 1.49 UT)']
         expected_params = { 'active' : False,
                             'name' : 'C/2015 V2',
-                            'source_type' : 'C'
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4032,7 +5128,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'LM02L2J', u'C/2015 TQ209', u'IAUC 2015-', u'(Oct. 24.07 UT)']
         expected_params = { 'active' : False,
                             'name' : 'C/2015 TQ209',
-                            'source_type' : 'C'
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4043,7 +5140,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'NM0015a', u'C/2015 X8', u'MPEC 2015-Y20', u'(Nov. 3.63 UT)']
         expected_params = { 'active' : True,
                             'name' : 'C/2015 X8',
-                            'source_type' : 'C'
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4054,7 +5152,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'NM0015a', u'C/2015 X8', u'MPEC 2015-Y20', u'(Oct. 18.63 UT)']
         expected_params = { 'active' : False,
                             'name' : 'C/2015 X8',
-                            'source_type' : 'C'
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4067,7 +5166,8 @@ class TestClean_crossid(TestCase):
         crossid = ['ZS9E891 ', '0046P  ', '', '(Sept. 16.62 UT)']
         expected_params = { 'active' : True,
                             'name' : '46P',
-                            'source_type' : 'C'
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4080,18 +5180,20 @@ class TestClean_crossid(TestCase):
         crossid = ['ZS9E891 ', '0046P  ', '', '(Sept. 16.62 UT)']
         expected_params = { 'active' : False,
                             'name' : '46P',
-                            'source_type' : 'C'
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
 
         self.assertEqual(expected_params, params)
 
-    def test_hyperbolic_asteroid1(self):
+    def test_active_asteroid1(self):
         crossid = [u'ZC82561', u'A/2018 C2', u'MPEC 2018-E18', u'(Nov. 4.95 UT)']
         expected_params = { 'active' : True,
                             'name' : 'A/2018 C2',
-                            'source_type' : 'H'
+                            'source_type' : 'A',
+                            'source_subtype_1': 'A'
                           }
 
         params = clean_crossid(crossid)
@@ -4099,10 +5201,11 @@ class TestClean_crossid(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_hyperbolic_asteroid2(self):
-        crossid = [u'P10EwQh', u'A/2017 U7', u'MPEC 2018-E17', u'(Nov. 4.94 UT)']
+        crossid = [u'P10EwQh', u'I/2017 U7', u'MPEC 2018-E17', u'(Nov. 4.94 UT)']
         expected_params = { 'active' : True,
-                            'name' : 'A/2017 U7',
-                            'source_type' : 'H'
+                            'name' : 'I/2017 U7',
+                            'source_type' : 'A',
+                            'source_subtype_1': 'H'
                           }
 
         params = clean_crossid(crossid)
@@ -4114,7 +5217,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'NM0015a', u'C/2015 X8', u'MPEC 2015-Y20', u'(Oct. 18.63 UT)']
         expected_params = { 'active' : False,
                             'name' : 'C/2015 X8',
-                            'source_type' : 'C'
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4126,7 +5230,8 @@ class TestClean_crossid(TestCase):
         crossid = [u'P10sKEk', u'2016 CP264', '', u'(Feb. 30.00 UT)']
         expected_params = { 'active' : False,
                             'name' : '2016 CP264',
-                            'source_type' : 'A'
+                            'source_type' : 'A',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4138,7 +5243,105 @@ class TestClean_crossid(TestCase):
         crossid = [u'P10tmAL ', u'2013 AM76', '', u'(Mar.  9.97 UT)']
         expected_params = { 'active' : False,
                             'name' : '2013 AM76',
-                            'source_type' : 'A'
+                            'source_type' : 'A',
+                            'source_subtype_1': ''
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_moon(self):
+        MockDateTime.change_datetime(2016, 4, 8, 0, 30, 0)
+        crossid = [u'P10tmAL ', u'Mars II', '', u'(Mar.  9.97 UT)']
+        expected_params = { 'active' : False,
+                            'name' : 'Mars II',
+                            'source_type' : 'M',
+                            'source_subtype_1': 'P4'
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_newstyle_comet_numbered_pre_time(self):
+        MockDateTime.change_datetime(2020, 4, 9, 6, 30, 0)
+
+        crossid = ['SWAN20A ', '58P', '', '(Apr. 9.13 UT)']
+        expected_params = { 'active' : True,
+                            'name' : '58P',
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_newstyle_comet_numbered_post_time(self):
+        MockDateTime.change_datetime(2020, 4, 19, 6, 30, 0)
+
+        crossid = ['SWAN20A ', '58P', '', '(Apr. 9.13 UT)']
+        expected_params = { 'active' : False,
+                            'name' : '58P',
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_newstyle_comet_unnumbered_pre_time_1(self):
+        MockDateTime.change_datetime(2020, 4, 9, 0, 30, 0)
+
+        crossid = ['P10XLLe ', 'C/2020 F6', '', '(Apr. 8.96 UT)']
+        expected_params = { 'active' : True,
+                            'name' : 'C/2020 F6',
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_newstyle_comet_unnumbered_post_time_1(self):
+        MockDateTime.change_datetime(2020, 4, 12, 0, 0, 0)
+
+        crossid = ['P10XLLe ', 'C/2020 F6', '', '(Apr. 8.96 UT)']
+        expected_params = { 'active' : False,
+                            'name' : 'C/2020 F6',
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_newstyle_comet_unnumbered_pre_time_2(self):
+        MockDateTime.change_datetime(2020, 4, 8, 6, 30, 0)
+
+        crossid = ['M60B7LC ', 'C/2020 F5', '', '(Apr. 8.11 UT)']
+        expected_params = { 'active' : True,
+                            'name' : 'C/2020 F5',
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_newstyle_comet_unnumbered_post_time_2(self):
+        MockDateTime.change_datetime(2020, 4, 11, 2, 39, 0)
+
+        crossid = ['M60B7LC ', 'C/2020 F5', '', '(Apr. 8.11 UT)']
+        expected_params = { 'active' : False,
+                            'name' : 'C/2020 F5',
+                            'source_type' : 'C',
+                            'source_subtype_1': ''
                           }
 
         params = clean_crossid(crossid)
@@ -4146,7 +5349,8 @@ class TestClean_crossid(TestCase):
         self.assertEqual(expected_params, params)
 
 
-class TestSummarise_Block_Efficiency(TestCase):
+
+class TestSummariseBlockEfficiency(TestCase):
 
     def setUp(self):
         # Initialise with a test body, three test proposals and several blocks.
@@ -4177,28 +5381,46 @@ class TestSummarise_Block_Efficiency(TestCase):
         proposal = Proposal.objects.create(**proposal_params)
 
         # Create test blocks
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'CPT',
+        sblock_params = {
                          'body'     : self.body,
                          'proposal' : proposal,
                          'groupid'  : self.body.current_name() + '_CPT-20150420',
                          'block_start' : '2015-04-20 13:00:00',
                          'block_end'   : '2015-04-21 03:00:00',
                          'tracking_number' : '00042',
+                         'active'   : True
+                       }
+        test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'CPT',
+                         'body'     : self.body,
+                         'superblock' : test_sblock,
+                         'block_start' : '2015-04-20 13:00:00',
+                         'block_end'   : '2015-04-21 03:00:00',
+                         'request_number' : '10042',
                          'num_exposures' : 5,
                          'exp_length' : 42.0,
                          'active'   : True
                        }
         test_block = Block.objects.create(**block_params)
 
-        block_params2 = { 'telclass' : '1m0',
-                         'site'     : 'CPT',
+        sblock_params2 = {
                          'body'     : self.body,
                          'proposal' : proposal,
                          'groupid'  : self.body.current_name() + '_CPT-20150420',
                          'block_start' : '2015-04-20 03:00:00',
                          'block_end'   : '2015-04-20 13:00:00',
                          'tracking_number' : '00043',
+                         'active'   : False,
+                       }
+        test_sblock2 = SuperBlock.objects.create(**sblock_params2)
+        block_params2 = { 'telclass' : '1m0',
+                         'site'     : 'CPT',
+                         'body'     : self.body,
+                         'superblock' : test_sblock2,
+                         'block_start' : '2015-04-20 03:00:00',
+                         'block_end'   : '2015-04-20 13:00:00',
+                         'request_number' : '10043',
                          'num_exposures' : 7,
                          'exp_length' : 30.0,
                          'active'   : False,
@@ -4223,14 +5445,23 @@ class TestSummarise_Block_Efficiency(TestCase):
         proposal = Proposal.objects.create(**proposal_params)
 
         # Create test blocks
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'CPT',
+        sblock_params = {
                          'body'     : self.body,
                          'proposal' : proposal,
                          'groupid'  : self.body.current_name() + '_CPT-20150420',
                          'block_start' : '2015-04-20 13:00:00',
                          'block_end'   : '2015-04-21 03:00:00',
                          'tracking_number' : '00042',
+                         'active'   : True
+                       }
+        test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'CPT',
+                         'body'     : self.body,
+                         'superblock' : test_sblock,
+                         'block_start' : '2015-04-20 13:00:00',
+                         'block_end'   : '2015-04-21 03:00:00',
+                         'request_number' : '10042',
                          'num_exposures' : 5,
                          'exp_length' : 42.0,
                          'active'   : True
@@ -4253,28 +5484,46 @@ class TestSummarise_Block_Efficiency(TestCase):
         proposal1 = Proposal.objects.create(**proposal_params)
 
         # Create test blocks
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'CPT',
+        sblock_params = {
                          'body'     : self.body,
                          'proposal' : proposal1,
                          'groupid'  : self.body.current_name() + '_CPT-20150420',
                          'block_start' : '2015-04-20 13:00:00',
                          'block_end'   : '2015-04-21 03:00:00',
                          'tracking_number' : '00042',
+                         'active'   : True
+                       }
+        test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'CPT',
+                         'body'     : self.body,
+                         'superblock' : test_sblock,
+                         'block_start' : '2015-04-20 13:00:00',
+                         'block_end'   : '2015-04-21 03:00:00',
+                         'request_number' : '10042',
                          'num_exposures' : 5,
                          'exp_length' : 42.0,
                          'active'   : True
                        }
         test_block = Block.objects.create(**block_params)
 
-        block_params2 = { 'telclass' : '1m0',
-                         'site'     : 'CPT',
+        sblock_params2 = {
                          'body'     : self.body,
                          'proposal' : proposal1,
                          'groupid'  : self.body.current_name() + '_CPT-20150420',
                          'block_start' : '2015-04-20 03:00:00',
                          'block_end'   : '2015-04-20 13:00:00',
                          'tracking_number' : '00043',
+                         'active'   : False,
+                       }
+        test_sblock2 = SuperBlock.objects.create(**sblock_params2)
+        block_params2 = { 'telclass' : '1m0',
+                         'site'     : 'CPT',
+                         'body'     : self.body,
+                         'superblock' : test_sblock2,
+                         'block_start' : '2015-04-20 03:00:00',
+                         'block_end'   : '2015-04-20 13:00:00',
+                         'request_number' : '10043',
                          'num_exposures' : 7,
                          'exp_length' : 30.0,
                          'active'   : False,
@@ -4289,14 +5538,23 @@ class TestSummarise_Block_Efficiency(TestCase):
         proposal2 = Proposal.objects.create(**proposal_params)
 
         # Create test blocks
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'CPT',
+        sblock_params = {
                          'body'     : self.body,
                          'proposal' : proposal2,
                          'groupid'  : self.body.current_name() + '_CPT-20150420',
                          'block_start' : '2015-04-20 13:00:00',
                          'block_end'   : '2015-04-21 03:00:00',
                          'tracking_number' : '00042',
+                         'active'   : True
+                       }
+        test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'CPT',
+                         'body'     : self.body,
+                         'superblock' : test_sblock,
+                         'block_start' : '2015-04-20 13:00:00',
+                         'block_end'   : '2015-04-21 03:00:00',
+                         'request_number' : '10042',
                          'num_exposures' : 5,
                          'exp_length' : 42.0,
                          'active'   : True
@@ -4356,6 +5614,11 @@ class TestCheckCatalogAndRefitNew(TestCase):
         self.test_banzai_fits = os.path.abspath(os.path.join(self.temp_dir, 'banzai_test_frame.fits'))
         self.test_cat_bad_wcs = os.path.abspath(os.path.join(self.temp_dir, 'oracdr_test_catalog.fits'))
 
+        self.test_externscamp_headfile = os.path.join('photometrics', 'tests', 'example_externcat_scamp.head')
+        self.test_externcat_xml = os.path.join('photometrics', 'tests', 'example_externcat_scamp.xml')
+        self.test_externscamp_TPV_headfile = os.path.join('photometrics', 'tests', 'example_externcat_scamp_tpv.head')
+        self.test_externcat_TPV_xml = os.path.join('photometrics', 'tests', 'example_externcat_scamp_tpv.xml')
+
         shutil.copyfile(original_test_banzai_fits, self.test_banzai_fits)
         shutil.copyfile(original_test_cat_bad_wcs, self.test_cat_bad_wcs)
 
@@ -4378,20 +5641,29 @@ class TestCheckCatalogAndRefitNew(TestCase):
 
         proposal_params = { 'code': 'test',
                             'title': 'test',
-                            'pi':'sgreenstreet@lcogt.net',
+                            'pi': 'sgreenstreet@lcogt.net',
                             'tag': 'LCOGT',
                             'active': True
                           }
         self.test_proposal, created = Proposal.objects.get_or_create(**proposal_params)
 
-        block_params = {    'telclass': '1m0',
-                            'site': 'K92',
+        sblock_params = {
                             'body': self.test_body,
                             'proposal': self.test_proposal,
                             'groupid': 'P10w5z5_cpt_20160801',
                             'block_start': datetime(2016, 8, 1, 17),
                             'block_end': datetime(2016, 8, 2, 4),
                             'tracking_number': '0013',
+                            'active': False,
+                        }
+        self.test_sblock, created = SuperBlock.objects.get_or_create(**sblock_params)
+        block_params = {    'telclass': '1m0',
+                            'site': 'K92',
+                            'body': self.test_body,
+                            'superblock': self.test_sblock,
+                            'block_start': datetime(2016, 8, 1, 17),
+                            'block_end': datetime(2016, 8, 2, 4),
+                            'request_number': '1013',
                             'num_exposures': 5,
                             'exp_length': 225.0,
                             'num_observed': 1,
@@ -4676,8 +5948,56 @@ class TestCheckCatalogAndRefitNew(TestCase):
 
         self.assertEqual(expected_num_new_frames, num_new_frames)
 
+    def test_make_new_catalog_entry_gaiadr2(self):
+        fits_header, junk_table, cattype = open_fits_catalog(self.test_banzai_fits, header_only=True)
+        (status, new_ldac_catalog) = run_sextractor_make_catalog(self.configs_dir, self.temp_dir, self.test_banzai_fits.replace('.fits', '.fits[SCI]'))
 
-class TestUpdate_Crossids(TestCase):
+        fits_file_output = self.test_banzai_fits.replace('_frame', '_frame_new')
+        status, new_header = updateFITSWCS(self.test_banzai_fits, self.test_externscamp_headfile, self.test_externcat_xml, fits_file_output)
+        header = get_catalog_header(new_header, cattype)
+        new_wcs = WCS(new_header)
+        expected_wcs = new_wcs.wcs
+        num_new_frames = make_new_catalog_entry(new_ldac_catalog, header, self.test_block)
+
+        frames = Frame.objects.filter(frametype=Frame.BANZAI_LDAC_CATALOG)
+        self.assertEqual(1, frames.count())
+        frame = frames[0]
+        self.assertEqual('GAIA-DR2', frame.astrometric_catalog)
+        self.assertEqual(' ', frame.photometric_catalog)
+        self.assertEqual(0.30818, frame.rms_of_fit)
+        self.assertEqual(23, frame.nstars_in_fit)
+
+        frame_wcs = frame.wcs.wcs
+        assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
+        assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
+        assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
+
+    def test_make_new_catalog_entry_gaiadr2_tpv(self):
+        fits_header, junk_table, cattype = open_fits_catalog(self.test_banzai_fits, header_only=True)
+        (status, new_ldac_catalog) = run_sextractor_make_catalog(self.configs_dir, self.temp_dir, self.test_banzai_fits.replace('.fits', '.fits[SCI]'))
+
+        fits_file_output = self.test_banzai_fits.replace('_frame', '_frame_new')
+        status, new_header = updateFITSWCS(self.test_banzai_fits, self.test_externscamp_TPV_headfile, self.test_externcat_TPV_xml, fits_file_output)
+        header = get_catalog_header(new_header, cattype)
+        new_wcs = WCS(new_header)
+        expected_wcs = new_wcs.wcs
+        num_new_frames = make_new_catalog_entry(new_ldac_catalog, header, self.test_block)
+
+        frames = Frame.objects.filter(frametype=Frame.BANZAI_LDAC_CATALOG)
+        self.assertEqual(1, frames.count())
+        frame = frames[0]
+        self.assertEqual('GAIA-DR2', frame.astrometric_catalog)
+        self.assertEqual(' ', frame.photometric_catalog)
+        self.assertAlmostEqual(0.327895, frame.rms_of_fit, 6)
+        self.assertEqual(23, frame.nstars_in_fit)
+
+        frame_wcs = frame.wcs.wcs
+        assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
+        assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
+        assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
+
+
+class TestUpdateCrossids(TestCase):
 
     @classmethod
     def setUpTestData(cls):
@@ -4697,6 +6017,13 @@ class TestUpdate_Crossids(TestCase):
                     'origin'        : 'G',
                     }
         cls.body, created = Body.objects.get_or_create(**params)
+
+        des_dict = {'desig_type': 'C',
+                    'value': params['provisional_name'],
+                    'notes': 'Test_candidate',
+                    'preferred': True,
+                    }
+        cls.body.save_physical_parameters(des_dict)
 
         params = {  'provisional_name': 'ZC82561',
                     'provisional_packed': None,
@@ -4728,6 +6055,9 @@ class TestUpdate_Crossids(TestCase):
                     }
         cls.blank_body, created = Body.objects.get_or_create(**params)
 
+        des_dict['value'] = params['provisional_name']
+        cls.blank_body.save_physical_parameters(des_dict)
+
         neo_proposal_params = { 'code'  : 'LCO2015B-005',
                                 'title' : 'LCOGT NEO Follow-up Network'
                               }
@@ -4735,6 +6065,29 @@ class TestUpdate_Crossids(TestCase):
 
     def setUp(self):
         self.body.refresh_from_db()
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_crossids_update_designations_to_prov_des(self):
+        expected_types = ['C', 'P']
+        expected_desigs = ['LM05OFG', '2016 JD18']
+        expected_names = list(zip(expected_types, expected_desigs))
+
+        # Set Mock time to more than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2016, 5, 13, 10, 40, 0)
+
+        crossid_info = [u'LM05OFG', u'2016 JD18', u'MPEC 2016-J96', u'(May 9.64 UT)']
+
+        update_crossids(crossid_info, dbg=False)
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+        names = Designations.objects.filter(body=body)
+
+        for name in names:
+            test_list = (name.desig_type, name.value)
+            self.assertIn(test_list, expected_names)
+            expected_names.remove(test_list)
+        self.assertEqual(expected_names, [])
 
     @patch('core.views.datetime', MockDateTime)
     @patch('astrometrics.time_subs.datetime', MockDateTime)
@@ -4777,6 +6130,29 @@ class TestUpdate_Crossids(TestCase):
         self.assertEqual('C', body.source_type)
         self.assertEqual('A', body.origin)
         self.assertEqual('C/2016 JD18', body.name)
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_crossids_update_designations_to_comet_des(self):
+        expected_types = ['C', 'P']
+        expected_desigs = ['LM05OFG', 'C/2016 JD18']
+        expected_names = list(zip(expected_types, expected_desigs))
+
+        # Set Mock time to more than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2016, 5, 13, 10, 40, 0)
+
+        crossid_info = [u'LM05OFG', u'C/2016 JD18', u'MPEC 2016-J96', u'(May 9.64 UT)']
+
+        update_crossids(crossid_info, dbg=False)
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+        names = Designations.objects.filter(body=body)
+
+        for name in names:
+            test_list = (name.desig_type, name.value)
+            self.assertIn(test_list, expected_names)
+            expected_names.remove(test_list)
+        self.assertEqual(expected_names, [])
 
     @patch('core.views.datetime', MockDateTime)
     @patch('astrometrics.time_subs.datetime', MockDateTime)
@@ -4876,6 +6252,32 @@ class TestUpdate_Crossids(TestCase):
         # Set Mock time to less than 3 days past the time of the cross ident.
         MockDateTime.change_datetime(2017, 9, 21, 10, 40, 0)
 
+        crossid_info = [u'ZC99999', u'I/2018 C2', u'MPEC 2018-E18', u'(Mar. 4.95 UT)']
+
+        self.body.origin = u'M'
+        self.body.source_type = u'U'
+        self.body.provisional_name = 'ZC99999'
+        self.body.save()
+
+        status = update_crossids(crossid_info, dbg=False)
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+
+        self.assertEqual(True, status)
+        self.assertEqual(False, body.active)
+        self.assertEqual('A', body.source_type)
+        self.assertEqual('H', body.source_subtype_1)
+        self.assertEqual('M', body.origin)
+        self.assertEqual('I/2018 C2', body.name)
+        self.assertEqual('MPC_COMET', body.elements_type)
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_check_active_ast(self):
+
+        # Set Mock time to less than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2017, 9, 21, 10, 40, 0)
+
         crossid_info = [u'ZC99999', u'A/2018 C2', u'MPEC 2018-E18', u'(Mar. 4.95 UT)']
 
         self.body.origin = u'M'
@@ -4889,10 +6291,37 @@ class TestUpdate_Crossids(TestCase):
 
         self.assertEqual(True, status)
         self.assertEqual(False, body.active)
-        self.assertEqual('H', body.source_type)
+        self.assertEqual('A', body.source_type)
+        self.assertEqual('A', body.source_subtype_1)
         self.assertEqual('M', body.origin)
         self.assertEqual('A/2018 C2', body.name)
-        self.assertEqual('MPC_COMET', body.elements_type)
+        self.assertEqual('MPC_MINOR_PLANET', body.elements_type)
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_check_moon(self):
+
+        # Set Mock time to less than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2017, 9, 21, 10, 40, 0)
+
+        crossid_info = [u'ZC99999', u'Saturn XIV', '', u'(Mar. 4.95 UT)']
+
+        self.body.origin = u'M'
+        self.body.source_type = u'U'
+        self.body.provisional_name = 'ZC99999'
+        self.body.save()
+
+        status = update_crossids(crossid_info, dbg=False)
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+
+        self.assertEqual(True, status)
+        self.assertEqual(False, body.active)
+        self.assertEqual('M', body.source_type)
+        self.assertEqual('P6', body.source_subtype_1)
+        self.assertEqual('M', body.origin)
+        self.assertEqual('Saturn XIV', body.name)
+        self.assertEqual('MPC_MINOR_PLANET', body.elements_type)
 
     @patch('core.views.datetime', MockDateTime)
     @patch('astrometrics.time_subs.datetime', MockDateTime)
@@ -4935,12 +6364,12 @@ class TestUpdate_Crossids(TestCase):
 
     @patch('core.views.datetime', MockDateTime)
     @patch('astrometrics.time_subs.datetime', MockDateTime)
-    def test_check_hyperbolic_ast_blank_body(self):
+    def test_check_Hyperbolic_ast_blank_body(self):
 
         # Set Mock time to more than 3 days past the time of the cross ident.
         MockDateTime.change_datetime(2017, 3,  8, 10, 40, 0)
 
-        crossid_info = [u'ZC82561', u'A/2018 C2', u'MPEC 2018-E18', u'(Mar. 4.95 UT)']
+        crossid_info = [u'ZC82561', u'I/2018 C2', u'MPEC 2018-E18', u'(Mar. 4.95 UT)']
 
         status = update_crossids(crossid_info, dbg=False)
 
@@ -4948,9 +6377,10 @@ class TestUpdate_Crossids(TestCase):
 
         self.assertEqual(True, status)
         self.assertEqual(False, body.active)
-        self.assertEqual('H', body.source_type)
+        self.assertEqual('A', body.source_type)
+        self.assertEqual('H', body.source_subtype_1)
         self.assertEqual('M', body.origin)
-        self.assertEqual('A/2018 C2', body.name)
+        self.assertEqual('I/2018 C2', body.name)
         self.assertEqual('MPC_COMET', body.elements_type)
 
     @patch('core.views.datetime', MockDateTime)
@@ -5034,6 +6464,58 @@ class TestUpdate_Crossids(TestCase):
 
     @patch('core.views.datetime', MockDateTime)
     @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_crossids_update_multiple_designations(self):
+        expected_types = ['C', 'P', 'C', 'C']
+        expected_desigs = ['LM05OFG', '2015 FP118', 'ZTF00Y8', 'A9999']
+        expected_names = list(zip(expected_types, expected_desigs))
+
+        # Set Mock time to less than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2018, 9, 5, 10, 40, 0)
+
+        crossid_info = ['ZTF00Y8 ', '2015 FP118', '', '(Sept. 3.50 UT)']
+
+        self.body.origin = u'A'
+        self.body.source_type = u'N'
+        self.body.name = '2015 FP118'
+        self.body.epochofel = datetime(2018, 9, 5, 0, 0)
+        self.body.eccentricity = 0.5415182
+        self.body.meandist = 5.8291288
+        self.body.meananom = 7.63767
+        self.body.perihdist = None
+        self.body.epochofperih = None
+        self.body.ingest = datetime(2018, 9, 1, 1, 2, 3)
+        self.body.save()
+
+        # Create duplicate with different info
+        body = Body.objects.get(pk=self.body.pk)
+        body.pk = None
+        body.provisional_name = 'A9999'
+        body.origin = 'N'
+        body.ingest = datetime(2018, 9, 2, 12, 13, 14)
+        body.save()
+
+        des_dicts = [{'desig_type': 'C', 'value': 'A9999'},
+                     {'desig_type': 'P', 'value': '2015 FP118'}
+                     ]
+        for des in des_dicts:
+            body.save_physical_parameters(des)
+
+        self.assertEqual(3, Body.objects.count(), msg="Before update_crossids; should be 3 Bodies")
+
+        update_crossids(crossid_info, dbg=False)
+        self.assertEqual(2, Body.objects.count(), msg="After update_crossids; should be 2 Bodies")
+
+        body = Body.objects.get(name='2015 FP118')
+        names = Designations.objects.filter(body=body)
+
+        for name in names:
+            test_list = (name.desig_type, name.value)
+            self.assertIn(test_list, expected_names)
+            expected_names.remove(test_list)
+        self.assertEqual(expected_names, [])
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
     def test_same_obj_multiple_copies_different_provids_from_MPC(self):
 
         # Set Mock time to less than 3 days past the time of the cross ident.
@@ -5106,7 +6588,7 @@ class TestUpdate_Crossids(TestCase):
         body.ingest = datetime(2018, 9, 2, 12, 13, 14)
         body.save()
 
-        block,created = Block.objects.get_or_create(body=body, proposal=self.neo_proposal)
+        block, created = Block.objects.get_or_create(body=body)
         self.assertEqual(3, Body.objects.count(), msg="Before update_crossids; should be 3 Bodies")
 
         status = update_crossids(crossid_info, dbg=False)
@@ -5142,7 +6624,7 @@ class TestUpdate_Crossids(TestCase):
         body.ingest = datetime(2018, 9, 2, 12, 13, 14)
         body.save()
 
-        sblock,created = SuperBlock.objects.get_or_create(body=body, proposal=self.neo_proposal)
+        sblock, created = SuperBlock.objects.get_or_create(body=body, proposal=self.neo_proposal)
         self.assertEqual(3, Body.objects.count(), msg="Before update_crossids; should be 3 Bodies")
 
         status = update_crossids(crossid_info, dbg=False)
@@ -5221,6 +6703,118 @@ class TestUpdate_Crossids(TestCase):
         self.assertAlmostEqual(q, body.perihdist, 7)
         self.assertIs(None, body.meananom)
 
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_newstyle_to_numbered_comet_match1(self):
+
+        # Set Mock time to less than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2020, 4,  13, 10, 40, 0)
+
+        crossid_info = ['SWAN20A ', '58P', '', '(Apr. 9.13 UT)']
+
+        self.body.origin = 'M'
+        self.body.source_type = 'U'
+        self.body.provisional_name = 'SWAN20A'
+        self.body.name = None
+        self.body.epochofel = datetime(2020, 4, 12, 0, 0)
+        self.body.eccentricity = 0.9964264
+        self.body.meandist = 118.3168684
+        self.body.meananom = 347.37843
+        self.body.perihdist = None
+        self.body.epochofperih = None
+
+        q = self.body.meandist * (1.0 - self.body.eccentricity)
+        self.body.save()
+
+        status = update_crossids(crossid_info, dbg=False)
+        self.assertEqual(2, Body.objects.count())
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+
+        self.assertEqual(True, status)
+        self.assertEqual('C', body.source_type)
+        self.assertEqual('M', body.origin)
+        self.assertEqual('58P', body.name)
+        self.assertEqual('MPC_COMET', body.elements_type)
+        self.assertAlmostEqual(q, body.perihdist, 7)
+        self.assertIs(None, body.meananom)
+        self.assertEqual(False, body.active)
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_newstyle_to_unnumbered_comet_match1(self):
+
+        # Set Mock time to less than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2020, 4,  10, 10, 40, 0)
+
+        crossid_info = ['P10XLLe ', 'C/2020 F6', '', '(Apr. 8.96 UT)']
+
+        self.body.origin = 'M'
+        self.body.source_type = 'U'
+        self.elements_type = 'MPC_COMET'
+        self.body.provisional_name = 'P10XLLe'
+        self.body.name = None
+        self.body.epochofel = datetime(2020, 3, 22, 0, 0)
+        self.body.eccentricity = 0.9857459
+        self.body.meandist = 246.2398975
+        self.body.meananom = 359.93312
+        self.body.perihdist = None
+        self.body.epochofperih = None
+
+        q = self.body.meandist * (1.0 - self.body.eccentricity)
+        self.body.save()
+
+        status = update_crossids(crossid_info, dbg=False)
+        self.assertEqual(2, Body.objects.count())
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+
+        self.assertEqual(True, status)
+        self.assertEqual('C', body.source_type)
+        self.assertEqual('M', body.origin)
+        self.assertEqual('C/2020 F6', body.name)
+        self.assertEqual('MPC_COMET', body.elements_type)
+        self.assertAlmostEqual(q, body.perihdist, 7)
+        self.assertIs(None, body.meananom)
+        self.assertEqual(True, body.active)
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_newstyle_to_unnumbered_comet_match2(self):
+
+        # Set Mock time to less than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2020, 4,  8, 10, 40, 0)
+
+        crossid_info = ['M60B7LC ', 'C/2020 F5', '', '(Apr. 8.11 UT)']
+
+        self.body.origin = 'M'
+        self.body.source_type = 'U'
+        self.body.provisional_name = 'M60B7LC'
+        self.body.name = None
+        self.body.epochofel = datetime(2020, 3, 23, 0, 0)
+        self.body.eccentricity = 0.9997408
+        self.body.meandist = 16761.69106
+        self.body.meananom = 359.93312
+        self.body.perihdist = None
+        self.body.epochofperih = None
+
+        q = self.body.meandist * (1.0 - self.body.eccentricity)
+        self.body.save()
+
+        status = update_crossids(crossid_info, dbg=False)
+        self.assertEqual(2, Body.objects.count())
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+
+        self.assertEqual(True, status)
+        self.assertEqual('C', body.source_type)
+        self.assertEqual('M', body.origin)
+        self.assertEqual('C/2020 F5', body.name)
+        self.assertEqual('MPC_COMET', body.elements_type)
+        self.assertAlmostEqual(q, body.perihdist, 7)
+        self.assertIs(None, body.meananom)
+        self.assertEqual(True, body.active)
+
 
 class TestStoreDetections(TestCase):
 
@@ -5254,14 +6848,23 @@ class TestStoreDetections(TestCase):
         self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
 
         # Create test blocks
-        block_params = { 'telclass' : '1m0',
-                         'site'     : 'ELP',
+        sblock_params = {
                          'body'     : self.body_with_provname,
                          'proposal' : self.neo_proposal,
                          'groupid'  : self.body_with_provname.current_name() + '_CPT-20150420',
                          'block_start' : '2016-02-26 03:00:00',
                          'block_end'   : '2016-02-26 13:00:00',
                          'tracking_number' : '00042',
+                         'active'   : True
+                       }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'ELP',
+                         'body'     : self.body_with_provname,
+                         'superblock'  : self.test_sblock,
+                         'block_start' : '2016-02-26 03:00:00',
+                         'block_end'   : '2016-02-26 13:00:00',
+                         'request_number' : '00042',
                          'num_exposures' : 5,
                          'exp_length' : 42.0,
                          'active'   : True
@@ -5285,7 +6888,7 @@ class TestStoreDetections(TestCase):
         self.assertEqual(expected_num_cands, len(cands))
 
 
-class Test_Generate_New_Candidate_Id_Blank(TestCase):
+class TestGenerateNewCandidateIdBlank(TestCase):
 
     def test_no_discoveries(self):
         expected_id = 'LNX0001'
@@ -5315,7 +6918,7 @@ class Test_Generate_New_Candidate_Id_Blank(TestCase):
         self.assertEqual(expected_id, new_id)
 
 
-class Test_Generate_New_Candidate_Id(TestCase):
+class TestGenerateNewCandidateId(TestCase):
 
     def setUp(self):
 
@@ -5362,7 +6965,7 @@ class Test_Generate_New_Candidate_Id(TestCase):
         self.assertEqual(3, Body.objects.count())
 
 
-class Test_Add_New_Taxonomy_Data(TestCase):
+class TestAddNewTaxonomyData(TestCase):
 
     def setUp(self):
 
@@ -5414,20 +7017,20 @@ class TestAddExternalSpectroscopyData(TestCase):
 
     def setUp(self):
 
-        params = { 'name' : '980',
-                   'provisional_name' : 'LNX0003',
-                   'origin' : 'L',
-                   'active' : True,
-                 }
+        params = {'name': '980',
+                  'provisional_name': 'LNX0003',
+                  'origin': 'L',
+                  'active': True,
+                  }
         self.body = Body.objects.create(pk=1, **params)
 
-        spec_params = {'body'          : self.body,
-                'spec_wav'      : 'Vis',
-                'spec_vis'      : 'spex/sp233/a265962.sp233.txt',
-                'spec_ref'      : 'sp[234]',
-                'spec_source'   : 'S',
-                'spec_date'     : '2017-09-25',
-                      }
+        spec_params = {'body': self.body,
+                       'spec_wav': 'Vis',
+                       'spec_vis': 'spex/sp233/a265962.sp233.txt',
+                       'spec_ref': 'sp[234]',
+                       'spec_source': 'S',
+                       'spec_date': '2017-09-25',
+                       }
         self.test_spectra = PreviousSpectra.objects.create(pk=1, **spec_params)
 
     def test_same_body_different_wavelength(self):
@@ -5436,6 +7039,17 @@ class TestAddExternalSpectroscopyData(TestCase):
         new_spec = update_previous_spectra(test_obj, 'S', dbg=True)
 
         self.assertEqual(expected_res, new_spec)
+
+    def test_same_everything_different_link(self):
+        expected_res = False
+        new_link = 'spex/sp233/a416584.sp234.txt'
+        self.assertNotEqual(new_link, self.test_spectra.spec_vis)
+        test_obj = ['LNX0003', 'Vis', new_link, "", "sp[234]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()]
+        new_spec = update_previous_spectra(test_obj, 'S', dbg=True)
+        self.test_spectra.refresh_from_db()
+
+        self.assertEqual(expected_res, new_spec)
+        self.assertEqual(new_link, self.test_spectra.spec_vis)
 
     def test_same_body_older(self):
         expected_res = False
@@ -5700,7 +7314,8 @@ class TestExportMeasurements(TestCase):
                 print("Error removing files in temporary test directory", self.test_dir)
             try:
                 os.rmdir(self.test_dir)
-                if self.debug_print: print("Removed", self.test_dir)
+                if self.debug_print:
+                    print("Removed", self.test_dir)
             except OSError:
                 print("Error removing temporary test directory", self.test_dir)
 
@@ -5861,7 +7476,7 @@ class TestRefitWithFindOrb(TestCase):
         expected_ephem_length = 4
         expected_num_srcmeas = SourceMeasurement.objects.filter(body=self.test_body).count()
         expected_meananom = 272.51789
-        expected_eccentricity =  0.3006186
+        expected_eccentricity = 0.3006186
         expected_epoch = datetime(2015, 11, 20)
         expected_src_type = 'U'
         expected_origin = 'M'
@@ -6069,6 +7684,7 @@ class TestDetermineActiveProposals(TestCase):
         self.assertEqual(expected_num, len(proposals))
         self.assertEqual(expected_code_1, proposals[0])
 
+
 class TestBestStandardsView(TestCase):
 
     def setUp(self):
@@ -6115,3 +7731,386 @@ class TestBestStandardsView(TestCase):
 
         self.assertAlmostEqual(expected_min_ra, min_ra, self.precision)
         self.assertAlmostEqual(expected_max_ra, max_ra, self.precision)
+
+
+class TestFindSpec(TestCase):
+
+    def setUp(self):
+        body_params = {
+                         'provisional_name': None,
+                         'provisional_packed': 'j5432',
+                         'name': '455432',
+                         'origin': 'A',
+                         'source_type': 'N',
+                         'elements_type': 'MPC_MINOR_PLANET',
+                         'active': True,
+                         'fast_moving': True,
+                         'urgency': None,
+                         'epochofel': datetime(2019, 7, 31, 0, 0),
+                         'orbit_rms': 0.46,
+                         'orbinc': 31.23094,
+                         'longascnode': 301.42266,
+                         'argofperih': 22.30793,
+                         'eccentricity': 0.3660154,
+                         'meandist': 1.7336673,
+                         'meananom': 352.55084,
+                         'perihdist': None,
+                         'epochofperih': None,
+                         'abs_mag': 18.54,
+                         'slope': 0.15,
+                         'score': None,
+                         'discovery_date': datetime(2003, 9, 7, 3, 7, 18),
+                         'num_obs': 130,
+                         'arc_length': 6209.0,
+                         'not_seen': 3.7969329574421296,
+                         'updated': True,
+                         'ingest': datetime(2019, 7, 4, 5, 28, 39),
+                         'update_time': datetime(2019, 7, 30, 19, 7, 35)
+                        }
+        self.test_body = Body.objects.create(**body_params)
+
+        proposal_params = { 'code'   : 'LCOEngineering',
+                                'title'  : 'LCOEngineering',
+                                'active' : True
+                              }
+        self.eng_proposal, created = Proposal.objects.get_or_create(**proposal_params)
+
+        sblock_params = {
+                        'body' : self.test_body,
+                        'block_start' : datetime(2019, 7, 27, 8, 30),
+                        'block_end'   : datetime(2019, 7, 27,19, 30),
+                        'proposal' : self.eng_proposal,
+                        'tracking_number' : '818566'
+                        }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+
+        block_params = {
+                        'body' : self.test_body,
+                        'superblock' : self.test_sblock,
+                        'block_start' : datetime(2019, 7, 27, 8, 30),
+                        'block_end'   : datetime(2019, 7, 27,19, 30),
+                        'obstype' : Block.OPT_SPECTRA,
+                        'request_number' : '1878696',
+                        'num_exposures' : 1,
+                        'exp_length' : 1800
+                        }
+        self.test_block = Block.objects.create(**block_params)
+
+        frame_params = {
+                         'block' : self.test_block,
+                         'sitecode': 'E10',
+                         'instrument': 'en12',
+                         'filter': 'SLIT_30.0x6.0AS',
+                         'filename': 'coj2m002-en12-20190727-0014-w00.fits',
+                         'frameid' : 12272496,
+                         'frametype' : Frame.SPECTRUM_FRAMETYPE,
+                         'midpoint': datetime(2019, 7, 27, 15, 52, 29, 495000),
+
+                        }
+        self.test_flatframe = Frame.objects.create(**frame_params)
+
+    @patch('core.views.lco_api_call', mock_archive_spectra_header)
+    def test_local_data_no_tarball(self):
+        settings.USE_S3 = False
+
+        expected_date = '20190727'
+        expected_path = os.path.join(expected_date, self.test_body.current_name() + '_' + self.test_block.request_number)
+
+        date_obs, obj, req, path, prop = find_spec(self.test_block.pk)
+
+        self.assertEqual(expected_date, date_obs)
+        self.assertEqual(self.test_body.current_name(), obj)
+        self.assertEqual(self.test_block.request_number, req)
+        self.assertEqual(expected_path, path)
+        self.assertEqual(self.eng_proposal.code, prop)
+
+    @patch('core.views.lco_api_call', mock_archive_spectra_header)
+    def test_local_data_with_tarball(self):
+
+        with self.settings(MEDIA_ROOT=tempfile.mkdtemp()):
+            expected_date = '20190727'
+            expected_path = os.path.join(expected_date, self.test_body.current_name() + '_' + self.test_block.request_number)
+            # os.makedirs(expected_date)
+            fake_tar = os.path.join(expected_date, self.eng_proposal.code + '_' + self.test_block.request_number + '.tar.gz')
+
+            date_obs, obj, req, path, prop = find_spec(self.test_block.pk)
+
+            self.assertEqual(expected_date, date_obs)
+            self.assertEqual(self.test_body.current_name(), obj)
+            self.assertEqual(self.test_block.request_number, req)
+            self.assertEqual(expected_path, path)
+            self.assertEqual(self.eng_proposal.code, prop)
+
+    @patch('core.views.lco_api_call', mock_archive_spectra_header)
+    def test_S3_data(self):
+        settings.USE_S3 = True
+        settings.DATA_ROOT = None
+
+        expected_date = '20190727'
+        expected_path = os.path.join('', expected_date, self.test_body.current_name() + '_' + self.test_block.request_number)
+
+        date_obs, obj, req, path, prop = find_spec(self.test_block.pk)
+
+        self.assertEqual(expected_date, date_obs)
+        self.assertEqual(self.test_body.current_name(), obj)
+        self.assertEqual(self.test_block.request_number, req)
+        self.assertEqual(expected_path, path)
+        self.assertEqual(self.eng_proposal.code, prop)
+
+    @patch('core.views.lco_api_call', mock_lco_api_fail)
+    def test_S3_data(self):
+        settings.USE_S3 = True
+        settings.DATA_ROOT = None
+
+        expected_results = ('', '', '', '', '')
+        results = find_spec(self.test_block.pk)
+        self.assertEqual(expected_results, results)
+
+
+class TestFindAnalog(TestCase):
+
+    def setUp(self):
+        body_params = {
+                         'provisional_name': None,
+                         'provisional_packed': 'j5432',
+                         'name': '455432',
+                         'origin': 'A',
+                         'source_type': 'N',
+                         'elements_type': 'MPC_MINOR_PLANET',
+                         'active': True,
+                         'fast_moving': True,
+                         'urgency': None,
+                         'epochofel': datetime(2019, 7, 31, 0, 0),
+                         'orbit_rms': 0.46,
+                         'orbinc': 31.23094,
+                         'longascnode': 301.42266,
+                         'argofperih': 22.30793,
+                         'eccentricity': 0.3660154,
+                         'meandist': 1.7336673,
+                         'meananom': 352.55084,
+                         'perihdist': None,
+                         'epochofperih': None,
+                         'abs_mag': 18.54,
+                         'slope': 0.15,
+                         'score': None,
+                         'discovery_date': datetime(2003, 9, 7, 3, 7, 18),
+                         'num_obs': 130,
+                         'arc_length': 6209.0,
+                         'not_seen': 3.7969329574421296,
+                         'updated': True,
+                         'ingest': datetime(2019, 7, 4, 5, 28, 39),
+                         'update_time': datetime(2019, 7, 30, 19, 7, 35)
+                        }
+        self.test_body = Body.objects.create(**body_params)
+
+        statsrc_params = {
+                         'name': '9 Cet',
+                         'ra' : 0.5,
+                         'dec' : -12.2,
+                         'vmag' : 7.0,
+                         'spectral_type' : 'G2.5V',
+                         'source_type' : StaticSource.SOLAR_STANDARD
+                        }
+        self.solar_analog = StaticSource.objects.create(**statsrc_params)
+
+        proposal_params = { 'code'   : 'LCOEngineering',
+                                'title'  : 'LCOEngineering',
+                                'active' : True
+                              }
+        self.eng_proposal, created = Proposal.objects.get_or_create(**proposal_params)
+
+        sblock_params = {
+                        'body' : self.test_body,
+                        'block_start' : datetime(2019, 7, 27, 8, 30),
+                        'block_end'   : datetime(2019, 7, 27,19, 30),
+                        'proposal' : self.eng_proposal,
+                        'tracking_number' : '818566'
+                        }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+
+        block_params = {
+                        'body' : self.test_body,
+                        'superblock' : self.test_sblock,
+                        'site' : 'coj',
+                        'block_start' : datetime(2019, 7, 27, 8, 30),
+                        'block_end'   : datetime(2019, 7, 27,19, 30),
+                        'obstype' : Block.OPT_SPECTRA,
+                        'request_number' : '1878696',
+                        'num_observed' : 1,
+                        'when_observed' : datetime(2019, 7, 27, 17, 15),
+                        'num_exposures' : 1,
+                        'exp_length' : 1800
+                        }
+        self.test_objblock = Block.objects.create(**block_params)
+
+        block_params = {
+                        'calibsource' : self.solar_analog,
+                        'superblock' : self.test_sblock,
+                        'site' : 'coj',
+                        'block_start' : datetime(2019, 7, 27, 8, 30),
+                        'block_end'   : datetime(2019, 7, 27,19, 30),
+                        'obstype' : Block.OPT_SPECTRA_CALIB,
+                        'request_number' : '1878697',
+                        'num_exposures' : 1,
+                        'exp_length' : 120
+                        }
+        self.test_calblock = Block.objects.create(**block_params)
+
+        frame_params = {
+                         'block' : self.test_objblock,
+                         'sitecode': 'E10',
+                         'instrument': 'en12',
+                         'filter': 'SLIT_30.0x6.0AS',
+                         'filename': 'coj2m002-en12-20190727-0014-w00.fits',
+                         'frameid' : 12272496,
+                         'frametype' : Frame.SPECTRUM_FRAMETYPE,
+                         'midpoint': datetime(2019, 7, 27, 15, 52, 29, 495000),
+
+                        }
+        self.test_specframe = Frame.objects.create(**frame_params)
+
+    def test_no_obsdate(self):
+        expected_analog_list = []
+
+        analog_list = find_analog(None, 'coj')
+
+        self.assertEqual(expected_analog_list, analog_list)
+
+    def test_obsdate_in_range(self):
+        expected_analog_list = []
+
+        analog_list = find_analog(self.test_objblock.when_observed+timedelta(days=1), 'coj')
+
+        self.assertEqual(expected_analog_list, analog_list)
+
+class TestBuildVisibilitySource(TestCase):
+
+    def setUp(self):
+        body_params = {
+                         'provisional_name': None,
+                         'provisional_packed': 'j5432',
+                         'name': '455432',
+                         'origin': 'A',
+                         'source_type': 'N',
+                         'elements_type': 'MPC_MINOR_PLANET',
+                         'active': True,
+                         'fast_moving': True,
+                         'urgency': None,
+                         'epochofel': datetime(2019, 7, 31, 0, 0),
+                         'orbit_rms': 0.46,
+                         'orbinc': 31.23094,
+                         'longascnode': 301.42266,
+                         'argofperih': 22.30793,
+                         'eccentricity': 0.3660154,
+                         'meandist': 1.7336673,
+                         'meananom': 352.55084,
+                         'perihdist': None,
+                         'epochofperih': None,
+                         'abs_mag': 18.54,
+                         'slope': 0.15,
+                         'score': None,
+                         'discovery_date': datetime(2003, 9, 7, 3, 7, 18),
+                         'num_obs': 130,
+                         'arc_length': 6209.0,
+                         'not_seen': 3.7969329574421296,
+                         'updated': True,
+                         'ingest': datetime(2019, 7, 4, 5, 28, 39),
+                         'update_time': datetime(2019, 7, 30, 19, 7, 35)
+                        }
+        self.test_body = Body.objects.create(**body_params)
+
+    def test_build_visibility_source(self):
+        site_code = ['LSC', 'CPT', 'COJ', 'ELP', 'TFN', 'OGG']
+        site_list = ['W85', 'K91', 'Q63', 'V37', 'Z21', 'F65']
+        color_list = ['darkviolet', 'forestgreen', 'saddlebrown', 'coral', 'darkslategray', 'dodgerblue']
+        d = datetime(2019, 10, 10, 0, 0, 0)
+        step_size = '30 m'
+        alt_limit = 30
+        vis, emp = build_visibility_source(self.test_body, site_list, site_code, color_list, d, alt_limit, step_size)
+
+        expected_vis = {'x': [0, 0, 0, 0, 0, 0],
+                        'y': [0, 0, 0, 0, 0, 0],
+                        'sun_rise': [10.210176124166827, 8.595746566072073, 6.370451769779303, 4.625122517784973, 9.381144729469522, 5.541420375081996],
+                        'sun_set': [7.810348402674624, 6.239552075879727, 3.9706240482870996, 1.9634954084936207, 6.719517620178169, 2.879793265790644],
+                        'obj_rise': [0.0, 0.0, 0.0, 0.7853981633974487, 5.366887449882563, 1.5707963267948966],
+                        'obj_set': [0, 0, 0, 2.879793265790644, 7.592182246175334, 3.796091123087667],
+                        'moon_rise': [1.0471975511965979, -0.5235987755982989, 3.534291735288517, 1.7016960206944711, 0.13089969389957457, 2.4870941840919194],
+                        'moon_set': [3.4033920413889427, 1.7016960206944713, 5.759586531581287, 3.9269908169872414, 2.356194490192345, 4.974188368183839],
+                        'moon_phase': [0.8706345970199544, 0.8651789635607248, 0.8701262242502456, 0.8701177903593142, 0.8645091870127206, 0.8712568525897345],
+                        'colors': ['darkviolet', 'forestgreen', 'saddlebrown', 'coral', 'darkslategray', 'dodgerblue'],
+                        'site': ['LSC', 'CPT', 'COJ', 'ELP', 'TFN', 'OGG'],
+                        'obj_vis': [0, 0, 0, 3.5, 3.0, 3.5],
+                        'max_alt': [0, 0, 0, 60, 57, 50],
+                        'line_alpha': [0, 0, 0, 1, 1, 1]}
+
+        for key in vis.keys():
+            assertDeepAlmostEqual(self, expected_vis[key], vis[key])
+
+
+class TestParsePortalErrors(TestCase):
+
+    def setUp(self):
+        self.no_parse_msg= "It was not possible to submit your request to the scheduler."
+        self.no_extrainfo_msg = self.no_parse_msg + "\nAdditional information:"
+
+        self.maxDiff = None
+
+    def test_no_response(self):
+        params = {}
+        msg = parse_portal_errors(params)
+
+        self.assertEqual(self.no_parse_msg, msg)
+
+    def test_empty_response(self):
+        params = {'error_msg': {}}
+        msg = parse_portal_errors(params)
+
+        self.assertEqual(self.no_parse_msg, msg)
+
+    def test_bad_proposal(self):
+        expected_msg = self.no_extrainfo_msg + '\nproposal: Invalid pk "foo" - object does not exist.'
+        params = {'error_msg': {'proposal': ['Invalid pk "foo" - object does not exist.']}}
+
+        msg = parse_portal_errors(params)
+
+        self.assertEqual(expected_msg, msg)
+
+    def test_no_visibility(self):
+        expected_msg = self.no_extrainfo_msg + "According to the constraints of the request, the target is never visible within the time window. Check that the target is in the nighttime sky. Consider modifying the time window or loosening the airmass or lunar separation constraints. If the target is non sidereal, double check that the provided elements are correct."
+        params = {'error_msg': {'requests': [{'non_field_errors': ['According to the constraints of the request, the target is never visible within the time window. Check that the target is in the nighttime sky. Consider modifying the time window or loosening the airmass or lunar separation constraints. If the target is non sidereal, double check that the provided elements are correct.']}]}}
+
+        msg = parse_portal_errors(params)
+
+        self.assertEqual(expected_msg, msg)
+
+    def test_no_visibility_bad_proposal(self):
+        expected_msg = self.no_extrainfo_msg + "According to the constraints of the request, the target is never visible within the time window. Check that the target is in the nighttime sky. Consider modifying the time window or loosening the airmass or lunar separation constraints. If the target is non sidereal, double check that the provided elements are correct."
+        expected_msg += '\nproposal: Invalid pk "foo" - object does not exist.'
+
+        params = {'error_msg': {'requests': [{'non_field_errors': ['According to the constraints of the request, the target is never visible within the time window. Check that the target is in the nighttime sky. Consider modifying the time window or loosening the airmass or lunar separation constraints. If the target is non sidereal, double check that the provided elements are correct.']}],
+                                 'proposal': ['Invalid pk "foo" - object does not exist.']}
+                  }
+
+        msg = parse_portal_errors(params)
+
+        self.assertEqual(expected_msg, msg)
+
+    def test_multiple_blocks_same_name_error(self):
+        expected_msg = self.no_extrainfo_msg
+        expected_msg += '\nneox: Multiple Blocks for same day and site found'
+
+        params = {'error_msg': {'neox': ['Multiple Blocks for same day and site found']}}
+
+        msg = parse_portal_errors(params)
+
+        self.assertEqual(expected_msg, msg)
+
+    def test_no_proposal_permission(self):
+        expected_msg = self.no_extrainfo_msg
+        expected_msg += '\nneox: You do not have permission to schedule using proposal LCO20XXB-003'
+
+        params = {'error_msg': {'neox': ['You do not have permission to schedule using proposal LCO20XXB-003']}}
+
+        msg = parse_portal_errors(params)
+
+        self.assertEqual(expected_msg, msg)

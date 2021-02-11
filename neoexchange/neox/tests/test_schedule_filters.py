@@ -19,12 +19,12 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
 from selenium.common.exceptions import NoSuchElementException
 from mock import patch
-from neox.tests.mocks import MockDateTime, mock_lco_authenticate, mock_fetch_filter_list
+from neox.tests.mocks import MockDateTime, mock_lco_authenticate, mock_fetch_filter_list, mock_build_visibility_source
 from unittest import skipIf
 
 from datetime import datetime
 from django.test.client import Client
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.contrib.auth.models import User
 from core.models import Body, Proposal
 
@@ -63,6 +63,7 @@ class ScheduleObservations(FunctionalTest):
 # TAL: Need to patch the datetime in views also otherwise we will get the wrong
 # semester and window bounds.
 
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.forms.datetime', MockDateTime)
     @patch('core.views.datetime', MockDateTime)
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
@@ -104,9 +105,9 @@ class ScheduleObservations(FunctionalTest):
         proposal_choices.select_by_visible_text(self.neo_proposal.title)
 
         site_choices = Select(self.browser.find_element_by_id('id_site_code'))
-        self.assertIn('ELP 1.0m - V37; (McDonald, Texas)', [option.text for option in site_choices.options])
+        self.assertIn('ELP 1.0m - V37,V39; (McDonald, Texas)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('ELP 1.0m - V37; (McDonald, Texas)')
+        site_choices.select_by_visible_text('ELP 1.0m - V37,V39; (McDonald, Texas)')
 
         MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
@@ -118,15 +119,15 @@ class ScheduleObservations(FunctionalTest):
         # The page refreshes and a series of values for magnitude, speed, slot
         # length, number and length of exposures appear
         magnitude = self.browser.find_element_by_id('id_magnitude_row').find_element_by_class_name('kv-value').text
-        self.assertIn('20.39', magnitude)
+        self.assertIn('20.40', magnitude)
         speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
-        self.assertIn('2.52 "/min', speed)
+        self.assertIn('2.37 "/min', speed)
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
-        self.assertIn('14', num_exp)
+        self.assertIn('15', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
-        self.assertIn('60.0', exp_length)
+        self.assertIn('50.0', exp_length)
 
         # At this point, a 'Schedule this object' button appears
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
@@ -137,7 +138,7 @@ class ScheduleObservations(FunctionalTest):
         self.assertIn('w', filter_pattern)
         
         # There is a help option listing the proper input format and available filters
-        expected_filters = 'air, ND, U, B, V, R, I, B*ND, V*ND, R*ND, I*ND, up, gp, rp, ip, zs, Y, w'
+        expected_filters = 'air, ND, U, B, V, R, I, up, gp, rp, ip, zs, Y, w'
         filter_help = self.browser.find_element_by_id('id_filter_pattern_row').find_element_by_class_name('kv-key').get_attribute("name")
         self.assertEqual(expected_filters, filter_help)
 
@@ -146,7 +147,7 @@ class ScheduleObservations(FunctionalTest):
             pattern_iterations = self.browser.find_element_by_id('id_pattern_iterations_row').find_element_by_class_name('kv-value').text
 
         # Updating filter pattern updates the number of iterations
-        iterations_expected = u'3.67'
+        iterations_expected = u'4.33'
         filter_pattern_box = self.browser.find_element_by_id('id_filter_pattern')
         filter_pattern_box.clear()
         filter_pattern_box.send_keys('V,I,R')
@@ -156,10 +157,10 @@ class ScheduleObservations(FunctionalTest):
         self.assertEqual(iterations_expected, pattern_iterations)
 
         # updating the slot length increases the number of iterations
-        iterations_expected = u'18.67'
+        iterations_expected = u'21.67'
         slot_length_box = self.browser.find_element_by_id('id_slot_length')
         slot_length_box.clear()
-        slot_length_box.send_keys('102')
+        slot_length_box.send_keys('106')
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_id("id_edit_button").click()
         pattern_iterations = self.browser.find_element_by_id('id_pattern_iterations_row').find_element_by_class_name('kv-value').text

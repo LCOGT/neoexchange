@@ -180,7 +180,9 @@ def plot_neos(date, site_code, asteroids, alt_limit=30.0, plot_filename=None):
     ax.grid(True)
     fig.tight_layout()
     if plot_filename:
-        fig.savefig(plot_filename)
+        fig_file  = default_storage.open(plot_filename,"wb+")
+        fig.savefig(fig_file, format='png')
+        fig_file.close()
     else:
         fig.show()
 
@@ -213,10 +215,12 @@ def plot_summary(config, alt_limit, snr_cut, dates, num_asts, num_filtered, num_
     labs = [l.get_label() for l in line]
     ax.legend(line, labs, loc='best', fontsize='small')
     ax.axhline(0, color='gray', linestyle='--')
-    
+
 #    fig.tight_layout()
     plot_filename = "%s_%s-%s_%.1f_snr_%.1f.pdf" % (config, dates[0].strftime("%Y%m%d"), dates[-1].strftime("%Y%m%d"), alt_limit, snr_cut)
-    fig.savefig(plot_filename)
+    fig_file  = default_storage.open(plot_filename,"wb+")
+    fig.savefig(fig_file, format='png')
+    fig_file.close()
 
     plt.close('all')
 
@@ -300,7 +304,7 @@ def construct_obs_tech_dict():
 
 def compute_source_pixels(zen_seeing, wavelength, airmass, pixel_scale, dbg=False):
     '''Compute the number of pixels covered by the source.
-    The seeing at the zenith (<zen_seeing>) and 0.5um (5000 angstrom; ~V band) is 
+    The seeing at the zenith (<zen_seeing>) and 0.5um (5000 angstrom; ~V band) is
     scaled to the observed <wavelength> (in angstroms) and the airmass.
     The number of pixels is calculated from this diameter of the seeing disc, scaled
     by the <pixel_scale> (in arcsec/pixel)'''

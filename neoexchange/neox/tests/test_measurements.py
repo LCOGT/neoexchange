@@ -16,8 +16,12 @@ GNU General Public License for more details.
 from .base import FunctionalTest
 import os
 from selenium import webdriver
-from django.core.urlresolvers import reverse
+from selenium.common.exceptions import NoSuchElementException
+from django.urls import reverse
 from core.models import Body, Frame, SourceMeasurement
+from mock import patch
+from neox.tests.mocks import mock_build_visibility_source
+
 
 class MeasurementsPageTests(FunctionalTest):
 
@@ -60,7 +64,7 @@ class MeasurementsPageTests(FunctionalTest):
         if rms:
             frame_params['astrometric_catalog'] = 'UCAC-4'
             frame_params['photometric_catalog'] = 'UCAC-4'
-        frame,status = Frame.objects.get_or_create(pk=1, **frame_params)
+        frame, status = Frame.objects.get_or_create(pk=1, **frame_params)
         self.test_frame = frame
 
         measure_params = { 'body' : self.body,
@@ -73,7 +77,7 @@ class MeasurementsPageTests(FunctionalTest):
         if rms:
             measure_params['err_obs_ra'] = 300e-3/3600.0
             measure_params['err_obs_dec'] = 275e-3/3600.0  
-        sourcemeas,status = SourceMeasurement.objects.get_or_create(pk=1, **measure_params)
+        sourcemeas, status = SourceMeasurement.objects.get_or_create(pk=1, **measure_params)
         self.test_measure1 = sourcemeas
 
     def insert_satellite_test_measurements(self):
@@ -165,10 +169,11 @@ class MeasurementsPageTests(FunctionalTest):
                            'err_obs_mag' : 0.01
                          }
         if rms:
-            measure_params['err_obs_ra'] =  90e-3/3600.0
-            measure_params['err_obs_dec'] =  90e-3/3600.0
+            measure_params['err_obs_ra'] = 90e-3/3600.0
+            measure_params['err_obs_dec'] = 90e-3/3600.0
         self.test_measure3 = SourceMeasurement.objects.create(pk=3, **measure_params)
 
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     def test_measurements_page(self):
 
         # Setup
@@ -202,7 +207,7 @@ class MeasurementsPageTests(FunctionalTest):
         self.check_for_row_not_in_table('id_targets', testlines[1])
 
         link = self.browser.find_element_by_partial_link_text('N999r0q')
-        target_url = "{0}{1}".format(self.live_server_url, reverse('target',kwargs={'pk':1}))
+        target_url = "{0}{1}".format(self.live_server_url, reverse('target', kwargs={'pk': 1}))
         actual_url = link.get_attribute('href')
         self.assertEqual(actual_url, target_url)
         with self.wait_for_page_load(timeout=10):
@@ -211,12 +216,12 @@ class MeasurementsPageTests(FunctionalTest):
         # He is taken to a page with the object's details on it.
         self.assertEqual(self.browser.current_url, target_url)
         header_text = self.browser.find_element_by_class_name('headingleft').text
-        self.assertIn('Object: ' + self.body.current_name(), header_text)
+        self.assertIn(self.body.full_name(), header_text)
 
         # He sees a link that says it will show the measurements
         # available for this object.
         link = self.browser.find_element_by_id('show-measurements')
-        target_url = "{0}{1}".format(self.live_server_url, reverse('measurement',kwargs={'pk':1}))
+        target_url = "{0}{1}".format(self.live_server_url, reverse('measurement', kwargs={'pk': 1}))
         actual_url = link.get_attribute('href')
         self.assertEqual(actual_url, target_url)
 
@@ -243,6 +248,7 @@ class MeasurementsPageTests(FunctionalTest):
         # Satisfied that the planet is safe from this asteroid, he
         # leaves.
 
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     def test_measurements_mpc_format(self):
 
         # Setup
@@ -251,7 +257,7 @@ class MeasurementsPageTests(FunctionalTest):
 
         # A user, Timo, is interested in seeing what existing measurements
         # exist for a NEOCP candidate that he has heard about
-        target_url = self.live_server_url + reverse('target',kwargs={'pk':1})
+        target_url = self.live_server_url + reverse('target', kwargs={'pk': 1})
         self.browser.get(target_url)
 
         # He sees a link that says it will export the measurements
@@ -293,6 +299,7 @@ class MeasurementsPageTests(FunctionalTest):
         # Satisfied that the planet is safe from this asteroid, he
         # leaves.
 
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     def test_satellite_measurements_mpc_format(self):
 
         # Setup
@@ -300,7 +307,7 @@ class MeasurementsPageTests(FunctionalTest):
 
         # A user, James, is interested in seeing what existing measurements
         # exist for a NEOCP candidate that he has heard about
-        target_url = self.live_server_url + reverse('target',kwargs={'pk':1})
+        target_url = self.live_server_url + reverse('target', kwargs={'pk': 1})
         self.browser.get(target_url)
 
         # He sees a link that says it will show the source measurements
@@ -344,6 +351,7 @@ class MeasurementsPageTests(FunctionalTest):
         # Satisfied that the planet is safe from this asteroid, he
         # leaves.
 
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     def test_precovery_measurements(self):
 
         self.insert_test_measurements()
@@ -351,7 +359,7 @@ class MeasurementsPageTests(FunctionalTest):
 
         # A user, Marco, is interested in seeing what existing measurements
         # exist for a NEOCP candidate that he has heard about
-        target_url = self.live_server_url + reverse('target',kwargs={'pk':1})
+        target_url = self.live_server_url + reverse('target', kwargs={'pk': 1})
         self.browser.get(target_url)
 
         # He sees a link that says it will show the source measurements
@@ -383,11 +391,12 @@ class MeasurementsPageTests(FunctionalTest):
         rownum = 0
         while rownum < len(testlines):
             self.assertIn(testlines[rownum], rows[rownum].text.replace('\n', ' '))
-            rownum+=1
+            rownum += 1
 
         # Satisfied that his newly reported precovery for this asteroid has
         # been recorded, he leaves.
 
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     def test_display_ADES_measurements(self):
 
         self.insert_test_measurements()
@@ -395,7 +404,7 @@ class MeasurementsPageTests(FunctionalTest):
 
         # A user, Marco, is interested in seeing what existing measurements
         # exist for a NEOCP candidate that he has heard about
-        target_url = self.live_server_url + reverse('target',kwargs={'pk':1})
+        target_url = self.live_server_url + reverse('target', kwargs={'pk': 1})
         self.browser.get(target_url)
 
         # He sees a link that says it will show the source measurements
@@ -435,6 +444,7 @@ class MeasurementsPageTests(FunctionalTest):
         for test_text in testlines:
             self.assertIn(test_text, [row.replace('\n', ' ') for row in rows])
 
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     def test_display_ADES_measurements_withRMS(self):
 
         self.insert_test_measurements(rms=True)
@@ -442,7 +452,7 @@ class MeasurementsPageTests(FunctionalTest):
 
         # A user, Marco, is interested in seeing what existing measurements
         # exist for a NEOCP candidate that he has heard about
-        target_url = self.live_server_url + reverse('target',kwargs={'pk':1})
+        target_url = self.live_server_url + reverse('target', kwargs={'pk': 1})
         self.browser.get(target_url)
 
         # He sees a link that says it will show the source measurements
@@ -483,6 +493,7 @@ class MeasurementsPageTests(FunctionalTest):
         for test_text in testlines:
             self.assertIn(test_text, [row.replace('\n', ' ') for row in rows])
 
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     def test_download_mpc_measurements(self):
 
         self.insert_test_measurements()
@@ -490,7 +501,7 @@ class MeasurementsPageTests(FunctionalTest):
 
         # A user, Marco, is interested in seeing what existing measurements
         # exist for a NEOCP candidate that he has heard about
-        target_url = self.live_server_url + reverse('target',kwargs={'pk':1})
+        target_url = self.live_server_url + reverse('target', kwargs={'pk': 1})
         self.browser.get(target_url)
 
         # He sees a link that says it will show the source measurements
@@ -519,6 +530,7 @@ class MeasurementsPageTests(FunctionalTest):
         dl_filepath = os.path.join(self.test_dir, self.body.current_name() + "_mpc.dat")
         self.assertTrue(os.path.exists(dl_filepath))
 
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     def test_download_ades_measurements(self):
 
         self.insert_test_measurements(rms=True)
@@ -526,7 +538,7 @@ class MeasurementsPageTests(FunctionalTest):
 
         # A user, Marco, is interested in seeing what existing measurements
         # exist for a NEOCP candidate that he has heard about
-        target_url = self.live_server_url + reverse('target',kwargs={'pk':1})
+        target_url = self.live_server_url + reverse('target', kwargs={'pk': 1})
         self.browser.get(target_url)
 
         # He sees a link that says it will show the source measurements
@@ -554,3 +566,19 @@ class MeasurementsPageTests(FunctionalTest):
         ades_dl_link.click()
         dl_filepath = os.path.join(self.test_dir, self.body.current_name() + ".psv")
         self.assertTrue(os.path.exists(dl_filepath))
+
+    def test_no_body_bad_measurements(self):
+
+        self.insert_test_measurements(rms=True)
+        self.insert_extra_measurements(rms=True)
+
+        # A user, Marco the trouble maker, is typing in random object IDs for the measurement page
+        target_url = self.live_server_url + reverse('measurement', kwargs={'pk': 10})
+        self.browser.get(target_url)
+
+        try:
+            error_text = self.browser.find_element_by_id('site-name').text
+        except NoSuchElementException:
+            error_text = self.browser.find_element_by_tag_name('h1').text
+        self.assertIn('Page not found', error_text)
+        self.assertNotIn('Server error', error_text)

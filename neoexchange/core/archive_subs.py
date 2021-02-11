@@ -12,6 +12,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 
+
 from datetime import datetime, timedelta
 import os
 import sys
@@ -23,8 +24,10 @@ from urllib.parse import urljoin
 
 import requests
 from django.conf import settings
+from django.core.management.base import CommandError
 
 from core.urlsubs import get_lcogt_headers
+
 
 logger = logging.getLogger(__name__)
 
@@ -36,23 +39,28 @@ if sys.version_info < (2, 7, 9):
     ssl_verify = False  # Danger, danger !
 
 
-def archive_login(username, password):
+def archive_login(username=None, password=None):
     """
-    Wrapper function to get API token for Archive
+    Wrapper function to get API token for Archive. [username] and [password]
+    are optional; If the PORTAL or ARCHIVE token (depending on the URL lookup)
+    is not found inside get_lcogt_headers(), then this will allow the retrieval
+    of the token via a passed username and password.
     """
     archive_url = settings.ARCHIVE_TOKEN_URL
     return get_lcogt_headers(archive_url, username, password)
 
 
-def lco_api_call(url):
-    if 'archive' in url:
-        token = settings.ARCHIVE_TOKEN
-    else:
-        token = settings.PORTAL_TOKEN
-    headers = {'Authorization': 'Token ' + token}
+def lco_api_call(url, headers=None, method='get'):
+    if headers is None:
+        if 'archive' in url:
+            token = settings.ARCHIVE_TOKEN
+        else:
+            token = settings.PORTAL_TOKEN
+        headers = {'Authorization': 'Token ' + token}
     data = None
+    methods = {'get': requests.get, 'post': requests.post}
     try:
-        resp = requests.get(url, headers=headers, timeout=20, verify=ssl_verify)
+        resp = methods[method](url, headers=headers, timeout=60, verify=ssl_verify)
         data = resp.json()
     except requests.exceptions.InvalidSchema as err:
         data = None
@@ -164,7 +172,7 @@ def fetch_observations(tracking_num):
     """
     data_url = urljoin(settings.PORTAL_REQUEST_API, tracking_num)
     data = lco_api_call(data_url)
-    if data.get('requests', '') == 'Not found.':
+    if data is None or data.get('requests', '') == 'Not found.' or data.get('requests', '') == '':
         return []
     for r in data['requests']:
         images = check_for_archive_images(request_id=r['id'])
@@ -173,8 +181,8 @@ def fetch_observations(tracking_num):
 
 def fetch_archive_frames(auth_header, archive_url, frames):
 
-    data = lco_api_call(archive_url)
-    if data.get('count', 0) > 0:
+    data = lco_api_call(archive_url, auth_header)
+    if data is not None and data.get('count', 0) > 0:
         frames += data['results']
         if data['next']:
             fetch_archive_frames(auth_header, data['next'], frames)
@@ -243,6 +251,7 @@ def check_for_existing_file(filename, archive_md5=None, dbg=False, verbose=False
                     if verbose:
                         print("Tarball exists with correct MD5 sum")
                     return True
+
     return False
 
 
