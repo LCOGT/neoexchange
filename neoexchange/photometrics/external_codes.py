@@ -789,14 +789,14 @@ def run_damit_periodscan(lcs_input_filename, psinput_filename, psoutput_filename
     return retcode_or_cmdline
 
 
-def run_damit_convinv(lcs_input_filename, param_input_filename, param_output_filename, lc_output_filename, area_output_filename, binary=None, dbg=False):
-    binary = binary or find_binary("convexinv")
+def run_damit(call_name, cat_input_filename, primary_call, write_out=False, binary=None, dbg=False):
+    binary = binary or find_binary(call_name)
     if binary is None:
-        logger.error("Could not locate 'convexinv' executable in PATH")
+        logger.error(f"Could not locate {call_name} executable in PATH")
         return -42
-    dest_dir = os.path.dirname(param_output_filename)
-    cmdline = f"{binary} -v -o {area_output_filename} -p {param_output_filename} {param_input_filename} {lc_output_filename}"
-    catline = f"cat {lcs_input_filename}"
+    dest_dir = os.path.dirname(cat_input_filename)
+    cmdline = f"{binary} {primary_call}"
+    catline = f"cat {cat_input_filename}"
     cmdline = cmdline.rstrip()
     catline = catline.rstrip()
     if dbg:
@@ -809,7 +809,11 @@ def run_damit_convinv(lcs_input_filename, param_input_filename, param_output_fil
         cmd_args = cmdline.split()
         cat_args = catline.split()
         cat_call = Popen(cat_args, cwd=dest_dir, stdout=PIPE)
-        cmd_call = Popen(cmd_args, cwd=dest_dir, stdin=cat_call.stdout, stdout=PIPE)
+        if write_out:
+
+            cmd_call = Popen(cmd_args, cwd=dest_dir, stdin=cat_call.stdout, stdout=write_out)
+        else:
+            cmd_call = Popen(cmd_args, cwd=dest_dir, stdin=cat_call.stdout, stdout=PIPE)
         retcode_or_cmdline = cmd_call.communicate()
 
     return retcode_or_cmdline

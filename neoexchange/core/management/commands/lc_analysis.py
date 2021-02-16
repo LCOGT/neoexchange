@@ -33,10 +33,10 @@ from astropy.time import Time
 from core.views import import_alcdef
 from core.models import Body, model_to_dict
 from core.utils import search
-from astrometrics.time_subs import jd_utc2datetime
+from astrometrics.time_subs import jd_utc2datetime, datetime2mjd_utc
 from astrometrics.ephem_subs import compute_ephem
 from photometrics.catalog_subs import sanitize_object_name
-from photometrics.external_codes import run_damit_periodscan, run_damit_convinv
+from photometrics.external_codes import run_damit_periodscan, run_damit
 
 
 class Command(BaseCommand):
@@ -51,6 +51,8 @@ class Command(BaseCommand):
         parser.add_argument('-p', '--period', type=float, default=None, help='base period to search around (h)')
         parser.add_argument('--filters', type=str, default=None, help='comma separated list of filters to use (SG,SR,W)')
         parser.add_argument('--period_scan', action="store_true", default=False, help='run Period Scan')
+        parser.add_argument('--lc_model', action="store", default=None, help='Start and end dates for the lc_model (YYYYMMDD-YYYMMDD)')
+
 
     # def read_data(self):
     #     """ reads lightcurve_data.txt output by lightcurve_extraction"""
@@ -177,6 +179,23 @@ class Command(BaseCommand):
                                      f" {astrocent_e[2]:.6E}   {astrocent_h[0]:.6E} {astrocent_h[1]:.6E}"
                                      f" {astrocent_h[2]:.6E}\n")
 
+    def create_epoch_input(self, epoch_file, period, start_date, end_date, body_elements):
+        step_size = period * 60 * 60 / 10
+        epoch_length = end_date - start_date
+        total_steps = epoch_length.total_seconds() / step_size
+        epoch_list = [start_date + timedelta(seconds=step_size*x) for x in range(round(total_steps))]
+        rel_intensity = 1.0
+        epoch_file.write(f"1\n")
+        epoch_file.write(f"{len(epoch_list)} 0\n")
+        for d in epoch_list:
+            jd = datetime2mjd_utc(d)+2400000.5
+            ephem = compute_ephem(d, body_elements, '500')
+            astrocent_e, astrocent_h = self.astro_centric_coord(ephem["geocnt_a_pos"], ephem["heliocnt_e_pos"])
+            jd = jd - ephem['ltt']/60/60/24
+            epoch_file.write(f"{jd:.6f}   {rel_intensity:1.6E}   {astrocent_e[0]:.6E} {astrocent_e[1]:.6E}"
+                             f" {astrocent_e[2]:.6E}   {astrocent_h[0]:.6E} {astrocent_h[1]:.6E}"
+                             f" {astrocent_h[2]:.6E}\n")
+
     def import_or_create_psinput(self, path, obj_name, pmin, pmax):
         """
         If input_period_scan file exists, update period range, else create file from scratch
@@ -211,16 +230,21 @@ class Command(BaseCommand):
     def import_or_create_cinv_input(self, path, obj_name, period):
         """
         If input_period_scan file exists, update period range, else create file from scratch
+        Create conjgradinv file if one doesn't exist
         :param path: path to working directory
         :param obj_name: sanitized object name
         :param period: best period
-        :return: filename for input_period_scan
+        :return: filenames for inversion programs
         """
         base_name = obj_name + '_convex_inv.in'
         cinv_input_filename = os.path.join(path, base_name)
-        cinv_input_file = default_storage.open(cinv_input_filename, 'w+')
+        try:
+            cinv_input_file = default_storage.open(cinv_input_filename, 'r+')
+        except FileNotFoundError:
+            cinv_input_file = default_storage.open(cinv_input_filename, 'w+')
         lines = cinv_input_file.readlines()
-        if lines:
+        print(lines)
+        if lines and len(lines) == 13:
             lines[2] = f"{period}		1	inital period [hours] (0/1 - fixed/free)\n"
             for line in lines:
                 cinv_input_file.write(line)
@@ -230,7 +254,7 @@ class Command(BaseCommand):
             cinv_input_file.write(f"{period}		1	inital period [hours] (0/1 - fixed/free)\n")
             cinv_input_file.write(f"0			zero time [JD]\n")
             cinv_input_file.write(f"0			initial rotation angle [deg]\n")
-            cinv_input_file.write(f"0.1			convexity regularization\n")
+            cinv_input_file.write(f"1.0			convexity regularization\n")
             cinv_input_file.write(f"6 6			degree and order of spherical harmonics expansion\n")
             cinv_input_file.write(f"8			number of rows\n")
             cinv_input_file.write(f"0.5		0	phase funct. param. 'a' (0/1 - fixed/free)\n")
@@ -239,7 +263,18 @@ class Command(BaseCommand):
             cinv_input_file.write(f"0.1		0	Lambert coefficient 'c' (0/1 - fixed/free)\n")
             cinv_input_file.write(f"50			iteration stop condition\n")
         cinv_input_file.close()
-        return cinv_input_filename
+
+        base_conjgrad_name = obj_name + '_conjgrad_inv.in'
+        conj_input_filename = os.path.join(path, base_conjgrad_name)
+        conj_input_file = default_storage.open(conj_input_filename, 'w+')
+        lines = conj_input_file.readlines()
+        if not lines:
+            conj_input_file.write("0.2			convexity weight\n")
+            conj_input_file.write("8			number of rows\n")
+            conj_input_file.write("100			number of iterations\n")
+        conj_input_file.close()
+
+        return cinv_input_filename, conj_input_filename
 
     def handle(self, *args, **options):
         path = options['path']
@@ -268,19 +303,57 @@ class Command(BaseCommand):
         self.create_lcs_input(lcs_input_file, meta_list, lc_list, body_elements, filt_list)
         lcs_input_file.close()
         pmin, pmax, period = self.get_period_range(body, options)
+        if options['lc_model']:
+            if isinstance(options['lc_model'], str):
+                try:
+                    start_stop_dates = options['lc_model'].split('-')
+                    start_date = datetime.strptime(start_stop_dates[0], '%Y%m%d')
+                    end_date = datetime.strptime(start_stop_dates[1], '%Y%m%d')
+                except ValueError:
+                    raise CommandError(usage)
+            else:
+                start_date = options['lc_model'][0]
+                end_date = options['lc_model'][1]
+            epoch_input_filename = os.path.join(path, obj_name + '_epoch.lcs')
+            epoch_input_file = default_storage.open(epoch_input_filename, 'w')
+            self.create_epoch_input(epoch_input_file, period, start_date, end_date, body_elements)
+            epoch_input_file.close()
+        else:
+            epoch_input_filename = lcs_input_filename
         if options['period_scan']:
             # Create period_scan input file
             psinput_filename = self.import_or_create_psinput(path, obj_name, pmin, pmax)
             # Run Period Scan
             psoutput_filename = os.path.join(path, f'{obj_name}_{pmin}T{pmax}_period_scan.out')
-            retcode_or_cmdline = run_damit_periodscan(lcs_input_filename, psinput_filename, psoutput_filename)
+            ps_retcode_or_cmdline = run_damit_periodscan(lcs_input_filename, psinput_filename, psoutput_filename)
         else:
             # Create convinv input file
-            convinv_input_filename = self.import_or_create_cinv_input(path, obj_name, period)
-            convinv_outpar_filename = os.path.join(path, f'{obj_name}_{period}_convinv_par.out')
-            convinv_outlcs_filename = os.path.join(path, f'{obj_name}_{period}_convinv_lcs.out')
-            convinv_outareas_filename = os.path.join(path, f'{obj_name}_{period}_convinv_areas.out')
-            retcode_or_cmdline = run_damit_convinv(lcs_input_filename, convinv_input_filename, convinv_outpar_filename,
-                                                   convinv_outlcs_filename, convinv_outareas_filename)
+            convinv_input_filename, conjinv_input_filename = self.import_or_create_cinv_input(path, obj_name, period)
+            basename = os.path.join(path, f'{obj_name}_{period}')
+            convinv_outpar_filename = basename + '_convinv_par.out'
+            convinv_outlcs_filename = basename + '_convinv_lcs.out'
+            conjinv_outareas_filename = basename + '_conjinv_areas.out'
+            conjinv_outlcs_filename = basename + '_conjinv_lcs.out'
+            mink_faces_filename = basename + '_minface.out'
+            shape_model_filename = basename + '_model.shape'
+            lcgen_outlcs_filename = basename + '_lcgen_lcs.out'
+            # Invert LC and calculate orientation/rotation parameters
+            convexinv_retcode_or_cmdline = run_damit('convexinv', lcs_input_filename,
+                                                     f"-s -p {convinv_outpar_filename} {convinv_input_filename} {convinv_outlcs_filename}")
+            # Refine output faces
+            conjgdinv_retcode_or_cmdline = run_damit('conjgradinv', lcs_input_filename,
+                                                     f"-s -o {conjinv_outareas_filename} {conjinv_input_filename} {convinv_outpar_filename} {conjinv_outlcs_filename}")
+            # Calculate polygon faces for shape
+            mink_face_file = default_storage.open(mink_faces_filename, 'w+')
+            minkowski_retcode_or_cmdline = run_damit('minkowski', conjinv_outareas_filename, f"", write_out=mink_face_file)
+            mink_face_file.close()
+            # Convert faces into triangles
+            shape_model_file = default_storage.open(shape_model_filename, 'w+')
+            stanrdtri_retcode_or_cmdline = run_damit('standardtri', mink_faces_filename, f"", write_out=shape_model_file)
+            shape_model_file.close()
+            # Create Model lc for given epochs.
+            lcgenerat_retcode_or_cmdline = run_damit('lcgenerator', epoch_input_filename,
+                                                     f" {convinv_outpar_filename} {shape_model_filename} {lcgen_outlcs_filename}")
+
 
         return
