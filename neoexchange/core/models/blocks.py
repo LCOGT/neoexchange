@@ -25,6 +25,7 @@ from astrometrics.ephem_subs import compute_ephem, comp_sep
 from core.archive_subs import check_for_archive_images
 
 from core.models.body import Body
+from core.models.frame import Frame
 from core.models.proposal import Proposal
 
 TELESCOPE_CHOICES = (
@@ -248,6 +249,15 @@ class Block(models.Model):
 
     def num_candidates(self):
         return Candidate.objects.filter(block=self.id).count()
+
+    def where_observed(self):
+        where_observed=''
+        if self.num_observed is not None:
+            frames = Frame.objects.filter(block=self.id, frametype=Frame.BANZAI_RED_FRAMETYPE)
+            if frames.count() > 0:
+                where_observed_qs = frames.values_list('sitecode', flat=True).distinct()
+                where_observed = ",".join(where_observed_qs)
+        return where_observed
 
     class Meta:
         verbose_name = _('Observation Block')
