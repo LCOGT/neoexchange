@@ -255,8 +255,9 @@ class Block(models.Model):
         if self.num_observed is not None:
             frames = Frame.objects.filter(block=self.id, frametype=Frame.BANZAI_RED_FRAMETYPE)
             if frames.count() > 0:
-                where_observed_qs = frames.values_list('sitecode', flat=True).distinct()
-                where_observed = ",".join(where_observed_qs)
+                # Code for producing full site strings + site codes e.g. 'W85'
+                where_observed_qs = frames.distinct('sitecode')
+                where_observed = ",".join([site.return_site_string() + " (" + site.sitecode + ")" for site in where_observed_qs])
         return where_observed
 
     class Meta:
