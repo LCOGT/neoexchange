@@ -279,14 +279,16 @@ class Command(BaseCommand):
     def zip_lc_model(self, epoch_in, lc_in, lc_out):
         epoch_in_file = default_storage.open(epoch_in, 'r')
         lc_in_file = default_storage.open(lc_in, 'r')
+        lc_out_file = default_storage.open(lc_out, 'w+')
         epoch_lines = epoch_in_file.readlines()
-        lc_lines = lc_in_file.readlines()
+        lc_lines = iter(lc_in_file.readlines())
         for dline in epoch_lines:
             chunks = dline.split()
             if len(chunks) > 3:
-                print(chunks[0])
+                lc_out_file.write(f"{chunks[0]} {next(lc_lines).rstrip()}\n")
         epoch_in_file.close()
         lc_in_file.close()
+        lc_out_file.close()
 
     def handle(self, *args, **options):
         path = options['path']
@@ -344,28 +346,36 @@ class Command(BaseCommand):
             basename = os.path.join(path, f'{obj_name}_{period}')
             convinv_outpar_filename = basename + '_convinv_par.out'
             convinv_outlcs_filename = basename + '_convinv_lcs.out'
+            convinv_lc_final_filename = basename + '_convinv_lcs.final'
             conjinv_outareas_filename = basename + '_conjinv_areas.out'
             conjinv_outlcs_filename = basename + '_conjinv_lcs.out'
+            conjinv_lc_final_filename = basename + '_conjinv_lcs.final'
             mink_faces_filename = basename + '_minface.out'
             shape_model_filename = basename + '_model.shape'
             lcgen_outlcs_filename = basename + '_lcgen_lcs.out'
-            # # Invert LC and calculate orientation/rotation parameters
-            # convexinv_retcode_or_cmdline = run_damit('convexinv', lcs_input_filename,
-            #                                          f"-s -p {convinv_outpar_filename} {convinv_input_filename} {convinv_outlcs_filename}")
-            # # Refine output faces
-            # conjgdinv_retcode_or_cmdline = run_damit('conjgradinv', lcs_input_filename,
-            #                                          f"-s -o {conjinv_outareas_filename} {conjinv_input_filename} {convinv_outpar_filename} {conjinv_outlcs_filename}")
-            # # Calculate polygon faces for shape
-            # mink_face_file = default_storage.open(mink_faces_filename, 'w+')
-            # minkowski_retcode_or_cmdline = run_damit('minkowski', conjinv_outareas_filename, f"", write_out=mink_face_file)
-            # mink_face_file.close()
-            # # Convert faces into triangles
-            # shape_model_file = default_storage.open(shape_model_filename, 'w+')
-            # stanrdtri_retcode_or_cmdline = run_damit('standardtri', mink_faces_filename, f"", write_out=shape_model_file)
-            # shape_model_file.close()
-            # # Create Model lc for given epochs.
-            # lcgenerat_retcode_or_cmdline = run_damit('lcgenerator', epoch_input_filename,
-            #                                          f" {convinv_outpar_filename} {shape_model_filename} {lcgen_outlcs_filename}")
+            lcgen_lc_final_filename = basename + '_lcgen_lcs.final'
 
-            zip_lc_model(epoch_input_filename, lcgen_outlcs_filename, "zip")
+            # Invert LC and calculate orientation/rotation parameters
+            convexinv_retcode_or_cmdline = run_damit('convexinv', lcs_input_filename,
+                                                     f"-s -p {convinv_outpar_filename} {convinv_input_filename} {convinv_outlcs_filename}")
+            self.zip_lc_model(lcs_input_filename, convinv_outlcs_filename, convinv_lc_final_filename)
+
+            # Refine output faces
+            conjgdinv_retcode_or_cmdline = run_damit('conjgradinv', lcs_input_filename,
+                                                     f"-s -o {conjinv_outareas_filename} {conjinv_input_filename} {convinv_outpar_filename} {conjinv_outlcs_filename}")
+            self.zip_lc_model(lcs_input_filename, conjinv_outlcs_filename, conjinv_lc_final_filename)
+
+            # Calculate polygon faces for shape
+            mink_face_file = default_storage.open(mink_faces_filename, 'w+')
+            minkowski_retcode_or_cmdline = run_damit('minkowski', conjinv_outareas_filename, f"", write_out=mink_face_file)
+            mink_face_file.close()
+            # Convert faces into triangles
+            shape_model_file = default_storage.open(shape_model_filename, 'w+')
+            stanrdtri_retcode_or_cmdline = run_damit('standardtri', mink_faces_filename, f"", write_out=shape_model_file)
+            shape_model_file.close()
+
+            # Create Model lc for given epochs.
+            lcgenerat_retcode_or_cmdline = run_damit('lcgenerator', epoch_input_filename,
+                                                     f" {convinv_outpar_filename} {shape_model_filename} {lcgen_outlcs_filename}")
+            self.zip_lc_model(epoch_input_filename, lcgen_outlcs_filename, lcgen_lc_final_filename)
         return
