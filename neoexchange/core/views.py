@@ -38,6 +38,8 @@ from django.urls import reverse, reverse_lazy
 from django.views.generic import DetailView, ListView, FormView, TemplateView, View
 from django.views.generic.detail import SingleObjectMixin
 from django.views.generic.edit import FormView
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
 from http.client import HTTPSConnection
 import reversion
 import requests
@@ -798,7 +800,7 @@ def generate_new_candidate(cand_frame_data, prefix='LNX'):
 
     return new_body
 
-
+@api_view(('GET',))
 def ephemeris(request):
 
     form = EphemQuery(request.GET)
@@ -812,7 +814,15 @@ def ephemeris(request):
             body_elements, dark_start, dark_end, data['site_code'], 900, data['alt_limit'])
     else:
         return render(request, 'core/home.html', {'form': form})
-    return render(request, 'core/ephem.html',
+    if 'api/' in request.path:
+        return Response(
+                  {'target': data['target'].current_name(),
+                   'ephem_lines': ephem_lines,
+                   'site_code': form['site_code'].value(),
+                   }
+                  )
+    else:
+        return render(request, 'core/ephem.html',
                   {'target': data['target'],
                    'ephem_lines': ephem_lines,
                    'site_code': form['site_code'].value(),
