@@ -56,6 +56,7 @@ router.register(r'srcmeasures', SourceMeasurementViewSet, 'srcmeasures')
 api_urlpatterns = ([
     url(r'^', include(router.urls)),
     url(r'^ephemeris/$', ephemeris, name='ephemeris'),
+    url(r'^api-token-auth/$', obtain_auth_token)
 ], 'api')
 
 urlpatterns = [
