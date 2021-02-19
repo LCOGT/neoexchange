@@ -881,7 +881,7 @@ def phase_lc(lc_data, period, base_date):
 
 
 def translate_from_alcdef_filter(filt):
-    if filt not in ['B, V, R, I, J, H, K']:
+    if filt not in 'B, V, R, I, J, H, K':
         filt = filt.lower()
         if len(filt) > 1 and filt[0] == 's':
             filt = filt[1] + 'p'
