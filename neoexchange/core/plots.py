@@ -735,7 +735,7 @@ def lc_plot(lc_list, meta_list, period=1, jpl_ephem=None):
 
         phased_dict = build_data_sets(phased_lc_list, sess_title)
         for k, phase in enumerate(phased_dict['time']):
-            if 0 < phase < 1 :
+            if 0 < phase < 1:
                 for key in phased_dict.keys():
                     if key == 'time':
                         if 0 < phase < 0.5:

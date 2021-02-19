@@ -574,6 +574,7 @@ class Command(BaseCommand):
                     for output_file in output_file_list:
                         outfut_file_file.write(output_file)
                         outfut_file_file.write('\n')
+                self.stdout.write(f"New lc file list created: {os.path.join(data_path, base_name + 'lc_file_list.txt')}")
                 try:
                     os.chmod(os.path.join(data_path, base_name + 'lc_file_list.txt'), rw_permissions)
                 except PermissionError:
