@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.8.3
+Add support for adding new LOOK project targets.
+
 ### 3.8.2
 Fix for cadences crossing semester boundaries.
 
