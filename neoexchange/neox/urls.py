@@ -42,6 +42,7 @@ from cal.views import goldstone_events, NeoxEvents
 from analyser.views import BlockFramesView, ProcessCandidates
 from core.viewsets import ProposalViewSet, SuperBlockViewSet, BlockViewSet, FrameViewSet, \
     CatalogSourcesViewSet, BodyViewSet, SourceMeasurementViewSet
+from cal.viewsets import CalEventViewSet
 
 admin.autodiscover()
 router = DefaultRouter()
@@ -52,7 +53,7 @@ router.register(r'superblocks', SuperBlockViewSet, 'superblocks')
 router.register(r'catsources', CatalogSourcesViewSet, 'catsources')
 router.register(r'bodies', BodyViewSet, 'bodies')
 router.register(r'srcmeasures', SourceMeasurementViewSet, 'srcmeasures')
-
+router.register(r'calevents', CalEventViewSet, 'cal_events')
 
 api_urlpatterns = ([
     url(r'^', include(router.urls)),
