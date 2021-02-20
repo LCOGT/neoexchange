@@ -155,6 +155,7 @@ INSTALLED_APPS = (
     'django_filters',
     'core.apps.CoreConfig',
     'analyser.apps.AstrometerConfig',
+    'cal.apps.CalConfig',
 )
 
 rollbar_default_env = 'development' if DEBUG else 'production'

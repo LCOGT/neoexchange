@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block header %}
+Calendar
+{% endblock %}
+
+{% block css-content %}
+<link href="{% static 'css/core.css' %}" rel='stylesheet' />
+<link href="{% static 'css/daygrid.css' %}" rel='stylesheet' />
+<link href="{% static 'css/timegrid.css' %}" rel='stylesheet' />
+<link href="{% static 'css/list.css' %}" rel='stylesheet' />
+{% endblock %}
+{% block script-content %}
+<script src="{% static 'js/core.js' %}"></script>
+<script src="{% static 'js/interaction.js' %}"></script>
+<script src="{% static 'js/daygrid.js' %}"></script>
+<script src="{% static 'js/timegrid.js' %}"></script>
+<script src="{% static 'js/list.js' %}"></script>
+<script>
+
+  var dt;
+  document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+      plugins: [ 'interaction', 'dayGrid', 'timeGrid', 'list' ],
+      eventTimeFormat: {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      },
+      header: {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+      },
+      editable: false,
+      navLinks: true, // can click day/week names to navigate views
+      eventLimit: true, // allow "more" link when too many events
+      eventSources: [
+      {
+        url: '/api/goldstone/',
+        failure: function() {
+          document.getElementById('script-warning').style.display = 'block'
+        },
+        color: 'khaki',
+        textColor: 'black',
+      },
+      {
+        url: '/api/neox/',
+        color: 'blue',
+        textColor: 'white',
+      },
+      ],
+      loading: function(bool) {
+        document.getElementById('loading').style.display =
+          bool ? 'block' : 'none';
+      },
+      eventClick: function(info) {
+        var msg = 'Target: ' + info.event.title +"\n";
+        msg += 'Start: ' + info.event.start.toISOString()+"\n";
+        msg += 'End: ' + info.event.end.toISOString()
+        // alert(msg);
+        dt = info.event.end;
+      }
+    });
+
+    calendar.render();
+  });
+
+</script>
+{% endblock %}
+
+
+{% block main-content %}
+  <div id='loading'>loading...</div>
+
+  <div id='calendar'></div>
+{% endblock %}

@@ -196,77 +196,137 @@ class TestGoldstoneChunkParser(TestCase):
 
     def test_specficdate_provis_desig(self):
         expected_objid = '2015 FW117'
+        expected_window_start = datetime(2015, 4, 1)
+        expected_window_end = datetime(2015, 4, 1, 23, 59, 59)
+
         chunks = [u'2015', u'Apr', u'1', u'2015', u'FW117', u'Yes', u'Yes', u'Scheduled']
-        obj_id = parse_goldstone_chunks(chunks)
+        obj_id, window_start, window_end = parse_goldstone_chunks(chunks)
         self.assertEqual(expected_objid, obj_id)
+        self.assertEqual(expected_window_start, window_start)
+        self.assertEqual(expected_window_end, window_end)
 
     def test_specficdate_astnumber(self):
         expected_objid = '285331'
+        expected_window_start = datetime(2015, 5, 16)
+        expected_window_end = datetime(2015, 5, 17, 23, 59, 59)
+
         chunks = [u'2015', u'May', u'16-17', u'285331', u'1999', u'FN53', u'No', u'Yes', u'R']
-        obj_id = parse_goldstone_chunks(chunks)
+        obj_id, window_start, window_end = parse_goldstone_chunks(chunks)
         self.assertEqual(expected_objid, obj_id)
+        self.assertEqual(expected_window_start, window_start)
+        self.assertEqual(expected_window_end, window_end)
 
     def test_unspecificdate_provis_desig(self):
         expected_objid = '2010 NY65'
+        expected_window_start = datetime(2015, 6, 1)
+        expected_window_end = datetime(2015, 6, 30, 23, 59, 59)
+
         chunks = [u'2015', u'Jun', u'2010', u'NY65', u'No', u'Yes', u'R', u'PHA']
-        obj_id = parse_goldstone_chunks(chunks)
+        obj_id, window_start, window_end = parse_goldstone_chunks(chunks)
         self.assertEqual(expected_objid, obj_id)
+        self.assertEqual(expected_window_start, window_start)
+        self.assertEqual(expected_window_end, window_end)
 
     def test_unspecificdate_astnumber(self):
         expected_objid = '385186'
+        expected_window_start = datetime(2015, 7, 1)
+        expected_window_end = datetime(2015, 7, 31, 23, 59, 59)
+
         chunks = [u'2015', u'Jul', u'385186', u'1994', u'AW1', u'No', u'Yes', u'PHA', u'BINARY', u'(not', u'previously', u'observed', u'with', u'radar)']
-        obj_id = parse_goldstone_chunks(chunks)
+        obj_id, window_start, window_end = parse_goldstone_chunks(chunks)
         self.assertEqual(expected_objid, obj_id)
+        self.assertEqual(expected_window_start, window_start)
+        self.assertEqual(expected_window_end, window_end)
 
     def test_specficdate_named_ast(self):
         expected_objid = '1566'  # '(1566) Icarus'
+        expected_window_start = datetime(2015, 6, 13)
+        expected_window_end = datetime(2015, 6, 17, 23, 59, 59)
+
         chunks = [u'2015', u'Jun', u'13-17', u'1566', u'Icarus', u'No', u'Yes', u'R', u'PHA', u'June', u'13/14,', u'14/15,', u'and', u'16/17']
-        obj_id = parse_goldstone_chunks(chunks)
+        obj_id, window_start, window_end = parse_goldstone_chunks(chunks)
         self.assertEqual(expected_objid, obj_id)
+        self.assertEqual(expected_window_start, window_start)
+        self.assertEqual(expected_window_end, window_end)
 
     def test_unspecficdate_named_ast(self):
         expected_objid = '1685'  # '(1685) Toro'
+        expected_window_start = datetime(2016, 1, 1)
+        expected_window_end = datetime(2016, 1, 31, 23, 59, 59)
+
         chunks = ['2016', 'Jan', '1685', 'Toro', 'No', 'No', 'R']
-        obj_id = parse_goldstone_chunks(chunks)
+        obj_id, window_start, window_end = parse_goldstone_chunks(chunks)
         self.assertEqual(expected_objid, obj_id)
+        self.assertEqual(expected_window_start, window_start)
+        self.assertEqual(expected_window_end, window_end)
 
     def test_multimonth_split(self):
         expected_objid = '410777'  # '(410777) 2009 FD'
+        expected_window_start = datetime(2015, 10, 25)
+        expected_window_end = datetime(2015, 11, 1, 23, 59, 59)
+
         chunks = [u'2015', u'Oct', u'25-Nov', u'1', u'410777', u'2009', u'FD', u'No', u'Yes', u'R']
-        obj_id = parse_goldstone_chunks(chunks)
+        obj_id, window_start, window_end = parse_goldstone_chunks(chunks)
         self.assertEqual(expected_objid, obj_id)
+        self.assertEqual(expected_window_start, window_start)
+        self.assertEqual(expected_window_end, window_end)
 
     def test_multimonth_split_provisional(self):
         expected_objid = '2017 CS'  # '2017 CS'
+        expected_window_start = datetime(2017, 5, 22)
+        expected_window_end = datetime(2017, 6, 1, 23, 59, 59)
+
         chunks = [u'2017', u'May', u'22-Jun', u'01', u'2017', u'CS', u'Yes', u'Yes', u'19.4', u'PHA', u'Target-of-opportunity']
-        obj_id = parse_goldstone_chunks(chunks)
+        obj_id, window_start, window_end = parse_goldstone_chunks(chunks)
         self.assertEqual(expected_objid, obj_id)
+        self.assertEqual(expected_window_start, window_start)
+        self.assertEqual(expected_window_end, window_end)
 
     def test_multimonth_split_provisional2(self):
-        expected_objid = '2017 CS101'  # '2017 CS01'
+        expected_objid = '2017 CS101'
+        expected_window_start = datetime(2017, 5, 22)
+        expected_window_end = datetime(2017, 6, 1, 23, 59, 59)
+
         chunks = [u'2017', u'May', u'22-Jun', u'01', u'2017', u'CS101', u'Yes', u'Yes', u'19.4', u'PHA', u'Target-of-opportunity']
-        obj_id = parse_goldstone_chunks(chunks)
+        obj_id, window_start, window_end = parse_goldstone_chunks(chunks)
         self.assertEqual(expected_objid, obj_id)
+        self.assertEqual(expected_window_start, window_start)
+        self.assertEqual(expected_window_end, window_end)
 
     def test_multimonth_split_named(self):
         expected_objid = '6063'  # '606 Jason'
+        expected_window_start = datetime(2017, 5, 22)
+        expected_window_end = datetime(2017, 6, 1, 23, 59, 59)
+
         chunks = [u'2017', u'May', u'22-Jun', u'01', u'6063', u'Jason', u'No', u'Yes', u'15.9', u'R1']
-        obj_id = parse_goldstone_chunks(chunks)
+        obj_id, window_start, window_end = parse_goldstone_chunks(chunks)
         self.assertEqual(expected_objid, obj_id)
+        self.assertEqual(expected_window_start, window_start)
+        self.assertEqual(expected_window_end, window_end)
 
     def test_periodic_comet(self):
         expected_objid = 'P/2016 BA14'
+        expected_window_start = datetime(2016, 3, 17)
+        expected_window_end = datetime(2016, 3, 23, 23, 59, 59)
+
         chunks = [u'2016', u'Mar', u'17-23', u'P/2016', u'BA14', u'Pan-STARRS', u'No', u'Yes', u'Comet', u'DSS-13', u'and', u'Green', u'Bank.', u'Tests', u'at', u'DSS-14.', u'Target-of-opportunity.']
-        obj_id = parse_goldstone_chunks(chunks)
+        obj_id, window_start, window_end = parse_goldstone_chunks(chunks)
         self.assertEqual(expected_objid, obj_id)
+        self.assertEqual(expected_window_start, window_start)
+        self.assertEqual(expected_window_end, window_end)
 
     def test_comma_separated_obsdates(self):
         expected_objid = '2016 BC14'
+        expected_window_start = datetime(2016, 3, 22)
+        expected_window_end = datetime(2016, 3, 23, 23, 59, 59)
+
         line = u'2016 Mar 22, 23          2016 BC14       No         Yes          PHA               NHATS  Tests at DSS-14.  Target-of-opportunity.'
         line = line.replace(', ', '-', 1)
         chunks = line.lstrip().split()
-        obj_id = parse_goldstone_chunks(chunks)
+        obj_id, window_start, window_end = parse_goldstone_chunks(chunks)
         self.assertEqual(expected_objid, obj_id)
+        self.assertEqual(expected_window_start, window_start)
+        self.assertEqual(expected_window_end, window_end)
 
 
 class TestFetchAreciboTargets(TestCase):
@@ -617,6 +677,113 @@ class TestFetchGoldstoneTargets(TestCase):
 
         self.assertEqual(1, len(targets))
         self.assertEqual(expected_target, targets)
+
+    def test_calendar_format(self):
+
+        html = '''<head><title>Goldstone Asteroid Schedule</title></head>
+                <body>
+                <h1><p ALIGN=CENTER>Goldstone Asteroid Schedule</p></h1>
+                <pre>
+                <h2>Upcoming Goldstone Observations</h2>
+                Last update: 2020 August 20
+                                                                  Needs
+                                                        Needs     Physical
+                                         Target      Astrometry?  Observations?   H
+
+                <b>...One-half power (~250 kW) is expected to resume at Goldstone in late August of 2020...</b>
+
+                2020 Sep          465824 2010 FR         No         Yes         21.7      PHA  0.050 au    ...not scheduled due to weak SNRs...
+                '''
+        page = BeautifulSoup(html, 'html.parser')
+
+        expected_target = [{'target' : '465824', 'windows' : [{'start' : '2020-09-01T00:00:00', 'end' : '2020-09-30T23:59:59'}]},
+                          ]
+
+        targets = fetch_goldstone_targets(page, calendar_format=True)
+
+        self.assertEqual(1, len(targets))
+        self.assertEqual(expected_target, targets)
+
+    def test_calendar_format_monthrange(self):
+
+        html = '''<head><title>Goldstone Asteroid Schedule</title></head>
+                <body>
+                <h1><p ALIGN=CENTER>Goldstone Asteroid Schedule</p></h1>
+                <pre>
+                <h2>Upcoming Goldstone Observations</h2>
+                Last update: 2020 August 20
+                                                                  Needs
+                                                        Needs     Physical
+                                         Target      Astrometry?  Observations?   H
+
+                <b>...One-half power (~250 kW) is expected to resume at Goldstone in late August of 2020...</b>
+
+                2020 Nov-Dec      153201 2000 WO107      No         Yes         19.3      PHA  0.029 au
+                '''
+        page = BeautifulSoup(html, 'html.parser')
+
+        expected_target = [{'target' : '153201', 'windows' : [{'start' : '2020-11-01T00:00:00', 'end' : '2020-12-31T23:59:59'}]},
+                          ]
+
+        targets = fetch_goldstone_targets(page, calendar_format=True, dbg=True)
+
+        self.assertEqual(1, len(targets))
+        self.assertEqual(expected_target, targets)
+
+    def test_calendar_format_monthrange_yearwrap(self):
+
+        html = '''<head><title>Goldstone Asteroid Schedule</title></head>
+                <body>
+                <h1><p ALIGN=CENTER>Goldstone Asteroid Schedule</p></h1>
+                <pre>
+                <h2>Upcoming Goldstone Observations</h2>
+                Last update: 2020 August 20
+                                                                  Needs
+                                                        Needs     Physical
+                                         Target      Astrometry?  Observations?   H
+
+                <b>...One-half power (~250 kW) is expected to resume at Goldstone in late August of 2020...</b>
+
+                2020 Dec-Jan      153201 2000 WO107      No         Yes         19.3      PHA  0.029 au
+                '''
+        page = BeautifulSoup(html, 'html.parser')
+
+        expected_target = [{'target' : '153201', 'windows' : [{'start' : '2020-12-01T00:00:00', 'end' : '2021-01-31T23:59:59'}]},
+                          ]
+
+        targets = fetch_goldstone_targets(page, calendar_format=True)
+
+        self.assertEqual(1, len(targets))
+        self.assertEqual(expected_target, targets)
+
+    def test_calendar_format_dayrange(self):
+
+        html = '''<head><title>Goldstone Asteroid Schedule</title></head>
+                <body>
+                <h1><p ALIGN=CENTER>Goldstone Asteroid Schedule</p></h1>
+                <pre>
+                <h2>Upcoming Goldstone Observations</h2>
+                Last update: 2020 August 20
+                                                                  Needs
+                                                        Needs     Physical
+                                         Target      Astrometry?  Observations?   H
+
+                <b>...One-half power (~250 kW) is expected to resume at Goldstone in late August of 2020...</b>
+                2020 Dec 11-21      3200 Phaethon        No         Yes         14.6  R1  PHA        Possible dead comet
+                2020 Dec 14              2020 VT14       YES        Yes         22.7
+                2020 Dec 31-Jan 2       2020 SN14       YES        Yes         22.7
+                '''
+        page = BeautifulSoup(html, 'html.parser')
+
+        expected_targets = [{'target' : '3200', 'windows' : [{'start' : '2020-12-11T00:00:00', 'end' : '2020-12-21T23:59:59'}]},
+                            {'target' : '2020 VT14', 'windows' : [{'start' : '2020-12-14T00:00:00', 'end' : '2020-12-14T23:59:59'}]},
+                            {'target' : '2020 SN14', 'windows' : [{'start' : '2020-12-31T00:00:00', 'end' : '2021-01-02T23:59:59'}]},
+                          ]
+
+        targets = fetch_goldstone_targets(page, calendar_format=True)
+
+        self.assertEqual(3, len(targets))
+        self.assertEqual(expected_targets, targets)
 
 
 class TestFetchYarkovskyTargets(TestCase):

@@ -37,6 +37,7 @@ from core.views import BodySearchView, BodyDetailView, BlockDetailView, Schedule
     look_project, AddTarget
 from core.plots import make_visibility_plot, \
     make_standards_plot, make_solar_standards_plot
+from cal.views import goldstone_events, NeoxEvents
 
 from analyser.views import BlockFramesView, ProcessCandidates
 from core.viewsets import ProposalViewSet, SuperBlockViewSet, BlockViewSet, FrameViewSet, \
@@ -117,6 +118,9 @@ urlpatterns = [
     url(r'^calib-schedule/(?P<pk>\d+)/confirm/$', ScheduleCalibSubmit.as_view(), name='schedule-calib-confirm'),
     url(r'^accounts/login/$', LoginView.as_view(template_name='core/login.html'), name='auth_login'),
     url(r'^accounts/logout/$', LogoutView.as_view(template_name='core/logout.html'), name='auth_logout'),
+    url(r'^calendar/$', TemplateView.as_view(template_name='cal/calendar.html')),
+    url(r'^api/goldstone/$',  goldstone_events),
+    url(r'^api/neox/$',  NeoxEvents.as_view()),
     url(r'^admin/', admin.site.urls),
 ]
 

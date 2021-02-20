@@ -1948,3 +1948,15 @@ def mock_build_visibility_source(body, site_list, site_code, color_list, d, alt_
            ['2019 10 15 03:30', '22 01 33.49', '-25 38 19.5', '21.7', ' 0.83', ' 72.0', '+22', '0.98', ' 72', '-20', '-999', '-03:24']]
 
     return vis, emp
+
+### XXX Rewrite for more likely Goldstone information, removed `extrainfo` on uncertainty for now.
+def mock_fetch_goldstone_calendar_targets(page=None, calendar_format=True):
+    targets = [ { 'target': '2020 RY',
+                  'windows' : [ {'start': '2020-09-03T00:00:00', 'end': '2020-09-03T23:59:59'} ],
+                },
+                { "target": "2020 RK",
+                  'windows' : [ {"start": "2020-09-03T00:00:00", "end": "2020-09-03T23:59:59"} ],
+                },
+              ]
+
+    return targets

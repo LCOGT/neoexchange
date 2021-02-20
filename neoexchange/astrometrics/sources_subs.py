@@ -39,6 +39,7 @@ except ModuleNotFoundError:
     pass
 from django.conf import settings
 from astropy.io import ascii
+from dateutil.relativedelta import relativedelta
 
 import astrometrics.site_config as cfg
 from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime, datetime2mjd_utc, mjd_utc2mjd_tt, mjd_utc2datetime
@@ -1082,7 +1083,7 @@ def psv_padding(s, l, jtype, dpos=0):
 
 def parse_goldstone_chunks(chunks, dbg=False):
     """Tries to parse the Goldstone target line (a split()'ed list of fields)
-    to extract the object id. Could also parse the date of radar observation
+    to extract the object id and range of observations dates. Could also
     and whether astrometry or photometry is needed"""
 
     if dbg:
@@ -1091,6 +1092,8 @@ def parse_goldstone_chunks(chunks, dbg=False):
     # that suceeds, check it's greater than 31. If yes, it's an asteroid number
     # (we assume asteroid #1-31 will never be observed with radar..)
     object_id = ''
+    window_start = None
+    window_end = None
 
     try:
         astnum = int(chunks[2])
@@ -1149,7 +1152,58 @@ def parse_goldstone_chunks(chunks, dbg=False):
                 print("In case 4")
             object_id = str(chunks[3] + ' ' + chunks[4])
 
-    return object_id
+    # Try and parse the window of observability. This is messy...
+    if '-' in chunks[2] and len(chunks[2].split('-')) == 2:
+        # Specific range of days
+        if dbg: print("In dates case 1")
+        dates_parts = chunks[2].split('-')
+        try:
+            window_start = datetime.strptime(str(chunks[0])+str(chunks[1]+str(dates_parts[0])), "%Y%b%d")
+            window_end = datetime.strptime(str(chunks[0])+str(chunks[1]+str(dates_parts[1])), "%Y%b%d")
+            window_end = window_end.replace(hour=23, minute=59, second=59)
+        except ValueError:
+            pass
+    elif chunks[2].isdigit() is True:
+        # Specific date , but first test if the number is <=31 and not an
+        # asteroid number
+        if dbg: print("In dates case 2")
+        if int(chunks[2]) <= 31:
+            if dbg: print("In dates case 2a")
+            try:
+                window_start = datetime.strptime(str(chunks[0])+str(chunks[1])+str(chunks[2]), "%Y%b%d")
+                window_end = window_start + relativedelta(days=1) -timedelta(seconds=1)
+            except ValueError:
+                pass
+
+    if window_start is None or window_end is None:
+        if dbg: print("In dates case 3")
+        try:
+            # Month crossing specific dates
+            dates_parts = chunks[2].split('-')
+            window_start = datetime.strptime(str(chunks[0])+str(chunks[1])+str(dates_parts[0]), "%Y%b%d")
+            window_end = datetime.strptime(str(chunks[0])+str(dates_parts[1])+str(chunks[3]), "%Y%b%d")
+            window_end = window_end.replace(hour=23, minute=59, second=59)
+        except (ValueError, IndexError):
+            if dbg: print("In dates case 4")
+            try:
+                # Try for a hyphen-split month range
+                dates_parts = chunks[1].split('-')
+                window_start = datetime.strptime(str(chunks[0])+str(dates_parts[0]), "%Y%b")
+                window_end = datetime.strptime(str(chunks[0])+str(dates_parts[1]), "%Y%b")
+                window_end = window_end + relativedelta(months=1) - timedelta(seconds=1)
+            except (ValueError, IndexError):
+                if dbg: print("In dates case 5")
+                try:
+                    window_start = datetime.strptime(str(chunks[0])+str(chunks[1]), "%Y%b")
+                    window_end = window_start + relativedelta(months=1) -timedelta(seconds=1)
+                except ValueError:
+                    logger.warning("Failed at all attempts to parse observing windows. Chunks=", chunks)
+    if window_start and window_end:
+        if window_end < window_start:
+            # End of year wrap
+            window_end += relativedelta(years=1)
+
+    return object_id, window_start, window_end
 
 
 def fetch_goldstone_page():
@@ -1163,12 +1217,15 @@ def fetch_goldstone_page():
     return page
 
 
-def fetch_goldstone_targets(page=None, dbg=False):
+def fetch_goldstone_targets(page=None, calendar_format=False, dbg=False):
     """Fetches and parses the Goldstone list of radar targets, returning a list
     of object id's for the current year.
     Takes either a BeautifulSoup page version of the Goldstone target page (from
     a call to fetch_goldstone_page() - to allow  standalone testing) or  calls
     this routine and then parses the resulting page.
+    If [calendar_format]=True, then the return format is changed to a JSON list
+    of targets with a dictionary with 'target' and 'windows' keys/values in the same
+    format as fetch_arecibo_calendar_targets()
     """
 
     if type(page) != BeautifulSoup:
@@ -1210,7 +1267,7 @@ def fetch_goldstone_targets(page=None, dbg=False):
                 if '&' in line[0:40] or ' &' in line[0:40] or '& ' in line[0:40] or ' & ' in line[0:40]:
                     line = line.replace(' & ', '-', 1).replace('& ', '-', 1).replace(' &', '-', 1)
                 chunks = line.lstrip().split()
-                # if dbg: print(line)
+                if dbg: print(line)
                 # Check if the start of the stripped line is no longer the
                 # current year.
                 # <sigh> we also need to check if the year goes backwards due
@@ -1228,18 +1285,70 @@ def fetch_goldstone_targets(page=None, dbg=False):
                     in_objects = False
                     logger.debug("Done with objects")
                 else:
-                    obj_id = parse_goldstone_chunks(chunks, dbg)
+                    obj_id, window_start, window_end = parse_goldstone_chunks(chunks, dbg)
                     if obj_id != '':
-                        radar_objects.append(obj_id)
+                        target = obj_id
+                        if calendar_format is True:
+                            if window_start is not None:
+                                 window_start = window_start.isoformat("T")
+                            else:
+                                window_start = ''
+                            if window_end is not None:
+                                window_end = window_end.isoformat("T")
+                            else:
+                                window_end = ''
+                            target = {'target' : obj_id, 'windows' : [{'start' : window_start, 'end' : window_end}] }
+                        radar_objects.append(target)
                 last_year_seen = year
     return radar_objects
 
 
-def fetch_arecibo_page():
+def parse_arecibo_targetnames(target_object):
+    """Handle parsing of Arecibo target names"""
+
+    # See if it is the form "(12345) 2008 FOO". If so, extract
+    # just the asteroid number
+    if '(' in target_object and ')' in target_object:
+        # See if we have parentheses around the number or around the
+        # temporary designation.
+        # If the first character in the string is a '(' we have the first
+        # case and should split on the closing ')' and take the 0th chunk
+        # If the first char is not a '(', then we have parentheses around
+        # the temporary designation and we should split on the '(', take
+        # the 0th chunk and strip whitespace
+        split_char = ')'
+        if target_object[0] != '(':
+            split_char = '('
+        target_object = target_object.split(split_char)[0].replace('(', '')
+        target_object = target_object.strip()
+    else:
+        # No parentheses, either just a number or a number and name
+        chunks = target_object.split(' ')
+        if len(chunks) >= 2:
+            if chunks[0].isalpha() and chunks[1].isalpha():
+                logger.warning("All text object found: " + target_object)
+                target_object = None
+            else:
+                if chunks[1].replace('-', '').isalpha() and len(chunks[1]) != 2:
+                    target_object = chunks[0]
+                elif 'Comet' in chunks[0] and '/P' in chunks[1].rstrip()[-2:]:
+                    target_object = chunks[1].replace('/', '')
+                else:
+                    target_object = chunks[0] + " " + chunks[1]
+        else:
+            logger.warning("Unable to parse Arecibo target %s" % target_object)
+            target_object = None
+    return target_object
+
+
+def fetch_arecibo_page(pagetype=None):
     """Fetches the Arecibo list of radar targets, returning a list
     of object id's for the current year"""
 
-    arecibo_url = 'http://www.naic.edu/~pradar/'
+    page_mapping = { 'calendar' : 'http://www.naic.edu/~smarshal/radar_targets.html',
+                     'default'  : 'http://www.naic.edu/~pradar/'
+                   }
+    arecibo_url = page_mapping.get(pagetype, page_mapping['default'])
 
     page = fetchpage_and_make_soup(arecibo_url)
 
@@ -1268,40 +1377,8 @@ def fetch_arecibo_targets(page=None):
             if len(rows) > 1 and 'OBJECT' in header or 'ASTEROID' in header:
                 for row in rows[1:]:
                     items = row.find_all('td')
-                    target_object = items[0].text
-                    target_object = target_object.strip()
-                    # See if it is the form "(12345) 2008 FOO". If so, extract
-                    # just the asteroid number
-                    if '(' in target_object and ')' in target_object:
-                        # See if we have parentheses around the number or around the
-                        # temporary designation.
-                        # If the first character in the string is a '(' we have the first
-                        # case and should split on the closing ')' and take the 0th chunk
-                        # If the first char is not a '(', then we have parentheses around
-                        # the temporary designation and we should split on the '(', take
-                        # the 0th chunk and strip whitespace
-                        split_char = ')'
-                        if target_object[0] != '(':
-                            split_char = '('
-                        target_object = target_object.split(split_char)[0].replace('(', '')
-                        target_object = target_object.strip()
-                    else:
-                        # No parentheses, either just a number or a number and name
-                        chunks = target_object.split(' ')
-                        if len(chunks) >= 2:
-                            if chunks[0].isalpha() and chunks[1].isalpha():
-                                logger.warning("All text object found: " + target_object)
-                                target_object = None
-                            else:
-                                if chunks[1].replace('-', '').isalpha() and len(chunks[1]) != 2:
-                                    target_object = chunks[0]
-                                elif 'Comet' in chunks[0] and '/P' in chunks[1].rstrip()[-2:]:
-                                    target_object = chunks[1].replace('/', '')
-                                else:
-                                    target_object = chunks[0] + " " + chunks[1]
-                        else:
-                            logger.warning("Unable to parse Arecibo target %s" % target_object)
-                            target_object = None
+                    target_object = parse_arecibo_targetnames(items[0].text.strip())
+
                     if target_object:
                         targets.append(target_object)
             else:
@@ -2577,9 +2654,9 @@ def store_jpl_physparams(phys_par, body):
         elif 'G' == p['name']:  # magnitude (phase) slope
             p_type = 'G'
         elif 'diameter' in p['name']:  # diameter
-            p_type = 'D'     
+            p_type = 'D'
         elif 'extent' in p['name']:  # extent
-            continue        
+            continue
         elif 'GM' in p['name']:  # GM
             p_type = 'M'
         elif 'density' in p['name']:  # density
@@ -2639,7 +2716,7 @@ def store_jpl_physparams(phys_par, body):
             del phys_params['parameter_type']
         else:
             phys_params['value2'] = jpl_value2
-            phys_params['error2'] = jpl_error2  
+            phys_params['error2'] = jpl_error2
 
         saved = body.save_physical_parameters(phys_params)
         if saved:
@@ -2739,13 +2816,13 @@ def store_jpl_sourcetypes(code, obj, body):
         source_type = 'T'
         source_subtype_1 = 'P5'
     elif 'TNO' in code:  # Trans-Neptunian Object
-        source_type = 'K'        
+        source_type = 'K'
     elif 'IEO' in code:  # Atira
         source_subtype_1 = 'N1'
     elif 'ATE' in code:  # Aten
         source_subtype_1 = 'N2'
     elif 'APO' in code:  # Apollo
-        source_subtype_1 = 'N3'   
+        source_subtype_1 = 'N3'
     elif 'AMO' in code:  # Amor
         source_subtype_1 = 'N4'
     elif 'IMB' in code:  # inner main belt
@@ -2794,10 +2871,7 @@ def store_jpl_sourcetypes(code, obj, body):
                 source_subtype_2 = 'N'
 
     if source_type:
-        body.source_type = source_type        
+        body.source_type = source_type
     body.source_subtype_1 = source_subtype_1
     body.source_subtype_2 = source_subtype_2
     body.save()
-        
-
-
