@@ -3880,7 +3880,7 @@ def import_alcdef(file, meta_list, lc_list):
                 chunks = line.split('=')
                 metadata[chunks[0]] = chunks[1].replace('\n', '')
         elif 'ENDDATA' in line:
-            if metadata not in meta_list:
+            if metadata not in meta_list and dates:
                 meta_list.append(metadata)
                 lc_data = {
                     'date': dates,
