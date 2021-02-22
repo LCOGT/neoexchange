@@ -23,6 +23,7 @@ class CalEvent(models.Model):
     event_type = models.CharField(max_length=40, choices=EVENT_TYPES, help_text='The type of CalEvent')
     start = models.DateTimeField(db_index=True, help_text='The time when this CalEvent starts')
     end = models.DateTimeField(db_index=True, help_text='The time when this CalEvent ends')
+    resource = models.CharField(max_length=255, help_text='The telescope or other resource this CalEvent refers to')
     state = models.CharField(max_length=40, choices=STATE_CHOICES, default=STATE_CHOICES[0][0], help_text='Current state of this CalEvent')
     created = models.DateTimeField(default=datetime.utcnow, db_index=True, help_text='Time when this CalEvent was created')
     modified = models.DateTimeField(blank=True, null=True, db_index=True, help_text='Time when this CalEvent was last changed')
