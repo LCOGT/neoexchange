@@ -104,10 +104,21 @@ function remove_shift_data(source, dataset_source, osource, plot, plot2){
     } else {
         plot.left[0].axis_label = 'Apparent Magnitude';
     }
-    var maxDate = new Date(Math.max.apply(null,selected_dates));
-    var minDate = new Date(Math.min.apply(null,selected_dates));
-    plot.title.text = plot.title.text.split("(")[0] + "("+minDate.toISOString().slice(0,10).replace(/-/g,"")+"-"+maxDate.toISOString().slice(0,10).replace(/-/g,"")+")";
-    plot2.title.text = plot.title.text.split("(")[0] + "("+minDate.toISOString().slice(0,10).replace(/-/g,"")+"-"+maxDate.toISOString().slice(0,10).replace(/-/g,"")+")";
+    if (selected_dates.length == 0){
+        plot.title.text = plot.title.text.split("(")[0]
+        plot2.title.text = plot.title.text.split("(")[0]
+    } else {
+        var maxDate = new Date(Math.max.apply(null,selected_dates));
+        var minDate = new Date(Math.min.apply(null,selected_dates));
+        if (maxDate.valueOf() == minDate.valueOf()){
+            plot.title.text = plot.title.text.split("(")[0] + "("+minDate.toISOString().slice(0,10).replace(/-/g,"")+")";
+            plot2.title.text = plot.title.text.split("(")[0] + "("+minDate.toISOString().slice(0,10).replace(/-/g,"")+")";
+        } else {
+            plot.title.text = plot.title.text.split("(")[0] + "("+minDate.toISOString().slice(0,10).replace(/-/g,"")+"-"+maxDate.toISOString().slice(0,10).replace(/-/g,"")+")";
+            plot2.title.text = plot.title.text.split("(")[0] + "("+minDate.toISOString().slice(0,10).replace(/-/g,"")+"-"+maxDate.toISOString().slice(0,10).replace(/-/g,"")+")";
+        }
+
+    }
 }
 
 
