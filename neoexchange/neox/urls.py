@@ -37,7 +37,7 @@ from core.views import BodySearchView, BodyDetailView, BlockDetailView, Schedule
     look_project, AddTarget
 from core.plots import make_visibility_plot, \
     make_standards_plot, make_solar_standards_plot
-from cal.views import goldstone_events, NeoxEvents
+from cal.views import goldstone_events, NeoxEvents, CalEvents
 
 from analyser.views import BlockFramesView, ProcessCandidates
 from core.viewsets import ProposalViewSet, SuperBlockViewSet, BlockViewSet, FrameViewSet, \
@@ -122,6 +122,7 @@ urlpatterns = [
     url(r'^calendar/$', TemplateView.as_view(template_name='cal/calendar.html')),
     url(r'^api/goldstone/$',  goldstone_events),
     url(r'^api/neox/$',  NeoxEvents.as_view()),
+    url(r'^api/events/$',  CalEvents.as_view()),
     url(r'^admin/', admin.site.urls),
 ]
 
