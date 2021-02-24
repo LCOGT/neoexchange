@@ -46,7 +46,6 @@ SITE_CHOICES = (
     )
 
 
-
 class SuperBlock(models.Model):
 
     cadence         = models.BooleanField(default=False)
