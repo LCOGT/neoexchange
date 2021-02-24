@@ -13,6 +13,10 @@ from cal.models import CalEvent
 
 logger = logging.getLogger(__name__)
 
+# Classes for the various calendars that return lists of dicts that the FullCalendar
+# uses as `Event Object`s (see https://fullcalendar.io/docs/event-object). Currently
+# only 'title', 'start', 'end' and 'url' are populated.
+
 class NeoxEvents(View):
     def get(self, request, *args, **kwargs):
         start = request.GET.get('start',None)
