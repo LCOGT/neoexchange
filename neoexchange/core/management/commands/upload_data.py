@@ -23,6 +23,7 @@ from django.core.files import File
 from django.core.files.storage import default_storage
 
 from core.utils import search
+from neox.settings import USE_S3
 
 
 class Command(BaseCommand):
@@ -45,6 +46,9 @@ class Command(BaseCommand):
         file_list = []
         search_list = []
         dest_list = []
+        if not USE_S3:
+            self.stdout.write("WARNING: No Access to S3. Update enviornment.")
+            return
 
         if options['list']:
             if '*' in filepath:
