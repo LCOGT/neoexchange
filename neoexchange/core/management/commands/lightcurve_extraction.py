@@ -536,7 +536,7 @@ class Command(BaseCommand):
                 if options['title'] is None:
                     sites = ', '.join(mpc_site)
                     try:
-                        if options['timespan'] < 1:
+                        if options['timespan'] < 1 or len(sites) <= 13:
                             plot_title = '%s from %s (%s) on %s' % (start_super_block.body.current_name(),
                                                                     start_block.site.upper(), sites, start_super_block.block_end.strftime("%Y-%m-%d"))
                             subtitle = ''
