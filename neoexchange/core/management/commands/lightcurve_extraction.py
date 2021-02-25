@@ -330,7 +330,8 @@ class Command(BaseCommand):
         start_blocks = Block.objects.filter(superblock=start_super_block.id)
         start_block = start_blocks[0]
         if options['single'] is True:
-            super_blocks = [start_super_block, ]
+            # Needs to be a one element QuerySet so later `order_by` works
+            super_blocks = SuperBlock.objects.filter(pk=start_super_block.pk)
         else:
             super_blocks = SuperBlock.objects.filter(body=start_super_block.body, block_start__gte=start_super_block.block_start-timedelta(days=options['timespan']))
         obs_date = None
