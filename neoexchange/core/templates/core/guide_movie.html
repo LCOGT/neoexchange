@@ -16,11 +16,12 @@
     <tr>
         {% for block in block_list|dictsort:"block_start" %}
             {% with block_ref=block.pk %}
+            {% with block_rn=block.request_number %}
                 <td>
                     <a href="{{block.make_obsblock_link}}">
                     <div class="container" id="main">
                         {% block graphic %}
-                            <img src="{% url 'display_movie' block_ref %}" alt="Could not find or create movie to show.">
+                            <img src="{% url 'display_movie' block_ref %}" alt="Could not find or create movie for Request Number {{block_rn}}.">
                         {% endblock %}
                     </div>
                     </a>
@@ -29,6 +30,7 @@
                         </tr>
                         <tr>
                     {% endif %}
+            {% endwith %}
             {% endwith %}
         {% endfor %}
     </tr>
