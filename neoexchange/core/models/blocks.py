@@ -166,7 +166,6 @@ class SuperBlock(models.Model):
         return '%s is %sactive' % (self.tracking_number, text)
 
 
-
 class Block(models.Model):
 
     OPT_IMAGING = 0
