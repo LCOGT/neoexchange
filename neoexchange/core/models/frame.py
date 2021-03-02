@@ -21,8 +21,6 @@ except ImportError:
     from pickle import loads, dumps
 from base64 import b64decode, b64encode
 
-from core.models.blocks import Block
-
 class WCSField(models.Field):
 
     description = "Store astropy.wcs objects"
@@ -102,7 +100,7 @@ class Frame(models.Model):
     filename    = models.CharField('FITS filename', max_length=50, blank=True, null=True, db_index=True)
     exptime     = models.FloatField('Exposure time in seconds', null=True, blank=True)
     midpoint    = models.DateTimeField('UTC date/time of frame midpoint', null=False, blank=False, db_index=True)
-    block       = models.ForeignKey(Block, null=True, blank=True, on_delete=models.CASCADE)
+    block       = models.ForeignKey("core.Block", null=True, blank=True, on_delete=models.CASCADE)
     quality     = models.CharField('Frame Quality flags', help_text='Comma separated list of frame/condition flags', max_length=40, blank=True, default=' ')
     zeropoint   = models.FloatField('Frame zeropoint (mag.)', null=True, blank=True)
     zeropoint_err = models.FloatField('Error on Frame zeropoint (mag.)', null=True, blank=True)
