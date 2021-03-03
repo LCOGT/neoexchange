@@ -57,6 +57,7 @@ function mainContent(i, data){
   html += '<div class="maindate">Observed: '+data['num']+ '</div>';
   html += '<div class="maindate">Type: '+data['type']+ '</div>';
   html += '<div class="maindate">Duration: '+data['duration']/60.+ ' mins</div>';
+  html += '<div class="maindate">Location: '+data['location']+'</div>';
   html += '</span>';
   return html
 }

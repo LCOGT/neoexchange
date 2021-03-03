@@ -304,7 +304,8 @@ class SuperBlockTimeline(DetailView):
                 'date' : date,
                 'num'  : blk.num_observed if blk.num_observed else 0,
                 'type' : blk.get_obstype_display(),
-                'duration' : (blk.block_end - blk.block_start).seconds
+                'duration' : (blk.block_end - blk.block_start).seconds,
+                'location' : blk.where_observed()
                 }
             blks.append(data)
         context['blocks'] = json.dumps(blks)
