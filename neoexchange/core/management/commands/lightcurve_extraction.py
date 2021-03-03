@@ -621,9 +621,7 @@ class Command(BaseCommand):
                         os.chmod(os.path.join(datadir, base_name + 'lightcurve.png'), rw_permissions)
                     except PermissionError:
                         pass
-                    self.stdout.write("Output files:")
-                    for output_file in output_file_list:
-                        self.stdout.write(output_file[0])
+                    self.stdout.write("Output files in: " + datadir)
             else:
                 self.stdout.write("No sources matched.")
 
