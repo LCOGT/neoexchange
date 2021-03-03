@@ -6,7 +6,13 @@
 
 {% block extramenu %}
     <div class="headingleft">
-        <h1>Super Block: <a href="{% url 'block-view' sb.id %}">{{sb.id}}</a> ( {{block_list|length}} Blocks )</h1>
+        <h1>Super Block: <a href="{% url 'block-view' sb.id %}">{{sb.id}}</a>
+            {% if block_list|length == 1 %}
+                ( {{block_list|length}} Block )
+            {% else %}
+                ( {{block_list|length}} Blocks )
+            {% endif %}
+        </h1>
     </div>
 {% endblock%}
 
