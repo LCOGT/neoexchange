@@ -537,16 +537,19 @@ class Command(BaseCommand):
                 if options['title'] is None:
                     sites = ', '.join(mpc_site)
                     try:
+                        # for single dates and short site lists, put everything on single line.
                         if options['timespan'] < 1 and len(sites) <= 13:
                             plot_title = '%s from %s (%s) on %s' % (start_super_block.body.current_name(),
                                                                     start_block.site.upper(), sites, start_super_block.block_end.strftime("%Y-%m-%d"))
                             subtitle = ''
+                        # for lc covering multiple nights, reformat title
                         elif options['timespan'] < 1:
                             plot_title = '%s from %s to %s' % (start_block.body.current_name(),
                                                                (start_super_block.block_end - timedelta(
                                                                    days=options['timespan'])).strftime("%Y-%m-%d"),
                                                                start_super_block.block_end.strftime("%Y-%m-%d"))
                             subtitle = 'Sites: ' + sites
+                        # for single night LC using many sites, put sites on 2nd line.
                         else:
                             plot_title = '%s from %s on %s' % (start_super_block.body.current_name(),
                                                                start_block.site.upper(),
