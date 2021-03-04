@@ -5,7 +5,8 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 ## History
 
 ### 3.8.4
-Add observed location to observation timeline.
+* Add observed location to observation timeline.
+* Fix bugs and add features for lightcurve extraction.
 
 ### 3.8.3
 Add support for adding new LOOK project targets.
