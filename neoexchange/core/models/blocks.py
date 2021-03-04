@@ -47,7 +47,6 @@ SITE_CHOICES = (
     )
 
 
-
 class SuperBlock(models.Model):
 
     cadence         = models.BooleanField(default=False)
@@ -166,7 +165,6 @@ class SuperBlock(models.Model):
             text = 'not '
 
         return '%s is %sactive' % (self.tracking_number, text)
-
 
 
 class Block(models.Model):

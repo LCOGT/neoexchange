@@ -338,6 +338,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
     filename = os.path.join(path, sanitize_object_name(obj) + '_' + rn + '_{}movie.gif'.format(frame_type))
     anim.save(filename, dpi=90, writer='imagemagick')
 
+    plt.close('all')
     # Save to default location because Matplotlib wants a string filename not File object
     if settings.USE_S3:
         movie_filename = filename.replace(out_path, "").lstrip("/")

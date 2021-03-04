@@ -45,6 +45,9 @@ class Command(BaseCommand):
         file_list = []
         search_list = []
         dest_list = []
+        if not settings.USE_S3:
+            self.stdout.write("WARNING: No Access to S3. Update enviornment.")
+            return
 
         if options['list']:
             if '*' in filepath:

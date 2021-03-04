@@ -3881,7 +3881,7 @@ def import_alcdef(file, meta_list, lc_list):
                 chunks = line.split('=')
                 metadata[chunks[0]] = chunks[1].replace('\n', '')
         elif 'ENDDATA' in line:
-            if metadata not in meta_list:
+            if metadata not in meta_list and dates:
                 meta_list.append(metadata)
                 lc_data = {
                     'date': dates,
@@ -3985,10 +3985,10 @@ class GuideMovie(View):
 
     def get(self, request, *args, **kwargs):
         try:
-            block = Block.objects.get(pk=kwargs['pk'])
+            supblock = SuperBlock.objects.get(pk=kwargs['pk'])
         except ObjectDoesNotExist:
-            raise Http404("Block does not exist.")
-        params = {'pk': kwargs['pk'], 'sb_id': block.superblock.id}
+            raise Http404("SuperBlock does not exist.")
+        params = {'sb': supblock, 'block_list': supblock.get_blocks.filter(num_observed__gt=0)}
 
         return render(request, self.template_name, params)
 

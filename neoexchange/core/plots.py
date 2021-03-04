@@ -693,6 +693,13 @@ def lc_plot(lc_list, meta_list, period=1, jpl_ephem=None):
     # plot_p.yaxis.major_label_text_font_size = "14pt"
     # plot_p.xaxis.major_label_text_font_size = "14pt"
     # plot_p.axis.major_tick_line_width = 2
+    # plot_u.title.text_font_size = '20pt'
+    # plot_u.xaxis.axis_label_text_font_size = "18pt"
+    # plot_u.yaxis.axis_label_text_font_size = "18pt"
+    # plot_u.axis.axis_line_width = 2
+    # plot_u.yaxis.major_label_text_font_size = "14pt"
+    # plot_u.xaxis.major_label_text_font_size = "14pt"
+    # plot_u.axis.major_tick_line_width = 2
     plot_p.xaxis.axis_label = 'Phase (Period = {}h / Epoch = {})'.format(period, base_date)
 
     # Create update function to fill datasets. This is currently unnecessary, but could be used if we ever got a
@@ -735,7 +742,7 @@ def lc_plot(lc_list, meta_list, period=1, jpl_ephem=None):
 
         phased_dict = build_data_sets(phased_lc_list, sess_title)
         for k, phase in enumerate(phased_dict['time']):
-            if 0 < phase < 1 :
+            if 0 < phase < 1:
                 for key in phased_dict.keys():
                     if key == 'time':
                         if 0 < phase < 0.5:
@@ -784,7 +791,7 @@ def lc_plot(lc_list, meta_list, period=1, jpl_ephem=None):
     # JS Callback to update phased data when datasets are removed, and mag offsets are made.
     # Note: Data just hidden (set to alpha=0). Not actually removed.
     js_remove_shift_data = get_js_as_text(js_file, "remove_shift_data")
-    callback = CustomJS(args=dict(source=source, dataset_source=dataset_source, osource=orig_source, plot=plot_p), code=js_remove_shift_data)
+    callback = CustomJS(args=dict(source=source, dataset_source=dataset_source, osource=orig_source, plot=plot_p, plot2=plot_u), code=js_remove_shift_data)
     dataset_source.selected.js_on_change('indices', callback)
     draw_button.js_on_click(callback)
     dataset_source.js_on_change('data', callback)  # Does not seem to work. Not sure why.
@@ -881,7 +888,7 @@ def phase_lc(lc_data, period, base_date):
 
 
 def translate_from_alcdef_filter(filt):
-    if filt not in ['B, V, R, I, J, H, K']:
+    if filt not in 'B, V, R, I, J, H, K':
         filt = filt.lower()
         if len(filt) > 1 and filt[0] == 's':
             filt = filt[1] + 'p'
