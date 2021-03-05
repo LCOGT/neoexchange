@@ -638,7 +638,7 @@ def lc_plot(lc_list, meta_list, period=1, jpl_ephem=None):
 
     # Create Input controls
     phase_shift = Slider(title="Phase Offset", value=0, start=-1, end=1, step=.01, width=200, tooltips=False)  # Slider bar to change base_date by +/- 1 period
-    max_period = round(10 * period)
+    max_period = max(round(10 * period), 1)
     min_period = 0.0
     step = (max_period - min_period)/1000
     period_slider = Slider(title=None, value=period, start=min_period, end=max_period, step=step, width=200, tooltips=False)  # Slider bar to change period
