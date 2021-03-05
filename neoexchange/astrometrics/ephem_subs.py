@@ -120,8 +120,8 @@ def perturb_elements(orbelems, epoch_mjd, mjd_tt, comet, perturb):
             aorq = float(orbelems['meandist'])
         except TypeError:
             aorq = 0.0
-    p_orbelems['H'] = orbelems['abs_mag']
-    p_orbelems['G'] = orbelems['slope']
+    p_orbelems['H'] = orbelems.get('abs_mag', None)
+    p_orbelems['G'] = orbelems.get('slope', None)
     if perturb is True:
         (p_epoch_mjd, p_orbelems['Inc'], p_orbelems['LongNode'], p_orbelems['ArgPeri'],
          p_orbelems['SemiAxisOrQ'], p_orbelems['Ecc'], p_orbelems['MeanAnom'], j) = S.sla_pertel( jform, epoch_mjd,
@@ -169,9 +169,9 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
 # Compute epoch of the elements as a MJD
     try:
         epochofel = datetime.strptime(orbelems['epochofel'], '%Y-%m-%d %H:%M:%S')
+        epoch_mjd = datetime2mjd_utc(epochofel)
     except TypeError:
-        epochofel = orbelems['epochofel']
-    epoch_mjd = datetime2mjd_utc(epochofel)
+        epoch_mjd = orbelems['epochofel']
 
     logger.debug('Element Epoch= %.1f' % epoch_mjd)
     logger.debug('MJD(UTC) =   %.15f' % mjd_utc)
