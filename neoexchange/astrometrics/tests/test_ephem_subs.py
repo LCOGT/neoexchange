@@ -162,6 +162,42 @@ class TestGetMountLimits(TestCase):
         self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
 
 
+class TestConvertElements(TestCase):
+
+    def setUp(self):
+        self.portal_elements = { 'type': 'ORBITAL_ELEMENTS',
+                                 'name': '2021 DW1',
+                                 'epochofel': 59276.0,
+                                 'orbinc': 7.2101,
+                                 'longascnode': 162.69369,
+                                 'eccentricity': 0.2510136,
+                                 'scheme': 'MPC_MINOR_PLANET',
+                                 'argofperih': 9.12624,
+                                 'meandist': 1.3250813,
+                                 'meananom': 354.3647,
+                                 'extra_params': {}
+                                 }
+
+    def test_convert1(self):
+        expected_elements = {'type': 'ORBITAL_ELEMENTS',
+                             'name': '2021 DW1',
+                             'epochofel': datetime(2021, 3, 3, 0, 0),
+                             'orbinc': 7.2101,
+                             'longascnode': 162.69369,
+                             'eccentricity': 0.2510136,
+                             'scheme': 'MPC_MINOR_PLANET',
+                             'argofperih': 9.12624,
+                             'meandist': 1.3250813,
+                             'meananom': 354.3647,
+                             'extra_params': {},
+                             'abs_mag': 19,
+                             'slope': 0.15}
+
+
+        elements = convert_elements(self.portal_elements)
+
+        self.assertEqual(expected_elements, elements)
+
 class TestComputeEphemerides(TestCase):
     """Tests both `compute_ephem()` and the `call_compute_ephem()` wrapper"""
 

@@ -190,6 +190,28 @@ def fetch_archive_frames(auth_header, archive_url, frames):
     return frames
 
 
+def fetch_elements_from_requestgroup(tracking_num):
+
+    elements = []
+    data_url = urljoin(settings.PORTAL_REQUEST_API, tracking_num)
+    data = lco_api_call(data_url)
+    if data is None or data.get('requests', '') == 'Not found.' or data.get('requests', '') == '':
+        return elements
+
+    targets = []
+    for r in data['requests']:
+        new_targets = [c['target'] for c in r['configurations'] if c['target']['type']!='ICRS']
+        for target in new_targets:
+            if target['name'] not in targets:
+                elements.append(target)
+                targets.append(target['name'])
+
+    if len(elements) == 1:
+        elements = elements[0]
+
+    return elements
+
+
 def check_for_existing_file(filename, archive_md5=None, dbg=False, verbose=False):
     """Tries to determine whether a higher reduction level of the file exists. If it does, True is
     returned otherwise False is returned"""

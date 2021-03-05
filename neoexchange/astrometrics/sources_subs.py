@@ -2798,6 +2798,3 @@ def store_jpl_sourcetypes(code, obj, body):
     body.source_subtype_1 = source_subtype_1
     body.source_subtype_2 = source_subtype_2
     body.save()
-        
-
-

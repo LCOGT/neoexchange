@@ -22,7 +22,7 @@ from mock import patch
 from django.test import TestCase
 from django.conf import settings
 
-from neox.tests.mocks import MockDateTime, mock_fetch_archive_frames, mock_lco_api_fail
+from neox.tests.mocks import MockDateTime, mock_fetch_archive_frames, mock_lco_api_fail, mock_check_result_status
 # Import module to test
 from core.archive_subs import *
 
@@ -380,3 +380,29 @@ class TestMakeDataDir(TestCase):
         outpath = make_data_dir(data_dir, frame)
 
         self.assertEqual(expected_out_dir, outpath)
+
+
+@patch('core.archive_subs.lco_api_call', mock_check_result_status)
+class TestFetchElementsFromRequestGroup(TestCase):
+
+    def setUp(self):
+        pass
+
+    def test1(self):
+        expected_elements = {'type': 'ORBITAL_ELEMENTS',
+                             'name': 'N999r0q',
+                             'argofperih': 180.74461,
+                             'eccentricity': 0.2695826,
+                             'epochofel': 58200.0,
+                             'longascnode': 347.31601,
+                             'meananom': 8.89267,
+                             'meandist': 1.36967423,
+                             'orbinc': 9.2247,
+                             'rot_angle': 0.0,
+                             'rot_mode': '',
+                             'scheme': 'MPC_MINOR_PLANET',
+                             'extra_params': {}}
+
+        elements = fetch_elements_from_requestgroup('42')
+
+        self.assertEqual(expected_elements, elements)

@@ -38,9 +38,11 @@ from astropy.table import Column
 from astropy.time import Time
 
 # Local imports
-from astrometrics.time_subs import datetime2mjd_utc, datetime2mjd_tdb, mjd_utc2mjd_tt, ut1_minus_utc, round_datetime
+from astrometrics.time_subs import datetime2mjd_utc, datetime2mjd_tdb, \
+    mjd_utc2mjd_tt, ut1_minus_utc, mjd_utc2datetime, round_datetime
 # from astsubs import mpc_8lineformat
 import astrometrics.site_config as cfg
+from core.archive_subs import fetch_elements_from_requestgroup
 
 
 logger = logging.getLogger(__name__)
@@ -63,6 +65,26 @@ def compute_phase_angle(r, delta, es_Rsq, dbg=False):
     logger.debug("Phase angle, beta (deg)=%s %s" % (beta, degrees(beta)))
     return beta
 
+
+def convert_elements(tracking_num_or_elements):
+    """Convert elements from the Observing Portal format to NEOx format"""
+
+#    mapping = { 'elements_type' : 'type',
+#                'name' : 'name',
+#                'epochofel': 'epochofel', 'orbinc', 'longascnode', 'eccentricity', 'scheme', 'argofperih', 'meandist', 'meananom', 'extra_params'])
+
+    if type(tracking_num_or_elements) != dict:
+        portal_elements = fetch_elements_from_requestgroup(tracking_num_or_elements)
+    else:
+        portal_elements = tracking_num_or_elements
+    elements = portal_elements.copy()
+    elements['epochofel'] = mjd_utc2datetime(portal_elements['epochofel'])
+    elements['abs_mag'] = 19
+    elements['slope'] = 0.15
+    if elements['scheme'] == 'MPC_COMET':
+        elements['slope'] = 4.0
+
+    return elements
 
 def perturb_elements(orbelems, epoch_mjd, mjd_tt, comet, perturb):
     """
