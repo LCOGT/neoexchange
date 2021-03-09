@@ -50,6 +50,8 @@ class Command(BaseCommand):
         parser.add_argument('supblock', type=int, help='SuperBlock (tracking number) to analyze')
         parser.add_argument('-ts', '--timespan', type=float, default=0.0, help='Days prior to referenced SuperBlock that should be included')
         parser.add_argument('-bw', '--boxwidth', type=float, default=5.0, help='Box half-width in arcsec to search')
+        parser.add_argument('-ro', '--ra_offset', type=float, default=0.0, help='RA offset of box center in arcsec')
+        parser.add_argument('-do', '--dec_offset', type=float, default=0.0, help='Dec offset of box center in arcsec')
         parser.add_argument('-dm', '--deltamag', type=float, default=0.5, help='delta magnitude tolerance for multiple matches')
         parser.add_argument('--title', type=str, default=None, help='plot title')
         parser.add_argument('--persist', action="store_true", default=False, help='Whether to store cross-matches as SourceMeasurements for the body')
@@ -364,6 +366,9 @@ class Command(BaseCommand):
         alcdef_filename = os.path.join(datadir, base_name + 'ALCDEF.txt')
         output_file_list.append('{},{}'.format(alcdef_filename, datadir.lstrip(out_path)))
         alcdef_file = default_storage.open(alcdef_filename, 'w')
+        # Set offsets, convert from Arcsec to Radians
+        ra_offset = radians(options['ra_offset'] / 3600)
+        dec_offset = radians(options['dec_offset'] / 3600)
         for super_block in super_blocks:
             block_list = Block.objects.filter(superblock=super_block.id)
             if obs_date:
@@ -395,8 +400,8 @@ class Command(BaseCommand):
                     for frame in frames_all_zp:
                         # get predicted position and magnitude of target during time of each frame
                         emp_line = compute_ephem(frame.midpoint, elements, frame.sitecode)
-                        ra = emp_line['ra']
-                        dec = emp_line['dec']
+                        ra = emp_line['ra'] + ra_offset
+                        dec = emp_line['dec'] + dec_offset
                         mag_estimate = emp_line['mag']
                         (ra_string, dec_string) = radec2strings(ra, dec, ' ')
                         # Find list of frame sources within search region of predicted coordinates
