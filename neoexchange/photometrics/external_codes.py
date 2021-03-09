@@ -17,7 +17,8 @@ import logging
 import os
 from math import floor
 from datetime import datetime, timedelta
-from subprocess import call, PIPE, Popen
+
+from subprocess import call, PIPE, Popen, TimeoutExpired
 from collections import OrderedDict
 import warnings
 from shutil import unpack_archive
@@ -394,10 +395,14 @@ def run_scamp(source_dir, dest_dir, fits_catalog_path, refcatalog='GAIA-DR2.cat'
     else:
         logger.debug("cmdline=%s" % cmdline)
         args = cmdline.split()
-        # Open /dev/null for writing to lose the SCAMP output into
-        DEVNULL = open(os.devnull, 'w')
-        retcode_or_cmdline = call(args, cwd=dest_dir, stdout=DEVNULL, stderr=DEVNULL)
-        DEVNULL.close()
+        try:
+            # Open /dev/null for writing to lose the SCAMP output into
+            DEVNULL = open(os.devnull, 'w')
+            retcode_or_cmdline = call(args, cwd=dest_dir, stdout=DEVNULL, stderr=DEVNULL, timeout=300)
+            DEVNULL.close()
+        except TimeoutExpired:
+            logger.warning(f'SCAMP timeout reached for {fits_catalog}')
+            retcode_or_cmdline = -2
 
     return retcode_or_cmdline
 
