@@ -229,6 +229,14 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
                         x_offset = int(copysign(x_frac, x_offset))
                     if abs(y_offset) > y_frac:
                         y_offset = int(copysign(y_frac, y_offset))
+                elif not x_offset and not y_offset:
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+                        wcs = WCS(header_n)  # get wcs transformation
+                    coord = SkyCoord(td['ra'], td['dec'], unit="rad")
+                    x_pix, y_pix = skycoord_to_pixel(coord, wcs)
+                    x_offset = int(x_pix - header_n['CRPIX1'])
+                    y_offset = int(y_pix - header_n['CRPIX2'])
                 data_x_range = [x + x_offset for x in data_x_range]
                 data_y_range = [y + y_offset for y in data_y_range]
                 x_frac += x_offset
