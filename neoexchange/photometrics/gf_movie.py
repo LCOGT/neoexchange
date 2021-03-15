@@ -211,8 +211,9 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
         x_frac = 0
         y_frac = 0
         if center is not None:
-            y_frac = np.max(int((shape[0] - (center * 60)/header_n['PIXSCALE']) / 2), 0)
-            x_frac = np.max(int((shape[1] - (center * 60)/header_n['PIXSCALE']) / 2), 0)
+            width = (center * 60)/header_n['PIXSCALE']
+            y_frac = np.max(int((shape[0] - width) / 2), 0)
+            x_frac = np.max(int((shape[1] - width) / 2), 0)
 
             # set data ranges
             data_x_range = [x_frac, -(x_frac+1)]
@@ -231,8 +232,9 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
                         wcs = WCS(header_n)  # get wcs transformation
                     coord = SkyCoord(td['ra'], td['dec'], unit="rad")
                     x_pix, y_pix = skycoord_to_pixel(coord, wcs)
-                    x_offset = int(x_pix - header_n['CRPIX1'])
-                    y_offset = int(y_pix - header_n['CRPIX2'])
+                    if 0 < x_pix < shape[1] and 0 < y_pix < shape[0]:
+                        x_offset = int(x_pix - header_n['CRPIX1'])
+                        y_offset = int(y_pix - header_n['CRPIX2'])
                 if abs(x_offset) > x_frac:
                     x_offset = int(copysign(x_frac, x_offset))
                 if abs(y_offset) > y_frac:
