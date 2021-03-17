@@ -20,7 +20,7 @@
 <!-- Main body -->
 <table style="margin-left:auto; margin-right:auto;">
     <tr>
-        {% for block in block_list|dictsort:"block_start" %}
+        {% for block in page_obj|dictsort:"block_start" %}
             {% with block_ref=block.pk %}
             {% with block_rn=block.request_number %}
                 <td>
@@ -41,6 +41,12 @@
         {% endfor %}
     </tr>
 </table>
-
+<div class="row">
+    {% if is_paginated %}
+        <!-- start -->
+            {% include '_pagination.html' with items=items %}
+        <!-- end -->
+    {% endif %}
+</div>
 
 {% endblock %}

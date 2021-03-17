@@ -272,7 +272,6 @@ class Block(models.Model):
         return '%s is %sactive' % (self.request_number, text)
 
 
-
 class Candidate(models.Model):
     """Class to hold candidate moving object detections found by the moving
     object code"""

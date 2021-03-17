@@ -3982,15 +3982,39 @@ class GuideMovie(View):
     # make logging required later
 
     template_name = 'core/guide_movie.html'
+    paginate_by = 6
+    orphans = 3
 
     def get(self, request, *args, **kwargs):
         try:
             supblock = SuperBlock.objects.get(pk=kwargs['pk'])
         except ObjectDoesNotExist:
             raise Http404("SuperBlock does not exist.")
-        params = {'sb': supblock, 'block_list': supblock.get_blocks.filter(num_observed__gt=0)}
+        block_list = supblock.get_blocks.filter(num_observed__gt=0).order_by('when_observed')
 
-        return render(request, self.template_name, params)
+        # Set up pagination
+        page = request.GET.get('page', None)
+
+        # Toggle Pagination
+        if page == '0':
+            self.paginate_by = len(block_list)
+        paginator = Paginator(block_list, self.paginate_by, orphans=self.orphans)
+
+        if paginator.num_pages > 1:
+            is_paginated = True
+        else:
+            is_paginated = False
+
+        if page is None or int(page) < 1:
+            page = 1
+        elif int(page) > paginator.num_pages:
+            page = paginator.num_pages
+        page_obj = paginator.page(page)
+
+        return render(request, self.template_name,
+                      {'sb': supblock, 'block_list': block_list, 'is_paginated': is_paginated, 'page_obj': page_obj})
+
+        # return render(request, self.template_name, params)
 
 
 def update_taxonomy(body, tax_table, dbg=False):
