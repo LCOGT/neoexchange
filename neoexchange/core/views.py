@@ -3990,8 +3990,7 @@ class GuideMovie(View):
             supblock = SuperBlock.objects.get(pk=kwargs['pk'])
         except ObjectDoesNotExist:
             raise Http404("SuperBlock does not exist.")
-        block_list = supblock.get_blocks.filter(num_observed__gt=0)
-        params = {'sb': supblock, 'block_list': block_list}
+        block_list = supblock.get_blocks.filter(num_observed__gt=0).order_by('when_observed')
 
         # Set up pagination
         page = request.GET.get('page', None)
