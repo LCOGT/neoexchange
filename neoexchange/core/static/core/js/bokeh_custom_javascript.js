@@ -213,6 +213,31 @@ function phase_data(source, period_box, period_slider, plot, osource, phase_shif
 }
 
 
+function remove_shift_model(source_list, model_source){
+    const models = source_list;
+    const I = model_source.selected.indices;
+    const N = model_source.data['name'];
+    const O = model_source.data['offset'];
+    var selected = [];
+    for (let i = 0; i < I.length; i++) {
+        selected[i] = N[I[i]];
+    }
+    for (var i = 0; i < N.length; i++){
+        var source = models[i]
+        var n = source.data['name']
+        var a = source.data['alpha']
+        for (let i = 0; i < a.length; i++) {
+            if (selected.includes(n[i])){
+                a[i] = 1;
+            } else {
+                a[i] = 0;
+            }
+        }
+        source.change.emit();
+    }
+}
+
+
 function rotation_tool(){
     // Javascript function to rotate a DataSource based on mouse movement
     import {GestureTool, GestureToolView} from "models/tools/gestures/gesture_tool"

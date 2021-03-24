@@ -637,7 +637,7 @@ class RotTool(Tool):
     orbs = Instance(ColumnDataSource)
 
 
-def lc_plot(lc_list, meta_list, period=1, pscan_dict={}, body=None, jpl_ephem=None):
+def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, body=None, jpl_ephem=None):
     """Creates an interactive Bokeh LC plot:
     Inputs:
     [lc_list] --- A list of LC dictionaries, each one containing the following keys:
@@ -689,6 +689,11 @@ def lc_plot(lc_list, meta_list, period=1, pscan_dict={}, body=None, jpl_ephem=No
     p_mark_source = ColumnDataSource(data=dict(period=[period], y=[-1]))
     orbit_source = ColumnDataSource(data=get_orbit_position(meta_list, lc_list, body))
     full_orbit_source = ColumnDataSource(data=get_full_orbit(body))
+    lc_models_sources = []
+    model_list_source = ColumnDataSource(data=dict(name=lc_model_dict['name'], offset=[0]*len(lc_model_dict['name'])))
+    for k, lc_name in enumerate(lc_model_dict['name']):
+        model_date = [(x - base_date) * 24 for x in lc_model_dict['date'][k]]
+        lc_models_sources.append(ColumnDataSource(data=dict(date=model_date, mag=lc_model_dict['mag'][k], name=[lc_name]*len(model_date), omag=lc_model_dict['mag'][k], alpha=[0]*len(model_date))))
 
     # Create Input controls
     phase_shift = Slider(title="Phase Offset", value=0, start=-1, end=1, step=.01, width=200, tooltips=False)  # Slider bar to change base_date by +/- 1 period
@@ -715,6 +720,9 @@ def lc_plot(lc_list, meta_list, period=1, pscan_dict={}, body=None, jpl_ephem=No
                 lower_head=error_cap, upper_head=error_cap))
     plot_u.circle(x="time", y="mag", source=orig_source, size=3, color="color", alpha="alpha")
     plot_u.legend.click_policy = 'hide'
+
+    for n, s in enumerate(lc_models_sources):
+        plot_u.circle(x="date", y="mag", source=s, name=lc_model_dict['name'][n], alpha="alpha")
     # Build Phased PLot:
     plot_p.add_layout(
         Whisker(source=source, base="time", upper="err_high", lower="err_low", line_color="color", line_alpha="alpha",
@@ -848,7 +856,7 @@ def lc_plot(lc_list, meta_list, period=1, pscan_dict={}, body=None, jpl_ephem=No
     formatter = HTMLTemplateFormatter(template=template)
 
     # Establish Columns for DataTable
-    columns = [
+    columns_lc = [
         TableColumn(field="symbol", title='', formatter=formatter, width=3),
         TableColumn(field="date", title="Date"),
         TableColumn(field="time", title="Time"),
@@ -857,11 +865,18 @@ def lc_plot(lc_list, meta_list, period=1, pscan_dict={}, body=None, jpl_ephem=No
         TableColumn(field="filter", title="Filter"),
         TableColumn(field="offset", title="Mag Offset", editor=NumberEditor(step=.1), formatter=NumberFormatter(format="0.00"))
     ]
+    columns_model = [
+        # TableColumn(field="symbol", title='', formatter=formatter, width=3),
+        TableColumn(field="name", title="Name")
+    ]
 
     # Build Datatable and Title
     dataset_source.selected.indices = list(range(len(dataset_source.data['date'])))
-    data_table = DataTable(source=dataset_source, columns=columns, width=600, height=300, selectable='checkbox', index_position=None, editable=True)
+    data_table = DataTable(source=dataset_source, columns=columns_lc, width=600, height=300, selectable='checkbox', index_position=None, editable=True)
     table_title = Div(text='<b>LC Data</b>', width=450)  # No way to set title for Table, Have to build HTML Div and put above it...
+    # model_list_source.selected.indices = list(range(len(model_list_source.data['name'])))
+    model_table = DataTable(source=model_list_source, columns=columns_model, width=200, height=300, selectable='checkbox', index_position=None, editable=True)
+    model_table_title = Div(text='<b>Models</b>', width=450)
 
     # JS Callback to set Dataset Mag offset to relative Horizons v-mag differences
     js_mag_offset = get_js_as_text(js_file, "set_mag_offset")
@@ -875,6 +890,12 @@ def lc_plot(lc_list, meta_list, period=1, pscan_dict={}, body=None, jpl_ephem=No
     dataset_source.selected.js_on_change('indices', callback)
     draw_button.js_on_click(callback)
     dataset_source.js_on_change('data', callback)  # Does not seem to work. Not sure why.
+
+    js_remove_shift_model = get_js_as_text(js_file, "remove_shift_model")
+    model_callback = CustomJS(args=dict(source_list=lc_models_sources, model_source=model_list_source), code=js_remove_shift_model)
+    model_list_source.selected.js_on_change('indices', model_callback)
+    # draw_button.js_on_click(callback)
+    model_list_source.js_on_change('data', model_callback)
 
     # JS Call back to handle period max and min changes to both the period_box and the period_slider
     # Self validation (min < 0, for instance) does not seem to work properly.
@@ -912,7 +933,9 @@ def lc_plot(lc_list, meta_list, period=1, pscan_dict={}, body=None, jpl_ephem=No
                                                  p_slider_max)))))
     unphased_layout = column(plot_u,
                              row(column(row(table_title),
-                                        data_table)))
+                                        data_table),
+                                 column(row(model_table_title),
+                                        model_table)))
     periodogram_layout = column(plot_period,
                                 row(column(row(table_title),
                                            data_table),

@@ -18,7 +18,7 @@ Prepare LC to be analysed with DAMIT
 import os
 from glob import glob
 from datetime import datetime, timedelta, time
-from math import floor
+from math import floor, log10
 import numpy as np
 
 from django.core.management.base import BaseCommand, CommandError
@@ -52,7 +52,6 @@ class Command(BaseCommand):
         parser.add_argument('--filters', type=str, default=None, help='comma separated list of filters to use (SG,SR,W)')
         parser.add_argument('--period_scan', action="store_true", default=False, help='run Period Scan')
         parser.add_argument('--lc_model', action="store", default=None, help='Start and end dates for the lc_model (YYYYMMDD-YYYMMDD)')
-
 
     # def read_data(self):
     #     """ reads lightcurve_data.txt output by lightcurve_extraction"""
@@ -163,9 +162,13 @@ class Command(BaseCommand):
         XYZ coordinates of Earth (astrocentric cartesian coordinates) AU
         """
         input_file.write(f"{len([x for x in meta_list if x['FILTER'] in filt_name])}\n")
+        mag_mean_list = []
+        ltt_list = []
         for k, dat in enumerate(meta_list):
             site = dat['MPCCODE']
-            mean_intensity = 10 ** (0.4 * np.mean(lc_list[k]['mags']))
+            mean_mag = np.mean(lc_list[k]['mags'])
+            mag_mean_list.append({'mean_mag': mean_mag, 'num_dates': len(lc_list[k]['mags'])})
+            mean_intensity = 10 ** (0.4 * mean_mag)
             if dat['FILTER'] in filt_name:
                 input_file.write(f"{len(lc_list[k]['mags'])} 0\n")
                 for c, d in enumerate(lc_list[k]['date']):
@@ -178,15 +181,22 @@ class Command(BaseCommand):
                     input_file.write(f"{d:.6f}   {rel_intensity:1.6E}   {astrocent_e[0]:.6E} {astrocent_e[1]:.6E}"
                                      f" {astrocent_e[2]:.6E}   {astrocent_h[0]:.6E} {astrocent_h[1]:.6E}"
                                      f" {astrocent_h[2]:.6E}\n")
+                    ltt_list.append(ephem['ltt']/60/60/24)
+        return mag_mean_list, ltt_list
 
     def create_epoch_input(self, epoch_file, period, start_date, end_date, body_elements):
-        step_size = period * 60 * 60 / 10
+        # step_size = period * 60 * 60 / 10
+        # epoch_length = end_date - start_date
+        # total_steps = epoch_length.total_seconds() / step_size
+        total_steps = 1000
         epoch_length = end_date - start_date
-        total_steps = epoch_length.total_seconds() / step_size
+        step_size = epoch_length.total_seconds() / 500
         epoch_list = [start_date + timedelta(seconds=step_size*x) for x in range(round(total_steps))]
         rel_intensity = 1.0
         epoch_file.write(f"1\n")
         epoch_file.write(f"{len(epoch_list)} 0\n")
+        mag_list = []
+        ltt_list = []
         for d in epoch_list:
             jd = datetime2mjd_utc(d)+2400000.5
             ephem = compute_ephem(d, body_elements, '500')
@@ -195,6 +205,10 @@ class Command(BaseCommand):
             epoch_file.write(f"{jd:.6f}   {rel_intensity:1.6E}   {astrocent_e[0]:.6E} {astrocent_e[1]:.6E}"
                              f" {astrocent_e[2]:.6E}   {astrocent_h[0]:.6E} {astrocent_h[1]:.6E}"
                              f" {astrocent_h[2]:.6E}\n")
+            mag_list.append(ephem['mag'])
+            ltt_list.append(ephem['ltt']/60/60/24)
+
+        return np.mean(mag_list), ltt_list
 
     def import_or_create_psinput(self, path, obj_name, pmin, pmax):
         """
@@ -276,16 +290,33 @@ class Command(BaseCommand):
 
         return cinv_input_filename, conj_input_filename
 
-    def zip_lc_model(self, epoch_in, lc_in, lc_out):
+    def zip_lc_model(self, epoch_in, lc_in, lc_out, mag_means=None, ltt_list=None):
         epoch_in_file = default_storage.open(epoch_in, 'r')
         lc_in_file = default_storage.open(lc_in, 'r')
         lc_out_file = default_storage.open(lc_out, 'w+')
         epoch_lines = epoch_in_file.readlines()
         lc_lines = iter(lc_in_file.readlines())
+        i = -1
+        k = 0
         for dline in epoch_lines:
             chunks = dline.split()
             if len(chunks) > 3:
-                lc_out_file.write(f"{chunks[0]} {next(lc_lines).rstrip()}\n")
+                if mag_means:
+                    if isinstance(mag_means, list):
+                        mean_mag = mag_means[i]['mean_mag']
+                    else:
+                        mean_mag = mag_means
+                else:
+                    mean_mag = 0
+                mag = log10(float(next(lc_lines).rstrip())) / 0.4 + mean_mag
+                if ltt_list:
+                    jd = float(chunks[0]) + ltt_list[k]
+                else:
+                    jd = chunks[0]
+                lc_out_file.write(f"{jd} {mag}\n")
+                k += 1
+            elif len(chunks) > 1:
+                i += 1
         epoch_in_file.close()
         lc_in_file.close()
         lc_out_file.close()
@@ -314,7 +345,7 @@ class Command(BaseCommand):
         # Create lightcurve input file
         lcs_input_filename = os.path.join(path, obj_name + '_input.lcs')
         lcs_input_file = default_storage.open(lcs_input_filename, 'w')
-        self.create_lcs_input(lcs_input_file, meta_list, lc_list, body_elements, filt_list)
+        mag_means, lc_ltt_list = self.create_lcs_input(lcs_input_file, meta_list, lc_list, body_elements, filt_list)
         lcs_input_file.close()
         pmin, pmax, period = self.get_period_range(body, options)
         if options['lc_model']:
@@ -330,10 +361,10 @@ class Command(BaseCommand):
                 end_date = options['lc_model'][1]
             epoch_input_filename = os.path.join(path, obj_name + '_epoch.lcs')
             epoch_input_file = default_storage.open(epoch_input_filename, 'w')
-            self.create_epoch_input(epoch_input_file, period, start_date, end_date, body_elements)
+            jpl_mean_mag, model_ltt_list = self.create_epoch_input(epoch_input_file, period, start_date, end_date, body_elements)
             epoch_input_file.close()
         else:
-            epoch_input_filename = lcs_input_filename
+            epoch_input_filename = None
         if options['period_scan']:
             # Create period_scan input file
             psinput_filename = self.import_or_create_psinput(path, obj_name, pmin, pmax)
@@ -358,12 +389,12 @@ class Command(BaseCommand):
             # Invert LC and calculate orientation/rotation parameters
             convexinv_retcode_or_cmdline = run_damit('convexinv', lcs_input_filename,
                                                      f"-s -p {convinv_outpar_filename} {convinv_input_filename} {convinv_outlcs_filename}")
-            self.zip_lc_model(lcs_input_filename, convinv_outlcs_filename, convinv_lc_final_filename)
+            self.zip_lc_model(lcs_input_filename, convinv_outlcs_filename, convinv_lc_final_filename, mag_means, lc_ltt_list)
 
             # Refine output faces
             conjgdinv_retcode_or_cmdline = run_damit('conjgradinv', lcs_input_filename,
                                                      f"-s -o {conjinv_outareas_filename} {conjinv_input_filename} {convinv_outpar_filename} {conjinv_outlcs_filename}")
-            self.zip_lc_model(lcs_input_filename, conjinv_outlcs_filename, conjinv_lc_final_filename)
+            self.zip_lc_model(lcs_input_filename, conjinv_outlcs_filename, conjinv_lc_final_filename, mag_means, lc_ltt_list)
 
             # Calculate polygon faces for shape
             mink_face_file = default_storage.open(mink_faces_filename, 'w+')
@@ -375,7 +406,8 @@ class Command(BaseCommand):
             shape_model_file.close()
 
             # Create Model lc for given epochs.
-            lcgenerat_retcode_or_cmdline = run_damit('lcgenerator', epoch_input_filename,
-                                                     f" {convinv_outpar_filename} {shape_model_filename} {lcgen_outlcs_filename}")
-            self.zip_lc_model(epoch_input_filename, lcgen_outlcs_filename, lcgen_lc_final_filename)
+            if epoch_input_filename:
+                lcgenerat_retcode_or_cmdline = run_damit('lcgenerator', epoch_input_filename,
+                                                         f" {convinv_outpar_filename} {shape_model_filename} {lcgen_outlcs_filename}")
+                self.zip_lc_model(epoch_input_filename, lcgen_outlcs_filename, lcgen_lc_final_filename, jpl_mean_mag, model_ltt_list)
         return

@@ -3919,6 +3919,24 @@ def import_period_scan(file, scan_list):
     return scan_list
 
 
+def import_lc_model(file, model_list):
+    """Pull model lc from intensity files."""
+
+    lc_model_file = default_storage.open(file, 'rb')
+    lines = lc_model_file.readlines()
+    model_jd = []
+    model_mag = []
+    for line in lines:
+        chunks = line.split()
+        if len(chunks) == 2:
+            model_jd.append(float(chunks[0]))
+            model_mag.append(float(chunks[1]))
+    model_list['date'].append(model_jd)
+    model_list['mag'].append(model_mag)
+    model_list['name'].append(os.path.basename(file))
+    return model_list
+
+
 def get_lc_plot(body, data):
     """Plot all lightcurve data for given source.
     """
@@ -3928,6 +3946,7 @@ def get_lc_plot(body, data):
     datadir = os.path.join(base_dir, obj_name)
     filenames = search(datadir, '.*.ALCDEF.txt')
     period_scans = search(datadir, '.*.period_scan.out')
+    lc_models = search(datadir, '.*.lcs.final')
     if data.get('period', None):
         period = data['period']
     else:
@@ -3949,6 +3968,11 @@ def get_lc_plot(body, data):
         period_scan_dict["chi2"] = [x for _, x in sorted(zip(period_scan_dict["period"], period_scan_dict["chi2"]))]
         period_scan_dict["period"].sort()
 
+    lc_model_dict = {"date": [], "mag": [], "name": []}
+    if lc_models:
+        for m in lc_models:
+            lc_model_dict = import_lc_model(os.path.join(datadir, m), lc_model_dict)
+
     meta_list = [x for _, x in sorted(zip(lc_list, meta_list), key=lambda i: i[0]['date'][0])]
     lc_list = sorted(lc_list, key=lambda i: i['date'][0])
 
@@ -3965,7 +3989,7 @@ def get_lc_plot(body, data):
         ephem = []
 
     if lc_list:
-        script, div = lc_plot(lc_list, meta_list, period, period_scan_dict, body, jpl_ephem=ephem)
+        script, div = lc_plot(lc_list, meta_list, lc_model_dict, period, period_scan_dict, body, jpl_ephem=ephem)
     else:
         script = None
         div = """
