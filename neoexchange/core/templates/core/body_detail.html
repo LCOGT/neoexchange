@@ -324,7 +324,7 @@
 								        {% endif %}
 								    {% endfor %}
                                     {% for sb in blocks %}
-                                        {% if sb.obstype == 1 %}
+                                        {% if sb.obstype == 1 and sb.num_observed > 0%}
                                             <tr>
 										        <td class="kv-key"> LCO Spectrum</td>
                                                 <td class="kv-value"><a href="{% url 'blockspec' sb.pk 1 %}">{{sb.when_observed|date:"Y-m-d"}} ({{sb.site|upper}}) </a></td>
