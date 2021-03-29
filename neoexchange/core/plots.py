@@ -710,19 +710,20 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, body=
     p_slider_max = Spinner(value=max_period, low=0, step=.01, title="max", width=100)  # Number box for setting period constraints
     v_offset_button = Toggle(label="Apply Predicted Offset", button_type="default")  # Button to add/remove Horizons predicted offset
     draw_button = Button(label="Re-Draw", button_type="default", width=50)  # Button to re-draw mags.
+    model_draw_button = Button(label="Re-Draw", button_type="default", width=50)  # Button to re-draw models.
 
     # Create plots
     error_cap = TeeHead(line_alpha=0)
     # Build unphased plot:
     plot_u.line(x="date", y="v_mag", source=horizons_source, line_color='black', line_width=3, line_alpha=.5, legend_label="Horizons V-mag", visible=False)
+    for n, s in enumerate(lc_models_sources):
+        plot_u.dash(x="date", y="mag", source=s, name=lc_model_dict['name'][n], alpha="alpha")
     plot_u.add_layout(
         Whisker(source=orig_source, base="time", upper="err_high", lower="err_low", line_color="color", line_alpha="alpha",
                 lower_head=error_cap, upper_head=error_cap))
     plot_u.circle(x="time", y="mag", source=orig_source, size=3, color="color", alpha="alpha")
     plot_u.legend.click_policy = 'hide'
 
-    for n, s in enumerate(lc_models_sources):
-        plot_u.circle(x="date", y="mag", source=s, name=lc_model_dict['name'][n], alpha="alpha")
     # Build Phased PLot:
     plot_p.add_layout(
         Whisker(source=source, base="time", upper="err_high", lower="err_low", line_color="color", line_alpha="alpha",
@@ -805,8 +806,10 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, body=
         except TypeError:
             jpl_date = []
             horizons_source.data = dict(date=[], v_mag=[])
-        colors = itertools.cycle(Category10[10])
+        colors = itertools.cycle(Category20[20])
         for c, lc in enumerate(phased_lc_list):
+            plot_col = next(colors)
+            plot_col = next(colors)
             plot_col = next(colors)
             # Build dataset_title
             sess_mid = (unphased_lc_list[c]['date'][-1] + unphased_lc_list[c]['date'][0]) / 2
@@ -867,15 +870,16 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, body=
     ]
     columns_model = [
         # TableColumn(field="symbol", title='', formatter=formatter, width=3),
-        TableColumn(field="name", title="Name")
+        TableColumn(field="name", title="Name"),
+        TableColumn(field="offset", title="Mag Offset", editor=NumberEditor(step=.1),
+                    formatter=NumberFormatter(format="0.00"))
     ]
 
     # Build Datatable and Title
     dataset_source.selected.indices = list(range(len(dataset_source.data['date'])))
     data_table = DataTable(source=dataset_source, columns=columns_lc, width=600, height=300, selectable='checkbox', index_position=None, editable=True)
     table_title = Div(text='<b>LC Data</b>', width=450)  # No way to set title for Table, Have to build HTML Div and put above it...
-    # model_list_source.selected.indices = list(range(len(model_list_source.data['name'])))
-    model_table = DataTable(source=model_list_source, columns=columns_model, width=200, height=300, selectable='checkbox', index_position=None, editable=True)
+    model_table = DataTable(source=model_list_source, columns=columns_model, width=300, height=300, selectable='checkbox', index_position=None, editable=True)
     model_table_title = Div(text='<b>Models</b>', width=450)
 
     # JS Callback to set Dataset Mag offset to relative Horizons v-mag differences
@@ -894,7 +898,7 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, body=
     js_remove_shift_model = get_js_as_text(js_file, "remove_shift_model")
     model_callback = CustomJS(args=dict(source_list=lc_models_sources, model_source=model_list_source), code=js_remove_shift_model)
     model_list_source.selected.js_on_change('indices', model_callback)
-    # draw_button.js_on_click(callback)
+    model_draw_button.js_on_click(model_callback)
     model_list_source.js_on_change('data', model_callback)
 
     # JS Call back to handle period max and min changes to both the period_box and the period_slider
@@ -935,7 +939,7 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, body=
                              row(column(row(table_title),
                                         data_table),
                                  column(row(model_table_title),
-                                        model_table)))
+                                        model_table, model_draw_button)))
     periodogram_layout = column(plot_period,
                                 row(column(row(table_title),
                                            data_table),
@@ -967,8 +971,10 @@ def build_data_sets(lc_list, title_list):
     dat_colors = []
     dat_alphas = []
     data_title = []
-    colors = itertools.cycle(Category10[10])
+    colors = itertools.cycle(Category20[20])
     for c, lc in enumerate(lc_list):
+        plot_col = next(colors)
+        plot_col = next(colors)
         plot_col = next(colors)
         # Build Error Bars
         err_up = np.array(lc['mags']) + np.array(lc['mag_errs'])

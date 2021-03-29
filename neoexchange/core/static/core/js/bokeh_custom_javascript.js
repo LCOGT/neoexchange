@@ -226,12 +226,15 @@ function remove_shift_model(source_list, model_source){
         var source = models[i]
         var n = source.data['name']
         var a = source.data['alpha']
-        for (let i = 0; i < a.length; i++) {
-            if (selected.includes(n[i])){
-                a[i] = 1;
+        var mag = source.data['mag']
+        var omag = source.data['omag']
+        for (let k = 0; k < a.length; k++) {
+            if (selected.includes(n[k])){
+                a[k] = 1;
             } else {
-                a[i] = 0;
+                a[k] = 0;
             }
+            mag[k] = omag[k] + O[i]
         }
         source.change.emit();
     }
