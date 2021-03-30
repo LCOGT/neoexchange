@@ -221,8 +221,9 @@ class BodyDetailView(DetailView):
         context['lin_script'] = lin_script
         context['lin_div'] = lin_div
         base_path = BOKEH_URL.format(bokeh.__version__)
-        context['css_path'] = base_path + 'css'
         context['js_path'] = base_path + 'js'
+        params['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
+        params['table_path'] = BOKEH_URL.format('tables-'+bokeh.__version__) + 'js'
         return context
 
 
@@ -742,8 +743,9 @@ class StaticSourceDetailView(DetailView):
             context['script'] = script
             context['div'] = div["raw_spec"]
         base_path = BOKEH_URL.format(bokeh.__version__)
-        context['css_path'] = base_path + 'css'
         context['js_path'] = base_path + 'js'
+        context['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
+        context['table_path'] = BOKEH_URL.format('tables-'+bokeh.__version__) + 'js'
         return context
 
 
@@ -3795,8 +3797,9 @@ class BlockSpec(View):  # make logging required later
             if 'reflec_spec' in div:
                 params["reflec_div"] = div["reflec_spec"]
         base_path = BOKEH_URL.format(bokeh.__version__)
-        params['css_path'] = base_path + 'css'
         params['js_path'] = base_path + 'js'
+        params['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
+        params['table_path'] = BOKEH_URL.format('tables-'+bokeh.__version__) + 'js'
         return render(request, self.template_name, params)
 
 
@@ -3816,8 +3819,9 @@ class PlotSpec(View):
             params["reflec_div"] = div["reflec_spec"]
             params["p_spec"] = p_spec
         base_path = BOKEH_URL.format(bokeh.__version__)
-        params['css_path'] = base_path + 'css'
         params['js_path'] = base_path + 'js'
+        params['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
+        params['table_path'] = BOKEH_URL.format('tables-'+bokeh.__version__) + 'js'
 
         return render(request, self.template_name, params)
 
@@ -3845,7 +3849,6 @@ class LCPlot(LookUpBodyMixin, FormView):
         else:
             params["lc_div"] = kwargs['div']
         base_path = BOKEH_URL.format(bokeh.__version__)
-        params['css_path'] = base_path + 'css'
         params['js_path'] = base_path + 'js'
         params['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
         params['table_path'] = BOKEH_URL.format('tables-'+bokeh.__version__) + 'js'

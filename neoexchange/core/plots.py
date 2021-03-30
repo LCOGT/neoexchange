@@ -38,7 +38,8 @@ from bokeh.layouts import layout, column, row
 from bokeh.plotting import figure, ColumnDataSource
 from bokeh.resources import CDN, INLINE
 from bokeh.embed import components, file_html
-from bokeh.models import HoverTool, Label, CrosshairTool, Whisker, TeeHead, Range1d, CustomJS, Title, CustomJSHover, DataRange1d
+from bokeh.models import HoverTool, Label, CrosshairTool, Whisker, TeeHead, Range1d, CustomJS, Title, CustomJSHover,\
+    DataRange1d, Select
 from bokeh.models.widgets import CheckboxGroup, Slider, TableColumn, DataTable, HTMLTemplateFormatter, NumberEditor,\
     NumberFormatter, Spinner, Button, Panel, Tabs, Div, Toggle
 from bokeh.palettes import Category20, Category10
@@ -271,7 +272,7 @@ def spec_plot(data_spec, analog_data, reflec=False):
             plot = figure(x_range=(3500, 10500), y_range=(0, 1.75), plot_width=800, plot_height=400)
             plot.yaxis.axis_label = 'Relative Spectra (Normalized at 5500 Å)'
         else:
-            plot = figure( plot_width=600, plot_height=400)
+            plot = figure(plot_width=600, plot_height=400)
             plot.yaxis.axis_label = 'Flux ({})'.format(data_spec[0]["spec"].unit)
         for spec in data_spec:
             plot.line(spec['wav'], spec['spec'], legend_label=spec['label'], muted_alpha=0.25)
@@ -322,8 +323,11 @@ def spec_plot(data_spec, analog_data, reflec=False):
 
         if not reflec:
             for spec in data_spec:
-                data_label_reflec, reflec_spec, reflec_ast_wav = spectrum_plot(spec['filename'], analog=analog_data[0]['filename'])
-                plot2.line(reflec_ast_wav, reflec_spec, line_width=3, name=spec['label'])
+                reflectance_sources = []
+                for a in analog_data:
+                    data_label_reflec, reflec_spec, reflec_ast_wav = spectrum_plot(spec['filename'], analog=a['filename'])
+                    reflectance_sources.append(ColumnDataSource(data=dict(wav=reflec_ast_wav, spec=reflec_spec)))
+                plot2.line("wav", "spec", source=reflectance_sources[0], line_width=3, name=spec['label'])
                 plot2.title.text = 'Object: {}    Analog: {}'.format(spec['label'], analog_data[0]['label'])
         else:
             for spec in data_spec:
@@ -348,7 +352,13 @@ def spec_plot(data_spec, analog_data, reflec=False):
         plot2.xaxis.axis_label = "Wavelength (Å)"
         plot2.yaxis.axis_label = 'Reflectance Spectra (Normalized at 5500 Å)'
 
-        spec_plots["reflec_spec"] = plot2
+        # Build tools
+        analog_labels = [a['label'] for a in analog_data]
+        analog_select = Select(title="Analog", value=analog_labels[0], options=analog_labels)
+
+        reflec_layout = column(row(plot2), row(analog_select))
+
+        spec_plots["reflec_spec"] = reflec_layout
 
     # Create script/div
     if spec_plots:
