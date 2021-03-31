@@ -206,7 +206,7 @@ function phase_data(source, period_box, period_slider, plot, osource, phase_shif
     source.change.emit();
 }
 
-function analog_select(analog_select, reflectance_sources, chosen_source){
+function analog_select(analog_select, reflectance_sources, chosen_source, plot){
     const analog = analog_select.value;
     const options = analog_select.options;
     const data = chosen_source.data;
@@ -215,6 +215,7 @@ function analog_select(analog_select, reflectance_sources, chosen_source){
         if (analog == options[i]){
             data['spec'] = reflectance_sources[i].data['spec'];
             data['wav'] = reflectance_sources[i].data['wav'];
+            plot.title.text = plot.title.text.split("    ")[0] + "    Analog: " + analog;
         }
     }
     chosen_source.change.emit();

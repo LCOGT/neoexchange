@@ -362,7 +362,10 @@ def spec_plot(data_spec, analog_data, reflec=False):
 
         # JS Call back to change analog
         js_analog_picker = get_js_as_text(js_file, "analog_select")
-        analog_select_callback = CustomJS(args=dict(analog_select=analog_select, reflectance_sources=reflectance_sources, chosen_source=reflect_source_pref), code=js_analog_picker)
+        analog_select_callback = CustomJS(args=dict(analog_select=analog_select,
+                                                    reflectance_sources=reflectance_sources,
+                                                    chosen_source=reflect_source_pref, plot=plot2),
+                                          code=js_analog_picker)
         analog_select.js_on_change('value', analog_select_callback)
 
         reflec_layout = column(row(analog_select), row(plot2))
