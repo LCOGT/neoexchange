@@ -56,6 +56,9 @@ from photometrics.spectraplot import spectrum_plot, read_mean_tax
 
 logger = logging.getLogger(__name__)
 
+# JS file containing call back functions
+js_file = os.path.abspath(os.path.join('core', 'static', 'core', 'js', 'bokeh_custom_javascript.js'))
+
 
 def find_existing_vis_file(base_dir, filematch):
     """
@@ -327,7 +330,8 @@ def spec_plot(data_spec, analog_data, reflec=False):
                 for a in analog_data:
                     data_label_reflec, reflec_spec, reflec_ast_wav = spectrum_plot(spec['filename'], analog=a['filename'])
                     reflectance_sources.append(ColumnDataSource(data=dict(wav=reflec_ast_wav, spec=reflec_spec)))
-                plot2.line("wav", "spec", source=reflectance_sources[0], line_width=3, name=spec['label'])
+                reflect_source_pref = ColumnDataSource(data=copy.deepcopy(reflectance_sources[0].data))
+                plot2.line("wav", "spec", source=reflect_source_pref, line_width=3, name=spec['label'])
                 plot2.title.text = 'Object: {}    Analog: {}'.format(spec['label'], analog_data[0]['label'])
         else:
             for spec in data_spec:
@@ -356,7 +360,12 @@ def spec_plot(data_spec, analog_data, reflec=False):
         analog_labels = [a['label'] for a in analog_data]
         analog_select = Select(title="Analog", value=analog_labels[0], options=analog_labels)
 
-        reflec_layout = column(row(plot2), row(analog_select))
+        # JS Call back to change analog
+        js_analog_picker = get_js_as_text(js_file, "analog_select")
+        analog_select_callback = CustomJS(args=dict(analog_select=analog_select, reflectance_sources=reflectance_sources, chosen_source=reflect_source_pref), code=js_analog_picker)
+        analog_select.js_on_change('value', analog_select_callback)
+
+        reflec_layout = column(row(analog_select), row(plot2))
 
         spec_plots["reflec_spec"] = reflec_layout
 
@@ -624,9 +633,6 @@ def lc_plot(lc_list, meta_list, period=1, jpl_ephem=None):
             ['datetime_jd'] --- Julian dates
             ['V'] --- predicted V magnitude for given Julian dates
     """
-
-    # JS file containing call back functions
-    js_file = os.path.abspath(os.path.join('core', 'static', 'core', 'js', 'bokeh_custom_javascript.js'))
 
     # Pull general info from metadata
     obj, name, num = get_name(meta_list[0])

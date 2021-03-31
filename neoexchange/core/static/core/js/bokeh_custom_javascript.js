@@ -205,3 +205,17 @@ function phase_data(source, period_box, period_slider, plot, osource, phase_shif
     plot.below[0].axis_label = 'Phase (Period = ' + period + 'h / Epoch = '+ epoch + ')';
     source.change.emit();
 }
+
+function analog_select(analog_select, reflectance_sources, chosen_source){
+    const analog = analog_select.value;
+    const options = analog_select.options;
+    const data = chosen_source.data;
+
+    for (var i = 0; i < options.length; i++){
+        if (analog == options[i]){
+            data['spec'] = reflectance_sources[i].data['spec'];
+            data['wav'] = reflectance_sources[i].data['wav'];
+        }
+    }
+    chosen_source.change.emit();
+}
