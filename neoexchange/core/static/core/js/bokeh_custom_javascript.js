@@ -206,17 +206,26 @@ function phase_data(source, period_box, period_slider, plot, osource, phase_shif
     source.change.emit();
 }
 
-function analog_select(analog_select, reflectance_sources, chosen_source, plot){
+function analog_select(analog_select, frame_select, reflectance_sources, chosen_sources, plot, lines){
     const analog = analog_select.value;
     const options = analog_select.options;
-    const data = chosen_source.data;
+    const frames = frame_select.value;
 
     for (var i = 0; i < options.length; i++){
         if (analog == options[i]){
-            data['spec'] = reflectance_sources[i].data['spec'];
-            data['wav'] = reflectance_sources[i].data['wav'];
+            for (var k = 0; k < chosen_sources.length; k++){
+                chosen_sources[k].data['spec'] = reflectance_sources[k][i].data['spec'];
+                chosen_sources[k].data['wav'] = reflectance_sources[k][i].data['wav'];
+                var num = k+1;
+                if (frames.includes(num.toString())){
+                    lines[k].visible = true
+                } else {
+                    lines[k].visible = false
+                }
+                chosen_sources[k].change.emit();
+                lines[k].change.emit()
+            }
             plot.title.text = plot.title.text.split("    ")[0] + "    Analog: " + analog;
         }
     }
-    chosen_source.change.emit();
 }

@@ -222,8 +222,8 @@ class BodyDetailView(DetailView):
         context['lin_div'] = lin_div
         base_path = BOKEH_URL.format(bokeh.__version__)
         context['js_path'] = base_path + 'js'
-        params['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
-        params['table_path'] = BOKEH_URL.format('tables-'+bokeh.__version__) + 'js'
+        context['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
+        context['table_path'] = BOKEH_URL.format('tables-'+bokeh.__version__) + 'js'
         return context
 
 
@@ -3757,11 +3757,13 @@ def plot_floyds_spec(block, obs_num=1):
     analogs = find_analog(block.when_observed, block.site)
 
     try:
-        raw_label, raw_spec, ast_wav = spectrum_plot(filenames[obs_num-1])
-        data_spec = {'label': raw_label,
-                     'spec': raw_spec,
-                     'wav': ast_wav,
-                     'filename': filenames[obs_num-1]}
+        data_spec = []
+        for filename in filenames:
+            raw_label, raw_spec, ast_wav = spectrum_plot(filename)
+            data_spec.append({'label': raw_label,
+                              'spec': raw_spec,
+                              'wav': ast_wav,
+                              'filename': filename})
     except IndexError:
         data_spec = None
 
@@ -3771,11 +3773,11 @@ def plot_floyds_spec(block, obs_num=1):
         offset += 2
         analog_label, analog_spec, star_wav = spectrum_plot(analog, offset=offset)
         analog_data.append({'label': analog_label,
-                       'spec': analog_spec,
-                       'wav': star_wav,
-                       'filename': analog})
+                            'spec': analog_spec,
+                            'wav': star_wav,
+                            'filename': analog})
 
-    script, div = spec_plot([data_spec], analog_data)
+    script, div = spec_plot(data_spec, analog_data)
 
     return script, div
 

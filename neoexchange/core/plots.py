@@ -39,9 +39,9 @@ from bokeh.plotting import figure, ColumnDataSource
 from bokeh.resources import CDN, INLINE
 from bokeh.embed import components, file_html
 from bokeh.models import HoverTool, Label, CrosshairTool, Whisker, TeeHead, Range1d, CustomJS, Title, CustomJSHover,\
-    DataRange1d, Select
+    DataRange1d
 from bokeh.models.widgets import CheckboxGroup, Slider, TableColumn, DataTable, HTMLTemplateFormatter, NumberEditor,\
-    NumberFormatter, Spinner, Button, Panel, Tabs, Div, Toggle
+    NumberFormatter, Spinner, Button, Panel, Tabs, Div, Toggle, Select, MultiSelect
 from bokeh.palettes import Category20, Category10
 
 from .models import Body, CatalogSources, StaticSource, Block, model_to_dict, PreviousSpectra
@@ -325,14 +325,19 @@ def spec_plot(data_spec, analog_data, reflec=False):
                 plot2.patch(xs, ys, fill_alpha=.25, line_width=1, fill_color=colors[j], line_color="black", name=tax + "-Type", legend_label=tax, line_alpha=.25, visible=vis)
 
         if not reflec:
+            reflect_source_prefs = []
+            reflect_source_lists = []
+            reflectance_lines = []
             for spec in data_spec:
                 reflectance_sources = []
                 for a in analog_data:
                     data_label_reflec, reflec_spec, reflec_ast_wav = spectrum_plot(spec['filename'], analog=a['filename'])
                     reflectance_sources.append(ColumnDataSource(data=dict(wav=reflec_ast_wav, spec=reflec_spec)))
-                reflect_source_pref = ColumnDataSource(data=copy.deepcopy(reflectance_sources[0].data))
-                plot2.line("wav", "spec", source=reflect_source_pref, line_width=3, name=spec['label'])
-                plot2.title.text = 'Object: {}    Analog: {}'.format(spec['label'], analog_data[0]['label'])
+                reflect_source_prefs.append(ColumnDataSource(data=copy.deepcopy(reflectance_sources[0].data)))
+                reflect_source_lists.append(reflectance_sources)
+            for k, ref_source in enumerate(reflect_source_prefs):
+                reflectance_lines.append(plot2.line("wav", "spec", source=ref_source, line_width=3, name=data_spec[k]['label']))
+            plot2.title.text = 'Object: {}    Analog: {}'.format(data_spec[0]['label'], analog_data[0]['label'])
         else:
             for spec in data_spec:
                 plot2.circle(spec['wav'], spec['spec'], size=3, name=spec['label'])
@@ -359,16 +364,20 @@ def spec_plot(data_spec, analog_data, reflec=False):
         # Build tools
         analog_labels = [a['label'] for a in analog_data]
         analog_select = Select(title="Analog", value=analog_labels[0], options=analog_labels)
+        frame_labels = list(map(str, range(1, len(data_spec)+1)))
+        frame_select = MultiSelect(title="Target Frames", value=frame_labels, options=frame_labels)
 
         # JS Call back to change analog
         js_analog_picker = get_js_as_text(js_file, "analog_select")
-        analog_select_callback = CustomJS(args=dict(analog_select=analog_select,
-                                                    reflectance_sources=reflectance_sources,
-                                                    chosen_source=reflect_source_pref, plot=plot2),
+        analog_select_callback = CustomJS(args=dict(analog_select=analog_select, frame_select=frame_select,
+                                                    reflectance_sources=reflect_source_lists,
+                                                    chosen_sources=reflect_source_prefs, plot=plot2,
+                                                    lines=reflectance_lines),
                                           code=js_analog_picker)
         analog_select.js_on_change('value', analog_select_callback)
+        frame_select.js_on_change('value', analog_select_callback)
 
-        reflec_layout = column(row(analog_select), row(plot2))
+        reflec_layout = column(row(frame_select, analog_select), row(plot2))
 
         spec_plots["reflec_spec"] = reflec_layout
 
