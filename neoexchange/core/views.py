@@ -3768,9 +3768,8 @@ def plot_floyds_spec(block, obs_num=1):
         data_spec = None
 
     analog_data = []
-    offset = 0
+    offset = 2
     for analog in analogs:
-        offset += 2
         analog_label, analog_spec, star_wav = spectrum_plot(analog, offset=offset)
         analog_data.append({'label': analog_label,
                             'spec': analog_spec,

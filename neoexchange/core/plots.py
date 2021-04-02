@@ -277,9 +277,9 @@ def spec_plot(data_spec, analog_data, reflec=False):
         else:
             plot = figure(plot_width=600, plot_height=400)
             plot.yaxis.axis_label = 'Flux ({})'.format(data_spec[0]["spec"].unit)
+        raw_lines = []
         for spec in data_spec:
-            plot.line(spec['wav'], spec['spec'], legend_label=spec['label'], muted_alpha=0.25)
-        plot.legend.click_policy = 'mute'
+            raw_lines.append(plot.line(spec['wav'], spec['spec'], muted_alpha=0.25))
 
         # Set Axes
         plot.axis.axis_line_width = 2
@@ -290,14 +290,12 @@ def spec_plot(data_spec, analog_data, reflec=False):
 
     if reflec or (data_spec[0] and analog_data and data_spec[0]['label'] != analog_data[0]['label']):
         if not reflec:
-            first = True
+            analog_sources_raw = []
             for analog in analog_data:
-                if first:
-                    muted_alpha = 0.25
-                    first = False
-                else:
-                    muted_alpha = 0
-                plot.line(analog['wav'], analog['spec'], color="firebrick", legend_label=analog['label'], muted=True, muted_alpha=muted_alpha, muted_color="firebrick")
+                analog_sources_raw.append(ColumnDataSource(data=dict(wav=analog['wav'], spec=analog['spec'])))
+            analog_source_final = ColumnDataSource(data=copy.deepcopy(analog_sources_raw[0].data))
+            plot.line('wav', 'spec', source=analog_source_final, color="firebrick")
+            plot.title.text = 'Object: {}    Analog: {}'.format(data_spec[0]['label'], analog_data[0]['label'])
         # Build Reflectance Plot
         plot2 = figure(x_range=(3500, 10500), y_range=(0.5, 1.75), plot_width=800, plot_height=400)
         spec_dict = read_mean_tax()
@@ -365,14 +363,15 @@ def spec_plot(data_spec, analog_data, reflec=False):
         analog_labels = [a['label'] for a in analog_data]
         analog_select = Select(title="Analog", value=analog_labels[0], options=analog_labels)
         frame_labels = list(map(str, range(1, len(data_spec)+1)))
-        frame_select = MultiSelect(title="Target Frames", value=frame_labels, options=frame_labels)
+        frame_select = MultiSelect(title="Target Frames", value=frame_labels, options=frame_labels, height=49)
 
         # JS Call back to change analog
         js_analog_picker = get_js_as_text(js_file, "analog_select")
         analog_select_callback = CustomJS(args=dict(analog_select=analog_select, frame_select=frame_select,
                                                     reflectance_sources=reflect_source_lists,
-                                                    chosen_sources=reflect_source_prefs, plot=plot2,
-                                                    lines=reflectance_lines),
+                                                    chosen_sources=reflect_source_prefs, plot=plot, plot2=plot2,
+                                                    lines=reflectance_lines, raw_analog=analog_source_final,
+                                                    raw_analog_list=analog_sources_raw, raw_lines=raw_lines),
                                           code=js_analog_picker)
         analog_select.js_on_change('value', analog_select_callback)
         frame_select.js_on_change('value', analog_select_callback)

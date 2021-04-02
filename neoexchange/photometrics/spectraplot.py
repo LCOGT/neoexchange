@@ -202,10 +202,17 @@ def spectrum_plot(spectra, data_set='', analog=None, offset=0):
         yyy = spec_y
 
     if not data_set:
+        if spec_header['ROTMODE'].upper() == 'VFLOAT':
+            slit_fig = '|'
+        else:
+            slit_fig = '/'
+        if spec_header['APERWID'] == 6.0:
+            slit_fig += slit_fig
         if analog:
             data_set = "{} -- {} -- {}".format(spec_header['OBJECT'], analog_header['OBJECT'], spec_header['DAY-OBS'])
         else:
-            data_set = "{} -- {}".format(spec_header['OBJECT'], spec_header['DAY-OBS'])
+            data_set = "{} -- {} ({}) [ {} ]".format(spec_header['OBJECT'], spec_header['DAY-OBS'],
+                                                     round(spec_header['AIRMASS'], 3), slit_fig)
     elif data_set.upper() == 'NONE':
         data_set = ''
 
