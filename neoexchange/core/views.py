@@ -3745,7 +3745,7 @@ def plot_all_spec(source):
     return script, div, p_spec
 
 
-def plot_floyds_spec(block, obs_num=1):
+def plot_floyds_spec(block):
     """Get plots for requested blocks of FLOYDs data and subtract nearest solar analog."""
 
     date_obs, obj, req, path, prop = find_spec(block.id)
@@ -3790,8 +3790,8 @@ class BlockSpec(View):  # make logging required later
             block = Block.objects.get(pk=kwargs['pk'])
         except ObjectDoesNotExist:
             raise Http404("Block does not exist.")
-        script, div = plot_floyds_spec(block, int(kwargs['obs_num']))
-        params = {'pk': kwargs['pk'], 'obs_num': kwargs['obs_num'], 'sb_id': block.superblock.id}
+        script, div = plot_floyds_spec(block)
+        params = {'pk': kwargs['pk'], 'sb_id': block.superblock.id}
         if div:
             params["the_script"] = script
             params["raw_div"] = div["raw_spec"]
