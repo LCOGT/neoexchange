@@ -265,12 +265,11 @@ class SpectraplotTest(FunctionalTest):
             # note: block and body do not match spectra.
             # mismatch due to recycling and laziness
         actual_url = self.browser.current_url
-        target_url = self.live_server_url+'/block/'+str(self.test_block.pk)+'/spectra/1/'
+        target_url = self.live_server_url+'/block/'+str(self.test_block.pk)+'/spectra/'
         self.assertIn('Spectrum for block: '+str(self.test_block.pk)+' | LCO NEOx', self.browser.title)
         self.assertEqual(target_url, actual_url)
 
-        spec_plot1 = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='reflec_spec']/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
-        spec_plot2 = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='raw_spec']/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
+        spec_plot = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='spec_plot']/div[@class='bk']/div[@class='bk'][2]/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
 
     @patch('core.views.lco_api_call', mock_archive_spectra_header)
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
@@ -284,12 +283,11 @@ class SpectraplotTest(FunctionalTest):
         with self.wait_for_page_load(timeout=10):
             self.browser.find_elements_by_link_text('Spectrum Plot')[0].click()
         actual_url = self.browser.current_url
-        target_url = self.live_server_url+'/block/'+str(self.test_mblock1.pk)+'/spectra/1/'
+        target_url = self.live_server_url+'/block/'+str(self.test_mblock1.pk)+'/spectra/'
         self.assertIn('Spectrum for block: '+str(self.test_mblock1.pk)+' | LCO NEOx', self.browser.title)
         self.assertEqual(target_url, actual_url)
 
-        spec_plot1 = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='reflec_spec']/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
-        spec_plot2 = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='raw_spec']/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
+        spec_plot = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='spec_plot']/div[@class='bk']/div[@class='bk'][2]/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
 
         self.wait_for_element_with_id('page')
         with self.wait_for_page_load(timeout=10):
@@ -298,11 +296,11 @@ class SpectraplotTest(FunctionalTest):
         with self.wait_for_page_load(timeout=10):
             self.browser.find_elements_by_link_text('Spectrum Plot')[1].click()
         actual_url2 = self.browser.current_url
-        target_url2 = self.live_server_url+'/block/'+str(self.test_mblock2.pk)+'/spectra/1/'
+        target_url2 = self.live_server_url+'/block/'+str(self.test_mblock2.pk)+'/spectra/'
         self.assertIn('Spectrum for block: '+str(self.test_mblock2.pk)+' | LCO NEOx', self.browser.title)
         self.assertEqual(target_url2, actual_url2)
 
-        spec_plot2 = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='raw_spec']/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
+        spec_plot = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='spec_plot']/div[@class='bk']/div[@class='bk'][2]/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
         try:
             spec_plot1 = self.browser.find_element_by_xpath(
                 "/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='reflec_spec']/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
@@ -325,25 +323,13 @@ class SpectraplotTest(FunctionalTest):
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_link_text('5').click()
         with self.wait_for_page_load(timeout=10):
-            self.browser.find_element_by_link_text('Spectrum Plot 1').click()
+            self.browser.find_element_by_link_text('Spectrum Plot').click()
         actual_url = self.browser.current_url
-        target_url = self.live_server_url+'/block/'+str(self.test_mblock1.pk)+'/spectra/1/'
+        target_url = self.live_server_url+'/block/'+str(self.test_mblock1.pk)+'/spectra/'
         self.assertIn('Spectrum for block: '+str(self.test_mblock1.pk)+' | LCO NEOx', self.browser.title)
         self.assertEqual(target_url, actual_url)
-
-        spec_plot1 = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='reflec_spec']/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
-        spec_plot2 = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='raw_spec']/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
-
-        self.wait_for_element_with_id('page')
-        with self.wait_for_page_load(timeout=10):
-            self.browser.back()
-
-        with self.wait_for_page_load(timeout=10):
-            self.browser.find_element_by_link_text('Spectrum Plot 2').click()
-        actual_url2 = self.browser.current_url
-        target_url2 = self.live_server_url+'/block/'+str(self.test_mblock1.pk)+'/spectra/2/'
-        self.assertIn('Spectrum for block: '+str(self.test_mblock1.pk)+' | LCO NEOx', self.browser.title)
-        self.assertEqual(target_url2, actual_url2)
+        spec_plot = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='spec_plot']/div[@class='bk']/div[@class='bk'][2]/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
+        target_list = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='spec_plot']/div[@class='bk']/div[@class='bk'][1]/div[@class='bk'][1]/div[@class='bk bk-input-group']/select[@class='bk bk-input']")
 
 
 class SMASSPlotTest(FunctionalTest):
@@ -353,7 +339,7 @@ class SMASSPlotTest(FunctionalTest):
         self.spectradir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_spectra'))
 
         settings.MEDIA_ROOT = self.spectradir
-        self.filename = 'test_ascii.ascii'
+        self.filename = 'a001981.4.txt'
 
         # Create test body
         params = {   'provisional_name': None,
@@ -419,4 +405,10 @@ class SMASSPlotTest(FunctionalTest):
         with self.wait_for_page_load(timeout=10):
             link.click()
 
-        spec_plot = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='reflec_spec']/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
+        spec_plot = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='spec_plot']/div[@class='bk']/div[@class='bk'][1]/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
+        try:
+            target_list = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='spec_plot']/div[@class='bk']/div[@class='bk'][1]/div[@class='bk'][1]/div[@class='bk bk-input-group']/select[@class='bk bk-input']")
+            analog_list = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='spec_plot']/div[@class='bk']/div[@class='bk'][1]/div[@class='bk'][2]/div[@class='bk bk-input-group']/select[@class='bk bk-input']")
+            raise Exception("Target list, or Analog list is present when it shouldn't be.")
+        except NoSuchElementException:
+            pass

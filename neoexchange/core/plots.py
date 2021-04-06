@@ -269,35 +269,48 @@ def spec_plot(data_spec, analog_data, reflec=False):
             reflec: Flag determinine if the data_spec data has already had the solar spectrum removed.
     """
 
-    spec_plots = {}
-    if not reflec and data_spec[0]:
+    if reflec:
+        spec_type = 'reflect_only'
+    elif data_spec[0] and analog_data and data_spec[0]['label'] != analog_data[0]['label']:
+        spec_type = 'raw_and_reflect'
+    else:
+        spec_type = 'raw_only'
+
+    # build plots
+    raw_plot = figure(plot_width=800, plot_height=400)
+    ref_plot = figure(x_range=(3500, 10500), y_range=(0.5, 1.75), plot_width=800, plot_height=400)
+    raw_lines = []
+    if 'raw' in spec_type:
         if data_spec[0]["spec"].unit == u.dimensionless_unscaled:
-            plot = figure(x_range=(3500, 10500), y_range=(0, 1.75), plot_width=800, plot_height=400)
-            plot.yaxis.axis_label = 'Relative Spectra (Normalized at 5500 Å)'
+            raw_plot = figure(plot_width=800, plot_height=400, x_range=(3500, 10500), y_range=(0, 1.75))
+            raw_plot.yaxis.axis_label = 'Relative Spectra (Normalized at 5500 Å)'
         else:
-            plot = figure(plot_width=600, plot_height=400)
-            plot.yaxis.axis_label = 'Flux ({})'.format(data_spec[0]["spec"].unit)
-        raw_lines = []
+            raw_plot.plot_width = 600
+            raw_plot.yaxis.axis_label = 'Flux ({})'.format(data_spec[0]["spec"].unit)
         for spec in data_spec:
-            raw_lines.append(plot.line(spec['wav'], spec['spec'], muted_alpha=0.25))
+            raw_lines.append(raw_plot.line(spec['wav'], spec['spec'], muted_alpha=0.25))
 
         # Set Axes
-        plot.axis.axis_line_width = 2
-        plot.axis.axis_label_text_font_size = "12pt"
-        plot.axis.major_tick_line_width = 2
-        plot.xaxis.axis_label = "Wavelength (Å)"
-        spec_plots["raw_spec"] = plot
+        raw_plot.axis.axis_line_width = 2
+        raw_plot.axis.axis_label_text_font_size = "12pt"
+        raw_plot.axis.major_tick_line_width = 2
+        raw_plot.xaxis.axis_label = "Wavelength (Å)"
 
-    if reflec or (data_spec[0] and analog_data and data_spec[0]['label'] != analog_data[0]['label']):
+    reflect_source_prefs = []
+    reflect_source_lists = []
+    reflectance_lines = []
+    analog_sources_raw = []
+    for analog in analog_data:
+        analog_sources_raw.append(ColumnDataSource(data=dict(wav=analog['wav'], spec=analog['spec'])))
+    try:
+        analog_source_final = ColumnDataSource(data=copy.deepcopy(analog_sources_raw[0].data))
+    except IndexError:
+        analog_source_final = ColumnDataSource(data=dict(wav=[], spec=[]))
+    if 'reflect' in spec_type:
         if not reflec:
-            analog_sources_raw = []
-            for analog in analog_data:
-                analog_sources_raw.append(ColumnDataSource(data=dict(wav=analog['wav'], spec=analog['spec'])))
-            analog_source_final = ColumnDataSource(data=copy.deepcopy(analog_sources_raw[0].data))
-            plot.line('wav', 'spec', source=analog_source_final, color="firebrick")
-            plot.title.text = 'Object: {}    Analog: {}'.format(data_spec[0]['label'], analog_data[0]['label'])
+            raw_plot.line('wav', 'spec', source=analog_source_final, color="firebrick")
+            raw_plot.title.text = 'Object: {}    Analog: {}'.format(data_spec[0]['label'], analog_data[0]['label'])
         # Build Reflectance Plot
-        plot2 = figure(x_range=(3500, 10500), y_range=(0.5, 1.75), plot_width=800, plot_height=400)
         spec_dict = read_mean_tax()
         spec_dict["Wavelength"] = [l*10000 for l in spec_dict["Wavelength"]]
 
@@ -318,14 +331,11 @@ def spec_plot(data_spec, analog_data, reflec=False):
 
             source = ColumnDataSource(spec_dict)
 
-            plot2.line("Wavelength", tax+"_Mean", source=source, color=colors[j], name=tax + "-Type", line_width=2, line_dash='dashed', legend_label=tax, visible=vis)
+            ref_plot.line("Wavelength", tax+"_Mean", source=source, color=colors[j], name=tax + "-Type", line_width=2, line_dash='dashed', legend_label=tax, visible=vis)
             if np.mean(spec_dict[tax + '_Sigma']) > 0:
-                plot2.patch(xs, ys, fill_alpha=.25, line_width=1, fill_color=colors[j], line_color="black", name=tax + "-Type", legend_label=tax, line_alpha=.25, visible=vis)
+                ref_plot.patch(xs, ys, fill_alpha=.25, line_width=1, fill_color=colors[j], line_color="black", name=tax + "-Type", legend_label=tax, line_alpha=.25, visible=vis)
 
         if not reflec:
-            reflect_source_prefs = []
-            reflect_source_lists = []
-            reflectance_lines = []
             for spec in data_spec:
                 reflectance_sources = []
                 for a in analog_data:
@@ -334,64 +344,65 @@ def spec_plot(data_spec, analog_data, reflec=False):
                 reflect_source_prefs.append(ColumnDataSource(data=copy.deepcopy(reflectance_sources[0].data)))
                 reflect_source_lists.append(reflectance_sources)
             for k, ref_source in enumerate(reflect_source_prefs):
-                reflectance_lines.append(plot2.line("wav", "spec", source=ref_source, line_width=3, name=data_spec[k]['label']))
-            plot2.title.text = 'Object: {}    Analog: {}'.format(data_spec[0]['label'], analog_data[0]['label'])
+                reflectance_lines.append(ref_plot.line("wav", "spec", source=ref_source, line_width=3, name=data_spec[k]['label']))
+            ref_plot.title.text = 'Object: {}    Analog: {}'.format(data_spec[0]['label'], analog_data[0]['label'])
         else:
             for spec in data_spec:
-                plot2.circle(spec['wav'], spec['spec'], size=3, name=spec['label'])
+                ref_plot.circle(spec['wav'], spec['spec'], size=3, name=spec['label'])
             title = data_spec[0]['label']
             for d in data_spec:
                 if d['label'] != title:
                     chunks = d['label'].split("--")
                     title += ' /' + chunks[1]
-            plot2.title.text = 'Object: {}'.format(title)
+            ref_plot.title.text = 'Object: {}'.format(title)
 
         hover = HoverTool(tooltips="$name", point_policy="follow_mouse", line_policy="none")
 
-        plot2.add_tools(hover)
-        plot2.legend.click_policy = 'hide'
-        plot2.legend.orientation = 'horizontal'
+        ref_plot.add_tools(hover)
+        ref_plot.legend.click_policy = 'hide'
+        ref_plot.legend.orientation = 'horizontal'
 
         # set axes
-        plot2.axis.axis_line_width = 2
-        plot2.axis.axis_label_text_font_size = "12pt"
-        plot2.axis.major_tick_line_width = 2
-        plot2.xaxis.axis_label = "Wavelength (Å)"
-        plot2.yaxis.axis_label = 'Reflectance Spectra (Normalized at 5500 Å)'
+        ref_plot.axis.axis_line_width = 2
+        ref_plot.axis.axis_label_text_font_size = "12pt"
+        ref_plot.axis.major_tick_line_width = 2
+        ref_plot.xaxis.axis_label = "Wavelength (Å)"
+        ref_plot.yaxis.axis_label = 'Reflectance Spectra (Normalized at 5500 Å)'
 
-        # Build tools
+    # Build tools
+    if analog_data:
         analog_labels = [a['label'] for a in analog_data]
-        analog_select = Select(title="Analog", value=analog_labels[0], options=analog_labels)
-        frame_labels = list(map(str, range(1, len(data_spec)+1)))
-        frame_select = MultiSelect(title="Target Frames", value=frame_labels, options=frame_labels, height=49)
+    else:
+        analog_labels = ["--None--"]
 
-        # JS Call back to change analog
-        js_analog_picker = get_js_as_text(js_file, "analog_select")
-        analog_select_callback = CustomJS(args=dict(analog_select=analog_select, frame_select=frame_select,
-                                                    reflectance_sources=reflect_source_lists,
-                                                    chosen_sources=reflect_source_prefs, plot=plot, plot2=plot2,
-                                                    lines=reflectance_lines, raw_analog=analog_source_final,
-                                                    raw_analog_list=analog_sources_raw, raw_lines=raw_lines),
-                                          code=js_analog_picker)
-        analog_select.js_on_change('value', analog_select_callback)
-        frame_select.js_on_change('value', analog_select_callback)
+    analog_select = Select(title="Analog", value=analog_labels[0], options=analog_labels)
+    frame_labels = list(map(str, range(1, len(data_spec)+1)))
+    frame_select = MultiSelect(title="Target Frames", value=frame_labels, options=frame_labels, height=49, width=100)
 
-        reflec_layout = column(row(frame_select, analog_select), row(plot2))
+    # JS Call back to change analog
+    js_analog_picker = get_js_as_text(js_file, "analog_select")
+    analog_select_callback = CustomJS(args=dict(analog_select=analog_select, frame_select=frame_select,
+                                                reflectance_sources=reflect_source_lists,
+                                                chosen_sources=reflect_source_prefs, plot=raw_plot, plot2=ref_plot,
+                                                lines=reflectance_lines, raw_analog=analog_source_final,
+                                                raw_analog_list=analog_sources_raw, raw_lines=raw_lines),
+                                      code=js_analog_picker)
+    analog_select.js_on_change('value', analog_select_callback)
+    frame_select.js_on_change('value', analog_select_callback)
 
-        spec_plots["reflec_spec"] = reflec_layout
+    selector_row = row(frame_select, analog_select)
+    layouts = {'raw_and_reflect': column(selector_row, row(ref_plot), row(raw_plot)),
+               'raw_only': column(selector_row, row(raw_plot)),
+               'reflect_only': column(row(ref_plot))
+               }
 
     # Create script/div
-    if spec_plots:
-        script, div = components(spec_plots, CDN)
-    else:
-        return '', {"raw_spec": ''}
-    try:
-        for key in div.keys():
-            b = div[key].index('>')
-            div[key] = '{} name={}{}'.format(div[key][:b], key, div[key][b:])
-    except ValueError:
-        pass
-    return script, div
+    script, div = components(layouts[spec_type], CDN)
+
+    chunks = div.split("data-root-id=")
+    named_div = chunks[0] + f'name="spec_plot" data-root-id=' + chunks[1]
+
+    return script, named_div
 
 
 def datetime_to_radians(ref_time, input_time):
@@ -867,6 +878,8 @@ def lc_plot(lc_list, meta_list, period=1, jpl_ephem=None):
     tabs = Tabs(tabs=[tabu, tabp])
 
     script, div = components({'plot': tabs}, CDN)
+    chunks = div['plot'].split("data-root-id=")
+    div['plot'] = chunks[0] + f'name="lc_plot" data-root-id=' + chunks[1]
 
     return script, div
 

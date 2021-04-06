@@ -741,7 +741,7 @@ class StaticSourceDetailView(DetailView):
         script, div, p_spec = plot_all_spec(self.object)
         if script and div:
             context['script'] = script
-            context['div'] = div["raw_spec"]
+            context['div'] = div
         base_path = BOKEH_URL.format(bokeh.__version__)
         context['js_path'] = base_path + 'js'
         context['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
@@ -3712,7 +3712,7 @@ def plot_all_spec(source):
         else:
             logger.warning("No flux file found for " + spec_file)
             script = ''
-            div = {"raw_spec": ''}
+            div = ''
 
     else:
         body = source
@@ -3794,9 +3794,7 @@ class BlockSpec(View):  # make logging required later
         params = {'pk': kwargs['pk'], 'sb_id': block.superblock.id}
         if div:
             params["the_script"] = script
-            params["raw_div"] = div["raw_spec"]
-            if 'reflec_spec' in div:
-                params["reflec_div"] = div["reflec_spec"]
+            params["div"] = div
         base_path = BOKEH_URL.format(bokeh.__version__)
         params['js_path'] = base_path + 'js'
         params['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
@@ -3817,7 +3815,7 @@ class PlotSpec(View):
         params = {'body': body, 'floyds': False}
         if div:
             params["the_script"] = script
-            params["reflec_div"] = div["reflec_spec"]
+            params["div"] = div
             params["p_spec"] = p_spec
         base_path = BOKEH_URL.format(bokeh.__version__)
         params['js_path'] = base_path + 'js'

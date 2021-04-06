@@ -416,7 +416,7 @@ class TestCalibrationSources(FunctionalTest):
         self.assertIn('B7III', table_text)
         self.assertIn('Spectrophotometric standard', self.browser.find_element_by_class_name("section-title").text)
 
-        spec_plot = self.browser.find_element_by_name("raw_spec")
+        spec_plot = self.browser.find_element_by_name("spec_plot")
 
     @patch('core.views.datetime', MockDateTime)
     def test_can_view_best_calibsources(self):
