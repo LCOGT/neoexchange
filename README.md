@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.8.6
+Update spectroscopy analysis capabilities.
+
 ### 3.8.5
 Paginate new gif movie page to speed up load times and prevent connection errors
 
