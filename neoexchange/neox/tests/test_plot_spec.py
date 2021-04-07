@@ -25,7 +25,7 @@ from selenium.common.exceptions import NoSuchElementException
 from core.models import Block, SuperBlock, Frame, Body, PreviousSpectra
 from mock import patch
 from neox.tests.mocks import MockDateTime, mock_lco_authenticate, mock_fetch_archive_frames,\
-    mock_fetch_archive_frames_2spectra, mock_archive_spectra_header
+    mock_fetch_archive_frames_2spectra, mock_archive_spectra_header, mock_archive_bad_spectra_header
 from django.conf import settings
 
 import os
@@ -51,6 +51,8 @@ class SpectraplotTest(FunctionalTest):
                        'target_2df_ex.fits')
         build_data_dir(os.path.join(self.test_dir, '20190727', 'HD30455_1878697'), self.spectradir,
                        'analog_2df_ex.fits')
+        # build_data_dir(os.path.join(self.test_dir, '20190927', '455432_1878696'), self.spectradir,
+        #                'target_2df_ex.fits')
 
         self.username = 'bart'
         self.password = 'simpson'
@@ -217,6 +219,17 @@ class SpectraplotTest(FunctionalTest):
            }
         self.mspec_frame2 = Frame.objects.create(**mfparams2)
 
+        # make empty block
+        sblock_params_empty = msblock_params
+        self.test_sblock_empty = SuperBlock.objects.create(pk=6, **sblock_params_empty)
+        block_params_empty = mblock2_params
+        block_params_empty['superblock'] = self.test_sblock_empty
+        block_params_empty['when_observed'] = datetime(2019, 9, 27, 16, 42, 51)
+        self.test_block_empty = Block.objects.create(**block_params_empty)
+        frame_params_empty = mfparams2
+        frame_params_empty['block'] = self.test_block_empty
+        self.spec_frame_empty = Frame.objects.create(**frame_params_empty)
+
         update_proposal_permissions(self.bart, [{'code': self.neo_proposal.code}])
 
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
@@ -334,6 +347,30 @@ class SpectraplotTest(FunctionalTest):
         analog_list = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='spec_plot']/div[@class='bk']/div[@class='bk'][1]/div[@class='bk'][2]/div[@class='bk bk-input-group']/select[@class='bk bk-input']")
         self.assertIn('HD 196164', analog_list.text)
         self.assertIn('398188', analog_list.text)
+
+    @patch('core.views.lco_api_call', mock_archive_bad_spectra_header)
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
+    @patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
+    def test_no_analog_no_spectra(self):    # test failure to find fits
+
+        self.login()
+        blocks_url = reverse('blocklist')
+        self.browser.get(self.live_server_url + blocks_url)
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_link_text('6').click()
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_link_text('Spectrum Plot').click()
+        actual_url = self.browser.current_url
+        target_url = self.live_server_url+'/block/'+str(self.test_block_empty.pk)+'/spectra/'
+        self.assertIn('Spectrum for block: '+str(self.test_block_empty.pk)+' | LCO NEOx', self.browser.title)
+        self.assertEqual(target_url, actual_url)
+        try:
+            spec_plot = self.browser.find_element_by_name("spec_plot")
+            raise Exception("FAILURE: Should not find spectroscopy plot")
+        except NoSuchElementException:
+            pass
+        source_text = self.browser.find_element_by_id("main")
+        self.assertIn('Cannot find data. :(', source_text.text)
 
 
 class SMASSPlotTest(FunctionalTest):

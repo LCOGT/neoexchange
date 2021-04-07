@@ -3776,7 +3776,10 @@ def plot_floyds_spec(block):
                             'wav': star_wav,
                             'filename': analog})
 
-    script, div = spec_plot(data_spec, analog_data)
+    if data_spec:
+        script, div = spec_plot(data_spec, analog_data)
+    else:
+        return None, None
 
     return script, div
 
