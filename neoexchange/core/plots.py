@@ -287,6 +287,7 @@ def spec_plot(data_spec, analog_data, reflec=False):
         else:
             raw_plot.plot_width = 600
             raw_plot.yaxis.axis_label = 'Flux ({})'.format(data_spec[0]["spec"].unit)
+            spec_type = "raw_standard"
         for spec in data_spec:
             raw_lines.append(raw_plot.line(spec['wav'], spec['spec'], muted_alpha=0.25))
 
@@ -393,6 +394,7 @@ def spec_plot(data_spec, analog_data, reflec=False):
     selector_row = row(frame_select, analog_select)
     layouts = {'raw_and_reflect': column(selector_row, row(ref_plot), row(raw_plot)),
                'raw_only': column(selector_row, row(raw_plot)),
+               'raw_standard': column(row(raw_plot)),
                'reflect_only': column(row(ref_plot))
                }
 

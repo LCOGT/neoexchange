@@ -3751,7 +3751,7 @@ def plot_floyds_spec(block):
     date_obs, obj, req, path, prop = find_spec(block.id)
     filenames = search(path, matchpattern='.*_2df_ex.fits', latest=False)
     if filenames is False:
-        return '', {"raw_spec": ''}
+        return None, None
     filenames = [os.path.join(path, f) for f in filenames]
 
     analogs = find_analog(block.when_observed, block.site)
