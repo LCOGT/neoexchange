@@ -741,7 +741,7 @@ class StaticSourceDetailView(DetailView):
         script, div, p_spec = plot_all_spec(self.object)
         if script and div:
             context['script'] = script
-            context['div'] = div
+            context['spec_div'] = div
         base_path = BOKEH_URL.format(bokeh.__version__)
         context['js_path'] = base_path + 'js'
         context['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
@@ -3768,7 +3768,7 @@ def plot_floyds_spec(block):
         data_spec = None
 
     analog_data = []
-    offset = 2
+    offset = 2  # Arbitrary offset to minimize analog/target plotting overlap
     for analog in analogs:
         analog_label, analog_spec, star_wav = spectrum_plot(analog, offset=offset)
         analog_data.append({'label': analog_label,
@@ -3797,7 +3797,7 @@ class BlockSpec(View):  # make logging required later
         params = {'pk': kwargs['pk'], 'sb_id': block.superblock.id}
         if div:
             params["the_script"] = script
-            params["div"] = div
+            params["spec_div"] = div
         base_path = BOKEH_URL.format(bokeh.__version__)
         params['js_path'] = base_path + 'js'
         params['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
@@ -3818,7 +3818,7 @@ class PlotSpec(View):
         params = {'body': body, 'floyds': False}
         if div:
             params["the_script"] = script
-            params["div"] = div
+            params["spec_div"] = div
             params["p_spec"] = p_spec
         base_path = BOKEH_URL.format(bokeh.__version__)
         params['js_path'] = base_path + 'js'

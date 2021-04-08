@@ -175,6 +175,12 @@ def spectrum_plot(spectra, data_set='', analog=None, offset=0):
     """Sets up X/Y plottable data from spectroscopic input.
         Creates Reflectance Spectra if analog given.
         Otherwise clips and normalizes spectrum.
+        input:
+            spectra: The input spectrum (path to fits file)
+            data_set: A Name, Title, or Description of the data
+            analog: The input comparison spectrum (path to fits file
+            offset: interger used as a linear offest for the y values of the final result. Useful for spreading out
+             multiple datasets to be plotted on the same plot. (physical offset = 0.2*X where X is int given here.)
         Returns:
             data_set: data label
             y_clipped: normalized and truncated flux/reflectance values
