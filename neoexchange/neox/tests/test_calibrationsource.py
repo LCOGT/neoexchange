@@ -22,6 +22,7 @@ from django.contrib.auth.models import User
 from bs4 import BeautifulSoup
 # from selenium import webdriver
 from mock import patch
+from selenium.common.exceptions import NoSuchElementException
 
 from neox.tests.mocks import MockDateTime, mock_lco_authenticate, \
     mock_fetch_filter_list, mock_submit_to_scheduler, MockDate
@@ -416,7 +417,9 @@ class TestCalibrationSources(FunctionalTest):
         self.assertIn('B7III', table_text)
         self.assertIn('Spectrophotometric standard', self.browser.find_element_by_class_name("section-title").text)
 
-        spec_plot = self.browser.find_element_by_name("raw_spec")
+        spec_plot = self.browser.find_element_by_name("spec_plot")
+        self.assertNotIn("Target Frames", spec_plot.text)
+        self.assertNotIn("Analog", spec_plot.text)
 
     @patch('core.views.datetime', MockDateTime)
     def test_can_view_best_calibsources(self):

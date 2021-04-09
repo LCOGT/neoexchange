@@ -61,12 +61,7 @@
                         <td data-label="block"><a href="{% url 'block-view' block.superblock.id %}">{{block.superblock.id}}</a></td>
                         <td data-label="obs">
                             <div>
-                            {% with ' '|center:block.num_observed as range %}
-                            {% for _ in range %}
-                                <a href="{% url 'blockspec' block.id forloop.counter %}" style="display: inline;">{{forloop.counter}}</a>
-                                {% if forloop.counter != block.num_observed %},&ensp;{% endif %}
-                            {% endfor %}
-                            {% endwith %}
+                                <a href="{% url 'blockspec' block.id %}" style="display: inline;">{{block.num_observed}}</a>
                             </div>
                         </td>
                     {% endwith %}
