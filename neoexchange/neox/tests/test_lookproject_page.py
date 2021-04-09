@@ -172,7 +172,7 @@ class LOOKProjectPageTest(FunctionalTest):
         self.assertIn('LOOK Project Page | LCO NEOx', self.browser.title)
 
         testlines = ['Target Name', 'Target Type', 'Target Subtype',
-            'R.A.', 'Dec.', 'V Mag.', 'Rate ("/min)', 'Helio Dist',
+            'R.A.', 'Dec.', 'V Mag.', 'Rate ("/min)', 'Heliocentric Distance (AU)',
             'Observations Scheduled', '(for next 30 days) Observation Window',
             '(for next 90 days)'
             ]
