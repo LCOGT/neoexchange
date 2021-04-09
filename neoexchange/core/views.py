@@ -1959,7 +1959,7 @@ def build_lookproject_list(disp=None):
                 if not emp_line:
                     continue
                 dist_line = body.compute_distances()
-                if not emp_line:
+                if not dist_line:
                     continue
                 obs_dates = body.compute_obs_window()
                 if obs_dates[0]:
