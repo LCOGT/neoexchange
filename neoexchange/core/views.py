@@ -1956,9 +1956,12 @@ def build_lookproject_list(disp=None):
                 elif len(subtypes) > 1:
                     body_dict['subtypes'] = ", ".join(subtypes)
                 body_dict['cadence_info'] = body.get_cadence_info()
-                # Compute ephemeris and observability window
+                # Compute ephemeris, distance and observability window
                 emp_line = body.compute_position()
                 if not emp_line:
+                    continue
+                dist_line = body.compute_distances()
+                if not dist_line:
                     continue
                 obs_dates = body.compute_obs_window()
                 if obs_dates[0]:
@@ -1988,6 +1991,7 @@ def build_lookproject_list(disp=None):
                 body_dict['dec'] = emp_line[1]
                 body_dict['v_mag'] = emp_line[2]
                 body_dict['motion'] = emp_line[4]
+                body_dict['helio_dist'] = dist_line[1]
                 unranked.append(body_dict)
             except Exception as e:
                 logger.error('LOOK target %s failed on %s' % (body.name, e))

@@ -439,6 +439,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
                 'southpole_sep' : spd,
                 'sun_sep'       : separation,
                 'earth_obj_dist': delta,
+                'sun_obj_dist'  : r,
                 }
 
     return emp_dict
