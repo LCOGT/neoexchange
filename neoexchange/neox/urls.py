@@ -51,7 +51,7 @@ urlpatterns = [
     url(r'^visibility_plot/(?P<pk>\d+)/(?P<plot_type>[a-z]*)/(?P<site_code>[A-Z,0-9]{3})/$', make_visibility_plot, name='visibility-plot-site'),
     url(r'^block/summary/$', BlockTimeSummary.as_view(), name='block-summary'),
     url(r'^block/list/$', SuperBlockListView.as_view(model=SuperBlock, queryset=SuperBlock.objects.order_by('-block_start'), context_object_name="block_list"), name='blocklist'),
-    url(r'^block/(?P<pk>\d+)/spectra/(?P<obs_num>\d+)/$', BlockSpec.as_view(), name='blockspec'),
+    url(r'^block/(?P<pk>\d+)/spectra/$', BlockSpec.as_view(), name='blockspec'),
     url(r'^block/(?P<pk>\d+)/guidemovie/$', GuideMovie.as_view(), name='guidemovie'),
     url(r'^block/(?P<pk>\d+)/spectra/guidemovie.gif$', display_movie, name='display_movie'),
     url(r'^block/(?P<pk>\d+)/source/(?P<source>\d+)/report/submit/$', BlockReportMPC.as_view(), name='block-submit-mpc'),

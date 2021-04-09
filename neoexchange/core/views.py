@@ -221,8 +221,9 @@ class BodyDetailView(DetailView):
         context['lin_script'] = lin_script
         context['lin_div'] = lin_div
         base_path = BOKEH_URL.format(bokeh.__version__)
-        context['css_path'] = base_path + 'css'
         context['js_path'] = base_path + 'js'
+        context['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
+        context['table_path'] = BOKEH_URL.format('tables-'+bokeh.__version__) + 'js'
         return context
 
 
@@ -740,10 +741,11 @@ class StaticSourceDetailView(DetailView):
         script, div, p_spec = plot_all_spec(self.object)
         if script and div:
             context['script'] = script
-            context['div'] = div["raw_spec"]
+            context['spec_div'] = div
         base_path = BOKEH_URL.format(bokeh.__version__)
-        context['css_path'] = base_path + 'css'
         context['js_path'] = base_path + 'js'
+        context['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
+        context['table_path'] = BOKEH_URL.format('tables-'+bokeh.__version__) + 'js'
         return context
 
 
@@ -3714,7 +3716,7 @@ def plot_all_spec(source):
         else:
             logger.warning("No flux file found for " + spec_file)
             script = ''
-            div = {"raw_spec": ''}
+            div = ''
 
     else:
         body = source
@@ -3747,37 +3749,41 @@ def plot_all_spec(source):
     return script, div, p_spec
 
 
-def plot_floyds_spec(block, obs_num=1):
+def plot_floyds_spec(block):
     """Get plots for requested blocks of FLOYDs data and subtract nearest solar analog."""
 
     date_obs, obj, req, path, prop = find_spec(block.id)
     filenames = search(path, matchpattern='.*_2df_ex.fits', latest=False)
     if filenames is False:
-        return '', {"raw_spec": ''}
+        return None, None
     filenames = [os.path.join(path, f) for f in filenames]
 
     analogs = find_analog(block.when_observed, block.site)
 
     try:
-        raw_label, raw_spec, ast_wav = spectrum_plot(filenames[obs_num-1])
-        data_spec = {'label': raw_label,
-                     'spec': raw_spec,
-                     'wav': ast_wav,
-                     'filename': filenames[obs_num-1]}
+        data_spec = []
+        for filename in filenames:
+            raw_label, raw_spec, ast_wav = spectrum_plot(filename)
+            data_spec.append({'label': raw_label,
+                              'spec': raw_spec,
+                              'wav': ast_wav,
+                              'filename': filename})
     except IndexError:
         data_spec = None
 
     analog_data = []
-    offset = 0
+    offset = 2  # Arbitrary offset to minimize analog/target plotting overlap
     for analog in analogs:
-        offset += 2
         analog_label, analog_spec, star_wav = spectrum_plot(analog, offset=offset)
         analog_data.append({'label': analog_label,
-                       'spec': analog_spec,
-                       'wav': star_wav,
-                       'filename': analog})
+                            'spec': analog_spec,
+                            'wav': star_wav,
+                            'filename': analog})
 
-    script, div = spec_plot([data_spec], analog_data)
+    if data_spec:
+        script, div = spec_plot(data_spec, analog_data)
+    else:
+        return None, None
 
     return script, div
 
@@ -3791,16 +3797,15 @@ class BlockSpec(View):  # make logging required later
             block = Block.objects.get(pk=kwargs['pk'])
         except ObjectDoesNotExist:
             raise Http404("Block does not exist.")
-        script, div = plot_floyds_spec(block, int(kwargs['obs_num']))
-        params = {'pk': kwargs['pk'], 'obs_num': kwargs['obs_num'], 'sb_id': block.superblock.id}
+        script, div = plot_floyds_spec(block)
+        params = {'pk': kwargs['pk'], 'sb_id': block.superblock.id}
         if div:
             params["the_script"] = script
-            params["raw_div"] = div["raw_spec"]
-            if 'reflec_spec' in div:
-                params["reflec_div"] = div["reflec_spec"]
+            params["spec_div"] = div
         base_path = BOKEH_URL.format(bokeh.__version__)
-        params['css_path'] = base_path + 'css'
         params['js_path'] = base_path + 'js'
+        params['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
+        params['table_path'] = BOKEH_URL.format('tables-'+bokeh.__version__) + 'js'
         return render(request, self.template_name, params)
 
 
@@ -3817,11 +3822,12 @@ class PlotSpec(View):
         params = {'body': body, 'floyds': False}
         if div:
             params["the_script"] = script
-            params["reflec_div"] = div["reflec_spec"]
+            params["spec_div"] = div
             params["p_spec"] = p_spec
         base_path = BOKEH_URL.format(bokeh.__version__)
-        params['css_path'] = base_path + 'css'
         params['js_path'] = base_path + 'js'
+        params['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
+        params['table_path'] = BOKEH_URL.format('tables-'+bokeh.__version__) + 'js'
 
         return render(request, self.template_name, params)
 
@@ -3849,7 +3855,6 @@ class LCPlot(LookUpBodyMixin, FormView):
         else:
             params["lc_div"] = kwargs['div']
         base_path = BOKEH_URL.format(bokeh.__version__)
-        params['css_path'] = base_path + 'css'
         params['js_path'] = base_path + 'js'
         params['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
         params['table_path'] = BOKEH_URL.format('tables-'+bokeh.__version__) + 'js'

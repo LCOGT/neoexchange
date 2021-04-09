@@ -237,7 +237,7 @@ class TestBuildSpectra(TestCase):
                 print("Error removing temporary test directory", self.test_dir)
 
     def test_spectrum_plot(self):
-        expected_label = '455432 -- 20190727'
+        expected_label = '455432 -- 20190727 (1.266) [ // ]'
         wav_range = [3100*u.AA, 10000*u.AA]
         expected_flux_mean = 0.7641197364877771
 

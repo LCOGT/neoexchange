@@ -22,7 +22,7 @@ mock
 django-storages
 boto3
 matplotlib<3.3
-bokeh==1.4.0
+bokeh==2.3.0
 fits2image
 pillow
 aplpy
