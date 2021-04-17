@@ -262,7 +262,7 @@ class TestComputeEphemerides(TestCase):
                          'type': 'MPC_MINOR_PLANET',
                          'uncertainty': 'U'}
 
-        self.length_emp_line = 11
+        self.length_emp_line = 12
 
     def test_body_is_correct_class(self):
         tbody = Body.objects.get(provisional_name='N999r0q')
@@ -297,6 +297,8 @@ class TestComputeEphemerides(TestCase):
         expected_alt = -58.658929026981895
         expected_spd = 119.94694444444444
         expected_pa = 91.35793788996334
+        expected_delta = 0.18138901132373111
+        expected_r = 0.9919581686703755
 
         emp_line = compute_ephem(d, self.elements, '500', dbg=False, perturb=True, display=False)
 
@@ -310,6 +312,8 @@ class TestComputeEphemerides(TestCase):
         self.assertAlmostEqual(expected_alt, emp_line['altitude'], precision)
         self.assertAlmostEqual(expected_spd, emp_line['southpole_sep'], precision)
         self.assertAlmostEqual(expected_pa,  emp_line['sky_motion_pa'], precision)
+        self.assertAlmostEqual(expected_delta,  emp_line['earth_obj_dist'], precision)
+        self.assertAlmostEqual(expected_r,  emp_line['sun_obj_dist'], precision)
 
     def test_compute_ephem_with_body(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
@@ -320,6 +324,8 @@ class TestComputeEphemerides(TestCase):
         expected_alt = -58.658929026981895
         expected_spd = 119.94694444444444
         expected_pa = 91.35793788996334
+        expected_delta = 0.18138901132373111
+        expected_r = 0.9919581686703755
 
         body_elements = model_to_dict(self.body)
         emp_line = compute_ephem(d, body_elements, '500', dbg=False, perturb=True, display=False)
@@ -334,7 +340,9 @@ class TestComputeEphemerides(TestCase):
         self.assertAlmostEqual(expected_alt, emp_line['altitude'], precision)
         self.assertAlmostEqual(expected_spd, emp_line['southpole_sep'], precision)
         self.assertAlmostEqual(expected_pa,  emp_line['sky_motion_pa'], precision)
-        
+        self.assertAlmostEqual(expected_delta,  emp_line['earth_obj_dist'], precision)
+        self.assertAlmostEqual(expected_r,  emp_line['sun_obj_dist'], precision)
+
     def test_compute_south_polar_distance_with_elements_in_north(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
         expected_dec = 0.522637696108887

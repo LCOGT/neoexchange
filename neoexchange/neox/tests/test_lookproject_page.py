@@ -171,10 +171,18 @@ class LOOKProjectPageTest(FunctionalTest):
         self.assertNotIn('Home | LCO NEOx', self.browser.title)
         self.assertIn('LOOK Project Page | LCO NEOx', self.browser.title)
 
+        testlines = ['Target Name', 'Target Type', 'Target Subtype',
+            'R.A.', 'Dec.', 'V Mag.', 'Rate ("/min)', 'Heliocentric Distance (AU)',
+            'Observations Scheduled', '(for next 30 days) Observation Window',
+            '(for next 90 days)'
+            ]
+        testline = "\n".join(testlines)
+        self.check_for_header_in_table('active_targets', testline)
+
         # Position below computed for 2017-07-01 17:00:00
 
-        testlines = [u'C/2013 US10 Comet Hyperbolic, Dynamically New 03 57 50.41 +44 46 52.2 18.5 0.20 Nothing scheduled [-----]',
-                     u'C/2017 K2 Comet Long Period, Dynamically New 17 29 39.56 +64 13 24.1 17.8 0.17 Active until 07/30 [-----]']
+        testlines = [u'C/2013 US10 Comet Hyperbolic, Dynamically New 03 57 50.41 +44 46 52.2 18.5 0.20 7.0 Nothing scheduled [-----]',
+                     u'C/2017 K2 Comet Long Period, Dynamically New 17 29 39.56 +64 13 24.1 17.8 0.17 11.8 Active until 07/30 [-----]']
 
         self.check_for_row_in_table('active_targets', testlines[0])
         self.check_for_row_in_table('active_targets', testlines[1])
@@ -230,7 +238,7 @@ class LOOKProjectPageTest(FunctionalTest):
         newtarget_button.click()
 
         # The page refreshes and the new target appears as an active target
-        testlines = [u'191P Comet Jupiter Family 21 24 28.42 -23 49 36.4 18.6 0.78 Nothing scheduled [-----]',
+        testlines = [u'191P Comet Jupiter Family 21 24 28.42 -23 49 36.4 18.6 0.78 2.4 Nothing scheduled [-----]',
                      ]
 
         self.check_for_row_in_table('active_targets', testlines[0])

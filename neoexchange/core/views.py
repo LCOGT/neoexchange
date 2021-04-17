@@ -223,8 +223,9 @@ class BodyDetailView(DetailView):
         context['lin_script'] = lin_script
         context['lin_div'] = lin_div
         base_path = BOKEH_URL.format(bokeh.__version__)
-        context['css_path'] = base_path + 'css'
         context['js_path'] = base_path + 'js'
+        context['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
+        context['table_path'] = BOKEH_URL.format('tables-'+bokeh.__version__) + 'js'
         return context
 
 
@@ -742,10 +743,11 @@ class StaticSourceDetailView(DetailView):
         script, div, p_spec = plot_all_spec(self.object)
         if script and div:
             context['script'] = script
-            context['div'] = div["raw_spec"]
+            context['spec_div'] = div
         base_path = BOKEH_URL.format(bokeh.__version__)
-        context['css_path'] = base_path + 'css'
         context['js_path'] = base_path + 'js'
+        context['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
+        context['table_path'] = BOKEH_URL.format('tables-'+bokeh.__version__) + 'js'
         return context
 
 
@@ -1956,9 +1958,12 @@ def build_lookproject_list(disp=None):
                 elif len(subtypes) > 1:
                     body_dict['subtypes'] = ", ".join(subtypes)
                 body_dict['cadence_info'] = body.get_cadence_info()
-                # Compute ephemeris and observability window
+                # Compute ephemeris, distance and observability window
                 emp_line = body.compute_position()
                 if not emp_line:
+                    continue
+                dist_line = body.compute_distances()
+                if not dist_line:
                     continue
                 obs_dates = body.compute_obs_window()
                 if obs_dates[0]:
@@ -1988,6 +1993,7 @@ def build_lookproject_list(disp=None):
                 body_dict['dec'] = emp_line[1]
                 body_dict['v_mag'] = emp_line[2]
                 body_dict['motion'] = emp_line[4]
+                body_dict['helio_dist'] = dist_line[1]
                 unranked.append(body_dict)
             except Exception as e:
                 logger.error('LOOK target %s failed on %s' % (body.name, e))
@@ -3712,7 +3718,7 @@ def plot_all_spec(source):
         else:
             logger.warning("No flux file found for " + spec_file)
             script = ''
-            div = {"raw_spec": ''}
+            div = ''
 
     else:
         body = source
@@ -3745,37 +3751,41 @@ def plot_all_spec(source):
     return script, div, p_spec
 
 
-def plot_floyds_spec(block, obs_num=1):
+def plot_floyds_spec(block):
     """Get plots for requested blocks of FLOYDs data and subtract nearest solar analog."""
 
     date_obs, obj, req, path, prop = find_spec(block.id)
     filenames = search(path, matchpattern='.*_2df_ex.fits', latest=False)
     if filenames is False:
-        return '', {"raw_spec": ''}
+        return None, None
     filenames = [os.path.join(path, f) for f in filenames]
 
     analogs = find_analog(block.when_observed, block.site)
 
     try:
-        raw_label, raw_spec, ast_wav = spectrum_plot(filenames[obs_num-1])
-        data_spec = {'label': raw_label,
-                     'spec': raw_spec,
-                     'wav': ast_wav,
-                     'filename': filenames[obs_num-1]}
+        data_spec = []
+        for filename in filenames:
+            raw_label, raw_spec, ast_wav = spectrum_plot(filename)
+            data_spec.append({'label': raw_label,
+                              'spec': raw_spec,
+                              'wav': ast_wav,
+                              'filename': filename})
     except IndexError:
         data_spec = None
 
     analog_data = []
-    offset = 0
+    offset = 2  # Arbitrary offset to minimize analog/target plotting overlap
     for analog in analogs:
-        offset += 2
         analog_label, analog_spec, star_wav = spectrum_plot(analog, offset=offset)
         analog_data.append({'label': analog_label,
-                       'spec': analog_spec,
-                       'wav': star_wav,
-                       'filename': analog})
+                            'spec': analog_spec,
+                            'wav': star_wav,
+                            'filename': analog})
 
-    script, div = spec_plot([data_spec], analog_data)
+    if data_spec:
+        script, div = spec_plot(data_spec, analog_data)
+    else:
+        return None, None
 
     return script, div
 
@@ -3789,16 +3799,15 @@ class BlockSpec(View):  # make logging required later
             block = Block.objects.get(pk=kwargs['pk'])
         except ObjectDoesNotExist:
             raise Http404("Block does not exist.")
-        script, div = plot_floyds_spec(block, int(kwargs['obs_num']))
-        params = {'pk': kwargs['pk'], 'obs_num': kwargs['obs_num'], 'sb_id': block.superblock.id}
+        script, div = plot_floyds_spec(block)
+        params = {'pk': kwargs['pk'], 'sb_id': block.superblock.id}
         if div:
             params["the_script"] = script
-            params["raw_div"] = div["raw_spec"]
-            if 'reflec_spec' in div:
-                params["reflec_div"] = div["reflec_spec"]
+            params["spec_div"] = div
         base_path = BOKEH_URL.format(bokeh.__version__)
-        params['css_path'] = base_path + 'css'
         params['js_path'] = base_path + 'js'
+        params['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
+        params['table_path'] = BOKEH_URL.format('tables-'+bokeh.__version__) + 'js'
         return render(request, self.template_name, params)
 
 
@@ -3815,11 +3824,12 @@ class PlotSpec(View):
         params = {'body': body, 'floyds': False}
         if div:
             params["the_script"] = script
-            params["reflec_div"] = div["reflec_spec"]
+            params["spec_div"] = div
             params["p_spec"] = p_spec
         base_path = BOKEH_URL.format(bokeh.__version__)
-        params['css_path'] = base_path + 'css'
         params['js_path'] = base_path + 'js'
+        params['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
+        params['table_path'] = BOKEH_URL.format('tables-'+bokeh.__version__) + 'js'
 
         return render(request, self.template_name, params)
 
@@ -3847,7 +3857,6 @@ class LCPlot(LookUpBodyMixin, FormView):
         else:
             params["lc_div"] = kwargs['div']
         base_path = BOKEH_URL.format(bokeh.__version__)
-        params['css_path'] = base_path + 'css'
         params['js_path'] = base_path + 'js'
         params['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
         params['table_path'] = BOKEH_URL.format('tables-'+bokeh.__version__) + 'js'
@@ -4041,15 +4050,39 @@ class GuideMovie(View):
     # make logging required later
 
     template_name = 'core/guide_movie.html'
+    paginate_by = 6
+    orphans = 3
 
     def get(self, request, *args, **kwargs):
         try:
             supblock = SuperBlock.objects.get(pk=kwargs['pk'])
         except ObjectDoesNotExist:
             raise Http404("SuperBlock does not exist.")
-        params = {'sb': supblock, 'block_list': supblock.get_blocks.filter(num_observed__gt=0)}
+        block_list = supblock.get_blocks.filter(num_observed__gt=0).order_by('when_observed')
 
-        return render(request, self.template_name, params)
+        # Set up pagination
+        page = request.GET.get('page', None)
+
+        # Toggle Pagination
+        if page == '0':
+            self.paginate_by = len(block_list)
+        paginator = Paginator(block_list, self.paginate_by, orphans=self.orphans)
+
+        if paginator.num_pages > 1:
+            is_paginated = True
+        else:
+            is_paginated = False
+
+        if page is None or int(page) < 1:
+            page = 1
+        elif int(page) > paginator.num_pages:
+            page = paginator.num_pages
+        page_obj = paginator.page(page)
+
+        return render(request, self.template_name,
+                      {'sb': supblock, 'block_list': block_list, 'is_paginated': is_paginated, 'page_obj': page_obj})
+
+        # return render(request, self.template_name, params)
 
 
 def update_taxonomy(body, tax_table, dbg=False):

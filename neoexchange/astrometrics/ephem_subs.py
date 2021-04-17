@@ -444,6 +444,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
                 'geocnt_a_pos'  : convert_to_ecliptic(pos, mjd_tt),
                 'heliocnt_e_pos': convert_to_ecliptic(e_pos_hel, mjd_tt),
                 'ltt'           : ltt,
+                'sun_obj_dist'  : r,
                 }
 
     return emp_dict

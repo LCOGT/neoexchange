@@ -277,6 +277,21 @@ class Body(models.Model):
             # Catch the case where there is no Epoch
             return False
 
+    def compute_distances(self, d=None):
+        d = d or datetime.utcnow()
+        if self.epochofel:
+            orbelems = model_to_dict(self)
+            sitecode = '500'
+            emp_line = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
+            if not emp_line:
+                return False
+            else:
+                # Return just distance values
+                return emp_line['earth_obj_dist'], emp_line['sun_obj_dist']
+        else:
+            # Catch the case where there is no Epoch
+            return False
+
     def compute_obs_window(self, d=None, dbg=False):
         """
         Compute rough window during which target may be observable based on when it is brighter than a
