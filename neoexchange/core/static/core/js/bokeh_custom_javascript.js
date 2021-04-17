@@ -213,7 +213,7 @@ function phase_data(source, period_box, period_slider, plot, osource, phase_shif
 }
 
 
-function remove_shift_model(source_list, model_source){
+function remove_shift_model(source_list, model_source, lines){
     const models = source_list;
     const I = model_source.selected.indices;
     const N = model_source.data['name'];
@@ -222,20 +222,21 @@ function remove_shift_model(source_list, model_source){
     for (let i = 0; i < I.length; i++) {
         selected[i] = N[I[i]];
     }
-    for (var i = 0; i < N.length; i++){
-        var source = models[i]
-        var n = source.data['name']
-        var a = source.data['alpha']
-        var mag = source.data['mag']
-        var omag = source.data['omag']
-        for (let k = 0; k < a.length; k++) {
-            if (selected.includes(n[k])){
-                a[k] = 1;
-            } else {
-                a[k] = 0;
+    for (var i = 0; i < lines.length; i++){
+        var source = models[i];
+        var n = source.data['name'];
+        var mag = source.data['mag'];
+        var omag = source.data['omag'];
+        if (selected.includes(lines[i].name)) {
+            lines[i].visible = true;
+            var j = N.indexOf(lines[i].name);
+            for (let k = 0; k < mag.length; k++) {
+                mag[k] = omag[k] + O[j];
             }
-            mag[k] = omag[k] + O[i]
+        } else {
+            lines[i].visible = false
         }
+
         source.change.emit();
     }
 }

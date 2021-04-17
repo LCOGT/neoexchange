@@ -316,6 +316,7 @@ class Command(BaseCommand):
                 lc_out_file.write(f"{jd} {mag}\n")
                 k += 1
             elif len(chunks) > 1:
+                lc_out_file.write(f"{chunks[0]}\n")
                 i += 1
         epoch_in_file.close()
         lc_in_file.close()

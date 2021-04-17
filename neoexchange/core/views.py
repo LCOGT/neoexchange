@@ -13,6 +13,7 @@ GNU General Public License for more details.
 
 import os
 from shutil import move
+import copy
 from glob import glob
 from datetime import datetime, timedelta, date
 from math import floor, ceil, degrees, radians, pi, acos, pow
@@ -91,6 +92,7 @@ import matplotlib.pyplot as plt
 logger = logging.getLogger(__name__)
 
 BOKEH_URL = "https://cdn.bokeh.org/bokeh/release/bokeh-{}.min."
+
 
 def home(request):
     params = build_unranked_list_params()
@@ -3926,13 +3928,19 @@ def import_lc_model(file, model_list):
     lines = lc_model_file.readlines()
     model_jd = []
     model_mag = []
-    for line in lines:
+    for k, line in enumerate(lines):
         chunks = line.split()
         if len(chunks) == 2:
             model_jd.append(float(chunks[0]))
             model_mag.append(float(chunks[1]))
-    model_list['date'].append(model_jd)
-    model_list['mag'].append(model_mag)
+        elif k > 0:
+            model_list['date'].append(copy.deepcopy(model_jd))
+            model_list['mag'].append(copy.deepcopy(model_mag))
+            model_list['name'].append(os.path.basename(file))
+            model_jd.clear()
+            model_mag.clear()
+    model_list['date'].append(copy.deepcopy(model_jd))
+    model_list['mag'].append(copy.deepcopy(model_mag))
     model_list['name'].append(os.path.basename(file))
     return model_list
 

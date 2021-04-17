@@ -690,7 +690,8 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, body=
     orbit_source = ColumnDataSource(data=get_orbit_position(meta_list, lc_list, body))
     full_orbit_source = ColumnDataSource(data=get_full_orbit(body))
     lc_models_sources = []
-    model_list_source = ColumnDataSource(data=dict(name=lc_model_dict['name'], offset=[0]*len(lc_model_dict['name'])))
+    model_names_unique = list(set(lc_model_dict['name']))
+    model_list_source = ColumnDataSource(data=dict(name=model_names_unique, offset=[0]*len(model_names_unique)))
     for k, lc_name in enumerate(lc_model_dict['name']):
         model_date = [(x - base_date) * 24 for x in lc_model_dict['date'][k]]
         lc_models_sources.append(ColumnDataSource(data=dict(date=model_date, mag=lc_model_dict['mag'][k], name=[lc_name]*len(model_date), omag=lc_model_dict['mag'][k], alpha=[0]*len(model_date))))
@@ -716,8 +717,9 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, body=
     error_cap = TeeHead(line_alpha=0)
     # Build unphased plot:
     plot_u.line(x="date", y="v_mag", source=horizons_source, line_color='black', line_width=3, line_alpha=.5, legend_label="Horizons V-mag", visible=False)
+    model_lines = []
     for n, s in enumerate(lc_models_sources):
-        plot_u.dash(x="date", y="mag", source=s, name=lc_model_dict['name'][n], alpha="alpha")
+        model_lines.append(plot_u.line(x="date", y="mag", source=s, name=lc_model_dict['name'][n], visible=False, line_color='firebrick', line_width=2, line_alpha=.5))
     plot_u.add_layout(
         Whisker(source=orig_source, base="time", upper="err_high", lower="err_low", line_color="color", line_alpha="alpha",
                 lower_head=error_cap, upper_head=error_cap))
@@ -896,7 +898,7 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, body=
     dataset_source.js_on_change('data', callback)  # Does not seem to work. Not sure why.
 
     js_remove_shift_model = get_js_as_text(js_file, "remove_shift_model")
-    model_callback = CustomJS(args=dict(source_list=lc_models_sources, model_source=model_list_source), code=js_remove_shift_model)
+    model_callback = CustomJS(args=dict(source_list=lc_models_sources, model_source=model_list_source, lines=model_lines), code=js_remove_shift_model)
     model_list_source.selected.js_on_change('indices', model_callback)
     model_draw_button.js_on_click(model_callback)
     model_list_source.js_on_change('data', model_callback)
