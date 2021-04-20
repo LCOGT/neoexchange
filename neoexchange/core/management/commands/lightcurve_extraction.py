@@ -278,8 +278,8 @@ class Command(BaseCommand):
         lightcurve_file.write('ENDMETADATA\n')
         i = 0
         for date in dates:
-            jd = datetime2mjd_utc(date)+0.5
-            lightcurve_file.write('DATA=24{:.6f}|{:+.3f}|{:+.3f}\n'.format(jd, mags[i], mag_errors[i]))
+            jd = datetime2mjd_utc(date)+2400000.5
+            lightcurve_file.write('DATA={:.6f}|{:+.3f}|{:+.3f}\n'.format(jd, mags[i], mag_errors[i]))
             i += 1
         lightcurve_file.write('ENDDATA\n')
 
