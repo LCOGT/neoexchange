@@ -43,6 +43,7 @@ from bokeh.models import HoverTool, Label, CrosshairTool, Whisker, TeeHead, Rang
 from bokeh.models.widgets import CheckboxGroup, Slider, TableColumn, DataTable, HTMLTemplateFormatter, NumberEditor,\
     NumberFormatter, Spinner, Button, Panel, Tabs, Div, Toggle, Select, MultiSelect
 from bokeh.palettes import Category20, Category10
+from bokeh.colors import HSL
 from bokeh.core.properties import Instance, String
 from bokeh.util.compiler import TypeScript
 
@@ -679,7 +680,7 @@ class RotTool(Tool):
     orbs = Instance(ColumnDataSource)
 
 
-def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, body=None, jpl_ephem=None):
+def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, shape_model_dict={}, body=None, jpl_ephem=None):
     """Creates an interactive Bokeh LC plot:
     Inputs:
     [lc_list] --- A list of LC dictionaries, each one containing the following keys:
@@ -721,6 +722,9 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, body=
     plot_orbit.y_range = Range1d(-1.1 * body.meandist, 1.1 * body.meandist)
     plot_orbit.x_range = Range1d(-1.1 * body.meandist, 1.1 * body.meandist)
     plot_orbit.grid.grid_line_color = None
+    plot_shape = figure(plot_width=600, plot_height=600, x_axis_location=None, y_axis_location=None)
+    plot_shape.grid.grid_line_color = None
+    plot_shape.background_fill_color = "black"
 
     # Create Column Data Source that will be used by the plots
     source = ColumnDataSource(data=dict(time=[], mag=[], color=[], title=[], err_high=[], err_low=[], alpha=[]))  # phased LC data Source
@@ -731,6 +735,8 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, body=
     p_mark_source = ColumnDataSource(data=dict(period=[period], y=[-1]))
     orbit_source = ColumnDataSource(data=get_orbit_position(meta_list, lc_list, body))
     full_orbit_source = ColumnDataSource(data=get_full_orbit(body))
+    shape_model_dict["colors"] = [HSL(0, 0, x[0]) for x in shape_model_dict['normal']]
+    shape_source = ColumnDataSource(data=shape_model_dict)
     lc_models_sources = []
     model_names_unique = list(set(lc_model_dict['name']))
     model_list_source = ColumnDataSource(data=dict(name=model_names_unique, offset=[0]*len(model_names_unique)))
@@ -754,6 +760,7 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, body=
     v_offset_button = Toggle(label="Apply Predicted Offset", button_type="default")  # Button to add/remove Horizons predicted offset
     draw_button = Button(label="Re-Draw", button_type="default", width=50)  # Button to re-draw mags.
     model_draw_button = Button(label="Re-Draw", button_type="default", width=50)  # Button to re-draw models.
+    contrast_switch = Toggle(label="Remove Shading", button_type="default")  # Change lighting contrast
 
     # Create plots
     error_cap = TeeHead(line_alpha=0)
@@ -786,6 +793,8 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, body=
         plot_orbit.line(x=f"{planet}_x", y=f"{planet}_y", source=full_orbit_source, color="gray", alpha=.5)
     cursor_change_source = ColumnDataSource(data=dict(x=[], y=[]))
     plot_orbit.add_tools(RotTool(source=cursor_change_source, orbs=full_orbit_source, obs=orbit_source))
+    # Build shape model
+    shape_patches = plot_shape.patches(xs="faces_x", ys="faces_y", source=shape_source, color="colors")
 
     # Write custom JavaScript Code to print the time to the next iteration of the given phase in a HoverTool
     js_hover_text = get_js_as_text(js_file, "next_time_phased")
@@ -939,6 +948,7 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, body=
     draw_button.js_on_click(callback)
     dataset_source.js_on_change('data', callback)  # Does not seem to work. Not sure why.
 
+    # JS Callback to plot and adjust models on unphased plots
     js_remove_shift_model = get_js_as_text(js_file, "remove_shift_model")
     model_callback = CustomJS(args=dict(source_list=lc_models_sources, model_source=model_list_source, lines=model_lines), code=js_remove_shift_model)
     model_list_source.selected.js_on_change('indices', model_callback)
@@ -963,11 +973,10 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, body=
     period_box.js_on_change('value', phased_callback)
     phase_shift.js_on_change('value', phased_callback)
 
-    # JS Call back to cause rotation
-    # js_rotation = get_js_as_text(js_file, "rotation")
-    # rotate_callback = CustomJS(args=dict(source=orbit_source, orb_source=full_orbit_source, pos=cursor_change_source),
-    #                            code=js_rotation)
-    # cursor_change_source.js_on_change('data', rotate_callback)
+    # JS for Shape Model
+    js_switch_contrast = get_js_as_text(js_file, "contrast_switch")
+    contrast_callback = CustomJS(args=dict(source=shape_source, toggle=contrast_switch, plot=shape_patches), code=js_switch_contrast)
+    contrast_switch.js_on_click(contrast_callback)
 
     # Build layout tables:
     phased_layout = column(plot_p,
@@ -992,13 +1001,15 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, body=
                                                column(p_slider_min,
                                                       p_slider_max)))))
     orbit_layout = column(plot_orbit)
+    shape_layout = column(row(plot_shape, contrast_switch))
 
     # Set Tabs
     tabu = Panel(child=unphased_layout, title="Unphased")
     tabp = Panel(child=phased_layout, title="Phased")
     tab_per = Panel(child=periodogram_layout, title="Periodogram")
     tab_orb = Panel(child=orbit_layout, title="Orbital Diagram")
-    tabs = Tabs(tabs=[tabu, tabp, tab_per, tab_orb])
+    tab_shape = Panel(child=shape_layout, title="Asteroid Shape")
+    tabs = Tabs(tabs=[tabu, tabp, tab_per, tab_orb, tab_shape])
 
     script, div = components({'plot': tabs}, CDN)
     chunks = div['plot'].split("data-root-id=")

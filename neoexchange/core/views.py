@@ -3954,6 +3954,51 @@ def import_lc_model(file, model_list):
     return model_list
 
 
+def import_shape_model(file, shape_list):
+    shape_model_file = default_storage.open(file, 'rb')
+    lines = shape_model_file.readlines()
+    points_list = []
+    n_points = 0
+    for k, line in enumerate(lines):
+        chunks = line.split()
+        if len(chunks) < 3:
+            if len(chunks) == 2:
+                n_points = int(chunks[0])
+        elif k <= n_points:
+            coords = []
+            for c in chunks:
+                coords.append(float(c))
+            points_list.append(coords)
+        else:
+            face_x = []
+            face_y = []
+            face_z = []
+            normal = [0, 0, 0]
+            for h, p in enumerate(chunks):
+                next_point = chunks[(h+1) % (len(chunks))]
+                xx = points_list[int(p)-1][0]
+                xx_nxt = points_list[int(next_point)-1][0]
+                yy = points_list[int(p)-1][1]
+                yy_nxt = points_list[int(next_point)-1][1]
+                zz = points_list[int(p)-1][2]
+                zz_nxt = points_list[int(next_point)-1][2]
+                # Store points of each face
+                face_x.append(xx)
+                face_y.append(yy)
+                face_z.append(zz)
+                # Calculate normal vector for face
+                normal[0] += (yy - yy_nxt) * (zz + zz_nxt)
+                normal[1] += (zz - zz_nxt) * (xx + xx_nxt)
+                normal[2] += (xx - xx_nxt) * (yy + yy_nxt)
+            normal = normal/np.linalg.norm(normal)
+            shape_list['faces_x'].append(face_x)
+            shape_list['faces_y'].append(face_y)
+            shape_list['faces_z'].append(face_z)
+            shape_list['normal'].append(normal)
+            shape_list['level'].append(np.mean(face_z))
+    return shape_list
+
+
 def get_lc_plot(body, data):
     """Plot all lightcurve data for given source.
     """
@@ -3964,6 +4009,7 @@ def get_lc_plot(body, data):
     filenames = search(datadir, '.*.ALCDEF.txt')
     period_scans = search(datadir, '.*.period_scan.out')
     lc_models = search(datadir, '.*.lcs.final')
+    shape_model = search(datadir, '.*.model.shape')
     if data.get('period', None):
         period = data['period']
     else:
@@ -3990,6 +4036,14 @@ def get_lc_plot(body, data):
         for m in lc_models:
             lc_model_dict = import_lc_model(os.path.join(datadir, m), lc_model_dict)
 
+    shape_model_dict = {'faces_x': [], 'faces_y': [], 'faces_z': [], 'normal': [], 'level': []}
+    if shape_model:
+        for sm in shape_model:
+            shape_model_dict = import_shape_model(os.path.join(datadir, sm), shape_model_dict)
+        for key in shape_model_dict.keys():
+            if key != 'level':
+                shape_model_dict[key] = [x for _, x in sorted(zip(shape_model_dict["level"], shape_model_dict[key]), reverse=True)]
+
     meta_list = [x for _, x in sorted(zip(lc_list, meta_list), key=lambda i: i[0]['date'][0])]
     lc_list = sorted(lc_list, key=lambda i: i['date'][0])
 
@@ -4006,7 +4060,7 @@ def get_lc_plot(body, data):
         ephem = []
 
     if lc_list:
-        script, div = lc_plot(lc_list, meta_list, lc_model_dict, period, period_scan_dict, body, jpl_ephem=ephem)
+        script, div = lc_plot(lc_list, meta_list, lc_model_dict, period, period_scan_dict, shape_model_dict, body, jpl_ephem=ephem)
     else:
         script = None
         div = """

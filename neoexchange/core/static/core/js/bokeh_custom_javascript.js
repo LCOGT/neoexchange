@@ -400,3 +400,18 @@ function analog_select(analog_select, frame_select, reflectance_sources, chosen_
     }
 
 }
+
+
+function contrast_switch(source, toggle, plot){
+    const dataset = source.data;
+    const C = dataset['colors'];
+    if (toggle.active){
+        plot.glyph.fill_color = "gray";
+        plot.glyph.line_color = "black";
+        toggle.label = 'Apply Shading';
+    } else {
+        plot.glyph.fill_color = {'field':'colors'};
+        plot.glyph.line_color = {'field':'colors'};
+        toggle.label = 'Remove Shading';
+    }
+}
