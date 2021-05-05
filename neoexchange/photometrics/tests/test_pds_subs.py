@@ -66,3 +66,51 @@ class TestPDSSchemaMappings(TestCase):
 
         self.assertNotEqual({}, schemas)
         self.assertEqual(expected_schemas, schemas)
+
+
+class TestWritePDSLabel(TestCase):
+
+    def setUp(self):
+        self.schemadir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_schemas'))
+#        self.test_dir = '/tmp/tmp_neox_wibble'
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+
+        test_xml_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label.xml'))
+        with open(test_xml_cat, 'r') as xml_file:
+            self.expected_xml = xml_file.readlines()
+
+        self.remove = True
+        self.debug_print = False
+        self.maxDiff = None
+
+    def tearDown(self):
+        if self.remove:
+            try:
+                files_to_remove = glob(os.path.join(self.test_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.test_dir)
+            try:
+                os.rmdir(self.test_dir)
+                if self.debug_print:
+                    print("Removed", self.test_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.test_dir)
+
+
+    def test_write(self):
+
+        output_xml_file = os.path.join(self.test_dir, 'test_example_label.xml')
+        filename = 'elp1m006-fa07-20210502-0048-e91.fits'
+
+        status = write_xml(filename, output_xml_file, self.schemadir)
+
+        with open(output_xml_file, 'r') as xml_file:
+            xml = xml_file.readlines()
+
+        for i, expected_line in enumerate(self.expected_xml):
+            if i < len(xml):
+                assert expected_line.lstrip() == xml[i].lstrip(), "Failed on line: " + str(i+1)
+            else:
+                assert expected_line.lstrip() == None, "Failed on line: " + str(i+1)
