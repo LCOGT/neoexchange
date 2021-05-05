@@ -1,6 +1,7 @@
 import os
 import tempfile
 from glob import glob
+from datetime import datetime
 
 from photometrics.pds_subs import *
 
@@ -72,14 +73,14 @@ class TestWritePDSLabel(TestCase):
 
     def setUp(self):
         self.schemadir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_schemas'))
-#        self.test_dir = '/tmp/tmp_neox_wibble'
-        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+        self.test_dir = '/tmp/tmp_neox_wibble'
+#        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
 
         test_xml_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label.xml'))
         with open(test_xml_cat, 'r') as xml_file:
             self.expected_xml = xml_file.readlines()
 
-        self.remove = True
+        self.remove = False
         self.debug_print = False
         self.maxDiff = None
 
@@ -102,9 +103,9 @@ class TestWritePDSLabel(TestCase):
     def test_write(self):
 
         output_xml_file = os.path.join(self.test_dir, 'test_example_label.xml')
-        filename = 'elp1m006-fa07-20210502-0048-e91.fits'
+        filename = 'elp1m006-fa07-20210502-0048-e92.fits'
 
-        status = write_xml(filename, output_xml_file, self.schemadir)
+        status = write_xml(filename, output_xml_file, self.schemadir, mod_time=datetime(2021,5,4))
 
         with open(output_xml_file, 'r') as xml_file:
             xml = xml_file.readlines()
