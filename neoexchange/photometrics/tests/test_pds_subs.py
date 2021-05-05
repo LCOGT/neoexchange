@@ -37,14 +37,32 @@ class TestPDSSchemaMappings(TestCase):
 
         self.assertEqual({}, schemas)
 
-    def test_schemas_dir(self):
+    def test_schemas_dir_sch(self):
 
         expected_schemas = {
-                            'PDS4::DISP' : os.path.join(self.schemadir, 'PDS4_DISP_1F00_1500.sch'),
-                            'PDS4::PDS' : os.path.join(self.schemadir, 'PDS4_PDS_1F00.sch'),
+                            'PDS4::DISP' : {'filename' : os.path.join(self.schemadir, 'PDS4_DISP_1F00_1500.sch'),
+                                           },
+                            'PDS4::PDS' : {'filename' : os.path.join(self.schemadir, 'PDS4_PDS_1F00.sch'),
+                                          }
                            }
 
         schemas = pds_schema_mappings(self.schemadir)
+
+        self.assertNotEqual({}, schemas)
+        self.assertEqual(expected_schemas, schemas)
+
+    def test_schemas_dir_xsd(self):
+
+        expected_schemas = {
+                            'PDS4::DISP' : {'filename' : os.path.join(self.schemadir, 'PDS4_DISP_1F00_1500.xsd'),
+                                            'namespace' : "http://pds.nasa.gov/pds4/disp/v1"
+                                           },
+                            'PDS4::PDS' : {'filename' : os.path.join(self.schemadir, 'PDS4_PDS_1F00.xsd'),
+                                           'namespace' : "http://pds.nasa.gov/pds4/pds/v1"
+                                          },
+                           }
+
+        schemas = pds_schema_mappings(self.schemadir, match_pattern='*.xsd')
 
         self.assertNotEqual({}, schemas)
         self.assertEqual(expected_schemas, schemas)
