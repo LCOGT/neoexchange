@@ -44,7 +44,7 @@ from bokeh.models.widgets import CheckboxGroup, Slider, TableColumn, DataTable, 
     NumberFormatter, Spinner, Button, Panel, Tabs, Div, Toggle, Select, MultiSelect
 from bokeh.palettes import Category20, Category10
 from bokeh.colors import HSL
-from bokeh.core.properties import Instance, String
+from bokeh.core.properties import Instance, String, List
 from bokeh.util.compiler import TypeScript
 
 from .models import Body, CatalogSources, StaticSource, Block, model_to_dict, PreviousSpectra
@@ -676,8 +676,7 @@ class RotTool(Tool):
     TS_CODE = get_js_as_text(js_file, "rotation_tool")
     __implementation__ = TypeScript(TS_CODE)
     source = Instance(ColumnDataSource)
-    obs = Instance(ColumnDataSource)
-    orbs = Instance(ColumnDataSource)
+    coords_list = List(Instance(ColumnDataSource))
 
 
 def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, shape_model_dict={}, body=None, jpl_ephem=None):
@@ -735,7 +734,7 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, shape
     p_mark_source = ColumnDataSource(data=dict(period=[period], y=[-1]))
     orbit_source = ColumnDataSource(data=get_orbit_position(meta_list, lc_list, body))
     full_orbit_source = ColumnDataSource(data=get_full_orbit(body))
-    shape_model_dict["colors"] = [HSL(0, 0, x[0]) for x in shape_model_dict['normal']]
+    shape_model_dict["faces_colors"] = [HSL(0, 0, x[0]) for x in shape_model_dict['faces_normal']]
     shape_source = ColumnDataSource(data=shape_model_dict)
     lc_models_sources = []
     model_names_unique = list(set(lc_model_dict['name']))
@@ -792,9 +791,10 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, shape
     for planet in get_planetary_elements():
         plot_orbit.line(x=f"{planet}_x", y=f"{planet}_y", source=full_orbit_source, color="gray", alpha=.5)
     cursor_change_source = ColumnDataSource(data=dict(x=[], y=[]))
-    plot_orbit.add_tools(RotTool(source=cursor_change_source, orbs=full_orbit_source, obs=orbit_source))
+    plot_orbit.add_tools(RotTool(source=cursor_change_source, coords_list=[full_orbit_source, orbit_source]))
     # Build shape model
-    shape_patches = plot_shape.patches(xs="faces_x", ys="faces_y", source=shape_source, color="colors")
+    shape_patches = plot_shape.patches(xs="faces_x", ys="faces_y", source=shape_source, color="faces_colors")
+    plot_shape.add_tools(RotTool(source=cursor_change_source, coords_list=[shape_source]))
 
     # Write custom JavaScript Code to print the time to the next iteration of the given phase in a HoverTool
     js_hover_text = get_js_as_text(js_file, "next_time_phased")

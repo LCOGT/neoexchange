@@ -3994,8 +3994,8 @@ def import_shape_model(file, shape_list):
             shape_list['faces_x'].append(face_x)
             shape_list['faces_y'].append(face_y)
             shape_list['faces_z'].append(face_z)
-            shape_list['normal'].append(normal)
-            shape_list['level'].append(np.mean(face_z))
+            shape_list['faces_normal'].append(normal)
+            shape_list['faces_level'].append(np.mean(face_z))
     return shape_list
 
 
@@ -4036,13 +4036,13 @@ def get_lc_plot(body, data):
         for m in lc_models:
             lc_model_dict = import_lc_model(os.path.join(datadir, m), lc_model_dict)
 
-    shape_model_dict = {'faces_x': [], 'faces_y': [], 'faces_z': [], 'normal': [], 'level': []}
+    shape_model_dict = {'faces_x': [], 'faces_y': [], 'faces_z': [], 'faces_normal': [], 'faces_level': []}
     if shape_model:
         for sm in shape_model:
             shape_model_dict = import_shape_model(os.path.join(datadir, sm), shape_model_dict)
         for key in shape_model_dict.keys():
-            if key != 'level':
-                shape_model_dict[key] = [x for _, x in sorted(zip(shape_model_dict["level"], shape_model_dict[key]), reverse=True)]
+            if key != 'faces_level':
+                shape_model_dict[key] = [x for _, x in sorted(zip(shape_model_dict["faces_level"], shape_model_dict[key]), reverse=True)]
 
     meta_list = [x for _, x in sorted(zip(lc_list, meta_list), key=lambda i: i[0]['date'][0])]
     lc_list = sorted(lc_list, key=lambda i: i['date'][0])

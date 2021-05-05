@@ -251,6 +251,7 @@ function rotation_tool(){
 
     function rotate(coords:any, omega:number, phi:number) {
         //Function to perform actual rotation
+        // coords = ColumnDataSource containing datasets = {<header>_x/y/z: []}
         // omega => rotation angle around y axis
         // phi => rotation angle around x axis
         const theta = 0  // rotation angle around z axis
@@ -264,19 +265,49 @@ function rotation_tool(){
         const unique_keys = [] as string[]
         var key
         for (key of keys) {
+            // pull out coordinate header
             const first = key.split("_")
             if (first.length > 1 && unique_keys.indexOf(first[0]) == -1) {
                 unique_keys.push(first[0])
-                var xx = coords.get_array(first[0].concat("_x")) as number[]
-                var yy = coords.get_array(first[0].concat("_y")) as number[]
-                var zz = coords.get_array(first[0].concat("_z")) as number[]
-                for (var i = 0; i < xx.length; i++){
-                    const xx_out = (xx[i] * ct * co) + (yy[i] * (ct * so * sp - st * cp)) + (zz[i] * (ct * so * cp + st * sp))
-                    const yy_out = (xx[i] * st * co) + (yy[i] * (st * so * sp + ct * cp)) + (zz[i] * (st * so * cp - ct * sp))
-                    const zz_out = (yy[i] * (co * sp)) + (zz[i] * (co * cp)) - (xx[i] * so)
-                    xx[i] = xx_out
-                    yy[i] = yy_out
-                    zz[i] = zz_out
+                // separate individual coordinates from face data
+                if (typeof coords.get_array(first[0].concat("_x"))[0] == "number") {
+                    var xx_list = [coords.get_array(first[0].concat("_x")) as number[]]
+                    var yy_list = [coords.get_array(first[0].concat("_y")) as number[]]
+                    var zz_list = [coords.get_array(first[0].concat("_z")) as number[]]
+                } else {
+                    var xx_list = coords.get_array(first[0].concat("_x")) as number[][]
+                    var yy_list = coords.get_array(first[0].concat("_y")) as number[][]
+                    var zz_list = coords.get_array(first[0].concat("_z")) as number[][]
+                }
+                var level = [] as any[];
+                // Perform Rotation
+                for (var k = 0; k < xx_list.length; k++){
+                    var xx = xx_list[k]
+                    var yy = yy_list[k]
+                    var zz = zz_list[k]
+                    var total = 0
+                    for (var i = 0; i < xx.length; i++){
+                        const xx_out = (xx[i] * ct * co) + (yy[i] * (ct * so * sp - st * cp)) + (zz[i] * (ct * so * cp + st * sp))
+                        const yy_out = (xx[i] * st * co) + (yy[i] * (st * so * sp + ct * cp)) + (zz[i] * (st * so * cp - ct * sp))
+                        const zz_out = (yy[i] * (co * sp)) + (zz[i] * (co * cp)) - (xx[i] * so)
+                        xx[i] = xx_out
+                        yy[i] = yy_out
+                        zz[i] = zz_out
+                        total += zz_out
+                    }
+                    level.push({index: k, value: total / zz.length});
+                }
+                // Sort faces by average z
+                level.sort(function(a, b){return a.value - b.value})
+                var k2
+                for (k2 of keys){
+                    if (k2.includes(first[0])){
+                        if (level.length > 1){
+                            var to_sort = coords.data[k2]
+                            to_sort = level.map(function(e:any){return to_sort[e.index];})
+                            coords.data[k2] = to_sort
+                        }
+                    }
                 }
             }
         }
@@ -299,7 +330,7 @@ function rotation_tool(){
         if (!frame.bbox.contains(sx, sy))
           return
 
-        const {source, obs, orbs} = this.model
+        const {source, coords_list} = this.model
 
         const x_list = source.get_array("x") as number[]
         const y_list = source.get_array("y") as number[]
@@ -319,13 +350,15 @@ function rotation_tool(){
             var phi = (y_list[1] - y_list[0]) * scale
             }
 
-        // Perform Rotation
-        rotate(obs, omega, phi)
-        rotate(orbs, omega, phi)
+        var coords
+        for (coords of coords_list) {
+            // Perform Rotation
+            rotate(coords, omega, phi)
+            // Update DataSources
+            coords.change.emit()
+        }
 
-        //Update DataSources
-        obs.change.emit()
-        orbs.change.emit()
+        // Update mouse position
         source.change.emit()
       }
 
@@ -338,8 +371,7 @@ function rotation_tool(){
 
       export type Props = GestureTool.Props & {
         source: p.Property<ColumnDataSource>,
-        obs: p.Property<ColumnDataSource>
-        orbs: p.Property<ColumnDataSource>
+        coords_list: p.Property<ColumnDataSource>
       }
     }
 
@@ -363,8 +395,7 @@ function rotation_tool(){
 
         this.define<RotTool.Props>({
           source: [ p.Instance ],
-          obs: [ p.Instance ],
-          orbs: [ p.Instance ],
+          coords_list: [ p.Instance ],
         })
       }
     }
@@ -404,14 +435,14 @@ function analog_select(analog_select, frame_select, reflectance_sources, chosen_
 
 function contrast_switch(source, toggle, plot){
     const dataset = source.data;
-    const C = dataset['colors'];
+    const C = dataset['faces_colors'];
     if (toggle.active){
         plot.glyph.fill_color = "gray";
         plot.glyph.line_color = "black";
         toggle.label = 'Apply Shading';
     } else {
-        plot.glyph.fill_color = {'field':'colors'};
-        plot.glyph.line_color = {'field':'colors'};
+        plot.glyph.fill_color = {'field':'faces_colors'};
+        plot.glyph.line_color = {'field':'faces_colors'};
         toggle.label = 'Remove Shading';
     }
 }
