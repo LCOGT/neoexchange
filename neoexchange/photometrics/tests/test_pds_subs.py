@@ -79,6 +79,7 @@ class TestWritePDSLabel(TestCase):
         test_xml_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label.xml'))
         with open(test_xml_cat, 'r') as xml_file:
             self.expected_xml = xml_file.readlines()
+        self.test_banzai_file = os.path.abspath(os.path.join('photometrics', 'tests', 'banzai_test_frame.fits'))
 
         self.remove = False
         self.debug_print = False
@@ -103,9 +104,8 @@ class TestWritePDSLabel(TestCase):
     def test_write(self):
 
         output_xml_file = os.path.join(self.test_dir, 'test_example_label.xml')
-        filename = 'elp1m006-fa07-20210502-0048-e92.fits'
 
-        status = write_xml(filename, output_xml_file, self.schemadir, mod_time=datetime(2021,5,4))
+        status = write_xml(self.test_banzai_file, output_xml_file, self.schemadir, mod_time=datetime(2021,5,4))
 
         with open(output_xml_file, 'r') as xml_file:
             xml = xml_file.readlines()

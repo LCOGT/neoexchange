@@ -1,8 +1,10 @@
 import os
 from glob import glob
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from lxml import etree
+
+from photometrics.catalog_subs import open_fits_catalog
 
 def get_namespace(schema_filepath):
 
@@ -71,15 +73,84 @@ def create_id_area(filename, mod_time=None):
 
     return id_area
 
-def write_xml(filename, xml_file, schema_root, mod_time=None):
+def get_shutter_open_close(params):
+    shutter_open = params.get('DATE-OBS', None)
+    shutter_close = params.get('UTSTOP', None)
+    if shutter_open and shutter_close:
+        # start by assuming shutter closed on the same day it opened.
+        shutter_close = shutter_open.split('T')[0] + 'T' + shutter_close
+        # convert to datetime object
+        try:
+            shutter_open = datetime.strptime(shutter_open, "%Y-%m-%dT%H:%M:%S.%f")
+        except ValueError:
+            shutter_open = datetime.strptime(shutter_open, "%Y-%m-%dT%H:%M:%S")
+        try:
+            shutter_close = datetime.strptime(shutter_close, "%Y-%m-%dT%H:%M:%S.%f")
+        except ValueError:
+            shutter_close = datetime.strptime(shutter_close, "%Y-%m-%dT%H:%M:%S")
+        # Increment close-time by 1 day if close happened before open
+        if shutter_close < shutter_open:
+            shutter_close = shutter_close + timedelta(days=1)
+    return shutter_open, shutter_close
+
+def create_obs_area(header):
+    """Creates the Observation Area set of classes and returns an etree.Element with it.
+    Documentation on filling this out taken from
+    https://sbnwiki.astro.umd.edu/wiki/Filling_Out_the_Observation_Area_Classes
+    """
+
+    obs_area = etree.Element("Observation_Area")
+
+    # Create Time_Coordinates sub element
+    time_coords = etree.SubElement(obs_area, "Time_Coordinates")
+    shutter_open, shutter_close = get_shutter_open_close(header)
+    etree.SubElement(time_coords, "start_date_time").text = shutter_open.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    etree.SubElement(time_coords, "stop_date_time").text = shutter_close.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+    invest_area = etree.SubElement(obs_area, "Investigation_Area")
+    etree.SubElement(invest_area, "name").text = "Double Asteroid Redirection Test"
+    etree.SubElement(invest_area, "type").text = "Mission"
+    # Create Internal Reference subclass of Investigation Area
+    int_reference = etree.SubElement(invest_area, "Internal_Reference")
+    etree.SubElement(int_reference, "lid_reference").text = "urn:nasa:pds:context:investigation:mission.double_asteroid_redirection_test"
+    etree.SubElement(int_reference, "reference_type").text = "data_to_investigation"
+    # Create Observing System subclass of Observation Area
+    obs_system = etree.SubElement(obs_area, "Observing_System")
+    obs_components = {  'Instrument' : 'Sinistro',
+                        'Observatory' : 'Las Cumbres Observatory (LCOGT)',
+                        'Telescope' : 'LCOGT ' + header.get('TELESCOP','') + ' Telescope'
+                     }
+    for component in obs_components:
+        comp = etree.SubElement(obs_system, "Observing_System_Component")
+        etree.SubElement(comp, "name").text = obs_components[component]
+        etree.SubElement(comp, "type").text = component
+        description = "The description for the {} can be found in the document collection for this bundle.".format(component.lower())
+        etree.SubElement(comp, "description").text = description
+
+    # Create Target Identification subclass
+    target_id = etree.SubElement(obs_area, "Target_Identification")
+    target_type = {'MINORPLANET' : 'Asteroid', 'COMET' : 'Comet' }
+    etree.SubElement(target_id, "name").text = header.get('object', '')
+    etree.SubElement(target_id, "type").text = target_type.get(header.get('srctype',''), 'Unknown')
+
+    return obs_area
+
+def write_xml(filepath, xml_file, schema_root, mod_time=None):
 
     xmlEncoding = "UTF-8"
     schema_mappings = pds_schema_mappings(schema_root, '*.xsd')
+
     processedImage = create_obs_product(schema_mappings)
 
-    id_area = create_id_area(filename, mod_time)
+    header, table, cattype = open_fits_catalog(filepath)
+    filename = os.path.basename(filepath)
 
+    id_area = create_id_area(filename, mod_time)
     processedImage.append(id_area)
+
+    # Add the Observation_Area
+    obs_area = create_obs_area(header)
+    processedImage.append(obs_area)
 
     # Wrap in ElementTree to write out to XML file
     doc = etree.ElementTree(processedImage)
