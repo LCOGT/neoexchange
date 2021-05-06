@@ -93,7 +93,42 @@ def get_shutter_open_close(params):
             shutter_close = shutter_close + timedelta(days=1)
     return shutter_open, shutter_close
 
-def create_obs_area(header):
+def create_discipline_area(header, filename, nsmap):
+
+    discp_area = etree.Element("Discipline_Area")
+
+    # Create Display Settings discipline area
+    disp_settings = create_display_settings(filename, nsmap)
+    # Create Display Direction discipline area
+    disp_dir = create_display_direction(nsmap)
+    disp_settings.append(disp_dir)
+    discp_area.append(disp_settings)
+
+    return discp_area
+
+def create_display_settings(filename, nsmap):
+
+    etree.register_namespace("disp", nsmap['PDS4::DISP']['namespace'])
+    disp_settings = etree.Element(etree.QName(nsmap['PDS4::DISP']['namespace'],"Display_Settings"))
+    lir = etree.SubElement(disp_settings, "Local_Internal_Reference")
+    etree.SubElement(lir, "local_identifier_reference").text = os.path.splitext(filename)[0]
+    etree.SubElement(lir, "local_reference_type").text = "display_settings_to_array"
+
+    return disp_settings
+
+def create_display_direction(nsmap):
+
+    disp_ns = nsmap['PDS4::DISP']['namespace']
+    etree.register_namespace("disp", disp_ns)
+    disp_direction = etree.Element(etree.QName(disp_ns,"Display_Direction"))
+    etree.SubElement(disp_direction, etree.QName(disp_ns, "horizontal_display_axis")).text = "Sample"
+    etree.SubElement(disp_direction, etree.QName(disp_ns, "horizontal_display_direction")).text = "Left to Right"
+    etree.SubElement(disp_direction, etree.QName(disp_ns, "vertical_display_axis")).text = "Line"
+    etree.SubElement(disp_direction, etree.QName(disp_ns, "vertical_display_direction")).text = "Bottom to Top"
+
+    return disp_direction
+
+def create_obs_area(header, filename):
     """Creates the Observation Area set of classes and returns an etree.Element with it.
     Documentation on filling this out taken from
     https://sbnwiki.astro.umd.edu/wiki/Filling_Out_the_Observation_Area_Classes
@@ -149,7 +184,11 @@ def write_xml(filepath, xml_file, schema_root, mod_time=None):
     processedImage.append(id_area)
 
     # Add the Observation_Area
-    obs_area = create_obs_area(header)
+    obs_area = create_obs_area(header, filename)
+
+    # Add Discipline Area
+    discipline_area = create_discipline_area(header, filename, schema_mappings)
+    obs_area.append(discipline_area)
     processedImage.append(obs_area)
 
     # Wrap in ElementTree to write out to XML file
