@@ -58,6 +58,9 @@ class TestPDSSchemaMappings(TestCase):
                             'PDS4::DISP' : {'filename' : os.path.join(self.schemadir, 'PDS4_DISP_1F00_1500.xsd'),
                                             'namespace' : "http://pds.nasa.gov/pds4/disp/v1"
                                            },
+                            'PDS4::GEOM' : {'filename' : os.path.join(self.schemadir, 'PDS4_GEOM_1F00_1910.xsd'),
+                                            'namespace' : "http://pds.nasa.gov/pds4/geom/v1"
+                                           },
                             'PDS4::IMG' : {'filename' : os.path.join(self.schemadir, 'PDS4_IMG_1F00_1810.xsd'),
                                             'namespace' : "http://pds.nasa.gov/pds4/img/v1"
                                            },

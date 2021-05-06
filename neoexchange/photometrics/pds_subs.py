@@ -101,7 +101,7 @@ def create_discipline_area(header, filename, nsmap):
     # Create Display Settings discipline area
     disp_settings = create_display_settings(filename, nsmap)
     # Create Display Direction discipline area
-    disp_direction = create_display_direction(nsmap)
+    disp_direction = create_display_direction(nsmap, 'PDS4::DISP')
     disp_settings.append(disp_direction)
     discp_area.append(disp_settings)
     # Create Image Exposure and Optical Filter sections
@@ -109,6 +109,19 @@ def create_discipline_area(header, filename, nsmap):
     discp_area.append(img_exposure)
     img_filter = create_image_filter(header, nsmap)
     discp_area.append(img_filter)
+    # Create Geometry area
+    geom = create_geometry(filename, nsmap)
+    img_disp = create_imgdisp_geometry(filename, nsmap)
+    geom.append(img_disp)    
+    # Create Display Direction discipline area
+    disp_direction = create_display_direction(nsmap, 'PDS4::GEOM')
+    img_disp.append(disp_direction)
+
+    # Create Object Orientation
+    obj_orient = create_obj_orient(header, nsmap)
+    img_disp.append(obj_orient)
+    # Add the whole Geometry subclass to the Discipline Area
+    discp_area.append(geom)
 
     return discp_area
 
@@ -122,10 +135,11 @@ def create_display_settings(filename, nsmap):
 
     return disp_settings
 
-def create_display_direction(nsmap):
+def create_display_direction(nsmap, namespace):
 
-    disp_ns = nsmap['PDS4::DISP']['namespace']
-    etree.register_namespace("disp", disp_ns)
+    disp_ns = nsmap[namespace]['namespace']
+    ns_shortname = namespace.split('::')[1].lower()
+    etree.register_namespace(ns_shortname, disp_ns)
     disp_direction = etree.Element(etree.QName(disp_ns,"Display_Direction"))
     etree.SubElement(disp_direction, etree.QName(disp_ns, "horizontal_display_axis")).text = "Sample"
     etree.SubElement(disp_direction, etree.QName(disp_ns, "horizontal_display_direction")).text = "Left to Right"
@@ -163,6 +177,47 @@ def create_image_filter(header, nsmap):
     etree.SubElement(optical_filter, etree.QName(img_ns, "center_filter_wavelength"), attrib={'unit' : obs_filter_cwave_unit}).text = obs_filter_cwave_str
 
     return optical_filter
+
+def create_geometry(filename, nsmap):
+
+    geom_ns = nsmap['PDS4::GEOM']['namespace']
+    etree.register_namespace("geom", geom_ns)
+    geometry = etree.Element(etree.QName(geom_ns, "Geometry"))
+
+    return geometry
+
+def create_imgdisp_geometry(filename, nsmap):
+
+    geom_ns = nsmap['PDS4::GEOM']['namespace']
+    etree.register_namespace("geom", geom_ns)
+    img_disp_geometry = etree.Element(etree.QName(geom_ns, "Image_Display_Geometry"))
+    lir = etree.SubElement(img_disp_geometry, "Local_Internal_Reference")
+    etree.SubElement(lir, "local_identifier_reference").text = os.path.splitext(filename)[0]
+    etree.SubElement(lir, "local_reference_type").text = "display_to_data_object"
+
+    return img_disp_geometry
+
+def create_obj_orient(header, nsmap):
+
+    geom_ns = nsmap['PDS4::GEOM']['namespace']
+    etree.register_namespace("geom", geom_ns)
+    obj_orient = etree.Element(etree.QName(geom_ns, "Object_Orientation_RA_Dec"))
+    ra_str = "{:.6f}".format(header['CRVAL1'])
+    etree.SubElement(obj_orient, etree.QName(geom_ns, "right_ascension_angle"), attrib={'unit' : "deg"}).text = ra_str
+
+    dec_str = "{:.6f}".format(header['CRVAL2'])
+    etree.SubElement(obj_orient, etree.QName(geom_ns, "declination_angle"), attrib={'unit' : "deg"}).text = dec_str
+
+    rotangle_str = "{:.1f}".format(0.0)
+    etree.SubElement(obj_orient, etree.QName(geom_ns, "celestial_north_clock_angle"), attrib={'unit' : "deg"}).text = rotangle_str
+
+    # Create Reference_Frame_Identification
+    ref_frame = etree.SubElement(obj_orient, etree.QName(geom_ns, "Reference_Frame_Identification"))
+    etree.SubElement(ref_frame, etree.QName(geom_ns, "name")).text = "J2000"
+    etree.SubElement(ref_frame, etree.QName(geom_ns, "comment")).text = "equinox of RA and DEC"
+    
+
+    return obj_orient
 
 def create_obs_area(header, filename):
     """Creates the Observation Area set of classes and returns an etree.Element with it.
