@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from lxml import etree
 
 from photometrics.catalog_subs import open_fits_catalog
+from photometrics.photometry_subs import map_filter_to_wavelength, map_filter_to_bandwidth
 
 def get_namespace(schema_filepath):
 
@@ -100,9 +101,14 @@ def create_discipline_area(header, filename, nsmap):
     # Create Display Settings discipline area
     disp_settings = create_display_settings(filename, nsmap)
     # Create Display Direction discipline area
-    disp_dir = create_display_direction(nsmap)
-    disp_settings.append(disp_dir)
+    disp_direction = create_display_direction(nsmap)
+    disp_settings.append(disp_direction)
     discp_area.append(disp_settings)
+    # Create Image Exposure and Optical Filter sections
+    img_exposure = create_image_exposure(header, nsmap)
+    discp_area.append(img_exposure)
+    img_filter = create_image_filter(header, nsmap)
+    discp_area.append(img_filter)
 
     return discp_area
 
@@ -127,6 +133,36 @@ def create_display_direction(nsmap):
     etree.SubElement(disp_direction, etree.QName(disp_ns, "vertical_display_direction")).text = "Bottom to Top"
 
     return disp_direction
+
+def create_image_exposure(header, nsmap):
+
+    img_ns = nsmap['PDS4::IMG']['namespace']
+    etree.register_namespace("img", img_ns)
+    img_exposure = etree.Element(etree.QName(img_ns,"Exposure"))
+    exposure_time = "{:.3f}".format(header.get('EXPTIME', 0.0))
+    etree.SubElement(img_exposure, etree.QName(img_ns, "exposure_duration"), attrib={'unit' : 's'}).text = exposure_time
+
+    return img_exposure
+
+def create_image_filter(header, nsmap):
+
+    img_ns = nsmap['PDS4::IMG']['namespace']
+    etree.register_namespace("img", img_ns)
+    optical_filter = etree.Element(etree.QName(img_ns,"Optical_Filter"))
+    obs_filter = header.get('FILTER', 'w')
+    etree.SubElement(optical_filter, etree.QName(img_ns, "filter_name")).text = obs_filter
+
+    obs_filter_bwidth = map_filter_to_bandwidth(obs_filter)
+    obs_filter_bwidth_str = "{:.1f}".format(obs_filter_bwidth.value)
+    obs_filter_bwidth_unit = str(obs_filter_bwidth.unit)
+    etree.SubElement(optical_filter, etree.QName(img_ns, "bandwidth"), attrib={'unit' : obs_filter_bwidth_unit}).text = obs_filter_bwidth_str
+
+    obs_filter_cwave = map_filter_to_wavelength(obs_filter)
+    obs_filter_cwave_str = "{:.1f}".format(obs_filter_cwave.value)
+    obs_filter_cwave_unit = str(obs_filter_cwave.unit)
+    etree.SubElement(optical_filter, etree.QName(img_ns, "center_filter_wavelength"), attrib={'unit' : obs_filter_cwave_unit}).text = obs_filter_cwave_str
+
+    return optical_filter
 
 def create_obs_area(header, filename):
     """Creates the Observation Area set of classes and returns an etree.Element with it.
