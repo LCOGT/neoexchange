@@ -1,5 +1,6 @@
 import os
 from glob import glob
+from math import ceil
 from datetime import datetime, timedelta
 
 from lxml import etree
@@ -261,6 +262,49 @@ def create_obs_area(header, filename):
 
     return obs_area
 
+def create_file_area_obs(header, filename):
+    """Creates the File Area Observational set of classes and returns an etree.Element with it.
+    """
+
+    # Mapping from BITPIX to PDS4 types
+    PDS_types = {  8 : "UnsignedByte",
+                  16 : "SignedMSB2",
+                  32 : "SignedMSB4",
+                 -32 : "IEEE754MSBSingle",
+                  64 : "SignedMSB8",
+                 -64 : "IEEE754MSBDouble"
+                }
+
+    file_area_obs = etree.Element("File_Area_Observational")
+    file_element = etree.SubElement(file_area_obs, "File")
+    etree.SubElement(file_element, "file_name").text = filename
+    etree.SubElement(file_element, "comment").text = "Calibrated LCOGT image file"
+
+    # XXX Check NAXIS=2 before this
+    array_2d = etree.SubElement(file_area_obs, "Array_2D_Image")
+    etree.SubElement(array_2d, "local_identifier").text = os.path.splitext(filename)[0]
+
+    # Compute size of header from list length+1 (missing END card)
+    header_size_bytes = (len(header)+1)*80
+    # Actual size is rounded to nearest multiple of FITS block size (2880 bytes)
+    header_size_blocks = ceil(header_size_bytes/2800.0) * 2800
+    header_size = "{:d}".format(header_size_blocks)
+
+    etree.SubElement(array_2d, "offset", attrib={"unit" : "byte"}).text = header_size
+    etree.SubElement(array_2d, "axes").text = str(header.get('NAXIS', 2))
+    etree.SubElement(array_2d, "axis_index_order").text = "Last Index Fastest"
+    elem_array = etree.SubElement(array_2d, "Element_Array")
+    etree.SubElement(elem_array, "data_type").text = PDS_types.get(header['BITPIX'])
+
+    axis_mapping = {'Line' : 'NAXIS2', 'Sample' : 'NAXIS2'}
+    for sequence_number, axis_name in enumerate(axis_mapping, start=1):
+        axis_array = etree.SubElement(array_2d, "Axis_Array")
+        etree.SubElement(axis_array, "axis_name").text = axis_name
+        etree.SubElement(axis_array, "elements").text = str(header[axis_mapping[axis_name]])
+        etree.SubElement(axis_array, "sequence_number").text = str(sequence_number)
+
+    return file_area_obs
+
 def write_xml(filepath, xml_file, schema_root, mod_time=None):
 
     xmlEncoding = "UTF-8"
@@ -281,6 +325,10 @@ def write_xml(filepath, xml_file, schema_root, mod_time=None):
     discipline_area = create_discipline_area(header, filename, schema_mappings)
     obs_area.append(discipline_area)
     processedImage.append(obs_area)
+
+    # Create File_Area_Observational
+    file_area = create_file_area_obs(header, filename)
+    processedImage.append(file_area)
 
     # Wrap in ElementTree to write out to XML file
     doc = etree.ElementTree(processedImage)

@@ -79,15 +79,15 @@ class TestWritePDSLabel(TestCase):
 
     def setUp(self):
         self.schemadir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_schemas'))
-        self.test_dir = '/tmp/tmp_neox_wibble'
-#        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+#        self.test_dir = '/tmp/tmp_neox_wibble'
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
 
         test_xml_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label.xml'))
         with open(test_xml_cat, 'r') as xml_file:
             self.expected_xml = xml_file.readlines()
         self.test_banzai_file = os.path.abspath(os.path.join('photometrics', 'tests', 'banzai_test_frame.fits'))
 
-        self.remove = False
+        self.remove = True
         self.debug_print = False
         self.maxDiff = None
 

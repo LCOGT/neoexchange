@@ -94,4 +94,29 @@
   </geom:Geometry>
 </Discipline_Area>
   </Observation_Area>
+  <File_Area_Observational>
+    <File>
+      <file_name>banzai_test_frame.fits</file_name>
+      <comment>Calibrated LCOGT image file</comment>
+    </File>
+    <Array_2D_Image>
+      <local_identifier>banzai_test_frame</local_identifier>
+      <offset unit="byte">22400</offset>
+      <axes>2</axes>
+      <axis_index_order>Last Index Fastest</axis_index_order>
+      <Element_Array>
+        <data_type>IEEE754MSBSingle</data_type>
+      </Element_Array>
+      <Axis_Array>
+        <axis_name>Line</axis_name>
+        <elements>2038</elements>
+        <sequence_number>1</sequence_number>
+      </Axis_Array>
+      <Axis_Array>
+        <axis_name>Sample</axis_name>
+        <elements>2038</elements>
+        <sequence_number>2</sequence_number>
+      </Axis_Array>
+    </Array_2D_Image>
+  </File_Area_Observational>
 </Product_Observational>
