@@ -5,9 +5,9 @@ from datetime import datetime
 
 from photometrics.pds_subs import *
 
-from django.test import TestCase
+from django.test import SimpleTestCase
 
-class TestPDSSchemaMappings(TestCase):
+class TestPDSSchemaMappings(SimpleTestCase):
 
     def setUp(self):
         self.schemadir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_schemas'))
@@ -75,7 +75,22 @@ class TestPDSSchemaMappings(TestCase):
         self.assertEqual(expected_schemas, schemas)
 
 
-class TestWritePDSLabel(TestCase):
+class TestGetNamespace(SimpleTestCase):
+
+    def setUp(self):
+        self.schemadir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_schemas'))
+        self.schemas = sorted(glob(os.path.join(self.schemadir, '*.xsd')))
+        print("schemas=\n",self.schemas)
+
+        self.maxDiff = None
+
+    def test_disp_schema(self):
+
+        ns = get_namespace(self.schemas[0])
+        self.assertEqual('http://pds.nasa.gov/pds4/disp/v1', ns)
+
+
+class TestWritePDSLabel(SimpleTestCase):
 
     def setUp(self):
         self.schemadir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_schemas'))
