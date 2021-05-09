@@ -46,6 +46,9 @@ def create_obs_product(schema_mappings):
             ns_key = key.split('::')[1].lower()
             NS_map[ns_key] = schema_mappings[key]['namespace']
 
+    # Add namespace for XMLSchema-instance
+    NS_map['xsi'] = "http://www.w3.org/2001/XMLSchema-instance"
+
     obs_product = etree.Element('Product_Observational', nsmap=NS_map)
 
     return obs_product
@@ -61,7 +64,7 @@ def create_id_area(filename, mod_time=None):
                     'product_class' : 'Product_Observational'
                     }
     for k,v in xml_elements.items():
-        etree.SubElement(id_area, k).text =v
+        etree.SubElement(id_area, k).text = v
 
     # Add a Modification_History and a Modification_Detail inside that
     mod_history = etree.SubElement(id_area, "Modification_History")
