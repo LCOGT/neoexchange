@@ -58,7 +58,7 @@ def create_obs_product(schema_mappings):
     # Add namespace for XMLSchema-instance
     NS_map['xsi'] = "http://www.w3.org/2001/XMLSchema-instance"
 
-    qname = etree.QName("http://www.w3.org/2001/XMLSchema-instance", "SchemaLocation")
+    qname = etree.QName("http://www.w3.org/2001/XMLSchema-instance", "schemaLocation")
     obs_product = etree.Element('Product_Observational', {qname: XSI_map}, nsmap=NS_map)
 
     return obs_product

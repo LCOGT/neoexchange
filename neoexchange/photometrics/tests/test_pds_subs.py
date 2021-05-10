@@ -88,7 +88,6 @@ class TestGetNamespace(SimpleTestCase):
     def setUp(self):
         self.schemadir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_schemas'))
         self.schemas = sorted(glob(os.path.join(self.schemadir, '*.xsd')))
-        print("schemas=\n",self.schemas)
 
         self.maxDiff = None
 
