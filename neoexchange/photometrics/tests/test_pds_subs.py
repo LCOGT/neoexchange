@@ -56,16 +56,24 @@ class TestPDSSchemaMappings(SimpleTestCase):
 
         expected_schemas = {
                             'PDS4::DISP' : {'filename' : os.path.join(self.schemadir, 'PDS4_DISP_1F00_1500.xsd'),
-                                            'namespace' : "http://pds.nasa.gov/pds4/disp/v1"
+                                            'namespace' : "http://pds.nasa.gov/pds4/disp/v1",
+                                            'location' : "https://pds.nasa.gov/pds4/disp/v1/PDS4_DISP_1F00_1500.xsd",
+                                            'version' : "1.5.0.0"
                                            },
                             'PDS4::GEOM' : {'filename' : os.path.join(self.schemadir, 'PDS4_GEOM_1F00_1910.xsd'),
-                                            'namespace' : "http://pds.nasa.gov/pds4/geom/v1"
+                                            'namespace' : "http://pds.nasa.gov/pds4/geom/v1",
+                                            'location' : "https://pds.nasa.gov/pds4/geom/v1/PDS4_GEOM_1F00_1910.xsd",
+                                            'version' : "1.9.1.0"
                                            },
                             'PDS4::IMG' : {'filename' : os.path.join(self.schemadir, 'PDS4_IMG_1F00_1810.xsd'),
-                                            'namespace' : "http://pds.nasa.gov/pds4/img/v1"
-                                           },
+                                           'namespace' : "http://pds.nasa.gov/pds4/img/v1",
+                                           'location' : "https://pds.nasa.gov/pds4/img/v1/PDS4_IMG_1F00_1810.xsd",
+                                           'version' : "1.8.1.0"
+                                          },
                             'PDS4::PDS' : {'filename' : os.path.join(self.schemadir, 'PDS4_PDS_1F00.xsd'),
-                                           'namespace' : "http://pds.nasa.gov/pds4/pds/v1"
+                                           'namespace' : "http://pds.nasa.gov/pds4/pds/v1",
+                                           'location' : "https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1F00.xsd",
+                                           'version' : "1.15.0.0"
                                           },
                            }
 
@@ -87,7 +95,12 @@ class TestGetNamespace(SimpleTestCase):
     def test_disp_schema(self):
 
         ns = get_namespace(self.schemas[0])
-        self.assertEqual('http://pds.nasa.gov/pds4/disp/v1', ns)
+        expected_ns = { 'namespace' : 'http://pds.nasa.gov/pds4/disp/v1',
+                        'location'  : 'https://pds.nasa.gov/pds4/disp/v1/PDS4_DISP_1F00_1500.xsd',
+                        'version' : '1.5.0.0'
+                      }
+
+        self.assertEqual(expected_ns, ns)
 
 
 class TestWritePDSLabel(SimpleTestCase):
