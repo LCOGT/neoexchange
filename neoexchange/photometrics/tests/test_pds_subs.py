@@ -1,4 +1,5 @@
 import os
+import shutil
 import tempfile
 from glob import glob
 from datetime import datetime
@@ -106,7 +107,6 @@ class TestWritePDSLabel(SimpleTestCase):
 
     def setUp(self):
         self.schemadir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_schemas'))
-#        self.test_dir = '/tmp/tmp_neox_wibble'
         self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
 
         test_xml_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label.xml'))
@@ -148,3 +148,55 @@ class TestWritePDSLabel(SimpleTestCase):
                 assert expected_line.lstrip() == xml[i].lstrip(), "Failed on line: " + str(i+1)
             else:
                 assert expected_line.lstrip() == None, "Failed on line: " + str(i+1)
+
+
+class TestCreatePDSLabels(SimpleTestCase):
+
+    def setUp(self):
+        self.schemadir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_schemas'))
+        test_xml_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label.xml'))
+        with open(test_xml_cat, 'r') as xml_file:
+            self.expected_xml = xml_file.readlines()
+
+        self.framedir = os.path.abspath(os.path.join('photometrics', 'tests'))
+        self.test_file = 'banzai_test_frame.fits'
+        test_file_path = os.path.join(self.framedir, self.test_file)
+
+#        self.test_dir = '/tmp/tmp_neox_wibble'
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+
+
+        # Make one copy and rename to an -e92 (so it will get picked up) and
+        # a second copy which is renamed to an -e91 (so it shouldn't be found)
+        new_name = os.path.join(self.test_dir, 'cpt1m013-kb76-20160606-0396-e92.fits')
+        self.test_banzai_file = shutil.copy(test_file_path, new_name)
+        new_name = os.path.join(self.test_dir, 'cpt1m013-kb76-20160606-0396-e91.fits')
+        shutil.copy(test_file_path, new_name)
+
+        self.remove = True
+        self.debug_print = False
+        self.maxDiff = None
+
+    def tearDown(self):
+        if self.remove:
+            try:
+                files_to_remove = glob(os.path.join(self.test_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.test_dir)
+            try:
+                os.rmdir(self.test_dir)
+                if self.debug_print:
+                    print("Removed", self.test_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.test_dir)
+
+    def test_generate(self):
+
+        expected_xml_labels = [self.test_banzai_file.replace('.fits', '.xml'),]
+
+        xml_labels = create_pds_labels(self.test_dir, self.schemadir)
+
+        self.assertEqual(len(expected_xml_labels), len(xml_labels))
+        self.assertEqual(expected_xml_labels, xml_labels)

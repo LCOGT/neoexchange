@@ -359,3 +359,23 @@ def write_xml(filepath, xml_file, schema_root, mod_time=None):
                 xml_declaration=True, encoding=xmlEncoding)
 
     return
+
+def create_pds_labels(procdir, schema_root):
+    """Create PDS4 product labels for all processed (e92) FITS fils in <procdir>
+    The PDS4 schematron and XSD files in <schema_root> are used in generating
+    the XML file.
+    A list of created PDS4 label filenames (with paths) is returned; this list
+    may be zero length.
+    """
+
+    xml_labels = []
+    full_procdir = os.path.abspath(os.path.expandvars(procdir))
+    files_to_process = sorted(glob(os.path.join(full_procdir, '*-e92.fits')))
+
+    for fits_file in files_to_process:
+        xml_file = fits_file.replace('.fits', '.xml')
+        write_xml(fits_file, xml_file, schema_root)
+        if os.path.exists(xml_file):
+            xml_labels.append(xml_file)
+
+    return xml_labels
