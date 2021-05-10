@@ -344,8 +344,18 @@ def write_xml(filepath, xml_file, schema_root, mod_time=None):
     processedImage.append(file_area)
 
     # Wrap in ElementTree to write out to XML file
-    doc = etree.ElementTree(processedImage)
-    doc.write(xml_file, pretty_print=True, standalone=None,
+    preamble = b'''<?xml-model href="https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1F00.sch"
+            schematypens="http://purl.oclc.org/dsdl/schematron"?>
+    <?xml-model href="https://pds.nasa.gov/pds4/disp/v1/PDS4_DISP_1F00_1500.sch"
+            schematypens="http://purl.oclc.org/dsdl/schematron"?>
+    <?xml-model href="https://pds.nasa.gov/pds4/img/v1/PDS4_IMG_1F00_1810.sch"
+            schematypens="http://purl.oclc.org/dsdl/schematron"?>
+    <?xml-model href="https://pds.nasa.gov/pds4/geom/v1/PDS4_GEOM_1F00_1910.sch"
+            schematypens="http://purl.oclc.org/dsdl/schematron"?>'''
+
+    doc = preamble + etree.tostring(processedImage)
+    tree = etree.ElementTree(etree.fromstring(doc))
+    tree.write(xml_file, pretty_print=True, standalone=None,
                 xml_declaration=True, encoding=xmlEncoding)
 
     return
