@@ -2,6 +2,8 @@ import os
 import shutil
 import tempfile
 from glob import glob
+from lxml import etree
+from lxml import objectify
 from datetime import datetime
 
 from photometrics.pds_subs import *
@@ -101,6 +103,89 @@ class TestGetNamespace(SimpleTestCase):
                       }
 
         self.assertEqual(expected_ns, ns)
+
+
+class TestCreateIDArea(SimpleTestCase):
+
+    def setUp(self):
+        schemadir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_schemas'))
+
+        self.schemas_mapping = pds_schema_mappings(schemadir, '*.xsd')
+
+    def compare_xml(self, expected, xml_element):
+        """Compare the expected XML string <expected> with the passed etree.Element
+        in <xml_element>
+        """
+
+        obj1 = objectify.fromstring(expected)
+        expect = etree.tostring(obj1)
+        result = etree.tostring(xml_element)
+
+        self.assertEquals(expect, result)
+
+    def test_default_version(self):
+        expected = '''
+            <Identification_Area>
+                <logical_identifier>urn:nasa:pds:dart_teleobs:lcogt_cal:banzai_test_frame.fits</logical_identifier>
+                <version_id>1.0</version_id>
+                <title>Las Cumbres Observatory Calibrated Image</title>
+                <information_model_version>1.15.0.0</information_model_version>
+                <product_class>Product_Observational</product_class>
+                <Modification_History>
+                    <Modification_Detail>
+                        <modification_date>2021-05-10</modification_date>
+                        <version_id>1.0</version_id>
+                        <description>initial version</description>
+                    </Modification_Detail>
+                </Modification_History>
+              </Identification_Area>'''
+
+        id_area = create_id_area('banzai_test_frame.fits', mod_time=datetime(2021,5,10))
+
+        self.compare_xml(expected, id_area)
+
+    def test_older_version(self):
+        expected = '''
+            <Identification_Area>
+                <logical_identifier>urn:nasa:pds:dart_teleobs:lcogt_cal:banzai_test_frame.fits</logical_identifier>
+                <version_id>1.0</version_id>
+                <title>Las Cumbres Observatory Calibrated Image</title>
+                <information_model_version>1.14.0.0</information_model_version>
+                <product_class>Product_Observational</product_class>
+                <Modification_History>
+                    <Modification_Detail>
+                        <modification_date>2021-05-10</modification_date>
+                        <version_id>1.0</version_id>
+                        <description>initial version</description>
+                    </Modification_Detail>
+                </Modification_History>
+              </Identification_Area>'''
+
+        id_area = create_id_area('banzai_test_frame.fits', '1.14.0.0', mod_time=datetime(2021,5,10))
+
+        self.compare_xml(expected, id_area)
+
+    def test_schema_version(self):
+        expected = '''
+            <Identification_Area>
+                <logical_identifier>urn:nasa:pds:dart_teleobs:lcogt_cal:banzai_test_frame.fits</logical_identifier>
+                <version_id>1.0</version_id>
+                <title>Las Cumbres Observatory Calibrated Image</title>
+                <information_model_version>1.15.0.0</information_model_version>
+                <product_class>Product_Observational</product_class>
+                <Modification_History>
+                    <Modification_Detail>
+                        <modification_date>2021-04-20</modification_date>
+                        <version_id>1.0</version_id>
+                        <description>initial version</description>
+                    </Modification_Detail>
+                </Modification_History>
+              </Identification_Area>'''
+        schema_version = self.schemas_mapping['PDS4::PDS']['version']
+
+        id_area = create_id_area('banzai_test_frame.fits', model_version=schema_version, mod_time=datetime(2021,4,20))
+
+        self.compare_xml(expected, id_area)
 
 
 class TestWritePDSLabel(SimpleTestCase):

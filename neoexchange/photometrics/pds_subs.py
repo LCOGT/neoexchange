@@ -9,6 +9,9 @@ from photometrics.catalog_subs import open_fits_catalog
 from photometrics.photometry_subs import map_filter_to_wavelength, map_filter_to_bandwidth
 
 def get_namespace(schema_filepath):
+    """Parse the specified XSD schema file at <schema_filepath> to extract the
+    namespace, version and location.
+    """
 
     tree = etree.parse(schema_filepath)
     root = tree.getroot()
@@ -22,6 +25,18 @@ def get_namespace(schema_filepath):
     return namespace
 
 def pds_schema_mappings(schema_root, match_pattern='*.sch'):
+    """Search for schema files matching [match_pattern] (defaults to '*.sch')
+    in <schema_root>.
+    Returns a dict of schema mappings indexed by a colon-separated key extracted
+    from the first two parts of the filenames (e.g. 'PDS4::DISP'). Value is a dict
+    consisting of `filename`, and for XSD schemas, `namespace`, `version` and
+    `location` keys extracted from the XSD file e.g.
+    {'PDS4::DISP': { 'filename': 'photometrics/configs/PDS_schemas/PDS4_DISP_1F00_1500.xsd',
+                     'namespace': 'http://pds.nasa.gov/pds4/disp/v1',
+                     'version': '1.5.0.0',
+                     'location': 'https://pds.nasa.gov/pds4/disp/v1/PDS4_DISP_1F00_1500.xsd'},
+    }
+    """
 
     schema_files = sorted(glob(os.path.join(schema_root, match_pattern)))
     schemas = {}
@@ -63,14 +78,19 @@ def create_obs_product(schema_mappings):
 
     return obs_product
 
-def create_id_area(filename, mod_time=None):
+def create_id_area(filename, model_version='1.15.0.0', mod_time=None):
+    """Create a Identification Area from the passed <filename> (which is
+    appended to the fixed 'urn:nasa:pds:dart_teleobs:lcogt_cal:' URI)
+    [model_version] (defaults to current '1.15.0.0') is the schema version
+    from the PDS schema containing `Identification_Area` (e.g. PDS4_PDS_1F00.xsd)
+    """
 
     mod_time = mod_time or datetime.utcnow()
     id_area = etree.Element("Identification_Area")
     xml_elements = {'logical_identifier' : 'urn:nasa:pds:dart_teleobs:lcogt_cal:' + filename,
                     'version_id' : '1.0',
                     'title' : 'Las Cumbres Observatory Calibrated Image',
-                    'information_model_version' : '1.15.0.0',  #XXX read from schema doc
+                    'information_model_version' : model_version,
                     'product_class' : 'Product_Observational'
                     }
     for k,v in xml_elements.items():
@@ -109,7 +129,13 @@ def get_shutter_open_close(params):
     return shutter_open, shutter_close
 
 def create_discipline_area(header, filename, nsmap):
-
+    """Creates a Discipline_Area element to be contained in an Observation_Area
+    from the passed FITS header <header>, <filename> and schema/namespace mappings
+    dict <nsmap> (from pds_schema_mappings())
+    This contains disp:Display_Settings, img:Exposure, img:Optical_Filter and geom:Geometry
+    SubElements so these schemas need to be in <nsmap>
+    Returns an etree.Element for the Discipline Area.
+    """
     discp_area = etree.Element("Discipline_Area")
 
     # Create Display Settings discipline area
@@ -328,7 +354,7 @@ def write_xml(filepath, xml_file, schema_root, mod_time=None):
     header, table, cattype = open_fits_catalog(filepath)
     filename = os.path.basename(filepath)
 
-    id_area = create_id_area(filename, mod_time)
+    id_area = create_id_area(filename, schema_mappings['PDS4::PDS']['version'], mod_time)
     processedImage.append(id_area)
 
     # Add the Observation_Area
