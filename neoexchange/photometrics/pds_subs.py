@@ -80,9 +80,13 @@ def create_obs_product(schema_mappings):
 
 def create_id_area(filename, model_version='1.15.0.0', mod_time=None):
     """Create a Identification Area from the passed <filename> (which is
-    appended to the fixed 'urn:nasa:pds:dart_teleobs:lcogt_cal:' URI)
-    [model_version] (defaults to current '1.15.0.0') is the schema version
+    appended to the fixed 'urn:nasa:pds:dart_teleobs:lcogt_cal:' URI), the
+    [model_version] (defaults to current '1.15.0.0') which is the schema version
     from the PDS schema containing `Identification_Area` (e.g. PDS4_PDS_1F00.xsd)
+    and an optional modification time [mod_time] (defaults to UTC "now")
+    Returns an etree.Element.
+    Some information on filling this out taken from:
+    https://sbnwiki.astro.umd.edu/wiki/Filling_Out_the_Identification_Area_Class
     """
 
     mod_time = mod_time or datetime.utcnow()
@@ -345,6 +349,13 @@ def create_file_area_obs(header, filename):
     return file_area_obs
 
 def write_xml(filepath, xml_file, schema_root, mod_time=None):
+    """Create a PDS4 XML product label in <xml_file> from the FITS file
+    pointed at by <filepath>. This used the PDS XSD and Schematron schemas located
+    in <schema_root> directory. Optionally a different modification `datetime` [mod_time]
+    can be passed which is used in `create_id_area()`
+    <schema_root> should contain the main PDS common and Display, Imaging and
+    Geometry Discipline Dictionaries (although this is not checked for)
+    """
 
     xmlEncoding = "UTF-8"
     schema_mappings = pds_schema_mappings(schema_root, '*.xsd')
