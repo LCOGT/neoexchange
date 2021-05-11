@@ -285,7 +285,6 @@ function rotation_tool(){
                     var xx = xx_list[k]
                     var yy = yy_list[k]
                     var zz = zz_list[k]
-                    var total = 0
                     for (var i = 0; i < xx.length; i++){
                         const xx_out = (xx[i] * ct * co) + (yy[i] * (ct * so * sp - st * cp)) + (zz[i] * (ct * so * cp + st * sp))
                         const yy_out = (xx[i] * st * co) + (yy[i] * (st * so * sp + ct * cp)) + (zz[i] * (st * so * cp - ct * sp))
@@ -293,9 +292,8 @@ function rotation_tool(){
                         xx[i] = xx_out
                         yy[i] = yy_out
                         zz[i] = zz_out
-                        total += zz_out
                     }
-                    level.push({index: k, value: total / zz.length});
+                    level.push({index: k, value: Math.min(...zz)});
                 }
                 // Sort faces by average z
                 level.sort(function(a, b){return a.value - b.value})
@@ -445,4 +443,29 @@ function contrast_switch(source, toggle, plot){
         plot.glyph.line_color = {'field':'faces_colors'};
         toggle.label = 'Remove Shading';
     }
+}
+
+
+function orbit_slider(source, slider, long_asc, inc){
+    const dataset = source.data;
+    const C = dataset['faces_colors'];
+    const N = dataset['faces_normal'];
+    const phase = slider.value;
+    const angle = phase * 2 * Math.PI + long_asc;
+    const elev = Math.sin(phase * 2 * Math.PI) * inc
+    const omega = Math.cos(angle) * elev  // rotation angle around y axis
+    const phi = Math.sin(angle) * elev // rotation angle around x axis
+    const theta = angle  // rotation angle around z axis
+    const ct = Math.cos(theta)
+    const st = Math.sin(theta)
+    const cp = Math.cos(phi)
+    const sp = Math.sin(phi)
+    const co = Math.cos(omega)
+    const so = Math.sin(omega)
+    for (var i=0; i<N.length; i++){
+        var n = N[i]
+        var brightness = ((n[0] * ct * co) + (n[1] * (ct * so * sp - st * cp)) + (n[2] * (ct * so * cp + st * sp))) * 100
+        C[i] = "hsl(0, 0%, " + brightness + "%)"
+    }
+    source.change.emit()
 }

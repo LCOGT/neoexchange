@@ -22,7 +22,7 @@ import os
 import re
 import shutil
 import itertools
-from math import pi, floor
+from math import pi, floor, radians
 import numpy as np
 from astropy import units as u
 
@@ -723,7 +723,9 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, shape
     plot_orbit.grid.grid_line_color = None
     plot_shape = figure(plot_width=600, plot_height=600, x_axis_location=None, y_axis_location=None)
     plot_shape.grid.grid_line_color = None
-    plot_shape.background_fill_color = "black"
+    plot_shape.background_fill_color = "#0e122a"
+    plot_shape.y_range = Range1d(-2.1, 2.1)
+    plot_shape.x_range = Range1d(-2.1, 2.1)
 
     # Create Column Data Source that will be used by the plots
     source = ColumnDataSource(data=dict(time=[], mag=[], color=[], title=[], err_high=[], err_low=[], alpha=[]))  # phased LC data Source
@@ -734,7 +736,6 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, shape
     p_mark_source = ColumnDataSource(data=dict(period=[period], y=[-1]))
     orbit_source = ColumnDataSource(data=get_orbit_position(meta_list, lc_list, body))
     full_orbit_source = ColumnDataSource(data=get_full_orbit(body))
-    shape_model_dict["faces_colors"] = [HSL(0, 0, x[0]) for x in shape_model_dict['faces_normal']]
     shape_source = ColumnDataSource(data=shape_model_dict)
     lc_models_sources = []
     model_names_unique = list(set(lc_model_dict['name']))
@@ -760,6 +761,7 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, shape
     draw_button = Button(label="Re-Draw", button_type="default", width=50)  # Button to re-draw mags.
     model_draw_button = Button(label="Re-Draw", button_type="default", width=50)  # Button to re-draw models.
     contrast_switch = Toggle(label="Remove Shading", button_type="default")  # Change lighting contrast
+    orbit_slider = Slider(title="Orbital Phase", value=0, start=-2, end=2, step=.01, width=200, tooltips=True)
 
     # Create plots
     error_cap = TeeHead(line_alpha=0)
@@ -978,6 +980,10 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, shape
     contrast_callback = CustomJS(args=dict(source=shape_source, toggle=contrast_switch, plot=shape_patches), code=js_switch_contrast)
     contrast_switch.js_on_click(contrast_callback)
 
+    js_orbit_slider = get_js_as_text(js_file, "orbit_slider")
+    orbit_callback = CustomJS(args=dict(source=shape_source, slider=orbit_slider, long_asc=radians(body.longascnode), inc=radians(body.orbinc)), code=js_orbit_slider)
+    orbit_slider.js_on_change('value', orbit_callback)
+
     # Build layout tables:
     phased_layout = column(plot_p,
                            row(column(row(table_title),
@@ -1001,7 +1007,8 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, shape
                                                column(p_slider_min,
                                                       p_slider_max)))))
     orbit_layout = column(plot_orbit)
-    shape_layout = column(row(plot_shape, contrast_switch))
+    shape_layout = column(row(plot_shape, column(contrast_switch,
+                                                 orbit_slider)))
 
     # Set Tabs
     tabu = Panel(child=unphased_layout, title="Unphased")

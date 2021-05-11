@@ -3954,11 +3954,20 @@ def import_lc_model(file, model_list):
     return model_list
 
 
-def import_shape_model(file, shape_list):
+def import_shape_model(file, shape_list, body, model_params):
     shape_model_file = default_storage.open(file, 'rb')
     lines = shape_model_file.readlines()
     points_list = []
     n_points = 0
+    long_of_asc_node = body.longascnode
+    pole_long = model_params['pole_longitude']
+    pole_lat = model_params['pole_latitude']
+    rmat_sun = S.sla_deuler('Z', radians(-long_of_asc_node), 0, 0)
+    print(model_params)
+    try:
+        rmat_pole = S.sla_deuler('YZ', radians(pole_lat), radians(pole_long), 0)
+    except TypeError:
+        rmat_pole = S.sla_deuler('', 0, 0, 0)
     for k, line in enumerate(lines):
         chunks = line.split()
         if len(chunks) < 3:
@@ -3976,16 +3985,20 @@ def import_shape_model(file, shape_list):
             normal = [0, 0, 0]
             for h, p in enumerate(chunks):
                 next_point = chunks[(h+1) % (len(chunks))]
-                xx = points_list[int(p)-1][0]
-                xx_nxt = points_list[int(next_point)-1][0]
-                yy = points_list[int(p)-1][1]
-                yy_nxt = points_list[int(next_point)-1][1]
-                zz = points_list[int(p)-1][2]
-                zz_nxt = points_list[int(next_point)-1][2]
+
+                coords = S.sla_dmxv(rmat_pole, points_list[int(p)-1])
+                coords_next = S.sla_dmxv(rmat_pole, points_list[int(next_point)-1])
+                xx = coords[0]
+                xx_nxt = coords_next[0]
+                yy = coords[1]
+                yy_nxt = coords_next[1]
+                zz = coords[2]
+                zz_nxt = coords_next[2]
                 # Store points of each face
                 face_x.append(xx)
                 face_y.append(yy)
                 face_z.append(zz)
+
                 # Calculate normal vector for face
                 normal[0] += (yy - yy_nxt) * (zz + zz_nxt)
                 normal[1] += (zz - zz_nxt) * (xx + xx_nxt)
@@ -3996,6 +4009,8 @@ def import_shape_model(file, shape_list):
             shape_list['faces_z'].append(face_z)
             shape_list['faces_normal'].append(normal)
             shape_list['faces_level'].append(np.mean(face_z))
+            brightness = S.sla_dmxv(rmat_sun, normal)[0] * 100
+            shape_list['faces_colors'].append(f"hsl(0, 0%, {brightness}%)")
     return shape_list
 
 
@@ -4009,6 +4024,7 @@ def get_lc_plot(body, data):
     filenames = search(datadir, '.*.ALCDEF.txt')
     period_scans = search(datadir, '.*.period_scan.out')
     lc_models = search(datadir, '.*.lcs.final')
+    model_params = search(datadir, '.*.par.out')
     shape_model = search(datadir, '.*.model.shape')
     if data.get('period', None):
         period = data['period']
@@ -4036,13 +4052,21 @@ def get_lc_plot(body, data):
         for m in lc_models:
             lc_model_dict = import_lc_model(os.path.join(datadir, m), lc_model_dict)
 
-    shape_model_dict = {'faces_x': [], 'faces_y': [], 'faces_z': [], 'faces_normal': [], 'faces_level': []}
+    model_param_dict = {"pole_longitude": None, "pole_latitude": None, "period": None}
+    if model_params:
+        for params in model_params:
+            model_params_file = default_storage.open(os.path.join(datadir, params), 'rb')
+            lines = model_params_file.readlines()
+            chunks = lines[0].split()
+            model_param_dict = {"pole_longitude": float(chunks[0]), "pole_latitude": float(chunks[1]), "period": float(chunks[2])}
+
+    shape_model_dict = {'faces_x': [], 'faces_y': [], 'faces_z': [], 'faces_normal': [], 'faces_level': [], 'faces_colors': []}
     if shape_model:
         for sm in shape_model:
-            shape_model_dict = import_shape_model(os.path.join(datadir, sm), shape_model_dict)
+            shape_model_dict = import_shape_model(os.path.join(datadir, sm), shape_model_dict, body, model_param_dict)
         for key in shape_model_dict.keys():
             if key != 'faces_level':
-                shape_model_dict[key] = [x for _, x in sorted(zip(shape_model_dict["faces_level"], shape_model_dict[key]), reverse=True)]
+                shape_model_dict[key] = [x for _, x in sorted(zip(shape_model_dict["faces_level"], shape_model_dict[key]), key=lambda x: x[0], reverse=False)]
 
     meta_list = [x for _, x in sorted(zip(lc_list, meta_list), key=lambda i: i[0]['date'][0])]
     lc_list = sorted(lc_list, key=lambda i: i['date'][0])
