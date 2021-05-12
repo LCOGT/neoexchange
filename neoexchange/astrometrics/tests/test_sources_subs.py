@@ -664,14 +664,15 @@ class TestFetchYarkovskyTargetsFTP(SimpleTestCase):
         self.test_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_yarkovsky_targets.txt'))
 
     def test_fetch_latest(self):
-        expected_targets = [ '467352',
-                             '2002TS69',
+        expected_targets = [ '433',
+                             '467352',
+                             '2002 TS69',
                              '401856',
-                             '2011JY1',
-                             '1998WB2',
-                             '2015KJ19',
-                             '2003MK4',
-                             '2003GQ22']
+                             '2011 JY1',
+                             '1998 WB2',
+                             '2015 KJ19',
+                             '2003 MK4',
+                             '2003 GQ22']
 
 
         targets = fetch_yarkovsky_targets_ftp(self.test_file)

@@ -1490,7 +1490,12 @@ def fetch_yarkovsky_targets_ftp(file_or_url=None):
     if os.path.exists(target_file):
         table = ascii.read(target_file, format='csv')
 
-        targets = [x.upper() for x in list(table['base'])]
+        for target in list(table['base']):
+            target = target.upper()
+            # Look for designations of the for yyyyXY[12] and add space in the middle
+            if len(target) >=6 and target[0:4].isdigit() and target[4:6].isalpha():
+                target = target[0:4] + ' ' + target[4:]
+            targets.append(target)
 
     return targets
 
