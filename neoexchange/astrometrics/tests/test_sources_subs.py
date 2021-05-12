@@ -24,7 +24,7 @@ from copy import deepcopy
 
 import astropy.units as u
 from bs4 import BeautifulSoup
-from django.test import TestCase
+from django.test import TestCase, SimpleTestCase
 from django.forms.models import model_to_dict
 
 from core.models import Body, Proposal, Block, StaticSource, PhysicalParameters, Designations, ColorValues
@@ -656,6 +656,27 @@ class TestFetchYarkovskyTargets(TestCase):
         target_list = fetch_yarkovsky_targets(targets)
 
         self.assertEqual(expected_targets, target_list)
+
+
+class TestFetchYarkovskyTargetsFTP(SimpleTestCase):
+
+    def setUp(self):
+        self.test_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_yarkovsky_targets.txt'))
+
+    def test_fetch_latest(self):
+        expected_targets = [ '467352',
+                             '2002TS69',
+                             '401856',
+                             '2011JY1',
+                             '1998WB2',
+                             '2015KJ19',
+                             '2003MK4',
+                             '2003GQ22']
+
+
+        targets = fetch_yarkovsky_targets_ftp(self.test_file)
+
+        self.assertEqual(expected_targets, targets)
 
 
 class TestSubmitBlockToScheduler(TestCase):

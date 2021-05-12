@@ -24,12 +24,14 @@ import imaplib
 import email
 from re import sub, compile
 from math import degrees
-from datetime import datetime, timedelta
+from time import sleep
+from datetime import date, datetime, timedelta
 from socket import error
 from random import randint
-from time import sleep
-from datetime import date
 import requests
+import shutil
+import tempfile
+from contextlib import closing
 
 from bs4 import BeautifulSoup
 import astropy.units as u
@@ -1465,6 +1467,32 @@ def fetch_yarkovsky_targets(yark_targets):
 
     return yark_target_list
 
+
+def fetch_yarkovsky_targets_ftp(file_or_url=None):
+    """Fetches Yarkovsky targets from either the specified file (if [file_or_url]
+    is not None) or the current list from the FTP site
+    and parses it to return the target and expected A2 Yarkovsky value and
+    its error"""
+    ftp_url = 'ftp://ssd.jpl.nasa.gov/pub/ssd/yarkovsky/yarko_targets/yarko_latest.txt'
+
+    targets = []
+
+    if file_or_url is None:
+        tempdir = tempfile.mkdtemp(prefix='tmp_neox_')
+        target_file = os.path.join(tempdir, 'yarkovsky_targets.txt')
+
+        with closing(urllib.request.urlopen(ftp_url)) as read_fp:
+            with open(target_file, 'wb') as write_fp:
+                shutil.copyfileobj(read_fp, write_fp)
+    else:
+        target_file = file_or_url
+
+    if os.path.exists(target_file):
+        table = ascii.read(target_file, format='csv')
+
+        targets = [x.upper() for x in list(table['base'])]
+
+    return targets
 
 def fetch_sfu(page=None):
     """Fetches the solar radio flux from the Solar Radio Monitoring
