@@ -340,15 +340,8 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
 
     plt.close('all')
     # Save to default location because Matplotlib wants a string filename not File object
-    if settings.USE_S3:
-        movie_filename = filename.replace(out_path, "").lstrip("/")
-        movie_file = default_storage.open(movie_filename, "wb+")
-        with open(filename, 'rb+') as f:
-            movie_file.write(f.read())
-        movie_file.close()
-        return movie_file.name
-    else:
-        return filename
+
+    return filename
 
 
 def make_movie(date_obs, obj, req, base_dir, out_path, prop):
@@ -404,6 +397,9 @@ def make_movie(date_obs, obj, req, base_dir, out_path, prop):
         logger.debug("#Frames = {}".format(len(frames)))
         logger.info("Making Movie...")
         movie_file = make_gif(frames, out_path=out_path, progress=False)
+        # Create DataProduct
+        blk_obj = Block.objects.get(request_number=req)
+        save_dataproduct(obj=blk-obj, filepath=movie_file, filetype=DataProduct.GIF_DATAPRODUCT)
         return movie_file
     else:
         logger.error("There must be at least 1 frame to make guide movie.")
@@ -434,4 +430,3 @@ if __name__ == '__main__':
         logger.info("New gif created: {}".format(gif_file))
     else:
         logger.info("No files found.")
-

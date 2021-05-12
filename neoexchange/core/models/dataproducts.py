@@ -20,17 +20,6 @@ from django.db import models
 from core.models.body import Body
 from core.models.blocks import Block
 
-DP_CHOICES = (
-                (0, 'JPEG'),
-                (1, 'GIF'),
-                (2, 'FITS Image'),
-                (3, 'FITS Spectra'),
-                (4, 'ALCDEF file'),
-                (5, 'MP4'),
-                (6, 'CSV'),
-                (7, 'PNG'),
-                (99, 'Other')
-            )
 
 class BlockManager(models.Manager):
     def get_queryset(self):
@@ -43,8 +32,29 @@ class BodyManager(models.Manager):
         return super().get_queryset().filter(content_type=body)
 
 class DataProduct(models.Model):
+
+    JPEG_DATAPRODUCT = 0
+    GIF_DATAPRODUCT = 1
+    FITS_IMAGE_DATAPRODUCT = 2
+    FITS_SPECTRA_DATAPRODUCT = 3
+    ALCDEF_DATAPRODUCT = 4
+    MP4_DATAPRODUCT = 5
+    CSV_DATAPRODUCT = 6
+    PNG_DATAPRODUCT = 7
+    DP_CHOICES = (
+                    (JPEG_DATAPRODUCT, 'JPEG'),
+                    (GIF_DATAPRODUCT, 'GIF'),
+                    (FITS_IMAGE_DATAPRODUCT, 'FITS Image'),
+                    (FITS_SPECTRA_DATAPRODUCT, 'FITS Spectra'),
+                    (ALCDEF_DATAPRODUCT, 'ALCDEF file'),
+                    (MP4_DATAPRODUCT, 'MP4'),
+                    (CSV_DATAPRODUCT, 'CSV'),
+                    (PNG_DATAPRODUCT, 'PNG'),
+                    (99, 'Other')
+                )
+
     filetype = models.PositiveSmallIntegerField(choices=DP_CHOICES)
-    product = models.FileField(upload_to='products/')
+    product = models.FileField(upload_to='products/', blank=True)
     created = models.DateTimeField(default=datetime.utcnow)
     # GenericForeignKey stuff from ContentTypes
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)

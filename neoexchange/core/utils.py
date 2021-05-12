@@ -14,8 +14,12 @@ GNU General Public License for more details.
 
 import re
 import os
-from django.core.files.storage import default_storage
+from pathlib import Path
 
+from django.core.files.storage import default_storage
+from django.core.files.base import File
+
+from core.models.dataproducts import DataProduct
 
 def search(base_dir, matchpattern, latest=False):
     """
@@ -55,4 +59,19 @@ def save_to_default(filename, out_path):
     with open(filename, 'rb+') as f:
         file.write(f.read())
     file.close()
+    return
+
+def save_dataproduct(obj, filepath, filetype, filename=None):
+    if not filename:
+        filename = Path(filepath).name
+    dp = DataProduct()
+    dp.content_object = obj
+    dp.filetype = filetype
+    if filetype == DataProduct.CSV_DATAPRODUCT:
+        mode = 'r'
+    else:
+        mode = 'rb'
+    with open(filepath, mode) as f:
+        dp.product.save(filename, File(f))
+    dp.save()
     return

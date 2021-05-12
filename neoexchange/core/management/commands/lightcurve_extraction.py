@@ -13,33 +13,36 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 
-import os
-import stat
-from sys import exit
 from datetime import datetime, timedelta, time
 from math import degrees, radians, floor
-import numpy as np
-from django.core.files.storage import default_storage
-from django.core.management.base import BaseCommand, CommandError
-from django.forms.models import model_to_dict
+from sys import exit
+import os
+import stat
+
 try:
     import pyslalib.slalib as S
 except:
     pass
-import matplotlib
-import matplotlib.pyplot as plt
-from matplotlib.dates import HourLocator, DateFormatter
 from astropy.stats import LombScargle
-import astropy.units as u
 from astropy.time import Time
 from django.conf import settings
-from core.models import Block, Frame, SuperBlock, SourceMeasurement, CatalogSources
+from django.core.files.storage import default_storage
+from django.core.management.base import BaseCommand, CommandError
+from django.forms.models import model_to_dict
+from matplotlib.dates import HourLocator, DateFormatter
+import astropy.units as u
+import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
+
 from astrometrics.ephem_subs import compute_ephem, radec2strings, moon_alt_az, get_sitepos
 from astrometrics.time_subs import datetime2mjd_utc
-from photometrics.gf_movie import make_gif
-from photometrics.catalog_subs import search_box, sanitize_object_name
-from photometrics.photometry_subs import compute_fwhm, map_filter_to_wavelength
 from core.archive_subs import make_data_dir
+from core.models import Block, Frame, SuperBlock, SourceMeasurement, CatalogSources, DataProduct
+from core.utils import save_dataproduct
+from photometrics.catalog_subs import search_box, sanitize_object_name
+from photometrics.gf_movie import make_gif
+from photometrics.photometry_subs import compute_fwhm, map_filter_to_wavelength
 
 
 class Command(BaseCommand):
@@ -474,6 +477,8 @@ class Command(BaseCommand):
                         movie_file = make_gif(frames_list, sort=False, init_fr=100, center=3, out_path=out_path, plot_source=True,
                                               target_data=frame_data, show_reticle=True, progress=True)
                         if "WARNING" not in movie_file:
+                            # Create DataProduct
+                            save_dataproduct(obj=block, filepath=movie_file, filetype=DataProduct.GIF_DATAPRODUCT)
                             output_file_list.append('{},{}'.format(movie_file, data_path.lstrip(out_path)))
                             self.stdout.write("New gif created: {}".format(movie_file))
                         else:
