@@ -34,6 +34,7 @@ class Command(BaseCommand):
         self.stdout.write("==== Fetching Yarkovsky targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
 
         targets = []
+        yark_targets = []
         if options['targetlist'] is not None:
             if options['targetlist'] == 'FTP':
                 targets = None
