@@ -1451,9 +1451,9 @@ def get_site_status(site_code):
 
 
 def fetch_yarkovsky_targets(targets_or_file=None):
-    """Main wrapper routine for either fetch_yarkovsky_targets_file() or
+    """Main wrapper routine for either fetch_yarkovsky_targets_list() or
     fetch_yarkovsky_targets_ftp() to fetch Yarkovsky targets.
-    If [targets_or_file] is a `list` of targets, fetch_yarkovsky_targets_file()
+    If [targets_or_file] is a `list` of targets, fetch_yarkovsky_targets_list()
     is called; if [targets_or_file] is a filename or None, then
     fetch_yarkovsky_targets_ftp() is called and the target list comes from either
     the FTP site (`targets_or_file=None`) or by reading the file specified by
@@ -1463,15 +1463,16 @@ def fetch_yarkovsky_targets(targets_or_file=None):
     """
 
     if type(targets_or_file) == list:
-        yark_target_list = fetch_yarkovsky_targets_file(targets_or_file)
+        yark_target_list = fetch_yarkovsky_targets_list(targets_or_file)
     else:
         yark_target_list = fetch_yarkovsky_targets_ftp(targets_or_file)
 
     return yark_target_list
 
 
-def fetch_yarkovsky_targets_file(yark_targets):
-    """Fetches Yarkovsky targets from command line and returns a list of targets"""
+def fetch_yarkovsky_targets_list(yark_targets):
+    """Parses a list of lines of Yarkovsky targets (read from a file and which
+    may contain comments) and returns a list of targets"""
 
     yark_target_list = []
 
