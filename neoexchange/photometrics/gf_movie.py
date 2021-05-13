@@ -399,7 +399,7 @@ def make_movie(date_obs, obj, req, base_dir, out_path, prop):
         movie_file = make_gif(frames, out_path=out_path, progress=False)
         # Create DataProduct
         blk_obj = Block.objects.get(request_number=req)
-        save_dataproduct(obj=blk-obj, filepath=movie_file, filetype=DataProduct.GIF_DATAPRODUCT)
+        save_dataproduct(obj=blk_obj, filepath=movie_file, filetype=DataProduct.GIF_DATAPRODUCT)
         return movie_file
     else:
         logger.error("There must be at least 1 frame to make guide movie.")
