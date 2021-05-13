@@ -4,6 +4,10 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.8.7
+* Add support for generating PDS XML labels.
+* Add support for fetching Yarkovsky targets from JPL ftp site.
+
 ### 3.8.6
 * Update spectroscopy analysis capabilities.
 * Add new Body method to compute and return distances and use this for the LOOK targets page.
