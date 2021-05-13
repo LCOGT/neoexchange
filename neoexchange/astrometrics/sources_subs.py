@@ -24,12 +24,14 @@ import imaplib
 import email
 from re import sub, compile
 from math import degrees
-from datetime import datetime, timedelta
+from time import sleep
+from datetime import date, datetime, timedelta
 from socket import error
 from random import randint
-from time import sleep
-from datetime import date
 import requests
+import shutil
+import tempfile
+from contextlib import closing
 
 from bs4 import BeautifulSoup
 import astropy.units as u
@@ -1448,8 +1450,29 @@ def get_site_status(site_code):
     return good_to_schedule, reason
 
 
-def fetch_yarkovsky_targets(yark_targets):
-    """Fetches Yarkovsky targets from command line and returns a list of targets"""
+def fetch_yarkovsky_targets(targets_or_file=None):
+    """Main wrapper routine for either fetch_yarkovsky_targets_list() or
+    fetch_yarkovsky_targets_ftp() to fetch Yarkovsky targets.
+    If [targets_or_file] is a `list` of targets, fetch_yarkovsky_targets_list()
+    is called; if [targets_or_file] is a filename or None, then
+    fetch_yarkovsky_targets_ftp() is called and the target list comes from either
+    the FTP site (`targets_or_file=None`) or by reading the file specified by
+    `targets_or_file`.
+
+    Returns a list of target names.
+    """
+
+    if type(targets_or_file) == list:
+        yark_target_list = fetch_yarkovsky_targets_list(targets_or_file)
+    else:
+        yark_target_list = fetch_yarkovsky_targets_ftp(targets_or_file)
+
+    return yark_target_list
+
+
+def fetch_yarkovsky_targets_list(yark_targets):
+    """Parses a list of lines of Yarkovsky targets (read from a file and which
+    may contain comments) and returns a list of targets"""
 
     yark_target_list = []
 
@@ -1465,6 +1488,45 @@ def fetch_yarkovsky_targets(yark_targets):
 
     return yark_target_list
 
+
+def fetch_yarkovsky_targets_ftp(file_or_url=None):
+    """Fetches Yarkovsky targets from either the specified file (if [file_or_url]
+    is not None) or the current list from the FTP site
+    and parses it to return the target and expected A2 Yarkovsky value and
+    its error"""
+    ftp_url = 'ftp://ssd.jpl.nasa.gov/pub/ssd/yarkovsky/yarko_targets/yarko_latest.txt'
+
+    targets = []
+    tempdir = None
+
+    if file_or_url is None:
+        tempdir = tempfile.mkdtemp(prefix='tmp_neox_')
+        target_file = os.path.join(tempdir, 'yarkovsky_targets.txt')
+
+        with closing(urllib.request.urlopen(ftp_url)) as read_fp:
+            with open(target_file, 'wb') as write_fp:
+                shutil.copyfileobj(read_fp, write_fp)
+    else:
+        target_file = file_or_url
+
+    if os.path.exists(target_file):
+        table = ascii.read(target_file, format='csv')
+
+        for target in list(table['base']):
+            target = target.upper()
+            # Look for designations of the for yyyyXY[12] and add space in the middle
+            if len(target) >=6 and target[0:4].isdigit() and target[4:6].isalpha():
+                target = target[0:4] + ' ' + target[4:]
+            targets.append(target)
+
+        if tempdir:
+            try:
+                os.remove(target_file)
+                os.rmdir(tempdir)
+            except FileNotFoundError:
+                pass
+
+    return targets
 
 def fetch_sfu(page=None):
     """Fetches the solar radio flux from the Solar Radio Monitoring
