@@ -1450,7 +1450,15 @@ def get_site_status(site_code):
     return good_to_schedule, reason
 
 
-def fetch_yarkovsky_targets(yark_targets):
+def fetch_yarkovsky_targets(targets_or_file):
+
+    if True:
+        yark_target_list = fetch_yarkovsky_targets_file(targets_or_file)
+
+    return yark_target_list
+
+
+def fetch_yarkovsky_targets_file(yark_targets):
     """Fetches Yarkovsky targets from command line and returns a list of targets"""
 
     yark_target_list = []
