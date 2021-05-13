@@ -1450,10 +1450,22 @@ def get_site_status(site_code):
     return good_to_schedule, reason
 
 
-def fetch_yarkovsky_targets(targets_or_file):
+def fetch_yarkovsky_targets(targets_or_file=None):
+    """Main wrapper routine for either fetch_yarkovsky_targets_file() or
+    fetch_yarkovsky_targets_ftp() to fetch Yarkovsky targets.
+    If [targets_or_file] is a `list` of targets, fetch_yarkovsky_targets_file()
+    is called; if [targets_or_file] is a filename or None, then
+    fetch_yarkovsky_targets_ftp() is called and the target list comes from either
+    the FTP site (`targets_or_file=None`) or by reading the file specified by
+    `targets_or_file`.
 
-    if True:
+    Returns a list of target names.
+    """
+
+    if type(targets_or_file) == list:
         yark_target_list = fetch_yarkovsky_targets_file(targets_or_file)
+    else:
+        yark_target_list = fetch_yarkovsky_targets_ftp(targets_or_file)
 
     return yark_target_list
 
@@ -1484,6 +1496,7 @@ def fetch_yarkovsky_targets_ftp(file_or_url=None):
     ftp_url = 'ftp://ssd.jpl.nasa.gov/pub/ssd/yarkovsky/yarko_targets/yarko_latest.txt'
 
     targets = []
+    tempdir = None
 
     if file_or_url is None:
         tempdir = tempfile.mkdtemp(prefix='tmp_neox_')
@@ -1504,6 +1517,13 @@ def fetch_yarkovsky_targets_ftp(file_or_url=None):
             if len(target) >=6 and target[0:4].isdigit() and target[4:6].isalpha():
                 target = target[0:4] + ' ' + target[4:]
             targets.append(target)
+
+        if tempdir:
+            try:
+                os.remove(target_file)
+                os.rmdir(tempdir)
+            except FileNotFoundError:
+                pass
 
     return targets
 
