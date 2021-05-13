@@ -27,7 +27,7 @@ class Command(BaseCommand):
     help = 'Fetch Yarkovsky target list for the current month'
 
     def add_arguments(self, parser):
-        parser.add_argument('--targetlist', action="store", default=None, help="File of targets to read (optional)")
+        parser.add_argument('--targetlist', action="store", default=None, help="File of targets to read (optional; set to 'FTP' to read from JPL site)")
         parser.add_argument('yark_targets', nargs='*', help='List of Yarkovsky targets to ingest')
 
     def handle(self, *args, **options):
@@ -35,10 +35,14 @@ class Command(BaseCommand):
 
         targets = []
         if options['targetlist'] is not None:
-            with open(expanduser(options['targetlist'])) as f:
-                targets = f.readlines()
-        targets += options['yark_targets']
-        yark_targets = fetch_yarkovsky_targets(targets)
+            if options['targetlist'] == 'FTP':
+                targets = None
+            else:
+                with open(expanduser(options['targetlist'])) as f:
+                    targets = f.readlines()
+
+            yark_targets = fetch_yarkovsky_targets(targets)
+        yark_targets += options['yark_targets']
         for obj_id in yark_targets:
             self.stdout.write("Reading Yarkovsky target %s" % obj_id)
             update_MPC_orbit(obj_id, origin='Y')

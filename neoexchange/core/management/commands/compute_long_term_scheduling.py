@@ -33,7 +33,7 @@ class Command(BaseCommand):
         parser.add_argument('site_code', help='MPC site code')
         parser.add_argument('dark_and_up_time_limit', type=float, help='Amount of time sky must be dark and target is above the horizon')
         parser.add_argument('targets', nargs='*', help='Targets to schedule')
-        parser.add_argument('--targetlist', action="store", default=None, help="File of targets to read (optional)")
+        parser.add_argument('--targetlist', action="store", default=None, help="File of targets to read (optional; set to 'FTP' to read from JPL site)")
         parser.add_argument('--start_date', default=datetime.utcnow().strftime('%Y-%m-%d'), help='Date to start ephemeris search in YYYY-MM-DD format')
         parser.add_argument('--date_range', type=int, default=30, help='Date range ephemeris search in days')
 
@@ -42,10 +42,17 @@ class Command(BaseCommand):
         self.stdout.write("========================")
         targets = []
         if options['targetlist'] is not None:
-            with open(expanduser(options['targetlist'])) as f:
-                targets = f.readlines()
-        targets += options['targets']
-        target_list = fetch_yarkovsky_targets(targets)
+            if options['targetlist'] == 'FTP':
+                targets = None
+            else:
+                with open(expanduser(options['targetlist'])) as f:
+                    targets = f.readlines()
+
+            target_list = fetch_yarkovsky_targets(targets)
+        target_list += options['targets']
+        self.stdout.write("Combined target list")
+        self.stdout.write("\n".join(target_list))
+        self.stdout.write("========================")
         for obj_id in target_list:
             orbelems = model_to_dict(Body.objects.get(name=obj_id))
             visible_dates, emp_visible_dates, dark_and_up_time_all, max_alt_all = monitor_long_term_scheduling(options['site_code'], orbelems, datetime.strptime(options['start_date'], '%Y-%m-%d'), options['date_range'], options['dark_and_up_time_limit'])
