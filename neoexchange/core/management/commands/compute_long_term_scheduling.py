@@ -54,7 +54,11 @@ class Command(BaseCommand):
         self.stdout.write("\n".join(target_list))
         self.stdout.write("========================")
         for obj_id in target_list:
-            orbelems = model_to_dict(Body.objects.get(name=obj_id))
+            try:
+                target = Body.objects.get(name=obj_id)
+            except Body.MultipleObjectsReturned:
+                target = Body.objects.get(name=obj_id, active=True)
+            orbelems = model_to_dict(target)
             visible_dates, emp_visible_dates, dark_and_up_time_all, max_alt_all = monitor_long_term_scheduling(options['site_code'], orbelems, datetime.strptime(options['start_date'], '%Y-%m-%d'), options['date_range'], options['dark_and_up_time_limit'])
             self.stdout.write("Reading target %s" % obj_id)
             self.stdout.write("Visible dates:")
