@@ -478,7 +478,7 @@ class Command(BaseCommand):
                                               target_data=frame_data, show_reticle=True, progress=True)
                         if "WARNING" not in movie_file:
                             # Create DataProduct
-                            save_dataproduct(obj=block, filepath=movie_file, filetype=DataProduct.GIF_DATAPRODUCT)
+                            save_dataproduct(obj=block, filepath=movie_file, filetype=DataProduct.GUIDER_GIF)
                             output_file_list.append('{},{}'.format(movie_file, data_path.lstrip(out_path)))
                             self.stdout.write("New gif created: {}".format(movie_file))
                         else:

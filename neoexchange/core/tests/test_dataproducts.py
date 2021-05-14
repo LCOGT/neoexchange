@@ -80,7 +80,7 @@ class DataProductTestCase(TestCase):
     def test_dataproduct_block_save(self):
         file_mock = mock.MagicMock(spec=File)
         file_mock.name = 'test.fits'
-        test_dp = DataProduct(product=file_mock, filetype=DataProduct.FITS_IMAGE_DATAPRODUCT, content_object=self.test_block)
+        test_dp = DataProduct(product=file_mock, filetype=DataProduct.FITS_IMAGE, content_object=self.test_block)
         test_dp.save()
         tmppath = 'products/' + file_mock.name
         self.assertEqual(test_dp.product.name, tmppath)
@@ -91,7 +91,7 @@ class DataProductTestCase(TestCase):
     def test_dataproduct_body_save(self):
         file_mock = mock.MagicMock(spec=File)
         file_mock.name = 'test.gif'
-        test_dp = DataProduct(product=file_mock, filetype=DataProduct.GIF_DATAPRODUCT, content_object=self.body)
+        test_dp = DataProduct(product=file_mock, filetype=DataProduct.GUIDER_GIF, content_object=self.body)
         test_dp.save()
         tmppath = 'products/' + file_mock.name
         self.assertEqual(test_dp.product.name, tmppath)
@@ -105,7 +105,7 @@ class DataProductTestCase(TestCase):
 
         # Test with a block
         with mock.patch('builtins.open', mock.mock_open()) as m:
-            save_dataproduct(obj=self.test_block, filepath=file_mock, filetype=DataProduct.PNG_DATAPRODUCT, filename=file_mock.name)
+            save_dataproduct(obj=self.test_block, filepath=file_mock, filetype=DataProduct.PNG_ASTRO, filename=file_mock.name)
 
         new_blocks = DataProduct.block_objects.filter(object_id=self.test_block.id)
         self.assertTrue(new_blocks.count() == 1)
@@ -113,7 +113,7 @@ class DataProductTestCase(TestCase):
 
         # Test with a body
         with mock.patch('builtins.open', mock.mock_open()) as m:
-            save_dataproduct(obj=self.body, filepath=file_mock, filetype=DataProduct.PNG_DATAPRODUCT, filename=file_mock.name)
+            save_dataproduct(obj=self.body, filepath=file_mock, filetype=DataProduct.PNG_ASTRO, filename=file_mock.name)
 
         new_body = DataProduct.body_objects.filter(object_id=self.body.id)
         self.assertTrue(new_body.count() == 1)
