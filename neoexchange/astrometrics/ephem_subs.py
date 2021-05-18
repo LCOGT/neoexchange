@@ -744,6 +744,52 @@ def determine_horizons_id(lines, now=None):
     return horizons_id
 
 
+def horizons_elements(obj_name, epoch_date=None):
+    """"Calls JPL HORIZONS for the specified <obj_name> producing an element set
+    in NEOexchange format
+    """
+
+    elements = {}
+
+    if epoch_date is None:
+        # Caclulate for midday (.0 JD_TDB) of the next day
+        epoch_date = datetime.utcnow()
+        epoch_date = epoch_date.replace(hour=12, minute=0, second=0, microsecond=0)
+        epoch_date += timedelta(days=1)
+    if type(epoch_date) == datetime:
+        epoch_time = Time(epoch_date, scale='tdb')
+    else:
+        epoch_time = epoch_date.tdb
+
+    # Generate heliocentric (center= '@10') elements
+    elem = Horizons(id=obj_name, location='500@10', epochs=epoch_time.jd)
+
+    elem_table = elem.elements()
+
+    if len(elem_table) == 1:
+        row = elem_table[0]
+        # Map HORIZONS elements to NEOx ones. (Other ones could be filled in by
+        # calling elem.elements(get_raw_response=True) and parsing the result
+        # ourselves but could be fragile and a lot of work....)
+        elements = {
+                     'origin': 'H',
+                     'elements_type': 'MPC_MINOR_PLANET',
+                     'active': True,
+                     'epochofel': epoch_time.datetime,
+                     'orbinc': row['incl'],
+                     'longascnode': row['Omega'],
+                     'argofperih': row['w'],
+                     'eccentricity': row['e'],
+                     'meandist': row['a'],
+                     'meananom': row['M'],
+                     'abs_mag': row['H'],
+                     'slope': row['G'],
+                     'updated': True,
+                     'update_time' = datetime.utcnow()
+                    }
+    return elements
+
+
 def read_findorb_ephem(empfile):
     """Routine to read find_orb produced ephemeris.emp files from non-interactive
     mode.
