@@ -3962,7 +3962,7 @@ def import_shape_model(file, shape_list, body, model_params):
     # set angles
     long_of_asc_node = body.longascnode
     pole_long = radians(model_params['pole_longitude'])
-    pole_lat = radians(model_params['pole_latitude'])
+    pole_lat = radians(model_params['pole_latitude'] - 90)
     # build rotation matrices
     rmat_sun = S.sla_deuler('Z', radians(-long_of_asc_node), 0, 0)  # set initial orbit position to ecliptic
     rmat_view = S.sla_deuler('X', radians(90), 0, 0)  # set initial view for heliocentric z = plot y

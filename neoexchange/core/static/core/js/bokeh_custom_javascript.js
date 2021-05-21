@@ -453,14 +453,14 @@ function shading_slider(source, orbit_slider, rot_slider, long_asc, inc, prev_ro
     const pole_vector = [orient.data['v_x'][0], orient.data['v_y'][0], orient.data['v_z'][0]];
     const C = dataset['faces_colors'];
     const N = dataset['faces_normal'];
-    const lambda = orient.data['p_long'][0];
-    const beta = orient.data['p_lat'][0];
+    const pole_long = orient.data['p_long'][0];
+    const pole_lat = orient.data['p_lat'][0];
 
     // set orbital angles
     const orb_phase = orbit_slider.value;
-    const orb_angle = orb_phase * 2 * Math.PI + long_asc - lambda;
+    const orb_angle = orb_phase * 2 * Math.PI + long_asc - pole_long;
     const elev = Math.sin(orb_phase * 2 * Math.PI) * inc;
-    const sol_omega = Math.cos(orb_angle) * elev - beta;  // rotation angle around y axis
+    const sol_omega = Math.cos(orb_angle) * elev - pole_lat;  // rotation angle around y axis
     const sol_phi = Math.sin(orb_angle) * elev; // rotation angle around x axis
     const sol_theta = orb_angle;  // rotation angle around z axis
 

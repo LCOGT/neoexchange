@@ -991,7 +991,6 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, shape
     orbit_slider.js_on_change('value', shading_callback)
     rotation_slider.js_on_change('value', shading_callback)
 
-
     # Build layout tables:
     phased_layout = column(plot_p,
                            row(column(row(table_title),
