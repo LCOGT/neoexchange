@@ -3919,14 +3919,19 @@ def import_alcdef(file, meta_list, lc_list):
 def import_period_scan(file, scan_list):
     """Pull Period data from Period Scan files."""
 
+    scan_data = {'period':[], 'rms': [], 'chi2': []}
     ps_file = default_storage.open(file, 'rb')
     lines = ps_file.readlines()
     for line in lines:
         chunks = line.split()
         if len(chunks) >= 3:
-            scan_list['period'].append(float(chunks[0]))
-            scan_list['rms'].append(float(chunks[1]))
-            scan_list['chi2'].append(float(chunks[2]))
+            scan_data['period'].append(float(chunks[0]))
+            scan_data['rms'].append(float(chunks[1]))
+            scan_data['chi2'].append(float(chunks[2]))
+    scan_data["rms"] = [x for _, x in sorted(zip(scan_data["period"], scan_data["rms"]))]
+    scan_data["chi2"] = [x for _, x in sorted(zip(scan_data["period"], scan_data["chi2"]))]
+    scan_data["period"].sort()
+    scan_list.append(scan_data)
     return scan_list
 
 
@@ -4052,13 +4057,11 @@ def get_lc_plot(body, data):
     else:
         meta_list = lc_list = []
 
-    period_scan_dict = {"period": [], "rms": [], "chi2": []}
+    period_scan_dict = [{"period": [], "rms": [], "chi2": []}]
     if period_scans:
+        period_scan_dict = []
         for scan in period_scans:
             period_scan_dict = import_period_scan(os.path.join(datadir, scan), period_scan_dict)
-        period_scan_dict["rms"] = [x for _, x in sorted(zip(period_scan_dict["period"], period_scan_dict["rms"]))]
-        period_scan_dict["chi2"] = [x for _, x in sorted(zip(period_scan_dict["period"], period_scan_dict["chi2"]))]
-        period_scan_dict["period"].sort()
 
     lc_model_dict = {"date": [], "mag": [], "name": []}
     if lc_models:

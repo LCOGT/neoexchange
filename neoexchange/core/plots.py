@@ -679,7 +679,7 @@ class RotTool(Tool):
     coords_list = List(Instance(ColumnDataSource))
 
 
-def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, shape_model_dict={}, pole_vector={}, body=None, jpl_ephem=None):
+def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_list=[], shape_model_dict={}, pole_vector={}, body=None, jpl_ephem=None):
     """Creates an interactive Bokeh LC plot:
     Inputs:
     [lc_list] --- A list of LC dictionaries, each one containing the following keys:
@@ -732,7 +732,9 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, shape
     orig_source = ColumnDataSource(data=dict(time=[], mag=[], mag_err=[], color=[], title=[], err_high=[], err_low=[], alpha=[]))  # unphased LC data source
     dataset_source = ColumnDataSource(data=dict(symbol=[], date=[], time=[], site=[], filter=[], color=[], title=[], offset=[]))  # dataset info
     horizons_source = ColumnDataSource(data=dict(date=[], v_mag=[]))  # V-mag info
-    periodogram_source = ColumnDataSource(data=dict(period=pscan_dict['period'], chi2=pscan_dict['chi2']))  # periodogram info
+    periodogram_sources = []
+    for peri in pscan_list:
+        periodogram_sources.append(ColumnDataSource(data=peri))  # periodogram info
     p_mark_source = ColumnDataSource(data=dict(period=[period], y=[-1]))
     orbit_source = ColumnDataSource(data=get_orbit_position(meta_list, lc_list, body))
     full_orbit_source = ColumnDataSource(data=get_full_orbit(body))
@@ -785,9 +787,13 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, shape
                 lower_head=error_cap, upper_head=error_cap))
     data_plot = plot_p.circle(x="time", y="mag", source=source, size=3, color="color", alpha="alpha", name='mags')
     base_line = plot_p.line([-2, 2], [base_date, base_date], alpha=0, name="phase_line")
+
     # Build periodogram:
-    period_data = plot_period.line(x="period", y="chi2", source=periodogram_source, color="red", name='period')
+    period_data = []
+    for ps in periodogram_sources:
+        period_data.append(plot_period.line(x="period", y="chi2", source=ps, color="red", name='period'))
     period_mark = plot_period.ray(x="period", y="y", length=10, angle=pi/2, source=p_mark_source, line_width=2)
+
     # Build orbit plot:
     ast_pos = plot_orbit.circle(x="a_x", y="a_y", source=orbit_source, color="red", name=body.full_name())
     earth_pos = plot_orbit.circle(x="e_x", y="e_y", source=orbit_source, name="Earth")
@@ -797,6 +803,7 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, shape
         plot_orbit.line(x=f"{planet}_x", y=f"{planet}_y", source=full_orbit_source, color="gray", alpha=.5)
     cursor_change_source = ColumnDataSource(data=dict(x=[], y=[]))
     plot_orbit.add_tools(RotTool(source=cursor_change_source, coords_list=[full_orbit_source, orbit_source]))
+
     # Build shape model
     shape_patches = plot_shape.patches(xs="faces_x", ys="faces_y", source=shape_source, color="faces_colors")
     plot_shape.add_tools(RotTool(source=cursor_change_source, coords_list=[shape_source, pole_source]))
@@ -810,7 +817,7 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, shape
                        formatters=dict(y=next_time), point_policy="none", line_policy="none", show_arrow=False,
                        mode="vline", renderers=[base_line], attachment='above')
     hover2 = HoverTool(tooltips='@title', renderers=[data_plot], point_policy="snap_to_data", attachment='below')
-    period_hover = HoverTool(tooltips='$x{0.0000}', renderers=[period_data], point_policy="none", mode="vline",
+    period_hover = HoverTool(tooltips='$x{0.0000}', renderers=period_data, point_policy="none", mode="vline",
                              line_policy="none", attachment='above')
     crosshair = CrosshairTool()
     plot_p.add_tools(hover1, crosshair, hover2)
