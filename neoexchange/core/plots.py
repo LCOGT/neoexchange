@@ -679,7 +679,7 @@ class RotTool(Tool):
     coords_list = List(Instance(ColumnDataSource))
 
 
-def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, shape_model_dict={}, body=None, jpl_ephem=None):
+def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, shape_model_dict={}, pole_vector={}, body=None, jpl_ephem=None):
     """Creates an interactive Bokeh LC plot:
     Inputs:
     [lc_list] --- A list of LC dictionaries, each one containing the following keys:
@@ -737,6 +737,8 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, shape
     orbit_source = ColumnDataSource(data=get_orbit_position(meta_list, lc_list, body))
     full_orbit_source = ColumnDataSource(data=get_full_orbit(body))
     shape_source = ColumnDataSource(data=shape_model_dict)
+    pole_source = ColumnDataSource(data=pole_vector)
+    prev_rot_source = ColumnDataSource(data=dict(prev_rot=[0]))
     lc_models_sources = []
     model_names_unique = list(set(lc_model_dict['name']))
     model_list_source = ColumnDataSource(data=dict(name=model_names_unique, offset=[0]*len(model_names_unique)))
@@ -762,6 +764,7 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, shape
     model_draw_button = Button(label="Re-Draw", button_type="default", width=50)  # Button to re-draw models.
     contrast_switch = Toggle(label="Remove Shading", button_type="default")  # Change lighting contrast
     orbit_slider = Slider(title="Orbital Phase", value=0, start=-2, end=2, step=.01, width=200, tooltips=True)
+    rotation_slider = Slider(title="Rotational Phase", value=0, start=-2, end=2, step=.01, width=200, tooltips=True)
 
     # Create plots
     error_cap = TeeHead(line_alpha=0)
@@ -796,7 +799,7 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, shape
     plot_orbit.add_tools(RotTool(source=cursor_change_source, coords_list=[full_orbit_source, orbit_source]))
     # Build shape model
     shape_patches = plot_shape.patches(xs="faces_x", ys="faces_y", source=shape_source, color="faces_colors")
-    plot_shape.add_tools(RotTool(source=cursor_change_source, coords_list=[shape_source]))
+    plot_shape.add_tools(RotTool(source=cursor_change_source, coords_list=[shape_source, pole_source]))
 
     # Write custom JavaScript Code to print the time to the next iteration of the given phase in a HoverTool
     js_hover_text = get_js_as_text(js_file, "next_time_phased")
@@ -977,12 +980,17 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, shape
 
     # JS for Shape Model
     js_switch_contrast = get_js_as_text(js_file, "contrast_switch")
-    contrast_callback = CustomJS(args=dict(source=shape_source, toggle=contrast_switch, plot=shape_patches), code=js_switch_contrast)
+    contrast_callback = CustomJS(args=dict(source=shape_source, toggle=contrast_switch, plot=shape_patches),
+                                 code=js_switch_contrast)
     contrast_switch.js_on_click(contrast_callback)
 
-    js_orbit_slider = get_js_as_text(js_file, "orbit_slider")
-    orbit_callback = CustomJS(args=dict(source=shape_source, slider=orbit_slider, long_asc=radians(body.longascnode), inc=radians(body.orbinc)), code=js_orbit_slider)
-    orbit_slider.js_on_change('value', orbit_callback)
+    js_shading = get_js_as_text(js_file, "shading_slider")
+    shading_callback = CustomJS(args=dict(source=shape_source, orbit_slider=orbit_slider, rot_slider=rotation_slider,
+                                          long_asc=radians(body.longascnode), inc=radians(body.orbinc),
+                                          prev_rot=prev_rot_source, orient=pole_source), code=js_shading)
+    orbit_slider.js_on_change('value', shading_callback)
+    rotation_slider.js_on_change('value', shading_callback)
+
 
     # Build layout tables:
     phased_layout = column(plot_p,
@@ -1008,7 +1016,8 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_dict={}, shape
                                                       p_slider_max)))))
     orbit_layout = column(plot_orbit)
     shape_layout = column(row(plot_shape, column(contrast_switch,
-                                                 orbit_slider)))
+                                                 orbit_slider,
+                                                 rotation_slider)))
 
     # Set Tabs
     tabu = Panel(child=unphased_layout, title="Unphased")

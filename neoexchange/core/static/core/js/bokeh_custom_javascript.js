@@ -295,7 +295,7 @@ function rotation_tool(){
                     }
                     level.push({index: k, value: Math.min(...zz)});
                 }
-                // Sort faces by average z
+                // Sort faces by min z
                 level.sort(function(a, b){return a.value - b.value})
                 var k2
                 for (k2 of keys){
@@ -446,26 +446,125 @@ function contrast_switch(source, toggle, plot){
 }
 
 
-function orbit_slider(source, slider, long_asc, inc){
+function shading_slider(source, orbit_slider, rot_slider, long_asc, inc, prev_rot, orient){
+    // CustomJS to adjust shading and rotation of shape model.
     const dataset = source.data;
+    const pr = prev_rot.data['prev_rot'];
+    const pole_vector = [orient.data['v_x'][0], orient.data['v_y'][0], orient.data['v_z'][0]];
     const C = dataset['faces_colors'];
     const N = dataset['faces_normal'];
-    const phase = slider.value;
-    const angle = phase * 2 * Math.PI + long_asc;
-    const elev = Math.sin(phase * 2 * Math.PI) * inc
-    const omega = Math.cos(angle) * elev  // rotation angle around y axis
-    const phi = Math.sin(angle) * elev // rotation angle around x axis
-    const theta = angle  // rotation angle around z axis
-    const ct = Math.cos(theta)
-    const st = Math.sin(theta)
-    const cp = Math.cos(phi)
-    const sp = Math.sin(phi)
-    const co = Math.cos(omega)
-    const so = Math.sin(omega)
-    for (var i=0; i<N.length; i++){
-        var n = N[i]
-        var brightness = ((n[0] * ct * co) + (n[1] * (ct * so * sp - st * cp)) + (n[2] * (ct * so * cp + st * sp))) * 100
-        C[i] = "hsl(0, 0%, " + brightness + "%)"
+    const lambda = orient.data['p_long'][0];
+    const beta = orient.data['p_lat'][0];
+
+    // set orbital angles
+    const orb_phase = orbit_slider.value;
+    const orb_angle = orb_phase * 2 * Math.PI + long_asc - lambda;
+    const elev = Math.sin(orb_phase * 2 * Math.PI) * inc;
+    const sol_omega = Math.cos(orb_angle) * elev - beta;  // rotation angle around y axis
+    const sol_phi = Math.sin(orb_angle) * elev; // rotation angle around x axis
+    const sol_theta = orb_angle;  // rotation angle around z axis
+
+    // Set rotational angles
+    const rot_phase = rot_slider.value;
+    const rot_angle = rot_phase * 2 * Math.PI;
+    const ast_omega = 0; // rotation angle around y axis
+    const ast_phi = 0; // rotation angle around x axis
+    const ast_theta = rot_angle; // rotation angle around z axis
+
+    function rotate(coords, omega, phi, theta, colors){
+        // Function to perform rotation of normals
+        // coords => array of normal vectors
+        // omega => rotation angle around y axis
+        // phi => rotation angle around x axis
+        // theta => rotation angle around z axis
+        const ct = Math.cos(theta)
+        const st = Math.sin(theta)
+        const cp = Math.cos(phi)
+        const sp = Math.sin(phi)
+        const co = Math.cos(omega)
+        const so = Math.sin(omega)
+        var N_out = []
+        // Perform Rotation
+        for (var k = 0; k < coords.length; k++){
+            var xx = coords[k][0]
+            var yy = coords[k][1]
+            var zz = coords[k][2]
+            const xx_out = (xx * ct * co) + (yy * (ct * so * sp - st * cp)) + (zz * (ct * so * cp + st * sp))
+            const yy_out = (xx * st * co) + (yy * (st * so * sp + ct * cp)) + (zz * (st * so * cp - ct * sp))
+            const zz_out = (yy * (co * sp)) + (zz * (co * cp)) - (xx * so)
+            var brightness = xx_out * 100;
+            colors[k] ="hsl(0, 0%, " + brightness + "%)";
+            N_out.push([xx_out, yy_out, zz_out]);
+        }
+        return N_out;
     }
+
+    function pole_rotate(coords, theta, pole){
+        // rotate faces around pole
+        // coords => ColumnDataSource containing datasets = {<header>_x/y/z: []}
+        // theta => rotation around pole
+        // pole => unit vector representing the pole direction
+        const ct = Math.cos(theta)
+        const cti = 1 - Math.cos(theta)
+        const st = Math.sin(theta)
+        const px = pole[0]
+        const py = pole[1]
+        const pz = pole[2]
+        const keys = Object.keys(coords.data)
+        const unique_keys = []
+        var key
+        for (key of keys) {
+            // pull out coordinate header
+            const first = key.split("_")
+            if (first.length > 1 && unique_keys.indexOf(first[0]) == -1) {
+                unique_keys.push(first[0])
+                var xx_list = coords.get_array(first[0].concat("_x"))
+                var yy_list = coords.get_array(first[0].concat("_y"))
+                var zz_list = coords.get_array(first[0].concat("_z"))
+                var level = [];
+                // Perform Rotation
+                for (var k = 0; k < xx_list.length; k++){
+                    var xx = xx_list[k]
+                    var yy = yy_list[k]
+                    var zz = zz_list[k]
+                    // Pull out linear algebra text book
+                    // Implement Rodrigues' rotation formula for rotation around "arbitrary" axis.
+                    for (var i = 0; i < xx.length; i++){
+                        const xx_out = (xx[i] * (px * px * cti + ct)) + (yy[i] * (px * py * cti - pz * st)) + (zz[i] * (px * pz * cti + py * st))
+                        const yy_out = (xx[i] * (px * py * cti + pz * st)) + (yy[i] * (py * py * cti + ct)) + (zz[i] * (py * pz * cti - px * st))
+                        const zz_out = (xx[i] * (px * pz * cti - py * st)) + (yy[i] * (py * pz * cti + px * st)) + (zz[i] * (pz * pz * cti + ct))
+                        xx[i] = xx_out
+                        yy[i] = yy_out
+                        zz[i] = zz_out
+                    }
+                    level.push({index: k, value: Math.min(...zz)});
+                }
+                // Sort faces by min z
+                level.sort(function(a, b){return a.value - b.value})
+                var k2
+                for (k2 of keys){
+                    if (k2.includes(first[0])){
+                        if (level.length > 1){
+                            var to_sort = coords.data[k2]
+                            to_sort = level.map(function(e){return to_sort[e.index];})
+                            coords.data[k2] = to_sort
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // rotate asteroid shading around pole
+    const rotated_N = rotate(N, ast_omega, ast_phi, ast_theta, C)
+    // rotate sun direction as asteroid orbits
+    rotate(rotated_N, sol_omega, sol_phi, sol_theta, C)
+    // rotate asteroid faces around pole to match view
+    pole_rotate(source, ast_theta - pr[0], pole_vector)
+
+    // store rotation state
+    pr[0] = ast_theta;
+    prev_rot.change.emit()
+    // update shading/orientation
     source.change.emit()
 }

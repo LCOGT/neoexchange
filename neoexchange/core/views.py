@@ -3959,26 +3959,34 @@ def import_shape_model(file, shape_list, body, model_params):
     lines = shape_model_file.readlines()
     points_list = []
     n_points = 0
+    # set angles
     long_of_asc_node = body.longascnode
-    pole_long = model_params['pole_longitude']
-    pole_lat = model_params['pole_latitude']
-    rmat_sun = S.sla_deuler('Z', radians(-long_of_asc_node), 0, 0)
-    print(model_params)
+    pole_long = radians(model_params['pole_longitude'])
+    pole_lat = radians(model_params['pole_latitude'])
+    # build rotation matrices
+    rmat_sun = S.sla_deuler('Z', radians(-long_of_asc_node), 0, 0)  # set initial orbit position to ecliptic
+    rmat_view = S.sla_deuler('X', radians(90), 0, 0)  # set initial view for heliocentric z = plot y
     try:
-        rmat_pole = S.sla_deuler('YZ', radians(pole_lat), radians(pole_long), 0)
+        rmat_pole = S.sla_deuler('YZ', pole_lat, pole_long, 0)  # create pole rotation
     except TypeError:
         rmat_pole = S.sla_deuler('', 0, 0, 0)
+    pole_vector = S.sla_dmxv(rmat_pole, [0, 0, 1])
+    pole_vector = S.sla_dmxv(rmat_view, pole_vector)
+    # pull out face information
     for k, line in enumerate(lines):
         chunks = line.split()
         if len(chunks) < 3:
             if len(chunks) == 2:
+                # get number of vertices
                 n_points = int(chunks[0])
         elif k <= n_points:
+            # get vertex coordinates
             coords = []
             for c in chunks:
                 coords.append(float(c))
             points_list.append(coords)
         else:
+            # build faces using assigned vertices
             face_x = []
             face_y = []
             face_z = []
@@ -3986,18 +3994,22 @@ def import_shape_model(file, shape_list, body, model_params):
             for h, p in enumerate(chunks):
                 next_point = chunks[(h+1) % (len(chunks))]
 
-                coords = S.sla_dmxv(rmat_pole, points_list[int(p)-1])
-                coords_next = S.sla_dmxv(rmat_pole, points_list[int(next_point)-1])
+                coords = points_list[int(p)-1]
+                coords_next = points_list[int(next_point)-1]
                 xx = coords[0]
                 xx_nxt = coords_next[0]
                 yy = coords[1]
                 yy_nxt = coords_next[1]
                 zz = coords[2]
                 zz_nxt = coords_next[2]
-                # Store points of each face
-                face_x.append(xx)
-                face_y.append(yy)
-                face_z.append(zz)
+
+                # rotate faces to initial position
+                rot_coords = S.sla_dmxv(rmat_pole, coords)
+                rot_coords = S.sla_dmxv(rmat_view, rot_coords)
+                # Store vertices of each face
+                face_x.append(rot_coords[0])
+                face_y.append(rot_coords[1])
+                face_z.append(rot_coords[2])
 
                 # Calculate normal vector for face
                 normal[0] += (yy - yy_nxt) * (zz + zz_nxt)
@@ -4009,9 +4021,10 @@ def import_shape_model(file, shape_list, body, model_params):
             shape_list['faces_z'].append(face_z)
             shape_list['faces_normal'].append(normal)
             shape_list['faces_level'].append(np.mean(face_z))
-            brightness = S.sla_dmxv(rmat_sun, normal)[0] * 100
+            brightness = S.sla_dmxv(rmat_sun, S.sla_dmxv(rmat_pole, normal))[0] * 100
             shape_list['faces_colors'].append(f"hsl(0, 0%, {brightness}%)")
-    return shape_list
+    pole_data = {"v_x": [pole_vector[0]], "v_y": [pole_vector[1]], "v_z": [pole_vector[2]], "p_lat": [pole_lat], "p_long": [pole_long]}
+    return shape_list, pole_data
 
 
 def get_lc_plot(body, data):
@@ -4063,7 +4076,7 @@ def get_lc_plot(body, data):
     shape_model_dict = {'faces_x': [], 'faces_y': [], 'faces_z': [], 'faces_normal': [], 'faces_level': [], 'faces_colors': []}
     if shape_model:
         for sm in shape_model:
-            shape_model_dict = import_shape_model(os.path.join(datadir, sm), shape_model_dict, body, model_param_dict)
+            shape_model_dict, pole_vector = import_shape_model(os.path.join(datadir, sm), shape_model_dict, body, model_param_dict)
         for key in shape_model_dict.keys():
             if key != 'faces_level':
                 shape_model_dict[key] = [x for _, x in sorted(zip(shape_model_dict["faces_level"], shape_model_dict[key]), key=lambda x: x[0], reverse=False)]
@@ -4084,7 +4097,7 @@ def get_lc_plot(body, data):
         ephem = []
 
     if lc_list:
-        script, div = lc_plot(lc_list, meta_list, lc_model_dict, period, period_scan_dict, shape_model_dict, body, jpl_ephem=ephem)
+        script, div = lc_plot(lc_list, meta_list, lc_model_dict, period, period_scan_dict, shape_model_dict, pole_vector, body, jpl_ephem=ephem)
     else:
         script = None
         div = """
