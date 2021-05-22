@@ -4077,6 +4077,7 @@ def get_lc_plot(body, data):
             model_param_dict = {"pole_longitude": float(chunks[0]), "pole_latitude": float(chunks[1]), "period": float(chunks[2])}
 
     shape_model_dict = {'faces_x': [], 'faces_y': [], 'faces_z': [], 'faces_normal': [], 'faces_level': [], 'faces_colors': []}
+    pole_vector = {"v_x": [0], "v_y": [0], "v_z": [1], "p_lat": [0], "p_long": [0]}
     if shape_model:
         for sm in shape_model:
             shape_model_dict, pole_vector = import_shape_model(os.path.join(datadir, sm), shape_model_dict, body, model_param_dict)

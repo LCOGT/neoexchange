@@ -446,7 +446,7 @@ function contrast_switch(source, toggle, plot){
 }
 
 
-function shading_slider(source, orbit_slider, rot_slider, long_asc, inc, prev_rot, orient){
+function shading_slider(source, orbit_slider, rot_slider, long_asc, inc, prev_rot, orient, label){
     // CustomJS to adjust shading and rotation of shape model.
     const dataset = source.data;
     const pr = prev_rot.data['prev_rot'];
@@ -567,4 +567,15 @@ function shading_slider(source, orbit_slider, rot_slider, long_asc, inc, prev_ro
     prev_rot.change.emit()
     // update shading/orientation
     source.change.emit()
+    // update heliocentric position label
+    const label_text = label.data['text'];
+    var long_deg = (orb_phase * 2 * Math.PI + long_asc) * 180 / Math.PI
+    const lat_deg = elev * 180 / Math.PI
+    if (long_deg > 360){
+        long_deg -= 360
+    } else if (long_deg < 0){
+        long_deg += 360
+    }
+    label_text[3] = '(' + long_deg.toFixed(1) + ', ' + lat_deg.toFixed(1) + ')'
+    label.change.emit()
 }

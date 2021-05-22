@@ -22,7 +22,7 @@ import os
 import re
 import shutil
 import itertools
-from math import pi, floor, radians
+from math import pi, floor, radians, degrees
 import numpy as np
 from astropy import units as u
 
@@ -38,7 +38,7 @@ from bokeh.layouts import layout, column, row
 from bokeh.plotting import figure
 from bokeh.resources import CDN, INLINE
 from bokeh.embed import components, file_html
-from bokeh.models import HoverTool, Label, CrosshairTool, Whisker, TeeHead, Range1d, CustomJS, Title, CustomJSHover,\
+from bokeh.models import HoverTool, LabelSet, CrosshairTool, Whisker, TeeHead, Range1d, CustomJS, Title, CustomJSHover,\
     DataRange1d, Tool, ColumnDataSource
 from bokeh.models.widgets import CheckboxGroup, Slider, TableColumn, DataTable, HTMLTemplateFormatter, NumberEditor,\
     NumberFormatter, Spinner, Button, Panel, Tabs, Div, Toggle, Select, MultiSelect
@@ -765,7 +765,7 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_list=[], shape
     draw_button = Button(label="Re-Draw", button_type="default", width=50)  # Button to re-draw mags.
     model_draw_button = Button(label="Re-Draw", button_type="default", width=50)  # Button to re-draw models.
     contrast_switch = Toggle(label="Remove Shading", button_type="default")  # Change lighting contrast
-    orbit_slider = Slider(title="Orbital Phase", value=0, start=-2, end=2, step=.01, width=200, tooltips=True)
+    orbit_slider = Slider(title="Orbital Phase", value=0, start=-1, end=1, step=.01, width=200, tooltips=True)
     rotation_slider = Slider(title="Rotational Phase", value=0, start=-2, end=2, step=.01, width=200, tooltips=True)
 
     # Create plots
@@ -807,6 +807,15 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_list=[], shape
     # Build shape model
     shape_patches = plot_shape.patches(xs="faces_x", ys="faces_y", source=shape_source, color="faces_colors")
     plot_shape.add_tools(RotTool(source=cursor_change_source, coords_list=[shape_source, pole_source]))
+    shape_label_source = ColumnDataSource(data=dict(x=[10, 10, 555, 555], y=[565, 545, 565, 545],
+                                                    align=['left', 'left', 'right', 'right'],
+                                                    text=['Pole Orientation:',
+                                                          f'({degrees(pole_vector["p_long"][0])}, {degrees(pole_vector["p_lat"][0]) + 90})',
+                                                          'Heliocentric Position:',
+                                                          f'({round(body.longascnode, 1)}, 0.0)']))
+    pole_label = LabelSet(x='x', y='y', x_units='screen', y_units='screen', text='text', text_align='align', source=shape_label_source,
+                          render_mode='css', text_color='limegreen')
+    plot_shape.add_layout(pole_label)
 
     # Write custom JavaScript Code to print the time to the next iteration of the given phase in a HoverTool
     js_hover_text = get_js_as_text(js_file, "next_time_phased")
@@ -994,7 +1003,8 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_list=[], shape
     js_shading = get_js_as_text(js_file, "shading_slider")
     shading_callback = CustomJS(args=dict(source=shape_source, orbit_slider=orbit_slider, rot_slider=rotation_slider,
                                           long_asc=radians(body.longascnode), inc=radians(body.orbinc),
-                                          prev_rot=prev_rot_source, orient=pole_source), code=js_shading)
+                                          prev_rot=prev_rot_source, orient=pole_source, label=shape_label_source),
+                                code=js_shading)
     orbit_slider.js_on_change('value', shading_callback)
     rotation_slider.js_on_change('value', shading_callback)
 
@@ -1028,10 +1038,16 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_list=[], shape
     # Set Tabs
     tabu = Panel(child=unphased_layout, title="Unphased")
     tabp = Panel(child=phased_layout, title="Phased")
-    tab_per = Panel(child=periodogram_layout, title="Periodogram")
+    tab_list = [tabu, tabp]
+    if pscan_list[0]['period']:
+        tab_per = Panel(child=periodogram_layout, title="Periodogram")
+        tab_list.append(tab_per)
     tab_orb = Panel(child=orbit_layout, title="Orbital Diagram")
-    tab_shape = Panel(child=shape_layout, title="Asteroid Shape")
-    tabs = Tabs(tabs=[tabu, tabp, tab_per, tab_orb, tab_shape])
+    tab_list.append(tab_orb)
+    if shape_model_dict['faces_x']:
+        tab_shape = Panel(child=shape_layout, title="Asteroid Shape")
+        tab_list.append(tab_shape)
+    tabs = Tabs(tabs=tab_list)
 
     script, div = components({'plot': tabs}, CDN)
     chunks = div['plot'].split("data-root-id=")
