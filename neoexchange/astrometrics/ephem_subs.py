@@ -785,7 +785,7 @@ def horizons_elements(obj_name, epoch_date=None):
                      'abs_mag': row['H'],
                      'slope': row['G'],
                      'updated': True,
-                     'update_time' = datetime.utcnow()
+                     'update_time' : datetime.utcnow()
                     }
     return elements
 
