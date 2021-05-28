@@ -38,7 +38,7 @@ import logging
 from django.core.files.storage import default_storage
 
 from photometrics.external_codes import unpack_tarball
-from core.models import Frame, CatalogSources
+from core.models import Frame, CatalogSources, Block
 from astrometrics.ephem_subs import horizons_ephem
 from astrometrics.time_subs import timeit
 from photometrics.catalog_subs import sanitize_object_name

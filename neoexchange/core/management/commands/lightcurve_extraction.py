@@ -17,6 +17,7 @@ from datetime import datetime, timedelta, time
 from math import degrees, radians, floor
 from sys import exit
 import os
+import tempfile
 import stat
 
 try:
@@ -364,9 +365,9 @@ class Command(BaseCommand):
         else:
             alcdef_date = sb_day
         base_name = '{}_{}_{}_{}_'.format(obj_name, sb_site, alcdef_date, start_super_block.tracking_number)
-        alcdef_filename = os.path.join(datadir, base_name + 'ALCDEF.txt')
+        alcdef_filename = base_name + 'ALCDEF.txt'
         output_file_list.append('{},{}'.format(alcdef_filename, datadir.lstrip(out_path)))
-        alcdef_file = default_storage.open(alcdef_filename, 'w')
+        alcdef_file = tempfile.NamedTemporaryFile('w+') #default_storage.open(alcdef_filename, 'w')
         for super_block in super_blocks:
             block_list = Block.objects.filter(superblock=super_block.id)
             if obs_date:
@@ -483,14 +484,10 @@ class Command(BaseCommand):
                             self.stdout.write("New gif created: {}".format(movie_file))
                         else:
                             self.stdout.write(movie_file)
-        alcdef_file.close()
+        save_dataproduct(obj=block.body, filepath=alcdef_file.name, filetype=DataProduct.ALCDEF_TXT, filename=alcdef_filename)
         self.stdout.write("Found matches in %d of %d frames" % (len(times), total_frame_count))
 
         if not settings.USE_S3:
-            try:
-                os.chmod(alcdef_filename, rw_permissions)
-            except PermissionError:
-                pass
 
             # Write light curve data out in similar format to Make_lc.csh
             i = 0

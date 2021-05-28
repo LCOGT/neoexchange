@@ -67,7 +67,7 @@ def save_dataproduct(obj, filepath, filetype, filename=None):
     dp = DataProduct()
     dp.content_object = obj
     dp.filetype = filetype
-    if filetype == DataProduct.CSV or filetype == DataProduct.PDS_XML:
+    if filetype in [DataProduct.CSV, DataProduct.PDS_XML, DataProduct.ALCDEF_TXT]:
         mode = 'r'
     else:
         mode = 'rb'

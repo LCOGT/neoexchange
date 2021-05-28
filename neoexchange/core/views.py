@@ -1749,6 +1749,7 @@ class LCDataListView(ListView):
         return context
 
     def find_lc(self):
+        # **DP** replace with DataProduct
         base_dir = os.path.join(settings.DATA_ROOT, 'Reduction')
         dir_list, _ = default_storage.listdir(base_dir)
         name_list = []
@@ -1763,6 +1764,7 @@ class LCDataListView(ListView):
                     name_list.append(new_name.lstrip())
         object_list = Body.objects.filter(Q(designations__value__in=name_list) | Q(provisional_name__in=name_list)
                                           | Q(provisional_packed__in=name_list) | Q(name__in=name_list))
+        # **DP** replace with DataProduct
         final_objects = object_list
         for obj in object_list:
             if sanitize_object_name(obj.current_name()) not in name_list:
@@ -3864,48 +3866,48 @@ class LCPlot(LookUpBodyMixin, FormView):
 def import_alcdef(file, meta_list, lc_list):
     """Pull LC data from ALCDEF text files."""
 
-    lc_file = default_storage.open(file, 'rb')
-    lines = lc_file.readlines()
+    with file.open() as lc_file:
+        lines = lc_file.readlines()
 
-    metadata = {}
-    dates = []
-    mags = []
-    mag_errs = []
-    met_dat = False
+        metadata = {}
+        dates = []
+        mags = []
+        mag_errs = []
+        met_dat = False
 
-    for line in lines:
-        line = str(line, 'utf-8')
-        if line[0] == '#':
-            continue
-        if '=' in line:
-            if 'DATA=' in line and met_dat is False:
-                chunks = line[5:].split('|')
-                jd = float(chunks[0])
-                mag = float(chunks[1])
-                mag_err = float(chunks[2])
-                dates.append(jd)
-                mags.append(mag)
-                mag_errs.append(mag_err)
-            else:
-                chunks = line.split('=')
-                metadata[chunks[0]] = chunks[1].replace('\n', '')
-        elif 'ENDDATA' in line:
-            if metadata not in meta_list and dates:
-                meta_list.append(metadata)
-                lc_data = {
-                    'date': dates,
-                    'mags': mags,
-                    'mag_errs': mag_errs,
-                    }
-                lc_list.append(lc_data)
-            dates = []
-            mags = []
-            mag_errs = []
-            metadata = {}
-        elif 'STARTMETADATA' in line:
-            met_dat = True
-        elif 'ENDMETADATA' in line:
-            met_dat = False
+        for line in lines:
+            line = str(line, 'utf-8')
+            if line[0] == '#':
+                continue
+            if '=' in line:
+                if 'DATA=' in line and met_dat is False:
+                    chunks = line[5:].split('|')
+                    jd = float(chunks[0])
+                    mag = float(chunks[1])
+                    mag_err = float(chunks[2])
+                    dates.append(jd)
+                    mags.append(mag)
+                    mag_errs.append(mag_err)
+                else:
+                    chunks = line.split('=')
+                    metadata[chunks[0]] = chunks[1].replace('\n', '')
+            elif 'ENDDATA' in line:
+                if metadata not in meta_list and dates:
+                    meta_list.append(metadata)
+                    lc_data = {
+                        'date': dates,
+                        'mags': mags,
+                        'mag_errs': mag_errs,
+                        }
+                    lc_list.append(lc_data)
+                dates = []
+                mags = []
+                mag_errs = []
+                metadata = {}
+            elif 'STARTMETADATA' in line:
+                met_dat = True
+            elif 'ENDMETADATA' in line:
+                met_dat = False
 
     return meta_list, lc_list
 
@@ -3914,10 +3916,6 @@ def get_lc_plot(body, data):
     """Plot all lightcurve data for given source.
     """
 
-    base_dir = os.path.join(settings.DATA_ROOT, 'Reduction')
-    obj_name = sanitize_object_name(body.current_name())
-    datadir = os.path.join(base_dir, obj_name)
-    filenames = search(datadir, '.*.ALCDEF.txt')
     if data.get('period', None):
         period = data['period']
     else:
@@ -3925,9 +3923,10 @@ def get_lc_plot(body, data):
 
     meta_list = []
     lc_list = []
-    if filenames:
-        for file in filenames:
-            meta_list, lc_list = import_alcdef(os.path.join(datadir, file), meta_list, lc_list)
+    dataproducts = DataProduct.body_objects.filter(filetype=DataProduct.ALCDEF_TXT)
+    if dataproducts:
+        for dp in dataproducts:
+            meta_list, lc_list = import_alcdef(dp.product.file, meta_list, lc_list)
     else:
         meta_list = lc_list = []
 

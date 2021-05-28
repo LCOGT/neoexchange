@@ -315,8 +315,8 @@ if USE_S3:
     DATA_ROOT = ''
 else:
     # For local use
-    MEDIA_ROOT = os.getenv('DATA_ROOT', '/apophis/eng/rocks/')
-    DATA_ROOT = MEDIA_ROOT
+    MEDIA_ROOT = os.getenv('MEDIA_ROOT', '/apophis/eng/media/')
+    DATA_ROOT = os.getenv('DATA_ROOT', '/apophis/eng/rocks/')
 
 ##################
 # LOCAL SETTINGS #
@@ -331,4 +331,3 @@ if not CURRENT_PATH.startswith('/app'):
     except ImportError as e:
         if "local_settings" not in str(e):
             raise e
-

@@ -53,6 +53,7 @@ class DataProduct(models.Model):
     PNG_FWHM = 15
     PNG_ZP = 16
     PDS_XML = 20
+    ALCDEF_TXT = 21
     DP_CHOICES = (
                     (JPEG, 'JPEG'),
                     (GUIDER_GIF, 'Guider GIF'),
@@ -72,6 +73,7 @@ class DataProduct(models.Model):
                     (PNG_FWHM,'FWHM condition PNG'),
                     (PNG_ZP, 'Zero point PNG'),
                     (PDS_XML, 'Planetary Data System (PDS) XML'),
+                    (ALCDEF_TXT, 'ALCDEF Lightcurve file'),
                     (99, 'Other')
                 )
 
