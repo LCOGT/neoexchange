@@ -17,7 +17,7 @@ import os
 from pathlib import Path
 
 from django.core.files.storage import default_storage
-from django.core.files.base import File
+from django.core.files.base import File, ContentFile
 
 from core.models.dataproducts import DataProduct
 
@@ -61,7 +61,7 @@ def save_to_default(filename, out_path):
     file.close()
     return
 
-def save_dataproduct(obj, filepath, filetype, filename=None):
+def save_dataproduct(obj, filepath, filetype, filename=None, content=None):
     if not filename:
         filename = Path(filepath).name
     dp = DataProduct()
@@ -71,7 +71,12 @@ def save_dataproduct(obj, filepath, filetype, filename=None):
         mode = 'r'
     else:
         mode = 'rb'
-    with open(filepath, mode) as f:
-        dp.product.save(filename, File(f))
+    if content:
+        dp.product.save(filename, ContentFile(content))
+    elif not content and not filepath:
+        return
+    else:
+        with open(filepath, mode) as f:
+            dp.product.save(filename, File(f))
     dp.save()
     return

@@ -235,7 +235,7 @@ class Command(BaseCommand):
             source.delete()
         return mpc_line, ades_psv_line
 
-    def output_alcdef(self, lightcurve_file, block, site, dates, mags, mag_errors, filt, outmag):
+    def output_alcdef(self, block, site, dates, mags, mag_errors, filt, outmag):
         """
         Create a standardized ALCDEF formatted text file for LC data
 
@@ -250,6 +250,7 @@ class Command(BaseCommand):
         :return: None
         """
         obj_name = block.body.current_name()
+        alcdef_txt = ''
 
         mid_time = (dates[-1] - dates[0])/2 + dates[0]
         metadata_dict = {'ObjectNumber': 0,
@@ -276,16 +277,17 @@ class Command(BaseCommand):
             metadata_dict['ObjectNumber'] = obj_name
             metadata_dict['MPCDesig'] = block.body.old_name()
             metadata_dict['ObjectName'] = block.body.old_name()
-        lightcurve_file.write('STARTMETADATA\n')
+        alcdef_txt += 'STARTMETADATA\n'
         for key, value in metadata_dict.items():
-            lightcurve_file.write('{}={}\n'.format(key.upper(), value))
-        lightcurve_file.write('ENDMETADATA\n')
+            alcdef_txt += '{}={}\n'.format(key.upper(), value)
+        alcdef_txt += 'ENDMETADATA\n'
         i = 0
         for date in dates:
             jd = datetime2mjd_utc(date)+0.5
-            lightcurve_file.write('DATA=24{:.6f}|{:+.3f}|{:+.3f}\n'.format(jd, mags[i], mag_errors[i]))
+            alcdef_txt += 'DATA=24{:.6f}|{:+.3f}|{:+.3f}\n'.format(jd, mags[i], mag_errors[i])
             i += 1
-        lightcurve_file.write('ENDDATA\n')
+        alcdef_txt += 'ENDDATA\n'
+        return alcdef_txt
 
     def handle(self, *args, **options):
 
@@ -367,7 +369,7 @@ class Command(BaseCommand):
         base_name = '{}_{}_{}_{}_'.format(obj_name, sb_site, alcdef_date, start_super_block.tracking_number)
         alcdef_filename = base_name + 'ALCDEF.txt'
         output_file_list.append('{},{}'.format(alcdef_filename, datadir.lstrip(out_path)))
-        alcdef_file = tempfile.NamedTemporaryFile('w+') #default_storage.open(alcdef_filename, 'w')
+        alcdef_txt = ''
         for super_block in super_blocks:
             block_list = Block.objects.filter(superblock=super_block.id)
             if obs_date:
@@ -466,7 +468,7 @@ class Command(BaseCommand):
                             mag_set = [m for m, f in zip(block_mags, filter_list) if f == filt]
                             time_set = [t for t, f in zip(block_times, filter_list) if f == filt]
                             error_set = [e for e, f in zip(block_mag_errs, filter_list) if f == filt]
-                            self.output_alcdef(alcdef_file, block, obs_site, time_set, mag_set, error_set, filt, outmag)
+                            alcdef_txt += self.output_alcdef(block, obs_site, time_set, mag_set, error_set, filt, outmag)
                     mags += block_mags
                     mag_errs += block_mag_errs
                     times += block_times
@@ -484,7 +486,7 @@ class Command(BaseCommand):
                             self.stdout.write("New gif created: {}".format(movie_file))
                         else:
                             self.stdout.write(movie_file)
-        save_dataproduct(obj=block.body, filepath=alcdef_file.name, filetype=DataProduct.ALCDEF_TXT, filename=alcdef_filename)
+        save_dataproduct(obj=block.body, filepath=None, filetype=DataProduct.ALCDEF_TXT, filename=alcdef_filename, content=alcdef_txt)
         self.stdout.write("Found matches in %d of %d frames" % (len(times), total_frame_count))
 
         if not settings.USE_S3:
