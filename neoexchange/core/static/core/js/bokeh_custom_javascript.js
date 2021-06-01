@@ -399,6 +399,7 @@ function rotation_tool(){
     }
 }
 
+
 function analog_select(analog_select, frame_select, reflectance_sources, chosen_sources, plot, plot2, lines, raw_analog, raw_analog_list, raw_lines){
     const analog = analog_select.value;
     const options = analog_select.options;
@@ -427,34 +428,52 @@ function analog_select(analog_select, frame_select, reflectance_sources, chosen_
             plot2.title.text = plot2.title.text.split("    ")[0] + "    Analog: " + analog;
         }
     }
-
 }
 
 
-function contrast_switch(source, toggle, plot){
-    const dataset = source.data;
-    const C = dataset['faces_colors'];
-    if (toggle.active){
-        plot.glyph.fill_color = "gray";
-        plot.glyph.line_color = "black";
-        toggle.label = 'Apply Shading';
-    } else {
-        plot.glyph.fill_color = {'field':'faces_colors'};
-        plot.glyph.line_color = {'field':'faces_colors'};
-        toggle.label = 'Remove Shading';
+function contrast_switch(toggle, plots){
+    for (var plot of plots){
+        if (toggle.active){
+            plot.glyph.fill_color = "gray";
+            plot.glyph.line_color = "black";
+            toggle.label = 'Apply Shading';
+        } else {
+            plot.glyph.fill_color = {'field':'faces_colors'};
+            plot.glyph.line_color = {'field':'faces_colors'};
+            toggle.label = 'Remove Shading';
+        }
     }
 }
 
 
-function shading_slider(source, orbit_slider, rot_slider, long_asc, inc, prev_rot, orient, label){
+function shape_select(selector, plots, labels, poles){
+    const label_text = labels.data['text']
+
+    for (var i = 0; i < plots.length; i++){
+        if (Number(selector.value) == i){
+            plots[i].visible = true;
+            const long_deg = poles[i]["p_long"][0] / Math.PI * 180
+            const lat_deg = poles[i]["p_lat"][0] / Math.PI * 180 + 90
+            label_text[1] = '(' + long_deg.toFixed(1) + ', ' + lat_deg.toFixed(1) + ')'
+            labels.change.emit()
+        } else {
+            plots[i].visible = false;
+        }
+    }
+}
+
+
+function shading_slider(source, orbit_slider, rot_slider, long_asc, inc, sn, prev_rot, orient, label){
     // CustomJS to adjust shading and rotation of shape model.
-    const dataset = source.data;
+    const model_num = Number(sn.value)
+    const dataset = source[model_num].data;
     const pr = prev_rot.data['prev_rot'];
-    const pole_vector = [orient.data['v_x'][0], orient.data['v_y'][0], orient.data['v_z'][0]];
+    const orient_data = orient[model_num].data
+    const pole_vector = [orient_data['v_x'][0], orient_data['v_y'][0], orient_data['v_z'][0]];
     const C = dataset['faces_colors'];
     const N = dataset['faces_normal'];
-    const pole_long = orient.data['p_long'][0];
-    const pole_lat = orient.data['p_lat'][0];
+    const pole_long = orient_data['p_long'][0];
+    const pole_lat = orient_data['p_lat'][0];
 
     // set orbital angles
     const orb_phase = orbit_slider.value;
@@ -560,13 +579,13 @@ function shading_slider(source, orbit_slider, rot_slider, long_asc, inc, prev_ro
     // rotate sun direction as asteroid orbits
     rotate(rotated_N, sol_omega, sol_phi, sol_theta, C)
     // rotate asteroid faces around pole to match view
-    pole_rotate(source, ast_theta - pr[0], pole_vector)
+    pole_rotate(source[model_num], ast_theta - pr[model_num], pole_vector)
 
     // store rotation state
-    pr[0] = ast_theta;
+    pr[model_num] = ast_theta;
     prev_rot.change.emit()
     // update shading/orientation
-    source.change.emit()
+    source[model_num].change.emit()
     // update heliocentric position label
     const label_text = label.data['text'];
     var long_deg = (orb_phase * 2 * Math.PI + long_asc) * 180 / Math.PI

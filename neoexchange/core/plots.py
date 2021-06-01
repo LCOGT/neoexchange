@@ -679,7 +679,7 @@ class RotTool(Tool):
     coords_list = List(Instance(ColumnDataSource))
 
 
-def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_list=[], shape_model_dict={}, pole_vector={}, body=None, jpl_ephem=None):
+def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_list=[], shape_model_dict=[], pole_vector=[], body=None, jpl_ephem=None):
     """Creates an interactive Bokeh LC plot:
     Inputs:
     [lc_list] --- A list of LC dictionaries, each one containing the following keys:
@@ -738,9 +738,13 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_list=[], shape
     p_mark_source = ColumnDataSource(data=dict(period=[period], y=[-1]))
     orbit_source = ColumnDataSource(data=get_orbit_position(meta_list, lc_list, body))
     full_orbit_source = ColumnDataSource(data=get_full_orbit(body))
-    shape_source = ColumnDataSource(data=shape_model_dict)
-    pole_source = ColumnDataSource(data=pole_vector)
-    prev_rot_source = ColumnDataSource(data=dict(prev_rot=[0]))
+    shape_sources = []
+    for shape in shape_model_dict:
+        shape_sources.append(ColumnDataSource(data=shape))
+    pole_sources = []
+    for pvec in pole_vector:
+        pole_sources.append(ColumnDataSource(data=pvec))
+    prev_rot_source = ColumnDataSource(data=dict(prev_rot=[0]*len(shape_model_dict)))
     lc_models_sources = []
     model_names_unique = list(set(lc_model_dict['name']))
     model_list_source = ColumnDataSource(data=dict(name=model_names_unique, offset=[0]*len(model_names_unique)))
@@ -767,6 +771,8 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_list=[], shape
     contrast_switch = Toggle(label="Remove Shading", button_type="default")  # Change lighting contrast
     orbit_slider = Slider(title="Orbital Phase", value=0, start=-1, end=1, step=.01, width=200, tooltips=True)
     rotation_slider = Slider(title="Rotational Phase", value=0, start=-2, end=2, step=.01, width=200, tooltips=True)
+    shape_labels = [str(x) for x in range(len(shape_model_dict))]
+    shape_select = Select(title="Shape Model", value='0', options=shape_labels)
 
     # Create plots
     error_cap = TeeHead(line_alpha=0)
@@ -805,12 +811,19 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_list=[], shape
     plot_orbit.add_tools(RotTool(source=cursor_change_source, coords_list=[full_orbit_source, orbit_source]))
 
     # Build shape model
-    shape_patches = plot_shape.patches(xs="faces_x", ys="faces_y", source=shape_source, color="faces_colors")
-    plot_shape.add_tools(RotTool(source=cursor_change_source, coords_list=[shape_source, pole_source]))
+    shape_patches = []
+    for n, shape in enumerate(shape_sources):
+        if n == 0:
+            shape_vis = True
+        else:
+            shape_vis = False
+        shape_patches.append(plot_shape.patches(xs="faces_x", ys="faces_y", source=shape, color="faces_colors", visible=shape_vis))
+    shape_rot_source_list = shape_sources + pole_sources
+    plot_shape.add_tools(RotTool(source=cursor_change_source, coords_list=shape_rot_source_list))
     shape_label_source = ColumnDataSource(data=dict(x=[10, 10, 555, 555], y=[565, 545, 565, 545],
                                                     align=['left', 'left', 'right', 'right'],
                                                     text=['Pole Orientation:',
-                                                          f'({degrees(pole_vector["p_long"][0])}, {degrees(pole_vector["p_lat"][0]) + 90})',
+                                                          f'({round(degrees(pole_vector[0]["p_long"][0]),1)}, {round(degrees(pole_vector[0]["p_lat"][0]) + 90,1)})',
                                                           'Heliocentric Position:',
                                                           f'({round(body.longascnode, 1)}, 0.0)']))
     pole_label = LabelSet(x='x', y='y', x_units='screen', y_units='screen', text='text', text_align='align', source=shape_label_source,
@@ -943,7 +956,6 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_list=[], shape
         TableColumn(field="offset", title="Mag Offset", editor=NumberEditor(step=.1), formatter=NumberFormatter(format="0.00"))
     ]
     columns_model = [
-        # TableColumn(field="symbol", title='', formatter=formatter, width=3),
         TableColumn(field="name", title="Name"),
         TableColumn(field="offset", title="Mag Offset", editor=NumberEditor(step=.1),
                     formatter=NumberFormatter(format="0.00"))
@@ -996,17 +1008,23 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_list=[], shape
 
     # JS for Shape Model
     js_switch_contrast = get_js_as_text(js_file, "contrast_switch")
-    contrast_callback = CustomJS(args=dict(source=shape_source, toggle=contrast_switch, plot=shape_patches),
+    contrast_callback = CustomJS(args=dict(toggle=contrast_switch, plots=shape_patches),
                                  code=js_switch_contrast)
     contrast_switch.js_on_click(contrast_callback)
 
     js_shading = get_js_as_text(js_file, "shading_slider")
-    shading_callback = CustomJS(args=dict(source=shape_source, orbit_slider=orbit_slider, rot_slider=rotation_slider,
-                                          long_asc=radians(body.longascnode), inc=radians(body.orbinc),
-                                          prev_rot=prev_rot_source, orient=pole_source, label=shape_label_source),
+    shading_callback = CustomJS(args=dict(source=shape_sources, orbit_slider=orbit_slider, rot_slider=rotation_slider,
+                                          long_asc=radians(body.longascnode), inc=radians(body.orbinc), sn=shape_select,
+                                          prev_rot=prev_rot_source, orient=pole_sources, label=shape_label_source),
                                 code=js_shading)
     orbit_slider.js_on_change('value', shading_callback)
     rotation_slider.js_on_change('value', shading_callback)
+
+    js_shape_selector = get_js_as_text(js_file, "shape_select")
+    shape_select_callback = CustomJS(args=dict(selector=shape_select, plots=shape_patches, labels=shape_label_source,
+                                               poles=pole_vector),
+                                     code=js_shape_selector)
+    shape_select.js_on_change('value', shape_select_callback)
 
     # Build layout tables:
     phased_layout = column(plot_p,
@@ -1031,9 +1049,10 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_list=[], shape
                                                column(p_slider_min,
                                                       p_slider_max)))))
     orbit_layout = column(plot_orbit)
-    shape_layout = column(row(plot_shape, column(contrast_switch,
+    shape_layout = column(row(plot_shape, column(shape_select,
                                                  orbit_slider,
-                                                 rotation_slider)))
+                                                 rotation_slider,
+                                                 contrast_switch)))
 
     # Set Tabs
     tabu = Panel(child=unphased_layout, title="Unphased")
@@ -1044,7 +1063,7 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_list=[], shape
         tab_list.append(tab_per)
     tab_orb = Panel(child=orbit_layout, title="Orbital Diagram")
     tab_list.append(tab_orb)
-    if shape_model_dict['faces_x']:
+    if shape_model_dict:
         tab_shape = Panel(child=shape_layout, title="Asteroid Shape")
         tab_list.append(tab_shape)
     tabs = Tabs(tabs=tab_list)

@@ -3959,7 +3959,8 @@ def import_lc_model(file, model_list):
     return model_list
 
 
-def import_shape_model(file, shape_list, body, model_params):
+def import_shape_model(file, body, model_params):
+    shape_list = {'faces_x': [], 'faces_y': [], 'faces_z': [], 'faces_normal': [], 'faces_level': [], 'faces_colors': []}
     shape_model_file = default_storage.open(file, 'rb')
     lines = shape_model_file.readlines()
     points_list = []
@@ -4035,15 +4036,20 @@ def import_shape_model(file, shape_list, body, model_params):
 def get_lc_plot(body, data):
     """Plot all lightcurve data for given source.
     """
-
     base_dir = os.path.join(settings.DATA_ROOT, 'Reduction')
     obj_name = sanitize_object_name(body.current_name())
     datadir = os.path.join(base_dir, obj_name)
     filenames = search(datadir, '.*.ALCDEF.txt')
     period_scans = search(datadir, '.*.period_scan.out')
-    lc_models = search(datadir, '.*.lcs.final')
-    model_params = search(datadir, '.*.par.out')
-    shape_model = search(datadir, '.*.model.shape')
+    damit_dir_list = search(datadir, 'DamitDocs.*.', dir_search=True)
+    lc_models = []
+    model_params = []
+    shape_models = []
+    for dd in damit_dir_list:
+        new_dir = os.path.join(datadir, dd)
+        lc_models += [os.path.join(dd, x) for x in search(new_dir, '.*.lcs.final')]
+        model_params += [os.path.join(dd, x) for x in search(new_dir, '.*.par.out')]
+        shape_models += [os.path.join(dd, x) for x in search(new_dir, '.*.model.shape')]
     if data.get('period', None):
         period = data['period']
     else:
@@ -4068,22 +4074,28 @@ def get_lc_plot(body, data):
         for m in lc_models:
             lc_model_dict = import_lc_model(os.path.join(datadir, m), lc_model_dict)
 
-    model_param_dict = {"pole_longitude": None, "pole_latitude": None, "period": None}
+    model_param_dict = []
     if model_params:
         for params in model_params:
             model_params_file = default_storage.open(os.path.join(datadir, params), 'rb')
             lines = model_params_file.readlines()
             chunks = lines[0].split()
-            model_param_dict = {"pole_longitude": float(chunks[0]), "pole_latitude": float(chunks[1]), "period": float(chunks[2])}
+            model_param_dict.append({"pole_longitude": float(chunks[0]), "pole_latitude": float(chunks[1]), "period": float(chunks[2])})
+    else:
+        model_param_dict.append({"pole_longitude": None, "pole_latitude": None, "period": None})
 
-    shape_model_dict = {'faces_x': [], 'faces_y': [], 'faces_z': [], 'faces_normal': [], 'faces_level': [], 'faces_colors': []}
-    pole_vector = {"v_x": [0], "v_y": [0], "v_z": [1], "p_lat": [0], "p_long": [0]}
-    if shape_model:
-        for sm in shape_model:
-            shape_model_dict, pole_vector = import_shape_model(os.path.join(datadir, sm), shape_model_dict, body, model_param_dict)
-        for key in shape_model_dict.keys():
-            if key != 'faces_level':
-                shape_model_dict[key] = [x for _, x in sorted(zip(shape_model_dict["faces_level"], shape_model_dict[key]), key=lambda x: x[0], reverse=False)]
+    shape_model_list = []
+    if shape_models:
+        pole_vector_list = []
+        for n, sm in enumerate(shape_models):
+            shape_model_dict, pole_vector = import_shape_model(os.path.join(datadir, sm), body, model_param_dict[n])
+            for key in shape_model_dict.keys():
+                if key != 'faces_level':
+                    shape_model_dict[key] = [x for _, x in sorted(zip(shape_model_dict["faces_level"], shape_model_dict[key]), key=lambda x: x[0], reverse=False)]
+            shape_model_list.append(shape_model_dict)
+            pole_vector_list.append(pole_vector)
+    else:
+        pole_vector_list = [{"v_x": [0], "v_y": [0], "v_z": [1], "p_lat": [0], "p_long": [0]}]
 
     meta_list = [x for _, x in sorted(zip(lc_list, meta_list), key=lambda i: i[0]['date'][0])]
     lc_list = sorted(lc_list, key=lambda i: i['date'][0])
@@ -4101,7 +4113,7 @@ def get_lc_plot(body, data):
         ephem = []
 
     if lc_list:
-        script, div = lc_plot(lc_list, meta_list, lc_model_dict, period, period_scan_dict, shape_model_dict, pole_vector, body, jpl_ephem=ephem)
+        script, div = lc_plot(lc_list, meta_list, lc_model_dict, period, period_scan_dict, shape_model_list, pole_vector_list, body, jpl_ephem=ephem)
     else:
         script = None
         div = """

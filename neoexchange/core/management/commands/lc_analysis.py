@@ -53,69 +53,6 @@ class Command(BaseCommand):
         parser.add_argument('--period_scan', action="store_true", default=False, help='run Period Scan')
         parser.add_argument('--lc_model', action="store", default=None, help='Start and end dates for the lc_model (YYYYMMDD-YYYMMDD)')
 
-    # def read_data(self):
-    #     """ reads lightcurve_data.txt output by lightcurve_extraction"""
-    #     f = open(options['lc_file'])
-    #     lines = f.readlines()
-    #     body = lines[0][8:-1]
-    #     day1 = lines[1][5:10]
-    #     times = np.array([])
-    #     mags = np.array([])
-    #     mag_errs = np.array([])
-    #     for line in lines:
-    #         try:
-    #             chunks = line.split(' ')
-    #             times = np.append(times, float(day1+chunks[0]))
-    #             mags = np.append(mags, float(chunks[1]))
-    #             mag_errs = np.append(mag_errs, float(chunks[2]))
-    #         except ValueError:
-    #             continue
-    #
-    #     return times, mags, mag_errs, body
-    #
-    # def find_period(self, times, mags, mag_errs):
-    #     """ Uses LombScargle routine to find period of light curve
-    #         NOTE: currently not accurate nor finished yet
-    #     """
-    #     utimes = Time(times, format='mjd')
-    #     ls = LombScargle(utimes.unix*u.s, mags*u.mag, mag_errs*u.mag)
-    #     freq, power = ls.autopower()
-    #
-    #     fig, ax = plt.subplots()
-    #     ax.plot(freq, power)
-    #     ax.set_xlabel('Frequencies Hz')
-    #     ax.set_ylabel('L-S Power')
-    #
-    #     fig2, ax2 = plt.subplots()
-    #     ax2.plot(1/(freq*3600), power)
-    #     ax2.set_xlabel('Period h')
-    #     ax2.set_ylabel('L-S Power')
-    #
-    #     period = (1/(freq[np.argmax(power)])).to(u.hour)
-    #     self.stdout.write("Period: %.3f h" % period.value)
-    #     return period.value
-    #
-    # def plot_fold_phase(self, phases, mags, mag_errs, period, epoch, title=''):
-    #     """ plots phase-folded lightcurve given phases, magnitude, error, a period to fold over, and an epoch
-    #         <phases>: list of phases or fraction each point in time is through a period from epoch.
-    #         <mags>: magnitudes at each phase
-    #         <mag_errs>: error in magnitudes at each phase
-    #         <period>: period to fold against. (time at phase=1)-(time at phase=0)=period
-    #         <epoch>: time to start first period at. Default is 0
-    #         [title]: title of plot
-    #     """
-    #     fig, ax = plt.subplots()
-    #     ax.errorbar(phases, mags, mag_errs, marker='.', linestyle=' ')
-    #     ax.set_xlabel('phase')
-    #     ax.set_ylabel('magnitude')
-    #     ax.set_xlim(-.1, 1.1)
-    #     ax.invert_yaxis()
-    #     fig.suptitle(title)
-    #     ax.set_title('(Period = %.3f h  Epoch = MJD%d)' % (period, epoch))
-    #     plt.savefig('phased_lc.png')
-    #
-    #     return
-
     def get_period_range(self, body, options):
         """
         Calculate period range to search from optional input parameters and known period
@@ -339,6 +276,7 @@ class Command(BaseCommand):
         body = bodies[0]
         body_elements = model_to_dict(body)
         obj_name = sanitize_object_name(body.current_name())
+
         if options['filters']:
             filt_list = options['filters'].upper()
         else:
@@ -349,6 +287,15 @@ class Command(BaseCommand):
         mag_means, lc_ltt_list = self.create_lcs_input(lcs_input_file, meta_list, lc_list, body_elements, filt_list)
         lcs_input_file.close()
         pmin, pmax, period = self.get_period_range(body, options)
+        dir_num = 0
+        dirs = search(path, 'DamitDocs_.*.', dir_search=True)
+        if dirs:
+            for d in dirs:
+                d_num = int(d.split('_')[1])
+                if dir_num < d_num:
+                    dir_num = d_num
+
+        dir_name = os.path.join(path, f"DamitDocs_{str(dir_num+1).zfill(3)}_{period}_{len(meta_list)}")
         if options['lc_model']:
             if isinstance(options['lc_model'], str):
                 try:
@@ -374,8 +321,10 @@ class Command(BaseCommand):
             ps_retcode_or_cmdline = run_damit_periodscan(lcs_input_filename, psinput_filename, psoutput_filename)
         else:
             # Create convinv input file
-            convinv_input_filename, conjinv_input_filename = self.import_or_create_cinv_input(path, obj_name, period)
-            basename = os.path.join(path, f'{obj_name}_{period}')
+            if not os.path.exists(dir_name):
+                os.makedirs(dir_name)
+            convinv_input_filename, conjinv_input_filename = self.import_or_create_cinv_input(dir_name, obj_name, period)
+            basename = os.path.join(dir_name, f'{obj_name}_{period}')
             convinv_outpar_filename = basename + '_convinv_par.out'
             convinv_outlcs_filename = basename + '_convinv_lcs.out'
             convinv_lc_final_filename = basename + '_convinv_lcs.final'
