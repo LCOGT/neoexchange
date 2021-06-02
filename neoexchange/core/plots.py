@@ -832,7 +832,6 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_list=[], shape
                           render_mode='css', text_color='limegreen')
     plot_shape.add_layout(pole_label)
 
-
     # Write custom JavaScript Code to print the time to the next iteration of the given phase in a HoverTool
     js_hover_text = get_js_as_text(js_file, "next_time_phased")
     next_time = CustomJSHover(args=dict(period_box=period_box, phase_shift=phase_shift), code=js_hover_text)

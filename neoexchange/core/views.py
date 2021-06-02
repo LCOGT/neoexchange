@@ -4048,11 +4048,12 @@ def get_lc_plot(body, data):
     lc_models = []
     model_params = []
     shape_models = []
-    for dd in damit_dir_list:
-        new_dir = os.path.join(datadir, dd)
-        lc_models += [os.path.join(dd, x) for x in search(new_dir, '.*.lcs.final')]
-        model_params += [os.path.join(dd, x) for x in search(new_dir, '.*.par.out')]
-        shape_models += [os.path.join(dd, x) for x in search(new_dir, '.*.model.shape')]
+    if damit_dir_list:
+        for dd in damit_dir_list:
+            new_dir = os.path.join(datadir, dd)
+            lc_models += [os.path.join(dd, x) for x in search(new_dir, '.*.lcs.final')]
+            model_params += [os.path.join(dd, x) for x in search(new_dir, '.*.par.out')]
+            shape_models += [os.path.join(dd, x) for x in search(new_dir, '.*.model.shape')]
     if data.get('period', None):
         period = data['period']
     else:
