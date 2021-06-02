@@ -587,6 +587,17 @@ def map_filter_to_wavelength(passband='ip'):
     return wavelength
 
 
+def map_filter_to_bandwidth(passband='ip'):
+    """Maps the given [passband] (defaults to 'ip' for SDSS-i') to a bandwidth
+    which is returned as an AstroPy Quantity in angstroms"""
+
+    filter_bwidth = {'U': 501.61, 'B': 952.75, 'V' : 839.79, 'R' : 1298.29, 'I' : 3155.25, 'Z' : 700,
+                    'up' : 638.91, 'gp' : 1487.49, 'rp' : 1391.42, 'ip' : 1287.66, 'zp' : 1026.15, 'w' : 4409.79}
+    bandwidth = filter_bwidth.get(passband, filter_bwidth['ip']) * u.angstrom
+
+    return bandwidth
+
+
 def construct_tic_params(instrument, passband='ip'):
     """Builds and returns the dict of telescope, instrument & CCD parameters ("tic_params")
     for the specified <instrument> (one of {F65-FLOYDS, E10-FLOYDS}) and <passband>
