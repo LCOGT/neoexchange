@@ -771,8 +771,8 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_list=[], shape
     contrast_switch = Toggle(label="Remove Shading", button_type="default")  # Change lighting contrast
     orbit_slider = Slider(title="Orbital Phase", value=0, start=-1, end=1, step=.01, width=200, tooltips=True)
     rotation_slider = Slider(title="Rotational Phase", value=0, start=-2, end=2, step=.01, width=200, tooltips=True)
-    shape_labels = [str(x) for x in range(len(shape_model_dict))]
-    shape_select = Select(title="Shape Model", value='0', options=shape_labels)
+    shape_labels = [str(x+1) for x in range(len(shape_model_dict))]
+    shape_select = Select(title="Shape Model", value='1', options=shape_labels)
 
     # Create plots
     error_cap = TeeHead(line_alpha=0)
@@ -820,15 +820,18 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_list=[], shape
         shape_patches.append(plot_shape.patches(xs="faces_x", ys="faces_y", source=shape, color="faces_colors", visible=shape_vis))
     shape_rot_source_list = shape_sources + pole_sources
     plot_shape.add_tools(RotTool(source=cursor_change_source, coords_list=shape_rot_source_list))
-    shape_label_source = ColumnDataSource(data=dict(x=[10, 10, 555, 555], y=[565, 545, 565, 545],
-                                                    align=['left', 'left', 'right', 'right'],
+    shape_label_source = ColumnDataSource(data=dict(x=[10, 10, 555, 555, 10, 10], y=[565, 545, 565, 545, 35, 15],
+                                                    align=['left', 'left', 'right', 'right', 'left', 'left'],
                                                     text=['Pole Orientation:',
                                                           f'({round(degrees(pole_vector[0]["p_long"][0]),1)}, {round(degrees(pole_vector[0]["p_lat"][0]) + 90,1)})',
                                                           'Heliocentric Position:',
-                                                          f'({round(body.longascnode, 1)}, 0.0)']))
+                                                          f'({round(body.longascnode, 1)}, 0.0)',
+                                                          'Sidereal Period:',
+                                                          f'{pole_vector[0]["period_fit"][0]}h']))
     pole_label = LabelSet(x='x', y='y', x_units='screen', y_units='screen', text='text', text_align='align', source=shape_label_source,
                           render_mode='css', text_color='limegreen')
     plot_shape.add_layout(pole_label)
+
 
     # Write custom JavaScript Code to print the time to the next iteration of the given phase in a HoverTool
     js_hover_text = get_js_as_text(js_file, "next_time_phased")

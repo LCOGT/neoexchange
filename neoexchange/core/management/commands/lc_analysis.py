@@ -45,7 +45,8 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('path', type=str, help='location of lightcurve data '
-                                                   '(e.g. /apophis/eng/rocks/Reduction/aster123/)')
+                                                   '(e.g. /apophis/eng/rocks/Reduction/aster123/). '
+                                                   'Should be DamitDoc Directory for lc_model.')
         parser.add_argument('-pmin', '--period_min', type=float, default=None, help='min period for period search (h)')
         parser.add_argument('-pmax', '--period_max', type=float, default=None, help='max period for period search (h)')
         parser.add_argument('-p', '--period', type=float, default=None, help='base period to search around (h)')
@@ -268,6 +269,8 @@ class Command(BaseCommand):
             file = os.path.join(path, file)
             meta_list, lc_list = import_alcdef(file, meta_list, lc_list)
         names = list(set([x['OBJECTNUMBER'] for x in meta_list]))
+        if not names:
+            names = [search(path, '.*.convinv_par.out')[0].split('_')[0]]
         if names == ['0']:
             names = list(set([x['OBJECTNAME'] for x in meta_list]))
         if len(names) != 1:
@@ -295,8 +298,13 @@ class Command(BaseCommand):
                 if dir_num < d_num:
                     dir_num = d_num
 
-        dir_name = os.path.join(path, f"DamitDocs_{str(dir_num+1).zfill(3)}_{period}_{len(meta_list)}")
-        if options['lc_model']:
+        if options['period_scan']:
+            # Create period_scan input file
+            psinput_filename = self.import_or_create_psinput(path, obj_name, pmin, pmax)
+            # Run Period Scan
+            psoutput_filename = os.path.join(path, f'{obj_name}_{pmin}T{pmax}_period_scan.out')
+            ps_retcode_or_cmdline = run_damit_periodscan(lcs_input_filename, psinput_filename, psoutput_filename)
+        elif options['lc_model']:
             if isinstance(options['lc_model'], str):
                 try:
                     start_stop_dates = options['lc_model'].split('-')
@@ -311,16 +319,20 @@ class Command(BaseCommand):
             epoch_input_file = default_storage.open(epoch_input_filename, 'w')
             jpl_mean_mag, model_ltt_list = self.create_epoch_input(epoch_input_file, period, start_date, end_date, body_elements)
             epoch_input_file.close()
-        else:
-            epoch_input_filename = None
-        if options['period_scan']:
-            # Create period_scan input file
-            psinput_filename = self.import_or_create_psinput(path, obj_name, pmin, pmax)
-            # Run Period Scan
-            psoutput_filename = os.path.join(path, f'{obj_name}_{pmin}T{pmax}_period_scan.out')
-            ps_retcode_or_cmdline = run_damit_periodscan(lcs_input_filename, psinput_filename, psoutput_filename)
+            # Create Model lc for given epochs.
+            convinv_outpar_filename = search(path, '.*.convinv_par.out', latest=True)
+            shape_model_filename = search(path, '.*.trifaces.shape', latest=True)
+            if not convinv_outpar_filename or not shape_model_filename:
+                raise CommandError("Both convinv_par.out and model.shape files required for lc_model.")
+            lcgen_outlcs_filename = os.path.join(path, obj_name + f'_{options["lc_model"]}_lcgen_lcs.out')
+            lcgen_lc_final_filename = os.path.join(path, obj_name + f'_{options["lc_model"]}_lcgen_lcs.final')
+            lcgenerat_retcode_or_cmdline = run_damit('lcgenerator', epoch_input_filename,
+                                                     f" {convinv_outpar_filename} {shape_model_filename} {lcgen_outlcs_filename}")
+            self.zip_lc_model(epoch_input_filename, lcgen_outlcs_filename, lcgen_lc_final_filename, jpl_mean_mag,
+                              model_ltt_list)
         else:
             # Create convinv input file
+            dir_name = os.path.join(path, f"DamitDocs_{str(dir_num + 1).zfill(3)}_{period}_{len(meta_list)}")
             if not os.path.exists(dir_name):
                 os.makedirs(dir_name)
             convinv_input_filename, conjinv_input_filename = self.import_or_create_cinv_input(dir_name, obj_name, period)
@@ -331,10 +343,8 @@ class Command(BaseCommand):
             conjinv_outareas_filename = basename + '_conjinv_areas.out'
             conjinv_outlcs_filename = basename + '_conjinv_lcs.out'
             conjinv_lc_final_filename = basename + '_conjinv_lcs.final'
-            mink_faces_filename = basename + '_minface.out'
-            shape_model_filename = basename + '_model.shape'
-            lcgen_outlcs_filename = basename + '_lcgen_lcs.out'
-            lcgen_lc_final_filename = basename + '_lcgen_lcs.final'
+            mink_faces_filename = basename + '_model.shape'
+            shape_model_filename = basename + '_trifaces.shape'
 
             # Invert LC and calculate orientation/rotation parameters
             convexinv_retcode_or_cmdline = run_damit('convexinv', lcs_input_filename,
@@ -355,9 +365,4 @@ class Command(BaseCommand):
             stanrdtri_retcode_or_cmdline = run_damit('standardtri', mink_faces_filename, f"", write_out=shape_model_file)
             shape_model_file.close()
 
-            # Create Model lc for given epochs.
-            if epoch_input_filename:
-                lcgenerat_retcode_or_cmdline = run_damit('lcgenerator', epoch_input_filename,
-                                                         f" {convinv_outpar_filename} {shape_model_filename} {lcgen_outlcs_filename}")
-                self.zip_lc_model(epoch_input_filename, lcgen_outlcs_filename, lcgen_lc_final_filename, jpl_mean_mag, model_ltt_list)
         return

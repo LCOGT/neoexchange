@@ -450,11 +450,12 @@ function shape_select(selector, plots, labels, poles){
     const label_text = labels.data['text']
 
     for (var i = 0; i < plots.length; i++){
-        if (Number(selector.value) == i){
+        if (Number(selector.value) == i+1){
             plots[i].visible = true;
             const long_deg = poles[i]["p_long"][0] / Math.PI * 180
             const lat_deg = poles[i]["p_lat"][0] / Math.PI * 180 + 90
             label_text[1] = '(' + long_deg.toFixed(1) + ', ' + lat_deg.toFixed(1) + ')'
+            label_text[5] = poles[i]["period_fit"][0] + 'h'
             labels.change.emit()
         } else {
             plots[i].visible = false;
@@ -465,7 +466,7 @@ function shape_select(selector, plots, labels, poles){
 
 function shading_slider(source, orbit_slider, rot_slider, long_asc, inc, sn, prev_rot, orient, label){
     // CustomJS to adjust shading and rotation of shape model.
-    const model_num = Number(sn.value)
+    const model_num = Number(sn.value-1)
     const dataset = source[model_num].data;
     const pr = prev_rot.data['prev_rot'];
     const orient_data = orient[model_num].data

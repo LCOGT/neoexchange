@@ -3939,6 +3939,9 @@ def import_lc_model(file, model_list):
     """Pull model lc from intensity files."""
 
     lc_model_file = default_storage.open(file, 'rb')
+    run_num = os.path.dirname(file).split('_')[1]
+    file_parts = os.path.basename(file).split('_')
+    name = f'{file_parts[2]} ({file_parts[1]}) [run:{run_num}]'
     lines = lc_model_file.readlines()
     model_jd = []
     model_mag = []
@@ -3950,12 +3953,12 @@ def import_lc_model(file, model_list):
         elif k > 0:
             model_list['date'].append(copy.deepcopy(model_jd))
             model_list['mag'].append(copy.deepcopy(model_mag))
-            model_list['name'].append(os.path.basename(file))
+            model_list['name'].append(name)
             model_jd.clear()
             model_mag.clear()
     model_list['date'].append(copy.deepcopy(model_jd))
     model_list['mag'].append(copy.deepcopy(model_mag))
-    model_list['name'].append(os.path.basename(file))
+    model_list['name'].append(name)
     return model_list
 
 
@@ -4029,7 +4032,7 @@ def import_shape_model(file, body, model_params):
             shape_list['faces_level'].append(np.mean(face_z))
             brightness = S.sla_dmxv(rmat_sun, S.sla_dmxv(rmat_pole, normal))[0] * 100
             shape_list['faces_colors'].append(f"hsl(0, 0%, {brightness}%)")
-    pole_data = {"v_x": [pole_vector[0]], "v_y": [pole_vector[1]], "v_z": [pole_vector[2]], "p_lat": [pole_lat], "p_long": [pole_long]}
+    pole_data = {"v_x": [pole_vector[0]], "v_y": [pole_vector[1]], "v_z": [pole_vector[2]], "p_lat": [pole_lat], "p_long": [pole_long], "period_fit": [model_params['period']]}
     return shape_list, pole_data
 
 
@@ -4095,7 +4098,7 @@ def get_lc_plot(body, data):
             shape_model_list.append(shape_model_dict)
             pole_vector_list.append(pole_vector)
     else:
-        pole_vector_list = [{"v_x": [0], "v_y": [0], "v_z": [1], "p_lat": [0], "p_long": [0]}]
+        pole_vector_list = [{"v_x": [0], "v_y": [0], "v_z": [1], "p_lat": [0], "p_long": [0], "period_fit": [1]}]
 
     meta_list = [x for _, x in sorted(zip(lc_list, meta_list), key=lambda i: i[0]['date'][0])]
     lc_list = sorted(lc_list, key=lambda i: i['date'][0])
