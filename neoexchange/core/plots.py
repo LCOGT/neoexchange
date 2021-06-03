@@ -718,8 +718,8 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_list=[], shape
     plot_period.y_range = DataRange1d(names=['period'])
     plot_period.x_range = DataRange1d(names=['period'], bounds=(0, None))
     plot_orbit = figure(plot_width=900, plot_height=900, x_axis_location=None, y_axis_location=None)
-    plot_orbit.y_range = Range1d(-1.1 * body.meandist, 1.1 * body.meandist)
-    plot_orbit.x_range = Range1d(-1.1 * body.meandist, 1.1 * body.meandist)
+    plot_orbit.y_range = Range1d(min(-1.1, -1.1 * body.meandist), max(1.1, 1.1 * body.meandist))
+    plot_orbit.x_range = Range1d(min(-1.1, -1.1 * body.meandist), max(1.1, 1.1 * body.meandist))
     plot_orbit.grid.grid_line_color = None
     plot_shape = figure(plot_width=600, plot_height=600, x_axis_location=None, y_axis_location=None)
     plot_shape.grid.grid_line_color = None
