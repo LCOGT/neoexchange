@@ -111,6 +111,9 @@ RUN curl -fsSLO "$SUPERCRONIC_URL" \
         && mv "$SUPERCRONIC" "/usr/local/bin/${SUPERCRONIC}" \
         && ln -s "/usr/local/bin/${SUPERCRONIC}" /usr/local/bin/supercronic
 
+# Install Node.JS
+RUN dnf -y dnf module install nodejs:14
+
 # Install packages and update base system
 # XXX Need to install powertools repo
 RUN yum -y install \
