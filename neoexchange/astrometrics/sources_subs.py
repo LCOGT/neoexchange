@@ -1499,7 +1499,9 @@ def fetch_yarkovsky_targets_ftp(file_or_url=None):
     targets = []
     tempdir = None
 
-    if file_or_url is None:
+    if file_or_url is None or file_or_url.startswith('ftp://'):
+        if file_or_url is not None and file_or_url.startswith('ftp://'):
+            ftp_url = file_or_url
         tempdir = tempfile.mkdtemp(prefix='tmp_neox_')
         target_file = os.path.join(tempdir, 'yarkovsky_targets.txt')
 
