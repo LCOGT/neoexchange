@@ -1150,14 +1150,20 @@ def parse_portal_errors(sched_params):
     if sched_params.get('error_msg', None):
         msg += "\nAdditional information:"
         error_groups = sched_params['error_msg']
-        for error_type in error_groups.keys():
-            error_msgs = error_groups[error_type]
-            for errors in error_msgs:
-                if type(errors) == str:
-                    msg += "\n{err_type}: {error}".format(err_type=error_type, error=errors)
-                elif type(errors) == dict:
-                    for key in errors:
-                        msg += "\n".join(errors[key])
+        if type(error_groups) == dict:
+            for error_type in error_groups.keys():
+                error_msgs = error_groups[error_type]
+                for errors in error_msgs:
+                    if type(errors) == str:
+                        msg += "\n{err_type}: {error}".format(err_type=error_type, error=errors)
+                    elif type(errors) == dict:
+                        for key in errors:
+                            msg += "\n".join(errors[key])
+        elif type(error_groups) == str:
+            msg += "\n" + error_groups
+        else:
+            msg += "\nError parsing error message"
+
     return msg
 
 
