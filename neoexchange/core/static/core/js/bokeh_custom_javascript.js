@@ -599,3 +599,24 @@ function shading_slider(source, orbit_slider, rot_slider, long_asc, inc, sn, pre
     label_text[3] = '(' + long_deg.toFixed(1) + ', ' + lat_deg.toFixed(1) + ')'
     label.change.emit()
 }
+
+function u_plot_xaxis_scale(plot){
+    // change x_axis units on zoom
+    // plot => unphased plot. Requires 3 axes below plot.
+    const max = plot.x_range['end']
+    const min = plot.x_range['start']
+    const range = max-min
+    if (range < .5){
+        plot.below[0]['visible'] = false
+        plot.below[1]['visible'] = false
+        plot.below[2]['visible'] = true
+    } else if (range < 200){
+        plot.below[0]['visible'] = true
+        plot.below[1]['visible'] = false
+        plot.below[2]['visible'] = false
+    } else{
+        plot.below[0]['visible'] = false
+        plot.below[1]['visible'] = true
+        plot.below[2]['visible'] = false
+    }
+}

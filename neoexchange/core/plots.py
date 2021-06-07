@@ -39,7 +39,7 @@ from bokeh.plotting import figure
 from bokeh.resources import CDN, INLINE
 from bokeh.embed import components, file_html
 from bokeh.models import HoverTool, LabelSet, CrosshairTool, Whisker, TeeHead, Range1d, CustomJS, Title, CustomJSHover,\
-    DataRange1d, Tool, ColumnDataSource
+    DataRange1d, Tool, ColumnDataSource, LinearAxis
 from bokeh.models.widgets import CheckboxGroup, Slider, TableColumn, DataTable, HTMLTemplateFormatter, NumberEditor,\
     NumberFormatter, Spinner, Button, Panel, Tabs, Div, Toggle, Select, MultiSelect
 from bokeh.palettes import Category20, Category10
@@ -712,6 +712,7 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_list=[], shape
     plot_u = figure(plot_width=900, plot_height=400)
     plot_p = figure(plot_width=900, plot_height=400)
     plot_u.y_range.flipped = True
+    plot_u.y_range.only_visible = True
     plot_p.x_range = Range1d(0, 1.1, bounds=(-.2, 1.2))
     plot_p.y_range = DataRange1d(names=['mags'], flipped=True)
     plot_period = figure(plot_width=900, plot_height=400)
@@ -850,7 +851,7 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_list=[], shape
     # Set Axis and Title Text
     plot_u.yaxis.axis_label = 'Apparent Magnitude'
     plot_u.title.text = 'LC for {} ({})'.format(obj, date_range)
-    plot_u.xaxis.axis_label = 'Date (Hours from {}.5/{}.0)'.format(jd_utc2datetime(base_date).strftime("%Y-%m-%d"), base_date)
+
     plot_p.yaxis.axis_label = 'Apparent Magnitude'
     plot_p.title.text = 'LC for {} ({})'.format(obj, date_range)
     plot_p.xaxis.axis_label = 'Phase (Period = {}h / Epoch = {})'.format(period, base_date)
@@ -935,6 +936,37 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_list=[], shape
         orig_source.data = build_data_sets(unphased_lc_list, sess_title)
 
     update()  # initial load of the data
+
+    # set up variable x_axis on unphased plot
+    uplot_min = min(orig_source.data['time'])
+    uplot_max = max(orig_source.data['time'])
+    uplot_buffer = (uplot_max - uplot_min) * .1
+    uplot_min = uplot_min - uplot_buffer
+    uplot_max = uplot_max + uplot_buffer
+    plot_u.x_range = Range1d(uplot_min, uplot_max)
+    # Establish initial ranges
+    plot_u.extra_x_ranges = {"days": Range1d(uplot_min / 24, uplot_max / 24),
+                             "hours": Range1d(uplot_min, uplot_max),
+                             "mins": Range1d(uplot_min * 60, uplot_max * 60)}
+    # Build new axes
+    plot_u.add_layout(LinearAxis(x_range_name='days', visible=False,
+                                 axis_label=f'Date (Days from {jd_utc2datetime(base_date).strftime("%Y-%m-%d")}.5/{base_date}.0)'), 'below')
+    plot_u.add_layout(LinearAxis(x_range_name='mins', visible=False,
+                                 axis_label=f'Date (Minutes from {jd_utc2datetime(base_date).strftime("%Y-%m-%d")}.5/{base_date}.0)'), 'below')
+    plot_u.below[0].x_range_name = 'hours'
+    plot_u.below[0].visible = False
+    plot_u.below[0].axis_label = f'Date (Hours from {jd_utc2datetime(base_date).strftime("%Y-%m-%d")}.5/{base_date}.0)'
+    # Set visible axis
+    if uplot_max < .5:
+        plot_u.below[2].visible = True
+    elif uplot_max < 200:
+        plot_u.below[0].visible = True
+    else:
+        plot_u.below[1].visible = True
+    # Set up JS to change axes on zoom
+    u_plot_x_axis_js = get_js_as_text(js_file, "u_plot_xaxis_scale")
+    u_plot_x_axis_callback = CustomJS(args=dict(plot=plot_u), code=u_plot_x_axis_js)
+    plot_u.x_range.js_on_change('end', u_plot_x_axis_callback)
 
     # Create HTML template format that allows printing of data symbol
     template = """
