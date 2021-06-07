@@ -4,6 +4,10 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.8.8
+* Fix issue in error reporting when submitting cadence with no valid requests.
+* Allow a specific FTP URL file to be passed for the Yarkovsky fetcher and planner (for when the 'latest' symlink doesn't get updated)
+
 ### 3.8.7
 * Add support for generating PDS XML labels.
 * Add support for fetching Yarkovsky targets from JPL ftp site.
