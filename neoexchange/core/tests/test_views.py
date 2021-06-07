@@ -8114,3 +8114,13 @@ class TestParsePortalErrors(TestCase):
         msg = parse_portal_errors(params)
 
         self.assertEqual(expected_msg, msg)
+
+    def test_no_cadence_windows(self):
+        expected_msg = self.no_extrainfo_msg
+        expected_msg += '\nNo visible requests within cadence window parameters'
+
+        params = {'error_msg' : "No visible requests within cadence window parameters" }
+
+        msg = parse_portal_errors(params)
+
+        self.assertEqual(expected_msg, msg)
