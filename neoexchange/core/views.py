@@ -4055,12 +4055,12 @@ def update_taxonomy(body, tax_table, dbg=False):
         for taxobj in taxonomies:
             check_tax = SpectralInfo.objects.filter(body=body, taxonomic_class=taxobj[1], tax_scheme=taxobj[2], tax_reference=taxobj[3], tax_notes=taxobj[4])
             if check_tax.count() == 0:
-                params = {  'body'          : body,
-                            'taxonomic_class' : taxobj[1],
-                            'tax_scheme'    : taxobj[2],
-                            'tax_reference' : taxobj[3],
-                            'tax_notes'     : taxobj[4],
-                            }
+                params = {'body'          : body,
+                          'taxonomic_class': taxobj[1],
+                          'tax_scheme'    : taxobj[2],
+                          'tax_reference' : taxobj[3],
+                          'tax_notes'     : taxobj[4],
+                          }
                 tax, created = SpectralInfo.objects.get_or_create(**params)
                 if not created:
                     if dbg is True:
