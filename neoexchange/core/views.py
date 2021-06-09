@@ -2175,18 +2175,26 @@ def record_block(tracking_number, params, form_data, target):
                     elif chunks[-1] == 'SINISTRO':
                         site = 'sin'
 
-            block_kwargs = { 'superblock' : sblock_pk,
-                             'telclass' : params['pondtelescope'].lower(),
-                             'site'     : site,
-                             'obstype'  : obstype,
-                             'block_start' : dt_notz_blk_start,
-                             'block_end'   : dt_notz_blk_end,
-                             'request_number'  : request,
-                             'num_exposures'   : params['exp_count'],
-                             'exp_length'      : params['exp_time'],
-                             'active'   : True
-                           }
-            if (request_type == 'SIDEREAL' or request_type == 'ICRS') and params.get('solar_analog', False) is True and len(params.get('calibsource', {})) > 0:
+            block_kwargs = {'superblock': sblock_pk,
+                            'telclass': params['pondtelescope'].lower(),
+                            'site': site,
+                            'obstype': obstype,
+                            'block_start': dt_notz_blk_start,
+                            'block_end': dt_notz_blk_end,
+                            'request_number': request,
+                            'num_exposures': params['exp_count'],
+                            'exp_length': params['exp_time'],
+                            'active': True
+                            }
+            if request_type == 'SIDEREAL' or request_type == 'ICRS':
+                block_kwargs['body'] = None
+                block_kwargs['calibsource'] = target
+            else:
+                block_kwargs['body'] = target
+                block_kwargs['calibsource'] = None
+            pk = Block.objects.create(**block_kwargs)
+
+            if len(params.get('calibsource', {})) > 0:
                 try:
                     calib_source = StaticSource.objects.get(pk=params['calibsource']['id'])
                 except StaticSource.DoesNotExist:
@@ -2195,13 +2203,8 @@ def record_block(tracking_number, params, form_data, target):
                 block_kwargs['body'] = None
                 block_kwargs['calibsource'] = calib_source
                 block_kwargs['exp_length'] = params['calibsrc_exptime']
-            elif request_type == 'SIDEREAL' or request_type == 'ICRS':
-                block_kwargs['body'] = None
-                block_kwargs['calibsource'] = target
-            else:
-                block_kwargs['body'] = target
-                block_kwargs['calibsource'] = None
-            pk = Block.objects.create(**block_kwargs)
+                block_kwargs['obstype'] = Block.OPT_SPECTRA_CALIB
+                pk = Block.objects.create(**block_kwargs)
             i += 1
         return True
     else:

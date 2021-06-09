@@ -917,23 +917,19 @@ class TestSubmitBlockToScheduler(TestCase):
         mock_post.return_value.status_code = 201
 
         mock_post.return_value.json.return_value = {'id': 999, 'requests': [
-            {'id': 111, 'duration': 1820,
-             'configurations': [{
-                 'id': 2635701,
-                 'constraints': {'max_airmass': 1.74},
-                 'instrument_configs': [{'optical_elements': {'slit': 'slit_6.0as'}, 'rotator_mode': 'VFLOAT'}],
-                 'target': {'type': 'ORBITAL_ELEMENTS', 'name': '11500'},
-                 'type': 'SPECTRUM'}, ]
-             },
-            {'id': 112, 'duration': 665,
-             'configurations': [{
-                 'id': 2635704,
-                 'constraints': {'max_airmass': 1.74},
-                 'instrument_configs': [{'optical_elements': {'slit': 'slit_6.0as'}, 'rotator_mode': 'VFLOAT'}],
-                 'target': {'type': 'ICRS', 'name': 'SA107-684', 'ra': 234.3, 'dec': -0.16},
-                 'type': 'SPECTRUM'}, ]
-             }
-        ]}
+            {'id': 111, 'duration': 2485,
+             'configurations': [
+                 {'id': 2635701,
+                  'constraints': {'max_airmass': 1.74},
+                  'instrument_configs': [{'optical_elements': {'slit': 'slit_6.0as'}, 'rotator_mode': 'VFLOAT'}],
+                  'target': {'type': 'ORBITAL_ELEMENTS', 'name': '11500'},
+                  'type': 'SPECTRUM'},
+                 {'id': 2635704,
+                  'constraints': {'max_airmass': 1.74},
+                  'instrument_configs': [{'optical_elements': {'slit': 'slit_6.0as'}, 'rotator_mode': 'VFLOAT'}],
+                  'target': {'type': 'ICRS', 'name': 'SA107-684', 'ra': 234.3, 'dec': -0.16},
+                  'type': 'SPECTRUM'}]
+             }, ]}
 
         body_elements = model_to_dict(self.body)
         body_elements['epochofel_mjd'] = self.body.epochofel_mjd()

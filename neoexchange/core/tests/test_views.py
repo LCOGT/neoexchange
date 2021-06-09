@@ -1108,25 +1108,23 @@ class TestRecordBlock(TestCase):
         self.assertEqual(True, sblocks[0].rapid_response)
 
     def test_spectro_and_solar_block(self):
-        new_params = { 'calibsource' : {'id': 1,
-                                        'name': 'Landolt SA107-684',
-                                        'ra_deg': 234.325,
-                                        'dec_deg': -0.164,
-                                        'pm_ra': 0.0,
-                                        'pm_dec': 0.0,
-                                        'parallax': 0.0
-                                        },
-                        'calibsrc_exptime' : 60.0,
-                        'dec_deg' : -0.164,
-                        'ra_deg'  : 234.325,
-                        'solar_analog' : True
-                        }
+        new_params = {'calibsource': {'id': 1,
+                                      'name': 'Landolt SA107-684',
+                                      'ra_deg': 234.325,
+                                      'dec_deg': -0.164,
+                                      'pm_ra': 0.0,
+                                      'pm_dec': 0.0,
+                                      'parallax': 0.0
+                                      },
+                      'calibsrc_exptime': 60.0,
+                      'dec_deg': -0.164,
+                      'ra_deg': 234.325,
+                      'solar_analog': True
+                      }
         spectro_params = {**new_params, **self.spectro_params}
         spectro_params['group_name'] = self.spectro_params['group_name'] + '+solstd'
-        spectro_params['request_numbers'] = {1450339: 'NON_SIDEREAL', 1450340: 'SIDEREAL'}
-        spectro_params['request_windows'] = [[{'end': '2018-03-16T18:30:00', 'start': '2018-03-16T11:20:00'}],
-                                            [{'end': '2018-03-16T18:30:00', 'start': '2018-03-16T11:20:00'}]
-                                           ]
+        spectro_params['request_numbers'] = {1450339: 'NON_SIDEREAL'}
+        spectro_params['request_windows'] = [[{'end': '2018-03-16T18:30:00', 'start': '2018-03-16T11:20:00'}]]
 
         block_resp = record_block(self.spectro_tracknum, spectro_params, self.spectro_form, self.spectro_body)
 
