@@ -228,10 +228,16 @@ class Block(models.Model):
     def num_spectro_frames(self):
         """Returns the numbers of different types of spectroscopic frames"""
         num_moltypes_string = 'No data'
-        data, num_frames = check_for_archive_images(self.request_number, obstype='')
+        try:
+            data, num_frames = check_for_archive_images(self.request_number, obstype='', obj=self.body.current_name())
+        except AttributeError:
+            try:
+                data, num_frames = check_for_archive_images(self.request_number, obstype='', obj=self.calibsource.name)
+            except AttributeError:
+                data, num_frames = check_for_archive_images(self.request_number, obstype='', obj='')
         if num_frames > 0:
             moltypes = [x['OBSTYPE'] if x['RLEVEL'] != 90 else "TAR" for x in data]
-            num_moltypes = {x : moltypes.count(x) for x in set(moltypes)}
+            num_moltypes = {x: moltypes.count(x) for x in set(moltypes)}
             num_moltypes_sort = OrderedDict(sorted(num_moltypes.items(), reverse=True))
             num_moltypes_string = ", ".join([x+": "+str(num_moltypes_sort[x]) for x in num_moltypes_sort])
         return num_moltypes_string
