@@ -1944,7 +1944,7 @@ class TestPreviousNEOCPParser(TestCase):
         """Test for Issue #548 from 2021/6/11 where artificial satellites
         were reported in a new format"""
         items = [' ZTF0LBs was suspected artificial (June 6.81 UT)\n']
-        expected = [u'ZTF0LBs' , 'wasnotminorplanet', '', u'(June. 6.81 UT)']
+        expected = [u'ZTF0LBs' , 'wasnotminorplanet', '', u'(June 6.81 UT)']
 
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
