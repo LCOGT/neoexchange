@@ -149,7 +149,7 @@ def parse_previous_NEOCP_id(items, dbg=False):
         elif len(chunks) >= 5:
             if chunks[2].lower() == 'not' and chunks[3].lower() == 'confirmed':
                 none_id = 'wasnotconfirmed'
-            elif chunks[2].lower() == 'not' and chunks[4].lower() == 'minor':
+            elif (chunks[2].lower() == 'not' and chunks[4].lower() == 'minor') or (chunks[2].lower() == 'suspected' and chunks[3].lower() == 'artificial'):
                 none_id = 'wasnotminorplanet'
             elif chunks[2].lower() == 'not' and chunks[3].lower() == 'interesting':
                 none_id = ''
