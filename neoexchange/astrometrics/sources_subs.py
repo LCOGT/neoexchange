@@ -24,12 +24,14 @@ import imaplib
 import email
 from re import sub, compile
 from math import degrees
-from datetime import datetime, timedelta
+from time import sleep
+from datetime import date, datetime, timedelta
 from socket import error
 from random import randint
-from time import sleep
-from datetime import date
 import requests
+import shutil
+import tempfile
+from contextlib import closing
 
 from bs4 import BeautifulSoup
 import astropy.units as u
@@ -147,7 +149,7 @@ def parse_previous_NEOCP_id(items, dbg=False):
         elif len(chunks) >= 5:
             if chunks[2].lower() == 'not' and chunks[3].lower() == 'confirmed':
                 none_id = 'wasnotconfirmed'
-            elif chunks[2].lower() == 'not' and chunks[4].lower() == 'minor':
+            elif (chunks[2].lower() == 'not' and chunks[4].lower() == 'minor') or (chunks[2].lower() == 'suspected' and chunks[3].lower() == 'artificial'):
                 none_id = 'wasnotminorplanet'
             elif chunks[2].lower() == 'not' and chunks[3].lower() == 'interesting':
                 none_id = ''
@@ -1429,7 +1431,7 @@ def get_site_status(site_code):
 # Get dictionary mapping LCO code (site-enclosure-telescope) to MPC site code
 # and reverse it
     site_codes = cfg.valid_site_codes
-    lco_codes = {mpc_code:lco_code.lower().replace('-', '.') for lco_code, mpc_code in site_codes.items()}
+    lco_codes = {mpc_code: lco_code.lower().replace('-', '.') for lco_code, mpc_code in site_codes.items()}
 
     response = get_telescope_states()
 
@@ -1448,8 +1450,29 @@ def get_site_status(site_code):
     return good_to_schedule, reason
 
 
-def fetch_yarkovsky_targets(yark_targets):
-    """Fetches Yarkovsky targets from command line and returns a list of targets"""
+def fetch_yarkovsky_targets(targets_or_file=None):
+    """Main wrapper routine for either fetch_yarkovsky_targets_list() or
+    fetch_yarkovsky_targets_ftp() to fetch Yarkovsky targets.
+    If [targets_or_file] is a `list` of targets, fetch_yarkovsky_targets_list()
+    is called; if [targets_or_file] is a filename or None, then
+    fetch_yarkovsky_targets_ftp() is called and the target list comes from either
+    the FTP site (`targets_or_file=None`) or by reading the file specified by
+    `targets_or_file`.
+
+    Returns a list of target names.
+    """
+
+    if type(targets_or_file) == list:
+        yark_target_list = fetch_yarkovsky_targets_list(targets_or_file)
+    else:
+        yark_target_list = fetch_yarkovsky_targets_ftp(targets_or_file)
+
+    return yark_target_list
+
+
+def fetch_yarkovsky_targets_list(yark_targets):
+    """Parses a list of lines of Yarkovsky targets (read from a file and which
+    may contain comments) and returns a list of targets"""
 
     yark_target_list = []
 
@@ -1465,6 +1488,47 @@ def fetch_yarkovsky_targets(yark_targets):
 
     return yark_target_list
 
+
+def fetch_yarkovsky_targets_ftp(file_or_url=None):
+    """Fetches Yarkovsky targets from either the specified file (if [file_or_url]
+    is not None) or the current list from the FTP site
+    and parses it to return the target and expected A2 Yarkovsky value and
+    its error"""
+    ftp_url = 'ftp://ssd.jpl.nasa.gov/pub/ssd/yarkovsky/yarko_targets/yarko_latest.txt'
+
+    targets = []
+    tempdir = None
+
+    if file_or_url is None or file_or_url.startswith('ftp://'):
+        if file_or_url is not None and file_or_url.startswith('ftp://'):
+            ftp_url = file_or_url
+        tempdir = tempfile.mkdtemp(prefix='tmp_neox_')
+        target_file = os.path.join(tempdir, 'yarkovsky_targets.txt')
+
+        with closing(urllib.request.urlopen(ftp_url)) as read_fp:
+            with open(target_file, 'wb') as write_fp:
+                shutil.copyfileobj(read_fp, write_fp)
+    else:
+        target_file = file_or_url
+
+    if os.path.exists(target_file):
+        table = ascii.read(target_file, format='csv')
+
+        for target in list(table['base']):
+            target = target.upper()
+            # Look for designations of the for yyyyXY[12] and add space in the middle
+            if len(target) >=6 and target[0:4].isdigit() and target[4:6].isalpha():
+                target = target[0:4] + ' ' + target[4:]
+            targets.append(target)
+
+        if tempdir:
+            try:
+                os.remove(target_file)
+                os.rmdir(tempdir)
+            except FileNotFoundError:
+                pass
+
+    return targets
 
 def fetch_sfu(page=None):
     """Fetches the solar radio flux from the Solar Radio Monitoring
@@ -1511,7 +1575,7 @@ def fetch_sfu(page=None):
 
 
 def make_location(params):
-    location = {'telescope_class' : params['pondtelescope'][0:3]}
+    location = {'telescope_class': params['pondtelescope'][0:3]}
     if params.get('site', None):
         location['site'] = params['site'].lower()
     if params['site_code'] == 'W85':
@@ -1594,30 +1658,66 @@ def make_window(params):
     return window
 
 
-def make_config(params, exp_filter):
+def make_config(params, filter_list):
     # Common part of a molecule
-    exp_count = exp_filter[1]
     conf = {
-        'type' : params['exp_type'],
-        'instrument_type'   : params['instrument'],
+        'type': params['exp_type'],
+        'instrument_type': params['instrument'],
         'target': params['target'],
         'constraints': params['constraints'],
         'acquisition_config': {},
         'guiding_config': {},
-        'instrument_configs': [
-            {
-                'exposure_count'  : exp_count,
-                'exposure_time' : params['exp_time'],
-                'bin_x'       : params['binning'],
-                'bin_y'       : params['binning'],
-                'optical_elements': {
-                    'filter': exp_filter[0]
-                }
-            }
-        ]
+        'instrument_configs': []
     }
-    if params.get('bin_mode', None) == '2k_2x2' and params['pondtelescope'] == '1m0':
-        conf['instrument_configs'][0]['mode'] = 'central_2k_2x2'
+    if params['exp_type'] == 'REPEAT_EXPOSE':
+        # Remove overhead from slot_length so repeat_exposure matches predicted frames.
+        # This will allow a 2 hour slot to fit within a 2 hour window.
+        single_mol_overhead = cfg.molecule_overhead['filter_change'] + cfg.molecule_overhead['per_molecule_time']
+        if '2M0' in params['instrument']:
+            overhead = cfg.tel_overhead['twom_setup_overhead']
+        elif '0M4' in params['instrument']:
+            overhead = cfg.tel_overhead['point4m_setup_overhead']
+        elif '1M0' in params['instrument']:
+            overhead = cfg.tel_overhead['onem_setup_overhead']
+        else:
+            overhead = 0
+        conf['repeat_duration'] = params['slot_length'] - overhead - single_mol_overhead - 1
+        conf['repeat_duration'] = max(conf['repeat_duration'], 1)
+    for filt in filter_list:
+        if params['exp_type'] == 'REPEAT_EXPOSE' and len(filter_list) == 1:
+            exp_count = 1
+        else:
+            exp_count = filt[1]
+
+        instrument_config = {'exposure_count': exp_count,
+                             'exposure_time': params['exp_time'],
+                             'bin_x': params['binning'],
+                             'bin_y': params['binning'],
+                             'optical_elements': {'filter': filt[0]}
+                             }
+
+        if params.get('bin_mode', None) == '2k_2x2' and params['pondtelescope'] == '1m0':
+            instrument_config['mode'] = 'central_2k_2x2'
+
+        if params['instrument'] == '2M0-SCICAM-MUSCAT':
+            if params.get('muscat_sync', False):
+                exposure_mode = 'SYNCHRONOUS'
+            else:
+                exposure_mode = 'ASYNCHRONOUS'
+            extra_params = {'exposure_time_g': params['muscat_exp_times']['gp_explength'],
+                            'exposure_time_r': params['muscat_exp_times']['rp_explength'],
+                            'exposure_time_i': params['muscat_exp_times']['ip_explength'],
+                            'exposure_time_z': params['muscat_exp_times']['zp_explength'],
+                            'exposure_mode': exposure_mode}
+            instrument_config['optical_elements'] = {'diffuser_g_position': 'out',
+                                                     'diffuser_r_position': 'out',
+                                                     'diffuser_i_position': 'out',
+                                                     'diffuser_z_position': 'out'}
+            instrument_config.pop('bin_x', None)
+            instrument_config.pop('bin_y', None)
+            instrument_config['extra_params'] = extra_params
+        conf['instrument_configs'].append(instrument_config)
+
     return conf
 
 
@@ -1650,7 +1750,7 @@ def make_spect_config(params, exp_filter):
         'target': params['target'],
         'acquisition_config': {
             'mode': 'BRIGHTEST',
-            'exposure_time' : params.get('ag_exp_time', 10),
+            'exposure_time': params.get('ag_exp_time', 10),
             "extra_params": {
               "acquire_radius": acq_rad,
             }
@@ -1658,7 +1758,7 @@ def make_spect_config(params, exp_filter):
         'guiding_config': {
             'mode': 'ON',
             'optional': False,
-            'exposure_time' : params.get('ag_exp_time', 10)
+            'exposure_time': params.get('ag_exp_time', 10)
         },
         'instrument_configs': [
             {
@@ -1668,7 +1768,7 @@ def make_spect_config(params, exp_filter):
                 'optical_elements': {
                     'slit': exp_filter[0]
                 },
-                'extra_params' : inst_extra
+                'extra_params': inst_extra
             }
         ]
     }
@@ -1682,7 +1782,7 @@ def make_configs(params):
     In spectroscopy mode, this will produce 1, 3 or 5 molecules depending on whether
     `params['calibs']` is 'none, 'before'/'after' or 'both'."""
 
-    filt_list = build_filter_blocks(params['filter_pattern'], params['exp_count'])
+    filt_list = build_filter_blocks(params['filter_pattern'], params['exp_count'], params['exp_type'])
 
     calib_mode = params.get('calibs', 'none').lower()
     if params.get('spectroscopy', False) is True:
@@ -1705,7 +1805,7 @@ def make_configs(params):
         else:
             configs = [spectrum_molecule, ]
     else:
-        configs = [make_config(params, filt) for filt in filt_list]
+        configs = [make_config(params, filt_list)]
 
     return configs
 
@@ -1717,8 +1817,8 @@ def make_constraints(params):
                     # 'max_airmass' : 1.55,   # 40 deg altitude (The maximum airmass you are willing to accept)
                     # 'max_airmass' : 2.37,   # 25 deg altitude (The maximum airmass you are willing to accept)
                     # 'min_lunar_distance': 30
-                    'max_airmass' : params.get('max_airmass', 1.74),
-                    'min_lunar_distance' : params.get('min_lunar_distance', 30)
+                    'max_airmass': params.get('max_airmass', 1.74),
+                    'min_lunar_distance': params.get('min_lunar_distance', 30)
                   }
     return constraints
 
@@ -1762,8 +1862,8 @@ def make_many(params, ipp_value, request, cal_request):
 
 def make_proposal(params):
     proposal = {
-                 'proposal_id' : params['proposal_id'],
-                 'user_id' : params['user_id']
+                 'proposal_id': params['proposal_id'],
+                 'user_id': params['user_id']
                }
     return proposal
 
@@ -1874,11 +1974,19 @@ def configure_defaults(params):
         pass
     params['binning'] = 1
     params['instrument'] = '1M0-SCICAM-SINISTRO'
-    params['exp_type'] = 'EXPOSE'
+
+    # Perform Repeated exposures if many exposures compared to number of filter changes.
+    if params['exp_count'] <= 10 or params['exp_count'] < 10*len(list(filter(None, params['filter_pattern'].split(',')))):
+        params['exp_type'] = 'EXPOSE'
+    else:
+        params['exp_type'] = 'REPEAT_EXPOSE'
 
     if params['site_code'] in ['F65', 'E10', '2M0']:
-        params['instrument'] = '2M0-SCICAM-SPECTRAL'
-        params['binning'] = 2
+        if 'F65' in params['site_code']:
+            params['instrument'] = '2M0-SCICAM-MUSCAT'
+        else:
+            params['instrument'] = '2M0-SCICAM-SPECTRAL'
+            params['binning'] = 2
         params['pondtelescope'] = '2m0'
         if params.get('spectroscopy', False) is True and 'FLOYDS' in params.get('instrument_code', ''):
             params['exp_type'] = 'SPECTRUM'
@@ -1912,6 +2020,7 @@ def configure_defaults(params):
 def make_requestgroup(elements, params):
 
     params = configure_defaults(params)
+
 # Create Location (site, observatory etc)
     location = make_location(params)
     logger.debug("Location=%s" % location)
@@ -1959,13 +2068,19 @@ def make_requestgroup(elements, params):
         if 'pm_dec' in params['calibsource']:
             params['pm_dec'] = params['calibsource']['pm_dec']
         params['target'] = make_target(params)
+        # save target exposure settings
         exp_time = params['exp_time']
-        params['exp_time'] = params['calibsrc_exptime']
+        exp_count = params['exp_count']
         ag_exptime = params.get('ag_exp_time', 10)
+        # update exposure settings for analog and create configurations
+        params['exp_time'] = params['calibsrc_exptime']
+        params['exp_count'] = 1
         params['ag_exp_time'] = 10
         params['rot_mode'] = 'VFLOAT'
         cal_configurations = make_configs(params)
+        # reinstate target exposure settings
         params['exp_time'] = exp_time
+        params['exp_count'] = exp_count
         params['ag_exp_time'] = ag_exptime
 
         cal_request = {
@@ -1995,6 +2110,21 @@ def make_requestgroup(elements, params):
 def submit_block_to_scheduler(elements, params):
 
     user_request = make_requestgroup(elements, params)
+
+    # Errors or mostly blank dict came back from make_requestgroup(), probably cadence-related
+    if user_request.get('errors', None):
+        msg = user_request['errors']
+        logger.error(msg)
+        params['error_msg'] = msg
+        return False, params
+    elif 'name' not in user_request and 'proposal' not in user_request:
+        error_msg = {}
+        for x in user_request['requests']:
+            if x != {}:
+                for key, value in x.items():
+                    error_msg[key] = value
+            params['error_msg'] = error_msg
+        return False, params
 
 # Make an endpoint and submit the thing
     try:
@@ -2069,6 +2199,8 @@ def fetch_filter_list(site, spec):
     elif '2m0' in telid.lower():
         if spec:
             camid = "2m0-FLOYDS-SciCam"
+        elif "OGG" in siteid.upper():
+            camid = "2M0-SCICAM-MUSCAT"
         else:
             camid = "2m0-SciCam-Spectral"
     else:
@@ -2096,14 +2228,19 @@ def fetch_filter_list(site, spec):
     if response.status_code in [200, 201]:
         resp = response.json()
 
+    fetch_error = ''
+    data_out = []
     if not resp:
-        logger.error('Could not find any telescopes at {}'.format(site))
-        data_out = []
+        fetch_error = 'The {} at {} is not schedulable.'.format(camid, site)
+    elif 'MUSCAT' in camid:
+        data_out = ['gp', 'rp', 'ip', 'zp']
     else:
         data_out = parse_filter_file(resp, spec)
         if not data_out:
-            logger.error('Could not find any filters for {}'.format(site))
-    return data_out
+            fetch_error = 'Could not find any filters for the {} at {}'.format(camid, site)
+    if fetch_error:
+        logger.error(fetch_error)
+    return data_out, fetch_error
 
 
 def parse_filter_file(resp, spec):
@@ -2498,15 +2635,15 @@ def store_jpl_physparams(phys_par, body):
     """Function to store object physical parameters from JPL Horizons"""
 
     # parsing the JPL physparams dictionary
-    for p in phys_par:   
+    for p in phys_par:
         if 'H' == p['name']:  # absolute magnitude
             p_type = 'H'
         elif 'G' == p['name']:  # magnitude (phase) slope
             p_type = 'G'
         elif 'diameter' in p['name']:  # diameter
-            p_type = 'D'     
+            p_type = 'D'
         elif 'extent' in p['name']:  # extent
-            continue        
+            continue
         elif 'GM' in p['name']:  # GM
             p_type = 'M'
         elif 'density' in p['name']:  # density
@@ -2566,7 +2703,7 @@ def store_jpl_physparams(phys_par, body):
             del phys_params['parameter_type']
         else:
             phys_params['value2'] = jpl_value2
-            phys_params['error2'] = jpl_error2  
+            phys_params['error2'] = jpl_error2
 
         saved = body.save_physical_parameters(phys_params)
         if saved:
@@ -2666,13 +2803,13 @@ def store_jpl_sourcetypes(code, obj, body):
         source_type = 'T'
         source_subtype_1 = 'P5'
     elif 'TNO' in code:  # Trans-Neptunian Object
-        source_type = 'K'        
+        source_type = 'K'
     elif 'IEO' in code:  # Atira
         source_subtype_1 = 'N1'
     elif 'ATE' in code:  # Aten
         source_subtype_1 = 'N2'
     elif 'APO' in code:  # Apollo
-        source_subtype_1 = 'N3'   
+        source_subtype_1 = 'N3'
     elif 'AMO' in code:  # Amor
         source_subtype_1 = 'N4'
     elif 'IMB' in code:  # inner main belt
@@ -2721,10 +2858,10 @@ def store_jpl_sourcetypes(code, obj, body):
                 source_subtype_2 = 'N'
 
     if source_type:
-        body.source_type = source_type        
+        body.source_type = source_type
     body.source_subtype_1 = source_subtype_1
     body.source_subtype_2 = source_subtype_2
     body.save()
-        
+
 
 

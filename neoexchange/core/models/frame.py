@@ -13,15 +13,13 @@ GNU General Public License for more details.
 from astropy.wcs import WCS
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
-from django.utils.encoding import force_text, python_2_unicode_compatible
+from django.utils.encoding import force_str
 try:
     # cpython 2.x
     from cPickle import loads, dumps
 except ImportError:
     from pickle import loads, dumps
 from base64 import b64decode, b64encode
-
-from core.models.blocks import Block
 
 class WCSField(models.Field):
 
@@ -37,7 +35,7 @@ class WCSField(models.Field):
         del kwargs["editable"]
         return name, path, args, kwargs
 
-    def from_db_value(self, value, expression, connection, context):
+    def from_db_value(self, value, expression, connection):
         if value is None:
             return value
         return unpickle_wcs(value)
@@ -56,7 +54,7 @@ class WCSField(models.Field):
 
     def get_db_prep_value(self, value, connection=None, prepared=False):
         if value is not None:
-            value = force_text(pickle_wcs(value))
+            value = force_str(pickle_wcs(value))
         return value
 
     def value_to_string(self, obj):
@@ -67,7 +65,6 @@ class WCSField(models.Field):
         return 'TextField'
 
 
-@python_2_unicode_compatible
 class Frame(models.Model):
     """ Model to represent (FITS) frames of data from observations successfully
     made and filename of data which resulted.
@@ -103,7 +100,7 @@ class Frame(models.Model):
     filename    = models.CharField('FITS filename', max_length=50, blank=True, null=True, db_index=True)
     exptime     = models.FloatField('Exposure time in seconds', null=True, blank=True)
     midpoint    = models.DateTimeField('UTC date/time of frame midpoint', null=False, blank=False, db_index=True)
-    block       = models.ForeignKey(Block, null=True, blank=True, on_delete=models.CASCADE)
+    block       = models.ForeignKey("core.Block", null=True, blank=True, on_delete=models.CASCADE)
     quality     = models.CharField('Frame Quality flags', help_text='Comma separated list of frame/condition flags', max_length=40, blank=True, default=' ')
     zeropoint   = models.FloatField('Frame zeropoint (mag.)', null=True, blank=True)
     zeropoint_err = models.FloatField('Error on Frame zeropoint (mag.)', null=True, blank=True)
@@ -173,7 +170,8 @@ class Frame(models.Model):
                         'W85' : 'LCO LSC Node 1m0 Dome A at Cerro Tololo, Chile',
                         'W86' : 'LCO LSC Node 1m0 Dome B at Cerro Tololo, Chile',
                         'W87' : 'LCO LSC Node 1m0 Dome C at Cerro Tololo, Chile',
-                        'V37' : 'LCO ELP Node at McDonald Observatory, Texas',
+                        'V37' : 'LCO ELP Node 1m0 Dome A at McDonald Observatory, Texas',
+                        'V39' : 'LCO ELP Node 1m0 Dome B at McDonald Observatory, Texas',
                         'Z21' : 'LCO TFN Node Aqawan A 0m4a at Tenerife, Spain',
                         'Z17' : 'LCO TFN Node Aqawan A 0m4b at Tenerife, Spain',
                         'Q58' : 'LCO COJ Node 0m4a at Siding Spring, Australia',

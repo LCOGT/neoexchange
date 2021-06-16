@@ -262,7 +262,7 @@ class TestComputeEphemerides(TestCase):
                          'type': 'MPC_MINOR_PLANET',
                          'uncertainty': 'U'}
 
-        self.length_emp_line = 11
+        self.length_emp_line = 12
 
     def test_body_is_correct_class(self):
         tbody = Body.objects.get(provisional_name='N999r0q')
@@ -297,6 +297,8 @@ class TestComputeEphemerides(TestCase):
         expected_alt = -58.658929026981895
         expected_spd = 119.94694444444444
         expected_pa = 91.35793788996334
+        expected_delta = 0.18138901132373111
+        expected_r = 0.9919581686703755
 
         emp_line = compute_ephem(d, self.elements, '500', dbg=False, perturb=True, display=False)
 
@@ -310,6 +312,8 @@ class TestComputeEphemerides(TestCase):
         self.assertAlmostEqual(expected_alt, emp_line['altitude'], precision)
         self.assertAlmostEqual(expected_spd, emp_line['southpole_sep'], precision)
         self.assertAlmostEqual(expected_pa,  emp_line['sky_motion_pa'], precision)
+        self.assertAlmostEqual(expected_delta,  emp_line['earth_obj_dist'], precision)
+        self.assertAlmostEqual(expected_r,  emp_line['sun_obj_dist'], precision)
 
     def test_compute_ephem_with_body(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
@@ -320,6 +324,8 @@ class TestComputeEphemerides(TestCase):
         expected_alt = -58.658929026981895
         expected_spd = 119.94694444444444
         expected_pa = 91.35793788996334
+        expected_delta = 0.18138901132373111
+        expected_r = 0.9919581686703755
 
         body_elements = model_to_dict(self.body)
         emp_line = compute_ephem(d, body_elements, '500', dbg=False, perturb=True, display=False)
@@ -334,7 +340,9 @@ class TestComputeEphemerides(TestCase):
         self.assertAlmostEqual(expected_alt, emp_line['altitude'], precision)
         self.assertAlmostEqual(expected_spd, emp_line['southpole_sep'], precision)
         self.assertAlmostEqual(expected_pa,  emp_line['sky_motion_pa'], precision)
-        
+        self.assertAlmostEqual(expected_delta,  emp_line['earth_obj_dist'], precision)
+        self.assertAlmostEqual(expected_r,  emp_line['sun_obj_dist'], precision)
+
     def test_compute_south_polar_distance_with_elements_in_north(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
         expected_dec = 0.522637696108887
@@ -597,6 +605,49 @@ class TestComputeEphemerides(TestCase):
         emp_line = compute_ephem(start, body_elements, site_code, perturb=False)
 
         self.assertEqual({}, emp_line)
+
+    def test_numerical_error(self):
+        orbelems = {
+                     'provisional_name': 'P10Ee5V',
+                     'provisional_packed': '',
+                     'name': 'C/2017 U1',
+                     'origin': 'M',
+                     'source_type': 'C',
+                     'source_subtype_1': 'H',
+                     'source_subtype_2': 'DN',
+                     'elements_type': 'MPC_COMET',
+                     'active': False,
+                     'fast_moving': False,
+                     'urgency': None,
+                     'epochofel': datetime(2017, 10, 20, 0, 0),
+                     'orbit_rms': 99.0,
+                     'orbinc': 122.48309,
+                     'longascnode': 24.60837,
+                     'argofperih': 241.31094,
+                     'eccentricity': 1.1938645,
+                     'meandist': None,
+                     'meananom': 0.0,
+                     'perihdist': 0.25316879,
+                     'epochofperih': datetime(2017, 9, 9, 10, 45, 27),
+                     'abs_mag': 22.2,
+                     'slope': 4.0,
+                     'score': 5,
+                     'discovery_date': datetime(2017, 10, 19, 7, 12),
+                     'num_obs': 57,
+                     'arc_length': 13.0,
+                     'not_seen': 0.908,
+                     'updated': True,
+                     'ingest': datetime(2017, 10, 19, 14, 20, 8),
+                     'update_time': datetime(2017, 10, 27, 17, 5, 51)}
+
+        start = datetime(2020, 11, 2, 9, 30)
+        site_code = 'W85'
+
+        try:
+            emp_line = compute_ephem(start, orbelems, site_code, perturb=False)
+            self.assertEqual({}, emp_line)
+        except ValueError:
+            self.fail("compute_ephem raised ValueError unexpectedly")
 
 
 class TestDarkAndObjectUp(TestCase):
@@ -1682,9 +1733,10 @@ class TestDetermineSlotLength(TestCase):
 
 class TestGetSiteCamParams(TestCase):
 
-    twom_setup_overhead = 240.0
+    twom_setup_overhead = 180.0
     twom_exp_overhead = 19.0
     twom_fov = radians(10.0/60.0)
+    twom_muscat_fov = radians(9.1/60.0)
     onem_sbig_fov = radians(15.5/60.0)
     onem_setup_overhead = 90.0
     onem_exp_overhead = 15.5
@@ -1705,7 +1757,7 @@ class TestGetSiteCamParams(TestCase):
         self.assertEqual(-1, exp_overhead)
 
     def test_2m_site(self):
-        site_code = 'f65'
+        site_code = 'E10'
         chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
         self.assertEqual(site_code.upper(), chk_site_code)
         self.assertEqual(0.304, pixel_scale)
@@ -1714,10 +1766,20 @@ class TestGetSiteCamParams(TestCase):
         self.assertEqual(self.twom_setup_overhead, setup_overhead)
         self.assertEqual(self.twom_exp_overhead, exp_overhead)
 
-    def test_2m_sitename(self):
-        site_code = 'F65'
+    def test_muscat_site(self):
+        site_code = 'f65'
+        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        self.assertEqual(site_code.upper(), chk_site_code)
+        self.assertEqual(0.27, pixel_scale)
+        self.assertEqual(self.twom_muscat_fov, ccd_fov)
+        self.assertEqual(self.max_exp, max_exp_time)
+        self.assertEqual(self.twom_setup_overhead, setup_overhead)
+        self.assertEqual(10, exp_overhead)
 
-        site_string = 'OGG-CLMA-2M0A'
+    def test_2m_sitename(self):
+        site_code = 'E10'
+
+        site_string = 'COJ-CLMA-2M0A'
         chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_string)
         self.assertEqual(site_code, chk_site_code)
         self.assertEqual(0.304, pixel_scale)
@@ -1886,8 +1948,8 @@ class TestDetermineExpTimeCount(TestCase):
         name = 'WH2845B'
         mag = 17.58
 
-        expected_exptime = 60.0
-        expected_expcount = 14
+        expected_exptime = 45.0
+        expected_expcount = 17
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
 
@@ -1916,8 +1978,8 @@ class TestDetermineExpTimeCount(TestCase):
         name = 'WH2845B'
         mag = 16.58
 
-        expected_exptime = 6.5
-        expected_expcount = 31
+        expected_exptime = 5.0
+        expected_expcount = 33
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
 
@@ -1947,7 +2009,7 @@ class TestDetermineExpTimeCount(TestCase):
         mag = 17.58
 
         expected_exptime = 1.0
-        expected_expcount = 32
+        expected_expcount = 35
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
 
@@ -1976,8 +2038,8 @@ class TestDetermineExpTimeCount(TestCase):
         name = 'WH2845B'
         mag = 17.58
 
-        expected_exptime = 40.0
-        expected_expcount = 23
+        expected_exptime = 45.0
+        expected_expcount = 21
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
 
@@ -1991,8 +2053,8 @@ class TestDetermineExpTimeCount(TestCase):
         name = 'WH2845B'
         mag = 17.58
 
-        expected_exptime = 4.0
-        expected_expcount = 60
+        expected_exptime = 5.0
+        expected_expcount = 57
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
 
@@ -2007,7 +2069,7 @@ class TestDetermineSpectroSlotLength(TestCase):
         exp_time = 180.0
         calibs = 'none'
 
-        expected_slot_length = 612.0
+        expected_slot_length = 552.0
 
         slot_length = determine_spectro_slot_length(exp_time, calibs)
 
@@ -2018,7 +2080,7 @@ class TestDetermineSpectroSlotLength(TestCase):
         exp_time = 180.0
         calibs = 'before'
 
-        expected_slot_length = 935.0
+        expected_slot_length = 875.0
 
         slot_length = determine_spectro_slot_length(exp_time, calibs)
 
@@ -2029,7 +2091,7 @@ class TestDetermineSpectroSlotLength(TestCase):
         exp_time = 180.0
         calibs = 'after'
 
-        expected_slot_length = 935.0
+        expected_slot_length = 875.0
 
         slot_length = determine_spectro_slot_length(exp_time, calibs)
 
@@ -2040,7 +2102,7 @@ class TestDetermineSpectroSlotLength(TestCase):
         exp_time = 180.0
         calibs = 'both'
 
-        expected_slot_length = 1258.0
+        expected_slot_length = 1198.0
 
         slot_length = determine_spectro_slot_length(exp_time, calibs)
 
@@ -2051,7 +2113,7 @@ class TestDetermineSpectroSlotLength(TestCase):
         exp_time = 180.0
         calibs = 'BoTH'
 
-        expected_slot_length = 1258.0
+        expected_slot_length = 1198.0
 
         slot_length = determine_spectro_slot_length(exp_time, calibs)
 
@@ -2063,7 +2125,7 @@ class TestDetermineSpectroSlotLength(TestCase):
         calibs = 'none'
         num_exp = 10
 
-        expected_slot_length = 961.0
+        expected_slot_length = 901.0
 
         slot_length = determine_spectro_slot_length(exp_time, calibs, num_exp)
 
@@ -2075,7 +2137,7 @@ class TestDetermineSpectroSlotLength(TestCase):
         calibs = 'after'
         num_exp = 10
 
-        expected_slot_length = 1284.0
+        expected_slot_length = 1224.0
 
         slot_length = determine_spectro_slot_length(exp_time, calibs, num_exp)
 
@@ -2087,7 +2149,7 @@ class TestDetermineSpectroSlotLength(TestCase):
         calibs = 'both'
         num_exp = 10
 
-        expected_slot_length = 1607.0
+        expected_slot_length = 1547.0
 
         slot_length = determine_spectro_slot_length(exp_time, calibs, num_exp)
 
@@ -2316,6 +2378,30 @@ class TestGetSitePos(TestCase):
         self.assertNotEqual(site_lat, 0.0)
         self.assertNotEqual(site_hgt, 0.0)
 
+    def test_mtjohn_by_code(self):
+        site_code = '474'
+
+        expected_site_name = 'MOA 1.8m at Mount John Observatory'
+
+        site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+
+        self.assertEqual(expected_site_name, site_name)
+        self.assertNotEqual(site_long, 0.0)
+        self.assertNotEqual(site_lat, 0.0)
+        self.assertNotEqual(site_hgt, 0.0)
+
+    def test_mtjohn_by_name(self):
+        site_code = 'NZTL-DOMA-1M8A'
+
+        expected_site_name = 'MOA 1.8m at Mount John Observatory'
+
+        site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+
+        self.assertEqual(expected_site_name, site_name)
+        self.assertNotEqual(site_long, 0.0)
+        self.assertNotEqual(site_lat, 0.0)
+        self.assertNotEqual(site_hgt, 0.0)
+
 
 class TestDetermineSitesToSchedule(TestCase):
 
@@ -2483,37 +2569,42 @@ class Testmolecule_overhead(TestCase):
     def test_single_filter(self):
         filter_pattern = 'V'
         expected_overhead = (2. + 5. + 11.)*1
-        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 10)))
+        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 10, 'EXPOSE')))
 
     def test_multiple_individual_filters(self):
         filter_pattern = 'V,R,I'
         expected_overhead = (2. + 5. + 11.)*10.
-        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 10)))
+        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 10, 'EXPOSE')))
 
     def test_multiple_repeated_filters(self):
         filter_pattern = 'V,R,I,V,R,I'
         expected_overhead = (2. + 5. + 11.)*10.
-        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 10)))
+        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 10, 'EXPOSE')))
 
     def test_multiple_filter_strings(self):
         filter_pattern = 'V,V,V,R,R,R,I,I,I,'
         expected_overhead = (2. + 5. + 11.)*5.
-        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 14)))
+        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 14, 'EXPOSE')))
 
     def test_short_block(self):
         filter_pattern = 'V,V,V,R,R,R,I,I,I,V'
         expected_overhead = (2. + 5. + 11.)*2.
-        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 5)))
+        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 5, 'EXPOSE')))
+
+    def test_repeat_expose(self):
+        filter_pattern = 'V,V,R,R,V,V'
+        expected_overhead = (2. + 5. + 11.)*3.
+        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 19, 'REPEAT_EXPOSE')))
 
     def test_start_end_loop(self):
         filter_pattern = 'V,V,R,R,V,V'
-        expected_overhead = (2. + 5. + 11.)*7.
-        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 19)))
+        expected_overhead = (2. + 5. + 11.)*4.
+        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 9, 'EXPOSE')))
 
     def test_exact_loop(self):
         filter_pattern = 'V,V,R,R,I,I'
         expected_overhead = (2. + 5. + 11.)*9.
-        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 18)))
+        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 18, 'EXPOSE')))
 
 
 class TestDetermineExpTimeCount_WithFilters(TestCase):
@@ -2526,8 +2617,8 @@ class TestDetermineExpTimeCount_WithFilters(TestCase):
         mag = 17.58
         filter_pattern = 'V,I'
 
-        expected_exptime = 60.0
-        expected_expcount = 11
+        expected_exptime = 45.0
+        expected_expcount = 13
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, filter_pattern)
 
@@ -2542,8 +2633,8 @@ class TestDetermineExpTimeCount_WithFilters(TestCase):
         mag = 17.58
         filter_pattern = 'V,V,V,R,R,R,I,I,I,V'
 
-        expected_exptime = 60.0
-        expected_expcount = 13
+        expected_exptime = 45.0
+        expected_expcount = 16
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, filter_pattern)
 
@@ -2558,8 +2649,8 @@ class TestDetermineExpTimeCount_WithFilters(TestCase):
         mag = 17.58
         filter_pattern = 'V,V,I,I'
 
-        expected_exptime = 60.0
-        expected_expcount = 12
+        expected_exptime = 45.0
+        expected_expcount = 15
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, filter_pattern)
 
@@ -2574,7 +2665,7 @@ class TestDetermineExpTimeCount_WithFilters(TestCase):
         mag = 17.58
         filter_pattern = 'V,I,V,I'
 
-        expected_exptime = 4.0
+        expected_exptime = 5.0
         expected_expcount = 30
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, filter_pattern)
@@ -2590,8 +2681,8 @@ class TestDetermineExpTimeCount_WithFilters(TestCase):
         mag = 17.58
         filter_pattern = 'V,V,V,V,V,V,R,R,R,R,R,R,I,I,I,I,I,I,I'
 
-        expected_exptime = 4.0
-        expected_expcount = 52
+        expected_exptime = 5.0
+        expected_expcount = 50
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, filter_pattern)
 
@@ -2606,8 +2697,8 @@ class TestDetermineExpTimeCount_WithFilters(TestCase):
         mag = 17.58
         filter_pattern = 'V,V,I,I'
 
-        expected_exptime = 4.0
-        expected_expcount = 40
+        expected_exptime = 5.0
+        expected_expcount = 39
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, filter_pattern)
 
@@ -3097,6 +3188,78 @@ class TestDetermineHorizonsId(TestCase):
                  '    90000544    2018    46P            46P             Wirtanen',
                  '']
         now = datetime(2008, 5, 11, 17, 20, 42)
+
+        horizons_id = determine_horizons_id(lines, now)
+
+        self.assertEqual(expected_id, horizons_id)
+
+    def test_29P(self):
+        expected_id = 90000393
+        lines = ['Ambiguous target name; provide unique id:',
+                 '    Record #  Epoch-yr  >MATCH DESIG<  Primary Desig  Name  ',
+                 '    --------  --------  -------------  -------------  -------------------------',
+                 '    90000387    1908    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000388    1925    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000389    1941    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000390    1957    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000391    1974    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000392    2007    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000393    2011    29P            29P             Schwassmann-Wachmann 1',
+                 '']
+        now = datetime(2020, 5, 11, 17, 20, 42)
+
+        horizons_id = determine_horizons_id(lines, now)
+
+        self.assertEqual(expected_id, horizons_id)
+
+    def test_29P_prior_apparition(self):
+        expected_id = 90000392
+        lines = ['Ambiguous target name; provide unique id:',
+                 '    Record #  Epoch-yr  >MATCH DESIG<  Primary Desig  Name  ',
+                 '    --------  --------  -------------  -------------  -------------------------',
+                 '    90000387    1908    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000388    1925    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000389    1941    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000390    1957    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000391    1974    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000392    2007    29P            29P             Schwassmann-Wachmann 1',
+                 '    90000393    2011    29P            29P             Schwassmann-Wachmann 1',
+                 '']
+        now = datetime(2008, 5, 11, 17, 20, 42)
+
+        horizons_id = determine_horizons_id(lines, now)
+
+        self.assertEqual(expected_id, horizons_id)
+
+    def test_10P_prior_apparition(self):
+        expected_id = 90000207
+        lines = ['Ambiguous target name; provide unique id:',
+                 '    Record #  Epoch-yr  >MATCH DESIG<  Primary Desig  Name  ',
+                 '    --------  --------  -------------  -------------  -------------------------',
+                 '    90000192    1873    10P            10P             Tempel 2',
+                 '    90000193    1878    10P            10P             Tempel 2',
+                 '    90000194    1894    10P            10P             Tempel 2',
+                 '    90000195    1899    10P            10P             Tempel 2',
+                 '    90000196    1904    10P            10P             Tempel 2',
+                 '    90000197    1915    10P            10P             Tempel 2',
+                 '    90000198    1920    10P            10P             Tempel 2',
+                 '    90000199    1925    10P            10P             Tempel 2',
+                 '    90000200    1930    10P            10P             Tempel 2',
+                 '    90000201    1946    10P            10P             Tempel 2',
+                 '    90000202    1951    10P            10P             Tempel 2',
+                 '    90000203    1957    10P            10P             Tempel 2',
+                 '    90000204    1962    10P            10P             Tempel 2',
+                 '    90000205    1967    10P            10P             Tempel 2',
+                 '    90000206    1972    10P            10P             Tempel 2',
+                 '    90000207    1978    10P            10P             Tempel 2',
+                 '    90000208    1983    10P            10P             Tempel 2',
+                 '    90000209    1988    10P            10P             Tempel 2',
+                 '    90000210    1994    10P            10P             Tempel 2',
+                 '    90000211    1999    10P            10P             Tempel 2',
+                 '    90000212    2008    10P            10P             Tempel 2',
+                 '    90000213    2011    10P            10P             Tempel 2',
+                 '']
+        now = datetime(1975, 5, 11, 17, 20, 42)
 
         horizons_id = determine_horizons_id(lines, now)
 

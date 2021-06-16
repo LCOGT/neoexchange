@@ -41,6 +41,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='sourcemeasurement',
             name='body',
-            field=models.ForeignKey(to='core.Body'),
+            field=models.ForeignKey(to='core.Body', on_delete=models.deletion.CASCADE),
         ),
     ]

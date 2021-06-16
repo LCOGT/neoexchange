@@ -1235,11 +1235,11 @@ class TestScheduleCheck(TestCase):
                             'speed': 2.904310588055287,
                             'slot_length': 20.0,
                             'filter_pattern': 'w',
-                            'pattern_iterations': 14.0,
+                            'pattern_iterations': 16.0,
                             'available_filters': 'air, ND, U, B, V, R, I, up, gp, rp, ip, zs, Y, w',
                             'bin_mode': None,
-                            'exp_count': 14,
-                            'exp_length': 50.0,
+                            'exp_count': 16,
+                            'exp_length': 40.0,
                             'schedule_ok': True,
                             'start_time': '2016-04-06T10:10:00',
                             'end_time': '2016-04-06T17:12:00',
@@ -1269,7 +1269,7 @@ class TestScheduleCheck(TestCase):
                             'moon_alt': -59.5216514230195,
                             'moon_phase': 1.2020664612667709,
                             'moon_sep': 170.4033428302428,
-                            'trail_len': 2.4202588233794056,
+                            'trail_len': 1.9362070587035247,
                             'typical_seeing': 2.0,
                             'ipp_value': 1.0,
                             'para_angle': False,
@@ -1823,21 +1823,21 @@ class TestScheduleCheck(TestCase):
     def test_mp_good_spectro(self):
         MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
 
-        data = { 'instrument_code' : 'E10-FLOYDS',
-                 'utc_date' : date(2016, 4, 6),
-                 'proposal_code' : self.neo_proposal.code,
-                 'spectroscopy' : True,
-                 'calibs' : 'both',
-                 'exp_length' : 300.0,
-                 'exp_count' : 1,
-                 'max_airmass': 2.0
-               }
+        data = {'instrument_code': 'E10-FLOYDS',
+                'utc_date': date(2016, 4, 6),
+                'proposal_code': self.neo_proposal.code,
+                'spectroscopy': True,
+                'calibs': 'both',
+                'exp_length': 300.0,
+                'exp_count': 1,
+                'max_airmass': 2.0
+                }
 
         expected_resp = {
                         'target_name': self.body_mp.current_name(),
                         'magnitude': 19.096949378287967,
                         'speed': 2.904309581894179,
-                        'slot_length': 23,
+                        'slot_length': 22,
                         'filter_pattern': 'slit_6.0as',
                         'pattern_iterations': 1.0,
                         'available_filters': 'slit_1.2as, slit_1.6as, slit_2.0as, slit_6.0as',
@@ -1856,19 +1856,19 @@ class TestScheduleCheck(TestCase):
                         'edit_window': False,
                         'ra_midpoint': 3.3125083797952244,
                         'dec_midpoint': -0.16076987807708198,
-                        'period' : None,
-                        'jitter' : None,
+                        'period': None,
+                        'jitter': None,
                         'bin_mode': None,
-                        'instrument_code' : 'E10-FLOYDS',
+                        'instrument_code': 'E10-FLOYDS',
                         'saturated': False,
-                        'snr' : 4.961338560320349,
-                        'calibs' : 'both',
-                        'spectroscopy' : True,
+                        'snr': 4.961338560320349,
+                        'calibs': 'both',
+                        'spectroscopy': True,
                         'too_mode': False,
-                        'calibsource' : {},
-                        'calibsource_id' : -1,
-                        'calibsource_exptime' : 60,
-                        'solar_analog' : False,
+                        'calibsource': {},
+                        'calibsource_id': -1,
+                        'calibsource_exptime': 60,
+                        'solar_analog': False,
                         'vis_time': 7.966666666666667,
                         'lco_enc': 'CLMA',
                         'lco_site': 'COJ',
@@ -1898,22 +1898,22 @@ class TestScheduleCheck(TestCase):
     def test_mp_good_spectro_solar_analog(self):
         MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
 
-        data = { 'instrument_code' : 'E10-FLOYDS',
-                 'utc_date' : date(2016, 4, 6),
-                 'proposal_code' : self.neo_proposal.code,
-                 'spectroscopy' : True,
-                 'calibs' : 'both',
-                 'exp_length' : 300.0,
-                 'exp_count' : 1,
-                 'solar_analog' : True,
-                 'max_airmass': 2.0
-               }
+        data = {'instrument_code': 'E10-FLOYDS',
+                'utc_date': date(2016, 4, 6),
+                'proposal_code': self.neo_proposal.code,
+                'spectroscopy': True,
+                'calibs': 'both',
+                'exp_length': 300.0,
+                'exp_count': 1,
+                'solar_analog': True,
+                'max_airmass': 2.0
+                }
 
         expected_resp = {
                         'target_name': self.body_mp.current_name(),
                         'magnitude': 19.096949378287967,
                         'speed': 2.904309581894179,
-                        'slot_length': 23,
+                        'slot_length': 22,
                         'filter_pattern': 'slit_6.0as',
                         'pattern_iterations': 1.0,
                         'available_filters': 'slit_1.2as, slit_1.6as, slit_2.0as, slit_6.0as',
@@ -1933,18 +1933,18 @@ class TestScheduleCheck(TestCase):
                         'edit_window': False,
                         'ra_midpoint': 3.3125083797952244,
                         'dec_midpoint': -0.16076987807708198,
-                        'period' : None,
-                        'jitter' : None,
-                        'instrument_code' : 'E10-FLOYDS',
+                        'period': None,
+                        'jitter': None,
+                        'instrument_code': 'E10-FLOYDS',
                         'saturated': False,
-                        'snr' : 4.961338560320349,
-                        'calibs' : 'both',
-                        'spectroscopy' : True,
+                        'snr': 4.961338560320349,
+                        'calibs': 'both',
+                        'spectroscopy': True,
                         'too_mode': False,
-                        'calibsource' : {'separation_deg' : 11.532781052438736, **model_to_dict(self.solar_analog)},
-                        'calibsource_id' : 1,
-                        'calibsource_exptime' : 180,
-                        'solar_analog' : True,
+                        'calibsource': {'separation_deg': 11.532781052438736, **model_to_dict(self.solar_analog)},
+                        'calibsource_id': 1,
+                        'calibsource_exptime': 180,
+                        'solar_analog': True,
                         'vis_time': 7.966666666666667,
                         'lco_enc': 'CLMA',
                         'lco_site': 'COJ',
@@ -2094,8 +2094,8 @@ class TestScheduleCheck(TestCase):
                         'target_name': self.body_mp.current_name(),
                         'start_time' : '2016-03-31T19:18:00',
                         'end_time'   : '2016-03-31T23:59:00',
-                        'exp_count'  : 18,
-                        'exp_length' : 30.0,
+                        'exp_count'  : 20,
+                        'exp_length' : 25.0,
                         'mid_time': '2016-03-31T21:38:00',
 
                         }
@@ -2121,8 +2121,8 @@ class TestScheduleCheck(TestCase):
                         'target_name': self.body_mp.current_name(),
                         'start_time' : '2016-04-01T00:00:00',
                         'end_time'   : '2016-04-01T02:44:00',
-                        'exp_count'  : 18,
-                        'exp_length' : 30.0,
+                        'exp_count'  : 20,
+                        'exp_length' : 25.0,
                         'mid_time': '2016-04-01T01:22:00',
 
                         }
@@ -2151,8 +2151,8 @@ class TestScheduleCheck(TestCase):
                         'end_time'   : '2016-04-21T08:06:00',
                         'vis_start' : '2016-04-21T02:30:00',
                         'vis_end'   : '2016-04-21T08:06:00',
-                        'exp_count'  : 7,
-                        'exp_length' : 165,
+                        'exp_count'  : 9,
+                        'exp_length' : 125,
                         'mid_time': '2016-04-21T05:18:00',
                         'magnitude' : 20.97
                         }
@@ -2183,7 +2183,7 @@ class TestScheduleCheck(TestCase):
                         'vis_start' : '2015-04-21T09:22:00',
                         'vis_end'   : '2015-04-21T11:08:00',
                         'exp_count'  : 6,
-                        'exp_length' : 165,
+                        'exp_length' : 125,
                         'mid_time': '2015-04-21T10:15:00',
                         'magnitude' : 20.97
                         }
@@ -2376,10 +2376,10 @@ class TestScheduleCheck(TestCase):
     def test_mp_semester_end_2018B_semester(self):
         MockDateTime.change_datetime(2018, 11, 29, 23, 0, 0)
 
-        data = { 'site_code' : 'Z17',
-                 'utc_date' : datetime(2018, 12, 1).date(),
-                 'proposal_code' : self.neo_proposal.code
-               }
+        data = {'site_code': 'Z17',
+                 'utc_date': datetime(2018, 12, 1).date(),
+                 'proposal_code': self.neo_proposal.code
+                }
 
         body = self.make_visible_obj(datetime(2018, 11, 30, 23, 0, 0))
 
@@ -2387,14 +2387,48 @@ class TestScheduleCheck(TestCase):
                         'target_name': body.current_name(),
                         'start_time' : '2018-11-30T20:38:00',
                         'end_time'   : '2018-11-30T23:59:00',
-                        'mid_time': '2018-11-30T22:18:00',
-
+                        'mid_time'   : '2018-11-30T22:18:00',
                         }
         resp = schedule_check(data, body)
 
         self.assertEqual(expected_resp['start_time'], resp['start_time'])
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_muscat_sub(self):
+        MockDateTime.change_datetime(2018, 11, 29, 23, 0, 0)
+
+        data = {'site_code': 'F65',
+                'utc_date': datetime(2018, 12, 1).date(),
+                'proposal_code': self.neo_proposal.code
+                }
+
+        body = self.make_visible_obj(datetime(2018, 11, 30, 23, 0, 0))
+
+        new_resp = {'site_code': 'F65',
+                    'available_filters': 'gp, rp, ip, zp',
+                    'exp_count': 8,
+                    'exp_length': 120.0,
+                    'slot_length': 22.5,
+                    'filter_pattern': 'gp',
+                    'pattern_iterations': 8.0,
+                    'gp_explength': 120.0,
+                    'rp_explength': 120.0,
+                    'ip_explength': 120.0,
+                    'zp_explength': 120.0,
+                    'muscat_sync': False,
+                    'group_name': 'over_there_F65-20181201',
+                    'lco_enc': 'CLMA',
+                    'lco_site': 'OGG',
+                    'lco_tel': '2M0',
+                    }
+
+        resp = schedule_check(data, body)
+
+        for key in new_resp:
+            self.assertEqual(new_resp[key], resp[key])
 
 
 class TestUpdateMPCOrbit(TestCase):
@@ -3177,7 +3211,7 @@ class TestIngestNewObject(TestCase):
         else:
             print("Not removing. Temporary test directory=", self.test_dir)
 
-    def _compare_bodies(self, body1, body2, excluded_keys={'_state', 'not_seen', 'ingest', 'update_time'}):
+    def _compare_bodies(self, body1, body2, excluded_keys={'_state', '_prefetched_objects_cache', 'not_seen', 'ingest', 'update_time'}):
         d1, d2 = body1.__dict__, body2.__dict__
         for key, value in d1.items():
             if key in excluded_keys:
@@ -6983,20 +7017,20 @@ class TestAddExternalSpectroscopyData(TestCase):
 
     def setUp(self):
 
-        params = { 'name' : '980',
-                   'provisional_name' : 'LNX0003',
-                   'origin' : 'L',
-                   'active' : True,
-                 }
+        params = {'name': '980',
+                  'provisional_name': 'LNX0003',
+                  'origin': 'L',
+                  'active': True,
+                  }
         self.body = Body.objects.create(pk=1, **params)
 
-        spec_params = {'body'          : self.body,
-                'spec_wav'      : 'Vis',
-                'spec_vis'      : 'spex/sp233/a265962.sp233.txt',
-                'spec_ref'      : 'sp[234]',
-                'spec_source'   : 'S',
-                'spec_date'     : '2017-09-25',
-                      }
+        spec_params = {'body': self.body,
+                       'spec_wav': 'Vis',
+                       'spec_vis': 'spex/sp233/a265962.sp233.txt',
+                       'spec_ref': 'sp[234]',
+                       'spec_source': 'S',
+                       'spec_date': '2017-09-25',
+                       }
         self.test_spectra = PreviousSpectra.objects.create(pk=1, **spec_params)
 
     def test_same_body_different_wavelength(self):
@@ -7005,6 +7039,17 @@ class TestAddExternalSpectroscopyData(TestCase):
         new_spec = update_previous_spectra(test_obj, 'S', dbg=True)
 
         self.assertEqual(expected_res, new_spec)
+
+    def test_same_everything_different_link(self):
+        expected_res = False
+        new_link = 'spex/sp233/a416584.sp234.txt'
+        self.assertNotEqual(new_link, self.test_spectra.spec_vis)
+        test_obj = ['LNX0003', 'Vis', new_link, "", "sp[234]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()]
+        new_spec = update_previous_spectra(test_obj, 'S', dbg=True)
+        self.test_spectra.refresh_from_db()
+
+        self.assertEqual(expected_res, new_spec)
+        self.assertEqual(new_link, self.test_spectra.spec_vis)
 
     def test_same_body_older(self):
         expected_res = False
@@ -8017,14 +8062,14 @@ class TestParsePortalErrors(TestCase):
         self.assertEqual(self.no_parse_msg, msg)
 
     def test_empty_response(self):
-        params = {'error_msg' : {} }
+        params = {'error_msg': {}}
         msg = parse_portal_errors(params)
 
         self.assertEqual(self.no_parse_msg, msg)
 
     def test_bad_proposal(self):
         expected_msg = self.no_extrainfo_msg + '\nproposal: Invalid pk "foo" - object does not exist.'
-        params = {'error_msg' : {'proposal': ['Invalid pk "foo" - object does not exist.']}}
+        params = {'error_msg': {'proposal': ['Invalid pk "foo" - object does not exist.']}}
 
         msg = parse_portal_errors(params)
 
@@ -8032,7 +8077,7 @@ class TestParsePortalErrors(TestCase):
 
     def test_no_visibility(self):
         expected_msg = self.no_extrainfo_msg + "According to the constraints of the request, the target is never visible within the time window. Check that the target is in the nighttime sky. Consider modifying the time window or loosening the airmass or lunar separation constraints. If the target is non sidereal, double check that the provided elements are correct."
-        params = {'error_msg' : {'requests': [{'non_field_errors': ['According to the constraints of the request, the target is never visible within the time window. Check that the target is in the nighttime sky. Consider modifying the time window or loosening the airmass or lunar separation constraints. If the target is non sidereal, double check that the provided elements are correct.']}]}}
+        params = {'error_msg': {'requests': [{'non_field_errors': ['According to the constraints of the request, the target is never visible within the time window. Check that the target is in the nighttime sky. Consider modifying the time window or loosening the airmass or lunar separation constraints. If the target is non sidereal, double check that the provided elements are correct.']}]}}
 
         msg = parse_portal_errors(params)
 
@@ -8042,9 +8087,39 @@ class TestParsePortalErrors(TestCase):
         expected_msg = self.no_extrainfo_msg + "According to the constraints of the request, the target is never visible within the time window. Check that the target is in the nighttime sky. Consider modifying the time window or loosening the airmass or lunar separation constraints. If the target is non sidereal, double check that the provided elements are correct."
         expected_msg += '\nproposal: Invalid pk "foo" - object does not exist.'
 
-        params = {'error_msg' : {'requests': [{'non_field_errors': ['According to the constraints of the request, the target is never visible within the time window. Check that the target is in the nighttime sky. Consider modifying the time window or loosening the airmass or lunar separation constraints. If the target is non sidereal, double check that the provided elements are correct.']}],
+        params = {'error_msg': {'requests': [{'non_field_errors': ['According to the constraints of the request, the target is never visible within the time window. Check that the target is in the nighttime sky. Consider modifying the time window or loosening the airmass or lunar separation constraints. If the target is non sidereal, double check that the provided elements are correct.']}],
                                  'proposal': ['Invalid pk "foo" - object does not exist.']}
-                 }
+                  }
+
+        msg = parse_portal_errors(params)
+
+        self.assertEqual(expected_msg, msg)
+
+    def test_multiple_blocks_same_name_error(self):
+        expected_msg = self.no_extrainfo_msg
+        expected_msg += '\nneox: Multiple Blocks for same day and site found'
+
+        params = {'error_msg': {'neox': ['Multiple Blocks for same day and site found']}}
+
+        msg = parse_portal_errors(params)
+
+        self.assertEqual(expected_msg, msg)
+
+    def test_no_proposal_permission(self):
+        expected_msg = self.no_extrainfo_msg
+        expected_msg += '\nneox: You do not have permission to schedule using proposal LCO20XXB-003'
+
+        params = {'error_msg': {'neox': ['You do not have permission to schedule using proposal LCO20XXB-003']}}
+
+        msg = parse_portal_errors(params)
+
+        self.assertEqual(expected_msg, msg)
+
+    def test_no_cadence_windows(self):
+        expected_msg = self.no_extrainfo_msg
+        expected_msg += '\nNo visible requests within cadence window parameters'
+
+        params = {'error_msg' : "No visible requests within cadence window parameters" }
 
         msg = parse_portal_errors(params)
 

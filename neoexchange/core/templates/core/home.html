@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load staticfiles basic_tags %}
+{% load static basic_tags %}
 
 {% block css-content %}<link rel="stylesheet" href="{% static 'core/css/forms.css' %}">{% endblock %}
 
@@ -42,7 +42,7 @@
         </div>
     </div>
 
-    <div class="fullwidth">
+    <div class="container-lg">
         <table id="id_neo_targets" class="datatable">
             <thead>
                 <tr>

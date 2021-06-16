@@ -21,24 +21,24 @@ import json
 import logging
 import tempfile
 import bokeh
-from django.db.models import Q, Prefetch
-from django.forms.models import model_to_dict
+from bs4 import BeautifulSoup
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.files.storage import default_storage
 from django.core.paginator import Paginator
-from django.urls import reverse, reverse_lazy
-from django.shortcuts import render, redirect
-from django.views.generic import DetailView, ListView, FormView, TemplateView, View
-from django.views.generic.edit import FormView
-from django.views.generic.detail import SingleObjectMixin
+from django.db.models import Q, Prefetch
+from django.forms.models import model_to_dict
 from django.http import Http404, HttpResponse, HttpResponseRedirect
+from django.shortcuts import render, redirect
 from django.template.loader import get_template
+from django.urls import reverse, reverse_lazy
+from django.views.generic import DetailView, ListView, FormView, TemplateView, View
+from django.views.generic.detail import SingleObjectMixin
+from django.views.generic.edit import FormView
 from http.client import HTTPSConnection
-from django.conf import settings
-from bs4 import BeautifulSoup
 import reversion
 import requests
 import re
@@ -48,9 +48,10 @@ try:
 except ImportError:
     pass
 import io
+from urllib.parse import urljoin
 
 from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, \
-    ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm
+    ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm, AddTargetForm
 from .models import *
 from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih, \
     convert_ast_to_comet
@@ -90,6 +91,11 @@ import matplotlib.pyplot as plt
 logger = logging.getLogger(__name__)
 
 BOKEH_URL = "https://cdn.bokeh.org/bokeh/release/bokeh-{}.min."
+
+def home(request):
+    params = build_unranked_list_params()
+
+    return render(request, 'core/home.html', params)
 
 
 class LoginRequiredMixin(object):
@@ -151,10 +157,31 @@ class MyProposalsMixin(object):
         return context
 
 
-def home(request):
-    params = build_unranked_list_params()
+class AddTarget(LoginRequiredMixin, FormView):
+    template_name = 'core/lookproject.html'
+    success_url = reverse_lazy('look_project')
+    form_class = AddTargetForm
 
-    return render(request, 'core/home.html', params)
+    def form_invalid(self, form, **kwargs):
+        context = self.get_context_data(**kwargs)
+        return render(context['view'].request, self.template_name, {'form': form, })
+
+    def form_valid(self, form):
+        origin = form.cleaned_data['origin']
+        target_name = form.cleaned_data['target_name']
+        try:
+            body = Body.objects.get(name=target_name)
+            messages.warning(self.request, '%s is already in the system' % target_name)
+        except ObjectDoesNotExist:
+            target_created = update_MPC_orbit(target_name, origin=origin)
+            if target_created:
+                messages.success(self.request, 'Added new target %s' % target_name)
+            else:
+                messages.warning(self.request, 'Could not add target %s' % target_name)
+        except Body.MultipleObjectsReturned:
+            messages.warning(self.request, 'Multiple targets called %s found' % target_name)
+
+        return super(AddTarget, self).form_valid(form)
 
 
 class BlockTimeSummary(LoginRequiredMixin, View):
@@ -194,8 +221,9 @@ class BodyDetailView(DetailView):
         context['lin_script'] = lin_script
         context['lin_div'] = lin_div
         base_path = BOKEH_URL.format(bokeh.__version__)
-        context['css_path'] = base_path + 'css'
         context['js_path'] = base_path + 'js'
+        context['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
+        context['table_path'] = BOKEH_URL.format('tables-'+bokeh.__version__) + 'js'
         return context
 
 
@@ -277,7 +305,8 @@ class SuperBlockTimeline(DetailView):
                 'date' : date,
                 'num'  : blk.num_observed if blk.num_observed else 0,
                 'type' : blk.get_obstype_display(),
-                'duration' : (blk.block_end - blk.block_start).seconds
+                'duration' : (blk.block_end - blk.block_start).seconds,
+                'location' : blk.where_observed()
                 }
             blks.append(data)
         context['blocks'] = json.dumps(blks)
@@ -295,7 +324,10 @@ class SuperBlockListView(ListView):
 class BlockReport(LoginRequiredMixin, View):
 
     def get(self, request, *args, **kwargs):
-        block = Block.objects.get(pk=kwargs['pk'])
+        try:
+            block = Block.objects.get(pk=kwargs['pk'])
+        except ObjectDoesNotExist:
+            raise Http404("Block does not exist.")
         if block.when_observed:
             block.active = False
             block.reported = True
@@ -310,7 +342,10 @@ class BlockReport(LoginRequiredMixin, View):
 class BlockReportMPC(LoginRequiredMixin, View):
 
     def get(self, request, *args, **kwargs):
-        block = Block.objects.get(pk=kwargs['pk'])
+        try:
+            block = Block.objects.get(pk=kwargs['pk'])
+        except ObjectDoesNotExist:
+            raise Http404("Block does not exist.")
         if block.reported is True:
             messages.error(request, 'Block has already been reported')
             return HttpResponseRedirect(reverse('block-report-mpc', kwargs={'pk': kwargs['pk']}))
@@ -358,7 +393,10 @@ class UploadReport(LoginRequiredMixin, FormView):
     form_class = MPCReportForm
 
     def get(self, request, *args, **kwargs):
-        block = Block.objects.get(pk=kwargs['pk'])
+        try:
+            block = Block.objects.get(pk=kwargs['pk'])
+        except ObjectDoesNotExist:
+            raise Http404("Block does not exist.")
         form = MPCReportForm(initial={'block_id': block.id})
         return render(request, 'core/uploadreport.html', {'form': form, 'slot': block})
 
@@ -393,7 +431,10 @@ class MeasurementViewBody(View):
     orphans = 3
 
     def get(self, request, *args, **kwargs):
-        body = Body.objects.get(pk=kwargs['pk'])
+        try:
+            body = Body.objects.get(pk=kwargs['pk'])
+        except ObjectDoesNotExist:
+            raise Http404("Body does not exist")
         measurements = SourceMeasurement.objects.filter(body=body).order_by('frame__midpoint')
         measurements = measurements.prefetch_related(Prefetch('frame'), Prefetch('body'))
 
@@ -419,7 +460,7 @@ class MeasurementViewBody(View):
             page = paginator.num_pages
         page_obj = paginator.page(page)
 
-        return render(request, self.template, {'body': body, 'measures' : page_obj, 'is_paginated': is_paginated, 'page_obj': page_obj})
+        return render(request, self.template, {'body': body, 'measures': page_obj, 'is_paginated': is_paginated, 'page_obj': page_obj})
 
 
 def download_measurements_file(template, body, m_format, request):
@@ -607,7 +648,10 @@ class CandidatesViewBlock(LoginRequiredMixin, View):
     template = 'core/candidates.html'
 
     def get(self, request, *args, **kwargs):
-        block = Block.objects.get(pk=kwargs['pk'])
+        try:
+            block = Block.objects.get(pk=kwargs['pk'])
+        except ObjectDoesNotExist:
+            raise Http404("Block does not exist.")
         candidates = Candidate.objects.filter(block=block).order_by('score')
         return render(request, self.template, {'body': block.body, 'candidates': candidates, 'slot': block})
 
@@ -634,6 +678,7 @@ class StaticSourceView(ListView):
 class BestStandardsView(ListView):
     template_name = 'core/best_calibsource_list.html'
     model = StaticSource
+    ordering = ['ra']
     paginate_by = 20
 
     def determine_ra_range(self, utc_dt=datetime.utcnow(), HA_hours=3, dbg=False):
@@ -696,10 +741,11 @@ class StaticSourceDetailView(DetailView):
         script, div, p_spec = plot_all_spec(self.object)
         if script and div:
             context['script'] = script
-            context['div'] = div["raw_spec"]
+            context['spec_div'] = div
         base_path = BOKEH_URL.format(bokeh.__version__)
-        context['css_path'] = base_path + 'css'
         context['js_path'] = base_path + 'js'
+        context['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
+        context['table_path'] = BOKEH_URL.format('tables-'+bokeh.__version__) + 'js'
         return context
 
 
@@ -921,7 +967,7 @@ class ScheduleParametersSpectra(LoginRequiredMixin, LookUpBodyMixin, FormView):
     def post(self, request, *args, **kwargs):
         form = ScheduleSpectraForm(request.POST)
         if form.is_valid():
-            return self.form_valid(form,request)
+            return self.form_valid(form, request)
         else:
             return self.render_to_response(self.get_context_data(form=form, body=self.body))
 
@@ -1011,7 +1057,7 @@ class ScheduleCalibSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
         elif 'submit' in request.POST:
             target = self.get_object()
             username = ''
-            if request.user.is_authenticated():
+            if request.user.is_authenticated:
                 username = request.user.get_username()
             tracking_num, sched_params = schedule_submit(form.cleaned_data, target, username)
 
@@ -1065,7 +1111,7 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
         elif 'submit' in request.POST and new_form.is_valid():
             target = self.get_object()
             username = ''
-            if request.user.is_authenticated():
+            if request.user.is_authenticated:
                 username = request.user.get_username()
             tracking_num, sched_params = schedule_submit(new_form.cleaned_data, target, username)
             if tracking_num:
@@ -1104,14 +1150,20 @@ def parse_portal_errors(sched_params):
     if sched_params.get('error_msg', None):
         msg += "\nAdditional information:"
         error_groups = sched_params['error_msg']
-        for error_type in error_groups.keys():
-            error_msgs = error_groups[error_type]
-            for errors in error_msgs:
-                if type(errors) == str:
-                    msg += "\n{err_type}: {error}".format(err_type=error_type, error=errors)
-                elif type(errors) == dict:
-                    for key in errors:
-                        msg += "\n".join(errors[key])
+        if type(error_groups) == dict:
+            for error_type in error_groups.keys():
+                error_msgs = error_groups[error_type]
+                for errors in error_msgs:
+                    if type(errors) == str:
+                        msg += "\n{err_type}: {error}".format(err_type=error_type, error=errors)
+                    elif type(errors) == dict:
+                        for key in errors:
+                            msg += "\n".join(errors[key])
+        elif type(error_groups) == str:
+            msg += "\n" + error_groups
+        else:
+            msg += "\nError parsing error message"
+
     return msg
 
 
@@ -1248,6 +1300,8 @@ def schedule_check(data, body, ok_to_schedule=True):
     elif data['site_code'] == 'E10' or data['site_code'] == 'F65' or data['site_code'] == '2M0':
         if spectroscopy:
             filter_pattern = 'slit_6.0as'
+        elif data['site_code'] == 'F65':
+            filter_pattern = 'gp'
         else:
             filter_pattern = 'solar'
     else:
@@ -1255,7 +1309,7 @@ def schedule_check(data, body, ok_to_schedule=True):
 
     # Get string of available filters
     available_filters = ''
-    filter_list = fetch_filter_list(data['site_code'], spectroscopy)
+    filter_list, fetch_error = fetch_filter_list(data['site_code'], spectroscopy)
     for filt in filter_list:
         available_filters = available_filters + filt + ', '
     available_filters = available_filters[:-2]
@@ -1321,6 +1375,21 @@ def schedule_check(data, body, ok_to_schedule=True):
             slot_length, exp_count = determine_exp_count(slot_length, exp_length, data['site_code'], filter_pattern, exp_count, bin_mode=bin_mode)
         if exp_length is None or exp_count is None:
             ok_to_schedule = False
+        # Set MuSCAT Exptimes
+        if 'F65' in data['site_code']:
+            muscat_exp_times = {}
+            muscat_filt_list = ['gp_explength', 'rp_explength', 'ip_explength', 'zp_explength']
+            for filt in muscat_filt_list:
+                if data.get(filt, None):
+                    muscat_exp_times[filt] = data.get(filt)
+                else:
+                    muscat_exp_times[filt] = exp_length
+            exp_length = max(muscat_exp_times.values())
+            slot_length, exp_count = determine_exp_count(slot_length, exp_length, data['site_code'], filter_pattern, bin_mode=bin_mode)
+            if data.get('muscat_sync', None):
+                muscat_sync = data.get('muscat_sync')
+            else:
+                muscat_sync = False
 
     # determine stellar trailing
     if spectroscopy:
@@ -1443,6 +1512,11 @@ def schedule_check(data, body, ok_to_schedule=True):
         'calibsource_exptime': solar_analog_exptime,
     }
 
+    if not spectroscopy and 'F65' in data['site_code']:
+        resp['muscat_sync'] = muscat_sync
+        for filt in muscat_filt_list:
+            resp[filt] = muscat_exp_times[filt]
+
     if period and jitter:
         resp['num_times'] = total_requests
         resp['total_time'] = total_time
@@ -1520,7 +1594,7 @@ def schedule_submit(data, body, username):
     proposal = Proposal.objects.get(code=data['proposal_code'])
     my_proposals = user_proposals(username)
     if proposal not in my_proposals:
-        resp_params = {'msg': 'You do not have permission to schedule using proposal %s' % data['proposal_code']}
+        resp_params = {'error_msg': {'neox': ['You do not have permission to schedule using proposal %s' % data['proposal_code']]}}
 
         return None, resp_params
     params = {'proposal_id': proposal.code,
@@ -1531,6 +1605,7 @@ def schedule_submit(data, body, username):
               'bin_mode': data['bin_mode'],
               'filter_pattern': data['filter_pattern'],
               'exp_count': data['exp_count'],
+              'slot_length': data['slot_length']*60,
               'exp_time': data['exp_length'],
               'site_code': data['site_code'],
               'start_time': data['start_time'],
@@ -1552,6 +1627,13 @@ def schedule_submit(data, body, username):
     if data['period'] or data['jitter']:
         params['period'] = data['period']
         params['jitter'] = data['jitter']
+    if data.get('gp_explength', None):
+        params['muscat_sync'] = data['muscat_sync']
+        params['muscat_exp_times'] = {}
+        muscat_filt_list = ['gp_explength', 'rp_explength', 'ip_explength', 'zp_explength']
+        for filt in muscat_filt_list:
+            params['muscat_exp_times'][filt] = data[filt]
+
     # If we have a (static) StaticSource object, fill in details needed by make_target
     if type(body) == StaticSource:
         params['ra_deg'] = body.ra
@@ -1573,7 +1655,7 @@ def schedule_submit(data, body, username):
         params['group_name'] = data['group_name']
     elif check_for_block(data, params, body) >= 2:
         # Multiple blocks found
-        resp_params = {'error_msg': 'Multiple Blocks for same day and site found'}
+        resp_params = {'error_msg': {'neox': ['Multiple Blocks for same day and site found']}}
     if check_for_block(data, params, body) == 0:
         # Submit to scheduler and then record block
         tracking_number, resp_params = submit_block_to_scheduler(body_elements, params)
@@ -1880,9 +1962,12 @@ def build_lookproject_list(disp=None):
                 elif len(subtypes) > 1:
                     body_dict['subtypes'] = ", ".join(subtypes)
                 body_dict['cadence_info'] = body.get_cadence_info()
-                # Compute ephemeris and observability window
+                # Compute ephemeris, distance and observability window
                 emp_line = body.compute_position()
                 if not emp_line:
+                    continue
+                dist_line = body.compute_distances()
+                if not dist_line:
                     continue
                 obs_dates = body.compute_obs_window()
                 if obs_dates[0]:
@@ -1912,6 +1997,7 @@ def build_lookproject_list(disp=None):
                 body_dict['dec'] = emp_line[1]
                 body_dict['v_mag'] = emp_line[2]
                 body_dict['motion'] = emp_line[4]
+                body_dict['helio_dist'] = dist_line[1]
                 unranked.append(body_dict)
             except Exception as e:
                 logger.error('LOOK target %s failed on %s' % (body.name, e))
@@ -1981,6 +2067,7 @@ def build_lookproject_list(disp=None):
 def look_project(request):
 
     params =  build_lookproject_list()
+    params['form'] = AddTargetForm()
     return render(request, 'core/lookproject.html', params)
 
 def check_for_block(form_data, params, new_body):
@@ -2482,7 +2569,9 @@ def update_crossids(astobj, dbg=False):
         return False
 
     temp_id = astobj[0].rstrip()
-    desig = astobj[1]
+    # XXX TAL 2020/11/16: Hacky fix for the temporarily created `name` too long problem
+    # (which Postgres complains at but MySQL has being letting slide...)
+    desig = astobj[1][0:15]
 
     created = False
     # Find Bodies that have the 'provisional name' of <temp_id> OR (final)'name' of <desig>
@@ -2545,6 +2634,8 @@ def update_crossids(astobj, dbg=False):
             kwargs = convert_ast_to_comet(kwargs, body)
         if dbg:
             print(kwargs)
+        # XXX TAL 2020/09/18 Is this doing the right thing ? Think it's doing a
+        # case-insensitive match which could overwrite similarly named objects ?
         check_body = Body.objects.filter(provisional_name=temp_id, **kwargs)
         if check_body.count() == 0:
             save_and_make_revision(body, kwargs)
@@ -2756,7 +2847,7 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
     return params
 
 
-def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
+def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M', force=False):
     """
     Performs remote look up of orbital elements for object with id obj_id_or_page,
     Gets or creates corresponding Body instance and updates entry.
@@ -2813,7 +2904,7 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
     if body.epochofel:
         time_to_current_epoch = abs(body.epochofel - datetime.now())
         time_to_new_epoch = abs(kwargs['epochofel'] - datetime.now())
-    if not body.epochofel or time_to_new_epoch <= time_to_current_epoch:
+    if not body.epochofel or time_to_new_epoch <= time_to_current_epoch or force is True:
         save_and_make_revision(body, kwargs)
         if not created:
             logger.info("Updated elements for %s from MPC" % obj_id)
@@ -3541,15 +3632,20 @@ def find_spec(pk):
     """find directory of spectra for a certain block
     NOTE: Currently will only pull first spectrum of a superblock
     """
-    block = Block.objects.get(pk=pk)
+    try:
+        block = Block.objects.get(pk=pk)
+    except ObjectDoesNotExist:
+        raise Http404("Block does not exist.")
     frames = Frame.objects.filter(block=block)
-    if not frames:
+    first_frames = [f.frameid for f in frames if f.frameid]
+    if first_frames:
+        # urljoin() is stupid and can't join multiple items together or be
+        # chained together in multiple calls
+        frame_header_url = "/".join([str(first_frames[0]), 'headers'])
+        url = urljoin(settings.ARCHIVE_FRAMES_URL, frame_header_url)
+    else:
         return '', '', '', '', ''
-    for frame in frames:
-        if frame.frameid:
-            first_frame = frame
-            break
-    url = settings.ARCHIVE_FRAMES_URL + str(first_frame.frameid) + '/headers'
+
     try:
         data = lco_api_call(url)['data']
     except TypeError:
@@ -3626,13 +3722,13 @@ def plot_all_spec(source):
         else:
             logger.warning("No flux file found for " + spec_file)
             script = ''
-            div = {"raw_spec": ''}
+            div = ''
 
     else:
         body = source
         p_spec = PreviousSpectra.objects.filter(body=body)
         for spec in p_spec:
-            if spec.spec_ir:
+            if spec.spec_ir and '.txt' in spec.spec_ir:
                 wav, flux, err = pull_data_from_text(spec.spec_ir)
                 label = "{} -- {}, {}(IR)".format(body.current_name(), spec.spec_date, spec.spec_source)
                 new_spec = {'label': label,
@@ -3641,7 +3737,7 @@ def plot_all_spec(source):
                      'err': err,
                      'filename': spec.spec_ir}
                 data_spec.append(new_spec)
-            if spec.spec_vis:
+            if spec.spec_vis and '.txt' in spec.spec_vis:
                 wav, flux, err = pull_data_from_text(spec.spec_vis)
                 label = "{} -- {}, {}(Vis)".format(body.current_name(), spec.spec_date, spec.spec_ref)
                 new_spec = {'label': label,
@@ -3659,37 +3755,41 @@ def plot_all_spec(source):
     return script, div, p_spec
 
 
-def plot_floyds_spec(block, obs_num=1):
+def plot_floyds_spec(block):
     """Get plots for requested blocks of FLOYDs data and subtract nearest solar analog."""
 
     date_obs, obj, req, path, prop = find_spec(block.id)
     filenames = search(path, matchpattern='.*_2df_ex.fits', latest=False)
     if filenames is False:
-        return '', {"raw_spec": ''}
+        return None, None
     filenames = [os.path.join(path, f) for f in filenames]
 
     analogs = find_analog(block.when_observed, block.site)
 
     try:
-        raw_label, raw_spec, ast_wav = spectrum_plot(filenames[obs_num-1])
-        data_spec = {'label': raw_label,
-                     'spec': raw_spec,
-                     'wav': ast_wav,
-                     'filename': filenames[obs_num-1]}
+        data_spec = []
+        for filename in filenames:
+            raw_label, raw_spec, ast_wav = spectrum_plot(filename)
+            data_spec.append({'label': raw_label,
+                              'spec': raw_spec,
+                              'wav': ast_wav,
+                              'filename': filename})
     except IndexError:
         data_spec = None
 
     analog_data = []
-    offset = 0
+    offset = 2  # Arbitrary offset to minimize analog/target plotting overlap
     for analog in analogs:
-        offset += 2
         analog_label, analog_spec, star_wav = spectrum_plot(analog, offset=offset)
         analog_data.append({'label': analog_label,
-                       'spec': analog_spec,
-                       'wav': star_wav,
-                       'filename': analog})
+                            'spec': analog_spec,
+                            'wav': star_wav,
+                            'filename': analog})
 
-    script, div = spec_plot([data_spec], analog_data)
+    if data_spec:
+        script, div = spec_plot(data_spec, analog_data)
+    else:
+        return None, None
 
     return script, div
 
@@ -3699,17 +3799,19 @@ class BlockSpec(View):  # make logging required later
     template_name = 'core/plot_spec.html'
 
     def get(self, request, *args, **kwargs):
-        block = Block.objects.get(pk=kwargs['pk'])
-        script, div = plot_floyds_spec(block, int(kwargs['obs_num']))
-        params = {'pk': kwargs['pk'], 'obs_num': kwargs['obs_num'], 'sb_id': block.superblock.id}
+        try:
+            block = Block.objects.get(pk=kwargs['pk'])
+        except ObjectDoesNotExist:
+            raise Http404("Block does not exist.")
+        script, div = plot_floyds_spec(block)
+        params = {'pk': kwargs['pk'], 'sb_id': block.superblock.id}
         if div:
             params["the_script"] = script
-            params["raw_div"] = div["raw_spec"]
-            if 'reflec_spec' in div:
-                params["reflec_div"] = div["reflec_spec"]
+            params["spec_div"] = div
         base_path = BOKEH_URL.format(bokeh.__version__)
-        params['css_path'] = base_path + 'css'
         params['js_path'] = base_path + 'js'
+        params['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
+        params['table_path'] = BOKEH_URL.format('tables-'+bokeh.__version__) + 'js'
         return render(request, self.template_name, params)
 
 
@@ -3718,16 +3820,20 @@ class PlotSpec(View):
     template_name = 'core/plot_spec.html'
 
     def get(self, request, *args, **kwargs):
-        body = Body.objects.get(pk=kwargs['pk'])
+        try:
+            body = Body.objects.get(pk=kwargs['pk'])
+        except ObjectDoesNotExist:
+            raise Http404("Body does not exist.")
         script, div, p_spec = plot_all_spec(body)
         params = {'body': body, 'floyds': False}
         if div:
             params["the_script"] = script
-            params["reflec_div"] = div["reflec_spec"]
+            params["spec_div"] = div
             params["p_spec"] = p_spec
         base_path = BOKEH_URL.format(bokeh.__version__)
-        params['css_path'] = base_path + 'css'
         params['js_path'] = base_path + 'js'
+        params['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
+        params['table_path'] = BOKEH_URL.format('tables-'+bokeh.__version__) + 'js'
 
         return render(request, self.template_name, params)
 
@@ -3755,7 +3861,6 @@ class LCPlot(LookUpBodyMixin, FormView):
         else:
             params["lc_div"] = kwargs['div']
         base_path = BOKEH_URL.format(bokeh.__version__)
-        params['css_path'] = base_path + 'css'
         params['js_path'] = base_path + 'js'
         params['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
         params['table_path'] = BOKEH_URL.format('tables-'+bokeh.__version__) + 'js'
@@ -3791,7 +3896,7 @@ def import_alcdef(file, meta_list, lc_list):
                 chunks = line.split('=')
                 metadata[chunks[0]] = chunks[1].replace('\n', '')
         elif 'ENDDATA' in line:
-            if metadata not in meta_list:
+            if metadata not in meta_list and dates:
                 meta_list.append(metadata)
                 lc_data = {
                     'date': dates,
@@ -3866,7 +3971,10 @@ def display_movie(request, pk):
     logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date_obs, req, prop))
     logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
 
-    block = Block.objects.get(pk=pk)
+    try:
+        block = Block.objects.get(pk=pk)
+    except ObjectDoesNotExist:
+        raise Http404("Block does not exist.")
     if block.obstype in [Block.OPT_IMAGING, Block.OPT_IMAGING_CALIB]:
         movie_file = "{}_{}_framemovie.gif".format(obj.replace(' ', '_'), req)
     elif block.obstype in [Block.OPT_SPECTRA, Block.OPT_SPECTRA_CALIB]:
@@ -3889,12 +3997,39 @@ class GuideMovie(View):
     # make logging required later
 
     template_name = 'core/guide_movie.html'
+    paginate_by = 6
+    orphans = 3
 
     def get(self, request, *args, **kwargs):
-        block = Block.objects.get(pk=kwargs['pk'])
-        params = {'pk': kwargs['pk'], 'sb_id': block.superblock.id}
+        try:
+            supblock = SuperBlock.objects.get(pk=kwargs['pk'])
+        except ObjectDoesNotExist:
+            raise Http404("SuperBlock does not exist.")
+        block_list = supblock.get_blocks.filter(num_observed__gt=0).order_by('when_observed')
 
-        return render(request, self.template_name, params)
+        # Set up pagination
+        page = request.GET.get('page', None)
+
+        # Toggle Pagination
+        if page == '0':
+            self.paginate_by = len(block_list)
+        paginator = Paginator(block_list, self.paginate_by, orphans=self.orphans)
+
+        if paginator.num_pages > 1:
+            is_paginated = True
+        else:
+            is_paginated = False
+
+        if page is None or int(page) < 1:
+            page = 1
+        elif int(page) > paginator.num_pages:
+            page = paginator.num_pages
+        page_obj = paginator.page(page)
+
+        return render(request, self.template_name,
+                      {'sb': supblock, 'block_list': block_list, 'is_paginated': is_paginated, 'page_obj': page_obj})
+
+        # return render(request, self.template_name, params)
 
 
 def update_taxonomy(body, tax_table, dbg=False):
@@ -3964,6 +4099,12 @@ def update_previous_spectra(specobj, source='U', dbg=False):
     if check_spec:
         for check in check_spec:
             if check.spec_date >= specobj[5]:
+                if check.spec_ref == specobj[4]:
+                    if specobj[2] and check.spec_vis != specobj[2]:
+                        check.spec_vis = specobj[2]
+                    if specobj[3] and check.spec_ir != specobj[3]:
+                        check.spec_ir = specobj[3]
+                    check.save()
                 if dbg is True:
                     print("More recent data already in DB")
                 return False

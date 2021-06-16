@@ -147,7 +147,7 @@ class TargetsPageTest(TestCase):
     def test_target_page_returns_correct_html(self):
         request = HttpRequest()
         targetlist = ListView.as_view(model=Body, queryset=Body.objects.filter(active=True))
-        response = targetlist.render_to_response(targetlist)
+        response = targetlist.render(targetlist)
         expected_html = render_to_string('core/body_list.html')
         self.assertEqual(response, expected_html)
 

@@ -45,6 +45,9 @@ class Command(BaseCommand):
         file_list = []
         search_list = []
         dest_list = []
+        if not settings.USE_S3:
+            self.stdout.write("WARNING: No Access to S3. Update enviornment.")
+            return
 
         if options['list']:
             if '*' in filepath:
@@ -101,7 +104,7 @@ class Command(BaseCommand):
                 dest = dest_list[0]
 
             filename = os.path.basename(file)
-            if not search(dest, filename) or options['overwrite']:
+            if not search(dest, filename, latest=True) or options['overwrite']:
                 self.stdout.write("==== Uploading {} to S3:{}".format(file, dest))
                 with open(file, "rb") as f:
                     default_storage.save(os.path.join(dest, filename), f)

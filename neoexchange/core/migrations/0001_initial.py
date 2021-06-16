@@ -84,7 +84,7 @@ class Migration(migrations.Migration):
                 ('filename', models.CharField(max_length=31)),
                 ('exp', models.FloatField(verbose_name=b'exposure time in seconds')),
                 ('whentaken', models.DateTimeField()),
-                ('block', models.ForeignKey(to='core.Block')),
+                ('block', models.ForeignKey(to='core.Block', on_delete=models.deletion.CASCADE)),
             ],
             options={
                 'db_table': 'ingest_record',
@@ -95,11 +95,11 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='block',
             name='body',
-            field=models.ForeignKey(to='core.Body'),
+            field=models.ForeignKey(to='core.Body', on_delete=models.deletion.CASCADE),
         ),
         migrations.AddField(
             model_name='block',
             name='proposal',
-            field=models.ForeignKey(to='core.Proposal'),
+            field=models.ForeignKey(to='core.Proposal', on_delete=models.deletion.CASCADE),
         ),
     ]

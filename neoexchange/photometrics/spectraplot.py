@@ -100,6 +100,9 @@ def pull_data_from_text(spectra):
                 lines = f.read()
         except ValueError:
             return [], [], []
+        except urllib.request.URLError:
+            logger.error(f"Connection to {spectra} error")
+            return [], [], []
     lines = re.split('[\n\r]', str(lines, 'utf-8'))
     xxx = []
     yyy = []
@@ -172,6 +175,12 @@ def spectrum_plot(spectra, data_set='', analog=None, offset=0):
     """Sets up X/Y plottable data from spectroscopic input.
         Creates Reflectance Spectra if analog given.
         Otherwise clips and normalizes spectrum.
+        input:
+            spectra: The input spectrum (path to fits file)
+            data_set: A Name, Title, or Description of the data
+            analog: The input comparison spectrum (path to fits file
+            offset: interger used as a linear offest for the y values of the final result. Useful for spreading out
+             multiple datasets to be plotted on the same plot. (physical offset = 0.2*X where X is int given here.)
         Returns:
             data_set: data label
             y_clipped: normalized and truncated flux/reflectance values
@@ -199,10 +208,17 @@ def spectrum_plot(spectra, data_set='', analog=None, offset=0):
         yyy = spec_y
 
     if not data_set:
+        if spec_header['ROTMODE'].upper() == 'VFLOAT':
+            slit_fig = '|'
+        else:
+            slit_fig = '/'
+        if spec_header['APERWID'] == 6.0:
+            slit_fig += slit_fig
         if analog:
             data_set = "{} -- {} -- {}".format(spec_header['OBJECT'], analog_header['OBJECT'], spec_header['DAY-OBS'])
         else:
-            data_set = "{} -- {}".format(spec_header['OBJECT'], spec_header['DAY-OBS'])
+            data_set = "{} -- {} ({}) [ {} ]".format(spec_header['OBJECT'], spec_header['DAY-OBS'],
+                                                     round(spec_header['AIRMASS'], 3), slit_fig)
     elif data_set.upper() == 'NONE':
         data_set = ''
 

@@ -16,16 +16,16 @@ from django.conf import settings
 from django.forms.models import model_to_dict
 from django.db import models
 from django.db.models import Sum
-from django.utils.translation import ugettext_lazy as _
-from django.utils.encoding import python_2_unicode_compatible
+from django.utils.translation import gettext_lazy as _
 from django.utils.functional import cached_property
 from requests.compat import urljoin
-from numpy import fromstring
+from numpy import frombuffer
 
 from astrometrics.ephem_subs import compute_ephem, comp_sep
 from core.archive_subs import check_for_archive_images
 
 from core.models.body import Body
+from core.models.frame import Frame
 from core.models.proposal import Proposal
 
 TELESCOPE_CHOICES = (
@@ -47,7 +47,6 @@ SITE_CHOICES = (
     )
 
 
-@python_2_unicode_compatible
 class SuperBlock(models.Model):
 
     cadence         = models.BooleanField(default=False)
@@ -168,7 +167,6 @@ class SuperBlock(models.Model):
         return '%s is %sactive' % (self.tracking_number, text)
 
 
-@python_2_unicode_compatible
 class Block(models.Model):
 
     OPT_IMAGING = 0
@@ -250,6 +248,16 @@ class Block(models.Model):
     def num_candidates(self):
         return Candidate.objects.filter(block=self.id).count()
 
+    def where_observed(self):
+        where_observed=''
+        if self.num_observed is not None:
+            frames = Frame.objects.filter(block=self.id, frametype=Frame.BANZAI_RED_FRAMETYPE)
+            if frames.count() > 0:
+                # Code for producing full site strings + site codes e.g. 'W85'
+                where_observed_qs = frames.distinct('sitecode')
+                where_observed = ",".join([site.return_site_string() + " (" + site.sitecode + ")" for site in where_observed_qs])
+        return where_observed
+
     class Meta:
         verbose_name = _('Observation Block')
         verbose_name_plural = _('Observation Blocks')
@@ -264,7 +272,6 @@ class Block(models.Model):
         return '%s is %sactive' % (self.request_number, text)
 
 
-@python_2_unicode_compatible
 class Candidate(models.Model):
     """Class to hold candidate moving object detections found by the moving
     object code"""
@@ -291,7 +298,7 @@ class Candidate(models.Model):
         """Unpacks the binary BLOB from the detections field into a numpy
         structured array"""
         dtypes = detections_array_dtypes()
-        dets = fromstring(self.detections, dtype=dtypes)
+        dets = frombuffer(self.detections, dtype=dtypes)
         return dets
 
     def compute_separation(self, body=None, time=None):

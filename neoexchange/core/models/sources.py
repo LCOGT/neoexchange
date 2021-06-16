@@ -14,8 +14,7 @@ import logging
 from math import pi, log10, sqrt, cos, ceil
 
 from django.db import models
-from django.utils.translation import ugettext_lazy as _
-from django.utils.encoding import python_2_unicode_compatible
+from django.utils.translation import gettext_lazy as _
 
 from astrometrics.ast_subs import normal_to_packed
 from astrometrics.ephem_subs import get_sitecam_params
@@ -26,6 +25,7 @@ from core.models.body import Body
 from core.models.frame import Frame
 
 logger = logging.getLogger(__name__)
+
 
 class SourceMeasurement(models.Model):
     """Class to represent the measurements (RA, Dec, Magnitude and errors)
@@ -345,7 +345,6 @@ class CatalogSources(models.Model):
         return flag
 
 
-@python_2_unicode_compatible
 class StaticSource(models.Model):
     """
     Class for static (sidereal) sources, normally calibration sources (solar

@@ -83,8 +83,13 @@ class MockDate(date, metaclass=MockDateTimeType):
 
 
 def mock_fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser"):
-    logger.warning("Page retrieval failed because this is a test and no page was attempted.")
-    return None
+    page = None
+    if '191P' in url:
+        with open(os.path.join('astrometrics', 'tests', 'test_mpcdb_Comet191P.html'), 'r') as test_fh:
+            page = BeautifulSoup(test_fh, "html.parser")
+    else:
+        logger.warning("Page retrieval failed because this is a test and no page was attempted.")
+    return page
 
 
 def mock_fetchpage_and_make_soup_pccp(url, fakeagent=False, dbg=False, parser="html.parser"):
@@ -1444,6 +1449,21 @@ def mock_archive_spectra_header(archive_headers):
     return header
 
 
+def mock_archive_bad_spectra_header(archive_headers):
+
+    header = { "data": {
+                    "DATE_OBS": "2019-09-27T15:52:19.512",
+                    "DAY_OBS" : "20190927",
+                    "ENCID" : "clma",
+                    "SITEID" : "coj",
+                    "TELID" : "2m0a",
+                    "OBJECT" : "455432",
+                    "REQNUM" : "1878696"
+                        }
+             }
+    return header
+
+
 def mock_find_images_for_block(blockid):
     data = ([{'img': '1'}, {'img': '2'}, ], [{'coords': [{'y': 1086.004, 'x': 1278.912}, {'y': 1086.047, 'x': 1278.9821}], 'id': '15'}], 2028, 2028)
     return data
@@ -1476,6 +1496,19 @@ class MockCandidate(object):
 def mock_fetch_filter_list(site, spec):
 
     siteid, encid, telid = MPC_site_code_to_domes(site)
+    if '1m0' in telid.lower():
+        camid = "1m0-SciCam-Sinistro"
+    elif '0m4' in telid.lower():
+        camid = "0m4-SciCam-SBIG"
+    elif '2m0' in telid.lower():
+        if spec:
+            camid = "2m0-FLOYDS-SciCam"
+        elif "OGG" in siteid.upper():
+            camid = "2M0-SCICAM-MUSCAT"
+        else:
+            camid = "2m0-SciCam-Spectral"
+    else:
+        camid = ''
 
     coj_1m_rsp = {'1M0-SCICAM-SINISTRO': {
         'type': 'IMAGE',
@@ -1544,25 +1577,85 @@ def mock_fetch_filter_list(site, spec):
              {'name': 'Bessell-B', 'code': 'B', 'schedulable': True, 'default': False},
              {'name': '200um Pinhole', 'code': '200um-Pinhole', 'schedulable': False, 'default': False}]}}}
 
+    muscat_2m_rsp = {"2M0-SCICAM-MUSCAT": {
+        "type": "IMAGE",
+        "class": "2m0",
+        "name": "2.0 meter Muscat",
+        "optical_elements": {
+            "diffuser_z_positions": [
+                {"name": "In Beam",
+                 "code": "in",
+                 "schedulable": True,
+                 "default": False},
+                {"name": "Out of Beam",
+                 "code": "out",
+                 "schedulable": True,
+                 "default": True}
+            ],
+            "diffuser_r_positions": [
+                {"name": "In Beam",
+                 "code": "in",
+                 "schedulable": True,
+                 "default": False},
+                {"name": "Out of Beam",
+                 "code": "out",
+                 "schedulable": True,
+                 "default": True}
+            ],
+            "diffuser_i_positions": [
+                {"name": "In Beam",
+                 "code": "in",
+                 "schedulable": True,
+                    "default": False},
+                {"name": "Out of Beam",
+                 "code": "out",
+                 "schedulable": True,
+                 "default": True}
+            ],
+            "diffuser_g_positions": [
+                {"name": "In Beam",
+                 "code": "in",
+                 "schedulable": True,
+                 "default": False},
+                {"name": "Out of Beam",
+                 "code": "out",
+                 "schedulable": True,
+                 "default": True}
+            ]
+        }}}
+
     empty = {}
+    fetch_error = ''
 
     if '2m0' in telid.lower():
         if spec:
             resp = spec_2m_rsp
+        elif 'OGG' in siteid.upper():
+            resp = muscat_2m_rsp
         else:
             resp = phot_2m_rsp
     elif '1m0' in telid.lower() or '0m4' in telid.lower():
         resp = coj_1m_rsp
     else:
         resp = empty
+        fetch_error = 'The {} at {} is not schedulable'.format(camid, site)
 
-    out_data = parse_filter_file(resp, spec)
-    return out_data
+    if 'MUSCAT' in camid:
+        out_data = ['gp', 'rp', 'ip', 'zp']
+    else:
+        out_data = parse_filter_file(resp, spec)
+    return out_data, fetch_error
 
 
 def mock_fetch_filter_list_no2m(site, spec):
+    if spec:
+        camid = "2m0-FLOYDS-SciCam"
+    elif "F65" in site.upper():
+        camid = "2M0-SCICAM-MUSCAT"
+    else:
+        camid = "2M0-SCICAM-SPECTRAL"
 
-    return []
+    return [], "The {} at {} is not schedulable.".format(camid, site)
 
 
 def mock_expand_cadence(user_request):
@@ -1658,6 +1751,24 @@ def mock_expand_cadence(user_request):
                 }
     return True, cadence
 
+def mock_expand_cadence_novis(user_request):
+
+    cadence = {'errors': 'No visible requests within cadence window parameters'}
+    start_date = datetime.strptime(user_request['requests'][0]['cadence']['start'], '%Y-%m-%dT%H:%M:%S')
+    end_date = datetime.strptime(user_request['requests'][0]['cadence']['end'], '%Y-%m-%dT%H:%M:%S')
+    if end_date.month > start_date.month:
+        # Fake a semester-spanning invalid request
+        cadence = {'requests': [{},
+                  {'windows': [{'non_field_errors': ['The observation window does not fit within any defined semester.']}]},
+                  {},
+                  {},
+                  {},
+                  {},
+                  {},
+                  {},
+                  {}]}
+
+    return False, cadence
 
 def mock_fetch_sfu(sfu_value=None):
     if sfu_value is None:

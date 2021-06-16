@@ -17,7 +17,7 @@ import logging
 import os
 from math import floor
 from datetime import datetime, timedelta
-from subprocess import call
+from subprocess import call, TimeoutExpired
 from collections import OrderedDict
 import warnings
 from shutil import unpack_archive
@@ -394,10 +394,14 @@ def run_scamp(source_dir, dest_dir, fits_catalog_path, refcatalog='GAIA-DR2.cat'
     else:
         logger.debug("cmdline=%s" % cmdline)
         args = cmdline.split()
-        # Open /dev/null for writing to lose the SCAMP output into
-        DEVNULL = open(os.devnull, 'w')
-        retcode_or_cmdline = call(args, cwd=dest_dir, stdout=DEVNULL, stderr=DEVNULL)
-        DEVNULL.close()
+        try:
+            # Open /dev/null for writing to lose the SCAMP output into
+            DEVNULL = open(os.devnull, 'w')
+            retcode_or_cmdline = call(args, cwd=dest_dir, stdout=DEVNULL, stderr=DEVNULL, timeout=300)
+            DEVNULL.close()
+        except TimeoutExpired:
+            logger.warning(f'SCAMP timeout reached for {fits_catalog}')
+            retcode_or_cmdline = -2
 
     return retcode_or_cmdline
 
@@ -489,6 +493,13 @@ def run_findorb(source_dir, dest_dir, obs_file, site_code=500, start_time=dateti
         return -42
 
     setup_findorb_environ_file(source_dir, site_code, start_time)
+
+    # Remove any old version of mpc_fmt.txt
+    orbit_file = os.path.join(os.getenv('HOME'), '.find_orb', 'mpc_fmt.txt')
+    try:
+        os.remove(orbit_file)
+    except FileNotFoundError:
+        pass
 
     options = determine_findorb_options(site_code, start_time)
     cmdline = "%s %s %s" % ( binary, obs_file, options)

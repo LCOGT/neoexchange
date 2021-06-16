@@ -200,8 +200,11 @@ def determine_time_of_perih(meandist, meananom, epochofel):
         days_from_perihelion = (360.0 - meananom) / n
     else:
         days_from_perihelion = -(meananom / n)
-    epochofperih = epochofel + timedelta(days=days_from_perihelion)
-#    print n, days_from_perihelion, epochofperih
+    if days_from_perihelion < timedelta.min.days or days_from_perihelion > timedelta.max.days:
+        epochofperih = None
+    else:
+        epochofperih = epochofel + timedelta(days=days_from_perihelion)
+#    print(n, days_from_perihelion, epochofperih)
 
     return epochofperih
 
@@ -226,6 +229,11 @@ def convert_ast_to_comet(kwargs, body):
         if params['eccentricity'] is not None and params['meandist'] is not None and params['meananom'] is not None and params['epochofel'] is not None:
             if params['eccentricity'] < 1.0:
                 params['perihdist'] = params['meandist'] * (1.0 - params['eccentricity'])
-            params['epochofperih'] = determine_time_of_perih(params['meandist'], params['meananom'], params['epochofel'])
-            params['meananom'] = None
+            time_of_perih = determine_time_of_perih(params['meandist'], params['meananom'], params['epochofel'])
+            if time_of_perih is not None:
+                params['epochofperih'] = determine_time_of_perih(params['meandist'], params['meananom'], params['epochofel'])
+                params['meananom'] = None
+            else:
+                # Something went badly wrong in there (see Issue #484), bail out of updating
+                params = None
     return params

@@ -68,6 +68,8 @@ data/
 neox.db
 neox.log
 geckodriver.log
+*.sql
+*.json.gz
 
 spectra.png
 lightcurve*.png

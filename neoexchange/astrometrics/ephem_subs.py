@@ -35,6 +35,7 @@ from astropy.utils.exceptions import AstropyDeprecationWarning
 warnings.simplefilter('ignore', category=AstropyDeprecationWarning)
 from astroquery.jplhorizons import Horizons
 from astropy.table import Column
+from astropy.time import Time
 
 # Local imports
 from astrometrics.time_subs import datetime2mjd_utc, datetime2mjd_tdb, mjd_utc2mjd_tt, ut1_minus_utc, round_datetime
@@ -275,6 +276,16 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
 
         logger.debug("Sun->Asteroid [x,y,z]=%s %s" % (pv[0:3], status))
         logger.debug("Sun->Asteroid [xdot,ydot,zdot]=%s %s" % (pv[3:6], status))
+        if status != 0:
+            err_mapping = { -1 : 'illegal JFORM',
+                            -2 : 'illegal E',
+                            -3 : 'illegal AORQ',
+                            -4 : 'illegal DM',
+                            -5 : 'numerical error'
+                          }
+            msg = "Position (sla_planel) error={} {}".format(status, err_mapping.get(status, 'Unknown error'))
+            logger.error(msg)
+            return {}
 
         for i, e_pos in enumerate(e_pos_hel):
             pos[i] = pv[i] - e_pos
@@ -428,6 +439,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
                 'southpole_sep' : spd,
                 'sun_sep'       : separation,
                 'earth_obj_dist': delta,
+                'sun_obj_dist'  : r,
                 }
 
     return emp_dict
@@ -654,6 +666,8 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
             skip_daylight=should_skip_daylight, airmass_lessthan=airmass_limit,
             max_hour_angle=ha_limit)
         ephem = convert_horizons_table(ephem, include_moon)
+    except ConnectionError as e:
+        logger.error("Unable to connect to HORIZONS")
     except ValueError as e:
         logger.debug("Ambiguous object, trying to determine HORIZONS id")
         ephem = None
@@ -684,7 +698,7 @@ def convert_horizons_table(ephem, include_moon=False):
     columns (if [include_moon] is True).
     The modified Astropy Table is returned"""
 
-    dates = Column([datetime.strptime(d, "%Y-%b-%d %H:%M") for d in ephem['datetime_str']])
+    dates = Time([datetime.strptime(d, "%Y-%b-%d %H:%M") for d in ephem['datetime_str']])
     if 'datetime' not in ephem.colnames:
         ephem.add_column(dates, name='datetime')
     # Convert units of RA/Dec rate from arcsec/hr to arcsec/min and compute
@@ -699,7 +713,7 @@ def convert_horizons_table(ephem, include_moon=False):
         moon_seps = []
         moon_phases = []
         for date, obj_ra, obj_dec in ephem[('datetime', 'RA', 'DEC')]:
-            moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(date, radians(obj_ra), radians(obj_dec), '-1')
+            moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(date.datetime, radians(obj_ra), radians(obj_dec), '-1')
             moon_seps.append(moon_obj_sep)
             moon_phases.append(moon_phase)
         ephem.add_columns(cols=(Column(moon_seps), Column(moon_phases)), names=('moon_sep', 'moon_phase'))
@@ -718,7 +732,7 @@ def determine_horizons_id(lines, now=None):
     horizons_id = None
     for line in lines:
         chunks = line.split()
-        if len(chunks) == 5 and chunks[0].isdigit() is True and chunks[1].isdigit() is True:
+        if len(chunks) >= 5 and chunks[0].isdigit() is True and chunks[1].isdigit() is True:
             try:
                 epoch_yr = datetime.strptime(chunks[1], "%Y")
                 if abs(now-epoch_yr) <= timespan:
@@ -1168,26 +1182,26 @@ def determine_slot_length(mag, site_code, debug=False):
     raise MagRangeError("Target magnitude outside bins")
 
 
-def estimate_exptime(rate, pixscale=0.304, roundtime=10.0):
-    """Gives the estimated exposure time (in seconds) for the given rate and
-    pixelscale"""
+def estimate_exptime(rate, roundtime=10.0):
+    """Gives the estimated exposure time (in seconds) for the given rate.
+        exptime is equal to seconds for 2" of movement.
+    """
 
-    exptime = (60.0 / rate / pixscale)*1.0
+    exptime = (60.0 / rate)*2.0
     round_exptime = max(int(exptime/roundtime)*roundtime, 1.0)
     return round_exptime, exptime
 
 
-def determine_exptime(speed, pixel_scale, max_exp_time=300.0):
-    (round_exptime, full_exptime) = estimate_exptime(speed, pixel_scale, 5.0)
+def determine_exptime(speed, max_exp_time=300.0):
+    (round_exptime, full_exptime) = estimate_exptime(speed, 5.0)
 
     if round_exptime > max_exp_time:
-        logger.debug("Capping exposure time at %.1f seconds (Was %1.f seconds)" % \
-            (round_exptime, max_exp_time))
+        logger.debug("Capping exposure time at %.1f seconds (Was %1.f seconds)" % (round_exptime, max_exp_time))
         round_exptime = full_exptime = max_exp_time
-    if round_exptime < 10.0 :
+    if round_exptime < 10.0:
         # If under 10 seconds, re-round to nearest half second
-        (round_exptime, full_exptime) = estimate_exptime(speed, pixel_scale, 0.5)
-    logger.debug("Estimated exptime=%.1f seconds (%.1f)" % (round_exptime , full_exptime))
+        (round_exptime, full_exptime) = estimate_exptime(speed, 0.5)
+    logger.debug("Estimated exptime=%.1f seconds (%.1f)" % (round_exptime, full_exptime))
 
     return round_exptime
 
@@ -1210,12 +1224,12 @@ def determine_exp_time_count(speed, site_code, slot_length_in_mins, mag, filter_
     # pretify max exposure time to nearest 5 seconds
     max_exp_time = ceil(max_exp_time/5)*5
 
-    exp_time = determine_exptime(speed, pixel_scale, max_exp_time)
+    exp_time = determine_exptime(speed, max_exp_time)
     # Make first estimate for exposure count ignoring molecule creation
     exp_count = int((slot_length - setup_overhead)/(exp_time + exp_overhead))
     # Reduce exposure count by number of exposures necessary to accomidate molecule overhead
     mol_overhead = molecule_overhead(build_filter_blocks(filter_pattern, exp_count))
-    exp_count = int(ceil(exp_count * (1.0-(mol_overhead / ((( exp_time + exp_overhead ) * exp_count) + mol_overhead)))))
+    exp_count = int(ceil(exp_count * (1.0-(mol_overhead / (((exp_time + exp_overhead) * exp_count) + mol_overhead)))))
     # Safety while loop for edge cases
     while setup_overhead + molecule_overhead(build_filter_blocks(filter_pattern, exp_count)) + (exp_overhead * float(exp_count)) + exp_time * float(exp_count) > slot_length:
         exp_count -= 1
@@ -1243,7 +1257,7 @@ def determine_exp_count(slot_length_in_mins, exp_time, site_code, filter_pattern
     exp_count = int((slot_length - setup_overhead)/(exp_time + exp_overhead))
     # Reduce exposure count by number of exposures necessary to accommodate molecule overhead
     mol_overhead = molecule_overhead(build_filter_blocks(filter_pattern, exp_count))
-    exp_count = int(ceil(exp_count * (1.0-(mol_overhead / ((( exp_time + exp_overhead ) * exp_count) + mol_overhead)))))
+    exp_count = int(ceil(exp_count * (1.0-(mol_overhead / (((exp_time + exp_overhead) * exp_count) + mol_overhead)))))
     # Safety while loop for edge cases
     while setup_overhead + molecule_overhead(build_filter_blocks(filter_pattern, exp_count)) + (exp_overhead * float(exp_count)) + exp_time * float(exp_count) > slot_length:
         exp_count -= 1
@@ -1251,8 +1265,8 @@ def determine_exp_count(slot_length_in_mins, exp_time, site_code, filter_pattern
     if exp_count < min_exp_count:
         exp_count = min_exp_count
         slot_length = ((exp_time + exp_overhead) * float(exp_count)) + (setup_overhead + molecule_overhead(build_filter_blocks(filter_pattern, min_exp_count)))
-        logger.debug("increasing slot length to %.1f minutes to allow %.1f exposure time" % ( slot_length/60.0, exp_time))
-    logger.debug("Slot length of %.1f mins (%.1f secs) allows %d x %.1f second exposures" % ( slot_length/60.0, slot_length, exp_count, exp_time))
+        logger.debug("increasing slot length to %.1f minutes to allow %.1f exposure time" % (slot_length/60.0, exp_time))
+    logger.debug("Slot length of %.1f mins (%.1f secs) allows %d x %.1f second exposures" % (slot_length/60.0, slot_length, exp_count, exp_time))
     if exp_time is None or exp_time <= 0.0 or exp_count < 1:
         logger.debug("Invalid exposure count")
         exp_count = None
@@ -1313,15 +1327,18 @@ def molecule_overhead(filter_blocks):
     return molecule_setup_overhead
 
 
-def build_filter_blocks(filter_pattern, exp_count):
+def build_filter_blocks(filter_pattern, exp_count, exp_type="EXPOSE"):
     """Take in filter pattern string, export list of [filter, # of exposures in filter] """
     filter_bits = filter_pattern.split(',')
     filter_bits = list(filter(None, filter_bits))
     filter_list = []
     filter_blocks = []
-    while exp_count > 0:
-        filter_list += filter_bits[:exp_count]
-        exp_count -= len(filter_bits)
+    if exp_type == 'REPEAT_EXPOSE':
+        filter_list = filter_bits
+    else:
+        while exp_count > 0:
+            filter_list += filter_bits[:exp_count]
+            exp_count -= len(filter_bits)
     for f, m in groupby(filter_list):
         filter_blocks.append(list(m))
     if len(filter_blocks) == 0:
@@ -1550,6 +1567,13 @@ def get_sitepos(site_code, dbg=False):
         (site_long, status) = S.sla_daf2r(20, 48, 35.54)
         site_hgt = 1804.0
         site_name = 'LCO CPT Node 0m4a Aqawan A at Sutherland'
+    elif site_code == 'NZTL-DOMA-1M8A' or site_code == '474':
+        # Latitude, longitude from https://www.canterbury.ac.nz/science/facilities/field-and-research-stations/mount-john-observatory/facilities/
+        (site_lat, status) = S.sla_daf2r(43, 59, 14.6)
+        site_lat = -site_lat   # Southern hemisphere !
+        (site_long, status) = S.sla_daf2r(170, 27, 53.9)
+        site_hgt = 1027.1
+        site_name = 'MOA 1.8m at Mount John Observatory'
     elif site_code == '500' or site_code == '1M0' or site_code == '0M4' or site_code == '2M0':
         site_lat = 0.0
         site_long = 0.0
@@ -1862,9 +1886,9 @@ def get_sitecam_params(site, bin_mode=None):
     elif site == 'FTN' or 'OGG-CLMA-2M0' in site or site == 'F65':
         site_code = 'F65'
         setup_overhead = cfg.tel_overhead['twom_setup_overhead']
-        exp_overhead = cfg.inst_overhead['twom_exp_overhead']
-        pixel_scale = cfg.tel_field['twom_pixscale']
-        fov = arcmins_to_radians(cfg.tel_field['twom_fov'])
+        exp_overhead = cfg.inst_overhead['muscat_exp_overhead']
+        pixel_scale = cfg.tel_field['twom_muscat_pixscale']
+        fov = arcmins_to_radians(cfg.tel_field['twom_muscat_fov'])
         max_exp_length = 300.0
         alt_limit = cfg.tel_alt['twom_alt_limit']
     elif site == 'FTS' or 'COJ-CLMA-2M0' in site or site == 'E10':

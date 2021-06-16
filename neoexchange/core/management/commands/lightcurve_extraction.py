@@ -162,6 +162,7 @@ class Command(BaseCommand):
         ax2.set_ylabel('FWHM (")')
         # ax2.set_title('FWHM')
         fig2.suptitle('Conditions for obs: '+title)
+        ax2.set_title(sub_title)
         ax3.plot(alltimes, air_mass, marker='.', color=colors, linestyle=' ')
         ax3.set_xlabel('Time')
         ax3.set_ylabel('Airmass')
@@ -366,7 +367,7 @@ class Command(BaseCommand):
         for super_block in super_blocks:
             block_list = Block.objects.filter(superblock=super_block.id)
             if obs_date:
-                block_list = block_list.filter(when_observed__lt=obs_date+timedelta(days=1)).filter(when_observed__gt=obs_date-timedelta(days=1))
+                block_list = block_list.filter(when_observed__lt=obs_date+timedelta(days=2)).filter(when_observed__gt=obs_date)
             self.stdout.write("Analyzing SuperblockBlock# %s for %s" % (super_block.tracking_number, super_block.body.current_name()))
             for block in block_list:
                 block_mags = []
@@ -470,11 +471,13 @@ class Command(BaseCommand):
                     data_path = make_data_dir(out_path, model_to_dict(frames_all_zp[0]))
                     frames_list = [os.path.join(data_path, f.filename) for f in frames_all_zp]
                     if not options['nogif']:
-                        movie_file = make_gif(frames_list, init_fr=100, center=3, out_path=out_path, plot_source=True,
+                        movie_file = make_gif(frames_list, sort=False, init_fr=100, center=3, out_path=out_path, plot_source=True,
                                               target_data=frame_data, show_reticle=True, progress=True)
                         if "WARNING" not in movie_file:
                             output_file_list.append('{},{}'.format(movie_file, data_path.lstrip(out_path)))
-                        self.stdout.write("New gif created: {}".format(movie_file))
+                            self.stdout.write("New gif created: {}".format(movie_file))
+                        else:
+                            self.stdout.write(movie_file)
         alcdef_file.close()
         self.stdout.write("Found matches in %d of %d frames" % (len(times), total_frame_count))
 
@@ -534,13 +537,22 @@ class Command(BaseCommand):
                 if options['title'] is None:
                     sites = ', '.join(mpc_site)
                     try:
-                        if options['timespan'] < 1:
+                        # for single dates and short site lists, put everything on single line.
+                        if options['timespan'] < 1 and len(sites) <= 13:
                             plot_title = '%s from %s (%s) on %s' % (start_super_block.body.current_name(),
                                                                     start_block.site.upper(), sites, start_super_block.block_end.strftime("%Y-%m-%d"))
                             subtitle = ''
-                        else:
+                        # for lc covering multiple nights, reformat title
+                        elif options['timespan'] < 1:
                             plot_title = '%s from %s to %s' % (start_block.body.current_name(),
-                                                               (start_super_block.block_end - timedelta(days=options['timespan'])).strftime("%Y-%m-%d"),
+                                                               (start_super_block.block_end - timedelta(
+                                                                   days=options['timespan'])).strftime("%Y-%m-%d"),
+                                                               start_super_block.block_end.strftime("%Y-%m-%d"))
+                            subtitle = 'Sites: ' + sites
+                        # for single night LC using many sites, put sites on 2nd line.
+                        else:
+                            plot_title = '%s from %s on %s' % (start_super_block.body.current_name(),
+                                                               start_block.site.upper(),
                                                                start_super_block.block_end.strftime("%Y-%m-%d"))
                             subtitle = 'Sites: ' + sites
                     except TypeError:
@@ -572,6 +584,7 @@ class Command(BaseCommand):
                     for output_file in output_file_list:
                         outfut_file_file.write(output_file)
                         outfut_file_file.write('\n')
+                self.stdout.write(f"New lc file list created: {os.path.join(data_path, base_name + 'lc_file_list.txt')}")
                 try:
                     os.chmod(os.path.join(data_path, base_name + 'lc_file_list.txt'), rw_permissions)
                 except PermissionError:

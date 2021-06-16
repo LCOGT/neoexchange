@@ -12,8 +12,7 @@ GNU General Public License for more details.
 """
 
 from django.db import models
-from django.utils.translation import ugettext_lazy as _
-from django.utils.encoding import python_2_unicode_compatible
+from django.utils.translation import gettext_lazy as _
 
 from core.models.body import Body
 
@@ -50,7 +49,6 @@ SPECTRAL_SOURCE_CHOICES = (
                         ('O', 'Other')
                      )
 
-@python_2_unicode_compatible
 class SpectralInfo(models.Model):
     body                = models.ForeignKey(Body, on_delete=models.CASCADE)
     taxonomic_class     = models.CharField('Taxonomic Class', blank=True, null=True, max_length=6)

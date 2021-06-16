@@ -41,12 +41,13 @@ function set_mag_offset(dataset_source, toggle){
 }
 
 
-function remove_shift_data(source, dataset_source, osource, plot){
+function remove_shift_data(source, dataset_source, osource, plot, plot2){
     const data = source.data;
     const base = osource.data;
     const I = dataset_source.selected.indices;
     const T = dataset_source.data['title'];
     const O = dataset_source.data['offset'];
+    const D = dataset_source.data['date'];
     const y = data['mag'];
     const el = data['err_low'];
     const eh = data['err_high'];
@@ -58,25 +59,27 @@ function remove_shift_data(source, dataset_source, osource, plot){
     const a2 = base['alpha']
     var selected = [];
     var offy = [];
-    for (var i = 0; i < I.length; i++) {
+    var selected_dates = [];
+    for (let i = 0; i < I.length; i++) {
         selected[i] = T[I[i]];
         offy.push(I[i]);
+        selected_dates.push(new Date(D[I[i]]));
     }
-    for (var i = 0; i < a2.length; i++) {
+    for (let i = 0; i < a2.length; i++) {
         if (selected.includes(t2[i])){
             a2[i] = 1;
         } else {
             a2[i] = 0;
         }
     }
-    for (var i = 0; i < a.length; i++) {
+    for (let i = 0; i < a.length; i++) {
         if (selected.includes(t[i])){
             a[i] = 1;
         } else {
             a[i] = 0;
         }
         if (offy != []) {
-            for (var k = 0; k < offy.length; k++) {
+            for (let k = 0; k < offy.length; k++) {
                 if (t[i] == T[offy[k]]) {
                     y[i] = m[i] + O[offy[k]];
                     el[i] = m[i] - me[i] + O[offy[k]];
@@ -100,6 +103,21 @@ function remove_shift_data(source, dataset_source, osource, plot){
         plot.left[0].axis_label = 'Apparent Magnitude (Adjusted)';
     } else {
         plot.left[0].axis_label = 'Apparent Magnitude';
+    }
+    if (selected_dates.length == 0){
+        plot.title.text = plot.title.text.split("(")[0]
+        plot2.title.text = plot.title.text.split("(")[0]
+    } else {
+        var maxDate = new Date(Math.max.apply(null,selected_dates));
+        var minDate = new Date(Math.min.apply(null,selected_dates));
+        if (maxDate.valueOf() == minDate.valueOf()){
+            plot.title.text = plot.title.text.split("(")[0] + "("+minDate.toISOString().slice(0,10).replace(/-/g,"")+")";
+            plot2.title.text = plot.title.text.split("(")[0] + "("+minDate.toISOString().slice(0,10).replace(/-/g,"")+")";
+        } else {
+            plot.title.text = plot.title.text.split("(")[0] + "("+minDate.toISOString().slice(0,10).replace(/-/g,"")+"-"+maxDate.toISOString().slice(0,10).replace(/-/g,"")+")";
+            plot2.title.text = plot.title.text.split("(")[0] + "("+minDate.toISOString().slice(0,10).replace(/-/g,"")+"-"+maxDate.toISOString().slice(0,10).replace(/-/g,"")+")";
+        }
+
     }
 }
 
@@ -186,4 +204,35 @@ function phase_data(source, period_box, period_slider, plot, osource, phase_shif
     let epoch = base_date + (B * period / 24);
     plot.below[0].axis_label = 'Phase (Period = ' + period + 'h / Epoch = '+ epoch + ')';
     source.change.emit();
+}
+
+function analog_select(analog_select, frame_select, reflectance_sources, chosen_sources, plot, plot2, lines, raw_analog, raw_analog_list, raw_lines){
+    const analog = analog_select.value;
+    const options = analog_select.options;
+    const frames = frame_select.value;
+
+    for (var i = 0; i < options.length; i++){
+        if (analog == options[i]){
+            raw_analog.data['spec'] = raw_analog_list[i].data['spec'];
+            raw_analog.data['wav'] = raw_analog_list[i].data['wav'];
+            for (var k = 0; k < chosen_sources.length; k++){
+                chosen_sources[k].data['spec'] = reflectance_sources[k][i].data['spec'];
+                chosen_sources[k].data['wav'] = reflectance_sources[k][i].data['wav'];
+                var num = k+1;
+                if (frames.includes(num.toString())){
+                    raw_lines[k].muted=false
+                    lines[k].visible = true
+                } else {
+                    raw_lines[k].muted=true
+                    lines[k].visible = false
+                }
+                chosen_sources[k].change.emit();
+                lines[k].change.emit()
+            }
+            raw_analog.change.emit()
+            plot.title.text = plot.title.text.split("    ")[0] + "    Analog: " + analog;
+            plot2.title.text = plot2.title.text.split("    ")[0] + "    Analog: " + analog;
+        }
+    }
+
 }

@@ -121,6 +121,10 @@ class FrameAdmin(VersionAdmin):
             name = "%s@%s" % (obj.midpoint, obj.sitecode.rstrip())
         return name
 
+    # Use raw_id fields (https://docs.djangoproject.com/en/1.11/ref/contrib/admin/#django.contrib.admin.ModelAdmin.raw_id_fields)
+    # for the Block to stop it making a select box tens of thousands entries long...
+    raw_id_fields = ("block",)
+
     list_display = ('id', 'block_groupid', 'quality', 'frametype', 'filename_or_midpoint', 'exptime', 'filter', 'sitecode')
     list_filter = ('quality', 'frametype', 'midpoint', 'filter', 'sitecode', 'instrument')
     search_fields = ('filename', )

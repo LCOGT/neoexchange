@@ -169,9 +169,9 @@ class ScheduleCadence(FunctionalTest):
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
-        self.assertIn('14', num_exp)
+        self.assertIn('17', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
-        self.assertIn('60.0', exp_length)
+        self.assertIn('45.0', exp_length)
         start_time = self.browser.find_element_by_id('id_start_time').get_attribute('value')
         self.assertIn('2015-04-20T01:30:00', start_time)
         jitter = self.browser.find_element_by_id('id_jitter').get_attribute('value')
@@ -289,9 +289,9 @@ class ScheduleCadence(FunctionalTest):
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
-        self.assertIn('13', num_exp)
+        self.assertIn('15', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
-        self.assertIn('65.0', exp_length)
+        self.assertIn('50.0', exp_length)
         jitter = self.browser.find_element_by_id('id_jitter').get_attribute('value')
         self.assertIn('0.5', jitter)
         period = self.browser.find_element_by_id('id_period').get_attribute('value')
@@ -418,9 +418,9 @@ class ScheduleCadence(FunctionalTest):
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
-        self.assertIn('13', num_exp)
+        self.assertIn('15', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
-        self.assertIn('65.0', exp_length)
+        self.assertIn('50.0', exp_length)
 
         # He notices the Jitter automatically adjusts to fit the slot length.
         jitter = self.browser.find_element_by_id('id_jitter').get_attribute('value')

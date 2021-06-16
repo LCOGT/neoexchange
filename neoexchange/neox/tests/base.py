@@ -286,7 +286,7 @@ class FunctionalTest(StaticLiveServerTestCase):
                         firefox_capabilities['marionette'] = False
                 options = webdriver.firefox.options.Options()
                 options.add_argument('--headless')
-                self.browser = webdriver.Firefox(capabilities=firefox_capabilities, firefox_profile=fp, firefox_options=options)
+                self.browser = webdriver.Firefox(capabilities=firefox_capabilities, firefox_profile=fp, options=options)
         else:
             options = webdriver.chrome.options.Options()
             options.add_argument('--headless')
