@@ -340,12 +340,16 @@ def spec_plot(data_spec, analog_data, reflec=False):
             for spec in data_spec:
                 reflectance_sources = []
                 for a in analog_data:
-                    data_label_reflec, reflec_spec, reflec_ast_wav = spectrum_plot(spec['filename'], analog=a['filename'])
-                    reflectance_sources.append(ColumnDataSource(data=dict(wav=reflec_ast_wav, spec=reflec_spec)))
+                    data_label_reflec, reflec_spec, reflec_ast_wav, reflec_ast_err = spectrum_plot(spec['filename'], analog=a['filename'])
+                    lower_error = np.array([flux - reflec_ast_err[i] for i, flux in enumerate(reflec_spec)])
+                    upper_error = np.array([flux + reflec_ast_err[i] for i, flux in enumerate(reflec_spec)])
+                    reflectance_sources.append(ColumnDataSource(data=dict(wav=reflec_ast_wav, spec=reflec_spec, up=upper_error, low=lower_error)))
                 reflect_source_prefs.append(ColumnDataSource(data=copy.deepcopy(reflectance_sources[0].data)))
                 reflect_source_lists.append(reflectance_sources)
             for k, ref_source in enumerate(reflect_source_prefs):
                 reflectance_lines.append(ref_plot.line("wav", "spec", source=ref_source, line_width=3, name=data_spec[k]['label']))
+                reflectance_lines.append(ref_plot.line("wav", "up", source=ref_source, line_width=1, name=data_spec[k]['label']))
+                reflectance_lines.append(ref_plot.line("wav", "low", source=ref_source, line_width=1, name=data_spec[k]['label']))
             ref_plot.title.text = 'Object: {}    Analog: {}'.format(data_spec[0]['label'], analog_data[0]['label'])
         else:
             for spec in data_spec:
