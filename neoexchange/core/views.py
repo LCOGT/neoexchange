@@ -1141,6 +1141,20 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
             return reverse('target', kwargs={'pk': self.object.id})
 
 
+def parse_errors(errors):
+    # To parse out errors, the base case is when there is just a list of strings
+    if isinstance(errors, list) and all([isinstance(e, str) for e in errors]):
+        return '\n'.join(errors)
+    else:
+        parsed_errors = []
+        if isinstance(errors, list):
+            for i, error in enumerate(errors):
+                parsed_errors.append(f'{parse_errors(error)}')
+        elif isinstance(errors, dict):
+            for key, value in errors.items():
+                parsed_errors.append(f'{key}: {parse_errors(value)}')
+        return '\n'.join(parsed_errors)
+
 def parse_portal_errors(sched_params):
     """Parse a passed <sched_params> response from the LCO Observing Portal via
     schedule_submit() and try to extract an error message
@@ -1148,21 +1162,15 @@ def parse_portal_errors(sched_params):
 
     msg = "It was not possible to submit your request to the scheduler."
     if sched_params.get('error_msg', None):
-        msg += "\nAdditional information:"
+        msg += "\nAdditional information:\n"
         error_groups = sched_params['error_msg']
-        if type(error_groups) == dict:
-            for error_type in error_groups.keys():
-                error_msgs = error_groups[error_type]
-                for errors in error_msgs:
-                    if type(errors) == str:
-                        msg += "\n{err_type}: {error}".format(err_type=error_type, error=errors)
-                    elif type(errors) == dict:
-                        for key in errors:
-                            msg += "\n".join(errors[key])
-        elif type(error_groups) == str:
-            msg += "\n" + error_groups
+        if isinstance(error_groups, str):
+            msg += error_groups
         else:
-            msg += "\nError parsing error message"
+            try:
+                msg += parse_errors(error_groups)
+            except:
+                msg += "Error parsing error message"
 
     return msg
 

@@ -752,6 +752,8 @@ class TestSubmitBlockToScheduler(TestCase):
                            'user_id': 'bsimpson'
                            }
 
+        self.maxDiff = None
+
     @patch('astrometrics.sources_subs.requests.post')
     def test_submit_body_for_cpt(self, mock_post):
         mock_post.return_value.status_code = 200
@@ -1369,7 +1371,8 @@ class TestSubmitBlockToScheduler(TestCase):
 
         resp, sched_params = submit_block_to_scheduler(body_elements, params)
         self.assertEqual(resp, False)
-        self.assertEqual(sched_params['error_msg'], 'No visible requests within cadence window parameters')
+        expected_msg = {'windows': [{'non_field_errors': ['The observation window does not fit within any defined semester.']}]}
+        self.assertEqual(sched_params['error_msg'], expected_msg)
 
     def test_spectro_with_solar_analog(self):
 
