@@ -3683,6 +3683,7 @@ def find_analog(date_obs, site):
     time_diff = []
     for b in analog_blocks:
         d_out, obj, req, path, prop = find_spec(b.id)
+        print(path)
         filenames = search(path, matchpattern='.*_2df_ex.fits', latest=False)
         if filenames is False:
             continue
