@@ -1,8 +1,10 @@
+import os
 from unittest import skipIf
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.test import TestCase
 from django.http import HttpResponse
+from django.core.files.storage import default_storage
 
 from core.models import Body
 # Import module methods to test
@@ -112,6 +114,7 @@ class TestMakeVisibilityPlot(TestCase):
                          'update_time': datetime(2019, 7, 30, 19, 7, 35)
                         }
         self.test_body = Body.objects.create(**body_params)
+        self.targetname = '455432_2003RP8'
 
         body_params['provisional_name'] = 'N999foo'
         body_params['provisional_packed'] = None
@@ -119,6 +122,7 @@ class TestMakeVisibilityPlot(TestCase):
         self.test_neocp_body = Body.objects.create(**body_params)
 
         self.start_time = datetime(2021,6,1)
+        self.end_time = self.start_time + timedelta(days=31)
 
     def test_badplottype(self):
         response = make_visibility_plot(None, self.test_body.pk, 'cucumber', self.start_time)
@@ -132,3 +136,27 @@ class TestMakeVisibilityPlot(TestCase):
 
         self.assertTrue(isinstance(response, HttpResponse))
         self.assertEqual(b'', response.content)
+
+    def test_plot_radec(self):
+
+        plot_filename = "visibility/{}/{}_radec_{}-{}.png".format(self.test_body.pk,
+            self.targetname, self.start_time.strftime("%Y%m%d"), self.end_time.strftime("%Y%m%d"))
+
+        response = make_visibility_plot(None, self.test_body.pk, 'radec', self.start_time)
+
+        self.assertTrue(isinstance(response, HttpResponse))
+        self.assertEqual('image/png', response['Content-Type'])
+        self.assertEqual(b'\x89PNG\r\n', response.content[0:6])
+        self.assertTrue(default_storage.exists(plot_filename))
+
+    def test_plot_gallonglat(self):
+
+        plot_filename = "visibility/{}/{}_glonglat_{}-{}.png".format(self.test_body.pk,
+            self.targetname, self.start_time.strftime("%Y%m%d"), self.end_time.strftime("%Y%m%d"))
+
+        response = make_visibility_plot(None, self.test_body.pk, 'glonglat', self.start_time)
+
+        self.assertTrue(isinstance(response, HttpResponse))
+        self.assertEqual('image/png', response['Content-Type'])
+        self.assertEqual(b'\x89PNG\r\n', response.content[0:6])
+        self.assertTrue(default_storage.exists(plot_filename))
