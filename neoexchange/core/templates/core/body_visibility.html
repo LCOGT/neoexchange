@@ -22,7 +22,7 @@
                 </div>
                 <h5  class="section-title"><span class="">Right Ascension and Declination</span></h5>
                 <img src="{% url 'visibility-plot' pk=body.pk plot_type='radec' %}" id="id_radecplot">
-                <span class="msgpadded">Milky Way outline in brown.</span>
+                <span class="msgpadded" style="display: block;">Milky Way outline in brown.</span>
                 <h5  class="section-title"><span class="">Galactic Longitude and Latitude</span></h5>
                 <img src="{% url 'visibility-plot' pk=body.pk plot_type='glonglat' %}" id="id_glonglatplot">
                 <h5  class="section-title"><span class="">Heliocentric and Geocentric Distances</span></h5>
