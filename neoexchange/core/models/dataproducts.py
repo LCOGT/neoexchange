@@ -26,10 +26,12 @@ class BlockManager(models.Manager):
         block = ContentType.objects.get(app_label='core', model='block')
         return super().get_queryset().filter(content_type=block)
 
+
 class BodyManager(models.Manager):
     def get_queryset(self):
         body = ContentType.objects.get(app_label='core', model='body')
         return super().get_queryset().filter(content_type=body)
+
 
 class DataProduct(models.Model):
     """
@@ -54,9 +56,11 @@ class DataProduct(models.Model):
     PNG_ZP = 16
     PDS_XML = 20
     ALCDEF_TXT = 21
+    FRAME_GIF = 22
     DP_CHOICES = (
                     (JPEG, 'JPEG'),
-                    (GUIDER_GIF, 'Guider GIF'),
+                    (GUIDER_GIF, 'Spectroscopy Guider GIF'),
+                    (FRAME_GIF, 'Thumbnail Frame GIF'),
                     (FITS_IMAGE, 'FITS Image'),
                     (FITS_SPECTRA, 'FITS Spectra'),
                     (ALCDEF, 'ALCDEF file'),
@@ -70,7 +74,7 @@ class DataProduct(models.Model):
                     (PNG_LIGHTCURVE_COMBINED_UNPHASED, 'Combined light curve PNG (unphased)'),
                     (PNG_PERIODOGRAM, 'Period finder periodogram PNG'),
                     (PNG_DATAWINDOW, 'Period finder data window PNG'),
-                    (PNG_FWHM,'FWHM condition PNG'),
+                    (PNG_FWHM, 'FWHM condition PNG'),
                     (PNG_ZP, 'Zero point PNG'),
                     (PDS_XML, 'Planetary Data System (PDS) XML'),
                     (ALCDEF_TXT, 'ALCDEF Lightcurve file'),
