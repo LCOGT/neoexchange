@@ -1,3 +1,4 @@
+
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
 Copyright (C) 2016-2019 LCO
@@ -1037,3 +1038,20 @@ class TestUnpackTarball(TestCase):
     #
     #     self.assertEqual(expected_num_files,len(files))
     #     self.assertEqual(expected_file_name,files[1])
+
+
+class TestDetermineListGPSOptions(ExternalCodeUnitTest):
+
+    def test_chile(self):
+        expected_output = '2021-06-23T04:00:00 W86'
+
+        output = determine_listGPS_options(datetime(2021,6,23,4,0,0), "W86")
+
+        self.assertEqual(expected_output, output)
+
+    def test_badsitecode(self):
+        expected_output = ''
+
+        output = determine_listGPS_options(datetime(2021,6,23,4,0,0),42)
+
+        self.assertEqual(expected_output, output)

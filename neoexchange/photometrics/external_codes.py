@@ -765,3 +765,16 @@ def unpack_tarball(tar_path, unpack_dir):
         os.chmod(file, 0o664)
 
     return files
+
+
+def determine_listGPS_options(ephem_date, sitecode):
+    """generates options for list_GPS program from passed date code and returns a string"""
+    options = ''
+
+    try:
+        options = "{:s} {:s}".format(ephem_date.strftime("%Y-%m-%dT%H:%M:%S"),sitecode)
+    except AttributeError:
+        pass
+    except ValueError:
+        print("invalid site code", sitecode)
+    return options
