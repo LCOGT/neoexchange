@@ -31,6 +31,7 @@ from time import sleep
 from datetime import date
 import requests
 
+import pytz
 from bs4 import BeautifulSoup
 import astropy.units as u
 try:
@@ -2530,7 +2531,29 @@ def fetch_aeon_page():
 
 def fetch_aeon_events(page=None):
 
-    return None
+    events = []
+    if type(page) != BeautifulSoup:
+        page = fetch_aeon_page()
+
+    if type(page) == BeautifulSoup:
+        # Find the table, make sure there is only one
+        tables = page.find_all('table')
+
+        if len(tables) != 1:
+            logger.warning("Unexpected number of tables found on AEON page (Found %d)" % len(tables))
+        else:
+            targets_table = tables[0]
+            rows = targets_table.find_all('tr')
+            if len(rows) > 1:
+                for row in rows[1:]:
+                    dates = row.find_all('td')
+                    event = {}
+                    for date_type, date in zip(['start', 'end'], dates):
+                        date_dt = datetime.strptime(date.text.strip(), "%Y-%m-%d %H:%M:%S")
+                        event[date_type] = date_dt.replace(tzinfo=pytz.UTC)
+                    events.append(event)
+
+    return events
 
 
 def fetch_list_targets(list_targets):

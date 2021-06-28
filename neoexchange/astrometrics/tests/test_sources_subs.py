@@ -22,6 +22,7 @@ from unittest import skipIf
 from math import radians
 from copy import deepcopy
 
+import pytz
 import astropy.units as u
 from bs4 import BeautifulSoup
 from django.test import TestCase
@@ -6105,7 +6106,9 @@ class TestFetchAEONEvents(TestCase):
         self.assertTrue(isinstance(page, BeautifulSoup))
 
     def test_first_item(self):
-        expected_event = {'start': '2021-02-05T00:55:19', 'end' : '2021-02-05T09:18:49' }
+        expected_event = {'start': datetime(2021, 2, 5, 00, 55, 19, 0, pytz.UTC),
+                          'end'  : datetime(2021, 2, 5,  9, 18, 49, 0, pytz.UTC)
+                         }
 
         events = fetch_aeon_events(self.test_aeon_page)
 
