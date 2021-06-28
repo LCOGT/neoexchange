@@ -1,8 +1,10 @@
 from django.test import TestCase
 from mock import patch
 
-from core.models import Body, SuperBlock, Proposal, Block
-from neox.tests.mocks import mock_fetch_goldstone_calendar_targets
+from core.models import Body, SuperBlock, Proposal, Block, User
+from neox.tests.mocks import mock_fetch_goldstone_calendar_targets, mock_fetch_aeon_events
+from cal.models import CalEvent
+from cal.views import create_aeon_events
 
 class CalNeoxApiTest(TestCase):
 
@@ -95,3 +97,31 @@ class CalGoldstoneApiTest(TestCase):
                 }
               ]
         )
+
+class CreateAEONEvents(TestCase):
+
+    def setUp(self):
+
+        self.aeon_username = 'soar-aeon'
+        self.aeon_password = 'simpson'
+        self.email = 'aeon@soar.org'
+        self.aeon = User.objects.create_user(username=self.aeon_username, password=self.aeon_password, email=self.email)
+        self.aeon.first_name = 'SOAR-AEON'
+        self.aeon.last_name = 'Calendar'
+        self.aeon.is_active = 1
+        self.aeon.save()
+        self.maxDiff = None
+
+    @patch('cal.views.fetch_aeon_events', mock_fetch_aeon_events)
+    def test_create(self):
+
+        events = create_aeon_events()
+
+        self.assertEqual(2, len(events))
+
+        calevents = CalEvent.objects.all()
+
+        self.assertEqual(2, calevents.count())
+        event = calevents[0]
+        self.assertEqual("NIGHT", event.event_type)
+        self.assertEqual(self.aeon, event.submitter)

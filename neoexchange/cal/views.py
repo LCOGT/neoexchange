@@ -2,13 +2,14 @@ from datetime import datetime
 from calendar import monthrange
 import logging
 
+import pytz
 from django.views.generic import View
 from django.shortcuts import render
 from django.http import JsonResponse, Http404
 from django.urls import reverse
 
-from astrometrics.sources_subs import fetch_goldstone_targets
-from core.models import SuperBlock, Block
+from astrometrics.sources_subs import fetch_goldstone_targets, fetch_aeon_events
+from core.models import SuperBlock, Block, User
 from cal.models import CalEvent
 
 logger = logging.getLogger(__name__)
@@ -54,3 +55,23 @@ def goldstone_events(request):
         target = {'title': d['target'], 'start' : d['windows'][0]['start'], 'end' : d['windows'][0]['end']}
         targets.append(target)
     return JsonResponse(targets, safe=False)
+
+def create_aeon_events():
+    events = fetch_aeon_events()
+
+    aeon_user, created = User.objects.get_or_create(username='soar-aeon')
+    calevents = []
+    for event in events:
+        params = {  'event_type' : "NIGHT",
+                    'start' : event['start'].astimezone(pytz.UTC).replace(tzinfo=None),
+                    'end' : event['end'].astimezone(pytz.UTC).replace(tzinfo=None),
+                    'resource' : 'SOAR-AEON',
+                    'state' : 'SCHEDULED',
+                    'submitter_id' : aeon_user.pk
+                 }
+
+        calevent, created = CalEvent.objects.update_or_create(**params)
+
+        calevents.append(calevent)
+
+    return calevents

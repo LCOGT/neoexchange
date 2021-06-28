@@ -7,6 +7,7 @@ class CalEvent(models.Model):
 
     EVENT_TYPES = (
         ('OBSERVATION', 'Observations'),
+        ('NIGHT', 'Night of observations'),
         ('CAMPAIGN', 'Campaign'),
         ('DOWNTIME', 'Downtime/unavailability')
     )

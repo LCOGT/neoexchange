@@ -18,6 +18,7 @@ from datetime import datetime
 from datetime import date
 import os
 
+import pytz
 import astropy.units as u
 from astropy.table import Table
 from bs4 import BeautifulSoup
@@ -1960,3 +1961,9 @@ def mock_fetch_goldstone_calendar_targets(page=None, calendar_format=True):
               ]
 
     return targets
+
+def mock_fetch_aeon_events(page=None):
+    events = [ { 'start' : datetime(2021, 2,  5, 0, 55, 19, 0, pytz.UTC), 'end' : datetime(2021, 2,  5, 9, 18, 49, 0, pytz.UTC) },
+               { 'start' : datetime(2021, 2, 13, 0, 47, 50, 0, pytz.UTC), 'end':  datetime(2021, 2, 13, 9, 26, 45, 0, pytz.UTC) }
+             ]
+    return events
