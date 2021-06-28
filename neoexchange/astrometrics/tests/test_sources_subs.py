@@ -6089,3 +6089,24 @@ class TestFetchJPLPhysParams(TestCase):
         self.assertLessEqual(len(body.source_subtype_1), 2)
         self.assertEqual(body.source_subtype_1, 'LP')
 
+
+class TestFetchAEONEvents(TestCase):
+
+    def setUp(self):
+        # Read and make soup from the stored version of the SOAR-AEON page
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_aeon_page.html'), 'r')
+        self.test_aeon_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+    def test_fetch_page(self):
+
+        page = fetch_aeon_page()
+
+        self.assertTrue(isinstance(page, BeautifulSoup))
+
+    def test_first_item(self):
+        expected_event = {'start': '2021-02-05T00:55:19', 'end' : '2021-02-05T09:18:49' }
+
+        events = fetch_aeon_events(self.test_aeon_page)
+
+        self.assertEqual(expected_event, events[0])

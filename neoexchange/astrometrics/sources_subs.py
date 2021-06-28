@@ -2520,6 +2520,18 @@ def fetch_manos_targets(page=None, cut_off=None):
             targets.append(target_object)
     return targets
 
+def fetch_aeon_page():
+    """Fetches the page of SOAR-AEON nights"""
+    aeon_url = 'https://lco.global/aeon/soar-aeon-schedule/'
+    page = fetchpage_and_make_soup(aeon_url)
+
+    return page
+    
+
+def fetch_aeon_events(page=None):
+
+    return None
+
 
 def fetch_list_targets(list_targets):
     """Fetches targets from command line and/or text file and returns a list of targets"""
