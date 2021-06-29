@@ -20,11 +20,12 @@ from datetime import datetime, timedelta
 from subprocess import call, TimeoutExpired
 from collections import OrderedDict
 import warnings
-from shutil import unpack_archive
+from shutil import unpack_archive, copy
 from glob import glob
 
 from astropy.io import fits
 from astropy.io.votable import parse
+from astropy.utils.data import download_file as download_iers_file
 from numpy import loadtxt, split, empty
 
 from core.models import detections_array_dtypes
@@ -779,13 +780,44 @@ def determine_listGPS_options(ephem_date, sitecode):
         print("invalid site code", sitecode)
     return options
 
+def fetch_remote_file(source_dir, filename, url, progress=False):
+    """Fetches the remote file from <url> and copies and renames it to <source_dir/filename>
+    We make use of Astropy's download and caching mechanism to not refetch the
+    file too often and then copy and rename the file into <source_dir> (normally photometrics/configs/)
+    so it's available for where setup_working_dir() will be able to find it.
+    Set [progress]=True to see the download progress
+    """
+
+    status = -1
+
+    eop_file = download_iers_file(url, cache=True, show_progress=progress)
+
+    output_file = os.path.abspath(os.path.join(source_dir, filename))
+    dest_file = copy(eop_file, output_file)
+    if os.path.exists(dest_file):
+        status = 0
+
+    return status
+
 
 def setup_listGPS_dir(source_dir, dest_dir):
     """Setup a temporary working directory for running listGPS in <dest_dir>. The
     needed config files are symlinked from <source_dir>"""
 
-    listGPS_config_files = []
+    # We need an up-to-date copy of the EOP and ObsCode.htm files but don't
+    # want to store them github (3.4MB and growing).
+    # Fetch them here using Astropy's cache mechanism and then copy into <source_dir>
+    listGPS_config_files = [{ 'file' : 'finals.all', 'url' : 'ftp://ftp.iers.org/products/eop/rapid/standard/finals.all'},
+                            { 'file' : 'ObsCodes.htm', 'url' : 'https://www.minorplanetcenter.net/iau/lists/ObsCodes.html'}
+                           ]
+    for config_file in listGPS_config_files:
+        fetch_status = fetch_remote_file(source_dir, config_file['file'], config_file['url'], progress=True)
+        if fetch_status != 0:
+            msg = "Error fetching file {} from {}".format(config_file['file'], config_file['url'])
+            logger.warning(msg)
+            return fetch_status
 
+    listGPS_config_files = [x['file'] for x in listGPS_config_files]
     return_value = setup_working_dir(source_dir, dest_dir, listGPS_config_files)
 
     return return_value
