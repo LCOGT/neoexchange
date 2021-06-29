@@ -791,8 +791,12 @@ def setup_listGPS_dir(source_dir, dest_dir):
     return return_value
 
 
-def run_listGPS(ephem_date, sitecode, dest_dir, binary=None, dbg=False):
+def run_listGPS(source_dir, dest_dir, ephem_date, sitecode, binary=None, dbg=False):
     """Runs listGPS..."""
+
+    status = setup_listGPS_dir(source_dir, dest_dir)
+    if status != 0:
+        return status
 
     date_site = determine_listGPS_options(ephem_date, sitecode)
 
@@ -809,7 +813,8 @@ def run_listGPS(ephem_date, sitecode, dest_dir, binary=None, dbg=False):
     else:
         logger.debug("cmdline=%s" % cmdline)
         args = cmdline.split()
-        retcode_or_cmdline = call(args)
+        output_file = open(os.path.join(dest_dir, 'list_gps_output.out'), 'w')
+        retcode_or_cmdline = call(args, cwd=dest_dir, stdout=output_file, stderr=output_file)
 
     return retcode_or_cmdline
 

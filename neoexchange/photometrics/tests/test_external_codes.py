@@ -1076,7 +1076,7 @@ class TestDetermineListGPSOptions(ExternalCodeUnitTest):
         ephem_date = datetime(2021,6,23,4,0,0)
         sitecode = 'W85'
 
-        status = run_listGPS(ephem_date, sitecode, dest_dir)
+        status = run_listGPS(self.source_dir, self.test_dir, ephem_date, sitecode)
 
         self.assertTrue(os.path.exists(self.test_dir))
         self.assertEqual(expected_status, status)
