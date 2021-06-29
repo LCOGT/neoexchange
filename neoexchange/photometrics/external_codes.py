@@ -174,7 +174,7 @@ def setup_working_dir(source_dir, dest_dir, config_files):
         try:
             os.symlink(config_src_filepath, config_dest_filepath)
         except OSError:
-            logger.error("Could not create link for %s to %s" % ( config, config_dest_filepath))
+            logger.error("Could not create link for %s to %s" % (config, config_dest_filepath))
             num_bad_links += 1
     return_status = 0
     if num_bad_links > 0:
@@ -204,13 +204,12 @@ def find_binary(program):
 
 
 def determine_sext_options(fits_file):
-
     option_mapping = OrderedDict([
-                        ('gain'      , '-GAIN'),
-                        ('zeropoint' , '-MAG_ZEROPOINT'),
-                        ('pixel_scale' , '-PIXEL_SCALE'),
-                        ('saturation'  , '-SATUR_LEVEL'),
-                     ])
+        ('gain', '-GAIN'),
+        ('zeropoint', '-MAG_ZEROPOINT'),
+        ('pixel_scale', '-PIXEL_SCALE'),
+        ('saturation', '-SATUR_LEVEL'),
+    ])
 
     options = ''
     if not os.path.exists(fits_file):
@@ -233,25 +232,24 @@ def determine_sext_options(fits_file):
 
 
 def make_pa_rate_dict(pa, deltapa, minrate, maxrate):
-
-    pa_rate_dict = {    'filter_pa': pa,
-                        'filter_deltapa': deltapa,
-                        'filter_minrate': minrate/3600.0*1440.0,  # mtdlink needs motion rates in deg/day, not arcsec/min
-                        'filter_maxrate': maxrate/3600.0*1440.0,
-                   }
+    pa_rate_dict = {'filter_pa': pa,
+                    'filter_deltapa': deltapa,
+                    'filter_minrate': minrate / 3600.0 * 1440.0,
+                    # mtdlink needs motion rates in deg/day, not arcsec/min
+                    'filter_maxrate': maxrate / 3600.0 * 1440.0,
+                    }
 
     return pa_rate_dict
 
 
 def determine_mtdlink_options(num_fits_files, param_file, pa_rate_dict):
-
     min_rate_str = '{:.2f}'.format(pa_rate_dict['filter_minrate'])
     max_rate_str = '{:.2f}'.format(pa_rate_dict['filter_maxrate'])
 
     options = ''
     options += '-paramfile' + ' ' + str(param_file) + ' '
-    options += '-CPUTIME' + ' ' + str(num_fits_files*200) + ' '
-    options += '-MAXMISSES' + ' ' + str(int(floor(num_fits_files/2.5))) + ' '
+    options += '-CPUTIME' + ' ' + str(num_fits_files * 200) + ' '
+    options += '-MAXMISSES' + ' ' + str(int(floor(num_fits_files / 2.5))) + ' '
     options += '-FILTER_PA' + ' ' + str(pa_rate_dict['filter_pa']) + ' '
     options += '-FILTER_DELTAPA' + ' ' + str(pa_rate_dict['filter_deltapa']) + ' '
     options += '-FILTER_MINRATE' + ' ' + min_rate_str + ' '
@@ -276,7 +274,7 @@ def determine_scamp_options(fits_catalog, external_cat_name='GAIA-DR2.cat', dist
     else:
         distort_degrees = 1
     if distort_degrees != 1 and distort_degrees <= 7:
-            options += " -DISTORT_DEGREES {} -PROJECTION_TYPE TPV".format(distort_degrees)
+        options += " -DISTORT_DEGREES {} -PROJECTION_TYPE TPV".format(distort_degrees)
 
     return options
 
@@ -343,7 +341,7 @@ def run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type='A
         options = determine_sext_options(root_fits_file)
     else:
         options = determine_sext_options(fits_file)
-    cmdline = "%s %s -c %s %s" % ( binary, fits_file, sextractor_config_file, options )
+    cmdline = "%s %s -c %s %s" % (binary, fits_file, sextractor_config_file, options)
     cmdline = cmdline.rstrip()
 
     if dbg is True:
@@ -357,7 +355,8 @@ def run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type='A
 
 
 @timeit
-def run_scamp(source_dir, dest_dir, fits_catalog_path, refcatalog='GAIA-DR2.cat', binary=None, dbg=False, distort_degrees=None):
+def run_scamp(source_dir, dest_dir, fits_catalog_path, refcatalog='GAIA-DR2.cat', binary=None, dbg=False,
+              distort_degrees=None):
     """Run SCAMP (using either the binary specified by [binary] or by
     looking for 'scamp' in the PATH) on the passed <fits_catalog_path> with the
     results and any temporary files created in <dest_dir>. <source_dir> is the
@@ -386,7 +385,7 @@ def run_scamp(source_dir, dest_dir, fits_catalog_path, refcatalog='GAIA-DR2.cat'
             if os.path.islink(fits_catalog):
                 os.unlink(fits_catalog)
                 os.symlink(fits_catalog_path, fits_catalog)
-    cmdline = "%s %s -c %s %s" % ( binary, fits_catalog, scamp_config_file, options )
+    cmdline = "%s %s -c %s %s" % (binary, fits_catalog, scamp_config_file, options)
     cmdline = cmdline.rstrip()
 
     if dbg is True:
@@ -407,7 +406,8 @@ def run_scamp(source_dir, dest_dir, fits_catalog_path, refcatalog='GAIA-DR2.cat'
 
 
 @timeit
-def run_mtdlink(source_dir, dest_dir, fits_file_list, num_fits_files, param_file, pa_rate_dict, catfile_type, binary=None, catalog_type='ASCII', dbg=False):
+def run_mtdlink(source_dir, dest_dir, fits_file_list, num_fits_files, param_file, pa_rate_dict, catfile_type,
+                binary=None, catalog_type='ASCII', dbg=False):
     """Run MTDLINK (using either the binary specified by [binary] or by
     looking for 'mtdlink' in the PATH) on the passed <fits_files> with the results
     and any temporary files created in <dest_dir>. <source_dir> is the path
@@ -455,15 +455,15 @@ def run_mtdlink(source_dir, dest_dir, fits_file_list, num_fits_files, param_file
     for f in fits_file_list:
         if os.path.exists(f):
             data, header = fits.getdata(f, header=True)
-            if 'MJD' not in header :
-                mjd = header['MJD-OBS'] + (0.5*header['exptime']/86400.0)
+            if 'MJD' not in header:
+                mjd = header['MJD-OBS'] + (0.5 * header['exptime'] / 86400.0)
                 header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
                 fits.writeto(f, data, header, overwrite=True, checksum=True)
         else:
             logger.error("Could not find fits file in PATH")
             return -43
 
-    cmdline = "%s %s %s %s %s" % ( 'time', binary, '-verbose', options, linked_fits_files)
+    cmdline = "%s %s %s %s %s" % ('time', binary, '-verbose', options, linked_fits_files)
     cmdline = cmdline.rstrip()
 
     if dbg is True:
@@ -502,7 +502,7 @@ def run_findorb(source_dir, dest_dir, obs_file, site_code=500, start_time=dateti
         pass
 
     options = determine_findorb_options(site_code, start_time)
-    cmdline = "%s %s %s" % ( binary, obs_file, options)
+    cmdline = "%s %s %s" % (binary, obs_file, options)
     cmdline = cmdline.rstrip()
     if dbg:
         print(cmdline)
@@ -518,7 +518,6 @@ def run_findorb(source_dir, dest_dir, obs_file, site_code=500, start_time=dateti
 
 
 def get_scamp_xml_info(scamp_xml_file):
-
     # SCAMP VOTable's are malformed and will throw an astropy W42 warning which
     # we don't want. Wrap in context manager to get rid of this
     with warnings.catch_warnings():
@@ -549,13 +548,13 @@ def get_scamp_xml_info(scamp_xml_file):
         reference_catalog = reference_catalog.replace('.cat', '')
     else:
         wcs_refcat_name = "<Vizier/aserver.cgi?%s@cds>" % reference_catalog.lower()
-    info = { 'num_match'    : fgroups_table.array['AstromNDets_Internal_HighSN'].data[0],
-             'num_refstars' : fields_table.array['NDetect'].data[0],
-             'wcs_refcat'   : wcs_refcat_name,
-             'wcs_cattype'  : "%s@CDS" % reference_catalog.upper(),
-             'wcs_imagecat' : fields_table.array['Catalog_Name'].data[0].decode("utf-8"),
-             'pixel_scale'  : fields_table.array['Pixel_Scale'].data[0].mean()
-           }
+    info = {'num_match': fgroups_table.array['AstromNDets_Internal_HighSN'].data[0],
+            'num_refstars': fields_table.array['NDetect'].data[0],
+            'wcs_refcat': wcs_refcat_name,
+            'wcs_cattype': "%s@CDS" % reference_catalog.upper(),
+            'wcs_imagecat': fields_table.array['Catalog_Name'].data[0].decode("utf-8"),
+            'pixel_scale': fields_table.array['Pixel_Scale'].data[0].mean()
+            }
 
     return info
 
@@ -589,7 +588,7 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
     # Read in SCAMP .head file
     for line in scamp_head_fh:
         if 'HISTORY' in line:
-            wcssolvr = str(line[34:39]+'-'+line[48:53])
+            wcssolvr = str(line[34:39] + '-' + line[48:53])
         if 'CTYPE1' in line:
             ctype1 = line[9:31].strip().replace("'", "")
         if 'CTYPE2' in line:
@@ -620,9 +619,9 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
         if 'ASTIRMS2' in line:
             astirms2 = round(float(line[9:31]), 7)
         if 'ASTRRMS1' in line:
-            astrrms1 = round(float(line[9:31])*3600.0, 5)
+            astrrms1 = round(float(line[9:31]) * 3600.0, 5)
         if 'ASTRRMS2' in line:
-            astrrms2 = round(float(line[9:31])*3600.0, 5)
+            astrrms2 = round(float(line[9:31]) * 3600.0, 5)
         if 'PV1_' in line or 'PV2_' in line:
             keyword = line[0:8].rstrip()
             value = float(line[9:31])
@@ -657,7 +656,7 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
     header['WCSNREF'] = wcsnref
     header['WCSMATCH'] = wcsmatch
     header['WCCATTYP'] = wccattyp
-    header['WCSRDRES'] = str(str(astrrms1)+'/'+str(astrrms2))
+    header['WCSRDRES'] = str(str(astrrms1) + '/' + str(astrrms2))
     header['WCSERR'] = 0
 
     # header keywords we (probably) don't have. Insert after CTYPE2
@@ -725,7 +724,7 @@ def read_mtds_file(mtdsfile, dbg=False):
             dets_array = loadtxt(mtds_fh, dtype=dtypes)
         except Exception as e:
             logger.warning("Didn't find any detections in file %s (Reason %s)" % (mtdsfile, e))
-            dets_array = empty( shape=(0, 0))
+            dets_array = empty(shape=(0, 0))
 
     # Check for correct number of entries
     if dbg:
@@ -736,7 +735,8 @@ def read_mtds_file(mtdsfile, dbg=False):
         num_detections = 0
         detections = []
     elif dets_array.shape[0] / float(num_frames) != num_detections:
-        logger.error("Incorrect number of detection entries (Expected %d, got %d)" % (num_frames*num_detections, dets_array.shape[0]))
+        logger.error("Incorrect number of detection entries (Expected %d, got %d)" % (
+        num_frames * num_detections, dets_array.shape[0]))
         num_detections = 0
         detections = []
     if num_detections:
@@ -744,12 +744,12 @@ def read_mtds_file(mtdsfile, dbg=False):
     mtds_fh.close()
 
     # Assemble dictionary'o'stuff...
-    dets = { 'version' : version,
-             'num_frames' : num_frames,
-             'frames' : frames,
-             'num_detections' : num_detections,
-             'detections' : detections
-           }
+    dets = {'version': version,
+            'num_frames': num_frames,
+            'frames': frames,
+            'num_detections': num_detections,
+            'detections': detections
+            }
 
     return dets
 
@@ -759,7 +759,7 @@ def unpack_tarball(tar_path, unpack_dir):
     unpack_archive(tar_path, extract_dir=unpack_dir, format="gztar")
 
     os.chmod(unpack_dir, 0o775)
-    files = glob(unpack_dir+'/*')
+    files = glob(unpack_dir + '/*')
 
     for file in files:
         os.chmod(file, 0o664)
@@ -772,9 +772,45 @@ def determine_listGPS_options(ephem_date, sitecode):
     options = ''
 
     try:
-        options = "{:s} {:s}".format(ephem_date.strftime("%Y-%m-%dT%H:%M:%S"),sitecode)
+        options = "{:s} {:s}".format(ephem_date.strftime("%Y-%m-%dT%H:%M:%S"), sitecode)
     except AttributeError:
         pass
     except ValueError:
         print("invalid site code", sitecode)
     return options
+
+
+def setup_listGPS_dir(source_dir, dest_dir):
+    """Setup a temporary working directory for running listGPS in <dest_dir>. The
+    needed config files are symlinked from <source_dir>"""
+
+    listGPS_config_files = []
+
+    return_value = setup_working_dir(source_dir, dest_dir, listGPS_config_files)
+
+    return return_value
+
+
+def run_listGPS(ephem_date, sitecode, dest_dir, binary=None, dbg=False):
+    """Runs listGPS..."""
+
+    date_site = determine_listGPS_options(ephem_date, sitecode)
+
+    binary = binary or find_binary("list_gps")
+    if binary is None:
+        logger.error("Could not locate '' executable in PATH")
+        return -42
+
+    cmdline = f'{binary} {date_site}'
+    cmdline = cmdline.rstrip()
+
+    if dbg is True:
+        retcode_or_cmdline = cmdline
+    else:
+        logger.debug("cmdline=%s" % cmdline)
+        args = cmdline.split()
+        retcode_or_cmdline = call(args)
+
+    return retcode_or_cmdline
+
+

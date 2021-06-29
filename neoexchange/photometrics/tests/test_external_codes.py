@@ -1040,6 +1040,10 @@ class TestUnpackTarball(TestCase):
     #     self.assertEqual(expected_file_name,files[1])
 
 
+def dest_dir(args):
+    pass
+
+
 class TestDetermineListGPSOptions(ExternalCodeUnitTest):
 
     def test_chile(self):
@@ -1055,3 +1059,29 @@ class TestDetermineListGPSOptions(ExternalCodeUnitTest):
         output = determine_listGPS_options(datetime(2021,6,23,4,0,0),42)
 
         self.assertEqual(expected_output, output)
+
+    def test_setup_listgps_dir(self):
+
+        expected_status = 0
+
+        status = setup_listGPS_dir(self.source_dir, self.test_dir)
+
+        self.assertTrue(os.path.exists(self.test_dir))
+        self.assertEqual(expected_status, status)
+
+
+    def test_run_listGPS(self):
+
+        expected_status = 0
+        ephem_date = datetime(2021,6,23,4,0,0)
+        sitecode = 'W85'
+
+        status = run_listGPS(ephem_date, sitecode, dest_dir)
+
+        self.assertTrue(os.path.exists(self.test_dir))
+        self.assertEqual(expected_status, status)
+
+
+
+
+
