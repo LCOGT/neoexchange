@@ -1089,7 +1089,9 @@ def get_mag_mapping(site_code):
     dictionary is returned if the site name isn't recognized"""
 
     twom_site_codes = ['F65', 'E10', '2M', '2M0']
-    good_onem_site_codes = ['V37', 'V39', 'K91', 'K92', 'K93', 'W85', 'W86', 'W87', 'Q63', 'Q64', 'GOOD1M', '1M0']
+    good_onem_site_codes = ['V37', 'V39', 'K91', 'K92', 'K93',
+                            'W85', 'W86', 'W87', 'Q63', 'Q64', 'Z00', 'Z01',
+                            'GOOD1M', '1M0']
     # COJ normally has bad seeing, allow more time
     # Disabled by TAL 2018/8/10 after mirror recoating
 #    bad_onem_site_codes = ['Q63', 'Q64']
@@ -1838,7 +1840,7 @@ def get_mountlimits(site_code_or_name):
     ha_neg_limit = -12.0 * 15.0
     alt_limit = 25.0
 
-    if '-1M0A' in site or site in ['V37', 'V39', 'W85', 'W86', 'W87', 'K91', 'K92', 'K93', 'Q63', 'Q64']:
+    if '-1M0A' in site or site in ['V37', 'V39', 'W85', 'W86', 'W87', 'K91', 'K92', 'K93', 'Q63', 'Q64', 'Z00', 'Z01']:
         ha_pos_limit = 4.5 * 15.0
         ha_neg_limit = -4.5 * 15.0
         alt_limit = 30.0
