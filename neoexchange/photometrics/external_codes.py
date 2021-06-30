@@ -818,6 +818,7 @@ def setup_listGPS_dir(source_dir, dest_dir):
             return fetch_status
 
     listGPS_config_files = [x['file'] for x in listGPS_config_files]
+    listGPS_config_files += ['url_fail.txt', 'names.txt']
     return_value = setup_working_dir(source_dir, dest_dir, listGPS_config_files)
 
     return return_value
