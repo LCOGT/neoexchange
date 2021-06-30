@@ -1587,6 +1587,12 @@ def make_location(params):
     elif params['site_code'] == 'V39':
         location['telescope'] = '1m0a'
         location['observatory'] = 'domb'
+    elif params['site_code'] == 'Z00':
+        location['telescope'] = '1m0a'
+        location['observatory'] = 'doma'
+    elif params['site_code'] == 'Z01':
+        location['telescope'] = '1m0a'
+        location['observatory'] = 'domb'
     return location
 
 
@@ -1957,6 +1963,8 @@ def configure_defaults(params):
                   'F65-FLOYDS' : 'OGG',
                   'E10' : 'COJ',
                   'E10-FLOYDS' : 'COJ',
+                  'Z00' : 'TFN',
+                  'Z01' : 'TFN',
                   'Z17' : 'TFN',
                   'Z21' : 'TFN',
                   'T03' : 'OGG',
