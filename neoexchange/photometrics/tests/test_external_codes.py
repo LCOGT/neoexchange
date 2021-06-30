@@ -1047,7 +1047,7 @@ def dest_dir(args):
 class TestDetermineListGPSOptions(ExternalCodeUnitTest):
 
     def test_chile(self):
-        expected_output = '2021-06-23T04:00:00 W86'
+        expected_output = '2021-06-23T04:00:00 W86 -t1'
 
         output = determine_listGPS_options(datetime(2021,6,23,4,0,0), "W86")
 
@@ -1073,6 +1073,7 @@ class TestDetermineListGPSOptions(ExternalCodeUnitTest):
     def test_run_listGPS(self):
 
         expected_status = 0
+        expected_lines = ['foo', 'bar']
         ephem_date = datetime(2021,6,23,4,0,0)
         sitecode = 'W85'
 
@@ -1082,6 +1083,17 @@ class TestDetermineListGPSOptions(ExternalCodeUnitTest):
         self.assertEqual(expected_status, status)
 
 
+    ### test that output_file is being created using os.path.exists
+
+        output_file = os.path.join(self.test_dir, 'list_gps_output.out')
+        self.assertTrue(os.path.exists(output_file))
 
 
+    ### see if specific lines in file are whats expected
+        outputfile_fh= open(output_file, 'r')
+        file_lines = outputfile_fh.readlines()
+        outputfile_fh.close()
 
+        for i, expected_line in enumerate(expected_lines):
+            test_line = file_lines[i]
+            self.assertEqual(expected_line, test_line)

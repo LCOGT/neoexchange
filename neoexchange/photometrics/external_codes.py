@@ -773,7 +773,7 @@ def determine_listGPS_options(ephem_date, sitecode):
     options = ''
 
     try:
-        options = "{:s} {:s}".format(ephem_date.strftime("%Y-%m-%dT%H:%M:%S"), sitecode)
+        options = "{:s} {:s} -t1".format(ephem_date.strftime("%Y-%m-%dT%H:%M:%S"), sitecode)
     except AttributeError:
         pass
     except ValueError:
