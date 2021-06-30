@@ -25,12 +25,14 @@ from glob import glob
 
 from astropy.io import fits
 from astropy.io.votable import parse
+from astropy.table import Table
 from astropy.utils.data import download_file as download_iers_file
 from numpy import loadtxt, split, empty
 
 from core.models import detections_array_dtypes
 from astrometrics.time_subs import timeit
 from photometrics.catalog_subs import oracdr_catalog_mapping
+from photometrics.external_codes import *
 
 logger = logging.getLogger(__name__)
 
@@ -825,7 +827,7 @@ def setup_listGPS_dir(source_dir, dest_dir):
 
 
 def run_listGPS(source_dir, dest_dir, ephem_date, sitecode, binary=None, dbg=False):
-    """Runs listGPS..."""
+    """Runs listGPS"""
 
     status = setup_listGPS_dir(source_dir, dest_dir)
     if status != 0:
@@ -851,4 +853,16 @@ def run_listGPS(source_dir, dest_dir, ephem_date, sitecode, binary=None, dbg=Fal
 
     return retcode_or_cmdline
 
+
+def listGPS_output(listGPS_datafile):
+    """Reads listGPS output file and returns table object"""
+
+    try:
+        read_listGPS = Table.read(listGPS_datafile, format='ascii.daophot', guess=True)
+    except FileNotFoundError:
+        logger.error(f"Could not locate filename {listGPS_datafile}")
+        return -42
+
+
+    print(read_listGPS)
 
