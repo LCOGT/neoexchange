@@ -2402,6 +2402,55 @@ class TestGetSitePos(TestCase):
         self.assertNotEqual(site_lat, 0.0)
         self.assertNotEqual(site_hgt, 0.0)
 
+    def test_tenerife_1m_num1_by_code(self):
+        site_code = 'Z00'
+
+        expected_site_name = 'LCO TFN Node 1m0 Dome A at Tenerife'
+
+        site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+
+        self.assertEqual(expected_site_name, site_name)
+        self.assertLess(site_long, 0.0)
+        self.assertGreater(site_lat, 0.0)
+        self.assertGreater(site_hgt, 0.0)
+
+    def test_tenerife_1m_num2_by_code(self):
+        site_code = 'Z01'
+
+        expected_site_name = 'LCO TFN Node 1m0 Dome B at Tenerife'
+
+        site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+
+        self.assertEqual(expected_site_name, site_name)
+        self.assertLess(site_long, 0.0)
+        self.assertGreater(site_lat, 0.0)
+        self.assertGreater(site_hgt, 0.0)
+
+    def test_tenerife_1m_num1_by_name(self):
+        site_code = 'TFN-DOMA-1M0A'
+
+        expected_site_name = 'LCO TFN Node 1m0 Dome A at Tenerife'
+
+        site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+
+        self.assertEqual(expected_site_name, site_name)
+        self.assertLess(site_long, 0.0)
+        self.assertGreater(site_lat, 0.0)
+        self.assertGreater(site_hgt, 0.0)
+
+    def test_tenerife_1m_num2_by_name(self):
+        site_code = 'TFN-DOMB-1M0A'
+
+        expected_site_name = 'LCO TFN Node 1m0 Dome B at Tenerife'
+
+        site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+
+        self.assertEqual(expected_site_name, site_name)
+        self.assertNotEqual('LCO TFN Node 1m0 Dome A at Tenerife', site_name)
+        self.assertLess(site_long, 0.0)
+        self.assertGreater(site_lat, 0.0)
+        self.assertGreater(site_hgt, 0.0)
+
 
 class TestDetermineSitesToSchedule(TestCase):
 
