@@ -1073,9 +1073,11 @@ class TestDetermineListGPSOptions(ExternalCodeUnitTest):
     def test_run_listGPS(self):
 
         expected_status = 0
-        expected_lines = ['foo', 'bar']
+        expected_lines = ['GPS positions for JD 2459388.666667 = 2021 Jun 23  4:00:00.000 UTC',
+                        'Observatory (W86) Cerro Tololo-LCO B 2021 Jun 23  4:00:00.000',
+                        'Longitude -70.804670, latitude -30.167328  alt 2204.09 m']
         ephem_date = datetime(2021,6,23,4,0,0)
-        sitecode = 'W85'
+        sitecode = 'W86'
 
         status = run_listGPS(self.source_dir, self.test_dir, ephem_date, sitecode)
 
@@ -1095,5 +1097,5 @@ class TestDetermineListGPSOptions(ExternalCodeUnitTest):
         outputfile_fh.close()
 
         for i, expected_line in enumerate(expected_lines):
-            test_line = file_lines[i]
+            test_line = file_lines[i+2].rstrip()
             self.assertEqual(expected_line, test_line)
