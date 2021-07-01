@@ -1580,19 +1580,19 @@ def make_location(params):
         location['site'] = params['site'].lower()
     if params['site_code'] == 'W85':
         location['telescope'] = '1m0a'
-        location['observatory'] = 'doma'
+        location['enclosure'] = 'doma'
     elif params['site_code'] == 'W87':
         location['telescope'] = '1m0a'
-        location['observatory'] = 'domc'
+        location['enclosure'] = 'domc'
     elif params['site_code'] == 'V39':
         location['telescope'] = '1m0a'
-        location['observatory'] = 'domb'
+        location['enclosure'] = 'domb'
     elif params['site_code'] == 'Z00':
         location['telescope'] = '1m0a'
-        location['observatory'] = 'doma'
+        location['enclosure'] = 'doma'
     elif params['site_code'] == 'Z01':
         location['telescope'] = '1m0a'
-        location['observatory'] = 'domb'
+        location['enclosure'] = 'domb'
     return location
 
 

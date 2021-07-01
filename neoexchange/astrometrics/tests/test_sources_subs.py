@@ -1081,7 +1081,7 @@ class TestSubmitBlockToScheduler(TestCase):
 
         self.assertEqual(user_request['submitter'], 'bsimpson')
         self.assertEqual(user_request['requests'][0]['location']['telescope'], '1m0a')
-        self.assertEqual(user_request['requests'][0]['location']['observatory'], 'domb')
+        self.assertEqual(user_request['requests'][0]['location']['enclosure'], 'domb')
         self.assertEqual(user_request['requests'][0]['location']['telescope_class'], '1m0')
         self.assertEqual(user_request['requests'][0]['location']['site'], 'elp')
 
@@ -1099,7 +1099,7 @@ class TestSubmitBlockToScheduler(TestCase):
 
         self.assertEqual(user_request['submitter'], 'bsimpson')
         self.assertEqual(user_request['requests'][0]['location']['telescope'], '1m0a')
-        self.assertEqual(user_request['requests'][0]['location']['observatory'], 'doma')
+        self.assertEqual(user_request['requests'][0]['location']['enclosure'], 'doma')
         self.assertEqual(user_request['requests'][0]['location']['telescope_class'], '1m0')
         self.assertEqual(user_request['requests'][0]['location']['site'], 'tfn')
 
@@ -1117,7 +1117,7 @@ class TestSubmitBlockToScheduler(TestCase):
 
         self.assertEqual(user_request['submitter'], 'bsimpson')
         self.assertEqual(user_request['requests'][0]['location']['telescope'], '1m0a')
-        self.assertEqual(user_request['requests'][0]['location']['observatory'], 'domb')
+        self.assertEqual(user_request['requests'][0]['location']['enclosure'], 'domb')
         self.assertEqual(user_request['requests'][0]['location']['telescope_class'], '1m0')
         self.assertEqual(user_request['requests'][0]['location']['site'], 'tfn')
 
