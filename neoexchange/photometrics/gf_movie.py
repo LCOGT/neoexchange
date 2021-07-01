@@ -205,39 +205,6 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
             if progress:
                 logger.warning('Could not find Frame {}'.format(fits_files[n]))
             return None
-
-        # Set frame to be center of chip in arcmin
-        shape = data.shape
-        x_frac = 0
-        y_frac = 0
-        if center is not None:
-            y_frac = np.max(int((shape[0] - (center * 60)/header_n['PIXSCALE']) / 2), 0)
-            x_frac = np.max(int((shape[1] - (center * 60)/header_n['PIXSCALE']) / 2), 0)
-
-            # set data ranges
-            data_x_range = [x_frac, -(x_frac+1)]
-            data_y_range = [y_frac, -(y_frac+1)]
-            if target_data:
-                nonlocal x_offset
-                nonlocal y_offset
-                td = target_data[n]
-                target_source = td['best_source']
-                if target_source:
-                    x_offset = int(target_source.obs_x - header_n['CRPIX1'])
-                    y_offset = int(target_source.obs_y - header_n['CRPIX2'])
-                    if abs(x_offset) > x_frac:
-                        x_offset = int(copysign(x_frac, x_offset))
-                    if abs(y_offset) > y_frac:
-                        y_offset = int(copysign(y_frac, y_offset))
-                data_x_range = [x + x_offset for x in data_x_range]
-                data_y_range = [y + y_offset for y in data_y_range]
-                x_frac += x_offset
-                y_frac += y_offset
-            data = data[data_y_range[0]:data_y_range[1], data_x_range[0]:data_x_range[1]]
-            # Set new coordinates for Reference Pixel w/in smaller window
-            header_n['CRPIX1'] -= x_frac
-            header_n['CRPIX2'] -= y_frac
-
         # pull Date from Header
         try:
             date_obs = header_n['DATE-OBS']
@@ -248,7 +215,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
         ax = plt.gca()
         ax.clear()
         ax.axis('off')
-        z_interval = ZScaleInterval().get_limits(data)  # set z-scale: responsible for vast majority of compute time
+
         try:
             # set wcs grid/axes
             with warnings.catch_warnings():
@@ -269,14 +236,48 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
         except InvalidTransformError:
             pass
         # finish up plot
-        current_count = len(np.unique(fits_files[:n+1]))
-        ax.set_title('UT Date: {} ({} of {})'.format(date.strftime('%x %X'), current_count, int(len(fits_files)-(copies-1)*start_frames)), pad=10)
+        current_count = len(np.unique(fits_files[:n + 1]))
+        ax.set_title('UT Date: {} ({} of {})'.format(date.strftime('%x %X'), current_count,
+                                                     int(len(fits_files) - (copies - 1) * start_frames)), pad=10)
 
+        # Set frame to be center of chip in arcmin
+        shape = data.shape
+        x_frac = 0
+        y_frac = 0
+        if center is not None:
+            y_frac = np.max(int((shape[0] - (center * 60)/header_n['PIXSCALE']) / 2), 0)
+            x_frac = np.max(int((shape[1] - (center * 60)/header_n['PIXSCALE']) / 2), 0)
+
+            # set data ranges
+            data_x_range = [x_frac, -(x_frac+1)]
+            data_y_range = [y_frac, -(y_frac+1)]
+            if target_data:
+                nonlocal x_offset
+                nonlocal y_offset
+                td = target_data[n]
+                coord = SkyCoord(td['ra'], td['dec'], unit="rad")
+                x_pix, y_pix = skycoord_to_pixel(coord, wcs)
+                x_offset = int(x_pix - header_n['CRPIX1'])
+                y_offset = int(y_pix - header_n['CRPIX2'])
+                if abs(x_offset) > x_frac:
+                    x_offset = int(copysign(x_frac, x_offset))
+                if abs(y_offset) > y_frac:
+                    y_offset = int(copysign(y_frac, y_offset))
+                data_x_range = [x + x_offset for x in data_x_range]
+                data_y_range = [y + y_offset for y in data_y_range]
+                x_frac += x_offset
+                y_frac += y_offset
+            data = data[data_y_range[0]:data_y_range[1], data_x_range[0]:data_x_range[1]]
+            # Set new coordinates for Reference Pixel w/in smaller window
+            header_n['CRPIX1'] -= x_frac
+            header_n['CRPIX2'] -= y_frac
+
+        z_interval = ZScaleInterval().get_limits(data)  # set z-scale: responsible for vast majority of compute time
         plt.imshow(data, cmap='gray', vmin=z_interval[0], vmax=z_interval[1])
 
         # If first few frames, add 5" and 15" reticle
         if current_count < 6 and fr != init_fr or show_reticle:
-            if plot_source and header_n['CRPIX1'] > 0 and header_n['CRPIX2'] > 0:
+            if plot_source and (data.shape[1] > header_n['CRPIX1'] > 0) and (data.shape[0] > header_n['CRPIX2'] > 0):
                 plt.plot([header_n['CRPIX1']], [header_n['CRPIX2']], color='red', marker='+', linestyle=' ', label="Frame_Center")
             else:
                 circle_5arcsec = plt.Circle((header_n['CRPIX1'], header_n['CRPIX2']), 5/header_n['PIXSCALE'], fill=False, color='limegreen', linewidth=1.5)
@@ -310,7 +311,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
             # if target_source:
             #     print(coord.separation(SkyCoord(target_source.obs_ra, target_source.obs_dec, unit="deg")).arcsec)
             x_pix, y_pix = skycoord_to_pixel(coord, wcs)
-            box_width = plt.Rectangle((x_pix-bw, y_pix-bw), width=bw*2, height=bw*2, fill=False, color='yellow', linewidth=1, alpha=.5)
+            box_width = plt.Rectangle((x_pix-bw-x_frac, y_pix-bw-y_frac), width=bw*2, height=bw*2, fill=False, color='yellow', linewidth=1, alpha=.5)
             ax.add_artist(box_width)
 
         # show the position of the JPL Horizons prediction relative to CRPIX if no target data.
