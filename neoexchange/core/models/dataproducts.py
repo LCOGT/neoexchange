@@ -95,3 +95,11 @@ class DataProduct(models.Model):
 
     def __str__(self):
         return f"{self.get_filetype_display()} for {self.content_type.name} - {self.object_id}"
+
+    def save(self, *args, **kwargs):
+        try:
+            this = DataProduct.objects.get(id=self.id)
+            this.product.delete(save=False)
+        except DoesNotExist:
+            pass
+        super(DataProduct, self).save(*args, **kwargs)
