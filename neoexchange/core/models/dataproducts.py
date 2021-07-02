@@ -16,10 +16,45 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.db import models
+from django.db.models import Q
 
 from core.models.body import Body
 from core.models.blocks import Block
 
+
+class CoreQuerySet(models.QuerySet):
+    def block(self):
+        block = ContentType.objects.get(app_label='core', model='block')
+        return self.filter(content_type=block)
+
+    def body(self):
+        body = ContentType.objects.get(app_label='core', model='body')
+        return self.filter(content_type=body)
+
+    def fullbody(self, *args, **kwargs):
+        body = ContentType.objects.get(app_label='core', model='body')
+        bodyid = kwargs.get('bodyid')
+        if not bodyid:
+            return self.filter(content_type=body)
+        else:
+            block = ContentType.objects.get(app_label='core', model='block')
+            blockslist = Block.objects.filter(body=bodyid).values_list('id', flat=True)
+            query1 = Q(content_type=block, object_id__in=blockslist)
+            query2 = Q(content_type=body, object_id=bodyid)
+            return self.filter(query1 | query2)
+
+class CoreManager(models.Manager):
+    def get_queryset(self):
+        return CoreQuerySet(self.model, using=self._db)
+
+    def body(self):
+        return self.get_queryset().body()
+
+    def block(self):
+        return self.get_queryset().block()
+
+    def fullbody(self, *args, **kwargs):
+        return self.get_queryset().fullbody(*args, **kwargs)
 
 class BlockManager(models.Manager):
     def get_queryset(self):
@@ -32,6 +67,18 @@ class BodyManager(models.Manager):
         body = ContentType.objects.get(app_label='core', model='body')
         return super().get_queryset().filter(content_type=body)
 
+class FullBodyManager(models.Manager):
+    def get_queryset(self):
+        body = ContentType.objects.get(app_label='core', model='body')
+        bodyid = self.kwargs.get('bodyid')
+        if not bodyid:
+            return super().get_queryset().filter(content_type=body)
+        else:
+            block = ContentType.objects.get(app_label='core', model='block')
+            blockslist = Block.objects.filter(body=bodyid).values_list('id', flat=True)
+            query1 = Q(content_type=block, object_id__in=blockslist)
+            query2 = Q(content_type=body, object_id=bodyid)
+            return super().get_queryset().filter(query1 | query2)
 
 class DataProduct(models.Model):
     """
@@ -90,8 +137,7 @@ class DataProduct(models.Model):
     content_object = GenericForeignKey('content_type', 'object_id')
     # Custom managers
     objects = models.Manager()
-    body_objects = BodyManager()
-    block_objects = BlockManager()
+    content = CoreManager()
 
     def __str__(self):
         return f"{self.get_filetype_display()} for {self.content_type.name} - {self.object_id}"
