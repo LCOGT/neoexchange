@@ -26,6 +26,7 @@ from django.test import TestCase, override_settings
 from core.models import DataProduct, Block, Body, Proposal, SuperBlock
 from core.utils import save_dataproduct
 
+
 @override_settings(MEDIA_ROOT=tempfile.mkdtemp())
 class DataProductTestCase(TestCase):
     def setUp(self):

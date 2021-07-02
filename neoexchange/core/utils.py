@@ -21,6 +21,7 @@ from django.core.files.base import File, ContentFile
 
 from core.models.dataproducts import DataProduct
 
+
 def search(base_dir, matchpattern, latest=False):
     """
     :param base_dir: directory to search
@@ -61,7 +62,12 @@ def save_to_default(filename, out_path):
     file.close()
     return
 
+<<<<<<< HEAD
 def save_dataproduct(obj, filepath, filetype, filename=None, content=None):
+=======
+
+def save_dataproduct(obj, filepath, filetype, filename=None):
+>>>>>>> 501ba99ca41d3e18d8d5bc346b800ef45ca3fb3a
     if not filename:
         filename = Path(filepath).name
     dp = DataProduct()
