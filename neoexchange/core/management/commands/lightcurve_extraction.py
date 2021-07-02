@@ -497,7 +497,6 @@ class Command(BaseCommand):
                             self.stdout.write("New gif created: {}".format(movie_file))
                         else:
                             self.stdout.write(movie_file)
-<<<<<<< HEAD
         save_dataproduct(obj=block.body, filepath=None, filetype=DataProduct.ALCDEF_TXT, filename=alcdef_filename, content=alcdef_txt)
         self.stdout.write("Found matches in %d of %d frames" % (len(times), total_frame_count))
 
@@ -548,40 +547,6 @@ class Command(BaseCommand):
                     os.chmod(os.path.join(datadir, base_name + 'ades_positions.psv'), rw_permissions)
                 except PermissionError:
                     pass
-=======
-            save_dataproduct(obj=super_block, filepath=alcdef_file.name, filetype=DataProduct.ALCDEF_TXT, filename=alcdef_filename)
-            self.stdout.write("Found matches in %d of %d frames" % (len(times), total_frame_count))
-
-            if not settings.USE_S3:
-
-                # Write light curve data out in similar format to Make_lc.csh
-                i = 0
-
-                lightcurve_file = open(os.path.join(datadir, base_name + 'lightcurve_data.txt'), 'w')
-                mpc_file = open(os.path.join(datadir, base_name + 'mpc_positions.txt'), 'w')
-                psv_file = open(os.path.join(datadir, base_name + 'ades_positions.psv'), 'w')
-                output_file_list.append('{},{}'.format(os.path.join(datadir, base_name + 'lightcurve_data.txt'), datadir.lstrip(out_path)))
-                output_file_list.append('{},{}'.format(os.path.join(datadir, base_name + 'mpc_positions.txt'), datadir.lstrip(out_path)))
-                output_file_list.append('{},{}'.format(os.path.join(datadir, base_name + 'ades_positions.psv'), datadir.lstrip(out_path)))
-
-                # Calculate integer part of JD for first frame and use this as a
-                # constant in case of wrapover to the next day
-                if len(times) > 0 and len(mags) > 0:
-                    mjd_offset = int(datetime2mjd_utc(times[0]))
-                    for time in times:
-                        time_jd = datetime2mjd_utc(time)
-                        time_jd_truncated = time_jd - mjd_offset
-                        if i == 0:
-                            lightcurve_file.write('#Object: %s\n' % start_super_block.body.current_name())
-                            lightcurve_file.write("#MJD-%.1f Mag. Mag. error\n" % mjd_offset)
-                        lightcurve_file.write("%7.5lf %6.3lf %5.3lf\n" % (time_jd_truncated, mags[i], mag_errs[i]))
-                        i += 1
-                    lightcurve_file.close()
-                    try:
-                        os.chmod(os.path.join(datadir, base_name + 'lightcurve_data.txt'), rw_permissions)
-                    except PermissionError:
-                        pass
->>>>>>> 501ba99ca41d3e18d8d5bc346b800ef45ca3fb3a
 
                     # Write out MPC1992 80 column file
                     for mpc_line in mpc_lines:
