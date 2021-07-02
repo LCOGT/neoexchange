@@ -38,7 +38,7 @@ import logging
 from django.core.files.storage import default_storage
 
 from photometrics.external_codes import unpack_tarball
-from core.models import Frame, CatalogSources
+from core.models import Frame, CatalogSources, Block
 from astrometrics.ephem_subs import horizons_ephem
 from astrometrics.time_subs import timeit
 from photometrics.catalog_subs import sanitize_object_name
@@ -144,35 +144,29 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
                 c += 1
             i += 1
 
-    # pull header information from first fits file
-    for file in fits_files:
-        try:
-            obj, rn, site, inst, frame_type = get_header_info(file)
-            break
-        except FileNotFoundError:
-            obj = rn = site = inst = frame_type = None
-            continue
-    if not obj and not rn and not site and not inst:
+    # pull out files that exist
+    base_name_list = [os.path.basename(f) for f in fits_files if os.path.exists(f)]
+    if not base_name_list:
         return "WARNING: COULD NOT FIND FITS FILES"
 
-    if title is None:
-        title = 'Request Number {} -- {} at {} ({})'.format(rn, obj, site, inst)
-
     fig = plt.figure()
-    if title:
-        fig.suptitle(title)
 
-    base_name_list = [os.path.basename(f) for f in fits_files]
     frame_query = Frame.objects.filter(filename__in=base_name_list).order_by('midpoint').prefetch_related('catalogsources_set')
+    frame_obj = frame_query[0]
+    end_frame = frame_query.last()
+    start = frame_obj.midpoint - timedelta(minutes=5)
+    end = end_frame.midpoint + timedelta(minutes=5)
+    sitecode = frame_obj.sitecode
+    obj_name = frame_obj.block.body.name
+    rn = frame_obj.block.request_number
+    if frame_obj.block.obstype == Block.OPT_IMAGING:
+        frame_type = 'frame'
+    else:
+        frame_type = 'guide'
 
     if horizons_comp:
         # Get predicted JPL position of target in first frame
-        frame_obj = frame_query[0]
-        end_frame = frame_query.last()
-        start = frame_obj.midpoint - timedelta(minutes=5)
-        end = end_frame.midpoint + timedelta(minutes=5)
-        sitecode = frame_obj.sitecode
-        obj_name = frame_obj.block.body.name
+
         try:
             ephem = horizons_ephem(obj_name, start, end, sitecode, ephem_step_size='1m')
             date_array = np.array([calendar.timegm(d.timetuple()) for d in ephem['datetime']])
@@ -237,6 +231,12 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
             pass
         # finish up plot
         current_count = len(np.unique(fits_files[:n + 1]))
+
+        if title is None:
+            sup_title = f'REQ# {header_n["REQNUM"]} -- {header_n["OBJECT"]} at {header_n["SITEID"].upper()} ({header_n["INSTRUME"]}) -- Filter: {header_n["FILTER1"]}'
+        else:
+            sup_title = title
+        fig.suptitle(sup_title)
         ax.set_title('UT Date: {} ({} of {})'.format(date.strftime('%x %X'), current_count,
                                                      int(len(fits_files) - (copies - 1) * start_frames)), pad=10)
 
@@ -336,7 +336,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
     # takes in fig, update function, and frame rate set to fr
     anim = FuncAnimation(fig, update, frames=len(fits_files), blit=False, interval=fr)
 
-    filename = os.path.join(path, sanitize_object_name(obj) + '_' + rn + '_{}movie.gif'.format(frame_type))
+    filename = os.path.join(path, sanitize_object_name(obj_name) + '_' + rn + '_{}movie.gif'.format(frame_type))
     anim.save(filename, dpi=90, writer='imagemagick')
 
     plt.close('all')
