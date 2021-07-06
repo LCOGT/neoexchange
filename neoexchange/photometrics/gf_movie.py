@@ -145,7 +145,8 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
             i += 1
 
     # pull out files that exist
-    base_name_list = [os.path.basename(f) for f in fits_files if os.path.exists(f)]
+    good_fits_files = [f for f in fits_files if os.path.exists(f)]
+    base_name_list = [os.path.basename(f) for f in good_fits_files]
     if not base_name_list:
         return "WARNING: COULD NOT FIND FITS FILES"
 
@@ -184,7 +185,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
         """
         # get data/Header from Fits
         try:
-            with fits.open(fits_files[n], ignore_missing_end=True) as hdul:
+            with fits.open(good_fits_files[n], ignore_missing_end=True) as hdul:
                 try:
                     header_n = hdul['SCI'].header
                     data = hdul['SCI'].data
@@ -197,7 +198,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
                         data = hdul[0].data
         except FileNotFoundError:
             if progress:
-                logger.warning('Could not find Frame {}'.format(fits_files[n]))
+                logger.warning('Could not find Frame {}'.format(good_fits_files[n]))
             return None
         # pull Date from Header
         try:
@@ -230,15 +231,15 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
         except InvalidTransformError:
             pass
         # finish up plot
-        current_count = len(np.unique(fits_files[:n + 1]))
+        current_count = len(np.unique(good_fits_files[:n + 1]))
 
         if title is None:
-            sup_title = f'REQ# {header_n["REQNUM"]} -- {header_n["OBJECT"]} at {header_n["SITEID"].upper()} ({header_n["INSTRUME"]}) -- Filter: {header_n["FILTER1"]}'
+            sup_title = f'REQ# {header_n["REQNUM"]} -- {header_n["OBJECT"]} at {header_n["SITEID"].upper()} ({header_n["INSTRUME"]}) -- Filter: {header_n["FILTER"]}'
         else:
             sup_title = title
         fig.suptitle(sup_title)
         ax.set_title('UT Date: {} ({} of {})'.format(date.strftime('%x %X'), current_count,
-                                                     int(len(fits_files) - (copies - 1) * start_frames)), pad=10)
+                                                     int(len(good_fits_files) - (copies - 1) * start_frames)), pad=10)
 
         # Set frame to be center of chip in arcmin
         shape = data.shape
@@ -288,7 +289,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
         # add sources
         if plot_source:
             try:
-                frame_obj = Frame.objects.get(filename=os.path.basename(fits_files[n]))
+                frame_obj = Frame.objects.get(filename=os.path.basename(good_fits_files[n]))
                 sources = CatalogSources.objects.filter(frame=frame_obj, obs_y__range=(y_frac, shape[0] - y_frac + 2 * y_offset), obs_x__range=(x_frac, shape[1] - x_frac + 2 * x_offset))
                 for source in sources:
                     circle_source = plt.Circle((source.obs_x - x_frac, source.obs_y - y_frac), 3/header_n['PIXSCALE'], fill=False, color='red', linewidth=1, alpha=.5)
@@ -327,14 +328,14 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
                 plt.plot([jpl_x_pix], [jpl_y_pix], color='blue', marker='x', linestyle=' ', label="JPL Prediction")
 
         if progress:
-            print_progress_bar(n+1, len(fits_files), prefix='Creating Gif: Frame {}'.format(current_count), time_in=time_in)
+            print_progress_bar(n+1, len(good_fits_files), prefix='Creating Gif: Frame {}'.format(current_count), time_in=time_in)
         return ax
 
     ax1 = update(0)
     plt.tight_layout(pad=4)
 
     # takes in fig, update function, and frame rate set to fr
-    anim = FuncAnimation(fig, update, frames=len(fits_files), blit=False, interval=fr)
+    anim = FuncAnimation(fig, update, frames=len(good_fits_files), blit=False, interval=fr)
 
     filename = os.path.join(path, sanitize_object_name(obj_name) + '_' + rn + '_{}movie.gif'.format(frame_type))
     anim.save(filename, dpi=90, writer='imagemagick')
