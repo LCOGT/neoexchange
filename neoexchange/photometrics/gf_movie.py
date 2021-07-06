@@ -38,7 +38,7 @@ import logging
 from django.core.files.storage import default_storage
 
 from photometrics.external_codes import unpack_tarball
-from core.models import Frame, CatalogSources, Block
+from core.models import Block, Frame, CatalogSources
 from astrometrics.ephem_subs import horizons_ephem
 from astrometrics.time_subs import timeit
 from photometrics.catalog_subs import sanitize_object_name
@@ -147,7 +147,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
     # pull out files that exist
     good_fits_files = [f for f in fits_files if os.path.exists(f)]
     base_name_list = [os.path.basename(f) for f in good_fits_files]
-    if not base_name_list:
+    if len(good_fits_files) == 0:
         return "WARNING: COULD NOT FIND FITS FILES"
 
     fig = plt.figure()
