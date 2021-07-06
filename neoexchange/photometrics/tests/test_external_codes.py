@@ -1103,7 +1103,8 @@ class TestDetermineListGPSOptions(ExternalCodeUnitTest):
 
 
     def test_read_listGPS_output(self):
-    """Tests first and last rows of created table object"""
+        """Tests first and last rows of created table object"""
+
         expected_numcolumns = 11
         expected_numrows = 37
 
