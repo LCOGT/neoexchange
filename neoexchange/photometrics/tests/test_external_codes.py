@@ -1104,11 +1104,8 @@ class TestDetermineListGPSOptions(ExternalCodeUnitTest):
 
     def test_read_listGPS_output(self):
 
-        expected_numcolumns = 10
-        expected_numrows = 36
-        read_listGPS = ''
-        ephem_date = datetime(2021, 6, 23, 4, 0, 0)
-        sitecode = 'W86'
+        expected_numcolumns = 11
+        expected_numrows = 37
 
         input_file = os.path.join('photometrics', 'tests', 'list_gps_output.out')
         output = read_listGPS_output(input_file)

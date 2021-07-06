@@ -859,18 +859,10 @@ def read_listGPS_output(listGPS_datafile):
     """Reads listGPS output file and returns table object"""
 
     try:
-        read_listGPS = ascii.read(listGPS_datafile, format='fixed_width', header_start=None, data_start=7,
-                                            names=('Nr', 'RA', 'dec', 'dist (km)','Azim', 'Alt', 'Elo', 'Rate',
-                                                   'PA','Desig'),
-                                            col_starts=(0, 6, 20, 35, 48, 55, 60, 64, 70, 76))
-        return read_listGPS
+        table = ascii.read(listGPS_datafile, format='fixed_width', header_start=None, data_start=6,
+                                            names=('Number', 'Uncertainty', 'RA', 'Dec', 'Distance','Azim', 'Alt', 'Elo', 'Rate', 'PA','Desig'),
+                                            col_starts=(0, 5, 6, 20, 35, 48, 55, 60, 64, 70, 76))
+        return table
     except FileNotFoundError:
         logger.error(f"Could not locate filename {listGPS_datafile}")
         return -42
-
-    print()
-    print(read_listGPS)
-
-
-
-
