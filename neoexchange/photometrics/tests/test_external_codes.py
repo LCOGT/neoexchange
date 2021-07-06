@@ -1103,7 +1103,7 @@ class TestDetermineListGPSOptions(ExternalCodeUnitTest):
 
 
     def test_read_listGPS_output(self):
-
+    """Tests first and last rows of created table object"""
         expected_numcolumns = 11
         expected_numrows = 37
 
@@ -1114,6 +1114,17 @@ class TestDetermineListGPSOptions(ExternalCodeUnitTest):
         self.assertEqual(expected_numcolumns, len(output.columns))
         self.assertEqual(expected_numrows, len(output))
 
+        # Test contents of first and last rows
+        expected_firstline = ['C34:', '*', '11 39 21.9774', '+01 32 46.175', 26843.16644, 273.4, 3.1, 83, 28.34, 146.5, '2018-078B Beidou-3 M16']
+        expected_lastline = ['E02:', '', '16 55 46.3996', '-20 23 19.273', 23315.41979, 327.5, 78.6, 163, 30.55, 32.4, '2016-030A GALILEO-2']
 
+        test_line1 = output[0].values()
 
+        for i, test_value in enumerate(test_line1):
+            self.assertEqual(expected_firstline[i], test_value)
+
+        test_last = output[-1]
+        for i, test_value in enumerate(test_last):
+            if test_value:
+                self.assertEqual(expected_lastline[i], test_value)
 

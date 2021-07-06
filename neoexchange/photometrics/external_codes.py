@@ -860,7 +860,8 @@ def read_listGPS_output(listGPS_datafile):
 
     try:
         table = ascii.read(listGPS_datafile, format='fixed_width', header_start=None, data_start=6,
-                                            names=('Number', 'Uncertainty', 'RA', 'Dec', 'Distance','Azim', 'Alt', 'Elo', 'Rate', 'PA','Desig'),
+                                            names=('Number', 'Uncertainty', 'RA', 'Dec', 'Distance','Azim', 'Alt',
+                                                   'Elo', 'Rate', 'PA','Desig'),
                                             col_starts=(0, 5, 6, 20, 35, 48, 55, 60, 64, 70, 76))
         return table
     except FileNotFoundError:
