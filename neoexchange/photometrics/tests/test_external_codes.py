@@ -21,6 +21,7 @@ from unittest import skipIf
 import warnings
 
 from astropy.io import fits
+from astropy.table import Table
 from numpy import array, arange
 
 from django.test import TestCase
@@ -1085,13 +1086,13 @@ class TestDetermineListGPSOptions(ExternalCodeUnitTest):
         self.assertEqual(expected_status, status)
 
 
-    # Test that output_file is being created using os.path.exists
+        # Test that output_file is being created using os.path.exists
 
         output_file = os.path.join(self.test_dir, 'list_gps_output.out')
         self.assertTrue(os.path.exists(output_file))
 
 
-    # See if specific lines in file are whats expected
+        # See if lines in file are equivalent to expected
         outputfile_fh= open(output_file, 'r')
         file_lines = outputfile_fh.readlines()
         outputfile_fh.close()
@@ -1103,36 +1104,19 @@ class TestDetermineListGPSOptions(ExternalCodeUnitTest):
 
     def test_listGPS_output(self):
 
-        expected_output = 0
+        expected_numcolumns = 10
+        expected_numrows = 36
         read_listGPS = ''
         ephem_date = datetime(2021, 6, 23, 4, 0, 0)
         sitecode = 'W86'
 
-        output_file = os.path.join(self.test_dir, 'list_gps_output.out')
-        output = listGPS_output(output_file)
-        self.assertEqual(output, -42)
+        input_file = os.path.join('photometrics', 'tests', 'list_gps_output.out')
+        output = listGPS_output(input_file)
+        self.assertTrue(isinstance(output, Table))
 
-        status = run_listGPS(self.source_dir, self.test_dir, ephem_date, sitecode)
+        self.assertEqual(expected_numcolumns, len(output.columns))
+        self.assertEqual(expected_numrows, len(output))
 
-        output = listGPS_output(output_file)
-        self.assertNotEqual(output, -42)
-
-    # No column names found in DAOphot header, so initialize the header column objects from the table
-    # Or possibly set guess parameter to true (?)
-
-    # def getcols_listGPS(self, file_lines):
-    #
-    # # Want to return table columns: call file_columns
-    #
-    #     # Create list of column objects (?)
-    #     self.setcols_listGPS()
-    #
-    #
-
-    # Test against expected
-    #     for i, expected_output in enumerate(read_listGPS):
-    #         test_output = file_lines[i+2].rstrip()
-    #         self.assertEqual(expected_output, output)
 
 
 

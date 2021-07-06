@@ -1,0 +1,228 @@
+adding trusted host: 'buildsba.lco.gtn' (from line 2 of requirements.txt)
+Looking in indexes: https://pypi.org/simple, http://buildsba.lco.gtn/python/
+Collecting Django<3.2,>=3.1
+  Using cached Django-3.1.12-py3-none-any.whl (7.8 MB)
+Collecting mysqlclient~=1.4.2
+  Using cached mysqlclient-1.4.6.tar.gz (85 kB)
+Collecting psycopg2-binary
+  Using cached psycopg2_binary-2.9.1-cp39-cp39-macosx_10_14_x86_64.macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl (2.1 MB)
+Collecting astropy<=3.2.3,>=3.1
+  Using cached astropy-3.2.3.tar.gz (8.0 MB)
+Collecting astroquery>=0.4
+  Using cached astroquery-0.4.2-py3-none-any.whl (3.9 MB)
+Requirement already satisfied: pyslalib in /Users/juliaperl/opt/miniconda3/lib/python3.9/site-packages (from -r requirements.txt (line 8)) (1.0.4)
+Collecting beautifulsoup4
+  Using cached beautifulsoup4-4.9.3-py3-none-any.whl (115 kB)
+Collecting django-reversion
+  Using cached django_reversion-3.0.9-py3-none-any.whl (85 kB)
+Collecting html5lib
+  Using cached html5lib-1.1-py2.py3-none-any.whl (112 kB)
+Collecting ipython
+  Using cached ipython-7.24.1-py3-none-any.whl (785 kB)
+Collecting nose
+  Using cached nose-1.3.7-py3-none-any.whl (154 kB)
+Collecting pytz
+  Using cached pytz-2021.1-py2.py3-none-any.whl (510 kB)
+Requirement already satisfied: six>=1.10.0 in /Users/juliaperl/opt/miniconda3/lib/python3.9/site-packages (from -r requirements.txt (line 15)) (1.16.0)
+Requirement already satisfied: pycparser in /Users/juliaperl/opt/miniconda3/lib/python3.9/site-packages (from -r requirements.txt (line 16)) (2.20)
+Requirement already satisfied: requests[security] in /Users/juliaperl/opt/miniconda3/lib/python3.9/site-packages (from -r requirements.txt (line 17)) (2.25.1)
+Collecting selenium<4.0,>=3.8
+  Using cached selenium-3.141.0-py2.py3-none-any.whl (904 kB)
+Collecting pytest-django
+  Using cached pytest_django-4.4.0-py3-none-any.whl (19 kB)
+Collecting tblib
+  Using cached tblib-1.7.0-py2.py3-none-any.whl (12 kB)
+Collecting mock
+  Using cached mock-4.0.3-py3-none-any.whl (28 kB)
+Collecting django-storages
+  Using cached django_storages-1.11.1-py3-none-any.whl (42 kB)
+Collecting boto3
+  Using cached boto3-1.17.99-py2.py3-none-any.whl (131 kB)
+Collecting matplotlib<3.3
+  Using cached matplotlib-3.2.2.tar.gz (40.3 MB)
+Collecting bokeh==2.3.0
+  Using cached bokeh-2.3.0-py3-none-any.whl
+Collecting fits2image
+  Using cached fits2image-0.4.3-py3-none-any.whl
+Requirement already satisfied: pillow in /Users/juliaperl/opt/miniconda3/lib/python3.9/site-packages (from -r requirements.txt (line 27)) (8.2.0)
+Collecting aplpy
+  Using cached APLpy-2.0.3-py2.py3-none-any.whl (89 kB)
+Collecting gunicorn[gevent]~=19.9.0
+  Using cached gunicorn-19.9.0-py2.py3-none-any.whl (112 kB)
+Collecting rollbar
+  Using cached rollbar-0.16.1-py3-none-any.whl
+Collecting sty
+  Using cached sty-1.0.0rc1-py3-none-any.whl (11 kB)
+Collecting awscli
+  Using cached awscli-1.19.99-py2.py3-none-any.whl (3.6 MB)
+Collecting lxml
+  Using cached lxml-4.6.3-cp39-cp39-macosx_10_9_x86_64.whl (4.6 MB)
+Collecting typing-extensions>=3.7.4
+  Using cached typing_extensions-3.10.0.0-py3-none-any.whl (26 kB)
+Collecting packaging>=16.8
+  Using cached packaging-20.9-py2.py3-none-any.whl (40 kB)
+Collecting PyYAML>=3.10
+  Using cached PyYAML-5.4.1-cp39-cp39-macosx_10_9_x86_64.whl (259 kB)
+Collecting tornado>=5.1
+  Using cached tornado-6.1-cp39-cp39-macosx_10_9_x86_64.whl (416 kB)
+Collecting Jinja2>=2.7
+  Using cached Jinja2-3.0.1-py3-none-any.whl (133 kB)
+Requirement already satisfied: python-dateutil>=2.1 in /Users/juliaperl/opt/miniconda3/lib/python3.9/site-packages (from bokeh==2.3.0->-r requirements.txt (line 25)) (2.8.1)
+Requirement already satisfied: numpy>=1.11.3 in /Users/juliaperl/opt/miniconda3/lib/python3.9/site-packages (from bokeh==2.3.0->-r requirements.txt (line 25)) (1.20.2)
+Collecting sqlparse>=0.2.2
+  Using cached sqlparse-0.4.1-py3-none-any.whl (42 kB)
+Collecting asgiref<4,>=3.2.10
+  Using cached asgiref-3.3.4-py3-none-any.whl (22 kB)
+Collecting keyring>=4.0
+  Using cached keyring-23.0.1-py3-none-any.whl (33 kB)
+Collecting pyvo>=1.1
+  Using cached pyvo-1.1-py3-none-any.whl (802 kB)
+Collecting soupsieve>1.2
+  Using cached soupsieve-2.2.1-py3-none-any.whl (33 kB)
+Collecting webencodings
+  Using cached webencodings-0.5.1-py2.py3-none-any.whl (11 kB)
+Requirement already satisfied: certifi>=2017.4.17 in /Users/juliaperl/opt/miniconda3/lib/python3.9/site-packages (from requests[security]->-r requirements.txt (line 17)) (2021.5.30)
+Requirement already satisfied: chardet<5,>=3.0.2 in /Users/juliaperl/opt/miniconda3/lib/python3.9/site-packages (from requests[security]->-r requirements.txt (line 17)) (4.0.0)
+Requirement already satisfied: urllib3<1.27,>=1.21.1 in /Users/juliaperl/opt/miniconda3/lib/python3.9/site-packages (from requests[security]->-r requirements.txt (line 17)) (1.26.4)
+Requirement already satisfied: idna<3,>=2.5 in /Users/juliaperl/opt/miniconda3/lib/python3.9/site-packages (from requests[security]->-r requirements.txt (line 17)) (2.10)
+Requirement already satisfied: cycler>=0.10 in /Users/juliaperl/opt/miniconda3/lib/python3.9/site-packages (from matplotlib<3.3->-r requirements.txt (line 24)) (0.10.0)
+Requirement already satisfied: kiwisolver>=1.0.1 in /Users/juliaperl/opt/miniconda3/lib/python3.9/site-packages (from matplotlib<3.3->-r requirements.txt (line 24)) (1.3.1)
+Requirement already satisfied: pyparsing!=2.0.4,!=2.1.2,!=2.1.6,>=2.0.1 in /Users/juliaperl/opt/miniconda3/lib/python3.9/site-packages (from matplotlib<3.3->-r requirements.txt (line 24)) (2.4.7)
+Collecting gevent>=0.13
+  Using cached gevent-21.1.2-cp39-cp39-macosx_10_14_x86_64.whl (1.8 MB)
+Collecting zope.event
+  Using cached zope.event-4.5.0-py2.py3-none-any.whl (6.8 kB)
+Requirement already satisfied: setuptools in /Users/juliaperl/opt/miniconda3/lib/python3.9/site-packages (from gevent>=0.13->gunicorn[gevent]~=19.9.0->-r requirements.txt (line 29)) (52.0.0.post20210125)
+Collecting zope.interface
+  Using cached zope.interface-5.4.0-cp39-cp39-macosx_10_14_x86_64.whl (208 kB)
+Collecting greenlet<2.0,>=0.4.17
+  Using cached greenlet-1.1.0-cp39-cp39-macosx_10_14_x86_64.whl (87 kB)
+Collecting MarkupSafe>=2.0
+  Using cached MarkupSafe-2.0.1-cp39-cp39-macosx_10_9_x86_64.whl (13 kB)
+Collecting importlib-metadata>=3.6
+  Using cached importlib_metadata-4.5.0-py3-none-any.whl (17 kB)
+Requirement already satisfied: zipp>=0.5 in /Users/juliaperl/opt/miniconda3/lib/python3.9/site-packages (from importlib-metadata>=3.6->keyring>=4.0->astroquery>=0.4->-r requirements.txt (line 7)) (3.4.1)
+Collecting mimeparse
+  Using cached mimeparse-0.1.3-py3-none-any.whl
+Collecting pexpect>4.3
+  Using cached pexpect-4.8.0-py2.py3-none-any.whl (59 kB)
+Collecting pygments
+  Using cached Pygments-2.9.0-py3-none-any.whl (1.0 MB)
+Collecting prompt-toolkit!=3.0.0,!=3.0.1,<3.1.0,>=2.0.0
+  Using cached prompt_toolkit-3.0.19-py3-none-any.whl (368 kB)
+Requirement already satisfied: decorator in /Users/juliaperl/opt/miniconda3/lib/python3.9/site-packages (from ipython->-r requirements.txt (line 12)) (4.4.2)
+Collecting traitlets>=4.2
+  Using cached traitlets-5.0.5-py3-none-any.whl (100 kB)
+Collecting appnope
+  Using cached appnope-0.1.2-py2.py3-none-any.whl (4.3 kB)
+Collecting matplotlib-inline
+  Using cached matplotlib_inline-0.1.2-py3-none-any.whl (8.2 kB)
+Collecting pickleshare
+  Using cached pickleshare-0.7.5-py2.py3-none-any.whl (6.9 kB)
+Collecting jedi>=0.16
+  Using cached jedi-0.18.0-py2.py3-none-any.whl (1.4 MB)
+Collecting backcall
+  Using cached backcall-0.2.0-py2.py3-none-any.whl (11 kB)
+Collecting parso<0.9.0,>=0.8.0
+  Using cached parso-0.8.2-py2.py3-none-any.whl (94 kB)
+Collecting ptyprocess>=0.5
+  Using cached ptyprocess-0.7.0-py2.py3-none-any.whl (13 kB)
+Collecting wcwidth
+  Using cached wcwidth-0.2.5-py2.py3-none-any.whl (30 kB)
+Requirement already satisfied: ipython-genutils in /Users/juliaperl/opt/miniconda3/lib/python3.9/site-packages (from traitlets>=4.2->ipython->-r requirements.txt (line 12)) (0.2.0)
+Collecting pytest>=5.4.0
+  Using cached pytest-6.2.4-py3-none-any.whl (280 kB)
+Collecting attrs>=19.2.0
+  Using cached attrs-21.2.0-py2.py3-none-any.whl (53 kB)
+Collecting pluggy<1.0.0a1,>=0.12
+  Using cached pluggy-0.13.1-py2.py3-none-any.whl (18 kB)
+Collecting toml
+  Using cached toml-0.10.2-py2.py3-none-any.whl (16 kB)
+Collecting iniconfig
+  Using cached iniconfig-1.1.1-py2.py3-none-any.whl (5.0 kB)
+Collecting py>=1.8.2
+  Using cached py-1.10.0-py2.py3-none-any.whl (97 kB)
+Requirement already satisfied: jmespath<1.0.0,>=0.7.1 in /Users/juliaperl/opt/miniconda3/lib/python3.9/site-packages (from boto3->-r requirements.txt (line 23)) (0.10.0)
+Collecting botocore<1.21.0,>=1.20.99
+  Using cached botocore-1.20.99-py2.py3-none-any.whl (7.6 MB)
+Collecting s3transfer<0.5.0,>=0.4.0
+  Using cached s3transfer-0.4.2-py2.py3-none-any.whl (79 kB)
+Collecting scikit-image>=0.14
+  Using cached scikit_image-0.18.1-cp39-cp39-macosx_10_9_x86_64.whl (12.9 MB)
+Collecting reproject>=0.4
+  Using cached reproject-0.7.1-cp39-cp39-macosx_10_9_x86_64.whl
+Collecting pyavm>=0.9.4
+  Using cached PyAVM-0.9.5-py2.py3-none-any.whl (378 kB)
+Collecting pyregion>=2.0
+  Using cached pyregion-2.0.tar.gz (1.1 MB)
+Collecting shapely>=1.6
+  Using cached Shapely-1.7.1-cp39-cp39-macosx_10_9_x86_64.whl (1.0 MB)
+Collecting Cython
+  Using cached Cython-0.29.23-cp39-cp39-macosx_10_9_x86_64.whl (1.9 MB)
+Collecting scipy>=1.1
+  Using cached scipy-1.7.0-cp39-cp39-macosx_10_9_x86_64.whl (32.1 MB)
+Collecting astropy-healpix>=0.2
+  Using cached astropy_healpix-0.6-cp39-cp39-macosx_10_9_x86_64.whl (83 kB)
+Collecting imageio>=2.3.0
+  Using cached imageio-2.9.0-py3-none-any.whl (3.3 MB)
+Collecting tifffile>=2019.7.26
+  Using cached tifffile-2021.6.14-py3-none-any.whl (169 kB)
+Collecting PyWavelets>=1.1.1
+  Using cached PyWavelets-1.1.1-cp39-cp39-macosx_10_9_x86_64.whl (4.3 MB)
+Collecting networkx>=2.0
+  Using cached networkx-2.5.1-py3-none-any.whl (1.6 MB)
+Collecting docutils<0.16,>=0.10
+  Using cached docutils-0.15.2-py3-none-any.whl (547 kB)
+Collecting colorama<0.4.4,>=0.2.5
+  Using cached colorama-0.4.3-py2.py3-none-any.whl (15 kB)
+Collecting rsa<4.8,>=3.1.2
+  Using cached rsa-4.7.2-py3-none-any.whl (34 kB)
+Collecting pyasn1>=0.1.3
+  Using cached pyasn1-0.4.8-py2.py3-none-any.whl (77 kB)
+Requirement already satisfied: cryptography>=1.3.4 in /Users/juliaperl/opt/miniconda3/lib/python3.9/site-packages (from requests[security]->-r requirements.txt (line 17)) (3.4.7)
+Requirement already satisfied: pyOpenSSL>=0.14 in /Users/juliaperl/opt/miniconda3/lib/python3.9/site-packages (from requests[security]->-r requirements.txt (line 17)) (20.0.1)
+Requirement already satisfied: cffi>=1.12 in /Users/juliaperl/opt/miniconda3/lib/python3.9/site-packages (from cryptography>=1.3.4->requests[security]->-r requirements.txt (line 17)) (1.14.5)
+Building wheels for collected packages: mysqlclient, astropy, matplotlib, pyregion
+  Building wheel for mysqlclient (setup.py): started
+  Building wheel for mysqlclient (setup.py): finished with status 'error'
+  Running setup.py clean for mysqlclient
+  Building wheel for astropy (setup.py): started
+  Building wheel for astropy (setup.py): finished with status 'error'
+  Running setup.py clean for astropy
+  Building wheel for matplotlib (setup.py): started
+  Building wheel for matplotlib (setup.py): finished with status 'error'
+  Running setup.py clean for matplotlib
+  Building wheel for pyregion (setup.py): started
+  Building wheel for pyregion (setup.py): finished with status 'error'
+  Running setup.py clean for pyregion
+Failed to build mysqlclient astropy matplotlib pyregion
+Installing collected packages: astropy, zope.interface, zope.event, webencodings, wcwidth, traitlets, toml, tifffile, sqlparse, soupsieve, scipy, PyWavelets, pytz, pyasn1, py, ptyprocess, pluggy, parso, packaging, networkx, mimeparse, matplotlib, MarkupSafe, iniconfig, importlib-metadata, imageio, greenlet, Cython, botocore, attrs, astropy-healpix, asgiref, typing-extensions, tornado, shapely, scikit-image, s3transfer, rsa, reproject, PyYAML, pyvo, pytest, pyregion, pygments, pyavm, prompt-toolkit, pickleshare, pexpect, matplotlib-inline, keyring, Jinja2, jedi, html5lib, gunicorn, gevent, docutils, Django, colorama, beautifulsoup4, backcall, appnope, tblib, sty, selenium, rollbar, pytest-django, psycopg2-binary, nose, mysqlclient, mock, lxml, ipython, fits2image, django-storages, django-reversion, boto3, bokeh, awscli, astroquery, aplpy
+  Attempting uninstall: astropy
+    Found existing installation: astropy 4.2.1
+    Uninstalling astropy-4.2.1:
+      Successfully uninstalled astropy-4.2.1
+    Running setup.py install for astropy: started
+    Running setup.py install for astropy: finished with status 'error'
+  Rolling back uninstall of astropy
+  Moving to /Users/juliaperl/opt/miniconda3/bin/fits2bitmap
+   from /private/var/folders/t5/nkpm3sxn0197c4dvrtrq14rr0000gn/T/pip-uninstall-p0sasqvs/fits2bitmap
+  Moving to /Users/juliaperl/opt/miniconda3/bin/fitscheck
+   from /private/var/folders/t5/nkpm3sxn0197c4dvrtrq14rr0000gn/T/pip-uninstall-p0sasqvs/fitscheck
+  Moving to /Users/juliaperl/opt/miniconda3/bin/fitsdiff
+   from /private/var/folders/t5/nkpm3sxn0197c4dvrtrq14rr0000gn/T/pip-uninstall-p0sasqvs/fitsdiff
+  Moving to /Users/juliaperl/opt/miniconda3/bin/fitsheader
+   from /private/var/folders/t5/nkpm3sxn0197c4dvrtrq14rr0000gn/T/pip-uninstall-p0sasqvs/fitsheader
+  Moving to /Users/juliaperl/opt/miniconda3/bin/fitsinfo
+   from /private/var/folders/t5/nkpm3sxn0197c4dvrtrq14rr0000gn/T/pip-uninstall-p0sasqvs/fitsinfo
+  Moving to /Users/juliaperl/opt/miniconda3/bin/samp_hub
+   from /private/var/folders/t5/nkpm3sxn0197c4dvrtrq14rr0000gn/T/pip-uninstall-p0sasqvs/samp_hub
+  Moving to /Users/juliaperl/opt/miniconda3/bin/showtable
+   from /private/var/folders/t5/nkpm3sxn0197c4dvrtrq14rr0000gn/T/pip-uninstall-p0sasqvs/showtable
+  Moving to /Users/juliaperl/opt/miniconda3/bin/volint
+   from /private/var/folders/t5/nkpm3sxn0197c4dvrtrq14rr0000gn/T/pip-uninstall-p0sasqvs/volint
+  Moving to /Users/juliaperl/opt/miniconda3/bin/wcslint
+   from /private/var/folders/t5/nkpm3sxn0197c4dvrtrq14rr0000gn/T/pip-uninstall-p0sasqvs/wcslint
+  Moving to /Users/juliaperl/opt/miniconda3/lib/python3.9/site-packages/astropy-4.2.1.dist-info/
+   from /Users/juliaperl/opt/miniconda3/lib/python3.9/site-packages/~stropy-4.2.1.dist-info
+  Moving to /Users/juliaperl/opt/miniconda3/lib/python3.9/site-packages/astropy/
+   from /Users/juliaperl/opt/miniconda3/lib/python3.9/site-packages/~stropy

@@ -24,6 +24,7 @@ from shutil import unpack_archive, copy
 from glob import glob
 
 from astropy.io import fits
+from astropy.io import ascii
 from astropy.io.votable import parse
 from astropy.table import Table
 from astropy.utils.data import download_file as download_iers_file
@@ -858,11 +859,18 @@ def listGPS_output(listGPS_datafile):
     """Reads listGPS output file and returns table object"""
 
     try:
-        read_listGPS = Table.read(listGPS_datafile, format='ascii.daophot', guess=True)
+        read_listGPS = ascii.read(listGPS_datafile, format='fixed_width', header_start=None, data_start=7,
+                                            names=('Nr', 'RA', 'dec', 'dist (km)','Azim', 'Alt', 'Elo', 'Rate',
+                                                   'PA','Desig'),
+                                            col_starts=(0, 6, 20, 35, 48, 55, 60, 64, 70, 76))
+        return read_listGPS
     except FileNotFoundError:
         logger.error(f"Could not locate filename {listGPS_datafile}")
         return -42
 
-
+    print()
     print(read_listGPS)
+
+
+
 
