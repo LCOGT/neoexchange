@@ -43,6 +43,7 @@ class CoreQuerySet(models.QuerySet):
             query2 = Q(content_type=body, object_id=bodyid)
             return self.filter(query1 | query2)
 
+
 class CoreManager(models.Manager):
     def get_queryset(self):
         return CoreQuerySet(self.model, using=self._db)
@@ -56,6 +57,7 @@ class CoreManager(models.Manager):
     def fullbody(self, *args, **kwargs):
         return self.get_queryset().fullbody(*args, **kwargs)
 
+
 class BlockManager(models.Manager):
     def get_queryset(self):
         block = ContentType.objects.get(app_label='core', model='block')
@@ -66,6 +68,7 @@ class BodyManager(models.Manager):
     def get_queryset(self):
         body = ContentType.objects.get(app_label='core', model='body')
         return super().get_queryset().filter(content_type=body)
+
 
 class FullBodyManager(models.Manager):
     def get_queryset(self):
@@ -79,6 +82,7 @@ class FullBodyManager(models.Manager):
             query1 = Q(content_type=block, object_id__in=blockslist)
             query2 = Q(content_type=body, object_id=bodyid)
             return super().get_queryset().filter(query1 | query2)
+
 
 class DataProduct(models.Model):
     """
@@ -146,6 +150,6 @@ class DataProduct(models.Model):
         try:
             this = DataProduct.objects.get(id=self.id)
             this.product.delete(save=False)
-        except DoesNotExist:
+        except DataProduct.DoesNotExist:
             pass
         super(DataProduct, self).save(*args, **kwargs)

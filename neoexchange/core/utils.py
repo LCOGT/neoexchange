@@ -62,6 +62,7 @@ def save_to_default(filename, out_path):
     file.close()
     return
 
+
 def save_dataproduct(obj, filepath, filetype, filename=None, content=None):
     if not filename:
         filename = Path(filepath).name
