@@ -1102,7 +1102,7 @@ class TestDetermineListGPSOptions(ExternalCodeUnitTest):
             self.assertEqual(expected_line, test_line)
 
 
-    def test_listGPS_output(self):
+    def test_read_listGPS_output(self):
 
         expected_numcolumns = 10
         expected_numrows = 36
@@ -1111,7 +1111,7 @@ class TestDetermineListGPSOptions(ExternalCodeUnitTest):
         sitecode = 'W86'
 
         input_file = os.path.join('photometrics', 'tests', 'list_gps_output.out')
-        output = listGPS_output(input_file)
+        output = read_listGPS_output(input_file)
         self.assertTrue(isinstance(output, Table))
 
         self.assertEqual(expected_numcolumns, len(output.columns))

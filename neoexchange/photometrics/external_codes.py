@@ -855,7 +855,7 @@ def run_listGPS(source_dir, dest_dir, ephem_date, sitecode, binary=None, dbg=Fal
     return retcode_or_cmdline
 
 
-def listGPS_output(listGPS_datafile):
+def read_listGPS_output(listGPS_datafile):
     """Reads listGPS output file and returns table object"""
 
     try:
