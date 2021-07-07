@@ -18,7 +18,6 @@ import tempfile
 
 from datetime import datetime, timedelta
 from django.core.files.base import File
-from django.db import connection
 from django.db.utils import IntegrityError
 from django.forms.models import model_to_dict
 from django.test import TestCase, override_settings
@@ -80,13 +79,14 @@ class DataProductTestCase(TestCase):
 
     def test_dataproduct_block_save_new_file(self):
         file_mock = mock.MagicMock(spec=File)
-        file_mock.name = 'test.fits'
-        test_dp = DataProduct(product=file_mock, filetype=DataProduct.FITS_IMAGE, content_object=self.test_block)
-        test_dp.save()
+        file_mock.name = 'test_overwrite.fits'
+        test_dp = DataProduct.objects.create(product=file_mock, filetype=DataProduct.FITS_IMAGE, content_object=self.test_block)
+        print(f"**** {test_dp.pk} ***")
         tmppath = 'products/' + file_mock.name
         self.assertEqual(test_dp.product.name, tmppath)
-        file_mock2 = mock.MagicMock(spec=File)
-        file_mock2.name = 'test.fits'
+        # file_mock2 = mock.MagicMock(spec=File)
+        file_mock.name = 'test_overwrite.fits'
+        print(f"**** {test_dp.pk} ***")
         test_dp.product = file_mock
         test_dp.save()
         self.assertEqual(test_dp.product.name, tmppath)
@@ -129,6 +129,6 @@ class DataProductTestCase(TestCase):
         with mock.patch('builtins.open', mock.mock_open()) as m:
             save_dataproduct(obj=self.body, filepath=file_mock, filetype=DataProduct.PNG_ASTRO, filename=file_mock.name)
 
-        new_body = DataProduct.body_objects.filter(object_id=self.body.id)
+        new_body = DataProduct.content.body().filter(object_id=self.body.id)
         self.assertTrue(new_body.count() == 1)
         self.assertEqual(new_body[0].content_object, self.body)
