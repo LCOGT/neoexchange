@@ -24,7 +24,7 @@ from copy import deepcopy
 
 import astropy.units as u
 from bs4 import BeautifulSoup
-from django.test import TestCase
+from django.test import TestCase, SimpleTestCase
 from django.forms.models import model_to_dict
 
 from core.models import Body, Proposal, Block, StaticSource, PhysicalParameters, Designations, ColorValues
@@ -619,7 +619,10 @@ class TestFetchGoldstoneTargets(TestCase):
         self.assertEqual(expected_target, targets)
 
 
-class TestFetchYarkovskyTargets(TestCase):
+class TestFetchYarkovskyTargets(SimpleTestCase):
+
+    def setUp(self):
+        self.test_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_yarkovsky_targets.txt'))
 
     def test_read_from_file(self):
         expected_targets = [ '1999 NW2',
@@ -656,6 +659,44 @@ class TestFetchYarkovskyTargets(TestCase):
         target_list = fetch_yarkovsky_targets(targets)
 
         self.assertEqual(expected_targets, target_list)
+
+    def test_fetch_from_ftp(self):
+        expected_targets = [ '433',
+                             '467352',
+                             '2002 TS69',
+                             '401856',
+                             '2011 JY1',
+                             '1998 WB2',
+                             '2015 KJ19',
+                             '2003 MK4',
+                             '2003 GQ22']
+
+
+        targets = fetch_yarkovsky_targets(self.test_file)
+
+        self.assertEqual(expected_targets, targets)
+
+
+class TestFetchYarkovskyTargetsFTP(SimpleTestCase):
+
+    def setUp(self):
+        self.test_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_yarkovsky_targets.txt'))
+
+    def test_fetch_latest(self):
+        expected_targets = [ '433',
+                             '467352',
+                             '2002 TS69',
+                             '401856',
+                             '2011 JY1',
+                             '1998 WB2',
+                             '2015 KJ19',
+                             '2003 MK4',
+                             '2003 GQ22']
+
+
+        targets = fetch_yarkovsky_targets_ftp(self.test_file)
+
+        self.assertEqual(expected_targets, targets)
 
 
 class TestSubmitBlockToScheduler(TestCase):
@@ -710,6 +751,8 @@ class TestSubmitBlockToScheduler(TestCase):
                            'group_name': self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                            'user_id': 'bsimpson'
                            }
+
+        self.maxDiff = None
 
     @patch('astrometrics.sources_subs.requests.post')
     def test_submit_body_for_cpt(self, mock_post):
@@ -1328,7 +1371,8 @@ class TestSubmitBlockToScheduler(TestCase):
 
         resp, sched_params = submit_block_to_scheduler(body_elements, params)
         self.assertEqual(resp, False)
-        self.assertEqual(sched_params['error_msg'], 'No visible requests within cadence window parameters')
+        expected_msg = {'windows': [{'non_field_errors': ['The observation window does not fit within any defined semester.']}]}
+        self.assertEqual(sched_params['error_msg'], expected_msg)
 
     def test_spectro_with_solar_analog(self):
 
@@ -1895,6 +1939,15 @@ class TestPreviousNEOCPParser(TestCase):
             BeautifulSoup('<a href="/mpec/K19/K19R24.html"><i>MPEC</i> 2019-R24</a>', "html.parser").a,
             ']\n']
         expected = [u'P10QYyp', 'wasnotconfirmed', '', u'(Sept. 4.34 UT)']
+
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+    def test_suspected_artificial(self):
+        """Test for Issue #548 from 2021/6/11 where artificial satellites
+        were reported in a new format"""
+        items = [' ZTF0LBs was suspected artificial (June 6.81 UT)\n']
+        expected = [u'ZTF0LBs' , 'wasnotminorplanet', '', u'(June 6.81 UT)']
 
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
