@@ -143,9 +143,10 @@ class DataProduct(models.Model):
         return f"{self.get_filetype_display()} for {self.content_type.name} - {self.object_id}"
 
     def save(self, *args, **kwargs):
-        try:
-            this = DataProduct.objects.get(id=self.id)
-            this.product.delete(save=False)
-        except DoesNotExist:
-            pass
+        if not kwargs.get('new_file'):
+            try:
+                this = DataProduct.objects.get(id=self.id)
+                this.product.delete(save=False)
+            except DataProduct.DoesNotExist:
+                pass
         super(DataProduct, self).save(*args, **kwargs)

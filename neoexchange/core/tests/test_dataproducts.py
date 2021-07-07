@@ -78,6 +78,19 @@ class DataProductTestCase(TestCase):
                        }
         self.test_block = Block.objects.create(**block_params)
 
+    def test_dataproduct_block_save_new_file(self):
+        file_mock = mock.MagicMock(spec=File)
+        file_mock.name = 'test.fits'
+        test_dp = DataProduct(product=file_mock, filetype=DataProduct.FITS_IMAGE, content_object=self.test_block)
+        test_dp.save()
+        tmppath = 'products/' + file_mock.name
+        self.assertEqual(test_dp.product.name, tmppath)
+        file_mock2 = mock.MagicMock(spec=File)
+        file_mock2.name = 'test.fits'
+        test_dp.product = file_mock
+        test_dp.save()
+        self.assertEqual(test_dp.product.name, tmppath)
+
     def test_dataproduct_block_save(self):
         file_mock = mock.MagicMock(spec=File)
         file_mock.name = 'test.fits'
@@ -85,7 +98,7 @@ class DataProductTestCase(TestCase):
         test_dp.save()
         tmppath = 'products/' + file_mock.name
         self.assertEqual(test_dp.product.name, tmppath)
-        new_blocks = DataProduct.block_objects.filter(object_id=self.test_block.id)
+        new_blocks = DataProduct.content.block().filter(object_id=self.test_block.id)
         self.assertTrue(new_blocks.count() == 1)
         self.assertEqual(new_blocks[0], test_dp)
 
@@ -96,7 +109,7 @@ class DataProductTestCase(TestCase):
         test_dp.save()
         tmppath = 'products/' + file_mock.name
         self.assertEqual(test_dp.product.name, tmppath)
-        new_bodies = DataProduct.body_objects.filter(object_id=self.body.id)
+        new_bodies = DataProduct.content.body().filter(object_id=self.body.id)
         self.assertTrue(new_bodies.count() == 1)
         self.assertEqual(new_bodies[0], test_dp)
 
@@ -108,7 +121,7 @@ class DataProductTestCase(TestCase):
         with mock.patch('builtins.open', mock.mock_open()) as m:
             save_dataproduct(obj=self.test_block, filepath=file_mock, filetype=DataProduct.PNG_ASTRO, filename=file_mock.name)
 
-        new_blocks = DataProduct.block_objects.filter(object_id=self.test_block.id)
+        new_blocks = DataProduct.content.block().filter(object_id=self.test_block.id)
         self.assertTrue(new_blocks.count() == 1)
         self.assertEqual(new_blocks[0].content_object, self.test_block)
 
