@@ -188,7 +188,7 @@ class TestReadSpectra(TestCase):
 
     def test_smoothing(self):
         with self.settings(MEDIA_ROOT=self.test_dir):
-            test_x_data, test_y_data, header = pull_data_from_spectrum(self.fitsfile)
+            test_x_data, test_y_data, header, error = pull_data_from_spectrum(self.fitsfile)
 
         exp_y_len = len(test_y_data)
 
@@ -240,26 +240,30 @@ class TestBuildSpectra(TestCase):
         expected_label = '455432 -- 20190727 (1.266) [ // ]'
         wav_range = [3100*u.AA, 10000*u.AA]
         expected_flux_mean = 0.7641197364877771
+        expected_error_mean = 0.0008555421156313763
 
         with self.settings(MEDIA_ROOT=self.test_dir):
-            label, flux, wavelength = spectrum_plot(self.fitsfile)
+            label, flux, wavelength, error = spectrum_plot(self.fitsfile)
 
         self.assertEqual(expected_label, label)
         self.assertGreater(wav_range[1], max(wavelength))
         self.assertLess(wav_range[0], min(wavelength))
         self.assertEqual(np.mean(flux), expected_flux_mean)
+        self.assertEqual(np.mean(error).value, expected_error_mean)
 
     def test_reflectance_plot(self):
         expected_label = '455432 -- HD 196164 -- 20190727'
         wav_range = [4000*u.AA, 10000*u.AA]
         expected_flux_mean = 1.0377393269850517
+        expected_error_mean = 0.001171595630670704
 
         with self.settings(MEDIA_ROOT=self.test_dir):
-            label, flux, wavelength = spectrum_plot(self.fitsfile, analog=self.analogfile)
+            label, flux, wavelength, error = spectrum_plot(self.fitsfile, analog=self.analogfile)
 
         self.assertEqual(expected_label, label)
         self.assertGreater(wav_range[1], max(wavelength))
         self.assertLess(wav_range[0], min(wavelength))
         self.assertEqual(np.mean(flux), expected_flux_mean)
+        self.assertEqual(np.mean(error), expected_error_mean)
 
 
