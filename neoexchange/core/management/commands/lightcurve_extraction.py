@@ -360,18 +360,6 @@ class Command(BaseCommand):
             self.stdout.write("Error determining telescope diameter, assuming 0.4m")
             tel_diameter = 0.4*u.m
 
-<<<<<<< HEAD
-        # Create, name, open ALCDEF file.
-        if obs_date:
-            alcdef_date = options['date']
-        else:
-            alcdef_date = sb_day
-        base_name = '{}_{}_{}_{}_'.format(obj_name, sb_site, alcdef_date, start_super_block.tracking_number)
-        alcdef_filename = base_name + 'ALCDEF.txt'
-        output_file_list.append('{},{}'.format(alcdef_filename, datadir.lstrip(out_path)))
-        alcdef_txt = ''
-=======
->>>>>>> 501ba99ca41d3e18d8d5bc346b800ef45ca3fb3a
         for super_block in super_blocks:
             # Create, name, open ALCDEF file.
             if obs_date:
@@ -382,6 +370,7 @@ class Command(BaseCommand):
             alcdef_filename = base_name + 'ALCDEF.txt'
             output_file_list.append('{},{}'.format(alcdef_filename, datadir.lstrip(out_path)))
             alcdef_file = tempfile.NamedTemporaryFile('w+')  # default_storage.open(alcdef_filename, 'w')
+            alcdef_txt = ''
             block_list = Block.objects.filter(superblock=super_block.id)
             if obs_date:
                 block_list = block_list.filter(when_observed__lt=obs_date+timedelta(days=2)).filter(when_observed__gt=obs_date)
