@@ -24,12 +24,14 @@ import imaplib
 import email
 from re import sub, compile
 from math import degrees
-from datetime import datetime, timedelta
+from time import sleep
+from datetime import date, datetime, timedelta
 from socket import error
 from random import randint
-from time import sleep
-from datetime import date
 import requests
+import shutil
+import tempfile
+from contextlib import closing
 
 from bs4 import BeautifulSoup
 import astropy.units as u
@@ -147,7 +149,7 @@ def parse_previous_NEOCP_id(items, dbg=False):
         elif len(chunks) >= 5:
             if chunks[2].lower() == 'not' and chunks[3].lower() == 'confirmed':
                 none_id = 'wasnotconfirmed'
-            elif chunks[2].lower() == 'not' and chunks[4].lower() == 'minor':
+            elif (chunks[2].lower() == 'not' and chunks[4].lower() == 'minor') or (chunks[2].lower() == 'suspected' and chunks[3].lower() == 'artificial'):
                 none_id = 'wasnotminorplanet'
             elif chunks[2].lower() == 'not' and chunks[3].lower() == 'interesting':
                 none_id = ''
@@ -1448,8 +1450,29 @@ def get_site_status(site_code):
     return good_to_schedule, reason
 
 
-def fetch_yarkovsky_targets(yark_targets):
-    """Fetches Yarkovsky targets from command line and returns a list of targets"""
+def fetch_yarkovsky_targets(targets_or_file=None):
+    """Main wrapper routine for either fetch_yarkovsky_targets_list() or
+    fetch_yarkovsky_targets_ftp() to fetch Yarkovsky targets.
+    If [targets_or_file] is a `list` of targets, fetch_yarkovsky_targets_list()
+    is called; if [targets_or_file] is a filename or None, then
+    fetch_yarkovsky_targets_ftp() is called and the target list comes from either
+    the FTP site (`targets_or_file=None`) or by reading the file specified by
+    `targets_or_file`.
+
+    Returns a list of target names.
+    """
+
+    if type(targets_or_file) == list:
+        yark_target_list = fetch_yarkovsky_targets_list(targets_or_file)
+    else:
+        yark_target_list = fetch_yarkovsky_targets_ftp(targets_or_file)
+
+    return yark_target_list
+
+
+def fetch_yarkovsky_targets_list(yark_targets):
+    """Parses a list of lines of Yarkovsky targets (read from a file and which
+    may contain comments) and returns a list of targets"""
 
     yark_target_list = []
 
@@ -1465,6 +1488,47 @@ def fetch_yarkovsky_targets(yark_targets):
 
     return yark_target_list
 
+
+def fetch_yarkovsky_targets_ftp(file_or_url=None):
+    """Fetches Yarkovsky targets from either the specified file (if [file_or_url]
+    is not None) or the current list from the FTP site
+    and parses it to return the target and expected A2 Yarkovsky value and
+    its error"""
+    ftp_url = 'ftp://ssd.jpl.nasa.gov/pub/ssd/yarkovsky/yarko_targets/yarko_latest.txt'
+
+    targets = []
+    tempdir = None
+
+    if file_or_url is None or file_or_url.startswith('ftp://'):
+        if file_or_url is not None and file_or_url.startswith('ftp://'):
+            ftp_url = file_or_url
+        tempdir = tempfile.mkdtemp(prefix='tmp_neox_')
+        target_file = os.path.join(tempdir, 'yarkovsky_targets.txt')
+
+        with closing(urllib.request.urlopen(ftp_url)) as read_fp:
+            with open(target_file, 'wb') as write_fp:
+                shutil.copyfileobj(read_fp, write_fp)
+    else:
+        target_file = file_or_url
+
+    if os.path.exists(target_file):
+        table = ascii.read(target_file, format='csv')
+
+        for target in list(table['base']):
+            target = target.upper()
+            # Look for designations of the for yyyyXY[12] and add space in the middle
+            if len(target) >=6 and target[0:4].isdigit() and target[4:6].isalpha():
+                target = target[0:4] + ' ' + target[4:]
+            targets.append(target)
+
+        if tempdir:
+            try:
+                os.remove(target_file)
+                os.rmdir(tempdir)
+            except FileNotFoundError:
+                pass
+
+    return targets
 
 def fetch_sfu(page=None):
     """Fetches the solar radio flux from the Solar Radio Monitoring
@@ -2571,15 +2635,15 @@ def store_jpl_physparams(phys_par, body):
     """Function to store object physical parameters from JPL Horizons"""
 
     # parsing the JPL physparams dictionary
-    for p in phys_par:   
+    for p in phys_par:
         if 'H' == p['name']:  # absolute magnitude
             p_type = 'H'
         elif 'G' == p['name']:  # magnitude (phase) slope
             p_type = 'G'
         elif 'diameter' in p['name']:  # diameter
-            p_type = 'D'     
+            p_type = 'D'
         elif 'extent' in p['name']:  # extent
-            continue        
+            continue
         elif 'GM' in p['name']:  # GM
             p_type = 'M'
         elif 'density' in p['name']:  # density
@@ -2639,7 +2703,7 @@ def store_jpl_physparams(phys_par, body):
             del phys_params['parameter_type']
         else:
             phys_params['value2'] = jpl_value2
-            phys_params['error2'] = jpl_error2  
+            phys_params['error2'] = jpl_error2
 
         saved = body.save_physical_parameters(phys_params)
         if saved:
@@ -2739,13 +2803,13 @@ def store_jpl_sourcetypes(code, obj, body):
         source_type = 'T'
         source_subtype_1 = 'P5'
     elif 'TNO' in code:  # Trans-Neptunian Object
-        source_type = 'K'        
+        source_type = 'K'
     elif 'IEO' in code:  # Atira
         source_subtype_1 = 'N1'
     elif 'ATE' in code:  # Aten
         source_subtype_1 = 'N2'
     elif 'APO' in code:  # Apollo
-        source_subtype_1 = 'N3'   
+        source_subtype_1 = 'N3'
     elif 'AMO' in code:  # Amor
         source_subtype_1 = 'N4'
     elif 'IMB' in code:  # inner main belt
@@ -2794,10 +2858,10 @@ def store_jpl_sourcetypes(code, obj, body):
                 source_subtype_2 = 'N'
 
     if source_type:
-        body.source_type = source_type        
+        body.source_type = source_type
     body.source_subtype_1 = source_subtype_1
     body.source_subtype_2 = source_subtype_2
     body.save()
-        
+
 
 
