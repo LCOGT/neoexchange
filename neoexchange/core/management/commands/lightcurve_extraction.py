@@ -369,7 +369,6 @@ class Command(BaseCommand):
             base_name = '{}_{}_{}_{}_'.format(obj_name, super_block.get_sites().replace(',', ''), alcdef_date, super_block.tracking_number)
             alcdef_filename = base_name + 'ALCDEF.txt'
             output_file_list.append('{},{}'.format(alcdef_filename, datadir.lstrip(out_path)))
-            alcdef_file = tempfile.NamedTemporaryFile('w+')  # default_storage.open(alcdef_filename, 'w')
             alcdef_txt = ''
             block_list = Block.objects.filter(superblock=super_block.id)
             if obs_date:
