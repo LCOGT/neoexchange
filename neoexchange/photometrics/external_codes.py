@@ -770,12 +770,15 @@ def unpack_tarball(tar_path, unpack_dir):
     return files
 
 
-def determine_listGPS_options(ephem_date, sitecode):
-    """generates options for list_GPS program from passed date code and returns a string"""
+def determine_listGPS_options(ephem_date, sitecode, satellite=None):
+    """generates options for list_GPS program from passed date code and returns a string.
+    pass [satellite] to compute ephemeris for single satellite"""
     options = ''
 
     try:
         options = "{:s} {:s} -t1".format(ephem_date.strftime("%Y-%m-%dT%H:%M:%S"), sitecode)
+        if satellite is not None:
+            options += " -o{:s} -i1m -n600".format(satellite)
     except AttributeError:
         pass
     except ValueError:
@@ -826,14 +829,14 @@ def setup_listGPS_dir(source_dir, dest_dir):
     return return_value
 
 
-def run_listGPS(source_dir, dest_dir, ephem_date, sitecode, binary=None, dbg=False):
+def run_listGPS(source_dir, dest_dir, ephem_date, sitecode, satellite=None, binary=None, dbg=False):
     """Runs listGPS"""
 
     status = setup_listGPS_dir(source_dir, dest_dir)
     if status != 0:
         return status
 
-    date_site = determine_listGPS_options(ephem_date, sitecode)
+    date_site = determine_listGPS_options(ephem_date, sitecode, satellite)
 
     binary = binary or find_binary("list_gps")
     if binary is None:

@@ -1062,6 +1062,13 @@ class TestDetermineListGPSOptions(ExternalCodeUnitTest):
 
         self.assertEqual(expected_output, output)
 
+    def test_single_satellite(self):
+        expected_output = '2021-06-23T04:00:00 W86 -t1 -oG42 -i1m -n600'
+
+        output = determine_listGPS_options(datetime(2021, 6, 23, 4, 0, 0), "W86", "G42")
+
+        self.assertEqual(expected_output, output)
+
     def test_setup_listgps_dir(self):
 
         expected_status = 0
@@ -1082,6 +1089,37 @@ class TestDetermineListGPSOptions(ExternalCodeUnitTest):
         sitecode = 'W86'
 
         status = run_listGPS(self.source_dir, self.test_dir, ephem_date, sitecode)
+
+        self.assertTrue(os.path.exists(self.test_dir))
+        self.assertEqual(expected_status, status)
+
+
+        # Test that output_file is being created using os.path.exists
+
+        output_file = os.path.join(self.test_dir, 'list_gps_output.out')
+        self.assertTrue(os.path.exists(output_file))
+
+
+        # See if lines in file are equivalent to expected
+        outputfile_fh= open(output_file, 'r')
+        file_lines = outputfile_fh.readlines()
+        outputfile_fh.close()
+
+        for i, expected_line in enumerate(expected_lines):
+            test_line = file_lines[i+2].rstrip()
+            self.assertEqual(expected_line, test_line)
+
+    def test_run_listGPS_single_satellite(self):
+
+        expected_status = 0
+        expected_lines = ['GPS positions for JD 2459388.666667 = 2021 Jun 23  4:00:00.000 UTC',
+                        'Observatory (W86) Cerro Tololo-LCO B 2021 Jun 23  4:00:00.000',
+                        'Longitude -70.804670, latitude -30.167328  alt 2204.09 m']
+        ephem_date = datetime(2021,6,23,4,0,0)
+        sitecode = 'W86'
+        satellite = 'G25'
+
+        status = run_listGPS(self.source_dir, self.test_dir, ephem_date, sitecode, satellite)
 
         self.assertTrue(os.path.exists(self.test_dir))
         self.assertEqual(expected_status, status)
