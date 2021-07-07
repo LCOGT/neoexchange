@@ -4,6 +4,10 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.8.10
+* Updates gif movies to fix intermitent issues and sort by filter.
+* Add error to spectra plots.
+
 ### 3.8.9
 * Fix issue with an alternative reporting format for artificial satellites which broke the Previous NEOCP page parser.
 * Fix rare issue where scheduling form would reset to previous day in cases where there was limited visibility.
