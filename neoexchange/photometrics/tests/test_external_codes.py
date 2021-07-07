@@ -21,6 +21,7 @@ from unittest import skipIf
 import warnings
 
 from astropy.io import fits
+from astropy import units as u
 from astropy.table import Table
 from numpy import array, arange
 
@@ -1116,8 +1117,8 @@ class TestDetermineListGPSOptions(ExternalCodeUnitTest):
         self.assertEqual(expected_numrows, len(output))
 
         # Test contents of first and last rows
-        expected_firstline = ['C34:', '*', '11 39 21.9774', '+01 32 46.175', 26843.16644, 273.4, 3.1, 83, 28.34, 146.5, '2018-078B Beidou-3 M16']
-        expected_lastline = ['E02:', '', '16 55 46.3996', '-20 23 19.273', 23315.41979, 327.5, 78.6, 163, 30.55, 32.4, '2016-030A GALILEO-2']
+        expected_firstline = ['C34:', '*', '11 39 21.9774', '+01 32 46.175', 26843.16644*u.km, 273.4, 3.1, 83, 28.34, 146.5, '2018-078B Beidou-3 M16']
+        expected_lastline = ['E02:', '', '16 55 46.3996', '-20 23 19.273', 23315.41979*u.km, 327.5, 78.6, 163, 30.55, 32.4, '2016-030A GALILEO-2']
 
         test_line1 = output[0]
         for i, test_value in enumerate(test_line1):
@@ -1127,4 +1128,5 @@ class TestDetermineListGPSOptions(ExternalCodeUnitTest):
         for i, test_value in enumerate(test_last):
             if test_value:
                 self.assertEqual(expected_lastline[i], test_value)
+
 

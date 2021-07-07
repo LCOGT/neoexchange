@@ -23,17 +23,16 @@ import warnings
 from shutil import unpack_archive, copy
 from glob import glob
 
-from astropy.io import fits
-from astropy.io import ascii
+from astropy import units as u
+from astropy.io import fits, ascii
 from astropy.io.votable import parse
-from astropy.table import Table
+from astropy.table import Table, QTable
 from astropy.utils.data import download_file as download_iers_file
 from numpy import loadtxt, split, empty
 
 from core.models import detections_array_dtypes
 from astrometrics.time_subs import timeit
 from photometrics.catalog_subs import oracdr_catalog_mapping
-from photometrics.external_codes import *
 
 logger = logging.getLogger(__name__)
 
@@ -859,11 +858,22 @@ def read_listGPS_output(listGPS_datafile):
     """Reads listGPS output file and returns table object"""
 
     try:
-        table = ascii.read(listGPS_datafile, format='fixed_width', header_start=None, data_start=6,
+        table = QTable.read(listGPS_datafile, format='ascii.fixed_width', header_start=None, data_start=6,
                                             names=('Number', 'Uncertainty', 'RA', 'Dec', 'Distance','Azim', 'Alt',
                                                    'Elo', 'Rate', 'PA','Desig'),
                                             col_starts=(0, 5, 6, 20, 35, 48, 55, 60, 64, 70, 76))
-        return table
+        column_units = {'Distance': u.km,
+                        'Azim': u.deg,
+                        'Alt': u.deg,
+                        'Elo': u.deg,
+                        'Rate': u.arcmin/u.min,
+                        'PA': u.deg,
+                        }
+        for column, unit in column_units.items():
+            table[column].unit = unit
+
+            return table
+
     except FileNotFoundError:
         logger.error(f"Could not locate filename {listGPS_datafile}")
         return -42
