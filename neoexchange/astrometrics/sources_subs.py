@@ -149,7 +149,7 @@ def parse_previous_NEOCP_id(items, dbg=False):
         elif len(chunks) >= 5:
             if chunks[2].lower() == 'not' and chunks[3].lower() == 'confirmed':
                 none_id = 'wasnotconfirmed'
-            elif chunks[2].lower() == 'not' and chunks[4].lower() == 'minor':
+            elif (chunks[2].lower() == 'not' and chunks[4].lower() == 'minor') or (chunks[2].lower() == 'suspected' and chunks[3].lower() == 'artificial'):
                 none_id = 'wasnotminorplanet'
             elif chunks[2].lower() == 'not' and chunks[3].lower() == 'interesting':
                 none_id = ''
@@ -1499,7 +1499,9 @@ def fetch_yarkovsky_targets_ftp(file_or_url=None):
     targets = []
     tempdir = None
 
-    if file_or_url is None:
+    if file_or_url is None or file_or_url.startswith('ftp://'):
+        if file_or_url is not None and file_or_url.startswith('ftp://'):
+            ftp_url = file_or_url
         tempdir = tempfile.mkdtemp(prefix='tmp_neox_')
         target_file = os.path.join(tempdir, 'yarkovsky_targets.txt')
 
@@ -2633,15 +2635,15 @@ def store_jpl_physparams(phys_par, body):
     """Function to store object physical parameters from JPL Horizons"""
 
     # parsing the JPL physparams dictionary
-    for p in phys_par:   
+    for p in phys_par:
         if 'H' == p['name']:  # absolute magnitude
             p_type = 'H'
         elif 'G' == p['name']:  # magnitude (phase) slope
             p_type = 'G'
         elif 'diameter' in p['name']:  # diameter
-            p_type = 'D'     
+            p_type = 'D'
         elif 'extent' in p['name']:  # extent
-            continue        
+            continue
         elif 'GM' in p['name']:  # GM
             p_type = 'M'
         elif 'density' in p['name']:  # density
@@ -2701,7 +2703,7 @@ def store_jpl_physparams(phys_par, body):
             del phys_params['parameter_type']
         else:
             phys_params['value2'] = jpl_value2
-            phys_params['error2'] = jpl_error2  
+            phys_params['error2'] = jpl_error2
 
         saved = body.save_physical_parameters(phys_params)
         if saved:
@@ -2801,13 +2803,13 @@ def store_jpl_sourcetypes(code, obj, body):
         source_type = 'T'
         source_subtype_1 = 'P5'
     elif 'TNO' in code:  # Trans-Neptunian Object
-        source_type = 'K'        
+        source_type = 'K'
     elif 'IEO' in code:  # Atira
         source_subtype_1 = 'N1'
     elif 'ATE' in code:  # Aten
         source_subtype_1 = 'N2'
     elif 'APO' in code:  # Apollo
-        source_subtype_1 = 'N3'   
+        source_subtype_1 = 'N3'
     elif 'AMO' in code:  # Amor
         source_subtype_1 = 'N4'
     elif 'IMB' in code:  # inner main belt
@@ -2856,10 +2858,10 @@ def store_jpl_sourcetypes(code, obj, body):
                 source_subtype_2 = 'N'
 
     if source_type:
-        body.source_type = source_type        
+        body.source_type = source_type
     body.source_subtype_1 = source_subtype_1
     body.source_subtype_2 = source_subtype_2
     body.save()
-        
+
 
 

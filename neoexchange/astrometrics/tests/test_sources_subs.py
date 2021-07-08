@@ -752,6 +752,8 @@ class TestSubmitBlockToScheduler(TestCase):
                            'user_id': 'bsimpson'
                            }
 
+        self.maxDiff = None
+
     @patch('astrometrics.sources_subs.requests.post')
     def test_submit_body_for_cpt(self, mock_post):
         mock_post.return_value.status_code = 200
@@ -1369,7 +1371,8 @@ class TestSubmitBlockToScheduler(TestCase):
 
         resp, sched_params = submit_block_to_scheduler(body_elements, params)
         self.assertEqual(resp, False)
-        self.assertEqual(sched_params['error_msg'], 'No visible requests within cadence window parameters')
+        expected_msg = {'windows': [{'non_field_errors': ['The observation window does not fit within any defined semester.']}]}
+        self.assertEqual(sched_params['error_msg'], expected_msg)
 
     def test_spectro_with_solar_analog(self):
 
@@ -1936,6 +1939,15 @@ class TestPreviousNEOCPParser(TestCase):
             BeautifulSoup('<a href="/mpec/K19/K19R24.html"><i>MPEC</i> 2019-R24</a>', "html.parser").a,
             ']\n']
         expected = [u'P10QYyp', 'wasnotconfirmed', '', u'(Sept. 4.34 UT)']
+
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+    def test_suspected_artificial(self):
+        """Test for Issue #548 from 2021/6/11 where artificial satellites
+        were reported in a new format"""
+        items = [' ZTF0LBs was suspected artificial (June 6.81 UT)\n']
+        expected = [u'ZTF0LBs' , 'wasnotminorplanet', '', u'(June 6.81 UT)']
 
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)

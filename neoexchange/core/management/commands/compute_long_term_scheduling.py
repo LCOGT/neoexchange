@@ -41,9 +41,12 @@ class Command(BaseCommand):
         self.stdout.write("==== Computing scheduling dates %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
         self.stdout.write("========================")
         targets = []
+        target_list = []
         if options['targetlist'] is not None:
             if options['targetlist'] == 'FTP':
                 targets = None
+            elif options['targetlist'].startswith('ftp://'):
+                targets = options['targetlist']
             else:
                 with open(expanduser(options['targetlist'])) as f:
                     targets = f.readlines()

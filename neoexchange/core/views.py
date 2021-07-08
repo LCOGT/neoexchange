@@ -1143,6 +1143,20 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
             return reverse('target', kwargs={'pk': self.object.id})
 
 
+def parse_errors(errors):
+    # To parse out errors, the base case is when there is just a list of strings
+    if isinstance(errors, list) and all([isinstance(e, str) for e in errors]):
+        return '\n'.join(errors)
+    else:
+        parsed_errors = []
+        if isinstance(errors, list):
+            for i, error in enumerate(errors):
+                parsed_errors.append(f'{parse_errors(error)}')
+        elif isinstance(errors, dict):
+            for key, value in errors.items():
+                parsed_errors.append(f'{key}: {parse_errors(value)}')
+        return '\n'.join(parsed_errors)
+
 def parse_portal_errors(sched_params):
     """Parse a passed <sched_params> response from the LCO Observing Portal via
     schedule_submit() and try to extract an error message
@@ -1150,16 +1164,16 @@ def parse_portal_errors(sched_params):
 
     msg = "It was not possible to submit your request to the scheduler."
     if sched_params.get('error_msg', None):
-        msg += "\nAdditional information:"
+        msg += "\nAdditional information:\n"
         error_groups = sched_params['error_msg']
-        for error_type in error_groups.keys():
-            error_msgs = error_groups[error_type]
-            for errors in error_msgs:
-                if type(errors) == str:
-                    msg += "\n{err_type}: {error}".format(err_type=error_type, error=errors)
-                elif type(errors) == dict:
-                    for key in errors:
-                        msg += "\n".join(errors[key])
+        if isinstance(error_groups, str):
+            msg += error_groups
+        else:
+            try:
+                msg += parse_errors(error_groups)
+            except:
+                msg += "Error parsing error message"
+
     return msg
 
 
@@ -1192,10 +1206,11 @@ def schedule_check(data, body, ok_to_schedule=True):
             too_mode = False
 
     # if start/stop times already established, use those
+    general_telescope = bool(data['site_code'] in ['1M0', '2M0', '0M4'])
     if data.get('start_time') and data.get('end_time') and (data.get('edit_window', False) or period is not None):
         dark_start = data.get('start_time')
         dark_end = data.get('end_time')
-    elif data['site_code'] in ['1M0', '2M0', '0M4']:
+    elif general_telescope:
         utc_date = data.get('utc_date', datetime.utcnow().date())
         if utc_date == datetime.utcnow().date():
             dark_start = datetime.utcnow().replace(microsecond=0).replace(second=0)
@@ -1209,6 +1224,7 @@ def schedule_check(data, body, ok_to_schedule=True):
             # If night has already ended, use next night instead
             dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'] + timedelta(days=1))
     dark_midpoint = dark_start + (dark_end - dark_start) / 2
+
     utc_date = data.get('utc_date', dark_midpoint.date())
     # Get semester boundaries for "current" semester
     semester_date = max(datetime.utcnow(), datetime.combine(utc_date, datetime.min.time()))
@@ -1221,8 +1237,12 @@ def schedule_check(data, body, ok_to_schedule=True):
     # calculate visibility
     # Determine the semester boundaries for the current time and truncate the visibility time and
     # therefore the windows appropriately.
+
+    sun_up, sun_down = determine_darkness_times(data['site_code'], utc_date)
+    if not (sun_up <= dark_start < sun_down or sun_up < dark_end <= sun_down):
+        utc_date = dark_midpoint.date()
     dark_and_up_time, max_alt, rise_time, set_time = get_visibility(None, None, utc_date, data['site_code'], '2 m', alt_limit, False, body_elements)
-    if (data['site_code'] in ['1M0', '2M0', '0M4']) or (period is not None and dark_end - dark_start >= timedelta(days=1)):
+    if general_telescope or (period is not None and dark_end - dark_start >= timedelta(days=1)):
         # If using generic telescope or cadence lasting more than 1 day ignore object visibility
         rise_time = dark_start
         set_time = dark_end
@@ -1259,7 +1279,7 @@ def schedule_check(data, body, ok_to_schedule=True):
     else:
         max_alt_airmass = 13
         dark_and_up_time = 0
-    if abs(mid_dark_up_time.date() - utc_date) > timedelta(days=1) or rise_time.date() > utc_date or set_time.date() < utc_date:
+    if not (sun_up <= rise_time < sun_down and sun_up < set_time<= sun_down):
         utc_date = mid_dark_up_time.date()
 
     solar_analog_id = -1
@@ -3765,10 +3785,11 @@ def plot_floyds_spec(block):
     try:
         data_spec = []
         for filename in filenames:
-            raw_label, raw_spec, ast_wav = spectrum_plot(filename)
+            raw_label, raw_spec, ast_wav, spec_err = spectrum_plot(filename)
             data_spec.append({'label': raw_label,
                               'spec': raw_spec,
                               'wav': ast_wav,
+                              'err': spec_err,
                               'filename': filename})
     except IndexError:
         data_spec = None
@@ -3776,10 +3797,11 @@ def plot_floyds_spec(block):
     analog_data = []
     offset = 2  # Arbitrary offset to minimize analog/target plotting overlap
     for analog in analogs:
-        analog_label, analog_spec, star_wav = spectrum_plot(analog, offset=offset)
+        analog_label, analog_spec, star_wav, spec_err = spectrum_plot(analog, offset=offset)
         analog_data.append({'label': analog_label,
                             'spec': analog_spec,
                             'wav': star_wav,
+                            'err': spec_err,
                             'filename': analog})
 
     if data_spec:
