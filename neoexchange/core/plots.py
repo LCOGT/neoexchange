@@ -206,6 +206,7 @@ def make_visibility_plot(request, pk, plot_type, start_date=None, site_code='-1'
             return HttpResponse(vis_plot.read(), content_type="image/png")
     else:
         # Return a 1x1 pixel gif in the case of no visibility file
+        logger.debug('No visibility plot')
         PIXEL_GIF_DATA = base64.b64decode(
             b"R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7")
 
