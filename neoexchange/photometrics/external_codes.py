@@ -26,6 +26,7 @@ from glob import glob
 from astropy import units as u
 from astropy.io import fits, ascii
 from astropy.io.votable import parse
+from astropy.time import Time
 from astropy.table import Table, QTable
 from astropy.utils.data import download_file as download_iers_file
 from numpy import loadtxt, split, empty
@@ -888,6 +889,10 @@ def read_listGPS_output(listGPS_datafile, singlesat=False):
         try:
             table = QTable.read(listGPS_datafile, format='ascii.fixed_width', header_start=None, data_start=7,
                                 names=singlesat_names, col_starts=singlesat_col_starts)
+
+        #2021 06 23 04:00.00000
+            dates = Time([datetime.strptime(d, "%Y %m %d %H:%M.00000") for d in table['UTC Datetime']])
+            table['UTC Datetime'] = dates
 
         except FileNotFoundError:
             logger.error(f"Could not locate filename {listGPS_datafile}")
