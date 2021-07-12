@@ -1048,6 +1048,11 @@ def dest_dir(args):
 
 class TestDetermineListGPSOptions(ExternalCodeUnitTest):
 
+    def setUp(self):
+        self.rate = u.arcmin/u.minute
+        self.remove = True
+        super(TestDetermineListGPSOptions, self).setUp()
+
     def test_chile(self):
         expected_output = '2021-06-23T04:00:00 W86 -t1'
 
@@ -1113,10 +1118,10 @@ class TestDetermineListGPSOptions(ExternalCodeUnitTest):
 
         expected_status = 0
         expected_lines = ['GPS positions for JD 2459388.666667 = 2021 Jun 23  4:00:00.000 UTC',
-                        'Observatory (W86) Cerro Tololo-LCO B 2021 Jun 23  4:00:00.000',
-                        'Longitude -70.804670, latitude -30.167328  alt 2204.09 m']
+                        'Observatory (W85) Cerro Tololo-LCO A 2021 Jun 23  4:00:00.000',
+                        'Longitude -70.804810, latitude -30.167407  alt 2201.78 m']
         ephem_date = datetime(2021,6,23,4,0,0)
-        sitecode = 'W86'
+        sitecode = 'W85'
         satellite = 'G25'
 
         status = run_listGPS(self.source_dir, self.test_dir, ephem_date, sitecode, satellite)
@@ -1127,7 +1132,7 @@ class TestDetermineListGPSOptions(ExternalCodeUnitTest):
 
         # Test that output_file is being created using os.path.exists
 
-        output_file = os.path.join(self.test_dir, 'list_gps_output.out')
+        output_file = os.path.join(self.test_dir, 'G25_W85_list_gps_output.out')
         self.assertTrue(os.path.exists(output_file))
 
 
@@ -1155,8 +1160,37 @@ class TestDetermineListGPSOptions(ExternalCodeUnitTest):
         self.assertEqual(expected_numrows, len(output))
 
         # Test contents of first and last rows
-        expected_firstline = ['C34:', '*', '11 39 21.9774', '+01 32 46.175', 26843.16644*u.km, 273.4, 3.1, 83, 28.34, 146.5, '2018-078B Beidou-3 M16']
-        expected_lastline = ['E02:', '', '16 55 46.3996', '-20 23 19.273', 23315.41979*u.km, 327.5, 78.6, 163, 30.55, 32.4, '2016-030A GALILEO-2']
+        expected_firstline = ['C34:', '*', '11 39 21.9774', '+01 32 46.175', 26843.16644*u.km, 273.4*u.deg, 3.1*u.deg, 83*u.deg, 28.34*self.rate, 146.5*u.deg, '2018-078B Beidou-3 M16']
+        expected_lastline = ['E02:', '', '16 55 46.3996', '-20 23 19.273', 23315.41979*u.km, 327.5*u.deg, 78.6*u.deg, 163*u.deg, 30.55*self.rate, 32.4*u.deg, '2016-030A GALILEO-2']
+
+        test_line1 = output[0]
+        for i, test_value in enumerate(test_line1):
+            self.assertEqual(expected_firstline[i], test_value)
+
+        test_last = output[-1]
+        for i, test_value in enumerate(test_last):
+            if test_value:
+                self.assertEqual(expected_lastline[i], test_value)
+
+
+    def test_read_listGPS_single_satellite_output(self):
+        """Tests first and last rows of created table object for single satellite"""
+
+        expected_numcolumns = 9
+        expected_numrows = 600
+
+        input_file = os.path.join('photometrics', 'tests', 'G25_W85_example.out')
+        output = read_listGPS_output(input_file, singlesat=True)
+        self.assertTrue(isinstance(output, Table))
+
+        print(input_file)
+
+        self.assertEqual(expected_numcolumns, len(output.columns))
+        self.assertEqual(expected_numrows, len(output))
+
+        # Test contents of first and last rows
+        expected_firstline = ['2021 06 23 04:00.00000', '19 58 07.7654', '+24 16 48.964', 23108.73742*u.km, 38.9*u.deg, 23.9*u.deg, 125*u.deg, 33.13*self.rate, 34.1*u.deg]
+        expected_lastline = ['2021 06 23 13:59.00000', '16 36 01.0247', '-23 11 15.764', 29620.56364*u.km, 200.4*u.deg, -33.7*u.deg, 159*u.deg, 29.07*self.rate, 49.5*u.deg]
 
         test_line1 = output[0]
         for i, test_value in enumerate(test_line1):

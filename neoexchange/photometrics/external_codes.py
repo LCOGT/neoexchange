@@ -851,32 +851,56 @@ def run_listGPS(source_dir, dest_dir, ephem_date, sitecode, satellite=None, bina
     else:
         logger.debug("cmdline=%s" % cmdline)
         args = cmdline.split()
-        output_file = open(os.path.join(dest_dir, 'list_gps_output.out'), 'w')
-        retcode_or_cmdline = call(args, cwd=dest_dir, stdout=output_file, stderr=output_file)
+
+        output_file = os.path.join(dest_dir, 'list_gps_output.out')
+
+        if satellite is not None:
+            output_file = os.path.join(dest_dir, f'{satellite}_{sitecode}_list_gps_output.out')
+
+        output_fh = open(output_file, 'w')
+
+        retcode_or_cmdline = call(args, cwd=dest_dir, stdout=output_fh, stderr=output_fh)
 
     return retcode_or_cmdline
 
 
-def read_listGPS_output(listGPS_datafile):
+def read_listGPS_output(listGPS_datafile, singlesat=False):
     """Reads listGPS output file and returns table object"""
 
-    try:
-        table = QTable.read(listGPS_datafile, format='ascii.fixed_width', header_start=None, data_start=6,
-                                            names=('Number', 'Uncertainty', 'RA', 'Dec', 'Distance','Azim', 'Alt',
-                                                   'Elo', 'Rate', 'PA','Desig'),
-                                            col_starts=(0, 5, 6, 20, 35, 48, 55, 60, 64, 70, 76))
-        column_units = {'Distance': u.km,
-                        'Azim': u.deg,
-                        'Alt': u.deg,
-                        'Elo': u.deg,
-                        'Rate': u.arcmin/u.min,
-                        'PA': u.deg,
-                        }
-        for column, unit in column_units.items():
-            table[column].unit = unit
+    names = ('Number', 'Uncertainty', 'RA', 'Dec', 'Distance', 'Azim', 'Alt',
+             'Elo', 'Rate', 'PA', 'Desig')
+    singlesat_names = ('UTC Datetime', 'RA', 'Dec', 'Distance', 'Azim', 'Alt',
+             'Elo', 'Rate', 'PA')
 
-            return table
+    col_starts = (0, 5, 6, 20, 35, 48, 55, 60, 64, 70, 76)
+    singlesat_col_starts = (0, 22, 37, 52, 65, 72, 77, 81, 87)
 
-    except FileNotFoundError:
-        logger.error(f"Could not locate filename {listGPS_datafile}")
-        return -42
+    if singlesat is False:
+        try:
+            table = QTable.read(listGPS_datafile, format='ascii.fixed_width', header_start=None, data_start=6,
+                                            names = names, col_starts = col_starts)
+
+        except FileNotFoundError:
+            logger.error(f"Could not locate filename {listGPS_datafile}")
+            return -42
+
+    else:
+        try:
+            table = QTable.read(listGPS_datafile, format='ascii.fixed_width', header_start=None, data_start=7,
+                                names=singlesat_names, col_starts=singlesat_col_starts)
+
+        except FileNotFoundError:
+            logger.error(f"Could not locate filename {listGPS_datafile}")
+            return -42
+
+    column_units = {'Distance': u.km,
+                    'Azim': u.deg,
+                    'Alt': u.deg,
+                    'Elo': u.deg,
+                    'Rate': u.arcmin / u.min,
+                    'PA': u.deg,
+                    }
+    for column, unit in column_units.items():
+        table[column].unit = unit
+
+    return table
