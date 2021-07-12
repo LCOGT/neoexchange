@@ -3783,10 +3783,11 @@ def plot_floyds_spec(block):
     try:
         data_spec = []
         for filename in filenames:
-            raw_label, raw_spec, ast_wav = spectrum_plot(filename)
+            raw_label, raw_spec, ast_wav, spec_err = spectrum_plot(filename)
             data_spec.append({'label': raw_label,
                               'spec': raw_spec,
                               'wav': ast_wav,
+                              'err': spec_err,
                               'filename': filename})
     except IndexError:
         data_spec = None
@@ -3794,10 +3795,11 @@ def plot_floyds_spec(block):
     analog_data = []
     offset = 2  # Arbitrary offset to minimize analog/target plotting overlap
     for analog in analogs:
-        analog_label, analog_spec, star_wav = spectrum_plot(analog, offset=offset)
+        analog_label, analog_spec, star_wav, spec_err = spectrum_plot(analog, offset=offset)
         analog_data.append({'label': analog_label,
                             'spec': analog_spec,
                             'wav': star_wav,
+                            'err': spec_err,
                             'filename': analog})
 
     if data_spec:
