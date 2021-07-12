@@ -31,3 +31,5 @@ rollbar
 sty
 awscli
 lxml
+gspread
+pydrive
