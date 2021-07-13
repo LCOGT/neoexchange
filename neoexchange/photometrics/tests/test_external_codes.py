@@ -1052,8 +1052,8 @@ class TestDetermineListGPSOptions(ExternalCodeUnitTest):
 
     def setUp(self):
         self.rate = u.arcmin/u.minute
-        self.remove = True
         super(TestDetermineListGPSOptions, self).setUp()
+        self.remove = True
 
     def test_chile(self):
         expected_output = '2021-06-23T04:00:00 W86 -t1'
@@ -1079,12 +1079,25 @@ class TestDetermineListGPSOptions(ExternalCodeUnitTest):
     def test_setup_listgps_dir(self):
 
         expected_status = 0
+        expected_files = { 'url_fail.txt' : "file",
+                           'names.txt'    : "link",
+                           'finals.all'   : "link",
+                           'ObsCodes.htm' : "link"
+                         }
 
         status = setup_listGPS_dir(self.source_dir, self.test_dir)
 
         self.assertTrue(os.path.exists(self.test_dir))
         self.assertEqual(expected_status, status)
-
+        for config_file, filetype in expected_files.items():
+            config_filepath = os.path.join(self.test_dir, config_file)
+            self.assertTrue(os.path.exists(config_filepath))
+            if filetype == "link":
+                self.assertTrue(os.path.islink(config_filepath))
+            else:
+                # Links are files too, so can't just test that
+                self.assertFalse(os.path.islink(config_filepath))
+                self.assertTrue(os.path.isfile(config_filepath))
 
     def test_run_listGPS(self):
 

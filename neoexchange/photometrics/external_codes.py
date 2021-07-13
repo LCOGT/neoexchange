@@ -148,11 +148,14 @@ def setup_findorb_environ_file(source_dir, site_code=500, start_time=datetime.ut
     return
 
 
-def setup_working_dir(source_dir, dest_dir, config_files):
+def setup_working_dir(source_dir, dest_dir, config_files, copy_files=False):
     """Sets up a temporary working directory for running programs in <dest_dir>.
     The temporary working directory is created if needed and the required config
     files (given in a list in <config_files>) are symlinked from <source_dir> if
-    they don't already exist in <dest_dir>"""
+    they don't already exist in <dest_dir>, If [copy_files] is True (not
+    the default) then the file is copied instead of being symlinked (for use
+    with files that will be updated by the running code but for which updated
+    versions don't want to be updated in the repo)"""
 
     if not os.path.exists(source_dir):
         logger.error("Source path '%s' does not exist" % source_dir)
@@ -176,11 +179,18 @@ def setup_working_dir(source_dir, dest_dir, config_files):
                 os.unlink(config_dest_filepath)
             except OSError:
                 logger.warning("Could not unlink %s" % config_dest_filepath)
-        try:
-            os.symlink(config_src_filepath, config_dest_filepath)
-        except OSError:
-            logger.error("Could not create link for %s to %s" % (config, config_dest_filepath))
-            num_bad_links += 1
+        if copy_files is True:
+            try:
+                copy(config_src_filepath, config_dest_filepath)
+            except OSError:
+                logger.error("Could not copy file from %s to %s" % (config, config_dest_filepath))
+                num_bad_links += 1
+        else:
+            try:
+                os.symlink(config_src_filepath, config_dest_filepath)
+            except OSError:
+                logger.error("Could not create link for %s to %s" % (config, config_dest_filepath))
+                num_bad_links += 1
     return_status = 0
     if num_bad_links > 0:
         return_status = -3
@@ -825,8 +835,11 @@ def setup_listGPS_dir(source_dir, dest_dir):
             return fetch_status
 
     listGPS_config_files = [x['file'] for x in listGPS_config_files]
-    listGPS_config_files += ['url_fail.txt', 'names.txt']
+    listGPS_config_files += ['names.txt']
     return_value = setup_working_dir(source_dir, dest_dir, listGPS_config_files)
+    # Call again without symlinking for this updating file
+    listGPS_config_files = ['url_fail.txt', ]
+    return_value = setup_working_dir(source_dir, dest_dir, listGPS_config_files, copy_files=True)
 
     return return_value
 
