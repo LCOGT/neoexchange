@@ -24,6 +24,7 @@ from astropy.io import fits
 from astropy import units as u
 from astropy.table import Table
 from astropy.time import Time
+from astropy.tests.helper import assert_quantity_allclose
 from numpy import array, arange
 
 from django.test import TestCase
@@ -1150,7 +1151,7 @@ class TestDetermineListGPSOptions(ExternalCodeUnitTest):
     def test_read_listGPS_output(self):
         """Tests first and last rows of created table object"""
 
-        expected_numcolumns = 11
+        expected_numcolumns = 12
         expected_numrows = 37
 
         input_file = os.path.join('photometrics', 'tests', 'list_gps_output.out')
@@ -1177,7 +1178,7 @@ class TestDetermineListGPSOptions(ExternalCodeUnitTest):
     def test_read_listGPS_single_satellite_output(self):
         """Tests first and last rows of created table object for single satellite"""
 
-        expected_numcolumns = 9
+        expected_numcolumns = 10
         expected_numrows = 600
 
         input_file = os.path.join('photometrics', 'tests', 'G25_W85_example.out')
@@ -1190,16 +1191,18 @@ class TestDetermineListGPSOptions(ExternalCodeUnitTest):
         self.assertEqual(expected_numrows, len(output))
 
         # Test contents of first and last rows
-        expected_firstline = [Time(datetime(2021,6,23,4,00,00000)), '19 58 07.7654', '+24 16 48.964', 23108.73742*u.km, 38.9*u.deg, 23.9*u.deg, 125*u.deg, 33.13*self.rate, 34.1*u.deg]
-        expected_lastline = [Time(datetime(2021,6,23,13,59,00000)), '16 36 01.0247', '-23 11 15.764', 29620.56364*u.km, 200.4*u.deg, -33.7*u.deg, 159*u.deg, 29.07*self.rate, 49.5*u.deg]
+        expected_firstline = [Time(datetime(2021,6,23,4,00,00000)), '19 58 07.7654', '+24 16 48.964', 23108.73742*u.km,
+                              38.9*u.deg, 23.9*u.deg, 125*u.deg, 33.13*self.rate, 34.1*u.deg, SkyCoord('19 58 07.7654', '+24 16 48.964', unit=(u.hourangle, u.deg))]
+        expected_lastline = [Time(datetime(2021,6,23,13,59,00000)), '16 36 01.0247', '-23 11 15.764', 29620.56364*u.km,
+                             200.4*u.deg, -33.7*u.deg, 159*u.deg, 29.07*self.rate, 49.5*u.deg, SkyCoord('16 36 01.0247', '-23 11 15.764', unit=(u.hourangle, u.deg))]
 
         test_line1 = output[0]
         for i, test_value in enumerate(test_line1):
-            self.assertEqual(expected_firstline[i], test_value)
+            assert_quantity_allclose(expected_firstline[i], test_value, 1e-5)
 
         test_last = output[-1]
         for i, test_value in enumerate(test_last):
             if test_value:
-                self.assertEqual(expected_lastline[i], test_value)
+                assert_quantity_allclose(expected_firstline[i], test_value, 1e-5)
 
 
