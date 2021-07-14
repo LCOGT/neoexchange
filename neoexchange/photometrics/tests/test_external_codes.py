@@ -1216,18 +1216,27 @@ class TestDetermineListGPSOptions(ExternalCodeUnitTest):
         self.assertEqual(expected_numrows, len(output))
 
         # Test contents of first and last rows
-        expected_firstline = [Time(datetime(2021,6,23,4,00,00000)), '19 58 07.7654', '+24 16 48.964', 23108.73742*u.km,
-                              38.9*u.deg, 23.9*u.deg, 125*u.deg, 33.13*self.rate, 34.1*u.deg, SkyCoord('19 58 07.7654', '+24 16 48.964', unit=(u.hourangle, u.deg))]
-        expected_lastline = [Time(datetime(2021,6,23,13,59,00000)), '16 36 01.0247', '-23 11 15.764', 29620.56364*u.km,
-                             200.4*u.deg, -33.7*u.deg, 159*u.deg, 29.07*self.rate, 49.5*u.deg, SkyCoord('16 36 01.0247', '-23 11 15.764', unit=(u.hourangle, u.deg))]
+        expected_firstline = [Time(datetime(2021,6,23,4,00,00000)), '19 58 07.7654', '+24 16 48.964',
+                              23108.73742*u.km, 38.9*u.deg, 23.9*u.deg, 125*u.deg, 33.13*self.rate,
+                              34.1*u.deg, SkyCoord('19 58 07.7654', '+24 16 48.964', unit=(u.hourangle, u.deg))]
+        expected_lastline = [Time(datetime(2021,6,23,13,59,00000)), '16 36 01.0247', '-23 11 15.764',
+                             29620.56364*u.km, 200.4*u.deg, -33.7*u.deg, 159*u.deg, 29.07*self.rate,
+                             49.5*u.deg, SkyCoord('16 36 01.0247', '-23 11 15.764', unit=(u.hourangle, u.deg))]
 
         test_line1 = output[0]
         for i, test_value in enumerate(test_line1):
-            assert_quantity_allclose(expected_firstline[i], test_value, 1e-5)
+            if isinstance(test_value, SkyCoord):
+                assert_quantity_allclose(expected_firstline[i].ra, test_value.ra, 1e-5)
+                assert_quantity_allclose(expected_firstline[i].dec, test_value.dec, 1e-5)
+            else:
+                self.assertEqual(expected_firstline[i], test_value)
 
         test_last = output[-1]
         for i, test_value in enumerate(test_last):
-            if test_value:
-                assert_quantity_allclose(expected_firstline[i], test_value, 1e-5)
+            if isinstance(test_value, SkyCoord):
+                assert_quantity_allclose(expected_lastline[i].ra, test_value.ra, 1e-5)
+                assert_quantity_allclose(expected_lastline[i].dec, test_value.dec, 1e-5)
+            else:
+                self.assertEqual(expected_lastline[i], test_value)
 
 
