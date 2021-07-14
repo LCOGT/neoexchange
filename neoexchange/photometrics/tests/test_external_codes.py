@@ -33,6 +33,12 @@ from django.forms.models import model_to_dict
 # Import module to test
 from photometrics.external_codes import *
 
+# Disable logging during testing
+import logging
+logger = logging.getLogger(__name__)
+# Disable anything below CRITICAL level
+logging.disable(logging.CRITICAL)
+
 
 class ExternalCodeUnitTest(TestCase):
 
