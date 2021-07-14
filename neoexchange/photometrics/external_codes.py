@@ -31,6 +31,7 @@ from astropy.table import Table, QTable, Column
 from astropy.coordinates import SkyCoord
 from astropy.utils.data import download_file as download_iers_file
 from numpy import loadtxt, split, empty
+import numpy as np
 
 from core.models import detections_array_dtypes
 from astrometrics.time_subs import timeit
@@ -935,3 +936,12 @@ def read_listGPS_output(listGPS_datafile, singlesat=False):
 #    print(table)
 
     return table
+
+
+def filter_listGPS_output(table):
+    """Filters listGPS output file to find satellites above 30 degrees altitude"""
+
+    filtered_output = (table[np.where(table['Alt'] >= 30*u.deg)])
+    return filtered_output
+
+

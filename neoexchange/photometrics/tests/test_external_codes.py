@@ -1246,3 +1246,14 @@ class TestDetermineListGPSOptions(ExternalCodeUnitTest):
                 self.assertEqual(expected_lastline[i], test_value)
 
 
+    def test_filter_listGPS_output(self):
+        """Tests satellite filter for under 30 degrees altitude"""
+
+        input_file = os.path.join('photometrics', 'tests', 'list_gps_output.out')
+        output = read_listGPS_output(input_file)
+
+        shortened_output = filter_listGPS_output(output)
+        print(shortened_output['Alt'])
+
+
+
