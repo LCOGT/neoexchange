@@ -16,6 +16,9 @@ import requests
 import sys
 
 from django.conf import settings
+from pydrive.auth import GoogleAuth, ServiceAccountCredentials
+import gspread
+
 
 ssl_verify = True
 # Check if Python version is less than 2.7.9. If so, disable SSL warnings and SNI verification
@@ -59,3 +62,50 @@ def get_telescope_states(telstates_url='http://observe.lco.global/api/telescope_
         response = {}
 
     return response
+
+def authenticate_to_gdrive(credentials_file="mycreds.json"):
+    gauth = GoogleAuth()
+    # Try to load saved client credentials
+    scope = ['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive']
+    gauth.credentials = ServiceAccountCredentials.from_json_keyfile_name(credentials_file, scope)
+
+    if gauth.credentials is None:
+        # Authenticate if they're not there
+        # Need to download from Google Developers Console and save credentials
+        # from Google Cloud and save as 'client_secrets.json'
+        gauth.LocalWebserverAuth()
+    elif gauth.access_token_expired:
+        # Refresh them if expired
+        gauth.Refresh()
+    else:
+        # Initialize the saved creds
+        gauth.Authorize()
+
+    return gauth
+
+def get_sheet_client(auth):
+    """Returns a gspread Client from the passed Google API <auth>"""
+
+    return gspread.authorize(auth.credentials)
+
+def get_spreadsheet(client, name='LOOK LPC Overview'):
+    """Gets or creates the Google Sheets spreadsheet specified by <name>"""
+
+    try:
+        sheet = client.open(name)
+    except gspread.SpreadsheetNotFound:
+        sheet = client.create(name)
+
+    return sheet
+
+def get_worksheet(sheet, name='testing'):
+    """Gets or creates the worksheet specified by <name> in the passed <sheet>"""
+
+    created = False
+    try:
+        worksheet = sheet.worksheet(name)
+    except gspread.WorksheetNotFound:
+        worksheet = sheet.add_worksheet(title=name, rows="20", cols="26")
+        created = True
+
+    return worksheet, created
