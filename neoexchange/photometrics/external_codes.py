@@ -27,7 +27,7 @@ from astropy import units as u
 from astropy.io import fits, ascii
 from astropy.io.votable import parse
 from astropy.time import Time
-from astropy.table import Table, QTable
+from astropy.table import Table, QTable, Column
 from astropy.coordinates import SkyCoord
 from astropy.utils.data import download_file as download_iers_file
 from numpy import loadtxt, split, empty
@@ -894,7 +894,8 @@ def read_listGPS_output(listGPS_datafile, singlesat=False):
         try:
             table = QTable.read(listGPS_datafile, format='ascii.fixed_width', header_start=None, data_start=6,
                                             names=names, col_starts=col_starts)
-
+            # Remove masking on Uncertainty column
+            table['Uncertainty'] = table['Uncertainty'].filled('')
         except FileNotFoundError:
             logger.error(f"Could not locate filename {listGPS_datafile}")
             return -42
@@ -912,6 +913,7 @@ def read_listGPS_output(listGPS_datafile, singlesat=False):
             logger.error(f"Could not locate filename {listGPS_datafile}")
             return -42
 
+    # Add units to some of the columns
     column_units = {'Distance': u.km,
                     'Azim': u.deg,
                     'Alt': u.deg,
@@ -922,14 +924,14 @@ def read_listGPS_output(listGPS_datafile, singlesat=False):
     for column, unit in column_units.items():
         table[column].unit = unit
 
+    # Convert RA, Dec string columns into a SkyCoord object and then make a
+    # Column from these and add to the Table.
     coords = []
-
     for ra, dec in table['RA', 'Dec']:
-        print(ra, dec)
         c = SkyCoord(ra, dec, unit=(u.hourangle, u.deg))
         coords.append(c)
 
-    table.add_column(coords, name='SkyCoord', index=10)
-    print(table)
+    table.add_column(Column(coords, name='SkyCoord'))
+#    print(table)
 
     return table

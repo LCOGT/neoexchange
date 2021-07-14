@@ -1175,16 +1175,28 @@ class TestDetermineListGPSOptions(ExternalCodeUnitTest):
         self.assertEqual(expected_numrows, len(output))
 
         # Test contents of first and last rows
-        expected_firstline = ['C34:', '*', '11 39 21.9774', '+01 32 46.175', 26843.16644*u.km, 273.4*u.deg, 3.1*u.deg, 83*u.deg, 28.34*self.rate, 146.5*u.deg, '2018-078B Beidou-3 M16']
-        expected_lastline = ['E02:', '', '16 55 46.3996', '-20 23 19.273', 23315.41979*u.km, 327.5*u.deg, 78.6*u.deg, 163*u.deg, 30.55*self.rate, 32.4*u.deg, '2016-030A GALILEO-2']
+        expected_firstline = ['C34:', '*', '11 39 21.9774', '+01 32 46.175',
+            26843.16644*u.km, 273.4*u.deg, 3.1*u.deg, 83*u.deg, 28.34*self.rate, 146.5*u.deg,
+            '2018-078B Beidou-3 M16',
+            SkyCoord('11 39 21.9774', '+01 32 46.175', unit=(u.hourangle, u.deg))]
+        expected_lastline = ['E02:', '', '16 55 46.3996', '-20 23 19.273',
+            23315.41979*u.km, 327.5*u.deg, 78.6*u.deg, 163*u.deg, 30.55*self.rate, 32.4*u.deg,
+            '2016-030A GALILEO-2', SkyCoord('16 55 46.3996', '-20 23 19.273', unit=(u.hourangle, u.deg))]
 
         test_line1 = output[0]
         for i, test_value in enumerate(test_line1):
-            self.assertEqual(expected_firstline[i], test_value)
+            if isinstance(test_value, SkyCoord):
+                assert_quantity_allclose(expected_firstline[i].ra, test_value.ra, 1e-5)
+                assert_quantity_allclose(expected_firstline[i].dec, test_value.dec, 1e-5)
+            else:
+                self.assertEqual(expected_firstline[i], test_value)
 
         test_last = output[-1]
         for i, test_value in enumerate(test_last):
-            if test_value:
+            if isinstance(test_value, SkyCoord):
+                assert_quantity_allclose(expected_lastline[i].ra, test_value.ra, 1e-5)
+                assert_quantity_allclose(expected_lastline[i].dec, test_value.dec, 1e-5)
+            else:
                 self.assertEqual(expected_lastline[i], test_value)
 
 
