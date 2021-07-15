@@ -1252,7 +1252,7 @@ class TestDetermineListGPSOptions(ExternalCodeUnitTest):
         input_file = os.path.join('photometrics', 'tests', 'list_gps_output.out')
         output = read_listGPS_output(input_file)
 
-        shortened_output = filter_listGPS_output(output)
+        shortened_output = filter_listGPS_output(output, output['Alt'])
         print(shortened_output['Alt'])
 
 
