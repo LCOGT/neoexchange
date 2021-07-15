@@ -14,6 +14,8 @@ GNU General Public License for more details.
 """
 import requests
 import sys
+from datetime import datetime, timedelta
+from dateutil import relativedelta
 
 from django.conf import settings
 from pydrive.auth import GoogleAuth, ServiceAccountCredentials
@@ -105,7 +107,38 @@ def get_worksheet(sheet, name='testing'):
     try:
         worksheet = sheet.worksheet(name)
     except gspread.WorksheetNotFound:
-        worksheet = sheet.add_worksheet(title=name, rows="20", cols="26")
+        worksheet = sheet.add_worksheet(title=name, rows="20", cols="100")
         created = True
 
     return worksheet, created
+
+def initialize_look_lpc_sheet(sheet):
+    """Creates headings for LOOK LPC Overview spreadsheet
+    """
+
+    title_format = {'textFormat' : {"fontSize" : 14, "fontFamily" : "PT Sans"}}
+    hdr_format   = {'textFormat' : {"fontSize" : 11,
+                                    "fontFamily" : "PT Sans",
+                                    "bold" : True}
+                   }
+
+    sheet.update('A1', 'Observed LPCs')
+    sheet.format('A1', title_format)
+
+    headings = ['Name', 'Start Date', 'Start r', 'Perihelion Dist', 'Perihelion Date', '1/a (Nakano)' , 'Notes', 'Total Visits']
+
+    for col, text in enumerate(headings):
+        sheet.update_cell(3, col+1, text)
+
+    start_date = datetime(2020, 8, 1)
+    end_date = start_date + timedelta(days=(3*365)-1)
+    a_month = relativedelta.relativedelta(months=1)
+    date = start_date
+    while date < end_date:
+        col += 1
+        sheet.update_cell(3, col+1, date.strftime("%B %Y"))
+        date += a_month
+    last_cell = sheet.cell(3, col+1)
+    sheet.format('A3:' + last_cell.address, hdr_format)
+
+    return

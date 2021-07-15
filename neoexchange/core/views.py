@@ -83,6 +83,8 @@ from core.utils import search
 from photometrics.SA_scatter import readSources, genGalPlane, plotScatter, \
     plotFormat
 from core.plots import spec_plot, lin_vis_plot, lc_plot
+from core.urlsubs import authenticate_to_gdrive, get_sheet_client, get_spreadsheet,\
+    get_worksheet, initialize_look_lpc_sheet
 
 # import matplotlib
 # matplotlib.use('Agg')
@@ -2083,6 +2085,25 @@ def look_project(request):
     params =  build_lookproject_list()
     params['form'] = AddTargetForm()
     return render(request, 'core/lookproject.html', params)
+
+
+def update_look_overview_sheet(request):
+
+    # Log into Google API
+    JSON_FILE = "../look-lpc-overview-6859fd46fe2c.json"
+    auth = authenticate_to_gdrive(JSON_FILE)
+
+    # Get gspread client for accessing spreadsheets
+    client = get_sheet_client(auth)
+
+    # Get the LOOK LPC Overview spreadsheet and the specific sheet
+    spreadsheet = get_spreadsheet(client, 'LOOK LPC Overview')
+    sheet = spreadsheet.worksheet('testing')
+    spreadsheet.del_worksheet(sheet)
+    sheet, created = get_worksheet(spreadsheet, 'testing')
+
+    if created:
+        initialize_look_lpc_sheet(sheet)
 
 def check_for_block(form_data, params, new_body):
     """Checks if a block with the given name exists in the Django DB.
