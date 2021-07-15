@@ -1,5 +1,6 @@
 # Local Setup
 
+## Install 
 Construct a Python Virtual Environment (virtualenv) by executing:  
 ```bash
 python3 -m venv <path to virtualenv>
@@ -48,6 +49,15 @@ DATABASES = {
     }
 }
 ```
+
+### Install on MacOS X M1 (Big Sur)
+
+* Install HomeBrew from https://brew.sh/
+* Install Fortran compiler with `brew install gfortran`
+* Install database backends: `brew install mysql postgresql`
+* Get an `arm64` version of Python via Miniconda from https://github.com/conda-forge/miniforge (Direct link: https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-MacOSX-arm64.sh) and install it
+* Install some hard to compile packages via `conda`: `conda install numpy scipy astropy`
+* Install remainder of dependencies: `pip install -r requirements.txt`
 
 Deployment
 ----------
