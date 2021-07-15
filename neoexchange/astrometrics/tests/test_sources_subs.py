@@ -1105,7 +1105,7 @@ class TestSubmitBlockToScheduler(TestCase):
 
     def test_1m_sinistro_tfn_domb_requestgroup(self):
 
-        site_code = 'Z01'
+        site_code = 'Z24'
         utc_date = datetime.now()+timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
         params = self.obs_params
@@ -1158,8 +1158,6 @@ class TestSubmitBlockToScheduler(TestCase):
         instrument_configs = user_request['requests'][0]['configurations'][0]['instrument_configs'][0]
 
         self.assertEqual(user_request['submitter'], 'bsimpson')
-        self.assertEqual(instrument_configs['bin_x'], 2)
-        self.assertEqual(instrument_configs['bin_y'], 2)
         self.assertEqual(instrument_configs['mode'], 'central_2k_2x2')
         self.assertEqual(user_request['requests'][0]['location'].get('telescope', None), None)
 
@@ -1173,8 +1171,6 @@ class TestSubmitBlockToScheduler(TestCase):
         instrument_configs = user_request['requests'][0]['configurations'][0]['instrument_configs'][0]
 
         self.assertEqual(user_request['submitter'], 'bsimpson')
-        self.assertEqual(instrument_configs['bin_x'], 2)
-        self.assertEqual(instrument_configs['bin_y'], 2)
         self.assertEqual(instrument_configs['mode'], 'central_2k_2x2')
 
     def test_1m_no_binning_requestgroup(self):
@@ -1187,8 +1183,6 @@ class TestSubmitBlockToScheduler(TestCase):
         instrument_configs = user_request['requests'][0]['configurations'][0]['instrument_configs'][0]
 
         self.assertEqual(user_request['submitter'], 'bsimpson')
-        self.assertEqual(instrument_configs['bin_x'], 1)
-        self.assertEqual(instrument_configs['bin_y'], 1)
         self.assertNotIn('mode', instrument_configs.keys())
 
     def test_2m_no_binning_requestgroup(self):
@@ -1207,8 +1201,6 @@ class TestSubmitBlockToScheduler(TestCase):
         instrument_configs = user_request['requests'][0]['configurations'][0]['instrument_configs'][0]
 
         self.assertEqual(user_request['submitter'], 'bsimpson')
-        self.assertEqual(instrument_configs['bin_x'], 2)
-        self.assertEqual(instrument_configs['bin_y'], 2)
         self.assertNotIn('mode', instrument_configs.keys())
 
     def test_0m4_no_binning_requestgroup(self):
@@ -1227,8 +1219,6 @@ class TestSubmitBlockToScheduler(TestCase):
         instrument_configs = user_request['requests'][0]['configurations'][0]['instrument_configs'][0]
 
         self.assertEqual(user_request['submitter'], 'bsimpson')
-        self.assertEqual(instrument_configs['bin_x'], 1)
-        self.assertEqual(instrument_configs['bin_y'], 1)
         self.assertNotIn('mode', instrument_configs.keys())
 
     def test_multi_filter_requestgroup(self):
@@ -4288,7 +4278,7 @@ class TestConfigureDefaults(TestCase):
 
     def test_tfn_num2_sinistro(self):
         test_params = self.obs_params
-        test_params['site_code'] = 'Z01'
+        test_params['site_code'] = 'Z24'
 
         expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
                             'pondtelescope': '1m0',
@@ -4708,8 +4698,6 @@ class TestMakeconfiguration(TestCase):
                               'instrument_configs': [{
                                 'exposure_count': 10,
                                 'exposure_time': 60.0,
-                                'bin_x': 1,
-                                'bin_y': 1,
                                 'optical_elements': {
                                   'filter': 'w'
                                 }
@@ -4739,8 +4727,6 @@ class TestMakeconfiguration(TestCase):
                               'instrument_configs': [{
                                 'exposure_count': 10,
                                 'exposure_time': 90.0,
-                                'bin_x': 1,
-                                'bin_y': 1,
                                 'optical_elements': {
                                   'filter': 'w'
                                 }

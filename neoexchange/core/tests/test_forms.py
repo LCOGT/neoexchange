@@ -224,7 +224,7 @@ class TestScheduleForm(TestCase):
     def test_form_has_tfn_fields(self):
         form = ScheduleForm()
         self.assertIsInstance(form, ScheduleForm)
-        self.assertIn('TFN 1.0m - Z00,Z01; (Tenerife, Spain)', form.as_p())
+        self.assertIn('TFN 1.0m - Z00,Z24; (Tenerife, Spain)', form.as_p())
         self.assertIn('TFN 0.4m - Z17,Z21; (Tenerife, Spain)', form.as_p())
 
     def test_sched_form_has_all_sites(self):
@@ -244,7 +244,7 @@ class TestScheduleForm(TestCase):
         self.assertIn('value="Q63"', form.as_p())
         self.assertIn('COJ 0.4m - Q58-59; (Siding Spring, Aust.)', form.as_p())
         self.assertIn('value="Q58"', form.as_p())
-        self.assertIn('TFN 1.0m - Z00,Z01; (Tenerife, Spain)', form.as_p())
+        self.assertIn('TFN 1.0m - Z00,Z24; (Tenerife, Spain)', form.as_p())
         self.assertIn('value="Z00"', form.as_p())
         self.assertIn('TFN 0.4m - Z17,Z21; (Tenerife, Spain)', form.as_p())
         self.assertIn('value="Z21"', form.as_p())
@@ -334,7 +334,7 @@ class TestScheduleCadenceForm(TestCase):
     def test_form_has_tfn_fields(self):
         form = ScheduleForm()
         self.assertIsInstance(form, ScheduleForm)
-        self.assertIn('TFN 1.0m - Z00,Z01; (Tenerife, Spain)', form.as_p())
+        self.assertIn('TFN 1.0m - Z00,Z24; (Tenerife, Spain)', form.as_p())
         self.assertIn('TFN 0.4m - Z17,Z21; (Tenerife, Spain)', form.as_p())
 
     def test_sched_form_has_all_sites(self):
@@ -354,7 +354,7 @@ class TestScheduleCadenceForm(TestCase):
         self.assertIn('value="Q63"', form.as_p())
         self.assertIn('COJ 0.4m - Q58-59; (Siding Spring, Aust.)', form.as_p())
         self.assertIn('value="Q58"', form.as_p())
-        self.assertIn('TFN 1.0m - Z00,Z01; (Tenerife, Spain)', form.as_p())
+        self.assertIn('TFN 1.0m - Z00,Z24; (Tenerife, Spain)', form.as_p())
         self.assertIn('value="Z00"', form.as_p())
         self.assertIn('TFN 0.4m - Z17,Z21; (Tenerife, Spain)', form.as_p())
         self.assertIn('value="Z21"', form.as_p())
