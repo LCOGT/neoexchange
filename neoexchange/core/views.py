@@ -70,7 +70,7 @@ from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal,
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
-    read_mtds_file, unpack_tarball, run_findorb, run_listGPS
+    read_mtds_file, unpack_tarball, run_findorb, run_listGPS, read_listGPS_output, filter_listGPS_output
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     determine_filenames, increment_red_level, update_ldac_catalog_wcs, FITSHdrException, \
     get_reference_catalog, reset_database_connection, sanitize_object_name
@@ -1683,19 +1683,35 @@ def schedule_GNSS_satellites(sitecode, date):
     # Run run_listGPS for the given sitecode and datetime
     source_dir = os.path.abspath(os.path.join('photometrics', 'configs'))
     dest_dir = tempfile.mkdtemp(prefix='tmp_neox_listgps')
+    print(dest_dir)
     status = run_listGPS(source_dir, dest_dir, date, sitecode)
     if status != 0:
         logger.warning("Error running list_gps")
         return -1
 
     # Read in the table of all visible satellites (using read_listGPS_output)
+    table_file = os.path.join(dest_dir, "list_gps_output.out")
+    table = read_listGPS_output(table_file)
 
     # Filter the table to find satellites above 30 degrees altitude at the datetime we ran it for
+    filter_table = filter_listGPS_output(table)
 
     # For each of these good satellites:
-        #Call run_listGPS again in single satellite mode
-        #Read in that table for the particular satellite
-        #Filter out all the lines in the table where alt<30
+    for satellite in filter_table['Number']:
+        if satellite.startswith('G'):
+
+            #Call run_listGPS again in single satellite mode
+            status = run_listGPS(source_dir, dest_dir, date, sitecode, satellite=satellite[0:3])
+            table_file = os.path.join(dest_dir, f'{satellite[0:3]}_{sitecode}_list_gps_output.out')
+            print(satellite, status, os.path.exists(table_file))
+
+            #Read in that table for the particular satellite
+            single_table = read_listGPS_output(table_file, singlesat=True)
+
+            #Filter out all the lines in the table where alt<30
+            filter_single_table = filter_listGPS_output(single_table)
+            print(filter_single_table)
+
         #Assemble an Observing Request and send to the telescopes
         #Telescope observes satellite
     #World Domination...

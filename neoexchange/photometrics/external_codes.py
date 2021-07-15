@@ -896,7 +896,7 @@ def read_listGPS_output(listGPS_datafile, singlesat=False):
             table = QTable.read(listGPS_datafile, format='ascii.fixed_width', header_start=None, data_start=6,
                                             names=names, col_starts=col_starts)
             # Remove masking on Uncertainty column
-            table['Uncertainty'] = table['Uncertainty'].filled('')
+            #table['Uncertainty'] = table['Uncertainty'].filled('')
         except FileNotFoundError:
             logger.error(f"Could not locate filename {listGPS_datafile}")
             return -42
@@ -906,7 +906,6 @@ def read_listGPS_output(listGPS_datafile, singlesat=False):
             table = QTable.read(listGPS_datafile, format='ascii.fixed_width', header_start=None, data_start=7,
                                 names=singlesat_names, col_starts=singlesat_col_starts)
 
-        #2021 06 23 04:00.00000
             dates = Time([datetime.strptime(d, "%Y %m %d %H:%M.00000") for d in table['UTC Datetime']])
             table['UTC Datetime'] = dates
 
@@ -933,7 +932,6 @@ def read_listGPS_output(listGPS_datafile, singlesat=False):
         coords.append(c)
 
     table.add_column(Column(coords, name='SkyCoord'))
-#    print(table)
 
     return table
 
@@ -941,7 +939,8 @@ def read_listGPS_output(listGPS_datafile, singlesat=False):
 def filter_listGPS_output(table):
     """Filters listGPS output file to find satellites above 30 degrees altitude"""
 
+    table.sort('Alt')
+    table.reverse()
+
     filtered_output = (table[np.where(table['Alt'] >= 30*u.deg)])
     return filtered_output
-
-
