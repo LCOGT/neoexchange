@@ -20,7 +20,7 @@ from dateutil import relativedelta
 from django.conf import settings
 from pydrive.auth import GoogleAuth, ServiceAccountCredentials
 import gspread
-
+from gspread.utils import a1_to_rowcol, rowcol_to_a1
 
 ssl_verify = True
 # Check if Python version is less than 2.7.9. If so, disable SSL warnings and SNI verification
@@ -127,18 +127,32 @@ def initialize_look_lpc_sheet(sheet):
 
     headings = ['Name', 'Start Date', 'Start r', 'Perihelion Dist', 'Perihelion Date', '1/a (Nakano)' , 'Notes', 'Total Visits']
 
-    for col, text in enumerate(headings):
-        sheet.update_cell(3, col+1, text)
-
     start_date = datetime(2020, 8, 1)
     end_date = start_date + timedelta(days=(3*365)-1)
     a_month = relativedelta.relativedelta(months=1)
     date = start_date
     while date < end_date:
-        col += 1
-        sheet.update_cell(3, col+1, date.strftime("%B %Y"))
+        headings.append(date.strftime("%B %Y"))
         date += a_month
-    last_cell = sheet.cell(3, col+1)
+    sheet.insert_row(headings, 3)
+
+    last_cell = sheet.cell(3, len(headings)+1)
     sheet.format('A3:' + last_cell.address, hdr_format)
+
+    return
+
+def populate_comet_lines(sheet, qs):
+
+    text_format   = {'textFormat' : {"fontSize" : 11,
+                                    "fontFamily" : "PT Sans" }
+                   }
+
+    index = 4
+    for comet in qs:
+        values = [comet.current_name(), "", "", comet.perihdist, comet.epochofperih.strftime("%Y-%m-%d"), comet.recip_a]
+        sheet.insert_row(values, index)
+        cell_range = "{}:{}".format(rowcol_to_a1(index, 1), rowcol_to_a1(index,8))
+        sheet.format(cell_range, text_format)
+        index += 1
 
     return

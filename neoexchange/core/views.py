@@ -84,7 +84,7 @@ from photometrics.SA_scatter import readSources, genGalPlane, plotScatter, \
     plotFormat
 from core.plots import spec_plot, lin_vis_plot, lc_plot
 from core.urlsubs import authenticate_to_gdrive, get_sheet_client, get_spreadsheet,\
-    get_worksheet, initialize_look_lpc_sheet
+    get_worksheet, initialize_look_lpc_sheet, populate_comet_lines
 
 # import matplotlib
 # matplotlib.use('Agg')
@@ -2098,12 +2098,18 @@ def update_look_overview_sheet(request):
 
     # Get the LOOK LPC Overview spreadsheet and the specific sheet
     spreadsheet = get_spreadsheet(client, 'LOOK LPC Overview')
-    sheet = spreadsheet.worksheet('testing')
-    spreadsheet.del_worksheet(sheet)
+#    sheet = spreadsheet.worksheet('testing')
+#    spreadsheet.del_worksheet(sheet)
     sheet, created = get_worksheet(spreadsheet, 'testing')
 
     if created:
         initialize_look_lpc_sheet(sheet)
+
+    # Get LPC targets
+    LPC_comets =  Body.objects.filter(origin='O', source_subtype_2='DN').order_by('id')
+
+    populate_comet_lines(sheet, LPC_comets)
+
 
 def check_for_block(form_data, params, new_body):
     """Checks if a block with the given name exists in the Django DB.
