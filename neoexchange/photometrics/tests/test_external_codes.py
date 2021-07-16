@@ -1273,3 +1273,43 @@ class TestFilterListGPSOutput(SimpleTestCase):
         self.assertEqual(self.table['Alt'].max(), filter_table['Alt'][0])
         self.assertEqual(self.table['Alt'].min(), filter_table['Alt'][-1])
 
+    def test_noreverse_specific_col(self):
+        """Tests reverse"""
+
+        filter_table = filter_listGPS_output(self.table, self.table['Alt']>0*u.deg, sort_column='Alt', reverse=False)
+        self.assertEqual(self.table['Alt'].min(), filter_table['Alt'][0])
+        self.assertEqual(self.table['Alt'].max(), filter_table['Alt'][-1])
+
+    def test_reverse_specific_col(self):
+        """Tests reverse"""
+
+        filter_table = filter_listGPS_output(self.table, self.table['Alt']>0*u.deg, sort_column='Alt', reverse=True)
+
+        self.assertEqual(self.table['Alt'].max(), filter_table['Alt'][0])
+        self.assertEqual(self.table['Alt'].min(), filter_table['Alt'][-1])
+
+    def test_noreverse_elong(self):
+        """Tests sort, noreverse on elongation """
+
+        filter_table = filter_listGPS_output(self.table, self.table['Alt']>0*u.deg, sort_column='Elo', reverse=False)
+        self.assertEqual(self.table['Elo'].min(), filter_table['Elo'][0])
+        self.assertEqual(self.table['Elo'].max(), filter_table['Elo'][-1])
+
+    def test_reverse_elong(self):
+        """Tests reversed sort on elongation"""
+
+        filter_table = filter_listGPS_output(self.table, self.table['Elo']>0*u.deg, sort_column='Elo', reverse=True)
+
+        self.assertEqual(self.table['Elo'].max(), filter_table['Elo'][0])
+        self.assertEqual(self.table['Elo'].min(), filter_table['Elo'][-1])
+
+    def test_sort_bad(self):
+        """Tests sort on non-existent column"""
+
+        filter_table = filter_listGPS_output(self.table, self.table['Alt']>0*u.deg, sort_column='foo', reverse=True)
+
+        self.assertEqual(self.table['Alt'][0], filter_table['Alt'][0])
+        self.assertEqual(self.table['Alt'][-1], filter_table['Alt'][-1])
+        self.assertEqual(self.table['Elo'][0], filter_table['Elo'][0])
+        self.assertEqual(self.table['Elo'][-1], filter_table['Elo'][-1])
+
