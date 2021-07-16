@@ -8230,11 +8230,36 @@ class TestMakeRequestForSatellite(SimpleTestCase):
     def setUp(self):
         table_file = os.path.join('photometrics', 'tests', 'G25_W85_example.out')
         self.table = read_listGPS_output(table_file, singlesat=True)
+        self.maxDiff = None
 
     def test1(self):
-        expected_req_group = {'exp_count' : 10,
-                              'filter_pattern' : "w,"
-                             }
+        expected_req_group = {'ipp_value': 1.0,
+                              'name': 'G99_W86_20210623',
+                              'observation_type': 'NORMAL',
+                              'operator': 'SINGLE',
+                              'proposal': 'LCOEngineering',
+                              'requests': [{'acceptability_threshold': 90,
+                                            'configurations': [{'acquisition_config': {},
+                                                                'constraints': {'max_airmass': 1.74,
+                                                                                'min_lunar_distance': 30},
+                                            'guiding_config': {},
+                                            'instrument_configs': [{'bin_x': 1,
+                                                                    'bin_y': 1,
+                                                                    'exposure_count': 10,
+                                                                    'exposure_time': 3.0,
+                                                                    'optical_elements': {'filter': 'w'}}],
+                                            'instrument_type': '1M0-SCICAM-SINISTRO',
+                                            'target': {'dec': 24.280267777777777,
+                                                        'extra_params': {},
+                                                        'name': 'G99',
+                                                        'ra': 299.53235583333327,
+                                                        'type': 'ICRS'},
+                                            'type': 'EXPOSE'}],
+                            'location': {'site': 'lsc', 'telescope_class': '1m0'},
+                            'observation_note': 'Submitted by NEOexchange',
+                            'windows': [{'end': '2021-06-23T13:59:00',
+                                        'start': '2021-06-23T04:00:00'}]}],
+                            'submitter': 'eng@lco.global'}
 
         req_group = make_request_for_satellite(self.table, 'W86', "G99")
 

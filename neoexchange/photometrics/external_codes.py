@@ -941,7 +941,6 @@ def filter_listGPS_output(table, test=None, sort_column='Alt', reverse=True):
     and then sorts on column [sort_column] (defaults to 'Alt') in either
     reversed ([reverse]=True; default) or non-reversed order ([reverse]=False)"""
 
-
     if test is None:
         test = table['Alt'] >= 30 * u.deg
 

@@ -1686,11 +1686,17 @@ def make_request_for_satellite(table, sitecode, satellite_name):
     request_group = None
 
     coords = table['SkyCoord'][0]
-    params = {'exp_count': 20, 'filter_pattern': 'w,', 'site_code': sitecode,
+    starttime = table['UTC Datetime'][0]
+    params = {'exp_count': 10, 'exp_time' : 3.0,'filter_pattern': 'w,',
+              'site_code': sitecode,
               'ra_deg': coords.ra.deg, 'dec_deg': coords.dec.deg,
               'source_id' : satellite_name,
-              'start_time' : table['UTC Datetime'][0],
+              'user_id' : 'eng@lco.global',
+              'proposal_id' : 'LCOEngineering',
+              'start_time' : starttime,
               'end_time' : table['UTC Datetime'][-1],
+              'slot_length' : 10.0,
+              'group_name' : '{sat_name}_{sitecode}_{st}'.format(sat_name=satellite_name, sitecode=sitecode, st=starttime.datetime.strftime('%Y%m%d'))
 
               }
 
@@ -1727,6 +1733,8 @@ def schedule_GNSS_satellites(sitecode, date):
             status = run_listGPS(source_dir, dest_dir, date, sitecode, satellite=satellite_name)
             table_file = os.path.join(dest_dir, f'{satellite_name}_{sitecode}_list_gps_output.out')
             print(satellite, status, os.path.exists(table_file))
+            print(table['Alt'].min(), table['Alt'].max())
+            #print(table['Elo'].min(), table['Elo'].max()) #error: cannot perform reduce with flexible type
 
             #Read in that table for the particular satellite
             single_table = read_listGPS_output(table_file, singlesat=True)
