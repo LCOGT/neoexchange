@@ -27,7 +27,7 @@ from astropy.time import Time
 from astropy.tests.helper import assert_quantity_allclose
 from numpy import array, arange
 
-from django.test import TestCase
+from django.test import TestCase, SimpleTestCase
 from django.forms.models import model_to_dict
 
 # Import module to test
@@ -1245,15 +1245,31 @@ class TestDetermineListGPSOptions(ExternalCodeUnitTest):
             else:
                 self.assertEqual(expected_lastline[i], test_value)
 
+class TestFilterListGPSOutput(SimpleTestCase):
+    #Doesn't need DB or directories so can be a SimpleTestCase
 
-    def test_filter_listGPS_output(self):
+    def setUp(self):
+        input_file = os.path.abspath(os.path.join('photometrics', 'tests', 'list_gps_output.out'))
+        self.table = read_listGPS_output(input_file)
+
+    def test_default(self):
         """Tests satellite filter for under 30 degrees altitude"""
 
-        input_file = os.path.join('photometrics', 'tests', 'list_gps_output.out')
-        output = read_listGPS_output(input_file)
+        filter_table = filter_listGPS_output(self.table)
+        self.assertNotEqual(len(self.table), len(filter_table))
 
-        shortened_output = filter_listGPS_output(output, output['Alt'])
-        print(shortened_output['Alt'])
+    def test_noreverse(self):
+        """Tests reverse"""
 
+        filter_table = filter_listGPS_output(self.table, self.table['Alt']>0*u.deg, reverse=False)
+        self.assertEqual(self.table['Alt'].min(), filter_table['Alt'][0])
+        self.assertEqual(self.table['Alt'].max(), filter_table['Alt'][-1])
 
+    def test_reverse(self):
+        """Tests reverse"""
+
+        filter_table = filter_listGPS_output(self.table, self.table['Alt']>0*u.deg, reverse=True)
+
+        self.assertEqual(self.table['Alt'].max(), filter_table['Alt'][0])
+        self.assertEqual(self.table['Alt'].min(), filter_table['Alt'][-1])
 

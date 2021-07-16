@@ -939,12 +939,12 @@ def read_listGPS_output(listGPS_datafile, singlesat=False):
 def filter_listGPS_output(table, test=None, reverse=True):
     """Filters listGPS output file to find satellites above 30 degrees altitude"""
 
-    table.sort('Alt')
-    if reverse is True:
-        table.reverse()
 
     if test is None:
         test = table['Alt'] >= 30 * u.deg
 
     filtered_output = (table[np.where(test)])
+    filtered_output.sort('Alt')
+    if reverse is True:
+        filtered_output.reverse()
     return filtered_output
