@@ -8234,7 +8234,7 @@ class TestMakeRequestForSatellite(SimpleTestCase):
 
     def test1(self):
         expected_req_group = {'ipp_value': 1.0,
-                              'name': 'G99_W86_20210623',
+                              'name': 'shutter timing test_G99_W86_20210623',
                               'observation_type': 'NORMAL',
                               'operator': 'SINGLE',
                               'proposal': 'LCOEngineering',
@@ -8257,9 +8257,9 @@ class TestMakeRequestForSatellite(SimpleTestCase):
                                             'type': 'EXPOSE'}],
                             'location': {'site': 'lsc', 'telescope_class': '1m0'},
                             'observation_note': 'Submitted by NEOexchange',
-                            'windows': [{'end': '2021-06-23T13:59:00',
-                                        'start': '2021-06-23T04:00:00'}]}],
-                            'submitter': 'eng@lco.global'}
+                            'windows': [{'end': '2021-06-23T04:05:00',
+                                        'start': '2021-06-23T03:55:00'}]}],
+                            'submitter': 'tlister@lcogt.net'}
 
         req_group = make_request_for_satellite(self.table, 'W86', "G99")
 

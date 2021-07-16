@@ -1685,18 +1685,21 @@ def make_request_for_satellite(table, sitecode, satellite_name):
 
     request_group = None
 
-    coords = table['SkyCoord'][0]
-    starttime = table['UTC Datetime'][0]
+    index = table['Alt'].argmax()
+    coords = table['SkyCoord'][index]
+    midtime = table['UTC Datetime'][index]
+    starttime = midtime - timedelta(minutes=5)
+    endtime = midtime + timedelta(minutes=5)
     params = {'exp_count': 10, 'exp_time' : 3.0,'filter_pattern': 'w,',
               'site_code': sitecode,
               'ra_deg': coords.ra.deg, 'dec_deg': coords.dec.deg,
               'source_id' : satellite_name,
-              'user_id' : 'eng@lco.global',
+              'user_id' : 'tlister@lcogt.net',
               'proposal_id' : 'LCOEngineering',
               'start_time' : starttime,
-              'end_time' : table['UTC Datetime'][-1],
+              'end_time' : endtime,
               'slot_length' : 10.0,
-              'group_name' : '{sat_name}_{sitecode}_{st}'.format(sat_name=satellite_name, sitecode=sitecode, st=starttime.datetime.strftime('%Y%m%d'))
+              'group_name' : 'shutter timing test_{sat_name}_{sitecode}_{st}'.format(sat_name=satellite_name, sitecode=sitecode, st=starttime.datetime.strftime('%Y%m%d'))
 
               }
 
@@ -1733,8 +1736,6 @@ def schedule_GNSS_satellites(sitecode, date):
             status = run_listGPS(source_dir, dest_dir, date, sitecode, satellite=satellite_name)
             table_file = os.path.join(dest_dir, f'{satellite_name}_{sitecode}_list_gps_output.out')
             print(satellite, status, os.path.exists(table_file))
-            print(table['Alt'].min(), table['Alt'].max())
-            #print(table['Elo'].min(), table['Elo'].max()) #error: cannot perform reduce with flexible type
 
             #Read in that table for the particular satellite
             single_table = read_listGPS_output(table_file, singlesat=True)
@@ -1742,6 +1743,8 @@ def schedule_GNSS_satellites(sitecode, date):
             #Filter out all the lines in the table where alt<30
             filter_single_table = filter_listGPS_output(single_table)
             print(filter_single_table)
+            print('Min Alt: ', filter_single_table['Alt'].min(), '\nMax Alt: ', filter_single_table['Alt'].max(), '\n')
+            print('Min Elo: ',filter_single_table['Elo'].min(), '\nMax Elo: ',filter_single_table['Elo'].max())
 
             #Assemble an Observing Request and send to the telescopes
             request_group = make_request_for_satellite(filter_single_table, sitecode, satellite_name)
