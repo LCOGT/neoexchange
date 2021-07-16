@@ -936,11 +936,21 @@ def read_listGPS_output(listGPS_datafile, singlesat=False):
     return table
 
 
-def filter_listGPS_output(table):
-    """Filters listGPS output file to find satellites above 30 degrees altitude"""
+def filter_listGPS_output(table, test=None, sort_column='Alt', reverse=True):
+    """Filters listGPS output file to find satellites above 30 degrees altitude
+    and then sorts on column [sort_column] (defaults to 'Alt') in either
+    reversed ([reverse]=True; default) or non-reversed order ([reverse]=False)"""
 
-    table.sort('Alt')
-    table.reverse()
 
-    filtered_output = (table[np.where(table['Alt'] >= 30*u.deg)])
+    if test is None:
+        test = table['Alt'] >= 30 * u.deg
+
+    filtered_output = (table[np.where(test)])
+    if sort_column in table.colnames:
+        filtered_output.sort(sort_column)
+        if reverse is True:
+            filtered_output.reverse()
+    else:
+        logger.warning(f"Column {sort_column} not in table")
+
     return filtered_output
