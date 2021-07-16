@@ -2107,8 +2107,11 @@ def update_look_overview_sheet(request):
 
     # Get LPC targets
     LPC_comets =  Body.objects.filter(origin='O', source_subtype_2='DN').order_by('id')
-
-    populate_comet_lines(sheet, LPC_comets)
+    params = {}
+    for comet in LPC_comets:
+        blocks = Block.objects.filter(body=comet).order_by('block_start')
+        params[comet] = blocks
+    populate_comet_lines(sheet, params)
 
 
 def check_for_block(form_data, params, new_body):

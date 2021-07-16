@@ -141,18 +141,34 @@ def initialize_look_lpc_sheet(sheet):
 
     return
 
-def populate_comet_lines(sheet, qs):
+def populate_comet_lines(sheet, params):
 
     text_format   = {'textFormat' : {"fontSize" : 11,
                                     "fontFamily" : "PT Sans" }
                    }
+    number_format = {'numberFormat' : {"type" : "NUMBER", "pattern" : "#0.00"}}
 
     index = 4
-    for comet in qs:
-        values = [comet.current_name(), "", "", comet.perihdist, comet.epochofperih.strftime("%Y-%m-%d"), comet.recip_a]
+    sheet.delete_rows(index, index+len(params))
+    for comet, blocks in params.items():
+        obs_blocks = blocks.filter(num_observed__gte=1)
+        if obs_blocks.count() > 0:
+            first_block = obs_blocks[0]
+            first_block_start = first_block.block_start.strftime("%Y-%m-%d")
+            # Compute distances at time of first Block
+            delta, r = comet.compute_distances(first_block.block_start)
+        else:
+            delta = r = first_block_start = ""
+
+        values = [comet.current_name(), first_block_start,
+                  r, comet.perihdist, comet.epochofperih.strftime("%Y-%m-%d"),
+                  comet.recip_a, "", obs_blocks.count()
+                  ]
         sheet.insert_row(values, index)
         cell_range = "{}:{}".format(rowcol_to_a1(index, 1), rowcol_to_a1(index,8))
         sheet.format(cell_range, text_format)
         index += 1
+    cell_range = "{}:{}".format(rowcol_to_a1(4, 3), rowcol_to_a1(index, 4))
 
+    sheet.format(cell_range, number_format)
     return
