@@ -45,6 +45,7 @@ from astrometrics.ephem_subs import compute_ephem, determine_darkness_times
 from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs, \
     fetch_flux_standards, read_solar_standards
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header
+from photometrics.external_codes import read_listGPS_output
 from core.frames import block_status, create_frame
 from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate,\
     SuperBlock, SpectralInfo, PreviousSpectra, StaticSource
@@ -8223,3 +8224,18 @@ class TestParsePortalErrors(SimpleTestCase):
         msg = parse_portal_errors(params)
 
         self.assertEqual(expected_msg, msg)
+
+class TestMakeRequestForSatellite(SimpleTestCase):
+
+    def setUp(self):
+        table_file = os.path.join('photometrics', 'tests', 'G25_W85_example.out')
+        self.table = read_listGPS_output(table_file, singlesat=True)
+
+    def test1(self):
+        expected_req_group = {'exp_count' : 10,
+                              'filter_pattern' : "w,"
+                             }
+
+        req_group = make_request_for_satellite(self.table, 'W86', "G99")
+
+        self.assertEqual(expected_req_group, req_group)

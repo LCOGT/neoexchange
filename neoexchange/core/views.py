@@ -66,7 +66,7 @@ from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal,
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs, validate_text,\
     read_mpcorbit_file, fetch_jpl_physparams_altdes, store_jpl_sourcetypes, store_jpl_desigs,\
-    store_jpl_physparams
+    store_jpl_physparams, make_requestgroup
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
@@ -1676,6 +1676,29 @@ def schedule_submit(data, body, username):
     return tracking_number, resp_params
 
 
+def make_request_for_satellite(table, sitecode, satellite_name):
+    """Create the requestgroup for observing the satellite
+    <table> is the single satellite ephemeris (from read_listGPS_output(singlesat=True),
+    <sitecode> is MPC sitecode,
+    <satellite_name> is the satellite name e.g. 'G25'
+    """
+
+    request_group = None
+
+    coords = table['SkyCoord'][0]
+    params = {'exp_count': 20, 'filter_pattern': 'w,', 'site_code': sitecode,
+              'ra_deg': coords.ra.deg, 'dec_deg': coords.dec.deg,
+              'source_id' : satellite_name,
+              'start_time' : table['UTC Datetime'][0],
+              'end_time' : table['UTC Datetime'][-1],
+
+              }
+
+    request_group = make_requestgroup({}, params)
+
+    return request_group
+
+
 def schedule_GNSS_satellites(sitecode, date):
 
     num_scheduled = 0
@@ -1699,10 +1722,10 @@ def schedule_GNSS_satellites(sitecode, date):
     # For each of these good satellites:
     for satellite in filter_table['Number']:
         if satellite.startswith('G'):
-
+            satellite_name = satellite[0:3]
             #Call run_listGPS again in single satellite mode
-            status = run_listGPS(source_dir, dest_dir, date, sitecode, satellite=satellite[0:3])
-            table_file = os.path.join(dest_dir, f'{satellite[0:3]}_{sitecode}_list_gps_output.out')
+            status = run_listGPS(source_dir, dest_dir, date, sitecode, satellite=satellite_name)
+            table_file = os.path.join(dest_dir, f'{satellite_name}_{sitecode}_list_gps_output.out')
             print(satellite, status, os.path.exists(table_file))
 
             #Read in that table for the particular satellite
@@ -1712,8 +1735,10 @@ def schedule_GNSS_satellites(sitecode, date):
             filter_single_table = filter_listGPS_output(single_table)
             print(filter_single_table)
 
-        #Assemble an Observing Request and send to the telescopes
-        #Telescope observes satellite
+            #Assemble an Observing Request and send to the telescopes
+            request_group = make_request_for_satellite(filter_single_table, sitecode, satellite_name)
+            #Telescope observes satellite
+
     #World Domination...
 
     return num_scheduled
