@@ -1677,7 +1677,7 @@ def schedule_submit(data, body, username):
 
 
 def make_request_for_satellite(table, sitecode, satellite_name):
-    """Create the requestgroup for observing the satellite
+    """Create the request params for observing the satellite
     <table> is the single satellite ephemeris (from read_listGPS_output(singlesat=True),
     <sitecode> is MPC sitecode,
     <satellite_name> is the satellite name e.g. 'G25'
@@ -1699,16 +1699,14 @@ def make_request_for_satellite(table, sitecode, satellite_name):
               'start_time' : starttime,
               'end_time' : endtime,
               'slot_length' : 10.0,
-              'group_name' : 'shutter timing test_{sat_name}_{sitecode}_{st}'.format(sat_name=satellite_name, sitecode=sitecode, st=starttime.datetime.strftime('%Y%m%d'))
-
+              'group_name' : 'shutter timing test ({sat_name}_{sitecode}_{st})'.format(sat_name=satellite_name, sitecode=sitecode, st=starttime.datetime.strftime('%Y%m%d'))
               }
 
-    request_group = make_requestgroup({}, params)
 
-    return request_group
+    return params
 
 
-def schedule_GNSS_satellites(sitecode, date):
+def schedule_GNSS_satellites(sitecode, date, execute=False):
 
     num_scheduled = 0
 
@@ -1742,12 +1740,17 @@ def schedule_GNSS_satellites(sitecode, date):
 
             #Filter out all the lines in the table where alt<30
             filter_single_table = filter_listGPS_output(single_table)
-            print(filter_single_table)
             print('Min Alt: ', filter_single_table['Alt'].min(), '\nMax Alt: ', filter_single_table['Alt'].max(), '\n')
             print('Min Elo: ',filter_single_table['Elo'].min(), '\nMax Elo: ',filter_single_table['Elo'].max())
 
-            #Assemble an Observing Request and send to the telescopes
-            request_group = make_request_for_satellite(filter_single_table, sitecode, satellite_name)
+            #Assemble parameters for a RequestGroup and send to the telescopes
+            params = make_request_for_satellite(filter_single_table, sitecode, satellite_name)
+            print(params)
+            tracking_number = '(simulated)'
+            if execute is True:
+                tracking_number, resp_params = submit_block_to_scheduler({}, params)
+                num_scheduled += 1
+            print("Tracking number:", tracking_number)
             #Telescope observes satellite
 
     #World Domination...

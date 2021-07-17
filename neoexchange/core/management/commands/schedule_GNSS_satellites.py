@@ -28,13 +28,14 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('sitecode', action="store", default=None, help="Sitecode to schedule for")
         parser.add_argument('date', default=datetime.utcnow(), type=datetime.fromisoformat, help='Date to schedule for (YYYYMMDDTHH)')
+        parser.add_argument('--execute', default=False, action='store_true', help='Execute observations on the network')
 
 
     def handle(self, *args, **options):
         self.stdout.write("==== Scheduling GNSS satellites %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
 
         print(options)
-        num_scheduled = schedule_GNSS_satellites(options['sitecode'], options['date'])
+        num_scheduled = schedule_GNSS_satellites(options['sitecode'], options['date'], options['execute'])
 
         self.stdout.write("Scheduled %d satellites" % num_scheduled)
 
