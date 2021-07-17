@@ -1699,7 +1699,8 @@ def make_request_for_satellite(table, sitecode, satellite_name):
               'start_time' : starttime,
               'end_time' : endtime,
               'slot_length' : 10.0,
-              'group_name' : 'shutter timing test ({sat_name}_{sitecode}_{st})'.format(sat_name=satellite_name, sitecode=sitecode, st=starttime.datetime.strftime('%Y%m%d'))
+              'group_name' : 'shutter timing test ({sat_name}_{sitecode}_{st})'.format(sat_name=satellite_name, sitecode=sitecode, st=starttime.datetime.strftime('%Y%m%d')),
+              'max_airmass' : 2.0
               }
 
 
