@@ -18,6 +18,9 @@ from datetime import datetime, timedelta
 from dateutil import relativedelta
 
 from django.conf import settings
+from django.db.models import Count
+from django.db.models.functions import TruncMonth
+
 from pydrive.auth import GoogleAuth, ServiceAccountCredentials
 import gspread
 from gspread.utils import a1_to_rowcol, rowcol_to_a1
@@ -147,9 +150,18 @@ def populate_comet_lines(sheet, params):
                                     "fontFamily" : "PT Sans" }
                    }
     number_format = {'numberFormat' : {"type" : "NUMBER", "pattern" : "#0.00"}}
+    start_date = datetime(2020, 8, 1)
+    end_date = start_date + timedelta(days=(3*365)-1)
+    a_month = relativedelta.relativedelta(months=1)
+    now = datetime.utcnow()
+    now.replace(hour=0, minute=0, second=0, microsecond=0)
+    now += a_month
 
     index = 4
-    sheet.delete_rows(index, index+len(params))
+    if sheet.row_count >= 3 + len(params):
+        sheet.delete_rows(index, index+len(params))
+        sheet.resize(rows=4)
+
     for comet, blocks in params.items():
         obs_blocks = blocks.filter(num_observed__gte=1)
         if obs_blocks.count() > 0:
@@ -164,8 +176,22 @@ def populate_comet_lines(sheet, params):
                   r, comet.perihdist, comet.epochofperih.strftime("%Y-%m-%d"),
                   comet.recip_a, "", obs_blocks.count()
                   ]
+
+        # Count up observed blocks per month
+        blocks_per_month = obs_blocks.annotate(month=TruncMonth('block_start')).values('month').annotate(total=Count('id')).order_by('month')
+
+        date = start_date
+        while date < min(now, end_date):
+            try:
+                num_visits= blocks_per_month.get(month=date)['total']
+            except blocks[0].DoesNotExist:
+                num_visits = ""
+
+            values.append(num_visits)
+            date += a_month
+
         sheet.insert_row(values, index)
-        cell_range = "{}:{}".format(rowcol_to_a1(index, 1), rowcol_to_a1(index,8))
+        cell_range = "{}:{}".format(rowcol_to_a1(index, 1), rowcol_to_a1(index, 44))
         sheet.format(cell_range, text_format)
         index += 1
     cell_range = "{}:{}".format(rowcol_to_a1(4, 3), rowcol_to_a1(index, 4))
