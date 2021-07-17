@@ -127,4 +127,5 @@ class DataProduct(models.Model):
                 this.product.delete(save=False)
             except DataProduct.DoesNotExist:
                 pass
+
         super(DataProduct, self).save(*args, **kwargs)

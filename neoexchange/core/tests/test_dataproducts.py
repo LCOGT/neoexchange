@@ -15,6 +15,7 @@ GNU General Public License for more details.
 import builtins
 import mock
 import tempfile
+import os
 
 from datetime import datetime, timedelta
 from django.core.files.base import File
@@ -81,15 +82,14 @@ class DataProductTestCase(TestCase):
         file_mock = mock.MagicMock(spec=File)
         file_mock.name = 'test_overwrite.fits'
         test_dp = DataProduct.objects.create(product=file_mock, filetype=DataProduct.FITS_IMAGE, content_object=self.test_block)
-        print(f"**** {test_dp.pk} ***")
         tmppath = 'products/' + file_mock.name
         self.assertEqual(test_dp.product.name, tmppath)
         # file_mock2 = mock.MagicMock(spec=File)
         file_mock.name = 'test_overwrite.fits'
-        print(f"**** {test_dp.pk} ***")
         test_dp.product = file_mock
         test_dp.save()
         self.assertEqual(test_dp.product.name, tmppath)
+        self.assertTrue(test_dp.product.storage.exists(test_dp.product.name))
 
     def test_dataproduct_block_save(self):
         file_mock = mock.MagicMock(spec=File)
@@ -101,6 +101,7 @@ class DataProductTestCase(TestCase):
         new_blocks = DataProduct.content.block().filter(object_id=self.test_block.id)
         self.assertTrue(new_blocks.count() == 1)
         self.assertEqual(new_blocks[0], test_dp)
+        self.assertTrue(new_blocks[0].product.storage.exists(test_dp.product.name))
 
     def test_dataproduct_body_save(self):
         file_mock = mock.MagicMock(spec=File)
@@ -112,6 +113,7 @@ class DataProductTestCase(TestCase):
         new_bodies = DataProduct.content.body().filter(object_id=self.body.id)
         self.assertTrue(new_bodies.count() == 1)
         self.assertEqual(new_bodies[0], test_dp)
+        self.assertTrue(new_bodies[0].product.storage.exists(test_dp.product.name))
 
     def test_dataproduct_save_util(self):
         file_mock = mock.MagicMock(spec=File)
@@ -124,6 +126,7 @@ class DataProductTestCase(TestCase):
         new_blocks = DataProduct.content.block().filter(object_id=self.test_block.id)
         self.assertTrue(new_blocks.count() == 1)
         self.assertEqual(new_blocks[0].content_object, self.test_block)
+        self.assertTrue(new_blocks[0].product.storage.exists(new_blocks[0].product.name))
 
         # Test with a body
         with mock.patch('builtins.open', mock.mock_open()) as m:
@@ -132,3 +135,32 @@ class DataProductTestCase(TestCase):
         new_body = DataProduct.content.body().filter(object_id=self.body.id)
         self.assertTrue(new_body.count() == 1)
         self.assertEqual(new_body[0].content_object, self.body)
+        self.assertTrue(new_body[0].product.storage.exists(new_body[0].product.name))
+
+    def test_dataproduct_save_ALCDEF(self):
+        file_name = 'test_ALCDEF.txt'
+        file_content = "some text here"
+
+        save_dataproduct(obj=self.test_sblock, filepath=None, filetype=DataProduct.ALCDEF_TXT, filename=file_name, content=file_content)
+
+        dp = DataProduct.objects.get(product__contains=file_name)
+        self.assertEqual(dp.content_object, self.test_sblock)
+        self.assertEqual(dp.product.name, os.path.join('products', file_name))
+        self.assertTrue(dp.product.storage.exists(dp.product.name))
+        test_file = dp.product.open(mode='r')
+        lines = test_file.readlines()
+        dp.product.close()
+        self.assertEqual(lines[0], file_content)
+        first_time_stamp = dp.created
+
+        new_content = "some other text here"
+        save_dataproduct(obj=self.test_sblock, filepath=None, filetype=DataProduct.ALCDEF_TXT, filename=file_name, content=new_content)
+        dp1 = DataProduct.objects.get(product__contains=file_name)
+        self.assertEqual(dp1.content_object, self.test_sblock)
+        self.assertEqual(dp1.product.name, os.path.join('products', file_name))
+        self.assertTrue(dp1.product.storage.exists(dp1.product.name))
+        test_file = dp1.product.open(mode='r')
+        lines = test_file.readlines()
+        dp1.product.close()
+        self.assertEqual(lines[0], new_content)
+        self.assertNotEqual(dp1.created, first_time_stamp)

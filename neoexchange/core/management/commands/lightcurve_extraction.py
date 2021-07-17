@@ -486,8 +486,8 @@ class Command(BaseCommand):
                             self.stdout.write("New gif created: {}".format(movie_file))
                         else:
                             self.stdout.write(movie_file)
-        save_dataproduct(obj=block.body, filepath=None, filetype=DataProduct.ALCDEF_TXT, filename=alcdef_filename, content=alcdef_txt)
-        self.stdout.write("Found matches in %d of %d frames" % (len(times), total_frame_count))
+            save_dataproduct(obj=super_block, filepath=None, filetype=DataProduct.ALCDEF_TXT, filename=alcdef_filename, content=alcdef_txt)
+            self.stdout.write("Found matches in %d of %d frames" % (len(times), total_frame_count))
 
         if not settings.USE_S3:
 

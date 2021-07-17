@@ -15,9 +15,11 @@ GNU General Public License for more details.
 import re
 import os
 from pathlib import Path
+from datetime import datetime
 
 from django.core.files.storage import default_storage
 from django.core.files.base import File, ContentFile
+from django.forms.models import model_to_dict
 
 from core.models.dataproducts import DataProduct
 
@@ -66,7 +68,10 @@ def save_to_default(filename, out_path):
 def save_dataproduct(obj, filepath, filetype, filename=None, content=None):
     if not filename:
         filename = Path(filepath).name
-    dp = DataProduct()
+    try:
+        dp = DataProduct.objects.get(filetype=filetype, product__endswith=filename)
+    except DataProduct.DoesNotExist:
+        dp = DataProduct()
     dp.content_object = obj
     dp.filetype = filetype
     if filetype in [DataProduct.CSV, DataProduct.PDS_XML, DataProduct.ALCDEF_TXT]:
@@ -74,11 +79,14 @@ def save_dataproduct(obj, filepath, filetype, filename=None, content=None):
     else:
         mode = 'rb'
     if content:
-        dp.product.save(filename, ContentFile(content))
+        file_obj = ContentFile(content)
     elif not content and not filepath:
         return
     else:
         with open(filepath, mode) as f:
-            dp.product.save(filename, File(f))
+            file_obj = File(f)
+    file_obj.name = filename
+    dp.product = file_obj
+    dp.created = datetime.utcnow()
     dp.save()
     return
