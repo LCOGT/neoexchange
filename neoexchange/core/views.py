@@ -1714,7 +1714,7 @@ def schedule_GNSS_satellites(sitecode, date, execute=False):
     # Run run_listGPS for the given sitecode and datetime
     source_dir = os.path.abspath(os.path.join('photometrics', 'configs'))
     dest_dir = tempfile.mkdtemp(prefix='tmp_neox_listgps')
-    print(dest_dir)
+    print(f"Calculating GNSS availability for {date}@{sitecode}\nResults in: {dest_dir}")
     status = run_listGPS(source_dir, dest_dir, date, sitecode)
     if status != 0:
         logger.warning("Error running list_gps")
@@ -1727,6 +1727,11 @@ def schedule_GNSS_satellites(sitecode, date, execute=False):
     # Filter the table to find satellites above 30 degrees altitude at the datetime we ran it for
     filter_table = filter_listGPS_output(table)
 
+    print(f"Table of GNSS satellites has {len(filter_table)} satellites >30deg altitude ({len(table)} originally)")
+    # Only schedule/count GPS satellites ("Number" column starts with 'G')
+    # that have the most precise orbit determinations
+    num_GPS_satelites = len([x for x in filter_table['Number'] if x.startswith('G')])
+    print(f"Scheduling up to {num_GPS_satelites} for observations")
     # For each of these good satellites:
     for satellite in filter_table['Number']:
         if satellite.startswith('G'):
@@ -1734,15 +1739,15 @@ def schedule_GNSS_satellites(sitecode, date, execute=False):
             #Call run_listGPS again in single satellite mode
             status = run_listGPS(source_dir, dest_dir, date, sitecode, satellite=satellite_name)
             table_file = os.path.join(dest_dir, f'{satellite_name}_{sitecode}_list_gps_output.out')
-            print(satellite, status, os.path.exists(table_file))
+            print(f"{satellite} status={status}")
 
             #Read in that table for the particular satellite
             single_table = read_listGPS_output(table_file, singlesat=True)
 
             #Filter out all the lines in the table where alt<30
             filter_single_table = filter_listGPS_output(single_table)
-            print('Min Alt: ', filter_single_table['Alt'].min(), '\nMax Alt: ', filter_single_table['Alt'].max(), '\n')
-            print('Min Elo: ',filter_single_table['Elo'].min(), '\nMax Elo: ',filter_single_table['Elo'].max())
+            print(f"  Altitude range: {filter_single_table['Alt'].min(): 5.1f} -- {filter_single_table['Alt'].max(): 5.1f}")
+            print(f"Elongation range: {filter_single_table['Elo'].min():.1f} -- {filter_single_table['Elo'].max():.1f}")
 
             #Assemble parameters for a RequestGroup and send to the telescopes
             params = make_request_for_satellite(filter_single_table, sitecode, satellite_name)
