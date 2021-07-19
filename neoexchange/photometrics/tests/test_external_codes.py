@@ -1167,14 +1167,22 @@ class TestDetermineListGPSOptions(ExternalCodeUnitTest):
             self.assertEqual(expected_line, test_line)
 
 
+class TestReadListGPSOutput(SimpleTestCase):
+
+    def setUp(self):
+        self.rate = u.arcmin/u.minute
+
+        self.input_file = os.path.join('photometrics', 'tests', 'list_gps_output.out')
+        self.single_input_file = os.path.join('photometrics', 'tests', 'G25_W85_example.out')
+        self.bad_input_file = os.path.join('photometrics', 'tests', 'G03_K92_listgps_output.bad')
+
     def test_read_listGPS_output(self):
         """Tests first and last rows of created table object"""
 
         expected_numcolumns = 12
         expected_numrows = 37
 
-        input_file = os.path.join('photometrics', 'tests', 'list_gps_output.out')
-        output = read_listGPS_output(input_file)
+        output = read_listGPS_output(self.input_file)
         self.assertTrue(isinstance(output, Table))
 
         self.assertEqual(expected_numcolumns, len(output.columns))
@@ -1212,11 +1220,46 @@ class TestDetermineListGPSOptions(ExternalCodeUnitTest):
         expected_numcolumns = 10
         expected_numrows = 600
 
-        input_file = os.path.join('photometrics', 'tests', 'G25_W85_example.out')
-        output = read_listGPS_output(input_file, singlesat=True)
+        output = read_listGPS_output(self.single_input_file, singlesat=True)
         self.assertTrue(isinstance(output, Table))
 
-        print(input_file)
+        self.assertEqual(expected_numcolumns, len(output.columns))
+        self.assertEqual(expected_numrows, len(output))
+
+        # Test contents of first and last rows
+        expected_firstline = [Time(datetime(2021,6,23,4,00,00000)), '19 58 07.7654', '+24 16 48.964',
+                              23108.73742*u.km, 38.9*u.deg, 23.9*u.deg, 125*u.deg, 33.13*self.rate,
+                              34.1*u.deg, SkyCoord('19 58 07.7654', '+24 16 48.964', unit=(u.hourangle, u.deg))]
+        expected_lastline = [Time(datetime(2021,6,23,13,59,00000)), '16 36 01.0247', '-23 11 15.764',
+                             29620.56364*u.km, 200.4*u.deg, -33.7*u.deg, 159*u.deg, 29.07*self.rate,
+                             49.5*u.deg, SkyCoord('16 36 01.0247', '-23 11 15.764', unit=(u.hourangle, u.deg))]
+
+        test_line1 = output[0]
+        for i, test_value in enumerate(test_line1):
+            if isinstance(test_value, SkyCoord):
+                assert_quantity_allclose(expected_firstline[i].ra, test_value.ra, 1e-5)
+                assert_quantity_allclose(expected_firstline[i].dec, test_value.dec, 1e-5)
+            else:
+                self.assertEqual(expected_firstline[i], test_value)
+
+        test_last = output[-1]
+        for i, test_value in enumerate(test_last):
+            if isinstance(test_value, SkyCoord):
+                assert_quantity_allclose(expected_lastline[i].ra, test_value.ra, 1e-5)
+                assert_quantity_allclose(expected_lastline[i].dec, test_value.dec, 1e-5)
+            else:
+                self.assertEqual(expected_lastline[i], test_value)
+
+
+    def test_read_listGPS_single_satellite_bad_output(self):
+        """Tests first and last rows of created table object for single
+        satellite with badly formed data"""
+
+        expected_numcolumns = 10
+        expected_numrows = 3
+
+        output = read_listGPS_output(self.bad_input_file, singlesat=True)
+        self.assertTrue(isinstance(output, Table))
 
         self.assertEqual(expected_numcolumns, len(output.columns))
         self.assertEqual(expected_numrows, len(output))
