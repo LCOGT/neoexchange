@@ -1288,6 +1288,7 @@ class TestReadListGPSOutput(SimpleTestCase):
             else:
                 self.assertEqual(expected_lastline[i], test_value)
 
+
 class TestFilterListGPSOutput(SimpleTestCase):
     #Doesn't need DB or directories so can be a SimpleTestCase
 

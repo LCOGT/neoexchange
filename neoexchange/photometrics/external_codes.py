@@ -27,7 +27,7 @@ from astropy import units as u
 from astropy.io import fits, ascii
 from astropy.io.votable import parse
 from astropy.time import Time
-from astropy.table import Table, QTable, Column
+from astropy.table import Table, QTable, MaskedColumn
 from astropy.coordinates import SkyCoord
 from astropy.utils.data import download_file as download_iers_file
 from numpy import loadtxt, split, empty
@@ -896,7 +896,7 @@ def read_listGPS_output(listGPS_datafile, singlesat=False):
             table = QTable.read(listGPS_datafile, format='ascii.fixed_width', header_start=None, data_start=6,
                                             names=names, col_starts=col_starts)
             # Remove masking on Uncertainty column
-            #table['Uncertainty'] = table['Uncertainty'].filled('')
+            table['Uncertainty'] = table['Uncertainty'].filled('')
         except FileNotFoundError:
             logger.error(f"Could not locate filename {listGPS_datafile}")
             return -42
@@ -927,13 +927,20 @@ def read_listGPS_output(listGPS_datafile, singlesat=False):
     # Convert RA, Dec string columns into a SkyCoord object and then make a
     # Column from these and add to the Table.
     coords = []
+    masked = []
     for ra, dec in table['RA', 'Dec']:
-        c = SkyCoord(ra, dec, unit=(u.hourangle, u.deg))
-        coords.append(c)
+        try:
+            c = SkyCoord(ra, dec, unit=(u.hourangle, u.deg))
+            coords.append(c)
+            masked.append(False)
+        except ValueError:
+            coords.append(None)
+            masked.append(True)
 
-    table.add_column(Column(coords, name='SkyCoord'))
+    table = Table(table, masked=True, copy=False)
+    table.add_column(MaskedColumn(coords, name='SkyCoord', mask=masked))
 
-    return table
+    return table[[not row for row in table['SkyCoord'].mask]]
 
 
 def filter_listGPS_output(table, test=None, sort_column='Alt', reverse=True):

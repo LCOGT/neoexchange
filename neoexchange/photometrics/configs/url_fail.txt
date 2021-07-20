@@ -6,3 +6,5 @@
 #   By default,  if a download attempt fails,  we'll wait three hours
 # (10800 seconds) before trying again.
 Wait 10800
+ 1626375243      -3 ftp://ftp.gfz-potsdam.de/GNSS/products/mgex/2166/GBM0MGXRAP_20211970000_01D_05M_ORB.SP3.gz
+ 1626375247      -3 ftp://igs.ign.fr/pub/igs/products/mgex/2166/WUM0MGXULA_20211970000_01D_05M_ORB.SP3.gz
