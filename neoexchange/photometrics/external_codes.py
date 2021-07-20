@@ -27,7 +27,7 @@ from astropy import units as u
 from astropy.io import fits, ascii
 from astropy.io.votable import parse
 from astropy.time import Time
-from astropy.table import Table, QTable, MaskedColumn
+from astropy.table import Table, QTable, Column
 from astropy.coordinates import SkyCoord
 from astropy.utils.data import download_file as download_iers_file
 from numpy import loadtxt, split, empty
@@ -913,6 +913,10 @@ def read_listGPS_output(listGPS_datafile, singlesat=False):
             logger.error(f"Could not locate filename {listGPS_datafile}")
             return -42
 
+    # Truncate table if table is malformed ('Object not found' starts appearing)
+    mask_goodrows = table['RA'] != 'Object not f'
+    table = table[mask_goodrows]
+
     # Add units to some of the columns
     column_units = {'Distance': u.km,
                     'Azim': u.deg,
@@ -927,20 +931,13 @@ def read_listGPS_output(listGPS_datafile, singlesat=False):
     # Convert RA, Dec string columns into a SkyCoord object and then make a
     # Column from these and add to the Table.
     coords = []
-    masked = []
     for ra, dec in table['RA', 'Dec']:
-        try:
-            c = SkyCoord(ra, dec, unit=(u.hourangle, u.deg))
-            coords.append(c)
-            masked.append(False)
-        except ValueError:
-            coords.append(None)
-            masked.append(True)
+        c = SkyCoord(ra, dec, unit=(u.hourangle, u.deg))
+        coords.append(c)
 
-    table = Table(table, masked=True, copy=False)
-    table.add_column(MaskedColumn(coords, name='SkyCoord', mask=masked))
+    table.add_column(Column(coords, name='SkyCoord'))
 
-    return table[[not row for row in table['SkyCoord'].mask]]
+    return table
 
 
 def filter_listGPS_output(table, test=None, sort_column='Alt', reverse=True):
