@@ -897,10 +897,11 @@ def read_listGPS_output(listGPS_datafile, singlesat=False):
 
     if singlesat is False:
         try:
-            table = QTable.read(listGPS_datafile, format='ascii.fixed_width', header_start=None, data_start=6,
-                                            names=names, col_starts=col_starts)
-            # Remove masking on Uncertainty column
-            table['Uncertainty'] = table['Uncertainty'].filled('')
+            table = QTable.read(listGPS_datafile, format='ascii.fixed_width',
+                                    header_start=None, data_start=6,
+                                    names=names, col_starts=col_starts,
+                                    fill_values=[('', ' '),], fill_include_names=['Uncertainty',])
+
         except FileNotFoundError:
             logger.error(f"Could not locate filename {listGPS_datafile}")
             return -42
