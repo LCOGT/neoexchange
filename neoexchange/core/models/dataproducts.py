@@ -19,7 +19,7 @@ from django.db import models
 from django.db.models import Q
 
 from core.models.body import Body
-from core.models.blocks import Block
+from core.models.blocks import Block, SuperBlock
 
 
 class CoreQuerySet(models.QuerySet):
@@ -31,6 +31,10 @@ class CoreQuerySet(models.QuerySet):
         body = ContentType.objects.get(app_label='core', model='body')
         return self.filter(content_type=body)
 
+    def sblock(self):
+        sblock = ContentType.objects.get(app_label='core', model='superblock')
+        return self.filter(content_type=sblock)
+
     def fullbody(self, *args, **kwargs):
         body = ContentType.objects.get(app_label='core', model='body')
         bodyid = kwargs.get('bodyid')
@@ -38,10 +42,13 @@ class CoreQuerySet(models.QuerySet):
             return self.filter(content_type=body)
         else:
             block = ContentType.objects.get(app_label='core', model='block')
+            sblock = ContentType.objects.get(app_label='core', model='superblock')
             blockslist = Block.objects.filter(body=bodyid).values_list('id', flat=True)
+            sblockslist = SuperBlock.objects.filter(body=bodyid).values_list('id', flat=True)
             query1 = Q(content_type=block, object_id__in=blockslist)
             query2 = Q(content_type=body, object_id=bodyid)
-            return self.filter(query1 | query2)
+            query3 = Q(content_type=sblock, object_id__in=sblockslist)
+            return self.filter(query1 | query2 | query3)
 
 
 class CoreManager(models.Manager):
@@ -53,6 +60,9 @@ class CoreManager(models.Manager):
 
     def block(self):
         return self.get_queryset().block()
+
+    def sblock(self):
+        return self.get_queryset().sblock()
 
     def fullbody(self, *args, **kwargs):
         return self.get_queryset().fullbody(*args, **kwargs)

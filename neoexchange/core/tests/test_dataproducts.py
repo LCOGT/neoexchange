@@ -48,6 +48,23 @@ class DataProductTestCase(TestCase):
                     }
         self.body, created = Body.objects.get_or_create(**params)
 
+        params2 = { 'provisional_name': '763',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    }
+        self.body2, created = Body.objects.get_or_create(**params2)
+
         neo_proposal_params = { 'code'  : 'LCO2015A-009',
                                 'title' : 'LCOGT NEO Follow-up Network'
                               }
@@ -153,6 +170,7 @@ class DataProductTestCase(TestCase):
         self.assertEqual(lines[0], file_content)
         first_time_stamp = dp.created
 
+        # Overwrite file
         new_content = "some other text here"
         save_dataproduct(obj=self.test_sblock, filepath=None, filetype=DataProduct.ALCDEF_TXT, filename=file_name, content=new_content)
         dp1 = DataProduct.objects.get(product__contains=file_name)
@@ -164,3 +182,66 @@ class DataProductTestCase(TestCase):
         dp1.product.close()
         self.assertEqual(lines[0], new_content)
         self.assertNotEqual(dp1.created, first_time_stamp)
+
+    def test_dataproduct_retrieve_ALCDEF(self):
+        # Create gif
+        file_mock = mock.MagicMock(spec=File)
+        file_mock.name = 'test.gif'
+        gif_dp = DataProduct.objects.create(product=file_mock, filetype=DataProduct.FRAME_GIF,
+                                            content_object=self.test_block)
+
+        # Add Superblock linked ALCDEF
+        file_name = 'test_SB_ALCDEF.txt'
+        file_content = "some text here"
+        save_dataproduct(obj=self.test_sblock, filepath=None, filetype=DataProduct.ALCDEF_TXT, filename=file_name, content=file_content)
+
+        dp_qset = DataProduct.content.fullbody(bodyid=self.body.id).filter(filetype=DataProduct.ALCDEF_TXT)
+        dp_sb = DataProduct.content.sblock().filter(object_id=self.test_sblock.id, filetype=DataProduct.ALCDEF_TXT)
+        dp_bod = DataProduct.content.body().filter(object_id=self.body.id, filetype=DataProduct.ALCDEF_TXT)
+        dp_blk = DataProduct.content.block().filter(object_id=self.test_block.id, filetype=DataProduct.ALCDEF_TXT)
+        self.assertEqual(len(dp_qset), 1)
+        self.assertEqual(len(dp_sb), 1)
+        self.assertEqual(len(dp_bod), 0)
+        self.assertEqual(len(dp_blk), 0)
+
+        # Add Block linked ALCDEF
+        file_name = 'test_Bloc_ALCDEF.txt'
+        file_content = "some other text here"
+        save_dataproduct(obj=self.test_block, filepath=None, filetype=DataProduct.ALCDEF_TXT, filename=file_name, content=file_content)
+
+        dp_qset = DataProduct.content.fullbody(bodyid=self.body.id).filter(filetype=DataProduct.ALCDEF_TXT)
+        dp_sb = DataProduct.content.sblock().filter(object_id=self.test_sblock.id, filetype=DataProduct.ALCDEF_TXT)
+        dp_bod = DataProduct.content.body().filter(object_id=self.body.id, filetype=DataProduct.ALCDEF_TXT)
+        dp_blk = DataProduct.content.block().filter(object_id=self.test_block.id, filetype=DataProduct.ALCDEF_TXT)
+        self.assertEqual(len(dp_qset), 2)
+        self.assertEqual(len(dp_sb), 1)
+        self.assertEqual(len(dp_bod), 0)
+        self.assertEqual(len(dp_blk), 1)
+
+        # Add Body linked ALCDEF
+        file_name = 'test_Bod_ALCDEF.txt'
+        file_content = "even other text here"
+        save_dataproduct(obj=self.test_sblock.body, filepath=None, filetype=DataProduct.ALCDEF_TXT, filename=file_name, content=file_content)
+
+        dp_qset = DataProduct.content.fullbody(bodyid=self.body.id).filter(filetype=DataProduct.ALCDEF_TXT)
+        dp_sb = DataProduct.content.sblock().filter(object_id=self.test_sblock.id, filetype=DataProduct.ALCDEF_TXT)
+        dp_bod = DataProduct.content.body().filter(object_id=self.body.id, filetype=DataProduct.ALCDEF_TXT)
+        dp_blk = DataProduct.content.block().filter(object_id=self.test_block.id, filetype=DataProduct.ALCDEF_TXT)
+        self.assertEqual(len(dp_qset), 3)
+        self.assertEqual(len(dp_sb), 1)
+        self.assertEqual(len(dp_bod), 1)
+        self.assertEqual(len(dp_blk), 1)
+
+        # Add unrelated body linked ALCDEF
+        file_name = 'test_newBod_ALCDEF.txt'
+        file_content = "woogaoooooowoo"
+        save_dataproduct(obj=self.body2, filepath=None, filetype=DataProduct.ALCDEF_TXT, filename=file_name, content=file_content)
+
+        dp_qset = DataProduct.content.fullbody(bodyid=self.body.id).filter(filetype=DataProduct.ALCDEF_TXT)
+        dp_sb = DataProduct.content.sblock().filter(object_id=self.test_sblock.id, filetype=DataProduct.ALCDEF_TXT)
+        dp_bod = DataProduct.content.body().filter(object_id=self.body.id, filetype=DataProduct.ALCDEF_TXT)
+        dp_blk = DataProduct.content.block().filter(object_id=self.test_block.id, filetype=DataProduct.ALCDEF_TXT)
+        self.assertEqual(len(dp_qset), 3)
+        self.assertEqual(len(dp_sb), 1)
+        self.assertEqual(len(dp_bod), 1)
+        self.assertEqual(len(dp_blk), 1)
