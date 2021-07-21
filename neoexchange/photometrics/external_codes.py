@@ -922,6 +922,12 @@ def read_listGPS_output(listGPS_datafile, singlesat=False):
     mask_goodrows = table['RA'] != 'Object not f'
     table = table[mask_goodrows]
 
+    # If table has 'Elo' column is not a float64 or int64 e.g. str3, replace
+    if table['Elo'].dtype != np.float64 and table['Elo'].dtype != np.int64:
+        mask_shadow = table['Elo'] != 'Sha'
+        table = table[mask_shadow]
+        table.replace_column('Elo', Column(np.float64(table['Elo'])))
+
     # Add units to some of the columns
     column_units = {'Distance': u.km,
                     'Azim': u.deg,

@@ -1175,6 +1175,7 @@ class TestReadListGPSOutput(SimpleTestCase):
         self.input_file = os.path.join('photometrics', 'tests', 'list_gps_output.out')
         self.single_input_file = os.path.join('photometrics', 'tests', 'G25_W85_example.out')
         self.bad_input_file = os.path.join('photometrics', 'tests', 'G03_K92_listgps_output.bad')
+        self.bad_elo_input_file = os.path.join('photometrics', 'tests', 'G03_V37_listgps_output.bad')
 
     def test_read_listGPS_output(self):
         """Tests first and last rows of created table object"""
@@ -1271,6 +1272,48 @@ class TestReadListGPSOutput(SimpleTestCase):
         expected_lastline = [Time(datetime(2021,7,19,22,44,0)), '04 40 23.3893', '-35 20 08.567',
                              26731.76146*u.km, 141.2*u.deg,  -8.0*u.deg,  73*u.deg, 29.58*self.rate,
                              49.5*u.deg, SkyCoord('04 40 23.3893', '-35 20 08.567', unit=(u.hourangle, u.deg))]
+
+        test_line1 = output[0]
+        for i, test_value in enumerate(test_line1):
+            if isinstance(test_value, SkyCoord):
+                assert_quantity_allclose(expected_firstline[i].ra, test_value.ra, 1e-5)
+                assert_quantity_allclose(expected_firstline[i].dec, test_value.dec, 1e-5)
+            else:
+                self.assertEqual(expected_firstline[i], test_value)
+
+        test_last = output[-1]
+        for i, test_value in enumerate(test_last):
+            if isinstance(test_value, SkyCoord):
+                assert_quantity_allclose(expected_lastline[i].ra, test_value.ra, 1e-5)
+                assert_quantity_allclose(expected_lastline[i].dec, test_value.dec, 1e-5)
+            else:
+                self.assertEqual(expected_lastline[i], test_value)
+
+
+    def test_read_listGPS_single_satellite_bad_elong(self):
+        """Tests first and last rows of created table object for single
+        satellite which goes into Earth's shadow and part of the Elo data is bad"""
+
+        expected_numcolumns = 10
+        expected_numrows = 3
+
+        output = read_listGPS_output(self.bad_elo_input_file, singlesat=True)
+        self.assertTrue(isinstance(output, Table))
+
+        self.assertEqual(expected_numcolumns, len(output.columns))
+        self.assertEqual(expected_numrows, len(output))
+
+        # Test contents of first and last rows
+        expected_firstline = [Time(datetime(2021,7,21, 7, 3,0)), '19 01 53.3612', '-22 14 34.879',
+                              22441.37067*u.km, 197.3*u.deg, 35.1*u.deg, 166*u.deg, 33.0*self.rate,
+                              150.0*u.deg, SkyCoord('19 01 53.3612', '-22 14 34.879', unit=(u.hourangle, u.deg))]
+        expected_lastline = [Time(datetime(2021,7,21, 7,59,0)), '20 20 06.4459', '-46 45 17.517',
+                             24559.05256*u.km, 186.7*u.deg, 12.1*u.deg, 153*u.deg, 29.61*self.rate,
+                             142.6*u.deg, SkyCoord('20 20 06.4459', '-46 45 17.517', unit=(u.hourangle, u.deg))]
+
+        assert_quantity_allclose(153*u.deg, output['Elo'].min())
+        assert_quantity_allclose(166*u.deg, output['Elo'].max())
+
 
         test_line1 = output[0]
         for i, test_value in enumerate(test_line1):
