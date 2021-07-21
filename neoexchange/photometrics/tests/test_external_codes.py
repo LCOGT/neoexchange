@@ -1038,7 +1038,7 @@ class TestUnpackTarball(TestCase):
         files = unpack_tarball(self.tar_path, self.unpack_dir)
 
         self.assertEqual(expected_num_files, len(files))
-        self.assertEqual(expected_file_name, files[0])
+        self.assertIn(expected_file_name, files)
 
     # def test_unpack_spectra(self):
     #     expected_file_name = os.path.join(self.spectra_unpack_dir,'ogg2m001-en06-20180713-0009-e00.fits')

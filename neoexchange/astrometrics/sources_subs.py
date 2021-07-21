@@ -2753,7 +2753,7 @@ def parse_jpl_fullname(obj):
     """Given a JPL object, return parsed full name"""
     fullname = obj['fullname']
     number = name = prov_des = None
-    if fullname[0] == '(':
+    if fullname[0] == '(':  # provisional designation only
         prov_des = fullname.strip('()')
     elif '/' in fullname:  # comet
         parts = fullname.split('/')
@@ -2775,17 +2775,16 @@ def parse_jpl_fullname(obj):
             elif number:
                 name = part2
     elif ' ' in fullname:
-        space_num = fullname.count(' ')
-        if space_num == 3:
-            part1, part2, part3, part4 = fullname.split(' ')
+        name_parts = list(filter(None, fullname.split(' ')))
+        if len(name_parts) == 4:
+            number = name_parts[0]
+            if name_parts[1][0].isalpha:
+                name = name_parts[1]
+        elif len(name_parts) == 3:
+            part1, part2, part3 = name_parts
             number = part1
-            if part2[0].isalpha:
-                name = part2
-        elif space_num == 2:
-            part1, part2, part3 = fullname.split(' ')
-            number = part1
-        elif space_num == 1:
-            part1, part2 = fullname.split(' ')
+        elif len(name_parts) == 2:
+            part1, part2 = name_parts
             number = part1
             name = part2
 
