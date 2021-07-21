@@ -21,6 +21,17 @@ from django.db.models import Q
 
 from core.views import schedule_GNSS_satellites
 
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    elif v.lower() == 'update':
+        return 'update'
+    else:
+        raise CommandError("Boolean value or 'update' expected.")
 
 class Command(BaseCommand):
     help = 'Schedule GNSS (GPS, Glonass etc)_satellites for observations '
@@ -29,13 +40,14 @@ class Command(BaseCommand):
         parser.add_argument('sitecode', action="store", default=None, help="Sitecode to schedule for")
         parser.add_argument('date', default=datetime.utcnow(), type=datetime.fromisoformat, help='Date to schedule for (YYYYMMDDTHH)')
         parser.add_argument('--execute', default=False, action='store_true', help='Execute observations on the network')
+        parser.add_argument('--cache', type=str2bool, default=True, help='Whether to use or update the AstroPy cache (True/False/update)')
 
 
     def handle(self, *args, **options):
         self.stdout.write("==== Scheduling GNSS satellites %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
 
         print(options)
-        num_scheduled = schedule_GNSS_satellites(options['sitecode'], options['date'], options['execute'])
+        num_scheduled = schedule_GNSS_satellites(options['sitecode'], options['date'], options['execute'], options['cache'])
 
         self.stdout.write("Scheduled %d satellites" % num_scheduled)
 

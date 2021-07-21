@@ -798,7 +798,7 @@ def determine_listGPS_options(ephem_date, sitecode, satellite=None):
         print("invalid site code", sitecode)
     return options
 
-def fetch_remote_file(source_dir, filename, url, progress=False):
+def fetch_remote_file(source_dir, filename, url, progress=False, cache=True):
     """Fetches the remote file from <url> and copies and renames it to <source_dir/filename>
     We make use of Astropy's download and caching mechanism to not refetch the
     file too often and then copy and rename the file into <source_dir> (normally photometrics/configs/)
@@ -808,7 +808,7 @@ def fetch_remote_file(source_dir, filename, url, progress=False):
 
     status = -1
 
-    eop_file = download_iers_file(url, cache=True, show_progress=progress)
+    eop_file = download_iers_file(url, cache=cache, show_progress=progress)
 
     output_file = os.path.abspath(os.path.join(source_dir, filename))
     dest_file = copy(eop_file, output_file)
@@ -818,9 +818,13 @@ def fetch_remote_file(source_dir, filename, url, progress=False):
     return status
 
 
-def setup_listGPS_dir(source_dir, dest_dir):
+def setup_listGPS_dir(source_dir, dest_dir, cache=True):
     """Setup a temporary working directory for running listGPS in <dest_dir>. The
-    needed config files are symlinked from <source_dir>"""
+    needed config files are symlinked from <source_dir>.
+    Set cache=True (default) to use the cache,
+        cache=False to bypass the cache and redownload each time (slow)
+        cache='update' to re-download then update the cache for changed files
+    """
 
     # We need an up-to-date copy of the EOP and ObsCode.htm files but don't
     # want to store them github (3.4MB and growing).
@@ -829,7 +833,7 @@ def setup_listGPS_dir(source_dir, dest_dir):
                             { 'file' : 'ObsCodes.htm', 'url' : 'https://www.minorplanetcenter.net/iau/lists/ObsCodes.html'}
                            ]
     for config_file in listGPS_config_files:
-        fetch_status = fetch_remote_file(source_dir, config_file['file'], config_file['url'], progress=True)
+        fetch_status = fetch_remote_file(source_dir, config_file['file'], config_file['url'], progress=True, cache=cache)
         if fetch_status != 0:
             msg = "Error fetching file {} from {}".format(config_file['file'], config_file['url'])
             logger.warning(msg)
@@ -845,10 +849,10 @@ def setup_listGPS_dir(source_dir, dest_dir):
     return return_value
 
 
-def run_listGPS(source_dir, dest_dir, ephem_date, sitecode, satellite=None, binary=None, dbg=False):
+def run_listGPS(source_dir, dest_dir, ephem_date, sitecode, satellite=None, binary=None, cache=True, dbg=False):
     """Runs listGPS"""
 
-    status = setup_listGPS_dir(source_dir, dest_dir)
+    status = setup_listGPS_dir(source_dir, dest_dir, cache)
     if status != 0:
         return status
 

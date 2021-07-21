@@ -1707,7 +1707,7 @@ def make_request_for_satellite(table, sitecode, satellite_name):
     return params
 
 
-def schedule_GNSS_satellites(sitecode, date, execute=False):
+def schedule_GNSS_satellites(sitecode, date, execute=False, cache=True):
 
     num_scheduled = 0
 
@@ -1715,7 +1715,7 @@ def schedule_GNSS_satellites(sitecode, date, execute=False):
     source_dir = os.path.abspath(os.path.join('photometrics', 'configs'))
     dest_dir = tempfile.mkdtemp(prefix='tmp_neox_listgps')
     print(f"Calculating GNSS availability for {date}@{sitecode}\nResults in: {dest_dir}")
-    status = run_listGPS(source_dir, dest_dir, date, sitecode)
+    status = run_listGPS(source_dir, dest_dir, date, sitecode, cache=cache)
     if status != 0:
         logger.warning("Error running list_gps")
         return -1
@@ -1731,13 +1731,13 @@ def schedule_GNSS_satellites(sitecode, date, execute=False):
     # Only schedule/count GPS satellites ("Number" column starts with 'G')
     # that have the most precise orbit determinations
     num_GPS_satelites = len([x for x in filter_table['Number'] if x.startswith('G')])
-    print(f"Scheduling up to {num_GPS_satelites} for observations")
+    print(f"Scheduling up to {num_GPS_satelites} satellites for observations")
     # For each of these good satellites:
     for satellite in filter_table['Number']:
         if satellite.startswith('G'):
             satellite_name = satellite[0:3]
             #Call run_listGPS again in single satellite mode
-            status = run_listGPS(source_dir, dest_dir, date, sitecode, satellite=satellite_name)
+            status = run_listGPS(source_dir, dest_dir, date, sitecode, satellite=satellite_name, cache=cache)
             table_file = os.path.join(dest_dir, f'{satellite_name}_{sitecode}_list_gps_output.out')
             print(f"{satellite} status={status}")
 
