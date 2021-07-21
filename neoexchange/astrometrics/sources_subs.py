@@ -1587,7 +1587,13 @@ def make_location(params):
     elif params['site_code'] == 'W87':
         location['telescope'] = '1m0a'
         location['enclosure'] = 'domc'
+    elif params['site_code'] == 'V37':
+        location['telescope'] = '1m0a'
+        location['enclosure'] = 'doma'
     elif params['site_code'] == 'V39':
+        location['telescope'] = '1m0a'
+        location['enclosure'] = 'domb'
+    elif params['site_code'] == 'Z24':
         location['telescope'] = '1m0a'
         location['enclosure'] = 'domb'
     return location
