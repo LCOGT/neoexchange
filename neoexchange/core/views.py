@@ -3943,7 +3943,7 @@ def get_lc_plot(body, data):
 
     meta_list = []
     lc_list = []
-    dataproducts = DataProduct.body_objects.filter(filetype=DataProduct.ALCDEF_TXT)
+    dataproducts = DataProduct.content.fullbody(bodyid=body.id).filter(filetype=DataProduct.ALCDEF_TXT)
     if dataproducts:
         for dp in dataproducts:
             meta_list, lc_list = import_alcdef(dp.product.file, meta_list, lc_list)

@@ -22,9 +22,11 @@ from django.core.files.base import File
 from django.db.utils import IntegrityError
 from django.forms.models import model_to_dict
 from django.test import TestCase, override_settings
+from django.conf import settings
 
-from core.models import DataProduct, Block, Body, Proposal, SuperBlock
+from core.models import DataProduct, Block, Body, Proposal, SuperBlock, Frame
 from core.utils import save_dataproduct
+from photometrics.gf_movie import make_gif
 
 
 @override_settings(MEDIA_ROOT=tempfile.mkdtemp())
@@ -32,6 +34,7 @@ class DataProductTestCase(TestCase):
     def setUp(self):
         # Initialise with a test body and two test proposals
         params = {  'provisional_name' : 'N999r0q',
+                    'name'          : '2255',
                     'abs_mag'       : 21.0,
                     'slope'         : 0.15,
                     'epochofel'     : '2015-03-19 00:00:00',
@@ -94,6 +97,22 @@ class DataProductTestCase(TestCase):
                          'reported' : False
                        }
         self.test_block = Block.objects.create(**block_params)
+
+        frame_params = {'sitecode': 'K92',
+                        'instrument': 'kb76',
+                        'filter': 'w',
+                        'filename': 'banzai_test_frame.fits',
+                        'exptime': 225.0,
+                        'midpoint': datetime(2016, 8, 2, 2, 17, 19),
+                        'block': self.test_block,
+                        'zeropoint': -99,
+                        'zeropoint_err': -99,
+                        'fwhm': 2.390,
+                        'frametype': 0,
+                        'rms_of_fit': 0.3,
+                        'nstars_in_fit': -4,
+                        }
+        self.test_frame, created = Frame.objects.get_or_create(**frame_params)
 
     def test_dataproduct_block_save_new_file(self):
         file_mock = mock.MagicMock(spec=File)
@@ -245,3 +264,12 @@ class DataProductTestCase(TestCase):
         self.assertEqual(len(dp_sb), 1)
         self.assertEqual(len(dp_bod), 1)
         self.assertEqual(len(dp_blk), 1)
+
+    def test_dataproduct_save_gif(self):
+        # Create gif
+        fits = os.path.abspath(os.path.join('photometrics', 'tests', 'banzai_test_frame.fits'))
+        frames = [fits, fits, fits, fits, fits]
+        movie_file = make_gif(frames, sort=False, init_fr=100, out_path=settings.MEDIA_ROOT, center=3, progress=False)
+        save_dataproduct(obj=self.test_block, filepath=movie_file, filetype=DataProduct.FRAME_GIF)
+        dp = DataProduct.objects.get(product__contains=os.path.basename(movie_file))
+        self.assertTrue(dp.product.storage.exists(dp.product.name))

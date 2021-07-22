@@ -129,7 +129,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
         fits_files = np.sort(frames)
     else:
         fits_files = frames
-    path = os.path.dirname(frames[0]).lstrip(' ')
+    path = out_path
 
     start_frames = 5
     copies = 1
@@ -205,7 +205,10 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
             date_obs = header_n['DATE-OBS']
         except KeyError:
             date_obs = header_n['DATE_OBS']
-        date = datetime.strptime(date_obs, '%Y-%m-%dT%H:%M:%S.%f')
+        try:
+            date = datetime.strptime(date_obs, '%Y-%m-%dT%H:%M:%S.%f')
+        except ValueError:
+            date = datetime.strptime(date_obs, '%Y-%m-%dT%H:%M:%S')
         # reset plot
         ax = plt.gca()
         ax.clear()
@@ -428,7 +431,7 @@ if __name__ == '__main__':
     if len(files) < 1:
         files = np.sort(glob(path+'*.fits'))
     if len(files) >= 1:
-        gif_file = make_gif(files, fr=fr, init_fr=ir, show_reticle=tr, center=center, progress=True)
+        gif_file = make_gif(files, fr=fr, init_fr=ir, show_reticle=tr, out_path=path, center=center, progress=True)
         logger.info("New gif created: {}".format(gif_file))
     else:
         logger.info("No files found.")

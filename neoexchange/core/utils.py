@@ -78,15 +78,19 @@ def save_dataproduct(obj, filepath, filetype, filename=None, content=None):
         mode = 'r'
     else:
         mode = 'rb'
+    if not content and not filepath:
+        return
     if content:
         file_obj = ContentFile(content)
-    elif not content and not filepath:
+        file_obj.name = filename
+        dp.product = file_obj
+        dp.created = datetime.utcnow()
+        dp.save()
         return
-    else:
-        with open(filepath, mode) as f:
-            file_obj = File(f)
-    file_obj.name = filename
-    dp.product = file_obj
-    dp.created = datetime.utcnow()
-    dp.save()
+    with open(filepath, mode) as f:
+        file_obj = File(f)
+        file_obj.name = filename
+        dp.product = file_obj
+        dp.created = datetime.utcnow()
+        dp.save()
     return
