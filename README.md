@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.8.11
+* Adds support for the two 1-m telescopes at Tenerife (Issue #555)
+
 ### 3.8.10
 * Updates gif movies to fix intermitent issues and sort by filter.
 * Add error to spectra plots.
