@@ -12,6 +12,7 @@ GNU General Public License for more details.
 """
 
 import os
+import random
 from shutil import move
 from glob import glob
 from datetime import datetime, timedelta, date
@@ -1676,21 +1677,23 @@ def schedule_submit(data, body, username):
     return tracking_number, resp_params
 
 
-def make_request_for_satellite(table, sitecode, satellite_name):
+def make_request_for_satellite(table, sitecode, satellite_name, exptime=None):
     """Create the request params for observing the satellite
     <table> is the single satellite ephemeris (from read_listGPS_output(singlesat=True),
     <sitecode> is MPC sitecode,
     <satellite_name> is the satellite name e.g. 'G25'
     """
 
-    request_group = None
-
     index = table['Alt'].argmax()
     coords = table['SkyCoord'][index]
     midtime = table['UTC Datetime'][index]
     starttime = midtime - timedelta(minutes=5)
     endtime = midtime + timedelta(minutes=5)
-    params = {'exp_count': 10, 'exp_time' : 3.0,'filter_pattern': 'w,',
+
+    if exptime is None:
+        exptime = round(random.uniform(2.5, 4), 1)
+
+    params = {'exp_count': 10, 'exp_time' : exptime,'filter_pattern': 'w,',
               'site_code': sitecode,
               'ra_deg': coords.ra.deg, 'dec_deg': coords.dec.deg,
               'source_id' : satellite_name,
@@ -1703,7 +1706,6 @@ def make_request_for_satellite(table, sitecode, satellite_name):
               'max_airmass' : 2.0
               }
 
-
     return params
 
 
@@ -1713,7 +1715,7 @@ def schedule_GNSS_satellites(sitecode, date, execute=False, cache=True):
 
     # Run run_listGPS for the given sitecode and datetime
     source_dir = os.path.abspath(os.path.join('photometrics', 'configs'))
-    dest_dir = tempfile.mkdtemp(prefix='tmp_neox_listgps')
+    dest_dir = os.path.abspath(os.path.join(os.getenv('HOME'), 'Asteroids', 'list_gps'))# tempfile.mkdtemp(prefix='tmp_neox_listgps')
     print(f"Calculating GNSS availability for {date}@{sitecode}\nResults in: {dest_dir}")
     status = run_listGPS(source_dir, dest_dir, date, sitecode, cache=cache)
     if status != 0:
