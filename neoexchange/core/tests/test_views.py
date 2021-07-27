@@ -8298,3 +8298,26 @@ class TestMakeRequestForSatellite(SimpleTestCase):
         params = make_request_for_satellite(self.table, 'W86', "G99", 3.5)
 
         self.assertEqual(expected_params, params)
+
+    def test_MuSCAT(self):
+        exp_time = 4.2
+        expected_params = {'exp_count': 10, 'exp_time': exp_time, 'filter_pattern': 'w,', 'site_code': 'F65',
+                           'ra_deg': 299.53235583333327,
+                           'dec_deg': 24.280267777777777,
+                           'source_id': 'G99',
+                           'user_id': 'tlister@lcogt.net',
+                           'proposal_id': 'LCOEngineering',
+                           'start_time': datetime(2021, 6, 23, 3, 55, 0),
+                           'end_time': datetime(2021, 6, 23, 4, 5, 0),
+                           'slot_length': 15.0,
+                           'group_name': 'shutter timing test (G99_F65_20210623)',
+                           'max_airmass': 2.0,
+                           'muscat_exp_times' : {'gp_explength': exp_time,
+                                                 'rp_explength' : exp_time,
+                                                 'ip_explength' : exp_time,
+                                                 'zp_explength' : exp_time}
+                           }
+
+        params = make_request_for_satellite(self.table, 'F65', "G99", exp_time)
+
+        self.assertEqual(expected_params, params)
