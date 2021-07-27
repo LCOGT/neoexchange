@@ -1706,6 +1706,12 @@ def make_request_for_satellite(table, sitecode, satellite_name, exptime=None):
               'max_airmass' : 2.0
               }
 
+    if sitecode == 'F65':
+        params['muscat_exp_times'] = {'gp_explength': exptime,
+                                      'rp_explength': exptime,
+                                      'ip_explength': exptime,
+                                      'zp_explength': exptime
+                                      }
     return params
 
 
