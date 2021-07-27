@@ -1763,7 +1763,8 @@ def schedule_GNSS_satellites(sitecode, date, execute=False, cache=True):
             tracking_number = '(simulated)'
             if execute is True:
                 tracking_number, resp_params = submit_block_to_scheduler({}, params)
-                num_scheduled += 1
+                if tracking_number:
+                    num_scheduled += 1
             print("Tracking number:", tracking_number)
             #Telescope observes satellite
 
