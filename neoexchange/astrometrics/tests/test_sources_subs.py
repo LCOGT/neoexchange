@@ -5877,7 +5877,7 @@ class TestFetchJPLPhysParams(TestCase):
                   "spkid": "2254857",
                   "kind": "an",
                   "orbit_id": "12",
-                  "fullname": "254857 (2005 RT33)",
+                  "fullname": "254857  (2005 RT33)",
                   "des": "254857",
                   "prefix": None}
 

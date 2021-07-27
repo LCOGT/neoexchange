@@ -378,8 +378,8 @@ class Command(BaseCommand):
 
                 obs_site = block.site
                 # Get all Useful frames from each block
-                frames_red = Frame.objects.filter(block=block.id, frametype__in=[Frame.BANZAI_RED_FRAMETYPE]).order_by('midpoint')
-                frames_ql = Frame.objects.filter(block=block.id, frametype__in=[Frame.BANZAI_QL_FRAMETYPE]).order_by('midpoint')
+                frames_red = Frame.objects.filter(block=block.id, frametype__in=[Frame.BANZAI_RED_FRAMETYPE]).order_by('filter', 'midpoint')
+                frames_ql = Frame.objects.filter(block=block.id, frametype__in=[Frame.BANZAI_QL_FRAMETYPE]).order_by('filter', 'midpoint')
                 if len(frames_red) >= len(frames_ql):
                     frames_all_zp = frames_red
                 else:
@@ -392,6 +392,7 @@ class Command(BaseCommand):
                 if frames_all_zp.count() != 0:
                     elements = model_to_dict(block.body)
                     filter_list = []
+
                     for frame in frames_all_zp:
                         # get predicted position and magnitude of target during time of each frame
                         emp_line = compute_ephem(frame.midpoint, elements, frame.sitecode)

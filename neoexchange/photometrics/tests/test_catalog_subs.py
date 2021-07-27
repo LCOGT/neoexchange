@@ -3580,6 +3580,13 @@ class TestSanitizeObjectName(TestCase):
 
         self.assertEqual(expected_obj_name, object_name)
 
+    def test_asteroid_with_two_desigs_and_extra_space(self):
+        expected_obj_name = '85989_1999JD6'
+
+        object_name = sanitize_object_name('85989  (1999 JD6)')
+
+        self.assertEqual(expected_obj_name, object_name)
+
     def test_asteroid_with_brackets(self):
         expected_obj_name = '123456'
 
