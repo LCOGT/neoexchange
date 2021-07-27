@@ -1699,8 +1699,8 @@ def make_request_for_satellite(table, sitecode, satellite_name, exptime=None):
               'source_id' : satellite_name,
               'user_id' : 'tlister@lcogt.net',
               'proposal_id' : 'LCOEngineering',
-              'start_time' : starttime,
-              'end_time' : endtime,
+              'start_time' : starttime.to_datetime(),
+              'end_time' : endtime.to_datetime(),
               'slot_length' : 15.0,
               'group_name' : 'shutter timing test ({sat_name}_{sitecode}_{st})'.format(sat_name=satellite_name, sitecode=sitecode, st=starttime.datetime.strftime('%Y%m%d')),
               'max_airmass' : 2.0

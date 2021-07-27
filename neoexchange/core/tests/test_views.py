@@ -8288,8 +8288,8 @@ class TestMakeRequestForSatellite(SimpleTestCase):
                            'source_id': 'G99',
                            'user_id': 'tlister@lcogt.net',
                            'proposal_id': 'LCOEngineering',
-                           'start_time': Time(datetime(2021, 6, 23, 3, 55, 0), scale='utc'),
-                           'end_time': Time(datetime(2021, 6, 23, 4, 5, 0), scale='utc'),
+                           'start_time': datetime(2021, 6, 23, 3, 55, 0),
+                           'end_time': datetime(2021, 6, 23, 4, 5, 0),
                            'slot_length': 15.0,
                            'group_name': 'shutter timing test (G99_W86_20210623)',
                            'max_airmass': 2.0
