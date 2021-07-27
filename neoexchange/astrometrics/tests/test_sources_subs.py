@@ -1087,7 +1087,7 @@ class TestSubmitBlockToScheduler(TestCase):
 
     def test_1m_sinistro_tfn_doma_requestgroup(self):
 
-        site_code = 'Z00'
+        site_code = 'Z31'
         utc_date = datetime.now()+timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
         params = self.obs_params
@@ -4260,7 +4260,7 @@ class TestConfigureDefaults(TestCase):
 
     def test_tfn_sinistro(self):
         test_params = self.obs_params
-        test_params['site_code'] = 'Z00'
+        test_params['site_code'] = 'Z31'
 
         expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
                             'pondtelescope': '1m0',

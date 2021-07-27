@@ -1090,7 +1090,7 @@ def get_mag_mapping(site_code):
 
     twom_site_codes = ['F65', 'E10', '2M', '2M0']
     good_onem_site_codes = ['V37', 'V39', 'K91', 'K92', 'K93',
-                            'W85', 'W86', 'W87', 'Q63', 'Q64', 'Z00', 'Z24',
+                            'W85', 'W86', 'W87', 'Q63', 'Q64', 'Z31', 'Z24',
                             'GOOD1M', '1M0']
     # COJ normally has bad seeing, allow more time
     # Disabled by TAL 2018/8/10 after mirror recoating
@@ -1534,7 +1534,7 @@ def get_sitepos(site_code, dbg=False):
         site_long = -site_long  # West of Greenwich !
         site_hgt = 2390.0
         site_name = 'LCO TFN Node 0m4b Aqawan A at Tenerife'
-    elif site_code == 'TFN-DOMA-1M0A' or site_code == 'Z00':
+    elif site_code == 'TFN-DOMA-1M0A' or site_code == 'Z31':
         # Latitude, longitude from portable GPS on mount (Brook Taylor)
         (site_lat, status) = S.sla_daf2r(28, 18, 1.56)
         (site_long, status) = S.sla_daf2r(16, 30, 41.82)
@@ -1840,7 +1840,7 @@ def get_mountlimits(site_code_or_name):
     ha_neg_limit = -12.0 * 15.0
     alt_limit = 25.0
 
-    if '-1M0A' in site or site in ['V37', 'V39', 'W85', 'W86', 'W87', 'K91', 'K92', 'K93', 'Q63', 'Q64', 'Z00', 'Z24']:
+    if '-1M0A' in site or site in ['V37', 'V39', 'W85', 'W86', 'W87', 'K91', 'K92', 'K93', 'Q63', 'Q64', 'Z31', 'Z24']:
         ha_pos_limit = 4.5 * 15.0
         ha_neg_limit = -4.5 * 15.0
         alt_limit = 30.0

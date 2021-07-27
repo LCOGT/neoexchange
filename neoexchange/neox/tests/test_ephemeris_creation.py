@@ -83,8 +83,8 @@ class NewVisitorTest(FunctionalTest):
         datebox.send_keys('2015-04-21')
 
         site_choices = Select(self.get_item_input_box('id_site_code'))
-        self.assertIn('TFN 1.0m - Z00,Z24; (Tenerife, Spain)', [option.text for option in site_choices.options])
-        site_choices.select_by_visible_text('TFN 1.0m - Z00,Z24; (Tenerife, Spain)')
+        self.assertIn('TFN 1.0m - Z31,Z24; (Tenerife, Spain)', [option.text for option in site_choices.options])
+        site_choices.select_by_visible_text('TFN 1.0m - Z31,Z24; (Tenerife, Spain)')
 
         # When he hits Enter, he is taken to a new page and now the page shows an ephemeris
         # for the target with a column header and a series of rows for the position
@@ -180,9 +180,9 @@ class NewVisitorTest(FunctionalTest):
         # He notices a new selection for the site code and chooses ELP (V37)
         # XXX Code smell: Too many static text constants
         site_choices = Select(self.get_item_input_box('id_site_code'))
-        self.assertIn('TFN 1.0m - Z00,Z24; (Tenerife, Spain)', [option.text for option in site_choices.options])
+        self.assertIn('TFN 1.0m - Z31,Z24; (Tenerife, Spain)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('TFN 1.0m - Z00,Z24; (Tenerife, Spain)')
+        site_choices.select_by_visible_text('TFN 1.0m - Z31,Z24; (Tenerife, Spain)')
 
         # He notices a new textbox for the date that is wanted which is filled
         # in with the current date

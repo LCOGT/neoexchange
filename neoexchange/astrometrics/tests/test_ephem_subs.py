@@ -87,7 +87,7 @@ class TestGetMountLimits(TestCase):
         self.compare_limits(pos_limit, neg_limit, alt_limit, '1m')
 
     def test_1m_by_site_code_tfn1(self):
-        (neg_limit, pos_limit, alt_limit) = get_mountlimits('Z00')
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('Z31')
         self.compare_limits(pos_limit, neg_limit, alt_limit, '1m')
 
     def test_1m_by_site_tfn2(self):
@@ -1747,7 +1747,7 @@ class TestDetermineSlotLength(TestCase):
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_basic_tfn_1m0_1(self):
-        site_code = 'Z00'
+        site_code = 'Z31'
         name = 'A101foo'
         mag = 19.0
         expected_length = 20
@@ -1971,7 +1971,7 @@ class TestGetSiteCamParams(TestCase):
         self.assertEqual(self.max_exp, max_exp_time)
 
     def test_1m_tfn_site_sinistro_domeA(self):
-        site_code = 'Z00'
+        site_code = 'Z31'
         chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
         self.assertEqual(site_code.upper(), chk_site_code)
         self.assertEqual(0.389, pixel_scale)
@@ -2455,7 +2455,7 @@ class TestGetSitePos(TestCase):
         self.assertNotEqual(site_hgt, 0.0)
 
     def test_tenerife_1m_num1_by_code(self):
-        site_code = 'Z00'
+        site_code = 'Z31'
 
         expected_site_name = 'LCO TFN Node 1m0 Dome A at Tenerife'
 
