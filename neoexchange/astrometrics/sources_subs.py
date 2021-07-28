@@ -1715,8 +1715,6 @@ def make_config(params, filter_list):
 
         instrument_config = {'exposure_count': exp_count,
                              'exposure_time': params['exp_time'],
-                             'bin_x': params['binning'],
-                             'bin_y': params['binning'],
                              'optical_elements': {'filter': filt[0]}
                              }
 
@@ -1737,8 +1735,7 @@ def make_config(params, filter_list):
                                                      'diffuser_r_position': 'out',
                                                      'diffuser_i_position': 'out',
                                                      'diffuser_z_position': 'out'}
-            instrument_config.pop('bin_x', None)
-            instrument_config.pop('bin_y', None)
+
             instrument_config['extra_params'] = extra_params
         conf['instrument_configs'].append(instrument_config)
 
@@ -1981,6 +1978,8 @@ def configure_defaults(params):
                   'F65-FLOYDS' : 'OGG',
                   'E10' : 'COJ',
                   'E10-FLOYDS' : 'COJ',
+                  'Z31' : 'TFN',
+                  'Z24' : 'TFN',
                   'Z17' : 'TFN',
                   'Z21' : 'TFN',
                   'T03' : 'OGG',
