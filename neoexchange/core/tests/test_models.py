@@ -1429,11 +1429,13 @@ class TestBlock(TestCase):
         frame = Frame.objects.create(**params)
 
         for site in valid_telescope_codes:
-            frame.sitecode = site
-            frame.save()
-            obs_string = block.where_observed()
-            self.assertNotEqual('', obs_string)
-            self.assertNotIn('Unknown LCO site', obs_string)
+            # Don't test generic sites
+            if site[0].isdigit() is False:
+                frame.sitecode = site
+                frame.save()
+                obs_string = block.where_observed()
+                self.assertNotEqual('', obs_string)
+                self.assertNotIn('Unknown LCO site', obs_string)
 
 
 class TestFrame(TestCase):
