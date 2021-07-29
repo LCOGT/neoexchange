@@ -21,7 +21,7 @@ import tempfile
 from glob import glob
 from math import degrees
 
-from django.test import TestCase
+from django.test import TestCase, SimpleTestCase
 from django.forms.models import model_to_dict
 from django.conf import settings
 from bs4 import BeautifulSoup
@@ -8045,7 +8045,7 @@ class TestBuildVisibilitySource(TestCase):
             assertDeepAlmostEqual(self, expected_vis[key], vis[key])
 
 
-class TestParsePortalErrors(TestCase):
+class TestParsePortalErrors(SimpleTestCase):
 
     def setUp(self):
         self.no_parse_msg= "It was not possible to submit your request to the scheduler."
@@ -8074,7 +8074,7 @@ class TestParsePortalErrors(TestCase):
         self.assertEqual(expected_msg, msg)
 
     def test_no_visibility(self):
-        expected_msg = self.no_extrainfo_msg + "According to the constraints of the request, the target is never visible within the time window. Check that the target is in the nighttime sky. Consider modifying the time window or loosening the airmass or lunar separation constraints. If the target is non sidereal, double check that the provided elements are correct."
+        expected_msg = self.no_extrainfo_msg + "\nrequests: non_field_errors: According to the constraints of the request, the target is never visible within the time window. Check that the target is in the nighttime sky. Consider modifying the time window or loosening the airmass or lunar separation constraints. If the target is non sidereal, double check that the provided elements are correct."
         params = {'error_msg': {'requests': [{'non_field_errors': ['According to the constraints of the request, the target is never visible within the time window. Check that the target is in the nighttime sky. Consider modifying the time window or loosening the airmass or lunar separation constraints. If the target is non sidereal, double check that the provided elements are correct.']}]}}
 
         msg = parse_portal_errors(params)
@@ -8082,7 +8082,7 @@ class TestParsePortalErrors(TestCase):
         self.assertEqual(expected_msg, msg)
 
     def test_no_visibility_bad_proposal(self):
-        expected_msg = self.no_extrainfo_msg + "According to the constraints of the request, the target is never visible within the time window. Check that the target is in the nighttime sky. Consider modifying the time window or loosening the airmass or lunar separation constraints. If the target is non sidereal, double check that the provided elements are correct."
+        expected_msg = self.no_extrainfo_msg + "\nrequests: non_field_errors: According to the constraints of the request, the target is never visible within the time window. Check that the target is in the nighttime sky. Consider modifying the time window or loosening the airmass or lunar separation constraints. If the target is non sidereal, double check that the provided elements are correct."
         expected_msg += '\nproposal: Invalid pk "foo" - object does not exist.'
 
         params = {'error_msg': {'requests': [{'non_field_errors': ['According to the constraints of the request, the target is never visible within the time window. Check that the target is in the nighttime sky. Consider modifying the time window or loosening the airmass or lunar separation constraints. If the target is non sidereal, double check that the provided elements are correct.']}],
@@ -8118,6 +8118,105 @@ class TestParsePortalErrors(TestCase):
         expected_msg += '\nNo visible requests within cadence window parameters'
 
         params = {'error_msg' : "No visible requests within cadence window parameters" }
+
+        msg = parse_portal_errors(params)
+
+        self.assertEqual(expected_msg, msg)
+
+    def test_semester_crossing(self):
+        expected_msg = self.no_extrainfo_msg
+        expected_msg += '\nrequests: windows: non_field_errors: The observation window does not fit within any defined semester.'
+
+        params = {'error_msg': {'requests': [{'windows': [{'non_field_errors': ['The observation window does not fit within any defined semester.']}]}]}
+        }
+
+        msg = parse_portal_errors(params)
+
+        self.assertEqual(expected_msg, msg)
+
+
+    def test_muchfail(self):
+        params = {'error_msg' : {
+                                'requests': [
+                                    {
+                                        'configurations': [
+                                            {
+                                                'instrument_configs': [
+                                                    {
+                                                        'exposure_time':['A valid number is required.']
+                                                    }
+                                                ],
+                                                'target': {
+                                                    'name': ['Please provide a name.'],
+                                                    'ra': ['A valid number is required.'],
+                                                    'dec': ['A valid number is required.']
+                                                }
+                                            }
+                                        ],
+                                        'windows': [
+                                            {
+                                                'non_field_errors': ['The observation window does not fit within any defined semester.']
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        'configurations':[
+                                            {
+                                                'instrument_configs': [
+                                                    {
+                                                        'exposure_time': ['A valid number is required.']
+                                                    },
+                                                    {
+                                                        'exposure_time': ['A valid number is required.']
+                                                    }
+                                                ],
+                                                'target': {
+                                                    'name': ['Please provide a name.'],
+                                                    'ra': ['A valid number is required.'],
+                                                    'dec': ['A valid number is required.']
+                                                }
+                                            },
+                                            {
+                                                'instrument_configs': [
+                                                    {
+                                                        'exposure_time': ['A valid number is required.']
+                                                    },
+                                                    {
+                                                        'exposure_time': ['A valid number is required.']
+                                                    }
+                                                ],
+                                                'target': {
+                                                    'name': ['Please provide a name.'],
+                                                    'ra': ['A valid number is required.'],
+                                                    'dec': ['A valid number is required.']
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ],
+                                'name': ['Please provide a name.'],
+                                'proposal': ['Please provide a proposal.']
+                            }
+                    }
+
+        expected_msg = self.no_extrainfo_msg + "\n".join(["",
+                        "requests: configurations: instrument_configs: exposure_time: A valid number is required.",
+                        "target: name: Please provide a name.",
+                        "ra: A valid number is required.",
+                        "dec: A valid number is required.",
+                        "windows: non_field_errors: The observation window does not fit within any defined semester.",
+                        "configurations: instrument_configs: exposure_time: A valid number is required.",
+                        "exposure_time: A valid number is required.",
+                        "target: name: Please provide a name.",
+                        "ra: A valid number is required.",
+                        "dec: A valid number is required.",
+                        "instrument_configs: exposure_time: A valid number is required.",
+                        "exposure_time: A valid number is required.",
+                        "target: name: Please provide a name.",
+                        "ra: A valid number is required.",
+                        "dec: A valid number is required.",
+                        "name: Please provide a name.",
+                        "proposal: Please provide a proposal."])
 
         msg = parse_portal_errors(params)
 

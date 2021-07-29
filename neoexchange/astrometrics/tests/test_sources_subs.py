@@ -752,6 +752,8 @@ class TestSubmitBlockToScheduler(TestCase):
                            'user_id': 'bsimpson'
                            }
 
+        self.maxDiff = None
+
     @patch('astrometrics.sources_subs.requests.post')
     def test_submit_body_for_cpt(self, mock_post):
         mock_post.return_value.status_code = 200
@@ -1073,9 +1075,45 @@ class TestSubmitBlockToScheduler(TestCase):
 
         self.assertEqual(user_request['submitter'], 'bsimpson')
         self.assertEqual(user_request['requests'][0]['location']['telescope'], '1m0a')
-        self.assertEqual(user_request['requests'][0]['location']['observatory'], 'domb')
+        self.assertEqual(user_request['requests'][0]['location']['enclosure'], 'domb')
         self.assertEqual(user_request['requests'][0]['location']['telescope_class'], '1m0')
         self.assertEqual(user_request['requests'][0]['location']['site'], 'elp')
+
+    def test_1m_sinistro_tfn_doma_requestgroup(self):
+
+        site_code = 'Z31'
+        utc_date = datetime.now()+timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = self.obs_params
+        params['start_time'] = dark_start
+        params['end_time'] = dark_end
+        params['site_code'] = site_code
+
+        user_request = make_requestgroup(self.body_elements, params)
+
+        self.assertEqual(user_request['submitter'], 'bsimpson')
+        self.assertEqual(user_request['requests'][0]['location']['telescope'], '1m0a')
+        self.assertEqual(user_request['requests'][0]['location']['enclosure'], 'doma')
+        self.assertEqual(user_request['requests'][0]['location']['telescope_class'], '1m0')
+        self.assertEqual(user_request['requests'][0]['location']['site'], 'tfn')
+
+    def test_1m_sinistro_tfn_domb_requestgroup(self):
+
+        site_code = 'Z24'
+        utc_date = datetime.now()+timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = self.obs_params
+        params['start_time'] = dark_start
+        params['end_time'] = dark_end
+        params['site_code'] = site_code
+
+        user_request = make_requestgroup(self.body_elements, params)
+
+        self.assertEqual(user_request['submitter'], 'bsimpson')
+        self.assertEqual(user_request['requests'][0]['location']['telescope'], '1m0a')
+        self.assertEqual(user_request['requests'][0]['location']['enclosure'], 'domb')
+        self.assertEqual(user_request['requests'][0]['location']['telescope_class'], '1m0')
+        self.assertEqual(user_request['requests'][0]['location']['site'], 'tfn')
 
     def test_make_too_requestgroup(self):
         body_elements = model_to_dict(self.body)
@@ -1114,8 +1152,6 @@ class TestSubmitBlockToScheduler(TestCase):
         instrument_configs = user_request['requests'][0]['configurations'][0]['instrument_configs'][0]
 
         self.assertEqual(user_request['submitter'], 'bsimpson')
-        self.assertEqual(instrument_configs['bin_x'], 2)
-        self.assertEqual(instrument_configs['bin_y'], 2)
         self.assertEqual(instrument_configs['mode'], 'central_2k_2x2')
         self.assertEqual(user_request['requests'][0]['location'].get('telescope', None), None)
 
@@ -1129,8 +1165,6 @@ class TestSubmitBlockToScheduler(TestCase):
         instrument_configs = user_request['requests'][0]['configurations'][0]['instrument_configs'][0]
 
         self.assertEqual(user_request['submitter'], 'bsimpson')
-        self.assertEqual(instrument_configs['bin_x'], 2)
-        self.assertEqual(instrument_configs['bin_y'], 2)
         self.assertEqual(instrument_configs['mode'], 'central_2k_2x2')
 
     def test_1m_no_binning_requestgroup(self):
@@ -1143,8 +1177,6 @@ class TestSubmitBlockToScheduler(TestCase):
         instrument_configs = user_request['requests'][0]['configurations'][0]['instrument_configs'][0]
 
         self.assertEqual(user_request['submitter'], 'bsimpson')
-        self.assertEqual(instrument_configs['bin_x'], 1)
-        self.assertEqual(instrument_configs['bin_y'], 1)
         self.assertNotIn('mode', instrument_configs.keys())
 
     def test_2m_no_binning_requestgroup(self):
@@ -1163,8 +1195,6 @@ class TestSubmitBlockToScheduler(TestCase):
         instrument_configs = user_request['requests'][0]['configurations'][0]['instrument_configs'][0]
 
         self.assertEqual(user_request['submitter'], 'bsimpson')
-        self.assertEqual(instrument_configs['bin_x'], 2)
-        self.assertEqual(instrument_configs['bin_y'], 2)
         self.assertNotIn('mode', instrument_configs.keys())
 
     def test_0m4_no_binning_requestgroup(self):
@@ -1183,8 +1213,6 @@ class TestSubmitBlockToScheduler(TestCase):
         instrument_configs = user_request['requests'][0]['configurations'][0]['instrument_configs'][0]
 
         self.assertEqual(user_request['submitter'], 'bsimpson')
-        self.assertEqual(instrument_configs['bin_x'], 1)
-        self.assertEqual(instrument_configs['bin_y'], 1)
         self.assertNotIn('mode', instrument_configs.keys())
 
     def test_multi_filter_requestgroup(self):
@@ -1363,7 +1391,8 @@ class TestSubmitBlockToScheduler(TestCase):
 
         resp, sched_params = submit_block_to_scheduler(body_elements, params)
         self.assertEqual(resp, False)
-        self.assertEqual(sched_params['error_msg'], 'No visible requests within cadence window parameters')
+        expected_msg = {'windows': [{'non_field_errors': ['The observation window does not fit within any defined semester.']}]}
+        self.assertEqual(sched_params['error_msg'], expected_msg)
 
     def test_spectro_with_solar_analog(self):
 
@@ -1922,6 +1951,15 @@ class TestPreviousNEOCPParser(TestCase):
             BeautifulSoup('<a href="/mpec/K19/K19R24.html"><i>MPEC</i> 2019-R24</a>', "html.parser").a,
             ']\n']
         expected = [u'P10QYyp', 'wasnotconfirmed', '', u'(Sept. 4.34 UT)']
+
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+    def test_suspected_artificial(self):
+        """Test for Issue #548 from 2021/6/11 where artificial satellites
+        were reported in a new format"""
+        items = [' ZTF0LBs was suspected artificial (June 6.81 UT)\n']
+        expected = [u'ZTF0LBs' , 'wasnotminorplanet', '', u'(June 6.81 UT)']
 
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
@@ -4206,6 +4244,42 @@ class TestConfigureDefaults(TestCase):
 
         self.assertEqual(expected_params, params)
 
+    def test_tfn_sinistro(self):
+        test_params = self.obs_params
+        test_params['site_code'] = 'Z31'
+
+        expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
+                            'pondtelescope': '1m0',
+                            'observatory': '',
+                            'exp_type': 'EXPOSE',
+                            'site': 'TFN',
+                            'binning': 1,
+                            'exp_count': 10,
+                            'exp_time': 42.0}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
+    def test_tfn_num2_sinistro(self):
+        test_params = self.obs_params
+        test_params['site_code'] = 'Z24'
+
+        expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
+                            'pondtelescope': '1m0',
+                            'observatory': '',
+                            'exp_type': 'EXPOSE',
+                            'site': 'TFN',
+                            'binning': 1,
+                            'exp_count': 10,
+                            'exp_time': 42.0}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
     def test_sinistro_many(self):
         test_params = self.obs_params
         test_params['site_code'] = '1M0'
@@ -4610,8 +4684,6 @@ class TestMakeconfiguration(TestCase):
                               'instrument_configs': [{
                                 'exposure_count': 10,
                                 'exposure_time': 60.0,
-                                'bin_x': 1,
-                                'bin_y': 1,
                                 'optical_elements': {
                                   'filter': 'w'
                                 }
@@ -4641,8 +4713,6 @@ class TestMakeconfiguration(TestCase):
                               'instrument_configs': [{
                                 'exposure_count': 10,
                                 'exposure_time': 90.0,
-                                'bin_x': 1,
-                                'bin_y': 1,
                                 'optical_elements': {
                                   'filter': 'w'
                                 }
@@ -5793,7 +5863,7 @@ class TestFetchJPLPhysParams(TestCase):
                   "spkid": "2254857",
                   "kind": "an",
                   "orbit_id": "12",
-                  "fullname": "254857 (2005 RT33)",
+                  "fullname": "254857  (2005 RT33)",
                   "des": "254857",
                   "prefix": None}
 

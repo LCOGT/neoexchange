@@ -221,6 +221,12 @@ class TestScheduleForm(TestCase):
         self.assertIn('CPT 1.0m - K91-93; (Sutherland, S. Africa)', form.as_p())
         self.assertIn('CPT 0.4m - L09; (Sutherland, S. Africa)', form.as_p())
 
+    def test_form_has_tfn_fields(self):
+        form = ScheduleForm()
+        self.assertIsInstance(form, ScheduleForm)
+        self.assertIn('TFN 1.0m - Z31,Z24; (Tenerife, Spain)', form.as_p())
+        self.assertIn('TFN 0.4m - Z17,Z21; (Tenerife, Spain)', form.as_p())
+
     def test_sched_form_has_all_sites(self):
         form = ScheduleForm()
         self.assertIsInstance(form, ScheduleForm)
@@ -238,6 +244,8 @@ class TestScheduleForm(TestCase):
         self.assertIn('value="Q63"', form.as_p())
         self.assertIn('COJ 0.4m - Q58-59; (Siding Spring, Aust.)', form.as_p())
         self.assertIn('value="Q58"', form.as_p())
+        self.assertIn('TFN 1.0m - Z31,Z24; (Tenerife, Spain)', form.as_p())
+        self.assertIn('value="Z24"', form.as_p())
         self.assertIn('TFN 0.4m - Z17,Z21; (Tenerife, Spain)', form.as_p())
         self.assertIn('value="Z21"', form.as_p())
         self.assertIn('OGG 0.4m - T03-04; (Maui, Hawaii)', form.as_p())
@@ -323,6 +331,14 @@ class TestScheduleCadenceForm(TestCase):
         self.assertIn('CPT 1.0m - K91-93; (Sutherland, S. Africa)', form.as_p())
         self.assertIn('CPT 0.4m - L09; (Sutherland, S. Africa)', form.as_p())
 
+    def test_form_has_tfn_fields(self):
+        form = ScheduleForm()
+        self.assertIsInstance(form, ScheduleForm)
+        self.assertIn('TFN 1.0m - Z31,Z24; (Tenerife, Spain)', form.as_p())
+        self.assertIn('TFN 0.4m - Z17,Z21; (Tenerife, Spain)', form.as_p())
+        self.assertNotIn('TFN 1.0m - Z31; (Dome A; Tenerife, Spain)', form.as_p())
+        self.assertNotIn('TFN 1.0m - Z24; (Dome B; Tenerife, Spain)', form.as_p())
+
     def test_sched_form_has_all_sites(self):
         form = ScheduleCadenceForm()
         self.assertIsInstance(form, ScheduleCadenceForm)
@@ -340,6 +356,8 @@ class TestScheduleCadenceForm(TestCase):
         self.assertIn('value="Q63"', form.as_p())
         self.assertIn('COJ 0.4m - Q58-59; (Siding Spring, Aust.)', form.as_p())
         self.assertIn('value="Q58"', form.as_p())
+        self.assertIn('TFN 1.0m - Z31,Z24; (Tenerife, Spain)', form.as_p())
+        self.assertIn('value="Z24"', form.as_p())
         self.assertIn('TFN 0.4m - Z17,Z21; (Tenerife, Spain)', form.as_p())
         self.assertIn('value="Z21"', form.as_p())
         self.assertIn('OGG 0.4m - T03-04; (Maui, Hawaii)', form.as_p())

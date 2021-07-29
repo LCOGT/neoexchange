@@ -149,7 +149,7 @@ def parse_previous_NEOCP_id(items, dbg=False):
         elif len(chunks) >= 5:
             if chunks[2].lower() == 'not' and chunks[3].lower() == 'confirmed':
                 none_id = 'wasnotconfirmed'
-            elif chunks[2].lower() == 'not' and chunks[4].lower() == 'minor':
+            elif (chunks[2].lower() == 'not' and chunks[4].lower() == 'minor') or (chunks[2].lower() == 'suspected' and chunks[3].lower() == 'artificial'):
                 none_id = 'wasnotminorplanet'
             elif chunks[2].lower() == 'not' and chunks[3].lower() == 'interesting':
                 none_id = ''
@@ -1580,13 +1580,19 @@ def make_location(params):
         location['site'] = params['site'].lower()
     if params['site_code'] == 'W85':
         location['telescope'] = '1m0a'
-        location['observatory'] = 'doma'
+        location['enclosure'] = 'doma'
     elif params['site_code'] == 'W87':
         location['telescope'] = '1m0a'
-        location['observatory'] = 'domc'
+        location['enclosure'] = 'domc'
     elif params['site_code'] == 'V39':
         location['telescope'] = '1m0a'
-        location['observatory'] = 'domb'
+        location['enclosure'] = 'domb'
+    elif params['site_code'] == 'Z31':
+        location['telescope'] = '1m0a'
+        location['enclosure'] = 'doma'
+    elif params['site_code'] == 'Z24':
+        location['telescope'] = '1m0a'
+        location['enclosure'] = 'domb'
     return location
 
 
@@ -1691,8 +1697,6 @@ def make_config(params, filter_list):
 
         instrument_config = {'exposure_count': exp_count,
                              'exposure_time': params['exp_time'],
-                             'bin_x': params['binning'],
-                             'bin_y': params['binning'],
                              'optical_elements': {'filter': filt[0]}
                              }
 
@@ -1713,8 +1717,7 @@ def make_config(params, filter_list):
                                                      'diffuser_r_position': 'out',
                                                      'diffuser_i_position': 'out',
                                                      'diffuser_z_position': 'out'}
-            instrument_config.pop('bin_x', None)
-            instrument_config.pop('bin_y', None)
+
             instrument_config['extra_params'] = extra_params
         conf['instrument_configs'].append(instrument_config)
 
@@ -1940,6 +1943,8 @@ def configure_defaults(params):
                   'F65-FLOYDS' : 'OGG',
                   'E10' : 'COJ',
                   'E10-FLOYDS' : 'COJ',
+                  'Z31' : 'TFN',
+                  'Z24' : 'TFN',
                   'Z17' : 'TFN',
                   'Z21' : 'TFN',
                   'T03' : 'OGG',
@@ -2723,7 +2728,7 @@ def parse_jpl_fullname(obj):
     """Given a JPL object, return parsed full name"""
     fullname = obj['fullname']
     number = name = prov_des = None
-    if fullname[0] == '(':
+    if fullname[0] == '(':  # provisional designation only
         prov_des = fullname.strip('()')
     elif '/' in fullname:  # comet
         parts = fullname.split('/')
@@ -2745,17 +2750,16 @@ def parse_jpl_fullname(obj):
             elif number:
                 name = part2
     elif ' ' in fullname:
-        space_num = fullname.count(' ')
-        if space_num == 3:
-            part1, part2, part3, part4 = fullname.split(' ')
+        name_parts = list(filter(None, fullname.split(' ')))
+        if len(name_parts) == 4:
+            number = name_parts[0]
+            if name_parts[1][0].isalpha:
+                name = name_parts[1]
+        elif len(name_parts) == 3:
+            part1, part2, part3 = name_parts
             number = part1
-            if part2[0].isalpha:
-                name = part2
-        elif space_num == 2:
-            part1, part2, part3 = fullname.split(' ')
-            number = part1
-        elif space_num == 1:
-            part1, part2 = fullname.split(' ')
+        elif len(name_parts) == 2:
+            part1, part2 = name_parts
             number = part1
             name = part2
 

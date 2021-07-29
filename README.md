@@ -4,6 +4,17 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.8.11
+* Adds support for the two 1-m telescopes at Tenerife (Issue #555)
+
+### 3.8.10
+* Updates gif movies to fix intermitent issues and sort by filter.
+* Add error to spectra plots.
+
+### 3.8.9
+* Fix issue with an alternative reporting format for artificial satellites which broke the Previous NEOCP page parser.
+* Fix rare issue where scheduling form would reset to previous day in cases where there was limited visibility.
+
 ### 3.8.8
 * Fix issue in error reporting when submitting cadence with no valid requests.
 * Allow a specific FTP URL file to be passed for the Yarkovsky fetcher and planner (for when the 'latest' symlink doesn't get updated)
