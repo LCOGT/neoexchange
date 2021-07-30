@@ -13,12 +13,14 @@ GNU General Public License for more details.
 
 import os
 import random
+import warnings
 from shutil import move
 from glob import glob
 from datetime import datetime, timedelta, date
 from math import floor, ceil, degrees, radians, pi, acos, pow
 from astropy import units as u
 from astropy.coordinates import SkyCoord
+from astropy.wcs import FITSFixedWarning
 import json
 import logging
 import tempfile
@@ -1779,6 +1781,8 @@ def get_streak_params(fits_catalog):
     midtime = None
     sat_pos = None
 
+    warnings.simplefilter('ignore', category=FITSFixedWarning)
+
     if os.path.exists(fits_catalog):
         fits_header, fits_table, cat_type = open_fits_catalog(fits_catalog)
 
@@ -1803,6 +1807,21 @@ def get_streak_params(fits_catalog):
         midtime = starttime + timedelta(seconds=exptime / 2.0)
 
     return midtime, sat_pos
+
+
+def make_GPS_psv_line(frame, dest_dir):
+
+    psv_line = ''
+    fits_catalog = os.path.abspath(os.path.join(dest_dir, frame.filename))
+    midtime, pos = get_streak_params(fits_catalog)
+
+    if midtime is not None and pos is not None:
+        src_params = {'body': frame.block.body, 'frame': frame, 'obs_ra': pos.ra.deg, 'obs_dec': pos.dec.deg,
+                      'astrometric_catalog': frame.astrometric_catalog, 'photometric_catalog': frame.photometric_catalog}
+        src, created = SourceMeasurement.objects.get_or_create(**src_params)
+        psv_line = src.format_psv_line()
+
+    return psv_line
 
 
 class SpectroFeasibility(LookUpBodyMixin, FormView):
