@@ -30,6 +30,7 @@ from mock import patch
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.time import Time
+from astropy.tests.helper import assert_quantity_allclose
 from numpy.testing import assert_allclose
 
 from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check_for_images, \
@@ -8321,3 +8322,29 @@ class TestMakeRequestForSatellite(SimpleTestCase):
         params = make_request_for_satellite(self.table, 'F65', "G99", exp_time)
 
         self.assertEqual(expected_params, params)
+
+
+class TestGetStreakParams(SimpleTestCase):
+
+    def setUp(self):
+        self.fits_table_file = os.path.abspath(os.path.join('photometrics', 'tests', 'gps_G26_0136_ldac.fits'))
+        self.maxDiff = None
+
+    def test_streak_params(self):
+        expected_midtime = datetime(2021,7,23,2,43,49,23000)
+        expected_pos = SkyCoord('250.39223316', '-27.0877275', unit=u.deg)
+
+        midtime, pos = get_streak_params(self.fits_table_file)
+
+        self.assertEqual(expected_midtime, midtime)
+        assert_quantity_allclose(expected_pos.ra, pos.ra)
+        assert_quantity_allclose(expected_pos.dec, pos.dec)
+
+    def test_missing_file(self):
+        expected_midtime = None
+        expected_pos = None
+
+        midtime, pos = get_streak_params('')
+
+        self.assertEqual(expected_midtime, midtime)
+        self.assertEqual(expected_pos, pos)

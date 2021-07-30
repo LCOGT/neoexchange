@@ -18,6 +18,7 @@ from glob import glob
 from datetime import datetime, timedelta, date
 from math import floor, ceil, degrees, radians, pi, acos, pow
 from astropy import units as u
+from astropy.coordinates import SkyCoord
 import json
 import logging
 import tempfile
@@ -74,7 +75,7 @@ from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS
     read_mtds_file, unpack_tarball, run_findorb, run_listGPS, read_listGPS_output, filter_listGPS_output
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     determine_filenames, increment_red_level, update_ldac_catalog_wcs, FITSHdrException, \
-    get_reference_catalog, reset_database_connection, sanitize_object_name
+    get_reference_catalog, reset_database_connection, sanitize_object_name, IsTooNearEdge
 from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
 from photometrics.spectraplot import pull_data_from_spectrum, pull_data_from_text, spectrum_plot
 from core.frames import create_frame, ingest_frames, measurements_from_block
@@ -1768,9 +1769,40 @@ def schedule_GNSS_satellites(sitecode, date, execute=False, cache=True):
             print("Tracking number:", tracking_number)
             #Telescope observes satellite
 
-    #World Domination...
+    # World Domination.
 
     return num_scheduled
+
+def get_streak_params(fits_catalog):
+    """<fits_catalog> is the full path to the FITS_LDAC catalog"""
+
+    midtime = None
+    sat_pos = None
+
+    if os.path.exists(fits_catalog):
+        fits_header, fits_table, cat_type = open_fits_catalog(fits_catalog)
+
+        # Make mask for objects not near the edge of file (X/YWIN_IMAGE more
+        # than 50 pixels from edge and FLAGS<=2)
+        mask0 = IsTooNearEdge(fits_table['XWIN_IMAGE'], fits_table['YWIN_IMAGE'], fits_header['NAXIS1'], fits_header['NAXIS2'],
+                              edge_band_percent=(50 / 4096) * 100)
+        mask1 = fits_table['FLAGS'] <= 2
+        mask2 = fits_table['ELLIPTICITY'] > 0.9
+        mask = ~mask0 & mask1 & mask2
+        new_fits_table = fits_table[mask]
+
+        # Find largest object in new table
+        row = new_fits_table['ISOAREA_IMAGE'].argmax()
+
+        # Make SkyCoord from RA & Dec of largest object row
+        sat_obs = new_fits_table[row]
+        sat_pos = SkyCoord(sat_obs['ALPHA_J2000'], sat_obs['DELTA_J2000'], unit=u.deg)
+
+        starttime = datetime.strptime(fits_header['DATE-OBS'], '%Y-%m-%dT%H:%M:%S.%f')
+        exptime = fits_header['exptime']
+        midtime = starttime + timedelta(seconds=exptime / 2.0)
+
+    return midtime, sat_pos
 
 
 class SpectroFeasibility(LookUpBodyMixin, FormView):
