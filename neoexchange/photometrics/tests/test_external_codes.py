@@ -1176,6 +1176,7 @@ class TestReadListGPSOutput(SimpleTestCase):
         self.single_input_file = os.path.join('photometrics', 'tests', 'G25_W85_example.out')
         self.bad_input_file = os.path.join('photometrics', 'tests', 'G03_K92_listgps_output.bad')
         self.bad_elo_input_file = os.path.join('photometrics', 'tests', 'G03_V37_listgps_output.bad')
+        self.bad_site_input_file = os.path.join('photometrics', 'tests', 'F65_listgps_output.bad')
 
     def test_read_listGPS_output(self):
         """Tests first and last rows of created table object"""
@@ -1215,6 +1216,19 @@ class TestReadListGPSOutput(SimpleTestCase):
                 self.assertEqual(expected_lastline[i], test_value)
 
 
+    def test_read_listGPS_output_low_precision(self):
+        """Tests handling low precision sitecodes warning message"""
+
+        expected_numcolumns = 12
+        expected_numrows = 37
+
+        output = read_listGPS_output(self.bad_site_input_file)
+        self.assertTrue(isinstance(output, Table))
+
+        self.assertEqual(expected_numcolumns, len(output.columns))
+        self.assertEqual(expected_numrows, len(output))
+
+
     def test_read_listGPS_single_satellite_output(self):
         """Tests first and last rows of created table object for single satellite"""
 
@@ -1228,9 +1242,9 @@ class TestReadListGPSOutput(SimpleTestCase):
         self.assertEqual(expected_numrows, len(output))
 
         # Test contents of first and last rows
-        expected_firstline = [Time(datetime(2021,7,19,22,42,00000)), '04 36 40.6234', '-35 58 22.321',
-                              26652.68026*u.km, 141.4*u.deg, -7.3*u.deg, 74*u.deg, 29.66*self.rate,
-                              50.1*u.deg, SkyCoord('19 58 07.7654', '+24 16 48.964', unit=(u.hourangle, u.deg))]
+        expected_firstline = [Time(datetime(2021,6,23,4,00,00000)), '19 58 07.7654', '+24 16 48.964',
+                              23108.73742*u.km, 38.9*u.deg, 23.9*u.deg, 125*u.deg, 33.13*self.rate,
+                              34.1*u.deg, SkyCoord('19 58 07.7654', '+24 16 48.964', unit=(u.hourangle, u.deg))]
         expected_lastline = [Time(datetime(2021,6,23,13,59,00000)), '16 36 01.0247', '-23 11 15.764',
                              29620.56364*u.km, 200.4*u.deg, -33.7*u.deg, 159*u.deg, 29.07*self.rate,
                              49.5*u.deg, SkyCoord('16 36 01.0247', '-23 11 15.764', unit=(u.hourangle, u.deg))]
