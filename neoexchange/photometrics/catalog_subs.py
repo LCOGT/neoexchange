@@ -1905,3 +1905,24 @@ def find_first_last_frames(fits_files):
         if frame.midpoint > last_frame.midpoint:
             last_frame = frame
     return first_frame, last_frame
+
+def IsTooNearEdge(x, y, ccd_x=4096, ccd_y=4096, edge_band_percent=5.0):
+
+    status = False
+    edgeFactor = edge_band_percent * 0.01
+    edgeX = ccd_x * edgeFactor
+    edgeY = ccd_y * edgeFactor
+    upEdgeX = ccd_x - edgeX
+    upEdgeY = ccd_y - edgeY
+
+    if type(x) == float and type(y) == float:
+        if (x < edgeX or y < edgeY or x > upEdgeX or y > upEdgeY):
+            status = True
+    else:
+        mask1 = x < edgeX
+        mask2 = x > upEdgeX
+        mask3 = y < edgeY
+        mask4 = y > upEdgeY
+        status = mask1 | mask2 | mask3 | mask4
+
+    return status
