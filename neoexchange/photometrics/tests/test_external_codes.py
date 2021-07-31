@@ -1220,7 +1220,7 @@ class TestReadListGPSOutput(SimpleTestCase):
         """Tests handling low precision sitecodes warning message"""
 
         expected_numcolumns = 12
-        expected_numrows = 37
+        expected_numrows = 29
 
         output = read_listGPS_output(self.bad_site_input_file)
         self.assertTrue(isinstance(output, Table))
@@ -1228,6 +1228,30 @@ class TestReadListGPSOutput(SimpleTestCase):
         self.assertEqual(expected_numcolumns, len(output.columns))
         self.assertEqual(expected_numrows, len(output))
 
+        # Test contents of first and last rows
+        expected_firstline = ['R05:', '', '12 17 14.4033', '+59 10 55.368',
+            24250.47627*u.km, 333.0*u.deg, 4.3*u.deg, 56*u.deg, 32.56*self.rate, 61.0*u.deg,
+            '2018-053A GLONASS-M',
+            SkyCoord('12 17 14.4033', '+59 10 55.368', unit=(u.hourangle, u.deg))]
+        expected_lastline = ['R03:', '', '20 48 51.2221', '+01 40 15.034',
+            19427.67585*u.km, 152.7*u.deg, 68.9*u.deg, 160*u.deg, 40.08*self.rate, 160.6*u.deg,
+            '2011-064A GLONASS-M', SkyCoord('20 48 51.2221', '+01 40 15.034', unit=(u.hourangle, u.deg))]
+
+        test_line1 = output[0]
+        for i, test_value in enumerate(test_line1):
+            if isinstance(test_value, SkyCoord):
+                assert_quantity_allclose(expected_firstline[i].ra, test_value.ra, 1e-5)
+                assert_quantity_allclose(expected_firstline[i].dec, test_value.dec, 1e-5)
+            else:
+                self.assertEqual(expected_firstline[i], test_value)
+
+        test_last = output[-1]
+        for i, test_value in enumerate(test_last):
+            if isinstance(test_value, SkyCoord):
+                assert_quantity_allclose(expected_lastline[i].ra, test_value.ra, 1e-5)
+                assert_quantity_allclose(expected_lastline[i].dec, test_value.dec, 1e-5)
+            else:
+                self.assertEqual(expected_lastline[i], test_value)
 
     def test_read_listGPS_single_satellite_output(self):
         """Tests first and last rows of created table object for single satellite"""

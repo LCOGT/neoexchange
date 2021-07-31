@@ -906,6 +906,17 @@ def read_listGPS_output(listGPS_datafile, singlesat=False):
             logger.error(f"Could not locate filename {listGPS_datafile}")
             return -42
 
+        # Test if there was more header than expected by seeing where 'Nr:'
+        # exists in the 'Number' column (if at all)
+        hdr_pos = np.where(table['Number'] == 'Nr:')[0]
+        if len(hdr_pos) == 1:
+            print(f"Error reading file. Trying a reread skipping more header")
+            table = QTable.read(listGPS_datafile, format='ascii.fixed_width',
+                        header_start=None, data_start=6+hdr_pos[0]+1,
+                        names=names, col_starts=col_starts,
+                        fill_values=[('', ' '),], fill_include_names=['Uncertainty',])
+
+
     else:
         try:
             table = QTable.read(listGPS_datafile, format='ascii.fixed_width', header_start=None, data_start=7,
