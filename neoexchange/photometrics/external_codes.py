@@ -922,6 +922,15 @@ def read_listGPS_output(listGPS_datafile, singlesat=False):
             table = QTable.read(listGPS_datafile, format='ascii.fixed_width', header_start=None, data_start=7,
                                 names=singlesat_names, col_starts=singlesat_col_starts)
 
+            # Test if there was more header than expected by seeing where 'UTC date/time'
+            # exists in the 'UTC Datetime' column (if at all)
+            hdr_pos = np.where(table['UTC Datetime'] == 'UTC date/time')[0]
+            if len(hdr_pos) == 1:
+                print(f"Error reading file. Trying a reread skipping more header")
+                table = QTable.read(listGPS_datafile, format='ascii.fixed_width',
+                    header_start=None, data_start=7+hdr_pos[0]+1,
+                    names=singlesat_names, col_starts=singlesat_col_starts)
+
             dates = Time([datetime.strptime(d, "%Y %m %d %H:%M.00000") for d in table['UTC Datetime']])
             table['UTC Datetime'] = dates
 

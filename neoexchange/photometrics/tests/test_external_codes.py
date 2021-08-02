@@ -1177,6 +1177,7 @@ class TestReadListGPSOutput(SimpleTestCase):
         self.bad_input_file = os.path.join('photometrics', 'tests', 'G03_K92_listgps_output.bad')
         self.bad_elo_input_file = os.path.join('photometrics', 'tests', 'G03_V37_listgps_output.bad')
         self.bad_site_input_file = os.path.join('photometrics', 'tests', 'F65_listgps_output.bad')
+        self.bad_site_singlesat_input_file = os.path.join('photometrics', 'tests', 'G28_F65_listgps_output.bad')
 
     def test_read_listGPS_output(self):
         """Tests first and last rows of created table object"""
@@ -1352,6 +1353,44 @@ class TestReadListGPSOutput(SimpleTestCase):
         assert_quantity_allclose(153*u.deg, output['Elo'].min())
         assert_quantity_allclose(166*u.deg, output['Elo'].max())
 
+
+        test_line1 = output[0]
+        for i, test_value in enumerate(test_line1):
+            if isinstance(test_value, SkyCoord):
+                assert_quantity_allclose(expected_firstline[i].ra, test_value.ra, 1e-5)
+                assert_quantity_allclose(expected_firstline[i].dec, test_value.dec, 1e-5)
+            else:
+                self.assertEqual(expected_firstline[i], test_value)
+
+        test_last = output[-1]
+        for i, test_value in enumerate(test_last):
+            if isinstance(test_value, SkyCoord):
+                assert_quantity_allclose(expected_lastline[i].ra, test_value.ra, 1e-5)
+                assert_quantity_allclose(expected_lastline[i].dec, test_value.dec, 1e-5)
+            else:
+                self.assertEqual(expected_lastline[i], test_value)
+
+
+    def test_read_listGPS_single_satellite_bad_sitepos(self):
+        """Tests first and last rows of created table object for single
+        satellite which is for a low precision sitecode"""
+
+        expected_numcolumns = 10
+        expected_numrows = 5
+
+        output = read_listGPS_output(self.bad_site_singlesat_input_file, singlesat=True)
+        self.assertTrue(isinstance(output, Table))
+
+        self.assertEqual(expected_numcolumns, len(output.columns))
+        self.assertEqual(expected_numrows, len(output))
+
+        # Test contents of first and last rows
+        expected_firstline = [Time(datetime(2021,7,31, 10, 0,0)), '20 29 24.0620', '+29 01 29.136',
+                              20403.88840*u.km,  25.4*u.deg, 80.6*u.deg, 133*u.deg, 36.36*self.rate,
+                              34.4*u.deg, SkyCoord('20 29 24.0620', '+29 01 29.136', unit=(u.hourangle, u.deg))]
+        expected_lastline = [Time(datetime(2021,7,31,19,59,0)), '18 01 59.8815', '-21 28 03.063',
+                             32632.79743*u.km, 109.7*u.deg, -87.7*u.deg, 142*u.deg, 26.48*self.rate,
+                             42.1*u.deg, SkyCoord('18 01 59.8815', '-21 28 03.063', unit=(u.hourangle, u.deg))]
 
         test_line1 = output[0]
         for i, test_value in enumerate(test_line1):

@@ -1,0 +1,17 @@
+Current time = 2021 Jul 31  0:23:33 UTC
+Earth rotation parameter file date 2021 Jul 22
+GPS positions for JD 2459426.916667 = 2021 Jul 31 10:00:00.000 UTC
+WARNING: Your observatory's position is given with low precision.  This will
+cause the computed positions for navigation satellites to be imprecise,  too.
+I'd recommend getting a corrected,  precise latitude,  longitude,  and altitude
+using GPS or mapping software,  and sending that to the MPC and to me at
+pluto (at) projectpluto (dot) com.
+Observatory (F65) Haleakala-Faulkes Telescope North 2021 Jul 31 10:00:00.000
+Longitude -156.257600, latitude 20.707094  alt 3055.00 m
+Target object: G28 G044 2000-040A   26407 BLOCK IIR-A
+UTC date/time             RA      (J2000)     dec     dist (km)    Azim   Alt Elo  Rate  PA 
+2021 07 31 10:00.00000  20 29 24.0620 +29 01 29.136  20403.88840   25.4  80.6 133 36.36  34.4
+2021 07 31 10:01.00000  20 30 58.5652 +29 31 25.512  20414.90385   24.7  80.1 132 36.33  34.6
+2021 07 31 10:02.00000  20 32 33.9205 +30 01 15.889  20426.28996   24.1  79.6 132 36.29  34.8
+2021 07 31 19:58.00000  18 00 43.4784 -21 47 41.877  32628.52348  116.4 -87.5 142 26.49  42.2
+2021 07 31 19:59.00000  18 01 59.8815 -21 28 03.063  32632.79743  109.7 -87.7 142 26.48  42.1
