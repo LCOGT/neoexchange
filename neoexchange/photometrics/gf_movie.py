@@ -153,18 +153,34 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
 
     fig = plt.figure()
     frame_query = Frame.objects.filter(filename__in=base_name_list).order_by('midpoint').prefetch_related('catalogsources_set')
-
-    frame_obj = frame_query[0]
-    end_frame = frame_query.last()
-    start = frame_obj.midpoint - timedelta(minutes=5)
-    end = end_frame.midpoint + timedelta(minutes=5)
-    sitecode = frame_obj.sitecode
-    obj_name = frame_obj.block.body.name
-    rn = frame_obj.block.request_number
-    if frame_obj.block.obstype == Block.OPT_IMAGING:
-        frame_type = 'frame'
-    else:
-        frame_type = 'guide'
+    try:
+        frame_obj = frame_query[0]
+        end_frame = frame_query.last()
+        start = frame_obj.midpoint - timedelta(minutes=5)
+        end = end_frame.midpoint + timedelta(minutes=5)
+        sitecode = frame_obj.sitecode
+        obj_name = frame_obj.block.body.name
+        rn = frame_obj.block.request_number
+        if frame_obj.block.obstype == Block.OPT_IMAGING:
+            frame_type = 'frame'
+        else:
+            frame_type = 'guide'
+    except IndexError:
+        with fits.open(good_fits_files[0], ignore_missing_end=True) as hdul:
+            try:
+                header = hdul['SCI'].header
+            except KeyError:
+                try:
+                    header = hdul['COMPRESSED_IMAGE'].header
+                except KeyError:
+                    header = hdul[0].header
+        obj_name = header['OBJECT']
+        rn = header['REQNUM']
+        sitecode = header['SITE']
+        if header['OBSTYPE'] == 'GUIDE':
+            frame_type = 'guide'
+        else:
+            frame_type = 'frame'
 
     if horizons_comp:
         # Get predicted JPL position of target in first frame
