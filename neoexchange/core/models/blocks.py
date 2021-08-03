@@ -94,6 +94,7 @@ class SuperBlock(models.Model):
     def get_telclass(self):
         bl = self.get_blocks
         qs = list(set([(b.telclass, b.obstype) for b in bl]))
+        qs.sort()
 
         # Convert obstypes into "(S)" suffix for spectra, nothing for imaging
         class_obstype = [x[0]+str(x[1]).replace(str(Block.OPT_SPECTRA), '(S)').replace(str(Block.OPT_SPECTRA_CALIB), '(SC)').replace(str(Block.OPT_IMAGING), '') for x in qs]
