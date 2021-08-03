@@ -1813,9 +1813,11 @@ def get_streak_params(fits_catalog):
 def make_GPS_psv_line(frame, dest_dir):
     """Creates a PSV line for the specified passed Frame object <frame>
     reading from the associated FITS_LDAC catalog in <dest_dir>
-    Returns a string for the PSV line"""
+    Returns a string for the PSV line and the SourceMeasurement itself"""
 
     psv_line = ''
+    src = None
+
     fits_catalog = os.path.abspath(os.path.join(dest_dir, frame.filename))
     midtime, pos = get_streak_params(fits_catalog)
 
@@ -1825,8 +1827,32 @@ def make_GPS_psv_line(frame, dest_dir):
         src, created = SourceMeasurement.objects.get_or_create(**src_params)
         psv_line = src.format_psv_line()
 
-    return psv_line
+    return psv_line, src
 
+
+def make_GPS_astrometry_file(block, dest_dir):
+    """Creates a file of PSV format astrometry for the GPS satellite observations
+    from Block <block> and files in <dest_dir>
+    Output file will be name <sitecode>_<camera>_<GPS sat>_<date>.psv (also returned)"""
+
+    gps_psv_filename = None
+    frames = Frame.objects.filter(block=block, frametype=Frame.BANZAI_LDAC_CATALOG).order_by('midpoint')
+    if frames.count() >= 1:
+        frame = frames[0]
+        gps_psv_filename = f'{frame.sitecode}_{frame.instrument}_{frame.block.body.current_name()}_{frame.midpoint.strftime("%Y%m%d")}.psv'
+        gps_psv_filename = os.path.join(dest_dir, gps_psv_filename)
+        with open(gps_psv_filename, 'w') as fh:
+            header_done = False
+            for frame in frames:
+                print(frame.filename)
+                psv_line, src = make_GPS_psv_line(frame, dest_dir)
+                if header_done is False and src is not None:
+                    print(src.format_psv_header(), file=fh)
+                    header_done = True
+                if psv_line:
+                    print(psv_line, file=fh)
+
+    return gps_psv_filename
 
 class SpectroFeasibility(LookUpBodyMixin, FormView):
 
