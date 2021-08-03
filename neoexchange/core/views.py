@@ -1795,21 +1795,25 @@ def get_streak_params(fits_catalog):
         mask = ~mask0 & mask1 & mask2
         new_fits_table = fits_table[mask]
 
-        # Find largest object in new table
-        row = new_fits_table['ISOAREA_IMAGE'].argmax()
+        if len(new_fits_table) > 0:
+            # Find largest object in new table
+            row = new_fits_table['ISOAREA_IMAGE'].argmax()
 
-        # Make SkyCoord from RA & Dec of largest object row
-        sat_obs = new_fits_table[row]
-        sat_pos = SkyCoord(sat_obs['ALPHA_J2000'], sat_obs['DELTA_J2000'], unit=u.deg)
+            # Make SkyCoord from RA & Dec of largest object row
+            sat_obs = new_fits_table[row]
+            sat_pos = SkyCoord(sat_obs['ALPHA_J2000'], sat_obs['DELTA_J2000'], unit=u.deg)
 
-        starttime = datetime.strptime(fits_header['DATE-OBS'], '%Y-%m-%dT%H:%M:%S.%f')
-        exptime = fits_header['exptime']
-        midtime = starttime + timedelta(seconds=exptime / 2.0)
+            starttime = datetime.strptime(fits_header['DATE-OBS'], '%Y-%m-%dT%H:%M:%S.%f')
+            exptime = fits_header['exptime']
+            midtime = starttime + timedelta(seconds=exptime / 2.0)
 
     return midtime, sat_pos
 
 
 def make_GPS_psv_line(frame, dest_dir):
+    """Creates a PSV line for the specified passed Frame object <frame>
+    reading from the associated FITS_LDAC catalog in <dest_dir>
+    Returns a string for the PSV line"""
 
     psv_line = ''
     fits_catalog = os.path.abspath(os.path.join(dest_dir, frame.filename))
