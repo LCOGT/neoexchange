@@ -1787,21 +1787,33 @@ def get_streak_params(fits_catalog):
         fits_header, fits_table, cat_type = open_fits_catalog(fits_catalog)
 
         # Make mask for objects not near the edge of file (X/YWIN_IMAGE more
-        # than 50 pixels from edge and FLAGS<=2)
-        mask0 = IsTooNearEdge(fits_table['XWIN_IMAGE'], fits_table['YWIN_IMAGE'], fits_header['NAXIS1'], fits_header['NAXIS2'],
+        # than 50 pixels from edge and FLAGS<=2). Make 2 masks since X/YWIN_IMAGE
+        # can be very different to X/Y_IMAGE...
+        mask0a = IsTooNearEdge(fits_table['XWIN_IMAGE'], fits_table['YWIN_IMAGE'], fits_header['NAXIS1'], fits_header['NAXIS2'],
                               edge_band_percent=(50 / 4096) * 100)
-        mask1 = fits_table['FLAGS'] <= 2
+        if 'X_IMAGE' in fits_table.columns.names and 'Y_IMAGE' in fits_table.columns.names:
+            mask0b = IsTooNearEdge(fits_table['X_IMAGE'], fits_table['Y_IMAGE'], fits_header['NAXIS1'], fits_header['NAXIS2'],
+                              edge_band_percent=(50 / 4096) * 100)
+            mask0 = mask0a | mask0b
+#            print("Double masking...")
+        else:
+            mask0 = mask0a
+        # 204 is combination of unwanted SExtractor FLAGS:
+        # 4 (saturated) + 8 (too close to edge) + 64 (mem overflow in deblending) + 128 (mem overflow in extraction)
+        mask1 = (fits_table['flags'] & 204) == 0
         mask2 = fits_table['ELLIPTICITY'] > 0.9
         mask = ~mask0 & mask1 & mask2
         new_fits_table = fits_table[mask]
 
         if len(new_fits_table) > 0:
+            print(" table length=",len(new_fits_table))
             # Find largest object in new table
             row = new_fits_table['ISOAREA_IMAGE'].argmax()
 
             # Make SkyCoord from RA & Dec of largest object row
             sat_obs = new_fits_table[row]
             sat_pos = SkyCoord(sat_obs['ALPHA_J2000'], sat_obs['DELTA_J2000'], unit=u.deg)
+            print(sat_obs['number'], sat_obs['xwin_image'], sat_obs['ywin_image'], sat_pos.to_string(precision=6))
 
             starttime = datetime.strptime(fits_header['DATE-OBS'], '%Y-%m-%dT%H:%M:%S.%f')
             exptime = fits_header['exptime']
@@ -1844,7 +1856,7 @@ def make_GPS_astrometry_file(block, dest_dir):
         with open(gps_psv_filename, 'w') as fh:
             header_done = False
             for frame in frames:
-                print(frame.filename)
+                print(frame.filename, end=' ')
                 psv_line, src = make_GPS_psv_line(frame, dest_dir)
                 if header_done is False and src is not None:
                     print(src.format_psv_header(), file=fh)
