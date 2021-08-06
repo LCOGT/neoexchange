@@ -196,12 +196,12 @@ class SourceMeasurement(models.Model):
         if phot_catalog_code == '' and ast_catalog_code != '':
             phot_catalog_code = ast_catalog_code
 
-        prec = 6
+        prec = 8
         if self.err_obs_ra:
             prec = self._numdp(err_obs_ra)
         fmt_ra = "{ra:.{prec}f}".format(prec=prec, ra=self.obs_ra)
         fmt_ra, width, dpos = psv_padding(fmt_ra, 11, 'D', 4)
-        prec = 6
+        prec = 8
         if self.err_obs_dec:
             prec = self._numdp(err_obs_dec)
         fmt_dec = "{dec:.{prec}f}".format(prec=prec, dec=self.obs_dec)
