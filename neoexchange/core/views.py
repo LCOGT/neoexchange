@@ -14,6 +14,7 @@ GNU General Public License for more details.
 import os
 from shutil import move
 from glob import glob
+from operator import itemgetter
 from datetime import datetime, timedelta, date
 from math import floor, ceil, degrees, radians, pi, acos, pow
 from astropy import units as u
@@ -998,7 +999,7 @@ class ScheduleCalibSpectra(LoginRequiredMixin, LookUpCalibMixin, FormView):
     def get(self, request, *args, **kwargs):
         # Override default exposure time for brighter calib targets and set the initial
         # instrument code to that which came in via the URL and the kwargs
-        form = ScheduleSpectraForm(initial={'exp_length' : 180.0,
+        form = ScheduleSpectraForm(initial={'exp_length': 180.0,
                                             'instrument_code' : kwargs.get('instrument_code', '')}
                                   )
         return self.render_to_response(self.get_context_data(form=form, body=self.target))
@@ -1106,6 +1107,7 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
         # Recalculate the parameters using new form data
         data = schedule_check(form.cleaned_data, self.object)
         new_form = ScheduleBlockForm(data)
+        # new_form.fields['calibsource_list'].choices = data['calibsource_list_options']
         if 'edit' in request.POST:
             return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.object})
         elif 'submit' in request.POST and new_form.is_valid():
@@ -1132,6 +1134,7 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
         # Recalculate the parameters using new form data
         data = schedule_check(form.cleaned_data, self.object)
         new_form = ScheduleBlockForm(data)
+        # new_form.fields['calibsource_list'].choices = data['calibsource_list_options']
         return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.object})
 
     def get_success_url(self):
@@ -1154,6 +1157,7 @@ def parse_errors(errors):
             for key, value in errors.items():
                 parsed_errors.append(f'{key}: {parse_errors(value)}')
         return '\n'.join(parsed_errors)
+
 
 def parse_portal_errors(sched_params):
     """Parse a passed <sched_params> response from the LCO Observing Portal via
@@ -1283,6 +1287,9 @@ def schedule_check(data, body, ok_to_schedule=True):
     solar_analog_id = -1
     solar_analog_params = {}
     solar_analog_exptime = 60
+    sa_predicted_exptime = 60
+    calibsource_list_init = data.get('calibsource_list', None)
+    calib_list = []
     if type(body) == Body:
         emp = compute_ephem(mid_dark_up_time, body_elements, data['site_code'], dbg=False, perturb=False, display=False)
         if emp == {}:
@@ -1298,10 +1305,12 @@ def schedule_check(data, body, ok_to_schedule=True):
         if spectroscopy and solar_analog:
             # Try and find a suitable solar analog "close" to RA, Dec midpoint
             # of block
-            close_solarstd, close_solarstd_params = find_best_solar_analog(ra, dec, data['site_code'])
+            close_solarstd, close_solarstd_params, std_list = find_best_solar_analog(ra, dec, data['site_code'], num=calibsource_list_init)
             if close_solarstd is not None:
                 solar_analog_id = close_solarstd.id
                 solar_analog_params = close_solarstd_params
+                calib_list = [f"{n+1}: {std['calib'].name} ({round(std['separation'], 1)}\N{DEGREE SIGN})" for n, std in enumerate(std_list)]
+
     else:
         magnitude = body.vmag
         speed = 0.0
@@ -1374,11 +1383,13 @@ def schedule_check(data, body, ok_to_schedule=True):
         slot_length = ceil(slot_length)
         # If automatically finding Solar Analog, calculate exposure time.
         # Currently assume bright enough that 180s is the maximum exposure time.
+
         if solar_analog and solar_analog_params:
+            solar_analog_exptime = calc_asteroid_snr(solar_analog_params['vmag'], 'V', 180, instrument=data['instrument_code'], params=snr_params, optimize=True)
+            sa_predicted_exptime = solar_analog_exptime
             if data.get('calibsource_exptime', None):
                 solar_analog_exptime = data.get('calibsource_exptime')
-            else:
-                solar_analog_exptime = calc_asteroid_snr(solar_analog_params['vmag'], 'V', 180, instrument=data['instrument_code'], params=snr_params, optimize=True)
+
     else:
         # Determine exposure length and count
         if data.get('exp_length', None):
@@ -1524,6 +1535,9 @@ def schedule_check(data, body, ok_to_schedule=True):
         'calibsource': solar_analog_params,
         'calibsource_id': solar_analog_id,
         'calibsource_exptime': solar_analog_exptime,
+        'calibsource_predict_exptime': sa_predicted_exptime,
+        'calibsource_list_options': calib_list,
+        'calibsource_list': calibsource_list_init,
     }
 
     if not spectroscopy and 'F65' in data['site_code']:
@@ -4212,7 +4226,7 @@ def find_best_flux_standard(sitecode, utc_date=None, flux_standards=None, debug=
     return close_standard, close_params
 
 
-def find_best_solar_analog(ra_rad, dec_rad, site, ha_sep=4.0, solar_standards=None, debug=False):
+def find_best_solar_analog(ra_rad, dec_rad, site, ha_sep=4.0, num=None, solar_standards=None, debug=False):
     """Finds the "best" solar analog (closest to the passed RA, Dec (in radians,
     from e.g. compute_ephem)) within [ha_sep] hours (defaults to 4 hours
     of HA) that can be seen from the appropriate site.
@@ -4222,6 +4236,10 @@ def find_best_solar_analog(ra_rad, dec_rad, site, ha_sep=4.0, solar_standards=No
 
     close_standard = None
     close_params = {}
+    if num:
+        num = int(num) - 1
+    else:
+        num = 0
     if solar_standards is None:
         solar_standards = StaticSource.objects.filter(source_type=StaticSource.SOLAR_STANDARD)
 
@@ -4232,17 +4250,17 @@ def find_best_solar_analog(ra_rad, dec_rad, site, ha_sep=4.0, solar_standards=No
     else:
         dec_lim = [-20.0, 20.0]
 
-    min_sep = None
+    close_standards = []
     for standard in solar_standards:
         ra_diff = abs(standard.ra - degrees(ra_rad)) / 15
         sep = degrees(S.sla_dsep(radians(standard.ra), radians(standard.dec), ra_rad, dec_rad))
         if debug:
             print("%10s %1d %011.7f %+11.7f %7.3f %7.3f (%10s)" % (standard.name.replace("Landolt ", "") , standard.source_type, standard.ra, standard.dec, sep, ha_sep, close_standard))
         if ra_diff < ha_sep and (dec_lim[0] <= standard.dec <= dec_lim[1]):
-            if min_sep is None or sep < min_sep:
-                min_sep = sep
-                close_standard = standard
-    if close_standard is not None:
+            close_standards.append({"calib": standard, "separation": sep})
+    if close_standards:
+        close_standards.sort(key=itemgetter("separation"))
+        close_standard = close_standards[num]["calib"]
         close_params = model_to_dict(close_standard)
-        close_params['separation_deg'] = min_sep
-    return close_standard, close_params
+        close_params['separation_deg'] = close_standards[num]["separation"]
+    return close_standard, close_params, close_standards[:5]
