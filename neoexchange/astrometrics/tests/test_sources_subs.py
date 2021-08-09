@@ -1097,7 +1097,7 @@ class TestSubmitBlockToScheduler(TestCase):
         self.assertEqual(user_request['requests'][0]['location']['telescope_class'], '1m0')
         self.assertEqual(user_request['requests'][0]['location']['site'], 'tfn')
 
-    def test_1m_sinistro_tfn_domb_requestgroup(self):
+    def test_1m_sinistro_tfn_generic_requestgroup(self):
 
         site_code = 'Z24'
         utc_date = datetime.now()+timedelta(days=1)
@@ -1110,8 +1110,8 @@ class TestSubmitBlockToScheduler(TestCase):
         user_request = make_requestgroup(self.body_elements, params)
 
         self.assertEqual(user_request['submitter'], 'bsimpson')
-        self.assertEqual(user_request['requests'][0]['location']['telescope'], '1m0a')
-        self.assertEqual(user_request['requests'][0]['location']['enclosure'], 'domb')
+        self.assertTrue('telescope' not in user_request['requests'][0]['location'])
+        self.assertTrue('enclosure' not in user_request['requests'][0]['location'])
         self.assertEqual(user_request['requests'][0]['location']['telescope_class'], '1m0')
         self.assertEqual(user_request['requests'][0]['location']['site'], 'tfn')
 
