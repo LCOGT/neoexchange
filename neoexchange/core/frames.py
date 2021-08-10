@@ -333,12 +333,12 @@ def block_status(block_id):
         return False
 
     try:
-        obj = block.body.current_name()
+        obj_name = block.body.current_name()
     except AttributeError:
         try:
-            obj = block.calibsource.name
+            obj_name = block.calibsource.name
         except AttributeError:
-            obj = ''
+            obj_name = ''
 
     # Get authentication token for Valhalla
     logger.info("Checking request status for block/track# %s / %s" % (block_id, tracking_num))
@@ -370,7 +370,7 @@ def block_status(block_id):
             except AttributeError:
                 logger.warning("Unable to find observation type for Block/track# %s / %s" % (block_id, tracking_num))
 
-            images, num_archive_frames = check_for_archive_images(request_id=r['id'], obstype=obstype, obj=obj)
+            images, num_archive_frames = check_for_archive_images(request_id=r['id'], obstype=obstype, obj=obj_name)
             logger.info('Request no. %s x %s images (%s total all red. levels)' % (r['id'], len(images), num_archive_frames))
             if images:
                 inst_configs = [x['instrument_configs'] for x in r['configurations']]
