@@ -76,7 +76,7 @@ class DataProduct(models.Model):
     GUIDER_GIF = 1
     FITS_IMAGE = 2
     FITS_SPECTRA = 3
-    ALCDEF = 4
+    ALCDEF_TXT = 4
     MP4 = 5
     CSV = 6
     PNG_ASTRO = 7
@@ -90,7 +90,6 @@ class DataProduct(models.Model):
     PNG_FWHM = 15
     PNG_ZP = 16
     PDS_XML = 20
-    ALCDEF_TXT = 21
     FRAME_GIF = 22
     DP_CHOICES = (
                     (JPEG, 'JPEG'),
@@ -98,7 +97,7 @@ class DataProduct(models.Model):
                     (FRAME_GIF, 'Thumbnail Frame GIF'),
                     (FITS_IMAGE, 'FITS Image'),
                     (FITS_SPECTRA, 'FITS Spectra'),
-                    (ALCDEF, 'ALCDEF file'),
+                    (ALCDEF_TXT, 'ALCDEF Lightcurve  file'),
                     (MP4, 'MP4'),
                     (CSV, 'CSV'),
                     (PNG_ASTRO, 'PNG astrometric ref stars'),
@@ -112,7 +111,6 @@ class DataProduct(models.Model):
                     (PNG_FWHM, 'FWHM condition PNG'),
                     (PNG_ZP, 'Zero point PNG'),
                     (PDS_XML, 'Planetary Data System (PDS) XML'),
-                    (ALCDEF_TXT, 'ALCDEF Lightcurve file'),
                     (99, 'Other')
                 )
 

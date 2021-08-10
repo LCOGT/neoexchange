@@ -3988,19 +3988,17 @@ def display_movie(request, pk):
         block = Block.objects.get(pk=pk)
     except ObjectDoesNotExist:
         raise Http404("Block does not exist.")
-    if block.obstype in [Block.OPT_IMAGING, Block.OPT_IMAGING_CALIB]:
-        movie_file = "{}_{}_framemovie.gif".format(obj.replace(' ', '_'), req)
-    elif block.obstype in [Block.OPT_SPECTRA, Block.OPT_SPECTRA_CALIB]:
-        movie_file = "{}_{}_guidemovie.gif".format(obj.replace(' ', '_'), req)
-        base_dir = os.path.join(path, "Guide_frames")
+    block_db_list = DataProduct.content.block().filter(object_id=block.id)
+    if block.obstype in [Block.OPT_IMAGING, Block.OPT_IMAGING_CALIB] and block_db_list:
+        movie_file = block_db_list.get(filetype=DataProduct.FRAME_GIF).product
+    elif block.obstype in [Block.OPT_SPECTRA, Block.OPT_SPECTRA_CALIB] and block_db_list:
+        movie_file = block_db_list.get(filetype=DataProduct.GUIDER_GIF).product
     else:
         return HttpResponse()
 
-    movie_file = search(base_dir, movie_file, latest=True)
-
     if movie_file:
         logger.debug('MOVIE FILE: {}'.format(movie_file))
-        movie = default_storage.open(movie_file, 'rb').read()
+        movie = movie_file
         return HttpResponse(movie, content_type="Image/gif")
     else:
         return HttpResponse()

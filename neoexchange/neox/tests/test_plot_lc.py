@@ -21,7 +21,8 @@ from django.contrib.auth.models import User
 from neox.auth_backend import update_proposal_permissions
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
-from core.models import Body
+from core.models import Body, DataProduct
+from core.utils import save_dataproduct
 from mock import patch
 from neox.tests.mocks import mock_lco_authenticate
 from django.conf import settings
@@ -32,20 +33,13 @@ from shutil import copy2, rmtree
 from glob import glob
 
 
-def build_data_dir(path, base_path, filename):
-    if not default_storage.exists(name=path):
-        os.makedirs(path)
-        copy2(os.path.join(base_path, filename), path)
-
-
 class LighCurvePlotTest(FunctionalTest):
 
     def setUp(self):
         super(LighCurvePlotTest, self).setUp()
-        self.lcdir = os.path.abspath(os.path.join('photometrics', 'tests'))
+        lcpath = os.path.abspath(os.path.join('photometrics', 'tests', '433_738215_ALCDEF.txt'))
         settings.DATA_ROOT = self.test_dir
         settings.MEDIA_ROOT = self.test_dir
-        build_data_dir(os.path.join(self.test_dir, 'Reduction', '433'), self.lcdir, '433_738215_ALCDEF.txt')
 
         params = {  'name' : '433',
                     'abs_mag'       : 21.0,
@@ -72,7 +66,7 @@ class LighCurvePlotTest(FunctionalTest):
                     }
         self.body2, created = Body.objects.get_or_create(pk=2, **params)
 
-        self.body2.save_physical_parameters({'parameter_type' : 'P', 'value': 5.27})
+        self.body2.save_physical_parameters({'parameter_type': 'P', 'value': 5.27})
 
         self.username = 'bart'
         self.password = 'simpson'
@@ -84,6 +78,8 @@ class LighCurvePlotTest(FunctionalTest):
         self.bart.save()
 
         update_proposal_permissions(self.bart, [{'code': self.neo_proposal.code}])
+
+        save_dataproduct(self.body2, lcpath, DataProduct.ALCDEF_TXT)
 
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def login(self):
