@@ -147,7 +147,7 @@ def check_for_archive_images(request_id=None, obstype='EXPOSE', obj='', limit=30
     auth_header = {'Authorization': 'Token {}'.format(settings.ARCHIVE_TOKEN)}
 
     base_url = settings.ARCHIVE_FRAMES_URL
-    archive_url = '%s?limit=%d&REQNUM=%s&OBSTYPE=%s&OBJECT=%s' % (base_url, limit, request_id, obstype, obj.replace(' ', '+'))
+    archive_url = '%s?limit=%d&REQNUM=%s&OBSTYPE=%s&OBJECT=%s' % (base_url, limit, request_id, obstype, obj.replace(' ', '+').replace('&', '+'))
 
     frames = []
     data = fetch_archive_frames(auth_header, archive_url, frames)
