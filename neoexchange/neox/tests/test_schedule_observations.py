@@ -473,6 +473,17 @@ class ScheduleObservations(FunctionalTest):
         analog_exptime = self.browser.find_element_by_id('id_calibsource_exptime').get_attribute('value')
         self.assertIn('50', analog_exptime)
 
+        # Bart wants to change the exposure time for the analog, but gets warned about it.
+        slot_length_box = self.browser.find_element_by_id('id_calibsource_exptime')
+        slot_length_box.clear()
+        slot_length_box.send_keys('10')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
+        analog_exptime = self.browser.find_element_by_id('id_calibsource_exptime').get_attribute('value')
+        self.assertIn('10', analog_exptime)
+        sa_exptime_warn = self.browser.find_element_by_id('id_solaranalog_exptime_row').find_element_by_class_name('warning').text
+        self.assertIn('Exposure Time', sa_exptime_warn)
+
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list_no2m)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list_no2m)

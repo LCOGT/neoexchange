@@ -112,7 +112,7 @@ class Command(BaseCommand):
                         tar_path = make_data_dir(out_path, frame)
                         obj = sanitize_object_name(frame['OBJECT'])
                         req_num = str(frame['REQNUM'])
-                        movie_file = make_movie(frame['DATE_OBS'], obj, req_num, tar_path, out_path, frame['PROPID'])
+                        movie_file = make_movie(frame['DATE_OBS'], obj, req_num, tar_path, out_path, frame['PROPID'], tarfile=frame['filename'])
                         if settings.USE_S3:
                             filenames = glob(os.path.join(tar_path, obj + '_' + req_num, '*_2df_ex.fits'))
                             if filenames:

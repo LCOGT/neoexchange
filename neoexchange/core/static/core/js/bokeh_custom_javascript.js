@@ -234,5 +234,4 @@ function analog_select(analog_select, frame_select, reflectance_sources, chosen_
             plot2.title.text = plot2.title.text.split("    ")[0] + "    Analog: " + analog;
         }
     }
-
 }

@@ -94,6 +94,7 @@ class SuperBlock(models.Model):
     def get_telclass(self):
         bl = self.get_blocks
         qs = list(set([(b.telclass, b.obstype) for b in bl]))
+        qs.sort()
 
         # Convert obstypes into "(S)" suffix for spectra, nothing for imaging
         class_obstype = [x[0]+str(x[1]).replace(str(Block.OPT_SPECTRA), '(S)').replace(str(Block.OPT_SPECTRA_CALIB), '(SC)').replace(str(Block.OPT_IMAGING), '') for x in qs]
@@ -228,10 +229,10 @@ class Block(models.Model):
     def num_spectro_frames(self):
         """Returns the numbers of different types of spectroscopic frames"""
         num_moltypes_string = 'No data'
-        data, num_frames = check_for_archive_images(self.request_number, obstype='')
+        data, num_frames = check_for_archive_images(self.request_number, obstype='', obj=self.current_name())
         if num_frames > 0:
             moltypes = [x['OBSTYPE'] if x['RLEVEL'] != 90 else "TAR" for x in data]
-            num_moltypes = {x : moltypes.count(x) for x in set(moltypes)}
+            num_moltypes = {x: moltypes.count(x) for x in set(moltypes)}
             num_moltypes_sort = OrderedDict(sorted(num_moltypes.items(), reverse=True))
             num_moltypes_string = ", ".join([x+": "+str(num_moltypes_sort[x]) for x in num_moltypes_sort])
         return num_moltypes_string

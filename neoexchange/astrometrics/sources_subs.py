@@ -1828,35 +1828,18 @@ def make_single(params, ipp_value, request):
     """Create a user_request for a single observation"""
 
     requestgroup = {
-                    'submitter' : params['user_id'],
-                    'requests'  : [request],
-                    'name'  : params['group_name'],
+                    'submitter': params['user_id'],
+                    'requests': [request],
+                    'name': params['group_name'],
                     'observation_type': "NORMAL",
-                    'operator'  : "SINGLE",
-                    'ipp_value' : ipp_value,
-                    'proposal'  : params['proposal_id']
+                    'operator': "SINGLE",
+                    'ipp_value': ipp_value,
+                    'proposal': params['proposal_id']
     }
 
 # If the ToO mode is set, change the observation_type
     if params.get('too_mode', False) is True:
         requestgroup['observation_type'] = 'TIME_CRITICAL'
-
-    return requestgroup
-
-
-def make_many(params, ipp_value, request, cal_request):
-    """Create a request for a MANY observation of the asteroidgroup
-    target (<request>) and calibration source (<cal_request>)"""
-
-    requestgroup = {
-                    'submitter' : params['user_id'],
-                    'requests'  : [request, cal_request],
-                    'name'  : params['group_name'],
-                    'observation_type': "NORMAL",
-                    'operator'  : "MANY",
-                    'ipp_value' : ipp_value,
-                    'proposal'  : params['proposal_id']
-    }
 
     return requestgroup
 
@@ -2052,14 +2035,7 @@ def make_requestgroup(elements, params):
     note = f'Submitted by NEOexchange {submitter}'
     note = note.rstrip()
 
-    request = {
-        'configurations': configurations,
-        "acceptability_threshold": params.get('acceptability_threshold', 90),
-        'windows': [window],
-        'location': location,
-        "observation_note": note,
-    }
-
+    cal_configurations = []
     if params.get('solar_analog', False) and len(params.get('calibsource', {})) > 0:
         # Assemble solar analog request
         params['group_name'] += "+solstd"
@@ -2086,22 +2062,19 @@ def make_requestgroup(elements, params):
         params['exp_count'] = exp_count
         params['ag_exp_time'] = ag_exptime
 
-        cal_request = {
-                        "location": location,
-                        "configurations": cal_configurations,
-                        "windows": [window],
-                        "observation_note": note,
-                    }
-    else:
-        cal_request = {}
+    request = {
+        'configurations': configurations + cal_configurations,
+        "acceptability_threshold": params.get('acceptability_threshold', 90),
+        'windows': [window],
+        'location': location,
+        "observation_note": note,
+    }
 
     ipp_value = params.get('ipp_value', 1.0)
 
 # Add the Request to the outer User Request
     if 'period' in params.keys() and 'jitter' in params.keys():
         user_request = make_cadence(request, params, ipp_value)
-    elif len(cal_request) > 0:
-        user_request = make_many(params, ipp_value, request, cal_request)
     else:
         user_request = make_single(params, ipp_value, request)
 
