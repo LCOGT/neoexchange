@@ -38,7 +38,8 @@ import logging
 from django.core.files.storage import default_storage
 
 from photometrics.external_codes import unpack_tarball
-from core.models import Frame, CatalogSources, Block
+from photometrics.catalog_subs import funpack_fits_file
+from core.models import Block, Frame, CatalogSources
 from astrometrics.ephem_subs import horizons_ephem
 from astrometrics.time_subs import timeit
 from photometrics.catalog_subs import sanitize_object_name
@@ -151,19 +152,38 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
         return "WARNING: COULD NOT FIND FITS FILES"
 
     fig = plt.figure()
-
     frame_query = Frame.objects.filter(filename__in=base_name_list).order_by('midpoint').prefetch_related('catalogsources_set')
-    frame_obj = frame_query[0]
-    end_frame = frame_query.last()
-    start = frame_obj.midpoint - timedelta(minutes=5)
-    end = end_frame.midpoint + timedelta(minutes=5)
-    sitecode = frame_obj.sitecode
-    obj_name = frame_obj.block.body.name
-    rn = frame_obj.block.request_number
-    if frame_obj.block.obstype == Block.OPT_IMAGING:
-        frame_type = 'frame'
+    if frame_query:
+        frame_obj = frame_query[0]
+        end_frame = frame_query.last()
+        start = frame_obj.midpoint - timedelta(minutes=5)
+        end = end_frame.midpoint + timedelta(minutes=5)
+        sitecode = frame_obj.sitecode
+        try:
+            obj_name = frame_obj.block.body.name
+        except AttributeError:
+            obj_name = frame_obj.block.calibsource.name
+        rn = frame_obj.block.request_number
+        if frame_obj.block.obstype == Block.OPT_IMAGING:
+            frame_type = 'frame'
+        else:
+            frame_type = 'guide'
     else:
-        frame_type = 'guide'
+        with fits.open(good_fits_files[0], ignore_missing_end=True) as hdul:
+            try:
+                header = hdul['SCI'].header
+            except KeyError:
+                try:
+                    header = hdul['COMPRESSED_IMAGE'].header
+                except KeyError:
+                    header = hdul[0].header
+        obj_name = header['OBJECT']
+        rn = header['REQNUM']
+        sitecode = header['SITE']
+        if header['OBSTYPE'] == 'GUIDE':
+            frame_type = 'guide'
+        else:
+            frame_type = 'frame'
 
     if horizons_comp:
         # Get predicted JPL position of target in first frame
@@ -349,7 +369,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
     return filename
 
 
-def make_movie(date_obs, obj, req, base_dir, out_path, prop):
+def make_movie(date_obs, obj, req, base_dir, out_path, prop, tarfile=None):
     """Make gif of FLOYDS Guide Frames given the following:
     <date_obs> -- Day of Observation (i.e. '20180910')
     <obj> -- object name w/ spaces replaced by underscores (i.e. '144332' or '2018_EB1')
@@ -367,34 +387,34 @@ def make_movie(date_obs, obj, req, base_dir, out_path, prop):
     frames = []
     if not filename:
         unpack_path = os.path.join(base_dir, obj+'_'+req)
-        tar_files = glob(os.path.join(base_dir, prop+"*"+req+"*.tar.gz"))  # if file not found, looks for tarball
-
-        if tar_files:
-            tar_path = tar_files[0]
-            logger.info("Unpacking 1st tar")
-            spec_files = unpack_tarball(tar_path, unpack_path)  # unpacks tarball
+        if tarfile:
+            logger.info("Unpacking tarfile")
+            spec_files = unpack_tarball(os.path.join(base_dir, tarfile), unpack_path)  # unpacks tarball
             filename = spec_files[0]
         else:
-            logger.error("Could not find tarball for request: %s" % req)
-            return None
+            tar_files = glob(os.path.join(base_dir, prop+"*"+req+"*.tar.gz"))  # if file not found, looks for tarball
+            if tar_files:
+                tar_path = tar_files[0]
+                logger.info("Unpacking 1st tar")
+                spec_files = unpack_tarball(tar_path, unpack_path)  # unpacks tarball
+                filename = spec_files[0]
+            else:
+                logger.error("Could not find tarball for request: %s" % req)
+                return None
     if filename:  # If first order tarball is unpacked
-        movie_dir = glob(os.path.join(path, "Guide_frames"))
-        if movie_dir:  # if 2nd order tarball is unpacked
-            frames = glob(os.path.join(movie_dir[0], "*.fits.fz"))
-            if not frames:
-                frames = glob(os.path.join(movie_dir[0], "*.fits"))
-        else:  # unpack 2nd tarball
+        movie_dir = os.path.join(path, "Guide_frames")
+        if not os.path.exists(movie_dir):  # unpack 2nd tarball
             tarintar = glob(os.path.join(path, "*.tar"))
             if tarintar:
-                unpack_path = os.path.join(path, 'Guide_frames')
-                guide_files = unpack_tarball(tarintar[0], unpack_path)  # unpacks tar
+                guide_files = unpack_tarball(tarintar[0], movie_dir)  # unpacks tar
                 logger.info("Unpacking tar in tar")
-                for file in guide_files:
-                    if '.fits.fz' in file:
-                        frames.append(file)
+                for gf in guide_files:
+                    if '.fits.fz' in gf:
+                        funpack_fits_file(gf)
             else:
                 logger.error("Could not find Guide Frames or Guide Frame tarball for request: %s" % req)
                 return None
+        frames = glob(os.path.join(movie_dir, "*.fits"))
     else:
         logger.error("Could not find spectrum data or tarball for request: %s" % req)
         return None
