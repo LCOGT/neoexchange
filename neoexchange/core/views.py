@@ -1690,11 +1690,19 @@ def make_request_for_satellite(table, sitecode, satellite_name, exptime=None):
     index = table['Alt'].argmax()
     coords = table['SkyCoord'][index]
     midtime = table['UTC Datetime'][index]
-    starttime = midtime - timedelta(minutes=5)
-    endtime = midtime + timedelta(minutes=5)
+    if sitecode == 'F65':
+        # MuSCAT seems to start much quicker leading to the satellite being late
+        starttime = midtime - timedelta(minutes=2)
+        endtime = midtime + timedelta(minutes=8)
+    else:
+        starttime = midtime - timedelta(minutes=5)
+        endtime = midtime + timedelta(minutes=5)
 
     if exptime is None:
-        exptime = round(random.uniform(2.5, 4), 1)
+        if sitecode == 'F65':
+            exptime = round(random.uniform(1.5, 3), 1)
+        else:
+            exptime = round(random.uniform(2.5, 4), 1)
 
     params = {'exp_count': 10, 'exp_time' : exptime,'filter_pattern': 'w,',
               'site_code': sitecode,
@@ -1715,6 +1723,8 @@ def make_request_for_satellite(table, sitecode, satellite_name, exptime=None):
                                       'ip_explength': exptime,
                                       'zp_explength': exptime
                                       }
+        params['exp_count'] = 30
+
     return params
 
 
@@ -1789,11 +1799,14 @@ def get_streak_params(fits_catalog):
         # Make mask for objects not near the edge of file (X/YWIN_IMAGE more
         # than 50 pixels from edge and FLAGS<=2). Make 2 masks since X/YWIN_IMAGE
         # can be very different to X/Y_IMAGE...
+        edge_percent = 0.0
+        if 'fa' in fits_header['instrume'].lower():
+            edge_percent = (50 / 4096) * 100
         mask0a = IsTooNearEdge(fits_table['XWIN_IMAGE'], fits_table['YWIN_IMAGE'], fits_header['NAXIS1'], fits_header['NAXIS2'],
-                              edge_band_percent=(50 / 4096) * 100)
+                              edge_band_percent=edge_percent)
         if 'X_IMAGE' in fits_table.columns.names and 'Y_IMAGE' in fits_table.columns.names:
             mask0b = IsTooNearEdge(fits_table['X_IMAGE'], fits_table['Y_IMAGE'], fits_header['NAXIS1'], fits_header['NAXIS2'],
-                              edge_band_percent=(50 / 4096) * 100)
+                              edge_band_percent=edge_percent)
             mask0 = mask0a | mask0b
 #            print("Double masking...")
         else:
@@ -1858,6 +1871,7 @@ def make_GPS_astrometry_file(block, dest_dir):
             for frame in frames:
                 print(frame.filename, end=' ')
                 psv_line, src = make_GPS_psv_line(frame, dest_dir)
+                print()
                 if header_done is False and src is not None:
                     print(src.format_psv_header(), file=fh)
                     header_done = True
