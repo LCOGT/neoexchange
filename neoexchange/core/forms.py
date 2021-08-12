@@ -33,6 +33,7 @@ SITES = (('1M0', '------------ Any 1.0m ------------'),
          ('V37', 'ELP 1.0m - V37,V39; (McDonald, Texas)'),
          ('Q63', 'COJ 1.0m - Q63-64; (Siding Spring, Aust.)'),
          ('K92', 'CPT 1.0m - K91-93; (Sutherland, S. Africa)'),
+         ('Z24', 'TFN 1.0m - Z31,Z24; (Tenerife, Spain)'),
          ('0M4', '------------ Any 0.4m ------------'),
          ('W89', 'LSC 0.4m - W89,W79; (CTIO, Chile)'),
          ('V38', 'ELP 0.4m - V38; (McDonald, Texas)'),
@@ -61,6 +62,12 @@ MOON = (('G', 'Grey',),
 
 BIN_MODES = (('full_chip', 'Full Chip, 1x1'),
              ('2k_2x2', 'Central 2k, 2x2'))
+
+ANALOG_OPTIONS = (('1', '1'),
+                  ('2', '2'),
+                  ('3', '3'),
+                  ('4', '4'),
+                  ('5', '5'))
 
 
 class SiteSelectWidget(forms.Select):
@@ -211,6 +218,7 @@ class ScheduleBlockForm(forms.Form):
     solar_analog = forms.BooleanField(initial=True, widget=forms.HiddenInput(), required=False)
     calibsource_id = forms.IntegerField(widget=forms.HiddenInput(), required=False)
     calibsource_exptime = forms.IntegerField(widget=forms.NumberInput(attrs={'size': '5'}), required=False)
+    calibsource_list = forms.ChoiceField(required=False)
     max_airmass = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     ipp_value = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     para_angle = forms.BooleanField(initial=False, required=False)
@@ -342,6 +350,11 @@ class ScheduleBlockForm(forms.Form):
             if self.cleaned_data.get('end_time') < self.cleaned_data.get('start_time'):
                 raise forms.ValidationError("Scheduling Window cannot end before it begins without breaking causality. Please Fix.")
         return cleaned_data
+
+    def __init__(self, *args, **kwargs):
+        self.calibsource_list = kwargs.pop('calibsource_list', None)
+        super(ScheduleBlockForm, self).__init__(*args, **kwargs)
+        self.fields['calibsource_list'].choices = ANALOG_OPTIONS
 
 
 class ScheduleSpectraForm(forms.Form):

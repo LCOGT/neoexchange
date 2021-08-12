@@ -123,7 +123,8 @@ def determine_plot_valid(vis_file, now=None):
         if age < max_age:
             valid_vis_file = vis_file
         else:
-            logger.debug("File '{file}' too old: {start} {now} {age}".format(file=vis_file, start=start_date_dt, now=now, age=age.total_seconds()/86400.0))
+            logger.debug("File '{file}' too old: {start} {now} {age}".format(file=vis_file, start=start_date_dt,
+                                                                             now=now, age=age.total_seconds()/86400.0))
     return valid_vis_file
 
 
@@ -335,9 +336,11 @@ def spec_plot(data_spec, analog_data, reflec=False):
 
             source = ColumnDataSource(spec_dict)
 
-            ref_plot.line("Wavelength", tax+"_Mean", source=source, color=colors[j], name=tax + "-Type", line_width=2, line_dash='dashed', legend_label=tax, visible=vis)
+            ref_plot.line("Wavelength", tax+"_Mean", source=source, color=colors[j], name=tax + "-Type", line_width=2,
+                          line_dash='dashed', legend_label=tax, visible=vis)
             if np.mean(spec_dict[tax + '_Sigma']) > 0:
-                ref_plot.patch(xs, ys, fill_alpha=.25, line_width=1, fill_color=colors[j], line_color="black", name=tax + "-Type", legend_label=tax, line_alpha=.25, visible=vis)
+                ref_plot.patch(xs, ys, fill_alpha=.25, line_width=1, fill_color=colors[j], line_color="black",
+                               name=tax + "-Type", legend_label=tax, line_alpha=.25, visible=vis)
 
         if not reflec:
             for spec in data_spec:

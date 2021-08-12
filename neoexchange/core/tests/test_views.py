@@ -1108,25 +1108,23 @@ class TestRecordBlock(TestCase):
         self.assertEqual(True, sblocks[0].rapid_response)
 
     def test_spectro_and_solar_block(self):
-        new_params = { 'calibsource' : {'id': 1,
-                                        'name': 'Landolt SA107-684',
-                                        'ra_deg': 234.325,
-                                        'dec_deg': -0.164,
-                                        'pm_ra': 0.0,
-                                        'pm_dec': 0.0,
-                                        'parallax': 0.0
-                                        },
-                        'calibsrc_exptime' : 60.0,
-                        'dec_deg' : -0.164,
-                        'ra_deg'  : 234.325,
-                        'solar_analog' : True
-                        }
+        new_params = {'calibsource': {'id': 1,
+                                      'name': 'Landolt SA107-684',
+                                      'ra_deg': 234.325,
+                                      'dec_deg': -0.164,
+                                      'pm_ra': 0.0,
+                                      'pm_dec': 0.0,
+                                      'parallax': 0.0
+                                      },
+                      'calibsrc_exptime': 60.0,
+                      'dec_deg': -0.164,
+                      'ra_deg': 234.325,
+                      'solar_analog': True
+                      }
         spectro_params = {**new_params, **self.spectro_params}
         spectro_params['group_name'] = self.spectro_params['group_name'] + '+solstd'
-        spectro_params['request_numbers'] = {1450339: 'NON_SIDEREAL', 1450340: 'SIDEREAL'}
-        spectro_params['request_windows'] = [[{'end': '2018-03-16T18:30:00', 'start': '2018-03-16T11:20:00'}],
-                                            [{'end': '2018-03-16T18:30:00', 'start': '2018-03-16T11:20:00'}]
-                                           ]
+        spectro_params['request_numbers'] = {1450339: 'NON_SIDEREAL'}
+        spectro_params['request_windows'] = [[{'end': '2018-03-16T18:30:00', 'start': '2018-03-16T11:20:00'}]]
 
         block_resp = record_block(self.spectro_tracknum, spectro_params, self.spectro_form, self.spectro_body)
 
@@ -1260,6 +1258,9 @@ class TestScheduleCheck(TestCase):
                             'calibsource': {},
                             'calibsource_id': -1,
                             'calibsource_exptime': 60,
+                            'calibsource_list': None,
+                            'calibsource_list_options': [],
+                            'calibsource_predict_exptime': 60,
                             'solar_analog': False,
                             'vis_time': 7.033333333333333,
                             'lco_enc': 'DOMA',
@@ -1868,6 +1869,9 @@ class TestScheduleCheck(TestCase):
                         'calibsource': {},
                         'calibsource_id': -1,
                         'calibsource_exptime': 60,
+                        'calibsource_list': None,
+                        'calibsource_list_options': [],
+                        'calibsource_predict_exptime': 60,
                         'solar_analog': False,
                         'vis_time': 7.966666666666667,
                         'lco_enc': 'CLMA',
@@ -1944,6 +1948,9 @@ class TestScheduleCheck(TestCase):
                         'calibsource': {'separation_deg': 11.532781052438736, **model_to_dict(self.solar_analog)},
                         'calibsource_id': 1,
                         'calibsource_exptime': 180,
+                        'calibsource_list': None,
+                        'calibsource_list_options': ['1: SA42-999 (11.5°)'],
+                        'calibsource_predict_exptime': 180,
                         'solar_analog': True,
                         'vis_time': 7.966666666666667,
                         'lco_enc': 'CLMA',
@@ -7229,7 +7236,7 @@ class TestFindBestSolarAnalog(TestCase):
         expected_ra = 2.7772337523336565
         expected_dec = 0.6247970652631909
         expected_standard = StaticSource.objects.get(name='35 Leo')
-        expected_params = { 'separation_deg' : 13.031726234959416}
+        expected_params = {'separation_deg': 13.031726234959416}
         # Python 3.5 dict merge; see PEP 448
         expected_params = {**expected_params, **model_to_dict(expected_standard)}
 
@@ -7237,20 +7244,31 @@ class TestFindBestSolarAnalog(TestCase):
         emp = compute_ephem(utc_date, model_to_dict(self.test_body), 'F65', perturb=False)
         self.assertAlmostEqual(expected_ra, emp['ra'], self.precision)
         self.assertAlmostEqual(expected_dec, emp['dec'], self.precision)
-        close_standard, close_params = find_best_solar_analog(emp['ra'], emp['dec'], 'F65')
+        close_standard, close_params, close_std_list = find_best_solar_analog(emp['ra'], emp['dec'], 'F65')
 
         self.assertEqual(expected_standard, close_standard)
+        self.assertEqual(len(close_std_list), 5)
+        self.assertGreater(close_std_list[1]["separation"], close_std_list[0]["separation"])
+        self.assertGreater(close_std_list[2]["separation"], close_std_list[1]["separation"])
+        self.assertGreater(close_std_list[3]["separation"], close_std_list[2]["separation"])
+
         for key in expected_params:
             if '_deg' in key or '_rad' in key:
                 self.assertAlmostEqual(expected_params[key], close_params[key], places=self.precision)
             else:
                 self.assertEqual(expected_params[key], close_params[key])
 
+        close_standard2, close_params2, close_std_list2 = find_best_solar_analog(emp['ra'], emp['dec'], 'F65', num=2)
+        self.assertNotEqual(expected_params['name'], close_params2['name'])
+        self.assertNotEqual(expected_params['ra'], close_params2['ra'])
+        self.assertEqual(close_std_list2, close_std_list)
+        self.assertEqual(close_std_list[1]['calib'], close_standard2)
+
     def test_FTS(self):
         expected_ra = 4.334041503242261
         expected_dec = -0.3877173805762358
         expected_standard = StaticSource.objects.get(name='HD 140990')
-        expected_params = { 'separation_deg' : 10.838361371951908}
+        expected_params = {'separation_deg': 10.838361371951908}
         # Python 3.5 dict merge; see PEP 448
         expected_params = {**expected_params, **model_to_dict(expected_standard)}
 
@@ -7258,9 +7276,13 @@ class TestFindBestSolarAnalog(TestCase):
         emp = compute_ephem(utc_date, model_to_dict(self.test_body), 'E10', perturb=False)
         self.assertAlmostEqual(expected_ra, emp['ra'], self.precision)
         self.assertAlmostEqual(expected_dec, emp['dec'], self.precision)
-        close_standard, close_params = find_best_solar_analog(emp['ra'], emp['dec'], 'E10')
+        close_standard, close_params, close_std_list = find_best_solar_analog(emp['ra'], emp['dec'], 'E10')
 
         self.assertEqual(expected_standard, close_standard)
+        self.assertEqual(len(close_std_list), 5)
+        self.assertGreater(close_std_list[1]["separation"], close_std_list[0]["separation"])
+        self.assertGreater(close_std_list[2]["separation"], close_std_list[1]["separation"])
+        self.assertGreater(close_std_list[3]["separation"], close_std_list[2]["separation"])
         for key in expected_params:
             if '_deg' in key or '_rad' in key:
                 self.assertAlmostEqual(expected_params[key], close_params[key], places=self.precision)
@@ -7272,15 +7294,17 @@ class TestFindBestSolarAnalog(TestCase):
         expected_dec = -0.9524603478856751
         expected_standard = None
         expected_params = {}
+        expected_list = []
 
         utc_date = datetime(2020, 9, 5, 13, 30, 0)
         emp = compute_ephem(utc_date, model_to_dict(self.test_body), 'E10', perturb=False)
         self.assertAlmostEqual(expected_ra, emp['ra'], self.precision)
         self.assertAlmostEqual(expected_dec, emp['dec'], self.precision)
-        close_standard, close_params = find_best_solar_analog(emp['ra'], emp['dec'], 'E10', ha_sep=0.5)
+        close_standard, close_params, close_std_list = find_best_solar_analog(emp['ra'], emp['dec'], 'E10', ha_sep=0.5)
 
         self.assertEqual(expected_standard, close_standard)
         self.assertEqual(expected_params, close_params)
+        self.assertEqual(expected_list, close_std_list)
 
 
 class TestExportMeasurements(TestCase):

@@ -382,7 +382,14 @@
                         <td class="kv-value">{{data.calibsource.separation_deg|floatformat:1 }}&deg</td>
                     </tr>
                     <tr id="id_solaranalog_exptime_row">
-                        <td class="kv-key">Exposure time</td>
+                        {% if data.calibsource_predict_exptime != data.calibsource_exptime %}
+                            <td ><table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip">
+                                <span class="warning msgpadded"> Exposure Time </span>
+                                <span class="tooltiptext" style="width: 150px;"><u>Non-optimal Exposure Time!</u>
+                                    <br>Optimal exposure time: <strong>{{data.calibsource_predict_exptime}}s</strong></span></div></td></tr></table></td>
+                        {% else %}
+                        <td class="kv-key">Exposure Time</td>
+                        {% endif %}
                         <td class="kv-value">{{form.calibsource_exptime }} secs</td>
                     </tr>
                     <tr id="id_solaranalog_mag_row">
@@ -463,6 +470,21 @@
                   </td>
                   <td class="kv-value">{{ form.para_angle }}</td>
               </tr>
+              {% if data.solar_analog %}
+                  <tr id="id_choose_calib_row">
+                      <td >
+                      <table align="left"  style="margin: 0px"><tr><td class="kv-key">
+                            <div class="tooltip">Choose a different Analog
+                            <span class="tooltiptext" style="left:60%;"><u>Alternative Analogs: <br></u>
+                                {% for calib in data.calibsource_list_options %}
+                                    {{ calib }} <br>
+                                {% endfor %}
+                            </span></div></td><td></td></tr>
+                      </table>
+                      </td>
+                      <td class="kv-value">{{ form.calibsource_list }}</td>
+                  </tr>
+              {% endif %}
               {% endif %}
           </table>
           </div>
