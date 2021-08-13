@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.8.12
+* Adds support for multi-target spectroscopy blocks.
+
 ### 3.8.11
 * Adds support for the two 1-m telescopes at Tenerife (Issue #555)
 
