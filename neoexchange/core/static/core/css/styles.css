@@ -943,6 +943,14 @@ ul.candidate-controls li {width:100%;}
 
 ul.candidate-controls li:hover {background-color:#eee; }
 
+.warning-msg {
+  display: block;
+  padding: 10px;
+  color: #9F6000;
+  background-color: #FEEFB3;
+  font-size: 1.2em;
+}
+
 /* Responsive design styles */
 
 @media (max-width: 1280px), (max-device-width: 1280px) {

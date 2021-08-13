@@ -20,6 +20,8 @@
                     <a class="button button-primary" href="{% url 'schedule-body' body.pk %}" id="schedule-obs">Schedule Observations</a>
                     <a class="button button-primary" href="{% url 'schedule-body-spectra' body.pk %}" id="schedule-spectro-obs">Schedule Spectroscopic Observations</a>
                 </div>
+                <div id="warning-message" class="warning-msg"><i class="fa fa-exclamation-triangle"></i> Plots are generated asynchronously so will appear when ready</div>
+
                 <h5  class="section-title"><span class="">Right Ascension and Declination</span></h5>
                 <img src="https://dummyimage.com/600x400/000/fff&text=RA+Dec" id="id_radecplot">
                 <span class="msgpadded" style="display: block;">Milky Way outline in brown.</span>
@@ -78,6 +80,7 @@
 
   function loadImages() {
     if (i >= imageUrls.length){
+      $('#warning-message').fadeOut()
       return
     }
     var url = imageUrls[i].url;
