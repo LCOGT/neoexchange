@@ -8306,39 +8306,37 @@ class TestCreateLatexTable(TestCase):
         self.test_sblock = SuperBlock.objects.create(**sblock_params)
 
         for sitecode, day in zip(['K91', 'K93', 'K92'], range(7,22,7)):
-            block_params = {
-                            'body' : self.test_body,
-                            'superblock' : self.test_sblock,
-                            'site' : 'cpt',
-                            'block_start' : datetime(2021, 7, day, 22, 30),
-                            'block_end'   : datetime(2019, 7, day, 6, 30),
-                            'obstype' : Block.OPT_IMAGING,
-                            'request_number' : day*1000,
-                            'num_observed' : 1,
-                            'when_observed' : datetime(2021, 7, day, 23, 15),
-                            'num_exposures' : 4,
-                            'exp_length' : 180
-                            }
-            self.test_objblock = Block.objects.create(**block_params)
+            self.block_params = {
+                                'body' : self.test_body,
+                                'superblock' : self.test_sblock,
+                                'site' : 'cpt',
+                                'block_start' : datetime(2021, 7, day, 22, 30),
+                                'block_end'   : datetime(2019, 7, day, 6, 30),
+                                'obstype' : Block.OPT_IMAGING,
+                                'request_number' : day*1000,
+                                'num_observed' : 1,
+                                'when_observed' : datetime(2021, 7, day, 23, 15),
+                                'num_exposures' : 4,
+                                'exp_length' : 60
+                               }
+            self.test_objblock = Block.objects.create(**self.block_params)
 
             for i, obs_filter in enumerate(['gp', 'gp', 'rp', 'rp']):
-                frame_params = { 'block'    : self.test_objblock,
-                                 'filename' : f'cpt1m003-fa99-202108{day}-{42+i:04d}-e91.fits',
-                                 'sitecode' : sitecode,
-                                 'frametype': Frame.BANZAI_RED_FRAMETYPE,
-                                 'filter' : obs_filter,
-                                 'midpoint' : datetime(2021, 7, day, 3, i, 0)
-                               }
+                self.frame_params = { 'block'    : self.test_objblock,
+                                      'filename' : f'cpt1m003-fa99-202108{day}-{42+i:04d}-e91.fits',
+                                      'sitecode' : sitecode,
+                                      'frametype': Frame.BANZAI_RED_FRAMETYPE,
+                                      'filter' : obs_filter,
+                                      'midpoint' : datetime(2021, 7, day, 3, i, 0)
+                                    }
 
-                test_frame = Frame.objects.create(**frame_params)
-
-        
+                test_frame = Frame.objects.create(**self.frame_params)
 
         self.table_hdr = [ '\\begin{table}\n',
                            '\\caption{Table of observations for 2005 QN173 with LCOGT}\n',
-                           '\\begin{tabular}{ccccccc}\n',
+                           '\\begin{tabular}{cccccccc}\n',
                            '\\hline \\hline\n',
-                           'block start & block end & site & telclass & MPC Site Code & Observation Type & num exposures \\\\\n',
+                           'block start & block end & site & telclass & MPC Site Code & Observation Type & Filters & num exposures \\\\\n',
                            '\\hline\n'
                          ]
 
@@ -8352,9 +8350,9 @@ class TestCreateLatexTable(TestCase):
     def test_table_by_body(self):
 
         lines = [
-                  '2021-07-07 03:00 & 2021-07-07 03:03 & cpt & 1m0 & K91 & Opt. imaging & 4/4 \\\\\n',
-                  '2021-07-14 03:00 & 2021-07-14 03:03 & cpt & 1m0 & K93 & Opt. imaging & 4/4 \\\\\n',
-                  '2021-07-21 03:00 & 2021-07-21 03:03 & cpt & 1m0 & K92 & Opt. imaging & 4/4 \\\\\n',
+                  "2021-07-07 03:00 & 2021-07-07 03:03 & cpt & 1m0 & K91 & Opt. imaging & g',r' & 4/4 \\\\\n",
+                  "2021-07-14 03:00 & 2021-07-14 03:03 & cpt & 1m0 & K93 & Opt. imaging & g',r' & 4/4 \\\\\n",
+                  "2021-07-21 03:00 & 2021-07-21 03:03 & cpt & 1m0 & K92 & Opt. imaging & g',r' & 4/4 \\\\\n",
                 ]
 
         expected_lines = self.table_hdr + lines + self.table_ftr
@@ -8373,9 +8371,9 @@ class TestCreateLatexTable(TestCase):
     def test_table_by_name(self):
 
         lines = [
-                  '2021-07-07 03:00 & 2021-07-07 03:03 & cpt & 1m0 & K91 & Opt. imaging & 4/4 \\\\\n',
-                  '2021-07-14 03:00 & 2021-07-14 03:03 & cpt & 1m0 & K93 & Opt. imaging & 4/4 \\\\\n',
-                  '2021-07-21 03:00 & 2021-07-21 03:03 & cpt & 1m0 & K92 & Opt. imaging & 4/4 \\\\\n',
+                  "2021-07-07 03:00 & 2021-07-07 03:03 & cpt & 1m0 & K91 & Opt. imaging & g',r' & 4/4 \\\\\n",
+                  "2021-07-14 03:00 & 2021-07-14 03:03 & cpt & 1m0 & K93 & Opt. imaging & g',r' & 4/4 \\\\\n",
+                  "2021-07-21 03:00 & 2021-07-21 03:03 & cpt & 1m0 & K92 & Opt. imaging & g',r' & 4/4 \\\\\n",
                 ]
 
         expected_lines = self.table_hdr + lines + self.table_ftr
@@ -8385,6 +8383,48 @@ class TestCreateLatexTable(TestCase):
         self.assertEqual(3, Block.objects.all().count())
         self.assertEqual(12, Frame.objects.all().count())
         
+        out_buf = create_latex_table(self.test_body.name)
+        out_buf.seek(0)
+
+        for i, line in enumerate(out_buf.readlines()):
+            self.assertEqual(expected_lines[i], line)
+
+    def test_table_filter_trans(self):
+
+        # Create MuSCAT block
+        self.test_objblock.id = None
+        self.test_objblock.site = 'ogg'
+        self.test_objblock.telclass = '2m0'
+        self.test_objblock.block_start : datetime(2021, 7, 22, 5, 30)
+        self.test_objblock.block_end : datetime(2021, 7, 22, 15, 30)
+        self.test_objblock.when_observed : datetime(2021, 7, 22, 15, 15)
+        self.test_objblock.save()
+
+        for i, obs_filter in enumerate(['gp', 'rp', 'ip', 'zs']):
+            frame_params = { 'block'    : self.test_objblock,
+                                  'filename' : f'ogg2m001-ep99-20210822-{42+i:04d}-e91.fits',
+                                  'sitecode' : 'F65',
+                                  'frametype': Frame.BANZAI_RED_FRAMETYPE,
+                                  'filter' : obs_filter,
+                                  'midpoint' : datetime(2021, 7, 22, 15, i*2, 0)
+                                }
+
+            test_frame = Frame.objects.create(**frame_params)
+
+        lines = [
+                  "2021-07-07 03:00 & 2021-07-07 03:03 & cpt & 1m0 & K91 & Opt. imaging & g',r' & 4/4 \\\\\n",
+                  "2021-07-14 03:00 & 2021-07-14 03:03 & cpt & 1m0 & K93 & Opt. imaging & g',r' & 4/4 \\\\\n",
+                  "2021-07-21 03:00 & 2021-07-21 03:03 & cpt & 1m0 & K92 & Opt. imaging & g',r' & 4/4 \\\\\n",
+                  "2021-07-22 15:00 & 2021-07-22 15:06 & ogg & 2m0 & F65 & Opt. imaging & g',r',i',z_{s} & 4/4 \\\\\n",
+                ]
+
+        expected_lines = self.table_hdr + lines + self.table_ftr
+
+        self.assertEqual(1, Body.objects.all().count())
+        self.assertEqual(1, SuperBlock.objects.all().count())
+        self.assertEqual(4, Block.objects.all().count())
+        self.assertEqual(16, Frame.objects.all().count())
+
         out_buf = create_latex_table(self.test_body.name)
         out_buf.seek(0)
 

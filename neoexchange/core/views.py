@@ -4270,7 +4270,7 @@ def find_best_solar_analog(ra_rad, dec_rad, site, ha_sep=4.0, num=None, solar_st
 
 def create_latex_table(body_or_name):
 
-    field_list = ['block_start','block_end','site','telclass','MPC Site Code','obstype','num_exposures']
+    field_list = ['block_start','block_end','site','telclass','MPC Site Code','obstype','Filters','num_exposures']
     cleaned_data = {}
     cleaned_data['field_list'] = field_list
 
@@ -4305,6 +4305,16 @@ def create_latex_table(body_or_name):
                 data_value = Frame.objects.filter(block=obs_record,frametype__in=(Frame.SPECTRUM_FRAMETYPE,Frame.BANZAI_QL_FRAMETYPE,Frame.BANZAI_RED_FRAMETYPE)).latest('midpoint').midpoint.strftime("%Y-%m-%d %H:%M")
             elif field == 'MPC Site Code':
                 data_value =  Frame.objects.filter(block=obs_record,frametype__in=(Frame.SPECTRUM_FRAMETYPE,Frame.BANZAI_QL_FRAMETYPE,Frame.BANZAI_RED_FRAMETYPE)).first().sitecode
+            elif field == 'Filters':
+                obs_filters = Frame.objects.filter(block=obs_record,frametype__in=(Frame.SPECTRUM_FRAMETYPE,Frame.BANZAI_QL_FRAMETYPE,Frame.BANZAI_RED_FRAMETYPE)).values_list('filter', flat=True).distinct()
+                text_filters = []
+                for obs_filter in obs_filters:
+                    if obs_filter in ['up', 'gp', 'rp', 'ip']:
+                        obs_filter = obs_filter.replace('p', "'")
+                    elif obs_filter == 'zs':
+                        obs_filter = 'z_{s}'
+                    text_filters.append(obs_filter)
+                data_value = ",".join(text_filters)
             elif field == 'num_exposures':
                 sched_frames = obs_record.num_exposures
                 actual_frames = obs_record.num_unique_red_frames()
