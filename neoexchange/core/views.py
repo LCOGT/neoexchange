@@ -12,12 +12,14 @@ GNU General Public License for more details.
 """
 
 import os
+from io import StringIO
 from shutil import move
 from glob import glob
 from operator import itemgetter
 from datetime import datetime, timedelta, date
 from math import floor, ceil, degrees, radians, pi, acos, pow
 from astropy import units as u
+from astropy.io import ascii
 import json
 import logging
 import tempfile
@@ -27,7 +29,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.messages.views import SuccessMessageMixin
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError, FieldDoesNotExist
 from django.core.files.storage import default_storage
 from django.core.paginator import Paginator
 from django.db.models import Q, Prefetch
@@ -4264,3 +4266,52 @@ def find_best_solar_analog(ra_rad, dec_rad, site, ha_sep=4.0, num=None, solar_st
         close_params = model_to_dict(close_standard)
         close_params['separation_deg'] = close_standards[num]["separation"]
     return close_standard, close_params, close_standards[:5]
+
+
+def create_latex_table(body_or_name):
+
+    field_list = ['block_start','block_end','site','telclass','MPC Site Code','obstype','num_exposures']
+    cleaned_data = {}
+    cleaned_data['field_list'] = field_list
+
+    if isinstance(body_or_name, Body):
+        body = body_or_name
+    else:
+        body = Body.objects.get(name=body_or_name)
+    blocks = Block.objects.filter(body=body, num_observed__gte=1)
+    block_mapping = { Block.OBSTYPE_CHOICES[0][0] : Block.OBSTYPE_CHOICES[0][1].replace("Optical", "Opt."), Block.OBSTYPE_CHOICES[1][0] : Block.OBSTYPE_CHOICES[1][1].replace("Optical", "Opt.")}
+
+    latex_dict = {'tabletype': 'table',
+                 'header_start': '\\hline \\hline',
+                 'header_end': '\\hline',
+                 'data_end': '\\hline',
+                 'caption': 'Table of observations for ' + body.current_name() + ' with LCOGT',
+                 'tablefoot': ''}
+                 
+    table_data = {}
+    for field in cleaned_data.get('field_list', []):
+        for obs_record in blocks.order_by('block_start'):
+            try:
+                verbose_name = Block._meta.get_field(field).verbose_name
+                data_value = getattr(obs_record, field)
+            except FieldDoesNotExist:
+                verbose_name = field
+                data_value = ''
+            if field == 'obstype':
+                data_value = block_mapping.get(data_value)
+            elif field == 'block_start':
+                data_value = Frame.objects.filter(block=obs_record,frametype__in=(Frame.SPECTRUM_FRAMETYPE,Frame.BANZAI_QL_FRAMETYPE,Frame.BANZAI_RED_FRAMETYPE)).earliest('midpoint').midpoint.strftime("%Y-%m-%d %H:%M")
+            elif field == 'block_end':
+                data_value = Frame.objects.filter(block=obs_record,frametype__in=(Frame.SPECTRUM_FRAMETYPE,Frame.BANZAI_QL_FRAMETYPE,Frame.BANZAI_RED_FRAMETYPE)).latest('midpoint').midpoint.strftime("%Y-%m-%d %H:%M")
+            elif field == 'MPC Site Code':
+                data_value =  Frame.objects.filter(block=obs_record,frametype__in=(Frame.SPECTRUM_FRAMETYPE,Frame.BANZAI_QL_FRAMETYPE,Frame.BANZAI_RED_FRAMETYPE)).first().sitecode
+            elif field == 'num_exposures':
+                sched_frames = obs_record.num_exposures
+                actual_frames = obs_record.num_unique_red_frames()
+                data_value = "{}/{}".format(actual_frames, sched_frames)
+            table_data.setdefault(verbose_name, []).append(data_value)
+
+    buf = StringIO()
+    ascii.write(table_data, output=buf, format='latex', latexdict=latex_dict)
+
+    return buf
