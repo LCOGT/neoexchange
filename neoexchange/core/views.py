@@ -4297,6 +4297,7 @@ def create_latex_table(body_or_name):
             except FieldDoesNotExist:
                 verbose_name = field
                 data_value = ''
+            verbose_name = verbose_name.title()
             if field == 'obstype':
                 data_value = block_mapping.get(data_value)
             elif field == 'block_start':
@@ -4305,6 +4306,7 @@ def create_latex_table(body_or_name):
                 data_value = Frame.objects.filter(block=obs_record,frametype__in=(Frame.SPECTRUM_FRAMETYPE,Frame.BANZAI_QL_FRAMETYPE,Frame.BANZAI_RED_FRAMETYPE)).latest('midpoint').midpoint.strftime("%Y-%m-%d %H:%M")
             elif field == 'MPC Site Code':
                 data_value =  Frame.objects.filter(block=obs_record,frametype__in=(Frame.SPECTRUM_FRAMETYPE,Frame.BANZAI_QL_FRAMETYPE,Frame.BANZAI_RED_FRAMETYPE)).first().sitecode
+                verbose_name = 'MPC Site Code'
             elif field == 'Filters':
                 obs_filters = Frame.objects.filter(block=obs_record,frametype__in=(Frame.SPECTRUM_FRAMETYPE,Frame.BANZAI_QL_FRAMETYPE,Frame.BANZAI_RED_FRAMETYPE)).values_list('filter', flat=True).distinct()
                 text_filters = []

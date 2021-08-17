@@ -8336,7 +8336,7 @@ class TestCreateLatexTable(TestCase):
                            '\\caption{Table of observations for 2005 QN173 with LCOGT}\n',
                            '\\begin{tabular}{cccccccc}\n',
                            '\\hline \\hline\n',
-                           'block start & block end & site & telclass & MPC Site Code & Observation Type & Filters & num exposures \\\\\n',
+                           'Block Start & Block End & Site & Telclass & MPC Site Code & Observation Type & Filters & Num Exposures \\\\\n',
                            '\\hline\n'
                          ]
 
