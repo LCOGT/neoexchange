@@ -22,7 +22,8 @@ from django.contrib.auth.models import User
 from neox.auth_backend import update_proposal_permissions
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
-from core.models import Block, SuperBlock, Frame, Body, PreviousSpectra
+from core.models import Block, SuperBlock, Frame, Body, PreviousSpectra, DataProduct
+from core.utils import save_dataproduct
 from mock import patch
 from neox.tests.mocks import MockDateTime, mock_lco_authenticate, mock_fetch_archive_frames,\
     mock_fetch_archive_frames_2spectra, mock_archive_spectra_header, mock_archive_bad_spectra_header
@@ -45,14 +46,11 @@ class SpectraplotTest(FunctionalTest):
     def setUp(self):
         super(SpectraplotTest, self).setUp()
         self.spectradir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_spectra'))
+        spec_path = os.path.join(self.spectradir, 'target_2df_ex.fits')
+        analog_path = os.path.join(self.spectradir, 'analog_2df_ex.fits')
+        analog2_path = os.path.join(self.spectradir, 'test_2df_ex.fits')
 
         settings.MEDIA_ROOT = self.test_dir
-        build_data_dir(os.path.join(self.test_dir, '20190727', '455432_1878696'), self.spectradir,
-                       'target_2df_ex.fits')
-        build_data_dir(os.path.join(self.test_dir, '20190727', 'HD30455_1878697'), self.spectradir,
-                       'analog_2df_ex.fits')
-        # build_data_dir(os.path.join(self.test_dir, '20190927', '455432_1878696'), self.spectradir,
-        #                'target_2df_ex.fits')
 
         self.username = 'bart'
         self.password = 'simpson'
@@ -63,6 +61,7 @@ class SpectraplotTest(FunctionalTest):
         self.bart.is_active = 1
         self.bart.save()
 
+        # build individual target blocks
         sblock_params = {
              'cadence'         : False,
              'body'            : self.body,
@@ -89,6 +88,7 @@ class SpectraplotTest(FunctionalTest):
              'when_observed'   : datetime(2019, 7, 27, 16, 42, 51)
            }
         self.test_block = Block.objects.create(pk=3, **block_params)
+        save_dataproduct(self.test_block, spec_path, DataProduct.FITS_SPECTRA)
 
         analog_block_params = {
              'telclass'        : '2m0',
@@ -106,6 +106,7 @@ class SpectraplotTest(FunctionalTest):
              'when_observed'   : datetime(2019, 7, 27, 18, 42, 51)
            }
         self.analog_block = Block.objects.create(pk=7, **analog_block_params)
+        save_dataproduct(self.analog_block, analog_path, DataProduct.FITS_SPECTRA)
 
         fparams = {
             'sitecode'      : 'E10',
@@ -156,6 +157,26 @@ class SpectraplotTest(FunctionalTest):
            }
         self.test_block2 = Block.objects.create(pk=4, **block2_params)
 
+        save_dataproduct(self.test_block2, spec_path, DataProduct.FITS_SPECTRA, filename='test2_2df_ex.fits')
+
+        analog_block2_params = {
+            'telclass': '2m0',
+            'site': 'coj',
+            'calibsource': self.calib,
+            'superblock': self.test_sblock2,
+            'obstype': Block.OPT_SPECTRA_CALIB,
+            'block_start': '2019-07-27 13:00:00',
+            'block_end': '2019-07-28 03:00:00',
+            'request_number': '54321',
+            'num_exposures': 1,
+            'exp_length': 1800.0,
+            'active': True,
+            'when_observed': datetime(2019, 7, 27, 18, 42, 51)
+        }
+        self.analog_block2 = Block.objects.create(pk=10, **analog_block2_params)
+        save_dataproduct(self.analog_block2, analog2_path, DataProduct.FITS_SPECTRA)
+
+        # Build multi-frame Blocks
         msblock_params = {
              'cadence'         : False,
              'body'            : self.body,
@@ -174,14 +195,17 @@ class SpectraplotTest(FunctionalTest):
              'obstype'         : Block.OPT_SPECTRA,
              'block_start'     : '2018-01-01 00:00:00',
              'block_end'       : '2018-01-01 02:00:00',
-             'request_number' : '54322',
-             'num_exposures'   : 1,
+             'request_number'  : '54322',
+             'num_exposures'   : 2,
              'num_observed'    : 1,
              'exp_length'      : 1800.0,
              'active'          : True,
              'when_observed'   : datetime(2019, 7, 27, 16, 42, 51)
            }
         self.test_mblock1 = Block.objects.create(pk=5, **mblock1_params)
+        save_dataproduct(self.test_mblock1, spec_path, DataProduct.FITS_SPECTRA, filename='test3_2df_ex.fits')
+        save_dataproduct(self.test_mblock1, spec_path, DataProduct.FITS_SPECTRA, filename='test3.2_2df_ex.fits')
+
         mfparams1 = {
             'sitecode'      : 'F65',
             'filename'      : 'sp233/a265962.sp233.txt',
@@ -208,6 +232,8 @@ class SpectraplotTest(FunctionalTest):
              'when_observed'   : datetime(2019, 7, 27, 16, 42, 51)
            }
         self.test_mblock2 = Block.objects.create(pk=6, **mblock2_params)
+        save_dataproduct(self.test_mblock2, spec_path, DataProduct.FITS_SPECTRA, filename='test4_2df_ex.fits')
+
         mfparams2 = {
             'sitecode'      : 'F65',
             'filename'      : 'sp233/a265962.sp233.txt',
@@ -323,12 +349,6 @@ class SpectraplotTest(FunctionalTest):
     def test_multi_spectra_block(self):    # test opening 2 different spectra in same block
         self.mspec_frame2.block = self.test_mblock1
         self.mspec_frame2.save()
-        self.test_mblock1.num_observed = 2
-        self.test_mblock1.save()
-        build_data_dir(os.path.join(self.test_dir, '20190727', '455432_1878696'), self.spectradir,
-                       'test_2df_ex.fits')
-        build_data_dir(os.path.join(self.test_dir, '20190727', 'HD30455_1878697'), self.spectradir,
-                       'test_2df_ex.fits')
 
         self.login()
         blocks_url = reverse('blocklist')

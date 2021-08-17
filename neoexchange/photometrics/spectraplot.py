@@ -136,7 +136,7 @@ def pull_data_from_spectrum(spectra):
         hdul = fits.open(file)
     except FileNotFoundError:
         print("Cannot find file {}".format(file))
-        return None, None, None
+        return None, None, None, None
 
     data = hdul[0].data
     hdr = hdul[0].header

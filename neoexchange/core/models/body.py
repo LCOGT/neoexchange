@@ -226,7 +226,6 @@ class Body(models.Model):
             pass
         return mjd
 
-
     def current_name(self):
         if self.name:
             return self.name

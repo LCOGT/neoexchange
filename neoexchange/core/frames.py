@@ -332,13 +332,7 @@ def block_status(block_id):
         logger.error("Block with id %s does not exist" % block_id)
         return False
 
-    try:
-        obj_name = block.body.current_name()
-    except AttributeError:
-        try:
-            obj_name = block.calibsource.name
-        except AttributeError:
-            obj_name = ''
+    obj_name = block.current_name()
 
     # Get authentication token for Valhalla
     logger.info("Checking request status for block/track# %s / %s" % (block_id, tracking_num))
