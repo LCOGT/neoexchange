@@ -4298,17 +4298,27 @@ def create_latex_table(body_or_name):
                 verbose_name = field
                 data_value = ''
             verbose_name = verbose_name.title()
+            frames = Frame.objects.filter(block=obs_record,frametype__in=(Frame.SPECTRUM_FRAMETYPE,Frame.BANZAI_QL_FRAMETYPE,Frame.BANZAI_RED_FRAMETYPE,Frame.SINGLE_FRAMETYPE))
             if field == 'obstype':
                 data_value = block_mapping.get(data_value)
             elif field == 'block_start':
-                data_value = Frame.objects.filter(block=obs_record,frametype__in=(Frame.SPECTRUM_FRAMETYPE,Frame.BANZAI_QL_FRAMETYPE,Frame.BANZAI_RED_FRAMETYPE)).earliest('midpoint').midpoint.strftime("%Y-%m-%d %H:%M")
+                try:
+                    data_value = frames.earliest('midpoint').midpoint.strftime("%Y-%m-%d %H:%M")
+                except Frame.DoesNotExist:
+                    data_value = "-"
             elif field == 'block_end':
-                data_value = Frame.objects.filter(block=obs_record,frametype__in=(Frame.SPECTRUM_FRAMETYPE,Frame.BANZAI_QL_FRAMETYPE,Frame.BANZAI_RED_FRAMETYPE)).latest('midpoint').midpoint.strftime("%Y-%m-%d %H:%M")
+                try:
+                    data_value = frames.latest('midpoint').midpoint.strftime("%Y-%m-%d %H:%M")
+                except Frame.DoesNotExist:
+                    data_value = "-"
             elif field == 'MPC Site Code':
-                data_value =  Frame.objects.filter(block=obs_record,frametype__in=(Frame.SPECTRUM_FRAMETYPE,Frame.BANZAI_QL_FRAMETYPE,Frame.BANZAI_RED_FRAMETYPE)).first().sitecode
+                try:
+                    data_value =  frames.first().sitecode
+                except AttributeError:
+                    data_value = "-"
                 verbose_name = 'MPC Site Code'
             elif field == 'Filters':
-                obs_filters = Frame.objects.filter(block=obs_record,frametype__in=(Frame.SPECTRUM_FRAMETYPE,Frame.BANZAI_QL_FRAMETYPE,Frame.BANZAI_RED_FRAMETYPE)).values_list('filter', flat=True).distinct()
+                obs_filters = frames.values_list('filter', flat=True).distinct()
                 text_filters = []
                 for obs_filter in obs_filters:
                     if obs_filter in ['up', 'gp', 'rp', 'ip']:
