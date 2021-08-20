@@ -114,9 +114,10 @@ class DataProduct(models.Model):
                     (99, 'Other')
                 )
 
-    filetype = models.PositiveSmallIntegerField(choices=DP_CHOICES)
-    product = models.FileField(upload_to='products/', blank=True)
-    created = models.DateTimeField(default=datetime.utcnow)
+    filetype = models.PositiveSmallIntegerField('Type of file to be stored.', choices=DP_CHOICES)
+    product = models.FileField('Filefield for actual data product.', upload_to='products/', blank=True)
+    created = models.DateTimeField('Datetime of the products creation or most recent update.', default=datetime.utcnow)
+    update = models.BooleanField('Flag for allowing automated updates. Set to False for robust storage.', default=True)
     # GenericForeignKey stuff from ContentTypes
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField()

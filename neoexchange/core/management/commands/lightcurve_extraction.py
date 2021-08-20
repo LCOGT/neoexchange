@@ -60,6 +60,7 @@ class Command(BaseCommand):
         parser.add_argument('--single', action="store_true", default=False, help='Whether to only analyze a single SuperBlock')
         parser.add_argument('--nogif', action="store_true", default=False, help='Whether to create a gif movie of the extraction')
         parser.add_argument('--date', action="store", default=None, help='Date of the blocks to extract (YYYYMMDD)')
+        parser.add_argument('--overwrite', action="store_true", default=False, help='Force overwrite and store robust data products')
         base_dir = os.path.join(settings.DATA_ROOT, 'Reduction')
         parser.add_argument('--datadir', default=base_dir, help='Place to save data (e.g. %s)' % base_dir)
 
@@ -481,12 +482,12 @@ class Command(BaseCommand):
                                               target_data=frame_data, show_reticle=True, progress=True)
                         if "WARNING" not in movie_file:
                             # Create DataProduct
-                            save_dataproduct(obj=block, filepath=movie_file, filetype=DataProduct.FRAME_GIF)
+                            save_dataproduct(obj=block, filepath=movie_file, filetype=DataProduct.FRAME_GIF, force=options['overwrite'])
                             output_file_list.append('{},{}'.format(movie_file, data_path.lstrip(out_path)))
                             self.stdout.write("New gif created: {}".format(movie_file))
                         else:
                             self.stdout.write(movie_file)
-            save_dataproduct(obj=super_block, filepath=None, filetype=DataProduct.ALCDEF_TXT, filename=alcdef_filename, content=alcdef_txt)
+            save_dataproduct(obj=super_block, filepath=None, filetype=DataProduct.ALCDEF_TXT, filename=alcdef_filename, content=alcdef_txt, force=options['overwrite'])
             self.stdout.write("Found matches in %d of %d frames" % (len(times), total_frame_count))
 
         if not settings.USE_S3:

@@ -273,3 +273,66 @@ class DataProductTestCase(TestCase):
         save_dataproduct(obj=self.test_block, filepath=movie_file, filetype=DataProduct.FRAME_GIF)
         dp = DataProduct.objects.get(product__contains=os.path.basename(movie_file))
         self.assertTrue(dp.product.storage.exists(dp.product.name))
+
+    def test_dataproduct_save_robust(self):
+        # Add Superblock linked CSV
+        file_name = 'test_SB_CSV.txt'
+        file_content = b"some text here"
+        save_dataproduct(obj=self.test_sblock, filepath=None, filetype=DataProduct.CSV, filename=file_name, content=file_content)
+
+        dp_qset = DataProduct.content.fullbody(bodyid=self.body.id).filter(filetype=DataProduct.CSV)
+        dp_sb = DataProduct.content.sblock().filter(object_id=self.test_sblock.id, filetype=DataProduct.CSV)
+        dp_bod = DataProduct.content.body().filter(object_id=self.body.id, filetype=DataProduct.CSV)
+        dp_blk = DataProduct.content.block().filter(object_id=self.test_block.id, filetype=DataProduct.CSV)
+        self.assertEqual(len(dp_qset), 1)
+        self.assertEqual(len(dp_sb), 1)
+        self.assertEqual(len(dp_bod), 0)
+        self.assertEqual(len(dp_blk), 0)
+        test_file = dp_sb[0].product.file
+        lines = test_file.readlines()
+        self.assertEqual(lines[0], file_content)
+        timestamp = dp_sb[0].created
+
+        # overwrite with normal dataproduct
+        file_content2 = b"some other text here"
+        save_dataproduct(obj=self.test_sblock, filepath=None, filetype=DataProduct.CSV, filename=file_name, content=file_content2)
+
+        dp_qset = DataProduct.content.fullbody(bodyid=self.body.id).filter(filetype=DataProduct.CSV)
+        dp_sb = DataProduct.content.sblock().filter(object_id=self.test_sblock.id, filetype=DataProduct.CSV)
+        self.assertEqual(len(dp_qset), 1)
+        self.assertEqual(len(dp_sb), 1)
+        test_file = dp_sb[0].product.file
+        lines = test_file.readlines()
+        self.assertEqual(lines[0], file_content2)
+        timestamp2 = dp_sb[0].created
+        self.assertNotEqual(timestamp2, timestamp)
+
+        # overwrite with robust dataproduct
+        file_content3 = b"even other text here"
+        save_dataproduct(obj=self.test_sblock, filepath=None, filetype=DataProduct.CSV, filename=file_name, content=file_content3, force=True)
+
+        dp_qset = DataProduct.content.fullbody(bodyid=self.body.id).filter(filetype=DataProduct.CSV)
+        dp_sb = DataProduct.content.sblock().filter(object_id=self.test_sblock.id, filetype=DataProduct.CSV)
+        self.assertEqual(len(dp_qset), 1)
+        self.assertEqual(len(dp_sb), 1)
+        test_file = dp_sb[0].product.file
+        lines = test_file.readlines()
+        self.assertEqual(lines[0], file_content3)
+        self.assertFalse(dp_sb[0].update)
+        timestamp3 = dp_sb[0].created
+        self.assertNotEqual(timestamp2, timestamp3)
+
+        # Fail to overwrite robust dataproduct
+        file_content4 = b"woogaoooooowoo"
+        save_dataproduct(obj=self.test_sblock, filepath=None, filetype=DataProduct.CSV, filename=file_name, content=file_content4)
+
+        dp_qset = DataProduct.content.fullbody(bodyid=self.body.id).filter(filetype=DataProduct.CSV)
+        dp_sb = DataProduct.content.sblock().filter(object_id=self.test_sblock.id, filetype=DataProduct.CSV)
+        self.assertEqual(len(dp_qset), 1)
+        self.assertEqual(len(dp_sb), 1)
+        test_file = dp_sb[0].product.file
+        lines = test_file.readlines()
+        self.assertEqual(lines[0], file_content3)
+        self.assertFalse(dp_sb[0].update)
+        timestamp4 = dp_sb[0].created
+        self.assertEqual(timestamp4, timestamp3)

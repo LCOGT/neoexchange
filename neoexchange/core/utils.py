@@ -65,15 +65,19 @@ def save_to_default(filename, out_path):
     return
 
 
-def save_dataproduct(obj, filepath, filetype, filename=None, content=None):
+def save_dataproduct(obj, filepath, filetype, filename=None, content=None, force=False):
     if not filename:
         filename = Path(filepath).name
     try:
         dp = DataProduct.objects.get(filetype=filetype, product__endswith=filename)
     except DataProduct.DoesNotExist:
         dp = DataProduct()
+    if dp.update is False and force is False:
+        return
     dp.content_object = obj
     dp.filetype = filetype
+    if force is True:
+        dp.update = False
     if filetype in [DataProduct.CSV, DataProduct.PDS_XML, DataProduct.ALCDEF_TXT]:
         mode = 'r'
     else:
