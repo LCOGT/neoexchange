@@ -336,3 +336,18 @@ class DataProductTestCase(TestCase):
         self.assertFalse(dp_sb[0].update)
         timestamp4 = dp_sb[0].created
         self.assertEqual(timestamp4, timestamp3)
+
+        # succeed to overwrite robust dataproduct
+        file_content5 = b"final text"
+        save_dataproduct(obj=self.test_sblock, filepath=None, filetype=DataProduct.CSV, filename=file_name, content=file_content5, force=True)
+
+        dp_qset = DataProduct.content.fullbody(bodyid=self.body.id).filter(filetype=DataProduct.CSV)
+        dp_sb = DataProduct.content.sblock().filter(object_id=self.test_sblock.id, filetype=DataProduct.CSV)
+        self.assertEqual(len(dp_qset), 1)
+        self.assertEqual(len(dp_sb), 1)
+        test_file = dp_sb[0].product.file
+        lines = test_file.readlines()
+        self.assertEqual(lines[0], file_content5)
+        self.assertFalse(dp_sb[0].update)
+        timestamp5 = dp_sb[0].created
+        self.assertNotEqual(timestamp4, timestamp5)
