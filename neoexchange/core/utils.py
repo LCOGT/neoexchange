@@ -20,6 +20,7 @@ from datetime import datetime
 from django.core.files.storage import default_storage
 from django.core.files.base import File, ContentFile
 from django.forms.models import model_to_dict
+from django.conf import settings
 
 from core.models.dataproducts import DataProduct
 
@@ -84,6 +85,9 @@ def save_dataproduct(obj, filepath, filetype, filename=None, content=None, force
         mode = 'rb'
     if not content and not filepath:
         return
+    predicted_path = os.path.join(settings.MEDIA_ROOT, 'products', filename)
+    if os.path.isfile(predicted_path):
+        os.remove(predicted_path)
     if content:
         file_obj = ContentFile(content)
         file_obj.name = filename

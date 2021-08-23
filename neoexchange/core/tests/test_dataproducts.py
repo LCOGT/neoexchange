@@ -351,3 +351,23 @@ class DataProductTestCase(TestCase):
         self.assertFalse(dp_sb[0].update)
         timestamp5 = dp_sb[0].created
         self.assertNotEqual(timestamp4, timestamp5)
+
+    def test_dataproduct_delete(self):
+        # Build file/DP
+        file_name = 'test_SB_png.txt'
+        file_content = b"some text here"
+        save_dataproduct(obj=self.test_sblock, filepath=None, filetype=DataProduct.PNG_ASTRO, filename=file_name, content=file_content)
+        dp_qset = DataProduct.content.fullbody(bodyid=self.body.id).filter(filetype=DataProduct.PNG_ASTRO)
+        pathname = os.path.join(settings.MEDIA_ROOT, dp_qset[0].product.name)
+        self.assertTrue(os.path.isfile(pathname))
+        # Delete DP
+        dp_qset.delete()
+        # file remains
+        self.assertTrue(os.path.isfile(pathname))
+
+        # Make new DP
+        file_content2 = b"some new text here"
+        save_dataproduct(obj=self.test_sblock, filepath=None, filetype=DataProduct.PNG_ASTRO, filename=file_name, content=file_content2)
+        dp_qset = DataProduct.content.fullbody(bodyid=self.body.id).filter(filetype=DataProduct.PNG_ASTRO)
+        # Overwrites old file
+        self.assertIn(file_name, dp_qset[0].product.name)
