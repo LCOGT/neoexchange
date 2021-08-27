@@ -79,15 +79,12 @@ def save_dataproduct(obj, filepath, filetype, filename=None, content=None, force
     dp.filetype = filetype
     if force is True:
         dp.update = False
-    if filetype in [DataProduct.CSV, DataProduct.PDS_XML, DataProduct.ALCDEF_TXT]:
-        mode = 'r'
-    else:
-        mode = 'rb'
+    mode = 'rb'
     if not content and not filepath:
         return
-    predicted_path = os.path.join(settings.MEDIA_ROOT, 'products', filename)
-    if os.path.isfile(predicted_path):
-        os.remove(predicted_path)
+    predicted_path = os.path.join('products', filename)
+    if default_storage.exists(predicted_path):
+        default_storage.delete(predicted_path)
     if content:
         file_obj = ContentFile(content)
         file_obj.name = filename
@@ -95,7 +92,7 @@ def save_dataproduct(obj, filepath, filetype, filename=None, content=None, force
         dp.created = datetime.utcnow()
         dp.save()
         return
-    with open(filepath, mode) as f:
+    with default_storage.open(filepath, mode) as f:
         file_obj = File(f)
         file_obj.name = filename
         dp.product = file_obj

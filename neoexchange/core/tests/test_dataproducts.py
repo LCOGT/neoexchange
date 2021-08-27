@@ -25,7 +25,7 @@ from django.test import TestCase, override_settings
 from django.conf import settings
 
 from core.models import DataProduct, Block, Body, Proposal, SuperBlock, Frame
-from core.utils import save_dataproduct
+from core.utils import save_dataproduct, save_to_default
 from photometrics.gf_movie import make_gif
 
 
@@ -152,12 +152,14 @@ class DataProductTestCase(TestCase):
         self.assertTrue(new_bodies[0].product.storage.exists(test_dp.product.name))
 
     def test_dataproduct_save_util(self):
-        file_mock = mock.MagicMock(spec=File)
-        file_mock.name = 'test.png'
+        # file_mock = mock.MagicMock(spec=File)
+        xml = os.path.abspath(os.path.join('photometrics', 'tests', 'example_scamp.xml'))
+        file_name = 'test.xml'
+        save_to_default(xml, os.path.dirname(xml))
 
         # Test with a block
-        with mock.patch('builtins.open', mock.mock_open()) as m:
-            save_dataproduct(obj=self.test_block, filepath=file_mock, filetype=DataProduct.PNG_ASTRO, filename=file_mock.name)
+        # with mock.patch('builtins.open', mock.mock_open()) as m:
+        save_dataproduct(obj=self.test_block, filepath=os.path.basename(xml), filetype=DataProduct.PDS_XML, filename=file_name)
 
         new_blocks = DataProduct.content.block().filter(object_id=self.test_block.id)
         self.assertTrue(new_blocks.count() == 1)
@@ -165,8 +167,8 @@ class DataProductTestCase(TestCase):
         self.assertTrue(new_blocks[0].product.storage.exists(new_blocks[0].product.name))
 
         # Test with a body
-        with mock.patch('builtins.open', mock.mock_open()) as m:
-            save_dataproduct(obj=self.body, filepath=file_mock, filetype=DataProduct.PNG_ASTRO, filename=file_mock.name)
+        # with mock.patch('builtins.open', mock.mock_open()) as m:
+        save_dataproduct(obj=self.body, filepath=os.path.basename(xml), filetype=DataProduct.PDS_XML, filename=file_name)
 
         new_body = DataProduct.content.body().filter(object_id=self.body.id)
         self.assertTrue(new_body.count() == 1)

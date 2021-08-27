@@ -67,7 +67,6 @@ class Command(BaseCommand):
                         gif_path = search(base_dir, movie_file, latest=True)
                         if gif_path:
                             n += 1
-                            gif_path = os.path.join(settings.MEDIA_ROOT, gif_path)
                             self.stdout.write(f"Found GIF for {bl.current_name()} in Block {bl.id} (Reqnum:{req}). \n"
                                               f"===> Creating DataProduct for {gif_path}.")
                             save_dataproduct(obj=bl, filepath=gif_path, filetype=DataProduct.FRAME_GIF, force=options['overwrite'])
@@ -75,7 +74,7 @@ class Command(BaseCommand):
                     if spec_list:
                         for spec in spec_list:
                             s += 1
-                            spec_path = os.path.join(settings.MEDIA_ROOT, path, spec)
+                            spec_path = os.path.join(path, spec)
                             self.stdout.write(f"Found Spectrum for {bl.current_name()} in Block {bl.id} (Reqnum:{req}). \n"
                                               f"===> Creating DataProduct for {spec_path}.")
                             save_dataproduct(obj=bl, filepath=spec_path, filetype=DataProduct.FITS_SPECTRA, force=options['overwrite'])
@@ -89,7 +88,7 @@ class Command(BaseCommand):
                     if alcdef_list:
                         a += len(alcdef_list)
                         for alcfile in alcdef_list:
-                            alc_path = os.path.join(settings.MEDIA_ROOT, reduction_dir, alcfile)
+                            alc_path = os.path.join(reduction_dir, alcfile)
                             self.stdout.write(f"Found ALCDEF for {bl.current_name()} in SuperBlock {bl.superblock.id} (TrackingNum:{tn}). \n"
                                               f"===> Creating DataProduct for {alc_path}.")
                             save_dataproduct(obj=bl.superblock, filepath=alc_path, filetype=DataProduct.ALCDEF_TXT, force=options['overwrite'])
