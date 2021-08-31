@@ -23,7 +23,7 @@ from neox.auth_backend import update_proposal_permissions
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 from core.models import Block, SuperBlock, Frame, Body, PreviousSpectra, DataProduct
-from core.utils import save_dataproduct
+from core.utils import save_dataproduct, save_to_default
 from mock import patch
 from neox.tests.mocks import MockDateTime, mock_lco_authenticate, mock_fetch_archive_frames,\
     mock_fetch_archive_frames_2spectra, mock_archive_spectra_header, mock_archive_bad_spectra_header
@@ -45,12 +45,15 @@ class SpectraplotTest(FunctionalTest):
 
     def setUp(self):
         super(SpectraplotTest, self).setUp()
-        self.spectradir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_spectra'))
-        spec_path = os.path.join(self.spectradir, 'target_2df_ex.fits')
-        analog_path = os.path.join(self.spectradir, 'analog_2df_ex.fits')
-        analog2_path = os.path.join(self.spectradir, 'test_2df_ex.fits')
-
         settings.MEDIA_ROOT = self.test_dir
+        spectradir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_spectra'))
+
+        spec_path = 'target_2df_ex.fits'
+        save_to_default(os.path.join(spectradir, spec_path), spectradir)
+        analog_path = 'analog_2df_ex.fits'
+        save_to_default(os.path.join(spectradir, analog_path), spectradir)
+        analog2_path = 'test_2df_ex.fits'
+        save_to_default(os.path.join(spectradir, analog2_path), spectradir)
 
         self.username = 'bart'
         self.password = 'simpson'

@@ -4002,11 +4002,14 @@ def display_movie(request, pk):
     except ObjectDoesNotExist:
         raise Http404("Block does not exist.")
     block_db_list = DataProduct.content.block().filter(object_id=block.id)
-    if block.obstype in [Block.OPT_IMAGING, Block.OPT_IMAGING_CALIB] and block_db_list:
-        movie_file = block_db_list.get(filetype=DataProduct.FRAME_GIF).product
-    elif block.obstype in [Block.OPT_SPECTRA, Block.OPT_SPECTRA_CALIB] and block_db_list:
-        movie_file = block_db_list.get(filetype=DataProduct.GUIDER_GIF).product
-    else:
+    try:
+        if block.obstype in [Block.OPT_IMAGING, Block.OPT_IMAGING_CALIB] and block_db_list:
+            movie_file = block_db_list.get(filetype=DataProduct.FRAME_GIF).product
+        elif block.obstype in [Block.OPT_SPECTRA, Block.OPT_SPECTRA_CALIB] and block_db_list:
+            movie_file = block_db_list.get(filetype=DataProduct.GUIDER_GIF).product
+        else:
+            return HttpResponse()
+    except DataProduct.DoesNotExist:
         return HttpResponse()
 
     if movie_file:

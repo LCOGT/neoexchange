@@ -50,7 +50,7 @@ from core.frames import block_status, create_frame
 from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate,\
     SuperBlock, SpectralInfo, PreviousSpectra, StaticSource
 from core.forms import EphemQuery
-from core.utils import save_dataproduct
+from core.utils import save_dataproduct, save_to_default
 # Import modules to test
 from core.views import *
 from core.plots import *
@@ -8353,6 +8353,12 @@ class TestDisplayMovie(TestCase):
         request = ''
         response = display_movie(request, self.test_block.id)
         self.assertEqual(b'', response.content)
+        # ALCDEF Only (superblock)
+        file_name = 'test_SB_ALCDEF.txt'
+        file_content = b"some text here"
+        save_dataproduct(obj=self.test_sblock, filepath=None, filetype=DataProduct.ALCDEF_TXT, filename=file_name, content=file_content)
+        response = display_movie(request, self.test_block.id)
+        self.assertEqual(b'', response.content)
         # build movie
         fits = os.path.abspath(os.path.join('photometrics', 'tests', 'banzai_test_frame.fits'))
         frames = [fits, fits, fits, fits, fits]
@@ -8361,8 +8367,13 @@ class TestDisplayMovie(TestCase):
         response = display_movie(request, self.test_block.id)
         self.assertIn(b'GIF', response.content)
 
-        # self.test_frame.block = self.test_block2
-        # self.test_frame.save()
+        # test fits only, no gif
+        save_to_default(fits, os.path.abspath(os.path.join('photometrics', 'tests')))
+        fits_path = os.path.basename(fits)
+        save_dataproduct(obj=self.test_block2, filepath=fits_path, filetype=DataProduct.FITS_SPECTRA)
+        response = display_movie(request, self.test_block2.id)
+        self.assertEqual(b'', response.content)
+        # check Guider gif
         save_dataproduct(obj=self.test_block2, filepath=movie_file, filetype=DataProduct.GUIDER_GIF)
         response = display_movie(request, self.test_block2.id)
         self.assertIn(b'GIF', response.content)

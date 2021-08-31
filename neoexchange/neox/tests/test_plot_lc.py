@@ -22,7 +22,7 @@ from neox.auth_backend import update_proposal_permissions
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 from core.models import Body, DataProduct
-from core.utils import save_dataproduct
+from core.utils import save_dataproduct, save_to_default
 from mock import patch
 from neox.tests.mocks import mock_lco_authenticate
 from django.conf import settings
@@ -37,9 +37,11 @@ class LighCurvePlotTest(FunctionalTest):
 
     def setUp(self):
         super(LighCurvePlotTest, self).setUp()
-        lcpath = os.path.abspath(os.path.join('photometrics', 'tests', '433_738215_ALCDEF.txt'))
         settings.DATA_ROOT = self.test_dir
         settings.MEDIA_ROOT = self.test_dir
+        lcname = '433_738215_ALCDEF.txt'
+        lcpath = os.path.abspath(os.path.join('photometrics', 'tests'))
+        save_to_default(os.path.join(lcpath, lcname), lcpath)
 
         params = {  'name' : '433',
                     'abs_mag'       : 21.0,
@@ -79,7 +81,7 @@ class LighCurvePlotTest(FunctionalTest):
 
         update_proposal_permissions(self.bart, [{'code': self.neo_proposal.code}])
 
-        save_dataproduct(self.body2, lcpath, DataProduct.ALCDEF_TXT)
+        save_dataproduct(self.body2, lcname, DataProduct.ALCDEF_TXT)
 
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def login(self):
