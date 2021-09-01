@@ -364,8 +364,10 @@ class DataProductTestCase(TestCase):
         self.assertTrue(os.path.isfile(pathname))
         # Delete DP
         dp_qset.delete()
-        # file remains
-        self.assertTrue(os.path.isfile(pathname))
+        # file is gone
+        self.assertFalse(os.path.isfile(pathname))
+        new_db_qset = DataProduct.content.fullbody(bodyid=self.body.id).filter(filetype=DataProduct.PNG_ASTRO)
+        self.assertFalse(new_db_qset.exists())
 
         # Make new DP
         file_content2 = b"some new text here"

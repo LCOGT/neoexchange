@@ -17,6 +17,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.db import models
 from django.db.models import Q
+from django.dispatch import receiver
+from django.core.files.storage import default_storage
 
 from core.models.body import Body
 from core.models.blocks import Block, SuperBlock
@@ -138,3 +140,14 @@ class DataProduct(models.Model):
                 pass
 
         super(DataProduct, self).save(*args, **kwargs)
+
+
+@receiver(models.signals.post_delete, sender=DataProduct)
+def auto_delete_file_on_delete(sender, instance, **kwargs):
+    """
+    Deletes file from filesystem
+    when corresponding `MediaFile` object is deleted.
+    """
+    if instance.product:
+        if default_storage.exists(instance.product.path):
+            default_storage.delete(instance.product.path)
