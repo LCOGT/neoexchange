@@ -3815,7 +3815,7 @@ def plot_floyds_spec(block):
                             'err': spec_err,
                             'filename': analog.product.name})
 
-    if data_spec:
+    if data_spec and data_spec[0]['spec'] is not None:
         script, div = spec_plot(data_spec, analog_data)
     else:
         return None, None
@@ -3959,7 +3959,10 @@ def get_lc_plot(body, data):
     dataproducts = DataProduct.content.fullbody(bodyid=body.id).filter(filetype=DataProduct.ALCDEF_TXT)
     if dataproducts:
         for dp in dataproducts:
-            meta_list, lc_list = import_alcdef(dp.product.file, meta_list, lc_list)
+            try:
+                meta_list, lc_list = import_alcdef(dp.product.file, meta_list, lc_list)
+            except FileNotFoundError as e:
+                logger.warning(e)
     else:
         meta_list = lc_list = []
 
@@ -4015,7 +4018,11 @@ def display_movie(request, pk):
     if movie_file:
         logger.debug('MOVIE FILE: {}'.format(movie_file))
         movie = movie_file
-        return HttpResponse(movie, content_type="Image/gif")
+        try:
+            return HttpResponse(movie, content_type="Image/gif")
+        except FileNotFoundError as e:
+            logger.warning(e)
+            return HttpResponse()
     else:
         return HttpResponse()
 
@@ -4055,8 +4062,6 @@ class GuideMovie(View):
 
         return render(request, self.template_name,
                       {'sb': supblock, 'block_list': block_list, 'is_paginated': is_paginated, 'page_obj': page_obj})
-
-        # return render(request, self.template_name, params)
 
 
 def update_taxonomy(body, tax_table, dbg=False):
