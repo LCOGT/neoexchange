@@ -30,6 +30,7 @@ import copy
 from itertools import groupby
 import re
 import warnings
+import requests
 
 from astropy.utils.exceptions import AstropyDeprecationWarning
 warnings.simplefilter('ignore', category=AstropyDeprecationWarning)
@@ -658,19 +659,21 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
     ha_lowlimit, ha_hilimit, alt_limit = get_mountlimits(site_code)
     ha_limit = max(abs(ha_lowlimit), abs(ha_hilimit)) / 15.0
     should_skip_daylight = True
+    ephem = None
     if len(site_code) >= 1 and site_code[0] == '-':
         # Radar site
         should_skip_daylight = False
     try:
-        ephem = eph.ephemerides(quantities='1,3,4,9,19,20,23,24,38,42',
+        ephem = eph.ephemerides(quantities='1,3,4,9,19,20,23,24,38,42,33',
             skip_daylight=should_skip_daylight, airmass_lessthan=airmass_limit,
             max_hour_angle=ha_limit)
         ephem = convert_horizons_table(ephem, include_moon)
     except ConnectionError as e:
         logger.error("Unable to connect to HORIZONS")
+    except requests.exceptions.ConnectionError as e:
+        logger.error("Unable to connect to HORIZONS")
     except ValueError as e:
         logger.debug("Ambiguous object, trying to determine HORIZONS id")
-        ephem = None
         if e.args and len(e.args) > 0:
             choices = e.args[0].split('\n')
             horizons_id = determine_horizons_id(choices)
