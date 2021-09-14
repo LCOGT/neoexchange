@@ -4,8 +4,21 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.8.5
+Paginate new gif movie page to speed up load times and prevent connection errors
+
+### 3.8.4
+* Add observed location to observation timeline.
+* Fix bugs and add features for lightcurve extraction.
+
+### 3.8.3
+Add support for adding new LOOK project targets.
+
+### 3.8.2
+Fix for cadences crossing semester boundaries.
+
 ### 3.8.1
-Update default exposure time estimate to be instrument agnostic
+Update default exposure time estimate to be instrument agnostic.
 
 ### 3.8.0.2
 Fix for occasional OSError on LDAC catalogs.

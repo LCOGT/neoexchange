@@ -22,7 +22,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from astrometrics.sources_subs import fetch_sfu, fetch_filter_list
-from .models import Body, Proposal, Block, StaticSource
+from .models import Body, Proposal, Block, StaticSource, ORIGINS
 from astrometrics.time_subs import tomorrow
 
 logger = logging.getLogger(__name__)
@@ -412,3 +412,9 @@ class SpectroFeasibilityForm(forms.Form):
         # Set default SFU value of 70; replace with value from fetch if it isn't None
         self.fields['sfu'].initial = 70.0
         self.fields['sfu'].initial = self.fields['sfu'].initial if sfu_values[1] is None else sfu_values[1].value
+
+
+class AddTargetForm(forms.Form):
+    origin = forms.ChoiceField(choices=ORIGINS, widget=forms.HiddenInput())
+    target_name = forms.CharField(label="Enter target to add...", max_length=30, required=True, widget=forms.TextInput(attrs={'size': '20'}),
+                             error_messages={'required': _(u'Target name is required')})

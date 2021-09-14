@@ -1,20 +1,52 @@
 {% extends 'base.html' %}
 
-{% block header %}Guide Movie for block: {{pk}}{% endblock %}
+{% block header %}Guide Movies for Superblock: {{sb.id}}{% endblock %}
 
 {% block bodyclass %}page{% endblock %}
 
 {% block extramenu %}
     <div class="headingleft">
-        <h1>Super Block: <a href="{% url 'block-view' sb_id %}">{{sb_id}}</a> / Block: {{pk}} </h1>
+        <h1>Super Block: <a href="{% url 'block-view' sb.id %}">{{sb.id}}</a>
+            {% if block_list|length == 1 %}
+                ( {{block_list|length}} Block )
+            {% else %}
+                ( {{block_list|length}} Blocks )
+            {% endif %}
+        </h1>
     </div>
 {% endblock%}
 
 {% block main-content %}
 <!-- Main body -->
-<div class="container" id="main">
-    {% block graphic %}
-      <img src="{% url 'display_movie' pk %}" alt="Could not find or create movie to show.">
-    {% endblock %}
+<table style="margin-left:auto; margin-right:auto;">
+    <tr>
+        {% for block in page_obj|dictsort:"block_start" %}
+            {% with block_ref=block.pk %}
+            {% with block_rn=block.request_number %}
+                <td>
+                    <a href="{{block.make_obsblock_link}}">
+                    <div class="container" id="main">
+                        {% block graphic %}
+                            <img src="{% url 'display_movie' block_ref %}" alt="Could not find or create movie for Request Number {{block_rn}}.">
+                        {% endblock %}
+                    </div>
+                    </a>
+                </td>
+                    {% if forloop.counter|divisibleby:2 %}
+                        </tr>
+                        <tr>
+                    {% endif %}
+            {% endwith %}
+            {% endwith %}
+        {% endfor %}
+    </tr>
+</table>
+<div class="row">
+    {% if is_paginated %}
+        <!-- start -->
+            {% include '_pagination.html' with items=items %}
+        <!-- end -->
+    {% endif %}
 </div>
+
 {% endblock %}

@@ -30,7 +30,8 @@ from django.forms.models import model_to_dict
 from core.models import Body, Proposal, Block, StaticSource, PhysicalParameters, Designations, ColorValues
 from astrometrics.ephem_subs import determine_darkness_times
 from astrometrics.time_subs import datetime2mjd_utc
-from neox.tests.mocks import MockDateTime, mock_expand_cadence, mock_fetchpage_and_make_soup, mock_fetchpage_and_make_soup_pccp
+from neox.tests.mocks import MockDateTime, mock_expand_cadence, mock_expand_cadence_novis, \
+    mock_fetchpage_and_make_soup, mock_fetchpage_and_make_soup_pccp
 from core.views import record_block, create_calib_sources, compute_vmag_pa
 # Import module to test
 from astrometrics.sources_subs import *
@@ -658,6 +659,7 @@ class TestFetchYarkovskyTargets(TestCase):
 
 
 class TestSubmitBlockToScheduler(TestCase):
+    """Also tests make_requestgroup()"""
 
     def setUp(self):
         b_params = {'provisional_name' : 'N999r0q',
@@ -803,6 +805,29 @@ class TestSubmitBlockToScheduler(TestCase):
                 self.assertNotEqual(block.block_start, block.superblock.block_start)
             if block != blocks[2]:
                 self.assertNotEqual(block.block_end, block.superblock.block_end)
+
+
+    @patch('astrometrics.sources_subs.expand_cadence', mock_expand_cadence_novis)
+    @patch('astrometrics.sources_subs.requests.post')
+    def test_submit_cadence_novis(self, mock_post):
+        """Test for issue of 2021-01-26 where jitter=12hr i.e. +/-6hr, start of
+        the period was at 2021-01-27 00:00 and visibility started at 08:00 so no
+        valid windows were available"""
+
+        mock_post.return_value.status_code = 400
+
+        body_elements = model_to_dict(self.body)
+        body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+        body_elements['current_name'] = self.body.current_name()
+        params = self.obs_params
+        params['start_time'] = datetime(2021,1,27,0,0,0)
+        params['end_time'] = datetime(2021,1,31,23,59,59)
+        params['period'] = 24.0
+        params['jitter'] = 12.0
+
+        resp, sched_params = submit_block_to_scheduler(body_elements, params)
+        self.assertEqual(resp, False)
+        self.assertEqual(sched_params['error_msg'], 'No visible requests within cadence window parameters')
 
     @patch('astrometrics.sources_subs.requests.post')
     def test_submit_spectra_for_ogg(self, mock_post):
@@ -1283,6 +1308,27 @@ class TestSubmitBlockToScheduler(TestCase):
         self.assertEqual(len(inst_configs), expected_inst_config_num)
         self.assertEqual(inst_configs[0]['exposure_count'], expected_exp_count)
         self.assertEqual(inst_configs[0]['optical_elements']['filter'], expected_filter)
+
+    @patch('astrometrics.sources_subs.expand_cadence', mock_expand_cadence_novis)
+    @patch('astrometrics.sources_subs.requests.post')
+    def test_semester_crossing(self, mock_post):
+        """Test for issue of 2021-01-25 where cadence crossed semester boundary
+        so no valid windows were available"""
+
+        mock_post.return_value.status_code = 400
+
+        body_elements = model_to_dict(self.body)
+        body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+        body_elements['current_name'] = self.body.current_name()
+        params = self.obs_params
+        params['start_time'] = datetime(2021,1,27,0,0,0)
+        params['end_time'] = datetime(2021,2,27,23,59,59)
+        params['period'] = 72.0
+        params['jitter'] = 24.0
+
+        resp, sched_params = submit_block_to_scheduler(body_elements, params)
+        self.assertEqual(resp, False)
+        self.assertEqual(sched_params['error_msg'], 'No visible requests within cadence window parameters')
 
     def test_spectro_with_solar_analog(self):
 

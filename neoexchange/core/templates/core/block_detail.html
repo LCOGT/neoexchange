@@ -104,6 +104,7 @@
                         {% if object.block_set.all|length > 1 %}
                         <a href="{% url 'view-timeline' object.id %}" class="button button-primary">Observation timeline</a>
                         {% endif %}
+                        <a href="{% url 'guidemovie' object.id %}" class="button button-primary">Preview Movies</a>
                         <ul class="block-status">
                         {% for blk in object.block_set.all %}
                         <li class="{% cycle 'odd' 'even' %}">
@@ -135,12 +136,8 @@
                                     {% else %}
                                         <div class="block-control"><a href="{% url 'blockspec' blk.pk 1 %}">Spectrum Plot</a></div>
                                     {% endif %}
-                                  <div class="block-control"><a href="{% url 'guidemovie' blk.pk %}">Guide Movie</a></div>
                                 {% endif %}
                               {% else %}
-                                  {% if blk.num_observed > 0 %}
-                                  <li class="block-control"><a href="{% url 'guidemovie' blk.pk %}">Preview Movie</a></li>
-                                  {% endif %}
                                   {% if blk.num_observed > 0 and blk.num_unique_red_frames < 10 and blk.num_candidates > 0 %}
                                   <li class="block-control"><a href="{% url 'block-ast' blk.id %}" id="analyse-btn">Analyse Images</a></li>
                                   {% if not blk.reported %}

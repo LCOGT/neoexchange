@@ -64,6 +64,8 @@ class GuideMovieTest(FunctionalTest):
                  'block_end'       : '2015-04-21 03:00:00',
                  'request_number' : '12345',
                  'num_exposures'   : 1,
+                 'num_observed'    : 1,
+                 'when_observed'   : '2015-04-21 02:00:00',
                  'exp_length'      : 1800.0,
                  'active'          : True,
                }
@@ -100,6 +102,7 @@ class GuideMovieTest(FunctionalTest):
                  'block_end'       : '2015-04-24 03:00:00',
                  'request_number' : '54321',
                  'num_exposures'   : 1,
+                 'num_observed'    : 1,
                  'exp_length'      : 1800.0,
                  'active'          : False,
                }
@@ -208,13 +211,15 @@ class GuideMovieTest(FunctionalTest):
             with self.wait_for_page_load(timeout=10):
                 self.browser.find_element_by_link_text(str(self.test_sblock.pk)).click()
             with self.wait_for_page_load(timeout=10):
-                self.browser.find_element_by_link_text('Guide Movie').click()
+                self.browser.find_element_by_link_text('Preview Movies'.upper()).click()
                 # note: block and body do not match guide movie.
                 # mismatch due to recycling and laziness
             actual_url = self.browser.current_url
             target_url = self.live_server_url+'/block/'+str(self.test_block.pk)+'/guidemovie/'
-            self.assertIn('Guide Movie for block: '+str(self.test_block.pk)+' | LCO NEOx', self.browser.title)
+            self.assertIn('Guide Movies for Superblock: '+str(self.test_block.pk)+' | LCO NEOx', self.browser.title)
             self.assertEqual(target_url, actual_url)
+            header_text = self.browser.find_element_by_class_name("headingleft").text
+            self.assertIn(f'Super Block: {self.test_sblock.pk} ( 1 Block )', header_text)
 
         @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
         @patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
@@ -225,20 +230,10 @@ class GuideMovieTest(FunctionalTest):
             with self.wait_for_page_load(timeout=10):
                 self.browser.find_element_by_link_text('5').click()
             with self.wait_for_page_load(timeout=10):
-                self.browser.find_elements_by_link_text('Guide Movie')[0].click()
+                self.browser.find_element_by_link_text('Preview Movies'.upper()).click()
             actual_url = self.browser.current_url
             target_url = self.live_server_url+'/block/'+str(self.test_mblock1.pk)+'/guidemovie/'
-            self.assertIn('Guide Movie for block: '+str(self.test_mblock1.pk)+' | LCO NEOx', self.browser.title)
+            self.assertIn('Guide Movies for Superblock: '+str(self.test_mblock1.pk)+' | LCO NEOx', self.browser.title)
             self.assertEqual(target_url, actual_url)
-
-            self.wait_for_element_with_id('page')
-            with self.wait_for_page_load(timeout=10):
-                self.browser.back()
-
-            with self.wait_for_page_load(timeout=10):
-                self.browser.find_elements_by_link_text('Guide Movie')[1].click()
-            # note: this movie is same as first one. really just checking if pages are different.
-            actual_url2 = self.browser.current_url
-            target_url2 = self.live_server_url+'/block/'+str(self.test_mblock2.pk)+'/guidemovie/'
-            self.assertIn('Guide Movie for block: '+str(self.test_mblock2.pk)+' | LCO NEOx', self.browser.title)
-            self.assertEqual(target_url2, actual_url2)
+            header_text = self.browser.find_element_by_class_name("headingleft").text
+            self.assertIn(f'Super Block: {self.test_mblock1.pk} ( 2 Blocks )', header_text)

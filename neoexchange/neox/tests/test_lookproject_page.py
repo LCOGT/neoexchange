@@ -15,13 +15,54 @@ GNU General Public License for more details.
 
 from .base import FunctionalTest
 from mock import patch
-from neox.tests.mocks import MockDateTime, mock_build_visibility_source
 from datetime import datetime
-from core.models import Body, PreviousSpectra, PhysicalParameters, Proposal, SuperBlock
+from django.contrib.auth.models import User, Permission
 from django.urls import reverse
+
+from neox.tests.mocks import MockDateTime, mock_build_visibility_source, mock_lco_authenticate, mock_fetchpage_and_make_soup
+from core.models import Body, PreviousSpectra, PhysicalParameters, Proposal, SuperBlock
+from neox.auth_backend import update_proposal_permissions, update_user_permissions
 
 
 class LOOKProjectPageTest(FunctionalTest):
+
+    def setUp(self):
+        # Create two users to test login and adding object permissions
+        self.insert_test_proposals()
+        self.lisa_username = 'lisa'
+        self.lisa_password = 'simpson'
+        self.email = 'lisa@simpson.org'
+        self.lisa = User.objects.create_user(username=self.lisa_username, password=self.lisa_password, email=self.email)
+        self.lisa.first_name = 'Lisa'
+        self.lisa.last_name = 'Simpson'
+        self.lisa.is_active = 1
+        self.lisa.save()
+        # Add Lisa to the right proposal and add permissions to add Body's
+        update_proposal_permissions(self.lisa, [{'code': self.neo_proposal.code}])
+        update_user_permissions(self.lisa, 'core.add_body')
+
+        # Create the second user, Bart, who is naughty and doesn't get to create Body's
+        self.bart_username = 'bart'
+        self.bart_password = 'simpson'
+        self.email = 'bart@simpson.org'
+        self.bart = User.objects.create_user(username=self.bart_username, password=self.bart_password, email=self.email)
+        self.bart.first_name = 'Bart'
+        self.bart.last_name = 'Simpson'
+        self.bart.is_active = 1
+        self.bart.save()
+        # Add Bart to the right proposal and *don't* add permissions to add Body's
+        update_proposal_permissions(self.bart, [{'code': self.neo_proposal.code}])
+        super(LOOKProjectPageTest, self).setUp()
+
+    def tearDown(self):
+        self.lisa.delete()
+        self.bart.delete()
+        super(LOOKProjectPageTest, self).tearDown()
+
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
+    def login(self):
+        test_login = self.client.login(username=self.lisa_username, password=self.lisa_password)
+        self.assertEqual(test_login, True)
 
     def insert_extra_test_bodies(self):
         params = {
@@ -124,7 +165,7 @@ class LOOKProjectPageTest(FunctionalTest):
 #        self.insert_another_extra_test_body()
 #        self.insert_another_other_extra_test_body()
 
-        # Conan the Barbarian goes to the characterization page and expects to see the list of bodies in need of Characterization.
+        # Conan the Barbarian goes to the LOOK Project page and expects to see the list of bodies in need of observation.
         lookproject_page_url = self.live_server_url + '/lookproject/'
         self.browser.get(lookproject_page_url)
         self.assertNotIn('Home | LCO NEOx', self.browser.title)
@@ -144,3 +185,104 @@ class LOOKProjectPageTest(FunctionalTest):
         testlines = [u'C/2013 US10 Hyperbolic, Dynamically New 03 57 50.41 +44 46 52.2 18.5 0.20 1.00055 1e+99 0.8245 5.296e-05 [-----]',]
 
         self.check_for_row_in_table('new_comets', testlines[0])
+
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
+    @patch('core.models.body.datetime', MockDateTime)
+    @patch('astrometrics.sources_subs.fetchpage_and_make_soup', mock_fetchpage_and_make_soup)
+    def test_add_lookproject_target(self):
+
+        MockDateTime.change_datetime(2020, 11, 14, 17, 0, 0)
+        self.insert_extra_test_bodies()
+#        self.insert_another_extra_test_body()
+#        self.insert_another_other_extra_test_body()
+
+        # Michaela goes to the the LOOK Project page as she has heard about a new outburst
+        lookproject_page_url = self.live_server_url + '/lookproject/'
+        self.browser.get(lookproject_page_url)
+        self.assertNotIn('Home | LCO NEOx', self.browser.title)
+        self.assertIn('LOOK Project Page | LCO NEOx', self.browser.title)
+
+        # She looks through the list of targets but does not see her desired target
+        table = self.browser.find_element_by_id('active_targets')
+        table_body = table.find_element_by_tag_name('tbody')
+        rows = table_body.find_elements_by_tag_name('tr')
+        self.assertNotIn('191P', [row.text.replace('\n', ' ') for row in rows])
+
+        # She logs in and sees that a new field and 'Add LOOK target' button has appeared
+        self.browser.get('%s%s' % (self.live_server_url, '/accounts/login/'))
+        username_input = self.browser.find_element_by_id("username")
+        username_input.send_keys(self.lisa_username)
+        password_input = self.browser.find_element_by_id("password")
+        password_input.send_keys(self.lisa_password)
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id('login-btn').click()
+        # Wait until response is received
+        self.wait_for_element_with_id('page')
+        # Back to LOOK Project page
+        self.browser.get(lookproject_page_url)
+        self.wait_for_element_with_id('page')
+
+        newtarget_input = self.browser.find_element_by_id('id_target_name')
+        newtarget_button = self.browser.find_element_by_id('add_new_target-btn')
+
+        # She fills in the field with the new object name and clicks it
+        newtarget_input.send_keys("191P")
+        newtarget_button.click()
+
+        # The page refreshes and the new target appears as an active target
+        testlines = [u'191P Comet Jupiter Family 21 24 28.42 -23 49 36.4 18.6 0.78 Nothing scheduled [-----]',
+                     ]
+
+        self.check_for_row_in_table('active_targets', testlines[0])
+
+        # She retries adding the same object
+        newtarget_input = self.browser.find_element_by_id('id_target_name')
+        newtarget_button = self.browser.find_element_by_id('add_new_target-btn')
+        newtarget_input.send_keys("191P")
+        newtarget_button.click()
+
+        # The message box says that the target is already in the system
+        msg_box = self.browser.find_element_by_id('show-messages')
+        self.assertIn('191P is already in the system', msg_box.text)
+
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
+    @patch('core.models.body.datetime', MockDateTime)
+    @patch('astrometrics.sources_subs.fetchpage_and_make_soup', mock_fetchpage_and_make_soup)
+    def test_cannot_add_lookproject_target(self):
+
+        MockDateTime.change_datetime(2020, 11, 14, 17, 0, 0)
+        self.insert_extra_test_bodies()
+#        self.insert_another_extra_test_body()
+#        self.insert_another_other_extra_test_body()
+
+        # Bart goes to the the LOOK Project page as he has heard about a new outburst
+        lookproject_page_url = self.live_server_url + '/lookproject/'
+        self.browser.get(lookproject_page_url)
+        self.assertNotIn('Home | LCO NEOx', self.browser.title)
+        self.assertIn('LOOK Project Page | LCO NEOx', self.browser.title)
+
+        # He looks through the list of targets but does not see his desired target
+        table = self.browser.find_element_by_id('active_targets')
+        table_body = table.find_element_by_tag_name('tbody')
+        rows = table_body.find_elements_by_tag_name('tr')
+        self.assertNotIn('191P', [row.text.replace('\n', ' ') for row in rows])
+
+        # He logs in but is disappointed that the 'Add LOOK target' button has not appeared
+        self.browser.get('%s%s' % (self.live_server_url, '/accounts/login/'))
+        username_input = self.browser.find_element_by_id("username")
+        username_input.send_keys(self.bart_username)
+        password_input = self.browser.find_element_by_id("password")
+        password_input.send_keys(self.bart_password)
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id('login-btn').click()
+        # Wait until response is received
+        self.wait_for_element_with_id('page')
+        # Back to LOOK Project page
+        self.browser.get(lookproject_page_url)
+        self.wait_for_element_with_id('page')
+
+        newtarget_input = self.browser.find_elements_by_id('id_target_name')
+        newtarget_button = self.browser.find_elements_by_id('add_new_target-btn')
+
+        self.assertEqual(0, len(newtarget_input))
+        self.assertEqual(0, len(newtarget_button))

@@ -51,7 +51,7 @@ import io
 from urllib.parse import urljoin
 
 from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, \
-    ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm
+    ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm, AddTargetForm
 from .models import *
 from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih, \
     convert_ast_to_comet
@@ -91,6 +91,11 @@ import matplotlib.pyplot as plt
 logger = logging.getLogger(__name__)
 
 BOKEH_URL = "https://cdn.bokeh.org/bokeh/release/bokeh-{}.min."
+
+def home(request):
+    params = build_unranked_list_params()
+
+    return render(request, 'core/home.html', params)
 
 
 class LoginRequiredMixin(object):
@@ -152,10 +157,31 @@ class MyProposalsMixin(object):
         return context
 
 
-def home(request):
-    params = build_unranked_list_params()
+class AddTarget(LoginRequiredMixin, FormView):
+    template_name = 'core/lookproject.html'
+    success_url = reverse_lazy('look_project')
+    form_class = AddTargetForm
 
-    return render(request, 'core/home.html', params)
+    def form_invalid(self, form, **kwargs):
+        context = self.get_context_data(**kwargs)
+        return render(context['view'].request, self.template_name, {'form': form, })
+
+    def form_valid(self, form):
+        origin = form.cleaned_data['origin']
+        target_name = form.cleaned_data['target_name']
+        try:
+            body = Body.objects.get(name=target_name)
+            messages.warning(self.request, '%s is already in the system' % target_name)
+        except ObjectDoesNotExist:
+            target_created = update_MPC_orbit(target_name, origin=origin)
+            if target_created:
+                messages.success(self.request, 'Added new target %s' % target_name)
+            else:
+                messages.warning(self.request, 'Could not add target %s' % target_name)
+        except Body.MultipleObjectsReturned:
+            messages.warning(self.request, 'Multiple targets called %s found' % target_name)
+
+        return super(AddTarget, self).form_valid(form)
 
 
 class BlockTimeSummary(LoginRequiredMixin, View):
@@ -278,7 +304,8 @@ class SuperBlockTimeline(DetailView):
                 'date' : date,
                 'num'  : blk.num_observed if blk.num_observed else 0,
                 'type' : blk.get_obstype_display(),
-                'duration' : (blk.block_end - blk.block_start).seconds
+                'duration' : (blk.block_end - blk.block_start).seconds,
+                'location' : blk.where_observed()
                 }
             blks.append(data)
         context['blocks'] = json.dumps(blks)
@@ -2028,6 +2055,7 @@ def build_lookproject_list(disp=None):
 def look_project(request):
 
     params =  build_lookproject_list()
+    params['form'] = AddTargetForm()
     return render(request, 'core/lookproject.html', params)
 
 def check_for_block(form_data, params, new_body):
@@ -3853,7 +3881,7 @@ def import_alcdef(file, meta_list, lc_list):
                 chunks = line.split('=')
                 metadata[chunks[0]] = chunks[1].replace('\n', '')
         elif 'ENDDATA' in line:
-            if metadata not in meta_list:
+            if metadata not in meta_list and dates:
                 meta_list.append(metadata)
                 lc_data = {
                     'date': dates,
@@ -3954,15 +3982,39 @@ class GuideMovie(View):
     # make logging required later
 
     template_name = 'core/guide_movie.html'
+    paginate_by = 6
+    orphans = 3
 
     def get(self, request, *args, **kwargs):
         try:
-            block = Block.objects.get(pk=kwargs['pk'])
+            supblock = SuperBlock.objects.get(pk=kwargs['pk'])
         except ObjectDoesNotExist:
-            raise Http404("Block does not exist.")
-        params = {'pk': kwargs['pk'], 'sb_id': block.superblock.id}
+            raise Http404("SuperBlock does not exist.")
+        block_list = supblock.get_blocks.filter(num_observed__gt=0).order_by('when_observed')
 
-        return render(request, self.template_name, params)
+        # Set up pagination
+        page = request.GET.get('page', None)
+
+        # Toggle Pagination
+        if page == '0':
+            self.paginate_by = len(block_list)
+        paginator = Paginator(block_list, self.paginate_by, orphans=self.orphans)
+
+        if paginator.num_pages > 1:
+            is_paginated = True
+        else:
+            is_paginated = False
+
+        if page is None or int(page) < 1:
+            page = 1
+        elif int(page) > paginator.num_pages:
+            page = paginator.num_pages
+        page_obj = paginator.page(page)
+
+        return render(request, self.template_name,
+                      {'sb': supblock, 'block_list': block_list, 'is_paginated': is_paginated, 'page_obj': page_obj})
+
+        # return render(request, self.template_name, params)
 
 
 def update_taxonomy(body, tax_table, dbg=False):

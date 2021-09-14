@@ -83,8 +83,13 @@ class MockDate(date, metaclass=MockDateTimeType):
 
 
 def mock_fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser"):
-    logger.warning("Page retrieval failed because this is a test and no page was attempted.")
-    return None
+    page = None
+    if '191P' in url:
+        with open(os.path.join('astrometrics', 'tests', 'test_mpcdb_Comet191P.html'), 'r') as test_fh:
+            page = BeautifulSoup(test_fh, "html.parser")
+    else:
+        logger.warning("Page retrieval failed because this is a test and no page was attempted.")
+    return page
 
 
 def mock_fetchpage_and_make_soup_pccp(url, fakeagent=False, dbg=False, parser="html.parser"):
@@ -1731,6 +1736,24 @@ def mock_expand_cadence(user_request):
                 }
     return True, cadence
 
+def mock_expand_cadence_novis(user_request):
+
+    cadence = {'errors': 'No visible requests within cadence window parameters'}
+    start_date = datetime.strptime(user_request['requests'][0]['cadence']['start'], '%Y-%m-%dT%H:%M:%S')
+    end_date = datetime.strptime(user_request['requests'][0]['cadence']['end'], '%Y-%m-%dT%H:%M:%S')
+    if end_date.month > start_date.month:
+        # Fake a semester-spanning invalid request
+        cadence = {'requests': [{},
+                  {'windows': [{'non_field_errors': ['The observation window does not fit within any defined semester.']}]},
+                  {},
+                  {},
+                  {},
+                  {},
+                  {},
+                  {},
+                  {}]}
+
+    return False, cadence
 
 def mock_fetch_sfu(sfu_value=None):
     if sfu_value is None:
