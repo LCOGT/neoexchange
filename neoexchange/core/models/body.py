@@ -563,6 +563,7 @@ class Body(models.Model):
             return_name = self.name
         return u'%s is %sactive' % (return_name, text)
 
+
 class Designations(models.Model):
     body        = models.ForeignKey(Body, on_delete=models.CASCADE)
     value       = models.CharField('Designation', blank=True, null=True, max_length=30, db_index=True)

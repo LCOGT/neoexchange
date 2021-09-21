@@ -15,12 +15,12 @@ GNU General Public License for more details.
 
 from urllib.parse import urljoin
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.core.management.base import BaseCommand
 from django.conf import settings
 
-from core.models import Block, SuperBlock, Body, DataProduct, Frame
+from core.models import Block, SuperBlock, Body, DataProduct, Frame, Designations
 from core.views import find_spec
 from core.utils import search, save_dataproduct
 from core.archive_subs import lco_api_call
@@ -35,19 +35,33 @@ class Command(BaseCommand):
         parser.add_argument('--start', action="store", default='1900', help='Earliest Year to search (YYYY)')
         parser.add_argument('--overwrite', action="store_true", default=False,
                             help='Force overwrite and store robust data products')
+        parser.add_argument('--reqnum', action="store", default=None, help='Request number for single block fetch.')
 
     def handle(self, *args, **options):
-        start_year = datetime.strptime(options['start'], '%Y')
-        blocks = Block.objects.filter(num_observed__gte=1).filter(block_start__gte=start_year)
+        if options['reqnum'] is not None:
+            blocks = Block.objects.filter(request_number=options['reqnum'])
+        else:
+            start_year = datetime.strptime(options['start'], '%Y')
+            blocks = Block.objects.filter(num_observed__gte=1).filter(block_start__gte=start_year)
         n = 0
         a = 0
         s = 0
         tn_list = []
         for bl in blocks:
-            obj_list = list({sanitize_object_name(bl.current_name()), bl.current_name().replace(' ', '_')})
+            obj_list = [sanitize_object_name(bl.current_name()), bl.current_name().replace(' ', '_'), bl.current_name().replace(" ", "")]
+            if bl.body:
+                obj_list.append(sanitize_object_name(bl.body.old_name()))
+                other_designations = Designations.objects.filter(body=bl.body)
+                for desig in other_designations:
+                    obj_list.append(sanitize_object_name(desig.value))
+            if bl.calibsource:
+                obj_list.append(sanitize_object_name(bl.calibsource.name))
+            obj_list = list(set(obj_list))
             req = bl.request_number
             tn = bl.superblock.tracking_number
-            date_obs_options = [str(int(bl.when_observed.strftime('%Y%m%d'))-0), str(int(bl.when_observed.strftime('%Y%m%d'))-1)]
+            d1 = bl.when_observed
+            d2 = bl.when_observed - timedelta(days=1)
+            date_obs_options = [d1.strftime('%Y%m%d'), d2.strftime('%Y%m%d')]
             # find gifs
             for date_obs in date_obs_options:
                 for obj in obj_list:
@@ -70,6 +84,7 @@ class Command(BaseCommand):
                             self.stdout.write(f"Found GIF for {bl.current_name()} in Block {bl.id} (Reqnum:{req}). \n"
                                               f"===> Creating DataProduct for {gif_path}.")
                             save_dataproduct(obj=bl, filepath=gif_path, filetype=DataProduct.FRAME_GIF, force=options['overwrite'])
+                    # find Spectra
                     spec_list = search(path, matchpattern='.*_2df_ex.fits', latest=False)
                     if spec_list:
                         for spec in spec_list:
@@ -82,7 +97,10 @@ class Command(BaseCommand):
             if tn not in tn_list:
                 tn_list.append(tn)
                 for obj in obj_list:
-                    reduction_dir = os.path.join('Reduction', obj)
+                    try:
+                        reduction_dir = os.path.join('Reduction', obj)
+                    except TypeError:
+                        continue
                     alcdef_base = f'.*.{tn}_ALCDEF.txt'
                     alcdef_list = search(reduction_dir, alcdef_base, latest=False)
                     if alcdef_list:
@@ -93,4 +111,3 @@ class Command(BaseCommand):
                                               f"===> Creating DataProduct for {alc_path}.")
                             save_dataproduct(obj=bl.superblock, filepath=alc_path, filetype=DataProduct.ALCDEF_TXT, force=options['overwrite'])
         self.stdout.write(f"{n} Gifs, {s} Spectra, and {a} ALCDEF Data products Created")
-
