@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.8.13
+* Adds galactic plane into the visualization plots.
+
 ### 3.8.12
 * Adds support for multi-target spectroscopy blocks.
 
