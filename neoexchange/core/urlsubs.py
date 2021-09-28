@@ -157,6 +157,67 @@ class QueryTelemetry(ESMetricsSource):
 
         return results
 
+    def get_fwhm_for_site_telescope(self, site, enclosure, telescope="1m0a"):
+
+        site_code = self.map_LCOsite_to_sitecode(site)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date=self.start_time, sun_zd=96)
+        print(dark_start, dark_end)
+
+        # Setup ElasticSearch query
+        es = Elasticsearch(self.es_urls)
+        formatter = "%Y-%m-%d %H:%M:%S"
+        image_query = {
+              "query": {
+                "bool": {
+                    "filter": [
+                        {
+                            "range": {
+                                "DATE-OBS" : {
+                                    "gte" : dark_start.strftime(formatter),
+                                    "lte" : dark_end.strftime(formatter),
+                                    "format" : "yyyy-MM-dd HH:mm:ss"
+                                }
+                            }
+                        },
+                        {
+                            "match": {
+                                "SITEID": site
+                            }
+                        },
+                        {
+                            "match": {
+                                "ENCID": enclosure
+                            }
+                        },
+                        {
+                            "match": {
+                                "TELID": telescope
+                            }
+                        },
+                        {
+                            "term" : {
+                              "RLEVEL" : 91
+                            }
+                        },
+                        {
+                          "terms" : {
+                            "OBSTYPE" : ["EXPOSE", "STANDARD"]
+                          }
+                        }
+                    ]
+                }
+            }
+        }
+        image_results = es.search(index=self.es_index, request_timeout=60, body=image_query,
+                            size=400, sort=['DATE-OBS:asc'],
+                            _source=["FILTER", "FOCOBOFF", "L1FWHM", "DATE-OBS", "AIRMASS"])
+        if image_results['hits']['total'] > 0:
+            results = image_results['hits']['hits']
+        else:
+            results = []
+
+        return results
+
 
 def convert_temps_to_table(temps_data, time_field='timestampmeasured', datum_name='datumname', data_field='seeing', default_units=None):
     """
