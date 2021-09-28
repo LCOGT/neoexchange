@@ -16,6 +16,7 @@ import builtins
 import mock
 import tempfile
 import os
+import shutil
 
 from datetime import datetime, timedelta
 from django.core.files.base import File
@@ -30,6 +31,7 @@ from photometrics.gf_movie import make_gif
 
 
 @override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+@override_settings(DATA_ROOT=tempfile.mkdtemp())
 class DataProductTestCase(TestCase):
     def setUp(self):
         # Initialise with a test body and two test proposals
@@ -153,6 +155,9 @@ class DataProductTestCase(TestCase):
 
     def test_dataproduct_save_util(self):
         # file_mock = mock.MagicMock(spec=File)
+        # out_path = settings.DATA_ROOT
+        # all_frames = {}
+        # dl_frames = download_files(all_frames, out_path)
         xml = os.path.abspath(os.path.join('photometrics', 'tests', 'example_scamp.xml'))
         file_name = 'test.xml'
         save_to_default(xml, os.path.dirname(xml))
@@ -174,6 +179,22 @@ class DataProductTestCase(TestCase):
         self.assertTrue(new_body.count() == 1)
         self.assertEqual(new_body[0].content_object, self.body)
         self.assertTrue(new_body[0].product.storage.exists(new_body[0].product.name))
+
+    def test_dataproduct_save_util_from_dataroot(self):
+        out_path = settings.DATA_ROOT
+        xml_test = os.path.abspath(os.path.join('photometrics', 'tests', 'example_scamp.xml'))
+        xml = os.path.join(out_path, os.path.basename(xml_test))
+        file_name = 'test.xml'
+        shutil.copyfile(xml_test, xml)
+
+        # Test with a block
+        # with mock.patch('builtins.open', mock.mock_open()) as m:
+        save_dataproduct(obj=self.test_block, filepath=xml, filetype=DataProduct.PDS_XML, filename=file_name)
+
+        new_blocks = DataProduct.content.block().filter(object_id=self.test_block.id)
+        self.assertTrue(new_blocks.count() == 1)
+        self.assertEqual(new_blocks[0].content_object, self.test_block)
+        self.assertTrue(new_blocks[0].product.storage.exists(new_blocks[0].product.name))
 
     def test_dataproduct_save_ALCDEF(self):
         file_name = 'test_ALCDEF.txt'
@@ -279,7 +300,7 @@ class DataProductTestCase(TestCase):
     def test_dataproduct_save_robust(self):
         # Add Superblock linked CSV
         file_name = 'test_SB_CSV.txt'
-        file_content = b"some text here"
+        file_content = "some text here"
         save_dataproduct(obj=self.test_sblock, filepath=None, filetype=DataProduct.CSV, filename=file_name, content=file_content)
 
         dp_qset = DataProduct.content.fullbody(bodyid=self.body.id).filter(filetype=DataProduct.CSV)
@@ -292,11 +313,11 @@ class DataProductTestCase(TestCase):
         self.assertEqual(len(dp_blk), 0)
         test_file = dp_sb[0].product.file
         lines = test_file.readlines()
-        self.assertEqual(lines[0], file_content)
+        self.assertEqual(lines[0], file_content.encode('utf-8'))
         timestamp = dp_sb[0].created
 
         # overwrite with normal dataproduct
-        file_content2 = b"some other text here"
+        file_content2 = "some other text here"
         save_dataproduct(obj=self.test_sblock, filepath=None, filetype=DataProduct.CSV, filename=file_name, content=file_content2)
 
         dp_qset = DataProduct.content.fullbody(bodyid=self.body.id).filter(filetype=DataProduct.CSV)
@@ -305,12 +326,12 @@ class DataProductTestCase(TestCase):
         self.assertEqual(len(dp_sb), 1)
         test_file = dp_sb[0].product.file
         lines = test_file.readlines()
-        self.assertEqual(lines[0], file_content2)
+        self.assertEqual(lines[0], file_content2.encode('utf-8'))
         timestamp2 = dp_sb[0].created
         self.assertNotEqual(timestamp2, timestamp)
 
         # overwrite with robust dataproduct
-        file_content3 = b"even other text here"
+        file_content3 = "even other text here"
         save_dataproduct(obj=self.test_sblock, filepath=None, filetype=DataProduct.CSV, filename=file_name, content=file_content3, force=True)
 
         dp_qset = DataProduct.content.fullbody(bodyid=self.body.id).filter(filetype=DataProduct.CSV)
@@ -319,13 +340,13 @@ class DataProductTestCase(TestCase):
         self.assertEqual(len(dp_sb), 1)
         test_file = dp_sb[0].product.file
         lines = test_file.readlines()
-        self.assertEqual(lines[0], file_content3)
+        self.assertEqual(lines[0], file_content3.encode('utf-8'))
         self.assertFalse(dp_sb[0].update)
         timestamp3 = dp_sb[0].created
         self.assertNotEqual(timestamp2, timestamp3)
 
         # Fail to overwrite robust dataproduct
-        file_content4 = b"woogaoooooowoo"
+        file_content4 = "woogaoooooowoo"
         save_dataproduct(obj=self.test_sblock, filepath=None, filetype=DataProduct.CSV, filename=file_name, content=file_content4)
 
         dp_qset = DataProduct.content.fullbody(bodyid=self.body.id).filter(filetype=DataProduct.CSV)
@@ -334,13 +355,13 @@ class DataProductTestCase(TestCase):
         self.assertEqual(len(dp_sb), 1)
         test_file = dp_sb[0].product.file
         lines = test_file.readlines()
-        self.assertEqual(lines[0], file_content3)
+        self.assertEqual(lines[0], file_content3.encode('utf-8'))
         self.assertFalse(dp_sb[0].update)
         timestamp4 = dp_sb[0].created
         self.assertEqual(timestamp4, timestamp3)
 
         # succeed to overwrite robust dataproduct
-        file_content5 = b"final text"
+        file_content5 = "final text"
         save_dataproduct(obj=self.test_sblock, filepath=None, filetype=DataProduct.CSV, filename=file_name, content=file_content5, force=True)
 
         dp_qset = DataProduct.content.fullbody(bodyid=self.body.id).filter(filetype=DataProduct.CSV)
@@ -349,7 +370,7 @@ class DataProductTestCase(TestCase):
         self.assertEqual(len(dp_sb), 1)
         test_file = dp_sb[0].product.file
         lines = test_file.readlines()
-        self.assertEqual(lines[0], file_content5)
+        self.assertEqual(lines[0], file_content5.encode('utf-8'))
         self.assertFalse(dp_sb[0].update)
         timestamp5 = dp_sb[0].created
         self.assertNotEqual(timestamp4, timestamp5)
@@ -357,7 +378,7 @@ class DataProductTestCase(TestCase):
     def test_dataproduct_delete(self):
         # Build file/DP
         file_name = 'test_SB_png.txt'
-        file_content = b"some text here"
+        file_content = "some text here"
         save_dataproduct(obj=self.test_sblock, filepath=None, filetype=DataProduct.PNG_ASTRO, filename=file_name, content=file_content)
         dp_qset = DataProduct.content.fullbody(bodyid=self.body.id).filter(filetype=DataProduct.PNG_ASTRO)
         pathname = os.path.join(settings.MEDIA_ROOT, dp_qset[0].product.name)
@@ -370,7 +391,7 @@ class DataProductTestCase(TestCase):
         self.assertFalse(new_db_qset.exists())
 
         # Make new DP
-        file_content2 = b"some new text here"
+        file_content2 = "some new text here"
         save_dataproduct(obj=self.test_sblock, filepath=None, filetype=DataProduct.PNG_ASTRO, filename=file_name, content=file_content2)
         dp_qset = DataProduct.content.fullbody(bodyid=self.body.id).filter(filetype=DataProduct.PNG_ASTRO)
         # Overwrites old file

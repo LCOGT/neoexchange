@@ -312,7 +312,7 @@ if USE_S3:
     PUBLIC_MEDIA_LOCATION = 'data'
     MEDIA_URL = f'https://s3-{AWS_S3_REGION_NAME}.amazonaws.com/{AWS_STORAGE_BUCKET_NAME}/{PUBLIC_MEDIA_LOCATION}/'
     DEFAULT_FILE_STORAGE = 'neox.storage_backends.PublicMediaStorage'
-    DATA_ROOT = os.getenv('DATA_ROOT', '') # Set env variable on Apophis to '/apophis/eng/rocks/'
+    DATA_ROOT = os.getenv('DATA_ROOT', '')  # Set env variable on Apophis to '/apophis/eng/rocks/'
 else:
     # For local use
     MEDIA_ROOT = os.getenv('MEDIA_ROOT', '/apophis/eng/media/')

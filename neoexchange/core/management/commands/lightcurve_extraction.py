@@ -333,7 +333,7 @@ class Command(BaseCommand):
         # build directory path / set permissions
         obj_name = sanitize_object_name(start_super_block.body.current_name())
         datadir = os.path.join(options['datadir'], obj_name)
-        out_path = settings.MEDIA_ROOT
+        out_path = settings.DATA_ROOT
         data_path = ''
         rw_permissions = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH | stat.S_IWOTH
         if not os.path.exists(datadir) and not settings.USE_S3:

@@ -8355,7 +8355,7 @@ class TestDisplayMovie(TestCase):
         self.assertEqual(b'', response.content)
         # ALCDEF Only (superblock)
         file_name = 'test_SB_ALCDEF.txt'
-        file_content = b"some text here"
+        file_content = "some text here"
         save_dataproduct(obj=self.test_sblock, filepath=None, filetype=DataProduct.ALCDEF_TXT, filename=file_name, content=file_content)
         response = display_movie(request, self.test_block.id)
         self.assertEqual(b'', response.content)

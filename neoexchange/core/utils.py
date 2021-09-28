@@ -19,6 +19,7 @@ from datetime import datetime
 
 from django.core.files.storage import default_storage
 from django.core.files.base import File, ContentFile
+from django.core.exceptions import SuspiciousFileOperation, SuspiciousOperation
 from django.forms.models import model_to_dict
 from django.conf import settings
 
@@ -86,16 +87,24 @@ def save_dataproduct(obj, filepath, filetype, filename=None, content=None, force
     if default_storage.exists(predicted_path):
         default_storage.delete(predicted_path)
     if content:
-        file_obj = ContentFile(content)
+        file_obj = ContentFile(content.encode('utf-8'))
         file_obj.name = filename
         dp.product = file_obj
         dp.created = datetime.utcnow()
         dp.save()
         return
-    with default_storage.open(filepath, mode) as f:
-        file_obj = File(f)
-        file_obj.name = filename
-        dp.product = file_obj
-        dp.created = datetime.utcnow()
-        dp.save()
+    try:
+        with default_storage.open(filepath, mode) as f:
+            file_obj = File(f)
+            file_obj.name = filename
+            dp.product = file_obj
+            dp.created = datetime.utcnow()
+            dp.save()
+    except (SuspiciousFileOperation, SuspiciousOperation):
+        with open(filepath, mode) as f:
+            file_obj = File(f)
+            file_obj.name = filename
+            dp.product = file_obj
+            dp.created = datetime.utcnow()
+            dp.save()
     return
