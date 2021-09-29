@@ -137,7 +137,7 @@ def determine_active_proposals(proposal_code=None, filter_proposals=True):
 
     if proposal_code is not None:
         try:
-            proposal = Proposal.objects.get(code=proposal_code.upper())
+            proposal = Proposal.objects.get(code=proposal_code)
             proposals = [proposal.code, ]
         except Proposal.DoesNotExist:
             logger.warning("Proposal {} does not exist".format(proposal_code))
@@ -3558,11 +3558,11 @@ def find_matching_image_file(catfile):
     return fits_file_for_sext
 
 
-def run_sextractor_make_catalog(configs_dir, dest_dir, fits_file):
+def run_sextractor_make_catalog(configs_dir, dest_dir, fits_file, cat_type='FITS_LDAC'):
     """Run SExtractor, rename output to new filename which is returned"""
 
-    logger.debug("Running SExtractor on BANZAI file: %s" % fits_file)
-    sext_status = run_sextractor(configs_dir, dest_dir, fits_file, catalog_type='FITS_LDAC')
+    print("Running SExtractor on BANZAI file: %s for %s " % (fits_file, cat_type))
+    sext_status = run_sextractor(configs_dir, dest_dir, fits_file, catalog_type=cat_type)
     if sext_status == 0:
         fits_ldac_catalog = 'test_ldac.fits'
         fits_ldac_catalog_path = os.path.join(dest_dir, fits_ldac_catalog)
@@ -3753,7 +3753,7 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False, desired_c
 #            status = update_ldac_catalog_wcs(fits_file_output, new_ldac_catalog)
 #            logger.info("Return status for update_ldac_catalog_wcs: {}".format(status))
             # Re-run SExtractor to make a new FITS_LDAC catalog from the frame
-            status, new_ldac_catalog = run_sextractor_make_catalog(configs_dir, dest_dir, fits_file_output)
+            status, new_ldac_catalog = run_sextractor_make_catalog(configs_dir, dest_dir, fits_file_output, cat_type='GPS::FITS_LDAC')
             logger.debug("Filename after 2nd SExtractor= {}".format(new_ldac_catalog))
             if status != 0:
                 logger.error("Execution of second SExtractor failed")

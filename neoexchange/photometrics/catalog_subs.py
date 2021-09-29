@@ -613,7 +613,8 @@ def oracdr_catalog_mapping():
                     'astrometric_fit_nstars' : 'WCSMATCH',
                     'astrometric_catalog'    : 'WCCATTYP',
                     'gain'          : 'GAIN',
-                    'saturation'    : 'SATURATE'
+                    'saturation'    : 'SATURATE',
+                    'linearity'    : 'MAXLIN'
                   }
 
     table_dict = OrderedDict([

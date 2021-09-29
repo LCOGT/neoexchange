@@ -68,6 +68,9 @@ def default_sextractor_config_files(catalog_type='ASCII'):
     if catalog_type == 'FITS_LDAC':
         config_files = ['sextractor_neox_ldac.conf',
                         'sextractor_ldac.params']
+    elif catalog_type == 'GPS::FITS_LDAC':
+        config_files = ['sextractor_gps_ldac.conf',
+                        'sextractor_ldac.params']
 
     config_files += common_config_files
     return config_files
@@ -240,6 +243,11 @@ def determine_sext_options(fits_file):
     header = hdulist[0].header
     header_mapping, table_mapping = oracdr_catalog_mapping()
 
+    # Check for lower value of saturation vs max linearity
+    if header.get(header_mapping['linearity'], 1e6) < header.get(header_mapping['saturation'], 0):
+        option_mapping = OrderedDict(('linearity' if k == 'saturation' else k, v) for k, v in option_mapping.items())
+        print("Using MAXLIN")
+
     for option in option_mapping.keys():
         if header.get(header_mapping[option], -99) != -99:
             options += option_mapping[option] + ' ' + str(header.get(header_mapping[option])) + ' '
@@ -345,7 +353,7 @@ def run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type='A
     # If we are making FITS_LDAC catalogs for SCAMP, we need to create a new
     # header keyword of L1FILTER and set the value to FILTER. This prevents
     # SCAMP false matching on the first FITS keyword starting with FILTER
-    if catalog_type == 'FITS_LDAC':
+    if 'FITS_LDAC' in catalog_type:
         root_fits_file = fits_file
         if '[SCI]' in fits_file:
             # Banzai format, strip off extension
@@ -363,7 +371,7 @@ def run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type='A
     if dbg is True:
         retcode_or_cmdline = cmdline
     else:
-        logger.debug("cmdline=%s" % cmdline)
+        print("cmdline=%s" % cmdline)
         args = cmdline.split()
         retcode_or_cmdline = call(args, cwd=dest_dir)
 
