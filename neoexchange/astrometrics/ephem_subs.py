@@ -643,11 +643,16 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
      'alpha',
      'RSS_3sigma',
      'hour_angle',
+     'GlxLon',
+     'GlxLat',
      'datetime']
     If [include_moon] = True, 2 additional columns of the Moon-Object separation
     ('moon_sep'; in degrees) and the Moon phase ('moon_phase'; 0..1) are added
     to the table.
     """
+
+    # Define quantities we want back from HORIZONS
+    horizons_quantities = '1,3,4,9,19,20,23,24,38,42,33'
 
     eph = Horizons(id=obj_name, id_type='smallbody', epochs={'start' : start.strftime("%Y-%m-%d %H:%M"),
             'stop' : end.strftime("%Y-%m-%d %H:%M"), 'step' : ephem_step_size}, location=site_code)
@@ -664,7 +669,7 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
         # Radar site
         should_skip_daylight = False
     try:
-        ephem = eph.ephemerides(quantities='1,3,4,9,19,20,23,24,38,42,33',
+        ephem = eph.ephemerides(quantities=horizons_quantities,
             skip_daylight=should_skip_daylight, airmass_lessthan=airmass_limit,
             max_hour_angle=ha_limit)
         ephem = convert_horizons_table(ephem, include_moon)
@@ -677,12 +682,12 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
         if e.args and len(e.args) > 0:
             choices = e.args[0].split('\n')
             horizons_id = determine_horizons_id(choices)
-            logger.debug("HORIZONS id=", horizons_id)
+            logger.debug("HORIZONS id= {}".format(horizons_id))
             if horizons_id:
                 try:
                     eph = Horizons(id=horizons_id, id_type='id', epochs={'start' : start.strftime("%Y-%m-%d %H:%M:%S"),
                         'stop' : end.strftime("%Y-%m-%d %H:%M:%S"), 'step' : ephem_step_size}, location=site_code)
-                    ephem = eph.ephemerides(quantities='1,3,4,9,19,20,23,24,38,42',
+                    ephem = eph.ephemerides(quantities=horizons_ephem,
                         skip_daylight=should_skip_daylight, airmass_lessthan=airmass_limit,
                         max_hour_angle=ha_limit)
                     ephem = convert_horizons_table(ephem, include_moon)
