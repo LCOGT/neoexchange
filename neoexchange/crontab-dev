@@ -7,4 +7,3 @@
 10 7 * * * python3 manage.py update_taxonomy_data
 03 05,18 * * * python3 manage.py update_targets
 30 7 * * 0 python3 manage.py update_external_spectroscopy_data -a
-45 19,22,23 * * * source ~/download_FLOYDS_data_cron "$(date --date '1 day ago' +\%Y\%m\%d)"

@@ -4,5 +4,3 @@
 05,40 17-23 * * * source ~/download_process_data_cron "$(date +\%Y\%m\%d)"
 # Spectra downloading
 20 19,22,23 * * * source ~/download_FLOYDS_data_cron "$(date --date '1 day ago' +\%Y\%m\%d)"
-# Upload data to S3
-30 15 * * * source ~/upload_data_cron "$(date --date '1 day ago' +\%Y\%m\%d)"
