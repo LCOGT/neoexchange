@@ -1783,6 +1783,7 @@ class LCDataListView(ListView):
         return context
 
     def find_lc(self):
+        # **DP** replace with DataProduct
         base_dir = os.path.join(settings.DATA_ROOT, 'Reduction')
         dir_list, _ = default_storage.listdir(base_dir)
         name_list = []
@@ -1797,6 +1798,7 @@ class LCDataListView(ListView):
                     name_list.append(new_name.lstrip())
         object_list = Body.objects.filter(Q(designations__value__in=name_list) | Q(provisional_name__in=name_list)
                                           | Q(provisional_packed__in=name_list) | Q(name__in=name_list))
+        # **DP** replace with DataProduct
         final_objects = object_list
         for obj in object_list:
             if sanitize_object_name(obj.current_name()) not in name_list:
@@ -3681,7 +3683,7 @@ def find_spec(pk):
 
     try:
         data = lco_api_call(url)['data']
-    except TypeError:
+    except (TypeError, KeyError) as e:
         return '', '', '', '', ''
 
     if 'DAY_OBS' in data:
@@ -3714,17 +3716,14 @@ def find_analog(date_obs, site):
     analog_blocks = Block.objects.filter(obstype=Block.OPT_SPECTRA_CALIB, site=site, when_observed__lte=date_obs+timedelta(days=10), when_observed__gte=date_obs-timedelta(days=10))
     star_list = []
     time_diff = []
-    for b in analog_blocks:
-        d_out, obj, req, path, prop = find_spec(b.id)
-        filenames = search(path, matchpattern='.*_2df_ex.fits', latest=False)
-        if filenames is False:
-            continue
-        filenames = [os.path.join(path, f) for f in filenames]
-        for fn in filenames:
-            star_list.append(fn)
-            time_diff.append(abs(date_obs - b.when_observed))
+    for block in analog_blocks:
+        block_db_list = DataProduct.content.block().filter(object_id=block.id)
+        analog_files = block_db_list.filter(filetype=DataProduct.FITS_SPECTRA)
+        for file in analog_files:
+            star_list.append(file)
+            time_diff.append(abs(date_obs - block.when_observed))
 
-    analog_list = [calib for _, calib in sorted(zip(time_diff, star_list))]
+    analog_list = [calib for _, calib in sorted(zip(time_diff, star_list), key=itemgetter(0))]
 
     return analog_list
 
@@ -3791,37 +3790,34 @@ def plot_all_spec(source):
 def plot_floyds_spec(block):
     """Get plots for requested blocks of FLOYDs data and subtract nearest solar analog."""
 
-    date_obs, obj, req, path, prop = find_spec(block.id)
-    filenames = search(path, matchpattern='.*_2df_ex.fits', latest=False)
-    if filenames is False:
-        return None, None
-    filenames = [os.path.join(path, f) for f in filenames]
+    block_db_list = DataProduct.content.block().filter(object_id=block.id)
+    spec_files = block_db_list.filter(filetype=DataProduct.FITS_SPECTRA)
 
     analogs = find_analog(block.when_observed, block.site)
 
     try:
         data_spec = []
-        for filename in filenames:
-            raw_label, raw_spec, ast_wav, spec_err = spectrum_plot(filename)
+        for spec_file in spec_files:
+            raw_label, raw_spec, ast_wav, spec_err = spectrum_plot(spec_file.product.name)
             data_spec.append({'label': raw_label,
                               'spec': raw_spec,
                               'wav': ast_wav,
                               'err': spec_err,
-                              'filename': filename})
+                              'filename': spec_file.product.name})
     except IndexError:
         data_spec = None
 
     analog_data = []
     offset = 2  # Arbitrary offset to minimize analog/target plotting overlap
     for analog in analogs:
-        analog_label, analog_spec, star_wav, spec_err = spectrum_plot(analog, offset=offset)
+        analog_label, analog_spec, star_wav, spec_err = spectrum_plot(analog.product.name, offset=offset)
         analog_data.append({'label': analog_label,
                             'spec': analog_spec,
                             'wav': star_wav,
                             'err': spec_err,
-                            'filename': analog})
+                            'filename': analog.product.name})
 
-    if data_spec:
+    if data_spec and data_spec[0]['spec'] is not None:
         script, div = spec_plot(data_spec, analog_data)
     else:
         return None, None
@@ -3905,48 +3901,48 @@ class LCPlot(LookUpBodyMixin, FormView):
 def import_alcdef(file, meta_list, lc_list):
     """Pull LC data from ALCDEF text files."""
 
-    lc_file = default_storage.open(file, 'rb')
-    lines = lc_file.readlines()
+    with file.open() as lc_file:
+        lines = lc_file.readlines()
 
-    metadata = {}
-    dates = []
-    mags = []
-    mag_errs = []
-    met_dat = False
+        metadata = {}
+        dates = []
+        mags = []
+        mag_errs = []
+        met_dat = False
 
-    for line in lines:
-        line = str(line, 'utf-8')
-        if line[0] == '#':
-            continue
-        if '=' in line:
-            if 'DATA=' in line and met_dat is False:
-                chunks = line[5:].split('|')
-                jd = float(chunks[0])
-                mag = float(chunks[1])
-                mag_err = float(chunks[2])
-                dates.append(jd)
-                mags.append(mag)
-                mag_errs.append(mag_err)
-            else:
-                chunks = line.split('=')
-                metadata[chunks[0]] = chunks[1].replace('\n', '')
-        elif 'ENDDATA' in line:
-            if metadata not in meta_list and dates:
-                meta_list.append(metadata)
-                lc_data = {
-                    'date': dates,
-                    'mags': mags,
-                    'mag_errs': mag_errs,
-                    }
-                lc_list.append(lc_data)
-            dates = []
-            mags = []
-            mag_errs = []
-            metadata = {}
-        elif 'STARTMETADATA' in line:
-            met_dat = True
-        elif 'ENDMETADATA' in line:
-            met_dat = False
+        for line in lines:
+            line = str(line, 'utf-8')
+            if line[0] == '#':
+                continue
+            if '=' in line:
+                if 'DATA=' in line and met_dat is False:
+                    chunks = line[5:].split('|')
+                    jd = float(chunks[0])
+                    mag = float(chunks[1])
+                    mag_err = float(chunks[2])
+                    dates.append(jd)
+                    mags.append(mag)
+                    mag_errs.append(mag_err)
+                else:
+                    chunks = line.split('=')
+                    metadata[chunks[0]] = chunks[1].replace('\n', '')
+            elif 'ENDDATA' in line:
+                if metadata not in meta_list and dates:
+                    meta_list.append(metadata)
+                    lc_data = {
+                        'date': dates,
+                        'mags': mags,
+                        'mag_errs': mag_errs,
+                        }
+                    lc_list.append(lc_data)
+                dates = []
+                mags = []
+                mag_errs = []
+                metadata = {}
+            elif 'STARTMETADATA' in line:
+                met_dat = True
+            elif 'ENDMETADATA' in line:
+                met_dat = False
 
     return meta_list, lc_list
 
@@ -3955,10 +3951,6 @@ def get_lc_plot(body, data):
     """Plot all lightcurve data for given source.
     """
 
-    base_dir = os.path.join(settings.DATA_ROOT, 'Reduction')
-    obj_name = sanitize_object_name(body.current_name())
-    datadir = os.path.join(base_dir, obj_name)
-    filenames = search(datadir, '.*.ALCDEF.txt')
     if data.get('period', None):
         period = data['period']
     else:
@@ -3966,9 +3958,13 @@ def get_lc_plot(body, data):
 
     meta_list = []
     lc_list = []
-    if filenames:
-        for file in filenames:
-            meta_list, lc_list = import_alcdef(os.path.join(datadir, file), meta_list, lc_list)
+    dataproducts = DataProduct.content.fullbody(bodyid=body.id).filter(filetype=DataProduct.ALCDEF_TXT)
+    if dataproducts:
+        for dp in dataproducts:
+            try:
+                meta_list, lc_list = import_alcdef(dp.product.file, meta_list, lc_list)
+            except FileNotFoundError as e:
+                logger.warning(e)
     else:
         meta_list = lc_list = []
 
@@ -4010,20 +4006,25 @@ def display_movie(request, pk):
         block = Block.objects.get(pk=pk)
     except ObjectDoesNotExist:
         raise Http404("Block does not exist.")
-    if block.obstype in [Block.OPT_IMAGING, Block.OPT_IMAGING_CALIB]:
-        movie_file = "{}_{}_framemovie.gif".format(obj.replace(' ', '_'), req)
-    elif block.obstype in [Block.OPT_SPECTRA, Block.OPT_SPECTRA_CALIB]:
-        movie_file = "{}_{}_guidemovie.gif".format(obj.replace(' ', '_'), req)
-        base_dir = os.path.join(path, "Guide_frames")
-    else:
+    block_db_list = DataProduct.content.block().filter(object_id=block.id)
+    try:
+        if block.obstype in [Block.OPT_IMAGING, Block.OPT_IMAGING_CALIB] and block_db_list:
+            movie_file = block_db_list.get(filetype=DataProduct.FRAME_GIF).product
+        elif block.obstype in [Block.OPT_SPECTRA, Block.OPT_SPECTRA_CALIB] and block_db_list:
+            movie_file = block_db_list.get(filetype=DataProduct.GUIDER_GIF).product
+        else:
+            return HttpResponse()
+    except DataProduct.DoesNotExist:
         return HttpResponse()
-
-    movie_file = search(base_dir, movie_file, latest=True)
 
     if movie_file:
         logger.debug('MOVIE FILE: {}'.format(movie_file))
-        movie = default_storage.open(movie_file, 'rb').read()
-        return HttpResponse(movie, content_type="Image/gif")
+        movie = movie_file
+        try:
+            return HttpResponse(movie, content_type="Image/gif")
+        except FileNotFoundError as e:
+            logger.warning(e)
+            return HttpResponse()
     else:
         return HttpResponse()
 
@@ -4063,8 +4064,6 @@ class GuideMovie(View):
 
         return render(request, self.template_name,
                       {'sb': supblock, 'block_list': block_list, 'is_paginated': is_paginated, 'page_obj': page_obj})
-
-        # return render(request, self.template_name, params)
 
 
 def update_taxonomy(body, tax_table, dbg=False):

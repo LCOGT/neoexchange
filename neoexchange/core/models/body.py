@@ -226,7 +226,6 @@ class Body(models.Model):
             pass
         return mjd
 
-
     def current_name(self):
         if self.name:
             return self.name
@@ -563,6 +562,7 @@ class Body(models.Model):
                 and self.name is not None and self.name != u'':
             return_name = self.name
         return u'%s is %sactive' % (return_name, text)
+
 
 class Designations(models.Model):
     body        = models.ForeignKey(Body, on_delete=models.CASCADE)

@@ -21,7 +21,7 @@ import tempfile
 from glob import glob
 from math import degrees
 
-from django.test import TestCase, SimpleTestCase
+from django.test import TestCase, SimpleTestCase, override_settings
 from django.forms.models import model_to_dict
 from django.conf import settings
 from bs4 import BeautifulSoup
@@ -45,10 +45,12 @@ from astrometrics.ephem_subs import compute_ephem, determine_darkness_times
 from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs, \
     fetch_flux_standards, read_solar_standards
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header
+from photometrics.gf_movie import make_gif
 from core.frames import block_status, create_frame
 from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate,\
     SuperBlock, SpectralInfo, PreviousSpectra, StaticSource
 from core.forms import EphemQuery
+from core.utils import save_dataproduct, save_to_default
 # Import modules to test
 from core.views import *
 from core.plots import *
@@ -8007,6 +8009,7 @@ class TestFindAnalog(TestCase):
 
         self.assertEqual(expected_analog_list, analog_list)
 
+
 class TestBuildVisibilitySource(TestCase):
 
     def setUp(self):
@@ -8074,7 +8077,7 @@ class TestBuildVisibilitySource(TestCase):
 class TestParsePortalErrors(SimpleTestCase):
 
     def setUp(self):
-        self.no_parse_msg= "It was not possible to submit your request to the scheduler."
+        self.no_parse_msg = "It was not possible to submit your request to the scheduler."
         self.no_extrainfo_msg = self.no_parse_msg + "\nAdditional information:"
 
         self.maxDiff = None
@@ -8160,9 +8163,8 @@ class TestParsePortalErrors(SimpleTestCase):
 
         self.assertEqual(expected_msg, msg)
 
-
     def test_muchfail(self):
-        params = {'error_msg' : {
+        params = {'error_msg': {
                                 'requests': [
                                     {
                                         'configurations': [
@@ -8247,3 +8249,131 @@ class TestParsePortalErrors(SimpleTestCase):
         msg = parse_portal_errors(params)
 
         self.assertEqual(expected_msg, msg)
+
+
+@override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+class TestDisplayMovie(TestCase):
+    def setUp(self):
+        body_params = {
+                         'provisional_name': None,
+                         'provisional_packed': 'j5432',
+                         'name': '455432',
+                         'origin': 'A',
+                         'source_type': 'N',
+                         'elements_type': 'MPC_MINOR_PLANET',
+                         'active': True,
+                         'fast_moving': True,
+                         'urgency': None,
+                         'epochofel': datetime(2019, 7, 31, 0, 0),
+                         'orbit_rms': 0.46,
+                         'orbinc': 31.23094,
+                         'longascnode': 301.42266,
+                         'argofperih': 22.30793,
+                         'eccentricity': 0.3660154,
+                         'meandist': 1.7336673,
+                         'meananom': 352.55084,
+                         'perihdist': None,
+                         'epochofperih': None,
+                         'abs_mag': 18.54,
+                         'slope': 0.15,
+                         'score': None,
+                         'discovery_date': datetime(2003, 9, 7, 3, 7, 18),
+                         'num_obs': 130,
+                         'arc_length': 6209.0,
+                         'not_seen': 3.7969329574421296,
+                         'updated': True,
+                         'ingest': datetime(2019, 7, 4, 5, 28, 39),
+                         'update_time': datetime(2019, 7, 30, 19, 7, 35)
+                        }
+        self.test_body = Body.objects.create(**body_params)
+
+        proposal_params = {'code': 'LCOEngineering',
+                           'title': 'LCOEngineering',
+                           'active': True
+                           }
+        self.eng_proposal, created = Proposal.objects.get_or_create(**proposal_params)
+
+        sblock_params = {
+                        'body': self.test_body,
+                        'block_start': datetime(2019, 7, 27, 8, 30),
+                        'block_end': datetime(2019, 7, 27,19, 30),
+                        'proposal': self.eng_proposal,
+                        'tracking_number': '818566'
+                        }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+
+        block_params = {
+                        'body': self.test_body,
+                        'superblock': self.test_sblock,
+                        'site': 'coj',
+                        'block_start': datetime(2019, 7, 27, 8, 30),
+                        'block_end': datetime(2019, 7, 27, 19, 30),
+                        'obstype': Block.OPT_IMAGING,
+                        'request_number': '1878696',
+                        'num_observed': 1,
+                        'when_observed': datetime(2019, 7, 27, 17, 15),
+                        'num_exposures': 1,
+                        'exp_length': 1800
+                        }
+        self.test_block = Block.objects.create(**block_params)
+
+        frame_params = {'sitecode': 'K92',
+                        'instrument': 'kb76',
+                        'filter': 'w',
+                        'filename': 'banzai_test_frame.fits',
+                        'exptime': 225.0,
+                        'midpoint': datetime(2016, 8, 2, 2, 17, 19),
+                        'block': self.test_block,
+                        'zeropoint': -99,
+                        'zeropoint_err': -99,
+                        'fwhm': 2.390,
+                        'frametype': 0,
+                        'rms_of_fit': 0.3,
+                        'nstars_in_fit': -4,
+                        }
+        self.test_frame, created = Frame.objects.get_or_create(**frame_params)
+
+        block2_params = {
+            'body': self.test_body,
+            'superblock': self.test_sblock,
+            'site': 'coj',
+            'block_start': datetime(2019, 7, 27, 8, 30),
+            'block_end': datetime(2019, 7, 27, 19, 30),
+            'obstype': Block.OPT_SPECTRA,
+            'request_number': '1878696',
+            'num_observed': 1,
+            'when_observed': datetime(2019, 7, 27, 17, 15),
+            'num_exposures': 1,
+            'exp_length': 1800
+        }
+        self.test_block2 = Block.objects.create(**block2_params)
+
+    def test_display_movie(self):
+        # test empty response
+        request = ''
+        response = display_movie(request, self.test_block.id)
+        self.assertEqual(b'', response.content)
+        # ALCDEF Only (superblock)
+        file_name = 'test_SB_ALCDEF.txt'
+        file_content = "some text here"
+        save_dataproduct(obj=self.test_sblock, filepath=None, filetype=DataProduct.ALCDEF_TXT, filename=file_name, content=file_content)
+        response = display_movie(request, self.test_block.id)
+        self.assertEqual(b'', response.content)
+        # build movie
+        fits = os.path.abspath(os.path.join('photometrics', 'tests', 'banzai_test_frame.fits'))
+        frames = [fits, fits, fits, fits, fits]
+        movie_file = make_gif(frames, sort=False, init_fr=100, out_path=settings.MEDIA_ROOT, center=3, progress=False)
+        save_dataproduct(obj=self.test_block, filepath=movie_file, filetype=DataProduct.FRAME_GIF)
+        response = display_movie(request, self.test_block.id)
+        self.assertIn(b'GIF', response.content)
+
+        # test fits only, no gif
+        save_to_default(fits, os.path.abspath(os.path.join('photometrics', 'tests')))
+        fits_path = os.path.basename(fits)
+        save_dataproduct(obj=self.test_block2, filepath=fits_path, filetype=DataProduct.FITS_SPECTRA)
+        response = display_movie(request, self.test_block2.id)
+        self.assertEqual(b'', response.content)
+        # check Guider gif
+        save_dataproduct(obj=self.test_block2, filepath=movie_file, filetype=DataProduct.GUIDER_GIF)
+        response = display_movie(request, self.test_block2.id)
+        self.assertIn(b'GIF', response.content)
