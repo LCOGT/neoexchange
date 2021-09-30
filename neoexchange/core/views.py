@@ -2943,6 +2943,8 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M', force=False):
             logger.info("Added new orbit for %s from MPC" % obj_id)
     else:
         body.origin = origin
+        if origin != 'M':
+            body.active = True
         body.save()
         logger.info("More recent elements already stored for %s" % obj_id)
     # Update Physical Parameters
