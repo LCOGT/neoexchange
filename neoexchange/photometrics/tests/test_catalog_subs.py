@@ -14,7 +14,7 @@ GNU General Public License for more details.
 """
 
 from datetime import datetime, timedelta
-from unittest import skipIf
+from unittest import skipIf, skip
 from math import sqrt, log10, log
 import os
 from glob import glob
@@ -67,7 +67,7 @@ class ZeropointUnitTest(TestCase):
     def test_get_cat_ra_dec(self):
         # test getting a single ra, dec, and rmag out of the default UCAC4 catalog
         # test_data = __file__.replace('.py', '_UCAC4.dat') #test_data_file captured with cat_table.write('test_catalog_subs_UCAC4.dat', format='csv')
-        #        test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
+        # test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
         # test_query_result = []
         # test_query_result.append(Table.read(test_data, format='csv'))
         # mock_vizier().query_region().__getitem__.return_value=test_query_result
@@ -257,6 +257,7 @@ class ZeropointUnitTest(TestCase):
 
 #    @patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_ra_dec_empty_list_PPMXL(self, mock_vizier):
+    @skip("Defunct catalog / needs mock")
     def test_get_cat_ra_dec_empty_list_PPMXL(self):
 
         expected_ra_last_source = 0.0
@@ -282,6 +283,7 @@ class ZeropointUnitTest(TestCase):
 
 #    @patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_ra_dec_empty_list_UCAC4(self, mock_vizier):
+    @skip("Defunct catalog / needs mock")
     def test_get_cat_ra_dec_empty_list_UCAC4(self):
 
         expected_ra_last_source = 0.0
@@ -824,6 +826,7 @@ class ZeropointUnitTest(TestCase):
         self.assertEqual(expected_cat_name, cat_name)
         self.assertAlmostEqual(expected_len_cross_match_table, len(cross_match_table))
 
+    @skip("Defunct catalog / needs mock")
     def test_call_with_diff_test_cat_force_to_UCAC4(self):
         """test the call with a different FITS catalog file that will return an empty vizier query table for the PPMXL
         catalog and a zeropoint already in the header, so that the computed avg_zeropoint is the difference between
