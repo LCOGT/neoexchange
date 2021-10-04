@@ -1580,13 +1580,17 @@ def make_location(params):
         location['site'] = params['site'].lower()
     if params['site_code'] == 'W85':
         location['telescope'] = '1m0a'
-        location['observatory'] = 'doma'
+        location['enclosure'] = 'doma'
     elif params['site_code'] == 'W87':
         location['telescope'] = '1m0a'
-        location['observatory'] = 'domc'
+        location['enclosure'] = 'domc'
     elif params['site_code'] == 'V39':
         location['telescope'] = '1m0a'
-        location['observatory'] = 'domb'
+        location['enclosure'] = 'domb'
+    elif params['site_code'] == 'Z31':
+        location['telescope'] = '1m0a'
+        location['enclosure'] = 'doma'
+
     return location
 
 
@@ -1691,8 +1695,6 @@ def make_config(params, filter_list):
 
         instrument_config = {'exposure_count': exp_count,
                              'exposure_time': params['exp_time'],
-                             'bin_x': params['binning'],
-                             'bin_y': params['binning'],
                              'optical_elements': {'filter': filt[0]}
                              }
 
@@ -1713,8 +1715,7 @@ def make_config(params, filter_list):
                                                      'diffuser_r_position': 'out',
                                                      'diffuser_i_position': 'out',
                                                      'diffuser_z_position': 'out'}
-            instrument_config.pop('bin_x', None)
-            instrument_config.pop('bin_y', None)
+
             instrument_config['extra_params'] = extra_params
         conf['instrument_configs'].append(instrument_config)
 
@@ -1827,35 +1828,18 @@ def make_single(params, ipp_value, request):
     """Create a user_request for a single observation"""
 
     requestgroup = {
-                    'submitter' : params['user_id'],
-                    'requests'  : [request],
-                    'name'  : params['group_name'],
+                    'submitter': params['user_id'],
+                    'requests': [request],
+                    'name': params['group_name'],
                     'observation_type': "NORMAL",
-                    'operator'  : "SINGLE",
-                    'ipp_value' : ipp_value,
-                    'proposal'  : params['proposal_id']
+                    'operator': "SINGLE",
+                    'ipp_value': ipp_value,
+                    'proposal': params['proposal_id']
     }
 
 # If the ToO mode is set, change the observation_type
     if params.get('too_mode', False) is True:
         requestgroup['observation_type'] = 'TIME_CRITICAL'
-
-    return requestgroup
-
-
-def make_many(params, ipp_value, request, cal_request):
-    """Create a request for a MANY observation of the asteroidgroup
-    target (<request>) and calibration source (<cal_request>)"""
-
-    requestgroup = {
-                    'submitter' : params['user_id'],
-                    'requests'  : [request, cal_request],
-                    'name'  : params['group_name'],
-                    'observation_type': "NORMAL",
-                    'operator'  : "MANY",
-                    'ipp_value' : ipp_value,
-                    'proposal'  : params['proposal_id']
-    }
 
     return requestgroup
 
@@ -1957,6 +1941,8 @@ def configure_defaults(params):
                   'F65-FLOYDS' : 'OGG',
                   'E10' : 'COJ',
                   'E10-FLOYDS' : 'COJ',
+                  'Z31' : 'TFN',
+                  'Z24' : 'TFN',
                   'Z17' : 'TFN',
                   'Z21' : 'TFN',
                   'T03' : 'OGG',
@@ -2049,14 +2035,7 @@ def make_requestgroup(elements, params):
     note = f'Submitted by NEOexchange {submitter}'
     note = note.rstrip()
 
-    request = {
-        'configurations': configurations,
-        "acceptability_threshold": params.get('acceptability_threshold', 90),
-        'windows': [window],
-        'location': location,
-        "observation_note": note,
-    }
-
+    cal_configurations = []
     if params.get('solar_analog', False) and len(params.get('calibsource', {})) > 0:
         # Assemble solar analog request
         params['group_name'] += "+solstd"
@@ -2083,22 +2062,19 @@ def make_requestgroup(elements, params):
         params['exp_count'] = exp_count
         params['ag_exp_time'] = ag_exptime
 
-        cal_request = {
-                        "location": location,
-                        "configurations": cal_configurations,
-                        "windows": [window],
-                        "observation_note": note,
-                    }
-    else:
-        cal_request = {}
+    request = {
+        'configurations': configurations + cal_configurations,
+        "acceptability_threshold": params.get('acceptability_threshold', 90),
+        'windows': [window],
+        'location': location,
+        "observation_note": note,
+    }
 
     ipp_value = params.get('ipp_value', 1.0)
 
 # Add the Request to the outer User Request
     if 'period' in params.keys() and 'jitter' in params.keys():
         user_request = make_cadence(request, params, ipp_value)
-    elif len(cal_request) > 0:
-        user_request = make_many(params, ipp_value, request, cal_request)
     else:
         user_request = make_single(params, ipp_value, request)
 
@@ -2750,7 +2726,7 @@ def parse_jpl_fullname(obj):
     """Given a JPL object, return parsed full name"""
     fullname = obj['fullname']
     number = name = prov_des = None
-    if fullname[0] == '(':
+    if fullname[0] == '(':  # provisional designation only
         prov_des = fullname.strip('()')
     elif '/' in fullname:  # comet
         parts = fullname.split('/')
@@ -2772,17 +2748,16 @@ def parse_jpl_fullname(obj):
             elif number:
                 name = part2
     elif ' ' in fullname:
-        space_num = fullname.count(' ')
-        if space_num == 3:
-            part1, part2, part3, part4 = fullname.split(' ')
+        name_parts = list(filter(None, fullname.split(' ')))
+        if len(name_parts) == 4:
+            number = name_parts[0]
+            if name_parts[1][0].isalpha:
+                name = name_parts[1]
+        elif len(name_parts) == 3:
+            part1, part2, part3 = name_parts
             number = part1
-            if part2[0].isalpha:
-                name = part2
-        elif space_num == 2:
-            part1, part2, part3 = fullname.split(' ')
-            number = part1
-        elif space_num == 1:
-            part1, part2 = fullname.split(' ')
+        elif len(name_parts) == 2:
+            part1, part2 = name_parts
             number = part1
             name = part2
 

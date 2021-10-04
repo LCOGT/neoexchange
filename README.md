@@ -4,6 +4,18 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.9.0
+* Implement DataProducts refactor for ALCDEF, Gifs, and Floyds Traces
+
+### 3.8.13
+* Adds galactic plane into the visualization plots.
+
+### 3.8.12
+* Adds support for multi-target spectroscopy blocks.
+
+### 3.8.11
+* Adds support for the two 1-m telescopes at Tenerife (Issue #555)
+
 ### 3.8.10
 * Updates gif movies to fix intermitent issues and sort by filter.
 * Add error to spectra plots.

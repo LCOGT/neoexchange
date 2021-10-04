@@ -53,7 +53,7 @@ from astrometrics.ephem_subs import horizons_ephem, call_compute_ephem, determin
     compute_ephem, orbital_pos_from_true_anomaly, get_planetary_elements
 from astrometrics.time_subs import jd_utc2datetime
 from photometrics.obsgeomplot import plot_ra_dec, plot_brightness, plot_helio_geo_dist, \
-    plot_uncertainty, plot_hoursup
+    plot_uncertainty, plot_hoursup, plot_gal_long_lat
 from photometrics.catalog_subs import sanitize_object_name
 from photometrics.SA_scatter import readSources, plotScatter, plotFormat
 from photometrics.spectraplot import spectrum_plot, read_mean_tax
@@ -130,7 +130,8 @@ def determine_plot_valid(vis_file, now=None):
         if age < max_age:
             valid_vis_file = vis_file
         else:
-            logger.debug("File '{file}' too old: {start} {now} {age}".format(file=vis_file, start=start_date_dt, now=now, age=age.total_seconds()/86400.0))
+            logger.debug("File '{file}' too old: {start} {now} {age}".format(file=vis_file, start=start_date_dt,
+                                                                             now=now, age=age.total_seconds()/86400.0))
     return valid_vis_file
 
 
@@ -144,7 +145,7 @@ def make_visibility_plot(request, pk, plot_type, start_date=None, site_code='-1'
         # Body's without a name e.g. NEOCP candidates cannot be looked up in HORIZONS
         return HttpResponse()
 
-    if plot_type not in ['radec', 'mag', 'dist', 'hoursup', 'uncertainty']:
+    if plot_type not in ['radec', 'mag', 'dist', 'hoursup', 'uncertainty', 'glonglat']:
         logger.warning("Invalid plot_type= {}".format(plot_type))
         # Return a 1x1 pixel gif in the case of no visibility file
         PIXEL_GIF_DATA = base64.b64decode(
@@ -193,6 +194,8 @@ def make_visibility_plot(request, pk, plot_type, start_date=None, site_code='-1'
                 vis_file = plot_helio_geo_dist(ephem, base_dir=base_dir)
             elif plot_type == 'uncertainty':
                 vis_file = plot_uncertainty(ephem, base_dir=base_dir)
+            elif plot_type == 'glonglat':
+                vis_file = plot_gal_long_lat(ephem, base_dir=base_dir)
             elif plot_type == 'hoursup':
                 tel_alt_limit = 30
                 to_add_rate = False
@@ -208,9 +211,10 @@ def make_visibility_plot(request, pk, plot_type, start_date=None, site_code='-1'
     if vis_file:
         logger.debug('Visibility Plot: {}'.format(vis_file))
         with default_storage.open(vis_file, "rb") as vis_plot:
-            return HttpResponse(vis_plot.read(), content_type="Image/png")
+            return HttpResponse(vis_plot.read(), content_type="image/png")
     else:
         # Return a 1x1 pixel gif in the case of no visibility file
+        logger.debug('No visibility plot')
         PIXEL_GIF_DATA = base64.b64decode(
             b"R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7")
 
@@ -339,9 +343,11 @@ def spec_plot(data_spec, analog_data, reflec=False):
 
             source = ColumnDataSource(spec_dict)
 
-            ref_plot.line("Wavelength", tax+"_Mean", source=source, color=colors[j], name=tax + "-Type", line_width=2, line_dash='dashed', legend_label=tax, visible=vis)
+            ref_plot.line("Wavelength", tax+"_Mean", source=source, color=colors[j], name=tax + "-Type", line_width=2,
+                          line_dash='dashed', legend_label=tax, visible=vis)
             if np.mean(spec_dict[tax + '_Sigma']) > 0:
-                ref_plot.patch(xs, ys, fill_alpha=.25, line_width=1, fill_color=colors[j], line_color="black", name=tax + "-Type", legend_label=tax, line_alpha=.25, visible=vis)
+                ref_plot.patch(xs, ys, fill_alpha=.25, line_width=1, fill_color=colors[j], line_color="black",
+                               name=tax + "-Type", legend_label=tax, line_alpha=.25, visible=vis)
 
         if not reflec:
             for spec in data_spec:

@@ -15,6 +15,7 @@ import os
 from shutil import move
 import copy
 from glob import glob
+from operator import itemgetter
 from datetime import datetime, timedelta, date
 from math import floor, ceil, degrees, radians, pi, acos, pow
 from astropy import units as u
@@ -1000,7 +1001,7 @@ class ScheduleCalibSpectra(LoginRequiredMixin, LookUpCalibMixin, FormView):
     def get(self, request, *args, **kwargs):
         # Override default exposure time for brighter calib targets and set the initial
         # instrument code to that which came in via the URL and the kwargs
-        form = ScheduleSpectraForm(initial={'exp_length' : 180.0,
+        form = ScheduleSpectraForm(initial={'exp_length': 180.0,
                                             'instrument_code' : kwargs.get('instrument_code', '')}
                                   )
         return self.render_to_response(self.get_context_data(form=form, body=self.target))
@@ -1108,6 +1109,7 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
         # Recalculate the parameters using new form data
         data = schedule_check(form.cleaned_data, self.object)
         new_form = ScheduleBlockForm(data)
+        # new_form.fields['calibsource_list'].choices = data['calibsource_list_options']
         if 'edit' in request.POST:
             return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.object})
         elif 'submit' in request.POST and new_form.is_valid():
@@ -1134,6 +1136,7 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
         # Recalculate the parameters using new form data
         data = schedule_check(form.cleaned_data, self.object)
         new_form = ScheduleBlockForm(data)
+        # new_form.fields['calibsource_list'].choices = data['calibsource_list_options']
         return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.object})
 
     def get_success_url(self):
@@ -1156,6 +1159,7 @@ def parse_errors(errors):
             for key, value in errors.items():
                 parsed_errors.append(f'{key}: {parse_errors(value)}')
         return '\n'.join(parsed_errors)
+
 
 def parse_portal_errors(sched_params):
     """Parse a passed <sched_params> response from the LCO Observing Portal via
@@ -1285,6 +1289,9 @@ def schedule_check(data, body, ok_to_schedule=True):
     solar_analog_id = -1
     solar_analog_params = {}
     solar_analog_exptime = 60
+    sa_predicted_exptime = 60
+    calibsource_list_init = data.get('calibsource_list', None)
+    calib_list = []
     if type(body) == Body:
         emp = compute_ephem(mid_dark_up_time, body_elements, data['site_code'], dbg=False, perturb=False, display=False)
         if emp == {}:
@@ -1300,10 +1307,12 @@ def schedule_check(data, body, ok_to_schedule=True):
         if spectroscopy and solar_analog:
             # Try and find a suitable solar analog "close" to RA, Dec midpoint
             # of block
-            close_solarstd, close_solarstd_params = find_best_solar_analog(ra, dec, data['site_code'])
+            close_solarstd, close_solarstd_params, std_list = find_best_solar_analog(ra, dec, data['site_code'], num=calibsource_list_init)
             if close_solarstd is not None:
                 solar_analog_id = close_solarstd.id
                 solar_analog_params = close_solarstd_params
+                calib_list = [f"{n+1}: {std['calib'].name} ({round(std['separation'], 1)}\N{DEGREE SIGN})" for n, std in enumerate(std_list)]
+
     else:
         magnitude = body.vmag
         speed = 0.0
@@ -1376,11 +1385,13 @@ def schedule_check(data, body, ok_to_schedule=True):
         slot_length = ceil(slot_length)
         # If automatically finding Solar Analog, calculate exposure time.
         # Currently assume bright enough that 180s is the maximum exposure time.
+
         if solar_analog and solar_analog_params:
+            solar_analog_exptime = calc_asteroid_snr(solar_analog_params['vmag'], 'V', 180, instrument=data['instrument_code'], params=snr_params, optimize=True)
+            sa_predicted_exptime = solar_analog_exptime
             if data.get('calibsource_exptime', None):
                 solar_analog_exptime = data.get('calibsource_exptime')
-            else:
-                solar_analog_exptime = calc_asteroid_snr(solar_analog_params['vmag'], 'V', 180, instrument=data['instrument_code'], params=snr_params, optimize=True)
+
     else:
         # Determine exposure length and count
         if data.get('exp_length', None):
@@ -1526,6 +1537,9 @@ def schedule_check(data, body, ok_to_schedule=True):
         'calibsource': solar_analog_params,
         'calibsource_id': solar_analog_id,
         'calibsource_exptime': solar_analog_exptime,
+        'calibsource_predict_exptime': sa_predicted_exptime,
+        'calibsource_list_options': calib_list,
+        'calibsource_list': calibsource_list_init,
     }
 
     if not spectroscopy and 'F65' in data['site_code']:
@@ -1771,6 +1785,7 @@ class LCDataListView(ListView):
         return context
 
     def find_lc(self):
+        # **DP** replace with DataProduct
         base_dir = os.path.join(settings.DATA_ROOT, 'Reduction')
         dir_list, _ = default_storage.listdir(base_dir)
         name_list = []
@@ -1785,6 +1800,7 @@ class LCDataListView(ListView):
                     name_list.append(new_name.lstrip())
         object_list = Body.objects.filter(Q(designations__value__in=name_list) | Q(provisional_name__in=name_list)
                                           | Q(provisional_packed__in=name_list) | Q(name__in=name_list))
+        # **DP** replace with DataProduct
         final_objects = object_list
         for obj in object_list:
             if sanitize_object_name(obj.current_name()) not in name_list:
@@ -2191,18 +2207,26 @@ def record_block(tracking_number, params, form_data, target):
                     elif chunks[-1] == 'SINISTRO':
                         site = 'sin'
 
-            block_kwargs = { 'superblock' : sblock_pk,
-                             'telclass' : params['pondtelescope'].lower(),
-                             'site'     : site,
-                             'obstype'  : obstype,
-                             'block_start' : dt_notz_blk_start,
-                             'block_end'   : dt_notz_blk_end,
-                             'request_number'  : request,
-                             'num_exposures'   : params['exp_count'],
-                             'exp_length'      : params['exp_time'],
-                             'active'   : True
-                           }
-            if (request_type == 'SIDEREAL' or request_type == 'ICRS') and params.get('solar_analog', False) is True and len(params.get('calibsource', {})) > 0:
+            block_kwargs = {'superblock': sblock_pk,
+                            'telclass': params['pondtelescope'].lower(),
+                            'site': site,
+                            'obstype': obstype,
+                            'block_start': dt_notz_blk_start,
+                            'block_end': dt_notz_blk_end,
+                            'request_number': request,
+                            'num_exposures': params['exp_count'],
+                            'exp_length': params['exp_time'],
+                            'active': True
+                            }
+            if request_type == 'SIDEREAL' or request_type == 'ICRS':
+                block_kwargs['body'] = None
+                block_kwargs['calibsource'] = target
+            else:
+                block_kwargs['body'] = target
+                block_kwargs['calibsource'] = None
+            pk = Block.objects.create(**block_kwargs)
+
+            if len(params.get('calibsource', {})) > 0:
                 try:
                     calib_source = StaticSource.objects.get(pk=params['calibsource']['id'])
                 except StaticSource.DoesNotExist:
@@ -2211,13 +2235,8 @@ def record_block(tracking_number, params, form_data, target):
                 block_kwargs['body'] = None
                 block_kwargs['calibsource'] = calib_source
                 block_kwargs['exp_length'] = params['calibsrc_exptime']
-            elif request_type == 'SIDEREAL' or request_type == 'ICRS':
-                block_kwargs['body'] = None
-                block_kwargs['calibsource'] = target
-            else:
-                block_kwargs['body'] = target
-                block_kwargs['calibsource'] = None
-            pk = Block.objects.create(**block_kwargs)
+                block_kwargs['obstype'] = Block.OPT_SPECTRA_CALIB
+                pk = Block.objects.create(**block_kwargs)
             i += 1
         return True
     else:
@@ -2928,6 +2947,8 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M', force=False):
             logger.info("Added new orbit for %s from MPC" % obj_id)
     else:
         body.origin = origin
+        if origin != 'M':
+            body.active = True
         body.save()
         logger.info("More recent elements already stored for %s" % obj_id)
     # Update Physical Parameters
@@ -3664,7 +3685,7 @@ def find_spec(pk):
 
     try:
         data = lco_api_call(url)['data']
-    except TypeError:
+    except (TypeError, KeyError) as e:
         return '', '', '', '', ''
 
     if 'DAY_OBS' in data:
@@ -3697,17 +3718,14 @@ def find_analog(date_obs, site):
     analog_blocks = Block.objects.filter(obstype=Block.OPT_SPECTRA_CALIB, site=site, when_observed__lte=date_obs+timedelta(days=10), when_observed__gte=date_obs-timedelta(days=10))
     star_list = []
     time_diff = []
-    for b in analog_blocks:
-        d_out, obj, req, path, prop = find_spec(b.id)
-        filenames = search(path, matchpattern='.*_2df_ex.fits', latest=False)
-        if filenames is False:
-            continue
-        filenames = [os.path.join(path, f) for f in filenames]
-        for fn in filenames:
-            star_list.append(fn)
-            time_diff.append(abs(date_obs - b.when_observed))
+    for block in analog_blocks:
+        block_db_list = DataProduct.content.block().filter(object_id=block.id)
+        analog_files = block_db_list.filter(filetype=DataProduct.FITS_SPECTRA)
+        for file in analog_files:
+            star_list.append(file)
+            time_diff.append(abs(date_obs - block.when_observed))
 
-    analog_list = [calib for _, calib in sorted(zip(time_diff, star_list))]
+    analog_list = [calib for _, calib in sorted(zip(time_diff, star_list), key=itemgetter(0))]
 
     return analog_list
 
@@ -3774,37 +3792,34 @@ def plot_all_spec(source):
 def plot_floyds_spec(block):
     """Get plots for requested blocks of FLOYDs data and subtract nearest solar analog."""
 
-    date_obs, obj, req, path, prop = find_spec(block.id)
-    filenames = search(path, matchpattern='.*_2df_ex.fits', latest=False)
-    if filenames is False:
-        return None, None
-    filenames = [os.path.join(path, f) for f in filenames]
+    block_db_list = DataProduct.content.block().filter(object_id=block.id)
+    spec_files = block_db_list.filter(filetype=DataProduct.FITS_SPECTRA)
 
     analogs = find_analog(block.when_observed, block.site)
 
     try:
         data_spec = []
-        for filename in filenames:
-            raw_label, raw_spec, ast_wav, spec_err = spectrum_plot(filename)
+        for spec_file in spec_files:
+            raw_label, raw_spec, ast_wav, spec_err = spectrum_plot(spec_file.product.name)
             data_spec.append({'label': raw_label,
                               'spec': raw_spec,
                               'wav': ast_wav,
                               'err': spec_err,
-                              'filename': filename})
+                              'filename': spec_file.product.name})
     except IndexError:
         data_spec = None
 
     analog_data = []
     offset = 2  # Arbitrary offset to minimize analog/target plotting overlap
     for analog in analogs:
-        analog_label, analog_spec, star_wav, spec_err = spectrum_plot(analog, offset=offset)
+        analog_label, analog_spec, star_wav, spec_err = spectrum_plot(analog.product.name, offset=offset)
         analog_data.append({'label': analog_label,
                             'spec': analog_spec,
                             'wav': star_wav,
                             'err': spec_err,
-                            'filename': analog})
+                            'filename': analog.product.name})
 
-    if data_spec:
+    if data_spec and data_spec[0]['spec'] is not None:
         script, div = spec_plot(data_spec, analog_data)
     else:
         return None, None
@@ -3888,52 +3903,53 @@ class LCPlot(LookUpBodyMixin, FormView):
 def import_alcdef(file, meta_list, lc_list):
     """Pull LC data from ALCDEF text files."""
 
-    lc_file = default_storage.open(file, 'rb')
-    lines = lc_file.readlines()
+    with file.open() as lc_file:
+        lines = lc_file.readlines()
 
-    metadata = {}
-    dates = []
-    mags = []
-    mag_errs = []
-    met_dat = False
+        metadata = {}
+        dates = []
+        mags = []
+        mag_errs = []
+        met_dat = False
 
-    for line in lines:
-        line = line.rstrip()
-        line = str(line, 'utf-8')
-        try:
-            if line[0] == '#':
+        for line in lines:
+            line = line.rstrip()
+            line = str(line, 'utf-8')
+            # skip commented lines
+            try:
+                if line[0] == '#':
+                    continue
+            except IndexError:
                 continue
-        except IndexError:
-            continue
-        if '=' in line:
-            if 'DATA=' in line and met_dat is False:
-                chunks = line[5:].split('|')
-                jd = float(chunks[0])
-                mag = float(chunks[1])
-                mag_err = float(chunks[2])
-                dates.append(jd)
-                mags.append(mag)
-                mag_errs.append(mag_err)
-            else:
-                chunks = line.split('=')
-                metadata[chunks[0]] = chunks[1].replace('\n', '')
-        elif 'ENDDATA' in line:
-            if metadata not in meta_list and dates:
-                meta_list.append(metadata)
-                lc_data = {
-                    'date': dates,
-                    'mags': mags,
-                    'mag_errs': mag_errs,
-                    }
-                lc_list.append(lc_data)
-            dates = []
-            mags = []
-            mag_errs = []
-            metadata = {}
-        elif 'STARTMETADATA' in line:
-            met_dat = True
-        elif 'ENDMETADATA' in line:
-            met_dat = False
+            if '=' in line:
+                if 'DATA=' in line and met_dat is False:
+                    chunks = line[5:].split('|')
+                    jd = float(chunks[0])
+                    mag = float(chunks[1])
+                    mag_err = float(chunks[2])
+                    dates.append(jd)
+                    mags.append(mag)
+                    mag_errs.append(mag_err)
+                else:
+                    chunks = line.split('=')
+                    metadata[chunks[0]] = chunks[1].replace('\n', '')
+            elif 'ENDDATA' in line:
+                if metadata not in meta_list and dates:
+                    meta_list.append(metadata)
+                    lc_data = {
+                        'date': dates,
+                        'mags': mags,
+                        'mag_errs': mag_errs,
+                        }
+                    lc_list.append(lc_data)
+                dates = []
+                mags = []
+                mag_errs = []
+                metadata = {}
+            elif 'STARTMETADATA' in line:
+                met_dat = True
+            elif 'ENDMETADATA' in line:
+                met_dat = False
 
     return meta_list, lc_list
 
@@ -4061,10 +4077,10 @@ def import_shape_model(file, body, model_params):
 def get_lc_plot(body, data):
     """Plot all lightcurve data for given source.
     """
+
     base_dir = os.path.join(settings.DATA_ROOT, 'Reduction')
     obj_name = sanitize_object_name(body.current_name())
     datadir = os.path.join(base_dir, obj_name)
-    filenames = search(datadir, '.*.ALCDEF.txt')
     period_scans = search(datadir, '.*.period_scan.out')
     damit_dir_list = search(datadir, 'DamitDocs.*.', dir_search=True)
     lc_models = []
@@ -4076,6 +4092,7 @@ def get_lc_plot(body, data):
             lc_models += [os.path.join(dd, x) for x in search(new_dir, '.*.lcs.final')]
             model_params += [os.path.join(dd, x) for x in search(new_dir, '.*.par.out')]
             shape_models += [os.path.join(dd, x) for x in search(new_dir, '.*.model.shape')]
+
     if data.get('period', None):
         period = data['period']
     else:
@@ -4083,9 +4100,13 @@ def get_lc_plot(body, data):
 
     meta_list = []
     lc_list = []
-    if filenames:
-        for file in filenames:
-            meta_list, lc_list = import_alcdef(os.path.join(datadir, file), meta_list, lc_list)
+    dataproducts = DataProduct.content.fullbody(bodyid=body.id).filter(filetype=DataProduct.ALCDEF_TXT)
+    if dataproducts:
+        for dp in dataproducts:
+            try:
+                meta_list, lc_list = import_alcdef(dp.product.file, meta_list, lc_list)
+            except FileNotFoundError as e:
+                logger.warning(e)
     else:
         meta_list = lc_list = []
 
@@ -4161,20 +4182,25 @@ def display_movie(request, pk):
         block = Block.objects.get(pk=pk)
     except ObjectDoesNotExist:
         raise Http404("Block does not exist.")
-    if block.obstype in [Block.OPT_IMAGING, Block.OPT_IMAGING_CALIB]:
-        movie_file = "{}_{}_framemovie.gif".format(obj.replace(' ', '_'), req)
-    elif block.obstype in [Block.OPT_SPECTRA, Block.OPT_SPECTRA_CALIB]:
-        movie_file = "{}_{}_guidemovie.gif".format(obj.replace(' ', '_'), req)
-        base_dir = os.path.join(path, "Guide_frames")
-    else:
+    block_db_list = DataProduct.content.block().filter(object_id=block.id)
+    try:
+        if block.obstype in [Block.OPT_IMAGING, Block.OPT_IMAGING_CALIB] and block_db_list:
+            movie_file = block_db_list.get(filetype=DataProduct.FRAME_GIF).product
+        elif block.obstype in [Block.OPT_SPECTRA, Block.OPT_SPECTRA_CALIB] and block_db_list:
+            movie_file = block_db_list.get(filetype=DataProduct.GUIDER_GIF).product
+        else:
+            return HttpResponse()
+    except DataProduct.DoesNotExist:
         return HttpResponse()
-
-    movie_file = search(base_dir, movie_file, latest=True)
 
     if movie_file:
         logger.debug('MOVIE FILE: {}'.format(movie_file))
-        movie = default_storage.open(movie_file, 'rb').read()
-        return HttpResponse(movie, content_type="Image/gif")
+        movie = movie_file
+        try:
+            return HttpResponse(movie, content_type="Image/gif")
+        except FileNotFoundError as e:
+            logger.warning(e)
+            return HttpResponse()
     else:
         return HttpResponse()
 
@@ -4215,8 +4241,6 @@ class GuideMovie(View):
         return render(request, self.template_name,
                       {'sb': supblock, 'block_list': block_list, 'is_paginated': is_paginated, 'page_obj': page_obj})
 
-        # return render(request, self.template_name, params)
-
 
 def update_taxonomy(body, tax_table, dbg=False):
     """Update taxonomy for given body based on passed taxonomy table.
@@ -4241,12 +4265,12 @@ def update_taxonomy(body, tax_table, dbg=False):
         for taxobj in taxonomies:
             check_tax = SpectralInfo.objects.filter(body=body, taxonomic_class=taxobj[1], tax_scheme=taxobj[2], tax_reference=taxobj[3], tax_notes=taxobj[4])
             if check_tax.count() == 0:
-                params = {  'body'          : body,
-                            'taxonomic_class' : taxobj[1],
-                            'tax_scheme'    : taxobj[2],
-                            'tax_reference' : taxobj[3],
-                            'tax_notes'     : taxobj[4],
-                            }
+                params = {'body'          : body,
+                          'taxonomic_class': taxobj[1],
+                          'tax_scheme'    : taxobj[2],
+                          'tax_reference' : taxobj[3],
+                          'tax_notes'     : taxobj[4],
+                          }
                 tax, created = SpectralInfo.objects.get_or_create(**params)
                 if not created:
                     if dbg is True:
@@ -4379,7 +4403,7 @@ def find_best_flux_standard(sitecode, utc_date=None, flux_standards=None, debug=
     return close_standard, close_params
 
 
-def find_best_solar_analog(ra_rad, dec_rad, site, ha_sep=4.0, solar_standards=None, debug=False):
+def find_best_solar_analog(ra_rad, dec_rad, site, ha_sep=4.0, num=None, solar_standards=None, debug=False):
     """Finds the "best" solar analog (closest to the passed RA, Dec (in radians,
     from e.g. compute_ephem)) within [ha_sep] hours (defaults to 4 hours
     of HA) that can be seen from the appropriate site.
@@ -4389,6 +4413,10 @@ def find_best_solar_analog(ra_rad, dec_rad, site, ha_sep=4.0, solar_standards=No
 
     close_standard = None
     close_params = {}
+    if num:
+        num = int(num) - 1
+    else:
+        num = 0
     if solar_standards is None:
         solar_standards = StaticSource.objects.filter(source_type=StaticSource.SOLAR_STANDARD)
 
@@ -4399,17 +4427,17 @@ def find_best_solar_analog(ra_rad, dec_rad, site, ha_sep=4.0, solar_standards=No
     else:
         dec_lim = [-20.0, 20.0]
 
-    min_sep = None
+    close_standards = []
     for standard in solar_standards:
         ra_diff = abs(standard.ra - degrees(ra_rad)) / 15
         sep = degrees(S.sla_dsep(radians(standard.ra), radians(standard.dec), ra_rad, dec_rad))
         if debug:
             print("%10s %1d %011.7f %+11.7f %7.3f %7.3f (%10s)" % (standard.name.replace("Landolt ", "") , standard.source_type, standard.ra, standard.dec, sep, ha_sep, close_standard))
         if ra_diff < ha_sep and (dec_lim[0] <= standard.dec <= dec_lim[1]):
-            if min_sep is None or sep < min_sep:
-                min_sep = sep
-                close_standard = standard
-    if close_standard is not None:
+            close_standards.append({"calib": standard, "separation": sep})
+    if close_standards:
+        close_standards.sort(key=itemgetter("separation"))
+        close_standard = close_standards[num]["calib"]
         close_params = model_to_dict(close_standard)
-        close_params['separation_deg'] = min_sep
-    return close_standard, close_params
+        close_params['separation_deg'] = close_standards[num]["separation"]
+    return close_standard, close_params, close_standards[:5]
