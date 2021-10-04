@@ -17,7 +17,7 @@ h1, h2, h3, h4 { font-family: Century Gothic,sans-serif; font-weight: bold;}
 #lcogt-bar li:last-child a { padding-left: 8px; }
 #login { margin: 0; padding: 0 0 0 0; display: inline; float: right; text-align: right; }
 #login, #lcogt-name { padding: 3px 8px; }
-#powered-by {float: right; position:relative; padding: 30px 0px 5px 0; }
+#powered-by {float: right; position:relative; padding: 30px 10px 5px 0; }
 #powered-by img {max-width:200px}
 
 fieldset { margin: 0px; padding: 0px; }
@@ -164,7 +164,7 @@ a:focus { border: 1px dotted invert; }
 #header-holder { display: block; clear:both; }
 #header h1 { font-size: 1em; }
 div p:first-child { margin-top: 0px; }
-#logo { text-align: center; display: inline-block; margin: 0; float: left; }
+#logo { text-align: center; display: inline-block; margin-left: 10pt; float: left; }
 #logo a { display: block; height: 64px; }
 #logo img { height: 96px; display: block; border:0px; }
 #site-name { display: inline-block; margin: 24px 0px 0px 16px; }
@@ -202,7 +202,7 @@ ul.navlist, ol.navlist { list-style: none; margin: 0px; padding: 0px; 	display: 
 	padding-left: 10px;
 	margin: 0px;
 }
-#navigation form {margin-left:16px;}
+#navigation form {margin-left:16px; margin-right:16px;}
 
 li.dropdown-menu {
 	position: relative;
@@ -430,12 +430,14 @@ li.dropdown-menu:after {
 }
 
 .home-button{
-  display:table-cell;
+  display:inline-flex;
+  flex-direction:column;
   padding-left:10px;
   }
 
 #moon, #moonphase {
   display:table-cell;
+  margin-top: 20%;
 }
 
 .home-button svg {
@@ -525,7 +527,7 @@ box-sizing: border-box;
 .buttons .button { margin-left:0.5em; margin-right: 0px; display: inline-block; }
 .buttons .button:first-child { margin-left:0em; }
 #extramenu .buttons { float: right; display: inline-block; }
-#extramenu .headingleft { display: inline-block; }
+#extramenu .headingleft { display: inline-block; margin-left: 16px}
 a#menutoggle { display: none; }
 .buttons .buttongroup { display: inline-block; }
 body.view .button.disable { display: none; }
@@ -940,6 +942,14 @@ ul.candidate-controls li {width:100%;}
 .block-control { padding: 0 10px;}
 
 ul.candidate-controls li:hover {background-color:#eee; }
+
+.warning-msg {
+  display: block;
+  padding: 10px;
+  color: #9F6000;
+  background-color: #FEEFB3;
+  font-size: 1.2em;
+}
 
 /* Responsive design styles */
 

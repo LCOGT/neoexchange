@@ -1410,6 +1410,34 @@ class TestBlock(TestCase):
 
         self.assertEqual(self.staticsrc.current_name(), block.current_name())
 
+    def test_where_observed(self):
+
+        from astrometrics.site_config import valid_telescope_codes
+
+        self.params_imaging1['num_observed'] = 1
+        block = Block.objects.create(**self.params_imaging1)
+
+        params = {
+                    'instrument'    : 'fa99',
+                    'filter'        : 'w',
+                    'filename'      : 'cpt1m012-fa99-20150713-0130-e91.fits',
+                    'exptime'       : 40.0,
+                    'midpoint'      : '2015-07-13 21:09:51',
+                    'block'         : block,
+                    'frametype'     : Frame.BANZAI_RED_FRAMETYPE
+                 }
+        frame = Frame.objects.create(**params)
+
+        for site in valid_telescope_codes:
+            # Don't test generic sites
+            if site[0].isdigit() is False:
+                frame.sitecode = site
+                frame.save()
+                obs_string = block.where_observed()
+                self.assertNotEqual('', obs_string)
+                self.assertNotIn('Unknown LCO site', obs_string)
+
+
 class TestFrame(TestCase):
 
     def setUp(self):

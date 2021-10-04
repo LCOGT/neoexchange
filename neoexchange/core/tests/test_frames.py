@@ -19,8 +19,8 @@ from django.test import TestCase
 from mock import patch, Mock
 from astropy.wcs import WCS
 
-from core.models import Body, Proposal, Block, SuperBlock
-from neox.tests.mocks import mock_fetch_archive_frames, mock_archive_frame_header,\
+from core.models import Body, Proposal, Block, SuperBlock, StaticSource
+from neox.tests.mocks import mock_fetch_archive_frames, mock_archive_spectra_header,\
     mock_check_for_archive_images, mock_lco_api_call, mock_check_result_status,\
     mock_check_request_status_spectro
 from core.frames import *
@@ -52,6 +52,13 @@ class TestBlockStatus(TestCase):
                     'origin'        : 'M',
                     }
         self.body, created = Body.objects.get_or_create(**params)
+
+        analog_params = {'name': 'HD 15445',
+                         'ra': 17,
+                         'dec': -1,
+                         'vmag': 12
+                         }
+        self.analog, created = StaticSource.objects.get_or_create(**analog_params)
 
         neo_proposal_params = { 'code'  : 'LCO2015A-009',
                                 'title' : 'LCOGT NEO Follow-up Network'
@@ -131,30 +138,48 @@ class TestBlockStatus(TestCase):
 
     def insert_spectro_blocks(self):
 
-        sb_params = {  'cadence'       : 'False',
-                       'body'          : self.body,
-                       'proposal'      : self.neo_proposal,
-                       'block_start'   : '2015-04-20 05:00:00',
-                       'block_end'     : '2015-04-21 15:00:00',
-                       'tracking_number' : '4242',
-                       'active'        : True
-                    }
+        sb_params = {'cadence': 'False',
+                     'body': self.body,
+                     'proposal': self.neo_proposal,
+                     'block_start': '2015-04-20 05:00:00',
+                     'block_end': '2015-04-21 15:00:00',
+                     'tracking_number': '4242',
+                     'active': True
+                     }
         self.spec_super_block, created = SuperBlock.objects.get_or_create(**sb_params)
 
-        spec_block_params1 = { 'telclass' : '2m0',
-                               'site'     : 'ogg',
-                               'body'     : self.body,
-                               'superblock'  : self.spec_super_block,
-                               'block_start' : '2015-04-20 13:00:00',
-                               'block_end'   : '2015-04-21 03:00:00',
-                               'request_number' : '1391169',
-                               'num_exposures' : 1,
-                               'exp_length' : 1800.0,
-                               'active'   : True,
-                               'num_observed' : 0,
-                               'reported' : False
-                               }
+        spec_block_params1 = {'telclass': '2m0',
+                              'site': 'ogg',
+                              'body': self.body,
+                              'superblock': self.spec_super_block,
+                              'obstype': Block.OPT_SPECTRA,
+                              'block_start': '2015-04-20 13:00:00',
+                              'block_end': '2015-04-21 03:00:00',
+                              'request_number': '1391169',
+                              'num_exposures': 1,
+                              'exp_length': 1800.0,
+                              'active': True,
+                              'num_observed': 0,
+                              'reported': False
+                              }
         self.spec_test_block1 = Block.objects.create(**spec_block_params1)
+
+        spec_block_params2 = {'telclass': '2m0',
+                              'site': 'ogg',
+                              'body': None,
+                              'calibsource': self.analog,
+                              'superblock': self.spec_super_block,
+                              'obstype': Block.OPT_SPECTRA_CALIB,
+                              'block_start': '2015-04-20 13:00:00',
+                              'block_end': '2015-04-21 03:00:00',
+                              'request_number': '1391169',
+                              'num_exposures': 1,
+                              'exp_length': 50.0,
+                              'active': True,
+                              'num_observed': 0,
+                              'reported': False
+                              }
+        self.spec_test_block2 = Block.objects.create(**spec_block_params2)
 
     @patch('core.frames.lco_api_call', side_effect=mock_lco_api_call)
     @patch('core.frames.check_request_status', side_effect=mock_check_result_status)
@@ -194,16 +219,24 @@ class TestBlockStatus(TestCase):
 
     @patch('core.frames.check_request_status', mock_check_request_status_spectro)
     @patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
-    @patch('core.frames.lco_api_call', mock_archive_frame_header)
+    @patch('core.frames.lco_api_call', mock_archive_spectra_header)
     def test_check_spectro_block(self):
         self.insert_spectro_blocks()
 
         self.assertEqual(0, self.spec_test_block1.num_observed)
-        status = block_status(self.spec_test_block1.id)
+        self.assertEqual(0, self.spec_test_block2.num_observed)
 
-        self.assertEqual(True, status)
+        self.assertEqual(True, block_status(self.spec_test_block1.id))
+        self.assertEqual(True, block_status(self.spec_test_block2.id))
         spec_block = Block.objects.get(id=self.spec_test_block1.id)
+        analog_block = Block.objects.get(id=self.spec_test_block2.id)
         self.assertEqual(1, spec_block.num_observed)
+        self.assertEqual(1, analog_block.num_observed)
+
+        spec_frames = Frame.objects.filter(block=spec_block)
+        analog_frames = Frame.objects.filter(block=analog_block)
+        self.assertEqual(len(spec_frames), 4)
+        self.assertEqual(len(analog_frames), 4)
 
 
 class TestFrameParamsFromHeader(TestCase):

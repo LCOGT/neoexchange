@@ -24,12 +24,14 @@ import imaplib
 import email
 from re import sub, compile
 from math import degrees
-from datetime import datetime, timedelta
+from time import sleep
+from datetime import date, datetime, timedelta
 from socket import error
 from random import randint
-from time import sleep
-from datetime import date
 import requests
+import shutil
+import tempfile
+from contextlib import closing
 
 from bs4 import BeautifulSoup
 import astropy.units as u
@@ -147,7 +149,7 @@ def parse_previous_NEOCP_id(items, dbg=False):
         elif len(chunks) >= 5:
             if chunks[2].lower() == 'not' and chunks[3].lower() == 'confirmed':
                 none_id = 'wasnotconfirmed'
-            elif chunks[2].lower() == 'not' and chunks[4].lower() == 'minor':
+            elif (chunks[2].lower() == 'not' and chunks[4].lower() == 'minor') or (chunks[2].lower() == 'suspected' and chunks[3].lower() == 'artificial'):
                 none_id = 'wasnotminorplanet'
             elif chunks[2].lower() == 'not' and chunks[3].lower() == 'interesting':
                 none_id = ''
@@ -1448,8 +1450,29 @@ def get_site_status(site_code):
     return good_to_schedule, reason
 
 
-def fetch_yarkovsky_targets(yark_targets):
-    """Fetches Yarkovsky targets from command line and returns a list of targets"""
+def fetch_yarkovsky_targets(targets_or_file=None):
+    """Main wrapper routine for either fetch_yarkovsky_targets_list() or
+    fetch_yarkovsky_targets_ftp() to fetch Yarkovsky targets.
+    If [targets_or_file] is a `list` of targets, fetch_yarkovsky_targets_list()
+    is called; if [targets_or_file] is a filename or None, then
+    fetch_yarkovsky_targets_ftp() is called and the target list comes from either
+    the FTP site (`targets_or_file=None`) or by reading the file specified by
+    `targets_or_file`.
+
+    Returns a list of target names.
+    """
+
+    if type(targets_or_file) == list:
+        yark_target_list = fetch_yarkovsky_targets_list(targets_or_file)
+    else:
+        yark_target_list = fetch_yarkovsky_targets_ftp(targets_or_file)
+
+    return yark_target_list
+
+
+def fetch_yarkovsky_targets_list(yark_targets):
+    """Parses a list of lines of Yarkovsky targets (read from a file and which
+    may contain comments) and returns a list of targets"""
 
     yark_target_list = []
 
@@ -1465,6 +1488,47 @@ def fetch_yarkovsky_targets(yark_targets):
 
     return yark_target_list
 
+
+def fetch_yarkovsky_targets_ftp(file_or_url=None):
+    """Fetches Yarkovsky targets from either the specified file (if [file_or_url]
+    is not None) or the current list from the FTP site
+    and parses it to return the target and expected A2 Yarkovsky value and
+    its error"""
+    ftp_url = 'ftp://ssd.jpl.nasa.gov/pub/ssd/yarkovsky/yarko_targets/yarko_latest.txt'
+
+    targets = []
+    tempdir = None
+
+    if file_or_url is None or file_or_url.startswith('ftp://'):
+        if file_or_url is not None and file_or_url.startswith('ftp://'):
+            ftp_url = file_or_url
+        tempdir = tempfile.mkdtemp(prefix='tmp_neox_')
+        target_file = os.path.join(tempdir, 'yarkovsky_targets.txt')
+
+        with closing(urllib.request.urlopen(ftp_url)) as read_fp:
+            with open(target_file, 'wb') as write_fp:
+                shutil.copyfileobj(read_fp, write_fp)
+    else:
+        target_file = file_or_url
+
+    if os.path.exists(target_file):
+        table = ascii.read(target_file, format='csv')
+
+        for target in list(table['base']):
+            target = target.upper()
+            # Look for designations of the for yyyyXY[12] and add space in the middle
+            if len(target) >=6 and target[0:4].isdigit() and target[4:6].isalpha():
+                target = target[0:4] + ' ' + target[4:]
+            targets.append(target)
+
+        if tempdir:
+            try:
+                os.remove(target_file)
+                os.rmdir(tempdir)
+            except FileNotFoundError:
+                pass
+
+    return targets
 
 def fetch_sfu(page=None):
     """Fetches the solar radio flux from the Solar Radio Monitoring
@@ -1516,13 +1580,17 @@ def make_location(params):
         location['site'] = params['site'].lower()
     if params['site_code'] == 'W85':
         location['telescope'] = '1m0a'
-        location['observatory'] = 'doma'
+        location['enclosure'] = 'doma'
     elif params['site_code'] == 'W87':
         location['telescope'] = '1m0a'
-        location['observatory'] = 'domc'
+        location['enclosure'] = 'domc'
     elif params['site_code'] == 'V39':
         location['telescope'] = '1m0a'
-        location['observatory'] = 'domb'
+        location['enclosure'] = 'domb'
+    elif params['site_code'] == 'Z31':
+        location['telescope'] = '1m0a'
+        location['enclosure'] = 'doma'
+
     return location
 
 
@@ -1627,8 +1695,6 @@ def make_config(params, filter_list):
 
         instrument_config = {'exposure_count': exp_count,
                              'exposure_time': params['exp_time'],
-                             'bin_x': params['binning'],
-                             'bin_y': params['binning'],
                              'optical_elements': {'filter': filt[0]}
                              }
 
@@ -1649,8 +1715,7 @@ def make_config(params, filter_list):
                                                      'diffuser_r_position': 'out',
                                                      'diffuser_i_position': 'out',
                                                      'diffuser_z_position': 'out'}
-            instrument_config.pop('bin_x', None)
-            instrument_config.pop('bin_y', None)
+
             instrument_config['extra_params'] = extra_params
         conf['instrument_configs'].append(instrument_config)
 
@@ -1763,35 +1828,18 @@ def make_single(params, ipp_value, request):
     """Create a user_request for a single observation"""
 
     requestgroup = {
-                    'submitter' : params['user_id'],
-                    'requests'  : [request],
-                    'name'  : params['group_name'],
+                    'submitter': params['user_id'],
+                    'requests': [request],
+                    'name': params['group_name'],
                     'observation_type': "NORMAL",
-                    'operator'  : "SINGLE",
-                    'ipp_value' : ipp_value,
-                    'proposal'  : params['proposal_id']
+                    'operator': "SINGLE",
+                    'ipp_value': ipp_value,
+                    'proposal': params['proposal_id']
     }
 
 # If the ToO mode is set, change the observation_type
     if params.get('too_mode', False) is True:
         requestgroup['observation_type'] = 'TIME_CRITICAL'
-
-    return requestgroup
-
-
-def make_many(params, ipp_value, request, cal_request):
-    """Create a request for a MANY observation of the asteroidgroup
-    target (<request>) and calibration source (<cal_request>)"""
-
-    requestgroup = {
-                    'submitter' : params['user_id'],
-                    'requests'  : [request, cal_request],
-                    'name'  : params['group_name'],
-                    'observation_type': "NORMAL",
-                    'operator'  : "MANY",
-                    'ipp_value' : ipp_value,
-                    'proposal'  : params['proposal_id']
-    }
 
     return requestgroup
 
@@ -1893,6 +1941,8 @@ def configure_defaults(params):
                   'F65-FLOYDS' : 'OGG',
                   'E10' : 'COJ',
                   'E10-FLOYDS' : 'COJ',
+                  'Z31' : 'TFN',
+                  'Z24' : 'TFN',
                   'Z17' : 'TFN',
                   'Z21' : 'TFN',
                   'T03' : 'OGG',
@@ -1985,14 +2035,7 @@ def make_requestgroup(elements, params):
     note = f'Submitted by NEOexchange {submitter}'
     note = note.rstrip()
 
-    request = {
-        'configurations': configurations,
-        "acceptability_threshold": params.get('acceptability_threshold', 90),
-        'windows': [window],
-        'location': location,
-        "observation_note": note,
-    }
-
+    cal_configurations = []
     if params.get('solar_analog', False) and len(params.get('calibsource', {})) > 0:
         # Assemble solar analog request
         params['group_name'] += "+solstd"
@@ -2019,22 +2062,19 @@ def make_requestgroup(elements, params):
         params['exp_count'] = exp_count
         params['ag_exp_time'] = ag_exptime
 
-        cal_request = {
-                        "location": location,
-                        "configurations": cal_configurations,
-                        "windows": [window],
-                        "observation_note": note,
-                    }
-    else:
-        cal_request = {}
+    request = {
+        'configurations': configurations + cal_configurations,
+        "acceptability_threshold": params.get('acceptability_threshold', 90),
+        'windows': [window],
+        'location': location,
+        "observation_note": note,
+    }
 
     ipp_value = params.get('ipp_value', 1.0)
 
 # Add the Request to the outer User Request
     if 'period' in params.keys() and 'jitter' in params.keys():
         user_request = make_cadence(request, params, ipp_value)
-    elif len(cal_request) > 0:
-        user_request = make_many(params, ipp_value, request, cal_request)
     else:
         user_request = make_single(params, ipp_value, request)
 
@@ -2571,15 +2611,15 @@ def store_jpl_physparams(phys_par, body):
     """Function to store object physical parameters from JPL Horizons"""
 
     # parsing the JPL physparams dictionary
-    for p in phys_par:   
+    for p in phys_par:
         if 'H' == p['name']:  # absolute magnitude
             p_type = 'H'
         elif 'G' == p['name']:  # magnitude (phase) slope
             p_type = 'G'
         elif 'diameter' in p['name']:  # diameter
-            p_type = 'D'     
+            p_type = 'D'
         elif 'extent' in p['name']:  # extent
-            continue        
+            continue
         elif 'GM' in p['name']:  # GM
             p_type = 'M'
         elif 'density' in p['name']:  # density
@@ -2639,7 +2679,7 @@ def store_jpl_physparams(phys_par, body):
             del phys_params['parameter_type']
         else:
             phys_params['value2'] = jpl_value2
-            phys_params['error2'] = jpl_error2  
+            phys_params['error2'] = jpl_error2
 
         saved = body.save_physical_parameters(phys_params)
         if saved:
@@ -2686,7 +2726,7 @@ def parse_jpl_fullname(obj):
     """Given a JPL object, return parsed full name"""
     fullname = obj['fullname']
     number = name = prov_des = None
-    if fullname[0] == '(':
+    if fullname[0] == '(':  # provisional designation only
         prov_des = fullname.strip('()')
     elif '/' in fullname:  # comet
         parts = fullname.split('/')
@@ -2708,17 +2748,16 @@ def parse_jpl_fullname(obj):
             elif number:
                 name = part2
     elif ' ' in fullname:
-        space_num = fullname.count(' ')
-        if space_num == 3:
-            part1, part2, part3, part4 = fullname.split(' ')
+        name_parts = list(filter(None, fullname.split(' ')))
+        if len(name_parts) == 4:
+            number = name_parts[0]
+            if name_parts[1][0].isalpha:
+                name = name_parts[1]
+        elif len(name_parts) == 3:
+            part1, part2, part3 = name_parts
             number = part1
-            if part2[0].isalpha:
-                name = part2
-        elif space_num == 2:
-            part1, part2, part3 = fullname.split(' ')
-            number = part1
-        elif space_num == 1:
-            part1, part2 = fullname.split(' ')
+        elif len(name_parts) == 2:
+            part1, part2 = name_parts
             number = part1
             name = part2
 
@@ -2739,13 +2778,13 @@ def store_jpl_sourcetypes(code, obj, body):
         source_type = 'T'
         source_subtype_1 = 'P5'
     elif 'TNO' in code:  # Trans-Neptunian Object
-        source_type = 'K'        
+        source_type = 'K'
     elif 'IEO' in code:  # Atira
         source_subtype_1 = 'N1'
     elif 'ATE' in code:  # Aten
         source_subtype_1 = 'N2'
     elif 'APO' in code:  # Apollo
-        source_subtype_1 = 'N3'   
+        source_subtype_1 = 'N3'
     elif 'AMO' in code:  # Amor
         source_subtype_1 = 'N4'
     elif 'IMB' in code:  # inner main belt
@@ -2794,10 +2833,10 @@ def store_jpl_sourcetypes(code, obj, body):
                 source_subtype_2 = 'N'
 
     if source_type:
-        body.source_type = source_type        
+        body.source_type = source_type
     body.source_subtype_1 = source_subtype_1
     body.source_subtype_2 = source_subtype_2
     body.save()
-        
+
 
 

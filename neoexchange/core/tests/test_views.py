@@ -21,7 +21,7 @@ import tempfile
 from glob import glob
 from math import degrees
 
-from django.test import TestCase
+from django.test import TestCase, SimpleTestCase, override_settings
 from django.forms.models import model_to_dict
 from django.conf import settings
 from bs4 import BeautifulSoup
@@ -45,10 +45,12 @@ from astrometrics.ephem_subs import compute_ephem, determine_darkness_times
 from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs, \
     fetch_flux_standards, read_solar_standards
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header
+from photometrics.gf_movie import make_gif
 from core.frames import block_status, create_frame
 from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate,\
     SuperBlock, SpectralInfo, PreviousSpectra, StaticSource
 from core.forms import EphemQuery
+from core.utils import save_dataproduct, save_to_default
 # Import modules to test
 from core.views import *
 from core.plots import *
@@ -1108,25 +1110,23 @@ class TestRecordBlock(TestCase):
         self.assertEqual(True, sblocks[0].rapid_response)
 
     def test_spectro_and_solar_block(self):
-        new_params = { 'calibsource' : {'id': 1,
-                                        'name': 'Landolt SA107-684',
-                                        'ra_deg': 234.325,
-                                        'dec_deg': -0.164,
-                                        'pm_ra': 0.0,
-                                        'pm_dec': 0.0,
-                                        'parallax': 0.0
-                                        },
-                        'calibsrc_exptime' : 60.0,
-                        'dec_deg' : -0.164,
-                        'ra_deg'  : 234.325,
-                        'solar_analog' : True
-                        }
+        new_params = {'calibsource': {'id': 1,
+                                      'name': 'Landolt SA107-684',
+                                      'ra_deg': 234.325,
+                                      'dec_deg': -0.164,
+                                      'pm_ra': 0.0,
+                                      'pm_dec': 0.0,
+                                      'parallax': 0.0
+                                      },
+                      'calibsrc_exptime': 60.0,
+                      'dec_deg': -0.164,
+                      'ra_deg': 234.325,
+                      'solar_analog': True
+                      }
         spectro_params = {**new_params, **self.spectro_params}
         spectro_params['group_name'] = self.spectro_params['group_name'] + '+solstd'
-        spectro_params['request_numbers'] = {1450339: 'NON_SIDEREAL', 1450340: 'SIDEREAL'}
-        spectro_params['request_windows'] = [[{'end': '2018-03-16T18:30:00', 'start': '2018-03-16T11:20:00'}],
-                                            [{'end': '2018-03-16T18:30:00', 'start': '2018-03-16T11:20:00'}]
-                                           ]
+        spectro_params['request_numbers'] = {1450339: 'NON_SIDEREAL'}
+        spectro_params['request_windows'] = [[{'end': '2018-03-16T18:30:00', 'start': '2018-03-16T11:20:00'}]]
 
         block_resp = record_block(self.spectro_tracknum, spectro_params, self.spectro_form, self.spectro_body)
 
@@ -1260,6 +1260,9 @@ class TestScheduleCheck(TestCase):
                             'calibsource': {},
                             'calibsource_id': -1,
                             'calibsource_exptime': 60,
+                            'calibsource_list': None,
+                            'calibsource_list_options': [],
+                            'calibsource_predict_exptime': 60,
                             'solar_analog': False,
                             'vis_time': 7.033333333333333,
                             'lco_enc': 'DOMA',
@@ -1868,6 +1871,9 @@ class TestScheduleCheck(TestCase):
                         'calibsource': {},
                         'calibsource_id': -1,
                         'calibsource_exptime': 60,
+                        'calibsource_list': None,
+                        'calibsource_list_options': [],
+                        'calibsource_predict_exptime': 60,
                         'solar_analog': False,
                         'vis_time': 7.966666666666667,
                         'lco_enc': 'CLMA',
@@ -1944,6 +1950,9 @@ class TestScheduleCheck(TestCase):
                         'calibsource': {'separation_deg': 11.532781052438736, **model_to_dict(self.solar_analog)},
                         'calibsource_id': 1,
                         'calibsource_exptime': 180,
+                        'calibsource_list': None,
+                        'calibsource_list_options': ['1: SA42-999 (11.5°)'],
+                        'calibsource_predict_exptime': 180,
                         'solar_analog': True,
                         'vis_time': 7.966666666666667,
                         'lco_enc': 'CLMA',
@@ -7229,7 +7238,7 @@ class TestFindBestSolarAnalog(TestCase):
         expected_ra = 2.7772337523336565
         expected_dec = 0.6247970652631909
         expected_standard = StaticSource.objects.get(name='35 Leo')
-        expected_params = { 'separation_deg' : 13.031726234959416}
+        expected_params = {'separation_deg': 13.031726234959416}
         # Python 3.5 dict merge; see PEP 448
         expected_params = {**expected_params, **model_to_dict(expected_standard)}
 
@@ -7237,20 +7246,31 @@ class TestFindBestSolarAnalog(TestCase):
         emp = compute_ephem(utc_date, model_to_dict(self.test_body), 'F65', perturb=False)
         self.assertAlmostEqual(expected_ra, emp['ra'], self.precision)
         self.assertAlmostEqual(expected_dec, emp['dec'], self.precision)
-        close_standard, close_params = find_best_solar_analog(emp['ra'], emp['dec'], 'F65')
+        close_standard, close_params, close_std_list = find_best_solar_analog(emp['ra'], emp['dec'], 'F65')
 
         self.assertEqual(expected_standard, close_standard)
+        self.assertEqual(len(close_std_list), 5)
+        self.assertGreater(close_std_list[1]["separation"], close_std_list[0]["separation"])
+        self.assertGreater(close_std_list[2]["separation"], close_std_list[1]["separation"])
+        self.assertGreater(close_std_list[3]["separation"], close_std_list[2]["separation"])
+
         for key in expected_params:
             if '_deg' in key or '_rad' in key:
                 self.assertAlmostEqual(expected_params[key], close_params[key], places=self.precision)
             else:
                 self.assertEqual(expected_params[key], close_params[key])
 
+        close_standard2, close_params2, close_std_list2 = find_best_solar_analog(emp['ra'], emp['dec'], 'F65', num=2)
+        self.assertNotEqual(expected_params['name'], close_params2['name'])
+        self.assertNotEqual(expected_params['ra'], close_params2['ra'])
+        self.assertEqual(close_std_list2, close_std_list)
+        self.assertEqual(close_std_list[1]['calib'], close_standard2)
+
     def test_FTS(self):
         expected_ra = 4.334041503242261
         expected_dec = -0.3877173805762358
         expected_standard = StaticSource.objects.get(name='HD 140990')
-        expected_params = { 'separation_deg' : 10.838361371951908}
+        expected_params = {'separation_deg': 10.838361371951908}
         # Python 3.5 dict merge; see PEP 448
         expected_params = {**expected_params, **model_to_dict(expected_standard)}
 
@@ -7258,9 +7278,13 @@ class TestFindBestSolarAnalog(TestCase):
         emp = compute_ephem(utc_date, model_to_dict(self.test_body), 'E10', perturb=False)
         self.assertAlmostEqual(expected_ra, emp['ra'], self.precision)
         self.assertAlmostEqual(expected_dec, emp['dec'], self.precision)
-        close_standard, close_params = find_best_solar_analog(emp['ra'], emp['dec'], 'E10')
+        close_standard, close_params, close_std_list = find_best_solar_analog(emp['ra'], emp['dec'], 'E10')
 
         self.assertEqual(expected_standard, close_standard)
+        self.assertEqual(len(close_std_list), 5)
+        self.assertGreater(close_std_list[1]["separation"], close_std_list[0]["separation"])
+        self.assertGreater(close_std_list[2]["separation"], close_std_list[1]["separation"])
+        self.assertGreater(close_std_list[3]["separation"], close_std_list[2]["separation"])
         for key in expected_params:
             if '_deg' in key or '_rad' in key:
                 self.assertAlmostEqual(expected_params[key], close_params[key], places=self.precision)
@@ -7272,15 +7296,17 @@ class TestFindBestSolarAnalog(TestCase):
         expected_dec = -0.9524603478856751
         expected_standard = None
         expected_params = {}
+        expected_list = []
 
         utc_date = datetime(2020, 9, 5, 13, 30, 0)
         emp = compute_ephem(utc_date, model_to_dict(self.test_body), 'E10', perturb=False)
         self.assertAlmostEqual(expected_ra, emp['ra'], self.precision)
         self.assertAlmostEqual(expected_dec, emp['dec'], self.precision)
-        close_standard, close_params = find_best_solar_analog(emp['ra'], emp['dec'], 'E10', ha_sep=0.5)
+        close_standard, close_params, close_std_list = find_best_solar_analog(emp['ra'], emp['dec'], 'E10', ha_sep=0.5)
 
         self.assertEqual(expected_standard, close_standard)
         self.assertEqual(expected_params, close_params)
+        self.assertEqual(expected_list, close_std_list)
 
 
 class TestExportMeasurements(TestCase):
@@ -7983,6 +8009,7 @@ class TestFindAnalog(TestCase):
 
         self.assertEqual(expected_analog_list, analog_list)
 
+
 class TestBuildVisibilitySource(TestCase):
 
     def setUp(self):
@@ -8047,10 +8074,10 @@ class TestBuildVisibilitySource(TestCase):
             assertDeepAlmostEqual(self, expected_vis[key], vis[key])
 
 
-class TestParsePortalErrors(TestCase):
+class TestParsePortalErrors(SimpleTestCase):
 
     def setUp(self):
-        self.no_parse_msg= "It was not possible to submit your request to the scheduler."
+        self.no_parse_msg = "It was not possible to submit your request to the scheduler."
         self.no_extrainfo_msg = self.no_parse_msg + "\nAdditional information:"
 
         self.maxDiff = None
@@ -8076,7 +8103,7 @@ class TestParsePortalErrors(TestCase):
         self.assertEqual(expected_msg, msg)
 
     def test_no_visibility(self):
-        expected_msg = self.no_extrainfo_msg + "According to the constraints of the request, the target is never visible within the time window. Check that the target is in the nighttime sky. Consider modifying the time window or loosening the airmass or lunar separation constraints. If the target is non sidereal, double check that the provided elements are correct."
+        expected_msg = self.no_extrainfo_msg + "\nrequests: non_field_errors: According to the constraints of the request, the target is never visible within the time window. Check that the target is in the nighttime sky. Consider modifying the time window or loosening the airmass or lunar separation constraints. If the target is non sidereal, double check that the provided elements are correct."
         params = {'error_msg': {'requests': [{'non_field_errors': ['According to the constraints of the request, the target is never visible within the time window. Check that the target is in the nighttime sky. Consider modifying the time window or loosening the airmass or lunar separation constraints. If the target is non sidereal, double check that the provided elements are correct.']}]}}
 
         msg = parse_portal_errors(params)
@@ -8084,7 +8111,7 @@ class TestParsePortalErrors(TestCase):
         self.assertEqual(expected_msg, msg)
 
     def test_no_visibility_bad_proposal(self):
-        expected_msg = self.no_extrainfo_msg + "According to the constraints of the request, the target is never visible within the time window. Check that the target is in the nighttime sky. Consider modifying the time window or loosening the airmass or lunar separation constraints. If the target is non sidereal, double check that the provided elements are correct."
+        expected_msg = self.no_extrainfo_msg + "\nrequests: non_field_errors: According to the constraints of the request, the target is never visible within the time window. Check that the target is in the nighttime sky. Consider modifying the time window or loosening the airmass or lunar separation constraints. If the target is non sidereal, double check that the provided elements are correct."
         expected_msg += '\nproposal: Invalid pk "foo" - object does not exist.'
 
         params = {'error_msg': {'requests': [{'non_field_errors': ['According to the constraints of the request, the target is never visible within the time window. Check that the target is in the nighttime sky. Consider modifying the time window or loosening the airmass or lunar separation constraints. If the target is non sidereal, double check that the provided elements are correct.']}],
@@ -8114,3 +8141,239 @@ class TestParsePortalErrors(TestCase):
         msg = parse_portal_errors(params)
 
         self.assertEqual(expected_msg, msg)
+
+    def test_no_cadence_windows(self):
+        expected_msg = self.no_extrainfo_msg
+        expected_msg += '\nNo visible requests within cadence window parameters'
+
+        params = {'error_msg' : "No visible requests within cadence window parameters" }
+
+        msg = parse_portal_errors(params)
+
+        self.assertEqual(expected_msg, msg)
+
+    def test_semester_crossing(self):
+        expected_msg = self.no_extrainfo_msg
+        expected_msg += '\nrequests: windows: non_field_errors: The observation window does not fit within any defined semester.'
+
+        params = {'error_msg': {'requests': [{'windows': [{'non_field_errors': ['The observation window does not fit within any defined semester.']}]}]}
+        }
+
+        msg = parse_portal_errors(params)
+
+        self.assertEqual(expected_msg, msg)
+
+    def test_muchfail(self):
+        params = {'error_msg': {
+                                'requests': [
+                                    {
+                                        'configurations': [
+                                            {
+                                                'instrument_configs': [
+                                                    {
+                                                        'exposure_time':['A valid number is required.']
+                                                    }
+                                                ],
+                                                'target': {
+                                                    'name': ['Please provide a name.'],
+                                                    'ra': ['A valid number is required.'],
+                                                    'dec': ['A valid number is required.']
+                                                }
+                                            }
+                                        ],
+                                        'windows': [
+                                            {
+                                                'non_field_errors': ['The observation window does not fit within any defined semester.']
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        'configurations':[
+                                            {
+                                                'instrument_configs': [
+                                                    {
+                                                        'exposure_time': ['A valid number is required.']
+                                                    },
+                                                    {
+                                                        'exposure_time': ['A valid number is required.']
+                                                    }
+                                                ],
+                                                'target': {
+                                                    'name': ['Please provide a name.'],
+                                                    'ra': ['A valid number is required.'],
+                                                    'dec': ['A valid number is required.']
+                                                }
+                                            },
+                                            {
+                                                'instrument_configs': [
+                                                    {
+                                                        'exposure_time': ['A valid number is required.']
+                                                    },
+                                                    {
+                                                        'exposure_time': ['A valid number is required.']
+                                                    }
+                                                ],
+                                                'target': {
+                                                    'name': ['Please provide a name.'],
+                                                    'ra': ['A valid number is required.'],
+                                                    'dec': ['A valid number is required.']
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ],
+                                'name': ['Please provide a name.'],
+                                'proposal': ['Please provide a proposal.']
+                            }
+                    }
+
+        expected_msg = self.no_extrainfo_msg + "\n".join(["",
+                        "requests: configurations: instrument_configs: exposure_time: A valid number is required.",
+                        "target: name: Please provide a name.",
+                        "ra: A valid number is required.",
+                        "dec: A valid number is required.",
+                        "windows: non_field_errors: The observation window does not fit within any defined semester.",
+                        "configurations: instrument_configs: exposure_time: A valid number is required.",
+                        "exposure_time: A valid number is required.",
+                        "target: name: Please provide a name.",
+                        "ra: A valid number is required.",
+                        "dec: A valid number is required.",
+                        "instrument_configs: exposure_time: A valid number is required.",
+                        "exposure_time: A valid number is required.",
+                        "target: name: Please provide a name.",
+                        "ra: A valid number is required.",
+                        "dec: A valid number is required.",
+                        "name: Please provide a name.",
+                        "proposal: Please provide a proposal."])
+
+        msg = parse_portal_errors(params)
+
+        self.assertEqual(expected_msg, msg)
+
+
+@override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+class TestDisplayMovie(TestCase):
+    def setUp(self):
+        body_params = {
+                         'provisional_name': None,
+                         'provisional_packed': 'j5432',
+                         'name': '455432',
+                         'origin': 'A',
+                         'source_type': 'N',
+                         'elements_type': 'MPC_MINOR_PLANET',
+                         'active': True,
+                         'fast_moving': True,
+                         'urgency': None,
+                         'epochofel': datetime(2019, 7, 31, 0, 0),
+                         'orbit_rms': 0.46,
+                         'orbinc': 31.23094,
+                         'longascnode': 301.42266,
+                         'argofperih': 22.30793,
+                         'eccentricity': 0.3660154,
+                         'meandist': 1.7336673,
+                         'meananom': 352.55084,
+                         'perihdist': None,
+                         'epochofperih': None,
+                         'abs_mag': 18.54,
+                         'slope': 0.15,
+                         'score': None,
+                         'discovery_date': datetime(2003, 9, 7, 3, 7, 18),
+                         'num_obs': 130,
+                         'arc_length': 6209.0,
+                         'not_seen': 3.7969329574421296,
+                         'updated': True,
+                         'ingest': datetime(2019, 7, 4, 5, 28, 39),
+                         'update_time': datetime(2019, 7, 30, 19, 7, 35)
+                        }
+        self.test_body = Body.objects.create(**body_params)
+
+        proposal_params = {'code': 'LCOEngineering',
+                           'title': 'LCOEngineering',
+                           'active': True
+                           }
+        self.eng_proposal, created = Proposal.objects.get_or_create(**proposal_params)
+
+        sblock_params = {
+                        'body': self.test_body,
+                        'block_start': datetime(2019, 7, 27, 8, 30),
+                        'block_end': datetime(2019, 7, 27,19, 30),
+                        'proposal': self.eng_proposal,
+                        'tracking_number': '818566'
+                        }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+
+        block_params = {
+                        'body': self.test_body,
+                        'superblock': self.test_sblock,
+                        'site': 'coj',
+                        'block_start': datetime(2019, 7, 27, 8, 30),
+                        'block_end': datetime(2019, 7, 27, 19, 30),
+                        'obstype': Block.OPT_IMAGING,
+                        'request_number': '1878696',
+                        'num_observed': 1,
+                        'when_observed': datetime(2019, 7, 27, 17, 15),
+                        'num_exposures': 1,
+                        'exp_length': 1800
+                        }
+        self.test_block = Block.objects.create(**block_params)
+
+        frame_params = {'sitecode': 'K92',
+                        'instrument': 'kb76',
+                        'filter': 'w',
+                        'filename': 'banzai_test_frame.fits',
+                        'exptime': 225.0,
+                        'midpoint': datetime(2016, 8, 2, 2, 17, 19),
+                        'block': self.test_block,
+                        'zeropoint': -99,
+                        'zeropoint_err': -99,
+                        'fwhm': 2.390,
+                        'frametype': 0,
+                        'rms_of_fit': 0.3,
+                        'nstars_in_fit': -4,
+                        }
+        self.test_frame, created = Frame.objects.get_or_create(**frame_params)
+
+        block2_params = {
+            'body': self.test_body,
+            'superblock': self.test_sblock,
+            'site': 'coj',
+            'block_start': datetime(2019, 7, 27, 8, 30),
+            'block_end': datetime(2019, 7, 27, 19, 30),
+            'obstype': Block.OPT_SPECTRA,
+            'request_number': '1878696',
+            'num_observed': 1,
+            'when_observed': datetime(2019, 7, 27, 17, 15),
+            'num_exposures': 1,
+            'exp_length': 1800
+        }
+        self.test_block2 = Block.objects.create(**block2_params)
+
+    def test_display_movie(self):
+        # test empty response
+        request = ''
+        response = display_movie(request, self.test_block.id)
+        self.assertEqual(b'', response.content)
+        # ALCDEF Only (superblock)
+        file_name = 'test_SB_ALCDEF.txt'
+        file_content = "some text here"
+        save_dataproduct(obj=self.test_sblock, filepath=None, filetype=DataProduct.ALCDEF_TXT, filename=file_name, content=file_content)
+        response = display_movie(request, self.test_block.id)
+        self.assertEqual(b'', response.content)
+        # build movie
+        fits = os.path.abspath(os.path.join('photometrics', 'tests', 'banzai_test_frame.fits'))
+        frames = [fits, fits, fits, fits, fits]
+        movie_file = make_gif(frames, sort=False, init_fr=100, out_path=settings.MEDIA_ROOT, center=3, progress=False)
+        save_dataproduct(obj=self.test_block, filepath=movie_file, filetype=DataProduct.FRAME_GIF)
+        response = display_movie(request, self.test_block.id)
+        self.assertIn(b'GIF', response.content)
+
+        # test fits only, no gif
+        save_to_default(fits, os.path.abspath(os.path.join('photometrics', 'tests')))
+        fits_path = os.path.basename(fits)
+        save_dataproduct(obj=self.test_block2, filepath=fits_path, filetype=DataProduct.FITS_SPECTRA)
+        response = display_movie(request, self.test_block2.id)
+        self.assertEqual(b'', response.content)
+        # check Guider gif
+        save_dataproduct(obj=self.test_block2, filepath=movie_file, filetype=DataProduct.GUIDER_GIF)
+        response = display_movie(request, self.test_block2.id)
+        self.assertIn(b'GIF', response.content)

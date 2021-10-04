@@ -129,13 +129,7 @@
                                 <div class="block-control">{{blk.num_spectro_frames}}</div>
                                 <div class="block-control">Target: {{blk.current_name}}</div>
                                 {% if "TAR" in blk.num_spectro_frames %}
-                                    {% if blk.num_spectra_complete > 1 %}
-                                        {% for obs_num in blk.num_spectra_complete|make_int_list %}
-                                            <div class="block-control"><a href="{% url 'blockspec' blk.pk obs_num %}">Spectrum Plot {{obs_num}}</a></div>
-                                        {% endfor %}
-                                    {% else %}
-                                        <div class="block-control"><a href="{% url 'blockspec' blk.pk 1 %}">Spectrum Plot</a></div>
-                                    {% endif %}
+                                    <div class="block-control"><a href="{% url 'blockspec' blk.pk %}">Spectrum Plot</a></div>
                                 {% endif %}
                               {% else %}
                                   {% if blk.num_observed > 0 and blk.num_unique_red_frames < 10 and blk.num_candidates > 0 %}

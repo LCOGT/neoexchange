@@ -38,7 +38,8 @@ import logging
 from django.core.files.storage import default_storage
 
 from photometrics.external_codes import unpack_tarball
-from core.models import Frame, CatalogSources
+from photometrics.catalog_subs import funpack_fits_file
+from core.models import Block, Frame, CatalogSources
 from astrometrics.ephem_subs import horizons_ephem
 from astrometrics.time_subs import timeit
 from photometrics.catalog_subs import sanitize_object_name
@@ -129,7 +130,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
         fits_files = np.sort(frames)
     else:
         fits_files = frames
-    path = os.path.dirname(frames[0]).lstrip(' ')
+    path = out_path
 
     start_frames = 5
     copies = 1
@@ -144,35 +145,49 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
                 c += 1
             i += 1
 
-    # pull header information from first fits file
-    for file in fits_files:
-        try:
-            obj, rn, site, inst, frame_type = get_header_info(file)
-            break
-        except FileNotFoundError:
-            obj = rn = site = inst = frame_type = None
-            continue
-    if not obj and not rn and not site and not inst:
+    # pull out files that exist
+    good_fits_files = [f for f in fits_files if os.path.exists(f)]
+    base_name_list = [os.path.basename(f) for f in good_fits_files]
+    if len(good_fits_files) == 0:
         return "WARNING: COULD NOT FIND FITS FILES"
 
-    if title is None:
-        title = 'Request Number {} -- {} at {} ({})'.format(rn, obj, site, inst)
-
     fig = plt.figure()
-    if title:
-        fig.suptitle(title)
-
-    base_name_list = [os.path.basename(f) for f in fits_files]
     frame_query = Frame.objects.filter(filename__in=base_name_list).order_by('midpoint').prefetch_related('catalogsources_set')
-
-    if horizons_comp:
-        # Get predicted JPL position of target in first frame
+    if frame_query:
         frame_obj = frame_query[0]
         end_frame = frame_query.last()
         start = frame_obj.midpoint - timedelta(minutes=5)
         end = end_frame.midpoint + timedelta(minutes=5)
         sitecode = frame_obj.sitecode
-        obj_name = frame_obj.block.body.name
+        try:
+            obj_name = frame_obj.block.body.name
+        except AttributeError:
+            obj_name = frame_obj.block.calibsource.name
+        rn = frame_obj.block.request_number
+        if frame_obj.block.obstype == Block.OPT_IMAGING:
+            frame_type = 'frame'
+        else:
+            frame_type = 'guide'
+    else:
+        with fits.open(good_fits_files[0], ignore_missing_end=True) as hdul:
+            try:
+                header = hdul['SCI'].header
+            except KeyError:
+                try:
+                    header = hdul['COMPRESSED_IMAGE'].header
+                except KeyError:
+                    header = hdul[0].header
+        obj_name = header['OBJECT']
+        rn = header['REQNUM']
+        sitecode = header['SITE']
+        if header['OBSTYPE'] == 'GUIDE':
+            frame_type = 'guide'
+        else:
+            frame_type = 'frame'
+
+    if horizons_comp:
+        # Get predicted JPL position of target in first frame
+
         try:
             ephem = horizons_ephem(obj_name, start, end, sitecode, ephem_step_size='1m')
             date_array = np.array([calendar.timegm(d.timetuple()) for d in ephem['datetime']])
@@ -190,7 +205,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
         """
         # get data/Header from Fits
         try:
-            with fits.open(fits_files[n], ignore_missing_end=True) as hdul:
+            with fits.open(good_fits_files[n], ignore_missing_end=True) as hdul:
                 try:
                     header_n = hdul['SCI'].header
                     data = hdul['SCI'].data
@@ -203,52 +218,22 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
                         data = hdul[0].data
         except FileNotFoundError:
             if progress:
-                logger.warning('Could not find Frame {}'.format(fits_files[n]))
+                logger.warning('Could not find Frame {}'.format(good_fits_files[n]))
             return None
-
-        # Set frame to be center of chip in arcmin
-        shape = data.shape
-        x_frac = 0
-        y_frac = 0
-        if center is not None:
-            y_frac = np.max(int((shape[0] - (center * 60)/header_n['PIXSCALE']) / 2), 0)
-            x_frac = np.max(int((shape[1] - (center * 60)/header_n['PIXSCALE']) / 2), 0)
-
-            # set data ranges
-            data_x_range = [x_frac, -(x_frac+1)]
-            data_y_range = [y_frac, -(y_frac+1)]
-            if target_data:
-                nonlocal x_offset
-                nonlocal y_offset
-                td = target_data[n]
-                target_source = td['best_source']
-                if target_source:
-                    x_offset = int(target_source.obs_x - header_n['CRPIX1'])
-                    y_offset = int(target_source.obs_y - header_n['CRPIX2'])
-                    if abs(x_offset) > x_frac:
-                        x_offset = int(copysign(x_frac, x_offset))
-                    if abs(y_offset) > y_frac:
-                        y_offset = int(copysign(y_frac, y_offset))
-                data_x_range = [x + x_offset for x in data_x_range]
-                data_y_range = [y + y_offset for y in data_y_range]
-                x_frac += x_offset
-                y_frac += y_offset
-            data = data[data_y_range[0]:data_y_range[1], data_x_range[0]:data_x_range[1]]
-            # Set new coordinates for Reference Pixel w/in smaller window
-            header_n['CRPIX1'] -= x_frac
-            header_n['CRPIX2'] -= y_frac
-
         # pull Date from Header
         try:
             date_obs = header_n['DATE-OBS']
         except KeyError:
             date_obs = header_n['DATE_OBS']
-        date = datetime.strptime(date_obs, '%Y-%m-%dT%H:%M:%S.%f')
+        try:
+            date = datetime.strptime(date_obs, '%Y-%m-%dT%H:%M:%S.%f')
+        except ValueError:
+            date = datetime.strptime(date_obs, '%Y-%m-%dT%H:%M:%S')
         # reset plot
         ax = plt.gca()
         ax.clear()
         ax.axis('off')
-        z_interval = ZScaleInterval().get_limits(data)  # set z-scale: responsible for vast majority of compute time
+
         try:
             # set wcs grid/axes
             with warnings.catch_warnings():
@@ -269,14 +254,54 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
         except InvalidTransformError:
             pass
         # finish up plot
-        current_count = len(np.unique(fits_files[:n+1]))
-        ax.set_title('UT Date: {} ({} of {})'.format(date.strftime('%x %X'), current_count, int(len(fits_files)-(copies-1)*start_frames)), pad=10)
+        current_count = len(np.unique(good_fits_files[:n + 1]))
 
+        if title is None:
+            sup_title = f'REQ# {header_n["REQNUM"]} -- {header_n["OBJECT"]} at {header_n["SITEID"].upper()} ({header_n["INSTRUME"]}) -- Filter: {header_n["FILTER"]}'
+        else:
+            sup_title = title
+        fig.suptitle(sup_title)
+        ax.set_title('UT Date: {} ({} of {})'.format(date.strftime('%x %X'), current_count,
+                                                     int(len(good_fits_files) - (copies - 1) * start_frames)), pad=10)
+
+        # Set frame to be center of chip in arcmin
+        shape = data.shape
+        x_frac = 0
+        y_frac = 0
+        if center is not None:
+            y_frac = np.max(int((shape[0] - (center * 60)/header_n['PIXSCALE']) / 2), 0)
+            x_frac = np.max(int((shape[1] - (center * 60)/header_n['PIXSCALE']) / 2), 0)
+
+            # set data ranges
+            data_x_range = [x_frac, -(x_frac+1)]
+            data_y_range = [y_frac, -(y_frac+1)]
+            if target_data:
+                nonlocal x_offset
+                nonlocal y_offset
+                td = target_data[n]
+                coord = SkyCoord(td['ra'], td['dec'], unit="rad")
+                x_pix, y_pix = skycoord_to_pixel(coord, wcs)
+                x_offset = int(x_pix - header_n['CRPIX1'])
+                y_offset = int(y_pix - header_n['CRPIX2'])
+                if abs(x_offset) > x_frac:
+                    x_offset = int(copysign(x_frac, x_offset))
+                if abs(y_offset) > y_frac:
+                    y_offset = int(copysign(y_frac, y_offset))
+                data_x_range = [x + x_offset for x in data_x_range]
+                data_y_range = [y + y_offset for y in data_y_range]
+                x_frac += x_offset
+                y_frac += y_offset
+            data = data[data_y_range[0]:data_y_range[1], data_x_range[0]:data_x_range[1]]
+            # Set new coordinates for Reference Pixel w/in smaller window
+            header_n['CRPIX1'] -= x_frac
+            header_n['CRPIX2'] -= y_frac
+
+        z_interval = ZScaleInterval().get_limits(data)  # set z-scale: responsible for vast majority of compute time
         plt.imshow(data, cmap='gray', vmin=z_interval[0], vmax=z_interval[1])
 
         # If first few frames, add 5" and 15" reticle
         if current_count < 6 and fr != init_fr or show_reticle:
-            if plot_source and header_n['CRPIX1'] > 0 and header_n['CRPIX2'] > 0:
+            if plot_source and (data.shape[1] > header_n['CRPIX1'] > 0) and (data.shape[0] > header_n['CRPIX2'] > 0):
                 plt.plot([header_n['CRPIX1']], [header_n['CRPIX2']], color='red', marker='+', linestyle=' ', label="Frame_Center")
             else:
                 circle_5arcsec = plt.Circle((header_n['CRPIX1'], header_n['CRPIX2']), 5/header_n['PIXSCALE'], fill=False, color='limegreen', linewidth=1.5)
@@ -287,7 +312,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
         # add sources
         if plot_source:
             try:
-                frame_obj = Frame.objects.get(filename=os.path.basename(fits_files[n]))
+                frame_obj = Frame.objects.get(filename=os.path.basename(good_fits_files[n]))
                 sources = CatalogSources.objects.filter(frame=frame_obj, obs_y__range=(y_frac, shape[0] - y_frac + 2 * y_offset), obs_x__range=(x_frac, shape[1] - x_frac + 2 * x_offset))
                 for source in sources:
                     circle_source = plt.Circle((source.obs_x - x_frac, source.obs_y - y_frac), 3/header_n['PIXSCALE'], fill=False, color='red', linewidth=1, alpha=.5)
@@ -310,7 +335,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
             # if target_source:
             #     print(coord.separation(SkyCoord(target_source.obs_ra, target_source.obs_dec, unit="deg")).arcsec)
             x_pix, y_pix = skycoord_to_pixel(coord, wcs)
-            box_width = plt.Rectangle((x_pix-bw, y_pix-bw), width=bw*2, height=bw*2, fill=False, color='yellow', linewidth=1, alpha=.5)
+            box_width = plt.Rectangle((x_pix-bw-x_frac, y_pix-bw-y_frac), width=bw*2, height=bw*2, fill=False, color='yellow', linewidth=1, alpha=.5)
             ax.add_artist(box_width)
 
         # show the position of the JPL Horizons prediction relative to CRPIX if no target data.
@@ -326,32 +351,25 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
                 plt.plot([jpl_x_pix], [jpl_y_pix], color='blue', marker='x', linestyle=' ', label="JPL Prediction")
 
         if progress:
-            print_progress_bar(n+1, len(fits_files), prefix='Creating Gif: Frame {}'.format(current_count), time_in=time_in)
+            print_progress_bar(n+1, len(good_fits_files), prefix='Creating Gif: Frame {}'.format(current_count), time_in=time_in)
         return ax
 
     ax1 = update(0)
     plt.tight_layout(pad=4)
 
     # takes in fig, update function, and frame rate set to fr
-    anim = FuncAnimation(fig, update, frames=len(fits_files), blit=False, interval=fr)
+    anim = FuncAnimation(fig, update, frames=len(good_fits_files), blit=False, interval=fr)
 
-    filename = os.path.join(path, sanitize_object_name(obj) + '_' + rn + '_{}movie.gif'.format(frame_type))
+    filename = os.path.join(path, sanitize_object_name(obj_name) + '_' + rn + '_{}movie.gif'.format(frame_type))
     anim.save(filename, dpi=90, writer='imagemagick')
 
     plt.close('all')
     # Save to default location because Matplotlib wants a string filename not File object
-    if settings.USE_S3:
-        movie_filename = filename.replace(out_path, "").lstrip("/")
-        movie_file = default_storage.open(movie_filename, "wb+")
-        with open(filename, 'rb+') as f:
-            movie_file.write(f.read())
-        movie_file.close()
-        return movie_file.name
-    else:
-        return filename
+
+    return filename
 
 
-def make_movie(date_obs, obj, req, base_dir, out_path, prop):
+def make_movie(date_obs, obj, req, base_dir, out_path, prop, tarfile=None):
     """Make gif of FLOYDS Guide Frames given the following:
     <date_obs> -- Day of Observation (i.e. '20180910')
     <obj> -- object name w/ spaces replaced by underscores (i.e. '144332' or '2018_EB1')
@@ -369,34 +387,34 @@ def make_movie(date_obs, obj, req, base_dir, out_path, prop):
     frames = []
     if not filename:
         unpack_path = os.path.join(base_dir, obj+'_'+req)
-        tar_files = glob(os.path.join(base_dir, prop+"*"+req+"*.tar.gz"))  # if file not found, looks for tarball
-
-        if tar_files:
-            tar_path = tar_files[0]
-            logger.info("Unpacking 1st tar")
-            spec_files = unpack_tarball(tar_path, unpack_path)  # unpacks tarball
+        if tarfile:
+            logger.info("Unpacking tarfile")
+            spec_files = unpack_tarball(os.path.join(base_dir, tarfile), unpack_path)  # unpacks tarball
             filename = spec_files[0]
         else:
-            logger.error("Could not find tarball for request: %s" % req)
-            return None
+            tar_files = glob(os.path.join(base_dir, prop+"*"+req+"*.tar.gz"))  # if file not found, looks for tarball
+            if tar_files:
+                tar_path = tar_files[0]
+                logger.info("Unpacking 1st tar")
+                spec_files = unpack_tarball(tar_path, unpack_path)  # unpacks tarball
+                filename = spec_files[0]
+            else:
+                logger.error("Could not find tarball for request: %s" % req)
+                return None
     if filename:  # If first order tarball is unpacked
-        movie_dir = glob(os.path.join(path, "Guide_frames"))
-        if movie_dir:  # if 2nd order tarball is unpacked
-            frames = glob(os.path.join(movie_dir[0], "*.fits.fz"))
-            if not frames:
-                frames = glob(os.path.join(movie_dir[0], "*.fits"))
-        else:  # unpack 2nd tarball
+        movie_dir = os.path.join(path, "Guide_frames")
+        if not os.path.exists(movie_dir):  # unpack 2nd tarball
             tarintar = glob(os.path.join(path, "*.tar"))
             if tarintar:
-                unpack_path = os.path.join(path, 'Guide_frames')
-                guide_files = unpack_tarball(tarintar[0], unpack_path)  # unpacks tar
+                guide_files = unpack_tarball(tarintar[0], movie_dir)  # unpacks tar
                 logger.info("Unpacking tar in tar")
-                for file in guide_files:
-                    if '.fits.fz' in file:
-                        frames.append(file)
+                for gf in guide_files:
+                    if '.fits.fz' in gf:
+                        funpack_fits_file(gf)
             else:
                 logger.error("Could not find Guide Frames or Guide Frame tarball for request: %s" % req)
                 return None
+        frames = glob(os.path.join(movie_dir, "*.fits"))
     else:
         logger.error("Could not find spectrum data or tarball for request: %s" % req)
         return None
@@ -430,8 +448,7 @@ if __name__ == '__main__':
     if len(files) < 1:
         files = np.sort(glob(path+'*.fits'))
     if len(files) >= 1:
-        gif_file = make_gif(files, fr=fr, init_fr=ir, show_reticle=tr, center=center, progress=True)
+        gif_file = make_gif(files, fr=fr, init_fr=ir, show_reticle=tr, out_path=path, center=center, progress=True)
         logger.info("New gif created: {}".format(gif_file))
     else:
         logger.info("No files found.")
-

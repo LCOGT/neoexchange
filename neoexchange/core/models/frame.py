@@ -170,7 +170,10 @@ class Frame(models.Model):
                         'W85' : 'LCO LSC Node 1m0 Dome A at Cerro Tololo, Chile',
                         'W86' : 'LCO LSC Node 1m0 Dome B at Cerro Tololo, Chile',
                         'W87' : 'LCO LSC Node 1m0 Dome C at Cerro Tololo, Chile',
-                        'V37' : 'LCO ELP Node at McDonald Observatory, Texas',
+                        'V37' : 'LCO ELP Node 1m0 Dome A at McDonald Observatory, Texas',
+                        'V39' : 'LCO ELP Node 1m0 Dome B at McDonald Observatory, Texas',
+                        'Z31' : 'LCO TFN Node 1m0 Dome A at Tenerife, Spain',
+                        'Z24' : 'LCO TFN Node 1m0 Dome B at Tenerife, Spain',
                         'Z21' : 'LCO TFN Node Aqawan A 0m4a at Tenerife, Spain',
                         'Z17' : 'LCO TFN Node Aqawan A 0m4b at Tenerife, Spain',
                         'Q58' : 'LCO COJ Node 0m4a at Siding Spring, Australia',
@@ -185,6 +188,7 @@ class Frame(models.Model):
                         'W79' : 'LCO LSC Node Aqawan B 0m4a at Cerro Tololo, Chile',
                         'V38' : 'LCO ELP Node Aqawan A 0m4a at McDonald Observatory, Texas',
                         'L09' : 'LCO CPT Node Aqawan A 0m4a at Sutherland, South Africa',
+                        'G51' : 'LCO Byrne Observatory at Sedgwick Reserve'
                         }
         return site_strings.get(self.sitecode, 'Unknown LCO site')
 

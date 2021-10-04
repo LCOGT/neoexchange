@@ -7,7 +7,7 @@ from django.utils.crypto import get_random_string
 import rollbar
 
 
-VERSION = '3.8.5-focus'
+VERSION = '3.8.6-focus'
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
@@ -311,11 +311,11 @@ if USE_S3:
     PUBLIC_MEDIA_LOCATION = 'data'
     MEDIA_URL = f'https://s3-{AWS_S3_REGION_NAME}.amazonaws.com/{AWS_STORAGE_BUCKET_NAME}/{PUBLIC_MEDIA_LOCATION}/'
     DEFAULT_FILE_STORAGE = 'neox.storage_backends.PublicMediaStorage'
-    DATA_ROOT = ''
+    DATA_ROOT = os.getenv('DATA_ROOT', '')  # Set env variable on Apophis to '/apophis/eng/rocks/'
 else:
     # For local use
-    MEDIA_ROOT = os.getenv('DATA_ROOT', '/apophis/eng/rocks/')
-    DATA_ROOT = MEDIA_ROOT
+    MEDIA_ROOT = os.getenv('MEDIA_ROOT', '/apophis/eng/media/')
+    DATA_ROOT = os.getenv('DATA_ROOT', '/apophis/eng/rocks/')
 
 ##################
 # LOCAL SETTINGS #
@@ -330,4 +330,3 @@ if not CURRENT_PATH.startswith('/app'):
     except ImportError as e:
         if "local_settings" not in str(e):
             raise e
-

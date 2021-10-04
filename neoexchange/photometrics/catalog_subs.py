@@ -402,7 +402,7 @@ def write_ldac(table, output_file):
                   'mag'       : 'F8.4',
                   'e_mag'     : 'F8.5'
                 }
-    unit_dict = { 'RAJ2000'   : 'deg', 
+    unit_dict = { 'RAJ2000'   : 'deg',
                   'DEJ2000'   : 'deg',
                   'e_RAJ2000' : 'deg',
                   'e_DEJ2000' : 'deg',
@@ -994,7 +994,7 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
     'UNKNOWN'.
     """
 
-    fixed_values_map = {'<WCCATTYP>'  : '2MASS',  # Hardwire catalog to 2MASS for BANZAI's astrometry.net-based solves 
+    fixed_values_map = {'<WCCATTYP>'  : '2MASS',  # Hardwire catalog to 2MASS for BANZAI's astrometry.net-based solves
                                                   # (but could be modified based on version number further down)
                         '<ZP>'        : -99,      # Hardwire zeropoint to -99.0 for BANZAI catalogs
                         '<ZPSRC>'     : 'N/A',    # Hardwire zeropoint src to 'N/A' for BANZAI catalogs
@@ -1489,12 +1489,12 @@ def get_or_create_CatalogSources(table, frame):
     if num_cat_sources == 0:
         new_sources = []
         for source in table:
-            new_source = CatalogSources(frame=frame, obs_x=source['ccd_x'], obs_y=source['ccd_y'], 
-                                        obs_ra=source['obs_ra'], obs_dec=source['obs_dec'], obs_mag=source['obs_mag'], 
-                                        err_obs_ra=source['obs_ra_err'], err_obs_dec=source['obs_dec_err'], 
-                                        err_obs_mag=source['obs_mag_err'], background=source['obs_sky_bkgd'], 
-                                        major_axis=source['major_axis'], minor_axis=source['minor_axis'], 
-                                        position_angle=source['ccd_pa'], ellipticity=1.0-(source['minor_axis']/source['major_axis']), 
+            new_source = CatalogSources(frame=frame, obs_x=source['ccd_x'], obs_y=source['ccd_y'],
+                                        obs_ra=source['obs_ra'], obs_dec=source['obs_dec'], obs_mag=source['obs_mag'],
+                                        err_obs_ra=source['obs_ra_err'], err_obs_dec=source['obs_dec_err'],
+                                        err_obs_mag=source['obs_mag_err'], background=source['obs_sky_bkgd'],
+                                        major_axis=source['major_axis'], minor_axis=source['minor_axis'],
+                                        position_angle=source['ccd_pa'], ellipticity=1.0-(source['minor_axis']/source['major_axis']),
                                         aperture_size=3.0, flags=source['flags'], flux_max=source['flux_max'], threshold=source['threshold'])
             new_sources.append(new_source)
         try:
@@ -1560,8 +1560,8 @@ def make_sext_file_line(sext_params):
 
     print_format = "      %4i   %8.3f   %8.3f  %7.4f %6.1f    %8.3f     %5.2f   %1i  %4.2f   %12.1f   %3i %9.5f %9.5f"
 
-    sext_line = print_format % (sext_params['number'], sext_params['obs_x'], sext_params['obs_y'], sext_params['obs_mag'], 
-                                sext_params['theta'], sext_params['elongation'], sext_params['fwhm'], sext_params['flags'], 
+    sext_line = print_format % (sext_params['number'], sext_params['obs_x'], sext_params['obs_y'], sext_params['obs_mag'],
+                                sext_params['theta'], sext_params['elongation'], sext_params['fwhm'], sext_params['flags'],
                                 sext_params['deltamu'], sext_params['flux'], sext_params['area'], sext_params['ra'], sext_params['dec'])
 
     return sext_line
@@ -1605,7 +1605,7 @@ def make_sext_dict_list(new_catalog, catalog_type, edge_trim_limit=75.0):
     except Frame.DoesNotExist:
         logger.error("Frame entry for fits file %s does not exist" % real_fits_filename)
         return -3, -3
-    sources = CatalogSources.objects.filter(frame__filename=real_fits_filename, obs_mag__gt=0.0, obs_x__gt=edge_trim_limit, 
+    sources = CatalogSources.objects.filter(frame__filename=real_fits_filename, obs_mag__gt=0.0, obs_x__gt=edge_trim_limit,
                                             obs_x__lt=num_x_pixels-edge_trim_limit, obs_y__gt=edge_trim_limit, obs_y__lt=num_y_pixels-edge_trim_limit)
     num_iter = 1
     for source in sources:
@@ -1786,7 +1786,7 @@ def search_box(frame, ra, dec, box_halfwidth=3.0, dbg=False):
     box_dec_max = dec_deg + box_halfwidth_deg
     dec_min = min(box_dec_min, box_dec_max)
     dec_max = max(box_dec_min, box_dec_max)
-    if dbg: 
+    if dbg:
         logger.debug("Searching %.4f->%.4f, %.4f->%.4f in %s" % (ra_min, ra_max, dec_min, dec_max , frame.filename))
     sources = CatalogSources.objects.filter(frame=frame, obs_ra__range=(ra_min, ra_max), obs_dec__range=(dec_min, dec_max))
     return sources
@@ -1807,7 +1807,7 @@ def get_fits_files(fits_path):
         sorted_fits_files = sorted(glob(fits_path + '*e91.fits') + glob(fits_path + '*e11.fits'))
 
     else:
-        logger.error("Not a directory")
+        logger.error(f"{fits_path} is not a directory")
 
     return sorted_fits_files
 
@@ -1838,6 +1838,8 @@ def sanitize_object_name(object_name):
     clean_object_name = None
     if type(object_name) == str or type(object_name) == np.str_:
         clean_object_name = object_name.strip().replace('(', '').replace(')', '')
+        # collapse multiple sequential spaces into a single space.
+        clean_object_name = ' '.join(clean_object_name.split())
         # Find the rightmost space and then do space->underscore mapping *left*
         # of that but space->empty string right of that.
         index = clean_object_name.rfind(' ')

@@ -205,3 +205,33 @@ function phase_data(source, period_box, period_slider, plot, osource, phase_shif
     plot.below[0].axis_label = 'Phase (Period = ' + period + 'h / Epoch = '+ epoch + ')';
     source.change.emit();
 }
+
+function analog_select(analog_select, frame_select, reflectance_sources, chosen_sources, plot, plot2, lines, raw_analog, raw_analog_list, raw_lines){
+    const analog = analog_select.value;
+    const options = analog_select.options;
+    const frames = frame_select.value;
+
+    for (var i = 0; i < options.length; i++){
+        if (analog == options[i]){
+            raw_analog.data['spec'] = raw_analog_list[i].data['spec'];
+            raw_analog.data['wav'] = raw_analog_list[i].data['wav'];
+            for (var k = 0; k < chosen_sources.length; k++){
+                chosen_sources[k].data['spec'] = reflectance_sources[k][i].data['spec'];
+                chosen_sources[k].data['wav'] = reflectance_sources[k][i].data['wav'];
+                var num = k+1;
+                if (frames.includes(num.toString())){
+                    raw_lines[k].muted=false
+                    lines[k].visible = true
+                } else {
+                    raw_lines[k].muted=true
+                    lines[k].visible = false
+                }
+                chosen_sources[k].change.emit();
+                lines[k].change.emit()
+            }
+            raw_analog.change.emit()
+            plot.title.text = plot.title.text.split("    ")[0] + "    Analog: " + analog;
+            plot2.title.text = plot2.title.text.split("    ")[0] + "    Analog: " + analog;
+        }
+    }
+}

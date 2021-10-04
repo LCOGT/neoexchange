@@ -226,7 +226,6 @@ class Body(models.Model):
             pass
         return mjd
 
-
     def current_name(self):
         if self.name:
             return self.name
@@ -274,6 +273,21 @@ class Body(models.Model):
             else:
                 # Return just numerical values
                 return emp_line['ra'], emp_line['dec'], emp_line['mag'], emp_line['southpole_sep'], emp_line['sky_motion'], emp_line['sky_motion_pa']
+        else:
+            # Catch the case where there is no Epoch
+            return False
+
+    def compute_distances(self, d=None):
+        d = d or datetime.utcnow()
+        if self.epochofel:
+            orbelems = model_to_dict(self)
+            sitecode = '500'
+            emp_line = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
+            if not emp_line:
+                return False
+            else:
+                # Return just distance values
+                return emp_line['earth_obj_dist'], emp_line['sun_obj_dist']
         else:
             # Catch the case where there is no Epoch
             return False
@@ -548,6 +562,7 @@ class Body(models.Model):
                 and self.name is not None and self.name != u'':
             return_name = self.name
         return u'%s is %sactive' % (return_name, text)
+
 
 class Designations(models.Model):
     body        = models.ForeignKey(Body, on_delete=models.CASCADE)
