@@ -93,13 +93,21 @@ class DataProduct(models.Model):
     PNG_ZP = 16
     PDS_XML = 20
     FRAME_GIF = 22
+    PERIODOGRAM_RAW = 23
+    MODEL_LC_RAW = 24
+    MODEL_LC_PARAM = 25
+    MODEL_SHAPE = 26
     DP_CHOICES = (
                     (JPEG, 'JPEG'),
                     (GUIDER_GIF, 'Spectroscopy Guider GIF'),
                     (FRAME_GIF, 'Thumbnail Frame GIF'),
                     (FITS_IMAGE, 'FITS Image'),
                     (FITS_SPECTRA, 'FITS Spectra'),
-                    (ALCDEF_TXT, 'ALCDEF Lightcurve  file'),
+                    (ALCDEF_TXT, 'ALCDEF Lightcurve file'),
+                    (PERIODOGRAM_RAW, 'Periodogram output file'),
+                    (MODEL_LC_RAW, 'Model Lightcurve output file'),
+                    (MODEL_LC_PARAM, 'Parameter file used to create DAMIT lightcurve models'),
+                    (MODEL_SHAPE, 'Shape Model output file'),
                     (MP4, 'MP4'),
                     (CSV, 'CSV'),
                     (PNG_ASTRO, 'PNG astrometric ref stars'),

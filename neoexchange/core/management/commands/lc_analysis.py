@@ -23,6 +23,8 @@ import numpy as np
 
 from django.core.management.base import BaseCommand, CommandError
 from django.core.files.storage import default_storage
+from django.db.models import Q
+from django.conf import settings
 
 import matplotlib.pyplot as plt
 from matplotlib.dates import HourLocator, DateFormatter
@@ -31,8 +33,8 @@ import astropy.units as u
 from astropy.time import Time
 
 from core.views import import_alcdef
-from core.models import Body, model_to_dict
-from core.utils import search
+from core.models import Body, model_to_dict, DataProduct
+from core.utils import search, save_dataproduct
 from astrometrics.time_subs import jd_utc2datetime, datetime2mjd_utc
 from astrometrics.ephem_subs import compute_ephem
 from photometrics.catalog_subs import sanitize_object_name
@@ -41,18 +43,18 @@ from photometrics.external_codes import run_damit_periodscan, run_damit
 
 class Command(BaseCommand):
 
-    help = 'Convert ALCDEF into format DAMIT can use.'
+    help = 'Convert ALCDEF into format DAMIT can use and run DAMIT.'
 
     def add_arguments(self, parser):
-        parser.add_argument('path', type=str, help='location of lightcurve data '
-                                                   '(e.g. /apophis/eng/rocks/Reduction/aster123/). '
-                                                   'Should be DamitDoc Directory for lc_model.')
+        out_path = settings.DATA_ROOT
+        parser.add_argument('body', type=str, help='Object name (use underscores instead of spaces)')
         parser.add_argument('-pmin', '--period_min', type=float, default=None, help='min period for period search (h)')
         parser.add_argument('-pmax', '--period_max', type=float, default=None, help='max period for period search (h)')
         parser.add_argument('-p', '--period', type=float, default=None, help='base period to search around (h)')
         parser.add_argument('--filters', type=str, default=None, help='comma separated list of filters to use (SG,SR,W)')
         parser.add_argument('--period_scan', action="store_true", default=False, help='run Period Scan')
         parser.add_argument('--lc_model', action="store", default=None, help='Start and end dates for the lc_model (YYYYMMDD-YYYMMDD)')
+        parser.add_argument('--path', type=str, default=out_path, help='Location for local DAMIT data to live')
 
     def get_period_range(self, body, options):
         """
@@ -159,7 +161,7 @@ class Command(BaseCommand):
         """
         base_name = obj_name + '_period_scan.in'
         ps_input_filename = os.path.join(path, base_name)
-        ps_input_file = default_storage.open(ps_input_filename, 'w+')
+        ps_input_file = open(ps_input_filename, 'w+')
         lines = ps_input_file.readlines()
         if lines:
             lines[0] = f"{pmin} {pmax} 0.8	period start - end - interval coeff.\n"
@@ -191,9 +193,9 @@ class Command(BaseCommand):
         base_name = obj_name + '_convex_inv.in'
         cinv_input_filename = os.path.join(path, base_name)
         try:
-            cinv_input_file = default_storage.open(cinv_input_filename, 'r+')
+            cinv_input_file = open(cinv_input_filename, 'r+')
         except FileNotFoundError:
-            cinv_input_file = default_storage.open(cinv_input_filename, 'w+')
+            cinv_input_file = open(cinv_input_filename, 'w+')
         lines = cinv_input_file.readlines()
         print(lines)
         if lines and len(lines) == 13:
@@ -218,7 +220,7 @@ class Command(BaseCommand):
 
         base_conjgrad_name = obj_name + '_conjgrad_inv.in'
         conj_input_filename = os.path.join(path, base_conjgrad_name)
-        conj_input_file = default_storage.open(conj_input_filename, 'w+')
+        conj_input_file = open(conj_input_filename, 'w+')
         lines = conj_input_file.readlines()
         if not lines:
             conj_input_file.write("0.2			convexity weight\n")
@@ -229,9 +231,9 @@ class Command(BaseCommand):
         return cinv_input_filename, conj_input_filename
 
     def zip_lc_model(self, epoch_in, lc_in, lc_out, mag_means=None, ltt_list=None):
-        epoch_in_file = default_storage.open(epoch_in, 'r')
-        lc_in_file = default_storage.open(lc_in, 'r')
-        lc_out_file = default_storage.open(lc_out, 'w+')
+        epoch_in_file = open(epoch_in, 'r')
+        lc_in_file = open(lc_in, 'r')
+        lc_out_file = open(lc_out, 'w+')
         epoch_lines = epoch_in_file.readlines()
         lc_lines = iter(lc_in_file.readlines())
         i = -1
@@ -261,22 +263,23 @@ class Command(BaseCommand):
         lc_out_file.close()
 
     def handle(self, *args, **options):
-        path = options['path']
-        files = search(path, '.*.ALCDEF.txt')
+        body_name = options['body']
+        body_name = body_name.replace('_', ' ')
+        object_list = []
+        if body_name.isdigit():
+            object_list = Body.objects.filter(Q(designations__value=body_name) | Q(name=body_name))
+        if not object_list and not (body_name.isdigit() and int(body_name) < 2100):
+            object_list = Body.objects.filter(Q(designations__value__iexact=body_name) | Q(provisional_name=body_name) | Q(provisional_packed=body_name) | Q(name=body_name))
+        try:
+            body = object_list[0]
+        except IndexError:
+            print(f"Couldn't find {body_name}")
+            return
+        alcdef_files = DataProduct.content.fullbody(bodyid=body.id).filter(filetype=DataProduct.ALCDEF_TXT)
         meta_list = []
         lc_list = []
-        for file in files:
-            file = os.path.join(path, file)
-            meta_list, lc_list = import_alcdef(file, meta_list, lc_list)
-        names = list(set([x['OBJECTNUMBER'] for x in meta_list]))
-        if not names:
-            names = [search(path, '.*.convinv_par.out')[0].split('_')[0]]
-        if names == ['0']:
-            names = list(set([x['OBJECTNAME'] for x in meta_list]))
-        if len(names) != 1:
-            self.stdout.write(f"Multiple objects Found: {names}")
-        bodies = Body.objects.filter(name=names[0])
-        body = bodies[0]
+        for alcdef in alcdef_files:
+            meta_list, lc_list = import_alcdef(alcdef.product.file, meta_list, lc_list)
         body_elements = model_to_dict(body)
         obj_name = sanitize_object_name(body.current_name())
 
@@ -285,25 +288,26 @@ class Command(BaseCommand):
         else:
             filt_list = list(set([meta['FILTER'] for meta in meta_list]))
         # Create lightcurve input file
+        path = os.path.join(options['path'], 'Reduction', obj_name)
         lcs_input_filename = os.path.join(path, obj_name + '_input.lcs')
-        lcs_input_file = default_storage.open(lcs_input_filename, 'w')
+        lcs_input_file = open(lcs_input_filename, 'w')
         mag_means, lc_ltt_list = self.create_lcs_input(lcs_input_file, meta_list, lc_list, body_elements, filt_list)
         lcs_input_file.close()
         pmin, pmax, period = self.get_period_range(body, options)
         dir_num = 0
-        dirs = search(path, 'DamitDocs_.*.', dir_search=True)
+        dirs = [item for item in os.listdir(path) if 'DamitDocs' in item]
         if dirs:
             for d in dirs:
                 d_num = int(d.split('_')[1])
                 if dir_num < d_num:
                     dir_num = d_num
-
         if options['period_scan']:
             # Create period_scan input file
             psinput_filename = self.import_or_create_psinput(path, obj_name, pmin, pmax)
             # Run Period Scan
             psoutput_filename = os.path.join(path, f'{obj_name}_{pmin}T{pmax}_period_scan.out')
             ps_retcode_or_cmdline = run_damit_periodscan(lcs_input_filename, psinput_filename, psoutput_filename)
+            save_dataproduct(obj=body, filepath=psoutput_filename, filetype=DataProduct.PERIODOGRAM_RAW)
         elif options['lc_model']:
             if isinstance(options['lc_model'], str):
                 try:
@@ -316,7 +320,7 @@ class Command(BaseCommand):
                 start_date = options['lc_model'][0]
                 end_date = options['lc_model'][1]
             epoch_input_filename = os.path.join(path, obj_name + '_epoch.lcs')
-            epoch_input_file = default_storage.open(epoch_input_filename, 'w')
+            epoch_input_file = open(epoch_input_filename, 'w')
             jpl_mean_mag, model_ltt_list = self.create_epoch_input(epoch_input_file, period, start_date, end_date, body_elements)
             epoch_input_file.close()
             # Create Model lc for given epochs.
@@ -357,12 +361,18 @@ class Command(BaseCommand):
             self.zip_lc_model(lcs_input_filename, conjinv_outlcs_filename, conjinv_lc_final_filename, mag_means, lc_ltt_list)
 
             # Calculate polygon faces for shape
-            mink_face_file = default_storage.open(mink_faces_filename, 'w+')
+            mink_face_file = open(mink_faces_filename, 'w+')
             minkowski_retcode_or_cmdline = run_damit('minkowski', conjinv_outareas_filename, f"", write_out=mink_face_file)
             mink_face_file.close()
             # Convert faces into triangles
-            shape_model_file = default_storage.open(shape_model_filename, 'w+')
+            shape_model_file = open(shape_model_filename, 'w+')
             stanrdtri_retcode_or_cmdline = run_damit('standardtri', mink_faces_filename, f"", write_out=shape_model_file)
             shape_model_file.close()
+
+            # Create Data Products
+            save_dataproduct(obj=body, filepath=convinv_lc_final_filename, filetype=DataProduct.MODEL_LC_RAW)
+            save_dataproduct(obj=body, filepath=conjinv_lc_final_filename, filetype=DataProduct.MODEL_LC_RAW)
+            save_dataproduct(obj=body, filepath=convinv_outpar_filename, filetype=DataProduct.MODEL_LC_PARAM)
+            save_dataproduct(obj=body, filepath=mink_faces_filename, filetype=DataProduct.MODEL_SHAPE)
 
         return

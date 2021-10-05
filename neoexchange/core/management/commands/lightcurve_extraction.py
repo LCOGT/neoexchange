@@ -543,66 +543,66 @@ class Command(BaseCommand):
                 except PermissionError:
                     pass
 
-                    # Write out MPC1992 80 column file
-                    for mpc_line in mpc_lines:
-                        mpc_file.write(mpc_line + '\n')
-                    mpc_file.close()
-                    try:
-                        os.chmod(os.path.join(datadir, base_name + 'mpc_positions.txt'), rw_permissions)
-                    except PermissionError:
-                        pass
+                # Write out MPC1992 80 column file
+                for mpc_line in mpc_lines:
+                    mpc_file.write(mpc_line + '\n')
+                mpc_file.close()
+                try:
+                    os.chmod(os.path.join(datadir, base_name + 'mpc_positions.txt'), rw_permissions)
+                except PermissionError:
+                    pass
 
-                    # Write out ADES Pipe Separated Value file
-                    for psv_line in psv_lines:
-                        psv_file.write(psv_line + '\n')
-                    psv_file.close()
-                    try:
-                        os.chmod(os.path.join(datadir, base_name + 'ades_positions.psv'), rw_permissions)
-                    except PermissionError:
-                        pass
+                # Write out ADES Pipe Separated Value file
+                for psv_line in psv_lines:
+                    psv_file.write(psv_line + '\n')
+                psv_file.close()
+                try:
+                    os.chmod(os.path.join(datadir, base_name + 'ades_positions.psv'), rw_permissions)
+                except PermissionError:
+                    pass
 
-                    # Create Default Plot Title
-                    if options['title'] is None:
-                        sites = ', '.join(mpc_site)
-                        try:
-                            # for single dates and short site lists, put everything on single line.
-                            if options['timespan'] < 1 and len(sites) <= 13:
-                                plot_title = '%s from %s (%s) on %s' % (start_super_block.body.current_name(),
-                                                                        start_block.site.upper(), sites, start_super_block.block_end.strftime("%Y-%m-%d"))
-                                subtitle = ''
-                            # for lc covering multiple nights, reformat title
-                            elif options['timespan'] < 1:
-                                plot_title = '%s from %s to %s' % (start_block.body.current_name(),
-                                                                   (start_super_block.block_end - timedelta(
-                                                                       days=options['timespan'])).strftime("%Y-%m-%d"),
-                                                                   start_super_block.block_end.strftime("%Y-%m-%d"))
-                                subtitle = 'Sites: ' + sites
-                            # for single night LC using many sites, put sites on 2nd line.
-                            else:
-                                plot_title = '%s from %s on %s' % (start_super_block.body.current_name(),
-                                                                   start_block.site.upper(),
-                                                                   start_super_block.block_end.strftime("%Y-%m-%d"))
-                                subtitle = 'Sites: ' + sites
-                        except TypeError:
-                            plot_title = 'LC for %s' % (start_super_block.body.current_name())
+                # Create Default Plot Title
+                if options['title'] is None:
+                    sites = ', '.join(mpc_site)
+                    try:
+                        # for single dates and short site lists, put everything on single line.
+                        if options['timespan'] < 1 and len(sites) <= 13:
+                            plot_title = '%s from %s (%s) on %s' % (start_super_block.body.current_name(),
+                                                                    start_block.site.upper(), sites, start_super_block.block_end.strftime("%Y-%m-%d"))
                             subtitle = ''
-                    else:
-                        plot_title = options['title']
+                        # for lc covering multiple nights, reformat title
+                        elif options['timespan'] < 1:
+                            plot_title = '%s from %s to %s' % (start_block.body.current_name(),
+                                                               (start_super_block.block_end - timedelta(
+                                                                   days=options['timespan'])).strftime("%Y-%m-%d"),
+                                                               start_super_block.block_end.strftime("%Y-%m-%d"))
+                            subtitle = 'Sites: ' + sites
+                        # for single night LC using many sites, put sites on 2nd line.
+                        else:
+                            plot_title = '%s from %s on %s' % (start_super_block.body.current_name(),
+                                                               start_block.site.upper(),
+                                                               start_super_block.block_end.strftime("%Y-%m-%d"))
+                            subtitle = 'Sites: ' + sites
+                    except TypeError:
+                        plot_title = 'LC for %s' % (start_super_block.body.current_name())
                         subtitle = ''
+                else:
+                    plot_title = options['title']
+                    subtitle = ''
 
-                    # Make plots
-                    if not settings.USE_S3:
-                        self.plot_timeseries(times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, title=plot_title, sub_title=subtitle, datadir=datadir, filename=base_name, diameter=tel_diameter)
-                        output_file_list.append('{},{}'.format(os.path.join(datadir, base_name + 'lightcurve_cond.png'), datadir.lstrip(out_path)))
-                        output_file_list.append('{},{}'.format(os.path.join(datadir, base_name + 'lightcurve.png'), datadir.lstrip(out_path)))
-                        try:
-                            os.chmod(os.path.join(datadir, base_name + 'lightcurve_cond.png'), rw_permissions)
-                        except PermissionError:
-                            pass
-                        try:
-                            os.chmod(os.path.join(datadir, base_name + 'lightcurve.png'), rw_permissions)
-                        except PermissionError:
-                            pass
+                # Make plots
+                if not settings.USE_S3:
+                    self.plot_timeseries(times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, title=plot_title, sub_title=subtitle, datadir=datadir, filename=base_name, diameter=tel_diameter)
+                    output_file_list.append('{},{}'.format(os.path.join(datadir, base_name + 'lightcurve_cond.png'), datadir.lstrip(out_path)))
+                    output_file_list.append('{},{}'.format(os.path.join(datadir, base_name + 'lightcurve.png'), datadir.lstrip(out_path)))
+                    try:
+                        os.chmod(os.path.join(datadir, base_name + 'lightcurve_cond.png'), rw_permissions)
+                    except PermissionError:
+                        pass
+                    try:
+                        os.chmod(os.path.join(datadir, base_name + 'lightcurve.png'), rw_permissions)
+                    except PermissionError:
+                        pass
                 else:
                     self.stdout.write("No sources matched.")
 
