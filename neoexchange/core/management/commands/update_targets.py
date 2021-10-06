@@ -40,6 +40,8 @@ class Command(BaseCommand):
             bodies = Body.objects.filter(name=obj_id)
         else:
             bodies = get_characterization_targets()
+            #Filter out MPC_COMET types as refitting seems to break things
+            bodies = bodies.exclude(elements_type='MPC_COMET')
         if type(options['date']) != datetime:
             try:
                 start_date = datetime.strptime(options['date'], '%Y%m%d')
