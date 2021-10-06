@@ -3957,8 +3957,8 @@ def import_alcdef(file, meta_list, lc_list):
 def import_period_scan(file, scan_list):
     """Pull Period data from Period Scan files."""
 
-    scan_data = {'period':[], 'rms': [], 'chi2': []}
-    ps_file = default_storage.open(file, 'rb')
+    scan_data = {'period': [], 'rms': [], 'chi2': []}
+    ps_file = file.open()
     lines = ps_file.readlines()
     for line in lines:
         chunks = line.split()
@@ -3973,12 +3973,12 @@ def import_period_scan(file, scan_list):
     return scan_list
 
 
-def import_lc_model(file, model_list):
+def import_lc_model(m_file, model_list):
     """Pull model lc from intensity files."""
 
-    lc_model_file = default_storage.open(file, 'rb')
-    run_num = os.path.dirname(file).split('_')[1]
-    file_parts = os.path.basename(file).split('_')
+    lc_model_file = m_file.product.file.open()
+    run_num = m_file.product.path.split('_')[1]
+    file_parts = m_file.product.name.split('_')
     name = f'{file_parts[2]} ({file_parts[1]}) [run:{run_num}]'
     lines = lc_model_file.readlines()
     model_jd = []
@@ -4002,7 +4002,7 @@ def import_lc_model(file, model_list):
 
 def import_shape_model(file, body, model_params):
     shape_list = {'faces_x': [], 'faces_y': [], 'faces_z': [], 'faces_normal': [], 'faces_level': [], 'faces_colors': []}
-    shape_model_file = default_storage.open(file, 'rb')
+    shape_model_file = file.open()
     lines = shape_model_file.readlines()
     points_list = []
     n_points = 0
@@ -4078,20 +4078,10 @@ def get_lc_plot(body, data):
     """Plot all lightcurve data for given source.
     """
 
-    base_dir = os.path.join(settings.DATA_ROOT, 'Reduction')
-    obj_name = sanitize_object_name(body.current_name())
-    datadir = os.path.join(base_dir, obj_name)
-    period_scans = search(datadir, '.*.period_scan.out')
-    damit_dir_list = search(datadir, 'DamitDocs.*.', dir_search=True)
-    lc_models = []
-    model_params = []
-    shape_models = []
-    if damit_dir_list:
-        for dd in damit_dir_list:
-            new_dir = os.path.join(datadir, dd)
-            lc_models += [os.path.join(dd, x) for x in search(new_dir, '.*.lcs.final')]
-            model_params += [os.path.join(dd, x) for x in search(new_dir, '.*.par.out')]
-            shape_models += [os.path.join(dd, x) for x in search(new_dir, '.*.model.shape')]
+    period_scans = DataProduct.content.fullbody(bodyid=body.id).filter(filetype=DataProduct.PERIODOGRAM_RAW)
+    lc_models = DataProduct.content.fullbody(bodyid=body.id).filter(filetype=DataProduct.MODEL_LC_RAW)
+    model_params = DataProduct.content.fullbody(bodyid=body.id).filter(filetype=DataProduct.MODEL_LC_PARAM)
+    shape_models = DataProduct.content.fullbody(bodyid=body.id).filter(filetype=DataProduct.MODEL_SHAPE)
 
     if data.get('period', None):
         period = data['period']
@@ -4114,17 +4104,17 @@ def get_lc_plot(body, data):
     if period_scans:
         period_scan_dict = []
         for scan in period_scans:
-            period_scan_dict = import_period_scan(os.path.join(datadir, scan), period_scan_dict)
+            period_scan_dict = import_period_scan(scan.product.file, period_scan_dict)
 
     lc_model_dict = {"date": [], "mag": [], "name": []}
     if lc_models:
         for m in lc_models:
-            lc_model_dict = import_lc_model(os.path.join(datadir, m), lc_model_dict)
+            lc_model_dict = import_lc_model(m, lc_model_dict)
 
     model_param_dict = []
     if model_params:
         for params in model_params:
-            model_params_file = default_storage.open(os.path.join(datadir, params), 'rb')
+            model_params_file = params.product.file.open()
             lines = model_params_file.readlines()
             chunks = lines[0].split()
             model_param_dict.append({"pole_longitude": float(chunks[0]), "pole_latitude": float(chunks[1]), "period": float(chunks[2])})
@@ -4135,7 +4125,7 @@ def get_lc_plot(body, data):
     if shape_models:
         pole_vector_list = []
         for n, sm in enumerate(shape_models):
-            shape_model_dict, pole_vector = import_shape_model(os.path.join(datadir, sm), body, model_param_dict[n])
+            shape_model_dict, pole_vector = import_shape_model(sm.product.file, body, model_param_dict[n])
             for key in shape_model_dict.keys():
                 if key != 'faces_level':
                     shape_model_dict[key] = [x for _, x in sorted(zip(shape_model_dict["faces_level"], shape_model_dict[key]), key=lambda x: x[0], reverse=False)]
