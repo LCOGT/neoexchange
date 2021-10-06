@@ -4104,12 +4104,18 @@ def get_lc_plot(body, data):
     if period_scans:
         period_scan_dict = []
         for scan in period_scans:
-            period_scan_dict = import_period_scan(scan.product.file, period_scan_dict)
+            try:
+                period_scan_dict = import_period_scan(scan.product.file, period_scan_dict)
+            except FileNotFoundError as e:
+                logger.warning(e)
 
     lc_model_dict = {"date": [], "mag": [], "name": []}
     if lc_models:
         for m in lc_models:
-            lc_model_dict = import_lc_model(m, lc_model_dict)
+            try:
+                lc_model_dict = import_lc_model(m, lc_model_dict)
+            except FileNotFoundError as e:
+                logger.warning(e)
 
     model_param_dict = []
     if model_params:
@@ -4125,12 +4131,15 @@ def get_lc_plot(body, data):
     if shape_models:
         pole_vector_list = []
         for n, sm in enumerate(shape_models):
-            shape_model_dict, pole_vector = import_shape_model(sm.product.file, body, model_param_dict[n])
-            for key in shape_model_dict.keys():
-                if key != 'faces_level':
-                    shape_model_dict[key] = [x for _, x in sorted(zip(shape_model_dict["faces_level"], shape_model_dict[key]), key=lambda x: x[0], reverse=False)]
-            shape_model_list.append(shape_model_dict)
-            pole_vector_list.append(pole_vector)
+            try:
+                shape_model_dict, pole_vector = import_shape_model(sm.product.file, body, model_param_dict[n])
+                for key in shape_model_dict.keys():
+                    if key != 'faces_level':
+                        shape_model_dict[key] = [x for _, x in sorted(zip(shape_model_dict["faces_level"], shape_model_dict[key]), key=lambda x: x[0], reverse=False)]
+                shape_model_list.append(shape_model_dict)
+                pole_vector_list.append(pole_vector)
+            except FileNotFoundError as e:
+                logger.warning(e)
     else:
         pole_vector_list = [{"v_x": [0], "v_y": [0], "v_z": [1], "p_lat": [0], "p_long": [0], "period_fit": [1]}]
 
