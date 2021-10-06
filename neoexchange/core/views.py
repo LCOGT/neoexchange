@@ -4100,14 +4100,15 @@ def get_lc_plot(body, data):
     else:
         meta_list = lc_list = []
 
-    period_scan_dict = [{"period": [], "rms": [], "chi2": []}]
+    period_scan_dict = []
     if period_scans:
-        period_scan_dict = []
         for scan in period_scans:
             try:
                 period_scan_dict = import_period_scan(scan.product.file, period_scan_dict)
             except FileNotFoundError as e:
                 logger.warning(e)
+    if not period_scan_dict:
+        period_scan_dict = [{"period": [], "rms": [], "chi2": []}]
 
     lc_model_dict = {"date": [], "mag": [], "name": []}
     if lc_models:
@@ -4131,8 +4132,8 @@ def get_lc_plot(body, data):
         model_param_dict.append({"pole_longitude": None, "pole_latitude": None, "period": None})
 
     shape_model_list = []
+    pole_vector_list = []
     if shape_models:
-        pole_vector_list = []
         for n, sm in enumerate(shape_models):
             try:
                 shape_model_dict, pole_vector = import_shape_model(sm.product.file, body, model_param_dict[n])
@@ -4143,7 +4144,7 @@ def get_lc_plot(body, data):
                 pole_vector_list.append(pole_vector)
             except FileNotFoundError as e:
                 logger.warning(e)
-    else:
+    if not pole_vector_list:
         pole_vector_list = [{"v_x": [0], "v_y": [0], "v_z": [1], "p_lat": [0], "p_long": [0], "period_fit": [1]}]
 
     meta_list = [x for _, x in sorted(zip(lc_list, meta_list), key=lambda i: i[0]['date'][0])]
