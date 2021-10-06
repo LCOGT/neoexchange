@@ -4120,10 +4120,13 @@ def get_lc_plot(body, data):
     model_param_dict = []
     if model_params:
         for params in model_params:
-            model_params_file = params.product.file.open()
-            lines = model_params_file.readlines()
-            chunks = lines[0].split()
-            model_param_dict.append({"pole_longitude": float(chunks[0]), "pole_latitude": float(chunks[1]), "period": float(chunks[2])})
+            try:
+                model_params_file = params.product.file.open()
+                lines = model_params_file.readlines()
+                chunks = lines[0].split()
+                model_param_dict.append({"pole_longitude": float(chunks[0]), "pole_latitude": float(chunks[1]), "period": float(chunks[2])})
+            except FileNotFoundError as e:
+                logger.warning(e)
     else:
         model_param_dict.append({"pole_longitude": None, "pole_latitude": None, "period": None})
 
