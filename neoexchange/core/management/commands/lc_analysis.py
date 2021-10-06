@@ -55,6 +55,7 @@ class Command(BaseCommand):
         parser.add_argument('--period_scan', action="store_true", default=False, help='run Period Scan')
         parser.add_argument('--lc_model', action="store", default=None, help='Start and end dates for the lc_model (YYYYMMDD-YYYMMDD)')
         parser.add_argument('--path', type=str, default=out_path, help='Location for local DAMIT data to live')
+        parser.add_argument('--ext_alcdef', type=str, default=None, help='path/filename for external alcdef data to be uploaded')
 
     def get_period_range(self, body, options):
         """
@@ -275,6 +276,8 @@ class Command(BaseCommand):
         except IndexError:
             print(f"Couldn't find {body_name}")
             return
+        if options['ext_alcdef'] is not None:
+            save_dataproduct(obj=body, filepath=options['ext_alcdef'], filetype=DataProduct.ALCDEF_TXT)
         alcdef_files = DataProduct.content.fullbody(bodyid=body.id).filter(filetype=DataProduct.ALCDEF_TXT)
         meta_list = []
         lc_list = []
