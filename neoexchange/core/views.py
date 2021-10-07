@@ -3977,9 +3977,8 @@ def import_lc_model(m_file, model_list):
     """Pull model lc from intensity files."""
 
     lc_model_file = m_file.product.file.open()
-    run_num = m_file.product.path.split('_')[1]
     file_parts = m_file.product.name.split('_')
-    name = f'{file_parts[2]} ({file_parts[1]}) [run:{run_num}]'
+    name = f'{file_parts[2]} ({file_parts[1]})'
     lines = lc_model_file.readlines()
     model_jd = []
     model_mag = []
