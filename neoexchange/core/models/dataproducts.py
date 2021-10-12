@@ -137,7 +137,7 @@ class DataProduct(models.Model):
     content = CoreManager()
 
     def __str__(self):
-        return f"{self.get_filetype_display()} for {self.content_type.name} - {self.object_id}"
+        return f"{self.get_filetype_display()} for {self.content_type.name} - pk={self.object_id}"
 
     def save(self, *args, **kwargs):
         if not kwargs.get('new_file'):

@@ -322,21 +322,40 @@ class Command(BaseCommand):
             else:
                 start_date = options['lc_model'][0]
                 end_date = options['lc_model'][1]
-            epoch_input_filename = os.path.join(path, obj_name + '_epoch.lcs')
+            dir_name = os.path.join(path, f"DamitDocs_{str(dir_num + 1).zfill(3)}_{period}_model_{options['lc_model']}")
+            if not os.path.exists(dir_name):
+                os.makedirs(dir_name)
+            epoch_input_filename = os.path.join(dir_name, obj_name + '_epoch.lcs')
             epoch_input_file = open(epoch_input_filename, 'w')
             jpl_mean_mag, model_ltt_list = self.create_epoch_input(epoch_input_file, period, start_date, end_date, body_elements)
             epoch_input_file.close()
             # Create Model lc for given epochs.
-            convinv_outpar_filename = search(path, '.*.convinv_par.out', latest=True)
-            shape_model_filename = search(path, '.*.trifaces.shape', latest=True)
-            if not convinv_outpar_filename or not shape_model_filename:
+            period_tag = f'_{period}_'
+            shape_models = DataProduct.content.fullbody(bodyid=body.id).filter(filetype=DataProduct.MODEL_SHAPE, product__icontains=period_tag).order_by('-created')
+            model_params = DataProduct.content.fullbody(bodyid=body.id).filter(filetype=DataProduct.MODEL_LC_PARAM, product__icontains=period_tag).order_by('-created')
+
+            if not model_params or not shape_models:
                 raise CommandError("Both convinv_par.out and model.shape files required for lc_model.")
-            lcgen_outlcs_filename = os.path.join(path, obj_name + f'_{options["lc_model"]}_lcgen_lcs.out')
-            lcgen_lc_final_filename = os.path.join(path, obj_name + f'_{options["lc_model"]}_lcgen_lcs.final')
+            shape_model = shape_models[0]
+            model_param = model_params[0]
+            shape_model_filename = os.path.join(dir_name, os.path.basename(shape_model.product.name))
+            convinv_outpar_filename = os.path.join(dir_name, os.path.basename(model_param.product.name))
+
+            # Save files locally
+            with open(shape_model_filename, 'wb') as shape_file:
+                sm = shape_model.product.open()
+                shape_file.write(sm.read())
+            with open(convinv_outpar_filename, 'wb') as param_file:
+                mp = model_param.product.open()
+                param_file.write(mp.read())
+
+            lcgen_outlcs_filename = os.path.join(dir_name, obj_name + f'_{options["lc_model"]}_lcgen_lcs.out')
+            lcgen_lc_final_filename = os.path.join(dir_name, obj_name + f'_{options["lc_model"]}_lcgen_lcs.final')
             lcgenerat_retcode_or_cmdline = run_damit('lcgenerator', epoch_input_filename,
                                                      f" {convinv_outpar_filename} {shape_model_filename} {lcgen_outlcs_filename}")
             self.zip_lc_model(epoch_input_filename, lcgen_outlcs_filename, lcgen_lc_final_filename, jpl_mean_mag,
                               model_ltt_list)
+            save_dataproduct(obj=body, filepath=lcgen_lc_final_filename, filetype=DataProduct.MODEL_LC_RAW)
         else:
             # Create convinv input file
             dir_name = os.path.join(path, f"DamitDocs_{str(dir_num + 1).zfill(3)}_{period}_{len(meta_list)}")
@@ -376,6 +395,6 @@ class Command(BaseCommand):
             save_dataproduct(obj=body, filepath=convinv_lc_final_filename, filetype=DataProduct.MODEL_LC_RAW)
             save_dataproduct(obj=body, filepath=conjinv_lc_final_filename, filetype=DataProduct.MODEL_LC_RAW)
             save_dataproduct(obj=body, filepath=convinv_outpar_filename, filetype=DataProduct.MODEL_LC_PARAM)
-            save_dataproduct(obj=body, filepath=mink_faces_filename, filetype=DataProduct.MODEL_SHAPE)
+            save_dataproduct(obj=body, filepath=shape_model_filename, filetype=DataProduct.MODEL_SHAPE)
 
         return
