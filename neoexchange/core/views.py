@@ -3882,6 +3882,7 @@ class LCPlot(LookUpBodyMixin, FormView):
         else:
             period = None
         script, div, meta_list = get_lc_plot(self.body, {'period': period})
+        alcdef_dps = DataProduct.content.fullbody(bodyid=self.body.id).filter(filetype=DataProduct.ALCDEF_TXT)
 
         return self.render_to_response(self.get_context_data(body=self.body, script=script, div=div, meta_list=meta_list))
 
@@ -3900,9 +3901,10 @@ class LCPlot(LookUpBodyMixin, FormView):
         return params
 
 
-def import_alcdef(file, meta_list, lc_list):
+def import_alcdef(alcdef, meta_list, lc_list):
     """Pull LC data from ALCDEF text files."""
 
+    file = alcdef.product.file
     with file.open() as lc_file:
         lines = lc_file.readlines()
 
@@ -3949,6 +3951,7 @@ def import_alcdef(file, meta_list, lc_list):
             elif 'STARTMETADATA' in line:
                 met_dat = True
             elif 'ENDMETADATA' in line:
+                metadata['alcdef_url'] = reverse('display_textfile', kwargs={'pk': alcdef.id})
                 met_dat = False
 
     return meta_list, lc_list
@@ -4093,7 +4096,7 @@ def get_lc_plot(body, data):
     if dataproducts:
         for dp in dataproducts:
             try:
-                meta_list, lc_list = import_alcdef(dp.product.file, meta_list, lc_list)
+                meta_list, lc_list = import_alcdef(dp, meta_list, lc_list)
             except FileNotFoundError as e:
                 logger.warning(e)
     else:
@@ -4170,6 +4173,15 @@ def get_lc_plot(body, data):
         """.format(body.full_name())
 
     return script, div, meta_list
+
+
+def display_textfile(request, pk):
+    textfile = DataProduct.objects.get(pk=pk).product
+    try:
+        return HttpResponse(textfile, content_type="Text/plain")
+    except FileNotFoundError as e:
+        logger.warning(e)
+        raise Http404("Couldn't find requested file.")
 
 
 def display_movie(request, pk):

@@ -282,7 +282,7 @@ class Command(BaseCommand):
         meta_list = []
         lc_list = []
         for alcdef in alcdef_files:
-            meta_list, lc_list = import_alcdef(alcdef.product.file, meta_list, lc_list)
+            meta_list, lc_list = import_alcdef(alcdef, meta_list, lc_list)
         body_elements = model_to_dict(body)
         obj_name = sanitize_object_name(body.current_name())
 

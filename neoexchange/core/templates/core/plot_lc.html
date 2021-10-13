@@ -32,5 +32,8 @@ Lightcurve for object: {{body.current_name}}
         {{ lc_div|safe }}
     {% endblock %}
 
+    {% for alcdef in alcdef_dps %}
+        <a href="{% url 'display_textfile' alcdef.id %}"> {{ alcdef.product.name }} </a>
+    {% endfor %}
 </div>
 {% endblock %}

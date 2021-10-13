@@ -893,6 +893,7 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_list=[], shape
         sess_site = []
         sess_title = []
         sess_color = []
+        sess_url = []
         span = []
         jpl_v_mid = []
         phased_lc_list = phase_lc(copy.deepcopy(lc_list), period, base_date)
@@ -924,12 +925,13 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_list=[], shape
             filt = translate_from_alcdef_filter(md['FILTER'])
             sess_filt.append(filt)
             sess_site.append(md['MPCCODE'])
+            sess_url.append(md['alcdef_url'])
             sess_color.append(plot_col)
             dataset_title = "{}T{} -- Filter:{} -- Site:{}".format(md['SESSIONDATE'], md['SESSIONTIME'], filt, md['MPCCODE'])
             sess_title.append(dataset_title)
         sess_sym = ['&#10739;']*len(sess_date)
         offset = [0]*len(sess_date)
-        dataset_source.data = dict(symbol=sess_sym, date=sess_date, time=sess_time, site=sess_site, filter=sess_filt, color=sess_color, title=sess_title, offset=offset, span=span, v_mid=jpl_v_mid)
+        dataset_source.data = dict(symbol=sess_sym, date=sess_date, time=sess_time, site=sess_site, filter=sess_filt, color=sess_color, title=sess_title, offset=offset, span=span, v_mid=jpl_v_mid, url=sess_url)
 
         phased_dict = build_data_sets(phased_lc_list, sess_title)
         for k, phase in enumerate(phased_dict['time']):
@@ -992,7 +994,7 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_list=[], shape
     # Establish Columns for DataTable
     columns_lc = [
         TableColumn(field="symbol", title='', formatter=formatter, width=3),
-        TableColumn(field="date", title="Date"),
+        TableColumn(field="date", title="Date", formatter=HTMLTemplateFormatter(template='<a href="<%= (url) %>"target="_blank"><%= value %> </a>')),
         TableColumn(field="time", title="Time"),
         TableColumn(field="span", title="Span (h)", formatter=NumberFormatter(format="0.00")),
         TableColumn(field="site", title="Site"),
