@@ -18,7 +18,7 @@ class TestReadPhotomPipe(SimpleTestCase):
 
 
     def test_read(self):
-        expected_length = 10
+        expected_length = 62
 
         table = read_photompipe_file(self.test_lc_file)
 
