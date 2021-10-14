@@ -31,6 +31,7 @@ import os
 import tempfile
 from shutil import copy2, rmtree
 from glob import glob
+import time
 
 
 class LighCurvePlotTest(FunctionalTest):
@@ -118,3 +119,16 @@ class LighCurvePlotTest(FunctionalTest):
         period_box = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='lc_plot']/div[@class='bk']/div[@class='bk'][2]/div[@class='bk'][2]/div[@class='bk'][2]/div[@class='bk']/div[@class='bk'][1]/div[@class='bk'][1]/div[@class='bk']/div[@class='bk bk-input-group']/div[@class='bk bk-spin-wrapper']/input[@class='bk bk-input']")
         period_text = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='lc_plot']/div[@class='bk']/div[@class='bk'][2]/div[@class='bk'][2]/div[@class='bk'][2]/div[@class='bk']/div[@class='bk'][1]/div[@class='bk'][1]/div[@class='bk']/div[@class='bk bk-input-group']/label[@class='bk']").text
         self.assertIn('Period (Default: 5.27h)', period_text)
+        # get current window
+        pw = self.browser.current_window_handle
+        data_link = self.browser.find_element_by_xpath("/html/body/div[1]/div/div[3]/div/div/div[2]/div[2]/div[1]/div[2]/div[4]/div[3]/div/div[1]/div[7]/a")
+        data_link.click()
+        time.sleep(1)
+        all_windows = self.browser.window_handles
+        for window in all_windows:
+            if window != pw:
+                self.browser.switch_to.window(window)
+        self.assertIn('txt', self.browser.current_url)
+        alcdef_text = self.browser.find_element_by_xpath("/html/body/pre").text
+        self.assertIn('OBJECTNUMBER=433', alcdef_text)
+        return
