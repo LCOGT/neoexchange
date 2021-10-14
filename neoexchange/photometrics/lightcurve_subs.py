@@ -30,3 +30,15 @@ def read_photompipe_file(filepath):
                 print("Doubling detected")
                 table = unique(table, keys='filename')
     return table
+
+def write_dartformat_file(table, filepath):
+    """Writes out the passed Astropy <table > in "DART lightcurve format" to the
+    given <filepath>"""
+
+    output_col_names = ['file', 'julian_date', 'mag', 'sig', 'ZP', 'ZP_sig', 'inst_mag', 'inst_sig', 'SExtractor_flag', 'aprad']
+    input_col_names = ['filename', 'julian_date', 'mag', 'sig', 'ZP', 'ZP_sig', 'inst_mag', 'in_sig', '[8]', 'FWHM"']
+    col_starts = [0, 37, 53, 61, 68, 76, 83, 92, 99, 115]
+
+    table[input_col_names].write(filepath, format='ascii.fixed_width', names=output_col_names, col_starts=col_starts, comment=False, delimiter='')
+
+    return
