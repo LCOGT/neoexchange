@@ -4176,7 +4176,11 @@ def get_lc_plot(body, data):
 
 
 def display_textfile(request, pk):
-    textfile = DataProduct.objects.get(pk=pk).product
+    try:
+        textfile = DataProduct.objects.get(pk=pk).product
+    except ObjectDoesNotExist as e:
+        logger.warning(e)
+        raise Http404("Dataproduct does not exist.")
     try:
         return HttpResponse(textfile, content_type="Text/plain")
     except FileNotFoundError as e:

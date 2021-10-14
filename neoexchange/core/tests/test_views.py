@@ -24,6 +24,7 @@ from math import degrees
 from django.test import TestCase, SimpleTestCase, override_settings
 from django.forms.models import model_to_dict
 from django.conf import settings
+from django.http import Http404
 from bs4 import BeautifulSoup
 from mock import patch
 from astropy.io import fits
@@ -8252,7 +8253,7 @@ class TestParsePortalErrors(SimpleTestCase):
 
 
 @override_settings(MEDIA_ROOT=tempfile.mkdtemp())
-class TestDisplayMovie(TestCase):
+class TestDisplayDataproduct(TestCase):
     def setUp(self):
         body_params = {
                          'provisional_name': None,
@@ -8377,3 +8378,17 @@ class TestDisplayMovie(TestCase):
         save_dataproduct(obj=self.test_block2, filepath=movie_file, filetype=DataProduct.GUIDER_GIF)
         response = display_movie(request, self.test_block2.id)
         self.assertIn(b'GIF', response.content)
+
+    def test_display_text(self):
+        # test non-existant DP
+        request = ''
+        with self.assertRaises(Http404) as context:
+            response = display_textfile(request, 0)
+            self.assertTrue("Dataproduct does not exist." in str(context.exception))
+        # create ALCDEF
+        file_name = 'test_SB_ALCDEF.txt'
+        file_content = "some text here"
+        save_dataproduct(obj=self.test_sblock, filepath=None, filetype=DataProduct.ALCDEF_TXT, filename=file_name, content=file_content)
+        dp = DataProduct.objects.filter(filetype=DataProduct.ALCDEF_TXT)
+        response = display_textfile(request, dp[0].id)
+        self.assertEqual(b"some text here", response.content)
