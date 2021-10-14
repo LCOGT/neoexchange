@@ -38,7 +38,16 @@ def write_dartformat_file(table, filepath):
     output_col_names = ['file', 'julian_date', 'mag', 'sig', 'ZP', 'ZP_sig', 'inst_mag', 'inst_sig', 'SExtractor_flag', 'aprad']
     input_col_names = ['filename', 'julian_date', 'mag', 'sig', 'ZP', 'ZP_sig', 'inst_mag', 'in_sig', '[8]', 'FWHM"']
     col_starts = [0, 37, 53, 61, 68, 76, 83, 92, 99, 115]
+    def_fmt = '%.4f'
+    formatters = {  'julian_date' : '%15.7f', 'mag' : def_fmt, 'sig' : def_fmt,
+                    'ZP' : def_fmt, 'ZP_sig' : def_fmt, 'inst_mag' : def_fmt, 'inst_sig' : def_fmt,
+                    'aprad' : '%.2f'
+                 }
 
-    table[input_col_names].write(filepath, format='ascii.fixed_width', names=output_col_names, col_starts=col_starts, comment=False, delimiter='')
+    # Replace truncated '.lda' in filename with real name
+    new_names = [x.replace('.lda','.fits') for x in table['filename']]
+    table.replace_column('filename', new_names)
+    table[input_col_names].write(filepath, format='ascii.fixed_width', names=output_col_names,
+        col_starts=col_starts, comment=False, delimiter='', formats=formatters)
 
     return

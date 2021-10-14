@@ -56,11 +56,14 @@ class TestWriteDartFormatFile(SimpleTestCase):
 
     def test_write(self):
         expected_lines = [
-        '                                file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  SExtractor_flag  aprad',
-        ' tfn1m001-fa11-20211012-0073-e91.lda  2459500.3339392  14.8447  0.0397  27.1845  0.0394  -12.3397    0.0052                0   2.14',
-        ' tfn1m001-fa11-20211012-0074-e91.lda   2459500.334579  14.8637  0.0293  27.1824  0.0288  -12.3187    0.0053                3    2.2'
+        '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  SExtractor_flag  aprad',
+        ' tfn1m001-fa11-20211012-0073-e91.fits  2459500.3339392  14.8400  0.0397  27.1845  0.0394  -12.3397    0.0052                0   2.14',
+        ' tfn1m001-fa11-20211012-0074-e91.fits  2459500.3345790  14.8637  0.0293  27.1824  0.0300  -12.3187    0.0053                3   2.20'
         ]
 
+        # Modify some values to test rounding
+        self.test_table[0]['mag'] = 14.84
+        self.test_table[1]['ZP_sig'] = 0.03
         output_file = os.path.join(self.test_dir, 'test.tab')
         write_dartformat_file(self.test_table[0:2], output_file)
 
