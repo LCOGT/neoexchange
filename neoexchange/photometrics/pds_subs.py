@@ -5,8 +5,12 @@ from datetime import datetime, timedelta
 
 from lxml import etree
 
+from core.models import Frame
 from photometrics.catalog_subs import open_fits_catalog
 from photometrics.photometry_subs import map_filter_to_wavelength, map_filter_to_bandwidth
+
+import logging
+logger = logging.getLogger(__name__)
 
 def get_namespace(schema_filepath):
     """Parse the specified XSD schema file at <schema_filepath> to extract the
@@ -416,3 +420,57 @@ def create_pds_labels(procdir, schema_root):
             xml_labels.append(xml_file)
 
     return xml_labels
+
+def split_filename(filename):
+    name_parts = {}
+    fileroot, name_parts['extension'] = os.path.splitext(filename)
+    if len(fileroot) >= 31:
+        chunks = fileroot.split('-')
+        name_parts['site'] = chunks[0][0:3]
+        name_parts['tel_class'] = chunks[0][3:6]
+        name_parts['tel_serial'] = chunks[0][6:8]
+        name_parts['instrument'] = chunks[1]
+        name_parts['dayobs'] = chunks[2]
+        name_parts['frame_num'] = chunks[3]
+        name_parts['frame_type'] = chunks[4]
+
+    return name_parts
+
+def create_dart_directories(output_dir, block):
+    """Creates the directory structures in <output_dir> needed for exporting a
+    Block <block> of light curve data to DART. Creates a directory tree as follows:
+    └── <output_dir>
+        └── lcogt_data
+            └── lcogt_1m0_01_fa11_20211013
+                ├── cal_data
+                ├── ddp_data
+                └── raw_data
+    """
+    status = False
+
+    frames = Frame.objects.filter(block=block, frametype=Frame.BANZAI_RED_FRAMETYPE)
+    if frames.count() > 0:
+        first_filename = frames.first().filename
+        file_parts = split_filename(first_filename)
+        if len(file_parts) == 8:
+            root_dir = f"lcogt_{file_parts['tel_class']}_{file_parts['tel_serial']}_{file_parts['instrument']}_{file_parts['dayobs']}"
+            logger.debug(f"Creating root directory {root_dir} and sub directories")
+            for dir_name in ['', 'raw_data', 'cal_data', 'ddp_data']:
+                dir_path = os.path.join(output_dir, 'lcogt_data', root_dir, dir_name)
+                os.makedirs(dir_path, exist_ok=True)
+            status = True
+        else:
+            logger.warning(f"Could not decode filename: {first_filename}")
+    return status
+
+def export_block_to_pds(input_dir, output_dir, block):
+
+    status = create_dart_directories(output_dir, block)
+
+    # transfer raw data
+    # create PDS products for raw data
+    # transfer cal data
+    # create PDS products for cal data
+    # transfer ddp data
+    # create PDS products for ddp data
+    return

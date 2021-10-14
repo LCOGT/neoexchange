@@ -6,9 +6,10 @@ from lxml import etree
 from lxml import objectify
 from datetime import datetime
 
+from core.models import SuperBlock, Block, Frame
 from photometrics.pds_subs import *
 
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, TestCase
 
 class TestPDSSchemaMappings(SimpleTestCase):
 
@@ -285,3 +286,122 @@ class TestCreatePDSLabels(SimpleTestCase):
 
         self.assertEqual(len(expected_xml_labels), len(xml_labels))
         self.assertEqual(expected_xml_labels, xml_labels)
+
+
+class TestSplitFilename(SimpleTestCase):
+
+    def test_cpt_1m(self):
+        expected_parts = { 'site' : 'cpt',
+                           'tel_class' : '1m0',
+                           'tel_serial' : '13',
+                           'instrument' : 'fa14',
+                           'dayobs' : '20211013',
+                           'frame_num' : '0035',
+                           'frame_type' : 'e91',
+                           'extension' : '.fits'
+                          }
+
+        parts = split_filename('cpt1m013-fa14-20211013-0035-e91.fits')
+
+        self.assertEqual(expected_parts, parts)
+
+    def test_tfn_1m(self):
+        expected_parts = { 'site' : 'tfn',
+                           'tel_class' : '1m0',
+                           'tel_serial' : '01',
+                           'instrument' : 'fa11',
+                           'dayobs' : '20211013',
+                           'frame_num' : '0126',
+                           'frame_type' : 'e91',
+                           'extension' : '.fits'
+                         }
+
+        parts = split_filename('tfn1m001-fa11-20211013-0126-e91.fits')
+
+        self.assertEqual(expected_parts, parts)
+
+
+class TestExportBlockToPDS(TestCase):
+
+    def setUp(self):
+        self.schemadir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_schemas'))
+        test_xml_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label.xml'))
+        with open(test_xml_cat, 'r') as xml_file:
+            self.expected_xml = xml_file.readlines()
+
+        self.framedir = os.path.abspath(os.path.join('photometrics', 'tests'))
+        self.test_file = 'banzai_test_frame.fits'
+        test_file_path = os.path.join(self.framedir, self.test_file)
+
+        self.test_dir = '/tmp/tmp_neox_wibble'
+#        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+        self.test_input_dir = os.path.join(self.test_dir, 'input')
+        os.makedirs(self.test_input_dir, exist_ok=True)
+        self.test_output_dir = os.path.join(self.test_dir, 'output')
+        os.makedirs(self.test_output_dir, exist_ok=True)
+
+        # Make one copy and rename to an -e92 (so it will get picked up) and
+        # a second copy which is renamed to an -e91 (so it shouldn't be found)
+        new_name = os.path.join(self.test_input_dir, 'tfn1m001-fa11-20211013-0065-e91.fits')
+        shutil.copy(test_file_path, new_name)
+        self.test_banzai_files = []
+
+        block_params = {
+                         'block_start' : datetime(2021, 10, 13, 0, 40),
+                         'block_end' : datetime(2021, 10, 14, 0, 40),
+                         'obstype' : Block.OPT_IMAGING,
+                         'num_observed' : 1
+                        }
+        self.test_block, created = Block.objects.get_or_create(**block_params)
+
+        frame_params = {
+                         'sitecode' : 'Z24',
+                         'instrument' : 'fa11',
+                         'filter' : 'ip',
+                         'block' : self.test_block,
+                         'frametype' : Frame.BANZAI_RED_FRAMETYPE,
+                         'zeropoint' : 27.0,
+                         'zeropoint_err' : 0.03,
+                         'midpoint' : block_params['block_start'] + timedelta(minutes=5)
+                       }
+
+        for frame_num in range(65,126,30):
+            frame_params['filename'] = f"tfn1m001-fa11-20211013-{frame_num:04d}-e91.fits"
+            frame_params['midpoint'] += timedelta(minutes=frame_num-65)
+            frame, created = Frame.objects.get_or_create(**frame_params)
+            new_name = os.path.join(self.test_input_dir, frame_params['filename'].replace('e91', 'e92'))
+            filename = shutil.copy(test_file_path, new_name)
+            self.test_banzai_files.append(filename)
+        self.remove = False
+        self.debug_print = False
+        self.maxDiff = None
+
+    def tearDown(self):
+        if self.remove:
+            for test_dir in [self.test_output_dir, self.test_input_dir, self.test_dir]:
+                try:
+                    files_to_remove = glob(os.path.join(test_dir, '*'))
+                    for file_to_rm in files_to_remove:
+                        os.remove(file_to_rm)
+                except OSError:
+                    print("Error removing files in temporary test directory", test_dir)
+                try:
+                    os.rmdir(test_dir)
+                    if self.debug_print:
+                        print("Removed", test_dir)
+                except OSError:
+                    print("Error removing temporary test directory", test_dir)
+
+    def test_create_directory_structure(self):
+
+        expected_root_dir = os.path.join(self.test_output_dir, 'lcogt_data')
+        expected_block_dir = os.path.join(expected_root_dir, 'lcogt_1m0_01_fa11_20211013')
+
+        status = create_dart_directories(self.test_output_dir, self.test_block)
+
+        self.assertEqual(1, Block.objects.count())
+        self.assertEqual(3, Frame.objects.count())
+        self.assertTrue(status)
+        for dir in [expected_root_dir, expected_block_dir]:
+            self.assertTrue(os.path.exists(dir), f'{dir} does not exist')
+            self.assertTrue(os.path.isdir(dir), f'{dir} is not a directory')
