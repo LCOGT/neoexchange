@@ -17,7 +17,7 @@ function next_time_phased(period_box, phase_shift, special_vars) {
             phase_diff = phase_diff + 1;
         }
     }
-    let hours_diff = phase_diff * P
+    let hours_diff = phase_diff * P;
     return "" + hours_diff.toFixed(2) + "h";
 }
 

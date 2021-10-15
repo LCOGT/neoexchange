@@ -849,7 +849,7 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_list=[], shape
 
     # Build Hovertools
     hover1 = HoverTool(tooltips=[('Phase', '$x{0.000}'), ('Mag', '$y{0.000}'), ('To Next', '@y{custom}')],
-                       formatters=dict(y=next_time), point_policy="none", line_policy="none", show_arrow=False,
+                       formatters={'@y': next_time}, point_policy="none", line_policy="none", show_arrow=False,
                        mode="vline", renderers=[base_line], attachment='above')
     hover2 = HoverTool(tooltips='@title', renderers=[data_plot], point_policy="snap_to_data", attachment='below')
     period_hover = HoverTool(tooltips='$x{0.0000}', renderers=period_data, point_policy="none", mode="vline",
