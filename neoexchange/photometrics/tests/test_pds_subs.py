@@ -327,7 +327,10 @@ class TestExportBlockToPDS(TestCase):
         self.schemadir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_schemas'))
         test_xml_collection = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_collection_cal.xml'))
         with open(test_xml_collection, 'r') as xml_file:
-            self.expected_xml = xml_file.readlines()
+            self.expected_xml_cal = xml_file.readlines()
+        test_xml_collection = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_collection_raw.xml'))
+        with open(test_xml_collection, 'r') as xml_file:
+            self.expected_xml_raw = xml_file.readlines()
 
         self.framedir = os.path.abspath(os.path.join('photometrics', 'tests'))
         self.test_file = 'banzai_test_frame.fits'
@@ -340,13 +343,6 @@ class TestExportBlockToPDS(TestCase):
         self.test_output_dir = os.path.join(self.test_dir, 'output')
         os.makedirs(self.test_output_dir, exist_ok=True)
         self.expected_root_dir = os.path.join(self.test_output_dir, 'lcogt_data')
-
-
-        # Make one copy and rename to an -e92 (so it will get picked up) and
-        # a second copy which is renamed to an -e91 (so it shouldn't be found)
-        new_name = os.path.join(self.test_input_dir, 'tfn1m001-fa11-20211013-0065-e91.fits')
-        shutil.copy(test_file_path, new_name)
-        self.test_banzai_files = [os.path.basename(new_name), ]
 
         block_params = {
                          'block_start' : datetime(2021, 10, 13, 0, 40),
@@ -370,13 +366,20 @@ class TestExportBlockToPDS(TestCase):
                          'midpoint' : block_params['block_start'] + timedelta(minutes=5)
                        }
 
+        self.test_banzai_files = []
         for frame_num in range(65,126,30):
             frame_params['filename'] = f"tfn1m001-fa11-20211013-{frame_num:04d}-e91.fits"
             frame_params['midpoint'] += timedelta(minutes=frame_num-65)
             frame, created = Frame.objects.get_or_create(**frame_params)
-            new_name = os.path.join(self.test_input_dir, frame_params['filename'].replace('e91', 'e92'))
-            filename = shutil.copy(test_file_path, new_name)
-            self.test_banzai_files.append(os.path.basename(filename))
+            for extn in ['e00', 'e92']:
+                new_name = os.path.join(self.test_input_dir, frame_params['filename'].replace('e91', extn))
+                filename = shutil.copy(test_file_path, new_name)
+                self.test_banzai_files.append(os.path.basename(filename))
+
+        # Make one additional copy which is renamed to an -e91 (so it shouldn't be found)
+        new_name = os.path.join(self.test_input_dir, 'tfn1m001-fa11-20211013-0065-e91.fits')
+        shutil.copy(test_file_path, new_name)
+        self.test_banzai_files.insert(1, os.path.basename(new_name))
 
         self.remove = False
         self.debug_print = False
@@ -455,7 +458,7 @@ class TestExportBlockToPDS(TestCase):
 
         self.assertEqual(expected_files, files)
 
-    def test_create_pds_cal_collection_cal(self):
+    def test_create_pds_collection_cal(self):
         expected_csv_file = os.path.join(self.expected_root_dir, 'collection_cal.csv')
         expected_xml_file = os.path.join(self.expected_root_dir, 'collection_cal.xml')
         e92_files = [x for x in self.test_banzai_files if 'e92' in x]
@@ -477,7 +480,35 @@ class TestExportBlockToPDS(TestCase):
         with open(xml_filename, 'r') as xml_file:
             xml = xml_file.readlines()
 
-        for i, expected_line in enumerate(self.expected_xml):
+        for i, expected_line in enumerate(self.expected_xml_cal):
+            if i < len(xml):
+                assert expected_line.lstrip() == xml[i].lstrip(), "Failed on line: " + str(i+1)
+            else:
+                assert expected_line.lstrip() == None, "Failed on line: " + str(i+1)
+
+    def test_create_pds_collection_raw(self):
+        expected_csv_file = os.path.join(self.expected_root_dir, 'collection_raw.csv')
+        expected_xml_file = os.path.join(self.expected_root_dir, 'collection_raw.xml')
+        e00_files = [x for x in self.test_banzai_files if 'e00' in x]
+        expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:lcogt_raw:{x}::1.0' ) for x in self.test_banzai_files if 'e00' in x]
+        paths = create_dart_directories(self.test_output_dir, self.test_block)
+
+        csv_filename, xml_filename = create_pds_collection(self.expected_root_dir, self.test_input_dir, e00_files, 'raw', self.schemadir)
+
+        for filename, expected_file in zip([csv_filename, xml_filename], [expected_csv_file, expected_xml_file]):
+            self.assertTrue(os.path.exists(expected_file), f'{expected_file} does not exist')
+            self.assertTrue(os.path.isfile(expected_file), f'{expected_file} is not a file')
+            self.assertEqual(expected_file, filename)
+
+        table = Table.read(csv_filename, format='ascii.no_header')
+        for i, line in enumerate(expected_lines):
+            self.assertEqual(line[0], table[i][0])
+            self.assertEqual(line[1], table[i][1])
+
+        with open(xml_filename, 'r') as xml_file:
+            xml = xml_file.readlines()
+
+        for i, expected_line in enumerate(self.expected_xml_raw):
             if i < len(xml):
                 assert expected_line.lstrip() == xml[i].lstrip(), "Failed on line: " + str(i+1)
             else:

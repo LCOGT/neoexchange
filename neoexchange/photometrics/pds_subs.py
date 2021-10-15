@@ -106,10 +106,11 @@ def create_product_collection(schema_mappings):
 
     return product_collection
 
-def create_id_area(filename, model_version='1.15.0.0', mod_time=None):
+def create_id_area(filename, model_version='1.15.0.0', collection_type='cal', mod_time=None):
     """Create a Identification Area from the passed <filename> (which is
-    appended to the fixed 'urn:nasa:pds:dart_teleobs:lcogt_cal:' URI), the
-    [model_version] (defaults to current '1.15.0.0') which is the schema version
+    appended to the fixed 'urn:nasa:pds:dart_teleobs:lcogt_xyz:' URI), with
+    'xyz' corresponding to the <collection_type> (one of 'cal (default), 'raw', 'ddp').
+    The [model_version] (defaults to current '1.15.0.0') which is the schema version
     from the PDS schema containing `Identification_Area` (e.g. PDS4_PDS_1F00.xsd)
     and an optional modification time [mod_time] (defaults to UTC "now")
     Returns an etree.Element.
@@ -118,17 +119,23 @@ def create_id_area(filename, model_version='1.15.0.0', mod_time=None):
     """
 
     mod_time = mod_time or datetime.utcnow()
+
+    proc_levels = { 'cal' : 'Calibrated',
+                    'raw' : 'Raw',
+                    'ddp' : 'Derived'
+                  }
+
     id_area = etree.Element("Identification_Area")
     if filename is None:
         filename = ''
         product_type = 'Product_Collection'
-        product_title = 'DART Telescopic Observations, Las Cumbres Observatory Network, Las Cumbres Observatory Calibrated Data Collection'
+        product_title = f'DART Telescopic Observations, Las Cumbres Observatory Network, Las Cumbres Observatory {proc_levels[collection_type]} Data Collection'
     else:
         filename = ':' + filename
         product_type = 'Product_Observational'
-        product_title = 'Las Cumbres Observatory Calibrated Image'
+        product_title = f'Las Cumbres Observatory {proc_levels[collection_type]} Image'
 
-    xml_elements = {'logical_identifier' : 'urn:nasa:pds:dart_teleobs:lcogt_cal' + filename,
+    xml_elements = {'logical_identifier' : 'urn:nasa:pds:dart_teleobs:lcogt_' + collection_type + filename,
                     'version_id' : '1.0',
                     'title' : product_title,
                     'information_model_version' : model_version,
@@ -143,7 +150,7 @@ def create_id_area(filename, model_version='1.15.0.0', mod_time=None):
         xml_elements = {'author_list' : 'T. Lister',
                         'publication_year' : mod_time.strftime("%Y"),
                         'keyword' : 'Las Cumbres',
-                        'description' : 'DART Telescopic Observation Bundle, Las Cumbres Observatory Calibrated Data Collection'
+                        'description' : f'DART Telescopic Observation Bundle, Las Cumbres Observatory {proc_levels[collection_type]} Data Collection'
                         }
         for k,v in xml_elements.items():
             etree.SubElement(citation_info, k).text = v
@@ -549,7 +556,7 @@ def write_product_label_xml(filepath, xml_file, schema_root, mod_time=None):
     header, table, cattype = open_fits_catalog(filepath)
     filename = os.path.basename(filepath)
 
-    id_area = create_id_area(filename, schema_mappings['PDS4::PDS']['version'], mod_time)
+    id_area = create_id_area(filename, schema_mappings['PDS4::PDS']['version'], 'cal', mod_time)
     processedImage.append(id_area)
 
     # Add the Observation_Area
@@ -607,7 +614,7 @@ def write_product_collection_xml(filepath, xml_file, schema_root, mod_time=None)
         logger.error("Unknown collection type")
         return False
 
-    id_area = create_id_area(None, schema_mappings['PDS4::PDS']['version'], mod_time)
+    id_area = create_id_area(None, schema_mappings['PDS4::PDS']['version'], collection_type, mod_time)
     productCollection.append(id_area)
 
     # Add Context Area
