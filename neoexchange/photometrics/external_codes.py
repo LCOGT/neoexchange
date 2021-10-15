@@ -769,6 +769,9 @@ def unpack_tarball(tar_path, unpack_dir):
 
 
 def run_damit_periodscan(lcs_input_filename, psinput_filename, psoutput_filename, binary=None, dbg=False):
+    """ Run DAMIT code to calculate periodogram based on lc .
+        See https://astro.troja.mff.cuni.cz/projects/damit/
+    """
     binary = binary or find_binary("period_scan")
     if binary is None:
         logger.error("Could not locate 'period_scan' executable in PATH")
@@ -795,6 +798,9 @@ def run_damit_periodscan(lcs_input_filename, psinput_filename, psoutput_filename
 
 
 def run_damit(call_name, cat_input_filename, primary_call, write_out=False, binary=None, dbg=False):
+    """ Run DAMIT code to calculate LC and shape models.
+        See https://astro.troja.mff.cuni.cz/projects/damit/
+    """
     binary = binary or find_binary(call_name)
     if binary is None:
         logger.error(f"Could not locate {call_name} executable in PATH")

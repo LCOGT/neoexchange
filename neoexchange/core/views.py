@@ -3902,7 +3902,12 @@ class LCPlot(LookUpBodyMixin, FormView):
 
 
 def import_alcdef(alcdef, meta_list, lc_list):
-    """Pull LC data from ALCDEF text files."""
+    """Pull LC data from ALCDEF Data Product.
+        :param alcdef: DataProduct of alcdef file
+        :param meta_list: list of metadata
+        :param lc_list: list of lc_data {date, mag, mag_err}
+        :return meta_list, lc_list
+    """
 
     file = alcdef.product.file
     with file.open() as lc_file:
@@ -4176,6 +4181,9 @@ def get_lc_plot(body, data):
 
 
 def display_textfile(request, pk):
+    """Load textfile DataProduct for display on webpage
+        :param pk: id for DataProduct
+    """
     try:
         textfile = DataProduct.objects.get(pk=pk).product
     except ObjectDoesNotExist as e:

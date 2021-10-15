@@ -87,6 +87,13 @@ class Command(BaseCommand):
         return pmin, pmax, period
 
     def astro_centric_coord(self, geocent_a, heliocent_e):
+        """Convert geocentric asteroid position and heliocentric earth position to astrocentric earth/sun position
+        :param geocent_a: 3 term geocentric asteroid position (AU)
+        :param heliocent_e: 3 term heliocentric earth position (AU)
+        -----
+        :return astrocent_e: 3 term astrocentric earth position (AU)
+        :return astrocent_h: 3 term astrocentric Sun position (AU)
+        """
         astrocent_e = [-1*x for x in geocent_a]
         geocent_h = [-1*x for x in heliocent_e]
         astrocent_h = [x_g - x_a for x_g, x_a in zip(geocent_h, geocent_a)]
@@ -126,6 +133,16 @@ class Command(BaseCommand):
         return mag_mean_list, ltt_list
 
     def create_epoch_input(self, epoch_file, period, start_date, end_date, body_elements):
+        """
+        Create DAMIT readable epoch file that will be used for lightcurve model containing a list of dates and target
+            positions
+        :param epoch_file: file object for epoch
+        :param period: Unused at the moment (hours)
+        :param start_date: Date/time object for start of epoch
+        :param end_date: Date/time object for end of epoch
+        :param body_elements: dictionary of current body model parameters
+        :return: mean mag and list of light travel time corrections
+        """
         # step_size = period * 60 * 60 / 10
         # epoch_length = end_date - start_date
         # total_steps = epoch_length.total_seconds() / step_size
@@ -232,6 +249,15 @@ class Command(BaseCommand):
         return cinv_input_filename, conj_input_filename
 
     def zip_lc_model(self, epoch_in, lc_in, lc_out, mag_means=None, ltt_list=None):
+        """
+        Create lightcurve file for plotting models, combining dates and mags into single final file
+        :param epoch_in: filename for epoch file with dates
+        :param lc_in: filename for DAMIT output that contains mags but no dates for no reason
+        :param lc_out: filename for lc model file with both dates and mags like a normal lc
+        :param mag_means: list of mags or average mag for converting from intensity
+        :param ltt_list: list of light travel times to remove from JD
+        :return: None
+        """
         epoch_in_file = open(epoch_in, 'r')
         lc_in_file = open(lc_in, 'r')
         lc_out_file = open(lc_out, 'w+')
