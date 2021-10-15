@@ -59,7 +59,7 @@ def pds_schema_mappings(schema_root, match_pattern='*.sch'):
                     schema_dict[k] = v
             schemas[key] = schema_dict
         else:
-            print("Unrecognized schema", schema_file)
+            logger.warning("Unrecognized schema", schema_file)
     return schemas
 
 def create_obs_product(schema_mappings):
@@ -84,6 +84,28 @@ def create_obs_product(schema_mappings):
 
     return obs_product
 
+def create_product_collection(schema_mappings):
+    """Create a namespace mapping from the passed dict of schemas in
+    <schema_mappings>. Returns a lxml.etree.Element of Product_Collection"""
+
+    NS_map = {None: schema_mappings['PDS4::PDS']['namespace']}
+    XSI_map = ''
+    for key in schema_mappings.keys():
+        ns_key = None
+        if key != 'PDS4::PDS':
+            ns_key = key.split('::')[1].lower()
+            NS_map[ns_key] = schema_mappings[key]['namespace']
+        XSI_map += schema_mappings[key]['namespace'] + ' ' + schema_mappings[key]['location'] + '    '
+    XSI_map = XSI_map.rstrip()
+
+    # Add namespace for XMLSchema-instance
+    NS_map['xsi'] = "http://www.w3.org/2001/XMLSchema-instance"
+
+    qname = etree.QName("http://www.w3.org/2001/XMLSchema-instance", "schemaLocation")
+    product_collection = etree.Element('Product_Collection', {qname: XSI_map}, nsmap=NS_map)
+
+    return product_collection
+
 def create_id_area(filename, model_version='1.15.0.0', mod_time=None):
     """Create a Identification Area from the passed <filename> (which is
     appended to the fixed 'urn:nasa:pds:dart_teleobs:lcogt_cal:' URI), the
@@ -97,14 +119,34 @@ def create_id_area(filename, model_version='1.15.0.0', mod_time=None):
 
     mod_time = mod_time or datetime.utcnow()
     id_area = etree.Element("Identification_Area")
-    xml_elements = {'logical_identifier' : 'urn:nasa:pds:dart_teleobs:lcogt_cal:' + filename,
+    if filename is None:
+        filename = ''
+        product_type = 'Product_Collection'
+        product_title = 'DART Telescopic Observations, Las Cumbres Observatory Network, Las Cumbres Observatory Calibrated Data Collection'
+    else:
+        filename = ':' + filename
+        product_type = 'Product_Observational'
+        product_title = 'Las Cumbres Observatory Calibrated Image'
+
+    xml_elements = {'logical_identifier' : 'urn:nasa:pds:dart_teleobs:lcogt_cal' + filename,
                     'version_id' : '1.0',
-                    'title' : 'Las Cumbres Observatory Calibrated Image',
+                    'title' : product_title,
                     'information_model_version' : model_version,
-                    'product_class' : 'Product_Observational'
+                    'product_class' : product_type
                     }
     for k,v in xml_elements.items():
         etree.SubElement(id_area, k).text = v
+
+    # If it's Product_Collection, add a Citation block
+    if product_type == 'Product_Collection':
+        citation_info = etree.SubElement(id_area, "Citation_Information")
+        xml_elements = {'author_list' : 'T. Lister',
+                        'publication_year' : mod_time.strftime("%Y"),
+                        'keyword' : 'Las Cumbres',
+                        'description' : 'DART Telescopic Observation Bundle, Las Cumbres Observatory Calibrated Data Collection'
+                        }
+        for k,v in xml_elements.items():
+            etree.SubElement(citation_info, k).text = v
 
     # Add a Modification_History and a Modification_Detail inside that
     mod_history = etree.SubElement(id_area, "Modification_History")
@@ -311,6 +353,84 @@ def create_obs_area(header, filename):
 
     return obs_area
 
+def determine_first_last_times(filepath):
+    """Iterates through all the FITS files in <filepath> to determine the
+    times of the first and last frames, which are returned"""
+
+    fits_files = find_fits_files(filepath)
+    first_frame = datetime.max
+    last_frame = datetime.min
+    for directory, files  in fits_files.items():
+        for fits_file in files:
+            fits_filepath = os.path.join(directory, fits_file)
+            header, table, cattype = open_fits_catalog(fits_filepath, header_only=True)
+            start, stop = get_shutter_open_close(header)
+            first_frame = min(first_frame, start)
+            last_frame = max(last_frame, stop)
+
+    return first_frame, last_frame
+
+def create_context_area(filepath, collection_type):
+    """Creates the Context Area set of classes and returns an etree.Element with it.
+    Documentation on filling this out taken from
+    https://sbnwiki.astro.umd.edu/wiki/Filling_Out_the_Observation_Area_Classes
+    """
+
+    proc_levels = { 'cal' : 'Calibrated',
+                    'raw' : 'Raw',
+                    'ddp' : 'Derived'
+                  }
+
+    context_area = etree.Element("Context_Area")
+
+    first_frametime, last_frametime = determine_first_last_times(filepath)
+    # Create Time_Coordinates sub element
+    time_coords = etree.SubElement(context_area, "Time_Coordinates")
+    etree.SubElement(time_coords, "start_date_time").text = f'{first_frametime.strftime("%Y-%m-%dT%H:%M:%S.%f"):22.22s}Z'
+    etree.SubElement(time_coords, "stop_date_time").text = f'{last_frametime.strftime("%Y-%m-%dT%H:%M:%S.%f"):22.22s}Z'
+
+    summary = etree.SubElement(context_area, "Primary_Result_Summary")
+    etree.SubElement(summary, "purpose").text = "Science"
+    etree.SubElement(summary, "processing_level").text = proc_levels.get(collection_type, "Unknown")
+
+    invest_area = etree.SubElement(context_area, "Investigation_Area")
+    etree.SubElement(invest_area, "name").text = "Double Asteroid Redirection Test"
+    etree.SubElement(invest_area, "type").text = "Mission"
+    # Create Internal Reference subclass of Investigation Area
+    int_reference = etree.SubElement(invest_area, "Internal_Reference")
+    etree.SubElement(int_reference, "lid_reference").text = "urn:nasa:pds:context:investigation:mission.double_asteroid_redirection_test"
+    etree.SubElement(int_reference, "reference_type").text = "collection_to_investigation"
+
+    fits_files = find_fits_files(filepath, '\S*e9')
+    fits_filepath = os.path.join(filepath, fits_files[filepath][0])
+    header, table, cattype = open_fits_catalog(fits_filepath, header_only=True)
+
+    # Create Observing System subclass of Observation Area
+    obs_system = etree.SubElement(context_area, "Observing_System")
+    obs_components = {
+                        'Host' : 'Las Cumbres Observatory (LCOGT)',
+                        'Telescope' : 'LCOGT ' + header.get('TELESCOP','') + ' Telescope',
+                        'Instrument' : 'Sinistro Imager',
+                     }
+    for component in obs_components:
+        comp = etree.SubElement(obs_system, "Observing_System_Component")
+        etree.SubElement(comp, "name").text = obs_components[component]
+        etree.SubElement(comp, "type").text = component
+        description = f"The description for the {obs_components[component]} can be found in the document collection for this bundle."
+        etree.SubElement(comp, "description").text = description
+
+    # Create Target Identification subclass
+    target_id = etree.SubElement(context_area, "Target_Identification")
+    target_type = {'MINORPLANET' : 'Asteroid', 'COMET' : 'Comet' }
+    etree.SubElement(target_id, "name").text = header.get('object', '')
+    etree.SubElement(target_id, "type").text = target_type.get(header.get('srctype',''), 'Unknown')
+    # Create Internal Reference subclass of Target Area
+    int_reference = etree.SubElement(target_id, "Internal_Reference")
+    etree.SubElement(int_reference, "lid_reference").text = "urn:nasa:pds:context:target:asteroid.didymos"
+    etree.SubElement(int_reference, "reference_type").text = "collection_to_target"
+
+    return context_area
+
 def create_file_area_obs(header, filename):
     """Creates the File Area Observational set of classes and returns an etree.Element with it.
     """
@@ -354,7 +474,65 @@ def create_file_area_obs(header, filename):
 
     return file_area_obs
 
-def write_xml(filepath, xml_file, schema_root, mod_time=None):
+def create_file_area_inv(filename, mod_time=None):
+    """Creates the File Area Inventory set of classes and returns an etree.Element with it.
+    """
+
+    mod_time = mod_time or datetime.fromtimestamp(os.path.getmtime(filename))
+    file_area_inv = etree.Element("File_Area_Inventory")
+    file_element = etree.SubElement(file_area_inv, "File")
+    etree.SubElement(file_element, "file_name").text = os.path.basename(filename)
+    etree.SubElement(file_element, "creation_date_time").text = mod_time.strftime("%Y-%m-%d")
+
+    # Count lines in CSV file, double it for number of records
+    num_records = 0
+    with open(filename, 'r') as csv_fh:
+        lines = csv_fh.readlines()
+        num_records = len(lines) * 2
+    inventory = etree.SubElement(file_area_inv, "Inventory")
+    etree.SubElement(inventory, "offset", attrib={"unit" : "byte"}).text = '0'
+    etree.SubElement(inventory, "parsing_standard_id").text = "PDS DSV 1"
+    etree.SubElement(inventory, "records").text = str(num_records)
+    etree.SubElement(inventory, "record_delimiter").text = "Carriage-Return Line-Feed"
+    etree.SubElement(inventory, "field_delimiter").text = "Comma"
+
+    record_delim = etree.SubElement(inventory, "Record_Delimited")
+    etree.SubElement(record_delim, "fields").text = "2"
+    etree.SubElement(record_delim, "groups").text = "0"
+    field_delim = etree.SubElement(record_delim, "Field_Delimited")
+
+    etree.SubElement(field_delim, "name").text = "Member Status"
+    etree.SubElement(field_delim, "field_number").text = "1"
+    etree.SubElement(field_delim, "data_type").text = "ASCII_String"
+    etree.SubElement(field_delim, "maximum_field_length", attrib={"unit" : "byte"}).text = "1"
+    etree.SubElement(field_delim, "description").text = '''
+            P indicates primary member of the collection
+            S indicates secondary member of the collection
+          '''
+    field_delim2 = etree.SubElement(record_delim, "Field_Delimited")
+    etree.SubElement(field_delim2, "name").text = "LIDVID_LID"
+    etree.SubElement(field_delim2, "field_number").text = "2"
+    etree.SubElement(field_delim2, "data_type").text = "ASCII_LIDVID_LID"
+    etree.SubElement(field_delim2, "maximum_field_length", attrib={"unit" : "byte"}).text = "255"
+    etree.SubElement(field_delim2, "description").text = "\n            The LID or LIDVID of a product that is a member of the collection.\n          "
+    etree.SubElement(inventory, "reference_type").text = "inventory_has_member_product"
+
+    return file_area_inv
+
+def create_reference_list(collection_type):
+    """Create a Reference List section
+    """
+
+    reference_list = etree.Element("Reference_List")
+    # Create Internal Reference subclass of Target Area
+    int_reference = etree.SubElement(reference_list, "Internal_Reference")
+    etree.SubElement(int_reference, "lid_reference").text = "urn:nasa:pds:dart_teleobs:lcogt_doc:las_cumbres_dart_uncalibrated_calibrated_sis"
+    etree.SubElement(int_reference, "reference_type").text = "collection_to_document"
+    etree.SubElement(int_reference, "comment").text = "Reference is to the Las Cumbres DART Uncalibrated, Calibrated SIS document which describes the data products in this collection."
+
+    return reference_list
+
+def write_product_label_xml(filepath, xml_file, schema_root, mod_time=None):
     """Create a PDS4 XML product label in <xml_file> from the FITS file
     pointed at by <filepath>. This used the PDS XSD and Schematron schemas located
     in <schema_root> directory. Optionally a different modification `datetime` [mod_time]
@@ -403,6 +581,71 @@ def write_xml(filepath, xml_file, schema_root, mod_time=None):
 
     return
 
+def write_product_collection_xml(filepath, xml_file, schema_root, mod_time=None):
+    """Create a PDS4 XML product collection in <xml_file> from the FITS files
+    pointed at by <filepath>. This used the PDS XSD and Schematron schemas located
+    in <schema_root> directory. Optionally a different modification `datetime` [mod_time]
+    can be passed which is used in `create_id_area()`
+    <schema_root> should contain the main PDS common Discipline Dictionaries
+    (although this is not checked for)
+    """
+
+    xmlEncoding = "UTF-8"
+    schema_mappings = pds_schema_mappings(schema_root, '*.xsd')
+
+    schemas_needed = {'PDS4::PDS' : schema_mappings['PDS4::PDS']}
+    productCollection = create_product_collection(schemas_needed)
+
+
+    if '_cal' in xml_file:
+        collection_type = 'cal'
+    elif '_raw' in xml_file:
+        collection_type = 'raw'
+    elif '_ddp' in xml_file:
+        collection_type = 'ddp'
+    else:
+        logger.error("Unknown collection type")
+        return False
+
+    id_area = create_id_area(None, schema_mappings['PDS4::PDS']['version'], mod_time)
+    productCollection.append(id_area)
+
+    # Add Context Area
+    context_area = create_context_area(filepath, collection_type)
+    productCollection.append(context_area)
+
+    # Add Reference List
+    ref_list = create_reference_list(collection_type)
+    productCollection.append(ref_list)
+
+    # Add Collection
+    collection = etree.SubElement(productCollection, "Collection")
+    etree.SubElement(collection, "collection_type").text = "Data"
+
+    # Create File_Area_Inventory
+    file_area = create_file_area_inv(xml_file.replace('.xml', '.csv'), mod_time)
+    productCollection.append(file_area)
+
+    # Wrap in ElementTree to write out to XML file
+    preambles = {'PDS4::PDS' : b'''<?xml-model href="https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1F00.sch"
+            schematypens="http://purl.oclc.org/dsdl/schematron"?>''',
+                'PDS4::DISP' : b'''<?xml-model href="https://pds.nasa.gov/pds4/disp/v1/PDS4_DISP_1F00_1500.sch"
+            schematypens="http://purl.oclc.org/dsdl/schematron"?>''',
+                'PDS4::IMG' : b'''<?xml-model href="https://pds.nasa.gov/pds4/img/v1/PDS4_IMG_1F00_1810.sch"
+            schematypens="http://purl.oclc.org/dsdl/schematron"?>''',
+                'PDS4::GEOM' : b'''<?xml-model href="https://pds.nasa.gov/pds4/geom/v1/PDS4_GEOM_1F00_1910.sch"
+            schematypens="http://purl.oclc.org/dsdl/schematron"?>'''
+                }
+    preamble = b''
+    for schema in schemas_needed.keys():
+        preamble += preambles[schema] + b'\n'
+    doc = preamble + etree.tostring(productCollection)
+    tree = etree.ElementTree(etree.fromstring(doc))
+    tree.write(xml_file, pretty_print=True, standalone=None,
+                xml_declaration=True, encoding=xmlEncoding)
+
+    return True
+
 def create_pds_labels(procdir, schema_root):
     """Create PDS4 product labels for all processed (e92) FITS fils in <procdir>
     The PDS4 schematron and XSD files in <schema_root> are used in generating
@@ -417,7 +660,7 @@ def create_pds_labels(procdir, schema_root):
 
     for fits_file in files_to_process:
         xml_file = fits_file.replace('.fits', '.xml')
-        write_xml(fits_file, xml_file, schema_root)
+        write_product_label_xml(fits_file, xml_file, schema_root)
         if os.path.exists(xml_file):
             xml_labels.append(xml_file)
 
@@ -502,19 +745,27 @@ def transfer_files(input_dir, files, output_dir):
 
     return files_copied
 
-def create_pds_collection(output_dir, files, collection_type):
-    """Creates a PDS collection (.csv and .xml) files with the names
-    'collection_<collection_type>.{csv,xml}' in <output_dir>
+def create_pds_collection(output_dir, input_dir, files, collection_type, schema_root):
+    """Creates a PDS Collection (.csv and .xml) files with the names
+    'collection_<collection_type>.{csv,xml}' in <output_dir> from the list
+    of files (without paths) passed as [files] which are located in <input_dir>
+    <collection_type> should be one of:
+    * 'cal' (calibrated)
+    * 'raw'
+    * 'ddp (derived data product)
     CSV file entries are of the form:
     P,urn:nasa:pds:dart_teleobs:lcogt_<collection_type>:[filename]::1.0
-
     """
 
-    prefix = 'urn:nasa:pds:dart_teleobs'
-    product_type = f'lcogt_{collection_type}'
+    # PDS4 Agency identifier
+    prefix = 'urn:nasa:pds'
+    # PDS4 Bundle id
+    bundle_id = 'dart_teleobs'
+    # PDS4 Collection id
+    collection_id = f'lcogt_{collection_type}'
     product_version = '1.0'
     product_column = Column(['P'] * len(files))
-    urns = [f'{prefix}:{product_type}:{x}::{product_version}' for x in files]
+    urns = [f'{prefix}:{bundle_id}:{collection_id}:{x}::{product_version}' for x in files]
     urns_column = Column(urns)
     csv_table = Table([product_column, urns_column])
     csv_filename = os.path.join(output_dir, f'collection_{collection_type}.csv')
@@ -522,11 +773,14 @@ def create_pds_collection(output_dir, files, collection_type):
     # to be no way to suppress the header
     csv_table.write(csv_filename, format='ascii.no_header', delimiter=',')
 
-    return csv_filename
+    # Write XML file after CSV file is generated (need to count records)
+    xml_filename = csv_filename.replace('.csv', '.xml')
+    status = write_product_collection_xml(input_dir, xml_filename, schema_root, mod_time=None)
+    return csv_filename, xml_filename
 
 def export_block_to_pds(input_dir, output_dir, block):
 
-    status = create_dart_directories(output_dir, block)
+    paths = create_dart_directories(output_dir, block)
 
     # transfer raw data
     # create PDS products for raw data
@@ -534,8 +788,8 @@ def export_block_to_pds(input_dir, output_dir, block):
     # create PDS products for cal data
     cal_files = find_fits_files(input_dir, '\S*e92')
     for root, files in cal_files.items():
-        sent_files = transfer_files(root, files, status['cal_data'])
-    csv_filename = create_pds_collection(status[''], sent_files, 'cal')
+        sent_files = transfer_files(root, files, paths['cal_data'])
+    csv_filename, xml_filename = create_pds_collection(paths[''], sent_files, 'cal')
     # transfer ddp data
     # create PDS products for ddp data
     return

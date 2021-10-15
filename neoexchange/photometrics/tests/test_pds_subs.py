@@ -224,7 +224,7 @@ class TestWritePDSLabel(SimpleTestCase):
 
         output_xml_file = os.path.join(self.test_dir, 'test_example_label.xml')
 
-        status = write_xml(self.test_banzai_file, output_xml_file, self.schemadir, mod_time=datetime(2021,5,4))
+        status = write_product_label_xml(self.test_banzai_file, output_xml_file, self.schemadir, mod_time=datetime(2021,5,4))
 
         with open(output_xml_file, 'r') as xml_file:
             xml = xml_file.readlines()
@@ -325,8 +325,8 @@ class TestExportBlockToPDS(TestCase):
 
     def setUp(self):
         self.schemadir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_schemas'))
-        test_xml_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label.xml'))
-        with open(test_xml_cat, 'r') as xml_file:
+        test_xml_collection = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_collection_cal.xml'))
+        with open(test_xml_collection, 'r') as xml_file:
             self.expected_xml = xml_file.readlines()
 
         self.framedir = os.path.abspath(os.path.join('photometrics', 'tests'))
@@ -455,18 +455,30 @@ class TestExportBlockToPDS(TestCase):
 
         self.assertEqual(expected_files, files)
 
-    def test_create_pds_collection_cal(self):
-        expected_file = os.path.join(self.expected_root_dir, 'collection_cal.csv')
+    def test_create_pds_cal_collection_cal(self):
+        expected_csv_file = os.path.join(self.expected_root_dir, 'collection_cal.csv')
+        expected_xml_file = os.path.join(self.expected_root_dir, 'collection_cal.xml')
         e92_files = [x for x in self.test_banzai_files if 'e92' in x]
         expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:lcogt_cal:{x}::1.0' ) for x in self.test_banzai_files if 'e92' in x]
+        paths = create_dart_directories(self.test_output_dir, self.test_block)
 
-        csv_filename = create_pds_collection(self.expected_root_dir, e92_files, 'cal')
+        csv_filename, xml_filename = create_pds_collection(self.expected_root_dir, self.test_input_dir, e92_files, 'cal', self.schemadir)
 
-        self.assertTrue(os.path.exists(expected_file), f'{expected_file} does not exist')
-        self.assertTrue(os.path.isfile(expected_file), f'{expected_file} is not a file')
-        self.assertEqual(expected_file, csv_filename)
+        for filename, expected_file in zip([csv_filename, xml_filename], [expected_csv_file, expected_xml_file]):
+            self.assertTrue(os.path.exists(expected_file), f'{expected_file} does not exist')
+            self.assertTrue(os.path.isfile(expected_file), f'{expected_file} is not a file')
+            self.assertEqual(expected_file, filename)
 
         table = Table.read(csv_filename, format='ascii.no_header')
         for i, line in enumerate(expected_lines):
             self.assertEqual(line[0], table[i][0])
             self.assertEqual(line[1], table[i][1])
+
+        with open(xml_filename, 'r') as xml_file:
+            xml = xml_file.readlines()
+
+        for i, expected_line in enumerate(self.expected_xml):
+            if i < len(xml):
+                assert expected_line.lstrip() == xml[i].lstrip(), "Failed on line: " + str(i+1)
+            else:
+                assert expected_line.lstrip() == None, "Failed on line: " + str(i+1)
