@@ -344,7 +344,7 @@ class TestExportBlockToPDS(TestCase):
         # a second copy which is renamed to an -e91 (so it shouldn't be found)
         new_name = os.path.join(self.test_input_dir, 'tfn1m001-fa11-20211013-0065-e91.fits')
         shutil.copy(test_file_path, new_name)
-        self.test_banzai_files = []
+        self.test_banzai_files = [os.path.basename(new_name), ]
 
         block_params = {
                          'block_start' : datetime(2021, 10, 13, 0, 40),
@@ -374,7 +374,7 @@ class TestExportBlockToPDS(TestCase):
             frame, created = Frame.objects.get_or_create(**frame_params)
             new_name = os.path.join(self.test_input_dir, frame_params['filename'].replace('e91', 'e92'))
             filename = shutil.copy(test_file_path, new_name)
-            self.test_banzai_files.append(filename)
+            self.test_banzai_files.append(os.path.basename(filename))
         self.remove = False
         self.debug_print = False
         self.maxDiff = None
@@ -432,3 +432,24 @@ class TestExportBlockToPDS(TestCase):
         # for dir in [expected_root_dir, expected_block_dir]:
             # self.assertTrue(os.path.exists(dir), f'{dir} does not exist')
             # self.assertTrue(os.path.isdir(dir), f'{dir} is not a directory')
+
+    def test_find_fits_files_bad_dir(self):
+        expected_files = {}
+
+        files = find_fits_files('/foo/bar')
+
+        self.assertEqual(expected_files, files)
+
+    def test_find_fits_files(self):
+        expected_files = {self.test_input_dir: self.test_banzai_files}
+
+        files = find_fits_files(self.test_input_dir)
+
+        self.assertEqual(expected_files, files)
+
+    def test_find_e92_fits_files(self):
+        expected_files = {self.test_input_dir: [x for x in self.test_banzai_files if 'e92' in x]}
+
+        files = find_fits_files(self.test_input_dir, '\S*e92')
+
+        self.assertEqual(expected_files, files)

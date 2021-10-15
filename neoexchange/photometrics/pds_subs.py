@@ -1,4 +1,5 @@
 import os
+import re
 from glob import glob
 from math import ceil
 from datetime import datetime, timedelta
@@ -462,6 +463,28 @@ def create_dart_directories(output_dir, block):
         else:
             logger.warning(f"Could not decode filename: {first_filename}")
     return status
+
+def find_fits_files(dirpath, prefix=None):
+
+    if prefix is None:
+        prefix = ''
+    regex = re.compile('^'+prefix+'.*[fits|FITS|fit|FIT|Fits|fts|FTS|fits.fz]$')
+
+    fits_files = {}
+    # walk through directories underneath
+    for root, dirs, files in os.walk(dirpath):
+
+        # ignore .diagnostics directories
+        if '.diagnostics' in root:
+            continue
+
+        # identify data frames
+        filenames = sorted([s for s in files if re.match(regex, s)])
+
+        if len(filenames) > 0:
+            fits_files[root] = filenames
+
+    return fits_files
 
 def export_block_to_pds(input_dir, output_dir, block):
 
