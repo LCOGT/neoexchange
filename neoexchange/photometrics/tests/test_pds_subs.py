@@ -339,6 +339,8 @@ class TestExportBlockToPDS(TestCase):
         os.makedirs(self.test_input_dir, exist_ok=True)
         self.test_output_dir = os.path.join(self.test_dir, 'output')
         os.makedirs(self.test_output_dir, exist_ok=True)
+        self.expected_root_dir = os.path.join(self.test_output_dir, 'lcogt_data')
+
 
         # Make one copy and rename to an -e92 (so it will get picked up) and
         # a second copy which is renamed to an -e91 (so it shouldn't be found)
@@ -375,6 +377,7 @@ class TestExportBlockToPDS(TestCase):
             new_name = os.path.join(self.test_input_dir, frame_params['filename'].replace('e91', 'e92'))
             filename = shutil.copy(test_file_path, new_name)
             self.test_banzai_files.append(os.path.basename(filename))
+
         self.remove = False
         self.debug_print = False
         self.maxDiff = None
@@ -397,8 +400,7 @@ class TestExportBlockToPDS(TestCase):
 
     def test_create_directory_structure(self):
 
-        expected_root_dir = os.path.join(self.test_output_dir, 'lcogt_data')
-        expected_block_dir = os.path.join(expected_root_dir, 'lcogt_1m0_01_fa11_20211013')
+        expected_block_dir = os.path.join(self.expected_root_dir, 'lcogt_1m0_01_fa11_20211013')
         expected_status = {
                             ''         : os.path.join(expected_block_dir, ''),
                             'raw_data' : os.path.join(expected_block_dir, 'raw_data'),
@@ -411,7 +413,7 @@ class TestExportBlockToPDS(TestCase):
         self.assertEqual(2, Block.objects.count())
         self.assertEqual(3, Frame.objects.filter(block=self.test_block).count())
         self.assertEqual(expected_status, status)
-        check_dirs = [expected_root_dir, expected_block_dir]
+        check_dirs = [self.expected_root_dir, expected_block_dir]
         check_dirs += list(expected_status.values())
         for dir in check_dirs:
             self.assertTrue(os.path.exists(dir), f'{dir} does not exist')
@@ -419,8 +421,7 @@ class TestExportBlockToPDS(TestCase):
 
     def test_create_directory_structure_no_frames(self):
 
-        expected_root_dir = os.path.join(self.test_output_dir, 'lcogt_data')
-        expected_block_dir = os.path.join(expected_root_dir, 'lcogt_1m0_01_fa11_20211013')
+        expected_block_dir = os.path.join(self.expected_root_dir, 'lcogt_1m0_01_fa11_20211013')
         expected_status = {}
 
         status = create_dart_directories(self.test_output_dir, self.test_block2)
@@ -429,7 +430,7 @@ class TestExportBlockToPDS(TestCase):
         self.assertEqual(0, Frame.objects.filter(block=self.test_block2).count())
 
         self.assertEqual(expected_status, status)
-        # for dir in [expected_root_dir, expected_block_dir]:
+        # for dir in [self.expected_root_dir, expected_block_dir]:
             # self.assertTrue(os.path.exists(dir), f'{dir} does not exist')
             # self.assertTrue(os.path.isdir(dir), f'{dir} is not a directory')
 
@@ -453,3 +454,19 @@ class TestExportBlockToPDS(TestCase):
         files = find_fits_files(self.test_input_dir, '\S*e92')
 
         self.assertEqual(expected_files, files)
+
+    def test_create_pds_collection_cal(self):
+        expected_file = os.path.join(self.expected_root_dir, 'collection_cal.csv')
+        e92_files = [x for x in self.test_banzai_files if 'e92' in x]
+        expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:lcogt_cal:{x}::1.0' ) for x in self.test_banzai_files if 'e92' in x]
+
+        csv_filename = create_pds_collection(self.expected_root_dir, e92_files, 'cal')
+
+        self.assertTrue(os.path.exists(expected_file), f'{expected_file} does not exist')
+        self.assertTrue(os.path.isfile(expected_file), f'{expected_file} is not a file')
+        self.assertEqual(expected_file, csv_filename)
+
+        table = Table.read(csv_filename, format='ascii.no_header')
+        for i, line in enumerate(expected_lines):
+            self.assertEqual(line[0], table[i][0])
+            self.assertEqual(line[1], table[i][1])

@@ -5,6 +5,7 @@ from math import ceil
 from datetime import datetime, timedelta
 
 from lxml import etree
+from astropy.table import Column, Table
 
 from core.models import Frame
 from photometrics.catalog_subs import open_fits_catalog
@@ -423,6 +424,9 @@ def create_pds_labels(procdir, schema_root):
     return xml_labels
 
 def split_filename(filename):
+    """Splits an LCO filename <filename> into component parts
+    Returns a dict of components"""
+
     name_parts = {}
     fileroot, name_parts['extension'] = os.path.splitext(filename)
     if len(fileroot) >= 31:
@@ -465,6 +469,13 @@ def create_dart_directories(output_dir, block):
     return status
 
 def find_fits_files(dirpath, prefix=None):
+    """Recursively searches directories in <dirpath> for FITS files.
+    [prefix] is added into the regexp, matching from the start so to look for
+    e.g. just 'e92' files, set prefix='\S*e92' to match any amount of characters
+    and then 'e92'
+    Returns a dict of paths as the key with a list of FITS files as the value for
+    that key. Directories or sub-directories with no FITS files are not included
+    in the returned dict."""
 
     if prefix is None:
         prefix = ''
@@ -486,6 +497,33 @@ def find_fits_files(dirpath, prefix=None):
 
     return fits_files
 
+def transfer_files(input_dir, files, output_dir):
+    files_copied = []
+
+    return files_copied
+
+def create_pds_collection(output_dir, files, collection_type):
+    """Creates a PDS collection (.csv and .xml) files with the names
+    'collection_<collection_type>.{csv,xml}' in <output_dir>
+    CSV file entries are of the form:
+    P,urn:nasa:pds:dart_teleobs:lcogt_<collection_type>:[filename]::1.0
+
+    """
+
+    prefix = 'urn:nasa:pds:dart_teleobs'
+    product_type = f'lcogt_{collection_type}'
+    product_version = '1.0'
+    product_column = Column(['P'] * len(files))
+    urns = [f'{prefix}:{product_type}:{x}::{product_version}' for x in files]
+    urns_column = Column(urns)
+    csv_table = Table([product_column, urns_column])
+    csv_filename = os.path.join(output_dir, f'collection_{collection_type}.csv')
+    # Have to use the 'no_header' Table type rather than 'csv' as there seems
+    # to be no way to suppress the header
+    csv_table.write(csv_filename, format='ascii.no_header', delimiter=',')
+
+    return csv_filename
+
 def export_block_to_pds(input_dir, output_dir, block):
 
     status = create_dart_directories(output_dir, block)
@@ -494,6 +532,10 @@ def export_block_to_pds(input_dir, output_dir, block):
     # create PDS products for raw data
     # transfer cal data
     # create PDS products for cal data
+    cal_files = find_fits_files(input_dir, '\S*e92')
+    for root, files in cal_files.items():
+        sent_files = transfer_files(root, files, status['cal_data'])
+    csv_filename = create_pds_collection(status[''], sent_files, 'cal')
     # transfer ddp data
     # create PDS products for ddp data
     return
