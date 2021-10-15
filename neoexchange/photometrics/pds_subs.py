@@ -446,7 +446,7 @@ def create_dart_directories(output_dir, block):
                 ├── ddp_data
                 └── raw_data
     """
-    status = False
+    status = {}
 
     frames = Frame.objects.filter(block=block, frametype=Frame.BANZAI_RED_FRAMETYPE)
     if frames.count() > 0:
@@ -458,7 +458,7 @@ def create_dart_directories(output_dir, block):
             for dir_name in ['', 'raw_data', 'cal_data', 'ddp_data']:
                 dir_path = os.path.join(output_dir, 'lcogt_data', root_dir, dir_name)
                 os.makedirs(dir_path, exist_ok=True)
-            status = True
+                status[dir_name] = dir_path
         else:
             logger.warning(f"Could not decode filename: {first_filename}")
     return status

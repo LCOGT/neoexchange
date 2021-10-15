@@ -353,6 +353,9 @@ class TestExportBlockToPDS(TestCase):
                          'num_observed' : 1
                         }
         self.test_block, created = Block.objects.get_or_create(**block_params)
+        # Second block with no frames attached
+        block_params['num_observed'] = 0
+        self.test_block2, created = Block.objects.get_or_create(**block_params)
 
         frame_params = {
                          'sitecode' : 'Z24',
@@ -396,12 +399,36 @@ class TestExportBlockToPDS(TestCase):
 
         expected_root_dir = os.path.join(self.test_output_dir, 'lcogt_data')
         expected_block_dir = os.path.join(expected_root_dir, 'lcogt_1m0_01_fa11_20211013')
+        expected_status = {
+                            ''         : os.path.join(expected_block_dir, ''),
+                            'raw_data' : os.path.join(expected_block_dir, 'raw_data'),
+                            'cal_data' : os.path.join(expected_block_dir, 'cal_data'),
+                            'ddp_data' : os.path.join(expected_block_dir, 'ddp_data'),
+                          }
 
         status = create_dart_directories(self.test_output_dir, self.test_block)
 
-        self.assertEqual(1, Block.objects.count())
-        self.assertEqual(3, Frame.objects.count())
-        self.assertTrue(status)
-        for dir in [expected_root_dir, expected_block_dir]:
+        self.assertEqual(2, Block.objects.count())
+        self.assertEqual(3, Frame.objects.filter(block=self.test_block).count())
+        self.assertEqual(expected_status, status)
+        check_dirs = [expected_root_dir, expected_block_dir]
+        check_dirs += list(expected_status.values())
+        for dir in check_dirs:
             self.assertTrue(os.path.exists(dir), f'{dir} does not exist')
             self.assertTrue(os.path.isdir(dir), f'{dir} is not a directory')
+
+    def test_create_directory_structure_no_frames(self):
+
+        expected_root_dir = os.path.join(self.test_output_dir, 'lcogt_data')
+        expected_block_dir = os.path.join(expected_root_dir, 'lcogt_1m0_01_fa11_20211013')
+        expected_status = {}
+
+        status = create_dart_directories(self.test_output_dir, self.test_block2)
+
+        self.assertEqual(2, Block.objects.count())
+        self.assertEqual(0, Frame.objects.filter(block=self.test_block2).count())
+
+        self.assertEqual(expected_status, status)
+        # for dir in [expected_root_dir, expected_block_dir]:
+            # self.assertTrue(os.path.exists(dir), f'{dir} does not exist')
+            # self.assertTrue(os.path.isdir(dir), f'{dir} is not a directory')
