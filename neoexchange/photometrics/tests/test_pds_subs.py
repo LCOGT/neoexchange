@@ -513,3 +513,12 @@ class TestExportBlockToPDS(TestCase):
                 assert expected_line.lstrip() == xml[i].lstrip(), "Failed on line: " + str(i+1)
             else:
                 assert expected_line.lstrip() == None, "Failed on line: " + str(i+1)
+
+    def test_export_block_to_pds(self):
+
+        export_block_to_pds(self.test_input_dir, self.test_output_dir, self.test_block, self.schemadir)
+
+        for collection_type, file_type in zip(['raw', 'cal', 'ddp'], ['csv', 'xml']):
+            expected_file = os.path.join(self.expected_root_dir, f'collection_{collection_type}.{file_type}')
+            self.assertTrue(os.path.exists(expected_file), f'{expected_file} does not exist')
+            self.assertTrue(os.path.isfile(expected_file), f'{expected_file} is not a file')

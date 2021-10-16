@@ -1,5 +1,6 @@
 import os
 import re
+import shutil
 from glob import glob
 from math import ceil
 from datetime import datetime, timedelta
@@ -408,7 +409,10 @@ def create_context_area(filepath, collection_type):
     etree.SubElement(int_reference, "lid_reference").text = "urn:nasa:pds:context:investigation:mission.double_asteroid_redirection_test"
     etree.SubElement(int_reference, "reference_type").text = "collection_to_investigation"
 
-    fits_files = find_fits_files(filepath, '\S*e9')
+    prefix = '\S*e92'
+    if collection_type == 'raw':
+        prefix = '\S*e00'
+    fits_files = find_fits_files(filepath, prefix)
     fits_filepath = os.path.join(filepath, fits_files[filepath][0])
     header, table, cattype = open_fits_catalog(fits_filepath, header_only=True)
 
@@ -705,7 +709,7 @@ def create_dart_directories(output_dir, block):
 
     frames = Frame.objects.filter(block=block, frametype=Frame.BANZAI_RED_FRAMETYPE)
     if frames.count() > 0:
-        first_filename = frames.first().filename
+        first_filename = frames.last().filename
         file_parts = split_filename(first_filename)
         if len(file_parts) == 8:
             root_dir = f"lcogt_{file_parts['tel_class']}_{file_parts['tel_serial']}_{file_parts['instrument']}_{file_parts['dayobs']}"
@@ -714,6 +718,7 @@ def create_dart_directories(output_dir, block):
                 dir_path = os.path.join(output_dir, 'lcogt_data', root_dir, dir_name)
                 os.makedirs(dir_path, exist_ok=True)
                 status[dir_name] = dir_path
+            status['root'] = os.path.join(output_dir, 'lcogt_data')
         else:
             logger.warning(f"Could not decode filename: {first_filename}")
     return status
@@ -750,6 +755,26 @@ def find_fits_files(dirpath, prefix=None):
 def transfer_files(input_dir, files, output_dir):
     files_copied = []
 
+    for file in files:
+        action = 'Copying'
+        if 'e00' in file:
+            action = 'Downloading'
+            #input_dir = 'Science Archive'
+
+        print(f"{action} {file} from {input_dir} -> {output_dir}")
+        input_filepath = os.path.join(input_dir, file)
+        output_filepath = os.path.join(output_dir, file)
+        # XXX Need to fetch raw frames from Science Archive if not existing
+        if os.path.exists(input_filepath):
+            if not os.path.exists(output_filepath):
+                filename = shutil.copy(input_filepath, output_filepath)
+                print(action, filename)
+            else:
+                print("Already exists")
+            files_copied.append(file)
+        else:
+            logger.error(f"Input file {file} in {input_dir} not readable")
+
     return files_copied
 
 def create_pds_collection(output_dir, input_dir, files, collection_type, schema_root):
@@ -783,20 +808,29 @@ def create_pds_collection(output_dir, input_dir, files, collection_type, schema_
     # Write XML file after CSV file is generated (need to count records)
     xml_filename = csv_filename.replace('.csv', '.xml')
     status = write_product_collection_xml(input_dir, xml_filename, schema_root, mod_time=None)
+
     return csv_filename, xml_filename
 
-def export_block_to_pds(input_dir, output_dir, block):
+def export_block_to_pds(input_dir, output_dir, block, schema_root):
 
     paths = create_dart_directories(output_dir, block)
+    print("output_dir", output_dir)
+    print(paths)
 
     # transfer raw data
+    raw_files = find_fits_files(input_dir, '\S*e00')
     # create PDS products for raw data
+    for root, files in raw_files.items():
+        sent_files = transfer_files(root, files, paths['raw_data'])
+    print(sent_files)
+    csv_filename, xml_filename = create_pds_collection(paths['root'], paths['raw_data'], sent_files, 'raw', schema_root)
+
     # transfer cal data
-    # create PDS products for cal data
     cal_files = find_fits_files(input_dir, '\S*e92')
+    # create PDS products for cal data
     for root, files in cal_files.items():
         sent_files = transfer_files(root, files, paths['cal_data'])
-    csv_filename, xml_filename = create_pds_collection(paths[''], sent_files, 'cal')
+    csv_filename, xml_filename = create_pds_collection(paths['root'], paths['cal_data'], sent_files, 'cal', schema_root)
     # transfer ddp data
     # create PDS products for ddp data
     return
