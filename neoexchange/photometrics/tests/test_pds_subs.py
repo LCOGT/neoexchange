@@ -409,6 +409,7 @@ class TestExportBlockToPDS(TestCase):
                             'raw_data' : os.path.join(expected_block_dir, 'raw_data'),
                             'cal_data' : os.path.join(expected_block_dir, 'cal_data'),
                             'ddp_data' : os.path.join(expected_block_dir, 'ddp_data'),
+                            'root'     : os.path.join(self.test_output_dir, 'lcogt_data')
                           }
 
         status = create_dart_directories(self.test_output_dir, self.test_block)
