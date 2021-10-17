@@ -495,11 +495,11 @@ def create_file_area_inv(filename, mod_time=None):
     etree.SubElement(file_element, "file_name").text = os.path.basename(filename)
     etree.SubElement(file_element, "creation_date_time").text = mod_time.strftime("%Y-%m-%d")
 
-    # Count lines in CSV file, double it for number of records
+    # Count lines in CSV file for number of records
     num_records = 0
     with open(filename, 'r') as csv_fh:
         lines = csv_fh.readlines()
-        num_records = len(lines) * 2
+        num_records = len(lines)
     inventory = etree.SubElement(file_area_inv, "Inventory")
     etree.SubElement(inventory, "offset", attrib={"unit" : "byte"}).text = '0'
     etree.SubElement(inventory, "parsing_standard_id").text = "PDS DSV 1"
@@ -777,7 +777,7 @@ def transfer_files(input_dir, files, output_dir):
 
     return files_copied
 
-def create_pds_collection(output_dir, input_dir, files, collection_type, schema_root):
+def create_pds_collection(output_dir, input_dir, files, collection_type, schema_root, mod_time=None):
     """Creates a PDS Collection (.csv and .xml) files with the names
     'collection_<collection_type>.{csv,xml}' in <output_dir> from the list
     of files (without paths) passed as [files] which are located in <input_dir>
@@ -807,7 +807,7 @@ def create_pds_collection(output_dir, input_dir, files, collection_type, schema_
 
     # Write XML file after CSV file is generated (need to count records)
     xml_filename = csv_filename.replace('.csv', '.xml')
-    status = write_product_collection_xml(input_dir, xml_filename, schema_root, mod_time=None)
+    status = write_product_collection_xml(input_dir, xml_filename, schema_root, mod_time)
 
     return csv_filename, xml_filename
 

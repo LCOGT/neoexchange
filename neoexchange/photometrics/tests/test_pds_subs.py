@@ -465,7 +465,8 @@ class TestExportBlockToPDS(TestCase):
         expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:lcogt_cal:{x}::1.0' ) for x in self.test_banzai_files if 'e92' in x]
         paths = create_dart_directories(self.test_output_dir, self.test_block)
 
-        csv_filename, xml_filename = create_pds_collection(self.expected_root_dir, self.test_input_dir, e92_files, 'cal', self.schemadir)
+        csv_filename, xml_filename = create_pds_collection(self.expected_root_dir,
+            self.test_input_dir, e92_files, 'cal', self.schemadir, mod_time=datetime(2021, 10, 15))
 
         for filename, expected_file in zip([csv_filename, xml_filename], [expected_csv_file, expected_xml_file]):
             self.assertTrue(os.path.exists(expected_file), f'{expected_file} does not exist')
@@ -493,7 +494,8 @@ class TestExportBlockToPDS(TestCase):
         expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:lcogt_raw:{x}::1.0' ) for x in self.test_banzai_files if 'e00' in x]
         paths = create_dart_directories(self.test_output_dir, self.test_block)
 
-        csv_filename, xml_filename = create_pds_collection(self.expected_root_dir, self.test_input_dir, e00_files, 'raw', self.schemadir)
+        csv_filename, xml_filename = create_pds_collection(self.expected_root_dir,
+            self.test_input_dir, e00_files, 'raw', self.schemadir, mod_time=datetime(2021, 10, 15))
 
         for filename, expected_file in zip([csv_filename, xml_filename], [expected_csv_file, expected_xml_file]):
             self.assertTrue(os.path.exists(expected_file), f'{expected_file} does not exist')
