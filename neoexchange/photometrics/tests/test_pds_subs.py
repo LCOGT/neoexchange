@@ -9,6 +9,7 @@ from datetime import datetime
 from core.models import SuperBlock, Block, Frame
 from photometrics.pds_subs import *
 
+from unittest import skipIf
 from django.test import SimpleTestCase, TestCase
 
 class TestPDSSchemaMappings(SimpleTestCase):
@@ -367,9 +368,10 @@ class TestExportBlockToPDS(TestCase):
                        }
 
         self.test_banzai_files = []
-        for frame_num in range(65,126,30):
+        for frame_num, frameid in zip(range(65,126,30),[45234032, 45234584, 45235052]):
             frame_params['filename'] = f"tfn1m001-fa11-20211013-{frame_num:04d}-e91.fits"
             frame_params['midpoint'] += timedelta(minutes=frame_num-65)
+            frame_params['frameid'] = frameid
             frame, created = Frame.objects.get_or_create(**frame_params)
             for extn in ['e00', 'e92']:
                 new_name = os.path.join(self.test_input_dir, frame_params['filename'].replace('e91', extn))
@@ -516,6 +518,17 @@ class TestExportBlockToPDS(TestCase):
                 assert expected_line.lstrip() == xml[i].lstrip(), "Failed on line: " + str(i+1)
             else:
                 assert expected_line.lstrip() == None, "Failed on line: " + str(i+1)
+
+    @skipIf(True, "Needs extensive archive API mocking")
+    def test_find_related_frames(self):
+        expected_files = {'' : [{'filename' : 'tfn1m001-fa11-20211013-0065-e00.fits', 'url' : 'https://archive-lco-global.s3.amazonaws.com/...'},
+                                {'filename' : 'tfn1m001-fa11-20211013-0095-e00.fits', 'url' : 'https://archive-lco-global.s3.amazonaws.com/...'},
+                                {'filename' : 'tfn1m001-fa11-20211013-0125-e00.fits', 'url' : 'https://archive-lco-global.s3.amazonaws.com/...'}
+                               ]}
+
+        related_frames = find_related_frames(self.test_block)
+
+        self.assertEqual(expected_files, related_frames)
 
     def test_export_block_to_pds(self):
 

@@ -7,9 +7,12 @@ from datetime import datetime, timedelta
 
 from lxml import etree
 from astropy.table import Column, Table
+from django.conf import settings
 
 from core.models import Frame
+from core.archive_subs import lco_api_call, download_files
 from photometrics.catalog_subs import open_fits_catalog
+from photometrics.external_codes import convert_file_to_crlf
 from photometrics.photometry_subs import map_filter_to_wavelength, map_filter_to_bandwidth
 
 import logging
@@ -372,9 +375,10 @@ def determine_first_last_times(filepath):
         for fits_file in files:
             fits_filepath = os.path.join(directory, fits_file)
             header, table, cattype = open_fits_catalog(fits_filepath, header_only=True)
-            start, stop = get_shutter_open_close(header)
-            first_frame = min(first_frame, start)
-            last_frame = max(last_frame, stop)
+            if header:
+                start, stop = get_shutter_open_close(header)
+                first_frame = min(first_frame, start)
+                last_frame = max(last_frame, stop)
 
     return first_frame, last_frame
 
@@ -752,6 +756,32 @@ def find_fits_files(dirpath, prefix=None):
 
     return fits_files
 
+def find_related_frames(block):
+    """Finds the unique set of related frames (raw and calibrations) for the Frames
+    belonging to the passed Block <block>.
+    Returns a dictionary with a reduction level key of `''` and then a list of
+    dictionaries of the response from LCO Science Archive. (This is of a form
+    suitable to given to core.archive_subs.download_files()
+    """
+
+    related_frames = {'': []}
+    red_frame_ids = Frame.objects.filter(block=block, filename__startswith='tfn1m0', frametype=Frame.BANZAI_RED_FRAMETYPE).values_list('frameid', flat=True)
+    # List for frame id's seen
+    frame_ids = []
+    for red_frame_id in red_frame_ids:
+        archive_url = f"{settings.ARCHIVE_API_URL}frames/{str(red_frame_id)}/related/"
+        data = lco_api_call(archive_url)
+        for frame in data:
+            logger.debug(f"{frame['id']}: {frame['filename']}")
+            if frame['id'] not in frame_ids:
+                logger.debug("New frame")
+                frame_ids.append(frame['id'])
+                related_frames[''].append(frame)
+            else:
+                logger.debug("Already know this frame")
+
+    return related_frames
+
 def transfer_files(input_dir, files, output_dir):
     files_copied = []
 
@@ -817,20 +847,36 @@ def export_block_to_pds(input_dir, output_dir, block, schema_root):
     print("output_dir", output_dir)
     print(paths)
 
+    # Find and download related frames (raw and calibration frames)
+    related_frames = find_related_frames(block)
+    dl_frames = download_files(related_frames, input_dir, True)
+
     # transfer raw data
     raw_files = find_fits_files(input_dir, '\S*e00')
     # create PDS products for raw data
     for root, files in raw_files.items():
         sent_files = transfer_files(root, files, paths['raw_data'])
-    print(sent_files)
     csv_filename, xml_filename = create_pds_collection(paths['root'], paths['raw_data'], sent_files, 'raw', schema_root)
+    # Convert csv file to CRLF endings required by PDS
+    status = convert_file_to_crlf(csv_filename)
 
     # transfer cal data
     cal_files = find_fits_files(input_dir, '\S*e92')
-    # create PDS products for cal data
     for root, files in cal_files.items():
         sent_files = transfer_files(root, files, paths['cal_data'])
+    # transfer master calibration files
+    calib_files = find_fits_files(input_dir, '\S*-(bias|bpm|dark|skyflat)')
+    for root, files in calib_files.items():
+        sent_files += transfer_files(root, files, paths['cal_data'])
+    print(sent_files)
+    # create PDS products for cal data
     csv_filename, xml_filename = create_pds_collection(paths['root'], paths['cal_data'], sent_files, 'cal', schema_root)
+    # Convert csv file to CRLF endings required by PDS
+    status = convert_file_to_crlf(csv_filename)
+
+    # Create PDS labels for cal data
+    create_pds_labels(paths['cal_data'], schema_root)
+
     # transfer ddp data
     # create PDS products for ddp data
     return
