@@ -124,22 +124,25 @@ def create_id_area(filename, model_version='1.15.0.0', collection_type='cal', mo
 
     mod_time = mod_time or datetime.utcnow()
 
-    proc_levels = { 'cal' : 'Calibrated',
-                    'raw' : 'Raw',
-                    'ddp' : 'Derived'
+    proc_levels = { 'cal' : {'title' : 'Calibrated', 'level' : 'cal'},
+                    'raw' : {'title' : 'Raw', 'level' : 'raw'},
+                    'ddp' : {'title' : 'Derived', 'level' : 'ddp'},
+                    'mbias' : {'title' : 'Master Bias', 'level' : 'cal'},
+                    'mdark' : {'title' : 'Master Dark', 'level' : 'cal'},
+                    'mflat' : {'title' : 'Master Flat', 'level' : 'cal'}
                   }
 
     id_area = etree.Element("Identification_Area")
     if filename is None:
         filename = ''
         product_type = 'Product_Collection'
-        product_title = f'DART Telescopic Observations, Las Cumbres Observatory Network, Las Cumbres Observatory {proc_levels[collection_type]} Data Collection'
+        product_title = f'DART Telescopic Observations, Las Cumbres Observatory Network, Las Cumbres Observatory {proc_levels[collection_type]["title"]} Data Collection'
     else:
         filename = ':' + filename
         product_type = 'Product_Observational'
-        product_title = f'Las Cumbres Observatory {proc_levels[collection_type]} Image'
+        product_title = f'Las Cumbres Observatory {proc_levels[collection_type]["title"]} Image'
 
-    xml_elements = {'logical_identifier' : 'urn:nasa:pds:dart_teleobs:lcogt_' + collection_type + filename,
+    xml_elements = {'logical_identifier' : 'urn:nasa:pds:dart_teleobs:lcogt_' + proc_levels[collection_type]['level'] + filename,
                     'version_id' : '1.0',
                     'title' : product_title,
                     'information_model_version' : model_version,
@@ -154,7 +157,7 @@ def create_id_area(filename, model_version='1.15.0.0', collection_type='cal', mo
         xml_elements = {'author_list' : 'T. Lister',
                         'publication_year' : mod_time.strftime("%Y"),
                         'keyword' : 'Las Cumbres',
-                        'description' : f'DART Telescopic Observation Bundle, Las Cumbres Observatory {proc_levels[collection_type]} Data Collection'
+                        'description' : f'DART Telescopic Observation Bundle, Las Cumbres Observatory {proc_levels[collection_type]["title"]} Data Collection'
                         }
         for k,v in xml_elements.items():
             etree.SubElement(citation_info, k).text = v
@@ -358,9 +361,15 @@ def create_obs_area(header, filename):
 
     # Create Target Identification subclass
     target_id = etree.SubElement(obs_area, "Target_Identification")
-    target_type = {'MINORPLANET' : 'Asteroid', 'COMET' : 'Comet' }
-    etree.SubElement(target_id, "name").text = header.get('object', '')
-    etree.SubElement(target_id, "type").text = target_type.get(header.get('srctype',''), 'Unknown')
+    target_types = {'MINORPLANET' : 'Asteroid', 'COMET' : 'Comet' }
+    target_name = header.get('object', '')
+    obstype = header.get('obstype', '').upper()
+    target_type = target_types.get(header.get('srctype',''), 'Unknown')
+    if obstype == 'BIAS' or obstype == 'DARK' or obstype == 'SKYFLAT' or obstype == 'BPM':
+        target_name = obstype.title()
+        target_type = 'Calibrator'
+    etree.SubElement(target_id, "name").text = target_name
+    etree.SubElement(target_id, "type").text = target_type
 
     return obs_area
 
@@ -462,7 +471,15 @@ def create_file_area_obs(header, filename):
     file_area_obs = etree.Element("File_Area_Observational")
     file_element = etree.SubElement(file_area_obs, "File")
     etree.SubElement(file_element, "file_name").text = filename
-    etree.SubElement(file_element, "comment").text = "Calibrated LCOGT image file"
+    obstype = header.get('obstype', 'expose').upper()
+    comment = "Calibrated LCOGT image file"
+    if obstype == 'BIAS' or obstype == 'DARK' or obstype == 'SKYFLAT':
+        comment = f"Median combined stack of {obstype.lower()} images. Used in calibration pipeline to generate the calibrated image data."
+    elif obstype == 'BPM':
+         comment = f"Bad Pixel Mask image. Used in calibration pipeline to generate the calibrated image data."
+    elif obstype == "EXPOSE" and header.get('rlevel', 91) == 0:
+        comment = "Raw LCOGT image file"
+    etree.SubElement(file_element, "comment").text = comment
 
     # XXX Check NAXIS=2 before this
     array_2d = etree.SubElement(file_area_obs, "Array_2D_Image")
@@ -556,6 +573,12 @@ def write_product_label_xml(filepath, xml_file, schema_root, mod_time=None):
     Geometry Discipline Dictionaries (although this is not checked for)
     """
 
+    proc_levels = { 'EXPOSE' : 'cal',
+                    'BIAS' : 'mbias',
+                    'DARK' : 'mdark',
+                    'SKYFLAT' : 'mflat'
+                  }
+
     xmlEncoding = "UTF-8"
     schema_mappings = pds_schema_mappings(schema_root, '*.xsd')
 
@@ -564,7 +587,8 @@ def write_product_label_xml(filepath, xml_file, schema_root, mod_time=None):
     header, table, cattype = open_fits_catalog(filepath)
     filename = os.path.basename(filepath)
 
-    id_area = create_id_area(filename, schema_mappings['PDS4::PDS']['version'], 'cal', mod_time)
+    proc_level = proc_levels.get(header.get('obstype', 'expose').upper(), 'cal')
+    id_area = create_id_area(filename, schema_mappings['PDS4::PDS']['version'], proc_level, mod_time)
     processedImage.append(id_area)
 
     # Add the Observation_Area
@@ -661,8 +685,9 @@ def write_product_collection_xml(filepath, xml_file, schema_root, mod_time=None)
 
     return True
 
-def create_pds_labels(procdir, schema_root):
-    """Create PDS4 product labels for all processed (e92) FITS fils in <procdir>
+def create_pds_labels(procdir, schema_root, match='.*e92'):
+    """Create PDS4 product labels for all frames matching the [match] regexp pattern
+    (defaults to processed (e92) FITS files) in <procdir>
     The PDS4 schematron and XSD files in <schema_root> are used in generating
     the XML file.
     A list of created PDS4 label filenames (with paths) is returned; this list
@@ -671,13 +696,16 @@ def create_pds_labels(procdir, schema_root):
 
     xml_labels = []
     full_procdir = os.path.abspath(os.path.expandvars(procdir))
-    files_to_process = sorted(glob(os.path.join(full_procdir, '*-e92.fits')))
+    files_to_process = find_fits_files(procdir, match)
+    print(files_to_process)
 
-    for fits_file in files_to_process:
-        xml_file = fits_file.replace('.fits', '.xml')
-        write_product_label_xml(fits_file, xml_file, schema_root)
-        if os.path.exists(xml_file):
-            xml_labels.append(xml_file)
+    for directory, fits_files in files_to_process.items():
+        for fits_file in fits_files:
+            fits_filepath = os.path.join(directory, fits_file)
+            xml_file = fits_filepath.replace('.fits', '.xml').replace('.fz', '')
+            write_product_label_xml(fits_filepath, xml_file, schema_root)
+            if os.path.exists(xml_file):
+                xml_labels.append(xml_file)
 
     return xml_labels
 
@@ -782,7 +810,7 @@ def find_related_frames(block):
 
     return related_frames
 
-def transfer_files(input_dir, files, output_dir):
+def transfer_files(input_dir, files, output_dir, dbg=False):
     files_copied = []
 
     for file in files:
@@ -791,16 +819,16 @@ def transfer_files(input_dir, files, output_dir):
             action = 'Downloading'
             #input_dir = 'Science Archive'
 
-        print(f"{action} {file} from {input_dir} -> {output_dir}")
+        if dbg: print(f"{action} {file} from {input_dir} -> {output_dir}")
         input_filepath = os.path.join(input_dir, file)
         output_filepath = os.path.join(output_dir, file)
         # XXX Need to fetch raw frames from Science Archive if not existing
         if os.path.exists(input_filepath):
             if not os.path.exists(output_filepath):
                 filename = shutil.copy(input_filepath, output_filepath)
-                print(action, filename)
+                if dbg: print(action, filename)
             else:
-                print("Already exists")
+                if dbg: print("Already exists")
             files_copied.append(file)
         else:
             logger.error(f"Input file {file} in {input_dir} not readable")
@@ -841,15 +869,20 @@ def create_pds_collection(output_dir, input_dir, files, collection_type, schema_
 
     return csv_filename, xml_filename
 
-def export_block_to_pds(input_dir, output_dir, block, schema_root):
+def export_block_to_pds(input_dir, output_dir, block, schema_root, skip_download=False):
 
     paths = create_dart_directories(output_dir, block)
     print("output_dir", output_dir)
-    print(paths)
+    for k,v in paths.items():
+        print(f"{k:>8s}: {v}")
 
     # Find and download related frames (raw and calibration frames)
-    related_frames = find_related_frames(block)
-    dl_frames = download_files(related_frames, input_dir, True)
+    if skip_download is True:
+        pass
+    else:
+        print("Find and downloading related frames")
+        related_frames = find_related_frames(block)
+        dl_frames = download_files(related_frames, input_dir, True)
 
     # transfer raw data
     raw_files = find_fits_files(input_dir, '\S*e00')
@@ -868,7 +901,6 @@ def export_block_to_pds(input_dir, output_dir, block, schema_root):
     calib_files = find_fits_files(input_dir, '\S*-(bias|bpm|dark|skyflat)')
     for root, files in calib_files.items():
         sent_files += transfer_files(root, files, paths['cal_data'])
-    print(sent_files)
     # create PDS products for cal data
     csv_filename, xml_filename = create_pds_collection(paths['root'], paths['cal_data'], sent_files, 'cal', schema_root)
     # Convert csv file to CRLF endings required by PDS

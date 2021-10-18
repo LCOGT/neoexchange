@@ -6,6 +6,8 @@ from lxml import etree
 from lxml import objectify
 from datetime import datetime
 
+from astropy.io import fits
+
 from core.models import SuperBlock, Block, Frame
 from photometrics.pds_subs import *
 
@@ -199,6 +201,9 @@ class TestWritePDSLabel(SimpleTestCase):
         test_xml_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label.xml'))
         with open(test_xml_cat, 'r') as xml_file:
             self.expected_xml = xml_file.readlines()
+        test_xml_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_bias.xml'))
+        with open(test_xml_cat, 'r') as xml_file:
+            self.expected_xml_bias = xml_file.readlines()
         self.test_banzai_file = os.path.abspath(os.path.join('photometrics', 'tests', 'banzai_test_frame.fits'))
 
         self.remove = True
@@ -219,7 +224,9 @@ class TestWritePDSLabel(SimpleTestCase):
                     print("Removed", self.test_dir)
             except OSError:
                 print("Error removing temporary test directory", self.test_dir)
-
+        else:
+            if self.debug_print:
+                print("Not removing temporary test directory", self.test_dir)
 
     def test_write(self):
 
@@ -231,6 +238,31 @@ class TestWritePDSLabel(SimpleTestCase):
             xml = xml_file.readlines()
 
         for i, expected_line in enumerate(self.expected_xml):
+            if i < len(xml):
+                assert expected_line.lstrip() == xml[i].lstrip(), "Failed on line: " + str(i+1)
+            else:
+                assert expected_line.lstrip() == None, "Failed on line: " + str(i+1)
+
+    def test_write_bias_file(self):
+
+        # Create example bias frame
+        hdulist = fits.open(self.test_banzai_file)
+        hdulist[0].header['obstype'] = 'BIAS'
+        hdulist[0].header['moltype'] = 'BIAS'
+        hdulist[0].header['exptime'] = 0
+        hdulist[0].header.insert('l1pubdat', ('ismaster', True, 'Is this a master calibration frame'), after=True)
+        test_bias_file = os.path.join(self.test_dir, 'banzai-test-bias-bin1x1.fits')
+        hdulist.writeto(test_bias_file, checksum=True, overwrite=True)
+        hdulist.close()
+
+        output_xml_file = os.path.join(self.test_dir, 'test_example_label.xml')
+
+        status = write_product_label_xml(test_bias_file, output_xml_file, self.schemadir, mod_time=datetime(2021,5,4))
+
+        with open(output_xml_file, 'r') as xml_file:
+            xml = xml_file.readlines()
+
+        for i, expected_line in enumerate(self.expected_xml_bias):
             if i < len(xml):
                 assert expected_line.lstrip() == xml[i].lstrip(), "Failed on line: " + str(i+1)
             else:
@@ -278,12 +310,42 @@ class TestCreatePDSLabels(SimpleTestCase):
                     print("Removed", self.test_dir)
             except OSError:
                 print("Error removing temporary test directory", self.test_dir)
+        else:
+            if self.debug_print:
+                print("Not removing temporary test directory", self.test_dir)
 
-    def test_generate(self):
+    def test_generate_e92(self):
 
         expected_xml_labels = [self.test_banzai_file.replace('.fits', '.xml'),]
 
         xml_labels = create_pds_labels(self.test_dir, self.schemadir)
+
+        self.assertEqual(len(expected_xml_labels), len(xml_labels))
+        self.assertEqual(expected_xml_labels, xml_labels)
+
+    def test_generate_e92_specified_match(self):
+
+        expected_xml_labels = [self.test_banzai_file.replace('.fits', '.xml'),]
+
+        xml_labels = create_pds_labels(self.test_dir, self.schemadir, '\S*e92')
+
+        self.assertEqual(len(expected_xml_labels), len(xml_labels))
+        self.assertEqual(expected_xml_labels, xml_labels)
+
+    def test_generate_bias(self):
+
+        hdulist = fits.open(self.test_banzai_file)
+        hdulist[0].header['obstype'] = 'BIAS'
+        hdulist[0].header['moltype'] = 'BIAS'
+        hdulist[0].header['exptime'] = 0
+        hdulist[0].header.insert('l1pubdat', ('ismaster', True, 'Is this a master calibration frame'), after=True)
+        test_bias_file = os.path.join(self.test_dir, 'cpt1m013-kb76-20160606-bias-bin1x1.fits')
+        hdulist.writeto(test_bias_file, checksum=True, overwrite=True)
+        hdulist.close()
+
+        expected_xml_labels = [test_bias_file.replace('.fits', '.xml'),]
+
+        xml_labels = create_pds_labels(self.test_dir, self.schemadir, '.*-bias.*')
 
         self.assertEqual(len(expected_xml_labels), len(xml_labels))
         self.assertEqual(expected_xml_labels, xml_labels)
@@ -486,7 +548,7 @@ class TestExportBlockToPDS(TestCase):
 
         for i, expected_line in enumerate(self.expected_xml_cal):
             if i < len(xml):
-                assert expected_line.lstrip() == xml[i].lstrip(), "Failed on line: " + str(i+1)
+                assert expected_line.lstrip() == xml[i].lstrip(), "Failed on line: " + str(i+1) + "\n" + expected_line.lstrip() + "\n" + xml[i].lstrip()
             else:
                 assert expected_line.lstrip() == None, "Failed on line: " + str(i+1)
 
@@ -532,7 +594,7 @@ class TestExportBlockToPDS(TestCase):
 
     def test_export_block_to_pds(self):
 
-        export_block_to_pds(self.test_input_dir, self.test_output_dir, self.test_block, self.schemadir)
+        export_block_to_pds(self.test_input_dir, self.test_output_dir, self.test_block, self.schemadir, skip_download=True)
 
         for collection_type, file_type in zip(['raw', 'cal', 'ddp'], ['csv', 'xml']):
             expected_file = os.path.join(self.expected_root_dir, f'collection_{collection_type}.{file_type}')
