@@ -1267,6 +1267,12 @@ class FITSUnitTest(TestCase):
         hdulist.close()
         self.uncomp_banzai_table_firstitem = self.test_banzaitable[0:1]
 
+        self.test_raw_filename = os.path.join('photometrics', 'tests', 'mef_raw_test_frame.fits')
+        hdulist = fits.open(self.test_raw_filename)
+        self.test_raw_header = [hdu.header for hdu in hdulist]
+        self.test_raw_table = {}
+        hdulist.close()
+
         column_types = [('ccd_x', '>f4'), 
                         ('ccd_y', '>f4'), 
                         ('obs_ra', '>f8'), 
@@ -1517,6 +1523,27 @@ class OpenFITSCatalog(FITSUnitTest):
 
         self.assertAlmostEqual(expected_x, tbl[-1]['XWIN'], self.precision)
         self.assertAlmostEqual(expected_y, tbl[-1]['YWIN'], self.precision)
+
+    def test_raw_read_image(self):
+        unexpected_value = {}
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_raw_filename)
+        self.assertNotEqual(unexpected_value, hdr)
+        self.assertEqual(unexpected_value, tbl)
+        self.assertNotEqual(unexpected_value, cattype)
+
+    def test_raw_image_read_length(self):
+        expected_hdr_lengths = [237, 17, 17, 17, 17]
+        expected_tbl_len = len(self.test_raw_table)
+        expected_cattype = 'RAW_MEF'
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_raw_filename)
+
+        self.assertEqual(len(expected_hdr_lengths), len(hdr))
+        for hdu, expected_hdr_len in enumerate(expected_hdr_lengths):
+            self.assertEqual(expected_hdr_len, len(hdr[hdu]))
+        self.assertEqual(expected_tbl_len, len(tbl))
+        self.assertEqual(expected_cattype, cattype)
 
 
 class TestConvertValues(FITSUnitTest):

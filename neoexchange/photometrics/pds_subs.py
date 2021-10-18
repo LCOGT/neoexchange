@@ -385,6 +385,9 @@ def determine_first_last_times(filepath):
             fits_filepath = os.path.join(directory, fits_file)
             header, table, cattype = open_fits_catalog(fits_filepath, header_only=True)
             if header:
+                # Check if MEF header and only take primary header if so
+                if 'MEF' in cattype:
+                    header = header[0]
                 start, stop = get_shutter_open_close(header)
                 first_frame = min(first_frame, start)
                 last_frame = max(last_frame, stop)

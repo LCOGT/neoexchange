@@ -399,8 +399,8 @@ class TestExportBlockToPDS(TestCase):
         self.test_file = 'banzai_test_frame.fits'
         test_file_path = os.path.join(self.framedir, self.test_file)
 
-        self.test_dir = '/tmp/tmp_neox_wibble'
-#        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+#        self.test_dir = '/tmp/tmp_neox_wibble'
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
         self.test_input_dir = os.path.join(self.test_dir, 'input')
         os.makedirs(self.test_input_dir, exist_ok=True)
         self.test_output_dir = os.path.join(self.test_dir, 'output')
@@ -445,7 +445,7 @@ class TestExportBlockToPDS(TestCase):
         shutil.copy(test_file_path, new_name)
         self.test_banzai_files.insert(1, os.path.basename(new_name))
 
-        self.remove = False
+        self.remove = True
         self.debug_print = False
         self.maxDiff = None
 

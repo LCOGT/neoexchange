@@ -888,13 +888,26 @@ def open_fits_catalog(catfile, header_only=False):
             cat_index = hdulist.index_of('CAT')
         except KeyError:
             cat_index = -1
+        try:
+            bpm_index = hdulist.index_of('BPM')
+        except KeyError:
+            bpm_index = -1
+        try:
+            err_index = hdulist.index_of('ERR')
+        except KeyError:
+            err_index = -1
 
         if sci_index != -1 and cat_index != -1:
             header = hdulist[sci_index].header
             if header_only is False:
                 table = hdulist[cat_index].data
         else:
-            logger.error("Could not find SCI and CAT HDUs in file")
+            if sci_index != -1 and bpm_index != -1 and err_index != -1:
+                cattype = 'BANZAI_CALIB'
+                header = hdulist[sci_index].header
+                table = {}
+            else:
+                logger.error("Could not find SCI and CAT (or BPM and ERR) HDUs in file: %s" % catfile)
     elif len(hdulist) == 1:
         # BANZAI-format after extraction of image
         cattype = 'BANZAI'
@@ -907,8 +920,12 @@ def open_fits_catalog(catfile, header_only=False):
             header = hdulist[sci_index].header
         else:
             logger.error("Could not find SCI HDU in file")
+    elif len(hdulist) == 5:
+        # Raw Sinistro image
+        cattype = 'RAW_MEF'
+        header = [hdu.header for hdu in hdulist]
     else:
-        logger.error("Unexpected number of catalog HDUs (Expected 2, got %d)" % len(hdulist))
+        logger.error("Unexpected number of catalog HDUs in %s (Expected 2, got %d)" % (catfile, len(hdulist)))
 
     hdulist.close()
 
