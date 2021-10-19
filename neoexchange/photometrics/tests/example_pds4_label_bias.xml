@@ -14,13 +14,13 @@
     <title>Las Cumbres Observatory Master Bias Image</title>
     <information_model_version>1.15.0.0</information_model_version>
     <product_class>Product_Observational</product_class>
-  <Modification_History>
+    <Modification_History>
       <Modification_Detail>
         <modification_date>2021-05-04</modification_date>
         <version_id>1.0</version_id>
         <description>initial version</description>
       </Modification_Detail>
-  </Modification_History>
+    </Modification_History>
   </Identification_Area>
   <Observation_Area>
     <Time_Coordinates>
@@ -57,59 +57,71 @@
       <type>Calibrator</type>
     </Target_Identification>
     <Discipline_Area>
-  <disp:Display_Settings>
+      <disp:Display_Settings>
         <Local_Internal_Reference>
           <local_identifier_reference>banzai-test-bias-bin1x1</local_identifier_reference>
           <local_reference_type>display_settings_to_array</local_reference_type>
         </Local_Internal_Reference>
-    <disp:Display_Direction>
-      <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
-      <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
-      <disp:vertical_display_axis>Line</disp:vertical_display_axis>
-      <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
-    </disp:Display_Direction>
-  </disp:Display_Settings>
-  <img:Exposure>
-    <img:exposure_duration unit="s">0.000</img:exposure_duration>
-  </img:Exposure>
-  <img:Optical_Filter>
-    <img:filter_name>w</img:filter_name>
-    <img:bandwidth unit="Angstrom">4409.8</img:bandwidth>
-    <img:center_filter_wavelength unit="Angstrom">6080.0</img:center_filter_wavelength>
-  </img:Optical_Filter>
-  <geom:Geometry>
-    <geom:Image_Display_Geometry>
-      <Local_Internal_Reference>
-        <local_identifier_reference>banzai-test-bias-bin1x1</local_identifier_reference>
-        <local_reference_type>display_to_data_object</local_reference_type>
-      </Local_Internal_Reference>
-    <geom:Display_Direction>
-      <geom:horizontal_display_axis>Sample</geom:horizontal_display_axis>
-      <geom:horizontal_display_direction>Left to Right</geom:horizontal_display_direction>
-      <geom:vertical_display_axis>Line</geom:vertical_display_axis>
-      <geom:vertical_display_direction>Bottom to Top</geom:vertical_display_direction>
-    </geom:Display_Direction>
-         <geom:Object_Orientation_RA_Dec>
-       <geom:right_ascension_angle unit="deg">272.953000</geom:right_ascension_angle>
-       <geom:declination_angle unit="deg">1.280402</geom:declination_angle>
-       <geom:celestial_north_clock_angle unit="deg">0.0</geom:celestial_north_clock_angle>
-      <geom:Reference_Frame_Identification>
-        <geom:name>J2000</geom:name>
-        <geom:comment>equinox of RA and DEC</geom:comment>
-      </geom:Reference_Frame_Identification>
-     </geom:Object_Orientation_RA_Dec>
-    </geom:Image_Display_Geometry>
-  </geom:Geometry>
-</Discipline_Area>
+        <disp:Display_Direction>
+          <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+          <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
+          <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+          <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
+        </disp:Display_Direction>
+      </disp:Display_Settings>
+      <img:Imaging>
+        <Local_Internal_Reference>
+          <local_identifier_reference>banzai-test-bias-bin1x1</local_identifier_reference>
+          <local_reference_type>imaging_parameters_to_image_object</local_reference_type>
+        </Local_Internal_Reference>
+        <img:Exposure>
+          <img:exposure_duration unit="s">0.000</img:exposure_duration>
+        </img:Exposure>
+        <img:Optical_Filter>
+          <img:filter_name>w</img:filter_name>
+          <img:bandwidth unit="Angstrom">4409.8</img:bandwidth>
+          <img:center_filter_wavelength unit="Angstrom">6080.0</img:center_filter_wavelength>
+        </img:Optical_Filter>
+      </img:Imaging>
+      <geom:Geometry>
+        <geom:Image_Display_Geometry>
+          <Local_Internal_Reference>
+            <local_identifier_reference>banzai-test-bias-bin1x1</local_identifier_reference>
+            <local_reference_type>display_to_data_object</local_reference_type>
+          </Local_Internal_Reference>
+          <geom:Display_Direction>
+            <geom:horizontal_display_axis>Sample</geom:horizontal_display_axis>
+            <geom:horizontal_display_direction>Left to Right</geom:horizontal_display_direction>
+            <geom:vertical_display_axis>Line</geom:vertical_display_axis>
+            <geom:vertical_display_direction>Bottom to Top</geom:vertical_display_direction>
+          </geom:Display_Direction>
+          <geom:Object_Orientation_RA_Dec>
+            <geom:right_ascension_angle unit="deg">272.953000</geom:right_ascension_angle>
+            <geom:declination_angle unit="deg">1.280402</geom:declination_angle>
+            <geom:celestial_north_clock_angle unit="deg">0.0</geom:celestial_north_clock_angle>
+            <geom:Reference_Frame_Identification>
+              <geom:name>J2000</geom:name>
+              <geom:comment>equinox of RA and DEC</geom:comment>
+            </geom:Reference_Frame_Identification>
+          </geom:Object_Orientation_RA_Dec>
+        </geom:Image_Display_Geometry>
+      </geom:Geometry>
+    </Discipline_Area>
   </Observation_Area>
   <File_Area_Observational>
     <File>
       <file_name>banzai-test-bias-bin1x1.fits</file_name>
       <comment>Median combined stack of bias images. Used in calibration pipeline to generate the calibrated image data.</comment>
     </File>
+    <Header>
+      <name>main_header</name>
+      <offset unit="byte">0</offset>
+      <object_length unit="byte">16534080</object_length>
+      <parsing_standard_id>FITS 3.0</parsing_standard_id>
+    </Header>
     <Array_2D_Image>
       <local_identifier>banzai-test-bias-bin1x1</local_identifier>
-      <offset unit="byte">22400</offset>
+      <offset unit="byte">23040</offset>
       <axes>2</axes>
       <axis_index_order>Last Index Fastest</axis_index_order>
       <Element_Array>
@@ -122,7 +134,7 @@
       </Axis_Array>
       <Axis_Array>
         <axis_name>Sample</axis_name>
-        <elements>2038</elements>
+        <elements>2028</elements>
         <sequence_number>2</sequence_number>
       </Axis_Array>
     </Array_2D_Image>

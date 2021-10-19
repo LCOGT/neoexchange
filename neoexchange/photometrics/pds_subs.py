@@ -553,9 +553,8 @@ def create_file_area_obs(header, filename):
         array_name_prefix = 'amp'
 
     header_offset = 0
-    print()
     for extn, extn_header in enumerate(headers):
-        print(f"Extn #{extn}, {len(extn_header)} records", end='')
+        logger.debug(f"Extn #{extn}, {len(extn_header)} records", end='')
         header_element = etree.SubElement(file_area_obs, "Header")
         # Compute size of header from list length+1 (missing END card)
         header_size_bytes = (len(extn_header)+1)*80
@@ -567,7 +566,7 @@ def create_file_area_obs(header, filename):
         image_size_blocks = int(ceil(image_size_bytes/fits_block_size) * fits_block_size)
         image_size = "{:d}".format(max(header_size_blocks,image_size_blocks))
 
-        print(f"   header_size={header_size_blocks} image_size={image_size_blocks}")
+        logger.debug(f"   header_size={header_size_blocks} image_size={image_size_blocks}")
         header_name = "main_header"
         if extn >= 1:
             header_name = f"{array_name_prefix}{extn}_header"
@@ -708,6 +707,8 @@ def write_product_label_xml(filepath, xml_file, schema_root, mod_time=None):
         headers = header
 
     proc_level = proc_levels.get(headers[0].get('obstype', 'expose').upper(), 'cal')
+    if headers[0].get('rlevel', 0) == 0:
+        proc_level = 'raw'
     id_area = create_id_area(filename, schema_mappings['PDS4::PDS']['version'], proc_level, mod_time)
     processedImage.append(id_area)
 
@@ -817,7 +818,6 @@ def create_pds_labels(procdir, schema_root, match='.*e92'):
     xml_labels = []
     full_procdir = os.path.abspath(os.path.expandvars(procdir))
     files_to_process = find_fits_files(procdir, match)
-    print(files_to_process)
 
     for directory, fits_files in files_to_process.items():
         for fits_file in fits_files:

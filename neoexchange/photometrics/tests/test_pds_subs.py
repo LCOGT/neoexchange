@@ -761,17 +761,15 @@ class TestWritePDSLabel(SimpleTestCase):
         self.schemadir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_schemas'))
         self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
 
-        test_xml_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label.xml'))
-        with open(test_xml_cat, 'r') as xml_file:
-            self.expected_xml = xml_file.readlines()
-        test_xml_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_bias.xml'))
-        with open(test_xml_cat, 'r') as xml_file:
-            self.expected_xml_bias = xml_file.readlines()
+        self.test_xml_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label.xml'))
+        self.test_xml_raw_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_raw.xml'))
+        self.test_xml_bias_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_bias.xml'))
+
         self.test_banzai_file = os.path.abspath(os.path.join('photometrics', 'tests', 'banzai_test_frame.fits'))
         self.test_raw_file = os.path.abspath(os.path.join('photometrics', 'tests', 'mef_raw_test_frame.fits'))
 
-        self.remove = False
-        self.debug_print = True
+        self.remove = True
+        self.debug_print = False
         self.maxDiff = None
 
     def tearDown(self):
@@ -792,20 +790,26 @@ class TestWritePDSLabel(SimpleTestCase):
             if self.debug_print:
                 print("Not removing temporary test directory", self.test_dir)
 
+
+    def compare_xml_files(self, expected_xml_file, xml_file):
+        """Compare the expected XML in <expected_xml_file> with that in the passed
+        <xml_file>
+        """
+
+        obj1 = etree.parse(expected_xml_file)
+        expect = etree.tostring(obj1, pretty_print=True)
+        obj2 = etree.parse(xml_file)
+        result = etree.tostring(obj2, pretty_print=True)
+
+        self.assertEquals(expect.decode("utf-8"), result.decode("utf-8"))
+
     def test_write_proc_label(self):
 
         output_xml_file = os.path.join(self.test_dir, 'test_example_label.xml')
 
         status = write_product_label_xml(self.test_banzai_file, output_xml_file, self.schemadir, mod_time=datetime(2021,5,4))
 
-        with open(output_xml_file, 'r') as xml_file:
-            xml = xml_file.readlines()
-
-        for i, expected_line in enumerate(self.expected_xml):
-            if i < len(xml):
-                assert expected_line.lstrip() == xml[i].lstrip(), "Failed on line: " + str(i+1)
-            else:
-                assert expected_line.lstrip() == None, "Failed on line: " + str(i+1)
+        self.compare_xml_files(self.test_xml_cat, output_xml_file)
 
     def test_write_bias_label(self):
 
@@ -823,24 +827,17 @@ class TestWritePDSLabel(SimpleTestCase):
 
         status = write_product_label_xml(test_bias_file, output_xml_file, self.schemadir, mod_time=datetime(2021,5,4))
 
-        with open(output_xml_file, 'r') as xml_file:
-            xml = xml_file.readlines()
-
-        for i, expected_line in enumerate(self.expected_xml_bias):
-            if i < len(xml):
-                assert expected_line.lstrip() == xml[i].lstrip(), "Failed on line: " + str(i+1)
-            else:
-                assert expected_line.lstrip() == None, "Failed on line: " + str(i+1)
+        self.compare_xml_files(self.test_xml_bias_cat, output_xml_file)
 
     def test_write_raw_label(self):
 
 
         output_xml_file = os.path.join(self.test_dir, 'test_example_label.xml')
 
-        status = write_product_label_xml(self.test_raw_file, output_xml_file, self.schemadir, mod_time=datetime(2021,5,4))
+        status = write_product_label_xml(self.test_raw_file, output_xml_file, self.schemadir, mod_time=datetime(2021,10,15))
 
-        with open(output_xml_file, 'r') as xml_file:
-            xml = etree.parse(xml_file)
+        self.compare_xml_files(self.test_xml_raw_cat, output_xml_file)
+
 
 class TestCreatePDSLabels(SimpleTestCase):
 
