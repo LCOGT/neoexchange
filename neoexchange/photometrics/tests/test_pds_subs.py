@@ -192,6 +192,159 @@ class TestCreateIDArea(SimpleTestCase):
         self.compare_xml(expected, id_area)
 
 
+class TestCreateFileAreaObs(SimpleTestCase):
+
+    def setUp(self):
+
+        kpno_prihdr = fits.Header.fromtextfile(os.path.abspath(os.path.join('photometrics', 'tests', 'example_kpno_mef_prihdr')))
+        kpno_extnhdr = fits.Header.fromtextfile(os.path.abspath(os.path.join('photometrics', 'tests', 'example_kpno_mef_extnhdr')))
+        self.test_kpno_header = [kpno_prihdr,]
+        for extn in range(1, 4+1):
+            kpno_extnhdr['extver'] = extn
+            kpno_extnhdr['extname'] = 'im' + str(extn)
+            kpno_extnhdr['imageid'] = extn
+            self.test_kpno_header.append(kpno_extnhdr)
+
+        self.maxDiff = None
+
+    def compare_xml(self, expected, xml_element):
+        """Compare the expected XML string <expected> with the passed etree.Element
+        in <xml_element>
+        """
+
+        obj1 = objectify.fromstring(expected)
+        expect = etree.tostring(obj1)
+        result = etree.tostring(xml_element)
+
+        self.assertEquals(expect.decode("utf-8"), result.decode("utf-8"))
+
+    def test_kpno_mef(self):
+        expected = '''
+          <File_Area_Observational>
+            <File>
+              <file_name>kp050709_031.fit</file_name>
+            </File>
+            <Header>
+              <name>main_header</name>
+              <offset unit="byte">0</offset>
+              <object_length unit="byte">17280</object_length>
+              <parsing_standard_id>FITS 3.0</parsing_standard_id>
+            </Header>
+            <Header>
+              <name>ccd1_header</name>
+              <offset unit="byte">17280</offset>
+              <object_length unit="byte">17498880</object_length>
+              <parsing_standard_id>FITS 3.0</parsing_standard_id>
+            </Header>
+            <Array_2D_Image>
+              <local_identifier>ccd1_image</local_identifier>
+              <offset unit="byte">34560</offset>
+              <axes>2</axes>
+              <axis_index_order>Last Index Fastest</axis_index_order>
+              <Element_Array>
+                <data_type>SignedMSB2</data_type>
+                <scaling_factor>1</scaling_factor>
+                <value_offset>32768</value_offset>
+              </Element_Array>
+              <Axis_Array>
+                <axis_name>Line</axis_name>
+                <elements>4096</elements>
+                <sequence_number>1</sequence_number>
+              </Axis_Array>
+              <Axis_Array>
+                <axis_name>Sample</axis_name>
+                <elements>2136</elements>
+                <sequence_number>2</sequence_number>
+              </Axis_Array>
+            </Array_2D_Image>
+            <Header>
+              <name>ccd2_header</name>
+              <offset unit="byte">17533440</offset>
+              <object_length unit="byte">17498880</object_length>
+              <parsing_standard_id>FITS 3.0</parsing_standard_id>
+            </Header>
+            <Array_2D_Image>
+              <local_identifier>ccd2_image</local_identifier>
+              <offset unit="byte">17550720</offset>
+              <axes>2</axes>
+              <axis_index_order>Last Index Fastest</axis_index_order>
+              <Element_Array>
+                <data_type>SignedMSB2</data_type>
+                <scaling_factor>1</scaling_factor>
+                <value_offset>32768</value_offset>
+              </Element_Array>
+              <Axis_Array>
+                <axis_name>Line</axis_name>
+                <elements>4096</elements>
+                <sequence_number>1</sequence_number>
+              </Axis_Array>
+              <Axis_Array>
+                <axis_name>Sample</axis_name>
+                <elements>2136</elements>
+                <sequence_number>2</sequence_number>
+              </Axis_Array>
+            </Array_2D_Image>
+            <Header>
+              <name>ccd3_header</name>
+              <offset unit="byte">35049600</offset>
+              <object_length unit="byte">17498880</object_length>
+              <parsing_standard_id>FITS 3.0</parsing_standard_id>
+            </Header>
+            <Array_2D_Image>
+              <local_identifier>ccd3_image</local_identifier>
+              <offset unit="byte">35066880</offset>
+              <axes>2</axes>
+              <axis_index_order>Last Index Fastest</axis_index_order>
+              <Element_Array>
+                <data_type>SignedMSB2</data_type>
+                <scaling_factor>1</scaling_factor>
+                <value_offset>32768</value_offset>
+              </Element_Array>
+              <Axis_Array>
+                <axis_name>Line</axis_name>
+                <elements>4096</elements>
+                <sequence_number>1</sequence_number>
+              </Axis_Array>
+              <Axis_Array>
+                <axis_name>Sample</axis_name>
+                <elements>2136</elements>
+                <sequence_number>2</sequence_number>
+              </Axis_Array>
+            </Array_2D_Image>
+            <Header>
+              <name>ccd4_header</name>
+              <offset unit="byte">52565760</offset>
+              <object_length unit="byte">17498880</object_length>
+              <parsing_standard_id>FITS 3.0</parsing_standard_id>
+            </Header>
+            <Array_2D_Image>
+              <local_identifier>ccd4_image</local_identifier>
+              <offset unit="byte">52583040</offset>
+              <axes>2</axes>
+              <axis_index_order>Last Index Fastest</axis_index_order>
+              <Element_Array>
+                <data_type>SignedMSB2</data_type>
+                <scaling_factor>1</scaling_factor>
+                <value_offset>32768</value_offset>
+              </Element_Array>
+              <Axis_Array>
+                <axis_name>Line</axis_name>
+                <elements>4096</elements>
+                <sequence_number>1</sequence_number>
+              </Axis_Array>
+              <Axis_Array>
+                <axis_name>Sample</axis_name>
+                <elements>2136</elements>
+                <sequence_number>2</sequence_number>
+              </Axis_Array>
+            </Array_2D_Image>
+          </File_Area_Observational>'''
+
+        file_obs_area = create_file_area_obs(self.test_kpno_header, 'kp050709_031.fit')
+
+        self.compare_xml(expected, file_obs_area)
+
+
 class TestWritePDSLabel(SimpleTestCase):
 
     def setUp(self):

@@ -470,42 +470,91 @@ def create_file_area_obs(header, filename):
                   64 : "SignedMSB8",
                  -64 : "IEEE754MSBDouble"
                 }
+    fits_block_size = 2880.0
+
+    if type(header) != list:
+        headers = [header, ]
+    else:
+        headers = header
 
     file_area_obs = etree.Element("File_Area_Observational")
     file_element = etree.SubElement(file_area_obs, "File")
     etree.SubElement(file_element, "file_name").text = filename
-    obstype = header.get('obstype', 'expose').upper()
+    obstype = headers[0].get('obstype', 'expose').upper()
     comment = "Calibrated LCOGT image file"
     if obstype == 'BIAS' or obstype == 'DARK' or obstype == 'SKYFLAT':
         comment = f"Median combined stack of {obstype.lower()} images. Used in calibration pipeline to generate the calibrated image data."
     elif obstype == 'BPM':
          comment = f"Bad Pixel Mask image. Used in calibration pipeline to generate the calibrated image data."
-    elif obstype == "EXPOSE" and header.get('rlevel', 91) == 0:
+    elif obstype == "EXPOSE" and headers[0].get('rlevel', 91) == 0:
         comment = "Raw LCOGT image file"
-    etree.SubElement(file_element, "comment").text = comment
+    if headers[0].get('origin', '') == 'LCOGT':
+        etree.SubElement(file_element, "comment").text = comment
 
-    # XXX Check NAXIS=2 before this
-    array_2d = etree.SubElement(file_area_obs, "Array_2D_Image")
-    etree.SubElement(array_2d, "local_identifier").text = os.path.splitext(filename)[0]
+    header_offset = 0
+    for extn, extn_header in enumerate(headers):
+        print(f"Extn #{extn}, {len(extn_header)} records", end='')
+        header_element = etree.SubElement(file_area_obs, "Header")
+        # Compute size of header from list length+1 (missing END card)
+        header_size_bytes = (len(extn_header)+1)*80
+        # Actual size is rounded to nearest multiple of FITS block size (2880 bytes)
+        header_size_blocks = int(ceil(header_size_bytes/fits_block_size) * fits_block_size)
+        header_size = "{:d}".format(header_size_blocks)
 
-    # Compute size of header from list length+1 (missing END card)
-    header_size_bytes = (len(header)+1)*80
-    # Actual size is rounded to nearest multiple of FITS block size (2880 bytes)
-    header_size_blocks = ceil(header_size_bytes/2800.0) * 2800
-    header_size = "{:d}".format(header_size_blocks)
+        image_size_bytes = extn_header.get('naxis1', 0) * extn_header.get('naxis2', 0) * int(abs(extn_header['bitpix'])/8)
+        image_size_blocks = int(ceil(image_size_bytes/fits_block_size) * fits_block_size)
+        image_size = "{:d}".format(max(header_size_blocks,image_size_blocks))
 
-    etree.SubElement(array_2d, "offset", attrib={"unit" : "byte"}).text = header_size
-    etree.SubElement(array_2d, "axes").text = str(header.get('NAXIS', 2))
-    etree.SubElement(array_2d, "axis_index_order").text = "Last Index Fastest"
-    elem_array = etree.SubElement(array_2d, "Element_Array")
-    etree.SubElement(elem_array, "data_type").text = PDS_types.get(header['BITPIX'])
+        print(f"   header_size={header_size_blocks} image_size={image_size_blocks}")
+        header_name = "main_header"
+        if extn >= 1:
+            header_name = f"ccd{extn}_header"
 
-    axis_mapping = {'Line' : 'NAXIS2', 'Sample' : 'NAXIS2'}
-    for sequence_number, axis_name in enumerate(axis_mapping, start=1):
-        axis_array = etree.SubElement(array_2d, "Axis_Array")
-        etree.SubElement(axis_array, "axis_name").text = axis_name
-        etree.SubElement(axis_array, "elements").text = str(header[axis_mapping[axis_name]])
-        etree.SubElement(axis_array, "sequence_number").text = str(sequence_number)
+        etree.SubElement(header_element, "name").text = header_name
+        etree.SubElement(header_element, "offset", attrib={"unit" : "byte"}).text = str(header_offset)
+        etree.SubElement(header_element, "object_length", attrib={"unit" : "byte"}).text = image_size
+        etree.SubElement(header_element, "parsing_standard_id").text = "FITS 3.0"
+
+        header_offset += header_size_blocks
+
+        naxis = extn_header.get("naxis", 0)
+        if naxis == 2:
+            array_2d = etree.SubElement(file_area_obs, "Array_2D_Image")
+            local_id = os.path.splitext(filename)[0]
+            if extn >= 1:
+                local_id = f"ccd{extn}_image"
+            etree.SubElement(array_2d, "local_identifier").text = local_id
+
+            # Compute size of header from list length+1 (missing END card)
+            header_size_bytes = (len(extn_header)+1)*80
+            # Actual size is rounded to nearest multiple of FITS block size (2880 bytes)
+            header_size_blocks = int(ceil(header_size_bytes/fits_block_size) * fits_block_size)
+            header_size = "{:d}".format(header_size_blocks)
+
+            image_size_bytes = extn_header.get('naxis1', 0) * extn_header.get('naxis2', 0) * int(abs(extn_header['bitpix'])/8)
+            image_size_blocks = int(ceil(image_size_bytes/fits_block_size) * fits_block_size)
+            image_size = "{:d}".format(image_size_blocks)
+
+            etree.SubElement(array_2d, "offset", attrib={"unit" : "byte"}).text = str(header_offset)
+            etree.SubElement(array_2d, "axes").text = str(naxis)
+            etree.SubElement(array_2d, "axis_index_order").text = "Last Index Fastest"
+            header_offset += image_size_blocks
+
+            elem_array = etree.SubElement(array_2d, "Element_Array")
+            etree.SubElement(elem_array, "data_type").text = PDS_types.get(extn_header['BITPIX'])
+            # Add scaling_factor and value_offset if BSCALE and BZERO are present
+            bscale = extn_header.get('bscale', None)
+            bzero = extn_header.get('bzero', None)
+            if bscale and bzero:
+                etree.SubElement(elem_array, "scaling_factor").text = str(bscale)
+                etree.SubElement(elem_array, "value_offset").text = str(bzero)
+
+            axis_mapping = {'Line' : 'NAXIS2', 'Sample' : 'NAXIS1'}
+            for sequence_number, axis_name in enumerate(axis_mapping, start=1):
+                axis_array = etree.SubElement(array_2d, "Axis_Array")
+                etree.SubElement(axis_array, "axis_name").text = axis_name
+                etree.SubElement(axis_array, "elements").text = str(extn_header[axis_mapping[axis_name]])
+                etree.SubElement(axis_array, "sequence_number").text = str(sequence_number)
 
     return file_area_obs
 
