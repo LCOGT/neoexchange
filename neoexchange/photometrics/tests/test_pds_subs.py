@@ -487,6 +487,14 @@ class TestCreateDisciplineArea(SimpleTestCase):
         self.test_raw_header, table, cattype = open_fits_catalog(self.test_raw_filename)
         test_proc_header = os.path.join(tests_path, 'example_lco_proc_hdr')
         self.test_proc_header = fits.Header.fromtextfile(os.path.join(tests_path, test_proc_header))
+        kpno_prihdr = fits.Header.fromtextfile(os.path.join(tests_path, 'example_kpno_mef_prihdr'))
+        kpno_extnhdr = fits.Header.fromtextfile(os.path.join(tests_path, 'example_kpno_mef_extnhdr'))
+        self.test_kpno_header = [kpno_prihdr,]
+        for extn in range(1, 4+1):
+            kpno_extnhdr['extver'] = extn
+            kpno_extnhdr['extname'] = 'im' + str(extn)
+            kpno_extnhdr['imageid'] = extn
+            self.test_kpno_header.append(kpno_extnhdr)
 
         self.maxDiff = None
 
@@ -516,14 +524,20 @@ class TestCreateDisciplineArea(SimpleTestCase):
                   <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
                 </disp:Display_Direction>
               </disp:Display_Settings>
-              <img:Exposure xmlns:img="http://pds.nasa.gov/pds4/img/v1">
-                <img:exposure_duration unit="s">100.000</img:exposure_duration>
-              </img:Exposure>
-              <img:Optical_Filter xmlns:img="http://pds.nasa.gov/pds4/img/v1">
-                <img:filter_name>w</img:filter_name>
-                <img:bandwidth unit="Angstrom">4409.8</img:bandwidth>
-                <img:center_filter_wavelength unit="Angstrom">6080.0</img:center_filter_wavelength>
-              </img:Optical_Filter>
+              <img:Imaging xmlns:img="http://pds.nasa.gov/pds4/img/v1">
+                <Local_Internal_Reference>
+                    <local_identifier_reference>tfn1m001-fa11-20211013-0095-e92</local_identifier_reference>
+                    <local_reference_type>imaging_parameters_to_image_object</local_reference_type>
+                  </Local_Internal_Reference>
+                <img:Exposure>
+                  <img:exposure_duration unit="s">100.000</img:exposure_duration>
+                </img:Exposure>
+                <img:Optical_Filter>
+                  <img:filter_name>w</img:filter_name>
+                  <img:bandwidth unit="Angstrom">4409.8</img:bandwidth>
+                  <img:center_filter_wavelength unit="Angstrom">6080.0</img:center_filter_wavelength>
+                </img:Optical_Filter>
+              </img:Imaging>
               <geom:Geometry xmlns:geom="http://pds.nasa.gov/pds4/geom/v1">
                 <geom:Image_Display_Geometry>
                   <Local_Internal_Reference>
@@ -553,12 +567,12 @@ class TestCreateDisciplineArea(SimpleTestCase):
 
         self.compare_xml(expected, file_obs_area)
 
-    def test_raw_frame(self):
+    def test_kpno_mef(self):
         expected = '''
             <Discipline_Area>
               <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
                 <Local_Internal_Reference>
-                  <local_identifier_reference>tfn1m001-fa11-20211013-0095-e00</local_identifier_reference>
+                  <local_identifier_reference>ccd1_image</local_identifier_reference>
                   <local_reference_type>display_settings_to_array</local_reference_type>
                 </Local_Internal_Reference>
                 <disp:Display_Direction>
@@ -568,18 +582,58 @@ class TestCreateDisciplineArea(SimpleTestCase):
                   <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
                 </disp:Display_Direction>
               </disp:Display_Settings>
-              <img:Exposure xmlns:img="http://pds.nasa.gov/pds4/img/v1">
-                <img:exposure_duration unit="s">100.000</img:exposure_duration>
-              </img:Exposure>
-              <img:Optical_Filter xmlns:img="http://pds.nasa.gov/pds4/img/v1">
-                <img:filter_name>w</img:filter_name>
-                <img:bandwidth unit="Angstrom">4409.8</img:bandwidth>
-                <img:center_filter_wavelength unit="Angstrom">6080.0</img:center_filter_wavelength>
-              </img:Optical_Filter>
+              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
+                <Local_Internal_Reference>
+                  <local_identifier_reference>ccd2_image</local_identifier_reference>
+                  <local_reference_type>display_settings_to_array</local_reference_type>
+                </Local_Internal_Reference>
+                <disp:Display_Direction>
+                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
+                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
+                </disp:Display_Direction>
+              </disp:Display_Settings>
+              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
+                <Local_Internal_Reference>
+                  <local_identifier_reference>ccd3_image</local_identifier_reference>
+                  <local_reference_type>display_settings_to_array</local_reference_type>
+                </Local_Internal_Reference>
+                <disp:Display_Direction>
+                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
+                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
+                </disp:Display_Direction>
+              </disp:Display_Settings>
+              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
+                <Local_Internal_Reference>
+                  <local_identifier_reference>ccd4_image</local_identifier_reference>
+                  <local_reference_type>display_settings_to_array</local_reference_type>
+                </Local_Internal_Reference>
+                <disp:Display_Direction>
+                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
+                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
+                </disp:Display_Direction>
+              </disp:Display_Settings>
+              <img:Imaging xmlns:img="http://pds.nasa.gov/pds4/img/v1">
+                <Local_Internal_Reference>
+                  <local_identifier_reference>ccd1_image</local_identifier_reference>
+                  <local_reference_type>imaging_parameters_to_image_object</local_reference_type>
+                </Local_Internal_Reference>
+                <img:Exposure>
+                  <img:exposure_duration unit="s">120.000</img:exposure_duration>
+                </img:Exposure>
+                <img:Optical_Filter>
+                  <img:filter_name>R Harris k1004</img:filter_name>
+                </img:Optical_Filter>
+              </img:Imaging>
               <geom:Geometry xmlns:geom="http://pds.nasa.gov/pds4/geom/v1">
                 <geom:Image_Display_Geometry>
                   <Local_Internal_Reference>
-                    <local_identifier_reference>tfn1m001-fa11-20211013-0095-e00</local_identifier_reference>
+                    <local_identifier_reference>ccd1_image</local_identifier_reference>
                     <local_reference_type>display_to_data_object</local_reference_type>
                   </Local_Internal_Reference>
                   <geom:Display_Direction>
@@ -589,8 +643,103 @@ class TestCreateDisciplineArea(SimpleTestCase):
                     <geom:vertical_display_direction>Bottom to Top</geom:vertical_display_direction>
                   </geom:Display_Direction>
                   <geom:Object_Orientation_RA_Dec>
-                    <geom:right_ascension_angle unit="deg">272.953000</geom:right_ascension_angle>
-                    <geom:declination_angle unit="deg">1.280402</geom:declination_angle>
+                    <geom:right_ascension_angle unit="deg">206.689792</geom:right_ascension_angle>
+                    <geom:declination_angle unit="deg">-11.545108</geom:declination_angle>
+                    <geom:celestial_north_clock_angle unit="deg">0.0</geom:celestial_north_clock_angle>
+                    <geom:Reference_Frame_Identification>
+                      <geom:name>J2000</geom:name>
+                      <geom:comment>equinox of RA and DEC</geom:comment>
+                    </geom:Reference_Frame_Identification>
+                  </geom:Object_Orientation_RA_Dec>
+                </geom:Image_Display_Geometry>
+              </geom:Geometry>
+            </Discipline_Area>'''
+
+        file_obs_area = create_discipline_area(self.test_kpno_header, 'kp050709_031.fit', self.schema_mappings)
+
+
+        self.compare_xml(expected, file_obs_area)
+
+    def test_raw_frame(self):
+        expected = '''
+            <Discipline_Area>
+              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
+                <Local_Internal_Reference>
+                  <local_identifier_reference>amp1_image</local_identifier_reference>
+                  <local_reference_type>display_settings_to_array</local_reference_type>
+                </Local_Internal_Reference>
+                <disp:Display_Direction>
+                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
+                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
+                </disp:Display_Direction>
+              </disp:Display_Settings>
+              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
+                <Local_Internal_Reference>
+                  <local_identifier_reference>amp2_image</local_identifier_reference>
+                  <local_reference_type>display_settings_to_array</local_reference_type>
+                </Local_Internal_Reference>
+                <disp:Display_Direction>
+                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
+                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
+                </disp:Display_Direction>
+              </disp:Display_Settings>
+              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
+                <Local_Internal_Reference>
+                  <local_identifier_reference>amp3_image</local_identifier_reference>
+                  <local_reference_type>display_settings_to_array</local_reference_type>
+                </Local_Internal_Reference>
+                <disp:Display_Direction>
+                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
+                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
+                </disp:Display_Direction>
+              </disp:Display_Settings>
+              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
+                <Local_Internal_Reference>
+                  <local_identifier_reference>amp4_image</local_identifier_reference>
+                  <local_reference_type>display_settings_to_array</local_reference_type>
+                </Local_Internal_Reference>
+                <disp:Display_Direction>
+                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
+                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
+                </disp:Display_Direction>
+              </disp:Display_Settings>
+              <img:Imaging xmlns:img="http://pds.nasa.gov/pds4/img/v1">
+                <Local_Internal_Reference>
+                  <local_identifier_reference>amp1_image</local_identifier_reference>
+                  <local_reference_type>imaging_parameters_to_image_object</local_reference_type>
+                </Local_Internal_Reference>
+                <img:Exposure>
+                  <img:exposure_duration unit="s">94.975</img:exposure_duration>
+                </img:Exposure>
+                <img:Optical_Filter>
+                  <img:filter_name>w</img:filter_name>
+                  <img:bandwidth unit="Angstrom">4409.8</img:bandwidth>
+                  <img:center_filter_wavelength unit="Angstrom">6080.0</img:center_filter_wavelength>
+                </img:Optical_Filter>
+              </img:Imaging>
+              <geom:Geometry xmlns:geom="http://pds.nasa.gov/pds4/geom/v1">
+                <geom:Image_Display_Geometry>
+                  <Local_Internal_Reference>
+                    <local_identifier_reference>amp1_image</local_identifier_reference>
+                    <local_reference_type>display_to_data_object</local_reference_type>
+                  </Local_Internal_Reference>
+                  <geom:Display_Direction>
+                    <geom:horizontal_display_axis>Sample</geom:horizontal_display_axis>
+                    <geom:horizontal_display_direction>Left to Right</geom:horizontal_display_direction>
+                    <geom:vertical_display_axis>Line</geom:vertical_display_axis>
+                    <geom:vertical_display_direction>Bottom to Top</geom:vertical_display_direction>
+                  </geom:Display_Direction>
+                  <geom:Object_Orientation_RA_Dec>
+                    <geom:right_ascension_angle unit="deg">287.324817</geom:right_ascension_angle>
+                    <geom:declination_angle unit="deg">59.493929</geom:declination_angle>
                     <geom:celestial_north_clock_angle unit="deg">0.0</geom:celestial_north_clock_angle>
                     <geom:Reference_Frame_Identification>
                       <geom:name>J2000</geom:name>

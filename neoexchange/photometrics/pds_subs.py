@@ -6,7 +6,9 @@ from math import ceil
 from datetime import datetime, timedelta
 
 from lxml import etree
+import astropy.units as u
 from astropy.table import Column, Table
+from astropy.coordinates import SkyCoord
 from django.conf import settings
 
 from core.models import Frame
@@ -202,29 +204,53 @@ def create_discipline_area(header, filename, nsmap):
     SubElements so these schemas need to be in <nsmap>
     Returns an etree.Element for the Discipline Area.
     """
+
+
+    if type(header) != list:
+        headers = [header, ]
+    else:
+        headers = header
+
     discp_area = etree.Element("Discipline_Area")
 
-    # Create Display Settings discipline area
-    disp_settings = create_display_settings(filename, nsmap)
-    # Create Display Direction discipline area
-    disp_direction = create_display_direction(nsmap, 'PDS4::DISP')
-    disp_settings.append(disp_direction)
-    discp_area.append(disp_settings)
-    # Create Image Exposure and Optical Filter sections
-    img_exposure = create_image_exposure(header, nsmap)
-    discp_area.append(img_exposure)
-    img_filter = create_image_filter(header, nsmap)
-    discp_area.append(img_filter)
+    origin = headers[0].get('origin', '').rstrip()
+    array_name_prefix = 'ccd'
+    if origin == 'LCOGT':
+        array_name_prefix = 'amp'
+    for extn, extn_header in enumerate(headers):
+
+        area_name = os.path.basename(filename)
+        if len(headers) > 1:
+            area_name = f"{array_name_prefix}{extn}_image"
+
+        naxis = extn_header.get("naxis", 0)
+        naxis1 = extn_header.get('naxis1', 0)
+        naxis2 = extn_header.get('naxis2', 0)
+        if naxis == 2 and naxis1 > 0 and naxis2 > 0:
+            # Create Display Settings discipline area
+            disp_settings = create_display_settings(area_name, nsmap)
+            # Create Display Direction discipline area
+            disp_direction = create_display_direction(nsmap, 'PDS4::DISP')
+            disp_settings.append(disp_direction)
+            discp_area.append(disp_settings)
+
+    # Create Imaging area
+    area_name = filename
+    if len(headers) > 1:
+        extn = 1
+        area_name = f"{array_name_prefix}{extn}_image"
+    img_area = create_image_area(headers[0], area_name, nsmap)
+    discp_area.append(img_area)
     # Create Geometry area
-    geom = create_geometry(filename, nsmap)
-    img_disp = create_imgdisp_geometry(filename, nsmap)
+    geom = create_geometry(area_name, nsmap)
+    img_disp = create_imgdisp_geometry(area_name, nsmap)
     geom.append(img_disp)    
     # Create Display Direction discipline area
     disp_direction = create_display_direction(nsmap, 'PDS4::GEOM')
     img_disp.append(disp_direction)
 
     # Create Object Orientation
-    obj_orient = create_obj_orient(header, nsmap)
+    obj_orient = create_obj_orient(headers[0], nsmap)
     img_disp.append(obj_orient)
     # Add the whole Geometry subclass to the Discipline Area
     discp_area.append(geom)
@@ -254,6 +280,24 @@ def create_display_direction(nsmap, namespace):
 
     return disp_direction
 
+def create_image_area(header, filename, nsmap):
+    """Create an img:Imaging area with img:Exposure and img:Optical_Filter
+    subareas. The new area XML Element is returned"""
+
+    img_ns = nsmap['PDS4::IMG']['namespace']
+    etree.register_namespace("img", img_ns)
+    img_area = etree.Element(etree.QName(img_ns,"Imaging"))
+    lir = etree.SubElement(img_area, "Local_Internal_Reference")
+    etree.SubElement(lir, "local_identifier_reference").text = os.path.splitext(filename)[0]
+    etree.SubElement(lir, "local_reference_type").text = "imaging_parameters_to_image_object"
+    # Create Image Exposure and Optical Filter sections
+    img_exposure = create_image_exposure(header, nsmap)
+    img_area.append(img_exposure)
+    img_filter = create_image_filter(header, nsmap)
+    img_area.append(img_filter)
+
+    return img_area
+
 def create_image_exposure(header, nsmap):
 
     img_ns = nsmap['PDS4::IMG']['namespace']
@@ -273,14 +317,16 @@ def create_image_filter(header, nsmap):
     etree.SubElement(optical_filter, etree.QName(img_ns, "filter_name")).text = obs_filter
 
     obs_filter_bwidth = map_filter_to_bandwidth(obs_filter)
-    obs_filter_bwidth_str = "{:.1f}".format(obs_filter_bwidth.value)
-    obs_filter_bwidth_unit = str(obs_filter_bwidth.unit)
-    etree.SubElement(optical_filter, etree.QName(img_ns, "bandwidth"), attrib={'unit' : obs_filter_bwidth_unit}).text = obs_filter_bwidth_str
+    if obs_filter_bwidth:
+        obs_filter_bwidth_str = "{:.1f}".format(obs_filter_bwidth.value)
+        obs_filter_bwidth_unit = str(obs_filter_bwidth.unit)
+        etree.SubElement(optical_filter, etree.QName(img_ns, "bandwidth"), attrib={'unit' : obs_filter_bwidth_unit}).text = obs_filter_bwidth_str
 
     obs_filter_cwave = map_filter_to_wavelength(obs_filter)
-    obs_filter_cwave_str = "{:.1f}".format(obs_filter_cwave.value)
-    obs_filter_cwave_unit = str(obs_filter_cwave.unit)
-    etree.SubElement(optical_filter, etree.QName(img_ns, "center_filter_wavelength"), attrib={'unit' : obs_filter_cwave_unit}).text = obs_filter_cwave_str
+    if obs_filter_cwave:
+        obs_filter_cwave_str = "{:.1f}".format(obs_filter_cwave.value)
+        obs_filter_cwave_unit = str(obs_filter_cwave.unit)
+        etree.SubElement(optical_filter, etree.QName(img_ns, "center_filter_wavelength"), attrib={'unit' : obs_filter_cwave_unit}).text = obs_filter_cwave_str
 
     return optical_filter
 
@@ -308,10 +354,21 @@ def create_obj_orient(header, nsmap):
     geom_ns = nsmap['PDS4::GEOM']['namespace']
     etree.register_namespace("geom", geom_ns)
     obj_orient = etree.Element(etree.QName(geom_ns, "Object_Orientation_RA_Dec"))
-    ra_str = "{:.6f}".format(header['CRVAL1'])
+    ra_val = header.get('CRVAL1', None)
+    dec_val = header.get('CRVAL2', None)
+    if not ra_val or not dec_val:
+        # No WCS in primary header, try from RA/DEC
+        try:
+            center = SkyCoord(header['RA'], header['DEC'], unit=(u.hourangle, u.deg))
+            ra_val = center.ra.deg
+            dec_val = center.dec.deg
+        except (ValueError, KeyError):
+            logger.error("No WCS present and couldn't extract pointing from RA/DEC keywords (or not present")
+
+    ra_str = "{:.6f}".format(ra_val)
     etree.SubElement(obj_orient, etree.QName(geom_ns, "right_ascension_angle"), attrib={'unit' : "deg"}).text = ra_str
 
-    dec_str = "{:.6f}".format(header['CRVAL2'])
+    dec_str = "{:.6f}".format(dec_val)
     etree.SubElement(obj_orient, etree.QName(geom_ns, "declination_angle"), attrib={'unit' : "deg"}).text = dec_str
 
     rotangle_str = "{:.1f}".format(0.0)
