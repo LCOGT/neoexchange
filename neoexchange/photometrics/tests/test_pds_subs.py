@@ -2,8 +2,7 @@ import os
 import shutil
 import tempfile
 from glob import glob
-from lxml import etree
-from lxml import objectify
+from lxml import etree, objectify
 from datetime import datetime
 
 from astropy.io import fits
@@ -196,14 +195,18 @@ class TestCreateFileAreaObs(SimpleTestCase):
 
     def setUp(self):
 
-        kpno_prihdr = fits.Header.fromtextfile(os.path.abspath(os.path.join('photometrics', 'tests', 'example_kpno_mef_prihdr')))
-        kpno_extnhdr = fits.Header.fromtextfile(os.path.abspath(os.path.join('photometrics', 'tests', 'example_kpno_mef_extnhdr')))
+        tests_path = os.path.abspath(os.path.join('photometrics', 'tests'))
+        kpno_prihdr = fits.Header.fromtextfile(os.path.join(tests_path, 'example_kpno_mef_prihdr'))
+        kpno_extnhdr = fits.Header.fromtextfile(os.path.join(tests_path, 'example_kpno_mef_extnhdr'))
         self.test_kpno_header = [kpno_prihdr,]
         for extn in range(1, 4+1):
             kpno_extnhdr['extver'] = extn
             kpno_extnhdr['extname'] = 'im' + str(extn)
             kpno_extnhdr['imageid'] = extn
             self.test_kpno_header.append(kpno_extnhdr)
+
+        self.test_raw_filename = os.path.join(tests_path, 'mef_raw_test_frame.fits')
+        self.test_raw_header, table, cattype = open_fits_catalog(self.test_raw_filename)
 
         self.maxDiff = None
 
@@ -213,8 +216,8 @@ class TestCreateFileAreaObs(SimpleTestCase):
         """
 
         obj1 = objectify.fromstring(expected)
-        expect = etree.tostring(obj1)
-        result = etree.tostring(xml_element)
+        expect = etree.tostring(obj1, pretty_print=True)
+        result = etree.tostring(xml_element, pretty_print=True)
 
         self.assertEquals(expect.decode("utf-8"), result.decode("utf-8"))
 
@@ -341,6 +344,133 @@ class TestCreateFileAreaObs(SimpleTestCase):
           </File_Area_Observational>'''
 
         file_obs_area = create_file_area_obs(self.test_kpno_header, 'kp050709_031.fit')
+
+        self.compare_xml(expected, file_obs_area)
+
+    def test_lco_raw(self):
+        expected = '''
+          <File_Area_Observational>
+            <File>
+              <file_name>mef_raw_test_frame.fits</file_name>
+              <comment>Raw LCOGT image file</comment>
+            </File>
+            <Header>
+              <name>main_header</name>
+              <offset unit="byte">0</offset>
+              <object_length unit="byte">20160</object_length>
+              <parsing_standard_id>FITS 3.0</parsing_standard_id>
+            </Header>
+            <Header>
+              <name>amp1_header</name>
+              <offset unit="byte">20160</offset>
+              <object_length unit="byte">570240</object_length>
+              <parsing_standard_id>FITS 3.0</parsing_standard_id>
+            </Header>
+            <Array_2D_Image>
+              <local_identifier>amp1_image</local_identifier>
+              <offset unit="byte">23040</offset>
+              <axes>2</axes>
+              <axis_index_order>Last Index Fastest</axis_index_order>
+              <Element_Array>
+                <data_type>SignedMSB2</data_type>
+                <scaling_factor>1</scaling_factor>
+                <value_offset>32768</value_offset>
+              </Element_Array>
+              <Axis_Array>
+                <axis_name>Line</axis_name>
+                <elements>522</elements>
+                <sequence_number>1</sequence_number>
+              </Axis_Array>
+              <Axis_Array>
+                <axis_name>Sample</axis_name>
+                <elements>544</elements>
+                <sequence_number>2</sequence_number>
+              </Axis_Array>
+            </Array_2D_Image>
+            <Header>
+              <name>amp2_header</name>
+              <offset unit="byte">593280</offset>
+              <object_length unit="byte">570240</object_length>
+              <parsing_standard_id>FITS 3.0</parsing_standard_id>
+            </Header>
+            <Array_2D_Image>
+              <local_identifier>amp2_image</local_identifier>
+              <offset unit="byte">596160</offset>
+              <axes>2</axes>
+              <axis_index_order>Last Index Fastest</axis_index_order>
+              <Element_Array>
+                <data_type>SignedMSB2</data_type>
+                <scaling_factor>1</scaling_factor>
+                <value_offset>32768</value_offset>
+              </Element_Array>
+              <Axis_Array>
+                <axis_name>Line</axis_name>
+                <elements>522</elements>
+                <sequence_number>1</sequence_number>
+              </Axis_Array>
+              <Axis_Array>
+                <axis_name>Sample</axis_name>
+                <elements>544</elements>
+                <sequence_number>2</sequence_number>
+              </Axis_Array>
+            </Array_2D_Image>
+            <Header>
+              <name>amp3_header</name>
+              <offset unit="byte">1166400</offset>
+              <object_length unit="byte">570240</object_length>
+              <parsing_standard_id>FITS 3.0</parsing_standard_id>
+            </Header>
+            <Array_2D_Image>
+              <local_identifier>amp3_image</local_identifier>
+              <offset unit="byte">1169280</offset>
+              <axes>2</axes>
+              <axis_index_order>Last Index Fastest</axis_index_order>
+              <Element_Array>
+                <data_type>SignedMSB2</data_type>
+                <scaling_factor>1</scaling_factor>
+                <value_offset>32768</value_offset>
+              </Element_Array>
+              <Axis_Array>
+                <axis_name>Line</axis_name>
+                <elements>522</elements>
+                <sequence_number>1</sequence_number>
+              </Axis_Array>
+              <Axis_Array>
+                <axis_name>Sample</axis_name>
+                <elements>544</elements>
+                <sequence_number>2</sequence_number>
+              </Axis_Array>
+            </Array_2D_Image>
+            <Header>
+              <name>amp4_header</name>
+              <offset unit="byte">1739520</offset>
+              <object_length unit="byte">570240</object_length>
+              <parsing_standard_id>FITS 3.0</parsing_standard_id>
+            </Header>
+            <Array_2D_Image>
+              <local_identifier>amp4_image</local_identifier>
+              <offset unit="byte">1742400</offset>
+              <axes>2</axes>
+              <axis_index_order>Last Index Fastest</axis_index_order>
+              <Element_Array>
+                <data_type>SignedMSB2</data_type>
+                <scaling_factor>1</scaling_factor>
+                <value_offset>32768</value_offset>
+              </Element_Array>
+              <Axis_Array>
+                <axis_name>Line</axis_name>
+                <elements>522</elements>
+                <sequence_number>1</sequence_number>
+              </Axis_Array>
+              <Axis_Array>
+                <axis_name>Sample</axis_name>
+                <elements>544</elements>
+                <sequence_number>2</sequence_number>
+              </Axis_Array>
+            </Array_2D_Image>
+          </File_Area_Observational>'''
+
+        file_obs_area = create_file_area_obs(self.test_raw_header, self.test_raw_filename)
 
         self.compare_xml(expected, file_obs_area)
 

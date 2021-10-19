@@ -479,19 +479,24 @@ def create_file_area_obs(header, filename):
 
     file_area_obs = etree.Element("File_Area_Observational")
     file_element = etree.SubElement(file_area_obs, "File")
-    etree.SubElement(file_element, "file_name").text = filename
+    etree.SubElement(file_element, "file_name").text = os.path.basename(filename)
     obstype = headers[0].get('obstype', 'expose').upper()
     comment = "Calibrated LCOGT image file"
     if obstype == 'BIAS' or obstype == 'DARK' or obstype == 'SKYFLAT':
         comment = f"Median combined stack of {obstype.lower()} images. Used in calibration pipeline to generate the calibrated image data."
     elif obstype == 'BPM':
          comment = f"Bad Pixel Mask image. Used in calibration pipeline to generate the calibrated image data."
-    elif obstype == "EXPOSE" and headers[0].get('rlevel', 91) == 0:
+    elif obstype == "EXPOSE" and headers[0].get('rlevel', 0) == 0:
         comment = "Raw LCOGT image file"
-    if headers[0].get('origin', '') == 'LCOGT':
+
+    origin = headers[0].get('origin', '').rstrip()
+    array_name_prefix = 'ccd'
+    if origin == 'LCOGT':
         etree.SubElement(file_element, "comment").text = comment
+        array_name_prefix = 'amp'
 
     header_offset = 0
+    print()
     for extn, extn_header in enumerate(headers):
         print(f"Extn #{extn}, {len(extn_header)} records", end='')
         header_element = etree.SubElement(file_area_obs, "Header")
@@ -508,7 +513,7 @@ def create_file_area_obs(header, filename):
         print(f"   header_size={header_size_blocks} image_size={image_size_blocks}")
         header_name = "main_header"
         if extn >= 1:
-            header_name = f"ccd{extn}_header"
+            header_name = f"{array_name_prefix}{extn}_header"
 
         etree.SubElement(header_element, "name").text = header_name
         etree.SubElement(header_element, "offset", attrib={"unit" : "byte"}).text = str(header_offset)
@@ -518,11 +523,13 @@ def create_file_area_obs(header, filename):
         header_offset += header_size_blocks
 
         naxis = extn_header.get("naxis", 0)
-        if naxis == 2:
+        naxis1 = extn_header.get('naxis1', 0)
+        naxis2 = extn_header.get('naxis2', 0)
+        if naxis == 2 and naxis1 > 0 and naxis2 > 0:
             array_2d = etree.SubElement(file_area_obs, "Array_2D_Image")
             local_id = os.path.splitext(filename)[0]
             if extn >= 1:
-                local_id = f"ccd{extn}_image"
+                local_id = f"{array_name_prefix}{extn}_image"
             etree.SubElement(array_2d, "local_identifier").text = local_id
 
             # Compute size of header from list length+1 (missing END card)
@@ -531,7 +538,7 @@ def create_file_area_obs(header, filename):
             header_size_blocks = int(ceil(header_size_bytes/fits_block_size) * fits_block_size)
             header_size = "{:d}".format(header_size_blocks)
 
-            image_size_bytes = extn_header.get('naxis1', 0) * extn_header.get('naxis2', 0) * int(abs(extn_header['bitpix'])/8)
+            image_size_bytes = naxis1 * naxis2 * int(abs(extn_header['bitpix'])/8)
             image_size_blocks = int(ceil(image_size_bytes/fits_block_size) * fits_block_size)
             image_size = "{:d}".format(image_size_blocks)
 
@@ -543,7 +550,7 @@ def create_file_area_obs(header, filename):
             elem_array = etree.SubElement(array_2d, "Element_Array")
             etree.SubElement(elem_array, "data_type").text = PDS_types.get(extn_header['BITPIX'])
             # Add scaling_factor and value_offset if BSCALE and BZERO are present
-            bscale = extn_header.get('bscale', None)
+            bscale = extn_header.get('bscale', 1)
             bzero = extn_header.get('bzero', None)
             if bscale and bzero:
                 etree.SubElement(elem_array, "scaling_factor").text = str(bscale)
