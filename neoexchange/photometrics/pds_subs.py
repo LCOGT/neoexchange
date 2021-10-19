@@ -645,21 +645,25 @@ def write_product_label_xml(filepath, xml_file, schema_root, mod_time=None):
 
     header, table, cattype = open_fits_catalog(filepath)
     filename = os.path.basename(filepath)
+    if type(header) != list:
+        headers = [header, ]
+    else:
+        headers = header
 
-    proc_level = proc_levels.get(header.get('obstype', 'expose').upper(), 'cal')
+    proc_level = proc_levels.get(headers[0].get('obstype', 'expose').upper(), 'cal')
     id_area = create_id_area(filename, schema_mappings['PDS4::PDS']['version'], proc_level, mod_time)
     processedImage.append(id_area)
 
     # Add the Observation_Area
-    obs_area = create_obs_area(header, filename)
+    obs_area = create_obs_area(headers[0], filename)
 
     # Add Discipline Area
-    discipline_area = create_discipline_area(header, filename, schema_mappings)
+    discipline_area = create_discipline_area(headers, filename, schema_mappings)
     obs_area.append(discipline_area)
     processedImage.append(obs_area)
 
     # Create File_Area_Observational
-    file_area = create_file_area_obs(header, filename)
+    file_area = create_file_area_obs(headers, filename)
     processedImage.append(file_area)
 
     # Wrap in ElementTree to write out to XML file

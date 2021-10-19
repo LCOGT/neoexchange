@@ -475,6 +475,137 @@ class TestCreateFileAreaObs(SimpleTestCase):
         self.compare_xml(expected, file_obs_area)
 
 
+class TestCreateDisciplineArea(SimpleTestCase):
+
+    def setUp(self):
+        schemadir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_schemas'))
+
+        self.schema_mappings = pds_schema_mappings(schemadir, '*.xsd')
+
+        tests_path = os.path.abspath(os.path.join('photometrics', 'tests'))
+        self.test_raw_filename = os.path.join(tests_path, 'mef_raw_test_frame.fits')
+        self.test_raw_header, table, cattype = open_fits_catalog(self.test_raw_filename)
+        test_proc_header = os.path.join(tests_path, 'example_lco_proc_hdr')
+        self.test_proc_header = fits.Header.fromtextfile(os.path.join(tests_path, test_proc_header))
+
+        self.maxDiff = None
+
+    def compare_xml(self, expected, xml_element):
+        """Compare the expected XML string <expected> with the passed etree.Element
+        in <xml_element>
+        """
+
+        obj1 = objectify.fromstring(expected)
+        expect = etree.tostring(obj1, pretty_print=True)
+        result = etree.tostring(xml_element, pretty_print=True)
+
+        self.assertEquals(expect.decode("utf-8"), result.decode("utf-8"))
+
+    def test_proc_frame(self):
+        expected = '''
+            <Discipline_Area>
+              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
+                <Local_Internal_Reference>
+                  <local_identifier_reference>tfn1m001-fa11-20211013-0095-e92</local_identifier_reference>
+                  <local_reference_type>display_settings_to_array</local_reference_type>
+                </Local_Internal_Reference>
+                <disp:Display_Direction>
+                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
+                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
+                </disp:Display_Direction>
+              </disp:Display_Settings>
+              <img:Exposure xmlns:img="http://pds.nasa.gov/pds4/img/v1">
+                <img:exposure_duration unit="s">100.000</img:exposure_duration>
+              </img:Exposure>
+              <img:Optical_Filter xmlns:img="http://pds.nasa.gov/pds4/img/v1">
+                <img:filter_name>w</img:filter_name>
+                <img:bandwidth unit="Angstrom">4409.8</img:bandwidth>
+                <img:center_filter_wavelength unit="Angstrom">6080.0</img:center_filter_wavelength>
+              </img:Optical_Filter>
+              <geom:Geometry xmlns:geom="http://pds.nasa.gov/pds4/geom/v1">
+                <geom:Image_Display_Geometry>
+                  <Local_Internal_Reference>
+                    <local_identifier_reference>tfn1m001-fa11-20211013-0095-e92</local_identifier_reference>
+                    <local_reference_type>display_to_data_object</local_reference_type>
+                  </Local_Internal_Reference>
+                  <geom:Display_Direction>
+                    <geom:horizontal_display_axis>Sample</geom:horizontal_display_axis>
+                    <geom:horizontal_display_direction>Left to Right</geom:horizontal_display_direction>
+                    <geom:vertical_display_axis>Line</geom:vertical_display_axis>
+                    <geom:vertical_display_direction>Bottom to Top</geom:vertical_display_direction>
+                  </geom:Display_Direction>
+                  <geom:Object_Orientation_RA_Dec>
+                    <geom:right_ascension_angle unit="deg">272.953000</geom:right_ascension_angle>
+                    <geom:declination_angle unit="deg">1.280402</geom:declination_angle>
+                    <geom:celestial_north_clock_angle unit="deg">0.0</geom:celestial_north_clock_angle>
+                    <geom:Reference_Frame_Identification>
+                      <geom:name>J2000</geom:name>
+                      <geom:comment>equinox of RA and DEC</geom:comment>
+                    </geom:Reference_Frame_Identification>
+                  </geom:Object_Orientation_RA_Dec>
+                </geom:Image_Display_Geometry>
+              </geom:Geometry>
+            </Discipline_Area>'''
+
+        file_obs_area = create_discipline_area(self.test_proc_header, 'tfn1m001-fa11-20211013-0095-e92.fits', self.schema_mappings)
+
+        self.compare_xml(expected, file_obs_area)
+
+    def test_raw_frame(self):
+        expected = '''
+            <Discipline_Area>
+              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
+                <Local_Internal_Reference>
+                  <local_identifier_reference>tfn1m001-fa11-20211013-0095-e00</local_identifier_reference>
+                  <local_reference_type>display_settings_to_array</local_reference_type>
+                </Local_Internal_Reference>
+                <disp:Display_Direction>
+                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
+                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
+                </disp:Display_Direction>
+              </disp:Display_Settings>
+              <img:Exposure xmlns:img="http://pds.nasa.gov/pds4/img/v1">
+                <img:exposure_duration unit="s">100.000</img:exposure_duration>
+              </img:Exposure>
+              <img:Optical_Filter xmlns:img="http://pds.nasa.gov/pds4/img/v1">
+                <img:filter_name>w</img:filter_name>
+                <img:bandwidth unit="Angstrom">4409.8</img:bandwidth>
+                <img:center_filter_wavelength unit="Angstrom">6080.0</img:center_filter_wavelength>
+              </img:Optical_Filter>
+              <geom:Geometry xmlns:geom="http://pds.nasa.gov/pds4/geom/v1">
+                <geom:Image_Display_Geometry>
+                  <Local_Internal_Reference>
+                    <local_identifier_reference>tfn1m001-fa11-20211013-0095-e00</local_identifier_reference>
+                    <local_reference_type>display_to_data_object</local_reference_type>
+                  </Local_Internal_Reference>
+                  <geom:Display_Direction>
+                    <geom:horizontal_display_axis>Sample</geom:horizontal_display_axis>
+                    <geom:horizontal_display_direction>Left to Right</geom:horizontal_display_direction>
+                    <geom:vertical_display_axis>Line</geom:vertical_display_axis>
+                    <geom:vertical_display_direction>Bottom to Top</geom:vertical_display_direction>
+                  </geom:Display_Direction>
+                  <geom:Object_Orientation_RA_Dec>
+                    <geom:right_ascension_angle unit="deg">272.953000</geom:right_ascension_angle>
+                    <geom:declination_angle unit="deg">1.280402</geom:declination_angle>
+                    <geom:celestial_north_clock_angle unit="deg">0.0</geom:celestial_north_clock_angle>
+                    <geom:Reference_Frame_Identification>
+                      <geom:name>J2000</geom:name>
+                      <geom:comment>equinox of RA and DEC</geom:comment>
+                    </geom:Reference_Frame_Identification>
+                  </geom:Object_Orientation_RA_Dec>
+                </geom:Image_Display_Geometry>
+              </geom:Geometry>
+            </Discipline_Area>'''
+
+        file_obs_area = create_discipline_area(self.test_raw_header, 'tfn1m001-fa11-20211013-0095-e00.fits', self.schema_mappings)
+
+        self.compare_xml(expected, file_obs_area)
+
+
 class TestWritePDSLabel(SimpleTestCase):
 
     def setUp(self):
@@ -488,9 +619,10 @@ class TestWritePDSLabel(SimpleTestCase):
         with open(test_xml_cat, 'r') as xml_file:
             self.expected_xml_bias = xml_file.readlines()
         self.test_banzai_file = os.path.abspath(os.path.join('photometrics', 'tests', 'banzai_test_frame.fits'))
+        self.test_raw_file = os.path.abspath(os.path.join('photometrics', 'tests', 'mef_raw_test_frame.fits'))
 
-        self.remove = True
-        self.debug_print = False
+        self.remove = False
+        self.debug_print = True
         self.maxDiff = None
 
     def tearDown(self):
@@ -511,7 +643,7 @@ class TestWritePDSLabel(SimpleTestCase):
             if self.debug_print:
                 print("Not removing temporary test directory", self.test_dir)
 
-    def test_write(self):
+    def test_write_proc_label(self):
 
         output_xml_file = os.path.join(self.test_dir, 'test_example_label.xml')
 
@@ -526,7 +658,7 @@ class TestWritePDSLabel(SimpleTestCase):
             else:
                 assert expected_line.lstrip() == None, "Failed on line: " + str(i+1)
 
-    def test_write_bias_file(self):
+    def test_write_bias_label(self):
 
         # Create example bias frame
         hdulist = fits.open(self.test_banzai_file)
@@ -551,6 +683,15 @@ class TestWritePDSLabel(SimpleTestCase):
             else:
                 assert expected_line.lstrip() == None, "Failed on line: " + str(i+1)
 
+    def test_write_raw_label(self):
+
+
+        output_xml_file = os.path.join(self.test_dir, 'test_example_label.xml')
+
+        status = write_product_label_xml(self.test_raw_file, output_xml_file, self.schemadir, mod_time=datetime(2021,5,4))
+
+        with open(output_xml_file, 'r') as xml_file:
+            xml = etree.parse(xml_file)
 
 class TestCreatePDSLabels(SimpleTestCase):
 
@@ -689,6 +830,7 @@ class TestExportBlockToPDS(TestCase):
         self.test_output_dir = os.path.join(self.test_dir, 'output')
         os.makedirs(self.test_output_dir, exist_ok=True)
         self.expected_root_dir = os.path.join(self.test_output_dir, 'lcogt_data')
+        self.test_daydir = os.path.join(self.expected_root_dir, 'lcogt_1m0_01_fa11_20211013')
 
         block_params = {
                          'block_start' : datetime(2021, 10, 13, 0, 40),
@@ -734,7 +876,8 @@ class TestExportBlockToPDS(TestCase):
 
     def tearDown(self):
         if self.remove:
-            for test_dir in [self.test_output_dir, self.test_input_dir, self.test_dir]:
+            extra_dirs = [os.path.join(self.test_daydir, x+'_data') for x in ['cal', 'ddp', 'raw']]
+            for test_dir in extra_dirs + [self.test_daydir, self.expected_root_dir, self.test_output_dir, self.test_input_dir, self.test_dir]:
                 try:
                     files_to_remove = glob(os.path.join(test_dir, '*'))
                     for file_to_rm in files_to_remove:

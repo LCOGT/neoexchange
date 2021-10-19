@@ -904,7 +904,7 @@ def open_fits_catalog(catfile, header_only=False):
         else:
             if sci_index != -1 and bpm_index != -1 and err_index != -1:
                 cattype = 'BANZAI_CALIB'
-                header = hdulist[sci_index].header
+                header = [hdu.header for hdu in hdulist]
                 table = {}
             else:
                 logger.error("Could not find SCI and CAT (or BPM and ERR) HDUs in file: %s" % catfile)
