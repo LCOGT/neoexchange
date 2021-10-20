@@ -7,8 +7,10 @@ from datetime import datetime, timedelta
 
 from lxml import etree
 import astropy.units as u
+from astropy.time import Time
 from astropy.table import Column, Table
 from astropy.coordinates import SkyCoord
+from astropy.io.ascii.core import InconsistentTableError
 from django.conf import settings
 
 from core.models import Frame
@@ -452,6 +454,28 @@ def determine_first_last_times(filepath):
 
     return first_frame, last_frame
 
+def determine_first_last_times_from_table(filepath, match_pattern='*_photometry.dat'):
+    """Iterates through all the tables in <filepath> that match [match_pattern]
+    to determine the times of the first and last frames, which are returned"""
+
+    first_frame = last_frame = None
+    photometry_files = sorted(glob(os.path.join(filepath, match_pattern)))
+    if len(photometry_files) > 0:
+        first_frame = datetime.max
+        last_frame = datetime.min
+        for table_file in photometry_files:
+            try:
+                table = Table.read(table_file, format='ascii', header_start=0, data_start=1)
+            except InconsistentTableError:
+                pass
+            if table:
+                first_frame = Time(table['julian_date'].min(), format='jd')
+                first_frame = first_frame.datetime
+                last_frame = Time(table['julian_date'].max(), format='jd')
+                last_frame = last_frame.datetime
+
+    return first_frame, last_frame
+
 def create_context_area(filepath, collection_type):
     """Creates the Context Area set of classes and returns an etree.Element with it.
     Documentation on filling this out taken from
@@ -465,7 +489,10 @@ def create_context_area(filepath, collection_type):
 
     context_area = etree.Element("Context_Area")
 
-    first_frametime, last_frametime = determine_first_last_times(filepath)
+    if collection_type == 'ddp':
+        first_frametime, last_frametime = determine_first_last_times_from_table(filepath)
+    else:
+        first_frametime, last_frametime = determine_first_last_times(filepath)
     # Create Time_Coordinates sub element
     time_coords = etree.SubElement(context_area, "Time_Coordinates")
     etree.SubElement(time_coords, "start_date_time").text = f'{first_frametime.strftime("%Y-%m-%dT%H:%M:%S.%f"):22.22s}Z'
@@ -483,11 +510,14 @@ def create_context_area(filepath, collection_type):
     etree.SubElement(int_reference, "lid_reference").text = "urn:nasa:pds:context:investigation:mission.double_asteroid_redirection_test"
     etree.SubElement(int_reference, "reference_type").text = "collection_to_investigation"
 
+    frames_filepath = filepath
     prefix = '\S*e92'
-    if collection_type == 'raw':
+    if collection_type == 'ddp':
+        frames_filepath = os.path.realpath(os.path.join(filepath,'..','cal_data'))
+    elif collection_type == 'raw':
         prefix = '\S*e00'
-    fits_files = find_fits_files(filepath, prefix)
-    fits_filepath = os.path.join(filepath, fits_files[filepath][0])
+    fits_files = find_fits_files(frames_filepath, prefix)
+    fits_filepath = os.path.join(frames_filepath, fits_files[frames_filepath][0])
     header, table, cattype = open_fits_catalog(fits_filepath, header_only=True)
 
     # Create Observing System subclass of Observation Area
@@ -1019,6 +1049,8 @@ def create_dart_lightcurve(input_dir, output_dir, block, match_pattern='photomet
 
 def export_block_to_pds(input_dir, output_dir, block, schema_root, skip_download=False):
 
+    csv_files = []
+    xml_files = []
     paths = create_dart_directories(output_dir, block)
     print("output_dir", output_dir)
     for k,v in paths.items():
@@ -1040,6 +1072,8 @@ def export_block_to_pds(input_dir, output_dir, block, schema_root, skip_download
     csv_filename, xml_filename = create_pds_collection(paths['root'], paths['raw_data'], sent_files, 'raw', schema_root)
     # Convert csv file to CRLF endings required by PDS
     status = convert_file_to_crlf(csv_filename)
+    csv_files.append(csv_filename)
+    xml_files.append(xml_filename)
 
     # transfer cal data
     cal_files = find_fits_files(input_dir, '\S*e92')
@@ -1053,13 +1087,20 @@ def export_block_to_pds(input_dir, output_dir, block, schema_root, skip_download
     csv_filename, xml_filename = create_pds_collection(paths['root'], paths['cal_data'], sent_files, 'cal', schema_root)
     # Convert csv file to CRLF endings required by PDS
     status = convert_file_to_crlf(csv_filename)
+    csv_files.append(csv_filename)
+    xml_files.append(xml_filename)
 
     # Create PDS labels for cal data
     create_pds_labels(paths['cal_data'], schema_root)
 
     # transfer ddp data
     dart_lc_file = create_dart_lightcurve(input_dir, paths['ddp_data'], block)
+    lc_files = [os.path.basename(dart_lc_file),]
     # create PDS products for ddp data
-    csv_filename, xml_filename = create_pds_collection(paths['root'], paths['ddp_data'], os.path.basename(dart_lc_file), 'ddp', schema_root)
+    csv_filename, xml_filename = create_pds_collection(paths['root'], paths['ddp_data'], lc_files, 'ddp', schema_root)
+    # Convert csv file to CRLF endings required by PDS
+    status = convert_file_to_crlf(csv_filename)
+    csv_files.append(csv_filename)
+    xml_files.append(xml_filename)
 
     return
