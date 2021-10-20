@@ -68,6 +68,11 @@ def write_dartformat_file(table, filepath, aprad=0.0):
                     'aprad' : '%.2f'
                  }
 
+    # Create directory path if it doesn't exist
+    filepath_dir = os.path.dirname(filepath)
+    if os.path.exists(filepath_dir) is False:
+        os.makedirs(filepath_dir)
+
     # Replace truncated '.lda' in filename with real name.
     # Also add a column for aperture radius
     new_names = [x.replace('.lda','.fits') for x in table['filename']]

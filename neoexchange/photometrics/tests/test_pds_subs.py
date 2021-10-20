@@ -972,11 +972,13 @@ class TestExportBlockToPDS(TestCase):
 #        self.test_dir = '/tmp/tmp_neox_wibble'
         self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
         self.test_input_dir = os.path.join(self.test_dir, 'input')
-        os.makedirs(self.test_input_dir, exist_ok=True)
+        self.test_input_daydir = os.path.join(self.test_dir, 'input', '20211013')
+        os.makedirs(self.test_input_daydir, exist_ok=True)
         self.test_output_dir = os.path.join(self.test_dir, 'output')
         os.makedirs(self.test_output_dir, exist_ok=True)
         self.expected_root_dir = os.path.join(self.test_output_dir, 'lcogt_data')
         self.test_daydir = os.path.join(self.expected_root_dir, 'lcogt_1m0_01_fa11_20211013')
+        self.test_ddp_daydir = os.path.join(self.test_daydir, 'ddp_data')
 
         block_params = {
                          'block_start' : datetime(2021, 10, 13, 0, 40),
@@ -1016,8 +1018,8 @@ class TestExportBlockToPDS(TestCase):
         shutil.copy(test_file_path, new_name)
         self.test_banzai_files.insert(1, os.path.basename(new_name))
 
-        self.remove = True
-        self.debug_print = False
+        self.remove = False
+        self.debug_print = True
         self.maxDiff = None
 
     def tearDown(self):
@@ -1036,6 +1038,9 @@ class TestExportBlockToPDS(TestCase):
                         print("Removed", test_dir)
                 except OSError:
                     print("Error removing temporary test directory", test_dir)
+        else:
+            if self.debug_print:
+                print("Not removing temporary test directory", self.test_dir)
 
     def test_create_directory_structure(self):
 
@@ -1164,7 +1169,69 @@ class TestExportBlockToPDS(TestCase):
 
         self.assertEqual(expected_files, related_frames)
 
+    def test_create_dart_lightcurve(self):
+        expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_1m0_01_fa11_20211013_didymos_photometry.dat')
+        expected_lines = [
+        '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  SExtractor_flag  aprad',
+        ' tfn1m001-fa11-20211012-0073-e91.fits  2459500.3339392  14.8447  0.0397  27.1845  0.0394  -12.3397    0.0052                0  10.00',
+        ' tfn1m001-fa11-20211012-0074-e91.fits  2459500.3345790  14.8637  0.0293  27.1824  0.0288  -12.3187    0.0053                3  10.00'
+        ]
+
+        test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_photompipe.dat'))
+        test_logfile = os.path.abspath(os.path.join('photometrics', 'tests', 'example_photompipe_log'))
+        # Copy files to input directory, renaming log
+        shutil.copy(test_lc_file, self.test_input_daydir)
+        new_name = os.path.join(self.test_input_daydir, 'LOG')
+        shutil.copy(test_logfile, new_name)
+
+        dart_lc_file = create_dart_lightcurve(self.test_input_dir, self.test_ddp_daydir, self.test_block, '*photompipe.dat')
+
+        self.assertEqual(expected_lc_file, dart_lc_file)
+        self.assertTrue(os.path.exists(expected_lc_file))
+
+        with open(dart_lc_file, 'r') as table_file:
+            lines = table_file.readlines()
+
+        self.assertEqual(63, len(lines))
+        for i, expected_line in enumerate(expected_lines):
+            self.assertEqual(expected_line, lines[i].rstrip())
+
+    def test_create_dart_lightcurve_default(self):
+        expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_1m0_01_fa11_20211013_didymos_photometry.dat')
+        expected_lines = [
+        '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  SExtractor_flag  aprad',
+        ' tfn1m001-fa11-20211012-0073-e91.fits  2459500.3339392  14.8447  0.0397  27.1845  0.0394  -12.3397    0.0052                0  10.00',
+        ' tfn1m001-fa11-20211012-0074-e91.fits  2459500.3345790  14.8637  0.0293  27.1824  0.0288  -12.3187    0.0053                3  10.00'
+        ]
+
+        test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_photompipe.dat'))
+        test_logfile = os.path.abspath(os.path.join('photometrics', 'tests', 'example_photompipe_log'))
+        # Copy files to input directory, renaming log
+        new_name = os.path.join(self.test_input_daydir, 'photometry_65803_Didymos__1996_GT.dat')
+        shutil.copy(test_lc_file, new_name)
+        new_name = os.path.join(self.test_input_daydir, 'LOG')
+        shutil.copy(test_logfile, new_name)
+
+        dart_lc_file = create_dart_lightcurve(self.test_input_dir, self.test_ddp_daydir, self.test_block)
+
+        self.assertEqual(expected_lc_file, dart_lc_file)
+        self.assertTrue(os.path.exists(expected_lc_file))
+
+        with open(dart_lc_file, 'r') as table_file:
+            lines = table_file.readlines()
+
+        self.assertEqual(63, len(lines))
+        for i, expected_line in enumerate(expected_lines):
+            self.assertEqual(expected_line, lines[i].rstrip())
+
     def test_export_block_to_pds(self):
+        test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_photompipe.dat'))
+        test_logfile = os.path.abspath(os.path.join('photometrics', 'tests', 'example_photompipe_log'))
+        # Copy files to input directory, renaming log
+        new_name = os.path.join(self.test_input_daydir, 'photometry_65803_Didymos__1996_GT.dat')
+        shutil.copy(test_lc_file, new_name)
+        new_name = os.path.join(self.test_input_daydir, 'LOG')
+        shutil.copy(test_logfile, new_name)
 
         export_block_to_pds(self.test_input_dir, self.test_output_dir, self.test_block, self.schemadir, skip_download=True)
 

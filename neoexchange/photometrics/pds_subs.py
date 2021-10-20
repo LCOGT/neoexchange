@@ -13,6 +13,7 @@ from django.conf import settings
 
 from core.models import Frame
 from core.archive_subs import lco_api_call, download_files
+from photometrics.lightcurve_subs import *
 from photometrics.catalog_subs import open_fits_catalog
 from photometrics.external_codes import convert_file_to_crlf
 from photometrics.photometry_subs import map_filter_to_wavelength, map_filter_to_bandwidth
@@ -989,6 +990,33 @@ def create_pds_collection(output_dir, input_dir, files, collection_type, schema_
 
     return csv_filename, xml_filename
 
+def create_dart_lightcurve(input_dir, output_dir, block, match_pattern='photometry_*.dat'):
+    """Creates a DART-format lightcurve file from the photometry file and LOG in
+    <input_dir>, outputting to <output_dir>. Block <block> is used find the directory
+    for the photometry file
+    """
+
+    output_lc_filepath = None
+    frames = Frame.objects.filter(block=block, frametype=Frame.BANZAI_RED_FRAMETYPE)
+    if frames.count() > 0:
+        first_filename = frames.last().filename
+        file_parts = split_filename(first_filename)
+        if len(file_parts) == 8:
+            root_dir = os.path.join(input_dir, file_parts['dayobs'])
+            photometry_files = sorted(glob(os.path.join(root_dir, match_pattern)))
+            for photometry_file in photometry_files:
+                log_file = os.path.join(os.path.dirname(photometry_file), 'LOG')
+                table = read_photompipe_file(photometry_file)
+                aper_radius = extract_photompipe_aperradius(log_file)
+                if table and aper_radius:
+                    output_lc_file = root_dir = f"lcogt_{file_parts['tel_class']}_{file_parts['tel_serial']}_{file_parts['instrument']}_{file_parts['dayobs']}_didymos_photometry.dat"
+                    output_lc_filepath = os.path.join(output_dir, output_lc_file)
+                    write_dartformat_file(table, output_lc_filepath, aper_radius)
+        else:
+            logger.warning(f"Could not decode filename: {first_filename}")
+
+    return output_lc_filepath
+
 def export_block_to_pds(input_dir, output_dir, block, schema_root, skip_download=False):
 
     paths = create_dart_directories(output_dir, block)
@@ -1030,5 +1058,8 @@ def export_block_to_pds(input_dir, output_dir, block, schema_root, skip_download
     create_pds_labels(paths['cal_data'], schema_root)
 
     # transfer ddp data
+    dart_lc_file = create_dart_lightcurve(input_dir, paths['ddp_data'], block)
     # create PDS products for ddp data
+    csv_filename, xml_filename = create_pds_collection(paths['root'], paths['ddp_data'], os.path.basename(dart_lc_file), 'ddp', schema_root)
+
     return
