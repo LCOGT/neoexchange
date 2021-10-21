@@ -131,7 +131,7 @@ def create_id_area(filename, model_version='1.15.0.0', collection_type='cal', mo
 
     proc_levels = { 'cal' : {'title' : 'Calibrated', 'level' : 'cal'},
                     'raw' : {'title' : 'Raw', 'level' : 'raw'},
-                    'ddp' : {'title' : 'Derived', 'level' : 'ddp'},
+                    'ddp' : {'title' : 'Derived Data Product', 'level' : 'ddp'},
                     'mbias' : {'title' : 'Master Bias', 'level' : 'cal'},
                     'mdark' : {'title' : 'Master Dark', 'level' : 'cal'},
                     'mflat' : {'title' : 'Master Flat', 'level' : 'cal'}
@@ -145,7 +145,10 @@ def create_id_area(filename, model_version='1.15.0.0', collection_type='cal', mo
     else:
         filename = ':' + filename
         product_type = 'Product_Observational'
-        product_title = f'Las Cumbres Observatory {proc_levels[collection_type]["title"]} Image'
+        suffix = ' Image'
+        if collection_type == 'ddp':
+            suffix = ''
+        product_title = f'Las Cumbres Observatory {proc_levels[collection_type]["title"]}{suffix}'
 
     xml_elements = {'logical_identifier' : 'urn:nasa:pds:dart_teleobs:lcogt_' + proc_levels[collection_type]['level'] + filename,
                     'version_id' : '1.0',
@@ -396,8 +399,8 @@ def create_obs_area(header, filename):
     # Create Time_Coordinates sub element
     time_coords = etree.SubElement(obs_area, "Time_Coordinates")
     shutter_open, shutter_close = get_shutter_open_close(header)
-    etree.SubElement(time_coords, "start_date_time").text = shutter_open.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-    etree.SubElement(time_coords, "stop_date_time").text = shutter_close.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    etree.SubElement(time_coords, "start_date_time").text = f'{shutter_open.strftime("%Y-%m-%dT%H:%M:%S.%f"):22.22s}Z'
+    etree.SubElement(time_coords, "stop_date_time").text = f'{shutter_close.strftime("%Y-%m-%dT%H:%M:%S.%f"):22.22s}Z'
 
     invest_area = etree.SubElement(obs_area, "Investigation_Area")
     etree.SubElement(invest_area, "name").text = "Double Asteroid Redirection Test"
@@ -697,6 +700,57 @@ def create_file_area_inv(filename, mod_time=None):
 
     return file_area_inv
 
+def create_file_area_table(filename):
+
+    fields = {'file' : { 'field_location' : 1, 'data_type' : 'ASCII_String', 'field_length' : 42, 'description' : 'File name of the calibrated image where data were measured.' },
+              'julian_date' : { 'field_location' : 40, 'data_type' : 'ASCII_Real', 'field_length' : 15, 'description' : 'UTC Julian date of the exposure midtime' },
+              'mag' : { 'field_location' : 56, 'data_type' : 'ASCII_Real', 'field_length' : 8, 'description' : 'Calibrated PanSTARRs r-band apparent magnitude of asteroid' },
+              'sig' : { 'field_location' : 66, 'data_type' : 'ASCII_Real', 'field_length' : 6, 'description' : '1-sigma error on the apparent magnitude' },
+              'ZP'  : { 'field_location' : 74, 'data_type' : 'ASCII_Real', 'field_length' : 7, 'description' : 'Calibrated zero point magnitude in PanSTARRs r-band' },
+              'ZP_sig' : { 'field_location' : 83, 'data_type' : 'ASCII_Real', 'field_length' : 6, 'description' : '1-sigma error on the zero point magnitude' },
+              'inst_mag' : { 'field_location' : 91, 'data_type' : 'ASCII_Real', 'field_length' : 8, 'description' : 'instrumental magnitude of asteroid' },
+              'inst_sig' : { 'field_location' : 101, 'data_type' : 'ASCII_Real', 'field_length' : 6, 'description' : '1-sigma error on the instrumental magnitude' },
+              'SExtractor_flag' : { 'field_location' : 110, 'data_type' : 'ASCII_Integer', 'field_length' : 15, 'description' : 'Flags associated with the Source Extractor photometry measurements. See source_extractor_flags.txt in the documents folder for this archive for more detailed description.' },
+              'aprad' : { 'field_location' : 128, 'data_type' : 'ASCII_Real', 'field_length' : 6, 'description' : 'radius in pixels of the aperture used for the photometry measurement' }
+              }
+    file_area_table = etree.Element("File_Area_Observational")
+    file_element = etree.SubElement(file_area_table, "File")
+    etree.SubElement(file_element, "file_name").text = os.path.basename(filename)
+    etree.SubElement(file_element, "comment").text = 'photometry summary table'
+
+    with open(filename, 'rb') as table_fh:
+        table = table_fh.readlines()
+    header_element = etree.SubElement(file_area_table, "Header")
+    # Compute size of header from first row
+    header_size_bytes = len(table[0])
+    header_size = "{:d}".format(header_size_bytes)
+
+    etree.SubElement(header_element, "offset", attrib={"unit" : "byte"}).text = "0"
+    etree.SubElement(header_element, "object_length", attrib={"unit" : "byte"}).text = header_size
+    etree.SubElement(header_element, "parsing_standard_id").text = "UTF-8 Text"
+
+    table_element = etree.SubElement(file_area_table, "Table_Character")
+    etree.SubElement(table_element, "offset", attrib={"unit" : "byte"}).text = header_size
+    etree.SubElement(table_element, "records").text = str(len(table)-1)
+    etree.SubElement(table_element, "record_delimiter").text = "Carriage-Return Line-Feed"
+
+    record_element = etree.SubElement(table_element, "Record_Character")
+    etree.SubElement(record_element, "fields").text = str(10)
+    etree.SubElement(record_element, "groups").text = str(0)
+    etree.SubElement(record_element, "record_length", attrib={"unit" : "byte"}).text = header_size
+
+    field_num = 1
+    for tab_field, field_data in fields.items():
+        field_element = etree.SubElement(record_element, "Field_Character")
+        etree.SubElement(field_element, "name").text = tab_field
+        etree.SubElement(field_element, "field_number"). text = str(field_num)
+        etree.SubElement(field_element, "field_location", attrib={"unit" : "byte"}).text = str(field_data['field_location'])
+        etree.SubElement(field_element, "data_type").text = field_data['data_type']
+        etree.SubElement(field_element, "field_length", attrib={"unit" : "byte"}).text = str(field_data['field_length'])
+        etree.SubElement(field_element, "description").text = field_data['description']
+        field_num += 1
+    return file_area_table
+
 def create_reference_list(collection_type):
     """Create a Reference List section
     """
@@ -730,29 +784,47 @@ def write_product_label_xml(filepath, xml_file, schema_root, mod_time=None):
 
     processedImage = create_obs_product(schema_mappings)
 
-    header, table, cattype = open_fits_catalog(filepath)
-    filename = os.path.basename(filepath)
-    if type(header) != list:
-        headers = [header, ]
-    else:
-        headers = header
+    if '.fit' not in filepath and 'photometry' in filepath:
+        proc_level = 'ddp'
+        filename = os.path.basename(filepath)
+        chunks = filename.split('_')
+        name_mapping = {'didymos' : '65803 Didymos'}
+        first_frame, last_frame = determine_first_last_times_from_table(os.path.dirname(filepath))
+        headers = [{ 'TELESCOP' : chunks[1]+'-'+chunks[2],
+                     'object'   : name_mapping.get(chunks[5], chunks[5]),
+                     'srctype'  : 'MINORPLANET',
+                     'DATE-OBS' : first_frame.strftime("%Y-%m-%dT%H:%M:%S.%f"),
+                     'UTSTOP'   : last_frame.strftime("%H:%M:%S.%f")
+                 },]
 
-    proc_level = proc_levels.get(headers[0].get('obstype', 'expose').upper(), 'cal')
-    if headers[0].get('rlevel', 0) == 0:
-        proc_level = 'raw'
+    else:
+        header, table, cattype = open_fits_catalog(filepath)
+        filename = os.path.basename(filepath)
+        if type(header) != list:
+            headers = [header, ]
+        else:
+            headers = header
+
+        proc_level = proc_levels.get(headers[0].get('obstype', 'expose').upper(), 'cal')
+        if headers[0].get('rlevel', 0) == 0:
+            proc_level = 'raw'
     id_area = create_id_area(filename, schema_mappings['PDS4::PDS']['version'], proc_level, mod_time)
     processedImage.append(id_area)
 
     # Add the Observation_Area
     obs_area = create_obs_area(headers[0], filename)
 
-    # Add Discipline Area
-    discipline_area = create_discipline_area(headers, filename, schema_mappings)
-    obs_area.append(discipline_area)
+    if proc_level != 'ddp':
+        # Add Discipline Area
+        discipline_area = create_discipline_area(headers, filename, schema_mappings)
+        obs_area.append(discipline_area)
     processedImage.append(obs_area)
 
     # Create File_Area_Observational
-    file_area = create_file_area_obs(headers, filename)
+    if proc_level == 'ddp':
+        file_area = create_file_area_table(filepath)
+    else:
+        file_area = create_file_area_obs(headers, filename)
     processedImage.append(file_area)
 
     # Wrap in ElementTree to write out to XML file
@@ -839,7 +911,8 @@ def write_product_collection_xml(filepath, xml_file, schema_root, mod_time=None)
 
 def create_pds_labels(procdir, schema_root, match='.*e92'):
     """Create PDS4 product labels for all frames matching the [match] regexp pattern
-    (defaults to processed (e92) FITS files) in <procdir>
+    (defaults to processed (e92) FITS files) in <procdir>. To search for and
+    process ASCII photometry files, use `match='*photometry.dat'`
     The PDS4 schematron and XSD files in <schema_root> are used in generating
     the XML file.
     A list of created PDS4 label filenames (with paths) is returned; this list
@@ -848,12 +921,19 @@ def create_pds_labels(procdir, schema_root, match='.*e92'):
 
     xml_labels = []
     full_procdir = os.path.abspath(os.path.expandvars(procdir))
-    files_to_process = find_fits_files(procdir, match)
+    if 'photometry.dat' in match:
+        photometry_files = sorted(glob(os.path.join(full_procdir, match)))
+        files_to_process = {full_procdir : photometry_files}
+    else:
+        files_to_process = find_fits_files(procdir, match)
 
     for directory, fits_files in files_to_process.items():
         for fits_file in fits_files:
             fits_filepath = os.path.join(directory, fits_file)
-            xml_file = fits_filepath.replace('.fits', '.xml').replace('.fz', '')
+            extn = os.path.splitext(fits_file)[1]
+            if extn == '.fz':
+                extn = os.path.splitext(os.path.splitext(fits_file)[0])
+            xml_file = fits_filepath.replace(extn, '.xml').replace('.fz', '')
             write_product_label_xml(fits_filepath, xml_file, schema_root)
             if os.path.exists(xml_file):
                 xml_labels.append(xml_file)
@@ -1020,7 +1100,7 @@ def create_pds_collection(output_dir, input_dir, files, collection_type, schema_
 
     return csv_filename, xml_filename
 
-def create_dart_lightcurve(input_dir, output_dir, block, match_pattern='photometry_*.dat'):
+def create_dart_lightcurve(input_dir, output_dir, block, match='photometry_*.dat'):
     """Creates a DART-format lightcurve file from the photometry file and LOG in
     <input_dir>, outputting to <output_dir>. Block <block> is used find the directory
     for the photometry file
@@ -1033,7 +1113,7 @@ def create_dart_lightcurve(input_dir, output_dir, block, match_pattern='photomet
         file_parts = split_filename(first_filename)
         if len(file_parts) == 8:
             root_dir = os.path.join(input_dir, file_parts['dayobs'])
-            photometry_files = sorted(glob(os.path.join(root_dir, match_pattern)))
+            photometry_files = sorted(glob(os.path.join(root_dir, match)))
             for photometry_file in photometry_files:
                 log_file = os.path.join(os.path.dirname(photometry_file), 'LOG')
                 table = read_photompipe_file(photometry_file)
@@ -1102,5 +1182,8 @@ def export_block_to_pds(input_dir, output_dir, block, schema_root, skip_download
     status = convert_file_to_crlf(csv_filename)
     csv_files.append(csv_filename)
     xml_files.append(xml_filename)
+
+    # Create PDS labels for ddp data
+    create_pds_labels(paths['ddp_data'], schema_root, match='*photometry.dat')
 
     return

@@ -24,8 +24,8 @@
   </Identification_Area>
   <Observation_Area>
     <Time_Coordinates>
-      <start_date_time>2021-10-08T01:55:17.144000Z</start_date_time>
-      <stop_date_time>2021-10-08T01:56:52.119000Z</stop_date_time>
+      <start_date_time>2021-10-08T01:55:17.14Z</start_date_time>
+      <stop_date_time>2021-10-08T01:56:52.11Z</stop_date_time>
     </Time_Coordinates>
     <Investigation_Area>
       <name>Double Asteroid Redirection Test</name>

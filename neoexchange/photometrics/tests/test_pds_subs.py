@@ -475,6 +475,135 @@ class TestCreateFileAreaObs(SimpleTestCase):
         self.compare_xml(expected, file_obs_area)
 
 
+class TestCreateFileAreaTable(SimpleTestCase):
+
+    def setUp(self):
+
+        tests_path = os.path.abspath(os.path.join('photometrics', 'tests'))
+        self.test_ddp_filename = os.path.join(tests_path, 'example_dartphotom.dat')
+
+        self.maxDiff = None
+
+    def compare_xml(self, expected, xml_element):
+        """Compare the expected XML string <expected> with the passed etree.Element
+        in <xml_element>
+        """
+
+        obj1 = objectify.fromstring(expected)
+        expect = etree.tostring(obj1, pretty_print=True)
+        result = etree.tostring(xml_element, pretty_print=True)
+
+        self.assertEquals(expect.decode("utf-8"), result.decode("utf-8"))
+
+    def test_lco_ddp(self):
+        expected = '''
+          <File_Area_Observational>
+            <File>
+              <file_name>example_dartphotom.dat</file_name>
+              <comment>photometry summary table</comment>
+            </File>
+             <Header>
+               <offset unit="byte">0</offset>
+               <object_length unit="byte">135</object_length>
+               <parsing_standard_id>UTF-8 Text</parsing_standard_id>
+             </Header>
+             <Table_Character>
+              <offset unit="byte">135</offset>
+              <records>62</records>
+              <record_delimiter>Carriage-Return Line-Feed</record_delimiter>
+              <Record_Character>
+                <fields>10</fields>
+                <groups>0</groups>
+                <record_length unit="byte">135</record_length>
+                <Field_Character>
+                  <name>file</name>
+                  <field_number>1</field_number>
+                  <field_location unit="byte">1</field_location>
+                  <data_type>ASCII_String</data_type>
+                  <field_length unit="byte">42</field_length>
+                  <description>File name of the calibrated image where data were measured.</description>
+                </Field_Character>
+                <Field_Character>
+                  <name>julian_date</name>
+                  <field_number>2</field_number>
+                  <field_location unit="byte">40</field_location>
+                  <data_type>ASCII_Real</data_type>
+                  <field_length unit="byte">15</field_length>
+                  <description>UTC Julian date of the exposure midtime</description>
+                </Field_Character>
+                <Field_Character>
+                  <name>mag</name>
+                  <field_number>3</field_number>
+                  <field_location unit="byte">56</field_location>
+                  <data_type>ASCII_Real</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Calibrated PanSTARRs r-band apparent magnitude of asteroid</description>
+                </Field_Character>
+                <Field_Character>
+                  <name>sig</name>
+                  <field_number>4</field_number>
+                  <field_location unit="byte">66</field_location>
+                  <data_type>ASCII_Real</data_type>
+                  <field_length unit="byte">6</field_length>
+                  <description>1-sigma error on the apparent magnitude</description>
+                </Field_Character>
+                <Field_Character>
+                  <name>ZP</name>
+                  <field_number>5</field_number>
+                  <field_location unit="byte">74</field_location>
+                  <data_type>ASCII_Real</data_type>
+                  <field_length unit="byte">7</field_length>
+                  <description>Calibrated zero point magnitude in PanSTARRs r-band</description>
+                </Field_Character>
+                <Field_Character>
+                  <name>ZP_sig</name>
+                  <field_number>6</field_number>
+                  <field_location unit="byte">83</field_location>
+                  <data_type>ASCII_Real</data_type>
+                  <field_length unit="byte">6</field_length>
+                  <description>1-sigma error on the zero point magnitude</description>
+                </Field_Character>
+                <Field_Character>
+                  <name>inst_mag</name>
+                  <field_number>7</field_number>
+                  <field_location unit="byte">91</field_location>
+                  <data_type>ASCII_Real</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>instrumental magnitude of asteroid</description>
+                </Field_Character>
+                <Field_Character>
+                  <name>inst_sig</name>
+                  <field_number>8</field_number>
+                  <field_location unit="byte">101</field_location>
+                  <data_type>ASCII_Real</data_type>
+                  <field_length unit="byte">6</field_length>
+                  <description>1-sigma error on the instrumental magnitude</description>
+                </Field_Character>
+                <Field_Character>
+                  <name>SExtractor_flag</name>
+                  <field_number>9</field_number>
+                  <field_location unit="byte">110</field_location>
+                  <data_type>ASCII_Integer</data_type>
+                  <field_length unit="byte">15</field_length>
+                  <description>Flags associated with the Source Extractor photometry measurements. See source_extractor_flags.txt in the documents folder for this archive for more detailed description.</description>
+                </Field_Character>
+                <Field_Character>
+                  <name>aprad</name>
+                  <field_number>10</field_number>
+                  <field_location unit="byte">128</field_location>
+                  <data_type>ASCII_Real</data_type>
+                  <field_length unit="byte">6</field_length>
+                  <description>radius in pixels of the aperture used for the photometry measurement</description>
+                </Field_Character>
+              </Record_Character>
+            </Table_Character>
+          </File_Area_Observational>'''
+
+        file_table_area = create_file_area_table(self.test_ddp_filename)
+
+        self.compare_xml(expected, file_table_area)
+
+
 class TestCreateDisciplineArea(SimpleTestCase):
 
     def setUp(self):
@@ -763,10 +892,16 @@ class TestWritePDSLabel(SimpleTestCase):
 
         self.test_xml_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label.xml'))
         self.test_xml_raw_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_raw.xml'))
+        self.test_xml_ddp_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_ddp.xml'))
         self.test_xml_bias_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_bias.xml'))
 
         self.test_banzai_file = os.path.abspath(os.path.join('photometrics', 'tests', 'banzai_test_frame.fits'))
         self.test_raw_file = os.path.abspath(os.path.join('photometrics', 'tests', 'mef_raw_test_frame.fits'))
+
+        test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_dartphotom.dat'))
+        # Copy files to input directory, renaming lc file
+        self.test_lc_file = os.path.join(self.test_dir, 'lcogt_1m0_01_fa11_20211013_didymos_photometry.dat')
+        shutil.copy(test_lc_file, self.test_lc_file)
 
         self.remove = True
         self.debug_print = False
@@ -831,12 +966,19 @@ class TestWritePDSLabel(SimpleTestCase):
 
     def test_write_raw_label(self):
 
-
         output_xml_file = os.path.join(self.test_dir, 'test_example_label.xml')
 
         status = write_product_label_xml(self.test_raw_file, output_xml_file, self.schemadir, mod_time=datetime(2021,10,15))
 
         self.compare_xml_files(self.test_xml_raw_cat, output_xml_file)
+
+    def test_write_ddp_label(self):
+
+        output_xml_file = os.path.join(self.test_dir, 'test_example_label.xml')
+
+        status = write_product_label_xml(self.test_lc_file, output_xml_file, self.schemadir, mod_time=datetime(2021,10,15))
+
+        self.compare_xml_files(self.test_xml_ddp_cat, output_xml_file)
 
 
 class TestCreatePDSLabels(SimpleTestCase):
@@ -861,6 +1003,11 @@ class TestCreatePDSLabels(SimpleTestCase):
         self.test_banzai_file = shutil.copy(test_file_path, new_name)
         new_name = os.path.join(self.test_dir, 'cpt1m013-kb76-20160606-0396-e91.fits')
         shutil.copy(test_file_path, new_name)
+
+        test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_dartphotom.dat'))
+        # Copy files to input directory, renaming lc file
+        self.test_lc_file = os.path.join(self.test_dir, 'lcogt_1m0_01_fa11_20211013_didymos_photometry.dat')
+        shutil.copy(test_lc_file, self.test_lc_file)
 
         self.remove = True
         self.debug_print = False
@@ -916,6 +1063,15 @@ class TestCreatePDSLabels(SimpleTestCase):
         expected_xml_labels = [test_bias_file.replace('.fits', '.xml'),]
 
         xml_labels = create_pds_labels(self.test_dir, self.schemadir, '.*-bias.*')
+
+        self.assertEqual(len(expected_xml_labels), len(xml_labels))
+        self.assertEqual(expected_xml_labels, xml_labels)
+
+    def test_generate_ddp(self):
+
+        expected_xml_labels = [self.test_lc_file.replace('.dat', '.xml'),]
+
+        xml_labels = create_pds_labels(self.test_dir, self.schemadir, '*photometry.dat')
 
         self.assertEqual(len(expected_xml_labels), len(xml_labels))
         self.assertEqual(expected_xml_labels, xml_labels)
@@ -1018,8 +1174,8 @@ class TestExportBlockToPDS(TestCase):
         shutil.copy(test_file_path, new_name)
         self.test_banzai_files.insert(1, os.path.basename(new_name))
 
-        self.remove = False
-        self.debug_print = True
+        self.remove = True
+        self.debug_print = False
         self.maxDiff = None
 
     def tearDown(self):
