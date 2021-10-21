@@ -38,7 +38,7 @@ import logging
 from django.core.files.storage import default_storage
 
 from photometrics.external_codes import unpack_tarball
-from photometrics.catalog_subs import funpack_fits_file
+from photometrics.catalog_subs import unpack_sci_extension
 from core.models import Block, Frame, CatalogSources
 from astrometrics.ephem_subs import horizons_ephem
 from astrometrics.time_subs import timeit
@@ -410,7 +410,7 @@ def make_movie(date_obs, obj, req, base_dir, out_path, prop, tarfile=None):
                 logger.info("Unpacking tar in tar")
                 for gf in guide_files:
                     if '.fits.fz' in gf:
-                        funpack_fits_file(gf)
+                        unpack_sci_extension(gf)
             else:
                 logger.error("Could not find Guide Frames or Guide Frame tarball for request: %s" % req)
                 return None

@@ -1709,7 +1709,7 @@ def determine_filenames(product):
         elif len(file_bits) == 3:
             # Fpacked BANZAI product - output is input
             new_product = None
-            funpack_status = funpack_fits_file(full_path)
+            funpack_status = unpack_sci_extension(full_path)
             if funpack_status == 0:
                 new_product = file_bits[0] + os.extsep + file_bits[1]
     return new_product
@@ -1740,8 +1740,9 @@ def increment_red_level(product):
     return new_product
 
 
-def funpack_fits_file(fpack_file):
-    """Calls 'funpack' on the passed <fpack_file> to uncompress it. A status
+def unpack_sci_extension(fpack_file):
+    """Opens the passed <fpack_file> FITS and extracts the'SCI', writing it to
+    a new PrimaryHDU and output file to uncompress it. A status
     value of 0 is returned if the unpacked file already exists or the uncompress
     was successful, -1 is returned otherwise"""
 
@@ -1819,7 +1820,7 @@ def get_fits_files(fits_path):
 
         fpacked_files = sorted(glob(fits_path + '*e91.fits.fz') + glob(fits_path + '*e11.fits.fz'))
         for fpack_file in fpacked_files:
-            funpack_fits_file(fpack_file)
+            unpack_sci_extension(fpack_file)
 
         sorted_fits_files = sorted(glob(fits_path + '*e91.fits') + glob(fits_path + '*e11.fits'))
 
