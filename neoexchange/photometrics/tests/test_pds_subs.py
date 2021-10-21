@@ -1110,6 +1110,27 @@ class TestSplitFilename(SimpleTestCase):
         self.assertEqual(expected_parts, parts)
 
 
+class TestMakePDSAsteroidName(SimpleTestCase):
+
+    def test_12923_Zephyr(self):
+        expected_filename = '12923Zephyr'
+        expected_pds_name = '(12923) Zephyr'
+
+        filename, pds_name = make_pds_asteroid_name('12923 Zephyr (1999 GK4)')
+
+        self.assertEqual(expected_filename, filename)
+        self.assertEqual(expected_pds_name, pds_name)
+
+    def test_didymos(self):
+        expected_filename = '65803Didymos'
+        expected_pds_name = '(65803) Didymos'
+
+        filename, pds_name = make_pds_asteroid_name('65803 Didymos (1996 GT)')
+
+        self.assertEqual(expected_filename, filename)
+        self.assertEqual(expected_pds_name, pds_name)
+
+
 class TestExportBlockToPDS(TestCase):
 
     def setUp(self):

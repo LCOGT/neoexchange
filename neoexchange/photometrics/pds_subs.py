@@ -13,7 +13,7 @@ from astropy.coordinates import SkyCoord
 from astropy.io.ascii.core import InconsistentTableError
 from django.conf import settings
 
-from core.models import Frame
+from core.models import Body, Frame
 from core.archive_subs import lco_api_call, download_files
 from photometrics.lightcurve_subs import *
 from photometrics.catalog_subs import open_fits_catalog
@@ -447,6 +447,7 @@ def determine_first_last_times(filepath):
         for fits_file in files:
             fits_filepath = os.path.join(directory, fits_file)
             header, table, cattype = open_fits_catalog(fits_filepath, header_only=True)
+#            print(f"{fits_file}: {len(header)} {cattype}")
             if header:
                 # Check if MEF header and only take primary header if so
                 if 'MEF' in cattype:
@@ -522,12 +523,16 @@ def create_context_area(filepath, collection_type):
     fits_files = find_fits_files(frames_filepath, prefix)
     fits_filepath = os.path.join(frames_filepath, fits_files[frames_filepath][0])
     header, table, cattype = open_fits_catalog(fits_filepath, header_only=True)
+    if type(header) != list:
+        headers = [header, ]
+    else:
+        headers = header
 
     # Create Observing System subclass of Observation Area
     obs_system = etree.SubElement(context_area, "Observing_System")
     obs_components = {
                         'Host' : 'Las Cumbres Observatory (LCOGT)',
-                        'Telescope' : 'LCOGT ' + header.get('TELESCOP','') + ' Telescope',
+                        'Telescope' : 'LCOGT ' + headers[0].get('TELESCOP','') + ' Telescope',
                         'Instrument' : 'Sinistro Imager',
                      }
     for component in obs_components:
@@ -540,8 +545,8 @@ def create_context_area(filepath, collection_type):
     # Create Target Identification subclass
     target_id = etree.SubElement(context_area, "Target_Identification")
     target_type = {'MINORPLANET' : 'Asteroid', 'COMET' : 'Comet' }
-    etree.SubElement(target_id, "name").text = header.get('object', '')
-    etree.SubElement(target_id, "type").text = target_type.get(header.get('srctype',''), 'Unknown')
+    etree.SubElement(target_id, "name").text = headers[0].get('object', '')
+    etree.SubElement(target_id, "type").text = target_type.get(headers[0].get('srctype',''), 'Unknown')
     # Create Internal Reference subclass of Target Area
     int_reference = etree.SubElement(target_id, "Internal_Reference")
     etree.SubElement(int_reference, "lid_reference").text = "urn:nasa:pds:context:target:asteroid.didymos"
@@ -1098,9 +1103,31 @@ def create_pds_collection(output_dir, input_dir, files, collection_type, schema_
 
     # Write XML file after CSV file is generated (need to count records)
     xml_filename = csv_filename.replace('.csv', '.xml')
+    print(xml_filename)
     status = write_product_collection_xml(input_dir, xml_filename, schema_root, mod_time)
 
     return csv_filename, xml_filename
+
+def make_pds_asteroid_name(body_or_bodyname):
+
+    filename = pds_name = None
+    if isinstance(body_or_bodyname, Body):
+        bodyname = body_or_bodyname.full_name()
+    else:
+        bodyname = body_or_bodyname
+
+    paren_loc = bodyname.rfind('(')
+    if paren_loc > 0:
+        bodyname = bodyname[0:paren_loc].rstrip()
+
+    filename = bodyname.replace(' ', '')
+    chunks = bodyname.split(' ')
+    if len(chunks) == 2 and chunks[0].isdigit():
+        pds_name = f"({chunks[0]}) {chunks[1]}"
+    else:
+        pds_name = bodyname
+
+    return filename, pds_name
 
 def create_dart_lightcurve(input_dir, output_dir, block, match='photometry_*.dat'):
     """Creates a DART-format lightcurve file from the photometry file and LOG in
@@ -1114,14 +1141,18 @@ def create_dart_lightcurve(input_dir, output_dir, block, match='photometry_*.dat
         first_filename = frames.last().filename
         file_parts = split_filename(first_filename)
         if len(file_parts) == 8:
-            root_dir = os.path.join(input_dir, file_parts['dayobs'])
+            root_dir = input_dir
             photometry_files = sorted(glob(os.path.join(root_dir, match)))
+            if len(photometry_files) == 0:
+                root_dir = os.path.join(input_dir, file_parts['dayobs'])
+                photometry_files = sorted(glob(os.path.join(root_dir, match)))
             for photometry_file in photometry_files:
                 log_file = os.path.join(os.path.dirname(photometry_file), 'LOG')
                 table = read_photompipe_file(photometry_file)
                 aper_radius = extract_photompipe_aperradius(log_file)
                 if table and aper_radius:
-                    output_lc_file = root_dir = f"lcogt_{file_parts['tel_class']}_{file_parts['tel_serial']}_{file_parts['instrument']}_{file_parts['dayobs']}_didymos_photometry.dat"
+                    phot_filename, pds_name = make_pds_asteroid_name(block.body)
+                    output_lc_file = root_dir = f"lcogt_{file_parts['tel_class']}_{file_parts['tel_serial']}_{file_parts['instrument']}_{file_parts['dayobs']}_{phot_filename}_photometry.dat"
                     output_lc_filepath = os.path.join(output_dir, output_lc_file)
                     write_dartformat_file(table, output_lc_filepath, aper_radius)
         else:
@@ -1134,9 +1165,10 @@ def export_block_to_pds(input_dir, output_dir, block, schema_root, skip_download
     csv_files = []
     xml_files = []
     paths = create_dart_directories(output_dir, block)
+    if verbose: print("input_dir ", input_dir)
     if verbose: print("output_dir", output_dir)
     for k,v in paths.items():
-        if verbose: print(f"{k:>8s}: {v}")
+        if verbose: print(f"{k:>8s}:  {v}")
 
     # Find and download related frames (raw and calibration frames)
     if skip_download is True:
@@ -1144,11 +1176,14 @@ def export_block_to_pds(input_dir, output_dir, block, schema_root, skip_download
     else:
         if verbose: print("Find and downloading related frames")
         related_frames = find_related_frames(block)
-        dl_frames = download_files(related_frames, input_dir, True)
+        dl_frames = download_files(related_frames, input_dir, verbose)
 
     # transfer raw data
     if verbose: print("Finding raw frames")
     raw_files = find_fits_files(input_dir, '\S*e00')
+    if len(raw_files) == 0:
+        logger.error("No raw files found")
+        return [], []
     # create PDS products for raw data
     if verbose: print("Transferring/uncompressing raw frames")
     for root, files in raw_files.items():
@@ -1160,22 +1195,26 @@ def export_block_to_pds(input_dir, output_dir, block, schema_root, skip_download
     status = convert_file_to_crlf(raw_csv_filename)
     csv_files.append(raw_csv_filename)
     xml_files.append(raw_xml_filename)
-
     # Create PDS labels for raw data
     if verbose: print("Creating raw PDS labels")
     xml_labels = create_pds_labels(paths['raw_data'], schema_root)
     xml_files += xml_labels
 
     # transfer cal data
-    cal_files = find_fits_files(input_dir, '\S*e92')
+    # Set pattern to '<any # of chars>e92.' (literal '.' rather than normal regexp
+    # meaning of "any character") to avoid picking up e92-ldac files
+    cal_files = find_fits_files(input_dir, '\S*e92\.')
+    if len(cal_files) == 0:
+        logger.error("No cal files found")
+        return [], []
     if verbose: print("Transferring calibrated frames")
     for root, files in cal_files.items():
-        sent_files = transfer_files(root, files, paths['cal_data'])
+        sent_files = transfer_files(root, files, paths['cal_data'], dbg=verbose)
     # transfer master calibration files
     if verbose: print("Transferring master calibration frames")
     calib_files = find_fits_files(input_dir, '\S*-(bias|bpm|dark|skyflat)')
     for root, files in calib_files.items():
-        sent_files += transfer_files(root, files, paths['cal_data'])
+        sent_files += transfer_files(root, files, paths['cal_data'], dbg=verbose)
     # create PDS products for cal data
     if verbose: print("Creating cal PDS collection")
     cal_csv_filename, cal_xml_filename = create_pds_collection(paths['root'], paths['cal_data'], sent_files, 'cal', schema_root)
@@ -1191,6 +1230,9 @@ def export_block_to_pds(input_dir, output_dir, block, schema_root, skip_download
 
     # transfer ddp data
     dart_lc_file = create_dart_lightcurve(input_dir, paths['ddp_data'], block)
+    if dart_lc_file is None:
+        logger.error("No light curve file found")
+        return [], []
     lc_files = [os.path.basename(dart_lc_file),]
     # create PDS products for ddp data
     ddp_csv_filename, ddp_xml_filename = create_pds_collection(paths['root'], paths['ddp_data'], lc_files, 'ddp', schema_root)

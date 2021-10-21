@@ -903,7 +903,7 @@ def open_fits_catalog(catfile, header_only=False):
                 table = hdulist[cat_index].data
         else:
             if sci_index != -1 and bpm_index != -1 and err_index != -1:
-                cattype = 'BANZAI_CALIB'
+                cattype = 'BANZAI_CALIB_MEF'
                 header = [hdu.header for hdu in hdulist]
                 table = {}
             else:
