@@ -1062,7 +1062,7 @@ def transfer_files(input_dir, files, output_dir, dbg=False):
                 if dbg: print(action, filename)
             else:
                 if dbg: print("Already exists")
-            files_copied.append(file.replace('.fz', '')
+            files_copied.append(file.replace('.fz', ''))
         else:
             logger.error(f"Input file {file} in {input_dir} not readable")
 
