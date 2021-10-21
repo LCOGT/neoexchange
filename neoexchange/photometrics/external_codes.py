@@ -789,3 +789,35 @@ def convert_file_to_crlf(file_to_convert, binary=None, dbg=False):
         retcode_or_cmdline = call(args, cwd=dest_dir)
 
     return retcode_or_cmdline
+
+def funpack_file(fpack_file, binary=None, dbg=False):
+    """Calls 'funpack' on the passed <fpack_file> to uncompress it. A status
+    value of 0 is returned if the unpacked file already exists or the uncompress
+    was successful, -1 is returned otherwise"""
+
+    file_bits = fpack_file.split(os.extsep)
+    if len(file_bits) != 3 and file_bits[-1].lower() != 'fz':
+        return -1
+    unpacked_file = file_bits[0] + os.extsep + file_bits[1]
+    if os.path.exists(unpacked_file):
+        return 0
+
+    binary = binary or find_binary("funpack")
+    if binary is None:
+        logger.error("Could not locate 'funpack' executable in PATH")
+        return -42
+
+    cmdline = "%s -F %s" % ( binary, fpack_file)
+    cmdline = cmdline.rstrip()
+    if dbg:
+        print(cmdline)
+
+    if dbg is True:
+        retcode_or_cmdline = cmdline
+    else:
+        dest_dir = os.path.dirname(fpack_file)
+        logger.debug("cmdline=%s" % cmdline)
+        args = cmdline.split()
+        retcode_or_cmdline = call(args, cwd=dest_dir)
+
+    return retcode_or_cmdline

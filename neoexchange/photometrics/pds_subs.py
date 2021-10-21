@@ -1053,10 +1053,12 @@ def transfer_files(input_dir, files, output_dir, dbg=False):
         if dbg: print(f"{action} {file} from {input_dir} -> {output_dir}")
         input_filepath = os.path.join(input_dir, file)
         output_filepath = os.path.join(output_dir, file)
-        # XXX Need to fetch raw frames from Science Archive if not existing
         if os.path.exists(input_filepath):
-            if not os.path.exists(output_filepath):
+            if os.path.exists(output_filepath) is False and os.path.exists(output_filepath.replace('.fz', '')) is False:
                 filename = shutil.copy(input_filepath, output_filepath)
+                if output_filepath.endswith('.fz'):
+                    if dbg: print("funpack file")
+                    status = funpack_file(output_filepath)
                 if dbg: print(action, filename)
             else:
                 if dbg: print("Already exists")
@@ -1155,6 +1157,10 @@ def export_block_to_pds(input_dir, output_dir, block, schema_root, skip_download
     csv_files.append(csv_filename)
     xml_files.append(xml_filename)
 
+    # Create PDS labels for raw data
+    xml_labels = create_pds_labels(paths['raw_data'], schema_root)
+    xml_files += xml_labels
+
     # transfer cal data
     cal_files = find_fits_files(input_dir, '\S*e92')
     for root, files in cal_files.items():
@@ -1171,7 +1177,8 @@ def export_block_to_pds(input_dir, output_dir, block, schema_root, skip_download
     xml_files.append(xml_filename)
 
     # Create PDS labels for cal data
-    create_pds_labels(paths['cal_data'], schema_root)
+    xml_labels = create_pds_labels(paths['cal_data'], schema_root)
+    xml_files += xml_labels
 
     # transfer ddp data
     dart_lc_file = create_dart_lightcurve(input_dir, paths['ddp_data'], block)
@@ -1184,6 +1191,7 @@ def export_block_to_pds(input_dir, output_dir, block, schema_root, skip_download
     xml_files.append(xml_filename)
 
     # Create PDS labels for ddp data
-    create_pds_labels(paths['ddp_data'], schema_root, match='*photometry.dat')
+    xml_labels = create_pds_labels(paths['ddp_data'], schema_root, match='*photometry.dat')
+    xml_files += xml_labels
 
-    return
+    return csv_files, xml_files
