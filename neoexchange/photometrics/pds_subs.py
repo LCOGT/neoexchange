@@ -17,7 +17,7 @@ from core.models import Frame
 from core.archive_subs import lco_api_call, download_files
 from photometrics.lightcurve_subs import *
 from photometrics.catalog_subs import open_fits_catalog
-from photometrics.external_codes import convert_file_to_crlf
+from photometrics.external_codes import convert_file_to_crlf, funpack_file
 from photometrics.photometry_subs import map_filter_to_wavelength, map_filter_to_bandwidth
 
 import logging
@@ -1062,7 +1062,7 @@ def transfer_files(input_dir, files, output_dir, dbg=False):
                 if dbg: print(action, filename)
             else:
                 if dbg: print("Already exists")
-            files_copied.append(file)
+            files_copied.append(file.replace('.fz', '')
         else:
             logger.error(f"Input file {file} in {input_dir} not readable")
 
@@ -1129,54 +1129,63 @@ def create_dart_lightcurve(input_dir, output_dir, block, match='photometry_*.dat
 
     return output_lc_filepath
 
-def export_block_to_pds(input_dir, output_dir, block, schema_root, skip_download=False):
+def export_block_to_pds(input_dir, output_dir, block, schema_root, skip_download=False, verbose=True):
 
     csv_files = []
     xml_files = []
     paths = create_dart_directories(output_dir, block)
-    print("output_dir", output_dir)
+    if verbose: print("output_dir", output_dir)
     for k,v in paths.items():
-        print(f"{k:>8s}: {v}")
+        if verbose: print(f"{k:>8s}: {v}")
 
     # Find and download related frames (raw and calibration frames)
     if skip_download is True:
         pass
     else:
-        print("Find and downloading related frames")
+        if verbose: print("Find and downloading related frames")
         related_frames = find_related_frames(block)
         dl_frames = download_files(related_frames, input_dir, True)
 
     # transfer raw data
+    if verbose: print("Finding raw frames")
     raw_files = find_fits_files(input_dir, '\S*e00')
     # create PDS products for raw data
+    if verbose: print("Transferring/uncompressing raw frames")
     for root, files in raw_files.items():
         sent_files = transfer_files(root, files, paths['raw_data'])
-    csv_filename, xml_filename = create_pds_collection(paths['root'], paths['raw_data'], sent_files, 'raw', schema_root)
+
+    if verbose: print("Creating raw PDS collection")
+    raw_csv_filename, raw_xml_filename = create_pds_collection(paths['root'], paths['raw_data'], sent_files, 'raw', schema_root)
     # Convert csv file to CRLF endings required by PDS
-    status = convert_file_to_crlf(csv_filename)
-    csv_files.append(csv_filename)
-    xml_files.append(xml_filename)
+    status = convert_file_to_crlf(raw_csv_filename)
+    csv_files.append(raw_csv_filename)
+    xml_files.append(raw_xml_filename)
 
     # Create PDS labels for raw data
+    if verbose: print("Creating raw PDS labels")
     xml_labels = create_pds_labels(paths['raw_data'], schema_root)
     xml_files += xml_labels
 
     # transfer cal data
     cal_files = find_fits_files(input_dir, '\S*e92')
+    if verbose: print("Transferring calibrated frames")
     for root, files in cal_files.items():
         sent_files = transfer_files(root, files, paths['cal_data'])
     # transfer master calibration files
+    if verbose: print("Transferring master calibration frames")
     calib_files = find_fits_files(input_dir, '\S*-(bias|bpm|dark|skyflat)')
     for root, files in calib_files.items():
         sent_files += transfer_files(root, files, paths['cal_data'])
     # create PDS products for cal data
-    csv_filename, xml_filename = create_pds_collection(paths['root'], paths['cal_data'], sent_files, 'cal', schema_root)
+    if verbose: print("Creating cal PDS collection")
+    cal_csv_filename, cal_xml_filename = create_pds_collection(paths['root'], paths['cal_data'], sent_files, 'cal', schema_root)
     # Convert csv file to CRLF endings required by PDS
-    status = convert_file_to_crlf(csv_filename)
-    csv_files.append(csv_filename)
-    xml_files.append(xml_filename)
+    status = convert_file_to_crlf(cal_csv_filename)
+    csv_files.append(cal_csv_filename)
+    xml_files.append(cal_xml_filename)
 
     # Create PDS labels for cal data
+    if verbose: print("Creating cal PDS labels")
     xml_labels = create_pds_labels(paths['cal_data'], schema_root)
     xml_files += xml_labels
 
@@ -1184,13 +1193,14 @@ def export_block_to_pds(input_dir, output_dir, block, schema_root, skip_download
     dart_lc_file = create_dart_lightcurve(input_dir, paths['ddp_data'], block)
     lc_files = [os.path.basename(dart_lc_file),]
     # create PDS products for ddp data
-    csv_filename, xml_filename = create_pds_collection(paths['root'], paths['ddp_data'], lc_files, 'ddp', schema_root)
+    ddp_csv_filename, ddp_xml_filename = create_pds_collection(paths['root'], paths['ddp_data'], lc_files, 'ddp', schema_root)
     # Convert csv file to CRLF endings required by PDS
-    status = convert_file_to_crlf(csv_filename)
-    csv_files.append(csv_filename)
-    xml_files.append(xml_filename)
+    status = convert_file_to_crlf(ddp_csv_filename)
+    csv_files.append(ddp_csv_filename)
+    xml_files.append(ddp_xml_filename)
 
     # Create PDS labels for ddp data
+    if verbose: print("Creating ddp PDS labels")
     xml_labels = create_pds_labels(paths['ddp_data'], schema_root, match='*photometry.dat')
     xml_files += xml_labels
 
