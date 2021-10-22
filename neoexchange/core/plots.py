@@ -354,8 +354,9 @@ def spec_plot(data_spec, analog_data, reflec=False):
                 reflect_source_lists.append(reflectance_sources)
             for k, ref_source in enumerate(reflect_source_prefs):
                 reflectance_lines.append(ref_plot.line("wav", "spec", source=ref_source, line_width=3, name=data_spec[k]['label']))
-                reflectance_lines.append(ref_plot.line("wav", "up", source=ref_source, line_width=1, name=data_spec[k]['label']))
-                reflectance_lines.append(ref_plot.line("wav", "low", source=ref_source, line_width=1, name=data_spec[k]['label']))
+                # More work is needed to make spectroscopic error bars feasible. the following will only behave properly for 1 frame of 1 analog.
+                # reflectance_lines.append(ref_plot.line("wav", "up", source=ref_source, line_width=1, name=data_spec[k]['label']))
+                # reflectance_lines.append(ref_plot.line("wav", "low", source=ref_source, line_width=1, name=data_spec[k]['label']))
             ref_plot.title.text = 'Object: {}    Analog: {}'.format(data_spec[0]['label'], analog_data[0]['label'])
         else:
             for spec in data_spec:
