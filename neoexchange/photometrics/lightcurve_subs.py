@@ -63,7 +63,7 @@ def write_dartformat_file(table, filepath, aprad=0.0):
     input_col_names = ['filename', 'julian_date', 'mag', 'sig', 'ZP', 'ZP_sig', 'inst_mag', 'in_sig', '[8]', 'aprad']
     col_starts = [0, 37, 53, 61, 68, 76, 83, 92, 99, 115]
     def_fmt = '%.4f'
-    formatters = {  'julian_date' : '%15.7f', 'mag' : def_fmt, 'sig' : def_fmt,
+    formatters = {  'file' : '%-36.36s', 'julian_date' : '%15.7f', 'mag' : def_fmt, 'sig' : def_fmt,
                     'ZP' : def_fmt, 'ZP_sig' : def_fmt, 'inst_mag' : def_fmt, 'inst_sig' : def_fmt,
                     'aprad' : '%.2f'
                  }
@@ -80,6 +80,6 @@ def write_dartformat_file(table, filepath, aprad=0.0):
     aprad_column = Column(np.full(len(table), aprad), name='aprad')
     table.add_column(aprad_column)
     table[input_col_names].write(filepath, format='ascii.fixed_width', names=output_col_names,
-        col_starts=col_starts, comment=False, delimiter='', formats=formatters)
+        comment=False, delimiter='', formats=formatters)
 
     return

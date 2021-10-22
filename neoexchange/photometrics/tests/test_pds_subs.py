@@ -7,7 +7,7 @@ from datetime import datetime
 
 from astropy.io import fits
 
-from core.models import SuperBlock, Block, Frame
+from core.models import Body, Designations, SuperBlock, Block, Frame
 from photometrics.pds_subs import *
 
 from unittest import skipIf
@@ -520,7 +520,7 @@ class TestCreateFileAreaTable(SimpleTestCase):
                   <field_number>1</field_number>
                   <field_location unit="byte">1</field_location>
                   <data_type>ASCII_String</data_type>
-                  <field_length unit="byte">42</field_length>
+                  <field_length unit="byte">36</field_length>
                   <description>File name of the calibrated image where data were measured.</description>
                 </Field_Character>
                 <Field_Character>
@@ -550,15 +550,15 @@ class TestCreateFileAreaTable(SimpleTestCase):
                 <Field_Character>
                   <name>ZP</name>
                   <field_number>5</field_number>
-                  <field_location unit="byte">74</field_location>
+                  <field_location unit="byte">73</field_location>
                   <data_type>ASCII_Real</data_type>
-                  <field_length unit="byte">7</field_length>
+                  <field_length unit="byte">8</field_length>
                   <description>Calibrated zero point magnitude in PanSTARRs r-band</description>
                 </Field_Character>
                 <Field_Character>
                   <name>ZP_sig</name>
                   <field_number>6</field_number>
-                  <field_location unit="byte">83</field_location>
+                  <field_location unit="byte">82</field_location>
                   <data_type>ASCII_Real</data_type>
                   <field_length unit="byte">6</field_length>
                   <description>1-sigma error on the zero point magnitude</description>
@@ -576,13 +576,13 @@ class TestCreateFileAreaTable(SimpleTestCase):
                   <field_number>8</field_number>
                   <field_location unit="byte">101</field_location>
                   <data_type>ASCII_Real</data_type>
-                  <field_length unit="byte">6</field_length>
+                  <field_length unit="byte">8</field_length>
                   <description>1-sigma error on the instrumental magnitude</description>
                 </Field_Character>
                 <Field_Character>
                   <name>SExtractor_flag</name>
                   <field_number>9</field_number>
-                  <field_location unit="byte">110</field_location>
+                  <field_location unit="byte">111</field_location>
                   <data_type>ASCII_Integer</data_type>
                   <field_length unit="byte">15</field_length>
                   <description>Flags associated with the Source Extractor photometry measurements. See source_extractor_flags.txt in the documents folder for this archive for more detailed description.</description>
@@ -590,7 +590,7 @@ class TestCreateFileAreaTable(SimpleTestCase):
                 <Field_Character>
                   <name>aprad</name>
                   <field_number>10</field_number>
-                  <field_location unit="byte">128</field_location>
+                  <field_location unit="byte">126</field_location>
                   <data_type>ASCII_Real</data_type>
                   <field_length unit="byte">6</field_length>
                   <description>radius in pixels of the aperture used for the photometry measurement</description>
@@ -1006,7 +1006,7 @@ class TestCreatePDSLabels(SimpleTestCase):
 
         test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_dartphotom.dat'))
         # Copy files to input directory, renaming lc file
-        self.test_lc_file = os.path.join(self.test_dir, 'lcogt_1m0_01_fa11_20211013_didymos_photometry.dat')
+        self.test_lc_file = os.path.join(self.test_dir, 'lcogt_tfn_fa11_20211013_12345_65803didymos_photometry.dat')
         shutil.copy(test_lc_file, self.test_lc_file)
 
         self.remove = True
@@ -1112,8 +1112,26 @@ class TestSplitFilename(SimpleTestCase):
 
 class TestMakePDSAsteroidName(SimpleTestCase):
 
+    def test_none(self):
+        expected_filename = None
+        expected_pds_name = None
+
+        filename, pds_name = make_pds_asteroid_name(None)
+
+        self.assertEqual(expected_filename, filename)
+        self.assertEqual(expected_pds_name, pds_name)
+
+    def test_nullstring(self):
+        expected_filename = None
+        expected_pds_name = None
+
+        filename, pds_name = make_pds_asteroid_name('')
+
+        self.assertEqual(expected_filename, filename)
+        self.assertEqual(expected_pds_name, pds_name)
+
     def test_12923_Zephyr(self):
-        expected_filename = '12923Zephyr'
+        expected_filename = '12923zephyr'
         expected_pds_name = '(12923) Zephyr'
 
         filename, pds_name = make_pds_asteroid_name('12923 Zephyr (1999 GK4)')
@@ -1122,7 +1140,7 @@ class TestMakePDSAsteroidName(SimpleTestCase):
         self.assertEqual(expected_pds_name, pds_name)
 
     def test_didymos(self):
-        expected_filename = '65803Didymos'
+        expected_filename = '65803didymos'
         expected_pds_name = '(65803) Didymos'
 
         filename, pds_name = make_pds_asteroid_name('65803 Didymos (1996 GT)')
@@ -1157,7 +1175,52 @@ class TestExportBlockToPDS(TestCase):
         self.test_daydir = os.path.join(self.expected_root_dir, 'lcogt_1m0_01_fa11_20211013')
         self.test_ddp_daydir = os.path.join(self.test_daydir, 'ddp_data')
 
+        body_params = {
+                         'id': 36254,
+                         'provisional_name': None,
+                         'provisional_packed': None,
+                         'name': '65803',
+                         'origin': 'N',
+                         'source_type': 'N',
+                         'source_subtype_1': 'N3',
+                         'source_subtype_2': 'PH',
+                         'elements_type': 'MPC_MINOR_PLANET',
+                         'active': False,
+                         'fast_moving': False,
+                         'urgency': None,
+                         'epochofel': datetime(2021, 2, 25, 0, 0),
+                         'orbit_rms': 0.56,
+                         'orbinc': 3.40768,
+                         'longascnode': 73.20234,
+                         'argofperih': 319.32035,
+                         'eccentricity': 0.3836409,
+                         'meandist': 1.6444571,
+                         'meananom': 77.75787,
+                         'perihdist': None,
+                         'epochofperih': None,
+                         'abs_mag': 18.27,
+                         'slope': 0.15,
+                         'score': None,
+                         'discovery_date': datetime(1996, 4, 11, 0, 0),
+                         'num_obs': 829,
+                         'arc_length': 7305.0,
+                         'not_seen': 2087.29154187494,
+                         'updated': True,
+                         'ingest': datetime(2018, 8, 14, 17, 45, 42),
+                         'update_time': datetime(2021, 3, 1, 19, 59, 56, 957500)
+                         }
+
+        self.test_body, created = Body.objects.get_or_create(**body_params)
+
+        desig_params = { 'body' : self.test_body, 'value' : 'Didymos', 'desig_type' : 'N', 'preferred' : True, 'packed' : False}
+        test_desig, created = Designations.objects.get_or_create(**desig_params)
+        desig_params['value'] = '65803'
+        desig_params['desig_type'] = '#'
+        test_desig, created = Designations.objects.get_or_create(**desig_params)
+
         block_params = {
+                         'body' : self.test_body,
+                         'request_number' : '12345',
                          'block_start' : datetime(2021, 10, 13, 0, 40),
                          'block_end' : datetime(2021, 10, 14, 0, 40),
                          'obstype' : Block.OPT_IMAGING,
@@ -1347,7 +1410,7 @@ class TestExportBlockToPDS(TestCase):
         self.assertEqual(expected_files, related_frames)
 
     def test_create_dart_lightcurve(self):
-        expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_1m0_01_fa11_20211013_didymos_photometry.dat')
+        expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_tfn_fa11_20211013_12345_65803didymos_photometry.dat')
         expected_lines = [
         '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  SExtractor_flag  aprad',
         ' tfn1m001-fa11-20211012-0073-e91.fits  2459500.3339392  14.8447  0.0397  27.1845  0.0394  -12.3397    0.0052                0  10.00',
@@ -1374,7 +1437,7 @@ class TestExportBlockToPDS(TestCase):
             self.assertEqual(expected_line, lines[i].rstrip())
 
     def test_create_dart_lightcurve_default(self):
-        expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_1m0_01_fa11_20211013_didymos_photometry.dat')
+        expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_tfn_fa11_20211013_12345_65803didymos_photometry.dat')
         expected_lines = [
         '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  SExtractor_flag  aprad',
         ' tfn1m001-fa11-20211012-0073-e91.fits  2459500.3339392  14.8447  0.0397  27.1845  0.0394  -12.3397    0.0052                0  10.00',

@@ -80,7 +80,7 @@
           <field_number>1</field_number>
           <field_location unit="byte">1</field_location>
           <data_type>ASCII_String</data_type>
-          <field_length unit="byte">42</field_length>
+          <field_length unit="byte">36</field_length>
           <description>File name of the calibrated image where data were measured.</description>
         </Field_Character>
         <Field_Character>
@@ -110,15 +110,15 @@
         <Field_Character>
           <name>ZP</name>
           <field_number>5</field_number>
-          <field_location unit="byte">74</field_location>
+          <field_location unit="byte">73</field_location>
           <data_type>ASCII_Real</data_type>
-          <field_length unit="byte">7</field_length>
+          <field_length unit="byte">8</field_length>
           <description>Calibrated zero point magnitude in PanSTARRs r-band</description>
         </Field_Character>
         <Field_Character>
           <name>ZP_sig</name>
           <field_number>6</field_number>
-          <field_location unit="byte">83</field_location>
+          <field_location unit="byte">82</field_location>
           <data_type>ASCII_Real</data_type>
           <field_length unit="byte">6</field_length>
           <description>1-sigma error on the zero point magnitude</description>
@@ -136,13 +136,13 @@
           <field_number>8</field_number>
           <field_location unit="byte">101</field_location>
           <data_type>ASCII_Real</data_type>
-          <field_length unit="byte">6</field_length>
+          <field_length unit="byte">8</field_length>
           <description>1-sigma error on the instrumental magnitude</description>
         </Field_Character>
         <Field_Character>
           <name>SExtractor_flag</name>
           <field_number>9</field_number>
-          <field_location unit="byte">110</field_location>
+          <field_location unit="byte">111</field_location>
           <data_type>ASCII_Integer</data_type>
           <field_length unit="byte">15</field_length>
           <description>Flags associated with the Source Extractor photometry measurements. See source_extractor_flags.txt in the documents folder for this archive for more detailed description.</description>
@@ -150,7 +150,7 @@
         <Field_Character>
           <name>aprad</name>
           <field_number>10</field_number>
-          <field_location unit="byte">128</field_location>
+          <field_location unit="byte">126</field_location>
           <data_type>ASCII_Real</data_type>
           <field_length unit="byte">6</field_length>
           <description>radius in pixels of the aperture used for the photometry measurement</description>

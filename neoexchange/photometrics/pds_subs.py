@@ -707,16 +707,16 @@ def create_file_area_inv(filename, mod_time=None):
 
 def create_file_area_table(filename):
 
-    fields = {'file' : { 'field_location' : 1, 'data_type' : 'ASCII_String', 'field_length' : 42, 'description' : 'File name of the calibrated image where data were measured.' },
+    fields = {'file' : { 'field_location' : 1, 'data_type' : 'ASCII_String', 'field_length' : 36, 'description' : 'File name of the calibrated image where data were measured.' },
               'julian_date' : { 'field_location' : 40, 'data_type' : 'ASCII_Real', 'field_length' : 15, 'description' : 'UTC Julian date of the exposure midtime' },
               'mag' : { 'field_location' : 56, 'data_type' : 'ASCII_Real', 'field_length' : 8, 'description' : 'Calibrated PanSTARRs r-band apparent magnitude of asteroid' },
               'sig' : { 'field_location' : 66, 'data_type' : 'ASCII_Real', 'field_length' : 6, 'description' : '1-sigma error on the apparent magnitude' },
-              'ZP'  : { 'field_location' : 74, 'data_type' : 'ASCII_Real', 'field_length' : 7, 'description' : 'Calibrated zero point magnitude in PanSTARRs r-band' },
-              'ZP_sig' : { 'field_location' : 83, 'data_type' : 'ASCII_Real', 'field_length' : 6, 'description' : '1-sigma error on the zero point magnitude' },
+              'ZP'  : { 'field_location' : 73, 'data_type' : 'ASCII_Real', 'field_length' : 8, 'description' : 'Calibrated zero point magnitude in PanSTARRs r-band' },
+              'ZP_sig' : { 'field_location' : 82, 'data_type' : 'ASCII_Real', 'field_length' : 6, 'description' : '1-sigma error on the zero point magnitude' },
               'inst_mag' : { 'field_location' : 91, 'data_type' : 'ASCII_Real', 'field_length' : 8, 'description' : 'instrumental magnitude of asteroid' },
-              'inst_sig' : { 'field_location' : 101, 'data_type' : 'ASCII_Real', 'field_length' : 6, 'description' : '1-sigma error on the instrumental magnitude' },
-              'SExtractor_flag' : { 'field_location' : 110, 'data_type' : 'ASCII_Integer', 'field_length' : 15, 'description' : 'Flags associated with the Source Extractor photometry measurements. See source_extractor_flags.txt in the documents folder for this archive for more detailed description.' },
-              'aprad' : { 'field_location' : 128, 'data_type' : 'ASCII_Real', 'field_length' : 6, 'description' : 'radius in pixels of the aperture used for the photometry measurement' }
+              'inst_sig' : { 'field_location' : 101, 'data_type' : 'ASCII_Real', 'field_length' : 8, 'description' : '1-sigma error on the instrumental magnitude' },
+              'SExtractor_flag' : { 'field_location' : 111, 'data_type' : 'ASCII_Integer', 'field_length' : 15, 'description' : 'Flags associated with the Source Extractor photometry measurements. See source_extractor_flags.txt in the documents folder for this archive for more detailed description.' },
+              'aprad' : { 'field_location' : 126, 'data_type' : 'ASCII_Real', 'field_length' : 6, 'description' : 'radius in pixels of the aperture used for the photometry measurement' }
               }
     file_area_table = etree.Element("File_Area_Observational")
     file_element = etree.SubElement(file_area_table, "File")
@@ -1116,16 +1116,19 @@ def make_pds_asteroid_name(body_or_bodyname):
     else:
         bodyname = body_or_bodyname
 
-    paren_loc = bodyname.rfind('(')
-    if paren_loc > 0:
-        bodyname = bodyname[0:paren_loc].rstrip()
+    if body_or_bodyname is not None and body_or_bodyname != '':
+        paren_loc = bodyname.rfind('(')
+        if paren_loc > 0:
+            bodyname = bodyname[0:paren_loc].rstrip()
 
-    filename = bodyname.replace(' ', '')
-    chunks = bodyname.split(' ')
-    if len(chunks) == 2 and chunks[0].isdigit():
-        pds_name = f"({chunks[0]}) {chunks[1]}"
-    else:
-        pds_name = bodyname
+        # Filename and therefore the logical_identifier can only contain lowercase
+        # letters.
+        filename = bodyname.replace(' ', '').lower()
+        chunks = bodyname.split(' ')
+        if len(chunks) == 2 and chunks[0].isdigit():
+            pds_name = f"({chunks[0]}) {chunks[1]}"
+        else:
+            pds_name = bodyname
 
     return filename, pds_name
 
@@ -1138,7 +1141,8 @@ def create_dart_lightcurve(input_dir, output_dir, block, match='photometry_*.dat
     output_lc_filepath = None
     frames = Frame.objects.filter(block=block, frametype=Frame.BANZAI_RED_FRAMETYPE)
     if frames.count() > 0:
-        first_filename = frames.last().filename
+        first_frame = frames.last()
+        first_filename = first_frame.filename
         file_parts = split_filename(first_filename)
         if len(file_parts) == 8:
             root_dir = input_dir
@@ -1152,7 +1156,8 @@ def create_dart_lightcurve(input_dir, output_dir, block, match='photometry_*.dat
                 aper_radius = extract_photompipe_aperradius(log_file)
                 if table and aper_radius:
                     phot_filename, pds_name = make_pds_asteroid_name(block.body)
-                    output_lc_file = root_dir = f"lcogt_{file_parts['tel_class']}_{file_parts['tel_serial']}_{file_parts['instrument']}_{file_parts['dayobs']}_{phot_filename}_photometry.dat"
+                    # Format for LC files: 'lcogt_<site>_<inst.>_<YYYYMMDD>_<request #>_<astname#>_photometry.txt'
+                    output_lc_file = f"lcogt_{file_parts['site']}_{file_parts['instrument']}_{file_parts['dayobs']}_{block.request_number}_{phot_filename}_photometry.dat"
                     output_lc_filepath = os.path.join(output_dir, output_lc_file)
                     write_dartformat_file(table, output_lc_filepath, aper_radius)
         else:
@@ -1234,6 +1239,8 @@ def export_block_to_pds(input_dir, output_dir, block, schema_root, skip_download
         logger.error("No light curve file found")
         return [], []
     lc_files = [os.path.basename(dart_lc_file),]
+    # Convert csv file to CRLF endings required by PDS
+    status = convert_file_to_crlf(dart_lc_file)
     # create PDS products for ddp data
     ddp_csv_filename, ddp_xml_filename = create_pds_collection(paths['root'], paths['ddp_data'], lc_files, 'ddp', schema_root)
     # Convert csv file to CRLF endings required by PDS
