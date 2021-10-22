@@ -226,6 +226,8 @@ class ScheduleBlockForm(forms.Form):
     acceptability_threshold = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     ag_exp_time = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     edit_window = forms.BooleanField(initial=False, required=False, widget=forms.CheckboxInput(attrs={'class': 'window-switch'}))
+    add_dither = forms.BooleanField(initial=False, required=False, widget=forms.CheckboxInput(attrs={'class': 'dither-switch'}))
+    dither_distance = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     gp_explength = forms.FloatField(required=False, widget=forms.NumberInput(attrs={'size': '5'}))
     rp_explength = forms.FloatField(required=False, widget=forms.NumberInput(attrs={'size': '5'}))
     ip_explength = forms.FloatField(required=False, widget=forms.NumberInput(attrs={'size': '5'}))
