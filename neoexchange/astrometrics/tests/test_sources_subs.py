@@ -6019,3 +6019,24 @@ class TestFetchJPLPhysParams(TestCase):
         self.assertLessEqual(len(body.source_subtype_1), 2)
         self.assertEqual(body.source_subtype_1, 'LP')
 
+
+class TestBoxSpiral(TestCase):
+
+    def test_run_generator(self):
+        """Test Box Spiral generator"""
+
+        b = box_spiral_generator(1, 3)
+        self.assertEqual((0, 0), next(b))
+        self.assertEqual((1, 0), next(b))
+        self.assertEqual((1, 1), next(b))
+        self.assertEqual((0, 1), next(b))
+        self.assertEqual((-1, 1), next(b))
+        self.assertEqual((-1, 0), next(b))
+        for k, b_next in enumerate(b):
+            if k == 23:
+                self.assertEqual((3, 2), b_next)
+            if k == 24:
+                self.assertEqual((0, 0), b_next)
+            if k == 25:
+                self.assertEqual((1, 0), b_next)
+                break

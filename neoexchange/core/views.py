@@ -1650,7 +1650,8 @@ def schedule_submit(data, body, username):
               'para_angle': data.get('para_angle', False),
               'min_lunar_distance': data.get('min_lunar_dist', 30),
               'acceptability_threshold': data.get('acceptability_threshold', 90),
-              'ag_exp_time': data.get('ag_exp_time', 10)
+              'ag_exp_time': data.get('ag_exp_time', 10),
+              'dither_distance': data.get('dither_distance', 10)
               }
     if data['period'] or data['jitter']:
         params['period'] = data['period']

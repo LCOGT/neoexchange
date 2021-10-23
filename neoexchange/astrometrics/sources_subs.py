@@ -23,7 +23,7 @@ from urllib.parse import urljoin
 import imaplib
 import email
 from re import sub, compile
-from math import degrees
+from math import degrees, sqrt, copysign
 from time import sleep
 from datetime import date, datetime, timedelta
 from socket import error
@@ -48,6 +48,35 @@ from astrometrics.ephem_subs import build_filter_blocks, MPC_site_code_to_domes,
 from core.urlsubs import get_telescope_states
 
 logger = logging.getLogger(__name__)
+
+
+def box_spiral_generator(dist, max_sep):
+    """Create a box spiral of offsets (starting at 0 and resetting when it reaches the max seperation)
+        Result is a generator, that can be treated as an iterator.
+    :param dist: distance of single offset in RA or Dec in arcsec
+    :param max_sep: total distance from origin at which point the spiral resets
+    :return (ra_off, dec_off): Tuple for the current requested offsets
+    """
+    ra_off = 0
+    dec_off = 0
+    n = 1
+    while True:
+        k = 0
+        while k < abs(n):
+            if sqrt(ra_off**2 + dec_off**2) >= max_sep:
+                ra_off = 0
+                dec_off = 0
+                n = 1
+            yield ra_off, dec_off
+            ra_off += copysign(dist, n)
+            k += 1
+        k = 0
+        while k < abs(n):
+            yield ra_off, dec_off
+            dec_off += copysign(dist, n)
+            k += 1
+        n += copysign(1, n)
+        n *= -1
 
 
 def download_file(url, file_to_save):
