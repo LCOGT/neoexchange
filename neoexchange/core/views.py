@@ -1538,6 +1538,8 @@ def schedule_check(data, body, ok_to_schedule=True):
         'calibsource_predict_exptime': sa_predicted_exptime,
         'calibsource_list_options': calib_list,
         'calibsource_list': calibsource_list_init,
+        'dither_distance': data.get('dither_distance', 10),
+        'add_dither': data.get('add_dither', False),
     }
 
     if not spectroscopy and 'F65' in data['site_code']:
@@ -1651,7 +1653,8 @@ def schedule_submit(data, body, username):
               'min_lunar_distance': data.get('min_lunar_dist', 30),
               'acceptability_threshold': data.get('acceptability_threshold', 90),
               'ag_exp_time': data.get('ag_exp_time', 10),
-              'dither_distance': data.get('dither_distance', 10)
+              'dither_distance': data.get('dither_distance', 10),
+              'add_dither': data['add_dither']
               }
     if data['period'] or data['jitter']:
         params['period'] = data['period']
