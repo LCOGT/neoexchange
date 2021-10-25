@@ -234,6 +234,14 @@ class ScheduleBlockForm(forms.Form):
     zp_explength = forms.FloatField(required=False, widget=forms.NumberInput(attrs={'size': '5'}))
     muscat_sync = forms.BooleanField(initial=False, required=False)
 
+    def clean_dither_distance(self):
+        """Limit dither distance to values between 0 and 60 arcsec."""
+        if not self.cleaned_data['dither_distance'] or self.cleaned_data['dither_distance'] < 0:
+            return 10
+        if self.cleaned_data['dither_distance'] > 60:
+            return 60
+        return self.cleaned_data['dither_distance']
+
     def clean_exp_length(self):
         if not self.cleaned_data['exp_length'] or self.cleaned_data['exp_length'] < 0.1:
             return 0.1
