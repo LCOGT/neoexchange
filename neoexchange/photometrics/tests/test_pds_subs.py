@@ -884,7 +884,7 @@ class TestCreateDisciplineArea(SimpleTestCase):
         self.compare_xml(expected, file_obs_area)
 
 
-class TestWritePDSLabel(SimpleTestCase):
+class TestWritePDSLabel(TestCase):
 
     def setUp(self):
         self.schemadir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_schemas'))
@@ -981,7 +981,7 @@ class TestWritePDSLabel(SimpleTestCase):
         self.compare_xml_files(self.test_xml_ddp_cat, output_xml_file)
 
 
-class TestCreatePDSLabels(SimpleTestCase):
+class TestCreatePDSLabels(TestCase):
 
     def setUp(self):
         self.schemadir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_schemas'))
@@ -1265,7 +1265,7 @@ class TestExportBlockToPDS(TestCase):
     def tearDown(self):
         if self.remove:
             extra_dirs = [os.path.join(self.test_daydir, x+'_data') for x in ['cal', 'ddp', 'raw']]
-            for test_dir in extra_dirs + [self.test_daydir, self.expected_root_dir, self.test_output_dir, self.test_input_dir, self.test_dir]:
+            for test_dir in extra_dirs + [self.test_daydir, self.expected_root_dir, self.test_output_dir, self.test_input_daydir, self.test_input_dir, self.test_dir]:
                 try:
                     files_to_remove = glob(os.path.join(test_dir, '*'))
                     for file_to_rm in files_to_remove:
@@ -1273,9 +1273,10 @@ class TestExportBlockToPDS(TestCase):
                 except OSError:
                     print("Error removing files in temporary test directory", test_dir)
                 try:
-                    os.rmdir(test_dir)
-                    if self.debug_print:
-                        print("Removed", test_dir)
+                    if os.path.exists(test_dir) and os.path.isdir(test_dir):
+                        os.rmdir(test_dir)
+                        if self.debug_print:
+                            print("Removed", test_dir)
                 except OSError:
                     print("Error removing temporary test directory", test_dir)
         else:
