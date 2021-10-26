@@ -5146,6 +5146,32 @@ class TestMakeconfigurations(TestCase):
         self.assertEqual(inst_configs[30]['extra_params'], {'offset_ra': 60.0, 'offset_dec': 60.0})
         self.assertEqual(inst_configs[91]['extra_params'], {'offset_ra': 20.0, 'offset_dec': 0.0})
 
+    def test_muscat_dithering(self):
+
+        expected_num_configurations = 1
+        expected_type = 'EXPOSE'
+        expected_num_inst_configurations = 10
+        expected_exp_num = 1
+        params = self.params_2m0_imaging
+        params['dither_distance'] = 10
+        params['add_dither'] = True
+        params['exp_count'] = 10
+
+        configurations = make_configs(params)
+
+        self.assertEqual(expected_num_configurations, len(configurations))
+        self.assertEqual(expected_type, configurations[0]['type'])
+
+        inst_configs = configurations[0]['instrument_configs']
+        self.assertEqual(expected_num_inst_configurations, len(inst_configs))
+        self.assertEqual(inst_configs[0]['exposure_count'], expected_exp_num)
+        self.assertEqual(inst_configs[0]['extra_params']['offset_ra'], 0.0)
+        self.assertEqual(inst_configs[0]['extra_params']['offset_dec'], 0.0)
+        self.assertEqual(inst_configs[0]['extra_params']['exposure_mode'], 'SYNCHRONOUS')
+        self.assertEqual(inst_configs[0]['extra_params']['exposure_time_g'], 60)
+        self.assertEqual(inst_configs[6]['extra_params']['offset_ra'], -10.0)
+        self.assertEqual(inst_configs[6]['extra_params']['offset_dec'], -10.0)
+
     def test_0m4_imaging(self):
 
         expected_num_configurations = 1
