@@ -15,7 +15,8 @@ GNU General Public License for more details.
 
 import os
 from mock import patch, MagicMock
-from socket import error
+from socket import error, timeout
+from errno import ETIMEDOUT
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from unittest import skipIf
@@ -4017,6 +4018,26 @@ class TestSFUFetch(TestCase):
 
         self.assertEqual(expected_result[0], sfu_result[0])
         self.assertEqual(expected_result[1], sfu_result[1])
+
+    # Uncomment and remove catch of `timeout` in fetchpage_and_make_soup() to
+    # test the mock is working.
+
+    # @patch('astrometrics.sources_subs.urllib.request.OpenerDirector.open')
+    # def test_fetch_socket_timeout_assert_raises(self, mock_open):
+        # mock_open.side_effect = timeout(ETIMEDOUT, '(fake) timed out')
+
+        # with self.assertRaises(timeout) as sock_e:
+            # sfu_result = fetchpage_and_make_soup('http://www.spaceweather.gc.ca/solarflux/sx-4-en.php')
+        # self.assertEqual(sock_e.exception.errno, ETIMEDOUT)
+        # self.assertEqual(sock_e.exception.strerror, '(fake) timed out')
+
+    @patch('astrometrics.sources_subs.urllib.request.OpenerDirector.open')
+    def test_fetch_socket_timeout_handled(self, mock_open):
+        mock_open.side_effect = timeout(ETIMEDOUT, '(fake) timed out')
+
+        sfu_result = fetch_sfu()
+
+        self.assertEqual((None, None), sfu_result)
 
 
 class TestConfigureDefaults(TestCase):
