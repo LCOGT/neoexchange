@@ -1476,11 +1476,23 @@ def schedule_check(data, body, ok_to_schedule=True):
         suffix += "_spectra"
     if too_mode is True:
         suffix += '_ToO'
+    # Define possible tags that can be added on confirmation page
+    possible_tags = ['_bin2x2', '_dither']
+    # Build defualt group name
     default_group_name = body.current_name() + '_' + data['site_code'].upper() + '-' + suffix
-    if not group_name or (group_name == default_group_name + '_bin2x2' and bin_mode != '2k_2x2'):
+    # Test group name for custom user additions
+    test_name = group_name
+    test_name = test_name.replace(default_group_name, '')
+    for tag in possible_tags:
+        test_name = test_name.replace(tag, '')
+    # If no name, or no user additions, remake group name
+    if not group_name or not test_name:
         group_name = default_group_name
-    if group_name == default_group_name and bin_mode == '2k_2x2':
-        group_name += '_bin2x2'
+    if group_name == default_group_name:
+        if bin_mode == '2k_2x2':
+            group_name += possible_tags[0]
+        if data.get('add_dither', False):
+            group_name += possible_tags[1]
 
     resp = {
         'target_name': body.current_name(),
