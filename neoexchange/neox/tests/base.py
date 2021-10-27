@@ -285,18 +285,18 @@ class FunctionalTest(StaticLiveServerTestCase):
                     if major_version.isdigit() and int(major_version) <= 52:
                         firefox_capabilities['marionette'] = False
                 options = webdriver.firefox.options.Options()
-                options.add_argument('--headless')
+                # options.add_argument('--headless')
                 self.browser = webdriver.Firefox(capabilities=firefox_capabilities, firefox_profile=fp, options=options)
         else:
             options = webdriver.chrome.options.Options()
-            options.add_argument('--headless')
+            # options.add_argument('--headless')
             options.add_argument('--no-sandbox')
             options.add_argument('--disable-gpu')
             self.browser = webdriver.Chrome(chrome_options=options)
         self.browser.implicitly_wait(5)
 
     def tearDown(self):
-        self.browser.quit()
+        # self.browser.quit()
         with self.settings(MEDIA_ROOT=self.test_dir):
             remove = True
             debug_print = False
