@@ -509,7 +509,17 @@
               {% endif %}
               {% else %}
               <tr id="id_dither_row">
-                  <td class="kv-key">Add Dithering?
+                  <td ><table align="left"  style="margin: 0px"><tr><td class="kv-key">
+                        <div class="tooltip">Add Dithering?
+                        <span class="tooltiptext" style="left:75%">
+                            <b>Add Dithering</b> to offset each image by the given distance in a box-spiral pattern starting at the target. <br> <br>
+                            The pattern will reset if the center ever gets further than 120" from the target.
+                             <font size="+1"><pre>&#9635; &larr; &#9635; &larr; &#9635;   &#9635;</pre>
+                                             <pre>&darr;        &uarr;   &uarr;</pre>
+                                             <pre>&#9635;   &#9673; &rarr; &#9635;   &#9635;</pre>
+                                             <pre>&darr;            &uarr;</pre>
+                                             <pre>&#9635; &rarr; &#9635; &rarr; &#9635; &rarr; &#9635;</pre> </font>
+                        </span></span></div></td><td></td></tr></table></td>
                   <td class="kv-value">
                         <div class="compact-field">
                             {{ form.add_dither}}<label for="id_add_dither"></label>
