@@ -888,6 +888,8 @@ class TestWritePDSLabel(TestCase):
 
     def setUp(self):
         self.schemadir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_schemas'))
+        schema_mappings = pds_schema_mappings(self.schemadir, '*.xsd')
+        self.pds_schema = schema_mappings['PDS4::PDS']
         self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
 
         self.test_xml_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label.xml'))
@@ -895,13 +897,59 @@ class TestWritePDSLabel(TestCase):
         self.test_xml_ddp_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_ddp.xml'))
         self.test_xml_bias_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_bias.xml'))
 
-        self.test_banzai_file = os.path.abspath(os.path.join('photometrics', 'tests', 'banzai_test_frame.fits'))
+        test_banzai_file = os.path.abspath(os.path.join('photometrics', 'tests', 'banzai_test_frame.fits'))
         self.test_raw_file = os.path.abspath(os.path.join('photometrics', 'tests', 'mef_raw_test_frame.fits'))
 
         test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_dartphotom.dat'))
         # Copy files to input directory, renaming lc file
         self.test_lc_file = os.path.join(self.test_dir, 'lcogt_1m0_01_fa11_20211013_didymos_photometry.dat')
         shutil.copy(test_lc_file, self.test_lc_file)
+        self.test_banzai_file = os.path.join(self.test_dir, os.path.basename(test_banzai_file))
+        shutil.copy(test_banzai_file, self.test_banzai_file)
+
+
+        body_params = {
+                         'id': 36254,
+                         'provisional_name': None,
+                         'provisional_packed': None,
+                         'name': '65803',
+                         'origin': 'N',
+                         'source_type': 'N',
+                         'source_subtype_1': 'N3',
+                         'source_subtype_2': 'PH',
+                         'elements_type': 'MPC_MINOR_PLANET',
+                         'active': False,
+                         'fast_moving': False,
+                         'urgency': None,
+                         'epochofel': datetime(2021, 2, 25, 0, 0),
+                         'orbit_rms': 0.56,
+                         'orbinc': 3.40768,
+                         'longascnode': 73.20234,
+                         'argofperih': 319.32035,
+                         'eccentricity': 0.3836409,
+                         'meandist': 1.6444571,
+                         'meananom': 77.75787,
+                         'perihdist': None,
+                         'epochofperih': None,
+                         'abs_mag': 18.27,
+                         'slope': 0.15,
+                         'score': None,
+                         'discovery_date': datetime(1996, 4, 11, 0, 0),
+                         'num_obs': 829,
+                         'arc_length': 7305.0,
+                         'not_seen': 2087.29154187494,
+                         'updated': True,
+                         'ingest': datetime(2018, 8, 14, 17, 45, 42),
+                         'update_time': datetime(2021, 3, 1, 19, 59, 56, 957500)
+                         }
+
+        self.test_body, created = Body.objects.get_or_create(**body_params)
+
+        desig_params = { 'body' : self.test_body, 'value' : 'Didymos', 'desig_type' : 'N', 'preferred' : True, 'packed' : False}
+        test_desig, created = Designations.objects.get_or_create(**desig_params)
+        desig_params['value'] = '65803'
+        desig_params['desig_type'] = '#'
+        test_desig, created = Designations.objects.get_or_create(**desig_params)
 
         self.remove = True
         self.debug_print = False
@@ -926,12 +974,21 @@ class TestWritePDSLabel(TestCase):
                 print("Not removing temporary test directory", self.test_dir)
 
 
-    def compare_xml_files(self, expected_xml_file, xml_file):
+    def compare_xml_files(self, expected_xml_file, xml_file, modifications={}):
         """Compare the expected XML in <expected_xml_file> with that in the passed
-        <xml_file>
+        <xml_file>. Can pass a dict of [modifications] to alter the XML in <expected_xml_file>;
+        the modifications dict should contain:
+            'xpath' : XPath to the element to modify (e.g. './/pds:Target_Identification/pds:name'),
+            'namespaces' : dict of namespaces for elements (e.g. {'pds': 'http://pds.nasa.gov/pds4/pds/v1'}),
+            'replacement' : replacement text for the modified element (e.g. '(65803) Didymos'
         """
 
         obj1 = etree.parse(expected_xml_file)
+        if len(modifications) >= 1:
+            elements = obj1.xpath(modifications['xpath'], namespaces=modifications['namespaces'])
+            for element in elements:
+                element.text = modifications['replacement']
+
         expect = etree.tostring(obj1, pretty_print=True)
         obj2 = etree.parse(xml_file)
         result = etree.tostring(obj2, pretty_print=True)
@@ -945,6 +1002,27 @@ class TestWritePDSLabel(TestCase):
         status = write_product_label_xml(self.test_banzai_file, output_xml_file, self.schemadir, mod_time=datetime(2021,5,4))
 
         self.compare_xml_files(self.test_xml_cat, output_xml_file)
+
+    def test_write_proc_label_body_name(self):
+
+        # modify object name in FITS file to match Body
+        hdulist = fits.open(self.test_banzai_file, mode='update')
+        hdulist[0].header['OBJECT'] = '65803'
+        hdulist.close()
+
+        output_xml_file = os.path.join(self.test_dir, 'test_example_label.xml')
+
+        status = write_product_label_xml(self.test_banzai_file, output_xml_file, self.schemadir, mod_time=datetime(2021,5,4))
+
+        bodies = Body.objects.all()
+        self.assertEqual(1, bodies.count())
+        self.assertEqual('65803 Didymos', bodies[0].full_name())
+        # Define modifications to the standard XML for the new name
+        modifications = { 'xpath' : './/pds:Target_Identification/pds:name',
+                          'namespaces' : {'pds' : self.pds_schema['namespace']},
+                          'replacement' : '(65803) Didymos'}
+
+        self.compare_xml_files(self.test_xml_cat, output_xml_file, modifications)
 
     def test_write_bias_label(self):
 
@@ -1009,6 +1087,49 @@ class TestCreatePDSLabels(TestCase):
         self.test_lc_file = os.path.join(self.test_dir, 'lcogt_tfn_fa11_20211013_12345_65803didymos_photometry.dat')
         shutil.copy(test_lc_file, self.test_lc_file)
 
+        body_params = {
+                         'id': 36254,
+                         'provisional_name': None,
+                         'provisional_packed': None,
+                         'name': '65803',
+                         'origin': 'N',
+                         'source_type': 'N',
+                         'source_subtype_1': 'N3',
+                         'source_subtype_2': 'PH',
+                         'elements_type': 'MPC_MINOR_PLANET',
+                         'active': False,
+                         'fast_moving': False,
+                         'urgency': None,
+                         'epochofel': datetime(2021, 2, 25, 0, 0),
+                         'orbit_rms': 0.56,
+                         'orbinc': 3.40768,
+                         'longascnode': 73.20234,
+                         'argofperih': 319.32035,
+                         'eccentricity': 0.3836409,
+                         'meandist': 1.6444571,
+                         'meananom': 77.75787,
+                         'perihdist': None,
+                         'epochofperih': None,
+                         'abs_mag': 18.27,
+                         'slope': 0.15,
+                         'score': None,
+                         'discovery_date': datetime(1996, 4, 11, 0, 0),
+                         'num_obs': 829,
+                         'arc_length': 7305.0,
+                         'not_seen': 2087.29154187494,
+                         'updated': True,
+                         'ingest': datetime(2018, 8, 14, 17, 45, 42),
+                         'update_time': datetime(2021, 3, 1, 19, 59, 56, 957500)
+                         }
+
+        self.test_body, created = Body.objects.get_or_create(**body_params)
+
+        desig_params = { 'body' : self.test_body, 'value' : 'Didymos', 'desig_type' : 'N', 'preferred' : True, 'packed' : False}
+        test_desig, created = Designations.objects.get_or_create(**desig_params)
+        desig_params['value'] = '65803'
+        desig_params['desig_type'] = '#'
+        test_desig, created = Designations.objects.get_or_create(**desig_params)
+
         self.remove = True
         self.debug_print = False
         self.maxDiff = None
@@ -1046,6 +1167,23 @@ class TestCreatePDSLabels(TestCase):
 
         xml_labels = create_pds_labels(self.test_dir, self.schemadir, '\S*e92')
 
+        self.assertEqual(len(expected_xml_labels), len(xml_labels))
+        self.assertEqual(expected_xml_labels, xml_labels)
+
+    def test_generate_e92_body_name(self):
+
+        # modify object name in FITS file to match Body
+        hdulist = fits.open(self.test_banzai_file, mode='update')
+        hdulist[0].header['OBJECT'] = '65803'
+        hdulist.close()
+
+        expected_xml_labels = [self.test_banzai_file.replace('.fits', '.xml'),]
+
+        xml_labels = create_pds_labels(self.test_dir, self.schemadir)
+
+        bodies = Body.objects.all()
+        self.assertEqual(1, bodies.count())
+        self.assertEqual('65803 Didymos', bodies[0].full_name())
         self.assertEqual(len(expected_xml_labels), len(xml_labels))
         self.assertEqual(expected_xml_labels, xml_labels)
 

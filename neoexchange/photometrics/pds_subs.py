@@ -426,6 +426,15 @@ def create_obs_area(header, filename):
     target_id = etree.SubElement(obs_area, "Target_Identification")
     target_types = {'MINORPLANET' : 'Asteroid', 'COMET' : 'Comet' }
     target_name = header.get('object', '')
+    # Try and find the Body associated with the name
+    try:
+        body = Body.objects.get(name=target_name)
+        _, target_name = make_pds_asteroid_name(body)
+    except Body.DoesNotExist:
+        logger.warning(f"Body with name {target_name} does not exist")
+    except Body.MultipleObjectsReturned:
+        logger.warning(f"Multiple Bodies with name {target_name} exist")
+
     obstype = header.get('obstype', '').upper()
     target_type = target_types.get(header.get('srctype',''), 'Unknown')
     if obstype == 'BIAS' or obstype == 'DARK' or obstype == 'SKYFLAT' or obstype == 'BPM':
