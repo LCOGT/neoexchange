@@ -2,11 +2,14 @@ import os
 import shutil
 import tempfile
 from glob import glob
-from datetime import datetime
+from datetime import datetime, timedelta
 
+from random import random
+
+from core.models import Body, SuperBlock, Block, Frame, SourceMeasurement
 from photometrics.lightcurve_subs import *
 
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, TestCase
 
 class TestReadPhotomPipe(SimpleTestCase):
 
@@ -92,3 +95,110 @@ class TestExtractApRadius(SimpleTestCase):
         aper_radius = extract_photompipe_aperradius(self.test_logfile)
 
         self.assertEqual(expected_radius, aper_radius)
+
+class TestCreateTableFromSrcMeasure(TestCase):
+
+    def setUp(self):
+
+        body_params = {
+                         'id': 36254,
+                         'provisional_name': None,
+                         'provisional_packed': None,
+                         'name': '65803',
+                         'origin': 'N',
+                         'source_type': 'N',
+                         'source_subtype_1': 'N3',
+                         'source_subtype_2': 'PH',
+                         'elements_type': 'MPC_MINOR_PLANET',
+                         'active': False,
+                         'fast_moving': False,
+                         'urgency': None,
+                         'epochofel': datetime(2021, 2, 25, 0, 0),
+                         'orbit_rms': 0.56,
+                         'orbinc': 3.40768,
+                         'longascnode': 73.20234,
+                         'argofperih': 319.32035,
+                         'eccentricity': 0.3836409,
+                         'meandist': 1.6444571,
+                         'meananom': 77.75787,
+                         'perihdist': None,
+                         'epochofperih': None,
+                         'abs_mag': 18.27,
+                         'slope': 0.15,
+                         'score': None,
+                         'discovery_date': datetime(1996, 4, 11, 0, 0),
+                         'num_obs': 829,
+                         'arc_length': 7305.0,
+                         'not_seen': 2087.29154187494,
+                         'updated': True,
+                         'ingest': datetime(2018, 8, 14, 17, 45, 42),
+                         'update_time': datetime(2021, 3, 1, 19, 59, 56, 957500)
+                         }
+
+        self.test_body, created = Body.objects.get_or_create(**body_params)
+
+        block_params = {
+                         'body' : self.test_body,
+                         'request_number' : '12345',
+                         'block_start' : datetime(2021, 10, 13, 0, 40),
+                         'block_end' : datetime(2021, 10, 14, 0, 40),
+                         'obstype' : Block.OPT_IMAGING,
+                         'num_observed' : 1
+                        }
+        self.test_block, created = Block.objects.get_or_create(**block_params)
+        # Second block with no frames attached
+        block_params['num_observed'] = 0
+        self.test_block2, created = Block.objects.get_or_create(**block_params)
+
+        frame_params = {
+                         'sitecode' : 'Z24',
+                         'instrument' : 'fa11',
+                         'filter' : 'ip',
+                         'block' : self.test_block,
+                         'frametype' : Frame.BANZAI_RED_FRAMETYPE,
+                         'zeropoint' : 27.0,
+                         'zeropoint_err' : 0.03,
+                         'midpoint' : block_params['block_start'] + timedelta(minutes=5),
+                         'astrometric_catalog' : 'GAIA-DR2',
+                         'photometric_catalog' : 'PANSTARRS',
+                       }
+
+        for frame_num, frameid in zip(range(65,126,30),[45234032, 45234584, 45235052]):
+            frame_params['filename'] = f"tfn1m001-fa11-20211013-{frame_num:04d}-e91.fits"
+            frame_offset = frame_num-65
+            frame_params['midpoint'] += timedelta(minutes=frame_offset)
+            frame_params['frameid'] = frameid
+            frame, created = Frame.objects.get_or_create(**frame_params)
+
+            mag_err = (frame_offset*0.0003) + 0.003
+            source_params = { 'body' : self.test_body,
+                              'frame' : frame,
+                              'obs_ra' : 270 + frame_offset*0.01,
+                              'obs_dec' : -27 - frame_offset*0.01,
+                              'obs_mag' : 14.6 + frame_offset * 0.001,
+                              'err_obs_ra' : 0.3/3600.0,
+                              'err_obs_dec' : 0.3/3600.0,
+                              'err_obs_mag' : mag_err,
+                              'astrometric_catalog' : frame.astrometric_catalog,
+                              'photometric_catalog' : frame.photometric_catalog,
+                              'aperture_size' : 10.0,
+                              'snr' : 1/mag_err,
+                              'flags' : ''
+                            }
+            source, created = SourceMeasurement.objects.get_or_create(**source_params)
+
+        self.maxDiff = None
+
+    def test1(self):
+
+        data_rows = [['filename1.fits', 2456000.6, 42, 0.03, 27, 0.04, -12.0, 0.03, 0, 10.0],
+                     ['filename2.fits', 2456000.6, 42, 0.03, 27, 0.04, -12.0, 0.03, 0, 10.0],
+                     ['filename3.fits', 2456000.6, 42, 0.03, 27, 0.04, -12.0, 0.03, 0, 10.0],
+                    ]
+        col_names = ['filename', 'julian_date', 'mag', 'sig', 'ZP', 'ZP_sig', 'inst_mag', 'in_sig', '[8]', 'aprad']
+        expected_table = Table(rows=data_rows, names=col_names)
+
+        table = create_table_from_srcmeasures(self.test_block)
+
+        self.assertEqual(len(expected_table), len(table))
+        self.assertEqual(expected_table, table)

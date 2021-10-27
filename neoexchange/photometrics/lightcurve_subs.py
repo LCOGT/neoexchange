@@ -17,7 +17,10 @@ import os
 import re
 
 import numpy as np
+from astropy.time import Time
 from astropy.table import Table, unique, Column
+from core.models import Frame, SourceMeasurement
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -54,6 +57,27 @@ def extract_photompipe_aperradius(logfile):
                     else:
                         logger.warning("Unexpected number of matches")
     return aper_radius
+
+def create_table_from_srcmeasures(block):
+    """Creates an AstroPy table (of the format suitable for write_dartformat_file()) from
+    the SourceMeasurements associated with Block <block>"""
+
+    col_names = ['filename', 'julian_date', 'mag', 'sig', 'ZP', 'ZP_sig', 'inst_mag', 'in_sig', '[8]', 'aprad']
+    dtypes = ('<U36', '<f8', '<f8', '<f8', '<f8', '<f8', '<f8', '<f8', '<i8', '<f8')
+    table = Table(names=col_names, dtype=dtypes)
+
+    sources = SourceMeasurement.objects.filter(frame__block=block, frame__frametype=Frame.BANZAI_RED_FRAMETYPE)
+
+    for src in sources:
+        t = Time(src.frame.midpoint)
+        # XXX map back to original CatalogSource
+        flags = 0
+        row = [src.frame.filename, t.jd, src.obs_mag, src.err_obs_mag,
+               src.frame.zeropoint, src.frame.zeropoint_err, src.obs_mag, src.err_obs_mag,
+               flags, src.aperture_size]
+        table.add_row(row)
+
+    return table
 
 def write_dartformat_file(table, filepath, aprad=0.0):
     """Writes out the passed Astropy <table > in "DART lightcurve format" to the
