@@ -1469,38 +1469,40 @@ def schedule_check(data, body, ok_to_schedule=True):
     # Create Group ID
     group_name = validate_text(data.get('group_name', None))
 
-    name_date = datetime.strftime(utc_date, '-%Y%m%d')
-    suffix = ''
     if period and jitter:
-        suffix = "cad-%s-%s" % (datetime.strftime(rise_time, '%Y%m%d'), datetime.strftime(set_time, '%m%d'))
-    elif spectroscopy:
-        suffix += "_spectra"
-    if too_mode is True:
-        suffix += '_ToO'
+        name_date = f"-cad-{datetime.strftime(rise_time, '%Y%m%d')}-{datetime.strftime(set_time, '%m%d')}"
+    else:
+        name_date = datetime.strftime(utc_date, '-%Y%m%d')
+
     # Define possible tags that can be added on confirmation page
-    possible_tags = ['_bin2x2', '_dither']
+    possible_tags = ['_spectra', '_ToO', '_bin2x2', '_dither']
     # Build defualt group name
     base_group_name = body.current_name() + '_' + data['site_code'].upper()
-    default_group_name = base_group_name + name_date + suffix
+    default_group_name = base_group_name + name_date
+    if spectroscopy:
+        default_group_name += possible_tags[0]
+    if too_mode is True:
+        default_group_name += possible_tags[1]
     # Test group name for custom user additions
     test_name = group_name
     test_name = test_name.replace(base_group_name, '')
-    test_name = test_name.replace(suffix, '')
     test_name = test_name.replace(name_date, '')
     for tag in possible_tags:
         test_name = test_name.replace(tag, '')
     # Check for new date
-    test_name = test_name.replace('-20', '')
-    if test_name.isdigit() and len(test_name) == 6:
+    if len(test_name) == 9 and test_name[:3] == '-20' and test_name[-8:].isdigit():
+        test_name = ''
+        # Check for new Cadence
+    elif "cad-20" in test_name and len(test_name) == 18 and test_name.replace('-', '').replace('cad', '').isdigit():
         test_name = ''
     # If no name, or no user additions, remake group name
     if not group_name or not test_name:
         group_name = default_group_name
     if group_name == default_group_name:
         if bin_mode == '2k_2x2':
-            group_name += possible_tags[0]
+            group_name += possible_tags[2]
         if data.get('add_dither', False):
-            group_name += possible_tags[1]
+            group_name += possible_tags[3]
 
     resp = {
         'target_name': body.current_name(),
