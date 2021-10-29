@@ -4,12 +4,14 @@ import tempfile
 from glob import glob
 from datetime import datetime, timedelta
 
-from random import random
+import numpy as np
+from astropy.time import Time
 
 from core.models import Body, SuperBlock, Block, Frame, SourceMeasurement
 from photometrics.lightcurve_subs import *
 
 from django.test import SimpleTestCase, TestCase
+from numpy.testing import assert_allclose, assert_array_equal
 
 class TestReadPhotomPipe(SimpleTestCase):
 
@@ -163,12 +165,14 @@ class TestCreateTableFromSrcMeasure(TestCase):
                          'photometric_catalog' : 'PANSTARRS',
                        }
 
+        self.test_filenames = []
         for frame_num, frameid in zip(range(65,126,30),[45234032, 45234584, 45235052]):
             frame_params['filename'] = f"tfn1m001-fa11-20211013-{frame_num:04d}-e91.fits"
             frame_offset = frame_num-65
             frame_params['midpoint'] += timedelta(minutes=frame_offset)
             frame_params['frameid'] = frameid
             frame, created = Frame.objects.get_or_create(**frame_params)
+            self.test_filenames.append(frame_params['filename'])
 
             mag_err = (frame_offset*0.0003) + 0.003
             source_params = { 'body' : self.test_body,
@@ -191,9 +195,11 @@ class TestCreateTableFromSrcMeasure(TestCase):
 
     def test1(self):
 
-        data_rows = [['filename1.fits', 2456000.6, 42, 0.03, 27, 0.04, -12.0, 0.03, 0, 10.0],
-                     ['filename2.fits', 2456000.6, 42, 0.03, 27, 0.04, -12.0, 0.03, 0, 10.0],
-                     ['filename3.fits', 2456000.6, 42, 0.03, 27, 0.04, -12.0, 0.03, 0, 10.0],
+        midpoints = Frame.objects.all().values_list('midpoint', flat=True)
+        midpoints_jd = [Time(d).jd for d in midpoints]
+        data_rows = [[self.test_filenames[0], midpoints_jd[0], 14.60, 0.003, 27, 0.03, 14.60-27, 0.003, 0, 10.0],
+                     [self.test_filenames[1], midpoints_jd[1], 14.63, 0.012, 27, 0.03, 14.63-27, 0.012, 0, 10.0],
+                     [self.test_filenames[2], midpoints_jd[2], 14.66, 0.021, 27, 0.03, 14.66-27, 0.021, 0, 10.0],
                     ]
         col_names = ['filename', 'julian_date', 'mag', 'sig', 'ZP', 'ZP_sig', 'inst_mag', 'in_sig', '[8]', 'aprad']
         expected_table = Table(rows=data_rows, names=col_names)
@@ -201,4 +207,9 @@ class TestCreateTableFromSrcMeasure(TestCase):
         table = create_table_from_srcmeasures(self.test_block)
 
         self.assertEqual(len(expected_table), len(table))
-        self.assertEqual(expected_table, table)
+        self.assertEqual(expected_table.colnames, table.colnames)
+        for column in col_names:
+            if expected_table[column].dtype.kind in ['U', 'S']:
+                assert_array_equal(expected_table[column], table[column])
+            else:
+                assert_allclose(expected_table[column], table[column], rtol=1e-4, err_msg=f"Compare failure on column: {column}")

@@ -73,7 +73,7 @@ def create_table_from_srcmeasures(block):
         # XXX map back to original CatalogSource
         flags = 0
         row = [src.frame.filename, t.jd, src.obs_mag, src.err_obs_mag,
-               src.frame.zeropoint, src.frame.zeropoint_err, src.obs_mag, src.err_obs_mag,
+               src.frame.zeropoint, src.frame.zeropoint_err, src.obs_mag-src.frame.zeropoint, src.err_obs_mag,
                flags, src.aperture_size]
         table.add_row(row)
 
