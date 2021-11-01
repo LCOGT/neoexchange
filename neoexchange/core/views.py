@@ -3924,7 +3924,7 @@ def import_alcdef(alcdef, meta_list, lc_list):
             line = str(line, 'utf-8')
             # skip commented lines
             try:
-                if line[0] == '#':
+                if line.lstrip()[0] == '#':
                     continue
             except IndexError:
                 continue
@@ -3966,8 +3966,7 @@ def import_period_scan(file, scan_list):
     """Pull Period data from Period Scan files."""
 
     scan_data = {'period': [], 'rms': [], 'chi2': []}
-    ps_file = file.open()
-    lines = ps_file.readlines()
+    lines = file.readlines()
     for line in lines:
         chunks = line.split()
         if len(chunks) >= 3:
@@ -3984,7 +3983,7 @@ def import_period_scan(file, scan_list):
 def import_lc_model(m_file, model_list):
     """Pull model lc from intensity files."""
 
-    lc_model_file = m_file.product.file.open()
+    lc_model_file = m_file.product.file
     file_parts = m_file.product.name.split('_')
     name = f'{file_parts[2]} ({file_parts[1]})'
     lines = lc_model_file.readlines()
@@ -4009,8 +4008,7 @@ def import_lc_model(m_file, model_list):
 
 def import_shape_model(file, body, model_params):
     shape_list = {'faces_x': [], 'faces_y': [], 'faces_z': [], 'faces_normal': [], 'faces_level': [], 'faces_colors': []}
-    shape_model_file = file.open()
-    lines = shape_model_file.readlines()
+    lines = file.readlines()
     points_list = []
     n_points = 0
     # set angles
@@ -4069,7 +4067,7 @@ def import_shape_model(file, body, model_params):
                 normal[0] += (yy - yy_nxt) * (zz + zz_nxt)
                 normal[1] += (zz - zz_nxt) * (xx + xx_nxt)
                 normal[2] += (xx - xx_nxt) * (yy + yy_nxt)
-            normal = normal/np.linalg.norm(normal)
+            normal, _ = S.sla_dvn(normal)
             shape_list['faces_x'].append(face_x)
             shape_list['faces_y'].append(face_y)
             shape_list['faces_z'].append(face_z)

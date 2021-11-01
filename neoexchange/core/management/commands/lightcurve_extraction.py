@@ -14,7 +14,7 @@ GNU General Public License for more details.
 """
 
 from datetime import datetime, timedelta, time
-from math import degrees, radians, floor
+from math import degrees, radians, floor, copysign
 from sys import exit
 import os
 import tempfile
@@ -407,8 +407,8 @@ class Command(BaseCommand):
                     for frame in frames_all_zp:
                         # get predicted position and magnitude of target during time of each frame
                         emp_line = compute_ephem(frame.midpoint, elements, frame.sitecode)
-                        ra = emp_line['ra'] + ra_offset
-                        dec = emp_line['dec'] + dec_offset
+                        ra = S.sla_dranrm(emp_line['ra'] + ra_offset)
+                        dec = copysign(S.sla_drange(emp_line['dec'] + dec_offset), emp_line['dec'] + dec_offset)
                         mag_estimate = emp_line['mag']
                         (ra_string, dec_string) = radec2strings(ra, dec, ' ')
                         # Find list of frame sources within search region of predicted coordinates

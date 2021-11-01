@@ -19,7 +19,8 @@ from django.urls import reverse
 from django.core.files.storage import default_storage
 from django.contrib.auth.models import User
 from neox.auth_backend import update_proposal_permissions
-from selenium import webdriver
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException
 from core.models import Body, DataProduct
 from core.utils import save_dataproduct, save_to_default
@@ -122,12 +123,14 @@ class LighCurvePlotTest(FunctionalTest):
         # get current window
         pw = self.browser.current_window_handle
         data_link = self.browser.find_element_by_xpath("/html/body/div[1]/div/div[3]/div/div/div[2]/div[2]/div[1]/div[2]/div[4]/div[3]/div/div[1]/div[7]/a")
+        self.assertEqual(len(self.browser.window_handles), 1)
         data_link.click()
-        time.sleep(1)
+        WebDriverWait(self.browser, timeout=10).until(EC.number_of_windows_to_be(2))
         all_windows = self.browser.window_handles
         for window in all_windows:
             if window != pw:
                 self.browser.switch_to.window(window)
+        WebDriverWait(self.browser, timeout=10).until(EC.url_contains('txt'))
         self.assertIn('txt', self.browser.current_url)
         alcdef_text = self.browser.find_element_by_xpath("/html/body/pre").text
         self.assertIn('OBJECTNUMBER=433', alcdef_text)
