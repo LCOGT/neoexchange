@@ -9,6 +9,7 @@ from matplotlib.patches import Rectangle, Circle
 from matplotlib.ticker import MultipleLocator
 import numpy as np
 import pyslalib.slalib as S
+from django.core.files.storage import default_storage
 
 from ephem_subs import compute_local_st, get_sitepos, datetime2mjd_tdb, moon_ra_dec, moon_alt_az, moonphase
 

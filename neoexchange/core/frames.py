@@ -250,7 +250,7 @@ def frame_params_from_header(params, block):
         wcs = WCS(params)
         frame_params['wcs'] = wcs
     except ValueError:
-        logger.warning("Error creating WCS entry from frameid=%s" % frameid)
+        logger.warning("Error creating WCS entry from frameid=%s" % frame_params['filename'])
 
     # Correct filename for missing trailing .fits extension
     if '.fits' not in frame_params['filename']:

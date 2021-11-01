@@ -1760,7 +1760,7 @@ def extract_sci_image(file_path, catalog_path):
     try:
         hdulist = fits.open(file_path)
     except IOError as e:
-        logger.error("Unable to open FITS catalog %s (Reason=%s)" % (catfile, e))
+        logger.error("Unable to open FITS catalog %s (Reason=%s)" % (fits_filename_path, e))
 
     try:
         sci_index = hdulist.index_of('SCI')
