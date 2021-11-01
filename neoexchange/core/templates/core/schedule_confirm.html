@@ -320,7 +320,13 @@
                     </tr>
                     {% if data.jitter is not None%}
                     <tr id="id_jitter_row">
-                        <td class="kv-key">Jitter</td>
+                        <td ><table align="left"  style="margin: 0px"><tr><td class="kv-key">
+                                    <div class="tooltip">Jitter
+                                    <span class="tooltiptext" style="left:75%">
+                                        <b>Jitter</b> is the length of the repeated window within which observations are taken once each period. <br>
+                                        It <em>must</em> be longer than the slot length and <em>should</em> be shorter than or equal to the period.<br>
+                                        Pracitcally speaking, <u>the period sets the cadence for the center of the jitter window</u>, which can result in truncation during the first and final iterations.
+                                    </span></span></div></td><td></td></tr></table></td>
                         <td class="kv-value">{{ form.jitter }}&nbsp;
                             <table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value">
                                 <div class="tooltip">hrs
