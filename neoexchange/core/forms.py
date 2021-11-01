@@ -226,11 +226,21 @@ class ScheduleBlockForm(forms.Form):
     acceptability_threshold = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     ag_exp_time = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     edit_window = forms.BooleanField(initial=False, required=False, widget=forms.CheckboxInput(attrs={'class': 'window-switch'}))
+    add_dither = forms.BooleanField(initial=False, required=False, widget=forms.CheckboxInput(attrs={'class': 'dither-switch'}))
+    dither_distance = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     gp_explength = forms.FloatField(required=False, widget=forms.NumberInput(attrs={'size': '5'}))
     rp_explength = forms.FloatField(required=False, widget=forms.NumberInput(attrs={'size': '5'}))
     ip_explength = forms.FloatField(required=False, widget=forms.NumberInput(attrs={'size': '5'}))
     zp_explength = forms.FloatField(required=False, widget=forms.NumberInput(attrs={'size': '5'}))
     muscat_sync = forms.BooleanField(initial=False, required=False)
+
+    def clean_dither_distance(self):
+        """Limit dither distance to values between 0 and 60 arcsec."""
+        if not self.cleaned_data['dither_distance'] or self.cleaned_data['dither_distance'] < 0:
+            return 10
+        if self.cleaned_data['dither_distance'] > 60:
+            return 60
+        return self.cleaned_data['dither_distance']
 
     def clean_exp_length(self):
         if not self.cleaned_data['exp_length'] or self.cleaned_data['exp_length'] < 0.1:

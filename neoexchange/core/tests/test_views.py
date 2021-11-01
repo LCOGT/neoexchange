@@ -1280,7 +1280,9 @@ class TestScheduleCheck(TestCase):
                             'max_airmass': 1.74,
                             'max_alt_airmass': 1.0861815238132588,
                             'min_lunar_dist': 30,
-                            'acceptability_threshold': 90
+                            'acceptability_threshold': 90,
+                            'dither_distance': 10,
+                            'add_dither': False,
                         }
 
     def make_visible_obj(self, test_date):
@@ -1804,11 +1806,11 @@ class TestScheduleCheck(TestCase):
     def test_mp_bad_too(self):
         MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
 
-        data = { 'site_code' : 'Q63',
-                 'utc_date' : datetime(2016, 4, 6).date(),
-                 'proposal_code' : self.neo_proposal.code,
-                 'too_mode' : True
-               }
+        data = {'site_code': 'Q63',
+                'utc_date': datetime(2016, 4, 6).date(),
+                'proposal_code': self.neo_proposal.code,
+                'too_mode': True
+                }
 
         expected_resp1 = self.expected_resp
         expected_resp1['site_code'] = data['site_code']
@@ -1891,7 +1893,9 @@ class TestScheduleCheck(TestCase):
                         'max_airmass': 2.0,
                         'max_alt_airmass': 1.0861815238132588,
                         'min_lunar_dist': 30,
-                        'acceptability_threshold': 90
+                        'acceptability_threshold': 90,
+                        'dither_distance': 10,
+                        'add_dither': False,
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -1970,7 +1974,9 @@ class TestScheduleCheck(TestCase):
                         'max_airmass': 2.0,
                         'max_alt_airmass': 1.0861815238132588,
                         'min_lunar_dist': 30,
-                        'acceptability_threshold': 90
+                        'acceptability_threshold': 90,
+                        'dither_distance': 10,
+                        'add_dither': False,
                         }
 
         resp = schedule_check(data, self.body_mp)
