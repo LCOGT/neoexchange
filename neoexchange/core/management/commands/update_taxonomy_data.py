@@ -44,7 +44,7 @@ class Command(BaseCommand):
             if resp + resp2:
                 msg = fg.green + "Updated {} Taxonomic measurements for {}".format(resp + resp2, body.current_name()) + fg.rs
                 c += 1
-            elif resp is 0 or resp2 is 0:
+            elif resp == 0 or resp2 == 0:
                 msg = fg.li_blue + "All Taxonomies for {} have been previously recorded.".format(body.current_name()) + fg.rs
             else:
                 msg = "No Taxonomies available for {}".format(body.current_name())
