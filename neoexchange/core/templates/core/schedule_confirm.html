@@ -19,12 +19,27 @@
         $('#data_window').show();
     }
 
+    var ds = document.getElementById("id_add_dither");
+    if(ds){
+        if(ds.checked){
+            $('#no_dither').hide();
+            $('#dither_dist_row').show();
+        } else {
+            $('#dither_dist_row').hide();
+            $('#no_dither').show();
+        }
+    }
+
     $('a.mode-switch').click(function(event){
       $('.mode-container').toggle();
     });
 
     $('.window-switch').click(function(event){
       $('.mode-window').toggle();
+    });
+
+    $('.dither-switch').click(function(event){
+      $('.mode-dither').toggle();
     });
 
   });
@@ -459,6 +474,7 @@
                   <td class="kv-key">Acceptability Threshold (%)</td>
                   <td class="kv-value">{{ form.acceptability_threshold }}</td>
               </tr>
+
               {% if data.spectroscopy %}
               <tr id="id_ag_exp_time_row">
                   <td class="kv-key">GuideCam Exposure time (s)</td>
@@ -491,6 +507,37 @@
                       <td class="kv-value">{{ form.calibsource_list }}</td>
                   </tr>
               {% endif %}
+              {% else %}
+              <tr id="id_dither_row">
+                  <td ><table align="left"  style="margin: 0px"><tr><td class="kv-key">
+                        <div class="tooltip">Add Dithering?
+                        <span class="tooltiptext" style="left:75%">
+                            <b>Add Dithering</b> to offset each image by the given distance in a box-spiral pattern starting at the target. <br> <br>
+                            The pattern will reset if the center ever gets further than 120" from the target.
+                             <font size="+1"><pre>&#9635; &larr; &#9635; &larr; &#9635;   &#9635;</pre>
+                                             <pre>&darr;        &uarr;   &uarr;</pre>
+                                             <pre>&#9635;   &#9673; &rarr; &#9635;   &#9635;</pre>
+                                             <pre>&darr;            &uarr;</pre>
+                                             <pre>&#9635; &rarr; &#9635; &rarr; &#9635; &rarr; &#9635;</pre> </font>
+                        </span></span></div></td><td></td></tr></table></td>
+                  <td class="kv-value">
+                        <div class="compact-field">
+                            {{ form.add_dither}}<label for="id_add_dither"></label>
+                        </div>
+                  </td>
+              </tr>
+              <tr id="no_dither" class="mode-dither">
+              </tr>
+              <tr id="dither_dist_row" class="mode-dither">
+                  <td ><table align="left"  style="margin: 0px"><tr><td class="kv-key">
+                        <div class="tooltip">Dither Separation (")
+                        <span class="tooltiptext" style="left:75%">
+                            Must be a value between 0 and 60".
+                      </span></span></div></td><td></td></tr></table></td>
+                <td class="kv-value">
+                    {{ form.dither_distance }}
+                </td>
+              </tr>
               {% endif %}
           </table>
           </div>

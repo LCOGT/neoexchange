@@ -17,13 +17,14 @@ GNU General Public License for more details.
 
 import logging
 import os
+from copy import deepcopy
 import urllib.request
 import urllib.error
 from urllib.parse import urljoin
 import imaplib
 import email
 from re import sub, compile
-from math import degrees
+from math import degrees, sqrt, copysign
 from time import sleep
 from datetime import date, datetime, timedelta
 from socket import error, timeout
@@ -48,6 +49,35 @@ from astrometrics.ephem_subs import build_filter_blocks, MPC_site_code_to_domes,
 from core.urlsubs import get_telescope_states
 
 logger = logging.getLogger(__name__)
+
+
+def box_spiral_generator(dist, max_sep):
+    """Create a box spiral of offsets (starting at 0 and resetting when it reaches the max seperation)
+        Result is a generator, that can be treated as an iterator.
+    :param dist: distance of single offset in RA or Dec in arcsec
+    :param max_sep: total distance from origin at which point the spiral resets
+    :return (ra_off, dec_off): Tuple for the current requested offsets
+    """
+    ra_off = 0
+    dec_off = 0
+    n = 1
+    while True:
+        k = 0
+        while k < abs(n):
+            if sqrt(ra_off**2 + dec_off**2) >= max_sep:
+                ra_off = 0
+                dec_off = 0
+                n = 1
+            yield ra_off, dec_off
+            ra_off += copysign(dist, n)
+            k += 1
+        k = 0
+        while k < abs(n):
+            yield ra_off, dec_off
+            dec_off += copysign(dist, n)
+            k += 1
+        n += copysign(1, n)
+        n *= -1
 
 
 def download_file(url, file_to_save):
@@ -1676,7 +1706,10 @@ def make_config(params, filter_list):
         'guiding_config': {},
         'instrument_configs': []
     }
-    if params['exp_type'] == 'REPEAT_EXPOSE':
+
+    if params.get('add_dither', False):
+        dither_pattern = box_spiral_generator(params['dither_distance'], 120)
+    elif params['exp_type'] == 'REPEAT_EXPOSE':
         # Remove overhead from slot_length so repeat_exposure matches predicted frames.
         # This will allow a 2 hour slot to fit within a 2 hour window.
         single_mol_overhead = cfg.molecule_overhead['filter_change'] + cfg.molecule_overhead['per_molecule_time']
@@ -1698,7 +1731,8 @@ def make_config(params, filter_list):
 
         instrument_config = {'exposure_count': exp_count,
                              'exposure_time': params['exp_time'],
-                             'optical_elements': {'filter': filt[0]}
+                             'optical_elements': {'filter': filt[0]},
+                             'extra_params': {}
                              }
 
         if params.get('bin_mode', None) == '2k_2x2' and params['pondtelescope'] == '1m0':
@@ -1720,7 +1754,18 @@ def make_config(params, filter_list):
                                                      'diffuser_z_position': 'out'}
 
             instrument_config['extra_params'] = extra_params
-        conf['instrument_configs'].append(instrument_config)
+
+        if params.get('add_dither', False):
+            exp = 0
+            while exp < exp_count:
+                offsets = next(dither_pattern)
+                instrument_config['exposure_count'] = 1
+                instrument_config['extra_params']["offset_ra"] = offsets[0]
+                instrument_config['extra_params']["offset_dec"] = offsets[1]
+                conf['instrument_configs'].append(deepcopy(instrument_config))
+                exp += 1
+        else:
+            conf['instrument_configs'].append(instrument_config)
 
     return conf
 
@@ -1965,7 +2010,7 @@ def configure_defaults(params):
     params['instrument'] = '1M0-SCICAM-SINISTRO'
 
     # Perform Repeated exposures if many exposures compared to number of filter changes.
-    if params['exp_count'] <= 10 or params['exp_count'] < 10*len(list(filter(None, params['filter_pattern'].split(',')))):
+    if params['exp_count'] <= 10 or params['exp_count'] < 10*len(list(filter(None, params['filter_pattern'].split(',')))) or params.get('add_dither', False):
         params['exp_type'] = 'EXPOSE'
     else:
         params['exp_type'] = 'REPEAT_EXPOSE'

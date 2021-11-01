@@ -1469,18 +1469,40 @@ def schedule_check(data, body, ok_to_schedule=True):
     # Create Group ID
     group_name = validate_text(data.get('group_name', None))
 
-    suffix = datetime.strftime(utc_date, '%Y%m%d')
     if period and jitter:
-        suffix = "cad-%s-%s" % (datetime.strftime(rise_time, '%Y%m%d'), datetime.strftime(set_time, '%m%d'))
-    elif spectroscopy:
-        suffix += "_spectra"
+        name_date = f"-cad-{datetime.strftime(rise_time, '%Y%m%d')}-{datetime.strftime(set_time, '%m%d')}"
+    else:
+        name_date = datetime.strftime(utc_date, '-%Y%m%d')
+
+    # Define possible tags that can be added on confirmation page
+    possible_tags = ['_spectra', '_ToO', '_bin2x2', '_dither']
+    # Build defualt group name
+    base_group_name = body.current_name() + '_' + data['site_code'].upper()
+    default_group_name = base_group_name + name_date
+    if spectroscopy:
+        default_group_name += possible_tags[0]
     if too_mode is True:
-        suffix += '_ToO'
-    default_group_name = body.current_name() + '_' + data['site_code'].upper() + '-' + suffix
-    if not group_name or (group_name == default_group_name + '_bin2x2' and bin_mode != '2k_2x2'):
+        default_group_name += possible_tags[1]
+    # Test group name for custom user additions
+    test_name = group_name
+    test_name = test_name.replace(base_group_name, '')
+    test_name = test_name.replace(name_date, '')
+    for tag in possible_tags:
+        test_name = test_name.replace(tag, '')
+    # Check for new date
+    if len(test_name) == 9 and test_name[:3] == '-20' and test_name[-8:].isdigit():
+        test_name = ''
+        # Check for new Cadence
+    elif "cad-20" in test_name and len(test_name) == 18 and test_name.replace('-', '').replace('cad', '').isdigit():
+        test_name = ''
+    # If no name, or no user additions, remake group name
+    if not group_name or not test_name:
         group_name = default_group_name
-    if group_name == default_group_name and bin_mode == '2k_2x2':
-        group_name += '_bin2x2'
+    if group_name == default_group_name:
+        if bin_mode == '2k_2x2':
+            group_name += possible_tags[2]
+        if data.get('add_dither', False):
+            group_name += possible_tags[3]
 
     resp = {
         'target_name': body.current_name(),
@@ -1538,6 +1560,8 @@ def schedule_check(data, body, ok_to_schedule=True):
         'calibsource_predict_exptime': sa_predicted_exptime,
         'calibsource_list_options': calib_list,
         'calibsource_list': calibsource_list_init,
+        'dither_distance': data.get('dither_distance', 10),  # set default value to 10 arcsec.
+        'add_dither': data.get('add_dither', False),
     }
 
     if not spectroscopy and 'F65' in data['site_code']:
@@ -1650,7 +1674,9 @@ def schedule_submit(data, body, username):
               'para_angle': data.get('para_angle', False),
               'min_lunar_distance': data.get('min_lunar_dist', 30),
               'acceptability_threshold': data.get('acceptability_threshold', 90),
-              'ag_exp_time': data.get('ag_exp_time', 10)
+              'ag_exp_time': data.get('ag_exp_time', 10),
+              'dither_distance': data.get('dither_distance', 10),
+              'add_dither': data.get('add_dither', False)
               }
     if data['period'] or data['jitter']:
         params['period'] = data['period']
