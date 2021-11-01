@@ -311,6 +311,7 @@ class Command(BaseCommand):
                 try:
                     obs_date = datetime.strptime(options['date'], '%Y%m%d')
                 except ValueError:
+                    usage = "Date for the --date option must be in the form: YYYYmmdd"
                     raise CommandError(usage)
             else:
                 obs_date = options['date']

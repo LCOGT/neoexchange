@@ -20,7 +20,7 @@ from django.forms.models import model_to_dict
 from math import degrees
 from bs4 import BeautifulSoup
 import logging
-from astrometrics.sources_subs import random_delay, fetch_mpcobs, packed_to_normal, parse_mpcobs
+from astrometrics.sources_subs import random_delay, fetch_mpcobs, packed_to_normal, parse_mpcobs, PackedError
 from core.models import Body, Frame, SourceMeasurement
 from core.views import get_characterization_targets
 logger = logging.getLogger(__name__)

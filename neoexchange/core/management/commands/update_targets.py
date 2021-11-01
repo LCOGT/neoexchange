@@ -46,6 +46,7 @@ class Command(BaseCommand):
                 start_date = datetime.strptime(options['date'], '%Y%m%d')
                 start_date += timedelta(seconds=12*3600)
             except ValueError:
+                usage = "Date for the --date option must be in the form: YYYYmmdd"
                 raise CommandError(usage)
         else:
             start_date = options['date']
