@@ -7,6 +7,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 ### 3.10
 * Add support for DAMIT and advanced LC plotting features.
 
+### 3.9.1
+* Implement dithering capabilities
+
 ### 3.9.0
 * Implement DataProducts refactor for ALCDEF, Gifs, and Floyds Traces
 
