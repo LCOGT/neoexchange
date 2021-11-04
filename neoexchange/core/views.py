@@ -1809,27 +1809,11 @@ class LCDataListView(ListView):
         return context
 
     def find_lc(self):
-        # **DP** replace with DataProduct
-        base_dir = os.path.join(settings.DATA_ROOT, 'Reduction')
-        dir_list, _ = default_storage.listdir(base_dir)
-        name_list = []
-        for name in dir_list:
-            if name.isdigit():
-                name_list.append(name)
-            elif '_' in name:
-                name_list.append(name.replace('_', ' '))
-            else:
-                for c in range(len(name)):
-                    new_name = name[:c] + ' ' + name[c:]
-                    name_list.append(new_name.lstrip())
-        object_list = Body.objects.filter(Q(designations__value__in=name_list) | Q(provisional_name__in=name_list)
-                                          | Q(provisional_packed__in=name_list) | Q(name__in=name_list))
-        # **DP** replace with DataProduct
-        final_objects = object_list
-        for obj in object_list:
-            if sanitize_object_name(obj.current_name()) not in name_list:
-                final_objects = final_objects.exclude(pk=obj.pk)
-        return list(set(final_objects))
+        alcdefs_blocks = DataProduct.content.sblock().filter(filetype=DataProduct.ALCDEF_TXT).select_related('content_type')
+        block_ids = [x.object_id for x in alcdefs_blocks]
+        alcdef_bodies = Body.objects.filter(superblock__pk__in=block_ids).distinct()
+
+        return alcdef_bodies
 
 
 def ranking(request):
