@@ -331,7 +331,7 @@ class Command(BaseCommand):
         output_file_list = []
 
         # build directory path / set permissions
-        obj_name = sanitize_object_name(start_super_block.body.current_name())
+        obj_name = sanitize_object_name(start_super_block.current_name())
         datadir = os.path.join(options['datadir'], obj_name)
         out_path = settings.DATA_ROOT
         data_path = ''
@@ -374,7 +374,7 @@ class Command(BaseCommand):
             block_list = Block.objects.filter(superblock=super_block.id)
             if obs_date:
                 block_list = block_list.filter(when_observed__lt=obs_date+timedelta(days=2)).filter(when_observed__gt=obs_date)
-            self.stdout.write("Analyzing SuperblockBlock# %s for %s" % (super_block.tracking_number, super_block.body.current_name()))
+            self.stdout.write("Analyzing SuperblockBlock# %s for %s" % (super_block.tracking_number, super_block.current_name()))
             for block in block_list:
                 block_mags = []
                 block_mag_errs = []
@@ -396,15 +396,22 @@ class Command(BaseCommand):
                 total_frame_count += frames.count()
                 frame_data = []
                 if frames_all_zp.count() != 0:
-                    elements = model_to_dict(block.body)
+                    elements = {}
+                    if block.body:
+                        elements = model_to_dict(block.body)
                     filter_list = []
 
                     for frame in frames_all_zp:
-                        # get predicted position and magnitude of target during time of each frame
-                        emp_line = compute_ephem(frame.midpoint, elements, frame.sitecode)
-                        ra = emp_line['ra']
-                        dec = emp_line['dec']
-                        mag_estimate = emp_line['mag']
+                        if elements:
+                            # get predicted position and magnitude of target during time of each frame
+                            emp_line = compute_ephem(frame.midpoint, elements, frame.sitecode)
+                            ra = emp_line['ra']
+                            dec = emp_line['dec']
+                            mag_estimate = emp_line['mag']
+                        else:
+                            ra = radians(block.calibsource.ra)
+                            dec = radians(block.calibsource.dec)
+                            mag_estimate = block.calibsource.vmag
                         (ra_string, dec_string) = radec2strings(ra, dec, ' ')
                         # Find list of frame sources within search region of predicted coordinates
                         sources = search_box(frame, ra, dec, options['boxwidth'])
