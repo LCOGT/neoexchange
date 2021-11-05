@@ -1786,8 +1786,9 @@ def search_box(frame, ra, dec, box_halfwidth=3.0, dbg=False):
     box_dec_max = dec_deg + box_halfwidth_deg
     dec_min = min(box_dec_min, box_dec_max)
     dec_max = max(box_dec_min, box_dec_max)
-    if dbg:
-        logger.debug("Searching %.4f->%.4f, %.4f->%.4f in %s" % (ra_min, ra_max, dec_min, dec_max , frame.filename))
+    if dbg: 
+        logger.debug("Searching %.4f->%.4f, %.4f->%.4f in %s" % (ra_min, ra_max, dec_min, dec_max, frame.filename))
+
     sources = CatalogSources.objects.filter(frame=frame, obs_ra__range=(ra_min, ra_max), obs_dec__range=(dec_min, dec_max))
     return sources
 

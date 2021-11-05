@@ -32,7 +32,7 @@ from core.views import BodySearchView, BodyDetailView, BlockDetailView, Schedule
     StaticSourceView, StaticSourceDetailView, ScheduleCalibSpectra, ScheduleCalibSubmit, \
     CalibSpectroFeasibility, ScheduleCalibParameters, \
     BestStandardsView, PlotSpec, BodyVisibilityView, SuperBlockTimeline, BlockCancel, \
-    look_project, AddTarget
+    look_project, AddTarget, display_textfile
 from core.plots import make_visibility_plot, \
     make_standards_plot, make_solar_standards_plot
 
@@ -77,6 +77,7 @@ urlpatterns = [
     url(r'^target/(?P<pk>\d+)/$', BodyDetailView.as_view(model=Body), name='target'),
     url(r'^target/(?P<pk>\d+)/spectra/$', PlotSpec.as_view(), name='plotspec'),
     url(r'^target/(?P<pk>\d+)/lc/$', LCPlot.as_view(), name='lc_plot'),
+    url(r'^documents/(?P<pk>\d+).txt$', display_textfile, name='display_textfile'),
     url(r'^target/add/$', AddTarget.as_view(), name='add_target'),
     url(r'^search/$', BodySearchView.as_view(context_object_name="target_list"), name='search'),
     url(r'^ephemeris/$', ephemeris, name='ephemeris'),

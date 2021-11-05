@@ -26,10 +26,11 @@ from django.conf import settings
 from core.models.dataproducts import DataProduct
 
 
-def search(base_dir, matchpattern, latest=False):
+def search(base_dir, matchpattern, dir_search=False, latest=False):
     """
     :param base_dir: directory to search
     :param matchpattern: filename pattern to search for
+    :param dir_search: flag to search for directories rather than files
     :param latest: flag to return only a single, most recently modified search result
     :return:
         If base directory doesn't exist: False
@@ -39,12 +40,16 @@ def search(base_dir, matchpattern, latest=False):
         If base directory exists, latest == True, and files not found: Empty string
     """
     try:
-        _, files = default_storage.listdir(base_dir)
+        directories, files = default_storage.listdir(base_dir)
     except FileNotFoundError:
         return False
-    if files:
+    if dir_search:
+        search_list = directories
+    else:
+        search_list = files
+    if search_list:
         regex = re.compile(matchpattern)
-        file_filter = filter(regex.search, files)
+        file_filter = filter(regex.search, search_list)
         matchfiles = [f for f in file_filter]
         # Find most recent file
         if not latest:

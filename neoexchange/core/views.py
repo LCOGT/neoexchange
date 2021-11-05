@@ -13,6 +13,7 @@ GNU General Public License for more details.
 
 import os
 from shutil import move
+import copy
 from glob import glob
 from operator import itemgetter
 from datetime import datetime, timedelta, date
@@ -92,6 +93,7 @@ import matplotlib.pyplot as plt
 logger = logging.getLogger(__name__)
 
 BOKEH_URL = "https://cdn.bokeh.org/bokeh/release/bokeh-{}.min."
+
 
 def home(request):
     params = build_unranked_list_params()
@@ -3890,6 +3892,7 @@ class LCPlot(LookUpBodyMixin, FormView):
         else:
             period = None
         script, div, meta_list = get_lc_plot(self.body, {'period': period})
+        alcdef_dps = DataProduct.content.fullbody(bodyid=self.body.id).filter(filetype=DataProduct.ALCDEF_TXT)
 
         return self.render_to_response(self.get_context_data(body=self.body, script=script, div=div, meta_list=meta_list))
 
@@ -3908,9 +3911,15 @@ class LCPlot(LookUpBodyMixin, FormView):
         return params
 
 
-def import_alcdef(file, meta_list, lc_list):
-    """Pull LC data from ALCDEF text files."""
+def import_alcdef(alcdef, meta_list, lc_list):
+    """Pull LC data from ALCDEF Data Product.
+        :param alcdef: DataProduct of alcdef file
+        :param meta_list: list of metadata
+        :param lc_list: list of lc_data {date, mag, mag_err}
+        :return meta_list, lc_list
+    """
 
+    file = alcdef.product.file
     with file.open() as lc_file:
         lines = lc_file.readlines()
 
@@ -3921,8 +3930,13 @@ def import_alcdef(file, meta_list, lc_list):
         met_dat = False
 
         for line in lines:
+            line = line.rstrip()
             line = str(line, 'utf-8')
-            if line[0] == '#':
+            # skip commented lines
+            try:
+                if line.lstrip()[0] == '#':
+                    continue
+            except IndexError:
                 continue
             if '=' in line:
                 if 'DATA=' in line and met_dat is False:
@@ -3952,14 +3966,137 @@ def import_alcdef(file, meta_list, lc_list):
             elif 'STARTMETADATA' in line:
                 met_dat = True
             elif 'ENDMETADATA' in line:
+                metadata['alcdef_url'] = reverse('display_textfile', kwargs={'pk': alcdef.id})
                 met_dat = False
 
     return meta_list, lc_list
 
 
+def import_period_scan(file, scan_list):
+    """Pull Period data from Period Scan files."""
+
+    scan_data = {'period': [], 'rms': [], 'chi2': []}
+    lines = file.readlines()
+    for line in lines:
+        chunks = line.split()
+        if len(chunks) >= 3:
+            scan_data['period'].append(float(chunks[0]))
+            scan_data['rms'].append(float(chunks[1]))
+            scan_data['chi2'].append(float(chunks[2]))
+    scan_data["rms"] = [x for _, x in sorted(zip(scan_data["period"], scan_data["rms"]))]
+    scan_data["chi2"] = [x for _, x in sorted(zip(scan_data["period"], scan_data["chi2"]))]
+    scan_data["period"].sort()
+    scan_list.append(scan_data)
+    return scan_list
+
+
+def import_lc_model(m_file, model_list):
+    """Pull model lc from intensity files."""
+
+    lc_model_file = m_file.product.file
+    file_parts = m_file.product.name.split('_')
+    name = f'{file_parts[2]} ({file_parts[1]})'
+    lines = lc_model_file.readlines()
+    model_jd = []
+    model_mag = []
+    for k, line in enumerate(lines):
+        chunks = line.split()
+        if len(chunks) == 2:
+            model_jd.append(float(chunks[0]))
+            model_mag.append(float(chunks[1]))
+        elif k > 0:
+            model_list['date'].append(copy.deepcopy(model_jd))
+            model_list['mag'].append(copy.deepcopy(model_mag))
+            model_list['name'].append(name)
+            model_jd.clear()
+            model_mag.clear()
+    model_list['date'].append(copy.deepcopy(model_jd))
+    model_list['mag'].append(copy.deepcopy(model_mag))
+    model_list['name'].append(name)
+    return model_list
+
+
+def import_shape_model(file, body, model_params):
+    shape_list = {'faces_x': [], 'faces_y': [], 'faces_z': [], 'faces_normal': [], 'faces_level': [], 'faces_colors': []}
+    lines = file.readlines()
+    points_list = []
+    n_points = 0
+    # set angles
+    long_of_asc_node = body.longascnode
+    pole_long = radians(model_params['pole_longitude'])
+    pole_lat = radians(model_params['pole_latitude'] - 90)
+    # build rotation matrices
+    rmat_sun = S.sla_deuler('Z', radians(-long_of_asc_node), 0, 0)  # set initial orbit position to ecliptic
+    rmat_view = S.sla_deuler('X', radians(90), 0, 0)  # set initial view for heliocentric z = plot y
+    try:
+        rmat_pole = S.sla_deuler('YZ', pole_lat, pole_long, 0)  # create pole rotation
+    except TypeError:
+        rmat_pole = S.sla_deuler('', 0, 0, 0)
+    pole_vector = S.sla_dmxv(rmat_pole, [0, 0, 1])
+    pole_vector = S.sla_dmxv(rmat_view, pole_vector)
+    # pull out face information
+    for k, line in enumerate(lines):
+        chunks = line.split()
+        if len(chunks) < 3:
+            if len(chunks) == 2:
+                # get number of vertices
+                n_points = int(chunks[0])
+        elif k <= n_points:
+            # get vertex coordinates
+            coords = []
+            for c in chunks:
+                coords.append(float(c))
+            points_list.append(coords)
+        else:
+            # build faces using assigned vertices
+            face_x = []
+            face_y = []
+            face_z = []
+            normal = [0, 0, 0]
+            for h, p in enumerate(chunks):
+                next_point = chunks[(h+1) % (len(chunks))]
+
+                coords = points_list[int(p)-1]
+                coords_next = points_list[int(next_point)-1]
+                xx = coords[0]
+                xx_nxt = coords_next[0]
+                yy = coords[1]
+                yy_nxt = coords_next[1]
+                zz = coords[2]
+                zz_nxt = coords_next[2]
+
+                # rotate faces to initial position
+                rot_coords = S.sla_dmxv(rmat_pole, coords)
+                rot_coords = S.sla_dmxv(rmat_view, rot_coords)
+                # Store vertices of each face
+                face_x.append(rot_coords[0])
+                face_y.append(rot_coords[1])
+                face_z.append(rot_coords[2])
+
+                # Calculate normal vector for face
+                normal[0] += (yy - yy_nxt) * (zz + zz_nxt)
+                normal[1] += (zz - zz_nxt) * (xx + xx_nxt)
+                normal[2] += (xx - xx_nxt) * (yy + yy_nxt)
+            normal, _ = S.sla_dvn(normal)
+            shape_list['faces_x'].append(face_x)
+            shape_list['faces_y'].append(face_y)
+            shape_list['faces_z'].append(face_z)
+            shape_list['faces_normal'].append(normal)
+            shape_list['faces_level'].append(np.mean(face_z))
+            brightness = S.sla_dmxv(rmat_sun, S.sla_dmxv(rmat_pole, normal))[0] * 100
+            shape_list['faces_colors'].append(f"hsl(0, 0%, {brightness}%)")
+    pole_data = {"v_x": [pole_vector[0]], "v_y": [pole_vector[1]], "v_z": [pole_vector[2]], "p_lat": [pole_lat], "p_long": [pole_long], "period_fit": [model_params['period']]}
+    return shape_list, pole_data
+
+
 def get_lc_plot(body, data):
     """Plot all lightcurve data for given source.
     """
+
+    period_scans = DataProduct.content.fullbody(bodyid=body.id).filter(filetype=DataProduct.PERIODOGRAM_RAW)
+    lc_models = DataProduct.content.fullbody(bodyid=body.id).filter(filetype=DataProduct.MODEL_LC_RAW)
+    model_params = DataProduct.content.fullbody(bodyid=body.id).filter(filetype=DataProduct.MODEL_LC_PARAM)
+    shape_models = DataProduct.content.fullbody(bodyid=body.id).filter(filetype=DataProduct.MODEL_SHAPE)
 
     if data.get('period', None):
         period = data['period']
@@ -3972,11 +4109,58 @@ def get_lc_plot(body, data):
     if dataproducts:
         for dp in dataproducts:
             try:
-                meta_list, lc_list = import_alcdef(dp.product.file, meta_list, lc_list)
+                meta_list, lc_list = import_alcdef(dp, meta_list, lc_list)
             except FileNotFoundError as e:
                 logger.warning(e)
     else:
         meta_list = lc_list = []
+
+    period_scan_dict = []
+    if period_scans:
+        for scan in period_scans:
+            try:
+                period_scan_dict = import_period_scan(scan.product.file, period_scan_dict)
+            except FileNotFoundError as e:
+                logger.warning(e)
+    if not period_scan_dict:
+        period_scan_dict = [{"period": [], "rms": [], "chi2": []}]
+
+    lc_model_dict = {"date": [], "mag": [], "name": []}
+    if lc_models:
+        for m in lc_models:
+            try:
+                lc_model_dict = import_lc_model(m, lc_model_dict)
+            except FileNotFoundError as e:
+                logger.warning(e)
+
+    model_param_dict = []
+    if model_params:
+        for params in model_params:
+            try:
+                model_params_file = params.product.file.open()
+                lines = model_params_file.readlines()
+                chunks = lines[0].split()
+                model_param_dict.append({"pole_longitude": float(chunks[0]), "pole_latitude": float(chunks[1]), "period": float(chunks[2])})
+            except FileNotFoundError as e:
+                logger.warning(e)
+    else:
+        model_param_dict.append({"pole_longitude": None, "pole_latitude": None, "period": None})
+
+    shape_model_list = []
+    pole_vector_list = []
+    if shape_models:
+        for n, sm in enumerate(shape_models):
+            try:
+                shape_model_dict, pole_vector = import_shape_model(sm.product.file, body, model_param_dict[n])
+                for key in shape_model_dict.keys():
+                    if key != 'faces_level':
+                        shape_model_dict[key] = [x for _, x in sorted(zip(shape_model_dict["faces_level"], shape_model_dict[key]), key=lambda x: x[0], reverse=False)]
+                shape_model_list.append(shape_model_dict)
+                pole_vector_list.append(pole_vector)
+            except FileNotFoundError as e:
+                logger.warning(e)
+    if not pole_vector_list:
+        pole_vector_list = [{"v_x": [0], "v_y": [0], "v_z": [1], "p_lat": [0], "p_long": [0], "period_fit": [1]}]
 
     meta_list = [x for _, x in sorted(zip(lc_list, meta_list), key=lambda i: i[0]['date'][0])]
     lc_list = sorted(lc_list, key=lambda i: i['date'][0])
@@ -3994,7 +4178,7 @@ def get_lc_plot(body, data):
         ephem = []
 
     if lc_list:
-        script, div = lc_plot(lc_list, meta_list, period, jpl_ephem=ephem)
+        script, div = lc_plot(lc_list, meta_list, lc_model_dict, period, period_scan_dict, shape_model_list, pole_vector_list, body, jpl_ephem=ephem)
     else:
         script = None
         div = """
@@ -4002,6 +4186,22 @@ def get_lc_plot(body, data):
         """.format(body.full_name())
 
     return script, div, meta_list
+
+
+def display_textfile(request, pk):
+    """Load textfile DataProduct for display on webpage
+        :param pk: id for DataProduct
+    """
+    try:
+        textfile = DataProduct.objects.get(pk=pk).product
+    except ObjectDoesNotExist as e:
+        logger.warning(e)
+        raise Http404("Dataproduct does not exist.")
+    try:
+        return HttpResponse(textfile, content_type="Text/plain")
+    except FileNotFoundError as e:
+        logger.warning(e)
+        raise Http404("Couldn't find requested file.")
 
 
 def display_movie(request, pk):

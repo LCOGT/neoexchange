@@ -220,6 +220,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
             if progress:
                 logger.warning('Could not find Frame {}'.format(good_fits_files[n]))
             return None
+
         # pull Date from Header
         try:
             date_obs = header_n['DATE-OBS']
@@ -269,8 +270,9 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
         x_frac = 0
         y_frac = 0
         if center is not None:
-            y_frac = np.max(int((shape[0] - (center * 60)/header_n['PIXSCALE']) / 2), 0)
-            x_frac = np.max(int((shape[1] - (center * 60)/header_n['PIXSCALE']) / 2), 0)
+            width = (center * 60) / header_n['PIXSCALE']
+            y_frac = np.max(int((shape[0] - width) / 2), 0)
+            x_frac = np.max(int((shape[1] - width) / 2), 0)
 
             # set data ranges
             data_x_range = [x_frac, -(x_frac+1)]
