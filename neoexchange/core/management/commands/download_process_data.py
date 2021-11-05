@@ -118,7 +118,7 @@ class Command(BaseCommand):
 # Step 3b: Calculate mean PA and speed
             if first_frame.block:
                 body = first_frame.block.body
-                if body.epochofel:
+                if body and body.epochofel:
                     elements = model_to_dict(body)
                     min_rate, max_rate, pa, deltapa = determine_rates_pa(first_frame.midpoint, last_frame.midpoint, elements, first_frame.sitecode)
 
@@ -145,7 +145,7 @@ class Command(BaseCommand):
                     status = call_command('pipeline_astrometry', *mtdlink_args, **mtdlink_kwargs)
                     self.stderr.write("\n")
                 else:
-                    self.stderr.write("Object %s does not have updated elements" % body.current_name())
+                    self.stderr.write("Object %s does not have updated elements" % first_frame.block.current_name())
 
 # Step 4: Run Lightcurve Extraction
                 if first_frame.block.superblock.tracking_number == last_frame.block.superblock.tracking_number:
