@@ -22,7 +22,7 @@ from django.core.management import call_command
 from django.forms import model_to_dict
 from django.conf import settings
 
-from core.models import Frame
+from core.models import Frame, Block
 from core.management.commands import download_archive_data, pipeline_astrometry
 from astrometrics.ephem_subs import determine_rates_pa
 from photometrics.catalog_subs import get_fits_files, sort_rocks, find_first_last_frames
@@ -118,13 +118,17 @@ class Command(BaseCommand):
 # Step 3b: Calculate mean PA and speed
             if first_frame.block:
                 body = first_frame.block.body
-                if body and body.epochofel:
-                    elements = model_to_dict(body)
-                    min_rate, max_rate, pa, deltapa = determine_rates_pa(first_frame.midpoint, last_frame.midpoint, elements, first_frame.sitecode)
+                if (body and body.epochofel) or (first_frame.block.calibsource and first_frame.block.obstype in (Block.OPT_IMAGING, Block.OPT_IMAGING_CALIB)):
+                    if body and body.epochofel:
+                        elements = model_to_dict(body)
+                        min_rate, max_rate, pa, deltapa = determine_rates_pa(first_frame.midpoint, last_frame.midpoint, elements, first_frame.sitecode)
 
 # Step 3c: Run pipeline_astrometry
-                    mtdlink_args = "datadir=%s pa=%03d deltapa=%03d minrate=%.3f maxrate=%.3f" % (datadir, pa, deltapa, min_rate, max_rate)
-                    skip_mtdlink = False
+                        skip_mtdlink = False
+                    else:
+                        # StaticSource
+                        skip_mtdlink = True
+                        min_rate = max_rate = pa = deltapa = 0
                     keep_temp_dir = False
                     if len(fits_files) > options['mtdlink_file_limit']:
                         self.stdout.write("Too many frames to run mtd_link")
