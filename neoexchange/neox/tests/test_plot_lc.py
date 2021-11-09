@@ -41,9 +41,9 @@ class LighCurvePlotTest(FunctionalTest):
         super(LighCurvePlotTest, self).setUp()
         settings.DATA_ROOT = self.test_dir
         settings.MEDIA_ROOT = self.test_dir
-        lcname = '433_738215_ALCDEF.txt'
+        self.lcname = '433_738215_ALCDEF.txt'
         lcpath = os.path.abspath(os.path.join('photometrics', 'tests'))
-        save_to_default(os.path.join(lcpath, lcname), lcpath)
+        save_to_default(os.path.join(lcpath, self.lcname), lcpath)
 
         params = {  'name' : '433',
                     'abs_mag'       : 21.0,
@@ -72,6 +72,33 @@ class LighCurvePlotTest(FunctionalTest):
 
         self.body2.save_physical_parameters({'parameter_type': 'P', 'value': 5.27})
 
+        params = {'name': 'C/2017 K2',
+                  'abs_mag': 7.0,
+                  'slope': 2.0,
+                  'epochofel': '2021-07-05 00:00:00',
+                  'epochofperih': '2022-12-19 05:50:00',
+                  'argofperih': 236.19001,
+                  'longascnode': 88.244,
+                  'orbinc': 87.55297,
+                  'eccentricity': 1.0005709,
+                  'perihdist': 1.7974686,
+                  'source_type': 'C',
+                  'elements_type': 'MPC_COMET',
+                  'active': True,
+                  'origin': 'O',
+                  'ingest': '2015-05-11 17:20:00',
+                  'score': 90,
+                  'discovery_date': '2015-05-10 12:00:00',
+                  'update_time': '2015-05-18 05:00:00',
+                  'num_obs': 17,
+                  'arc_length': 3.123456789,
+                  'not_seen': 0.423456789,
+                  'updated': True,
+                  'meandist': None,
+                  'meananom': None,
+                  }
+        self.comet, created = Body.objects.get_or_create(pk=3, **params)
+
         self.username = 'bart'
         self.password = 'simpson'
         self.email = 'bart@simpson.org'
@@ -82,8 +109,6 @@ class LighCurvePlotTest(FunctionalTest):
         self.bart.save()
 
         update_proposal_permissions(self.bart, [{'code': self.neo_proposal.code}])
-
-        save_dataproduct(self.body2, lcname, DataProduct.ALCDEF_TXT)
 
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def login(self):
@@ -108,6 +133,7 @@ class LighCurvePlotTest(FunctionalTest):
 
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def test_can_view_lightcurve(self):   # test opening up a ALCDEF file associated with a body
+        save_dataproduct(self.body2, self.lcname, DataProduct.ALCDEF_TXT)
         self.login()
         lc_url = reverse('lc_plot', args=[self.body2.id])
         self.browser.get(self.live_server_url + lc_url)
@@ -134,4 +160,22 @@ class LighCurvePlotTest(FunctionalTest):
         self.assertIn('txt', self.browser.current_url)
         alcdef_text = self.browser.find_element_by_xpath("/html/body/pre").text
         self.assertIn('OBJECTNUMBER=433', alcdef_text)
+        return
+
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
+    def test_can_view_comet_lightcurve(self):  # test opening up a ALCDEF file associated with a body
+        save_dataproduct(self.comet, self.lcname, DataProduct.ALCDEF_TXT)
+        self.login()
+        lc_url = reverse('lc_plot', args=[self.comet.id])
+        self.browser.get(self.live_server_url + lc_url)
+
+        self.assertIn('Lightcurve for object: C/2017 K2', self.browser.title)
+
+        canvas = self.browser.find_element_by_xpath(
+            "/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='lc_plot']/div[@class='bk']/div[@class='bk'][2]/div[@class='bk'][1]/div[@class='bk']/div[@class='bk bk-canvas-events']")
+        phase_tab = self.browser.find_element_by_xpath(
+            "/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='lc_plot']/div[@class='bk']/div[@class='bk bk-tabs-header bk-above']/div[@class='bk bk-headers-wrapper']/div[@class='bk bk-headers']/div[@class='bk bk-tab']")
+        phase_tab.click()
+        period_box = self.browser.find_element_by_xpath(
+            "/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='lc_plot']/div[@class='bk']/div[@class='bk'][2]/div[@class='bk'][2]/div[@class='bk'][2]/div[@class='bk']/div[@class='bk'][1]/div[@class='bk'][1]/div[@class='bk']/div[@class='bk bk-input-group']/div[@class='bk bk-spin-wrapper']/input[@class='bk bk-input']")
         return

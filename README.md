@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.10.1
+* Fix orbit plots for cometary elements.
+
 ### 3.10.0
 * Add support for DAMIT and advanced LC plotting features.
 

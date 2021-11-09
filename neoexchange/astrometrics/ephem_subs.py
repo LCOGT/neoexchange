@@ -2247,15 +2247,24 @@ def convert_to_ecliptic(equatorial_coords, coord_date):
 
 
 def orbital_pos_from_true_anomaly(nu, body_elements):
-    """Give Cartesian coordinates for a given true anomaly in radians for s given set of orbital elements"""
-    a = body_elements['meandist']
+    """Give Cartesian coordinates for a given true anomaly in radians for a given set of orbital elements"""
+    a = body_elements.get('meandist', 0)
     e = body_elements['eccentricity']
     i = radians(body_elements['orbinc'])
     om = radians(body_elements['longascnode'])
     w = radians(body_elements['argofperih'])
+    q = body_elements.get('perihdist', 0)
+
+    # Calculate radial distance
+    if not a:  # Comet
+        e = 1
+        if e >= 1:  # shorten extent of nu to prevent wayward infinities and beyond.
+            nu *= acos(-1/e) / pi - 0.0001
+        r = q * (1 + e) / (1 + e * cos(nu))
+    else:
+        r = a * (1 - e ** 2) / (1 + e * cos(nu))
 
     # Calculate radial distance and heliocentric, ecliptic Cartesian Coordinates based on orbital elements
-    r = a * (1 - e ** 2) / (1 + e * cos(nu))
     x_h_ecl = r * (cos(om) * cos(w + nu) - sin(om) * sin(w + nu) * cos(i))
     y_h_ecl = r * (sin(om) * cos(w + nu) + cos(om) * sin(w + nu) * cos(i))
     z_h_ecl = r * (sin(w + nu) * sin(i))
