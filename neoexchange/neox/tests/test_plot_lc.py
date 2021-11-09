@@ -41,9 +41,9 @@ class LighCurvePlotTest(FunctionalTest):
         super(LighCurvePlotTest, self).setUp()
         settings.DATA_ROOT = self.test_dir
         settings.MEDIA_ROOT = self.test_dir
-        lcname = '433_738215_ALCDEF.txt'
+        self.lcname = '433_738215_ALCDEF.txt'
         lcpath = os.path.abspath(os.path.join('photometrics', 'tests'))
-        save_to_default(os.path.join(lcpath, lcname), lcpath)
+        save_to_default(os.path.join(lcpath, self.lcname), lcpath)
 
         params = {  'name' : '433',
                     'abs_mag'       : 21.0,
@@ -110,9 +110,6 @@ class LighCurvePlotTest(FunctionalTest):
 
         update_proposal_permissions(self.bart, [{'code': self.neo_proposal.code}])
 
-        save_dataproduct(self.body2, lcname, DataProduct.ALCDEF_TXT)
-        save_dataproduct(self.comet, lcname, DataProduct.ALCDEF_TXT)
-
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def login(self):
         self.browser.get('%s%s' % (self.live_server_url, '/accounts/login/'))
@@ -136,6 +133,7 @@ class LighCurvePlotTest(FunctionalTest):
 
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def test_can_view_lightcurve(self):   # test opening up a ALCDEF file associated with a body
+        save_dataproduct(self.body2, self.lcname, DataProduct.ALCDEF_TXT)
         self.login()
         lc_url = reverse('lc_plot', args=[self.body2.id])
         self.browser.get(self.live_server_url + lc_url)
@@ -166,6 +164,7 @@ class LighCurvePlotTest(FunctionalTest):
 
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def test_can_view_comet_lightcurve(self):  # test opening up a ALCDEF file associated with a body
+        save_dataproduct(self.comet, self.lcname, DataProduct.ALCDEF_TXT)
         self.login()
         lc_url = reverse('lc_plot', args=[self.comet.id])
         self.browser.get(self.live_server_url + lc_url)
