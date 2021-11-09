@@ -732,6 +732,8 @@ def lc_plot(lc_list, meta_list, lc_model_dict={}, period=1, pscan_list=[], shape
     plot_orbit = figure(plot_width=900, plot_height=900, x_axis_location=None, y_axis_location=None)
     if body.meandist:
         orbit_range = body.meandist
+    elif body.perihdist:
+        orbit_range = body.perihdist
     else:
         orbit_range = 1
     plot_orbit.y_range = Range1d(min(-1.1, -1.1 * orbit_range), max(1.1, 1.1 * orbit_range))
