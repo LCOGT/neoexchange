@@ -1197,7 +1197,7 @@ def get_orbit_position(meta_list, lc_list, body):
 
 def get_full_orbit(body):
     body_elements = model_to_dict(body)
-    full_orbit = [orbital_pos_from_true_anomaly(nu, body_elements) for nu in np.arange(-3.5, 3.5, .01)]
+    full_orbit = [orbital_pos_from_true_anomaly(nu, body_elements) for nu in np.arange(-pi, pi, .01)]
     full_orbit_x = [pos[0] for pos in full_orbit]
     full_orbit_y = [pos[1] for pos in full_orbit]
     full_orbit_z = [pos[2] for pos in full_orbit]
@@ -1205,7 +1205,7 @@ def get_full_orbit(body):
 
     planetary_elements = get_planetary_elements()
     for planet in planetary_elements:
-        p_orb = [orbital_pos_from_true_anomaly(nu, planetary_elements[planet]) for nu in np.arange(-3.5, 3.5, .01)]
+        p_orb = [orbital_pos_from_true_anomaly(nu, planetary_elements[planet]) for nu in np.arange(-pi, pi, .01)]
         position_data[f'{planet}_x'] = [pos[0] for pos in p_orb]
         position_data[f'{planet}_y'] = [pos[1] for pos in p_orb]
         position_data[f'{planet}_z'] = [pos[2] for pos in p_orb]
