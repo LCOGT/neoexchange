@@ -291,6 +291,11 @@ class SuperBlockDetailView(DetailView):
     template_name = 'core/block_detail.html'
     model = SuperBlock
 
+    def get_context_data(self, *args, **kwargs):
+        data = super(SuperBlockDetailView, self).get_context_data(**kwargs)
+        blockids = self.get_object().block_set.values_list('id',flat=True)
+        data['dataproducts'] = DataProduct.content.filter(object_id__in=blockids).block()
+        return data
 
 class SuperBlockTimeline(DetailView):
     template_name = 'core/block_timeline.html'

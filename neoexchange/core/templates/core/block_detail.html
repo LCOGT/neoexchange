@@ -96,6 +96,13 @@
                     </table>
                 </div>
                 <div class="four columns">
+
+                  {% if dataproducts %}
+                  <h5 class="section-title">Data Products</h5>
+                  {% for dp in dataproducts%}
+                  <a href="{{dp.product.url}}">{{dp.get_filetype_display}}</a><br/>
+                  {% endfor %}
+                  {% endif %}
                     <h5 class="section-title">{% if object.block_set.all%}Observation Blocks{% else%}Controls{% endif %}</h5>
                         {% if request.user.is_authenticated %}
                         {% if object.active %}
