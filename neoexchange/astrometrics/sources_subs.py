@@ -1614,15 +1614,63 @@ def make_location(params):
     if params['site_code'] == 'W85':
         location['telescope'] = '1m0a'
         location['enclosure'] = 'doma'
+    elif params['site_code'] == 'W86':
+        location['telescope'] = '1m0a'
+        location['enclosure'] = 'domb'
     elif params['site_code'] == 'W87':
         location['telescope'] = '1m0a'
         location['enclosure'] = 'domc'
+    elif params['site_code'] == 'V37':
+        location['telescope'] = '1m0a'
+        location['enclosure'] = 'doma'
     elif params['site_code'] == 'V39':
         location['telescope'] = '1m0a'
         location['enclosure'] = 'domb'
     elif params['site_code'] == 'Z31':
         location['telescope'] = '1m0a'
         location['enclosure'] = 'doma'
+    elif params['site_code'] == 'Z24':
+        location['telescope'] = '1m0a'
+        location['enclosure'] = 'domb'
+    elif params['site_code'] == 'K91':
+        location['telescope'] = '1m0a'
+        location['enclosure'] = 'doma'
+    elif params['site_code'] == 'K92':
+        location['telescope'] = '1m0a'
+        location['enclosure'] = 'domb'
+    elif params['site_code'] == 'K93':
+        location['telescope'] = '1m0a'
+        location['enclosure'] = 'domc'
+    elif params['site_code'] == 'Q63':
+        location['telescope'] = '1m0a'
+        location['enclosure'] = 'doma'
+    elif params['site_code'] == 'Q64':
+        location['telescope'] = '1m0a'
+        location['enclosure'] = 'domb'
+    elif params['site_code'] == 'Z21':
+        location['telescope'] = '0m4a'
+        location['enclosure'] = 'aqwa'
+    elif params['site_code'] == 'Z17':
+        location['telescope'] = '0m4b'
+        location['enclosure'] = 'aqwa'
+    elif params['site_code'] == 'Q58':
+        location['telescope'] = '0m4a'
+        location['enclosure'] = 'clma'
+    elif params['site_code'] == 'Q59':
+        location['telescope'] = '0m4b'
+        location['enclosure'] = 'clma'
+    elif params['site_code'] == 'L09':
+        location['telescope'] = '0m4a'
+        location['enclosure'] = 'aqwa'
+    elif params['site_code'] == 'V38':
+        location['telescope'] = '0m4a'
+        location['enclosure'] = 'aqwa'
+    elif params['site_code'] == 'T04':
+        location['telescope'] = '0m4b'
+        location['enclosure'] = 'clma'
+    elif params['site_code'] == 'T03':
+        location['telescope'] = '0m4c'
+        location['enclosure'] = 'clma'
 
     return location
 
