@@ -140,7 +140,7 @@ class SourceMeasurement(models.Model):
         rms_available = False
         if self.err_obs_ra and self.err_obs_dec and self.err_obs_mag:
             rms_available = True
-            rms_tbl_fmt = '%7s|%-11s|%8s|%4s|%-4s|%-23s|%11s|%11s|%5s|%6s|%8s|%-5s|%6s|%4s|%8s|%6s|%6s|%6s|%-5s|%-s'
+            rms_tbl_fmt = '%7s|%-11s|%8s|%4s|%-4s|%-24s|%11s|%11s|%5s|%6s|%8s|%-5s|%6s|%4s|%8s|%6s|%6s|%6s|%-5s|%-s'
             tbl_hdr = rms_tbl_fmt % ('permID ', 'provID', 'trkSub  ', 'mode', 'stn', 'obsTime', \
                 'ra', 'dec', 'rmsRA', 'rmsDec', 'astCat', 'mag', 'rmsMag', 'band', 'photCat', \
                 'photAp', 'logSNR', 'seeing', 'notes', 'remarks')
@@ -183,7 +183,7 @@ class SourceMeasurement(models.Model):
 
         obsTime = self.frame.midpoint
         obsTime = obsTime.strftime("%Y-%m-%dT%H:%M:%S")
-        frac_time = "{:.2f}Z".format(self.frame.midpoint.microsecond / 1e6)
+        frac_time = "{:.3f}Z".format(self.frame.midpoint.microsecond / 1e6)
         obsTime = obsTime + frac_time[1:]
         ast_catalog_code = translate_catalog_code(self.frame.astrometric_catalog, ades_code=True)
         if (self.frame.astrometric_catalog is None or self.frame.astrometric_catalog.strip() == '')\
