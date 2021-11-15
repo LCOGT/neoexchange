@@ -27,9 +27,9 @@ def generate_message(blockid, bodyid):
     # Strip off last double newline but put one back again
     return message.rstrip() + '\n'
 
-def generate_ades_psv_message(blockid, bodyid):
+def generate_ades_psv_message(blockid, bodyid, obs_filter=None):
     t = get_template('core/mpc_ades_psv.txt')
-    data = measurements_from_block(blockid, bodyid)
+    data = measurements_from_block(blockid, bodyid, obs_filter)
     message = t.render(data)
 
     # Strip off last double newline but put one back again
