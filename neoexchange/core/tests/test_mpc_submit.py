@@ -1396,3 +1396,120 @@ class TestGenerateADESPSVMessage(TestCase):
             i += 1
 
         self.assertEqual(exp_msg, message)
+
+    def test_V39_gaiadr2(self):
+
+        self.test_frame_gaiadr2.sitecode = 'V39'
+        self.test_frame_gaiadr2.instrument = 'fa07'
+        self.test_frame_gaiadr2.save()
+
+        exp_msg = ( '# version=2017\n'
+                    '# observatory\n'
+                    '! mpcCode V39\n'
+                    '# submitter\n'
+                    '! name T. Lister\n'
+                    '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
+                    '# observers\n'
+                    '! name T. Lister\n'
+                    '! name E. Gomez\n'
+                    '! name J. Chatelain\n'
+                    '! name S. Greenstreet\n'
+                    '# measurers\n'
+                    '! name T. Lister\n'
+                    '# telescope\n'
+                    '! name LCO ELP Node 1m0 Dome B at McDonald Observatory, Texas\n'
+                    '! design Ritchey-Chretien\n'
+                    '! aperture 1.0\n'
+                    '! detector CCD\n'
+                    '! fRatio 8.0\n'
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks\n'
+                    '       |           | N999r0q| CCD|V39 |2015-07-13T21:09:51.00Z| 15.500000 | -3.750000 |   Gaia2|21.6 |   G|   Gaia2|     |\n')
+
+        message = generate_ades_psv_message(self.test_block_gaiadr2.id, self.test_block_gaiadr2.body.id)
+
+        i = 0
+        expected_lines = exp_msg.split('\n')
+        message_lines = message.split('\n')
+        while i < len(expected_lines):
+            self.assertEqual(expected_lines[i], message_lines[i])
+            i += 1
+
+        self.assertEqual(exp_msg, message)
+
+    def test_Z24_gaiadr2(self):
+
+        self.test_frame_gaiadr2.sitecode = 'Z24'
+        self.test_frame_gaiadr2.instrument = 'fa20'
+        self.test_frame_gaiadr2.save()
+
+        exp_msg = ( '# version=2017\n'
+                    '# observatory\n'
+                    '! mpcCode Z24\n'
+                    '# submitter\n'
+                    '! name T. Lister\n'
+                    '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
+                    '# observers\n'
+                    '! name T. Lister\n'
+                    '! name E. Gomez\n'
+                    '! name J. Chatelain\n'
+                    '! name S. Greenstreet\n'
+                    '# measurers\n'
+                    '! name T. Lister\n'
+                    '# telescope\n'
+                    '! name LCO TFN Node 1m0 Dome B at Tenerife, Spain\n'
+                    '! design Ritchey-Chretien\n'
+                    '! aperture 1.0\n'
+                    '! detector CCD\n'
+                    '! fRatio 8.0\n'
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks\n'
+                    '       |           | N999r0q| CCD|Z24 |2015-07-13T21:09:51.00Z| 15.500000 | -3.750000 |   Gaia2|21.6 |   G|   Gaia2|     |\n')
+
+        message = generate_ades_psv_message(self.test_block_gaiadr2.id, self.test_block_gaiadr2.body.id)
+
+        i = 0
+        expected_lines = exp_msg.split('\n')
+        message_lines = message.split('\n')
+        while i < len(expected_lines):
+            self.assertEqual(expected_lines[i], message_lines[i])
+            i += 1
+
+        self.assertEqual(exp_msg, message)
+
+    def test_Z31_gaiadr2(self):
+
+        self.test_frame_gaiadr2.sitecode = 'Z31'
+        self.test_frame_gaiadr2.instrument = 'fa11'
+        self.test_frame_gaiadr2.save()
+
+        exp_msg = ( '# version=2017\n'
+                    '# observatory\n'
+                    '! mpcCode Z31\n'
+                    '# submitter\n'
+                    '! name T. Lister\n'
+                    '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
+                    '# observers\n'
+                    '! name T. Lister\n'
+                    '! name E. Gomez\n'
+                    '! name J. Chatelain\n'
+                    '! name S. Greenstreet\n'
+                    '# measurers\n'
+                    '! name T. Lister\n'
+                    '# telescope\n'
+                    '! name LCO TFN Node 1m0 Dome A at Tenerife, Spain\n'
+                    '! design Ritchey-Chretien\n'
+                    '! aperture 1.0\n'
+                    '! detector CCD\n'
+                    '! fRatio 8.0\n'
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks\n'
+                    '       |           | N999r0q| CCD|Z31 |2015-07-13T21:09:51.00Z| 15.500000 | -3.750000 |   Gaia2|21.6 |   G|   Gaia2|     |\n')
+
+        message = generate_ades_psv_message(self.test_block_gaiadr2.id, self.test_block_gaiadr2.body.id)
+
+        i = 0
+        expected_lines = exp_msg.split('\n')
+        message_lines = message.split('\n')
+        while i < len(expected_lines):
+            self.assertEqual(expected_lines[i], message_lines[i])
+            i += 1
+
+        self.assertEqual(exp_msg, message)
