@@ -7433,12 +7433,13 @@ class TestDownloadMeasurementsFile(TestCase):
                      'flags': ' '}
         self.test_sm, created = SourceMeasurement.objects.get_or_create(**sm_params)
 
-        self.psv_header =  'permID|provID      |trkSub  |mode|stn |obsTime                |ra.........|dec........|rmsRA|rmsDec|astCat..|mag..|rmsMag|band| photCat|photAp|logSNR|seeing|notes|remarks'
+        self.psv_header =  'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |rmsRA|rmsDec|astCat  |mag  |rmsMag|band|photCat |photAp|logSNR|seeing|notes|remarks'
 
         self.maxDiff = None
 
     def test_V37_ades(self):
-        expected_response = '\n'.join([self.psv_header,'        |2019 XS    |        | CCD|V37 |2021-11-10T04:47:23.87Z| 41.790514 | -4.340474 | 0.28|  0.28|   Gaia2|14.3 |0.083 |   G|   Gaia2|  3.00|1.0824|1.7449|     |', ''])
+        expected_response = '\n'.join([self.psv_header,
+        '       |2019 XS    |        | CCD|V37 |2021-11-10T04:47:23.87Z| 41.790514 | -4.340474 | 0.28|  0.28|   Gaia2|14.3 |0.083 |   G|   Gaia2|  3.00|1.0824|1.7449|     |', '',''])
 
         request = ''
         response = download_measurements_file(self.ades_template, self.test_body, '.psv', request)
@@ -7454,7 +7455,7 @@ class TestDownloadMeasurementsFile(TestCase):
         self.assertEqual(expected_response, response.content.decode())
 
     def test_V39_ades(self):
-        expected_response = '\n'.join([self.psv_header,'        |2019 XS    |        | CCD|V39 |2021-11-10T04:47:23.87Z| 41.790514 | -4.340474 | 0.28|  0.28|   Gaia2|14.3 |0.083 |   G|   Gaia2|  3.00|1.0824|1.7449|     |', ''])
+        expected_response = '\n'.join([self.psv_header,'       |2019 XS    |        | CCD|V39 |2021-11-10T04:47:23.87Z| 41.790514 | -4.340474 | 0.28|  0.28|   Gaia2|14.3 |0.083 |   G|   Gaia2|  3.00|1.0824|1.7449|     |', '',''])
 
         self.test_frame.sitecode = 'V39'
         self.test_frame.instrument = 'fa07'
