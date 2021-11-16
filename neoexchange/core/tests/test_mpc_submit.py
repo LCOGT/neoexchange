@@ -287,7 +287,7 @@ class TestGenerateMessage(TestCase):
                             'obs_mag' : 20.7,
                          }
 
-        measure = SourceMeasurement.objects.create(**measure_params)
+        self.measure_twom = SourceMeasurement.objects.create(**measure_params)
 
         measure_params = {  'body' : self.body,
                             'frame' : self.test_frame_gaia,
@@ -537,6 +537,42 @@ class TestGenerateMessage(TestCase):
                             u'NET PPMXL\n'
                             u'BND R\n'
                             u'     K15X54S  C2015 12 05.41028900 30 24.00 +32 45 18.0          20.7 R      F65\n')
+        message = generate_message(self.test_block4.id, self.test_block4.body.id)
+
+        i = 0
+        expected_lines = expected_message.split('\n')
+        message_lines = message.split('\n')
+        while i < len(expected_lines):
+            self.assertEqual(expected_lines[i], message_lines[i])
+            i += 1
+
+        self.assertEqual(expected_message, message)
+
+    def test_F65_MuSCAT(self):
+
+        self.test_frame_twom.instrument = 'ep02'
+        self.test_frame_twom.filter = 'rp'
+        self.test_frame_twom.extrainfo = 'MUSCAT_FAST'
+        self.test_frame_twom.astrometric_catalog = 'GAIA-DR2'
+        self.test_frame_twom.photometric_catalog = 'GAIA-DR2'
+        self.test_frame_twom.save()
+
+        self.measure_twom.astrometric_catalog = 'GAIA-DR2'
+        self.measure_twom.photometric_catalog = 'GAIA-DR2'
+        self.measure_twom.save()
+
+        expected_message = (u'COD F65\n'
+                            u'CON LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
+                            u'CON [tlister@lco.global]\n'
+                            u'OBS T. Lister, J. Chatelain, S. Greenstreet, E. Gomez\n'
+                            u'MEA T. Lister\n'
+                            u'TEL 2.0-m f/10 Ritchey-Chretien + CCD\n'
+                            u'ACK NEOx_2015 XS54_F65_ep02\n'
+                            u'COM LCO OGG Node 2m0 FTN at Haleakala, Maui\n'
+                            u'AC2 tlister@lco.global,sgreenstreet@lco.global,jchatelain@lco.global\n'
+                            u'NET GAIA-DR2\n'
+                            u'BND G\n'
+                            u'     K15X54S  C2015 12 05.41028900 30 24.00 +32 45 18.0          20.7 G      F65\n')
         message = generate_message(self.test_block4.id, self.test_block4.body.id)
 
         i = 0

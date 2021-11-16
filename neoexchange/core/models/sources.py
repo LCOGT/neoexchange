@@ -71,7 +71,9 @@ class SourceMeasurement(models.Model):
 
         microday = True
 
-        if self.frame.extrainfo:
+        valid_MPC_notes = ['A', 'P', 'e', 'C', 'B', 'T', 'M', 'V', 'v', 'R', 'r', 'S', 's',\
+            'c', 'E', 'O', 'H', 'N', 'n', 'D', 'Z', 'W', 'w', 'Q', 'q', 'T', 't']
+        if self.frame.extrainfo in valid_MPC_notes:
             obs_type = self.frame.extrainfo
             if obs_type == 'A':
                 microday = False
