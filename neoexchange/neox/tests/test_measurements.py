@@ -435,7 +435,7 @@ class MeasurementsPageTests(FunctionalTest):
         # He sees that there is a table in which are the original
         # discovery observations from PanSTARRS (obs. code F51) and from
         # the LCOGT follow-up network.
-        testlines = [ 'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |  astCat|mag  |band| photCat|notes|remarks',
+        testlines = [ 'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks',
                       '       |           | N999r0q| CCD|F51 |2015-03-21T06:00:00.00Z| 62.200000 |-11.050000 |        |21.5 |   r|        |     |',
                       '       |           | N999r0q| CCD|K91 |2015-04-20T18:00:00.00Z| 42.100000 |-30.050000 |        |21.1 |   R|        |     |',
                     ]
@@ -483,7 +483,7 @@ class MeasurementsPageTests(FunctionalTest):
         # He sees that there is a table in which are the original
         # discovery observations from PanSTARRS (obs. code F51) and from
         # the LCOGT follow-up network.
-        testlines = [ 'permID |provID     |trkSub  |mode|stn |obsTime                |         ra|        dec|rmsRA|rmsDec|  astCat|mag  |rmsMag|band| photCat|photAp|logSNR|seeing|notes|remarks',
+        testlines = [ 'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |rmsRA|rmsDec|astCat  |mag  |rmsMag|band|photCat |photAp|logSNR|seeing|notes|remarks',
                       '       |           | N999r0q| CCD|F51 |2015-03-21T06:00:00.00Z| 62.200000 |-11.050000 |0.090| 0.090|   2MASS|21.5 |0.010 |   r|   2MASS|      |      |      |     |',
                       '       |           | N999r0q| CCD|K91 |2015-04-20T18:00:00.00Z| 42.100000 |-30.050000 | 0.30|  0.28|   UCAC4|21.1 |0.030 |   R|   UCAC4|      |      |      |     |',
                       '       |           | N999r0q| CCD|K91 |2015-04-21T18:00:00.00Z| 42.200000 |-31.050000 | 0.30|  0.28|   PPMXL|20.9 |0.028 |   R|   PPMXL|  1.56|1.3945|1.6000|     |',
