@@ -287,7 +287,7 @@ class TestGenerateMessage(TestCase):
                             'obs_mag' : 20.7,
                          }
 
-        measure = SourceMeasurement.objects.create(**measure_params)
+        self.measure_twom = SourceMeasurement.objects.create(**measure_params)
 
         measure_params = {  'body' : self.body,
                             'frame' : self.test_frame_gaia,
@@ -537,6 +537,42 @@ class TestGenerateMessage(TestCase):
                             u'NET PPMXL\n'
                             u'BND R\n'
                             u'     K15X54S  C2015 12 05.41028900 30 24.00 +32 45 18.0          20.7 R      F65\n')
+        message = generate_message(self.test_block4.id, self.test_block4.body.id)
+
+        i = 0
+        expected_lines = expected_message.split('\n')
+        message_lines = message.split('\n')
+        while i < len(expected_lines):
+            self.assertEqual(expected_lines[i], message_lines[i])
+            i += 1
+
+        self.assertEqual(expected_message, message)
+
+    def test_F65_MuSCAT(self):
+
+        self.test_frame_twom.instrument = 'ep02'
+        self.test_frame_twom.filter = 'rp'
+        self.test_frame_twom.extrainfo = 'MUSCAT_FAST'
+        self.test_frame_twom.astrometric_catalog = 'GAIA-DR2'
+        self.test_frame_twom.photometric_catalog = 'GAIA-DR2'
+        self.test_frame_twom.save()
+
+        self.measure_twom.astrometric_catalog = 'GAIA-DR2'
+        self.measure_twom.photometric_catalog = 'GAIA-DR2'
+        self.measure_twom.save()
+
+        expected_message = (u'COD F65\n'
+                            u'CON LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
+                            u'CON [tlister@lco.global]\n'
+                            u'OBS T. Lister, J. Chatelain, S. Greenstreet, E. Gomez\n'
+                            u'MEA T. Lister\n'
+                            u'TEL 2.0-m f/10 Ritchey-Chretien + CCD\n'
+                            u'ACK NEOx_2015 XS54_F65_ep02\n'
+                            u'COM LCO OGG Node 2m0 FTN at Haleakala, Maui\n'
+                            u'AC2 tlister@lco.global,sgreenstreet@lco.global,jchatelain@lco.global\n'
+                            u'NET GAIA-DR2\n'
+                            u'BND G\n'
+                            u'     K15X54S  C2015 12 05.41028900 30 24.00 +32 45 18.0          20.7 G      F65\n')
         message = generate_message(self.test_block4.id, self.test_block4.body.id)
 
         i = 0
@@ -971,7 +1007,7 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! aperture 1.0\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
-                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |  astCat|mag  |band| photCat|notes|remarks\n'
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks\n'
                     '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|157.500000 |-32.750000 |   UCAC4|21.5 |   R|   UCAC4|     |\n')
 
         message = generate_ades_psv_message(self.test_block.id, self.test_block.body.id)
@@ -1005,7 +1041,7 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! aperture 1.0\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
-                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |  astCat|mag  |band| photCat|notes|remarks\n'
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks\n'
                     '       |2015 XS54  |        | CCD|W86 |2015-12-05T01:10:49.90Z|157.500000 |  0.660000 |   2MASS|21.5 |   R|   2MASS|K    |\n')
 
         message = generate_ades_psv_message(self.test_block2.id, self.test_block2.body.id)
@@ -1039,7 +1075,7 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! aperture 0.4\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
-                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |  astCat|mag  |band| photCat|notes|remarks\n'
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks\n'
                     '       |2015 XS54  |        | CCD|Z21 |2015-12-05T01:10:49.90Z|  7.600000 | 32.755000 |   2MASS|20.5 |   R|   2MASS|     |\n')
 
         message = generate_ades_psv_message(self.test_block3.id, self.test_block3.body.id)
@@ -1080,7 +1116,7 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! aperture 0.4\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
-                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |  astCat|mag  |band| photCat|notes|remarks\n'
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks\n'
                     '       |2015 XS54  |        | CCD|W89 |2015-12-05T01:10:49.90Z|  7.600000 | 32.755000 |   2MASS|20.5 |   R|   2MASS|     |\n')
 
         message = generate_ades_psv_message(self.test_block3.id, self.test_block3.body.id)
@@ -1121,7 +1157,7 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! aperture 0.4\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
-                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |  astCat|mag  |band| photCat|notes|remarks\n'
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks\n'
                     '       |2015 XS54  |        | CCD|W79 |2015-12-05T01:10:49.90Z|  7.600000 | 32.755000 |   2MASS|20.5 |   R|   2MASS|     |\n')
 
         message = generate_ades_psv_message(self.test_block3.id, self.test_block3.body.id)
@@ -1162,7 +1198,7 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! aperture 0.4\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
-                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |  astCat|mag  |band| photCat|notes|remarks\n'
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks\n'
                     '       |2015 XS54  |        | CCD|V38 |2015-12-05T01:10:49.90Z|  7.600000 | 32.755000 |   2MASS|20.5 |   R|   2MASS|     |\n')
 
         message = generate_ades_psv_message(self.test_block3.id, self.test_block3.body.id)
@@ -1203,7 +1239,7 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! aperture 0.4\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
-                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |  astCat|mag  |band| photCat|notes|remarks\n'
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks\n'
                     '       |2015 XS54  |        | CCD|L09 |2015-12-05T01:10:49.90Z|  7.600000 | 32.755000 |   2MASS|20.5 |   R|   2MASS|     |\n')
 
         message = generate_ades_psv_message(self.test_block3.id, self.test_block3.body.id)
@@ -1238,7 +1274,7 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! aperture 2.0\n'
                     '! detector CCD\n'
                     '! fRatio 10.0\n'
-                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |  astCat|mag  |band| photCat|notes|remarks\n'
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks\n'
                     '       |2015 XS54  |        | CCD|F65 |2015-12-05T09:50:49.00Z|  7.600000 | 32.755000 |   PPMXL|20.7 |   R|   PPMXL|     |\n')
 
         message = generate_ades_psv_message(self.test_block4.id, self.test_block4.body.id)
@@ -1273,7 +1309,7 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! aperture 1.0\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
-                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |  astCat|mag  |band| photCat|notes|remarks\n'
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks\n'
                     '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z| 15.500000 | -3.750000 |   Gaia1|21.6 |   G|   Gaia1|     |\n')
 
         message = generate_ades_psv_message(self.test_block_gaia.id, self.test_block_gaia.body.id)
@@ -1308,7 +1344,7 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! aperture 1.0\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
-                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |  astCat|mag  |band| photCat|notes|remarks\n'
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks\n'
                     '       |2015 XS54  |        | CCD|W86 |2015-12-05T01:10:49.90Z| 15.500000 | -3.750000 |   2MASS|21.6 |   V|   PPMXL|     |\n')
 
         message = generate_ades_psv_message(self.test_block2ql.id, self.test_block2ql.body.id)
@@ -1348,7 +1384,7 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! aperture 1.0\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
-                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |  astCat|mag  |band| photCat|notes|remarks\n'
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks\n'
                     '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|157.500000 |-32.750000 |   UCAC4|21.5 |   R|   UCAC4|*    |\n')
 
         message = generate_ades_psv_message(self.test_block.id, self.test_block.body.id)
@@ -1383,8 +1419,125 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! aperture 1.0\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
-                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |  astCat|mag  |band| photCat|notes|remarks\n'
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks\n'
                     '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z| 15.500000 | -3.750000 |   Gaia2|21.6 |   G|   Gaia2|     |\n')
+
+        message = generate_ades_psv_message(self.test_block_gaiadr2.id, self.test_block_gaiadr2.body.id)
+
+        i = 0
+        expected_lines = exp_msg.split('\n')
+        message_lines = message.split('\n')
+        while i < len(expected_lines):
+            self.assertEqual(expected_lines[i], message_lines[i])
+            i += 1
+
+        self.assertEqual(exp_msg, message)
+
+    def test_V39_gaiadr2(self):
+
+        self.test_frame_gaiadr2.sitecode = 'V39'
+        self.test_frame_gaiadr2.instrument = 'fa07'
+        self.test_frame_gaiadr2.save()
+
+        exp_msg = ( '# version=2017\n'
+                    '# observatory\n'
+                    '! mpcCode V39\n'
+                    '# submitter\n'
+                    '! name T. Lister\n'
+                    '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
+                    '# observers\n'
+                    '! name T. Lister\n'
+                    '! name E. Gomez\n'
+                    '! name J. Chatelain\n'
+                    '! name S. Greenstreet\n'
+                    '# measurers\n'
+                    '! name T. Lister\n'
+                    '# telescope\n'
+                    '! name LCO ELP Node 1m0 Dome B at McDonald Observatory, Texas\n'
+                    '! design Ritchey-Chretien\n'
+                    '! aperture 1.0\n'
+                    '! detector CCD\n'
+                    '! fRatio 8.0\n'
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks\n'
+                    '       |           | N999r0q| CCD|V39 |2015-07-13T21:09:51.00Z| 15.500000 | -3.750000 |   Gaia2|21.6 |   G|   Gaia2|     |\n')
+
+        message = generate_ades_psv_message(self.test_block_gaiadr2.id, self.test_block_gaiadr2.body.id)
+
+        i = 0
+        expected_lines = exp_msg.split('\n')
+        message_lines = message.split('\n')
+        while i < len(expected_lines):
+            self.assertEqual(expected_lines[i], message_lines[i])
+            i += 1
+
+        self.assertEqual(exp_msg, message)
+
+    def test_Z24_gaiadr2(self):
+
+        self.test_frame_gaiadr2.sitecode = 'Z24'
+        self.test_frame_gaiadr2.instrument = 'fa20'
+        self.test_frame_gaiadr2.save()
+
+        exp_msg = ( '# version=2017\n'
+                    '# observatory\n'
+                    '! mpcCode Z24\n'
+                    '# submitter\n'
+                    '! name T. Lister\n'
+                    '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
+                    '# observers\n'
+                    '! name T. Lister\n'
+                    '! name E. Gomez\n'
+                    '! name J. Chatelain\n'
+                    '! name S. Greenstreet\n'
+                    '# measurers\n'
+                    '! name T. Lister\n'
+                    '# telescope\n'
+                    '! name LCO TFN Node 1m0 Dome B at Tenerife, Spain\n'
+                    '! design Ritchey-Chretien\n'
+                    '! aperture 1.0\n'
+                    '! detector CCD\n'
+                    '! fRatio 8.0\n'
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks\n'
+                    '       |           | N999r0q| CCD|Z24 |2015-07-13T21:09:51.00Z| 15.500000 | -3.750000 |   Gaia2|21.6 |   G|   Gaia2|     |\n')
+
+        message = generate_ades_psv_message(self.test_block_gaiadr2.id, self.test_block_gaiadr2.body.id)
+
+        i = 0
+        expected_lines = exp_msg.split('\n')
+        message_lines = message.split('\n')
+        while i < len(expected_lines):
+            self.assertEqual(expected_lines[i], message_lines[i])
+            i += 1
+
+        self.assertEqual(exp_msg, message)
+
+    def test_Z31_gaiadr2(self):
+
+        self.test_frame_gaiadr2.sitecode = 'Z31'
+        self.test_frame_gaiadr2.instrument = 'fa11'
+        self.test_frame_gaiadr2.save()
+
+        exp_msg = ( '# version=2017\n'
+                    '# observatory\n'
+                    '! mpcCode Z31\n'
+                    '# submitter\n'
+                    '! name T. Lister\n'
+                    '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
+                    '# observers\n'
+                    '! name T. Lister\n'
+                    '! name E. Gomez\n'
+                    '! name J. Chatelain\n'
+                    '! name S. Greenstreet\n'
+                    '# measurers\n'
+                    '! name T. Lister\n'
+                    '# telescope\n'
+                    '! name LCO TFN Node 1m0 Dome A at Tenerife, Spain\n'
+                    '! design Ritchey-Chretien\n'
+                    '! aperture 1.0\n'
+                    '! detector CCD\n'
+                    '! fRatio 8.0\n'
+                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks\n'
+                    '       |           | N999r0q| CCD|Z31 |2015-07-13T21:09:51.00Z| 15.500000 | -3.750000 |   Gaia2|21.6 |   G|   Gaia2|     |\n')
 
         message = generate_ades_psv_message(self.test_block_gaiadr2.id, self.test_block_gaiadr2.body.id)
 
