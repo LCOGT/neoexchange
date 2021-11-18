@@ -486,6 +486,11 @@ class Command(BaseCommand):
                         movie_file = make_gif(frames_list, sort=False, init_fr=100, center=3, out_path=data_path, plot_source=True,
                                               target_data=frame_data, show_reticle=True, progress=True)
                         if "WARNING" not in movie_file:
+                            # Add write permissions to movie file
+                            try:
+                                os.chmod(movie_file, rw_permissions)
+                            except PermissionError:
+                                pass
                             # Create DataProduct
                             save_dataproduct(obj=block, filepath=movie_file, filetype=DataProduct.FRAME_GIF, force=options['overwrite'])
                             output_file_list.append('{},{}'.format(movie_file, data_path.lstrip(out_path)))
