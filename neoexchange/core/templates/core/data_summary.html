@@ -46,6 +46,9 @@
                     <th class="list_title">
                         <span class="sortable" id="name_id">Target Name</span>
                     </th>
+                    <th class="list_title">
+                        <span class="sortable" id="period_id">Period</span>
+                    </th>
                     {% endif %}
 
                 </tr>
@@ -57,7 +60,7 @@
                     {% if data_type == 'Spec' %}
                     {% with datum as block %}
                         <td data-label="date">{{block.when_observed|date:"Y-m-d"}}</td>
-                        <td data-label="body"><a href="{% url 'target' block.body.id %}">{{block.body.current_name}}</a></td>
+                        <td data-label="body"><a href="{% url 'target' block.body.id %}">{{block.body.full_name}}</a></td>
                         <td data-label="block"><a href="{% url 'block-view' block.superblock.id %}">{{block.superblock.id}}</a></td>
                         <td data-label="obs">
                             <div>
@@ -67,8 +70,15 @@
                     {% endwith %}
                     {% else %}
                         {% if data_type == 'LC' %}
-                        {% with datum as body %}
-                            <td data-label="body"><a href="{% url 'lc_plot' body.id %}">{{body.current_name}}</a></td>
+                            {% with datum as body %}
+                            <td data-label="body"><a href="{% url 'lc_plot' body.id %}">{{body.full_name}}</a></td>
+                            <td data-label="period">
+                                {% with body|get_period as periods %}
+                                {% for p in periods %}
+                                    {{p.value}}
+                                {% endfor %}
+                                {% endwith %}
+                            </td>
                         {% endwith %}
                         {% endif %}
                     {% endif %}

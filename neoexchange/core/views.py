@@ -1804,18 +1804,16 @@ class SpecDataListView(ListView):
 class LCDataListView(ListView):
     model = Body
     template_name = 'core/data_summary.html'
+    alcdefs_blocks = DataProduct.content.sblock().filter(filetype=DataProduct.ALCDEF_TXT).select_related('content_type')
+    block_ids = [x.object_id for x in alcdefs_blocks]
+    queryset = Body.objects.filter(superblock__pk__in=block_ids).distinct().prefetch_related('physicalparameters_set')
+    context_object_name = "data_list"
     paginate_by = 20
 
     def get_context_data(self, **kwargs):
-        context = {'data_list': self.find_lc(), 'data_type': 'LC'}
+        context = super(LCDataListView, self).get_context_data(**kwargs)
+        context['data_type'] = 'LC'
         return context
-
-    def find_lc(self):
-        alcdefs_blocks = DataProduct.content.sblock().filter(filetype=DataProduct.ALCDEF_TXT).select_related('content_type')
-        block_ids = [x.object_id for x in alcdefs_blocks]
-        alcdef_bodies = Body.objects.filter(superblock__pk__in=block_ids).distinct()
-
-        return alcdef_bodies
 
 
 def ranking(request):
