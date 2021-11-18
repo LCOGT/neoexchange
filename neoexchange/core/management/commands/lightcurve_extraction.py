@@ -488,7 +488,7 @@ class Command(BaseCommand):
                         if "WARNING" not in movie_file:
                             # Add write permissions to movie file
                             try:
-                                os.chmod(os.path.join(movie_file), rw_permissions)
+                                os.chmod(movie_file, rw_permissions)
                             except PermissionError:
                                 pass
                             # Create DataProduct
