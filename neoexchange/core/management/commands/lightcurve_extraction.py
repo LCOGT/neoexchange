@@ -337,7 +337,7 @@ class Command(BaseCommand):
         datadir = os.path.join(options['datadir'], obj_name)
         out_path = settings.DATA_ROOT
         data_path = ''
-        rw_permissions = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH | stat.S_IWOTH
+        rw_permissions = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH
         if not os.path.exists(datadir) and not settings.USE_S3:
             try:
                 os.makedirs(datadir)
