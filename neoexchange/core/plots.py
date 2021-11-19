@@ -58,13 +58,11 @@ from photometrics.catalog_subs import sanitize_object_name
 from photometrics.SA_scatter import readSources, plotScatter, plotFormat
 from photometrics.spectraplot import spectrum_plot, read_mean_tax
 
-# JS file containing call back functions
-js_file = os.path.abspath(os.path.join('core', 'static', 'core', 'js', 'bokeh_custom_javascript.js'))
-
 logger = logging.getLogger(__name__)
 
 # JS file containing call back functions
-js_file = os.path.abspath(os.path.join('core', 'static', 'core', 'js', 'bokeh_custom_javascript.js'))
+python_path = os.path.expandvars(os.getenv('PYTHONPATH', ''))
+js_file = os.path.abspath(os.path.join(python_path, 'core', 'static', 'core', 'js', 'bokeh_custom_javascript.js'))
 
 
 def find_existing_vis_file(base_dir, filematch):
