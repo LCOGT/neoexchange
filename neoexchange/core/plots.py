@@ -61,8 +61,7 @@ from photometrics.spectraplot import spectrum_plot, read_mean_tax
 logger = logging.getLogger(__name__)
 
 # JS file containing call back functions
-python_path = os.path.expandvars(os.getenv('PYTHONPATH', ''))
-js_file = os.path.abspath(os.path.join(python_path, 'core', 'static', 'core', 'js', 'bokeh_custom_javascript.js'))
+js_file = os.path.abspath(os.path.join('core', 'static', 'core', 'js', 'bokeh_custom_javascript.js'))
 
 
 def find_existing_vis_file(base_dir, filematch):
