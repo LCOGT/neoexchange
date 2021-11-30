@@ -1806,7 +1806,10 @@ class LCDataListView(ListView):
     template_name = 'core/data_summary.html'
     alcdefs_blocks = DataProduct.content.sblock().filter(filetype=DataProduct.ALCDEF_TXT).select_related('content_type')
     block_ids = [x.object_id for x in alcdefs_blocks]
-    queryset = Body.objects.filter(superblock__pk__in=block_ids).distinct().prefetch_related('physicalparameters_set')
+    period_info = PhysicalParameters.objects.filter(parameter_type='P', preferred=True)
+    prefetch_period = Prefetch('physicalparameters_set', queryset=period_info, to_attr='rot_period')
+    queryset = Body.objects.filter(superblock__pk__in=block_ids).distinct().prefetch_related(prefetch_period)
+    param_list = [body.rot_period for body in queryset]
     context_object_name = "data_list"
     paginate_by = 20
 

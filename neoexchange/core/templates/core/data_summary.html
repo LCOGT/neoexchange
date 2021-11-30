@@ -73,7 +73,7 @@
                             {% with datum as body %}
                             <td data-label="body"><a href="{% url 'lc_plot' body.id %}">{{body.full_name}}</a></td>
                             <td data-label="period">
-                                {% with body|get_period as periods %}
+                                {% with body.rot_period as periods %}
                                 {% for p in periods %}
                                     {{p.value}}
                                 {% endfor %}

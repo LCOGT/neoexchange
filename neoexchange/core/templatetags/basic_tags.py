@@ -110,11 +110,6 @@ def format_mpc_line_catcode(measure):
     return measure.format_mpc_line(include_catcode=True)
 
 
-@register.filter(is_safe=False)
-def get_period(body):
-    return body.get_physical_parameters('P', False)
-
-
 @register.inclusion_tag('partials/block_row.html')
 def build_block_row(superblock):
     return {
