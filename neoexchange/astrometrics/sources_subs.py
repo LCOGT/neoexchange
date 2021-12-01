@@ -148,10 +148,26 @@ def fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser
             logger.warning("Page retrieval failed with HTTP Error: %s" % (e.reason,))
         return None
     except (BrokenPipeError, ConnectionAbortedError, ConnectionRefusedError, ConnectionResetError) as sock_e:
-        logger.warning("Page retrieval failed with socket Error %d: %s" % (sock_e.errno, sock_e.strerror))
+        try:
+            errno = int(sock_e.errno)
+        except TypeError:
+            errno = -99
+        try:
+            errstring = str(sock_e.strerror)
+        except TypeError:
+            errstring = "No message available"
+        logger.warning("Page retrieval failed with socket Error %d: %s" % (errno, errstring))
         return None
     except timeout as sock_e:
-        logger.warning("Page retrieval failed with socket Error %d: %s" % (sock_e.errno, sock_e.strerror))
+        try:
+            errno = int(sock_e.errno)
+        except TypeError:
+            errno = -99
+        try:
+            errstring = str(sock_e.strerror)
+        except TypeError:
+            errstring = "No message available"
+        logger.warning("Page retrieval failed with socket Error %d: %s" % (errno, errstring))
         return None
 
     # Suck the HTML down
