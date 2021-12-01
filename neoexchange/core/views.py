@@ -3887,15 +3887,16 @@ class LCPlot(LookUpBodyMixin, FormView):
     template_name = 'core/plot_lc.html'
 
     def get(self, request, *args, **kwargs):
-        best_period = self.body.get_physical_parameters('P', False)
+        period_list = PhysicalParameters.objects.filter(body=self.body, parameter_type='P')
+        best_period = period_list.filter(preferred=True)
         if best_period:
-            period = best_period[0].get('value', None)
+            period = best_period[0].value
         else:
             period = None
         script, div, meta_list = get_lc_plot(self.body, {'period': period})
-        alcdef_dps = DataProduct.content.fullbody(bodyid=self.body.id).filter(filetype=DataProduct.ALCDEF_TXT)
 
-        return self.render_to_response(self.get_context_data(body=self.body, script=script, div=div, meta_list=meta_list))
+        return self.render_to_response(self.get_context_data(body=self.body, script=script, div=div,
+                                                             meta_list=meta_list, period_list=period_list))
 
     def get_context_data(self, **kwargs):
         params = kwargs
