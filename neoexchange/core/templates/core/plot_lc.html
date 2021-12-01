@@ -40,7 +40,7 @@ Lightcurve for object: {{body.current_name}}
                         <span class="sortable" id="Rank"></span>
                 </th>
                 <th class="list_title">
-                        <span class="sortable" id="period">Period(h)</span>
+                        <span class="sortable" id="period">Period [hours]</span>
                 </th>
                 <th class="list_project">
                         <span class="sortable" id="p_source">Source</span>
@@ -57,7 +57,14 @@ Lightcurve for object: {{body.current_name}}
             {% for period in period_list|dictsort:"update_time"%}
                 <tr class="{% cycle 'odd' 'even' %}">
                     <td data-label="Rank">{{forloop.counter}}</td>
-                    <td data-label="period">{{period.value}}</td>
+                    <td data-label="period">{{period.value}}
+                        {% if period.error %}
+                            &plusmn;{{period.error}}
+                        {% endif %}
+                        {% if period.quality %}
+                            ({{period.quality}})
+                        {% endif %}
+                    </td>
                     <td data-label="p_source">{{period.reference}}</td>
                     <td data-label="p_notes">{{period.notes}}</td>
                     <td data-label="p_update">{{period.update_time}}</td>
