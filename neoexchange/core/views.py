@@ -1914,7 +1914,7 @@ def build_characterization_list(disp=None):
                             if m_wav == "NA":
                                 m_wav = "Yes"
                 body_dict = model_to_dict(body)
-                body_dict['current_name'] = body.current_name()
+                body_dict['full_name'] = body.full_name()
                 body_dict['ingest_date'] = body.ingest
                 body_dict['s_wav'] = s_wav
                 if s_vis_link:
