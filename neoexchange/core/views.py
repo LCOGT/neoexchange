@@ -1872,7 +1872,7 @@ def get_characterization_targets():
     """Function to return the list of Characterization targets.
     If we change this, also change models.Body.characterization_target"""
 
-    characterization_list = Body.objects.filter(active=True).exclude(origin='M').exclude(source_type='U')
+    characterization_list = Body.objects.filter(active=True).exclude(origin='M').exclude(source_type='U').exclude(source_type='T')
     return characterization_list
 
 
