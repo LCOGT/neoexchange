@@ -684,7 +684,7 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
     except requests.exceptions.ConnectionError as e:
         logger.error("Unable to connect to HORIZONS")
     except timeout as sock_e:
-        logger.warning("HORIZONS retrieval failed with socket Error %d: %s" % (sock_e.errno, sock_e.strerror))
+        logger.warning(f"HORIZONS retrieval failed with socket Error {sock_e.errno}: {sock_e.strerror}")
     except ValueError as e:
         logger.debug("Ambiguous object, trying to determine HORIZONS id")
         if e.args and len(e.args) > 0:
