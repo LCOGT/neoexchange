@@ -1190,9 +1190,16 @@ ul.candidate-controls li:hover {background-color:#eee; }
   border: none;
   text-align: left;
   outline: none;
+  box-shadow: 2px 2px 10px #777;
 }
 
 .active, .collapsible:hover {
   background-color: #555;
   color: white;
+}
+
+.content {
+  margin-bottom: 0px;
+  margin-top: 2px;
+  box-shadow: 2px 2px 10px #777;
 }

@@ -77,12 +77,12 @@ $(document).ready(function(){
             </tbody>
     </table>
     {% if request.user.is_authenticated and perms.core.add_body %}
-    <div class="content", id="period_adder">
+    <div class="content" id="period_adder">
         <form action="{% url 'lc_plot' body.pk %}" method="POST" style="display:inline-block;">
             {% csrf_token %}
             <div class="inline-fields">
                 <div class="compact-field">
-                    <input type="submit" class="button button-primary" value="+" id="add_new_period-btn" name="update" style="font-size: larger;">
+                    <input type="submit" class="button button-primary" title="Add Neox Period" value="+" id="add_new_period-btn" name="update" style="font-size: larger;">
                 </div>
                 <div class="compact-field">
                     {{form.period}}<label>Period (h)</label>
@@ -97,7 +97,7 @@ $(document).ready(function(){
                     {{form.notes}}<label>Notes</label>
                 </div>
                 <div class="compact-field">
-                    {{form.preferred}}<label>Set as Preferred</label>
+                    {{form.preferred}}<label>(Preferred)</label>
                 </div>
             </div>
             {% for key, error in form.errors.items %}
