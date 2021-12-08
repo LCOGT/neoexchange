@@ -53,7 +53,7 @@ import io
 from urllib.parse import urljoin
 
 from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, \
-    ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm, AddTargetForm
+    ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm, AddTargetForm, AddPeriodForm
 from .models import *
 from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih, \
     convert_ast_to_comet
@@ -167,7 +167,7 @@ class AddTarget(LoginRequiredMixin, FormView):
 
     def form_invalid(self, form, **kwargs):
         context = self.get_context_data(**kwargs)
-        return render(context['view'].request, self.template_name, {'form': form, })
+        return render(context['view'].request, self.template_name, {'form': form})
 
     def form_valid(self, form):
         origin = form.cleaned_data['origin']
@@ -2109,9 +2109,10 @@ def build_lookproject_list(disp=None):
 
 def look_project(request):
 
-    params =  build_lookproject_list()
+    params = build_lookproject_list()
     params['form'] = AddTargetForm()
     return render(request, 'core/lookproject.html', params)
+
 
 def check_for_block(form_data, params, new_body):
     """Checks if a block with the given name exists in the Django DB.
@@ -3885,8 +3886,9 @@ class PlotSpec(View):
 class LCPlot(LookUpBodyMixin, FormView):
 
     template_name = 'core/plot_lc.html'
+    form_class = AddPeriodForm
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request, form=None, *args, **kwargs):
         period_list = PhysicalParameters.objects.filter(body=self.body, parameter_type='P')
         best_period = period_list.filter(preferred=True)
         if best_period:
@@ -3894,8 +3896,10 @@ class LCPlot(LookUpBodyMixin, FormView):
         else:
             period = None
         script, div, meta_list = get_lc_plot(self.body, {'period': period})
+        if not form:
+            form = AddPeriodForm()
 
-        return self.render_to_response(self.get_context_data(body=self.body, script=script, div=div,
+        return self.render_to_response(self.get_context_data(body=self.body, script=script, div=div, form=form,
                                                              meta_list=meta_list, period_list=period_list))
 
     def get_context_data(self, **kwargs):
@@ -3911,6 +3915,36 @@ class LCPlot(LookUpBodyMixin, FormView):
         params['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
         params['table_path'] = BOKEH_URL.format('tables-'+bokeh.__version__) + 'js'
         return params
+
+    def form_invalid(self, form, **kwargs):
+        period_list = PhysicalParameters.objects.filter(body=self.body, parameter_type='P')
+        best_period = period_list.filter(preferred=True)
+        if best_period:
+            period = best_period[0].value
+        else:
+            period = None
+        script, div, meta_list = get_lc_plot(self.body, {'period': period})
+        if not form:
+            form = AddPeriodForm()
+        context = self.get_context_data(body=self.body, script=script, div=div, form=form, meta_list=meta_list, period_list=period_list)
+        return self.render_to_response(context)
+
+    def form_valid(self, form):
+        period_data = form.cleaned_data
+        period_dict = {'value': period_data['period'],
+                       'error': period_data['error'],
+                       'parameter_type': 'P',
+                       'units': 'h',
+                       'preferred': period_data['preferred'],
+                       'reference': 'NEOX',
+                       'quality': period_data['quality'],
+                       'notes': period_data['notes']
+                       }
+        self.body.save_physical_parameters(period_dict)
+        return super(LCPlot, self).form_valid(form)
+
+    def get_success_url(self):
+        return reverse('lc_plot', kwargs={'pk': self.body.id})
 
 
 def import_alcdef(alcdef, meta_list, lc_list):

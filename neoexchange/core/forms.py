@@ -69,6 +69,16 @@ ANALOG_OPTIONS = (('1', '1'),
                   ('4', '4'),
                   ('5', '5'))
 
+LC_QUALITIES = (('3', 'Unambiguous (3)'),
+                ('3-', 'Unique (3-)'),
+                ('2+', 'Possible Ambiguity (2+)'),
+                ('2', 'Within 30% accurate (2)'),
+                ('2-', 'Not well established (2-)'),
+                ('1+', 'Possibly Just Noise (1+)'),
+                ('1', 'Possibly Completely Wrong (1)'),
+                ('1-', 'Probably Completely Wrong (1-)'),
+                ('0', 'Debunked (0)'))
+
 
 class SiteSelectWidget(forms.Select):
     """
@@ -441,3 +451,11 @@ class AddTargetForm(forms.Form):
     origin = forms.ChoiceField(choices=ORIGINS, widget=forms.HiddenInput())
     target_name = forms.CharField(label="Enter target to add...", max_length=30, required=True, widget=forms.TextInput(attrs={'size': '20'}),
                              error_messages={'required': _(u'Target name is required')})
+
+
+class AddPeriodForm(forms.Form):
+    period = forms.FloatField(label="Period", initial=1.000, required=True, widget=forms.DateTimeInput(attrs={'style': 'width: 75px;'}))
+    error = forms.FloatField(label="Error", initial=0.0, required=False, widget=forms.DateTimeInput(attrs={'style': 'width: 75px;'}))
+    quality = forms.ChoiceField(required=False, choices=LC_QUALITIES)
+    notes = forms.CharField(label="Notes", required=False, widget=forms.DateTimeInput(attrs={'style': 'width: 275px;'}))
+    preferred = forms.BooleanField(initial=False, required=False)

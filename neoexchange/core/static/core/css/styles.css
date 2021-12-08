@@ -1182,3 +1182,17 @@ ul.candidate-controls li:hover {background-color:#eee; }
     background: white;
     color: silver;
 }
+
+.collapsible {
+  background-color: #777;
+  color: white;
+  cursor: pointer;
+  border: none;
+  text-align: left;
+  outline: none;
+}
+
+.active, .collapsible:hover {
+  background-color: #555;
+  color: white;
+}
