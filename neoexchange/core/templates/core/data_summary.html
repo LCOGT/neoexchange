@@ -49,6 +49,15 @@
                     <th class="list_title">
                         <span class="sortable" id="period_id">Period</span>
                     </th>
+                    <th class="list_title">
+                        <span class="sortable" id="quality_id">Quality</span>
+                    </th>
+                    <th class="list_title">
+                        <span class="sortable" id="source_id">Source</span>
+                    </th>
+                    <th class="list_title">
+                        <span class="sortable" id="notes_id">Notes</span>
+                    </th>
                     {% endif %}
 
                 </tr>
@@ -71,14 +80,27 @@
                     {% else %}
                         {% if data_type == 'LC' %}
                             {% with datum as body %}
+                            {% with body.rot_period|first as period %}
                             <td data-label="body"><a href="{% url 'lc_plot' body.id %}">{{body.full_name}}</a></td>
                             <td data-label="period">
-                                {% with body.rot_period as periods %}
-                                {% for p in periods %}
-                                    {{p.value}}
-                                {% endfor %}
-                                {% endwith %}
+                                {{period.value}}
+                                {% if period.units %}
+                                    ({{period.units}})
+                                {% endif %}
+                                {% if body.rot_period|length > 1 %}
+                                    [1 of {{body.rot_period|length}}]
+                                {% endif %}
                             </td>
+                            <td data-label="quality">
+                                {{period.quality}}
+                            </td>
+                            <td data-label="source">
+                                {{period.reference}}
+                            </td>
+                            <td data-label="notes">
+                                {{period.notes}}
+                            </td>
+                        {% endwith %}
                         {% endwith %}
                         {% endif %}
                     {% endif %}
