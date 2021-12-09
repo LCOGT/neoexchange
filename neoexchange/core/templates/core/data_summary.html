@@ -58,6 +58,12 @@
                     <th class="list_title">
                         <span class="sortable" id="notes_id">Notes</span>
                     </th>
+                    <th class="list_title">
+                        <span class="sortable" id="status_id">Status</span>
+                    </th>
+                    <th class="list_title">
+                        <span class="sortable" id="status_date_id">Status Updated</span>
+                    </th>
                     {% endif %}
 
                 </tr>
@@ -99,6 +105,16 @@
                             </td>
                             <td data-label="notes">
                                 {{period.notes}}
+                            </td>
+                            <td data-label="status">
+                                {% if body.analysis_status %}
+                                    {{body.analysis_status}}
+                                {% endif %}
+                            </td>
+                            <td data-label="status_date">
+                                {% if body.analysis_status %}
+                                    {{body.as_updated}}
+                                {% endif %}
                             </td>
                         {% endwith %}
                         {% endwith %}

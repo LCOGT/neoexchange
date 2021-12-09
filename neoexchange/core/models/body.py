@@ -158,8 +158,8 @@ class Body(models.Model):
     updated             = models.BooleanField('Has this object been updated?', default=False)
     ingest              = models.DateTimeField(default=datetime.utcnow, db_index=True)
     update_time         = models.DateTimeField(blank=True, null=True, db_index=True)
-    analysis_status     = models.CharField('Current Analysis Status', max_length=2, choices=STATUS_CHOICES, blank=True, null=True)
-    as_updated          = models.DateTimeField(blank=True, null=True)
+    analysis_status     = models.CharField('Current Analysis Status', max_length=2, choices=STATUS_CHOICES, blank=True, null=True, db_index=True)
+    as_updated          = models.DateTimeField(blank=True, null=True, db_index=True)
 
     def _compute_period(self):
         period = None

@@ -1809,7 +1809,6 @@ class LCDataListView(ListView):
     period_info = PhysicalParameters.objects.filter(parameter_type='P').order_by('-preferred')
     prefetch_period = Prefetch('physicalparameters_set', queryset=period_info, to_attr='rot_period')
     queryset = Body.objects.filter(superblock__pk__in=block_ids).distinct().prefetch_related(prefetch_period)
-    param_list = [body.rot_period for body in queryset]
     context_object_name = "data_list"
     paginate_by = 20
 
