@@ -41,6 +41,12 @@
                     <th>
                         <span class="sortable" id="Obs">Obs</span>
                     </th>
+                    <th class="list_title">
+                        <span class="sortable" id="status_id">Status</span>
+                    </th>
+                    <th class="list_title">
+                        <span class="sortable" id="status_date_id">Status Updated</span>
+                    </th>
                     {% endif %}
                     {% if data_type == 'LC' %}
                     <th class="list_title">
@@ -65,7 +71,6 @@
                         <span class="sortable" id="status_date_id">Status Updated</span>
                     </th>
                     {% endif %}
-
                 </tr>
             </thead>
             <tbody>
@@ -81,6 +86,16 @@
                             <div>
                                 <a href="{% url 'blockspec' block.id %}" style="display: inline;">{{block.num_observed}}</a>
                             </div>
+                        </td>
+                        <td data-label="status">
+                            {% if block.body.analysis_status %}
+                                {{block.body.analysis_status}}
+                            {% endif %}
+                        </td>
+                        <td data-label="status_date">
+                            {% if block.body.analysis_status %}
+                                {{block.body.as_updated}}
+                            {% endif %}
                         </td>
                     {% endwith %}
                     {% else %}
@@ -108,12 +123,12 @@
                             </td>
                             <td data-label="status">
                                 {% if body.analysis_status %}
-                                    {{body.analysis_status}}
+                                    {{body.get_analysis_status_display}}
                                 {% endif %}
                             </td>
                             <td data-label="status_date">
                                 {% if body.analysis_status %}
-                                    {{body.as_updated}}
+                                    {{body.as_updated.date}}
                                 {% endif %}
                             </td>
                         {% endwith %}
@@ -128,6 +143,18 @@
             </tbody>
         </table>
     </div>
+    <form action="{% url 'lc_data_summary' %}" method="POST" style="display:inline-block;">
+        {% csrf_token %}
+        <div class="inline-fields">
+            <input type="submit" class="button button-primary" title="Update Body Status" value="Update" id="update_status-btn" name="update" style="font-size: larger;">
+            <div class="compact-field">
+                {{form.update_body}}
+            </div>
+            <div class="compact-field">
+                {{form.status}}
+            </div>
+        </div>
+    </form>
     <div class="row">
         {% if is_paginated %}
             <!-- start -->

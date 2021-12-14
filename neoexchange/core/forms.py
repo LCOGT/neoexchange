@@ -22,7 +22,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from astrometrics.sources_subs import fetch_sfu, fetch_filter_list
-from .models import Body, Proposal, Block, StaticSource, ORIGINS
+from .models import Body, Proposal, Block, StaticSource, ORIGINS, STATUS_CHOICES
 from astrometrics.time_subs import tomorrow
 
 logger = logging.getLogger(__name__)
@@ -459,3 +459,8 @@ class AddPeriodForm(forms.Form):
     quality = forms.ChoiceField(required=False, choices=LC_QUALITIES)
     notes = forms.CharField(label="Notes", required=False, widget=forms.DateTimeInput(attrs={'style': 'width: 275px;'}))
     preferred = forms.BooleanField(initial=False, required=False)
+
+
+class UpdateAnalysisStatusForm(forms.Form):
+    update_body = forms.ChoiceField(required=False, choices=[])
+    status = forms.ChoiceField(required=False, choices=STATUS_CHOICES)

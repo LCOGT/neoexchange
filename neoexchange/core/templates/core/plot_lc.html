@@ -36,7 +36,17 @@ $(document).ready(function(){
 
 
 {% block main-content %}
+
+<!-- Main body -->
+<div class="container" id="main">
+    <!-- Import the javascript and div created by Bokeh for plots -->
+    {% block graphic %}
+        {{ lc_div|safe }}
+    {% endblock %}
+</div>
+
 <div class="container">
+    <h5 class="section-title">Known Periods</h5>
     <table id="id_periods" class="datatable">
         <thead>
             <tr>
@@ -71,7 +81,7 @@ $(document).ready(function(){
                     </td>
                     <td data-label="p_source">{{period.reference}}</td>
                     <td data-label="p_notes">{{period.notes}}</td>
-                    <td data-label="p_update">{{period.update_time}}</td>
+                    <td data-label="p_update">{{period.update_time.date}}</td>
                 </tr>
             {% endfor %}
             </tbody>
@@ -110,12 +120,4 @@ $(document).ready(function(){
     <button type="button" class="collapsible" id="arrow"><i class="fa fa-chevron-down" id="chevron"></i></button>
     {% endif %}
 </div>
-<!-- Main body -->
-<div class="container" id="main">
-    <!-- Import the javascript and div created by Bokeh for plots -->
-    {% block graphic %}
-        {{ lc_div|safe }}
-    {% endblock %}
-</div>
-
 {% endblock %}

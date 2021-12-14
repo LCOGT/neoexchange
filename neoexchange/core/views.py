@@ -53,7 +53,7 @@ import io
 from urllib.parse import urljoin
 
 from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, \
-    ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm, AddTargetForm, AddPeriodForm
+    ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm, AddTargetForm, AddPeriodForm, UpdateAnalysisStatusForm
 from .models import *
 from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih, \
     convert_ast_to_comet
@@ -1801,21 +1801,57 @@ class SpecDataListView(ListView):
         return context
 
 
-class LCDataListView(ListView):
+class LCDataListDisplay(ListView):
     model = Body
     template_name = 'core/data_summary.html'
     alcdefs_blocks = DataProduct.content.sblock().filter(filetype=DataProduct.ALCDEF_TXT).select_related('content_type')
     block_ids = [x.object_id for x in alcdefs_blocks]
     period_info = PhysicalParameters.objects.filter(parameter_type='P').order_by('-preferred')
     prefetch_period = Prefetch('physicalparameters_set', queryset=period_info, to_attr='rot_period')
-    queryset = Body.objects.filter(superblock__pk__in=block_ids).distinct().prefetch_related(prefetch_period)
+    queryset = Body.objects.filter(superblock__pk__in=block_ids).distinct().prefetch_related(prefetch_period).order_by('-as_updated').order_by('analysis_status')
     context_object_name = "data_list"
     paginate_by = 20
 
     def get_context_data(self, **kwargs):
-        context = super(LCDataListView, self).get_context_data(**kwargs)
+        context = super(LCDataListDisplay, self).get_context_data(**kwargs)
         context['data_type'] = 'LC'
+        body_choices_list = [(body.pk, body.current_name()) for body in context['data_list']]
+        form = UpdateAnalysisStatusForm()
+        form.fields['update_body'].choices = body_choices_list
+        context['form'] = form
         return context
+
+
+class UpdateBodyStatus(SingleObjectMixin, FormView):
+    template_name = 'core/data_summary.html'
+    form_class = UpdateAnalysisStatusForm
+    model = Body
+
+    def post(self, request, *args, **kwargs):
+        body_id = request.POST.get('update_body')
+        status_value = request.POST.get('status')
+        try:
+            body = Body.objects.get(pk=body_id)
+            body.analysis_status = status_value
+            body.as_updated = datetime.utcnow()
+            body.save()
+        except ObjectDoesNotExist:
+            logger.warning(f"Could not find a body for {body_id}.")
+        return redirect(reverse('lc_data_summary'))
+
+    def get_success_url(self):
+        return reverse('lc_data_summary')
+
+
+class LCDataListView(View):
+
+    def get(self, request, *args, **kwargs):
+        view = LCDataListDisplay.as_view()
+        return view(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        view = UpdateBodyStatus.as_view()
+        return view(request, *args, **kwargs)
 
 
 def ranking(request):
