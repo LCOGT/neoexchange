@@ -1788,7 +1788,7 @@ def feasibility_check(data, body):
     return data
 
 
-class SpecDataListView(ListView):
+class SpecDataListDisplay(ListView):
     model = Block
     template_name = 'core/data_summary.html'
     queryset = Block.objects.filter(obstype=1).filter(num_observed__gt=0).order_by('-when_observed')
@@ -1796,26 +1796,10 @@ class SpecDataListView(ListView):
     paginate_by = 20
 
     def get_context_data(self, **kwargs):
-        context = super(SpecDataListView, self).get_context_data(**kwargs)
+        context = super(SpecDataListDisplay, self).get_context_data(**kwargs)
         context['data_type'] = 'Spec'
-        return context
-
-
-class LCDataListDisplay(ListView):
-    model = Body
-    template_name = 'core/data_summary.html'
-    alcdefs_blocks = DataProduct.content.sblock().filter(filetype=DataProduct.ALCDEF_TXT).select_related('content_type')
-    block_ids = [x.object_id for x in alcdefs_blocks]
-    period_info = PhysicalParameters.objects.filter(parameter_type='P').order_by('-preferred')
-    prefetch_period = Prefetch('physicalparameters_set', queryset=period_info, to_attr='rot_period')
-    queryset = Body.objects.filter(superblock__pk__in=block_ids).distinct().prefetch_related(prefetch_period).order_by('-as_updated').order_by('analysis_status')
-    context_object_name = "data_list"
-    paginate_by = 20
-
-    def get_context_data(self, **kwargs):
-        context = super(LCDataListDisplay, self).get_context_data(**kwargs)
-        context['data_type'] = 'LC'
-        body_choices_list = [(body.pk, body.current_name()) for body in context['data_list']]
+        body_list = Body.objects.filter(block__in=context['data_list']).distinct()
+        body_choices_list = [(body.pk, body.current_name()) for body in body_list]
         form = UpdateAnalysisStatusForm()
         form.fields['update_body'].choices = body_choices_list
         context['form'] = form
@@ -1841,6 +1825,38 @@ class UpdateBodyStatus(SingleObjectMixin, FormView):
 
     def get_success_url(self):
         return reverse('lc_data_summary')
+
+
+class SpecDataListView(View):
+
+    def get(self, request, *args, **kwargs):
+        view = SpecDataListDisplay.as_view()
+        return view(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        view = UpdateBodyStatus.as_view()
+        return view(request, *args, **kwargs)
+
+
+class LCDataListDisplay(ListView):
+    model = Body
+    template_name = 'core/data_summary.html'
+    alcdefs_blocks = DataProduct.content.sblock().filter(filetype=DataProduct.ALCDEF_TXT).select_related('content_type')
+    block_ids = [x.object_id for x in alcdefs_blocks]
+    period_info = PhysicalParameters.objects.filter(parameter_type='P').order_by('-preferred')
+    prefetch_period = Prefetch('physicalparameters_set', queryset=period_info, to_attr='rot_period')
+    queryset = Body.objects.filter(superblock__pk__in=block_ids).distinct().prefetch_related(prefetch_period).order_by('-as_updated').order_by('analysis_status')
+    context_object_name = "data_list"
+    paginate_by = 20
+
+    def get_context_data(self, **kwargs):
+        context = super(LCDataListDisplay, self).get_context_data(**kwargs)
+        context['data_type'] = 'LC'
+        body_choices_list = [(body.pk, body.current_name()) for body in context['data_list']]
+        form = UpdateAnalysisStatusForm()
+        form.fields['update_body'].choices = body_choices_list
+        context['form'] = form
+        return context
 
 
 class LCDataListView(View):

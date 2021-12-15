@@ -162,7 +162,7 @@ $(document).ready(function(){
             <form action="{% url 'lc_data_summary' %}" method="POST" style="display:inline-block;">
                 {% csrf_token %}
                 <div class="inline-fields">
-                    <input type="submit" class="button button-primary" title="Update Body Status" value="Update" id="update_status-btn" name="update" style="font-size: larger;">
+                    <input type="submit" class="button button-primary" title="Update Body Status" value="Update" id="update_status-btn" name="update" style="font-size: larger; margin-left: 10px; margin-top: 10px;">
                     <div class="compact-field">
                         {{form.update_body}}<label>Select Body</label>
                     </div>
