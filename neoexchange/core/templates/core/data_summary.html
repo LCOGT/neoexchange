@@ -3,6 +3,19 @@
 
 {% block css-content %}<link rel="stylesheet" href="{% static 'core/css/forms.css' %}">{% endblock %}
 
+{% block script-content %}
+<script type="text/javascript">
+$(document).ready(function(){
+    // Initially hide the status form
+    $('#status_updater').hide();
+    $('.collapsible').click(function(event){
+      $('#chevron').toggleClass('fa fa-chevron-down fa fa-chevron-up');
+      $('.content').toggle();
+    });
+});
+</script>
+{% endblock %}
+
 {% block header %}Data Summary Page{% endblock %}
 
 {% block bodyclass %}page{% endblock %}
@@ -89,12 +102,12 @@
                         </td>
                         <td data-label="status">
                             {% if block.body.analysis_status %}
-                                {{block.body.analysis_status}}
+                                {{block.body.get_analysis_status_display}}
                             {% endif %}
                         </td>
                         <td data-label="status_date">
                             {% if block.body.analysis_status %}
-                                {{block.body.as_updated}}
+                                {{block.body.as_updated.date}}
                             {% endif %}
                         </td>
                     {% endwith %}
@@ -143,18 +156,25 @@
             </tbody>
         </table>
     </div>
-    <form action="{% url 'lc_data_summary' %}" method="POST" style="display:inline-block;">
-        {% csrf_token %}
-        <div class="inline-fields">
-            <input type="submit" class="button button-primary" title="Update Body Status" value="Update" id="update_status-btn" name="update" style="font-size: larger;">
-            <div class="compact-field">
-                {{form.update_body}}
-            </div>
-            <div class="compact-field">
-                {{form.status}}
-            </div>
+    {% if request.user.is_authenticated and perms.core.add_body %}
+    <div class="container">
+        <div class="content" id="status_updater">
+            <form action="{% url 'lc_data_summary' %}" method="POST" style="display:inline-block;">
+                {% csrf_token %}
+                <div class="inline-fields">
+                    <input type="submit" class="button button-primary" title="Update Body Status" value="Update" id="update_status-btn" name="update" style="font-size: larger;">
+                    <div class="compact-field">
+                        {{form.update_body}}<label>Select Body</label>
+                    </div>
+                    <div class="compact-field">
+                        {{form.status}}<label>New Status</label>
+                    </div>
+                </div>
+            </form>
         </div>
-    </form>
+        <button type="button" class="collapsible" id="arrow" title="Update Analysis Status"><i class="fa fa-chevron-down" id="chevron"></i></button>
+    </div>
+    {% endif %}
     <div class="row">
         {% if is_paginated %}
             <!-- start -->
