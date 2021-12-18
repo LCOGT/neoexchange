@@ -115,13 +115,13 @@ PARAM_CHOICES = (
                 )
 
 STATUS_CHOICES = (
-                ('0', 'No Analysis Done'),
-                ('1', 'Light Curve Analysis Done'),
-                ('2', 'Spectroscopic Analysis Done'),
-                ('3', 'LC & Spec Analysis Done'),
-                ('10', 'More Observations Needed'),
-                ('20', 'Published'),
-                ('99', 'No usable Data')
+                (0, 'No Analysis Done'),
+                (1, 'Light Curve Analysis Done'),
+                (2, 'Spectroscopic Analysis Done'),
+                (3, 'LC & Spec Analysis Done'),
+                (10, 'More Observations Needed'),
+                (20, 'Published'),
+                (99, 'No usable Data')
                 )
 
 logger = logging.getLogger(__name__)
@@ -159,7 +159,7 @@ class Body(models.Model):
     updated             = models.BooleanField('Has this object been updated?', default=False)
     ingest              = models.DateTimeField(default=datetime.utcnow, db_index=True)
     update_time         = models.DateTimeField(blank=True, null=True, db_index=True)
-    analysis_status     = models.CharField('Current Analysis Status', max_length=2, choices=STATUS_CHOICES, db_index=True, default='0')
+    analysis_status     = models.IntegerField('Current Analysis Status', choices=STATUS_CHOICES, db_index=True, default=0)
     as_updated          = models.DateTimeField(blank=True, null=True, db_index=True)
 
     def _compute_period(self):

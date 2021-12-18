@@ -101,12 +101,10 @@ $(document).ready(function(){
                             </div>
                         </td>
                         <td data-label="status">
-                            {% if block.body.analysis_status %}
-                                {{block.body.get_analysis_status_display}}
-                            {% endif %}
+                            {{block.body.get_analysis_status_display}}
                         </td>
                         <td data-label="status_date">
-                            {% if block.body.analysis_status %}
+                            {% if block.body.as_updated %}
                                 {{block.body.as_updated.date}}
                             {% endif %}
                         </td>
@@ -135,12 +133,10 @@ $(document).ready(function(){
                                 {{period.notes}}
                             </td>
                             <td data-label="status">
-                                {% if body.analysis_status %}
-                                    {{body.get_analysis_status_display}}
-                                {% endif %}
+                                {{body.get_analysis_status_display}}
                             </td>
                             <td data-label="status_date">
-                                {% if body.analysis_status %}
+                                {% if body.as_updated %}
                                     {{body.as_updated.date}}
                                 {% endif %}
                             </td>

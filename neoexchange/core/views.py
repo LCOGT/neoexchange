@@ -1796,10 +1796,13 @@ class SpecDataListDisplay(ListView):
     paginate_by = 20
 
     def get_context_data(self, **kwargs):
+        # define data_type
         context = super(SpecDataListDisplay, self).get_context_data(**kwargs)
         context['data_type'] = 'Spec'
+        # Define list of choices for status form
         body_list = Body.objects.filter(block__in=context['data_list']).distinct()
         body_choices_list = [(body.pk, body.current_name()) for body in body_list]
+        # Add form to context
         form = UpdateAnalysisStatusForm()
         form.fields['update_body'].choices = body_choices_list
         context['form'] = form
@@ -1841,18 +1844,19 @@ class SpecDataListView(View):
 class LCDataListDisplay(ListView):
     model = Body
     template_name = 'core/data_summary.html'
-    alcdefs_blocks = DataProduct.content.sblock().filter(filetype=DataProduct.ALCDEF_TXT).select_related('content_type')
-    block_ids = [x.object_id for x in alcdefs_blocks]
     period_info = PhysicalParameters.objects.filter(parameter_type='P').order_by('-preferred')
     prefetch_period = Prefetch('physicalparameters_set', queryset=period_info, to_attr='rot_period')
-    queryset = Body.objects.filter(superblock__pk__in=block_ids).distinct().prefetch_related(prefetch_period).order_by('-as_updated').order_by('analysis_status')
-    context_object_name = "data_list"
+    queryset = Body.objects.filter(superblock__dataproduct__filetype=DataProduct.ALCDEF_TXT).distinct().prefetch_related(prefetch_period).order_by('-as_updated').order_by('analysis_status')
     paginate_by = 20
+    context_object_name = "data_list"
 
     def get_context_data(self, **kwargs):
+        # define data_type
         context = super(LCDataListDisplay, self).get_context_data(**kwargs)
         context['data_type'] = 'LC'
+        # Define list of choices for status form
         body_choices_list = [(body.pk, body.current_name()) for body in context['data_list']]
+        # Add form to context
         form = UpdateAnalysisStatusForm()
         form.fields['update_body'].choices = body_choices_list
         context['form'] = form
