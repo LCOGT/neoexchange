@@ -454,7 +454,7 @@ class AddTargetForm(forms.Form):
 
 
 class AddPeriodForm(forms.Form):
-    period = forms.FloatField(label="Period", initial=1.000, required=True, widget=forms.DateTimeInput(attrs={'style': 'width: 75px;'}))
+    period = forms.FloatField(label="Period", initial=None, required=True, widget=forms.DateTimeInput(attrs={'style': 'width: 75px;'}))
     error = forms.FloatField(label="Error", initial=0.0, required=False, widget=forms.DateTimeInput(attrs={'style': 'width: 75px;'}))
     quality = forms.ChoiceField(required=False, choices=LC_QUALITIES)
     notes = forms.CharField(label="Notes", required=False, widget=forms.DateTimeInput(attrs={'style': 'width: 275px;'}))
