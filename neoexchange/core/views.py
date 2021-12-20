@@ -305,11 +305,11 @@ class SuperBlockTimeline(DetailView):
             else:
                 date = blk.block_start.isoformat(' ')
             data = {
-                'date' : date,
-                'num'  : blk.num_observed if blk.num_observed else 0,
-                'type' : blk.get_obstype_display(),
-                'duration' : (blk.block_end - blk.block_start).seconds,
-                'location' : blk.where_observed()
+                'date': date,
+                'num': blk.num_observed if blk.num_observed else 0,
+                'type': blk.get_obstype_display(),
+                'duration': (blk.block_end - blk.block_start).seconds,
+                'location': blk.where_observed()
                 }
             blks.append(data)
         context['blocks'] = json.dumps(blks)
@@ -3944,7 +3944,7 @@ class LCPlot(LookUpBodyMixin, FormView):
     form_class = AddPeriodForm
 
     def get(self, request, form=None, *args, **kwargs):
-        period_list = PhysicalParameters.objects.filter(body=self.body, parameter_type='P')
+        period_list = PhysicalParameters.objects.filter(body=self.body, parameter_type='P').order_by('update_time').order_by('-preferred')
         best_period = period_list.filter(preferred=True)
         if best_period:
             period = best_period[0].value

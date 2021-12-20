@@ -25,7 +25,7 @@ from selenium.common.exceptions import NoSuchElementException
 from core.models import Body, DataProduct
 from core.utils import save_dataproduct, save_to_default
 from mock import patch
-from neox.tests.mocks import mock_lco_authenticate
+from neox.tests.mocks import mock_lco_authenticate, MockDateTime
 from django.conf import settings
 
 import os
@@ -37,6 +37,7 @@ import time
 
 class LighCurvePlotTest(FunctionalTest):
 
+    @patch('core.models.body.datetime', MockDateTime)
     def setUp(self):
         super(LighCurvePlotTest, self).setUp()
         settings.DATA_ROOT = self.test_dir
@@ -70,7 +71,12 @@ class LighCurvePlotTest(FunctionalTest):
                     }
         self.body2, created = Body.objects.get_or_create(pk=2, **params)
 
-        self.body2.save_physical_parameters({'parameter_type': 'P', 'value': 5.27})
+        MockDateTime.change_date(2021, 12, 10)
+        self.body2.save_physical_parameters({'parameter_type': 'P',
+                                             'value': 5.27,
+                                             'error': .0015,
+                                             'quality': '2-',
+                                             'notes': "testy test note"})
 
         params = {'name': 'C/2017 K2',
                   'abs_mag': 7.0,
@@ -106,6 +112,8 @@ class LighCurvePlotTest(FunctionalTest):
         self.bart.first_name = 'Bart'
         self.bart.last_name = 'Simpson'
         self.bart.is_active = 1
+        self.bart.is_staff = 1
+        self.bart.is_superuser = 1
         self.bart.save()
 
         update_proposal_permissions(self.bart, [{'code': self.neo_proposal.code}])
@@ -131,10 +139,10 @@ class LighCurvePlotTest(FunctionalTest):
         self.assertIn('Lightcurve for object: N999r0q', self.browser.title)
         self.assertIn('Could not find any LC data', error_text)
 
+    @patch('core.models.body.datetime', MockDateTime)
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def test_can_view_lightcurve(self):   # test opening up a ALCDEF file associated with a body
         save_dataproduct(self.body2, self.lcname, DataProduct.ALCDEF_TXT)
-        self.login()
         lc_url = reverse('lc_plot', args=[self.body2.id])
         self.browser.get(self.live_server_url + lc_url)
 
@@ -146,9 +154,42 @@ class LighCurvePlotTest(FunctionalTest):
         period_box = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='lc_plot']/div[@class='bk']/div[@class='bk'][2]/div[@class='bk'][2]/div[@class='bk'][2]/div[@class='bk']/div[@class='bk'][1]/div[@class='bk'][1]/div[@class='bk']/div[@class='bk bk-input-group']/div[@class='bk bk-spin-wrapper']/input[@class='bk bk-input']")
         period_text = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='lc_plot']/div[@class='bk']/div[@class='bk'][2]/div[@class='bk'][2]/div[@class='bk'][2]/div[@class='bk']/div[@class='bk'][1]/div[@class='bk'][1]/div[@class='bk']/div[@class='bk bk-input-group']/label[@class='bk']").text
         self.assertIn('Period (Default: 5.27h)', period_text)
+        # check for period table
+        self.check_for_header_in_table('id_periods', 'Period [hours] Source Notes Date')
+        test_lines = ['1 5.27 ±0.0015 (2-) None testy test note Dec. 10, 2021']
+        for test_line in test_lines:
+            self.check_for_row_in_table('id_periods', test_line)
+        # Check for no form
+        try:
+            arrow_link = self.browser.find_element_by_id("arrow")
+            raise Exception("Should be logged in for this form")
+        except NoSuchElementException:
+            pass
+        # Login
+        self.login()
+        self.browser.get(self.live_server_url + lc_url)
+        self.assertIn('Lightcurve for object: 433', self.browser.title)
+        # find form
+        arrow_link = self.browser.find_element_by_id("arrow")
+        arrow_link.click()
+        # Fill out Form and submit.
+        MockDateTime.change_date(2021, 12, 12)
+        period_box = self.get_item_input_box("id_period")
+        period_box.send_keys('4.35')
+        preferred_box = self.browser.find_element_by_id("id_preferred")
+        preferred_box.click()
+        add_button = self.browser.find_element_by_id("add_new_period-btn")
+        with self.wait_for_page_load(timeout=10):
+            add_button.click()
+        # check for updated period table
+        self.check_for_header_in_table('id_periods', 'Period [hours] Source Notes Date')
+        test_lines = ['1 4.35 (3) NEOX Dec. 12, 2021', '2 5.27 ±0.0015 (2-) None testy test note Dec. 10, 2021']
+        for test_line in test_lines:
+            self.check_for_row_in_table('id_periods', test_line)
+
         # get current window
         pw = self.browser.current_window_handle
-        data_link = self.browser.find_element_by_xpath("/html/body/div[1]/div/div[3]/div/div/div[2]/div[2]/div[1]/div[2]/div[4]/div[3]/div/div[1]/div[7]/a")
+        data_link = self.browser.find_element_by_link_text("2019-01-12")
         self.assertEqual(len(self.browser.window_handles), 1)
         data_link.click()
         WebDriverWait(self.browser, timeout=10).until(EC.number_of_windows_to_be(2))

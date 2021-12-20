@@ -68,7 +68,7 @@ $(document).ready(function(){
             </tr>
         </thead>
         <tbody>
-            {% for period in period_list|dictsort:"update_time"%}
+            {% for period in period_list %}
                 <tr class="{% cycle 'odd' 'even' %}">
                     <td data-label="Rank">{{forloop.counter}}</td>
                     <td data-label="period">{{period.value}}
