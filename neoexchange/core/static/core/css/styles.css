@@ -26,7 +26,7 @@ table { border-collapse: collapse; }
 table.datatable { margin: 0px; padding: 0px; background-color: white; width: 100%!important; border-collapse: collapse; table-layout: fixed; color:#555;}
 table.datatable th, table.datatable td { text-align: left; padding: 8px; border: 0px; font-weight: normal; }
 table.datatable th { padding: 16px 8px; font-weight: bold; border-bottom: 1px solid #aaa;}
-table.datatable td { border-bottom: 1px solid #e6e6e6; color: #202020; white-space: nowrap; overflow: auto; text-overflow: unset; }
+table.datatable td { border-bottom: 1px solid #e6e6e6; color: #202020; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 table.datatable td a { display: block; }
 table.datatable .wider { width: 12%; }
 
@@ -1202,4 +1202,10 @@ ul.candidate-controls li:hover {background-color:#eee; }
   margin-bottom: 0px;
   margin-top: 2px;
   box-shadow: 2px 2px 10px #777;
+}
+
+.long-row {
+  display: block;
+  white-space: nowrap;
+  overflow-x: auto;
 }

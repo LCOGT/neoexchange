@@ -79,8 +79,16 @@ $(document).ready(function(){
                             ({{period.quality}})
                         {% endif %}
                     </td>
-                    <td data-label="p_source">{{period.reference}}</td>
-                    <td data-label="p_notes">{{period.notes}}</td>
+                    <td data-label="p_source">
+                        <div class="long-row">
+                            {{period.reference}}
+                        </div>
+                    </td>
+                    <td data-label="p_notes">
+                        <div class="long-row">
+                            {{period.notes}}
+                        </div>
+                    </td>
                     <td data-label="p_update">{{period.update_time.date}}</td>
                 </tr>
             {% endfor %}
