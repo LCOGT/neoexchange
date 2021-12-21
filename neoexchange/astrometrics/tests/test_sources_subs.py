@@ -422,10 +422,12 @@ class TestFetchGoldstoneCSV(SimpleTestCase):
 
     def test_basic(self):
         expected_length = 7
+        expected_columns = ['number', 'name', 'start (UT)', 'end (UT)', 'OCC', 'Updated 2021 Dec 17']
 
         table = fetch_goldstone_csv(self.test_file)
 
         self.assertEqual(expected_length, len(table))
+        self.assertEqual(expected_columns, table.colnames)
 
     def test_missing_file(self):
         expected_length = None

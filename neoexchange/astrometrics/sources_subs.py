@@ -1211,8 +1211,8 @@ def fetch_goldstone_csv(file_or_url=None):
 
     table = None
     try:
-        table = Table.read(file_or_url, format='ascii.csv')
-    except FileNotFoundError:
+        table = Table.read(file_or_url, format='csv', encoding='utf-8-sig')
+    except (FileNotFoundError, urllib.error.URLError):
         logger.warning(f"Could not read Goldstone target file: {file_or_url}")
     
     return table
