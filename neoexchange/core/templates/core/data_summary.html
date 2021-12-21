@@ -124,7 +124,9 @@ $(document).ready(function(){
                                 {% endif %}
                             </td>
                             <td data-label="quality">
-                                {{period.quality}}
+                                {% if period.quality %}
+                                    {{period.quality}}
+                                {% endif %}
                             </td>
                             <td data-label="source">
                                 <div class="long-row">
