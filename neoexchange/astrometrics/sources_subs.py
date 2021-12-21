@@ -36,6 +36,7 @@ from contextlib import closing
 
 from bs4 import BeautifulSoup
 import astropy.units as u
+from astropy.table import Table
 try:
     import pyslalib.slalib as S
 except ModuleNotFoundError:
@@ -1201,6 +1202,20 @@ def parse_goldstone_chunks(chunks, dbg=False):
             object_id = str(chunks[3] + ' ' + chunks[4])
 
     return object_id
+
+def fetch_goldstone_csv(file_or_url=None):
+    """Fetches the Goldstone CSV file of radar targets, returning a Astropy
+    Table"""
+
+    file_or_url = file_or_url or 'https://echo.jpl.nasa.gov/asteroids/GSSR_schedule.csv'
+
+    table = None
+    try:
+        table = Table.read(file_or_url, format='ascii.csv')
+    except FileNotFoundError:
+        logger.warning(f"Could not read Goldstone target file: {file_or_url}")
+    
+    return table
 
 
 def fetch_goldstone_page():

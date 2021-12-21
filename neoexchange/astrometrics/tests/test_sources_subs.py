@@ -415,6 +415,33 @@ class TestFetchAreciboTargets(TestCase):
         self.assertEqual(expected_targets, targets)
 
 
+class TestFetchGoldstoneCSV(SimpleTestCase):
+
+    def setUp(self):
+        self.test_file = os.path.join('astrometrics', 'tests', 'test_goldstone_page.csv')
+
+    def test_basic(self):
+        expected_length = 7
+
+        table = fetch_goldstone_csv(self.test_file)
+
+        self.assertEqual(expected_length, len(table))
+
+    def test_missing_file(self):
+        expected_length = None
+
+        table = fetch_goldstone_csv('/foo/bar')
+
+        self.assertEqual(expected_length, table)
+
+    def test_missing_url(self):
+        expected_length = None
+
+        table = fetch_goldstone_csv('https://foo.bar.com/nothere.csv')
+
+        self.assertEqual(expected_length, table)
+
+
 class TestFetchGoldstoneTargets(TestCase):
 
     def setUp(self):
