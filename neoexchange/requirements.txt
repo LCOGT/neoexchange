@@ -1,10 +1,10 @@
 --extra-index-url=http://buildsba.lco.gtn/python/
 --trusted-host buildsba.lco.gtn
-Django>=3.1,<3.2
+Django>=3.1.13,<3.2
 mysqlclient~=1.4.2
 psycopg2-binary
 astropy>=3.1,<=3.2.3
-astroquery>=0.4
+astroquery>=0.4.4.dev7007
 pyslalib
 beautifulsoup4
 django-reversion
@@ -22,7 +22,7 @@ mock
 django-storages
 boto3
 matplotlib<3.3
-bokeh==1.4.0
+bokeh==2.3.0
 fits2image
 pillow
 aplpy
@@ -30,3 +30,4 @@ gunicorn[gevent]~=19.9.0
 rollbar
 sty
 awscli
+lxml

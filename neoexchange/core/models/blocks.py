@@ -25,6 +25,7 @@ from astrometrics.ephem_subs import compute_ephem, comp_sep
 from core.archive_subs import check_for_archive_images
 
 from core.models.body import Body
+from core.models.frame import Frame
 from core.models.proposal import Proposal
 
 TELESCOPE_CHOICES = (
@@ -44,7 +45,6 @@ SITE_CHOICES = (
                     ('sin', 'Sinistro cameras'),
                     ('spc', 'Spectral cameras')
     )
-
 
 
 class SuperBlock(models.Model):
@@ -94,6 +94,7 @@ class SuperBlock(models.Model):
     def get_telclass(self):
         bl = self.get_blocks
         qs = list(set([(b.telclass, b.obstype) for b in bl]))
+        qs.sort()
 
         # Convert obstypes into "(S)" suffix for spectra, nothing for imaging
         class_obstype = [x[0]+str(x[1]).replace(str(Block.OPT_SPECTRA), '(S)').replace(str(Block.OPT_SPECTRA_CALIB), '(SC)').replace(str(Block.OPT_IMAGING), '') for x in qs]
@@ -167,7 +168,6 @@ class SuperBlock(models.Model):
         return '%s is %sactive' % (self.tracking_number, text)
 
 
-
 class Block(models.Model):
 
     OPT_IMAGING = 0
@@ -229,10 +229,10 @@ class Block(models.Model):
     def num_spectro_frames(self):
         """Returns the numbers of different types of spectroscopic frames"""
         num_moltypes_string = 'No data'
-        data, num_frames = check_for_archive_images(self.request_number, obstype='')
+        data, num_frames = check_for_archive_images(self.request_number, obstype='', obj=self.current_name())
         if num_frames > 0:
             moltypes = [x['OBSTYPE'] if x['RLEVEL'] != 90 else "TAR" for x in data]
-            num_moltypes = {x : moltypes.count(x) for x in set(moltypes)}
+            num_moltypes = {x: moltypes.count(x) for x in set(moltypes)}
             num_moltypes_sort = OrderedDict(sorted(num_moltypes.items(), reverse=True))
             num_moltypes_string = ", ".join([x+": "+str(num_moltypes_sort[x]) for x in num_moltypes_sort])
         return num_moltypes_string
@@ -249,6 +249,19 @@ class Block(models.Model):
     def num_candidates(self):
         return Candidate.objects.filter(block=self.id).count()
 
+    def where_observed(self):
+        where_observed=''
+        if self.num_observed is not None:
+            frames = Frame.objects.filter(block=self.id, frametype=Frame.BANZAI_RED_FRAMETYPE)
+            if frames.count() > 0:
+                # Code for producing full site strings + site codes e.g. 'W85'
+                # where_observed_qs = frames.distinct('sitecode')
+                # where_observed = ",".join([site.return_site_string() + " (" + site.sitecode + ")" for site in where_observed_qs])
+                # Alternative which doesn't need PostgreSQL DISTINCT ON <fieldname>
+                unique_sites = frames.values('sitecode').distinct()
+                where_observed = ",".join([frames.filter(sitecode=site['sitecode'])[0].return_site_string() + " (" + site['sitecode'] + ")" for site in unique_sites])
+        return where_observed
+
     class Meta:
         verbose_name = _('Observation Block')
         verbose_name_plural = _('Observation Blocks')
@@ -261,7 +274,6 @@ class Block(models.Model):
             text = 'not '
 
         return '%s is %sactive' % (self.request_number, text)
-
 
 
 class Candidate(models.Model):

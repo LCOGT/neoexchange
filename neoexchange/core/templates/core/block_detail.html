@@ -104,6 +104,7 @@
                         {% if object.block_set.all|length > 1 %}
                         <a href="{% url 'view-timeline' object.id %}" class="button button-primary">Observation timeline</a>
                         {% endif %}
+                        <a href="{% url 'guidemovie' object.id %}" class="button button-primary">Preview Movies</a>
                         <ul class="block-status">
                         {% for blk in object.block_set.all %}
                         <li class="{% cycle 'odd' 'even' %}">
@@ -128,19 +129,9 @@
                                 <div class="block-control">{{blk.num_spectro_frames}}</div>
                                 <div class="block-control">Target: {{blk.current_name}}</div>
                                 {% if "TAR" in blk.num_spectro_frames %}
-                                    {% if blk.num_spectra_complete > 1 %}
-                                        {% for obs_num in blk.num_spectra_complete|make_int_list %}
-                                            <div class="block-control"><a href="{% url 'blockspec' blk.pk obs_num %}">Spectrum Plot {{obs_num}}</a></div>
-                                        {% endfor %}
-                                    {% else %}
-                                        <div class="block-control"><a href="{% url 'blockspec' blk.pk 1 %}">Spectrum Plot</a></div>
-                                    {% endif %}
-                                  <div class="block-control"><a href="{% url 'guidemovie' blk.pk %}">Guide Movie</a></div>
+                                    <div class="block-control"><a href="{% url 'blockspec' blk.pk %}">Spectrum Plot</a></div>
                                 {% endif %}
                               {% else %}
-                                  {% if blk.num_observed > 0 %}
-                                  <li class="block-control"><a href="{% url 'guidemovie' blk.pk %}">Preview Movie</a></li>
-                                  {% endif %}
                                   {% if blk.num_observed > 0 and blk.num_unique_red_frames < 10 and blk.num_candidates > 0 %}
                                   <li class="block-control"><a href="{% url 'block-ast' blk.id %}" id="analyse-btn">Analyse Images</a></li>
                                   {% if not blk.reported %}

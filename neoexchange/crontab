@@ -1,5 +1,5 @@
 02 5,18 * * * python3 manage.py fetch_goldstone_targets
-27 5,18 * * * python3 manage.py fetch_arecibo_targets
+#27 5,18 * * * python3 manage.py fetch_arecibo_targets
 42 5,16 * * * python3 manage.py fetch_NASA_targets
 20,50 * * * * python3 manage.py update_neocp_data
 30 0,4,8,12,16,20 * * * python3 manage.py update_crossids
@@ -7,4 +7,5 @@
 10 7 * * * python3 manage.py update_taxonomy_data
 03 06,19 * * * python3 manage.py update_targets
 30 7 * * 0 python3 manage.py update_external_spectroscopy_data -a
-30 19,22,23 * * * source ~/download_FLOYDS_data_cron "$(date --date '1 day ago' +\%Y\%m\%d)"
+# Spectra downloading
+20 19,22,23 * * * source ~/download_FLOYDS_data_cron "$(date --date '1 day ago' +\%Y\%m\%d)"

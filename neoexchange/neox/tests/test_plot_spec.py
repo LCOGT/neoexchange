@@ -22,10 +22,11 @@ from django.contrib.auth.models import User
 from neox.auth_backend import update_proposal_permissions
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
-from core.models import Block, SuperBlock, Frame, Body, PreviousSpectra
+from core.models import Block, SuperBlock, Frame, Body, PreviousSpectra, DataProduct
+from core.utils import save_dataproduct, save_to_default
 from mock import patch
 from neox.tests.mocks import MockDateTime, mock_lco_authenticate, mock_fetch_archive_frames,\
-    mock_fetch_archive_frames_2spectra, mock_archive_spectra_header
+    mock_fetch_archive_frames_2spectra, mock_archive_spectra_header, mock_archive_bad_spectra_header
 from django.conf import settings
 
 import os
@@ -37,20 +38,22 @@ from glob import glob
 def build_data_dir(path, base_path, filename):
     if not default_storage.exists(name=path):
         os.makedirs(path)
-        copy2(os.path.join(base_path, filename), path)
+    copy2(os.path.join(base_path, filename), path)
 
 
 class SpectraplotTest(FunctionalTest):
 
     def setUp(self):
         super(SpectraplotTest, self).setUp()
-        self.spectradir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_spectra'))
-
         settings.MEDIA_ROOT = self.test_dir
-        build_data_dir(os.path.join(self.test_dir, '20190727', '455432_1878696'), self.spectradir,
-                       'target_2df_ex.fits')
-        build_data_dir(os.path.join(self.test_dir, '20190727', 'HD30455_1878697'), self.spectradir,
-                       'analog_2df_ex.fits')
+        spectradir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_spectra'))
+
+        spec_path = 'target_2df_ex.fits'
+        save_to_default(os.path.join(spectradir, spec_path), spectradir)
+        analog_path = 'analog_2df_ex.fits'
+        save_to_default(os.path.join(spectradir, analog_path), spectradir)
+        analog2_path = 'test_2df_ex.fits'
+        save_to_default(os.path.join(spectradir, analog2_path), spectradir)
 
         self.username = 'bart'
         self.password = 'simpson'
@@ -61,6 +64,7 @@ class SpectraplotTest(FunctionalTest):
         self.bart.is_active = 1
         self.bart.save()
 
+        # build individual target blocks
         sblock_params = {
              'cadence'         : False,
              'body'            : self.body,
@@ -87,6 +91,7 @@ class SpectraplotTest(FunctionalTest):
              'when_observed'   : datetime(2019, 7, 27, 16, 42, 51)
            }
         self.test_block = Block.objects.create(pk=3, **block_params)
+        save_dataproduct(self.test_block, spec_path, DataProduct.FITS_SPECTRA)
 
         analog_block_params = {
              'telclass'        : '2m0',
@@ -104,6 +109,7 @@ class SpectraplotTest(FunctionalTest):
              'when_observed'   : datetime(2019, 7, 27, 18, 42, 51)
            }
         self.analog_block = Block.objects.create(pk=7, **analog_block_params)
+        save_dataproduct(self.analog_block, analog_path, DataProduct.FITS_SPECTRA)
 
         fparams = {
             'sitecode'      : 'E10',
@@ -154,6 +160,26 @@ class SpectraplotTest(FunctionalTest):
            }
         self.test_block2 = Block.objects.create(pk=4, **block2_params)
 
+        save_dataproduct(self.test_block2, spec_path, DataProduct.FITS_SPECTRA, filename='test2_2df_ex.fits')
+
+        analog_block2_params = {
+            'telclass': '2m0',
+            'site': 'coj',
+            'calibsource': self.calib,
+            'superblock': self.test_sblock2,
+            'obstype': Block.OPT_SPECTRA_CALIB,
+            'block_start': '2019-07-27 13:00:00',
+            'block_end': '2019-07-28 03:00:00',
+            'request_number': '54321',
+            'num_exposures': 1,
+            'exp_length': 1800.0,
+            'active': True,
+            'when_observed': datetime(2019, 7, 27, 18, 42, 51)
+        }
+        self.analog_block2 = Block.objects.create(pk=10, **analog_block2_params)
+        save_dataproduct(self.analog_block2, analog2_path, DataProduct.FITS_SPECTRA)
+
+        # Build multi-frame Blocks
         msblock_params = {
              'cadence'         : False,
              'body'            : self.body,
@@ -172,14 +198,17 @@ class SpectraplotTest(FunctionalTest):
              'obstype'         : Block.OPT_SPECTRA,
              'block_start'     : '2018-01-01 00:00:00',
              'block_end'       : '2018-01-01 02:00:00',
-             'request_number' : '54322',
-             'num_exposures'   : 1,
+             'request_number'  : '54322',
+             'num_exposures'   : 2,
              'num_observed'    : 1,
              'exp_length'      : 1800.0,
              'active'          : True,
              'when_observed'   : datetime(2019, 7, 27, 16, 42, 51)
            }
         self.test_mblock1 = Block.objects.create(pk=5, **mblock1_params)
+        save_dataproduct(self.test_mblock1, spec_path, DataProduct.FITS_SPECTRA, filename='test3_2df_ex.fits')
+        save_dataproduct(self.test_mblock1, spec_path, DataProduct.FITS_SPECTRA, filename='test3.2_2df_ex.fits')
+
         mfparams1 = {
             'sitecode'      : 'F65',
             'filename'      : 'sp233/a265962.sp233.txt',
@@ -206,6 +235,8 @@ class SpectraplotTest(FunctionalTest):
              'when_observed'   : datetime(2019, 7, 27, 16, 42, 51)
            }
         self.test_mblock2 = Block.objects.create(pk=6, **mblock2_params)
+        save_dataproduct(self.test_mblock2, spec_path, DataProduct.FITS_SPECTRA, filename='test4_2df_ex.fits')
+
         mfparams2 = {
             'sitecode'      : 'F65',
             'filename'      : 'sp233/a265962.sp233.txt',
@@ -216,6 +247,17 @@ class SpectraplotTest(FunctionalTest):
             'frameid'       : 11,
            }
         self.mspec_frame2 = Frame.objects.create(**mfparams2)
+
+        # make empty block
+        sblock_params_empty = msblock_params
+        self.test_sblock_empty = SuperBlock.objects.create(pk=6, **sblock_params_empty)
+        block_params_empty = mblock2_params
+        block_params_empty['superblock'] = self.test_sblock_empty
+        block_params_empty['when_observed'] = datetime(2019, 9, 27, 16, 42, 51)
+        self.test_block_empty = Block.objects.create(**block_params_empty)
+        frame_params_empty = mfparams2
+        frame_params_empty['block'] = self.test_block_empty
+        self.spec_frame_empty = Frame.objects.create(**frame_params_empty)
 
         update_proposal_permissions(self.bart, [{'code': self.neo_proposal.code}])
 
@@ -265,12 +307,11 @@ class SpectraplotTest(FunctionalTest):
             # note: block and body do not match spectra.
             # mismatch due to recycling and laziness
         actual_url = self.browser.current_url
-        target_url = self.live_server_url+'/block/'+str(self.test_block.pk)+'/spectra/1/'
+        target_url = self.live_server_url+'/block/'+str(self.test_block.pk)+'/spectra/'
         self.assertIn('Spectrum for block: '+str(self.test_block.pk)+' | LCO NEOx', self.browser.title)
         self.assertEqual(target_url, actual_url)
 
-        spec_plot1 = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='reflec_spec']/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
-        spec_plot2 = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='raw_spec']/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
+        spec_plot = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='spec_plot']/div[@class='bk']/div[@class='bk'][2]/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
 
     @patch('core.views.lco_api_call', mock_archive_spectra_header)
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
@@ -284,12 +325,12 @@ class SpectraplotTest(FunctionalTest):
         with self.wait_for_page_load(timeout=10):
             self.browser.find_elements_by_link_text('Spectrum Plot')[0].click()
         actual_url = self.browser.current_url
-        target_url = self.live_server_url+'/block/'+str(self.test_mblock1.pk)+'/spectra/1/'
+        target_url = self.live_server_url+'/block/'+str(self.test_mblock1.pk)+'/spectra/'
         self.assertIn('Spectrum for block: '+str(self.test_mblock1.pk)+' | LCO NEOx', self.browser.title)
         self.assertEqual(target_url, actual_url)
 
-        spec_plot1 = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='reflec_spec']/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
-        spec_plot2 = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='raw_spec']/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
+        spec_plot = self.browser.find_element_by_name("spec_plot")
+        self.assertIn("HD 196164 -- 20190723 (1.03) [ || ]", spec_plot.text)
 
         self.wait_for_element_with_id('page')
         with self.wait_for_page_load(timeout=10):
@@ -298,17 +339,12 @@ class SpectraplotTest(FunctionalTest):
         with self.wait_for_page_load(timeout=10):
             self.browser.find_elements_by_link_text('Spectrum Plot')[1].click()
         actual_url2 = self.browser.current_url
-        target_url2 = self.live_server_url+'/block/'+str(self.test_mblock2.pk)+'/spectra/1/'
+        target_url2 = self.live_server_url+'/block/'+str(self.test_mblock2.pk)+'/spectra/'
         self.assertIn('Spectrum for block: '+str(self.test_mblock2.pk)+' | LCO NEOx', self.browser.title)
         self.assertEqual(target_url2, actual_url2)
 
-        spec_plot2 = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='raw_spec']/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
-        try:
-            spec_plot1 = self.browser.find_element_by_xpath(
-                "/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='reflec_spec']/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
-            raise ValueError('Wrong site, should not produce reflec_spec!')
-        except NoSuchElementException:
-            pass
+        spec_plot = self.browser.find_element_by_name("spec_plot")
+        self.assertIn("None", spec_plot.text)
 
     @patch('core.views.lco_api_call', mock_archive_spectra_header)
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
@@ -316,8 +352,6 @@ class SpectraplotTest(FunctionalTest):
     def test_multi_spectra_block(self):    # test opening 2 different spectra in same block
         self.mspec_frame2.block = self.test_mblock1
         self.mspec_frame2.save()
-        self.test_mblock1.num_observed = 2
-        self.test_mblock1.save()
 
         self.login()
         blocks_url = reverse('blocklist')
@@ -325,25 +359,41 @@ class SpectraplotTest(FunctionalTest):
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_link_text('5').click()
         with self.wait_for_page_load(timeout=10):
-            self.browser.find_element_by_link_text('Spectrum Plot 1').click()
+            self.browser.find_element_by_link_text('Spectrum Plot').click()
         actual_url = self.browser.current_url
-        target_url = self.live_server_url+'/block/'+str(self.test_mblock1.pk)+'/spectra/1/'
+        target_url = self.live_server_url+'/block/'+str(self.test_mblock1.pk)+'/spectra/'
         self.assertIn('Spectrum for block: '+str(self.test_mblock1.pk)+' | LCO NEOx', self.browser.title)
         self.assertEqual(target_url, actual_url)
+        spec_plot = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='spec_plot']/div[@class='bk']/div[@class='bk'][2]/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
+        target_list = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='spec_plot']/div[@class='bk']/div[@class='bk'][1]/div[@class='bk'][1]/div[@class='bk bk-input-group']/select[@class='bk bk-input']")
+        self.assertIn('2', target_list.text)
+        analog_list = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='spec_plot']/div[@class='bk']/div[@class='bk'][1]/div[@class='bk'][2]/div[@class='bk bk-input-group']/select[@class='bk bk-input']")
+        self.assertIn('HD 196164', analog_list.text)
+        self.assertIn('398188', analog_list.text)
 
-        spec_plot1 = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='reflec_spec']/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
-        spec_plot2 = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='raw_spec']/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
+    @patch('core.views.lco_api_call', mock_archive_bad_spectra_header)
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
+    @patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
+    def test_no_analog_no_spectra(self):    # test failure to find fits
 
-        self.wait_for_element_with_id('page')
+        self.login()
+        blocks_url = reverse('blocklist')
+        self.browser.get(self.live_server_url + blocks_url)
         with self.wait_for_page_load(timeout=10):
-            self.browser.back()
-
+            self.browser.find_element_by_link_text('6').click()
         with self.wait_for_page_load(timeout=10):
-            self.browser.find_element_by_link_text('Spectrum Plot 2').click()
-        actual_url2 = self.browser.current_url
-        target_url2 = self.live_server_url+'/block/'+str(self.test_mblock1.pk)+'/spectra/2/'
-        self.assertIn('Spectrum for block: '+str(self.test_mblock1.pk)+' | LCO NEOx', self.browser.title)
-        self.assertEqual(target_url2, actual_url2)
+            self.browser.find_element_by_link_text('Spectrum Plot').click()
+        actual_url = self.browser.current_url
+        target_url = self.live_server_url+'/block/'+str(self.test_block_empty.pk)+'/spectra/'
+        self.assertIn('Spectrum for block: '+str(self.test_block_empty.pk)+' | LCO NEOx', self.browser.title)
+        self.assertEqual(target_url, actual_url)
+        try:
+            spec_plot = self.browser.find_element_by_name("spec_plot")
+            raise Exception("FAILURE: Should not find spectroscopy plot")
+        except NoSuchElementException:
+            pass
+        source_text = self.browser.find_element_by_id("main")
+        self.assertIn('Cannot find data. :(', source_text.text)
 
 
 class SMASSPlotTest(FunctionalTest):
@@ -353,7 +403,7 @@ class SMASSPlotTest(FunctionalTest):
         self.spectradir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_spectra'))
 
         settings.MEDIA_ROOT = self.spectradir
-        self.filename = 'test_ascii.ascii'
+        self.filename = 'a001981.4.txt'
 
         # Create test body
         params = {   'provisional_name': None,
@@ -419,4 +469,10 @@ class SMASSPlotTest(FunctionalTest):
         with self.wait_for_page_load(timeout=10):
             link.click()
 
-        spec_plot = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='reflec_spec']/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
+        spec_plot = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='spec_plot']/div[@class='bk']/div[@class='bk'][1]/div[@class='bk']/div[@class='bk']/div[@class='bk bk-canvas-events']")
+        try:
+            target_list = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='spec_plot']/div[@class='bk']/div[@class='bk'][1]/div[@class='bk'][1]/div[@class='bk bk-input-group']/select[@class='bk bk-input']")
+            analog_list = self.browser.find_element_by_xpath("/html/body[@class='page']/div[@id='page-wrapper']/div[@id='page']/div[@id='main']/div[@name='spec_plot']/div[@class='bk']/div[@class='bk'][1]/div[@class='bk'][2]/div[@class='bk bk-input-group']/select[@class='bk bk-input']")
+            raise Exception("Target list, or Analog list is present when it shouldn't be.")
+        except NoSuchElementException:
+            pass

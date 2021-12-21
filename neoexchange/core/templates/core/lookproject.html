@@ -65,6 +65,9 @@
                             <span class="sortable" id="motion">Rate ("/min)</span><br>
                         </th>
                         <th>
+                            <span class="sortable" id="helio_dist">Heliocentric Distance (AU)</span><br>
+                        </th>
+                        <th>
                             <span class="sortable" id="obsdate">Observations Scheduled</span><br>
                             <span style="font-size:75%" > (for next 30 days) </span>
                         </th>
@@ -84,6 +87,7 @@
                         <td data-label="Dec">{{body.dec|radianstodms:" "}}</td>
                         <td data-label="Vmag">{{body.v_mag|floatformat:1 }}</td>
                         <td data-label="motion">{{body.motion|floatformat:2 }}</td>
+                        <td data-label="helio_dist">{{body.helio_dist|floatformat:1}}</td>
                         <td data-label="Observations Scheduled"><span class="">
                             {% if "Inactive" in body.cadence_info %}
                                 <span class="warning msgpadded">{{body.cadence_info}}</td></span>

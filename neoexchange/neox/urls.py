@@ -32,7 +32,7 @@ from core.views import BodySearchView, BodyDetailView, BlockDetailView, Schedule
     StaticSourceView, StaticSourceDetailView, ScheduleCalibSpectra, ScheduleCalibSubmit, \
     CalibSpectroFeasibility, ScheduleCalibParameters, \
     BestStandardsView, PlotSpec, BodyVisibilityView, SuperBlockTimeline, BlockCancel, \
-    look_project, AddTarget
+    look_project, AddTarget, display_textfile
 from core.plots import make_visibility_plot, \
     make_standards_plot, make_solar_standards_plot
 from cal.views import goldstone_events, NeoxEvents
@@ -52,7 +52,7 @@ urlpatterns = [
     url(r'^visibility_plot/(?P<pk>\d+)/(?P<plot_type>[a-z]*)/(?P<site_code>[A-Z,0-9]{3})/$', make_visibility_plot, name='visibility-plot-site'),
     url(r'^block/summary/$', BlockTimeSummary.as_view(), name='block-summary'),
     url(r'^block/list/$', SuperBlockListView.as_view(model=SuperBlock, queryset=SuperBlock.objects.order_by('-block_start'), context_object_name="block_list"), name='blocklist'),
-    url(r'^block/(?P<pk>\d+)/spectra/(?P<obs_num>\d+)/$', BlockSpec.as_view(), name='blockspec'),
+    url(r'^block/(?P<pk>\d+)/spectra/$', BlockSpec.as_view(), name='blockspec'),
     url(r'^block/(?P<pk>\d+)/guidemovie/$', GuideMovie.as_view(), name='guidemovie'),
     url(r'^block/(?P<pk>\d+)/spectra/guidemovie.gif$', display_movie, name='display_movie'),
     url(r'^block/(?P<pk>\d+)/source/(?P<source>\d+)/report/submit/$', BlockReportMPC.as_view(), name='block-submit-mpc'),
@@ -78,6 +78,7 @@ urlpatterns = [
     url(r'^target/(?P<pk>\d+)/$', BodyDetailView.as_view(model=Body), name='target'),
     url(r'^target/(?P<pk>\d+)/spectra/$', PlotSpec.as_view(), name='plotspec'),
     url(r'^target/(?P<pk>\d+)/lc/$', LCPlot.as_view(), name='lc_plot'),
+    url(r'^documents/(?P<pk>\d+).txt$', display_textfile, name='display_textfile'),
     url(r'^target/add/$', AddTarget.as_view(), name='add_target'),
     url(r'^search/$', BodySearchView.as_view(context_object_name="target_list"), name='search'),
     url(r'^ephemeris/$', ephemeris, name='ephemeris'),

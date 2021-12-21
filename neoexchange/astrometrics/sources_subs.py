@@ -17,19 +17,22 @@ GNU General Public License for more details.
 
 import logging
 import os
+from copy import deepcopy
 import urllib.request
 import urllib.error
 from urllib.parse import urljoin
 import imaplib
 import email
 from re import sub, compile
-from math import degrees
-from datetime import datetime, timedelta
-from socket import error
-from random import randint
+from math import degrees, sqrt, copysign
 from time import sleep
-from datetime import date
+from datetime import date, datetime, timedelta
+from socket import error, timeout
+from random import randint
 import requests
+import shutil
+import tempfile
+from contextlib import closing
 
 from bs4 import BeautifulSoup
 import astropy.units as u
@@ -47,6 +50,35 @@ from astrometrics.ephem_subs import build_filter_blocks, MPC_site_code_to_domes,
 from core.urlsubs import get_telescope_states
 
 logger = logging.getLogger(__name__)
+
+
+def box_spiral_generator(dist, max_sep):
+    """Create a box spiral of offsets (starting at 0 and resetting when it reaches the max seperation)
+        Result is a generator, that can be treated as an iterator.
+    :param dist: distance of single offset in RA or Dec in arcsec
+    :param max_sep: total distance from origin at which point the spiral resets
+    :return (ra_off, dec_off): Tuple for the current requested offsets
+    """
+    ra_off = 0
+    dec_off = 0
+    n = 1
+    while True:
+        k = 0
+        while k < abs(n):
+            if sqrt(ra_off**2 + dec_off**2) >= max_sep:
+                ra_off = 0
+                dec_off = 0
+                n = 1
+            yield ra_off, dec_off
+            ra_off += copysign(dist, n)
+            k += 1
+        k = 0
+        while k < abs(n):
+            yield ra_off, dec_off
+            dec_off += copysign(dist, n)
+            k += 1
+        n += copysign(1, n)
+        n *= -1
 
 
 def download_file(url, file_to_save):
@@ -117,7 +149,26 @@ def fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser
             logger.warning("Page retrieval failed with HTTP Error: %s" % (e.reason,))
         return None
     except (BrokenPipeError, ConnectionAbortedError, ConnectionRefusedError, ConnectionResetError) as sock_e:
-        logger.warning("Page retrieval failed with socket Error %d: %s" % (sock_e.errno, sock_e.strerror))
+        try:
+            errno = int(sock_e.errno)
+        except TypeError:
+            errno = -99
+        try:
+            errstring = str(sock_e.strerror)
+        except TypeError:
+            errstring = "No message available"
+        logger.warning("Page retrieval failed with socket Error %d: %s" % (errno, errstring))
+        return None
+    except timeout as sock_e:
+        try:
+            errno = int(sock_e.errno)
+        except TypeError:
+            errno = -99
+        try:
+            errstring = str(sock_e.strerror)
+        except TypeError:
+            errstring = "No message available"
+        logger.warning("Page retrieval failed with socket Error %d: %s" % (errno, errstring))
         return None
 
     # Suck the HTML down
@@ -148,7 +199,7 @@ def parse_previous_NEOCP_id(items, dbg=False):
         elif len(chunks) >= 5:
             if chunks[2].lower() == 'not' and chunks[3].lower() == 'confirmed':
                 none_id = 'wasnotconfirmed'
-            elif chunks[2].lower() == 'not' and chunks[4].lower() == 'minor':
+            elif (chunks[2].lower() == 'not' and chunks[4].lower() == 'minor') or (chunks[2].lower() == 'suspected' and chunks[3].lower() == 'artificial'):
                 none_id = 'wasnotminorplanet'
             elif chunks[2].lower() == 'not' and chunks[3].lower() == 'interesting':
                 none_id = ''
@@ -1525,8 +1576,29 @@ def get_site_status(site_code):
     return good_to_schedule, reason
 
 
-def fetch_yarkovsky_targets(yark_targets):
-    """Fetches Yarkovsky targets from command line and returns a list of targets"""
+def fetch_yarkovsky_targets(targets_or_file=None):
+    """Main wrapper routine for either fetch_yarkovsky_targets_list() or
+    fetch_yarkovsky_targets_ftp() to fetch Yarkovsky targets.
+    If [targets_or_file] is a `list` of targets, fetch_yarkovsky_targets_list()
+    is called; if [targets_or_file] is a filename or None, then
+    fetch_yarkovsky_targets_ftp() is called and the target list comes from either
+    the FTP site (`targets_or_file=None`) or by reading the file specified by
+    `targets_or_file`.
+
+    Returns a list of target names.
+    """
+
+    if type(targets_or_file) == list:
+        yark_target_list = fetch_yarkovsky_targets_list(targets_or_file)
+    else:
+        yark_target_list = fetch_yarkovsky_targets_ftp(targets_or_file)
+
+    return yark_target_list
+
+
+def fetch_yarkovsky_targets_list(yark_targets):
+    """Parses a list of lines of Yarkovsky targets (read from a file and which
+    may contain comments) and returns a list of targets"""
 
     yark_target_list = []
 
@@ -1542,6 +1614,47 @@ def fetch_yarkovsky_targets(yark_targets):
 
     return yark_target_list
 
+
+def fetch_yarkovsky_targets_ftp(file_or_url=None):
+    """Fetches Yarkovsky targets from either the specified file (if [file_or_url]
+    is not None) or the current list from the FTP site
+    and parses it to return the target and expected A2 Yarkovsky value and
+    its error"""
+    ftp_url = 'ftp://ssd.jpl.nasa.gov/pub/ssd/yarkovsky/yarko_targets/yarko_latest.txt'
+
+    targets = []
+    tempdir = None
+
+    if file_or_url is None or file_or_url.startswith('ftp://'):
+        if file_or_url is not None and file_or_url.startswith('ftp://'):
+            ftp_url = file_or_url
+        tempdir = tempfile.mkdtemp(prefix='tmp_neox_')
+        target_file = os.path.join(tempdir, 'yarkovsky_targets.txt')
+
+        with closing(urllib.request.urlopen(ftp_url)) as read_fp:
+            with open(target_file, 'wb') as write_fp:
+                shutil.copyfileobj(read_fp, write_fp)
+    else:
+        target_file = file_or_url
+
+    if os.path.exists(target_file):
+        table = ascii.read(target_file, format='csv')
+
+        for target in list(table['base']):
+            target = target.upper()
+            # Look for designations of the for yyyyXY[12] and add space in the middle
+            if len(target) >=6 and target[0:4].isdigit() and target[4:6].isalpha():
+                target = target[0:4] + ' ' + target[4:]
+            targets.append(target)
+
+        if tempdir:
+            try:
+                os.remove(target_file)
+                os.rmdir(tempdir)
+            except FileNotFoundError:
+                pass
+
+    return targets
 
 def fetch_sfu(page=None):
     """Fetches the solar radio flux from the Solar Radio Monitoring
@@ -1593,13 +1706,17 @@ def make_location(params):
         location['site'] = params['site'].lower()
     if params['site_code'] == 'W85':
         location['telescope'] = '1m0a'
-        location['observatory'] = 'doma'
+        location['enclosure'] = 'doma'
     elif params['site_code'] == 'W87':
         location['telescope'] = '1m0a'
-        location['observatory'] = 'domc'
+        location['enclosure'] = 'domc'
     elif params['site_code'] == 'V39':
         location['telescope'] = '1m0a'
-        location['observatory'] = 'domb'
+        location['enclosure'] = 'domb'
+    elif params['site_code'] == 'Z31':
+        location['telescope'] = '1m0a'
+        location['enclosure'] = 'doma'
+
     return location
 
 
@@ -1682,7 +1799,10 @@ def make_config(params, filter_list):
         'guiding_config': {},
         'instrument_configs': []
     }
-    if params['exp_type'] == 'REPEAT_EXPOSE':
+
+    if params.get('add_dither', False):
+        dither_pattern = box_spiral_generator(params['dither_distance'], 120)
+    elif params['exp_type'] == 'REPEAT_EXPOSE':
         # Remove overhead from slot_length so repeat_exposure matches predicted frames.
         # This will allow a 2 hour slot to fit within a 2 hour window.
         single_mol_overhead = cfg.molecule_overhead['filter_change'] + cfg.molecule_overhead['per_molecule_time']
@@ -1704,9 +1824,8 @@ def make_config(params, filter_list):
 
         instrument_config = {'exposure_count': exp_count,
                              'exposure_time': params['exp_time'],
-                             'bin_x': params['binning'],
-                             'bin_y': params['binning'],
-                             'optical_elements': {'filter': filt[0]}
+                             'optical_elements': {'filter': filt[0]},
+                             'extra_params': {}
                              }
 
         if params.get('bin_mode', None) == '2k_2x2' and params['pondtelescope'] == '1m0':
@@ -1726,10 +1845,20 @@ def make_config(params, filter_list):
                                                      'diffuser_r_position': 'out',
                                                      'diffuser_i_position': 'out',
                                                      'diffuser_z_position': 'out'}
-            instrument_config.pop('bin_x', None)
-            instrument_config.pop('bin_y', None)
+
             instrument_config['extra_params'] = extra_params
-        conf['instrument_configs'].append(instrument_config)
+
+        if params.get('add_dither', False):
+            exp = 0
+            while exp < exp_count:
+                offsets = next(dither_pattern)
+                instrument_config['exposure_count'] = 1
+                instrument_config['extra_params']["offset_ra"] = offsets[0]
+                instrument_config['extra_params']["offset_dec"] = offsets[1]
+                conf['instrument_configs'].append(deepcopy(instrument_config))
+                exp += 1
+        else:
+            conf['instrument_configs'].append(instrument_config)
 
     return conf
 
@@ -1840,35 +1969,18 @@ def make_single(params, ipp_value, request):
     """Create a user_request for a single observation"""
 
     requestgroup = {
-                    'submitter' : params['user_id'],
-                    'requests'  : [request],
-                    'name'  : params['group_name'],
+                    'submitter': params['user_id'],
+                    'requests': [request],
+                    'name': params['group_name'],
                     'observation_type': "NORMAL",
-                    'operator'  : "SINGLE",
-                    'ipp_value' : ipp_value,
-                    'proposal'  : params['proposal_id']
+                    'operator': "SINGLE",
+                    'ipp_value': ipp_value,
+                    'proposal': params['proposal_id']
     }
 
 # If the ToO mode is set, change the observation_type
     if params.get('too_mode', False) is True:
         requestgroup['observation_type'] = 'TIME_CRITICAL'
-
-    return requestgroup
-
-
-def make_many(params, ipp_value, request, cal_request):
-    """Create a request for a MANY observation of the asteroidgroup
-    target (<request>) and calibration source (<cal_request>)"""
-
-    requestgroup = {
-                    'submitter' : params['user_id'],
-                    'requests'  : [request, cal_request],
-                    'name'  : params['group_name'],
-                    'observation_type': "NORMAL",
-                    'operator'  : "MANY",
-                    'ipp_value' : ipp_value,
-                    'proposal'  : params['proposal_id']
-    }
 
     return requestgroup
 
@@ -1970,6 +2082,8 @@ def configure_defaults(params):
                   'F65-FLOYDS' : 'OGG',
                   'E10' : 'COJ',
                   'E10-FLOYDS' : 'COJ',
+                  'Z31' : 'TFN',
+                  'Z24' : 'TFN',
                   'Z17' : 'TFN',
                   'Z21' : 'TFN',
                   'T03' : 'OGG',
@@ -1989,7 +2103,7 @@ def configure_defaults(params):
     params['instrument'] = '1M0-SCICAM-SINISTRO'
 
     # Perform Repeated exposures if many exposures compared to number of filter changes.
-    if params['exp_count'] <= 10 or params['exp_count'] < 10*len(list(filter(None, params['filter_pattern'].split(',')))):
+    if params['exp_count'] <= 10 or params['exp_count'] < 10*len(list(filter(None, params['filter_pattern'].split(',')))) or params.get('add_dither', False):
         params['exp_type'] = 'EXPOSE'
     else:
         params['exp_type'] = 'REPEAT_EXPOSE'
@@ -2062,14 +2176,7 @@ def make_requestgroup(elements, params):
     note = f'Submitted by NEOexchange {submitter}'
     note = note.rstrip()
 
-    request = {
-        'configurations': configurations,
-        "acceptability_threshold": params.get('acceptability_threshold', 90),
-        'windows': [window],
-        'location': location,
-        "observation_note": note,
-    }
-
+    cal_configurations = []
     if params.get('solar_analog', False) and len(params.get('calibsource', {})) > 0:
         # Assemble solar analog request
         params['group_name'] += "+solstd"
@@ -2096,22 +2203,19 @@ def make_requestgroup(elements, params):
         params['exp_count'] = exp_count
         params['ag_exp_time'] = ag_exptime
 
-        cal_request = {
-                        "location": location,
-                        "configurations": cal_configurations,
-                        "windows": [window],
-                        "observation_note": note,
-                    }
-    else:
-        cal_request = {}
+    request = {
+        'configurations': configurations + cal_configurations,
+        "acceptability_threshold": params.get('acceptability_threshold', 90),
+        'windows': [window],
+        'location': location,
+        "observation_note": note,
+    }
 
     ipp_value = params.get('ipp_value', 1.0)
 
 # Add the Request to the outer User Request
     if 'period' in params.keys() and 'jitter' in params.keys():
         user_request = make_cadence(request, params, ipp_value)
-    elif len(cal_request) > 0:
-        user_request = make_many(params, ipp_value, request, cal_request)
     else:
         user_request = make_single(params, ipp_value, request)
 
@@ -2648,7 +2752,7 @@ def store_jpl_physparams(phys_par, body):
     """Function to store object physical parameters from JPL Horizons"""
 
     # parsing the JPL physparams dictionary
-    for p in phys_par:   
+    for p in phys_par:
         if 'H' == p['name']:  # absolute magnitude
             p_type = 'H'
         elif 'G' == p['name']:  # magnitude (phase) slope
@@ -2763,7 +2867,7 @@ def parse_jpl_fullname(obj):
     """Given a JPL object, return parsed full name"""
     fullname = obj['fullname']
     number = name = prov_des = None
-    if fullname[0] == '(':
+    if fullname[0] == '(':  # provisional designation only
         prov_des = fullname.strip('()')
     elif '/' in fullname:  # comet
         parts = fullname.split('/')
@@ -2785,17 +2889,16 @@ def parse_jpl_fullname(obj):
             elif number:
                 name = part2
     elif ' ' in fullname:
-        space_num = fullname.count(' ')
-        if space_num == 3:
-            part1, part2, part3, part4 = fullname.split(' ')
+        name_parts = list(filter(None, fullname.split(' ')))
+        if len(name_parts) == 4:
+            number = name_parts[0]
+            if name_parts[1][0].isalpha:
+                name = name_parts[1]
+        elif len(name_parts) == 3:
+            part1, part2, part3 = name_parts
             number = part1
-            if part2[0].isalpha:
-                name = part2
-        elif space_num == 2:
-            part1, part2, part3 = fullname.split(' ')
-            number = part1
-        elif space_num == 1:
-            part1, part2 = fullname.split(' ')
+        elif len(name_parts) == 2:
+            part1, part2 = name_parts
             number = part1
             name = part2
 
