@@ -1309,6 +1309,14 @@ def fetch_goldstone_targets(page=None, calendar_format=False, dbg=False):
             target = str(row['number'])
             if is_masked(row['number']) is True:
                 target = row['name']
+            if calendar_format is True:
+                start_date = datetime.strptime(row['start (UT)'], '%m/%d/%Y')
+                end_date = datetime.strptime(row['end (UT)'], '%m/%d/%Y')
+                end_date += timedelta(seconds=86399)
+                target = {'target' : target,
+                          'windows' : [{'start' : start_date.strftime("%Y-%m-%dT%H:%M:%S"),
+                                        'end' : end_date.strftime("%Y-%m-%dT%H:%M:%S")}]
+                         }
             radar_objects.append(target)
     return radar_objects
 

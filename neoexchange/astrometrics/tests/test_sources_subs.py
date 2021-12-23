@@ -658,6 +658,32 @@ class TestFetchGoldstoneTargets(SimpleTestCase):
         self.assertEqual(7, len(targets))
         self.assertEqual(expected_targets, targets)
 
+    def test_csv_file_calformat(self):
+
+        expected_targets = ['163899', '4660', '2021 XK6', '7842', '153591', '2016 QJ44', '2018 CW2']
+
+        expected_targets = [{ 'target': '163899',
+                              'windows': [{'start': '2021-11-22T00:00:00', 'end': '2021-12-31T23:59:59'}]},
+                             {'target': '4660',
+                              'windows': [{'start': '2021-12-05T00:00:00', 'end': '2021-12-31T23:59:59'}]},
+                             {'target': '2021 XK6',
+                              'windows': [{'start': '2021-12-17T00:00:00', 'end': '2021-12-17T23:59:59'}]},
+                             {'target': '7842',
+                              'windows': [{'start': '2022-01-18T00:00:00', 'end': '2022-01-25T23:59:59'}]},
+                             {'target': '153591',
+                              'windows': [{'start': '2022-02-18T00:00:00', 'end': '2022-03-08T23:59:59'}]},
+                             {'target': '2016 QJ44',
+                              'windows': [{'start': '2022-02-18T00:00:00', 'end': '2022-02-25T23:59:59'}]},
+                             {'target': '2018 CW2',
+                              'windows': [{'start': '2022-02-16T00:00:00', 'end': '2022-02-21T23:59:59'}]},
+                              ]
+
+
+        targets = fetch_goldstone_targets(self.test_csv_file, calendar_format=True)
+
+        self.assertEqual(7, len(targets))
+        self.assertEqual(expected_targets, targets)
+
 
 class TestFetchYarkovskyTargets(SimpleTestCase):
 
