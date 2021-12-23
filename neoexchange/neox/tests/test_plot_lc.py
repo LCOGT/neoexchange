@@ -175,6 +175,20 @@ class LighCurvePlotTest(FunctionalTest):
         # Fill out Form and submit.
         MockDateTime.change_date(2021, 12, 12)
         period_box = self.get_item_input_box("id_period")
+        period_box.send_keys('-4.35')
+        add_button = self.browser.find_element_by_id("add_new_period-btn")
+        with self.wait_for_page_load(timeout=10):
+            add_button.click()
+        arrow_link = self.browser.find_element_by_id("arrow")
+        arrow_link.click()
+        error_msg = self.browser.find_element_by_class_name('errorlist').text
+        self.assertIn("Please enter a positive number for Period", error_msg)
+        test_lines = ['1 5.27 ±0.0015 (2-) None testy test note Dec. 10, 2021']
+        for test_line in test_lines:
+            self.check_for_row_in_table('id_periods', test_line)
+
+        period_box = self.get_item_input_box("id_period")
+        period_box.clear()
         period_box.send_keys('4.35')
         preferred_box = self.browser.find_element_by_id("id_preferred")
         preferred_box.click()

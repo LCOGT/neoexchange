@@ -460,6 +460,15 @@ class AddPeriodForm(forms.Form):
     notes = forms.CharField(label="Notes", required=False, widget=forms.DateTimeInput(attrs={'style': 'width: 275px;'}))
     preferred = forms.BooleanField(initial=False, required=False)
 
+    def clean(self):
+        cleaned_data = super(AddPeriodForm, self).clean()
+        period = self.cleaned_data.get('period', None)
+        error = self.cleaned_data.get('error', None)
+        if period and period <= 0:
+            raise forms.ValidationError("Please enter a positive number for Period.")
+        if error and error < 0:
+            raise forms.ValidationError("Please enter a positive number, zero, or leave Error blank.")
+
 
 class UpdateAnalysisStatusForm(forms.Form):
     update_body = forms.ChoiceField(required=False, choices=[])
