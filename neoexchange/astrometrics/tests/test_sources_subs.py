@@ -444,7 +444,7 @@ class TestFetchGoldstoneCSV(SimpleTestCase):
         self.assertEqual(expected_length, table)
 
 
-class TestFetchGoldstoneTargets(TestCase):
+class TestFetchGoldstoneTargets(SimpleTestCase):
 
     def setUp(self):
         # Read and make soup from the stored version of the Goldstone radar pages
@@ -454,6 +454,7 @@ class TestFetchGoldstoneTargets(TestCase):
         test_fh = open(os.path.join('astrometrics', 'tests', 'test_goldstone_page_v2.html'), 'r')
         self.test_goldstone_page_v2 = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
+        self.test_csv_file = os.path.join('astrometrics', 'tests', 'test_goldstone_page.csv')
 
         self.maxDiff = None
 
@@ -647,6 +648,15 @@ class TestFetchGoldstoneTargets(TestCase):
 
         self.assertEqual(1, len(targets))
         self.assertEqual(expected_target, targets)
+
+    def test_csv_file(self):
+
+        expected_targets = ['163899', '4660', '2021 XK6', '7842', '153591', '2016 QJ44', '2018 CW2']
+
+        targets = fetch_goldstone_targets(self.test_csv_file)
+
+        self.assertEqual(7, len(targets))
+        self.assertEqual(expected_targets, targets)
 
 
 class TestFetchYarkovskyTargets(SimpleTestCase):
