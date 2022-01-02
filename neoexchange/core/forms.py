@@ -22,7 +22,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from astrometrics.sources_subs import fetch_sfu, fetch_filter_list
-from .models import Body, Proposal, Block, StaticSource, ORIGINS, STATUS_CHOICES
+from .models import Body, Proposal, Block, StaticSource, ORIGINS, STATUS_CHOICES, PHYSICAL_PARAMETER_QUALITIES
 from astrometrics.time_subs import tomorrow
 
 logger = logging.getLogger(__name__)
@@ -69,15 +69,7 @@ ANALOG_OPTIONS = (('1', '1'),
                   ('4', '4'),
                   ('5', '5'))
 
-LC_QUALITIES = (('3', 'Unambiguous (3)'),
-                ('3-', 'Unique (3-)'),
-                ('2+', 'Possible Ambiguity (2+)'),
-                ('2', 'Within 30% accurate (2)'),
-                ('2-', 'Not well established (2-)'),
-                ('1+', 'Possibly Just Noise (1+)'),
-                ('1', 'Possibly Completely Wrong (1)'),
-                ('1-', 'Probably Completely Wrong (1-)'),
-                ('0', 'Debunked (0)'))
+LC_QUALITIES = tuple((qual, PHYSICAL_PARAMETER_QUALITIES['P'][qual]) for qual in PHYSICAL_PARAMETER_QUALITIES['P'])
 
 
 class SiteSelectWidget(forms.Select):

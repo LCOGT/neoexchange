@@ -19,7 +19,7 @@ from django.urls import reverse
 from django.core.files.storage import default_storage
 from django.contrib.auth.models import User
 from neox.auth_backend import update_proposal_permissions
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException
 from core.models import Body, DataProduct
@@ -75,7 +75,7 @@ class LighCurvePlotTest(FunctionalTest):
         self.body2.save_physical_parameters({'parameter_type': 'P',
                                              'value': 5.27,
                                              'error': .0015,
-                                             'quality': '2-',
+                                             'quality': 5,
                                              'notes': "testy test note"})
 
         params = {'name': 'C/2017 K2',
@@ -192,12 +192,14 @@ class LighCurvePlotTest(FunctionalTest):
         period_box.send_keys('4.35')
         preferred_box = self.browser.find_element_by_id("id_preferred")
         preferred_box.click()
+        quality_choices = Select(self.browser.find_element_by_id('id_quality'))
+        quality_choices.select_by_visible_text("Unique (3-)")
         add_button = self.browser.find_element_by_id("add_new_period-btn")
         with self.wait_for_page_load(timeout=10):
             add_button.click()
         # check for updated period table
         self.check_for_header_in_table('id_periods', 'Period [hours] Source Notes Date')
-        test_lines = ['1 4.35 (3) NEOX Dec. 12, 2021', '2 5.27 ±0.0015 (2-) None testy test note Dec. 10, 2021']
+        test_lines = ['1 4.35 (3-) NEOX Dec. 12, 2021', '2 5.27 ±0.0015 (2-) None testy test note Dec. 10, 2021']
         for test_line in test_lines:
             self.check_for_row_in_table('id_periods', test_line)
 

@@ -75,8 +75,8 @@ $(document).ready(function(){
                         {% if period.error %}
                             &plusmn;{{period.error}}
                         {% endif %}
-                        {% if period.quality %}
-                            ({{period.quality}})
+                        {% if period.quality is not None %}
+                            {{period.quality_short}}
                         {% endif %}
                     </td>
                     <td data-label="p_source">

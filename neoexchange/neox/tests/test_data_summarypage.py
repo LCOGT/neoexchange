@@ -299,7 +299,7 @@ class SummaryPageTest(FunctionalTest):
                        'units': 'h',
                        'preferred': True,
                        'reference': 'NEOX',
-                       'quality': '2-',
+                       'quality': 5,
                        'notes': "testy test tested"
                        }
         self.body.save_physical_parameters(period_dict)
@@ -330,7 +330,7 @@ class SummaryPageTest(FunctionalTest):
         self.assertEqual(str(new_url), lc_summary_url)
         self.assertIn('Data Summary Page | LCO NEOx', self.browser.title)
         self.check_for_header_in_table('id_ranked_targets', 'Target Name Period Quality Source Notes Status Status Updated')
-        test_lines = ['1 N999r0q 12.0 (h) 2- NEOX testy test tested No Analysis Done']
+        test_lines = ['1 N999r0q 12.0 (h) Not well established (2-) NEOX testy test tested No Analysis Done']
         for test_line in test_lines:
             self.check_for_row_in_table('id_ranked_targets', test_line)
         # Not logged in, can't see status form
@@ -372,6 +372,6 @@ class SummaryPageTest(FunctionalTest):
         update_button = self.browser.find_element_by_id("update_status-btn")
         with self.wait_for_page_load(timeout=10):
             update_button.click()
-        test_lines = ['1 N999r0q 12.0 (h) 2- NEOX testy test tested Published Dec. 10, 2021']
+        test_lines = ['1 N999r0q 12.0 (h) Not well established (2-) NEOX testy test tested Published Dec. 10, 2021']
         for test_line in test_lines:
             self.check_for_row_in_table('id_ranked_targets', test_line)

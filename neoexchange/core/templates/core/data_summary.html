@@ -124,8 +124,8 @@ $(document).ready(function(){
                                 {% endif %}
                             </td>
                             <td data-label="quality">
-                                {% if period.quality %}
-                                    {{period.quality}}
+                                {% if period.quality is not None %}
+                                    {{period.quality_parser}}
                                 {% endif %}
                             </td>
                             <td data-label="source">

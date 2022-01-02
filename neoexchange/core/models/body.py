@@ -12,6 +12,7 @@ GNU General Public License for more details.
 """
 from datetime import datetime, timedelta
 from math import degrees
+import re
 import logging
 
 from astropy.time import Time
@@ -124,6 +125,18 @@ STATUS_CHOICES = (
                 (99, 'No usable Data')
                 )
 
+PHYSICAL_PARAMETER_QUALITIES = {"P": {-99: 'Debunked (0)',
+                                      0: 'Probably Completely Wrong (1-)',
+                                      2: 'Possibly Completely Wrong (1)',
+                                      3: 'Possibly Just Noise (1+)',
+                                      5: 'Not well established (2-)',
+                                      6: 'Within 30% accurate (2)',
+                                      7: 'Possible Ambiguity (2+)',
+                                      9: 'Unique (3-)',
+                                      10: 'Unambiguous (3)',
+                                      }
+                                }
+
 logger = logging.getLogger(__name__)
 
 
@@ -189,7 +202,7 @@ class Body(models.Model):
 
     period = property(_compute_period)
     recip_a = property(_compute_one_over_a)
-    one_over_a  = property(_compute_one_over_a)
+    one_over_a = property(_compute_one_over_a)
 
     def characterization_target(self):
         # If we change the definition of Characterization Target,
@@ -602,11 +615,22 @@ class PhysicalParameters(models.Model):
     value2         = models.FloatField('2nd component of Physical Parameter', blank=True, null=True)
     error2         = models.FloatField('Error for 2nd component of Physical Parameter', blank=True, null=True)
     units          = models.CharField('Physical Parameter Units', blank=True, null=True, max_length=30)
-    quality        = models.CharField('Physical Parameter Quality Designation', blank=True, null=True, max_length=10)
+    quality        = models.IntegerField('Physical Parameter Quality Designation', blank=True, null=True)
     preferred      = models.BooleanField('Is this the preferred value for this type of parameter?', default=False)
     reference      = models.TextField('Reference for this value', blank=True, null=True)
     notes          = models.TextField('Notes on this value', blank=True, null=True)
     update_time    = models.DateTimeField(blank=True, null=True, db_index=True)
+
+    def quality_parser(self):
+        return PHYSICAL_PARAMETER_QUALITIES.get(self.parameter_type, {}).get(self.quality, self.quality)
+
+    def quality_short(self):
+        quality_string = self.quality_parser()
+        if isinstance(quality_string, str):
+            short_string = re.search(r'\(.*?\)', quality_string).group()
+            if short_string:
+                return short_string
+        return f"({quality_string})"
 
     class Meta:
         verbose_name = _('Physical Parameter')
