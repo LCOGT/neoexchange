@@ -77,7 +77,7 @@ class Command(BaseCommand):
             # Will update epoch to date of most recent obs.
             # Will only update if new epoch closer to present than previous.
             # Don't refit Body's with MPC_COMET element type as this seems to misbehave.
-            if ((measures or body.fast_moving) and body.element_type != 'MPC_COMET') or options['target']:
+            if ((measures or body.fast_moving) and body.elements_type != 'MPC_COMET') or options['target']:
                 refit_with_findorb(body.id, 500, start_date)
                 f += 1
                 body.refresh_from_db()

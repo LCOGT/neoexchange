@@ -1928,7 +1928,7 @@ def get_characterization_targets():
     """Function to return the list of Characterization targets.
     If we change this, also change models.Body.characterization_target"""
 
-    characterization_list = Body.objects.filter(active=True).exclude(origin='M').exclude(source_type='U')
+    characterization_list = Body.objects.filter(active=True).exclude(origin='M').exclude(source_type='U').exclude(origin='T')
     return characterization_list
 
 
@@ -1970,7 +1970,7 @@ def build_characterization_list(disp=None):
                             if m_wav == "NA":
                                 m_wav = "Yes"
                 body_dict = model_to_dict(body)
-                body_dict['current_name'] = body.current_name()
+                body_dict['full_name'] = body.full_name()
                 body_dict['ingest_date'] = body.ingest
                 body_dict['s_wav'] = s_wav
                 if s_vis_link:

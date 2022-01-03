@@ -4,10 +4,13 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
-### 3.10.3
+### 3.10.4
 * Update Summary pages for enhanced usability and utility
 * Add body publication status
 * Add form for updating period from LC plot page
+
+### 3.10.3
+* Minor bug fixes and error handling.
 
 ### 3.10.2
 * Fix ADES header info for new telescopes and MuSCAT instrument (Issue #578)
