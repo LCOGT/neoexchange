@@ -622,11 +622,19 @@ class PhysicalParameters(models.Model):
     update_time    = models.DateTimeField(blank=True, null=True, db_index=True)
 
     def quality_parser(self):
-        return PHYSICAL_PARAMETER_QUALITIES.get(self.parameter_type, {}).get(self.quality, self.quality)
+        """Retrieve quality description for given Parameter type
+        Return Quality description or quality int.
+        """
+        quality_dict = PHYSICAL_PARAMETER_QUALITIES.get(self.parameter_type, {})
+        quality_text_or_value = quality_dict.get(self.quality, self.quality)
+        return quality_text_or_value
 
     def quality_short(self):
+        """If it exists, return shortened parenthetical quality tag.
+        Else, return quality int. as string.
+        """
         quality_string = self.quality_parser()
-        if isinstance(quality_string, str):
+        if not isinstance(quality_string, str):
             short_string = re.search(r'\(.*?\)', quality_string).group()
             if short_string:
                 return short_string
