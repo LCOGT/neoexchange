@@ -4,7 +4,7 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
-### 3.10.4
+### 3.11.0
 * Update Summary pages for enhanced usability and utility
 * Add body publication status
 * Add form for updating period from LC plot page
