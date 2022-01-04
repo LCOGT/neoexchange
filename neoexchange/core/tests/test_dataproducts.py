@@ -396,3 +396,17 @@ class DataProductTestCase(TestCase):
         dp_qset = DataProduct.content.fullbody(bodyid=self.body.id).filter(filetype=DataProduct.PNG_ASTRO)
         # Overwrites old file
         self.assertIn(file_name, dp_qset[0].product.name)
+
+    def test_reverse_lookup(self):
+        file_name = 'test_ALCDEF.txt'
+        file_content = "some text here"
+
+        save_dataproduct(obj=self.test_sblock, filepath=None, filetype=DataProduct.ALCDEF_TXT, filename=file_name, content=file_content)
+
+        sb = SuperBlock.objects.filter(dataproduct__filetype=DataProduct.ALCDEF_TXT)
+        raw_blk = Block.objects.filter(dataproduct__filetype=DataProduct.ALCDEF_TXT)
+        sb_blk = Block.objects.filter(superblock__dataproduct__filetype=DataProduct.ALCDEF_TXT)
+
+        self.assertEqual(len(sb), 1)
+        self.assertEqual(len(raw_blk), 0)
+        self.assertEqual(len(sb_blk), 1)
