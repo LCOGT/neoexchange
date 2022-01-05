@@ -1236,10 +1236,10 @@ class TestScheduleCheck(TestCase):
                             'speed': 2.904310588055287,
                             'slot_length': 20.0,
                             'filter_pattern': 'w',
-                            'pattern_iterations': 16.0,
+                            'pattern_iterations': 10.0,
                             'available_filters': 'air, ND, U, B, V, R, I, up, gp, rp, ip, zs, Y, w',
                             'bin_mode': None,
-                            'exp_count': 16,
+                            'exp_count': 10,
                             'exp_length': 80.0,
                             'schedule_ok': True,
                             'start_time': '2016-04-06T10:10:00',
@@ -1284,6 +1284,7 @@ class TestScheduleCheck(TestCase):
                             'acceptability_threshold': 90,
                             'dither_distance': 10,
                             'add_dither': False,
+                            'fractional_rate': 0.5,
                         }
 
     def make_visible_obj(self, test_date):
@@ -1318,10 +1319,10 @@ class TestScheduleCheck(TestCase):
     def test_mp_good(self):
         MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
 
-        data = { 'site_code': 'Q63',
-                 'utc_date': date(2016, 4, 6),
-                 'proposal_code': self.neo_proposal.code
-               }
+        data = {'site_code': 'Q63',
+                'utc_date': date(2016, 4, 6),
+                'proposal_code': self.neo_proposal.code
+                }
 
         expected_resp1 = self.expected_resp
         expected_resp1['site_code'] = data['site_code']
@@ -1897,6 +1898,7 @@ class TestScheduleCheck(TestCase):
                         'acceptability_threshold': 90,
                         'dither_distance': 10,
                         'add_dither': False,
+                        'fractional_rate': 1.0,
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -1978,6 +1980,7 @@ class TestScheduleCheck(TestCase):
                         'acceptability_threshold': 90,
                         'dither_distance': 10,
                         'add_dither': False,
+                        'fractional_rate': 1.0,
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -2101,19 +2104,18 @@ class TestScheduleCheck(TestCase):
     def test_mp_semester_end_B_semester(self):
         MockDateTime.change_datetime(2016, 3, 30, 22, 0, 0)
 
-        data = { 'site_code' : 'K92',
-                 'utc_date' : date(2016, 4, 1),
-                 'proposal_code' : self.neo_proposal.code
-               }
+        data = {'site_code': 'K92',
+                'utc_date': date(2016, 4, 1),
+                'proposal_code': self.neo_proposal.code
+                }
 
         expected_resp = {
                         'target_name': self.body_mp.current_name(),
-                        'start_time' : '2016-03-31T19:18:00',
-                        'end_time'   : '2016-03-31T23:59:00',
-                        'exp_count'  : 20,
-                        'exp_length' : 25.0,
+                        'start_time': '2016-03-31T19:18:00',
+                        'end_time': '2016-03-31T23:59:00',
+                        'exp_count': 14,
+                        'exp_length': 50.0,
                         'mid_time': '2016-03-31T21:38:00',
-
                         }
         resp = schedule_check(data, self.body_mp)
 
@@ -2128,17 +2130,17 @@ class TestScheduleCheck(TestCase):
     def test_mp_semester_start_A_semester(self):
         MockDateTime.change_datetime(2016, 4, 1, 0, 0, 2)
 
-        data = { 'site_code' : 'K92',
-                 'utc_date' : datetime(2016, 4, 1).date(),
-                 'proposal_code' : self.neo_proposal.code
+        data = { 'site_code': 'K92',
+                 'utc_date': datetime(2016, 4, 1).date(),
+                 'proposal_code': self.neo_proposal.code
                }
 
         expected_resp = {
                         'target_name': self.body_mp.current_name(),
-                        'start_time' : '2016-04-01T00:00:00',
-                        'end_time'   : '2016-04-01T02:44:00',
-                        'exp_count'  : 20,
-                        'exp_length' : 25.0,
+                        'start_time': '2016-04-01T00:00:00',
+                        'end_time': '2016-04-01T02:44:00',
+                        'exp_count': 14,
+                        'exp_length': 50.0,
                         'mid_time': '2016-04-01T01:22:00',
 
                         }
@@ -2156,21 +2158,21 @@ class TestScheduleCheck(TestCase):
     def test_mp_semester_mid_A_semester(self):
         MockDateTime.change_datetime(2016, 4, 20, 23, 0, 0)
 
-        data = { 'site_code' : 'V37',
-                 'utc_date' : datetime(2016, 4, 21).date(),
-                 'proposal_code' : self.neo_proposal.code
-               }
+        data = {'site_code': 'V37',
+                'utc_date': datetime(2016, 4, 21).date(),
+                'proposal_code': self.neo_proposal.code
+                }
 
         expected_resp = {
                         'target_name': self.body_mp.current_name(),
-                        'start_time' : '2016-04-21T02:30:00',
-                        'end_time'   : '2016-04-21T08:06:00',
-                        'vis_start' : '2016-04-21T02:30:00',
-                        'vis_end'   : '2016-04-21T08:06:00',
-                        'exp_count'  : 9,
-                        'exp_length' : 125,
+                        'start_time': '2016-04-21T02:30:00',
+                        'end_time': '2016-04-21T08:06:00',
+                        'vis_start': '2016-04-21T02:30:00',
+                        'vis_end': '2016-04-21T08:06:00',
+                        'exp_count': 4,
+                        'exp_length': 255,
                         'mid_time': '2016-04-21T05:18:00',
-                        'magnitude' : 20.97
+                        'magnitude': 20.97
                         }
         resp = schedule_check(data, self.body_mp)
 #        self.assertEqual(expected_resp, resp)
@@ -2425,15 +2427,15 @@ class TestScheduleCheck(TestCase):
 
         new_resp = {'site_code': 'F65',
                     'available_filters': 'gp, rp, ip, zp',
-                    'exp_count': 8,
-                    'exp_length': 120.0,
+                    'exp_count': 4,
+                    'exp_length': 240.0,
                     'slot_length': 22.5,
                     'filter_pattern': 'gp',
-                    'pattern_iterations': 8.0,
-                    'gp_explength': 120.0,
-                    'rp_explength': 120.0,
-                    'ip_explength': 120.0,
-                    'zp_explength': 120.0,
+                    'pattern_iterations': 4.0,
+                    'gp_explength': 240.0,
+                    'rp_explength': 240.0,
+                    'ip_explength': 240.0,
+                    'zp_explength': 240.0,
                     'muscat_sync': False,
                     'group_name': 'over_there_F65-20181201',
                     'lco_enc': 'CLMA',
