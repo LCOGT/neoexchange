@@ -1240,7 +1240,7 @@ class TestScheduleCheck(TestCase):
                             'available_filters': 'air, ND, U, B, V, R, I, up, gp, rp, ip, zs, Y, w',
                             'bin_mode': None,
                             'exp_count': 16,
-                            'exp_length': 40.0,
+                            'exp_length': 80.0,
                             'schedule_ok': True,
                             'start_time': '2016-04-06T10:10:00',
                             'end_time': '2016-04-06T17:12:00',

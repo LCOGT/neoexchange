@@ -69,6 +69,11 @@ ANALOG_OPTIONS = (('1', '1'),
                   ('4', '4'),
                   ('5', '5'))
 
+RATE_OPTIONS = ((0.5, 'Half-Rate'),
+                (1.0, 'Full-Rate'),
+                (0.0, 'Sidereal')
+                )
+
 LC_QUALITIES = tuple((qual, PHYSICAL_PARAMETER_QUALITIES['P'][qual]) for qual in PHYSICAL_PARAMETER_QUALITIES['P'])
 
 
@@ -230,6 +235,7 @@ class ScheduleBlockForm(forms.Form):
     edit_window = forms.BooleanField(initial=False, required=False, widget=forms.CheckboxInput(attrs={'class': 'window-switch'}))
     add_dither = forms.BooleanField(initial=False, required=False, widget=forms.CheckboxInput(attrs={'class': 'dither-switch'}))
     dither_distance = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
+    fractional_rate = forms.ChoiceField(required=False, choices=RATE_OPTIONS)
     gp_explength = forms.FloatField(required=False, widget=forms.NumberInput(attrs={'size': '5'}))
     rp_explength = forms.FloatField(required=False, widget=forms.NumberInput(attrs={'size': '5'}))
     ip_explength = forms.FloatField(required=False, widget=forms.NumberInput(attrs={'size': '5'}))

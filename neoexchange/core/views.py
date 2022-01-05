@@ -1318,6 +1318,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         speed = 0.0
         ra = radians(body.ra)
         dec = radians(body.dec)
+    adjusted_speed = speed
 
     # Determine filter pattern
     if data.get('filter_pattern'):
@@ -1373,6 +1374,7 @@ def schedule_check(data, body, ok_to_schedule=True):
     snr = None
     saturated = None
     if spectroscopy:
+        fractional_tracking_rate = float(data.get('fractional_rate', 1.0))
         snr_params = {'airmass': max_alt_airmass,
                       'slit_width': float(filter_pattern[5:8])*u.arcsec,
                       'moon_phase': moon_phase_code
@@ -1393,12 +1395,16 @@ def schedule_check(data, body, ok_to_schedule=True):
                 solar_analog_exptime = data.get('calibsource_exptime')
 
     else:
+        # calculate rate of relative motion on chip
+        fractional_tracking_rate = float(data.get('fractional_rate', 0.5))
+        relative_apparent_rate = abs(fractional_tracking_rate - 0.5) + 0.5
+        adjusted_speed = speed * relative_apparent_rate
         # Determine exposure length and count
         if data.get('exp_length', None):
             exp_length = data.get('exp_length')
             slot_length, exp_count = determine_exp_count(slot_length, exp_length, data['site_code'], filter_pattern, bin_mode=bin_mode)
         else:
-            exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length, magnitude, filter_pattern, bin_mode=bin_mode)
+            exp_length, exp_count = determine_exp_time_count(adjusted_speed, data['site_code'], slot_length, magnitude, filter_pattern, bin_mode=bin_mode)
             slot_length, exp_count = determine_exp_count(slot_length, exp_length, data['site_code'], filter_pattern, exp_count, bin_mode=bin_mode)
         if exp_length is None or exp_count is None:
             ok_to_schedule = False
@@ -1424,7 +1430,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         trail_len = determine_star_trails(speed, ag_exp_time)
     else:
         ag_exp_time = None
-        trail_len = determine_star_trails(speed, exp_length)
+        trail_len = determine_star_trails(adjusted_speed, exp_length)
     if lco_site_code[-4:-1].upper() == "0M4":
         typical_seeing = 3.0
     else:
@@ -1564,6 +1570,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'calibsource_list': calibsource_list_init,
         'dither_distance': data.get('dither_distance', 10),  # set default value to 10 arcsec.
         'add_dither': data.get('add_dither', False),
+        'fractional_rate': fractional_tracking_rate,
     }
 
     if not spectroscopy and 'F65' in data['site_code']:
