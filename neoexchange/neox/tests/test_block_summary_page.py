@@ -18,6 +18,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth.models import User
 from selenium import webdriver
+from selenium.common.exceptions import NoSuchElementException
 
 
 class BlockSummaryTest(FunctionalTest):
@@ -28,24 +29,27 @@ class BlockSummaryTest(FunctionalTest):
         self.password = 'simpson'
         self.email = 'bart@simpson.org'
         self.bart = User.objects.create_user(username=self.username, password=self.password, email=self.email)
-        self.bart.first_name= 'Bart'
+        self.bart.first_name = 'Bart'
         self.bart.last_name = 'Simpson'
-        self.bart.is_active=1
+        self.bart.is_active = 1
         self.bart.save()
-        super(BlockSummaryTest,self).setUp()
+        super(BlockSummaryTest, self).setUp()
 
     def test_can_view_block_summary(self):
         # A seasoned user comes along to the site.
         self.browser.get(self.live_server_url)
 
-        # He sees a link to EFFICIENCY on the front page.
-        link = self.browser.find_element_by_xpath(u'//a[text()="Efficiency"]')
-        url = self.live_server_url + '/block/' + 'summary/'
-        self.assertEqual(link.get_attribute('href'), url)
+        # He sees no link to EFFICIENCY on the front page.
+        try:
+            link = self.browser.find_element_by_xpath(u'//a[text()="Efficiency"]')
+            raise Exception("This should be a hidden link")
+        except NoSuchElementException:
+            pass
 
-        # He clicks the link and is taken to a page with the efficiency
+        # He instead manually enters the url for the page with the efficiency
         # details.
-        link.click()
+        url = self.live_server_url + '/block/' + 'summary/'
+        self.browser.get(url)
         self.browser.implicitly_wait(3)
         new_url = self.live_server_url + '/block/' + 'summary/'
         username_input = self.browser.find_element_by_id("username")

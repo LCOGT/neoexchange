@@ -22,7 +22,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from astrometrics.sources_subs import fetch_sfu, fetch_filter_list
-from .models import Body, Proposal, Block, StaticSource, ORIGINS
+from .models import Body, Proposal, Block, StaticSource, ORIGINS, STATUS_CHOICES, PHYSICAL_PARAMETER_QUALITIES
 from astrometrics.time_subs import tomorrow
 
 logger = logging.getLogger(__name__)
@@ -68,6 +68,8 @@ ANALOG_OPTIONS = (('1', '1'),
                   ('3', '3'),
                   ('4', '4'),
                   ('5', '5'))
+
+LC_QUALITIES = tuple((qual, PHYSICAL_PARAMETER_QUALITIES['P'][qual]) for qual in PHYSICAL_PARAMETER_QUALITIES['P'])
 
 
 class SiteSelectWidget(forms.Select):
@@ -441,3 +443,25 @@ class AddTargetForm(forms.Form):
     origin = forms.ChoiceField(choices=ORIGINS, widget=forms.HiddenInput())
     target_name = forms.CharField(label="Enter target to add...", max_length=30, required=True, widget=forms.TextInput(attrs={'size': '20'}),
                              error_messages={'required': _(u'Target name is required')})
+
+
+class AddPeriodForm(forms.Form):
+    period = forms.FloatField(label="Period", initial=None, required=True, widget=forms.DateTimeInput(attrs={'style': 'width: 75px;'}))
+    error = forms.FloatField(label="Error", initial=0.0, required=False, widget=forms.DateTimeInput(attrs={'style': 'width: 75px;'}))
+    quality = forms.ChoiceField(required=False, choices=LC_QUALITIES)
+    notes = forms.CharField(label="Notes", required=False, widget=forms.DateTimeInput(attrs={'style': 'width: 275px;'}))
+    preferred = forms.BooleanField(initial=False, required=False)
+
+    def clean(self):
+        cleaned_data = super(AddPeriodForm, self).clean()
+        period = self.cleaned_data.get('period', None)
+        error = self.cleaned_data.get('error', None)
+        if period and period <= 0:
+            raise forms.ValidationError("Please enter a positive number for Period.")
+        if error and error < 0:
+            raise forms.ValidationError("Please enter a positive number, zero, or leave Error blank.")
+
+
+class UpdateAnalysisStatusForm(forms.Form):
+    update_body = forms.ChoiceField(required=False, choices=[])
+    status = forms.ChoiceField(required=False, choices=STATUS_CHOICES)
