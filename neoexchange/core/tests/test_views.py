@@ -2189,21 +2189,21 @@ class TestScheduleCheck(TestCase):
     def test_mp_semester_mid_past_A_semester(self):
         MockDateTime.change_datetime(2015, 4, 20, 23, 1, 0)
 
-        data = { 'site_code' : 'V37',
-                 'utc_date' : datetime(2015, 4, 21).date(),
-                 'proposal_code' : self.neo_proposal.code
-               }
+        data = {'site_code': 'V37',
+                'utc_date': datetime(2015, 4, 21).date(),
+                'proposal_code': self.neo_proposal.code
+                }
 
         expected_resp = {
                         'target_name': self.body_mp.current_name(),
-                        'start_time' : '2015-04-21T09:22:00',
-                        'end_time'   : '2015-04-21T11:08:00',
-                        'vis_start' : '2015-04-21T09:22:00',
-                        'vis_end'   : '2015-04-21T11:08:00',
-                        'exp_count'  : 6,
-                        'exp_length' : 125,
+                        'start_time': '2015-04-21T09:22:00',
+                        'end_time': '2015-04-21T11:08:00',
+                        'vis_start': '2015-04-21T09:22:00',
+                        'vis_end': '2015-04-21T11:08:00',
+                        'exp_count': 6,
+                        'exp_length': 125,
                         'mid_time': '2015-04-21T10:15:00',
-                        'magnitude' : 20.97
+                        'magnitude': 20.97
                         }
         resp = schedule_check(data, self.body_mp)
 #        self.assertEqual(expected_resp, resp)
@@ -2226,11 +2226,11 @@ class TestScheduleCheck(TestCase):
 
         expected_resp = {
                         'target_name': body.current_name(),
-                        'start_time' : '2016-09-30T19:28:00',
-                        'end_time'   : '2016-09-30T23:59:00',
+                        'start_time': '2016-09-30T19:28:00',
+                        'end_time': '2016-09-30T23:59:00',
                         'mid_time': '2016-09-30T21:43:00',
-                        'vis_start' : '2016-09-30T19:28:00',
-                        'vis_end'   : '2016-09-30T23:59:00',
+                        'vis_start': '2016-09-30T19:28:00',
+                        'vis_end': '2016-09-30T23:59:00',
                         }
         resp = schedule_check(data, body)
 #        self.assertEqual(expected_resp, resp)
@@ -2244,15 +2244,15 @@ class TestScheduleCheck(TestCase):
     def test_mp_semester_schedule_for_B_at_A_semester_end(self):
         MockDateTime.change_datetime(2017, 3, 31, 23, 0, 0)
 
-        data = { 'site_code' : 'K92',
-                 'utc_date' : datetime(2017, 4, 2).date(),
-                 'proposal_code' : self.neo_proposal.code
-               }
+        data = {'site_code': 'K92',
+                'utc_date': datetime(2017, 4, 2).date(),
+                'proposal_code': self.neo_proposal.code
+                }
 
         expected_resp = {
                         'target_name': self.body_mp.current_name(),
-                        'start_time' : '2017-04-02T01:10:00',
-                        'end_time'   : '2017-04-02T03:38:00',
+                        'start_time': '2017-04-02T01:10:00',
+                        'end_time': '2017-04-02T03:38:00',
                         'mid_time': '2017-04-02T02:24:00',
 
                         }

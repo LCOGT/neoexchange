@@ -1374,7 +1374,10 @@ def schedule_check(data, body, ok_to_schedule=True):
     snr = None
     saturated = None
     if spectroscopy:
-        fractional_tracking_rate = float(data.get('fractional_rate', 1.0))
+        try:
+            fractional_tracking_rate = float(data.get('fractional_rate', 1.0))
+        except ValueError:
+            fractional_tracking_rate = 1.0
         snr_params = {'airmass': max_alt_airmass,
                       'slit_width': float(filter_pattern[5:8])*u.arcsec,
                       'moon_phase': moon_phase_code
@@ -1396,7 +1399,10 @@ def schedule_check(data, body, ok_to_schedule=True):
 
     else:
         # calculate rate of relative motion on chip
-        fractional_tracking_rate = float(data.get('fractional_rate', 0.5))
+        try:
+            fractional_tracking_rate = float(data.get('fractional_rate', 0.5))
+        except ValueError:
+            fractional_tracking_rate = 0.5
         relative_apparent_rate = abs(fractional_tracking_rate - 0.5) + 0.5
         adjusted_speed = speed * relative_apparent_rate
         # Determine exposure length and count
