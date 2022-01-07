@@ -2003,6 +2003,7 @@ def configure_defaults(params):
         params['exp_type'] = 'EXPOSE'
     else:
         params['exp_type'] = 'REPEAT_EXPOSE'
+    params['exp_type'] = 'EXPOSE'
 
     if params['site_code'] in ['F65', 'E10', '2M0']:
         if 'F65' in params['site_code']:
