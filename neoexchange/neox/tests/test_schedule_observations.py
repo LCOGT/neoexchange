@@ -780,6 +780,38 @@ class ScheduleObservations(FunctionalTest):
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_id("id_edit_button").click()
 
+        # fiddle with the non-sidereal tracking rate
+        speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
+        self.assertIn('2.32 "/min', speed)
+        self.assertIn('1.93 "/exp', speed)
+        self.browser.find_element_by_id("advanced-switch").click()
+        tracking_picker = Select(self.browser.find_element_by_id('id_fractional_rate'))
+        self.assertIn('Full-Rate', [option.text for option in tracking_picker.options])
+        tracking_picker.select_by_visible_text('Full-Rate')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
+        speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
+        self.assertIn('2.32 "/min', speed)
+        self.assertIn('3.86 "/exp', speed)
+        self.browser.find_element_by_id("advanced-switch").click()
+        tracking_picker = Select(self.browser.find_element_by_id('id_fractional_rate'))
+        self.assertIn('Half-Rate', [option.text for option in tracking_picker.options])
+        tracking_picker.select_by_visible_text('Half-Rate')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
+        speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
+        self.assertIn('2.32 "/min', speed)
+        self.assertIn('1.93 "/exp', speed)
+        self.browser.find_element_by_id("advanced-switch").click()
+        tracking_picker = Select(self.browser.find_element_by_id('id_fractional_rate'))
+        self.assertIn('Sidereal', [option.text for option in tracking_picker.options])
+        tracking_picker.select_by_visible_text('Sidereal')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
+        speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
+        self.assertIn('2.32 "/min', speed)
+        self.assertIn('3.86 "/exp', speed)
+
         # Bart saw a dithering option just now, what's that do?
         self.browser.find_element_by_id("advanced-switch").click()
         self.browser.find_element_by_id('id_add_dither').click()
