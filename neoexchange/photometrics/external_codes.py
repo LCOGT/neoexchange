@@ -868,7 +868,7 @@ def run_listGPS(source_dir, dest_dir, ephem_date, sitecode, satellite=None, bina
 
     binary = binary or find_binary("list_gps")
     if binary is None:
-        logger.error("Could not locate '' executable in PATH")
+        logger.error("Could not locate 'list_gps' executable in PATH")
         return -42
 
     cmdline = f'{binary} {date_site}'
