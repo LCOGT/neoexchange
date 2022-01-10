@@ -649,7 +649,9 @@ class TestFetchGoldstoneTargets(SimpleTestCase):
         self.assertEqual(1, len(targets))
         self.assertEqual(expected_target, targets)
 
+    @patch('astrometrics.sources_subs.datetime', MockDateTime)
     def test_csv_file(self):
+        MockDateTime.change_datetime(2021, 12, 7, 2, 0, 0)
 
         expected_targets = ['163899', '4660', '2021 XK6', '7842', '153591', '2016 QJ44', '2018 CW2']
 
@@ -658,9 +660,11 @@ class TestFetchGoldstoneTargets(SimpleTestCase):
         self.assertEqual(7, len(targets))
         self.assertEqual(expected_targets, targets)
 
-    def test_csv_file_calformat(self):
+    @patch('astrometrics.sources_subs.datetime', MockDateTime)
+    def test_csv_file_calformat_2021(self):
+        MockDateTime.change_datetime(2021, 12, 7, 2, 0, 0)
 
-        expected_targets = ['163899', '4660', '2021 XK6', '7842', '153591', '2016 QJ44', '2018 CW2']
+        expected_targets = ['163899', '4660', '2021 XK6']
 
         expected_targets = [{ 'target': '163899',
                               'windows': [{'start': '2021-11-22T00:00:00', 'end': '2021-12-31T23:59:59'}]},
@@ -668,6 +672,21 @@ class TestFetchGoldstoneTargets(SimpleTestCase):
                               'windows': [{'start': '2021-12-05T00:00:00', 'end': '2021-12-31T23:59:59'}]},
                              {'target': '2021 XK6',
                               'windows': [{'start': '2021-12-17T00:00:00', 'end': '2021-12-17T23:59:59'}]},
+                              ]
+
+
+        targets = fetch_goldstone_targets(self.test_csv_file, calendar_format=True)
+
+        self.assertEqual(3, len(targets))
+        self.assertEqual(expected_targets, targets)
+
+    @patch('astrometrics.sources_subs.datetime', MockDateTime)
+    def test_csv_file_calformat_2022(self):
+        MockDateTime.change_datetime(2022, 1, 7, 2, 0, 0)
+
+        expected_targets = ['7842', '153591', '2016 QJ44', '2018 CW2']
+
+        expected_targets = [
                              {'target': '7842',
                               'windows': [{'start': '2022-01-18T00:00:00', 'end': '2022-01-25T23:59:59'}]},
                              {'target': '153591',
@@ -681,7 +700,7 @@ class TestFetchGoldstoneTargets(SimpleTestCase):
 
         targets = fetch_goldstone_targets(self.test_csv_file, calendar_format=True)
 
-        self.assertEqual(7, len(targets))
+        self.assertEqual(4, len(targets))
         self.assertEqual(expected_targets, targets)
 
 

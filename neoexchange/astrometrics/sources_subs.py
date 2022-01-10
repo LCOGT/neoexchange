@@ -1304,20 +1304,24 @@ def fetch_goldstone_targets(page=None, calendar_format=False, dbg=False):
     if type(page) == BeautifulSoup:
         radar_objects = parse_goldstone_page(page)
     else:
+        current_year = datetime.utcnow().year
+
         radar_objects = []
         for row in page:
             target = str(row['number'])
             if is_masked(row['number']) is True:
                 target = row['name']
+            start_date = datetime.strptime(row['start (UT)'], '%m/%d/%Y')
             if calendar_format is True:
-                start_date = datetime.strptime(row['start (UT)'], '%m/%d/%Y')
                 end_date = datetime.strptime(row['end (UT)'], '%m/%d/%Y')
                 end_date += timedelta(seconds=86399)
                 target = {'target' : target,
                           'windows' : [{'start' : start_date.strftime("%Y-%m-%dT%H:%M:%S"),
                                         'end' : end_date.strftime("%Y-%m-%dT%H:%M:%S")}]
-                         }
-            radar_objects.append(target)
+                             }
+            print(row['name'],start_date,start_date.year, current_year)
+            if start_date.year == current_year:
+                radar_objects.append(target)
     return radar_objects
 
 
