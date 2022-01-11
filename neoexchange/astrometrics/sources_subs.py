@@ -1319,7 +1319,6 @@ def fetch_goldstone_targets(page=None, calendar_format=False, dbg=False):
                           'windows' : [{'start' : start_date.strftime("%Y-%m-%dT%H:%M:%S"),
                                         'end' : end_date.strftime("%Y-%m-%dT%H:%M:%S")}]
                              }
-            print(row['name'],start_date,start_date.year, current_year)
             if start_date.year == current_year:
                 radar_objects.append(target)
     return radar_objects

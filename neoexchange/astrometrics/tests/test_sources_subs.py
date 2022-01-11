@@ -15,6 +15,7 @@ GNU General Public License for more details.
 
 import os
 from mock import patch, MagicMock
+from freezegun import freeze_time
 from socket import error, timeout
 from errno import ETIMEDOUT
 from datetime import datetime, timedelta
@@ -649,20 +650,28 @@ class TestFetchGoldstoneTargets(SimpleTestCase):
         self.assertEqual(1, len(targets))
         self.assertEqual(expected_target, targets)
 
-    @patch('astrometrics.sources_subs.datetime', MockDateTime)
-    def test_csv_file(self):
-        MockDateTime.change_datetime(2021, 12, 7, 2, 0, 0)
+    @freeze_time(datetime(2021, 12, 7, 2, 0, 0))
+    def test_csv_file_2021(self):
 
-        expected_targets = ['163899', '4660', '2021 XK6', '7842', '153591', '2016 QJ44', '2018 CW2']
+        expected_targets = ['163899', '4660', '2021 XK6']
 
         targets = fetch_goldstone_targets(self.test_csv_file)
 
-        self.assertEqual(7, len(targets))
+        self.assertEqual(3, len(targets))
         self.assertEqual(expected_targets, targets)
 
-    @patch('astrometrics.sources_subs.datetime', MockDateTime)
+    @freeze_time(datetime(2022, 1, 7, 2, 0, 0))
+    def test_csv_file_2022(self):
+
+        expected_targets = ['7842', '153591', '2016 QJ44', '2018 CW2', '2010 XC15']
+
+        targets = fetch_goldstone_targets(self.test_csv_file)
+
+        self.assertEqual(5, len(targets))
+        self.assertEqual(expected_targets, targets)
+
+    @freeze_time(datetime(2021, 12, 7, 2, 0, 0))
     def test_csv_file_calformat_2021(self):
-        MockDateTime.change_datetime(2021, 12, 7, 2, 0, 0)
 
         expected_targets = ['163899', '4660', '2021 XK6']
 
@@ -680,11 +689,10 @@ class TestFetchGoldstoneTargets(SimpleTestCase):
         self.assertEqual(3, len(targets))
         self.assertEqual(expected_targets, targets)
 
-    @patch('astrometrics.sources_subs.datetime', MockDateTime)
+    @freeze_time(datetime(2022, 1, 7, 2, 0, 0))
     def test_csv_file_calformat_2022(self):
-        MockDateTime.change_datetime(2022, 1, 7, 2, 0, 0)
 
-        expected_targets = ['7842', '153591', '2016 QJ44', '2018 CW2']
+        expected_targets = ['7842', '153591', '2016 QJ44', '2018 CW2', '2010 XC15']
 
         expected_targets = [
                              {'target': '7842',
@@ -695,12 +703,14 @@ class TestFetchGoldstoneTargets(SimpleTestCase):
                               'windows': [{'start': '2022-02-18T00:00:00', 'end': '2022-02-25T23:59:59'}]},
                              {'target': '2018 CW2',
                               'windows': [{'start': '2022-02-16T00:00:00', 'end': '2022-02-21T23:59:59'}]},
+                             {'target': '2010 XC15',
+                              'windows': [{'start': '2022-12-24T00:00:00', 'end': '2023-01-06T23:59:59'}]},
                               ]
 
 
         targets = fetch_goldstone_targets(self.test_csv_file, calendar_format=True)
 
-        self.assertEqual(4, len(targets))
+        self.assertEqual(len(expected_targets), len(targets))
         self.assertEqual(expected_targets, targets)
 
 
