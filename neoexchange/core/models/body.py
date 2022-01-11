@@ -634,7 +634,7 @@ class PhysicalParameters(models.Model):
         Else, return quality int. as string.
         """
         quality_string = self.quality_parser()
-        if not isinstance(quality_string, str):
+        if isinstance(quality_string, str):
             short_string = re.search(r'\(.*?\)', quality_string).group()
             if short_string:
                 return short_string

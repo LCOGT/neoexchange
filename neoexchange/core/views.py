@@ -1617,17 +1617,17 @@ def schedule_submit(data, body, username):
     if data.get('solar_analog', False) and data.get('calibsource_id', -1) > 0:
         try:
             calibsource = StaticSource.objects.get(pk=data['calibsource_id'])
-            calibsource_params = {  'id'      : calibsource.pk,
-                                    'name'    : calibsource.name,
-                                    'ra_deg'  : calibsource.ra,
-                                    'dec_deg' : calibsource.dec,
-                                    'pm_ra'   : calibsource.pm_ra,
-                                    'pm_dec'  : calibsource.pm_dec,
-                                    'parallax': calibsource.parallax,
-                                    'source_type' : calibsource.source_type,
-                                    'vmag' : calibsource.vmag,
-                                    'calib_exptime': data.get('calibsource_exptime', 60)
-                                 }
+            calibsource_params = {'id': calibsource.pk,
+                                  'name': calibsource.name,
+                                  'ra_deg': calibsource.ra,
+                                  'dec_deg': calibsource.dec,
+                                  'pm_ra': calibsource.pm_ra,
+                                  'pm_dec': calibsource.pm_dec,
+                                  'parallax': calibsource.parallax,
+                                  'source_type': calibsource.source_type,
+                                  'vmag': calibsource.vmag,
+                                  'calib_exptime': data.get('calibsource_exptime', 60)
+                                  }
         except StaticSource.DoesNotExist:
             logger.error("Was passed a StaticSource id=%d, but it now can't be found" % data['calibsource_id'])
 
@@ -1691,7 +1691,8 @@ def schedule_submit(data, body, username):
               'acceptability_threshold': data.get('acceptability_threshold', 90),
               'ag_exp_time': data.get('ag_exp_time', 10),
               'dither_distance': data.get('dither_distance', 10),
-              'add_dither': data.get('add_dither', False)
+              'add_dither': data.get('add_dither', False),
+              'fractional_rate': data.get('add_dither', 0.5),
               }
     if data['period'] or data['jitter']:
         params['period'] = data['period']
