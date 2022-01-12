@@ -83,8 +83,8 @@ class NewVisitorTest(FunctionalTest):
         datebox.send_keys('2015-04-21')
 
         site_choices = Select(self.get_item_input_box('id_site_code'))
-        self.assertIn('ELP 1.0m - V37,V39; (McDonald, Texas)', [option.text for option in site_choices.options])
-        site_choices.select_by_visible_text('ELP 1.0m - V37,V39; (McDonald, Texas)')
+        self.assertIn('TFN 1.0m - Z31,Z24; (Tenerife, Spain)', [option.text for option in site_choices.options])
+        site_choices.select_by_visible_text('TFN 1.0m - Z31,Z24; (Tenerife, Spain)')
 
         # When he hits Enter, he is taken to a new page and now the page shows an ephemeris
         # for the target with a column header and a series of rows for the position
@@ -95,13 +95,13 @@ class NewVisitorTest(FunctionalTest):
         eduardo_ephem_url = self.browser.current_url
         self.assertRegexpMatches(eduardo_ephem_url, '/ephemeris/.+')
         menu = self.browser.find_element_by_id('extramenu').text
-        self.assertIn('Ephemeris for N999r0q at V37', menu)
+        self.assertIn('Ephemeris for N999r0q at Z24', menu)
 
         self.check_for_header_in_table('id_ephemeris_table',
             'Date/Time (UTC) RA Dec Mag "/min P.A. Alt Moon Phase Moon Dist. Moon Alt. Score H.A.'
         )
         self.check_for_row_in_table('id_ephemeris_table',
-            '2015 04 21 08:45 20 10 05.99 +29 56 57.5 20.4 2.43 89.2 +33 0.09 107 -42 +047 -04:25'
+            '2015 04 21 03:00 20 08 59.51 +29 57 16.0 20.4 2.43 89.0 +34 0.07 105 -45 +049 -04:20'
         )
 
         # # There is a button asking whether to schedule the target
@@ -180,9 +180,9 @@ class NewVisitorTest(FunctionalTest):
         # He notices a new selection for the site code and chooses ELP (V37)
         # XXX Code smell: Too many static text constants
         site_choices = Select(self.get_item_input_box('id_site_code'))
-        self.assertIn('ELP 1.0m - V37,V39; (McDonald, Texas)', [option.text for option in site_choices.options])
+        self.assertIn('TFN 1.0m - Z31,Z24; (Tenerife, Spain)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('ELP 1.0m - V37,V39; (McDonald, Texas)')
+        site_choices.select_by_visible_text('TFN 1.0m - Z31,Z24; (Tenerife, Spain)')
 
         # He notices a new textbox for the date that is wanted which is filled
         # in with the current date
@@ -208,7 +208,7 @@ class NewVisitorTest(FunctionalTest):
         eduardo_ephem_url = self.browser.current_url
         self.assertRegexpMatches(eduardo_ephem_url, '/ephemeris/.+')
         menu = self.browser.find_element_by_id('extramenu').text
-        self.assertIn('Ephemeris for N999r0q at V37', menu)
+        self.assertIn('Ephemeris for N999r0q at Z24', menu)
 
         # Check the results for default date are not in the table
         table = self.browser.find_element_by_id('id_ephemeris_table')
@@ -216,12 +216,12 @@ class NewVisitorTest(FunctionalTest):
         rows = table_body.find_elements_by_tag_name('tr')
         self.assertNotIn('2015 04 21 08:45 20 10 05.99 +29 56 57.5 20.4 2.43 89.2 +33 0.09 107 -42 +047 -04:25', [row.text for row in rows])
 
-        # Check the values are correct for F65
+        # Check the values are correct for Z24
         self.check_for_row_in_table('id_ephemeris_table',
-            '2015 04 28 10:15 20 40 35.73 +29 36 33.7 20.6 2.09 93.3 +51 0.72 136 -14 +056 -02:58'
+            '2015 04 28 03:00 20 39 22.77 +29 37 47.1 20.6 2.14 92.6 +33 0.69 137 +00 +033 -04:22'
         )
         self.check_for_row_in_table('id_ephemeris_table',
-            '2015 04 28 10:30 20 40 38.12 +29 36 31.9 20.6 2.08 93.5 +55 0.72 136 -17 +060 -02:43'
+            '2015 04 28 05:15 20 39 44.51 +29 37 31.9 20.6 2.07 93.7 +62 0.70 137 -26 +071 -02:07'
         )
 
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)

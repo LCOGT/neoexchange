@@ -49,6 +49,7 @@ SPECTRAL_SOURCE_CHOICES = (
                         ('O', 'Other')
                      )
 
+
 class SpectralInfo(models.Model):
     body                = models.ForeignKey(Body, on_delete=models.CASCADE)
     taxonomic_class     = models.CharField('Taxonomic Class', blank=True, null=True, max_length=6)

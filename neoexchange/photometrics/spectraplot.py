@@ -131,12 +131,12 @@ def pull_data_from_spectrum(spectra):
     """Extract spectroscopy data from fits files.
         Return wavelength in Angstroms, flux with units.
         Return Header."""
-    file = default_storage.open(spectra)
     try:
+        file = default_storage.open(spectra)
         hdul = fits.open(file)
-    except FileNotFoundError:
-        print("Cannot find file {}".format(file))
-        return None, None, None
+    except FileNotFoundError as e:
+        logger.warning(e)
+        return None, None, None, None
 
     data = hdul[0].data
     hdr = hdul[0].header
@@ -192,7 +192,7 @@ def spectrum_plot(spectra, data_set='', analog=None, offset=0):
     windows = ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']
     spec_x, spec_y, spec_header, spec_error = pull_data_from_spectrum(spectra)
     if spec_y is None:
-        return data_set, None, None
+        return data_set, None, None, None
 
     box = 100
     if analog:

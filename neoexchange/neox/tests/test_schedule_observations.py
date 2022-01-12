@@ -473,6 +473,17 @@ class ScheduleObservations(FunctionalTest):
         analog_exptime = self.browser.find_element_by_id('id_calibsource_exptime').get_attribute('value')
         self.assertIn('50', analog_exptime)
 
+        # Bart wants to change the exposure time for the analog, but gets warned about it.
+        slot_length_box = self.browser.find_element_by_id('id_calibsource_exptime')
+        slot_length_box.clear()
+        slot_length_box.send_keys('10')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
+        analog_exptime = self.browser.find_element_by_id('id_calibsource_exptime').get_attribute('value')
+        self.assertIn('10', analog_exptime)
+        sa_exptime_warn = self.browser.find_element_by_id('id_solaranalog_exptime_row').find_element_by_class_name('warning').text
+        self.assertIn('Exposure Time', sa_exptime_warn)
+
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list_no2m)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list_no2m)
@@ -769,8 +780,27 @@ class ScheduleObservations(FunctionalTest):
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_id("id_edit_button").click()
 
+        # Bart saw a dithering option just now, what's that do?
+        self.browser.find_element_by_id("advanced-switch").click()
+        self.browser.find_element_by_id('id_add_dither').click()
+        dither_box = self.browser.find_element_by_id('id_dither_distance')
+        self.assertIn('10', dither_box.get_attribute('value'))
+        dither_box.clear()
+        dither_box.send_keys('30')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
+        self.browser.find_element_by_id("advanced-switch").click()
+        dither_box = self.browser.find_element_by_id('id_dither_distance')
+        self.assertIn('30', dither_box.get_attribute('value'))
+        group_id_box = self.browser.find_element_by_name("group_name")
+        self.assertIn('_dither', group_id_box.get_attribute('value'))
+        self.browser.find_element_by_id('id_add_dither').click()
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
+
         # Bart wants to be a little &^%$ and stress test our group ID input
         group_id_box = self.browser.find_element_by_name("group_name")
+        self.assertNotIn('_dither', group_id_box.get_attribute('value'))
         group_id_box.clear()
         bs_string = 'ຢູ່ໃກ້Γη小惑星‽'
         group_id_box.send_keys(bs_string)

@@ -332,6 +332,8 @@ def block_status(block_id):
         logger.error("Block with id %s does not exist" % block_id)
         return False
 
+    obj_name = block.current_name()
+
     # Get authentication token for Valhalla
     logger.info("Checking request status for block/track# %s / %s" % (block_id, tracking_num))
     data = check_request_status(tracking_num)
@@ -361,7 +363,8 @@ def block_status(block_id):
                     obstype = ''
             except AttributeError:
                 logger.warning("Unable to find observation type for Block/track# %s / %s" % (block_id, tracking_num))
-            images, num_archive_frames = check_for_archive_images(request_id=r['id'], obstype=obstype)
+
+            images, num_archive_frames = check_for_archive_images(request_id=r['id'], obstype=obstype, obj=obj_name)
             logger.info('Request no. %s x %s images (%s total all red. levels)' % (r['id'], len(images), num_archive_frames))
             if images:
                 inst_configs = [x['instrument_configs'] for x in r['configurations']]
@@ -390,6 +393,7 @@ def block_status(block_id):
                     block.active = False
                 # Add frames and get list of scheduler block IDs used
                 block_ids = ingest_frames(images, block)
+
                 # If we got at least 3 frames (i.e. usable for astrometry reporting) and
                 # at least frames for at least one block were ingested, update the blocks'
                 # observed count.

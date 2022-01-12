@@ -943,6 +943,14 @@ ul.candidate-controls li {width:100%;}
 
 ul.candidate-controls li:hover {background-color:#eee; }
 
+.warning-msg {
+  display: block;
+  padding: 10px;
+  color: #9F6000;
+  background-color: #FEEFB3;
+  font-size: 1.2em;
+}
+
 /* Responsive design styles */
 
 @media (max-width: 1280px), (max-device-width: 1280px) {
@@ -1173,4 +1181,31 @@ ul.candidate-controls li:hover {background-color:#eee; }
 .bk-root .slick-cell {
     background: white;
     color: silver;
+}
+
+.collapsible {
+  background-color: #777;
+  color: white;
+  cursor: pointer;
+  border: none;
+  text-align: left;
+  outline: none;
+  box-shadow: 2px 2px 10px #777;
+}
+
+.active, .collapsible:hover {
+  background-color: #555;
+  color: white;
+}
+
+.content {
+  margin-bottom: 0px;
+  margin-top: 2px;
+  box-shadow: 2px 2px 10px #777;
+}
+
+.long-row {
+  display: block;
+  white-space: nowrap;
+  overflow-x: auto;
 }

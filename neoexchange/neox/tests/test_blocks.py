@@ -329,6 +329,23 @@ class SpectroBlocksDetailValidationTest(FunctionalTest):
                        }
         self.test_block = Block.objects.create(pk=4, **block_params)
 
+        analog_block_params = {'telclass': '2m0',
+                               'site': 'ogg',
+                               'body': None,
+                               'calibsource': self.calib,
+                               'superblock': self.test_sblock,
+                               'obstype': Block.OPT_SPECTRA_CALIB,
+                               'block_start': '2015-04-20 13:00:00',
+                               'block_end': '2015-04-21 03:00:00',
+                               'request_number': '12345',
+                               'num_exposures': 1,
+                               'exp_length': 50.0,
+                               'active': True,
+                               'num_observed': 1,
+                               'when_observed': '2015-04-21 12:13:14'
+                               }
+        self.analog_block = Block.objects.create(pk=5, **analog_block_params)
+
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def login(self):
         test_login = self.client.login(username=self.username, password=self.password)
@@ -375,12 +392,12 @@ class SpectroBlocksDetailValidationTest(FunctionalTest):
             'Block # Target Name Site Telescope Type Proposal Tracking Number Obs. Details Cadence? Active? Observed? Reported?')
         testlines = ['1 N999r0q CPT 1m0 LCO2015A-009 00042 5x42.0 secs Yes Active 0 / 1 0 / 1',
                      '2 N999r0q COJ 2m0 LCOEngineering 00043 7x30.0 secs No Not Active 1 / 1 1 / 1',
-                     '3 N999r0q OGG 2m0(S) LCOEngineering 4242 1x1800.0 secs No Active 1 / 1 0 / 1']
+                     '3 N999r0q OGG 2m0(S), 2m0(SC) LCOEngineering 4242 1 of 1x1800.0 secs, 1 of 1x50.0 secs No Active 2 / 2 0 / 2']
         self.check_for_row_in_table('id_blocks', testlines[2])
 
         # He wishes to get more details on the spectroscopic block that is scheduled
         link = self.browser.find_element_by_link_text('3')
-        target_url = "{0}{1}".format(self.live_server_url, reverse('block-view',kwargs={'pk':3}))
+        target_url = "{0}{1}".format(self.live_server_url, reverse('block-view', kwargs={'pk': 3}))
         actual_url = link.get_attribute('href')
         self.assertEqual(actual_url, target_url)
 
@@ -399,7 +416,7 @@ class SpectroBlocksDetailValidationTest(FunctionalTest):
         # He notices there is a table which lists a lot more details about
         # the Block.
 
-        testlines = ['TELESCOPE CLASS ' + self.test_block.telclass + '(S)',
+        testlines = ['TELESCOPE CLASS ' + self.test_block.telclass + '(S), ' + self.test_block.telclass + '(SC)',
                      'SITE ' + self.test_block.site.upper()]
         for line in testlines:
             self.check_for_row_in_table('id_blockdetail', line)
@@ -410,6 +427,7 @@ class SpectroBlocksDetailValidationTest(FunctionalTest):
                     ]
         for line in testlines:
             self.assertIn(line, block_lines)
+
 
 class BlockCancelTest(FunctionalTest):
     def setUp(self):

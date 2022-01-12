@@ -20,17 +20,84 @@
                     <a class="button button-primary" href="{% url 'schedule-body' body.pk %}" id="schedule-obs">Schedule Observations</a>
                     <a class="button button-primary" href="{% url 'schedule-body-spectra' body.pk %}" id="schedule-spectro-obs">Schedule Spectroscopic Observations</a>
                 </div>
+                <div id="warning-message" class="warning-msg"><i class="fa fa-exclamation-triangle"></i> Plots are generated asynchronously so will appear when ready</div>
+
                 <h5  class="section-title"><span class="">Right Ascension and Declination</span></h5>
-                <img src="{% url 'visibility-plot' pk=body.pk plot_type='radec' %}" id="id_radecplot">
+                <img src="https://dummyimage.com/600x400/000/fff&text=RA+Dec" id="id_radecplot">
+                <span class="msgpadded" style="display: block;">Milky Way outline in brown.</span>
+                <h5  class="section-title"><span class="">Galactic Longitude and Latitude</span></h5>
+                <img src="https://dummyimage.com/600x400/000/fff&text=Long+Lat" id="id_glonglatplot">
                 <h5  class="section-title"><span class="">Heliocentric and Geocentric Distances</span></h5>
-                <img src="{% url 'visibility-plot' pk=body.pk plot_type='dist' %}" id="id_distanceplot">
+                <img src="https://dummyimage.com/600x400/000/fff&text=Distances" id="id_distanceplot">
                 <h5  class="section-title"><span class="">Predicted Brightness</span></h5>
-                <img src="{% url 'visibility-plot' pk=body.pk plot_type='mag' %}" id="id_magplot">
+                <img src="https://dummyimage.com/600x400/000/fff&text=Predicted Brightness" id="id_magplot">
                 <h5  class="section-title"><span class="">Positional Uncertainty</span></h5>
-                <img src="{% url 'visibility-plot' pk=body.pk plot_type='uncertainty' %}" id="id_uncertaintyplot">
+                <img src="https://dummyimage.com/600x400/000/fff&text=Positional Uncertainty" id="id_uncertaintyplot">
                 <h5  class="section-title"><span class="">Hours Up</span></h5>
-                <img src="{% url 'visibility-plot' pk=body.pk plot_type='hoursup' %}" id="id_hoursupplot">
-                <img src="{% url 'visibility-plot-site' pk=body.pk plot_type='hoursup' site_code='F65' %}" id="id_hoursupplot">
-                <img src="{% url 'visibility-plot-site' pk=body.pk plot_type='hoursup' site_code='E10' %}" id="id_hoursupplot">
+                <img src="https://dummyimage.com/600x400/000/fff&text=Hours+Plot" id="id_hoursupplotgen">
+                <img src="https://dummyimage.com/600x400/000/fff&text=Hours+Plot+F65" id="id_hoursupplotf65">
+                <img src="https://dummyimage.com/600x400/000/fff&text=Hours+Plot+E10" id="id_hoursupplote10">
+
             </div>
+{% endblock %}
+
+{% block end-scripts %}
+<script>
+  var i=0;
+  var imageUrls = [{
+      'id': 'id_radecplot',
+      'url': "{% url 'visibility-plot' pk=body.pk plot_type='radec' %}"
+    },
+    {
+      'id': 'id_glonglatplot',
+      'url': "{% url 'visibility-plot' pk=body.pk plot_type='glonglat' %}"
+    },
+    {
+      'id': 'id_distanceplot',
+      'url': "{% url 'visibility-plot' pk=body.pk plot_type='dist' %}"
+    },
+    {
+      'id': 'id_magplot',
+      'url': "{% url 'visibility-plot' pk=body.pk plot_type='mag' %}"
+    },
+    {
+      'id': 'id_uncertaintyplot',
+      'url': "{% url 'visibility-plot' pk=body.pk plot_type='uncertainty' %}"
+    },
+    {
+      'id': 'id_hoursupplotgen',
+      'url': "{% url 'visibility-plot' pk=body.pk plot_type='hoursup' %}"
+    },
+    {
+      'id': 'id_hoursupplotf65',
+      'url': "{% url 'visibility-plot-site' pk=body.pk plot_type='hoursup' site_code='F65' %}"
+    },
+    {
+      'id': 'id_hoursupplote10',
+      'url': "{% url 'visibility-plot-site' pk=body.pk plot_type='hoursup' site_code='E10' %}"
+    },
+  ];
+
+  function loadImages() {
+    if (i >= imageUrls.length){
+      $('#warning-message').fadeOut()
+      return
+    }
+    var url = imageUrls[i].url;
+    var id = imageUrls[i].id;
+    var _img = document.getElementById(id);
+    var newImg = new Image;
+    setTimeout(function(){
+      newImg.onload = function() {
+          _img.src = this.src;
+      }
+      newImg.src = url;
+      i++;
+      loadImages();
+    }, 2000);
+
+  }
+
+  loadImages();
+</script>
 {% endblock %}

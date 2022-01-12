@@ -4,6 +4,39 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.11.0
+* Update Summary pages for enhanced usability and utility
+* Add body publication status
+* Add form for updating period from LC plot page
+
+### 3.10.3
+* Minor bug fixes and error handling.
+
+### 3.10.2
+* Fix ADES header info for new telescopes and MuSCAT instrument (Issue #578)
+* Fix gif movie creation permission issues (Issue #580)
+
+### 3.10.1
+* Fix orbit plots for cometary elements.
+
+### 3.10.0
+* Add support for DAMIT and advanced LC plotting features.
+
+### 3.9.1
+* Implement dithering capabilities
+
+### 3.9.0
+* Implement DataProducts refactor for ALCDEF, Gifs, and Floyds Traces
+
+### 3.8.13
+* Adds galactic plane into the visualization plots.
+
+### 3.8.12
+* Adds support for multi-target spectroscopy blocks.
+
+### 3.8.11
+* Adds support for the two 1-m telescopes at Tenerife (Issue #555)
+
 ### 3.8.10
 * Updates gif movies to fix intermitent issues and sort by filter.
 * Add error to spectra plots.
