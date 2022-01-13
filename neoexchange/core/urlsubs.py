@@ -128,7 +128,7 @@ def initialize_look_lpc_sheet(sheet):
     sheet.update('A1', 'Observed LPCs')
     sheet.format('A1', title_format)
 
-    headings = ['Name', 'Start Date', 'Start r', 'Perihelion Dist', 'Perihelion Date', '1/a (Nakano)' , 'Notes', 'Total Visits']
+    headings = ['Name', 'Start Date', 'Start r', 'Perihelion Dist', 'Perihelion Date', 'Date Span', '1/a (JPL)' , 'Notes', 'Total Visits']
 
     start_date = datetime(2020, 8, 1)
     end_date = start_date + timedelta(days=(3*365)-1)
@@ -157,11 +157,13 @@ def populate_comet_lines(sheet, params):
     now.replace(hour=0, minute=0, second=0, microsecond=0)
     now += a_month
 
-    index = 4
+    data_start = 4
+    index = data_start
     if sheet.row_count >= 3 + len(params):
         sheet.delete_rows(index, index+len(params))
         sheet.resize(rows=4)
 
+    all_values = []
     for comet, blocks in params.items():
         obs_blocks = blocks.filter(num_observed__gte=1)
         if obs_blocks.count() > 0:
@@ -174,7 +176,7 @@ def populate_comet_lines(sheet, params):
 
         values = [comet.current_name(), first_block_start,
                   r, comet.perihdist, comet.epochofperih.strftime("%Y-%m-%d"),
-                  comet.recip_a, "", obs_blocks.count()
+                  "=TODAY()-B"+str(index), comet.recip_a, "", obs_blocks.count()
                   ]
 
         # Count up observed blocks per month
@@ -182,19 +184,26 @@ def populate_comet_lines(sheet, params):
 
         date = start_date
         while date < min(now, end_date):
-            try:
-                num_visits= blocks_per_month.get(month=date)['total']
-            except blocks[0].DoesNotExist:
+            if len(blocks) > 0:
+                try:
+                    num_visits= blocks_per_month.get(month=date)['total']
+                except blocks[0].DoesNotExist:
+                    num_visits = ""
+            else:
                 num_visits = ""
 
             values.append(num_visits)
             date += a_month
 
-        sheet.insert_row(values, index)
-        cell_range = "{}:{}".format(rowcol_to_a1(index, 1), rowcol_to_a1(index, 44))
-        sheet.format(cell_range, text_format)
+        all_values.append(values)
         index += 1
-    cell_range = "{}:{}".format(rowcol_to_a1(4, 3), rowcol_to_a1(index, 4))
 
+    # Bulk insert all values in a single API call
+    cell_range = "{}:{}".format(rowcol_to_a1(data_start, 1), rowcol_to_a1(index, 45))
+    sheet.batch_update([{'range' : cell_range, 'values' : all_values}], value_input_option='USER_ENTERED')
+    sheet.format(cell_range, text_format)
+
+    cell_range = "{}:{}".format(rowcol_to_a1(data_start, 3), rowcol_to_a1(index, 4))
     sheet.format(cell_range, number_format)
+
     return
