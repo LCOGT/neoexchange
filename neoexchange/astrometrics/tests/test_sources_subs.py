@@ -422,7 +422,7 @@ class TestFetchGoldstoneCSV(SimpleTestCase):
         self.test_file = os.path.join('astrometrics', 'tests', 'test_goldstone_page.csv')
 
     def test_basic(self):
-        expected_length = 7
+        expected_length = 9
         expected_columns = ['number', 'name', 'start (UT)', 'end (UT)', 'OCC', 'Updated 2021 Dec 17']
 
         table = fetch_goldstone_csv(self.test_file)
