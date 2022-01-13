@@ -752,7 +752,9 @@ class TestSubmitBlockToScheduler(TestCase):
                            'group_name': self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                            'user_id': 'bsimpson',
                            'dither_distance': 10,
-                           'add_dither': False
+                           'add_dither': False,
+                           'fractional_rate': 0.5,
+                           'target_speed': 10,
                            }
 
         self.maxDiff = None
@@ -4056,7 +4058,6 @@ class TestConfigureDefaults(TestCase):
                             'pondtelescope': '0m4',
                             'observatory': '',
                             'site': 'TFN',
-                            'exp_type': 'EXPOSE',
                             'binning': 1}
         expected_params.update(test_params)
 
@@ -4071,7 +4072,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
                             'pondtelescope': '0m4',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'site': 'OGG',
                             'binning': 1}
         expected_params.update(test_params)
@@ -4087,7 +4087,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
                             'pondtelescope': '0m4',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'site': 'COJ',
                             'binning': 1}
         expected_params.update(test_params)
@@ -4103,7 +4102,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
                             'pondtelescope': '0m4',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'site': 'CPT',
                             'binning': 1}
         expected_params.update(test_params)
@@ -4119,7 +4117,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
                             'pondtelescope': '0m4',
                             'observatory': 'aqwa',
-                            'exp_type': 'EXPOSE',
                             'site': 'ELP',
                             'binning': 1}
         expected_params.update(test_params)
@@ -4135,7 +4132,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
                             'pondtelescope': '0m4',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'site': 'LSC',
                             'binning': 1}
         expected_params.update(test_params)
@@ -4151,7 +4147,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
                             'pondtelescope': '0m4',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'site': 'LSC',
                             'binning': 1}
         expected_params.update(test_params)
@@ -4167,7 +4162,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
                             'pondtelescope': '1m0',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'site': 'LSC',
                             'binning': 1}
         expected_params.update(test_params)
@@ -4183,7 +4177,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
                             'pondtelescope': '1m0',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'site': 'LSC',
                             'binning': 1,
                             'site_code': 'W87',
@@ -4201,7 +4194,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = {'instrument':  '2M0-SCICAM-MUSCAT',
                            'pondtelescope': '2m0',
                            'observatory': '',
-                           'exp_type': 'EXPOSE',
                            'site': 'OGG',
                            'binning': 1,
                            'exp_count': 10,
@@ -4219,7 +4211,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'instrument':  '2M0-SCICAM-SPECTRAL',
                             'pondtelescope': '2m0',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'site': 'COJ',
                             'binning': 2,
                             'exp_count': 10,
@@ -4237,7 +4228,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
                             'pondtelescope': '1m0',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'site': 'ELP',
                             'binning': 1,
                             'exp_count': 10,
@@ -4255,7 +4245,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
                             'pondtelescope': '1m0',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'site': 'ELP',
                             'binning': 1,
                             'exp_count': 10,
@@ -4273,7 +4262,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
                             'pondtelescope': '1m0',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'site': 'TFN',
                             'binning': 1,
                             'exp_count': 10,
@@ -4291,7 +4279,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
                             'pondtelescope': '1m0',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'site': 'TFN',
                             'binning': 1,
                             'exp_count': 10,
@@ -4311,7 +4298,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
                             'pondtelescope': '1m0',
                             'observatory': '',
-                            'exp_type': 'REPEAT_EXPOSE',
                             'binning': 1,
                             'exp_count': 45,
                             'exp_time': 42.0}
@@ -4330,7 +4316,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
                             'pondtelescope': '1m0',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'binning': 1,
                             'exp_count': 15,
                             'exp_time': 42.0}
@@ -4344,7 +4329,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'binning': 1,
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'pondtelescope': '1m0',
                             'site': 'CPT',
                             'site_code': 'K92',
@@ -4362,7 +4346,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'binning': 1,
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'pondtelescope': '1m0',
                             'site': 'LSC',
                             'site_code': 'W85',
@@ -4380,7 +4363,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'binning': 1,
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'pondtelescope': '1m0',
                             'site': 'LSC',
                             'site_code': 'W86',
@@ -4398,7 +4380,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'binning': 1,
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'pondtelescope': '1m0',
                             'site': 'ELP',
                             'site_code': 'V37',
@@ -4416,7 +4397,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'binning': 1,
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'pondtelescope': '1m0',
                             'site': 'LSC',
                             'site_code': 'W87',
@@ -4434,7 +4414,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'binning': 1,
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'pondtelescope': '1m0',
                             'site': 'CPT',
                             'site_code': 'K93',
@@ -4452,7 +4431,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = {'binning': 1,
                            'instrument': '2M0-SCICAM-MUSCAT',
                            'observatory': '',
-                           'exp_type': 'EXPOSE',
                            'pondtelescope': '2m0',
                            'site': 'OGG',
                            'site_code': 'F65',
@@ -4470,7 +4448,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'binning': 2,
                             'instrument': '2M0-SCICAM-SPECTRAL',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'pondtelescope': '2m0',
                             'site': 'COJ',
                             'site_code': 'E10',
@@ -4606,6 +4583,7 @@ class TestMakeconfiguration(TestCase):
                                                           'max_airmass': 2.0,
                                                           'min_lunar_distance': 30.0
                                                        }})
+        self.params_2m0_imaging['exp_type'] = 'REPEAT_EXPOSE'
         self.filt_2m0_imaging = build_filter_blocks(self.params_2m0_imaging['filter_pattern'],
                                                     self.params_2m0_imaging['exp_count'],
                                                     self.params_2m0_imaging['exp_type'])
@@ -4620,6 +4598,7 @@ class TestMakeconfiguration(TestCase):
                                                           'max_airmass': 2.0,
                                                           'min_lunar_distance': 30.0
                                                       }})
+        self.params_1m0_imaging['exp_type'] = 'EXPOSE'
         self.filt_1m0_imaging = build_filter_blocks(self.params_1m0_imaging['filter_pattern'],
                                                     self.params_1m0_imaging['exp_count'],
                                                     self.params_1m0_imaging['exp_type'])
@@ -4634,6 +4613,7 @@ class TestMakeconfiguration(TestCase):
                                                           'max_airmass': 2.0,
                                                           'min_lunar_distance': 30.0
                                                       }})
+        self.params_0m4_imaging['exp_type'] = 'EXPOSE'
         self.filt_0m4_imaging = build_filter_blocks(self.params_0m4_imaging['filter_pattern'],
                                                     self.params_0m4_imaging['exp_count'],
                                                     self.params_0m4_imaging['exp_type'])
@@ -5030,9 +5010,6 @@ class TestMakeconfigurations(TestCase):
                                                         'max_airmass': 2.0,
                                                         'min_lunar_distance': 30.0
                                                       }})
-        self.filt_2m0_imaging = build_filter_blocks(self.params_2m0_imaging['filter_pattern'],
-                                                    self.params_2m0_imaging['exp_count'],
-                                                    self.params_2m0_imaging['exp_type'])[0]
 
         self.params_1m0_imaging = configure_defaults({ 'site_code': 'K92',
                                                        'exp_time': 60.0,
@@ -5045,9 +5022,6 @@ class TestMakeconfigurations(TestCase):
                                                          'min_lunar_distance': 30.0
                                                        }})
 
-        self.filt_1m0_imaging = build_filter_blocks(self.params_1m0_imaging['filter_pattern'],
-                                                    self.params_1m0_imaging['exp_count'],
-                                                    self.params_1m0_imaging['exp_type'])[0]
         self.params_0m4_imaging = configure_defaults({ 'site_code': 'Z21',
                                                        'exp_time': 90.0,
                                                        'exp_count': 18,
@@ -5059,9 +5033,6 @@ class TestMakeconfigurations(TestCase):
                                                          'max_airmass': 2.0,
                                                          'min_lunar_distance': 30.0
                                                        }})
-        self.filt_0m4_imaging = build_filter_blocks(self.params_0m4_imaging['filter_pattern'],
-                                                    self.params_0m4_imaging['exp_count'],
-                                                    self.params_0m4_imaging['exp_type'])[0]
 
         self.params_2m0_spectroscopy = configure_defaults({ 'site_code': 'F65',
                                                             'instrument_code' : 'F65-FLOYDS',

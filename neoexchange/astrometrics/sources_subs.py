@@ -44,8 +44,10 @@ from django.conf import settings
 from astropy.io import ascii
 
 import astrometrics.site_config as cfg
-from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime, datetime2mjd_utc, mjd_utc2mjd_tt, mjd_utc2datetime
-from astrometrics.ephem_subs import build_filter_blocks, MPC_site_code_to_domes, compute_ephem, perturb_elements, LCOGT_site_codes
+from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime, datetime2mjd_utc, mjd_utc2mjd_tt,\
+    mjd_utc2datetime
+from astrometrics.ephem_subs import build_filter_blocks, MPC_site_code_to_domes, compute_ephem, perturb_elements,\
+    LCOGT_site_codes, get_sitecam_params
 from core.urlsubs import get_telescope_states
 
 logger = logging.getLogger(__name__)
@@ -1847,6 +1849,15 @@ def make_configs(params):
     In spectroscopy mode, this will produce 1, 3 or 5 molecules depending on whether
     `params['calibs']` is 'none, 'before'/'after' or 'both'."""
 
+    # Perform Repeated exposures if many exposures compared to number of filter changes.
+    if not params.get('exp_type', None):
+        if params['exp_count'] <= 10 or\
+                params['exp_count'] < 10 * len(list(filter(None, params['filter_pattern'].split(',')))) or\
+                params.get('add_dither', False):
+            params['exp_type'] = 'EXPOSE'
+        else:
+            params['exp_type'] = 'REPEAT_EXPOSE'
+
     filt_list = build_filter_blocks(params['filter_pattern'], params['exp_count'], params['exp_type'])
 
     calib_mode = params.get('calibs', 'none').lower()
@@ -2024,12 +2035,6 @@ def configure_defaults(params):
         pass
     params['binning'] = 1
     params['instrument'] = '1M0-SCICAM-SINISTRO'
-
-    # Perform Repeated exposures if many exposures compared to number of filter changes.
-    if params['exp_count'] <= 10 or params['exp_count'] < 10*len(list(filter(None, params['filter_pattern'].split(',')))) or params.get('add_dither', False):
-        params['exp_type'] = 'EXPOSE'
-    else:
-        params['exp_type'] = 'REPEAT_EXPOSE'
 
     if params['site_code'] in ['F65', 'E10', '2M0']:
         if 'F65' in params['site_code']:

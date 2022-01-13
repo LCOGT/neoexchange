@@ -1692,7 +1692,8 @@ def schedule_submit(data, body, username):
               'ag_exp_time': data.get('ag_exp_time', 10),
               'dither_distance': data.get('dither_distance', 10),
               'add_dither': data.get('add_dither', False),
-              'fractional_rate': data.get('add_dither', 0.5),
+              'fractional_rate': data.get('fractional_rate', 0.5),
+              'target_speed': data.get('speed', 0)
               }
     if data['period'] or data['jitter']:
         params['period'] = data['period']
