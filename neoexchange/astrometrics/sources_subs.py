@@ -36,12 +36,14 @@ from contextlib import closing
 
 from bs4 import BeautifulSoup
 import astropy.units as u
+from astropy.table import Table
 try:
     import pyslalib.slalib as S
 except ModuleNotFoundError:
     pass
 from django.conf import settings
 from astropy.io import ascii
+from numpy.ma import is_masked
 
 import astrometrics.site_config as cfg
 from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime, datetime2mjd_utc, mjd_utc2mjd_tt, mjd_utc2datetime
@@ -1202,6 +1204,20 @@ def parse_goldstone_chunks(chunks, dbg=False):
 
     return object_id
 
+def fetch_goldstone_csv(file_or_url=None):
+    """Fetches the Goldstone CSV file of radar targets, returning a Astropy
+    Table"""
+
+    file_or_url = file_or_url or 'https://echo.jpl.nasa.gov/asteroids/GSSR_schedule.csv'
+
+    table = None
+    try:
+        table = Table.read(file_or_url, format='csv', encoding='utf-8-sig')
+    except (FileNotFoundError, urllib.error.URLError):
+        logger.warning(f"Could not read Goldstone target file: {file_or_url}")
+    
+    return table
+
 
 def fetch_goldstone_page():
     """Fetches the Goldstone page of radar targets, returning a BeautifulSoup
@@ -1213,21 +1229,7 @@ def fetch_goldstone_page():
 
     return page
 
-
-def fetch_goldstone_targets(page=None, dbg=False):
-    """Fetches and parses the Goldstone list of radar targets, returning a list
-    of object id's for the current year.
-    Takes either a BeautifulSoup page version of the Goldstone target page (from
-    a call to fetch_goldstone_page() - to allow  standalone testing) or  calls
-    this routine and then parses the resulting page.
-    """
-
-    if type(page) != BeautifulSoup:
-        page = fetch_goldstone_page()
-
-    if page is None:
-        return None
-
+def parse_goldstone_page(page, dbg=False):
     radar_objects = []
     in_objects = False
     current_year = datetime.now().year
@@ -1283,6 +1285,42 @@ def fetch_goldstone_targets(page=None, dbg=False):
                     if obj_id != '':
                         radar_objects.append(obj_id)
                 last_year_seen = year
+    return radar_objects
+
+def fetch_goldstone_targets(page=None, calendar_format=False, dbg=False):
+    """Fetches and parses the Goldstone list of radar targets, returning a list
+    of object id's for the current year.
+    Takes either a BeautifulSoup page version of the Goldstone target page (from
+    a call to fetch_goldstone_page() - to allow  standalone testing) or  calls
+    this routine and then parses the resulting page.
+    """
+
+    if type(page) != BeautifulSoup:
+        page = fetch_goldstone_csv(page)
+
+    if page is None:
+        return None
+
+    if type(page) == BeautifulSoup:
+        radar_objects = parse_goldstone_page(page)
+    else:
+        current_year = datetime.utcnow().year
+
+        radar_objects = []
+        for row in page:
+            target = str(row['number'])
+            if is_masked(row['number']) is True:
+                target = row['name']
+            start_date = datetime.strptime(row['start (UT)'], '%m/%d/%Y')
+            if calendar_format is True:
+                end_date = datetime.strptime(row['end (UT)'], '%m/%d/%Y')
+                end_date += timedelta(seconds=86399)
+                target = {'target' : target,
+                          'windows' : [{'start' : start_date.strftime("%Y-%m-%dT%H:%M:%S"),
+                                        'end' : end_date.strftime("%Y-%m-%dT%H:%M:%S")}]
+                             }
+            if start_date.year == current_year:
+                radar_objects.append(target)
     return radar_objects
 
 

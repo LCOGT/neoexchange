@@ -15,6 +15,7 @@ GNU General Public License for more details.
 
 import os
 from mock import patch, MagicMock
+from freezegun import freeze_time
 from socket import error, timeout
 from errno import ETIMEDOUT
 from datetime import datetime, timedelta
@@ -415,7 +416,36 @@ class TestFetchAreciboTargets(TestCase):
         self.assertEqual(expected_targets, targets)
 
 
-class TestFetchGoldstoneTargets(TestCase):
+class TestFetchGoldstoneCSV(SimpleTestCase):
+
+    def setUp(self):
+        self.test_file = os.path.join('astrometrics', 'tests', 'test_goldstone_page.csv')
+
+    def test_basic(self):
+        expected_length = 9
+        expected_columns = ['number', 'name', 'start (UT)', 'end (UT)', 'OCC', 'Updated 2021 Dec 17']
+
+        table = fetch_goldstone_csv(self.test_file)
+
+        self.assertEqual(expected_length, len(table))
+        self.assertEqual(expected_columns, table.colnames)
+
+    def test_missing_file(self):
+        expected_length = None
+
+        table = fetch_goldstone_csv('/foo/bar')
+
+        self.assertEqual(expected_length, table)
+
+    def test_missing_url(self):
+        expected_length = None
+
+        table = fetch_goldstone_csv('https://foo.bar.com/nothere.csv')
+
+        self.assertEqual(expected_length, table)
+
+
+class TestFetchGoldstoneTargets(SimpleTestCase):
 
     def setUp(self):
         # Read and make soup from the stored version of the Goldstone radar pages
@@ -425,6 +455,7 @@ class TestFetchGoldstoneTargets(TestCase):
         test_fh = open(os.path.join('astrometrics', 'tests', 'test_goldstone_page_v2.html'), 'r')
         self.test_goldstone_page_v2 = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
+        self.test_csv_file = os.path.join('astrometrics', 'tests', 'test_goldstone_page.csv')
 
         self.maxDiff = None
 
@@ -618,6 +649,69 @@ class TestFetchGoldstoneTargets(TestCase):
 
         self.assertEqual(1, len(targets))
         self.assertEqual(expected_target, targets)
+
+    @freeze_time(datetime(2021, 12, 7, 2, 0, 0))
+    def test_csv_file_2021(self):
+
+        expected_targets = ['163899', '4660', '2021 XK6']
+
+        targets = fetch_goldstone_targets(self.test_csv_file)
+
+        self.assertEqual(3, len(targets))
+        self.assertEqual(expected_targets, targets)
+
+    @freeze_time(datetime(2022, 1, 7, 2, 0, 0))
+    def test_csv_file_2022(self):
+
+        expected_targets = ['7842', '153591', '2016 QJ44', '2018 CW2', '2010 XC15']
+
+        targets = fetch_goldstone_targets(self.test_csv_file)
+
+        self.assertEqual(5, len(targets))
+        self.assertEqual(expected_targets, targets)
+
+    @freeze_time(datetime(2021, 12, 7, 2, 0, 0))
+    def test_csv_file_calformat_2021(self):
+
+        expected_targets = ['163899', '4660', '2021 XK6']
+
+        expected_targets = [{ 'target': '163899',
+                              'windows': [{'start': '2021-11-22T00:00:00', 'end': '2021-12-31T23:59:59'}]},
+                             {'target': '4660',
+                              'windows': [{'start': '2021-12-05T00:00:00', 'end': '2021-12-31T23:59:59'}]},
+                             {'target': '2021 XK6',
+                              'windows': [{'start': '2021-12-17T00:00:00', 'end': '2021-12-17T23:59:59'}]},
+                              ]
+
+
+        targets = fetch_goldstone_targets(self.test_csv_file, calendar_format=True)
+
+        self.assertEqual(3, len(targets))
+        self.assertEqual(expected_targets, targets)
+
+    @freeze_time(datetime(2022, 1, 7, 2, 0, 0))
+    def test_csv_file_calformat_2022(self):
+
+        expected_targets = ['7842', '153591', '2016 QJ44', '2018 CW2', '2010 XC15']
+
+        expected_targets = [
+                             {'target': '7842',
+                              'windows': [{'start': '2022-01-18T00:00:00', 'end': '2022-01-25T23:59:59'}]},
+                             {'target': '153591',
+                              'windows': [{'start': '2022-02-18T00:00:00', 'end': '2022-03-08T23:59:59'}]},
+                             {'target': '2016 QJ44',
+                              'windows': [{'start': '2022-02-18T00:00:00', 'end': '2022-02-25T23:59:59'}]},
+                             {'target': '2018 CW2',
+                              'windows': [{'start': '2022-02-16T00:00:00', 'end': '2022-02-21T23:59:59'}]},
+                             {'target': '2010 XC15',
+                              'windows': [{'start': '2022-12-24T00:00:00', 'end': '2023-01-06T23:59:59'}]},
+                              ]
+
+
+        targets = fetch_goldstone_targets(self.test_csv_file, calendar_format=True)
+
+        self.assertEqual(len(expected_targets), len(targets))
+        self.assertEqual(expected_targets, targets)
 
 
 class TestFetchYarkovskyTargets(SimpleTestCase):
