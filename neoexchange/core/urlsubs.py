@@ -150,6 +150,10 @@ def populate_comet_lines(sheet, params):
                                     "fontFamily" : "PT Sans" }
                    }
     number_format = {'numberFormat' : {"type" : "NUMBER", "pattern" : "#0.00"}}
+    # Convert background color hex values from colorpicker to [0..1]
+    r,g,b = 0xfa/255, 0xe9/255, 0xe9/255
+    nonvis_format = {"backgroundColor" : { 'red' : r, 'green' : g, 'blue': b}}
+
     start_date = datetime(2020, 8, 1)
     end_date = start_date + timedelta(days=(3*365)-1)
     a_month = relativedelta.relativedelta(months=1)
@@ -164,6 +168,7 @@ def populate_comet_lines(sheet, params):
         sheet.resize(rows=4)
 
     all_values = []
+    all_visibilities = []
     for comet, blocks in params.items():
         obs_blocks = blocks.filter(num_observed__gte=1)
         if obs_blocks.count() > 0:
@@ -183,6 +188,7 @@ def populate_comet_lines(sheet, params):
         blocks_per_month = obs_blocks.annotate(month=TruncMonth('block_start')).values('month').annotate(total=Count('id')).order_by('month')
 
         date = start_date
+        visibilities = []
         while date < min(now, end_date):
             if len(blocks) > 0:
                 try:
@@ -193,9 +199,15 @@ def populate_comet_lines(sheet, params):
                 num_visits = ""
 
             values.append(num_visits)
+            visibility = comet.compute_obs_window(date)
+            visible = True
+            if visibility[0] != date:
+                visible = False
+            visibilities.append(visible)
             date += a_month
 
         all_values.append(values)
+        all_visibilities.append(visibilities)
         index += 1
 
     # Bulk insert all values in a single API call
@@ -206,4 +218,24 @@ def populate_comet_lines(sheet, params):
     cell_range = "{}:{}".format(rowcol_to_a1(data_start, 3), rowcol_to_a1(index, 4))
     sheet.format(cell_range, number_format)
 
+    # Fill in with background color where comet is not visible
+    row_index = 0
+    while row_index < len(all_visibilities)-1:
+        visibilities = all_visibilities[row_index]
+        row_num = row_index + data_start
+        col_index = 0
+        in_visblock = False
+        while col_index < len(visibilities)-1:
+            col_num = col_index + 10
+            if visibilities[col_index] is False:
+                if in_visblock is False:
+                    visblock_start = col_num
+                in_visblock = True
+            else:
+                if in_visblock is True:
+                    cell_range = "{}:{}".format(rowcol_to_a1(row_num, visblock_start), rowcol_to_a1(row_num, col_num))
+                    sheet.format(cell_range, nonvis_format)
+                    in_visblock = False
+            col_index += 1
+        row_index += 1
     return
