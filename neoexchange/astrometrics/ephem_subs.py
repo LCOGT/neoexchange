@@ -363,6 +363,10 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
             mag = p_orbelems['H'] + 5.0 * log10(delta) + 2.5 * p_orbelems['G'] * log10(r)
             mag_dot = 5.0 * delta_dot / log(10) / delta + 2.5 * p_orbelems['G'] * r_dot / log(10) / r
 
+        # Alternative way of elongation/separation (from Meeus's
+        # _Astronomical Algorithms_ Chapter 33, p. 231. eq. 33.11)
+        separation = acos((es_Rsq + delta**2 - r**2) / (2*sqrt(es_Rsq) * delta))
+        logger.debug("Separation=%f" % degrees(separation))
     else:
         # Compute phase angle, beta (Sun-Target-Earth angle)
         beta = compute_phase_angle(r, delta, es_Rsq)
