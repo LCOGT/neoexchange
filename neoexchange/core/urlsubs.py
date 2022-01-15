@@ -199,7 +199,7 @@ def populate_comet_lines(sheet, params):
                 num_visits = ""
 
             values.append(num_visits)
-            visibility = comet.compute_obs_window(date)
+            visibility = comet.compute_obs_window(date, df=31, mag_limit=20)
             visible = True
             if visibility[0] != date:
                 visible = False
@@ -233,7 +233,7 @@ def populate_comet_lines(sheet, params):
                 in_visblock = True
             else:
                 if in_visblock is True:
-                    cell_range = "{}:{}".format(rowcol_to_a1(row_num, visblock_start), rowcol_to_a1(row_num, col_num))
+                    cell_range = "{}:{}".format(rowcol_to_a1(row_num, visblock_start), rowcol_to_a1(row_num, col_num-1))
                     sheet.format(cell_range, nonvis_format)
                     in_visblock = False
             col_index += 1
