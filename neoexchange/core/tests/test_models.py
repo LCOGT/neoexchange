@@ -310,6 +310,30 @@ class TestBody(TestCase):
         self.assertEqual(obs_window[0], expected_start)
         self.assertEqual(obs_window[1], expected_end)
 
+    def test_compute_obs_window_mag_limit(self):
+        test_body = self.body
+        test_body.abs_mag = 22
+        test_body.save()
+
+        expected_start = datetime(2015, 8, 10, 17, 0)
+        expected_end = datetime(2015, 9, 29, 17, 0)
+        obs_window = test_body.compute_obs_window(d=datetime(2015, 7, 1, 17, 0, 0), mag_limit=21)
+        self.assertEqual(obs_window[0], expected_start)
+        self.assertEqual(obs_window[1], expected_end)
+
+    def test_compute_obs_window_fine_spacing(self):
+        test_body = self.body
+        test_body.abs_mag = 19
+        test_body.save()
+
+        expected_start = datetime(2015, 8, 5, 17, 0)
+        expected_end = datetime(2015, 9, 22, 17, 0)
+        d = datetime(2015, 8, 1, 17, 0, 0)
+        obs_window = test_body.compute_obs_window(d, delta_t=1, df=60)
+        print(obs_window)
+        self.assertEqual(obs_window[0], expected_start)
+        self.assertEqual(obs_window[1], expected_end)
+
     def test_return_latest_measurement_no_ingest(self):
         expected_dt = self.body.ingest
         expected_type = 'Ingest Time'

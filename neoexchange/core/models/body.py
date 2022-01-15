@@ -317,18 +317,20 @@ class Body(models.Model):
             # Catch the case where there is no Epoch
             return False
 
-    def compute_obs_window(self, d=None, dbg=False):
+    def compute_obs_window(self, d=None, df=90, delta_t=10, mag_limit=18, sep_limit=45, dbg=False):
         """
         Compute rough window during which target may be observable based on when it is brighter than a
-        given mag_limit amd further from the sun than sep_limit.
+        given mag_limit amd further from the sun than sep_limit. Optional
+        parameters are:
+        * df (default: 90; days to look forward)
+        * delta_t (default: 10; size of steps in days)
+        * mag_limit (default: 20)
+        * sep_limit (default: 45; degrees away from Sun)
         """
         if not isinstance(d, datetime):
             d = datetime.utcnow()
         d0 = d
-        df = 90  # days to look forward
-        delta_t = 10  # size of steps in days
-        mag_limit = 18
-        sep_limit = 45  # degrees away from Sun
+
         i = 0
         dstart = ''
         dend = ''
