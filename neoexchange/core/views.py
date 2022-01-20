@@ -3568,9 +3568,11 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False, desired_c
         logger.error("Bad header for %s (%s)" % (catfile, e))
         return -1, num_new_frames_created
 
+    # Downgrade check on bad fit to a logged warning as we're seeing a fair
+    # number of instances where BANZAI fails but we can solve succesfully
     if header.get('astrometric_fit_status', None) != 0:
-        logger.error("Bad astrometric fit found")
-        return -1, num_new_frames_created
+        logger.warning("Bad astrometric fit found in %s", catfile)
+    # return -1, num_new_frames_created
 
     # Check catalog type
     if cattype != 'BANZAI':
