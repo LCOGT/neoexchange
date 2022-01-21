@@ -754,7 +754,7 @@ class TestSubmitBlockToScheduler(TestCase):
                            'dither_distance': 10,
                            'add_dither': False,
                            'fractional_rate': 0.5,
-                           'target_speed': 10,
+                           'speed': 10,
                            }
 
         self.maxDiff = None
@@ -4989,10 +4989,158 @@ class TestMakeconfiguration(TestCase):
         self.assertEqual(expected_configuration, configuration)
 
 
+class TestGetExposureBins(TestCase):
+
+    def setUp(self):
+        b_params = {'provisional_name': 'N999r0q',
+                    'abs_mag': 21.0,
+                    'slope': 0.15,
+                    'epochofel': datetime(2015, 3, 19, 00, 00, 00),
+                    'meananom': 325.2636,
+                    'argofperih': 85.19251,
+                    'longascnode': 147.81325,
+                    'orbinc': 8.34739,
+                    'eccentricity': 0.1896865,
+                    'meandist': 1.2176312,
+                    'source_type': 'U',
+                    'elements_type': 'MPC_MINOR_PLANET',
+                    'active': True,
+                    'origin': 'M',
+                    }
+        self.body, created = Body.objects.get_or_create(**b_params)
+        self.body_elements = model_to_dict(self.body)
+        self.body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+        self.body_elements['current_name'] = self.body.current_name()
+        self.body_elements['v_mag'] = 16.6777676
+
+        self.params_1m0_imaging = configure_defaults({ 'site_code': 'K92',
+                                                       'exp_time': 60.0,
+                                                       'exp_count': 10,
+                                                       'slot_length': 16,
+                                                       'filter_pattern': 'w',
+                                                       'target': make_moving_target(self.body_elements, 0.5),
+                                                       'add_dither': False,
+                                                       'target_speed': 10,
+                                                       'constraints': {
+                                                         'max_airmass': 2.0,
+                                                         'min_lunar_distance': 30.0
+                                                       }})
+
+        self.params_2m0_imaging = configure_defaults({'site_code': 'F65',
+                                                      'exp_time': 60.0,
+                                                      'exp_count': 10,
+                                                      'filter_pattern': 'solar',
+                                                      'target': make_moving_target(self.body_elements, 0.5),
+                                                      'muscat_exp_times': {'gp_explength': 60,
+                                                                           'rp_explength': 30,
+                                                                           'ip_explength': 30,
+                                                                           'zp_explength': 60,
+                                                                           },
+                                                      'muscat_sync': True,
+                                                      'add_dither': False,
+                                                      'constraints': {
+                                                        'max_airmass': 2.0,
+                                                        'min_lunar_distance': 30.0
+                                                      }})
+
+    def test_exposure_bins_long_block(self):
+        params = self.params_1m0_imaging
+        params['exp_count'] = 145
+        params['speed'] = 25
+
+        expected_exp_list = [21, 21, 21, 21, 21, 20, 20]
+        self.assertEqual(sum(expected_exp_list), 145)
+
+        exp_count_list = get_exposure_bins(params)
+
+        self.assertEqual(expected_exp_list, exp_count_list)
+
+    def test_exposure_bins_binned(self):
+        params = self.params_1m0_imaging
+        params['exp_time'] = 15
+        params['exp_count'] = 55
+        params['speed'] = 18.43
+        params['bin_mode'] = '2k_2x2'
+
+        expected_exp_list = [28, 27]
+        self.assertEqual(sum(expected_exp_list), 55)
+
+        exp_count_list = get_exposure_bins(params)
+
+        self.assertEqual(expected_exp_list, exp_count_list)
+
+    def test_exposure_bins_short_block(self):
+        params = self.params_1m0_imaging
+        params['exp_count'] = 10
+        params['speed'] = 25
+
+        expected_exp_list = [10]
+
+        exp_count_list = get_exposure_bins(params)
+
+        self.assertEqual(expected_exp_list, exp_count_list)
+
+    def test_exposure_bin_slow_block(self):
+        params = self.params_1m0_imaging
+        params['exp_count'] = 100
+        params['speed'] = 2
+
+        expected_exp_list = [100]
+
+        exp_count_list = get_exposure_bins(params)
+
+        self.assertEqual(expected_exp_list, exp_count_list)
+
+    def test_exposure_bin_full_tracking(self):
+        params = self.params_1m0_imaging
+        params['exp_count'] = 100
+        params['slot_length'] = 147
+        params['fractional_rate'] = 1
+        params['speed'] = 24
+
+        expected_exp_list = None
+
+        exp_count_list = get_exposure_bins(params)
+
+        self.assertEqual(expected_exp_list, exp_count_list)
+
+    def test_exposure_bin_2m0(self):
+        params = self.params_2m0_imaging
+        params['exp_count'] = 25
+        params['speed'] = 25
+
+        expected_exp_list = [9, 8, 8]
+
+        exp_count_list = get_exposure_bins(params)
+
+        self.assertEqual(expected_exp_list, exp_count_list)
+
+
 class TestMakeconfigurations(TestCase):
 
     def setUp(self):
         self.target = {'type': 'ICRS', 'name': 'SA107-684', 'ra': 234.3, 'dec': -0.16}
+
+        b_params = {'provisional_name': 'N999r0q',
+                    'abs_mag': 21.0,
+                    'slope': 0.15,
+                    'epochofel': datetime(2015, 3, 19, 00, 00, 00),
+                    'meananom': 325.2636,
+                    'argofperih': 85.19251,
+                    'longascnode': 147.81325,
+                    'orbinc': 8.34739,
+                    'eccentricity': 0.1896865,
+                    'meandist': 1.2176312,
+                    'source_type': 'U',
+                    'elements_type': 'MPC_MINOR_PLANET',
+                    'active': True,
+                    'origin': 'M',
+                    }
+        self.body, created = Body.objects.get_or_create(**b_params)
+        self.body_elements = model_to_dict(self.body)
+        self.body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+        self.body_elements['current_name'] = self.body.current_name()
+        self.body_elements['v_mag'] = 16.6777676
 
         self.params_2m0_imaging = configure_defaults({'site_code': 'F65',
                                                       'exp_time': 60.0,
@@ -5063,6 +5211,21 @@ class TestMakeconfigurations(TestCase):
         expected_type = 'EXPOSE'
 
         configurations = make_configs(self.params_1m0_imaging)
+
+        self.assertEqual(expected_num_configurations, len(configurations))
+        self.assertEqual(expected_type, configurations[0]['type'])
+
+    def test_1m_longblock_imaging(self):
+        params = self.params_1m0_imaging
+        params['exp_count'] = 65
+        params['slot_length'] = 120*60
+        params['speed'] = 25
+        params['target'] = make_moving_target(self.body_elements, 0.5)
+
+        expected_num_configurations = 4
+        expected_type = 'REPEAT_EXPOSE'
+
+        configurations = make_configs(params)
 
         self.assertEqual(expected_num_configurations, len(configurations))
         self.assertEqual(expected_type, configurations[0]['type'])

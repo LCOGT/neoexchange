@@ -1052,10 +1052,10 @@ class ScheduleCalibSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
             return self.form_invalid(form, request)
 
     def form_valid(self, form, request):
+        # Recalculate the parameters by amending the block length
+        data = schedule_check(form.cleaned_data, self.object)
+        new_form = ScheduleBlockForm(data)
         if 'edit' in request.POST:
-            # Recalculate the parameters by amending the block length
-            data = schedule_check(form.cleaned_data, self.object)
-            new_form = ScheduleBlockForm(data)
             return render(request, self.template_name, {'form': new_form, 'data': data, 'calibrator': self.object})
         elif 'submit' in request.POST:
             target = self.get_object()
@@ -1692,8 +1692,8 @@ def schedule_submit(data, body, username):
               'ag_exp_time': data.get('ag_exp_time', 10),
               'dither_distance': data.get('dither_distance', 10),
               'add_dither': data.get('add_dither', False),
-              'fractional_rate': data.get('fractional_rate', 0.5),
-              'target_speed': data.get('speed', 0)
+              'fractional_rate': float(data.get('fractional_rate', 0.5)),
+              'speed': data.get('speed', 0)
               }
     if data['period'] or data['jitter']:
         params['period'] = data['period']

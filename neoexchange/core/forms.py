@@ -236,11 +236,19 @@ class ScheduleBlockForm(forms.Form):
     add_dither = forms.BooleanField(initial=False, required=False, widget=forms.CheckboxInput(attrs={'class': 'dither-switch'}))
     dither_distance = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     fractional_rate = forms.ChoiceField(required=False, choices=RATE_OPTIONS)
+    speed = forms.FloatField(widget=forms.HiddenInput(), required=False)
     gp_explength = forms.FloatField(required=False, widget=forms.NumberInput(attrs={'size': '5'}))
     rp_explength = forms.FloatField(required=False, widget=forms.NumberInput(attrs={'size': '5'}))
     ip_explength = forms.FloatField(required=False, widget=forms.NumberInput(attrs={'size': '5'}))
     zp_explength = forms.FloatField(required=False, widget=forms.NumberInput(attrs={'size': '5'}))
     muscat_sync = forms.BooleanField(initial=False, required=False)
+
+    def clean_fractional_rate(self):
+        """Ensure Float"""
+        try:
+            return float(self.cleaned_data['fractional_rate'])
+        except ValueError:
+            return 0.5
 
     def clean_dither_distance(self):
         """Limit dither distance to values between 0 and 60 arcsec."""

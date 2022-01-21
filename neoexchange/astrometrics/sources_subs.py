@@ -24,7 +24,7 @@ from urllib.parse import urljoin
 import imaplib
 import email
 from re import sub, compile
-from math import degrees, sqrt, copysign
+from math import degrees, sqrt, copysign, ceil
 from time import sleep
 from datetime import date, datetime, timedelta
 from socket import error, timeout
@@ -1581,6 +1581,7 @@ def fetch_yarkovsky_targets_ftp(file_or_url=None):
 
     return targets
 
+
 def fetch_sfu(page=None):
     """Fetches the solar radio flux from the Solar Radio Monitoring
     Program run by National Research Council and Natural Resources Canada.
@@ -1670,7 +1671,7 @@ def make_target(params):
     return target
 
 
-def make_moving_target(elements):
+def make_moving_target(elements, fractional_rate=None):
     """Make a target dictionary for the request from an element set"""
 
     # Generate initial dictionary of things in common
@@ -1695,6 +1696,8 @@ def make_moving_target(elements):
         target['meananom'] = elements['meananom']
     if 'v_mag' in elements:
         target['extra_params']['v_magnitude'] = round(elements['v_mag'], 2)
+    if fractional_rate is not None:
+        target['extra_params']['fractional_ephemeris_rate'] = fractional_rate
 
     return target
 
@@ -1711,6 +1714,47 @@ def make_window(params):
              }
 
     return window
+
+
+def get_exposure_bins(params):
+    target_speed = params.get('speed', 0)
+    fractional_rate = params.get('fractional_rate', 0.5)
+    relative_speed = (1.0 - fractional_rate) * target_speed
+    if not relative_speed:
+        return None
+    sitecam = get_sitecam_params(params['site_code'], params.get('bin_mode', None))
+    fov = sitecam['fov']
+    exp_overhead = sitecam['exp_overhead']
+    exp_time = params['exp_time']
+    exp_count = params['exp_count']
+    total_exp_time = exp_time + exp_overhead
+    target_travel_limit_arcsec = fov / 4 * 60
+    arcsec_per_exposure = relative_speed * (total_exp_time / 60)
+    exposures_per_limit = target_travel_limit_arcsec / arcsec_per_exposure
+    number_of_configs = int(exp_count // exposures_per_limit) + 1
+    exp_count_list = [int(exp_count // number_of_configs)] * number_of_configs
+    overflow_frames = int(exp_count % number_of_configs)
+    exp_count_list[:overflow_frames] = (i+1 for i in exp_count_list[:overflow_frames])
+    slot_length_list = [ceil((ecount * total_exp_time) / 60) for ecount in exp_count_list]
+    return exp_count_list
+
+
+def split_configs(configs, params):
+    exposure_bins = get_exposure_bins(params)
+    new_configs = []
+    if exposure_bins and len(exposure_bins) > 1:
+        total_count = sum(exposure_bins)
+        for ex_bin in exposure_bins:
+            new_config = configs[0].copy()
+            if new_config['type'] == 'REPEAT_EXPOSE':
+
+                new_config['repeat_duration'] = ceil(ex_bin / total_count * configs[0]['repeat_duration'])
+            else:
+                new_config['instrument_configs'][0]['exposure_count'] = ex_bin
+            new_configs.append(new_config)
+        return new_configs
+
+    return configs
 
 
 def make_config(params, filter_list):
@@ -1882,6 +1926,7 @@ def make_configs(params):
             configs = [spectrum_molecule, ]
     else:
         configs = [make_config(params, filt_list)]
+        configs = split_configs(configs, params)
 
     return configs
 
@@ -2082,7 +2127,8 @@ def make_requestgroup(elements, params):
 # Create Target (pointing)
     if len(elements) > 0:
         logger.debug("Making a moving object")
-        params['target'] = make_moving_target(elements)
+        fractional_rate = params.get('fractional_rate')
+        params['target'] = make_moving_target(elements, fractional_rate)
         if 'sky_pa' in elements and params['para_angle'] is False:
             params['rot_mode'] = 'SKY'
             params['rot_angle'] = round(elements['sky_pa'], 1)

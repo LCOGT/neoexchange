@@ -1945,12 +1945,12 @@ def get_sitecam_params(site, bin_mode=None):
         fov = cfg.tel_field['twom_floyds_fov']
         max_exp_length = 3600.0
         alt_limit = cfg.tel_alt['twom_alt_limit']
-        setup_overhead = { 'front_padding' : cfg.tel_overhead['twom_setup_overhead'],
-                           'config_change_time' : cfg.inst_overhead['floyds_config_change_overhead'],
-                           'acquire_processing_time' : cfg.inst_overhead['floyds_acq_proc_overhead'],
-                           'acquire_exposure_time': cfg.inst_overhead['floyds_acq_exp_time'],
-                           'per_molecule_time' : cfg.molecule_overhead['per_molecule_time'],
-                           'calib_exposure_time' : cfg.inst_overhead['floyds_calib_exp_time']
+        setup_overhead = {'front_padding': cfg.tel_overhead['twom_setup_overhead'],
+                          'config_change_time': cfg.inst_overhead['floyds_config_change_overhead'],
+                          'acquire_processing_time': cfg.inst_overhead['floyds_acq_proc_overhead'],
+                          'acquire_exposure_time': cfg.inst_overhead['floyds_acq_exp_time'],
+                          'per_molecule_time': cfg.molecule_overhead['per_molecule_time'],
+                          'calib_exposure_time': cfg.inst_overhead['floyds_calib_exp_time']
                          }
     elif site in valid_point4m_codes:
         site_code = site
