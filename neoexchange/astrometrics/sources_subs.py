@@ -1717,6 +1717,12 @@ def make_window(params):
 
 
 def get_exposure_bins(params):
+    """
+    Break the exposure count into bins each containing the number of exposures (with overheads) possible before the
+    target leaves the central quarter of the FOV.
+    :param params: list of observation parameters
+    :return: exp_count_list
+    """
     target_speed = params.get('speed', 0)
     fractional_rate = params.get('fractional_rate', 0.5)
     relative_speed = (1.0 - fractional_rate) * target_speed
@@ -1735,23 +1741,68 @@ def get_exposure_bins(params):
     exp_count_list = [int(exp_count // number_of_configs)] * number_of_configs
     overflow_frames = int(exp_count % number_of_configs)
     exp_count_list[:overflow_frames] = (i+1 for i in exp_count_list[:overflow_frames])
-    slot_length_list = [ceil((ecount * total_exp_time) / 60) for ecount in exp_count_list]
     return exp_count_list
 
 
+def instrument_config_generator(inst_configs):
+    """
+    Infinitely cycle through a list of Instrument configurations.
+    :param inst_configs: List of instrument configurations
+    :return iconfig: individual instrument configuration
+    """
+    while True:
+        for iconfig in inst_configs:
+            yield iconfig
+
+
+def split_inst_configs(exposure_bins, inst_configs):
+    """
+    Split the instrument configurations so that one configuration picks up where the previous configuration left off.
+    Will not subdivide individual Instrument configurations with more than one exposure.
+    :param exposure_bins: list of exposure counts per configuration
+    :param inst_configs: list of instrument configurations for origional configuration
+    :return new_inst_configs_list:
+    """
+    new_inst_configs_list = []
+    exp_counter = 0
+    inst_loop = instrument_config_generator(inst_configs)
+    i_list = []
+    for exp_bin in exposure_bins:
+        for iconfig in inst_loop:
+            if len(i_list) < len(inst_configs):
+                i_list.append(iconfig)
+            exp_counter += iconfig['exposure_count']
+            if exp_counter >= exp_bin:
+                new_inst_configs_list.append(i_list)
+                exp_counter = 0
+                i_list = []
+                break
+
+    return new_inst_configs_list
+
+
 def split_configs(configs, params):
+    """
+    Splits configurations to keep moving target at a fractional ephemeris rate in the central quarter of the FOV.
+    :param configs: observation configuration list
+    :param params: Observation parameters
+    :return new_configs: subdivided configuration list
+    """
     exposure_bins = get_exposure_bins(params)
     new_configs = []
     if exposure_bins and len(exposure_bins) > 1:
+        new_inst_configs_list = split_inst_configs(exposure_bins, configs[0]['instrument_configs'])
         total_count = sum(exposure_bins)
-        for ex_bin in exposure_bins:
+        for i, ex_bin in enumerate(exposure_bins):
             new_config = configs[0].copy()
+            new_config['instrument_configs'] = new_inst_configs_list[i]
             if new_config['type'] == 'REPEAT_EXPOSE':
-
                 new_config['repeat_duration'] = ceil(ex_bin / total_count * configs[0]['repeat_duration'])
-            else:
+            elif len(new_config['instrument_configs']) == 1:
                 new_config['instrument_configs'][0]['exposure_count'] = ex_bin
+
             new_configs.append(new_config)
+
         return new_configs
 
     return configs

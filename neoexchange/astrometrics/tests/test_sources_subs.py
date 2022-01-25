@@ -744,7 +744,7 @@ class TestSubmitBlockToScheduler(TestCase):
         self.obs_params = {'proposal_id': 'LCO2015A-009',
                            'exp_count': 18,
                            'exp_time': 50.0,
-                           'slot_length': 30,
+                           'slot_length': 30 * 60,
                            'site_code': site_code,
                            'start_time': dark_start,
                            'end_time': dark_end,
@@ -754,7 +754,7 @@ class TestSubmitBlockToScheduler(TestCase):
                            'dither_distance': 10,
                            'add_dither': False,
                            'fractional_rate': 0.5,
-                           'speed': 10,
+                           'speed': 20,
                            }
 
         self.maxDiff = None
@@ -1223,21 +1223,25 @@ class TestSubmitBlockToScheduler(TestCase):
 
         params = self.obs_params
         params['filter_pattern'] = 'V,V,R,R,I,I'
-        params['exp_count'] = 70
+        params['exp_count'] = 75
 
         user_request = make_requestgroup(self.body_elements, params)
         configurations = user_request.get('requests')[0].get('configurations')
         inst_configs = configurations[0].get('instrument_configs')
 
-        expected_configuration_num = 1
+        expected_configuration_num = 3
         expected_inst_config_num = 3
         expected_exp_count = 2
-        expected_filter = 'I'
+        expected_filter0 = 'I'
+        expected_filter1 = 'V'
+        expected_filter2 = 'R'
 
         self.assertEqual(len(configurations), expected_configuration_num)
         self.assertEqual(len(inst_configs), expected_inst_config_num)
         self.assertEqual(inst_configs[2]['exposure_count'], expected_exp_count)
-        self.assertEqual(inst_configs[2]['optical_elements']['filter'], expected_filter)
+        self.assertEqual(inst_configs[2]['optical_elements']['filter'], expected_filter0)
+        self.assertEqual(configurations[1]['instrument_configs'][2]['optical_elements']['filter'], expected_filter1)
+        self.assertEqual(configurations[2]['instrument_configs'][2]['optical_elements']['filter'], expected_filter2)
 
     def test_uneven_filter_requestgroup(self):
 
@@ -1249,7 +1253,7 @@ class TestSubmitBlockToScheduler(TestCase):
         configurations = user_request.get('requests')[0].get('configurations')
         inst_configs = configurations[0].get('instrument_configs')
 
-        expected_configuration_num = 1
+        expected_configuration_num = 2
         expected_inst_config_num = 3
         expected_exp_count = 1
         expected_filter = 'I'
@@ -1367,14 +1371,20 @@ class TestSubmitBlockToScheduler(TestCase):
         inst_configs = configurations[0].get('instrument_configs')
 
         expected_inst_config_num = 3
-        expected_configuration_num = 1
+        expected_configuration_num = 3
         expected_exp_count = 3
-        expected_filter = 'V'
+        expected_filter0 = 'V'
+        expected_filter1 = 'I'
+        expected_filter2 = 'V'
+        expected_repeat_duration = 577
 
         self.assertEqual(len(configurations), expected_configuration_num)
         self.assertEqual(len(inst_configs), expected_inst_config_num)
         self.assertEqual(inst_configs[0]['exposure_count'], expected_exp_count)
-        self.assertEqual(inst_configs[0]['optical_elements']['filter'], expected_filter)
+        self.assertEqual(configurations[0]['instrument_configs'][0]['optical_elements']['filter'], expected_filter0)
+        self.assertEqual(configurations[1]['instrument_configs'][0]['optical_elements']['filter'], expected_filter1)
+        self.assertEqual(configurations[2]['instrument_configs'][0]['optical_elements']['filter'], expected_filter2)
+        self.assertEqual(configurations[0]['repeat_duration'], expected_repeat_duration)
 
     @patch('astrometrics.sources_subs.expand_cadence', mock_expand_cadence_novis)
     @patch('astrometrics.sources_subs.requests.post')
@@ -1388,8 +1398,8 @@ class TestSubmitBlockToScheduler(TestCase):
         body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
         body_elements['current_name'] = self.body.current_name()
         params = self.obs_params
-        params['start_time'] = datetime(2021,1,27,0,0,0)
-        params['end_time'] = datetime(2021,2,27,23,59,59)
+        params['start_time'] = datetime(2021, 1, 27, 0, 0, 0)
+        params['end_time'] = datetime(2021, 2, 27, 23, 59, 59)
         params['period'] = 72.0
         params['jitter'] = 24.0
 
@@ -5279,27 +5289,32 @@ class TestMakeconfigurations(TestCase):
 
     def test_longblock_dithering(self):
 
-        expected_num_configurations = 1
+        expected_num_configurations = 5
         expected_type = 'EXPOSE'
-        expected_num_inst_configurations = 100
+        expected_num_inst_configurations = 20
         expected_exp_num = 1
         params = self.params_1m0_imaging
         params['dither_distance'] = 20
         params['add_dither'] = True
         params['exp_count'] = 100
+        params['target'] = make_moving_target(self.body_elements, 0.5)
+        params['speed'] = 25
 
         configurations = make_configs(params)
 
         self.assertEqual(expected_num_configurations, len(configurations))
         self.assertEqual(expected_type, configurations[0]['type'])
 
-        inst_configs = configurations[0]['instrument_configs']
-        self.assertEqual(expected_num_inst_configurations, len(inst_configs))
-        self.assertEqual(inst_configs[0]['exposure_count'], expected_exp_num)
-        self.assertEqual(inst_configs[0]['extra_params'], {'offset_ra': 0.0, 'offset_dec': 0.0})
-        self.assertEqual(inst_configs[6]['extra_params'], {'offset_ra': -20.0, 'offset_dec': -20.0})
-        self.assertEqual(inst_configs[30]['extra_params'], {'offset_ra': 60.0, 'offset_dec': 60.0})
-        self.assertEqual(inst_configs[91]['extra_params'], {'offset_ra': 20.0, 'offset_dec': 0.0})
+        inst_configs0 = configurations[0]['instrument_configs']
+        inst_configs1 = configurations[1]['instrument_configs']
+        inst_configs4 = configurations[4]['instrument_configs']
+
+        self.assertEqual(expected_num_inst_configurations, len(inst_configs0))
+        self.assertEqual(inst_configs0[0]['exposure_count'], expected_exp_num)
+        self.assertEqual(inst_configs0[0]['extra_params'], {'offset_ra': 0.0, 'offset_dec': 0.0})
+        self.assertEqual(inst_configs0[6]['extra_params'], {'offset_ra': -20.0, 'offset_dec': -20.0})
+        self.assertEqual(inst_configs1[10]['extra_params'], {'offset_ra': 60.0, 'offset_dec': 60.0})
+        self.assertEqual(inst_configs4[11]['extra_params'], {'offset_ra': 20.0, 'offset_dec': 0.0})
 
     def test_muscat_dithering(self):
 
