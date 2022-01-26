@@ -964,29 +964,29 @@ class TestRecordBlock(TestCase):
     def setUp(self):
 
         self.spectro_tracknum = '606083'
-        self.spectro_params = {
-                              'binning': 1,
-                              'block_duration': 988.0,
-                              'calibs': 'both',
-                              'end_time': datetime(2018, 3, 16, 18, 50),
-                              'exp_count': 1,
-                              'exp_time': 180.0,
-                              'exp_type': 'SPECTRUM',
-                              'group_name': '4_E10-20180316_spectra',
-                              'instrument': '2M0-FLOYDS-SCICAM',
-                              'instrument_code': 'E10-FLOYDS',
-                              'observatory': '',
-                              'pondtelescope': '2m0',
-                              'proposal_id': 'LCO2019A-001',
-                              'request_numbers': {1450339: 'NON_SIDEREAL'},
-                              'request_windows': [[{'end': '2018-03-16T18:30:00',
-                                 'start': '2018-03-16T11:20:00'}]],
-                              'site': 'COJ',
-                              'site_code': 'E10',
-                              'spectra_slit': 'slit_6.0as',
-                              'spectroscopy': True,
-                              'start_time': datetime(2018, 3, 16, 9, 20),
-                              'user_id': 'tlister@lcogt.net'}
+        self.spectro_params = {'binning': 1,
+                               'block_duration': 988.0,
+                               'calibs': 'both',
+                               'end_time': datetime(2018, 3, 16, 18, 50),
+                               'exp_count': 1,
+                               'exp_time': 180.0,
+                               'exp_type': 'SPECTRUM',
+                               'fractional_rate': 1.0,
+                               'group_name': '4_E10-20180316_spectra',
+                               'instrument': '2M0-FLOYDS-SCICAM',
+                               'instrument_code': 'E10-FLOYDS',
+                               'observatory': '',
+                               'pondtelescope': '2m0',
+                               'proposal_id': 'LCO2019A-001',
+                               'request_numbers': {1450339: 'NON_SIDEREAL'},
+                               'request_windows': [[{'end': '2018-03-16T18:30:00',
+                                                     'start': '2018-03-16T11:20:00'}]],
+                               'site': 'COJ',
+                               'site_code': 'E10',
+                               'spectra_slit': 'slit_6.0as',
+                               'spectroscopy': True,
+                               'start_time': datetime(2018, 3, 16, 9, 20),
+                               'user_id': 'tlister@lcogt.net'}
 
         self.spectro_form = { 'start_time' : self.spectro_params['start_time'],
                               'end_time' : self.spectro_params['end_time'],
@@ -1006,25 +1006,25 @@ class TestRecordBlock(TestCase):
         self.proposal_tc = Proposal.objects.create(**proposal_params)
 
         self.imaging_tracknum = '576013'
-        self.imaging_params = {
-                              'binning': 1,
-                              'block_duration': 1068.0,
-                              'end_time': datetime(2018, 3, 16, 3, 50),
-                              'exp_count': 12,
-                              'exp_time': 42.0,
-                              'exp_type': 'EXPOSE',
-                              'group_name': 'N999r0q_K91-20180316',
-                              'instrument': '1M0-SCICAM-SINISTRO',
-                              'observatory': '',
-                              'pondtelescope': '1m0',
-                              'proposal_id': 'LCO2019A-001',
-                              'request_numbers': {1440123: 'NON_SIDEREAL'},
-                              'request_windows': [[{'end': '2018-03-16T03:30:00.600000Z',
-                                 'start': '2018-03-15T20:20:00.400000Z'}]],
-                              'site': 'CPT',
-                              'site_code': 'K91',
-                              'start_time': datetime(2018, 3, 15, 18, 20),
-                              'user_id': 'tlister@lcogt.net'}
+        self.imaging_params = {'binning': 1,
+                               'block_duration': 1068.0,
+                               'end_time': datetime(2018, 3, 16, 3, 50),
+                               'exp_count': 12,
+                               'exp_time': 42.0,
+                               'exp_type': 'EXPOSE',
+                               'fractional_rate': 0.5,
+                               'group_name': 'N999r0q_K91-20180316',
+                               'instrument': '1M0-SCICAM-SINISTRO',
+                               'observatory': '',
+                               'pondtelescope': '1m0',
+                               'proposal_id': 'LCO2019A-001',
+                               'request_numbers': {1440123: 'NON_SIDEREAL'},
+                               'request_windows': [[{'end': '2018-03-16T03:30:00.600000Z',
+                                                     'start': '2018-03-15T20:20:00.400000Z'}]],
+                               'site': 'CPT',
+                               'site_code': 'K91',
+                               'start_time': datetime(2018, 3, 15, 18, 20),
+                               'user_id': 'tlister@lcogt.net'}
 
         self.imaging_form = { 'start_time' : self.imaging_params['start_time'],
                               'end_time' : self.imaging_params['end_time'],
@@ -1063,6 +1063,7 @@ class TestRecordBlock(TestCase):
         self.assertEqual(self.spectro_tracknum, sblocks[0].tracking_number)
         self.assertTrue(self.spectro_tracknum != blocks[0].request_number)
         self.assertEqual(self.spectro_params['block_duration'], sblocks[0].timeused)
+        self.assertEqual(blocks[0].tracking_rate, 100)
 
     def test_imaging_block(self):
         block_resp = record_block(self.imaging_tracknum, self.imaging_params, self.imaging_form, self.imaging_body)
@@ -1083,6 +1084,7 @@ class TestRecordBlock(TestCase):
         self.assertTrue(self.imaging_tracknum != blocks[0].request_number)
         self.assertEqual(self.imaging_params['block_duration'], sblocks[0].timeused)
         self.assertEqual(False, sblocks[0].rapid_response)
+        self.assertEqual(blocks[0].tracking_rate, 50)
 
     def test_imaging_block_rr_proposal(self):
         imaging_params = self.imaging_params

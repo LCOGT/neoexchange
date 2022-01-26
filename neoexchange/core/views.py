@@ -2303,9 +2303,11 @@ def record_block(tracking_number, params, form_data, target):
             if request_type == 'SIDEREAL' or request_type == 'ICRS':
                 block_kwargs['body'] = None
                 block_kwargs['calibsource'] = target
+                block_kwargs['tracking_rate'] = 0
             else:
                 block_kwargs['body'] = target
                 block_kwargs['calibsource'] = None
+                block_kwargs['tracking_rate'] = int(params['fractional_rate'] * 100)
             pk = Block.objects.create(**block_kwargs)
 
             if len(params.get('calibsource', {})) > 0:
