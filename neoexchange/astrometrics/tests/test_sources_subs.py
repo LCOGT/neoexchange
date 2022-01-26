@@ -899,7 +899,8 @@ class TestSubmitBlockToScheduler(TestCase):
                   'group_name': body_elements['current_name'] + '_' + 'ogg' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                   'user_id': 'bsimpson',
                   'spectroscopy': True,
-                  'spectra_slit': 'slit_6.0as'
+                  'spectra_slit': 'slit_6.0as',
+                  'fractional_rate': 1
                   }
 
         resp, sched_params = submit_block_to_scheduler(body_elements, params)
@@ -957,7 +958,8 @@ class TestSubmitBlockToScheduler(TestCase):
                   'calibsource': {'id': 1, 'name': 'SA107-684', 'ra_deg': 234.3, 'dec_deg': -0.16, 'calib_exptime': 60},
                   'calibsrc_exptime': 60,
                   'spectroscopy': True,
-                  'spectra_slit': 'slit_6.0as'
+                  'spectra_slit': 'slit_6.0as',
+                  'fractional_rate': 1
                   }
 
         resp, sched_params = submit_block_to_scheduler(body_elements, params)

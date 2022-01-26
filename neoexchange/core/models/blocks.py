@@ -48,13 +48,6 @@ SITE_CHOICES = (
                     ('spc', 'Spectral cameras')
     )
 
-RATE_CHOICES = (
-                    (100, 'Target Tracking'),
-                    (50, 'Half-Rate Tracking'),
-                    (0, 'Sidereal Tracking'),
-                    (-99, 'Non-Standard Tracking')
-    )
-
 
 class SuperBlock(models.Model):
 
@@ -179,6 +172,13 @@ class SuperBlock(models.Model):
 
 
 class Block(models.Model):
+
+    RATE_CHOICES = (
+        (100, 'Target Tracking'),
+        (50, 'Half-Rate Tracking'),
+        (0, 'Sidereal Tracking'),
+        (-99, 'Non-Standard Tracking')
+    )
 
     OPT_IMAGING = 0
     OPT_SPECTRA = 1
