@@ -5128,6 +5128,83 @@ class TestGetExposureBins(TestCase):
         self.assertEqual(expected_exp_list, exp_count_list)
 
 
+class TestSplitInstConfigs(TestCase):
+
+    def setUp(self):
+        self.inst_config = {'exposure_count': 1,
+                            'exposure_time': 60.0,
+                            'optical_elements': {'filter': 'w'},
+                            'extra_params': {}
+                            }
+
+    def test_split_high_exposure_count(self):
+        exp_bins = [21, 21, 21, 21, 21, 20, 20]
+        inst_configs = [self.inst_config]
+        inst_configs[0]['exposure_count'] = 145
+
+        inst_list = split_inst_configs(exp_bins, inst_configs)
+
+        self.assertEqual(len(inst_list), len(exp_bins))
+        for inst in inst_list:
+            self.assertEqual(len(inst), 1)
+
+    def test_split_filters(self):
+        exp_bins = [22, 22, 21, 21]
+        inst_configs = []
+        ic = self.inst_config
+        filter_list = ['V', 'B', 'R', 'I']
+        for f in filter_list:
+            ic['optical_elements']['filter'] = f
+            inst_configs.append(deepcopy(ic))
+
+        inst_list = split_inst_configs(exp_bins, inst_configs)
+
+        expected_first_filter = ['V', 'R', 'V', 'B']
+
+        self.assertEqual(len(inst_list), len(exp_bins))
+        for k, inst in enumerate(inst_list):
+            self.assertEqual(len(inst), 4)
+            self.assertEqual(inst[0]['optical_elements']['filter'], expected_first_filter[k])
+
+    def test_split_doublefilters(self):
+        exp_bins = [22, 22, 21, 21]
+        inst_configs = []
+        ic = self.inst_config
+        ic['exposure_count'] = 2
+        filter_list = ['V', 'B', 'R', 'I']
+        for f in filter_list:
+            ic['optical_elements']['filter'] = f
+            inst_configs.append(deepcopy(ic))
+
+        inst_list = split_inst_configs(exp_bins, inst_configs)
+
+        expected_first_filter = ['V', 'I', 'R', 'B']
+
+        self.assertEqual(len(inst_list), len(exp_bins))
+        for k, inst in enumerate(inst_list):
+            self.assertEqual(len(inst), 4)
+            self.assertEqual(inst[0]['optical_elements']['filter'], expected_first_filter[k])
+
+    def test_split_longfilters(self):
+        exp_bins = [22, 22, 21, 21, 21]
+        inst_configs = []
+        ic = self.inst_config
+        ic['exposure_count'] = 25
+        filter_list = ['V', 'B', 'R', 'I']
+        for f in filter_list:
+            ic['optical_elements']['filter'] = f
+            inst_configs.append(deepcopy(ic))
+
+        inst_list = split_inst_configs(exp_bins, inst_configs)
+
+        expected_first_filter = ['V', 'B', 'R', 'I', 'V']
+
+        self.assertEqual(len(inst_list), len(exp_bins))
+        for k, inst in enumerate(inst_list):
+            self.assertEqual(len(inst), 1)
+            self.assertEqual(inst[0]['optical_elements']['filter'], expected_first_filter[k])
+
+
 class TestMakeconfigurations(TestCase):
 
     def setUp(self):
