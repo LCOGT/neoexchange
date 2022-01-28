@@ -1738,7 +1738,7 @@ def get_exposure_bins(params):
     arcsec_per_exposure = relative_speed * (total_exp_time / 60)
     exposures_per_limit = target_travel_limit_arcsec / arcsec_per_exposure
     number_of_configs = int(exp_count // exposures_per_limit) + 1
-    exp_count_list = [int(exp_count // number_of_configs)] * number_of_configs
+    exp_count_list = [int(exp_count // number_of_configs)] * min(number_of_configs, exp_count)
     overflow_frames = int(exp_count % number_of_configs)
     exp_count_list[:overflow_frames] = (i+1 for i in exp_count_list[:overflow_frames])
     return exp_count_list
@@ -1770,7 +1770,7 @@ def split_inst_configs(exposure_bins, inst_configs):
     for exp_bin in exposure_bins:
         for iconfig in inst_loop:
             if len(i_list) < len(inst_configs):
-                i_list.append(iconfig)
+                i_list.append(deepcopy(iconfig))
             exp_counter += iconfig['exposure_count']
             if exp_counter >= exp_bin:
                 new_inst_configs_list.append(i_list)
@@ -1794,7 +1794,7 @@ def split_configs(configs, params):
         new_inst_configs_list = split_inst_configs(exposure_bins, configs[0]['instrument_configs'])
         total_count = sum(exposure_bins)
         for i, ex_bin in enumerate(exposure_bins):
-            new_config = configs[0].copy()
+            new_config = deepcopy(configs[0])
             new_config['instrument_configs'] = new_inst_configs_list[i]
             if new_config['type'] == 'REPEAT_EXPOSE':
                 new_config['repeat_duration'] = ceil(ex_bin / total_count * configs[0]['repeat_duration'])

@@ -20,7 +20,7 @@ from errno import ETIMEDOUT
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from unittest import skipIf
-from math import radians
+from math import radians, ceil
 from copy import deepcopy
 
 import astropy.units as u
@@ -5032,7 +5032,7 @@ class TestGetExposureBins(TestCase):
                                                        'filter_pattern': 'w',
                                                        'target': make_moving_target(self.body_elements, 0.5),
                                                        'add_dither': False,
-                                                       'target_speed': 10,
+                                                       'speed': 10,
                                                        'constraints': {
                                                          'max_airmass': 2.0,
                                                          'min_lunar_distance': 30.0
@@ -5203,6 +5203,283 @@ class TestSplitInstConfigs(TestCase):
         for k, inst in enumerate(inst_list):
             self.assertEqual(len(inst), 1)
             self.assertEqual(inst[0]['optical_elements']['filter'], expected_first_filter[k])
+
+
+class TestSplitConfigs(TestCase):
+
+    def setUp(self):
+        b_params = {'provisional_name': 'N999r0q',
+                    'abs_mag': 21.0,
+                    'slope': 0.15,
+                    'epochofel': datetime(2015, 3, 19, 00, 00, 00),
+                    'meananom': 325.2636,
+                    'argofperih': 85.19251,
+                    'longascnode': 147.81325,
+                    'orbinc': 8.34739,
+                    'eccentricity': 0.1896865,
+                    'meandist': 1.2176312,
+                    'source_type': 'U',
+                    'elements_type': 'MPC_MINOR_PLANET',
+                    'active': True,
+                    'origin': 'M',
+                    }
+        self.body, created = Body.objects.get_or_create(**b_params)
+        self.body_elements = model_to_dict(self.body)
+        self.body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+        self.body_elements['current_name'] = self.body.current_name()
+        self.body_elements['v_mag'] = 16.6777676
+
+        self.params_1m0_imaging = configure_defaults({ 'site_code': 'K92',
+                                                       'exp_time': 60.0,
+                                                       'exp_count': 20,
+                                                       'slot_length': 26*60,
+                                                       'filter_pattern': 'w',
+                                                       'target': make_moving_target(self.body_elements, 0.5),
+                                                       'add_dither': False,
+                                                       'speed': 25,
+                                                       'bin_mode': '2k_2x2',
+                                                       'constraints': {
+                                                         'max_airmass': 2.0,
+                                                         'min_lunar_distance': 30.0
+                                                       }})
+
+        self.params_2m0_imaging = configure_defaults({'site_code': 'F65',
+                                                      'exp_time': 60.0,
+                                                      'exp_count': 10,
+                                                      'filter_pattern': 'solar',
+                                                      'target': make_moving_target(self.body_elements, 0.5),
+                                                      'muscat_exp_times': {'gp_explength': 60,
+                                                                           'rp_explength': 30,
+                                                                           'ip_explength': 30,
+                                                                           'zp_explength': 60,
+                                                                           },
+                                                      'muscat_sync': True,
+                                                      'add_dither': False,
+                                                      'speed': 25,
+                                                      'constraints': {
+                                                        'max_airmass': 2.0,
+                                                        'min_lunar_distance': 30.0
+                                                      }})
+
+        self.configs_1m_repeatexpose = [{'type': 'REPEAT_EXPOSE',
+                                         'instrument_type': '1M0-SCICAM-SINISTRO',
+                                         'target': {'name': 'N999r0q',
+                                                    'type': 'ORBITAL_ELEMENTS',
+                                                    'scheme': 'MPC_MINOR_PLANET',
+                                                    'epochofel': 57100.0,
+                                                    'orbinc': 8.34739,
+                                                    'longascnode': 147.81325,
+                                                    'argofperih': 85.19251,
+                                                    'eccentricity': 0.1896865,
+                                                    'extra_params': {'v_magnitude': 16.68,
+                                                                     'fractional_ephemeris_rate': 0.5},
+                                                    'meandist': 1.2176312,
+                                                    'meananom': 325.2636},
+                                         'constraints': {'max_airmass': 2.0,
+                                                         'min_lunar_distance': 30.0},
+                                         'acquisition_config': {},
+                                         'guiding_config': {},
+                                         'instrument_configs': [{'exposure_count': 1,
+                                                                 'exposure_time': 60.0,
+                                                                 'optical_elements': {'filter': 'w'},
+                                                                 'mode': 'central_2k_2x2',
+                                                                 'extra_params': {}}],
+                                         'repeat_duration': 7091.0}
+                                        ]
+
+        self.configs_2m_muscat = [{'type': 'EXPOSE',
+                                   'instrument_type': '2M0-SCICAM-MUSCAT',
+                                   'target': {'name': 'N999r0q',
+                                              'type': 'ORBITAL_ELEMENTS',
+                                              'scheme': 'MPC_MINOR_PLANET',
+                                              'epochofel': 57100.0,
+                                              'orbinc': 8.34739,
+                                              'longascnode': 147.81325,
+                                              'argofperih': 85.19251,
+                                              'eccentricity': 0.1896865,
+                                              'extra_params': {'v_magnitude': 16.68,
+                                                               'fractional_ephemeris_rate': 0.5},
+                                              'meandist': 1.2176312,
+                                              'meananom': 325.2636},
+                                   'constraints': {'max_airmass': 2.0,
+                                                   'min_lunar_distance': 30.0},
+                                   'acquisition_config': {},
+                                   'guiding_config': {},
+                                   'instrument_configs': [{'exposure_count': 10,
+                                                           'exposure_time': 60.0,
+                                                           'optical_elements': {'diffuser_g_position': 'out',
+                                                                                'diffuser_r_position': 'out',
+                                                                                'diffuser_i_position': 'out',
+                                                                                'diffuser_z_position': 'out'},
+                                                           'extra_params': {'exposure_time_g': 60,
+                                                                            'exposure_time_r': 35,
+                                                                            'exposure_time_i': 35,
+                                                                            'exposure_time_z': 60,
+                                                                            'exposure_mode': 'ASYNCHRONOUS'}
+                                                           }]
+                                   }]
+
+    def test_split_single_config(self):
+        params = self.params_1m0_imaging
+        params['speed'] = 5
+
+        new_configs = split_configs(self.configs_1m_repeatexpose, params)
+
+        self.assertEqual(new_configs, self.configs_1m_repeatexpose)
+
+    def test_split_long_config(self):
+        params = self.params_1m0_imaging
+        params['exp_count'] = 67
+
+        expected_num_configs = 5
+
+        new_configs = split_configs(self.configs_1m_repeatexpose, params)
+
+        self.assertEqual(len(new_configs), expected_num_configs)
+        self.assertEqual(new_configs[0]['instrument_configs'], self.configs_1m_repeatexpose[0]['instrument_configs'])
+        self.assertEqual(new_configs[0]['repeat_duration'], 1482)
+        self.assertEqual(new_configs[4]['repeat_duration'], 1376)
+
+    def test_split_veryfast_config(self):
+        params = self.params_1m0_imaging
+        params['exp_count'] = 12
+        params['speed'] = 350
+
+        expected_num_configs = 12
+
+        new_configs = split_configs(self.configs_1m_repeatexpose, params)
+
+        self.assertEqual(len(new_configs), expected_num_configs)
+        self.assertEqual(new_configs[0]['instrument_configs'], self.configs_1m_repeatexpose[0]['instrument_configs'])
+        self.assertEqual(new_configs[0]['repeat_duration'], ceil(self.configs_1m_repeatexpose[0]['repeat_duration'] / 12))
+        self.assertEqual(new_configs[4]['repeat_duration'], ceil(self.configs_1m_repeatexpose[0]['repeat_duration'] / 12))
+
+    def test_split_short_config(self):
+        params = self.params_1m0_imaging
+        params['exp_count'] = 7
+        params['speed'] = 54
+
+        configs = self.configs_1m_repeatexpose
+        configs[0]['type'] = 'EXPOSE'
+        del configs[0]['repeat_duration']
+        configs[0]['instrument_configs'][0]['exposure_count'] = params['exp_count']
+
+        expected_num_configs = 2
+
+        new_configs = split_configs(configs, params)
+
+        self.assertEqual(len(new_configs), expected_num_configs)
+        for key in new_configs[0]['instrument_configs'][0]:
+            if key != 'exposure_count':
+                self.assertEqual(new_configs[0]['instrument_configs'][0][key], configs[0]['instrument_configs'][0][key])
+            else:
+                self.assertNotEqual(new_configs[0]['instrument_configs'][0][key],
+                                    configs[0]['instrument_configs'][0][key])
+        self.assertNotEqual(new_configs[0]['instrument_configs'][0]['exposure_count'],
+                            new_configs[1]['instrument_configs'][0]['exposure_count'])
+
+    def test_split_multifilter_config(self):
+        params = self.params_1m0_imaging
+        params['exp_count'] = 62
+        params['speed'] = 25
+
+        configs = self.configs_1m_repeatexpose
+        inst_config = configs[0]['instrument_configs'][0]
+        filter_list = ['V', 'R', 'I']
+        configs[0]['instrument_configs'] = []
+        for filt in filter_list:
+            inst_config['optical_elements']['filter'] = filt
+            configs[0]['instrument_configs'].append(deepcopy(inst_config))
+
+        expected_num_configs = 5
+
+        new_configs = split_configs(configs, params)
+
+        self.assertEqual(len(new_configs), expected_num_configs)
+        self.assertEqual(new_configs[0]['instrument_configs'], configs[0]['instrument_configs'])
+        # filter cycles and aren't repeated in this case.
+        self.assertNotEqual(new_configs[2]['instrument_configs'], configs[0]['instrument_configs'])
+        self.assertEqual(new_configs[0]['repeat_duration'], 1487)
+        self.assertEqual(new_configs[4]['repeat_duration'], 1373)
+
+    def test_split_longfilter_config(self):
+        params = self.params_1m0_imaging
+        params['exp_count'] = 45
+        params['speed'] = 25
+
+        configs = self.configs_1m_repeatexpose
+        inst_config = configs[0]['instrument_configs'][0]
+        filter_list = ['V', 'R', 'I']
+        configs[0]['instrument_configs'] = []
+        for filt in filter_list:
+            inst_config['optical_elements']['filter'] = filt
+            inst_config['exposure_count'] = 15
+            configs[0]['instrument_configs'].append(deepcopy(inst_config))
+
+        expected_num_configs = 4
+
+        new_configs = split_configs(configs, params)
+
+        self.assertEqual(len(new_configs), expected_num_configs)
+        self.assertEqual(new_configs[0]['instrument_configs'][0], configs[0]['instrument_configs'][0])
+        self.assertEqual(new_configs[0]['repeat_duration'], 1891)
+        self.assertEqual(new_configs[3]['repeat_duration'], 1734)
+
+    def test_split_exposefilter_config(self):
+        params = self.params_1m0_imaging
+        params['exp_count'] = 9
+        params['speed'] = 150
+
+        configs = self.configs_1m_repeatexpose
+        configs[0]['type'] = 'EXPOSE'
+        del configs[0]['repeat_duration']
+        inst_config = configs[0]['instrument_configs'][0]
+        filter_list = ['V', 'R', 'I']
+        configs[0]['instrument_configs'] = []
+        for filt in filter_list:
+            inst_config['optical_elements']['filter'] = filt
+            inst_config['exposure_count'] = 3
+            configs[0]['instrument_configs'].append(deepcopy(inst_config))
+
+        expected_num_configs = 4
+
+        new_configs = split_configs(configs, params)
+
+        self.assertEqual(len(new_configs), expected_num_configs)
+        self.assertEqual(new_configs[0]['instrument_configs'][0], configs[0]['instrument_configs'][0])
+        self.assertNotEqual(new_configs[2]['instrument_configs'][0], configs[0]['instrument_configs'][2])
+        self.assertEqual(new_configs[2]['instrument_configs'][0]['exposure_count'], 2)
+        self.assertEqual(new_configs[3]['instrument_configs'][0]['optical_elements']['filter'], 'V')
+
+    def test_split_muscat_config(self):
+        params = self.params_2m0_imaging
+
+        configs = self.configs_2m_muscat
+
+        expected_num_configs = 2
+
+        new_configs = split_configs(configs, params)
+
+        self.assertEqual(len(new_configs), expected_num_configs)
+        self.assertEqual(new_configs[0]['instrument_configs'][0]['exposure_count'], 5)
+
+    def test_split_longmuscat_config(self):
+        params = self.params_2m0_imaging
+        params['exp_count'] = 65
+
+        configs = self.configs_2m_muscat
+        configs[0]['type'] = 'REPEAT_EXPOSE'
+        configs[0]['repeat_duration'] = 65 * 80
+        configs[0]['instrument_configs'][0]['exposure_count'] = 1
+
+        expected_num_configs = 7
+
+        new_configs = split_configs(configs, params)
+
+        self.assertEqual(len(new_configs), expected_num_configs)
+        for cfg in new_configs:
+            self.assertEqual(cfg['instrument_configs'][0], configs[0]['instrument_configs'][0])
+            self.assertLess(cfg['repeat_duration'], configs[0]['repeat_duration'])
 
 
 class TestMakeconfigurations(TestCase):
