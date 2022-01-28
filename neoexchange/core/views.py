@@ -2192,9 +2192,16 @@ def update_look_overview_sheet(request):
     # Get LPC targets
     LPC_comets =  Body.objects.filter(origin='O', source_subtype_2='DN').order_by('id')
     params = {}
-    for comet in LPC_comets:
-        blocks = Block.objects.filter(body=comet).order_by('block_start')
-        params[comet] = blocks
+    # for comet in LPC_comets:
+        # blocks = Block.objects.filter(body=comet).order_by('block_start')
+        # params[comet] = blocks
+    # Feels inefficient...
+    while LPC_comets.count() > 0:
+        print(LPC_comets)
+        first_comet = LPC_comets.order_by("block__block_start")[0]
+        blocks = Block.objects.filter(body=first_comet).order_by("block_start")
+        params[first_comet] = blocks
+        LPC_comets = LPC_comets.exclude(id=first_comet.id)
     populate_comet_lines(sheet, params)
 
 

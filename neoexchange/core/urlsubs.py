@@ -237,7 +237,8 @@ def populate_comet_lines(sheet, params):
         index += 1
 
     # Bulk insert all values in a single API call
-    cell_range = "{}:{}".format(rowcol_to_a1(data_start, 1), rowcol_to_a1(index, 45))
+    data_end = index
+    cell_range = "{}:{}".format(rowcol_to_a1(data_start, 1), rowcol_to_a1(data_end, 45))
     sheet.batch_update([{'range' : cell_range, 'values' : all_values}], value_input_option='USER_ENTERED')
     sheet.format(cell_range, text_format)
 
@@ -264,4 +265,17 @@ def populate_comet_lines(sheet, params):
                     in_visblock = False
             col_index += 1
         row_index += 1
+
+    # Add formula in to count visits per semester. First find heading cells
+    regexp = re.compile(r"\w* Total Visits:")
+    semester_cells = sheet.findall(regexp, in_row=1)
+    value_cells = []
+    for cell in semester_cells:
+        cell_range = "{}:{}".format(rowcol_to_a1(data_start, cell.col), rowcol_to_a1(data_end, cell.col+5))
+        # Select cell to the right, update value with formula
+        value_cell = sheet.cell(cell.row, cell.col+1)
+        value_cell.value = "=SUM({})".format(cell_range)
+        value_cells.append(value_cell)
+    sheet.update_cells(value_cells, value_input_option='USER_ENTERED')
+
     return
