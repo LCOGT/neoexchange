@@ -24,6 +24,8 @@ try:
 except:
     pass
 
+from core.urlsubs import get_semester_from_lco_api
+
 logger = logging.getLogger(__name__)
 
 
@@ -88,6 +90,14 @@ def get_semester_dates(date):
 
     return start, end
 
+def get_semester_for_date(date):
+    """Returns the semester code e.g. '2020B' for the passed datetime e.g.
+    datetime(2020,8,1). Uses LCO API call rather than the other
+    time_subs.get_semester_* routines"""
+
+    semester_code = get_semester_from_lco_api(date)
+
+    return semester_code
 
 def parse_neocp_date(neocp_datestr, dbg=False):
     """Parse dates from the NEOCP (e.g. '(Nov. 16.81 UT)' ) into a datetime

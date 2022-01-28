@@ -68,6 +68,25 @@ def get_telescope_states(telstates_url='http://observe.lco.global/api/telescope_
 
     return response
 
+def get_semester_from_lco_api(date):
+    """Uses the LCO API call to return the semester code for the passed datetime
+    <date>
+    """
+
+    url = f"{settings.PORTAL_API_URL:s}semesters"
+    req = requests.models.PreparedRequest()
+    query_params = {'semester_contains' : date.strftime("%Y-%m-%d")}
+    req.prepare_url(url, query_params)
+
+    resp = requests.get(req.url)
+    semester_code = None
+    if resp.status_code in [200,201]:
+        result = resp.json()['results']
+        if len(result) == 1:
+            semester_code = result[0]['id']
+
+    return semester_code
+
 def authenticate_to_gdrive(credentials_file="mycreds.json"):
     gauth = GoogleAuth()
     # Try to load saved client credentials
@@ -134,7 +153,14 @@ def initialize_look_lpc_sheet(sheet):
     end_date = start_date + timedelta(days=(3*365)-1)
     a_month = relativedelta.relativedelta(months=1)
     date = start_date
+    current_semester = get_semester_from_lco_api(start_date-a_month*2)
+
     while date < end_date:
+        semester = get_semester_from_lco_api(date)
+        if semester != current_semester:
+            current_semester = semester
+            sheet.update_cell(1, len(headings)+1, current_semester + " Total Visits:")
+            sheet.update_cell(2, len(headings)+1, "New Additions:")
         headings.append(date.strftime("%B %Y"))
         date += a_month
     sheet.insert_row(headings, 3)
