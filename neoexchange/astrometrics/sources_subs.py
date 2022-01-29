@@ -2178,7 +2178,10 @@ def make_requestgroup(elements, params):
 # Create Target (pointing)
     if len(elements) > 0:
         logger.debug("Making a moving object")
-        fractional_rate = params.get('fractional_rate')
+        if params.get('spectroscopy') is True:
+            fractional_rate = 1
+        else:
+            fractional_rate = params.get('fractional_rate')
         params['target'] = make_moving_target(elements, fractional_rate)
         if 'sky_pa' in elements and params['para_angle'] is False:
             params['rot_mode'] = 'SKY'

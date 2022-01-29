@@ -1050,6 +1050,35 @@ class TestSubmitBlockToScheduler(TestCase):
         self.assertAlmostEqual(user_request['requests'][0]['configurations'][0]['instrument_configs'][0]['extra_params']['rotator_angle'], 107.53, 1)
         self.assertEqual(user_request['requests'][0]['configurations'][0]['instrument_configs'][0]['rotator_mode'], 'SKY')
 
+    def test_make_spectra_requestgroup_with_wrong_rate(self):
+        body_elements = model_to_dict(self.body)
+        body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+        body_elements['current_name'] = self.body.current_name()
+        site_code = 'F65'
+        utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {'proposal_id': 'LCO2015A-009',
+                  'exp_count': 18,
+                  'exp_time': 50.0,
+                  'site_code': site_code,
+                  'start_time': dark_start,
+                  'end_time': dark_end,
+                  'filter_pattern': 'slit_6.0as',
+                  'group_name': body_elements['current_name'] + '_' + 'OGG' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                  'user_id': 'bsimpson',
+                  'spectroscopy': True,
+                  'spectra_slit': 'slit_6.0as',
+                  'para_angle': False,
+                  'fractional_rate': 0.5
+                  }
+
+        body_elements = compute_vmag_pa(body_elements, params)
+        user_request = make_requestgroup(body_elements, params)
+        self.assertAlmostEqual(user_request['requests'][0]['configurations'][0]['target']['extra_params']['v_magnitude'], 20.88, 2)
+        self.assertAlmostEqual(user_request['requests'][0]['configurations'][0]['instrument_configs'][0]['extra_params']['rotator_angle'], 107.53, 1)
+        self.assertEqual(user_request['requests'][0]['configurations'][0]['instrument_configs'][0]['rotator_mode'], 'SKY')
+        self.assertEqual(user_request['requests'][0]['configurations'][0]['target']['extra_params']['fractional_ephemeris_rate'], 1)
+
     def test_1m_sinistro_lsc_doma_requestgroup(self):
 
         site_code = 'W85'
@@ -1438,7 +1467,7 @@ class TestSubmitBlockToScheduler(TestCase):
         expected_groupid = params['group_name'] + '+solstd'
         expected_ast_target = {'name': 'N999r0q', 'type': 'ORBITAL_ELEMENTS', 'scheme': 'MPC_MINOR_PLANET',
                                'epochofel': 57100.0, 'orbinc': 8.34739, 'longascnode': 147.81325,
-                               'argofperih': 85.19251, 'eccentricity': 0.1896865, 'extra_params': {'v_magnitude': 16.68},
+                               'argofperih': 85.19251, 'eccentricity': 0.1896865, 'extra_params': {'v_magnitude': 16.68, 'fractional_ephemeris_rate': 1},
                                'meandist': 1.2176312, 'meananom': 325.2636}
         expected_cal_target = {'type': 'ICRS', 'name': 'SA107-684', 'ra': 234.3254167, 'dec': -0.163889, 'extra_params': {}}
 
@@ -1489,7 +1518,7 @@ class TestSubmitBlockToScheduler(TestCase):
         expected_groupid = params['group_name'] + '+solstd'
         expected_ast_target = {'name': 'N999r0q', 'type': 'ORBITAL_ELEMENTS', 'scheme': 'MPC_MINOR_PLANET',
                                'epochofel': 57100.0, 'orbinc': 8.34739, 'longascnode': 147.81325,
-                               'argofperih': 85.19251, 'eccentricity': 0.1896865, 'extra_params': {'v_magnitude': 16.68},
+                               'argofperih': 85.19251, 'eccentricity': 0.1896865, 'extra_params': {'v_magnitude': 16.68, 'fractional_ephemeris_rate': 1},
                                'meandist': 1.2176312, 'meananom': 325.2636}
         expected_cal_target = {'type': 'ICRS', 'name': 'SA107-684', 'ra': 234.3254167, 'dec': -0.163889, 'extra_params': {}}
 
@@ -1591,7 +1620,7 @@ class TestSubmitBlockToScheduler(TestCase):
         expected_ast_target = {'name': 'N999r0q', 'type': 'ORBITAL_ELEMENTS', 'scheme': 'MPC_MINOR_PLANET',
                                'epochofel': 57100.0, 'orbinc': 8.34739, 'longascnode': 147.81325,
                                'argofperih': 85.19251, 'eccentricity': 0.1896865,
-                               'extra_params': {'v_magnitude': 16.68}, 'meandist': 1.2176312, 'meananom': 325.2636}
+                               'extra_params': {'v_magnitude': 16.68, 'fractional_ephemeris_rate': 1}, 'meandist': 1.2176312, 'meananom': 325.2636}
         expected_cal_target = {'type': 'ICRS', 'name': 'SA107-684', 'ra': 234.3254167, 'dec': -0.163889,
                                'proper_motion_ra': 60.313, 'proper_motion_dec': -35.584, 'extra_params': {}}
 
