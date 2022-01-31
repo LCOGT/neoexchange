@@ -1841,7 +1841,8 @@ class TestScheduleCheck(TestCase):
                 'calibs': 'both',
                 'exp_length': 300.0,
                 'exp_count': 1,
-                'max_airmass': 2.0
+                'max_airmass': 2.0,
+                'fractional_rate': 0.5
                 }
 
         expected_resp = {

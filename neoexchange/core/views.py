@@ -1374,10 +1374,7 @@ def schedule_check(data, body, ok_to_schedule=True):
     snr = None
     saturated = None
     if spectroscopy:
-        try:
-            fractional_tracking_rate = float(data.get('fractional_rate', 1.0))
-        except ValueError:
-            fractional_tracking_rate = 1.0
+        fractional_tracking_rate = 1.0
         snr_params = {'airmass': max_alt_airmass,
                       'slit_width': float(filter_pattern[5:8])*u.arcsec,
                       'moon_phase': moon_phase_code
