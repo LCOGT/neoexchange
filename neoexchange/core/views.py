@@ -2320,6 +2320,7 @@ def record_block(tracking_number, params, form_data, target):
                 block_kwargs['calibsource'] = calib_source
                 block_kwargs['exp_length'] = params['calibsrc_exptime']
                 block_kwargs['obstype'] = Block.OPT_SPECTRA_CALIB
+                block_kwargs['tracking_rate'] = 0
                 pk = Block.objects.create(**block_kwargs)
             i += 1
         return True

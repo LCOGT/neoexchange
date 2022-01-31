@@ -1157,6 +1157,8 @@ class TestRecordBlock(TestCase):
         self.assertEqual(solar_analogs[0], blocks[1].calibsource)
         self.assertEqual(None, blocks[1].body)
         self.assertEqual(spectro_params['calibsrc_exptime'], blocks[1].exp_length)
+        self.assertEqual(blocks[0].tracking_rate, 100)
+        self.assertEqual(blocks[1].tracking_rate, 0)
 
     def test_solo_solar_spectro_block(self):
         # adjust parameters for sidereal target
