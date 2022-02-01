@@ -31,3 +31,4 @@ rollbar
 sty
 awscli
 lxml
+freezegun
