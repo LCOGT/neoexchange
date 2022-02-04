@@ -192,13 +192,32 @@
                         {% if data.trail_len > data.typical_seeing %}
                             <td class="kv-value">{{ data.speed|floatformat:2 }} "/min <i class="fa fa-arrow-right"></i>
                                 <table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip">
-                                <span class="warning msgpadded">{{ data.trail_len|floatformat:2 }} "/exp </span>
+                                <span class="warning msgpadded">{{ data.trail_len|floatformat:2 }} "/exp
+                                    {% for fr_choice in form.fractional_rate.field.choices %}
+                                        {% if fr_choice.0 == form.fractional_rate.data %}
+                                            [{{fr_choice.1}}]
+                                        {% endif %}
+                                    {% endfor %}
+                                </span>
                                 <span class="tooltiptext" style="width: 150px;">
-                                    <u>Stellar Trailing Will Cause Elongation!</u>
+                                    <u>{% if data.fractional_rate == 1 %}
+                                        Stellar
+                                        {% else %}
+                                            {% if data.fractional_rate == 0 %}
+                                                Target
+                                            {% endif %}
+                                        {% endif %}
+                                        Trailing Will Cause Elongation!</u>
                                     <br>Trailing larger than typical seeing at this telescope. ({{data.typical_seeing}}")<br>
                                 </span></div></td></tr></table></td>
                         {% else %}
-                            <td class="kv-value">{{ data.speed|floatformat:2 }} "/min <i class="fa fa-arrow-right"></i> {{ data.trail_len|floatformat:2 }} "/exp</td>
+                            <td class="kv-value">{{ data.speed|floatformat:2 }} "/min <i class="fa fa-arrow-right"></i> {{ data.trail_len|floatformat:2 }} "/exp
+                                {% for fr_choice in form.fractional_rate.field.choices %}
+                                    {% if fr_choice.0 == form.fractional_rate.data %}
+                                        [{{fr_choice.1}}]
+                                    {% endif %}
+                                {% endfor %}
+                            </td>
                         {% endif %}
                     </tr>
                     {% if '1M0' in data.lco_tel or '1M0' in data.site_code %}
