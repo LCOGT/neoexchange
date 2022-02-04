@@ -2197,7 +2197,6 @@ def update_look_overview_sheet(request):
         # params[comet] = blocks
     # Feels inefficient...
     while LPC_comets.count() > 0:
-        print(LPC_comets)
         first_comet = LPC_comets.order_by("block__block_start")[0]
         blocks = Block.objects.filter(body=first_comet).order_by("block_start")
         params[first_comet] = blocks

@@ -16,6 +16,7 @@ import requests
 import sys
 from datetime import datetime, timedelta
 from dateutil import relativedelta
+import re
 
 from django.conf import settings
 from django.db.models import Count
