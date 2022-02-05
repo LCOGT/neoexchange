@@ -65,6 +65,9 @@ class Command(BaseCommand):
         if options['verbosity'] < 1:
             verbose = False
 
+        if dataroot == '':
+            msg = "No value for `dataroot` set. Set DATA_ROOT in the enviroment or use --datadir"
+            raise CommandError(msg)
         if not os.path.exists(dataroot):
             self.stdout.write("Creating download location: %s" % dataroot)
             try:

@@ -17,7 +17,8 @@ import logging
 import os
 from math import floor
 from datetime import datetime, timedelta
-from subprocess import call, TimeoutExpired
+
+from subprocess import call, PIPE, Popen, TimeoutExpired
 from collections import OrderedDict
 import warnings
 from shutil import unpack_archive
@@ -809,15 +810,65 @@ def funpack_file(fpack_file, binary=None, dbg=False):
 
     cmdline = "%s -F %s" % ( binary, fpack_file)
     cmdline = cmdline.rstrip()
+
+
+def run_damit_periodscan(lcs_input_filename, psinput_filename, psoutput_filename, binary=None, dbg=False):
+    """ Run DAMIT code to calculate periodogram based on lc .
+        See https://astro.troja.mff.cuni.cz/projects/damit/
+    """
+    binary = binary or find_binary("period_scan")
+    if binary is None:
+        logger.error("Could not locate 'period_scan' executable in PATH")
+        return -42
+    dest_dir = os.path.dirname(psoutput_filename)
+    cmdline = f"{binary} -v {psinput_filename} {psoutput_filename}"
+    catline = f"cat {lcs_input_filename}"
+    cmdline = cmdline.rstrip()
+    catline = catline.rstrip()
     if dbg:
         print(cmdline)
 
     if dbg is True:
         retcode_or_cmdline = cmdline
     else:
-        dest_dir = os.path.dirname(fpack_file)
-        logger.debug("cmdline=%s" % cmdline)
-        args = cmdline.split()
-        retcode_or_cmdline = call(args, cwd=dest_dir)
+        logger.debug(f"cmdline={catline} | {cmdline}")
+        cmd_args = cmdline.split()
+        cat_args = catline.split()
+        cat_call = Popen(cat_args, cwd=dest_dir, stdout=PIPE)
+        cmd_call = Popen(cmd_args, cwd=dest_dir, stdin=cat_call.stdout, stdout=PIPE)
+        retcode_or_cmdline = cmd_call.communicate()
+
+    return retcode_or_cmdline        
+
+
+def run_damit(call_name, cat_input_filename, primary_call, write_out=False, binary=None, dbg=False):
+    """ Run DAMIT code to calculate LC and shape models.
+        See https://astro.troja.mff.cuni.cz/projects/damit/
+    """
+    binary = binary or find_binary(call_name)
+    if binary is None:
+        logger.error(f"Could not locate {call_name} executable in PATH")
+        return -42
+    dest_dir = os.path.dirname(cat_input_filename)
+    cmdline = f"{binary} {primary_call}"
+    catline = f"cat {cat_input_filename}"
+    cmdline = cmdline.rstrip()
+    catline = catline.rstrip()
+    if dbg:
+        print(cmdline)
+
+    if dbg is True:
+        retcode_or_cmdline = cmdline
+    else:
+        logger.debug(f"cmdline={catline} | {cmdline}")
+        cmd_args = cmdline.split()
+        cat_args = catline.split()
+        cat_call = Popen(cat_args, cwd=dest_dir, stdout=PIPE)
+        if write_out:
+
+            cmd_call = Popen(cmd_args, cwd=dest_dir, stdin=cat_call.stdout, stdout=write_out)
+        else:
+            cmd_call = Popen(cmd_args, cwd=dest_dir, stdin=cat_call.stdout, stdout=PIPE)
+        retcode_or_cmdline = cmd_call.communicate()
 
     return retcode_or_cmdline

@@ -15,7 +15,9 @@ GNU General Public License for more details.
 
 import os
 from mock import patch, MagicMock
-from socket import error
+from freezegun import freeze_time
+from socket import error, timeout
+from errno import ETIMEDOUT
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from unittest import skipIf
@@ -414,7 +416,36 @@ class TestFetchAreciboTargets(TestCase):
         self.assertEqual(expected_targets, targets)
 
 
-class TestFetchGoldstoneTargets(TestCase):
+class TestFetchGoldstoneCSV(SimpleTestCase):
+
+    def setUp(self):
+        self.test_file = os.path.join('astrometrics', 'tests', 'test_goldstone_page.csv')
+
+    def test_basic(self):
+        expected_length = 9
+        expected_columns = ['number', 'name', 'start (UT)', 'end (UT)', 'OCC', 'Updated 2021 Dec 17']
+
+        table = fetch_goldstone_csv(self.test_file)
+
+        self.assertEqual(expected_length, len(table))
+        self.assertEqual(expected_columns, table.colnames)
+
+    def test_missing_file(self):
+        expected_length = None
+
+        table = fetch_goldstone_csv('/foo/bar')
+
+        self.assertEqual(expected_length, table)
+
+    def test_missing_url(self):
+        expected_length = None
+
+        table = fetch_goldstone_csv('https://foo.bar.com/nothere.csv')
+
+        self.assertEqual(expected_length, table)
+
+
+class TestFetchGoldstoneTargets(SimpleTestCase):
 
     def setUp(self):
         # Read and make soup from the stored version of the Goldstone radar pages
@@ -424,6 +455,7 @@ class TestFetchGoldstoneTargets(TestCase):
         test_fh = open(os.path.join('astrometrics', 'tests', 'test_goldstone_page_v2.html'), 'r')
         self.test_goldstone_page_v2 = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
+        self.test_csv_file = os.path.join('astrometrics', 'tests', 'test_goldstone_page.csv')
 
         self.maxDiff = None
 
@@ -618,6 +650,69 @@ class TestFetchGoldstoneTargets(TestCase):
         self.assertEqual(1, len(targets))
         self.assertEqual(expected_target, targets)
 
+    @freeze_time(datetime(2021, 12, 7, 2, 0, 0))
+    def test_csv_file_2021(self):
+
+        expected_targets = ['163899', '4660', '2021 XK6']
+
+        targets = fetch_goldstone_targets(self.test_csv_file)
+
+        self.assertEqual(3, len(targets))
+        self.assertEqual(expected_targets, targets)
+
+    @freeze_time(datetime(2022, 1, 7, 2, 0, 0))
+    def test_csv_file_2022(self):
+
+        expected_targets = ['7842', '153591', '2016 QJ44', '2018 CW2', '2010 XC15']
+
+        targets = fetch_goldstone_targets(self.test_csv_file)
+
+        self.assertEqual(5, len(targets))
+        self.assertEqual(expected_targets, targets)
+
+    @freeze_time(datetime(2021, 12, 7, 2, 0, 0))
+    def test_csv_file_calformat_2021(self):
+
+        expected_targets = ['163899', '4660', '2021 XK6']
+
+        expected_targets = [{ 'target': '163899',
+                              'windows': [{'start': '2021-11-22T00:00:00', 'end': '2021-12-31T23:59:59'}]},
+                             {'target': '4660',
+                              'windows': [{'start': '2021-12-05T00:00:00', 'end': '2021-12-31T23:59:59'}]},
+                             {'target': '2021 XK6',
+                              'windows': [{'start': '2021-12-17T00:00:00', 'end': '2021-12-17T23:59:59'}]},
+                              ]
+
+
+        targets = fetch_goldstone_targets(self.test_csv_file, calendar_format=True)
+
+        self.assertEqual(3, len(targets))
+        self.assertEqual(expected_targets, targets)
+
+    @freeze_time(datetime(2022, 1, 7, 2, 0, 0))
+    def test_csv_file_calformat_2022(self):
+
+        expected_targets = ['7842', '153591', '2016 QJ44', '2018 CW2', '2010 XC15']
+
+        expected_targets = [
+                             {'target': '7842',
+                              'windows': [{'start': '2022-01-18T00:00:00', 'end': '2022-01-25T23:59:59'}]},
+                             {'target': '153591',
+                              'windows': [{'start': '2022-02-18T00:00:00', 'end': '2022-03-08T23:59:59'}]},
+                             {'target': '2016 QJ44',
+                              'windows': [{'start': '2022-02-18T00:00:00', 'end': '2022-02-25T23:59:59'}]},
+                             {'target': '2018 CW2',
+                              'windows': [{'start': '2022-02-16T00:00:00', 'end': '2022-02-21T23:59:59'}]},
+                             {'target': '2010 XC15',
+                              'windows': [{'start': '2022-12-24T00:00:00', 'end': '2023-01-06T23:59:59'}]},
+                              ]
+
+
+        targets = fetch_goldstone_targets(self.test_csv_file, calendar_format=True)
+
+        self.assertEqual(len(expected_targets), len(targets))
+        self.assertEqual(expected_targets, targets)
+
 
 class TestFetchYarkovskyTargets(SimpleTestCase):
 
@@ -749,7 +844,9 @@ class TestSubmitBlockToScheduler(TestCase):
                            'end_time': dark_end,
                            'filter_pattern': 'w',
                            'group_name': self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                           'user_id': 'bsimpson'
+                           'user_id': 'bsimpson',
+                           'dither_distance': 10,
+                           'add_dither': False
                            }
 
         self.maxDiff = None
@@ -848,7 +945,6 @@ class TestSubmitBlockToScheduler(TestCase):
                 self.assertNotEqual(block.block_start, block.superblock.block_start)
             if block != blocks[2]:
                 self.assertNotEqual(block.block_end, block.superblock.block_end)
-
 
     @patch('astrometrics.sources_subs.expand_cadence', mock_expand_cadence_novis)
     @patch('astrometrics.sources_subs.requests.post')
@@ -4017,6 +4113,26 @@ class TestSFUFetch(TestCase):
         self.assertEqual(expected_result[0], sfu_result[0])
         self.assertEqual(expected_result[1], sfu_result[1])
 
+    # Uncomment and remove catch of `timeout` in fetchpage_and_make_soup() to
+    # test the mock is working.
+
+    # @patch('astrometrics.sources_subs.urllib.request.OpenerDirector.open')
+    # def test_fetch_socket_timeout_assert_raises(self, mock_open):
+        # mock_open.side_effect = timeout(ETIMEDOUT, '(fake) timed out')
+
+        # with self.assertRaises(timeout) as sock_e:
+            # sfu_result = fetchpage_and_make_soup('http://www.spaceweather.gc.ca/solarflux/sx-4-en.php')
+        # self.assertEqual(sock_e.exception.errno, ETIMEDOUT)
+        # self.assertEqual(sock_e.exception.strerror, '(fake) timed out')
+
+    @patch('astrometrics.sources_subs.urllib.request.OpenerDirector.open')
+    def test_fetch_socket_timeout_handled(self, mock_open):
+        mock_open.side_effect = timeout(ETIMEDOUT, '(fake) timed out')
+
+        sfu_result = fetch_sfu()
+
+        self.assertEqual((None, None), sfu_result)
+
 
 class TestConfigureDefaults(TestCase):
 
@@ -4579,6 +4695,7 @@ class TestMakeconfiguration(TestCase):
                                                                             },
                                                       'muscat_sync': True,
                                                       'target': self.target,
+                                                      'add_dither': False,
                                                       'constraints': {
                                                           'max_airmass': 2.0,
                                                           'min_lunar_distance': 30.0
@@ -4592,6 +4709,7 @@ class TestMakeconfiguration(TestCase):
                                                       'exp_count': 10,
                                                       'filter_pattern': 'w',
                                                       'target': self.target,
+                                                      'add_dither': False,
                                                       'constraints': {
                                                           'max_airmass': 2.0,
                                                           'min_lunar_distance': 30.0
@@ -4605,6 +4723,7 @@ class TestMakeconfiguration(TestCase):
                                                       'exp_count': 10,
                                                       'filter_pattern': 'w',
                                                       'target': self.target,
+                                                      'add_dither': False,
                                                       'constraints': {
                                                           'max_airmass': 2.0,
                                                           'min_lunar_distance': 30.0
@@ -4684,6 +4803,7 @@ class TestMakeconfiguration(TestCase):
                               'instrument_configs': [{
                                 'exposure_count': 10,
                                 'exposure_time': 60.0,
+                                'extra_params': {},
                                 'optical_elements': {
                                   'filter': 'w'
                                 }
@@ -4713,6 +4833,7 @@ class TestMakeconfiguration(TestCase):
                               'instrument_configs': [{
                                 'exposure_count': 10,
                                 'exposure_time': 90.0,
+                                'extra_params': {},
                                 'optical_elements': {
                                   'filter': 'w'
                                 }
@@ -4998,6 +5119,7 @@ class TestMakeconfigurations(TestCase):
                                                                            'zp_explength': 60,
                                                                            },
                                                       'muscat_sync': True,
+                                                      'add_dither': False,
                                                       'constraints': {
                                                         'max_airmass': 2.0,
                                                         'min_lunar_distance': 30.0
@@ -5007,10 +5129,11 @@ class TestMakeconfigurations(TestCase):
                                                     self.params_2m0_imaging['exp_type'])[0]
 
         self.params_1m0_imaging = configure_defaults({ 'site_code': 'K92',
-                                                       'exp_time' : 60.0,
-                                                       'exp_count' : 10,
-                                                       'filter_pattern' : 'w',
-                                                       'target' : self.target,
+                                                       'exp_time': 60.0,
+                                                       'exp_count': 10,
+                                                       'filter_pattern': 'w',
+                                                       'target': self.target,
+                                                       'add_dither': False,
                                                        'constraints': {
                                                          'max_airmass': 2.0,
                                                          'min_lunar_distance': 30.0
@@ -5020,11 +5143,12 @@ class TestMakeconfigurations(TestCase):
                                                     self.params_1m0_imaging['exp_count'],
                                                     self.params_1m0_imaging['exp_type'])[0]
         self.params_0m4_imaging = configure_defaults({ 'site_code': 'Z21',
-                                                       'exp_time' : 90.0,
-                                                       'exp_count' : 18,
+                                                       'exp_time': 90.0,
+                                                       'exp_count': 18,
                                                        'slot_length': 220,
-                                                       'filter_pattern' : 'w',
-                                                       'target' : self.target,
+                                                       'filter_pattern': 'w',
+                                                       'target': self.target,
+                                                       'add_dither': False,
                                                        'constraints': {
                                                          'max_airmass': 2.0,
                                                          'min_lunar_distance': 30.0
@@ -5065,6 +5189,103 @@ class TestMakeconfigurations(TestCase):
 
         self.assertEqual(expected_num_configurations, len(configurations))
         self.assertEqual(expected_type, configurations[0]['type'])
+
+    def test_1m_dithering(self):
+
+        expected_num_configurations = 1
+        expected_type = 'EXPOSE'
+        expected_num_inst_configurations = 10
+        expected_exp_num = 1
+        params = self.params_1m0_imaging
+        params['dither_distance'] = 10
+        params['add_dither'] = True
+
+        configurations = make_configs(params)
+
+        self.assertEqual(expected_num_configurations, len(configurations))
+        self.assertEqual(expected_type, configurations[0]['type'])
+
+        inst_configs = configurations[0]['instrument_configs']
+        self.assertEqual(expected_num_inst_configurations, len(inst_configs))
+        self.assertEqual(inst_configs[0]['exposure_count'], expected_exp_num)
+        self.assertEqual(inst_configs[0]['extra_params'], {'offset_ra': 0.0, 'offset_dec': 0.0})
+        self.assertEqual(inst_configs[6]['extra_params'], {'offset_ra': -10.0, 'offset_dec': -10.0})
+
+    def test_multifilter_dithering(self):
+
+        expected_num_configurations = 1
+        expected_type = 'EXPOSE'
+        expected_num_inst_configurations = 10
+        expected_exp_num = 1
+        params = self.params_1m0_imaging
+        params['dither_distance'] = 10
+        params['add_dither'] = True
+        params['filter_pattern'] = 'w,r'
+        params['exp_count'] = 10
+
+        configurations = make_configs(params)
+
+        self.assertEqual(expected_num_configurations, len(configurations))
+        self.assertEqual(expected_type, configurations[0]['type'])
+
+        inst_configs = configurations[0]['instrument_configs']
+        self.assertEqual(expected_num_inst_configurations, len(inst_configs))
+        self.assertEqual(inst_configs[0]['exposure_count'], expected_exp_num)
+        self.assertEqual(inst_configs[0]['extra_params'], {'offset_ra': 0.0, 'offset_dec': 0.0})
+        self.assertEqual(inst_configs[6]['extra_params'], {'offset_ra': -10.0, 'offset_dec': -10.0})
+        self.assertEqual(inst_configs[0]['optical_elements']['filter'], 'w')
+        self.assertEqual(inst_configs[1]['optical_elements']['filter'], 'r')
+        self.assertEqual(inst_configs[2]['optical_elements']['filter'], 'w')
+
+    def test_longblock_dithering(self):
+
+        expected_num_configurations = 1
+        expected_type = 'EXPOSE'
+        expected_num_inst_configurations = 100
+        expected_exp_num = 1
+        params = self.params_1m0_imaging
+        params['dither_distance'] = 20
+        params['add_dither'] = True
+        params['exp_count'] = 100
+
+        configurations = make_configs(params)
+
+        self.assertEqual(expected_num_configurations, len(configurations))
+        self.assertEqual(expected_type, configurations[0]['type'])
+
+        inst_configs = configurations[0]['instrument_configs']
+        self.assertEqual(expected_num_inst_configurations, len(inst_configs))
+        self.assertEqual(inst_configs[0]['exposure_count'], expected_exp_num)
+        self.assertEqual(inst_configs[0]['extra_params'], {'offset_ra': 0.0, 'offset_dec': 0.0})
+        self.assertEqual(inst_configs[6]['extra_params'], {'offset_ra': -20.0, 'offset_dec': -20.0})
+        self.assertEqual(inst_configs[30]['extra_params'], {'offset_ra': 60.0, 'offset_dec': 60.0})
+        self.assertEqual(inst_configs[91]['extra_params'], {'offset_ra': 20.0, 'offset_dec': 0.0})
+
+    def test_muscat_dithering(self):
+
+        expected_num_configurations = 1
+        expected_type = 'EXPOSE'
+        expected_num_inst_configurations = 10
+        expected_exp_num = 1
+        params = self.params_2m0_imaging
+        params['dither_distance'] = 10
+        params['add_dither'] = True
+        params['exp_count'] = 10
+
+        configurations = make_configs(params)
+
+        self.assertEqual(expected_num_configurations, len(configurations))
+        self.assertEqual(expected_type, configurations[0]['type'])
+
+        inst_configs = configurations[0]['instrument_configs']
+        self.assertEqual(expected_num_inst_configurations, len(inst_configs))
+        self.assertEqual(inst_configs[0]['exposure_count'], expected_exp_num)
+        self.assertEqual(inst_configs[0]['extra_params']['offset_ra'], 0.0)
+        self.assertEqual(inst_configs[0]['extra_params']['offset_dec'], 0.0)
+        self.assertEqual(inst_configs[0]['extra_params']['exposure_mode'], 'SYNCHRONOUS')
+        self.assertEqual(inst_configs[0]['extra_params']['exposure_time_g'], 60)
+        self.assertEqual(inst_configs[6]['extra_params']['offset_ra'], -10.0)
+        self.assertEqual(inst_configs[6]['extra_params']['offset_dec'], -10.0)
 
     def test_0m4_imaging(self):
 
@@ -5187,6 +5408,7 @@ class TestMakeCadence(TestCase):
                         'pondtelescope' : '0m4a',
                         'site_code' : 'Q59',
                         'target' : self.elements,
+                        'add_dither': False,
                         'constraints' : {'max_airmass': 2.0, 'min_lunar_distance': 15}
                         }
         self.ipp_value = 1.0
@@ -6019,3 +6241,24 @@ class TestFetchJPLPhysParams(TestCase):
         self.assertLessEqual(len(body.source_subtype_1), 2)
         self.assertEqual(body.source_subtype_1, 'LP')
 
+
+class TestBoxSpiral(TestCase):
+
+    def test_run_generator(self):
+        """Test Box Spiral generator"""
+
+        b = box_spiral_generator(1, 3)
+        self.assertEqual((0, 0), next(b))
+        self.assertEqual((1, 0), next(b))
+        self.assertEqual((1, 1), next(b))
+        self.assertEqual((0, 1), next(b))
+        self.assertEqual((-1, 1), next(b))
+        self.assertEqual((-1, 0), next(b))
+        for k, b_next in enumerate(b):
+            if k == 23:
+                self.assertEqual((3, 2), b_next)
+            if k == 24:
+                self.assertEqual((0, 0), b_next)
+            if k == 25:
+                self.assertEqual((1, 0), b_next)
+                break

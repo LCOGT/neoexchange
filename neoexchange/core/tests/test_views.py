@@ -24,6 +24,7 @@ from math import degrees
 from django.test import TestCase, SimpleTestCase, override_settings
 from django.forms.models import model_to_dict
 from django.conf import settings
+from django.http import Http404
 from bs4 import BeautifulSoup
 from mock import patch
 from astropy.io import fits
@@ -1280,7 +1281,9 @@ class TestScheduleCheck(TestCase):
                             'max_airmass': 1.74,
                             'max_alt_airmass': 1.0861815238132588,
                             'min_lunar_dist': 30,
-                            'acceptability_threshold': 90
+                            'acceptability_threshold': 90,
+                            'dither_distance': 10,
+                            'add_dither': False,
                         }
 
     def make_visible_obj(self, test_date):
@@ -1804,11 +1807,11 @@ class TestScheduleCheck(TestCase):
     def test_mp_bad_too(self):
         MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
 
-        data = { 'site_code' : 'Q63',
-                 'utc_date' : datetime(2016, 4, 6).date(),
-                 'proposal_code' : self.neo_proposal.code,
-                 'too_mode' : True
-               }
+        data = {'site_code': 'Q63',
+                'utc_date': datetime(2016, 4, 6).date(),
+                'proposal_code': self.neo_proposal.code,
+                'too_mode': True
+                }
 
         expected_resp1 = self.expected_resp
         expected_resp1['site_code'] = data['site_code']
@@ -1891,7 +1894,9 @@ class TestScheduleCheck(TestCase):
                         'max_airmass': 2.0,
                         'max_alt_airmass': 1.0861815238132588,
                         'min_lunar_dist': 30,
-                        'acceptability_threshold': 90
+                        'acceptability_threshold': 90,
+                        'dither_distance': 10,
+                        'add_dither': False,
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -1970,7 +1975,9 @@ class TestScheduleCheck(TestCase):
                         'max_airmass': 2.0,
                         'max_alt_airmass': 1.0861815238132588,
                         'min_lunar_dist': 30,
-                        'acceptability_threshold': 90
+                        'acceptability_threshold': 90,
+                        'dither_distance': 10,
+                        'add_dither': False,
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -2512,182 +2519,187 @@ class TestUpdateMPCOrbit(TestCase):
 
         self.nocheck_keys = ['ingest']   # Involves datetime.utcnow(), hard to check
 
-        self.expected_elements = {u'id' : 1,
-                             'name' : u'2014 UR',
-                             'provisional_name': None,
-                             'provisional_packed': None,
-                             'elements_type': u'MPC_MINOR_PLANET',
-                             'abs_mag' : 26.6,
-                             'argofperih': 222.91160,
-                             'longascnode': 24.87559,
-                             'eccentricity': 0.0120915,
-                             'epochofel': datetime(2016, 1, 13, 0),
-                             'orbit_rms': 99,
-                             'meandist': 0.9967710,
-                             'orbinc': 8.25708,
-                             'meananom': 221.74204,
-                             'epochofperih': None,
-                             'perihdist': None,
-                             'slope': 0.15,
-                             'origin' : u'M',
-                             'active' : True,
-                             'arc_length': 357.0,
-                             'discovery_date': datetime(2014, 10, 17, 0),
-                             'num_obs' : 147,
-                             'not_seen' : 5.5,
-                             'orbit_rms' : 0.57,
-                             'fast_moving' : False,
-                             'score' : None,
-                             'source_type' : 'N',
-                             'source_subtype_1' : None,
-                             'source_subtype_2': None,
-                             'update_time' : datetime(2015, 10, 9, 0),
-                             'updated' : True,
-                             'urgency' : None
-                             }
+        self.expected_elements = {u'id': 1,
+                                  'name': u'2014 UR',
+                                  'provisional_name': None,
+                                  'provisional_packed': None,
+                                  'elements_type': u'MPC_MINOR_PLANET',
+                                  'abs_mag' : 26.6,
+                                  'argofperih': 222.91160,
+                                  'longascnode': 24.87559,
+                                  'eccentricity': 0.0120915,
+                                  'epochofel': datetime(2016, 1, 13, 0),
+                                  'meandist': 0.9967710,
+                                  'orbinc': 8.25708,
+                                  'meananom': 221.74204,
+                                  'epochofperih': None,
+                                  'perihdist': None,
+                                  'slope': 0.15,
+                                  'origin': u'M',
+                                  'active': True,
+                                  'arc_length': 357.0,
+                                  'discovery_date': datetime(2014, 10, 17, 0),
+                                  'num_obs': 147,
+                                  'not_seen': 5.5,
+                                  'orbit_rms': 0.57,
+                                  'fast_moving': False,
+                                  'score': None,
+                                  'source_type': 'N',
+                                  'source_subtype_1': None,
+                                  'source_subtype_2': None,
+                                  'update_time': datetime(2015, 10, 9, 0),
+                                  'updated': True,
+                                  'urgency': None,
+                                  'analysis_status': 0,
+                                  'as_updated': None
+                                  }
 
         # Elements from epoch=2018-03-23 set
         self.expected_elements_sp_comet = {
-                                             'id' : 2,
-                                             'name' : u'243P/NEAT',
+                                             'id': 2,
+                                             'name': u'243P/NEAT',
                                              'provisional_name': None,
                                              'provisional_packed': None,
                                              'elements_type': u'MPC_COMET',
-                                             'abs_mag' : 10.4,
+                                             'abs_mag': 10.4,
                                              'argofperih': 283.56217,
                                              'longascnode': 87.66076,
                                              'eccentricity': 0.3591386,
                                              'epochofel': datetime(2018, 3, 23, 0),
-                                             'orbit_rms': 99.0,
                                              'meandist': None,
                                              'orbinc': 7.64150,
                                              'meananom': None,
                                              'epochofperih': datetime(2018, 8, 26, 0, 59, 55, int(0.968*1e6)),
                                              'perihdist': 2.4544160,
                                              'slope': 15.5/2.5,
-                                             'origin' : u'M',
-                                             'active' : True,
+                                             'origin': u'M',
+                                             'active': True,
                                              'arc_length': 5528.0,
                                              'discovery_date': datetime(2003,  8,  1, 0),
-                                             'num_obs' : 334,
-                                             'not_seen' : -151.5,
-                                             'orbit_rms' : 0.60,
-                                             'fast_moving' : False,
-                                             'score' : None,
-                                             'source_type' : 'C',
-                                             'source_subtype_1' : 'JF',
+                                             'num_obs': 334,
+                                             'not_seen': -151.5,
+                                             'orbit_rms': 0.60,
+                                             'fast_moving': False,
+                                             'score': None,
+                                             'source_type': 'C',
+                                             'source_subtype_1': 'JF',
                                              'source_subtype_2': None,
-                                             'update_time' : datetime(2018,  9,19, 0),
-                                             'updated' : True,
-                                             'urgency' : None
+                                             'update_time' : datetime(2018, 9, 19, 0),
+                                             'updated': True,
+                                             'urgency': None,
+                                             'analysis_status': 0,
+                                             'as_updated': None
                                              }
 
         # Elements from epoch=2016-04-19 set
         self.expected_elements_comet_set1 = {
-                                             'id' : 3,
-                                             'name' : u'C/2016 C2',
+                                             'id': 3,
+                                             'name': u'C/2016 C2',
                                              'provisional_name': None,
                                              'provisional_packed': None,
                                              'elements_type': u'MPC_COMET',
-                                             'abs_mag' : 13.8,
+                                             'abs_mag': 13.8,
                                              'argofperih': 214.01052,
                                              'longascnode': 24.55858,
                                              'eccentricity': 1.0000000,
                                              'epochofel': datetime(2016, 4, 19, 0),
-                                             'orbit_rms': 99.0,
                                              'meandist': None,
                                              'orbinc': 38.19233,
                                              'meananom': None,
                                              'epochofperih': datetime(2016, 4, 19, 0, 41, 44, int(0.736*1e6)),
                                              'perihdist': 1.5671127,
                                              'slope': 21/2.5,
-                                             'origin' : u'M',
-                                             'active' : True,
+                                             'origin': u'M',
+                                             'active': True,
                                              'arc_length': 10.0,
                                              'discovery_date': datetime(2016, 2, 8, 0),
-                                             'num_obs' : 89,
-                                             'not_seen' : 62.5,
-                                             'orbit_rms' : 99.0,
-                                             'fast_moving' : False,
-                                             'score' : None,
-                                             'source_type' : 'C',
-                                             'source_subtype_1' : 'LP',
+                                             'num_obs': 89,
+                                             'not_seen': 62.5,
+                                             'orbit_rms': 99.0,
+                                             'fast_moving': False,
+                                             'score': None,
+                                             'source_type': 'C',
+                                             'source_subtype_1': 'LP',
                                              'source_subtype_2': None,
-                                             'update_time' : datetime(2016, 2, 18, 0),
-                                             'updated' : True,
-                                             'urgency' : None
+                                             'update_time': datetime(2016, 2, 18, 0),
+                                             'updated': True,
+                                             'urgency': None,
+                                             'analysis_status': 0,
+                                             'as_updated': None
                                              }
 
         # Elements from epoch=2016-07-30 set
         self.expected_elements_comet_set2 = {
-                                             'id' : 3,
-                                             'name' : u'C/2016 C2',
+                                             'id': 3,
+                                             'name': u'C/2016 C2',
                                              'provisional_name': None,
                                              'provisional_packed': None,
                                              'elements_type': u'MPC_COMET',
-                                             'abs_mag' : 13.8,
+                                             'abs_mag': 13.8,
                                              'argofperih': 214.40704,
                                              'longascnode': 24.40401,
                                              'eccentricity': 0.9755678,
                                              'epochofel': datetime(2016, 7, 31, 0),
-                                             'orbit_rms': 99.0,
                                              'meandist': None,
                                              'orbinc': 38.15649,
                                              'meananom': None,
                                              'epochofperih': datetime(2016, 4, 19, 14, 26, 29, int(0.472*1e6)),
                                              'perihdist': 1.5597633,
                                              'slope': 21.0/2.5,
-                                             'origin' : u'M',
-                                             'active' : True,
+                                             'origin': u'M',
+                                             'active': True,
                                              'arc_length': 126,
                                              'discovery_date': datetime(2016, 2, 8, 0),
-                                             'num_obs' : 138,
-                                             'not_seen' : 311.5,
-                                             'orbit_rms' : 0.40,
-                                             'fast_moving' : False,
-                                             'score' : None,
-                                             'source_type' : 'C',
-                                             'source_subtype_1' : 'LP',
+                                             'num_obs': 138,
+                                             'not_seen': 311.5,
+                                             'orbit_rms': 0.40,
+                                             'fast_moving': False,
+                                             'score': None,
+                                             'source_type': 'C',
+                                             'source_subtype_1': 'LP',
                                              'source_subtype_2': None,
-                                             'update_time' : datetime(2016, 6, 13, 0),
-                                             'updated' : True,
-                                             'urgency' : None
+                                             'update_time': datetime(2016, 6, 13, 0),
+                                             'updated': True,
+                                             'urgency': None,
+                                             'analysis_status': 0,
+                                             'as_updated': None
                                              }
 
         # Elements from epoch=2019-04-27 set
         self.expected_elements_dnc_comet_set1 = {
-                                             'id' : 4,
-                                             'name' : u'C/2017 K2',
+                                             'id': 4,
+                                             'name': u'C/2017 K2',
                                              'provisional_name': None,
                                              'provisional_packed': None,
                                              'elements_type': u'MPC_COMET',
-                                             'abs_mag' : 6.3,
+                                             'abs_mag': 6.3,
                                              'argofperih': 236.10242,
                                              'longascnode': 88.27001,
                                              'eccentricity': 1.0003739,
                                              'epochofel': datetime(2019, 4, 27, 0),
-                                             'orbit_rms': 99.0,
                                              'meandist': None,
                                              'orbinc': 87.54153,
                                              'meananom': None,
                                              'epochofperih': datetime(2022, 12, 20, 10, 25, 51, int(0.168*1e6)),
                                              'perihdist': 1.8037084,
                                              'slope': 5.75/2.5,
-                                             'origin' : u'O',
-                                             'active' : True,
+                                             'origin': u'O',
+                                             'active': True,
                                              'arc_length': 2339,
                                              'discovery_date': datetime(2013, 5, 12, 0),
-                                             'num_obs' : 1452,
-                                             'not_seen' : -169.5,
-                                             'orbit_rms' : 0.40,
-                                             'fast_moving' : False,
-                                             'score' : None,
-                                             'source_type' : 'C',
-                                             'source_subtype_1' : 'LP',
+                                             'num_obs': 1452,
+                                             'not_seen': -169.5,
+                                             'orbit_rms': 0.40,
+                                             'fast_moving': False,
+                                             'score': None,
+                                             'source_type': 'C',
+                                             'source_subtype_1': 'LP',
                                              'source_subtype_2': 'DN',
-                                             'update_time' : datetime(2019, 10, 7, 0),
-                                             'updated' : True,
-                                             'urgency' : None
+                                             'update_time': datetime(2019, 10, 7, 0),
+                                             'updated': True,
+                                             'urgency': None,
+                                             'analysis_status': 0,
+                                             'as_updated': None
                                              }
 
         self.maxDiff = None
@@ -7309,6 +7321,169 @@ class TestFindBestSolarAnalog(TestCase):
         self.assertEqual(expected_list, close_std_list)
 
 
+class TestDownloadMeasurementsFile(TestCase):
+
+    def setUp(self):
+        self.ades_template = get_template('core/mpc_ades_psv_outputfile.txt')
+        self.mpc_template = get_template('core/mpc_outputfile.txt')
+
+        body_params = {
+                        'provisional_name': 'C1HDFQ2',
+                        'provisional_packed': None,
+                        'name': '2019 XS',
+                        'origin': 'G',
+                        'source_type': 'N',
+                        'source_subtype_1': '',
+                        'source_subtype_2': None,
+                        'elements_type': 'MPC_MINOR_PLANET',
+                        'active': True,
+                        'fast_moving': True,
+                        'urgency': None,
+                        'epochofel': datetime(2021, 11, 10, 0, 0),
+                        'orbit_rms': 0.33,
+                        'orbinc': 4.4386,
+                        'longascnode': 49.49322,
+                        'argofperih': 250.25583,
+                        'eccentricity': 0.3277499,
+                        'meandist': 1.0048339,
+                        'meananom': 69.71659,
+                        'perihdist': 0.0815255040820201,
+                        'epochofperih': datetime(2019, 9, 30, 19, 58, 17),
+                        'abs_mag': 23.86,
+                        'slope': 0.15,
+                        'score': 96,
+                        'discovery_date': datetime(2012, 12, 22, 0, 0),
+                        'num_obs': 72,
+                        'arc_length': 6210.0,
+                        'not_seen': 334.05341602897,
+                        'updated': True,
+                        'ingest': datetime(2019, 12, 2, 7, 20, 38),
+                        'update_time': datetime(2021, 11, 9, 1, 16, 55, 144878)
+                        }
+        self.test_body, created = Body.objects.get_or_create(**body_params)
+
+        test_proposal, created = Proposal.objects.get_or_create(code='LCOTesting', title='LCOTesting')
+
+        sblock_params = {
+                         'cadence': False,
+                         'body': self.test_body,
+                         'calibsource': None,
+                         'proposal': test_proposal,
+                         'block_start': datetime(2021, 11, 10, 3, 40),
+                         'block_end': datetime(2021, 11, 10, 9, 22),
+                         'groupid': '2019 XS_V37-20211110',
+                         'tracking_number': '1335839',
+                         'timeused': 883.0,
+                         'active': False
+                         }
+
+        self.test_sblock, created = SuperBlock.objects.get_or_create(**sblock_params)
+
+        block_params = {
+                         'telclass': '1m0',
+                         'site': 'elp',
+                         'body': self.test_body,
+                         'calibsource': None,
+                         'superblock': self.test_sblock,
+                         'obstype': 0,
+                         'block_start': datetime(2021, 11, 10, 3, 40),
+                         'block_end': datetime(2021, 11, 10, 9, 22),
+                         'request_number': '2704510',
+                         'num_exposures': 26,
+                         'exp_length': 2.0,
+                         'num_observed': 1,
+                         'when_observed': datetime(2021, 11, 10, 4, 47, 22),
+                         'active': False,
+                         'reported': True,
+                         'when_reported': datetime(2021, 11, 12, 1, 30, 32, 830720)
+                       }
+        self.test_block, created = Block.objects.get_or_create(**block_params)
+
+        frame_params = {
+                         'sitecode': 'V37',
+                         'instrument': 'fa05',
+                         'filter': 'w',
+                         'filename': 'elp1m008-fa05-20211109-0177-e91.fits',
+                         'exptime': 2.028,
+                         'midpoint': datetime(2021, 11, 10, 4, 47, 23, 867000),
+                         'block': self.test_block,
+                         'quality': ' ',
+                         'zeropoint': 25.197377268962,
+                         'zeropoint_err': 0.0819936287107206,
+                         'fwhm': 1.7449277159035,
+                         'frametype': 91,
+                         'extrainfo': None,
+                         'rms_of_fit': 0.283035,
+                         'nstars_in_fit': 45.0,
+                         'time_uncertainty': None,
+                         'frameid': 46146456,
+                         'astrometric_catalog': 'GAIA-DR2',
+                         'photometric_catalog': 'GAIA-DR2'
+                       }
+        self.test_frame, created = Frame.objects.get_or_create(**frame_params)
+
+        sm_params = {
+                     'body': self.test_body,
+                     'frame': self.test_frame,
+                     'obs_ra': 41.7905144822113,
+                     'obs_dec': -4.34047400302277,
+                     'obs_mag': 14.3134813308716,
+                     'err_obs_ra': 2.39723807836075e-06,
+                     'err_obs_dec': 2.48654937873956e-06,
+                     'err_obs_mag': 0.0827159211039543,
+                     'astrometric_catalog': 'GAIA-DR2',
+                     'photometric_catalog': 'GAIA-DR2',
+                     'aperture_size': 3.0,
+                     'snr': 12.0895709877091,
+                     'flags': ' '}
+        self.test_sm, created = SourceMeasurement.objects.get_or_create(**sm_params)
+
+        self.psv_header =  'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |rmsRA|rmsDec|astCat  |mag  |rmsMag|band|photCat |photAp|logSNR|seeing|notes|remarks'
+
+        self.maxDiff = None
+
+    def test_V37_ades(self):
+        expected_response = '\n'.join([self.psv_header,
+        '       |2019 XS    |        | CCD|V37 |2021-11-10T04:47:23.87Z| 41.790514 | -4.340474 | 0.28|  0.28|   Gaia2|14.3 |0.083 |   G|   Gaia2|  3.00|1.0824|1.7449|     |', '',''])
+
+        request = ''
+        response = download_measurements_file(self.ades_template, self.test_body, '.psv', request)
+
+        self.assertEqual(expected_response, response.content.decode())
+
+    def test_V37_mpc(self):
+        expected_response = '     K19X00S  C2021 11 10.19958202 47 09.72 -04 20 25.7          14.3 G      V37' + '\n\n'
+
+        request = ''
+        response = download_measurements_file(self.mpc_template, self.test_body, '.psv', request)
+
+        self.assertEqual(expected_response, response.content.decode())
+
+    def test_V39_ades(self):
+        expected_response = '\n'.join([self.psv_header,'       |2019 XS    |        | CCD|V39 |2021-11-10T04:47:23.87Z| 41.790514 | -4.340474 | 0.28|  0.28|   Gaia2|14.3 |0.083 |   G|   Gaia2|  3.00|1.0824|1.7449|     |', '',''])
+
+        self.test_frame.sitecode = 'V39'
+        self.test_frame.instrument = 'fa07'
+        self.test_frame.save()
+
+        request = ''
+        response = download_measurements_file(self.ades_template, self.test_body, '.psv', request)
+
+        self.assertEqual(expected_response, response.content.decode())
+
+    def test_V39_mpc(self):
+        expected_response = '     K19X00S  C2021 11 10.19958202 47 09.72 -04 20 25.7          14.3 G      V39' + '\n\n'
+
+        self.test_frame.sitecode = 'V39'
+        self.test_frame.instrument = 'fa07'
+        self.test_frame.save()
+
+        request = ''
+        response = download_measurements_file(self.mpc_template, self.test_body, '.psv', request)
+
+        self.assertEqual(expected_response, response.content.decode())
+
+
 class TestExportMeasurements(TestCase):
 
     def setUp(self):
@@ -8252,7 +8427,7 @@ class TestParsePortalErrors(SimpleTestCase):
 
 
 @override_settings(MEDIA_ROOT=tempfile.mkdtemp())
-class TestDisplayMovie(TestCase):
+class TestDisplayDataproduct(TestCase):
     def setUp(self):
         body_params = {
                          'provisional_name': None,
@@ -8377,3 +8552,17 @@ class TestDisplayMovie(TestCase):
         save_dataproduct(obj=self.test_block2, filepath=movie_file, filetype=DataProduct.GUIDER_GIF)
         response = display_movie(request, self.test_block2.id)
         self.assertIn(b'GIF', response.content)
+
+    def test_display_text(self):
+        # test non-existant DP
+        request = ''
+        with self.assertRaises(Http404) as context:
+            response = display_textfile(request, 0)
+            self.assertTrue("Dataproduct does not exist." in str(context.exception))
+        # create ALCDEF
+        file_name = 'test_SB_ALCDEF.txt'
+        file_content = "some text here"
+        save_dataproduct(obj=self.test_sblock, filepath=None, filetype=DataProduct.ALCDEF_TXT, filename=file_name, content=file_content)
+        dp = DataProduct.objects.filter(filetype=DataProduct.ALCDEF_TXT)
+        response = display_textfile(request, dp[0].id)
+        self.assertEqual(b"some text here", response.content)

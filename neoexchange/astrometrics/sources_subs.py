@@ -17,16 +17,17 @@ GNU General Public License for more details.
 
 import logging
 import os
+from copy import deepcopy
 import urllib.request
 import urllib.error
 from urllib.parse import urljoin
 import imaplib
 import email
 from re import sub, compile
-from math import degrees
+from math import degrees, sqrt, copysign
 from time import sleep
 from datetime import date, datetime, timedelta
-from socket import error
+from socket import error, timeout
 from random import randint
 import requests
 import shutil
@@ -35,12 +36,14 @@ from contextlib import closing
 
 from bs4 import BeautifulSoup
 import astropy.units as u
+from astropy.table import Table
 try:
     import pyslalib.slalib as S
 except ModuleNotFoundError:
     pass
 from django.conf import settings
 from astropy.io import ascii
+from numpy.ma import is_masked
 
 import astrometrics.site_config as cfg
 from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime, datetime2mjd_utc, mjd_utc2mjd_tt, mjd_utc2datetime
@@ -48,6 +51,35 @@ from astrometrics.ephem_subs import build_filter_blocks, MPC_site_code_to_domes,
 from core.urlsubs import get_telescope_states
 
 logger = logging.getLogger(__name__)
+
+
+def box_spiral_generator(dist, max_sep):
+    """Create a box spiral of offsets (starting at 0 and resetting when it reaches the max seperation)
+        Result is a generator, that can be treated as an iterator.
+    :param dist: distance of single offset in RA or Dec in arcsec
+    :param max_sep: total distance from origin at which point the spiral resets
+    :return (ra_off, dec_off): Tuple for the current requested offsets
+    """
+    ra_off = 0
+    dec_off = 0
+    n = 1
+    while True:
+        k = 0
+        while k < abs(n):
+            if sqrt(ra_off**2 + dec_off**2) >= max_sep:
+                ra_off = 0
+                dec_off = 0
+                n = 1
+            yield ra_off, dec_off
+            ra_off += copysign(dist, n)
+            k += 1
+        k = 0
+        while k < abs(n):
+            yield ra_off, dec_off
+            dec_off += copysign(dist, n)
+            k += 1
+        n += copysign(1, n)
+        n *= -1
 
 
 def download_file(url, file_to_save):
@@ -118,7 +150,26 @@ def fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser
             logger.warning("Page retrieval failed with HTTP Error: %s" % (e.reason,))
         return None
     except (BrokenPipeError, ConnectionAbortedError, ConnectionRefusedError, ConnectionResetError) as sock_e:
-        logger.warning("Page retrieval failed with socket Error %d: %s" % (sock_e.errno, sock_e.strerror))
+        try:
+            errno = int(sock_e.errno)
+        except TypeError:
+            errno = -99
+        try:
+            errstring = str(sock_e.strerror)
+        except TypeError:
+            errstring = "No message available"
+        logger.warning("Page retrieval failed with socket Error %d: %s" % (errno, errstring))
+        return None
+    except timeout as sock_e:
+        try:
+            errno = int(sock_e.errno)
+        except TypeError:
+            errno = -99
+        try:
+            errstring = str(sock_e.strerror)
+        except TypeError:
+            errstring = "No message available"
+        logger.warning("Page retrieval failed with socket Error %d: %s" % (errno, errstring))
         return None
 
     # Suck the HTML down
@@ -1153,6 +1204,20 @@ def parse_goldstone_chunks(chunks, dbg=False):
 
     return object_id
 
+def fetch_goldstone_csv(file_or_url=None):
+    """Fetches the Goldstone CSV file of radar targets, returning a Astropy
+    Table"""
+
+    file_or_url = file_or_url or 'https://echo.jpl.nasa.gov/asteroids/GSSR_schedule.csv'
+
+    table = None
+    try:
+        table = Table.read(file_or_url, format='csv', encoding='utf-8-sig')
+    except (FileNotFoundError, urllib.error.URLError):
+        logger.warning(f"Could not read Goldstone target file: {file_or_url}")
+    
+    return table
+
 
 def fetch_goldstone_page():
     """Fetches the Goldstone page of radar targets, returning a BeautifulSoup
@@ -1164,21 +1229,7 @@ def fetch_goldstone_page():
 
     return page
 
-
-def fetch_goldstone_targets(page=None, dbg=False):
-    """Fetches and parses the Goldstone list of radar targets, returning a list
-    of object id's for the current year.
-    Takes either a BeautifulSoup page version of the Goldstone target page (from
-    a call to fetch_goldstone_page() - to allow  standalone testing) or  calls
-    this routine and then parses the resulting page.
-    """
-
-    if type(page) != BeautifulSoup:
-        page = fetch_goldstone_page()
-
-    if page is None:
-        return None
-
+def parse_goldstone_page(page, dbg=False):
     radar_objects = []
     in_objects = False
     current_year = datetime.now().year
@@ -1234,6 +1285,42 @@ def fetch_goldstone_targets(page=None, dbg=False):
                     if obj_id != '':
                         radar_objects.append(obj_id)
                 last_year_seen = year
+    return radar_objects
+
+def fetch_goldstone_targets(page=None, calendar_format=False, dbg=False):
+    """Fetches and parses the Goldstone list of radar targets, returning a list
+    of object id's for the current year.
+    Takes either a BeautifulSoup page version of the Goldstone target page (from
+    a call to fetch_goldstone_page() - to allow  standalone testing) or  calls
+    this routine and then parses the resulting page.
+    """
+
+    if type(page) != BeautifulSoup:
+        page = fetch_goldstone_csv(page)
+
+    if page is None:
+        return None
+
+    if type(page) == BeautifulSoup:
+        radar_objects = parse_goldstone_page(page)
+    else:
+        current_year = datetime.utcnow().year
+
+        radar_objects = []
+        for row in page:
+            target = str(row['number'])
+            if is_masked(row['number']) is True:
+                target = row['name']
+            start_date = datetime.strptime(row['start (UT)'], '%m/%d/%Y')
+            if calendar_format is True:
+                end_date = datetime.strptime(row['end (UT)'], '%m/%d/%Y')
+                end_date += timedelta(seconds=86399)
+                target = {'target' : target,
+                          'windows' : [{'start' : start_date.strftime("%Y-%m-%dT%H:%M:%S"),
+                                        'end' : end_date.strftime("%Y-%m-%dT%H:%M:%S")}]
+                             }
+            if start_date.year == current_year:
+                radar_objects.append(target)
     return radar_objects
 
 
@@ -1673,7 +1760,10 @@ def make_config(params, filter_list):
         'guiding_config': {},
         'instrument_configs': []
     }
-    if params['exp_type'] == 'REPEAT_EXPOSE':
+
+    if params.get('add_dither', False):
+        dither_pattern = box_spiral_generator(params['dither_distance'], 120)
+    elif params['exp_type'] == 'REPEAT_EXPOSE':
         # Remove overhead from slot_length so repeat_exposure matches predicted frames.
         # This will allow a 2 hour slot to fit within a 2 hour window.
         single_mol_overhead = cfg.molecule_overhead['filter_change'] + cfg.molecule_overhead['per_molecule_time']
@@ -1695,7 +1785,8 @@ def make_config(params, filter_list):
 
         instrument_config = {'exposure_count': exp_count,
                              'exposure_time': params['exp_time'],
-                             'optical_elements': {'filter': filt[0]}
+                             'optical_elements': {'filter': filt[0]},
+                             'extra_params': {}
                              }
 
         if params.get('bin_mode', None) == '2k_2x2' and params['pondtelescope'] == '1m0':
@@ -1717,7 +1808,18 @@ def make_config(params, filter_list):
                                                      'diffuser_z_position': 'out'}
 
             instrument_config['extra_params'] = extra_params
-        conf['instrument_configs'].append(instrument_config)
+
+        if params.get('add_dither', False):
+            exp = 0
+            while exp < exp_count:
+                offsets = next(dither_pattern)
+                instrument_config['exposure_count'] = 1
+                instrument_config['extra_params']["offset_ra"] = offsets[0]
+                instrument_config['extra_params']["offset_dec"] = offsets[1]
+                conf['instrument_configs'].append(deepcopy(instrument_config))
+                exp += 1
+        else:
+            conf['instrument_configs'].append(instrument_config)
 
     return conf
 
@@ -1962,7 +2064,7 @@ def configure_defaults(params):
     params['instrument'] = '1M0-SCICAM-SINISTRO'
 
     # Perform Repeated exposures if many exposures compared to number of filter changes.
-    if params['exp_count'] <= 10 or params['exp_count'] < 10*len(list(filter(None, params['filter_pattern'].split(',')))):
+    if params['exp_count'] <= 10 or params['exp_count'] < 10*len(list(filter(None, params['filter_pattern'].split(',')))) or params.get('add_dither', False):
         params['exp_type'] = 'EXPOSE'
     else:
         params['exp_type'] = 'REPEAT_EXPOSE'

@@ -18,6 +18,7 @@ GNU General Public License for more details.
 import logging
 from datetime import datetime, timedelta, time
 from math import sin, cos, tan, asin, acos, atan2, degrees, radians, pi, sqrt, fabs, exp, log10, ceil, log
+from socket import timeout
 
 try:
     import pyslalib.slalib as S
@@ -129,7 +130,9 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
         'southpole_sep':  Angular distance from the South Pole (degrees)
         'sun_sep':        Angular distance from the Solar position (radians)
         'earth_obj_dist': Delta, distance between Earth and target (AU)
-
+        'geocnt_a_pos':   Geocentric Asteroid Position [x,y,z] (AU)
+        'heliocnt_e_pos': Heliocentric Earth Position [x,y,z] (AU)
+        'ltt':            Light Travel time (s)
     """
 # Light travel time for 1 AU (in sec)
     tau = 499.004783806
@@ -249,10 +252,10 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
 
     # Check we have everything we need before computing positions
     if p_orbelems['Inc'] is None or p_orbelems['LongNode'] is None or p_orbelems['ArgPeri'] is None\
-        or p_orbelems['SemiAxisOrQ'] is None or p_orbelems['Ecc'] is None:
-            logger.error("Missing parameter for %s (%s)" % (orbelems['name'], orbelems['provisional_name']))
-            logger.error(p_orbelems)
-            return {}
+            or p_orbelems['SemiAxisOrQ'] is None or p_orbelems['Ecc'] is None:
+        logger.error("Missing parameter for %s (%s)" % (orbelems['name'], orbelems['provisional_name']))
+        logger.error(p_orbelems)
+        return {}
 
     r3 = -100.
     delta = 0.0
@@ -278,12 +281,12 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
         logger.debug("Sun->Asteroid [x,y,z]=%s %s" % (pv[0:3], status))
         logger.debug("Sun->Asteroid [xdot,ydot,zdot]=%s %s" % (pv[3:6], status))
         if status != 0:
-            err_mapping = { -1 : 'illegal JFORM',
-                            -2 : 'illegal E',
-                            -3 : 'illegal AORQ',
-                            -4 : 'illegal DM',
-                            -5 : 'numerical error'
-                          }
+            err_mapping = {-1: 'illegal JFORM',
+                           -2: 'illegal E',
+                           -3: 'illegal AORQ',
+                           -4: 'illegal DM',
+                           -5: 'numerical error'
+                           }
             msg = "Position (sla_planel) error={} {}".format(status, err_mapping.get(status, 'Unknown error'))
             logger.error(msg)
             return {}
@@ -440,6 +443,9 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
                 'southpole_sep' : spd,
                 'sun_sep'       : separation,
                 'earth_obj_dist': delta,
+                'geocnt_a_pos'  : convert_to_ecliptic(pos, mjd_tt),
+                'heliocnt_e_pos': convert_to_ecliptic(e_pos_hel, mjd_tt),
+                'ltt'           : ltt,
                 'sun_obj_dist'  : r,
                 }
 
@@ -677,6 +683,8 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
         logger.error("Unable to connect to HORIZONS")
     except requests.exceptions.ConnectionError as e:
         logger.error("Unable to connect to HORIZONS")
+    except timeout as sock_e:
+        logger.warning(f"HORIZONS retrieval failed with socket Error {sock_e.errno}: {sock_e.strerror}")
     except ValueError as e:
         logger.debug("Ambiguous object, trying to determine HORIZONS id")
         if e.args and len(e.args) > 0:
@@ -2220,3 +2228,107 @@ def get_visibility(ra, dec, date, site_code, step_size='30 m', alt_limit=30, qui
             stop_time = set_time
 
     return dark_and_up_time, max_alt, start_time, stop_time
+
+
+def convert_to_ecliptic(equatorial_coords, coord_date):
+    # Calculate radial distance for cartesian coordinates
+    r = sqrt(sum([coord ** 2 for coord in equatorial_coords]))
+
+    # Convert heliocentric, equatorial Cartesian Coordinates to spherical coordinates
+    alpha, delta = S.sla_dcc2s(equatorial_coords)
+
+    # Convert Equatorial spherical Coordinates to Ecliptic Spherical coordinates
+    l, b = S.sla_eqecl(alpha, delta, coord_date)
+
+    # Convert Ecliptic Spherical coordinates to Unit cartesian coordinates
+    unit_cartesian_coords = S.sla_dcs2c(l, b)
+
+    # Convert Unit coordinates into real coordinates
+    final_cartesian_coords = [pos * r for pos in unit_cartesian_coords]
+
+    return final_cartesian_coords
+
+
+def orbital_pos_from_true_anomaly(nu, body_elements):
+    """Give Cartesian coordinates for a given true anomaly in radians for a given set of orbital elements"""
+    a = body_elements.get('meandist', 0)
+    e = body_elements['eccentricity']
+    i = radians(body_elements['orbinc'])
+    om = radians(body_elements['longascnode'])
+    w = radians(body_elements['argofperih'])
+    q = body_elements.get('perihdist', 0)
+
+    # Calculate radial distance
+    if not a:  # Comet
+        e = 1
+        if e >= 1:  # shorten extent of nu to prevent wayward infinities and beyond.
+            nu *= acos(-1/e) / pi - 0.0001
+        r = q * (1 + e) / (1 + e * cos(nu))
+    else:
+        r = a * (1 - e ** 2) / (1 + e * cos(nu))
+
+    # Calculate radial distance and heliocentric, ecliptic Cartesian Coordinates based on orbital elements
+    x_h_ecl = r * (cos(om) * cos(w + nu) - sin(om) * sin(w + nu) * cos(i))
+    y_h_ecl = r * (sin(om) * cos(w + nu) + cos(om) * sin(w + nu) * cos(i))
+    z_h_ecl = r * (sin(w + nu) * sin(i))
+
+    final_cartesian_coords = [x_h_ecl, y_h_ecl, z_h_ecl]
+
+    return final_cartesian_coords
+
+
+def get_planetary_elements(planet=None):
+    """
+    Function to return rough elements for the major planets with respect to the mean ecliptic and equinox of J2000.
+    Provides approximate orbits valid between 1800 AD and 2050 AD.
+    a,e,i change on the the order of .001 Unit/Century while Om and om are ~ .2 deg/Century
+    (See https://ssd.jpl.nasa.gov/planets/approx_pos.html)
+    :param planet: name of planet
+    :return: requested elements
+    """
+    planet_elements = {'mercury': {'meandist': 0.38709927,
+                                   'eccentricity': 0.20563593,
+                                   'orbinc': 7.00497902,
+                                   'longascnode': 48.33076593,
+                                   'argofperih': 77.45779628},
+                       'venus':   {'meandist': 0.72333566,
+                                   'eccentricity': 0.00677672,
+                                   'orbinc': 3.39467605,
+                                   'longascnode': 76.67984255,
+                                   'argofperih': 131.60246718},
+                       'earth':   {'meandist': 1.00000261,
+                                   'eccentricity': 0.01671123,
+                                   'orbinc': 0.00001531,
+                                   'longascnode': 0.0,
+                                   'argofperih': 102.93768193},
+                       'mars':    {'meandist': 1.52371034,
+                                   'eccentricity': 0.09339410,
+                                   'orbinc': 1.84969142,
+                                   'longascnode': 49.55953891,
+                                   'argofperih': -23.94362959},
+                       'jupiter': {'meandist': 5.20288700,
+                                   'eccentricity': 0.04838624,
+                                   'orbinc': 1.30439695,
+                                   'longascnode': 100.47390909,
+                                   'argofperih': 14.72847983},
+                       'saturn':  {'meandist': 9.53667594,
+                                   'eccentricity': 0.05386179,
+                                   'orbinc': 2.48599187,
+                                   'longascnode': 113.66242448,
+                                   'argofperih': 92.59887831},
+                       'uranus':  {'meandist': 19.18916464,
+                                   'eccentricity': 0.04725744,
+                                   'orbinc': 0.77263783,
+                                   'longascnode': 74.01692503,
+                                   'argofperih': 170.95427630},
+                       'neptune': {'meandist': 30.06992276,
+                                   'eccentricity': 0.00859048,
+                                   'orbinc': 1.77004347,
+                                   'longascnode': 131.78422574,
+                                   'argofperih': 44.96476227}
+                       }
+    try:
+        return_elements = planet_elements[planet.lower()]
+    except (KeyError, AttributeError):
+        return_elements = planet_elements
+    return return_elements
