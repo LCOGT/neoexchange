@@ -811,6 +811,16 @@ def funpack_file(fpack_file, binary=None, dbg=False):
     cmdline = "%s -F %s" % ( binary, fpack_file)
     cmdline = cmdline.rstrip()
 
+    if dbg is True:
+        print(cmdline)
+        retcode_or_cmdline = cmdline
+    else:
+        dest_dir = os.path.dirname(fpack_file)
+        logger.debug("cmdline=%s" % cmdline)
+        args = cmdline.split()
+        retcode_or_cmdline = call(args, cwd=dest_dir)
+
+    return retcode_or_cmdline
 
 def run_damit_periodscan(lcs_input_filename, psinput_filename, psoutput_filename, binary=None, dbg=False):
     """ Run DAMIT code to calculate periodogram based on lc .
