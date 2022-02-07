@@ -61,6 +61,10 @@ COPY neoexchange/photometrics/configs/environ.def /root/.find_orb/
 ################################################################################
 FROM centos:8 AS damitbuilder
 
+RUN sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-Linux-* &&\
+    sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-Linux-*
+RUN yum upgrade -y
+
 # Choose specific release versions of each piece of software
 ENV DAMIT_VERSION="version_0.2.1"
 
@@ -95,6 +99,10 @@ RUN cd ${DAMIT_VERSION} \
 # Production Container
 ################################################################################
 FROM centos:8
+
+RUN sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-Linux-* &&\
+    sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-Linux-*
+RUN yum upgrade -y
 
 # Copy findorb from builder container
 COPY --from=findorbbuilder /root /root
