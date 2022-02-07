@@ -3,6 +3,10 @@
 ################################################################################
 FROM centos:8 AS findorbbuilder
 
+RUN sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-Linux-* &&\
+    sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-Linux-*
+RUN yum upgrade -y
+
 # Choose specific release versions of each piece of software
 ENV LUNAR_VERSION=016b82f80bd509929e0d55136ed6882e61831dfb \
     JPL_EPH_VERSION=d460e8ace0e5d3036e29838444b4f3fee85f0a45 \
