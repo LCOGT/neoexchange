@@ -460,7 +460,10 @@ def determine_first_last_times(filepath):
             if header:
                 # Check if MEF header and only take primary header if so
                 if 'MEF' in cattype:
-                    header = header[0]
+                    index = 0
+                    if 'RAW_MEF' not in cattype and fits_filepath.endswith('.fz'):
+                        index = 1
+                    header = header[index]
                 start, stop = get_shutter_open_close(header)
                 first_frame = min(first_frame, start)
                 last_frame = max(last_frame, stop)
@@ -1038,7 +1041,7 @@ def find_related_frames(block):
     """
 
     related_frames = {'': []}
-    red_frame_ids = Frame.objects.filter(block=block, filename__startswith='tfn1m0', frametype=Frame.BANZAI_RED_FRAMETYPE).values_list('frameid', flat=True)
+    red_frame_ids = Frame.objects.filter(block=block, filename__contains='1m0', frametype=Frame.BANZAI_RED_FRAMETYPE).values_list('frameid', flat=True)
     # List for frame id's seen
     frame_ids = []
     for red_frame_id in red_frame_ids:
@@ -1211,7 +1214,7 @@ def export_block_to_pds(input_dir, output_dir, block, schema_root, skip_download
     xml_files.append(raw_xml_filename)
     # Create PDS labels for raw data
     if verbose: print("Creating raw PDS labels")
-    xml_labels = create_pds_labels(paths['raw_data'], schema_root)
+    xml_labels = create_pds_labels(paths['raw_data'], schema_root, match='\S*e00')
     xml_files += xml_labels
 
     # transfer cal data
