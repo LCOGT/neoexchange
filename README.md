@@ -4,6 +4,10 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.12.0
+* Add fractional ephemeris rate
+* Set default observing mode to 50% object's rate for moving targets
+
 ### 3.11.0
 * Update Summary pages for enhanced usability and utility
 * Add body publication status
