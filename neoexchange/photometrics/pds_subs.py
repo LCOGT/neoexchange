@@ -470,7 +470,7 @@ def determine_first_last_times(filepath):
 
     return first_frame, last_frame
 
-def determine_first_last_times_from_table(filepath, match_pattern='*_photometry.dat'):
+def determine_first_last_times_from_table(filepath, match_pattern='*_photometry.tab'):
     """Iterates through all the tables in <filepath> that match [match_pattern]
     to determine the times of the first and last frames, which are returned"""
 
@@ -929,7 +929,7 @@ def write_product_collection_xml(filepath, xml_file, schema_root, mod_time=None)
 def create_pds_labels(procdir, schema_root, match='.*e92'):
     """Create PDS4 product labels for all frames matching the [match] regexp pattern
     (defaults to processed (e92) FITS files) in <procdir>. To search for and
-    process ASCII photometry files, use `match='*photometry.dat'`
+    process ASCII photometry files, use `match='*photometry.tab'`
     The PDS4 schematron and XSD files in <schema_root> are used in generating
     the XML file.
     A list of created PDS4 label filenames (with paths) is returned; this list
@@ -938,7 +938,7 @@ def create_pds_labels(procdir, schema_root, match='.*e92'):
 
     xml_labels = []
     full_procdir = os.path.abspath(os.path.expandvars(procdir))
-    if 'photometry.dat' in match:
+    if 'photometry.tab' in match:
         photometry_files = sorted(glob(os.path.join(full_procdir, match)))
         files_to_process = {full_procdir : photometry_files}
     else:
@@ -1169,7 +1169,7 @@ def create_dart_lightcurve(input_dir, output_dir, block, match='photometry_*.dat
                 if table and aper_radius:
                     phot_filename, pds_name = make_pds_asteroid_name(block.body)
                     # Format for LC files: 'lcogt_<site>_<inst.>_<YYYYMMDD>_<request #>_<astname#>_photometry.txt'
-                    output_lc_file = f"lcogt_{file_parts['site']}_{file_parts['instrument']}_{file_parts['dayobs']}_{block.request_number}_{phot_filename}_photometry.dat"
+                    output_lc_file = f"lcogt_{file_parts['site']}_{file_parts['instrument']}_{file_parts['dayobs']}_{block.request_number}_{phot_filename}_photometry.tab"
                     output_lc_filepath = os.path.join(output_dir, output_lc_file)
                     write_dartformat_file(table, output_lc_filepath, aper_radius)
         else:
@@ -1262,7 +1262,7 @@ def export_block_to_pds(input_dir, output_dir, block, schema_root, skip_download
 
     # Create PDS labels for ddp data
     if verbose: print("Creating ddp PDS labels")
-    xml_labels = create_pds_labels(paths['ddp_data'], schema_root, match='*photometry.dat')
+    xml_labels = create_pds_labels(paths['ddp_data'], schema_root, match='*photometry.tab')
     xml_files += xml_labels
 
     return csv_files, xml_files

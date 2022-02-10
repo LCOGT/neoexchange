@@ -902,7 +902,7 @@ class TestWritePDSLabel(TestCase):
 
         test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_dartphotom.dat'))
         # Copy files to input directory, renaming lc file
-        self.test_lc_file = os.path.join(self.test_dir, 'lcogt_1m0_01_fa11_20211013_didymos_photometry.dat')
+        self.test_lc_file = os.path.join(self.test_dir, 'lcogt_1m0_01_fa11_20211013_didymos_photometry.tab')
         shutil.copy(test_lc_file, self.test_lc_file)
         self.test_banzai_file = os.path.join(self.test_dir, os.path.basename(test_banzai_file))
         shutil.copy(test_banzai_file, self.test_banzai_file)
@@ -1084,7 +1084,7 @@ class TestCreatePDSLabels(TestCase):
 
         test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_dartphotom.dat'))
         # Copy files to input directory, renaming lc file
-        self.test_lc_file = os.path.join(self.test_dir, 'lcogt_tfn_fa11_20211013_12345_65803didymos_photometry.dat')
+        self.test_lc_file = os.path.join(self.test_dir, 'lcogt_tfn_fa11_20211013_12345_65803didymos_photometry.tab')
         shutil.copy(test_lc_file, self.test_lc_file)
 
         body_params = {
@@ -1207,9 +1207,9 @@ class TestCreatePDSLabels(TestCase):
 
     def test_generate_ddp(self):
 
-        expected_xml_labels = [self.test_lc_file.replace('.dat', '.xml'),]
+        expected_xml_labels = [self.test_lc_file.replace('.tab', '.xml'),]
 
-        xml_labels = create_pds_labels(self.test_dir, self.schemadir, '*photometry.dat')
+        xml_labels = create_pds_labels(self.test_dir, self.schemadir, '*photometry.tab')
 
         self.assertEqual(len(expected_xml_labels), len(xml_labels))
         self.assertEqual(expected_xml_labels, xml_labels)
@@ -1549,7 +1549,7 @@ class TestExportBlockToPDS(TestCase):
         self.assertEqual(expected_files, related_frames)
 
     def test_create_dart_lightcurve(self):
-        expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_tfn_fa11_20211013_12345_65803didymos_photometry.dat')
+        expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_tfn_fa11_20211013_12345_65803didymos_photometry.tab')
         expected_lines = [
         '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  SExtractor_flag  aprad',
         ' tfn1m001-fa11-20211012-0073-e91.fits  2459500.3339392  14.8447  0.0397  27.1845  0.0394  -12.3397    0.0052                0  10.00',
@@ -1576,7 +1576,7 @@ class TestExportBlockToPDS(TestCase):
             self.assertEqual(expected_line, lines[i].rstrip())
 
     def test_create_dart_lightcurve_default(self):
-        expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_tfn_fa11_20211013_12345_65803didymos_photometry.dat')
+        expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_tfn_fa11_20211013_12345_65803didymos_photometry.tab')
         expected_lines = [
         '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  SExtractor_flag  aprad',
         ' tfn1m001-fa11-20211012-0073-e91.fits  2459500.3339392  14.8447  0.0397  27.1845  0.0394  -12.3397    0.0052                0  10.00',
