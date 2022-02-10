@@ -797,12 +797,19 @@ def write_product_label_xml(filepath, xml_file, schema_root, mod_time=None):
                   }
 
     xmlEncoding = "UTF-8"
-    schema_mappings = pds_schema_mappings(schema_root, '*.xsd')
+    proc_level = ''
+    if '.fit' not in filepath and 'photometry' in filepath:
+        proc_level = 'ddp'
+
+    schemas_needed = '*.xsd'
+    if proc_level == 'ddp':
+        # DDP/ASCII photometry files only need base schema
+        schemas_needed = 'PDS4_PDS*.xsd'
+    schema_mappings = pds_schema_mappings(schema_root, schemas_needed)
 
     processedImage = create_obs_product(schema_mappings)
 
-    if '.fit' not in filepath and 'photometry' in filepath:
-        proc_level = 'ddp'
+    if proc_level == 'ddp':
         filename = os.path.basename(filepath)
         chunks = filename.split('_')
         name_mapping = {'didymos' : '65803 Didymos'}
@@ -852,6 +859,9 @@ def write_product_label_xml(filepath, xml_file, schema_root, mod_time=None):
     <?xml-model href="https://pds.nasa.gov/pds4/img/v1/PDS4_IMG_1F00_1810.sch"
             schematypens="http://purl.oclc.org/dsdl/schematron"?>
     <?xml-model href="https://pds.nasa.gov/pds4/geom/v1/PDS4_GEOM_1F00_1910.sch"
+            schematypens="http://purl.oclc.org/dsdl/schematron"?>'''
+    if proc_level == 'ddp':
+        preamble = b'''<?xml-model href="https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1F00.sch"
             schematypens="http://purl.oclc.org/dsdl/schematron"?>'''
 
     doc = preamble + etree.tostring(processedImage)
