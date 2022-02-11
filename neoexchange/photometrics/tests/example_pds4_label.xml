@@ -37,19 +37,34 @@
     </Investigation_Area>
     <Observing_System>
       <Observing_System_Component>
-        <name>Sinistro</name>
+        <name>Las Cumbres Observatory (LCOGT)</name>
+        <type>Host</type>
+        <description>The description for the host can be found in the document collection for this bundle.</description>
+        <Internal_Reference>
+          <lid_reference>urn:nasa:pds:context:facility:observatory.las_cumbres</lid_reference>
+          <reference_type>is_facility</reference_type>
+        </Internal_Reference>
+      </Observing_System_Component>
+      <Observing_System_Component>
+        <name>Las Cumbres Global Telescope Network - 1m Telescopes</name>
+        <type>Telescope</type>
+        <description>
+          LCOGT 1m0-13 Telescope
+          LCOGT CPT Node 1m0 Dome B at Sutherland
+          The description for the telescope can be found in the document collection for this bundle.</description>
+        <Internal_Reference>
+          <lid_reference>urn:nasa:pds:context:instrument_host:las_cumbres.1m0_telescopes</lid_reference>
+          <reference_type>is_telescope</reference_type>
+        </Internal_Reference>
+      </Observing_System_Component>
+      <Observing_System_Component>
+        <name>Las Cumbres 1m Telescopes - Sinistro Camera</name>
         <type>Instrument</type>
         <description>The description for the instrument can be found in the document collection for this bundle.</description>
-      </Observing_System_Component>
-      <Observing_System_Component>
-        <name>Las Cumbres Observatory (LCOGT)</name>
-        <type>Observatory</type>
-        <description>The description for the observatory can be found in the document collection for this bundle.</description>
-      </Observing_System_Component>
-      <Observing_System_Component>
-        <name>LCOGT 1m0-13 Telescope</name>
-        <type>Telescope</type>
-        <description>The description for the telescope can be found in the document collection for this bundle.</description>
+        <Internal_Reference>
+          <lid_reference>urn:nasa:pds:context:instrument:las_cumbres.1m0_telescopes.sinistro</lid_reference>
+          <reference_type>is_instrument</reference_type>
+        </Internal_Reference>
       </Observing_System_Component>
     </Observing_System>
     <Target_Identification>
