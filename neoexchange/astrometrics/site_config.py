@@ -81,6 +81,34 @@ valid_site_codes = { 'ELP-DOMA-1M0A' : 'V37',
 # Reverse site code dictionary
 valid_telescope_codes = {v: k for k, v in valid_site_codes.items()}
 
+# Telescope serial codes
+valid_telescope_serials = {  '1m008' : 'V37',
+                             '1m006' : 'V39',
+                             '1m005' : 'W85',
+                             '1m009' : 'W86',
+                             '1m004' : 'W87',
+                             '1m010' : 'K91',
+                             '1m013' : 'K92',
+                             '1m012' : 'K93',
+                             '1m011' : 'Q63',
+                             '1m003' : 'Q64',
+                             '2m001' : 'F65',
+                             '2m002' : 'E10',
+                             '1m014' : 'Z31',
+                             '1m001' : 'Z24',
+                             '0m414' : 'Z21',
+                             '0m410' : 'Z17',
+                             '0m403' : 'Q58',
+                             '0m405' : 'Q59',
+                             '0m406' : 'T04',
+                             '0m404' : 'T03',
+                             '0m409' : 'W89',
+                             '0m412' : 'W79',
+                             '0m411' : 'V38',
+                             '0m407' : 'L09', # LCOGT   cpt-aqwa-0m4a
+                             '0m420' : 'XXX'  # ASAS-SN cpt-aqwa-0m4b
+                            }
+
 # Establish Filter Lists
 phot_filters = [    "air",
                     "clear",

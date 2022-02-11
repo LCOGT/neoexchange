@@ -1884,6 +1884,13 @@ def LCOGT_domes_to_site_codes(siteid, encid, telid):
     instance = "%s-%s-%s" % (siteid.strip().upper(), encid.strip().upper(), telid.strip().upper())
     return valid_site_codes.get(instance, 'XXX')
 
+def LCOGT_telserial_to_site_codes(serial):
+    """Turns LCOGT telescope serial numbers e.g. '1m0-11' or '1m011' into the
+    MPC site code e.g. 'Q63'"""
+
+    valid_tel_serials = cfg.valid_telescope_serials
+
+    return valid_tel_serials.get(serial.replace('-', '', 1), 'XXX')
 
 def MPC_site_code_to_domes(site):
     """ Returns the mapped value of the MPC site code to LCO Site, Eclosure, and telescope"""
