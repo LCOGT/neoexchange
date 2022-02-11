@@ -719,16 +719,16 @@ def create_file_area_inv(filename, mod_time=None):
 
 def create_file_area_table(filename):
 
-    fields = {'file' : { 'field_location' : 1, 'data_type' : 'ASCII_String', 'field_length' : 36, 'description' : 'File name of the calibrated image where data were measured.' },
+    fields = {'file' : { 'field_location' : 2, 'data_type' : 'ASCII_String', 'field_length' : 36, 'description' : 'File name of the calibrated image where data were measured.' },
               'julian_date' : { 'field_location' : 40, 'data_type' : 'ASCII_Real', 'field_length' : 15, 'description' : 'UTC Julian date of the exposure midtime' },
               'mag' : { 'field_location' : 56, 'data_type' : 'ASCII_Real', 'field_length' : 8, 'description' : 'Calibrated PanSTARRs r-band apparent magnitude of asteroid' },
               'sig' : { 'field_location' : 66, 'data_type' : 'ASCII_Real', 'field_length' : 6, 'description' : '1-sigma error on the apparent magnitude' },
               'ZP'  : { 'field_location' : 73, 'data_type' : 'ASCII_Real', 'field_length' : 8, 'description' : 'Calibrated zero point magnitude in PanSTARRs r-band' },
-              'ZP_sig' : { 'field_location' : 82, 'data_type' : 'ASCII_Real', 'field_length' : 6, 'description' : '1-sigma error on the zero point magnitude' },
+              'ZP_sig' : { 'field_location' : 83, 'data_type' : 'ASCII_Real', 'field_length' : 6, 'description' : '1-sigma error on the zero point magnitude' },
               'inst_mag' : { 'field_location' : 91, 'data_type' : 'ASCII_Real', 'field_length' : 8, 'description' : 'instrumental magnitude of asteroid' },
               'inst_sig' : { 'field_location' : 101, 'data_type' : 'ASCII_Real', 'field_length' : 8, 'description' : '1-sigma error on the instrumental magnitude' },
               'SExtractor_flag' : { 'field_location' : 111, 'data_type' : 'ASCII_Integer', 'field_length' : 15, 'description' : 'Flags associated with the Source Extractor photometry measurements. See source_extractor_flags.txt in the documents folder for this archive for more detailed description.' },
-              'aprad' : { 'field_location' : 126, 'data_type' : 'ASCII_Real', 'field_length' : 6, 'description' : 'radius in pixels of the aperture used for the photometry measurement' }
+              'aprad' : { 'field_location' : 127, 'data_type' : 'ASCII_Real', 'field_length' : 6, 'description' : 'radius in pixels of the aperture used for the photometry measurement' }
               }
     file_area_table = etree.Element("File_Area_Observational")
     file_element = etree.SubElement(file_area_table, "File")

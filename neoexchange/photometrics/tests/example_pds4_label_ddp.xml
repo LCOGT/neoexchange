@@ -72,7 +72,7 @@
         <Field_Character>
           <name>file</name>
           <field_number>1</field_number>
-          <field_location unit="byte">1</field_location>
+          <field_location unit="byte">2</field_location>
           <data_type>ASCII_String</data_type>
           <field_length unit="byte">36</field_length>
           <description>File name of the calibrated image where data were measured.</description>
@@ -112,7 +112,7 @@
         <Field_Character>
           <name>ZP_sig</name>
           <field_number>6</field_number>
-          <field_location unit="byte">82</field_location>
+          <field_location unit="byte">83</field_location>
           <data_type>ASCII_Real</data_type>
           <field_length unit="byte">6</field_length>
           <description>1-sigma error on the zero point magnitude</description>
@@ -144,7 +144,7 @@
         <Field_Character>
           <name>aprad</name>
           <field_number>10</field_number>
-          <field_location unit="byte">126</field_location>
+          <field_location unit="byte">127</field_location>
           <data_type>ASCII_Real</data_type>
           <field_length unit="byte">6</field_length>
           <description>radius in pixels of the aperture used for the photometry measurement</description>
