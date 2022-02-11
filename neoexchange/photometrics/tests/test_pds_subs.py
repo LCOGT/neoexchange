@@ -1286,6 +1286,32 @@ class TestMakePDSAsteroidName(SimpleTestCase):
         self.assertEqual(expected_filename, filename)
         self.assertEqual(expected_pds_name, pds_name)
 
+class TestDetermineFilenameFromTable(SimpleTestCase):
+
+    def setUp(self):
+        self.test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_dartphotom.dat'))
+
+    def test_none(self):
+        expected_filename = None
+
+        filename = determine_filename_from_table(None)
+
+        self.assertEqual(expected_filename, filename)
+
+    def test_nonexistant(self):
+        expected_filename = None
+
+        filename = determine_filename_from_table('\tmp\wibble')
+
+        self.assertEqual(expected_filename, filename)
+
+    def test_tfn(self):
+        expected_filename = 'tfn1m001-fa11-20211012-0073-e91.fits'
+
+        filename = determine_filename_from_table(self.test_lc_file)
+
+        self.assertEqual(expected_filename, filename)
+
 
 class TestExportBlockToPDS(TestCase):
 

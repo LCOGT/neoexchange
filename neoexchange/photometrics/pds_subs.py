@@ -15,6 +15,7 @@ from django.conf import settings
 
 from core.models import Body, Frame
 from core.archive_subs import lco_api_call, download_files
+from astrometrics.ephem_subs import LCOGT_telserial_to_site_codes, LCOGT_domes_to_site_codes, get_sitepos
 from photometrics.lightcurve_subs import *
 from photometrics.catalog_subs import open_fits_catalog
 from photometrics.external_codes import convert_file_to_crlf, funpack_file
@@ -410,17 +411,38 @@ def create_obs_area(header, filename):
     etree.SubElement(int_reference, "lid_reference").text = "urn:nasa:pds:context:investigation:mission.double_asteroid_redirection_test"
     etree.SubElement(int_reference, "reference_type").text = "data_to_investigation"
     # Create Observing System subclass of Observation Area
+    tel_class = header.get('TELESCOP', 'XXX')[0:3]
+    tel_class_descrip = tel_class.replace("m0", "m").replace("0m4", "0.4m")
     obs_system = etree.SubElement(obs_area, "Observing_System")
-    obs_components = {  'Instrument' : 'Sinistro',
-                        'Observatory' : 'Las Cumbres Observatory (LCOGT)',
-                        'Telescope' : 'LCOGT ' + header.get('TELESCOP','') + ' Telescope'
+    obs_components = {
+                        'Host' : { 'name' : 'Las Cumbres Observatory (LCOGT)',
+                                   'lid_reference' : 'urn:nasa:pds:context:facility:observatory.las_cumbres',
+                                   'reference_type' : 'is_facility'
+                                 },
+                        'Telescope' : { 'name' : f'Las Cumbres Global Telescope Network - {tel_class_descrip:} Telescopes',
+                                        'lid_reference' : f"urn:nasa:pds:context:instrument_host:las_cumbres.{tel_class:}_telescopes",
+                                        'reference_type' : 'is_telescope'
+                                      },
+                        'Instrument' : { 'name' : f'Las Cumbres {tel_class_descrip:} Telescopes - Sinistro Camera',
+                                         'lid_reference' : f"urn:nasa:pds:context:instrument:las_cumbres.{tel_class:}_telescopes.sinistro",
+                                         'reference_type' : 'is_instrument'
+                                       }
                      }
     for component in obs_components:
         comp = etree.SubElement(obs_system, "Observing_System_Component")
-        etree.SubElement(comp, "name").text = obs_components[component]
+        etree.SubElement(comp, "name").text = obs_components[component]['name']
         etree.SubElement(comp, "type").text = component
-        description = "The description for the {} can be found in the document collection for this bundle.".format(component.lower())
+        description = f"The description for the {component.lower():} can be found in the document collection for this bundle."
+        if component == 'Telescope':
+            site_code = header.get('MPCCODE', None)
+            if site_code is None:
+                site_code = LCOGT_domes_to_site_codes(header.get('siteid', ''), header.get('encid', ''),  header.get('telid', ''))
+            site_name = get_sitepos(site_code)[0]
+            description = f"\n          LCOGT {header.get('TELESCOP',''):} Telescope\n          {site_name.replace('LCO', 'LCOGT'):}\n          {description:}"
         etree.SubElement(comp, "description").text = description
+        int_reference = etree.SubElement(comp, "Internal_Reference")
+        etree.SubElement(int_reference, "lid_reference").text = obs_components[component]['lid_reference']
+        etree.SubElement(int_reference, "reference_type").text = obs_components[component]['reference_type']
 
     # Create Target Identification subclass
     target_id = etree.SubElement(obs_area, "Target_Identification")
@@ -491,6 +513,19 @@ def determine_first_last_times_from_table(filepath, match_pattern='*_photometry.
                 last_frame = last_frame.datetime
 
     return first_frame, last_frame
+
+def determine_filename_from_table(table_file):
+
+    filename = None
+    if table_file and os.path.exists(table_file):
+        try:
+            table = Table.read(table_file, format='ascii', header_start=0, data_start=1)
+        except InconsistentTableError:
+            pass
+        if table:
+            filename = table['file'][0]
+
+    return filename
 
 def create_context_area(filepath, collection_type):
     """Creates the Context Area set of classes and returns an etree.Element with it.
@@ -812,9 +847,18 @@ def write_product_label_xml(filepath, xml_file, schema_root, mod_time=None):
     if proc_level == 'ddp':
         filename = os.path.basename(filepath)
         chunks = filename.split('_')
+        tel_class = chunks[1]
+        tel_serialnum = chunks[2]
+        site_code = ''
         name_mapping = {'didymos' : '65803 Didymos'}
         first_frame, last_frame = determine_first_last_times_from_table(os.path.dirname(filepath))
-        headers = [{ 'TELESCOP' : chunks[1]+'-'+chunks[2],
+        first_filename = determine_filename_from_table(filepath)
+        if first_filename:
+            tel_class = first_filename[3:6]
+            tel_serialnum = first_filename[6:8]
+            site_code = LCOGT_telserial_to_site_codes(tel_class+tel_serialnum)
+        headers = [{ 'TELESCOP' : tel_class + '-' + tel_serialnum,
+                     'MPCCODE'  : site_code,
                      'object'   : name_mapping.get(chunks[5], chunks[5]),
                      'srctype'  : 'MINORPLANET',
                      'DATE-OBS' : first_frame.strftime("%Y-%m-%dT%H:%M:%S.%f"),
