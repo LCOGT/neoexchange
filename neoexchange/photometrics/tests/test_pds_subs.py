@@ -1644,3 +1644,11 @@ class TestExportBlockToPDS(TestCase):
             expected_file = os.path.join(self.expected_root_dir, f'collection_{collection_type}.{file_type}')
             self.assertTrue(os.path.exists(expected_file), f'{expected_file} does not exist')
             self.assertTrue(os.path.isfile(expected_file), f'{expected_file} is not a file')
+        for collection_type in ['raw', 'cal']:
+            filepath = os.path.join(self.test_daydir, collection_type+'_data','')
+            fits_files = glob(filepath + "*fits")
+            xml_files = glob(filepath + "*xml")
+            self.assertEqual(len(fits_files), len(xml_files))
+            collection_filepath = os.path.join(self.expected_root_dir, f'collection_{collection_type}.csv')
+            t = Table.read(collection_filepath, format='ascii.csv', data_start=0)
+            self.assertEqual(len(fits_files), len(t))
