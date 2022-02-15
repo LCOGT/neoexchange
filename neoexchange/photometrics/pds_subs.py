@@ -459,8 +459,14 @@ def create_obs_area(header, filename):
 
     obstype = header.get('obstype', '').upper()
     target_type = target_types.get(header.get('srctype',''), 'Unknown')
+    #OBSTYPE PDS NAME
+    target_type_mapping = { 'BIAS' : 'BIAS',
+                            'SKYFLAT' : 'FLAT FIELD',
+                            'DARK' : 'DARK',
+                            'BPM' : 'BPM'
+                          }
     if obstype == 'BIAS' or obstype == 'DARK' or obstype == 'SKYFLAT' or obstype == 'BPM':
-        target_name = obstype.title()
+        target_name = target_type_mapping[obstype]
         target_type = 'Calibrator'
     etree.SubElement(target_id, "name").text = target_name
     etree.SubElement(target_id, "type").text = target_type

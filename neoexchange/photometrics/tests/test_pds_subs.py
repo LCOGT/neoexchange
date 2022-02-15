@@ -896,6 +896,8 @@ class TestWritePDSLabel(TestCase):
         self.test_xml_raw_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_raw.xml'))
         self.test_xml_ddp_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_ddp.xml'))
         self.test_xml_bias_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_bias.xml'))
+        self.test_xml_dark_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_dark.xml'))
+        self.test_xml_flat_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_flat.xml'))
 
         test_banzai_file = os.path.abspath(os.path.join('photometrics', 'tests', 'banzai_test_frame.fits'))
         self.test_raw_file = os.path.abspath(os.path.join('photometrics', 'tests', 'mef_raw_test_frame.fits'))
@@ -1041,6 +1043,42 @@ class TestWritePDSLabel(TestCase):
         status = write_product_label_xml(test_bias_file, output_xml_file, self.schemadir, mod_time=datetime(2021,5,4))
 
         self.compare_xml_files(self.test_xml_bias_cat, output_xml_file)
+
+    def test_write_dark_label(self):
+
+        # Create example dark frame
+        hdulist = fits.open(self.test_banzai_file)
+        hdulist[0].header['obstype'] = 'DARK'
+        hdulist[0].header['moltype'] = 'DARK'
+        hdulist[0].header['exptime'] = 300
+        hdulist[0].header.insert('l1pubdat', ('ismaster', True, 'Is this a master calibration frame'), after=True)
+        test_dark_file = os.path.join(self.test_dir, 'banzai-test-dark-bin1x1.fits')
+        hdulist.writeto(test_dark_file, checksum=True, overwrite=True)
+        hdulist.close()
+
+        output_xml_file = os.path.join(self.test_dir, 'test_example_label.xml')
+
+        status = write_product_label_xml(test_dark_file, output_xml_file, self.schemadir, mod_time=datetime(2021,5,4))
+
+        self.compare_xml_files(self.test_xml_dark_cat, output_xml_file)
+
+    def test_write_flat_label(self):
+
+        # Create example flat frame
+        hdulist = fits.open(self.test_banzai_file)
+        hdulist[0].header['obstype'] = 'SKYFLAT'
+        hdulist[0].header['moltype'] = 'SKYFLAT'
+        hdulist[0].header['exptime'] = 2.5
+        hdulist[0].header.insert('l1pubdat', ('ismaster', True, 'Is this a master calibration frame'), after=True)
+        test_flat_file = os.path.join(self.test_dir, 'banzai-test-flat-bin1x1.fits')
+        hdulist.writeto(test_flat_file, checksum=True, overwrite=True)
+        hdulist.close()
+
+        output_xml_file = os.path.join(self.test_dir, 'test_example_label.xml')
+
+        status = write_product_label_xml(test_flat_file, output_xml_file, self.schemadir, mod_time=datetime(2021,5,4))
+
+        self.compare_xml_files(self.test_xml_flat_cat, output_xml_file)
 
     def test_write_raw_label(self):
 
