@@ -3,7 +3,7 @@
             schematypens="http://purl.oclc.org/dsdl/schematron"?>
 <Product_Collection xmlns="http://pds.nasa.gov/pds4/pds/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1 https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1F00.xsd">
   <Identification_Area>
-    <logical_identifier>urn:nasa:pds:dart_teleobs:lcogt_cal</logical_identifier>
+    <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogt_cal</logical_identifier>
     <version_id>1.0</version_id>
     <title>DART Telescopic Observations, Las Cumbres Observatory Network, Las Cumbres Observatory Calibrated Data Collection</title>
     <information_model_version>1.15.0.0</information_model_version>
@@ -67,7 +67,7 @@
   </Context_Area>
   <Reference_List>
     <Internal_Reference>
-      <lid_reference>urn:nasa:pds:dart_teleobs:lcogt_doc:las_cumbres_dart_uncalibrated_calibrated_sis</lid_reference>
+      <lid_reference>urn:nasa:pds:dart_teleobs:documentation_lcogt:las_cumbres_dart_uncalibrated_calibrated_sis</lid_reference>
       <reference_type>collection_to_document</reference_type>
       <comment>Reference is to the Las Cumbres DART Uncalibrated, Calibrated SIS document which describes the data products in this collection.</comment>
     </Internal_Reference>
@@ -77,7 +77,7 @@
   </Collection>
   <File_Area_Inventory>
     <File>
-      <file_name>collection_cal.csv</file_name>
+      <file_name>collection_data_lcogt_cal.csv</file_name>
       <creation_date_time>2021-10-15</creation_date_time>
     </File>
     <Inventory>

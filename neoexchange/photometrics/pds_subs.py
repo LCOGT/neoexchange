@@ -151,7 +151,7 @@ def create_id_area(filename, model_version='1.15.0.0', collection_type='cal', mo
             suffix = ''
         product_title = f'Las Cumbres Observatory {proc_levels[collection_type]["title"]}{suffix}'
 
-    xml_elements = {'logical_identifier' : 'urn:nasa:pds:dart_teleobs:lcogt_' + proc_levels[collection_type]['level'] + filename,
+    xml_elements = {'logical_identifier' : 'urn:nasa:pds:dart_teleobs:data_lcogt_' + proc_levels[collection_type]['level'] + filename,
                     'version_id' : '1.0',
                     'title' : product_title,
                     'information_model_version' : model_version,
@@ -564,7 +564,8 @@ def create_context_area(filepath, collection_type):
     frames_filepath = filepath
     prefix = '\S*e92'
     if collection_type == 'ddp':
-        frames_filepath = os.path.realpath(os.path.join(filepath,'..','cal_data'))
+        block_dir = os.path.basename(filepath)
+        frames_filepath = os.path.realpath(os.path.join(filepath, '..', '..', 'data_lcogt_cal', block_dir))
     elif collection_type == 'raw':
         prefix = '\S*e00'
     fits_files = find_fits_files(frames_filepath, prefix)
@@ -810,7 +811,7 @@ def create_reference_list(collection_type):
     reference_list = etree.Element("Reference_List")
     # Create Internal Reference subclass of Target Area
     int_reference = etree.SubElement(reference_list, "Internal_Reference")
-    etree.SubElement(int_reference, "lid_reference").text = "urn:nasa:pds:dart_teleobs:lcogt_doc:las_cumbres_dart_uncalibrated_calibrated_sis"
+    etree.SubElement(int_reference, "lid_reference").text = "urn:nasa:pds:dart_teleobs:documentation_lcogt:las_cumbres_dart_uncalibrated_calibrated_sis"
     etree.SubElement(int_reference, "reference_type").text = "collection_to_document"
     etree.SubElement(int_reference, "comment").text = "Reference is to the Las Cumbres DART Uncalibrated, Calibrated SIS document which describes the data products in this collection."
 
@@ -1034,10 +1035,12 @@ def create_dart_directories(output_dir, block):
     Block <block> of light curve data to DART. Creates a directory tree as follows:
     └── <output_dir>
         └── lcogt_data
-            └── lcogt_1m0_01_fa11_20211013
-                ├── cal_data
-                ├── ddp_data
-                └── raw_data
+            ├── data_lcogt_cal
+            │   └── lcogt_1m0_01_fa11_20211013
+            ├── data_lcogt_ddp
+            │   └── lcogt_1m0_01_fa11_20211013
+            ├── data_lcogt_raw
+            │   └── lcogt_1m0_01_fa11_20211013
     """
     status = {}
 
@@ -1046,13 +1049,13 @@ def create_dart_directories(output_dir, block):
         first_filename = frames.last().filename
         file_parts = split_filename(first_filename)
         if len(file_parts) == 8:
-            root_dir = f"lcogt_{file_parts['tel_class']}_{file_parts['tel_serial']}_{file_parts['instrument']}_{file_parts['dayobs']}"
-            logger.debug(f"Creating root directory {root_dir} and sub directories")
-            for dir_name in ['', 'raw_data', 'cal_data', 'ddp_data']:
-                dir_path = os.path.join(output_dir, 'lcogt_data', root_dir, dir_name)
+            block_dir = f"lcogt_{file_parts['tel_class']}_{file_parts['tel_serial']}_{file_parts['instrument']}_{file_parts['dayobs']}"
+            logger.debug(f"Creating root directories and  {block_dir} sub directories")
+            for dir_key, dir_name in zip(['raw_data', 'cal_data', 'ddp_data'], ['data_lcogt_raw', 'data_lcogt_cal', 'data_lcogt_ddp']):
+                dir_path = os.path.join(output_dir, dir_name, block_dir)
                 os.makedirs(dir_path, exist_ok=True)
-                status[dir_name] = dir_path
-            status['root'] = os.path.join(output_dir, 'lcogt_data')
+                status[dir_key] = dir_path
+            status['root'] = output_dir
         else:
             logger.warning(f"Could not decode filename: {first_filename}")
     return status
@@ -1148,7 +1151,7 @@ def create_pds_collection(output_dir, input_dir, files, collection_type, schema_
     * 'raw'
     * 'ddp (derived data product)
     CSV file entries are of the form:
-    P,urn:nasa:pds:dart_teleobs:lcogt_<collection_type>:[filename]::1.0
+    P,urn:nasa:pds:dart_teleobs:data_lcogt_<collection_type>:[filename]::1.0
     """
 
     # PDS4 Agency identifier
@@ -1156,13 +1159,13 @@ def create_pds_collection(output_dir, input_dir, files, collection_type, schema_
     # PDS4 Bundle id
     bundle_id = 'dart_teleobs'
     # PDS4 Collection id
-    collection_id = f'lcogt_{collection_type}'
+    collection_id = f'data_lcogt_{collection_type}'
     product_version = '1.0'
     product_column = Column(['P'] * len(files))
     urns = [f'{prefix}:{bundle_id}:{collection_id}:{x}::{product_version}' for x in files]
     urns_column = Column(urns)
     csv_table = Table([product_column, urns_column])
-    csv_filename = os.path.join(output_dir, f'collection_{collection_type}.csv')
+    csv_filename = os.path.join(output_dir, collection_id, f'collection_data_lcogt_{collection_type}.csv')
     # Have to use the 'no_header' Table type rather than 'csv' as there seems
     # to be no way to suppress the header
     csv_table.write(csv_filename, format='ascii.no_header', delimiter=',')
