@@ -1461,7 +1461,7 @@ class TestExportBlockToPDS(TestCase):
         shutil.copy(test_file_path, new_name)
         self.test_banzai_files.insert(1, os.path.basename(new_name))
 
-        self.remove = True
+        self.remove = False
         self.debug_print = False
         self.maxDiff = None
 
@@ -1677,6 +1677,45 @@ class TestExportBlockToPDS(TestCase):
         new_name = os.path.join(self.test_input_daydir, 'LOG')
         shutil.copy(test_logfile, new_name)
 
+        # Create example bpm frame
+        hdulist = fits.open(os.path.join(self.test_input_dir, self.test_banzai_files[0]))
+        hdulist[0].header['obstype'] = 'BPM'
+        hdulist[0].header['moltype'] = 'BIAS'
+        hdulist[0].header['exptime'] = 0
+        test_bpm_file = os.path.join(self.test_input_dir, 'banzai-test--bpm-full_frame.fits')
+        hdulist.writeto(test_bpm_file, checksum=True, overwrite=True)
+        hdulist.close()
+
+        # Create example bias frame
+        hdulist = fits.open(os.path.join(self.test_input_dir, self.test_banzai_files[0]))
+        hdulist[0].header['obstype'] = 'BIAS'
+        hdulist[0].header['moltype'] = 'BIAS'
+        hdulist[0].header['exptime'] = 0
+        hdulist[0].header.insert('l1pubdat', ('ismaster', True, 'Is this a master calibration frame'), after=True)
+        test_bias_file = os.path.join(self.test_input_dir, 'banzai-test-bias-bin1x1.fits')
+        hdulist.writeto(test_bias_file, checksum=True, overwrite=True)
+        hdulist.close()
+
+        # Create example dark frame
+        hdulist = fits.open(os.path.join(self.test_input_dir, self.test_banzai_files[0]))
+        hdulist[0].header['obstype'] = 'DARK'
+        hdulist[0].header['moltype'] = 'DARK'
+        hdulist[0].header['exptime'] = 300
+        hdulist[0].header.insert('l1pubdat', ('ismaster', True, 'Is this a master calibration frame'), after=True)
+        test_dark_file = os.path.join(self.test_input_dir, 'banzai-test-dark-bin1x1.fits')
+        hdulist.writeto(test_dark_file, checksum=True, overwrite=True)
+        hdulist.close()
+
+        # Create example flat frame
+        hdulist = fits.open(os.path.join(self.test_input_dir, self.test_banzai_files[0]))
+        hdulist[0].header['obstype'] = 'SKYFLAT'
+        hdulist[0].header['moltype'] = 'SKYFLAT'
+        hdulist[0].header['exptime'] = 13.876
+        hdulist[0].header.insert('l1pubdat', ('ismaster', True, 'Is this a master calibration frame'), after=True)
+        test_skyflat_file = os.path.join(self.test_input_dir, 'banzai-test-skyflat-bin1x1-w.fits')
+        hdulist.writeto(test_skyflat_file, checksum=True, overwrite=True)
+        hdulist.close()
+
         export_block_to_pds(self.test_input_dir, self.test_output_dir, self.test_block, self.schemadir, skip_download=True)
 
         for collection_type, file_type in zip(['raw', 'cal', 'ddp'], ['csv', 'xml']):
@@ -1687,7 +1726,7 @@ class TestExportBlockToPDS(TestCase):
             filepath = os.path.join(self.expected_root_dir, 'data_lcogt_' + collection_type, self.test_blockdir, '') #Null string on end so 'glob' works in directory
             fits_files = glob(filepath + "*fits")
             xml_files = glob(filepath + "*xml")
-            self.assertEqual(len(fits_files), len(xml_files))
+            self.assertEqual(len(fits_files), len(xml_files), msg=f"Comparison failed on {collection_type:} files in {filepath:}")
             collection_filepath = os.path.join(self.expected_root_dir, f'data_lcogt_{collection_type}', f'collection_data_lcogt_{collection_type}.csv')
             t = Table.read(collection_filepath, format='ascii.csv', data_start=0)
             self.assertEqual(len(fits_files), len(t))

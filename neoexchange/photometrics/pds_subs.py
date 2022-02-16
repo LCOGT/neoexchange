@@ -459,7 +459,7 @@ def create_obs_area(header, filename):
 
     obstype = header.get('obstype', '').upper()
     target_type = target_types.get(header.get('srctype',''), 'Unknown')
-    #OBSTYPE PDS NAME
+    #                       OBSTYPE PDS NAME
     target_type_mapping = { 'BIAS' : 'BIAS',
                             'SKYFLAT' : 'FLAT FIELD',
                             'DARK' : 'DARK',
@@ -1305,7 +1305,7 @@ def export_block_to_pds(input_dir, output_dir, block, schema_root, skip_download
 
     # Create PDS labels for cal data
     if verbose: print("Creating cal PDS labels")
-    xml_labels = create_pds_labels(paths['cal_data'], schema_root)
+    xml_labels = create_pds_labels(paths['cal_data'], schema_root, match='.*[bpm|bias|dark|flat|e92]*')
     xml_files += xml_labels
 
     # transfer ddp data
