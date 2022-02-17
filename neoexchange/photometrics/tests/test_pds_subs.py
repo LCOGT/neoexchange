@@ -615,7 +615,15 @@ class TestCreateDisciplineArea(SimpleTestCase):
         self.test_raw_filename = os.path.join(tests_path, 'mef_raw_test_frame.fits')
         self.test_raw_header, table, cattype = open_fits_catalog(self.test_raw_filename)
         test_proc_header = os.path.join(tests_path, 'example_lco_proc_hdr')
-        self.test_proc_header = fits.Header.fromtextfile(os.path.join(tests_path, test_proc_header))
+        self.test_proc_header = fits.Header.fromtextfile(test_proc_header)
+        lco_calib_prihdr = fits.Header.fromtextfile(test_proc_header)
+        lco_calib_prihdr["OBSTYPE"] = "DARK"
+        for keyword in ['L1IDDARK', 'L1STATDA', 'L1IDFLAT', 'L1STATFL', 'L1MEAN', 'L1MEDIAN', 'L1SIGMA', 'L1FWHM', 'L1ELLIP', 'L1ELLIPA', 'WCSERR']:
+            lco_calib_prihdr.remove(keyword)
+        lco_bpm_exthdr = fits.Header.fromtextfile(os.path.join(tests_path, 'example_lco_calib_bpmhdr'))
+        lco_err_exthdr = fits.Header.fromtextfile(os.path.join(tests_path, 'example_lco_calib_errhdr'))
+        self.test_lco_calib_header = [lco_calib_prihdr, lco_bpm_exthdr, lco_err_exthdr]
+
         kpno_prihdr = fits.Header.fromtextfile(os.path.join(tests_path, 'example_kpno_mef_prihdr'))
         kpno_extnhdr = fits.Header.fromtextfile(os.path.join(tests_path, 'example_kpno_mef_extnhdr'))
         self.test_kpno_header = [kpno_prihdr,]
@@ -880,6 +888,88 @@ class TestCreateDisciplineArea(SimpleTestCase):
             </Discipline_Area>'''
 
         file_obs_area = create_discipline_area(self.test_raw_header, 'tfn1m001-fa11-20211013-0095-e00.fits', self.schema_mappings)
+
+        self.compare_xml(expected, file_obs_area)
+
+    def test_calib_frame(self):
+        expected = '''
+            <Discipline_Area>
+              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
+                <Local_Internal_Reference>
+                  <local_identifier_reference>tfn1m001-fa11-20211013-dark-bin1x1</local_identifier_reference>
+                  <local_reference_type>display_settings_to_array</local_reference_type>
+                </Local_Internal_Reference>
+                <disp:Display_Direction>
+                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
+                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
+                </disp:Display_Direction>
+              </disp:Display_Settings>
+              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
+                <Local_Internal_Reference>
+                  <local_identifier_reference>bpm_image</local_identifier_reference>
+                  <local_reference_type>display_settings_to_array</local_reference_type>
+                </Local_Internal_Reference>
+                <disp:Display_Direction>
+                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
+                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
+                </disp:Display_Direction>
+              </disp:Display_Settings>
+              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
+                <Local_Internal_Reference>
+                  <local_identifier_reference>err_image</local_identifier_reference>
+                  <local_reference_type>display_settings_to_array</local_reference_type>
+                </Local_Internal_Reference>
+                <disp:Display_Direction>
+                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
+                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
+                </disp:Display_Direction>
+              </disp:Display_Settings>
+              <img:Imaging xmlns:img="http://pds.nasa.gov/pds4/img/v1">
+                <Local_Internal_Reference>
+                    <local_identifier_reference>tfn1m001-fa11-20211013-dark-bin1x1</local_identifier_reference>
+                    <local_reference_type>imaging_parameters_to_image_object</local_reference_type>
+                  </Local_Internal_Reference>
+                <img:Exposure>
+                  <img:exposure_duration unit="s">100.000</img:exposure_duration>
+                </img:Exposure>
+                <img:Optical_Filter>
+                  <img:filter_name>w</img:filter_name>
+                  <img:bandwidth unit="Angstrom">4409.8</img:bandwidth>
+                  <img:center_filter_wavelength unit="Angstrom">6080.0</img:center_filter_wavelength>
+                </img:Optical_Filter>
+              </img:Imaging>
+              <geom:Geometry xmlns:geom="http://pds.nasa.gov/pds4/geom/v1">
+                <geom:Image_Display_Geometry>
+                  <Local_Internal_Reference>
+                    <local_identifier_reference>tfn1m001-fa11-20211013-dark-bin1x1</local_identifier_reference>
+                    <local_reference_type>display_to_data_object</local_reference_type>
+                  </Local_Internal_Reference>
+                  <geom:Display_Direction>
+                    <geom:horizontal_display_axis>Sample</geom:horizontal_display_axis>
+                    <geom:horizontal_display_direction>Left to Right</geom:horizontal_display_direction>
+                    <geom:vertical_display_axis>Line</geom:vertical_display_axis>
+                    <geom:vertical_display_direction>Bottom to Top</geom:vertical_display_direction>
+                  </geom:Display_Direction>
+                  <geom:Object_Orientation_RA_Dec>
+                    <geom:right_ascension_angle unit="deg">272.953000</geom:right_ascension_angle>
+                    <geom:declination_angle unit="deg">1.280402</geom:declination_angle>
+                    <geom:celestial_north_clock_angle unit="deg">0.0</geom:celestial_north_clock_angle>
+                    <geom:Reference_Frame_Identification>
+                      <geom:name>J2000</geom:name>
+                      <geom:comment>equinox of RA and DEC</geom:comment>
+                    </geom:Reference_Frame_Identification>
+                  </geom:Object_Orientation_RA_Dec>
+                </geom:Image_Display_Geometry>
+              </geom:Geometry>
+            </Discipline_Area>'''
+
+        file_obs_area = create_discipline_area(self.test_lco_calib_header, 'tfn1m001-fa11-20211013-dark-bin1x1.fits', self.schema_mappings)
 
         self.compare_xml(expected, file_obs_area)
 

@@ -221,6 +221,7 @@ def create_discipline_area(header, filename, nsmap):
 
     discp_area = etree.Element("Discipline_Area")
 
+    obstype = headers[0].get('obstype', '').rstrip()
     origin = headers[0].get('origin', '').rstrip()
     array_name_prefix = 'ccd'
     if origin == 'LCOGT':
@@ -229,7 +230,16 @@ def create_discipline_area(header, filename, nsmap):
 
         area_name = os.path.basename(filename)
         if len(headers) > 1:
-            area_name = f"{array_name_prefix}{extn}_image"
+            if origin == 'LCOGT' :
+                if obstype in ['BIAS', 'DARK', 'SKYFLAT']:
+                    if extn > 0:
+                        area_name = f"{extn_header['extname'].lower():}_image"
+                else:
+                    # LCO MEF raw file
+                    area_name = f"{array_name_prefix}{extn}_image"
+            else:
+                # Non-LCO file
+                area_name = f"{array_name_prefix}{extn}_image"
 
         naxis = extn_header.get("naxis", 0)
         naxis1 = extn_header.get('naxis1', 0)
@@ -246,7 +256,8 @@ def create_discipline_area(header, filename, nsmap):
     area_name = filename
     if len(headers) > 1:
         extn = 1
-        area_name = f"{array_name_prefix}{extn}_image"
+        if origin != 'LCOGT' or obstype not in ['BIAS', 'DARK', 'SKYFLAT']:
+            area_name = f"{array_name_prefix}{extn}_image"
     img_area = create_image_area(headers[0], area_name, nsmap)
     discp_area.append(img_area)
     # Create Geometry area
