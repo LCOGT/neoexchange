@@ -895,6 +895,7 @@ class TestWritePDSLabel(TestCase):
         self.test_xml_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label.xml'))
         self.test_xml_raw_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_raw.xml'))
         self.test_xml_ddp_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_ddp.xml'))
+        self.test_xml_bpm_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_bpm.xml'))
         self.test_xml_bias_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_bias.xml'))
         self.test_xml_dark_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_dark.xml'))
         self.test_xml_flat_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_flat.xml'))
@@ -953,7 +954,7 @@ class TestWritePDSLabel(TestCase):
         desig_params['desig_type'] = '#'
         test_desig, created = Designations.objects.get_or_create(**desig_params)
 
-        self.remove = True
+        self.remove = False
         self.debug_print = False
         self.maxDiff = None
 
@@ -1025,6 +1026,26 @@ class TestWritePDSLabel(TestCase):
                           'replacement' : '(65803) Didymos'}
 
         self.compare_xml_files(self.test_xml_cat, output_xml_file, modifications)
+
+    def test_write_bpm_label(self):
+
+        # Create example bpm frame
+        hdulist = fits.open(self.test_raw_file)
+        for hdu in hdulist:
+            hdu.header['obstype'] = 'BPM'
+            hdu.header['moltype'] = 'BIAS'
+            hdu.header['exptime'] = 900
+            hdu.header['extname'] = 'BPM'
+            hdu.data = np.zeros(hdu.shape, np.uint8)
+        test_bpm_file = os.path.join(self.test_dir, 'banzai-test-bpm-bin1x1.fits')
+        hdulist.writeto(test_bpm_file, checksum=True, overwrite=True)
+        hdulist.close()
+
+        output_xml_file = os.path.join(self.test_dir, 'test_example_label.xml')
+
+        status = write_product_label_xml(test_bpm_file, output_xml_file, self.schemadir, mod_time=datetime(2021,6,24))
+
+        self.compare_xml_files(self.test_xml_bpm_cat, output_xml_file)
 
     def test_write_bias_label(self):
 

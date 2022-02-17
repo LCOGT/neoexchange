@@ -133,6 +133,7 @@ def create_id_area(filename, model_version='1.15.0.0', collection_type='cal', mo
     proc_levels = { 'cal' : {'title' : 'Calibrated', 'level' : 'cal'},
                     'raw' : {'title' : 'Raw', 'level' : 'raw'},
                     'ddp' : {'title' : 'Derived Data Product', 'level' : 'ddp'},
+                    'bpm' : {'title' : 'Bad Pixel Mask', 'level' : 'cal'},
                     'mbias' : {'title' : 'Master Bias', 'level' : 'cal'},
                     'mdark' : {'title' : 'Master Dark', 'level' : 'cal'},
                     'mflat' : {'title' : 'Master Flat', 'level' : 'cal'}
@@ -835,7 +836,8 @@ def write_product_label_xml(filepath, xml_file, schema_root, mod_time=None):
     proc_levels = { 'EXPOSE' : 'cal',
                     'BIAS' : 'mbias',
                     'DARK' : 'mdark',
-                    'SKYFLAT' : 'mflat'
+                    'SKYFLAT' : 'mflat',
+                    'BPM' : 'bpm'
                   }
 
     xmlEncoding = "UTF-8"
@@ -881,7 +883,7 @@ def write_product_label_xml(filepath, xml_file, schema_root, mod_time=None):
             headers = header
 
         proc_level = proc_levels.get(headers[0].get('obstype', 'expose').upper(), 'cal')
-        if headers[0].get('rlevel', 0) == 0:
+        if headers[0].get('rlevel', 0) == 0 and proc_level != 'bpm':
             proc_level = 'raw'
     id_area = create_id_area(filename, schema_mappings['PDS4::PDS']['version'], proc_level, mod_time)
     processedImage.append(id_area)
