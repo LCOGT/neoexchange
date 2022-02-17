@@ -208,6 +208,16 @@ class TestCreateFileAreaObs(SimpleTestCase):
         self.test_raw_filename = os.path.join(tests_path, 'mef_raw_test_frame.fits')
         self.test_raw_header, table, cattype = open_fits_catalog(self.test_raw_filename)
 
+        lco_calib_prihdr = fits.Header.fromtextfile(os.path.join(tests_path, 'example_lco_proc_hdr'))
+        lco_calib_prihdr["NAXIS1"] = 4096
+        lco_calib_prihdr["NAXIS2"] = 4096
+        lco_calib_prihdr["OBSTYPE"] = "DARK"
+        for keyword in ['L1IDDARK', 'L1STATDA', 'L1IDFLAT', 'L1STATFL', 'L1MEAN', 'L1MEDIAN', 'L1SIGMA', 'L1FWHM', 'L1ELLIP', 'L1ELLIPA', 'WCSERR']:
+            lco_calib_prihdr.remove(keyword)
+        lco_bpm_exthdr = fits.Header.fromtextfile(os.path.join(tests_path, 'example_lco_calib_bpmhdr'))
+        lco_err_exthdr = fits.Header.fromtextfile(os.path.join(tests_path, 'example_lco_calib_errhdr'))
+        self.test_lco_calib_header = [lco_calib_prihdr, lco_bpm_exthdr, lco_err_exthdr]
+
         self.maxDiff = None
 
     def compare_xml(self, expected, xml_element):
@@ -471,6 +481,94 @@ class TestCreateFileAreaObs(SimpleTestCase):
           </File_Area_Observational>'''
 
         file_obs_area = create_file_area_obs(self.test_raw_header, self.test_raw_filename)
+
+        self.compare_xml(expected, file_obs_area)
+
+    def test_lco_calib(self):
+        expected = '''
+          <File_Area_Observational>
+            <File>
+              <file_name>tfn1m001-fa11-20211013-dark-bin1x1.fits</file_name>
+              <comment>Median combined stack of dark images. Used in calibration pipeline to generate the calibrated image data.</comment>
+            </File>
+            <Header>
+              <name>main_header</name>
+              <offset unit="byte">0</offset>
+              <object_length unit="byte">67109760</object_length>
+              <parsing_standard_id>FITS 3.0</parsing_standard_id>
+            </Header>
+            <Array_2D_Image>
+              <local_identifier>tfn1m001-fa11-20211013-dark-bin1x1</local_identifier>
+              <offset unit="byte">20160</offset>
+              <axes>2</axes>
+              <axis_index_order>Last Index Fastest</axis_index_order>
+              <Element_Array>
+                <data_type>IEEE754MSBSingle</data_type>
+              </Element_Array>
+              <Axis_Array>
+                <axis_name>Line</axis_name>
+                <elements>4096</elements>
+                <sequence_number>1</sequence_number>
+              </Axis_Array>
+              <Axis_Array>
+                <axis_name>Sample</axis_name>
+                <elements>4096</elements>
+                <sequence_number>2</sequence_number>
+              </Axis_Array>
+            </Array_2D_Image>
+            <Header>
+              <name>bpm_header</name>
+              <offset unit="byte">67129920</offset>
+              <object_length unit="byte">16778880</object_length>
+              <parsing_standard_id>FITS 3.0</parsing_standard_id>
+            </Header>
+            <Array_2D_Image>
+              <local_identifier>bpm_image</local_identifier>
+              <offset unit="byte">67132800</offset>
+              <axes>2</axes>
+              <axis_index_order>Last Index Fastest</axis_index_order>
+              <Element_Array>
+                <data_type>UnsignedByte</data_type>
+              </Element_Array>
+              <Axis_Array>
+                <axis_name>Line</axis_name>
+                <elements>4096</elements>
+                <sequence_number>1</sequence_number>
+              </Axis_Array>
+              <Axis_Array>
+                <axis_name>Sample</axis_name>
+                <elements>4096</elements>
+                <sequence_number>2</sequence_number>
+              </Axis_Array>
+            </Array_2D_Image>
+            <Header>
+              <name>err_header</name>
+              <offset unit="byte">83911680</offset>
+              <object_length unit="byte">67109760</object_length>
+              <parsing_standard_id>FITS 3.0</parsing_standard_id>
+            </Header>
+            <Array_2D_Image>
+              <local_identifier>err_image</local_identifier>
+              <offset unit="byte">83914560</offset>
+              <axes>2</axes>
+              <axis_index_order>Last Index Fastest</axis_index_order>
+              <Element_Array>
+                <data_type>IEEE754MSBSingle</data_type>
+              </Element_Array>
+              <Axis_Array>
+                <axis_name>Line</axis_name>
+                <elements>4096</elements>
+                <sequence_number>1</sequence_number>
+              </Axis_Array>
+              <Axis_Array>
+                <axis_name>Sample</axis_name>
+                <elements>4096</elements>
+                <sequence_number>2</sequence_number>
+              </Axis_Array>
+            </Array_2D_Image>
+          </File_Area_Observational>'''
+
+        file_obs_area = create_file_area_obs(self.test_lco_calib_header, 'tfn1m001-fa11-20211013-dark-bin1x1.fits')
 
         self.compare_xml(expected, file_obs_area)
 
@@ -1572,7 +1670,7 @@ class TestExportBlockToPDS(TestCase):
         shutil.copy(test_file_path, new_name)
         self.test_banzai_files.insert(1, os.path.basename(new_name))
 
-        self.remove = False
+        self.remove = True
         self.debug_print = False
         self.maxDiff = None
 

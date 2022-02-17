@@ -652,10 +652,8 @@ def create_file_area_obs(header, filename):
         comment = "Raw LCOGT image file"
 
     origin = headers[0].get('origin', '').rstrip()
-    array_name_prefix = 'ccd'
     if origin == 'LCOGT':
         etree.SubElement(file_element, "comment").text = comment
-        array_name_prefix = 'amp'
 
     header_offset = 0
     for extn, extn_header in enumerate(headers):
@@ -673,8 +671,15 @@ def create_file_area_obs(header, filename):
 
         logger.debug(f"   header_size={header_size_blocks} image_size={image_size_blocks}")
         header_name = "main_header"
+        array_name_prefix = 'ccd'
+        if origin == 'LCOGT':
+            array_name_prefix = 'amp'
+            if obstype == 'BIAS' or obstype == 'DARK' or obstype == 'SKYFLAT':
+                array_name_prefix = extn_header['EXTNAME'].lower()
         if extn >= 1:
             header_name = f"{array_name_prefix}{extn}_header"
+            if origin == 'LCOGT' and (obstype == 'BIAS' or obstype == 'DARK' or obstype == 'SKYFLAT'):
+                header_name = f"{array_name_prefix}_header"
 
         etree.SubElement(header_element, "name").text = header_name
         etree.SubElement(header_element, "offset", attrib={"unit" : "byte"}).text = str(header_offset)
@@ -691,6 +696,8 @@ def create_file_area_obs(header, filename):
             local_id = os.path.splitext(filename)[0]
             if extn >= 1:
                 local_id = f"{array_name_prefix}{extn}_image"
+                if origin == 'LCOGT' and (obstype == 'BIAS' or obstype == 'DARK' or obstype == 'SKYFLAT'):
+                    local_id = f"{array_name_prefix}_image"
             etree.SubElement(array_2d, "local_identifier").text = local_id
 
             # Compute size of header from list length+1 (missing END card)
