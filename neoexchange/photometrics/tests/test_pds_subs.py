@@ -954,7 +954,7 @@ class TestWritePDSLabel(TestCase):
         desig_params['desig_type'] = '#'
         test_desig, created = Designations.objects.get_or_create(**desig_params)
 
-        self.remove = False
+        self.remove = True
         self.debug_print = False
         self.maxDiff = None
 
