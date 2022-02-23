@@ -21,11 +21,11 @@ import logging
 from astropy import units as u
 from astropy.table import QTable
 from django.conf import settings
-from elasticsearch import Elasticsearch
+from opensearchpy import OpenSearch
 
 from astrometrics.ephem_subs import determine_darkness_times
 
-ELASTICSEARCH_URLS = os.getenv('ELASTICSEARCH_URLS', 'http://elasticsearch.lco.gtn:9200,http://es-dev.lco.gtn:80').split(',')
+OPENSEARCH_URL = os.getenv('OPENSEARCH_URL', 'https://opensearch.lco.global')
 
 logger = logging.getLogger(__name__)
 ssl_verify = True
@@ -74,13 +74,13 @@ def get_telescope_states(telstates_url='http://observe.lco.global/api/telescope_
 
 class ESMetricsSource(object):
     '''
-        Base class for elasticsearch based metrics. Right now just records the es_urls and the index name.
+        Base class for opensearch based metrics. Right now just records the url and the index name.
     '''
 
-    def __init__(self, es_urls, es_index, start_time=datetime.utcnow()-timedelta(days=1),
+    def __init__(self, os_url, index, start_time=datetime.utcnow()-timedelta(days=1),
                  end_time=datetime.utcnow()):
-        self.es_urls = es_urls
-        self.es_index = es_index
+        self.os_url = os_url
+        self.index = index
         self.start_time = start_time
         self.end_time = end_time
 
@@ -92,7 +92,7 @@ class QueryTelemetry(ESMetricsSource):
 
     def __init__(self, start_time=datetime.utcnow()-timedelta(days=1),
                  end_time=datetime.utcnow()):
-        ESMetricsSource.__init__(self, es_urls=ELASTICSEARCH_URLS[0], es_index='fitsheaders',
+        ESMetricsSource.__init__(self, os_url=OPENSEARCH_URL, index='fitsheaders',
                                  start_time=start_time, end_time=end_time)
 
     def get_site_names():
@@ -124,7 +124,7 @@ class QueryTelemetry(ESMetricsSource):
         print("Darkness times: {start}->{end}".format(start=dark_start, end=dark_end))
 
         # Setup ElasticSearch query
-        es = Elasticsearch(self.es_urls)
+        client = OpenSearch(self.es_url)
         formatter = "%Y-%m-%d %H:%M:%S"
         dimm_query = {
               "query": {
@@ -148,7 +148,7 @@ class QueryTelemetry(ESMetricsSource):
                 }
             }
         }
-        seeing_results = es.search(index='dimm', request_timeout=60, body=dimm_query,
+        seeing_results = client.search(index='dimm', request_timeout=60, body=dimm_query,
                              size=10000, sort=['measure_time:asc'])
         if seeing_results['hits']['total'] > 0:
             results = seeing_results['hits']['hits']
@@ -164,7 +164,7 @@ class QueryTelemetry(ESMetricsSource):
         print(dark_start, dark_end)
 
         # Setup ElasticSearch query
-        es = Elasticsearch(self.es_urls)
+        client = OpenSearch(self.os_url)
         formatter = "%Y-%m-%d %H:%M:%S"
         image_query = {
               "query": {
@@ -208,7 +208,7 @@ class QueryTelemetry(ESMetricsSource):
                 }
             }
         }
-        image_results = es.search(index=self.es_index, request_timeout=60, body=image_query,
+        image_results = client.search(index=self.es_index, request_timeout=60, body=image_query,
                             size=400, sort=['DATE-OBS:asc'],
                             _source=["FILTER", "FOCOBOFF", "L1FWHM", "DATE-OBS", "AIRMASS"])
         if image_results['hits']['total'] > 0:
