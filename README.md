@@ -4,10 +4,13 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.11.1
+* Change threshold on 1/a0 for Dynamically New Comets from 1e-4 to 4e-5.
+
 ### 3.11.0
-* Update Summary pages for enhanced usability and utility
-* Add body publication status
-* Add form for updating period from LC plot page
+* Update Summary pages for enhanced usability and utility.
+* Add body publication status.
+* Add form for updating period from LC plot page.
 
 ### 3.10.3
 * Minor bug fixes and error handling.
