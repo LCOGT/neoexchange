@@ -1,7 +1,7 @@
 ################################################################################
 # Findorb Builder Container
 ################################################################################
-FROM centos:8 AS findorbbuilder
+FROM rockylinux:8 AS findorbbuilder
 
 # Choose specific release versions of each piece of software
 ENV LUNAR_VERSION=016b82f80bd509929e0d55136ed6882e61831dfb \
@@ -55,7 +55,7 @@ COPY neoexchange/photometrics/configs/environ.def /root/.find_orb/
 ################################################################################
 # damit Builder Container
 ################################################################################
-FROM centos:8 AS damitbuilder
+FROM rockylinux:8 AS damitbuilder
 
 # Choose specific release versions of each piece of software
 ENV DAMIT_VERSION="version_0.2.1"
@@ -90,7 +90,7 @@ RUN cd ${DAMIT_VERSION} \
 ################################################################################
 # Production Container
 ################################################################################
-FROM centos:8
+FROM rockylinux:8
 
 # Copy findorb from builder container
 COPY --from=findorbbuilder /root /root
