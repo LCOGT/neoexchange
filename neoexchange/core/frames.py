@@ -174,7 +174,14 @@ def frame_params_from_header(params, block):
         logger.warning("Error converting RLEVEL to integer in frame " + params.get('ORIGNAME', None))
         rlevel = 0
 
-    frame_params = { 'midpoint' : params.get('DATE_OBS', None),
+    dateobs_keyword = 'DATE-OBS'
+    if dateobs_keyword not in params:
+        dateobs_keyword = 'DATE_OBS'
+        if dateobs_keyword not in params:
+            logger.error("Neither DATE-OBS or DATE_OBS found in header")
+            return None
+
+    frame_params = { 'midpoint' : params.get(dateobs_keyword, None),
                      'sitecode' : sitecode,
                      'filter'   : params.get('FILTER', "B"),
                      'frametype': rlevel,
@@ -189,7 +196,7 @@ def frame_params_from_header(params, block):
         frame_params['extrainfo'] = inst_mode
 
     # correct exptime to actual shutter open duration
-    shutter_open = params.get('DATE_OBS', None)
+    shutter_open = params.get(dateobs_keyword, None)
     shutter_close = params.get('UTSTOP', None)
     if shutter_open and shutter_close:
         # start by assuming shutter closed on the same day it opened.
@@ -376,10 +383,18 @@ def block_status(block_id):
                 if last_image_header is None:
                     logger.error('Image header was not returned for %s' % last_image_dict)
                     return False
+                # At some point in Feb 2022, archive started returning data with DATE-OBS rather than DATE_OBS
+                dateobs_keyword = 'DATE-OBS'
+                if dateobs_keyword not in last_image_header['data']:
+                    dateobs_keyword = 'DATE_OBS'
+                    if dateobs_keyword not in last_image_header['data']:
+                        logger.error("Neither DATE-OBS or DATE_OBS found in header")
+                        return False
+
                 try:
-                    last_image = datetime.strptime(last_image_header['data']['DATE_OBS'][:19], '%Y-%m-%dT%H:%M:%S')
+                    last_image = datetime.strptime(last_image_header['data'][dateobs_keyword][:19], '%Y-%m-%dT%H:%M:%S')
                 except ValueError:
-                    logger.error('Image datetime stamp is badly formatted %s' % last_image_header['data']['DATE_OBS'])
+                    logger.error('Image datetime stamp is badly formatted %s' % last_image_header['data'][dateobs_keyword])
                     return False
                 if not block.when_observed or last_image > block.when_observed:
                     block.when_observed = last_image
