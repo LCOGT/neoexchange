@@ -3072,8 +3072,8 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M', force=False):
             if phys_params['value'] is not None:
                 saved = body.save_physical_parameters(phys_params)
                 body.refresh_from_db()
-                # Test to see if it's a DNC with a 1/a value < 1e-4 (10,000 AU)
-                if body.recip_a and body.recip_a < 1e-4 and body.source_subtype_2 is None:
+                # Test to see if it's a DNC with a 1/a0 value < 1e-4 (25,000 AU)
+                if body.recip_a and body.recip_a < 4e-5 and body.source_subtype_2 is None:
                     body.source_subtype_2 = 'DN'
                     body.save()
 
