@@ -5,8 +5,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 ## History
 
 ### 3.12.0
-* Add fractional ephemeris rate
-* Set default observing mode to 50% object's rate for moving targets
+* Add option to set fractional ephemeris rate.
+* Set default observing mode to 50% object's rate for moving targets (except for comets and spectroscopy)
+* Fix frame updating for change in archive header returns.
 
 ### 3.11.1
 * Change threshold on 1/a0 for Dynamically New Comets from 1e-4 to 4e-5.
