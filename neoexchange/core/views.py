@@ -1397,9 +1397,15 @@ def schedule_check(data, body, ok_to_schedule=True):
     else:
         # calculate rate of relative motion on chip
         try:
-            fractional_tracking_rate = float(data.get('fractional_rate', 0.5))
+            if 'fractional_rate' not in data and body_elements.get('elements_type', '') == 'MPC_COMET':
+                fractional_tracking_rate = 1.0
+            else:
+                fractional_tracking_rate = float(data.get('fractional_rate', 0.5))
         except ValueError:
             fractional_tracking_rate = 0.5
+            if body_elements.get('elements_type', '') == 'MPC_COMET':
+                print("Setting to 1.0 for comets")
+                fractional_tracking_rate = 1.0
         relative_apparent_rate = abs(fractional_tracking_rate - 0.5) + 0.5
         adjusted_speed = speed * relative_apparent_rate
         # Determine exposure length and count
