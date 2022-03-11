@@ -124,7 +124,7 @@ class QueryTelemetry(ESMetricsSource):
         print("Darkness times: {start}->{end}".format(start=dark_start, end=dark_end))
 
         # Setup ElasticSearch query
-        client = OpenSearch(self.es_url)
+        client = OpenSearch(self.os_url)
         formatter = "%Y-%m-%d %H:%M:%S"
         dimm_query = {
               "query": {
