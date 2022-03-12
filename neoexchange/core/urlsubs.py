@@ -150,7 +150,7 @@ class QueryTelemetry(ESMetricsSource):
         }
         seeing_results = client.search(index='dimm', request_timeout=60, body=dimm_query,
                              size=10000, sort=['measure_time:asc'])
-        if seeing_results['hits']['total'] > 0:
+        if seeing_results['hits']['total']['value'] > 0:
             results = seeing_results['hits']['hits']
         else:
             results = []
@@ -211,7 +211,7 @@ class QueryTelemetry(ESMetricsSource):
         image_results = client.search(index=self.es_index, request_timeout=60, body=image_query,
                             size=400, sort=['DATE-OBS:asc'],
                             _source=["FILTER", "FOCOBOFF", "L1FWHM", "DATE-OBS", "AIRMASS"])
-        if image_results['hits']['total'] > 0:
+        if image_results['hits']['total']['value'] > 0:
             results = image_results['hits']['hits']
         else:
             results = []
