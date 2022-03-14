@@ -111,18 +111,27 @@ class Command(BaseCommand):
                 for frame in all_frames.get('', []):
                     if "tar.gz" in frame['filename']:
                         tar_path = make_data_dir(out_path, frame)
-                        obj = sanitize_object_name(frame['OBJECT'])
                         req_num = str(frame['REQNUM'])
-                        movie_file = make_movie(frame['DATE_OBS'], obj, req_num, tar_path, out_path, frame['PROPID'], tarfile=frame['filename'])
                         blocks = Block.objects.filter(request_number=req_num)
+                        # Try to get true name of actual object now that the
+                        # frame['OBJECT'] can't be relied on
+                        target_blocks = blocks.filter(obstype=Block.OPT_SPECTRA)
+                        if target_blocks.count() == 1:
+                            obj_dir_name = target_blocks[0].current_name()
+                        else:
+                            obj_dir_name = frame['OBJECT']
+
                         for block in blocks:
-                            if block.current_name() == frame['OBJECT']:
+                            obj = sanitize_object_name(obj_dir_name)
+                            movie_file = make_movie(frame['DATE_OBS'], obj, req_num, tar_path, out_path, frame['PROPID'], tarfile=frame['filename'])
+                            if block.current_name() == obj_dir_name:
                                 save_dataproduct(obj=block, filepath=movie_file, filetype=DataProduct.GUIDER_GIF)
-                                filenames = glob(os.path.join(tar_path, obj + '_' + req_num, '*_2df_ex.fits'))
-                                if filenames:
-                                    for filename in filenames:
-                                        save_dataproduct(obj=block, filepath=filename, filetype=DataProduct.FITS_SPECTRA)
-                                break
+                            block_obj_name = sanitize_object_name(block.current_name())
+                            filenames = glob(os.path.join(tar_path, obj + '_' + req_num, '*' + block_obj_name + '*_2df_ex.fits'))
+                            if filenames:
+                                for filename in filenames:
+                                    save_dataproduct(obj=block, filepath=filename, filetype=DataProduct.FITS_SPECTRA)
+#                                break
         else:
             self.stdout.write("No token defined (set ARCHIVE_TOKEN environment variable)")
 
