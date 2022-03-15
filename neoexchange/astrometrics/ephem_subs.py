@@ -1229,7 +1229,10 @@ def determine_exp_time_count(speed, site_code, slot_length_in_mins, mag, filter_
     exp_count = None
     min_exp_count = 4
 
-    (chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, site_max_exp_time, alt_limit) = get_sitecam_params(site_code, bin_mode)
+    sitecam = get_sitecam_params(site_code, bin_mode)
+    setup_overhead = sitecam['setup_overhead']
+    exp_overhead = sitecam['exp_overhead']
+    site_max_exp_time = sitecam['max_exp_length']
 
     slot_length = slot_length_in_mins * 60.0
 
@@ -1267,7 +1270,9 @@ def determine_exp_time_count(speed, site_code, slot_length_in_mins, mag, filter_
 def determine_exp_count(slot_length_in_mins, exp_time, site_code, filter_pattern, min_exp_count=1, bin_mode=None):
     exp_count = None
 
-    (chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, site_max_exp_time, alt_limit) = get_sitecam_params(site_code, bin_mode)
+    sitecam = get_sitecam_params(site_code, bin_mode)
+    setup_overhead = sitecam['setup_overhead']
+    exp_overhead = sitecam['exp_overhead']
 
     slot_length = slot_length_in_mins * 60.0
 
@@ -1318,7 +1323,9 @@ def determine_spectro_slot_length(exp_time, calibs, exp_count=1):
     site_code = 'F65-FLOYDS'
     slot_length = None
 
-    (chk_site_code, overheads, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit) = get_sitecam_params(site_code)
+    sitecam = get_sitecam_params(site_code)
+    overheads = sitecam['setup_overhead']
+    exp_overhead = sitecam['exp_overhead']
 
     num_molecules = 1
     calibs = calibs.lower()
@@ -1912,7 +1919,7 @@ def get_sitecam_params(site, bin_mode=None):
         setup_overhead = cfg.tel_overhead['twom_setup_overhead']
         exp_overhead = cfg.inst_overhead['twom_exp_overhead']
         pixel_scale = cfg.tel_field['twom_pixscale']
-        fov = arcmins_to_radians(cfg.tel_field['twom_fov'])
+        fov = cfg.tel_field['twom_fov']
         max_exp_length = 300.0
         alt_limit = cfg.tel_alt['twom_alt_limit']
     elif site == 'FTN' or 'OGG-CLMA-2M0' in site or site == 'F65':
@@ -1920,7 +1927,7 @@ def get_sitecam_params(site, bin_mode=None):
         setup_overhead = cfg.tel_overhead['twom_setup_overhead']
         exp_overhead = cfg.inst_overhead['muscat_exp_overhead']
         pixel_scale = cfg.tel_field['twom_muscat_pixscale']
-        fov = arcmins_to_radians(cfg.tel_field['twom_muscat_fov'])
+        fov = cfg.tel_field['twom_muscat_fov']
         max_exp_length = 300.0
         alt_limit = cfg.tel_alt['twom_alt_limit']
     elif site == 'FTS' or 'COJ-CLMA-2M0' in site or site == 'E10':
@@ -1928,29 +1935,29 @@ def get_sitecam_params(site, bin_mode=None):
         setup_overhead = cfg.tel_overhead['twom_setup_overhead']
         exp_overhead = cfg.inst_overhead['twom_exp_overhead']
         pixel_scale = cfg.tel_field['twom_pixscale']
-        fov = arcmins_to_radians(cfg.tel_field['twom_fov'])
+        fov = cfg.tel_field['twom_fov']
         max_exp_length = 300.0
         alt_limit = cfg.tel_alt['twom_alt_limit']
     elif site == 'F65-FLOYDS' or site == 'E10-FLOYDS':
         site_code = site[0:3]
         exp_overhead = cfg.inst_overhead['floyds_exp_overhead']
         pixel_scale = cfg.tel_field['twom_floyds_pixscale']
-        fov = arcmins_to_radians(cfg.tel_field['twom_floyds_fov'])
+        fov = cfg.tel_field['twom_floyds_fov']
         max_exp_length = 3600.0
         alt_limit = cfg.tel_alt['twom_alt_limit']
-        setup_overhead = { 'front_padding' : cfg.tel_overhead['twom_setup_overhead'],
-                           'config_change_time' : cfg.inst_overhead['floyds_config_change_overhead'],
-                           'acquire_processing_time' : cfg.inst_overhead['floyds_acq_proc_overhead'],
-                           'acquire_exposure_time': cfg.inst_overhead['floyds_acq_exp_time'],
-                           'per_molecule_time' : cfg.molecule_overhead['per_molecule_time'],
-                           'calib_exposure_time' : cfg.inst_overhead['floyds_calib_exp_time']
+        setup_overhead = {'front_padding': cfg.tel_overhead['twom_setup_overhead'],
+                          'config_change_time': cfg.inst_overhead['floyds_config_change_overhead'],
+                          'acquire_processing_time': cfg.inst_overhead['floyds_acq_proc_overhead'],
+                          'acquire_exposure_time': cfg.inst_overhead['floyds_acq_exp_time'],
+                          'per_molecule_time': cfg.molecule_overhead['per_molecule_time'],
+                          'calib_exposure_time': cfg.inst_overhead['floyds_calib_exp_time']
                          }
     elif site in valid_point4m_codes:
         site_code = site
         setup_overhead = cfg.tel_overhead['point4m_setup_overhead']
         exp_overhead = cfg.inst_overhead['point4m_exp_overhead']
         pixel_scale = cfg.tel_field['point4m_pixscale']
-        fov = arcmins_to_radians(cfg.tel_field['point4m_fov'])
+        fov = cfg.tel_field['point4m_fov']
         max_exp_length = 300.0
         alt_limit = cfg.tel_alt['point4m_alt_limit']
     elif site in valid_site_codes or site == '1M0':
@@ -1958,11 +1965,11 @@ def get_sitecam_params(site, bin_mode=None):
         if bin_mode == '2k_2x2':
             pixel_scale = cfg.tel_field['onem_2x2_sin_pixscale']
             exp_overhead = cfg.inst_overhead['sinistro_2x2_exp_overhead']
-            fov = arcmins_to_radians(cfg.tel_field['onem_2x2_sinistro_fov'])
+            fov = cfg.tel_field['onem_2x2_sinistro_fov']
         else:
             exp_overhead = cfg.inst_overhead['sinistro_exp_overhead']
             pixel_scale = cfg.tel_field['onem_sinistro_pixscale']
-            fov = arcmins_to_radians(cfg.tel_field['onem_sinistro_fov'])
+            fov = cfg.tel_field['onem_sinistro_fov']
         max_exp_length = 300.0
         alt_limit = cfg.tel_alt['normal_alt_limit']
         site_code = site
@@ -1971,7 +1978,14 @@ def get_sitecam_params(site, bin_mode=None):
         site_code = 'XXX'
         setup_overhead = exp_overhead = pixel_scale = fov = max_exp_length = alt_limit = -1
 
-    return site_code, setup_overhead, exp_overhead, pixel_scale, fov, max_exp_length, alt_limit
+    return {'site_code': site_code,
+            'setup_overhead': setup_overhead,
+            'exp_overhead': exp_overhead,
+            'pixel_scale': pixel_scale,
+            'fov': fov,
+            'max_exp_length': max_exp_length,
+            'alt_limit': alt_limit,
+            }
 
 
 def comp_FOM(orbelems, emp_line):

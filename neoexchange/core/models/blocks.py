@@ -174,6 +174,13 @@ class SuperBlock(models.Model):
 
 class Block(models.Model):
 
+    RATE_CHOICES = (
+        (100, 'Target Tracking'),
+        (50, 'Half-Rate Tracking'),
+        (0, 'Sidereal Tracking'),
+        (-99, 'Non-Standard Tracking')
+    )
+
     OPT_IMAGING = 0
     OPT_SPECTRA = 1
     OPT_IMAGING_CALIB = 2
@@ -201,7 +208,8 @@ class Block(models.Model):
     active          = models.BooleanField(default=False)
     reported        = models.BooleanField(default=False)
     when_reported   = models.DateTimeField(null=True, blank=True)
-    dataproduct    = GenericRelation(DataProduct, related_query_name='block')
+    dataproduct     = GenericRelation(DataProduct, related_query_name='block')
+    tracking_rate   = models.SmallIntegerField('Tracking Strategy', choices=RATE_CHOICES, blank=False, default=100)
 
     def current_name(self):
         name = ''

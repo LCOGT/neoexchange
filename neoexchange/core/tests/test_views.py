@@ -964,29 +964,29 @@ class TestRecordBlock(TestCase):
     def setUp(self):
 
         self.spectro_tracknum = '606083'
-        self.spectro_params = {
-                              'binning': 1,
-                              'block_duration': 988.0,
-                              'calibs': 'both',
-                              'end_time': datetime(2018, 3, 16, 18, 50),
-                              'exp_count': 1,
-                              'exp_time': 180.0,
-                              'exp_type': 'SPECTRUM',
-                              'group_name': '4_E10-20180316_spectra',
-                              'instrument': '2M0-FLOYDS-SCICAM',
-                              'instrument_code': 'E10-FLOYDS',
-                              'observatory': '',
-                              'pondtelescope': '2m0',
-                              'proposal_id': 'LCO2019A-001',
-                              'request_numbers': {1450339: 'NON_SIDEREAL'},
-                              'request_windows': [[{'end': '2018-03-16T18:30:00',
-                                 'start': '2018-03-16T11:20:00'}]],
-                              'site': 'COJ',
-                              'site_code': 'E10',
-                              'spectra_slit': 'slit_6.0as',
-                              'spectroscopy': True,
-                              'start_time': datetime(2018, 3, 16, 9, 20),
-                              'user_id': 'tlister@lcogt.net'}
+        self.spectro_params = {'binning': 1,
+                               'block_duration': 988.0,
+                               'calibs': 'both',
+                               'end_time': datetime(2018, 3, 16, 18, 50),
+                               'exp_count': 1,
+                               'exp_time': 180.0,
+                               'exp_type': 'SPECTRUM',
+                               'fractional_rate': 1.0,
+                               'group_name': '4_E10-20180316_spectra',
+                               'instrument': '2M0-FLOYDS-SCICAM',
+                               'instrument_code': 'E10-FLOYDS',
+                               'observatory': '',
+                               'pondtelescope': '2m0',
+                               'proposal_id': 'LCO2019A-001',
+                               'request_numbers': {1450339: 'NON_SIDEREAL'},
+                               'request_windows': [[{'end': '2018-03-16T18:30:00',
+                                                     'start': '2018-03-16T11:20:00'}]],
+                               'site': 'COJ',
+                               'site_code': 'E10',
+                               'spectra_slit': 'slit_6.0as',
+                               'spectroscopy': True,
+                               'start_time': datetime(2018, 3, 16, 9, 20),
+                               'user_id': 'tlister@lcogt.net'}
 
         self.spectro_form = { 'start_time' : self.spectro_params['start_time'],
                               'end_time' : self.spectro_params['end_time'],
@@ -1006,25 +1006,25 @@ class TestRecordBlock(TestCase):
         self.proposal_tc = Proposal.objects.create(**proposal_params)
 
         self.imaging_tracknum = '576013'
-        self.imaging_params = {
-                              'binning': 1,
-                              'block_duration': 1068.0,
-                              'end_time': datetime(2018, 3, 16, 3, 50),
-                              'exp_count': 12,
-                              'exp_time': 42.0,
-                              'exp_type': 'EXPOSE',
-                              'group_name': 'N999r0q_K91-20180316',
-                              'instrument': '1M0-SCICAM-SINISTRO',
-                              'observatory': '',
-                              'pondtelescope': '1m0',
-                              'proposal_id': 'LCO2019A-001',
-                              'request_numbers': {1440123: 'NON_SIDEREAL'},
-                              'request_windows': [[{'end': '2018-03-16T03:30:00.600000Z',
-                                 'start': '2018-03-15T20:20:00.400000Z'}]],
-                              'site': 'CPT',
-                              'site_code': 'K91',
-                              'start_time': datetime(2018, 3, 15, 18, 20),
-                              'user_id': 'tlister@lcogt.net'}
+        self.imaging_params = {'binning': 1,
+                               'block_duration': 1068.0,
+                               'end_time': datetime(2018, 3, 16, 3, 50),
+                               'exp_count': 12,
+                               'exp_time': 42.0,
+                               'exp_type': 'EXPOSE',
+                               'fractional_rate': 0.5,
+                               'group_name': 'N999r0q_K91-20180316',
+                               'instrument': '1M0-SCICAM-SINISTRO',
+                               'observatory': '',
+                               'pondtelescope': '1m0',
+                               'proposal_id': 'LCO2019A-001',
+                               'request_numbers': {1440123: 'NON_SIDEREAL'},
+                               'request_windows': [[{'end': '2018-03-16T03:30:00.600000Z',
+                                                     'start': '2018-03-15T20:20:00.400000Z'}]],
+                               'site': 'CPT',
+                               'site_code': 'K91',
+                               'start_time': datetime(2018, 3, 15, 18, 20),
+                               'user_id': 'tlister@lcogt.net'}
 
         self.imaging_form = { 'start_time' : self.imaging_params['start_time'],
                               'end_time' : self.imaging_params['end_time'],
@@ -1063,6 +1063,7 @@ class TestRecordBlock(TestCase):
         self.assertEqual(self.spectro_tracknum, sblocks[0].tracking_number)
         self.assertTrue(self.spectro_tracknum != blocks[0].request_number)
         self.assertEqual(self.spectro_params['block_duration'], sblocks[0].timeused)
+        self.assertEqual(blocks[0].tracking_rate, 100)
 
     def test_imaging_block(self):
         block_resp = record_block(self.imaging_tracknum, self.imaging_params, self.imaging_form, self.imaging_body)
@@ -1083,6 +1084,7 @@ class TestRecordBlock(TestCase):
         self.assertTrue(self.imaging_tracknum != blocks[0].request_number)
         self.assertEqual(self.imaging_params['block_duration'], sblocks[0].timeused)
         self.assertEqual(False, sblocks[0].rapid_response)
+        self.assertEqual(blocks[0].tracking_rate, 50)
 
     def test_imaging_block_rr_proposal(self):
         imaging_params = self.imaging_params
@@ -1155,6 +1157,8 @@ class TestRecordBlock(TestCase):
         self.assertEqual(solar_analogs[0], blocks[1].calibsource)
         self.assertEqual(None, blocks[1].body)
         self.assertEqual(spectro_params['calibsrc_exptime'], blocks[1].exp_length)
+        self.assertEqual(blocks[0].tracking_rate, 100)
+        self.assertEqual(blocks[1].tracking_rate, 0)
 
     def test_solo_solar_spectro_block(self):
         # adjust parameters for sidereal target
@@ -1236,11 +1240,11 @@ class TestScheduleCheck(TestCase):
                             'speed': 2.904310588055287,
                             'slot_length': 20.0,
                             'filter_pattern': 'w',
-                            'pattern_iterations': 16.0,
+                            'pattern_iterations': 10.0,
                             'available_filters': 'air, ND, U, B, V, R, I, up, gp, rp, ip, zs, Y, w',
                             'bin_mode': None,
-                            'exp_count': 16,
-                            'exp_length': 40.0,
+                            'exp_count': 10,
+                            'exp_length': 80.0,
                             'schedule_ok': True,
                             'start_time': '2016-04-06T10:10:00',
                             'end_time': '2016-04-06T17:12:00',
@@ -1284,6 +1288,7 @@ class TestScheduleCheck(TestCase):
                             'acceptability_threshold': 90,
                             'dither_distance': 10,
                             'add_dither': False,
+                            'fractional_rate': 0.5,
                         }
 
     def make_visible_obj(self, test_date):
@@ -1318,10 +1323,10 @@ class TestScheduleCheck(TestCase):
     def test_mp_good(self):
         MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
 
-        data = { 'site_code': 'Q63',
-                 'utc_date': date(2016, 4, 6),
-                 'proposal_code': self.neo_proposal.code
-               }
+        data = {'site_code': 'Q63',
+                'utc_date': date(2016, 4, 6),
+                'proposal_code': self.neo_proposal.code
+                }
 
         expected_resp1 = self.expected_resp
         expected_resp1['site_code'] = data['site_code']
@@ -1836,7 +1841,8 @@ class TestScheduleCheck(TestCase):
                 'calibs': 'both',
                 'exp_length': 300.0,
                 'exp_count': 1,
-                'max_airmass': 2.0
+                'max_airmass': 2.0,
+                'fractional_rate': 0.5
                 }
 
         expected_resp = {
@@ -1897,6 +1903,7 @@ class TestScheduleCheck(TestCase):
                         'acceptability_threshold': 90,
                         'dither_distance': 10,
                         'add_dither': False,
+                        'fractional_rate': 1.0,
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -1978,6 +1985,7 @@ class TestScheduleCheck(TestCase):
                         'acceptability_threshold': 90,
                         'dither_distance': 10,
                         'add_dither': False,
+                        'fractional_rate': 1.0,
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -2101,19 +2109,18 @@ class TestScheduleCheck(TestCase):
     def test_mp_semester_end_B_semester(self):
         MockDateTime.change_datetime(2016, 3, 30, 22, 0, 0)
 
-        data = { 'site_code' : 'K92',
-                 'utc_date' : date(2016, 4, 1),
-                 'proposal_code' : self.neo_proposal.code
-               }
+        data = {'site_code': 'K92',
+                'utc_date': date(2016, 4, 1),
+                'proposal_code': self.neo_proposal.code
+                }
 
         expected_resp = {
                         'target_name': self.body_mp.current_name(),
-                        'start_time' : '2016-03-31T19:18:00',
-                        'end_time'   : '2016-03-31T23:59:00',
-                        'exp_count'  : 20,
-                        'exp_length' : 25.0,
+                        'start_time': '2016-03-31T19:18:00',
+                        'end_time': '2016-03-31T23:59:00',
+                        'exp_count': 14,
+                        'exp_length': 50.0,
                         'mid_time': '2016-03-31T21:38:00',
-
                         }
         resp = schedule_check(data, self.body_mp)
 
@@ -2128,17 +2135,17 @@ class TestScheduleCheck(TestCase):
     def test_mp_semester_start_A_semester(self):
         MockDateTime.change_datetime(2016, 4, 1, 0, 0, 2)
 
-        data = { 'site_code' : 'K92',
-                 'utc_date' : datetime(2016, 4, 1).date(),
-                 'proposal_code' : self.neo_proposal.code
+        data = { 'site_code': 'K92',
+                 'utc_date': datetime(2016, 4, 1).date(),
+                 'proposal_code': self.neo_proposal.code
                }
 
         expected_resp = {
                         'target_name': self.body_mp.current_name(),
-                        'start_time' : '2016-04-01T00:00:00',
-                        'end_time'   : '2016-04-01T02:44:00',
-                        'exp_count'  : 20,
-                        'exp_length' : 25.0,
+                        'start_time': '2016-04-01T00:00:00',
+                        'end_time': '2016-04-01T02:44:00',
+                        'exp_count': 14,
+                        'exp_length': 50.0,
                         'mid_time': '2016-04-01T01:22:00',
 
                         }
@@ -2156,21 +2163,21 @@ class TestScheduleCheck(TestCase):
     def test_mp_semester_mid_A_semester(self):
         MockDateTime.change_datetime(2016, 4, 20, 23, 0, 0)
 
-        data = { 'site_code' : 'V37',
-                 'utc_date' : datetime(2016, 4, 21).date(),
-                 'proposal_code' : self.neo_proposal.code
-               }
+        data = {'site_code': 'V37',
+                'utc_date': datetime(2016, 4, 21).date(),
+                'proposal_code': self.neo_proposal.code
+                }
 
         expected_resp = {
                         'target_name': self.body_mp.current_name(),
-                        'start_time' : '2016-04-21T02:30:00',
-                        'end_time'   : '2016-04-21T08:06:00',
-                        'vis_start' : '2016-04-21T02:30:00',
-                        'vis_end'   : '2016-04-21T08:06:00',
-                        'exp_count'  : 9,
-                        'exp_length' : 125,
+                        'start_time': '2016-04-21T02:30:00',
+                        'end_time': '2016-04-21T08:06:00',
+                        'vis_start': '2016-04-21T02:30:00',
+                        'vis_end': '2016-04-21T08:06:00',
+                        'exp_count': 4,
+                        'exp_length': 255,
                         'mid_time': '2016-04-21T05:18:00',
-                        'magnitude' : 20.97
+                        'magnitude': 20.97
                         }
         resp = schedule_check(data, self.body_mp)
 #        self.assertEqual(expected_resp, resp)
@@ -2187,21 +2194,21 @@ class TestScheduleCheck(TestCase):
     def test_mp_semester_mid_past_A_semester(self):
         MockDateTime.change_datetime(2015, 4, 20, 23, 1, 0)
 
-        data = { 'site_code' : 'V37',
-                 'utc_date' : datetime(2015, 4, 21).date(),
-                 'proposal_code' : self.neo_proposal.code
-               }
+        data = {'site_code': 'V37',
+                'utc_date': datetime(2015, 4, 21).date(),
+                'proposal_code': self.neo_proposal.code
+                }
 
         expected_resp = {
                         'target_name': self.body_mp.current_name(),
-                        'start_time' : '2015-04-21T09:22:00',
-                        'end_time'   : '2015-04-21T11:08:00',
-                        'vis_start' : '2015-04-21T09:22:00',
-                        'vis_end'   : '2015-04-21T11:08:00',
-                        'exp_count'  : 6,
-                        'exp_length' : 125,
+                        'start_time': '2015-04-21T09:22:00',
+                        'end_time': '2015-04-21T11:08:00',
+                        'vis_start': '2015-04-21T09:22:00',
+                        'vis_end': '2015-04-21T11:08:00',
+                        'exp_count': 6,
+                        'exp_length': 125,
                         'mid_time': '2015-04-21T10:15:00',
-                        'magnitude' : 20.97
+                        'magnitude': 20.97
                         }
         resp = schedule_check(data, self.body_mp)
 #        self.assertEqual(expected_resp, resp)
@@ -2224,11 +2231,11 @@ class TestScheduleCheck(TestCase):
 
         expected_resp = {
                         'target_name': body.current_name(),
-                        'start_time' : '2016-09-30T19:28:00',
-                        'end_time'   : '2016-09-30T23:59:00',
+                        'start_time': '2016-09-30T19:28:00',
+                        'end_time': '2016-09-30T23:59:00',
                         'mid_time': '2016-09-30T21:43:00',
-                        'vis_start' : '2016-09-30T19:28:00',
-                        'vis_end'   : '2016-09-30T23:59:00',
+                        'vis_start': '2016-09-30T19:28:00',
+                        'vis_end': '2016-09-30T23:59:00',
                         }
         resp = schedule_check(data, body)
 #        self.assertEqual(expected_resp, resp)
@@ -2242,15 +2249,15 @@ class TestScheduleCheck(TestCase):
     def test_mp_semester_schedule_for_B_at_A_semester_end(self):
         MockDateTime.change_datetime(2017, 3, 31, 23, 0, 0)
 
-        data = { 'site_code' : 'K92',
-                 'utc_date' : datetime(2017, 4, 2).date(),
-                 'proposal_code' : self.neo_proposal.code
-               }
+        data = {'site_code': 'K92',
+                'utc_date': datetime(2017, 4, 2).date(),
+                'proposal_code': self.neo_proposal.code
+                }
 
         expected_resp = {
                         'target_name': self.body_mp.current_name(),
-                        'start_time' : '2017-04-02T01:10:00',
-                        'end_time'   : '2017-04-02T03:38:00',
+                        'start_time': '2017-04-02T01:10:00',
+                        'end_time': '2017-04-02T03:38:00',
                         'mid_time': '2017-04-02T02:24:00',
 
                         }
@@ -2425,15 +2432,15 @@ class TestScheduleCheck(TestCase):
 
         new_resp = {'site_code': 'F65',
                     'available_filters': 'gp, rp, ip, zp',
-                    'exp_count': 8,
-                    'exp_length': 120.0,
+                    'exp_count': 4,
+                    'exp_length': 240.0,
                     'slot_length': 22.5,
                     'filter_pattern': 'gp',
-                    'pattern_iterations': 8.0,
-                    'gp_explength': 120.0,
-                    'rp_explength': 120.0,
-                    'ip_explength': 120.0,
-                    'zp_explength': 120.0,
+                    'pattern_iterations': 4.0,
+                    'gp_explength': 240.0,
+                    'rp_explength': 240.0,
+                    'ip_explength': 240.0,
+                    'zp_explength': 240.0,
                     'muscat_sync': False,
                     'group_name': 'over_there_F65-20181201',
                     'lco_enc': 'CLMA',
