@@ -11,6 +11,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 from collections import Counter, OrderedDict
+from datetime import datetime
 
 from django.conf import settings
 from django.forms.models import model_to_dict
@@ -233,7 +234,16 @@ class Block(models.Model):
     def num_spectro_frames(self):
         """Returns the numbers of different types of spectroscopic frames"""
         num_moltypes_string = 'No data'
-        data, num_frames = check_for_archive_images(self.request_number, obstype='', obj=self.current_name())
+        # After (roughly) 2021 December 15, FLOYDS pipeline behaviour changed
+        # so our multi-target spectra ended in the same tarball and only
+        # the analog is associated with the tarball (https://github.com/LCOGT/neoexchange/issues/596)
+        # Searching without the object name should allow the TAR to be found
+        # for the object.
+        # XXX add a end date for this when fixed upstream
+        object_name = self.current_name()
+        if self.block_start >= datetime(2021,12,15):
+            object_name = ''
+        data, num_frames = check_for_archive_images(self.request_number, obstype='', obj=object_name)
         if num_frames > 0:
             moltypes = [x['OBSTYPE'] if x['RLEVEL'] != 90 else "TAR" for x in data]
             num_moltypes = {x: moltypes.count(x) for x in set(moltypes)}
