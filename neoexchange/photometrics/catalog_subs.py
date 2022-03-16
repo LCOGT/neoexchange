@@ -1740,7 +1740,9 @@ def funpack_fits_file(fpack_file):
     hdu = fits.PrimaryHDU(data, header)
     hdu._bscale = 1.0
     hdu._bzero = 0.0
+    hdu.header.remove("BSCALE", ignore_missing=True)
     hdu.header.insert("NAXIS2", ("BSCALE", 1.0), after=True)
+    hdu.header.remove("BZERO", ignore_missing=True)
     hdu.header.insert("BSCALE", ("BZERO", 0.0), after=True)
     hdu.writeto(unpacked_file, checksum=True)
     hdulist.close()
