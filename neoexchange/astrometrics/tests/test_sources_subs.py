@@ -21,7 +21,7 @@ from errno import ETIMEDOUT
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from unittest import skipIf
-from math import radians
+from math import radians, ceil
 from copy import deepcopy
 
 import astropy.units as u
@@ -838,7 +838,7 @@ class TestSubmitBlockToScheduler(TestCase):
         self.obs_params = {'proposal_id': 'LCO2015A-009',
                            'exp_count': 18,
                            'exp_time': 50.0,
-                           'slot_length': 30,
+                           'slot_length': 30 * 60,
                            'site_code': site_code,
                            'start_time': dark_start,
                            'end_time': dark_end,
@@ -846,7 +846,9 @@ class TestSubmitBlockToScheduler(TestCase):
                            'group_name': self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                            'user_id': 'bsimpson',
                            'dither_distance': 10,
-                           'add_dither': False
+                           'add_dither': False,
+                           'fractional_rate': 0.5,
+                           'speed': 20,
                            }
 
         self.maxDiff = None
@@ -991,7 +993,8 @@ class TestSubmitBlockToScheduler(TestCase):
                   'group_name': body_elements['current_name'] + '_' + 'ogg' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                   'user_id': 'bsimpson',
                   'spectroscopy': True,
-                  'spectra_slit': 'slit_6.0as'
+                  'spectra_slit': 'slit_6.0as',
+                  'fractional_rate': 1
                   }
 
         resp, sched_params = submit_block_to_scheduler(body_elements, params)
@@ -1049,7 +1052,8 @@ class TestSubmitBlockToScheduler(TestCase):
                   'calibsource': {'id': 1, 'name': 'SA107-684', 'ra_deg': 234.3, 'dec_deg': -0.16, 'calib_exptime': 60},
                   'calibsrc_exptime': 60,
                   'spectroscopy': True,
-                  'spectra_slit': 'slit_6.0as'
+                  'spectra_slit': 'slit_6.0as',
+                  'fractional_rate': 1
                   }
 
         resp, sched_params = submit_block_to_scheduler(body_elements, params)
@@ -1139,6 +1143,35 @@ class TestSubmitBlockToScheduler(TestCase):
         self.assertAlmostEqual(user_request['requests'][0]['configurations'][0]['target']['extra_params']['v_magnitude'], 20.88, 2)
         self.assertAlmostEqual(user_request['requests'][0]['configurations'][0]['instrument_configs'][0]['extra_params']['rotator_angle'], 107.53, 1)
         self.assertEqual(user_request['requests'][0]['configurations'][0]['instrument_configs'][0]['rotator_mode'], 'SKY')
+
+    def test_make_spectra_requestgroup_with_wrong_rate(self):
+        body_elements = model_to_dict(self.body)
+        body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+        body_elements['current_name'] = self.body.current_name()
+        site_code = 'F65'
+        utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {'proposal_id': 'LCO2015A-009',
+                  'exp_count': 18,
+                  'exp_time': 50.0,
+                  'site_code': site_code,
+                  'start_time': dark_start,
+                  'end_time': dark_end,
+                  'filter_pattern': 'slit_6.0as',
+                  'group_name': body_elements['current_name'] + '_' + 'OGG' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                  'user_id': 'bsimpson',
+                  'spectroscopy': True,
+                  'spectra_slit': 'slit_6.0as',
+                  'para_angle': False,
+                  'fractional_rate': 0.5
+                  }
+
+        body_elements = compute_vmag_pa(body_elements, params)
+        user_request = make_requestgroup(body_elements, params)
+        self.assertAlmostEqual(user_request['requests'][0]['configurations'][0]['target']['extra_params']['v_magnitude'], 20.88, 2)
+        self.assertAlmostEqual(user_request['requests'][0]['configurations'][0]['instrument_configs'][0]['extra_params']['rotator_angle'], 107.53, 1)
+        self.assertEqual(user_request['requests'][0]['configurations'][0]['instrument_configs'][0]['rotator_mode'], 'SKY')
+        self.assertEqual(user_request['requests'][0]['configurations'][0]['target']['extra_params']['fractional_ephemeris_rate'], 1)
 
     def test_1m_sinistro_lsc_doma_requestgroup(self):
 
@@ -1315,21 +1348,25 @@ class TestSubmitBlockToScheduler(TestCase):
 
         params = self.obs_params
         params['filter_pattern'] = 'V,V,R,R,I,I'
-        params['exp_count'] = 70
+        params['exp_count'] = 75
 
         user_request = make_requestgroup(self.body_elements, params)
         configurations = user_request.get('requests')[0].get('configurations')
         inst_configs = configurations[0].get('instrument_configs')
 
-        expected_configuration_num = 1
+        expected_configuration_num = 3
         expected_inst_config_num = 3
         expected_exp_count = 2
-        expected_filter = 'I'
+        expected_filter0 = 'I'
+        expected_filter1 = 'V'
+        expected_filter2 = 'R'
 
         self.assertEqual(len(configurations), expected_configuration_num)
         self.assertEqual(len(inst_configs), expected_inst_config_num)
         self.assertEqual(inst_configs[2]['exposure_count'], expected_exp_count)
-        self.assertEqual(inst_configs[2]['optical_elements']['filter'], expected_filter)
+        self.assertEqual(inst_configs[2]['optical_elements']['filter'], expected_filter0)
+        self.assertEqual(configurations[1]['instrument_configs'][2]['optical_elements']['filter'], expected_filter1)
+        self.assertEqual(configurations[2]['instrument_configs'][2]['optical_elements']['filter'], expected_filter2)
 
     def test_uneven_filter_requestgroup(self):
 
@@ -1341,7 +1378,7 @@ class TestSubmitBlockToScheduler(TestCase):
         configurations = user_request.get('requests')[0].get('configurations')
         inst_configs = configurations[0].get('instrument_configs')
 
-        expected_configuration_num = 1
+        expected_configuration_num = 2
         expected_inst_config_num = 3
         expected_exp_count = 1
         expected_filter = 'I'
@@ -1459,14 +1496,20 @@ class TestSubmitBlockToScheduler(TestCase):
         inst_configs = configurations[0].get('instrument_configs')
 
         expected_inst_config_num = 3
-        expected_configuration_num = 1
+        expected_configuration_num = 3
         expected_exp_count = 3
-        expected_filter = 'V'
+        expected_filter0 = 'V'
+        expected_filter1 = 'I'
+        expected_filter2 = 'V'
+        expected_repeat_duration = 577
 
         self.assertEqual(len(configurations), expected_configuration_num)
         self.assertEqual(len(inst_configs), expected_inst_config_num)
         self.assertEqual(inst_configs[0]['exposure_count'], expected_exp_count)
-        self.assertEqual(inst_configs[0]['optical_elements']['filter'], expected_filter)
+        self.assertEqual(configurations[0]['instrument_configs'][0]['optical_elements']['filter'], expected_filter0)
+        self.assertEqual(configurations[1]['instrument_configs'][0]['optical_elements']['filter'], expected_filter1)
+        self.assertEqual(configurations[2]['instrument_configs'][0]['optical_elements']['filter'], expected_filter2)
+        self.assertEqual(configurations[0]['repeat_duration'], expected_repeat_duration)
 
     @patch('astrometrics.sources_subs.expand_cadence', mock_expand_cadence_novis)
     @patch('astrometrics.sources_subs.requests.post')
@@ -1480,8 +1523,8 @@ class TestSubmitBlockToScheduler(TestCase):
         body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
         body_elements['current_name'] = self.body.current_name()
         params = self.obs_params
-        params['start_time'] = datetime(2021,1,27,0,0,0)
-        params['end_time'] = datetime(2021,2,27,23,59,59)
+        params['start_time'] = datetime(2021, 1, 27, 0, 0, 0)
+        params['end_time'] = datetime(2021, 2, 27, 23, 59, 59)
         params['period'] = 72.0
         params['jitter'] = 24.0
 
@@ -1518,7 +1561,7 @@ class TestSubmitBlockToScheduler(TestCase):
         expected_groupid = params['group_name'] + '+solstd'
         expected_ast_target = {'name': 'N999r0q', 'type': 'ORBITAL_ELEMENTS', 'scheme': 'MPC_MINOR_PLANET',
                                'epochofel': 57100.0, 'orbinc': 8.34739, 'longascnode': 147.81325,
-                               'argofperih': 85.19251, 'eccentricity': 0.1896865, 'extra_params': {'v_magnitude': 16.68},
+                               'argofperih': 85.19251, 'eccentricity': 0.1896865, 'extra_params': {'v_magnitude': 16.68, 'fractional_ephemeris_rate': 1},
                                'meandist': 1.2176312, 'meananom': 325.2636}
         expected_cal_target = {'type': 'ICRS', 'name': 'SA107-684', 'ra': 234.3254167, 'dec': -0.163889, 'extra_params': {}}
 
@@ -1569,7 +1612,7 @@ class TestSubmitBlockToScheduler(TestCase):
         expected_groupid = params['group_name'] + '+solstd'
         expected_ast_target = {'name': 'N999r0q', 'type': 'ORBITAL_ELEMENTS', 'scheme': 'MPC_MINOR_PLANET',
                                'epochofel': 57100.0, 'orbinc': 8.34739, 'longascnode': 147.81325,
-                               'argofperih': 85.19251, 'eccentricity': 0.1896865, 'extra_params': {'v_magnitude': 16.68},
+                               'argofperih': 85.19251, 'eccentricity': 0.1896865, 'extra_params': {'v_magnitude': 16.68, 'fractional_ephemeris_rate': 1},
                                'meandist': 1.2176312, 'meananom': 325.2636}
         expected_cal_target = {'type': 'ICRS', 'name': 'SA107-684', 'ra': 234.3254167, 'dec': -0.163889, 'extra_params': {}}
 
@@ -1671,7 +1714,7 @@ class TestSubmitBlockToScheduler(TestCase):
         expected_ast_target = {'name': 'N999r0q', 'type': 'ORBITAL_ELEMENTS', 'scheme': 'MPC_MINOR_PLANET',
                                'epochofel': 57100.0, 'orbinc': 8.34739, 'longascnode': 147.81325,
                                'argofperih': 85.19251, 'eccentricity': 0.1896865,
-                               'extra_params': {'v_magnitude': 16.68}, 'meandist': 1.2176312, 'meananom': 325.2636}
+                               'extra_params': {'v_magnitude': 16.68, 'fractional_ephemeris_rate': 1}, 'meandist': 1.2176312, 'meananom': 325.2636}
         expected_cal_target = {'type': 'ICRS', 'name': 'SA107-684', 'ra': 234.3254167, 'dec': -0.163889,
                                'proper_motion_ra': 60.313, 'proper_motion_dec': -35.584, 'extra_params': {}}
 
@@ -4150,7 +4193,6 @@ class TestConfigureDefaults(TestCase):
                             'pondtelescope': '0m4',
                             'observatory': '',
                             'site': 'TFN',
-                            'exp_type': 'EXPOSE',
                             'binning': 1}
         expected_params.update(test_params)
 
@@ -4165,7 +4207,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
                             'pondtelescope': '0m4',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'site': 'OGG',
                             'binning': 1}
         expected_params.update(test_params)
@@ -4181,7 +4222,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
                             'pondtelescope': '0m4',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'site': 'COJ',
                             'binning': 1}
         expected_params.update(test_params)
@@ -4197,7 +4237,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
                             'pondtelescope': '0m4',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'site': 'CPT',
                             'binning': 1}
         expected_params.update(test_params)
@@ -4213,7 +4252,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
                             'pondtelescope': '0m4',
                             'observatory': 'aqwa',
-                            'exp_type': 'EXPOSE',
                             'site': 'ELP',
                             'binning': 1}
         expected_params.update(test_params)
@@ -4229,7 +4267,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
                             'pondtelescope': '0m4',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'site': 'LSC',
                             'binning': 1}
         expected_params.update(test_params)
@@ -4245,7 +4282,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
                             'pondtelescope': '0m4',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'site': 'LSC',
                             'binning': 1}
         expected_params.update(test_params)
@@ -4261,7 +4297,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
                             'pondtelescope': '1m0',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'site': 'LSC',
                             'binning': 1}
         expected_params.update(test_params)
@@ -4277,7 +4312,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
                             'pondtelescope': '1m0',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'site': 'LSC',
                             'binning': 1,
                             'site_code': 'W87',
@@ -4295,7 +4329,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = {'instrument':  '2M0-SCICAM-MUSCAT',
                            'pondtelescope': '2m0',
                            'observatory': '',
-                           'exp_type': 'EXPOSE',
                            'site': 'OGG',
                            'binning': 1,
                            'exp_count': 10,
@@ -4313,7 +4346,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'instrument':  '2M0-SCICAM-SPECTRAL',
                             'pondtelescope': '2m0',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'site': 'COJ',
                             'binning': 2,
                             'exp_count': 10,
@@ -4331,7 +4363,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
                             'pondtelescope': '1m0',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'site': 'ELP',
                             'binning': 1,
                             'exp_count': 10,
@@ -4349,7 +4380,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
                             'pondtelescope': '1m0',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'site': 'ELP',
                             'binning': 1,
                             'exp_count': 10,
@@ -4367,7 +4397,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
                             'pondtelescope': '1m0',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'site': 'TFN',
                             'binning': 1,
                             'exp_count': 10,
@@ -4385,7 +4414,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
                             'pondtelescope': '1m0',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'site': 'TFN',
                             'binning': 1,
                             'exp_count': 10,
@@ -4405,7 +4433,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
                             'pondtelescope': '1m0',
                             'observatory': '',
-                            'exp_type': 'REPEAT_EXPOSE',
                             'binning': 1,
                             'exp_count': 45,
                             'exp_time': 42.0}
@@ -4424,7 +4451,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
                             'pondtelescope': '1m0',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'binning': 1,
                             'exp_count': 15,
                             'exp_time': 42.0}
@@ -4438,7 +4464,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'binning': 1,
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'pondtelescope': '1m0',
                             'site': 'CPT',
                             'site_code': 'K92',
@@ -4456,7 +4481,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'binning': 1,
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'pondtelescope': '1m0',
                             'site': 'LSC',
                             'site_code': 'W85',
@@ -4474,7 +4498,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'binning': 1,
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'pondtelescope': '1m0',
                             'site': 'LSC',
                             'site_code': 'W86',
@@ -4492,7 +4515,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'binning': 1,
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'pondtelescope': '1m0',
                             'site': 'ELP',
                             'site_code': 'V37',
@@ -4510,7 +4532,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'binning': 1,
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'pondtelescope': '1m0',
                             'site': 'LSC',
                             'site_code': 'W87',
@@ -4528,7 +4549,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'binning': 1,
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'pondtelescope': '1m0',
                             'site': 'CPT',
                             'site_code': 'K93',
@@ -4546,7 +4566,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = {'binning': 1,
                            'instrument': '2M0-SCICAM-MUSCAT',
                            'observatory': '',
-                           'exp_type': 'EXPOSE',
                            'pondtelescope': '2m0',
                            'site': 'OGG',
                            'site_code': 'F65',
@@ -4564,7 +4583,6 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'binning': 2,
                             'instrument': '2M0-SCICAM-SPECTRAL',
                             'observatory': '',
-                            'exp_type': 'EXPOSE',
                             'pondtelescope': '2m0',
                             'site': 'COJ',
                             'site_code': 'E10',
@@ -4700,6 +4718,7 @@ class TestMakeconfiguration(TestCase):
                                                           'max_airmass': 2.0,
                                                           'min_lunar_distance': 30.0
                                                        }})
+        self.params_2m0_imaging['exp_type'] = 'REPEAT_EXPOSE'
         self.filt_2m0_imaging = build_filter_blocks(self.params_2m0_imaging['filter_pattern'],
                                                     self.params_2m0_imaging['exp_count'],
                                                     self.params_2m0_imaging['exp_type'])
@@ -4714,6 +4733,7 @@ class TestMakeconfiguration(TestCase):
                                                           'max_airmass': 2.0,
                                                           'min_lunar_distance': 30.0
                                                       }})
+        self.params_1m0_imaging['exp_type'] = 'EXPOSE'
         self.filt_1m0_imaging = build_filter_blocks(self.params_1m0_imaging['filter_pattern'],
                                                     self.params_1m0_imaging['exp_count'],
                                                     self.params_1m0_imaging['exp_type'])
@@ -4728,6 +4748,7 @@ class TestMakeconfiguration(TestCase):
                                                           'max_airmass': 2.0,
                                                           'min_lunar_distance': 30.0
                                                       }})
+        self.params_0m4_imaging['exp_type'] = 'EXPOSE'
         self.filt_0m4_imaging = build_filter_blocks(self.params_0m4_imaging['filter_pattern'],
                                                     self.params_0m4_imaging['exp_count'],
                                                     self.params_0m4_imaging['exp_type'])
@@ -5103,10 +5124,512 @@ class TestMakeconfiguration(TestCase):
         self.assertEqual(expected_configuration, configuration)
 
 
+class TestGetExposureBins(TestCase):
+
+    def setUp(self):
+        b_params = {'provisional_name': 'N999r0q',
+                    'abs_mag': 21.0,
+                    'slope': 0.15,
+                    'epochofel': datetime(2015, 3, 19, 00, 00, 00),
+                    'meananom': 325.2636,
+                    'argofperih': 85.19251,
+                    'longascnode': 147.81325,
+                    'orbinc': 8.34739,
+                    'eccentricity': 0.1896865,
+                    'meandist': 1.2176312,
+                    'source_type': 'U',
+                    'elements_type': 'MPC_MINOR_PLANET',
+                    'active': True,
+                    'origin': 'M',
+                    }
+        self.body, created = Body.objects.get_or_create(**b_params)
+        self.body_elements = model_to_dict(self.body)
+        self.body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+        self.body_elements['current_name'] = self.body.current_name()
+        self.body_elements['v_mag'] = 16.6777676
+
+        self.params_1m0_imaging = configure_defaults({ 'site_code': 'K92',
+                                                       'exp_time': 60.0,
+                                                       'exp_count': 10,
+                                                       'slot_length': 16,
+                                                       'filter_pattern': 'w',
+                                                       'target': make_moving_target(self.body_elements, 0.5),
+                                                       'add_dither': False,
+                                                       'speed': 10,
+                                                       'constraints': {
+                                                         'max_airmass': 2.0,
+                                                         'min_lunar_distance': 30.0
+                                                       }})
+
+        self.params_2m0_imaging = configure_defaults({'site_code': 'F65',
+                                                      'exp_time': 60.0,
+                                                      'exp_count': 10,
+                                                      'filter_pattern': 'solar',
+                                                      'target': make_moving_target(self.body_elements, 0.5),
+                                                      'muscat_exp_times': {'gp_explength': 60,
+                                                                           'rp_explength': 30,
+                                                                           'ip_explength': 30,
+                                                                           'zp_explength': 60,
+                                                                           },
+                                                      'muscat_sync': True,
+                                                      'add_dither': False,
+                                                      'constraints': {
+                                                        'max_airmass': 2.0,
+                                                        'min_lunar_distance': 30.0
+                                                      }})
+
+    def test_exposure_bins_long_block(self):
+        params = self.params_1m0_imaging
+        params['exp_count'] = 145
+        params['speed'] = 25
+
+        expected_exp_list = [21, 21, 21, 21, 21, 20, 20]
+        self.assertEqual(sum(expected_exp_list), 145)
+
+        exp_count_list = get_exposure_bins(params)
+
+        self.assertEqual(expected_exp_list, exp_count_list)
+
+    def test_exposure_bins_binned(self):
+        params = self.params_1m0_imaging
+        params['exp_time'] = 15
+        params['exp_count'] = 55
+        params['speed'] = 18.43
+        params['bin_mode'] = '2k_2x2'
+
+        expected_exp_list = [28, 27]
+        self.assertEqual(sum(expected_exp_list), 55)
+
+        exp_count_list = get_exposure_bins(params)
+
+        self.assertEqual(expected_exp_list, exp_count_list)
+
+    def test_exposure_bins_short_block(self):
+        params = self.params_1m0_imaging
+        params['exp_count'] = 10
+        params['speed'] = 25
+
+        expected_exp_list = [10]
+
+        exp_count_list = get_exposure_bins(params)
+
+        self.assertEqual(expected_exp_list, exp_count_list)
+
+    def test_exposure_bin_slow_block(self):
+        params = self.params_1m0_imaging
+        params['exp_count'] = 100
+        params['speed'] = 2
+
+        expected_exp_list = [100]
+
+        exp_count_list = get_exposure_bins(params)
+
+        self.assertEqual(expected_exp_list, exp_count_list)
+
+    def test_exposure_bin_full_tracking(self):
+        params = self.params_1m0_imaging
+        params['exp_count'] = 100
+        params['slot_length'] = 147
+        params['fractional_rate'] = 1
+        params['speed'] = 24
+
+        expected_exp_list = None
+
+        exp_count_list = get_exposure_bins(params)
+
+        self.assertEqual(expected_exp_list, exp_count_list)
+
+    def test_exposure_bin_2m0(self):
+        params = self.params_2m0_imaging
+        params['exp_count'] = 25
+        params['speed'] = 25
+
+        expected_exp_list = [9, 8, 8]
+
+        exp_count_list = get_exposure_bins(params)
+
+        self.assertEqual(expected_exp_list, exp_count_list)
+
+
+class TestSplitInstConfigs(TestCase):
+
+    def setUp(self):
+        self.inst_config = {'exposure_count': 1,
+                            'exposure_time': 60.0,
+                            'optical_elements': {'filter': 'w'},
+                            'extra_params': {}
+                            }
+
+    def test_split_high_exposure_count(self):
+        exp_bins = [21, 21, 21, 21, 21, 20, 20]
+        inst_configs = [self.inst_config]
+        inst_configs[0]['exposure_count'] = 145
+
+        inst_list = split_inst_configs(exp_bins, inst_configs)
+
+        self.assertEqual(len(inst_list), len(exp_bins))
+        for inst in inst_list:
+            self.assertEqual(len(inst), 1)
+
+    def test_split_filters(self):
+        exp_bins = [22, 22, 21, 21]
+        inst_configs = []
+        ic = self.inst_config
+        filter_list = ['V', 'B', 'R', 'I']
+        for f in filter_list:
+            ic['optical_elements']['filter'] = f
+            inst_configs.append(deepcopy(ic))
+
+        inst_list = split_inst_configs(exp_bins, inst_configs)
+
+        expected_first_filter = ['V', 'R', 'V', 'B']
+
+        self.assertEqual(len(inst_list), len(exp_bins))
+        for k, inst in enumerate(inst_list):
+            self.assertEqual(len(inst), 4)
+            self.assertEqual(inst[0]['optical_elements']['filter'], expected_first_filter[k])
+
+    def test_split_doublefilters(self):
+        exp_bins = [22, 22, 21, 21]
+        inst_configs = []
+        ic = self.inst_config
+        ic['exposure_count'] = 2
+        filter_list = ['V', 'B', 'R', 'I']
+        for f in filter_list:
+            ic['optical_elements']['filter'] = f
+            inst_configs.append(deepcopy(ic))
+
+        inst_list = split_inst_configs(exp_bins, inst_configs)
+
+        expected_first_filter = ['V', 'I', 'R', 'B']
+
+        self.assertEqual(len(inst_list), len(exp_bins))
+        for k, inst in enumerate(inst_list):
+            self.assertEqual(len(inst), 4)
+            self.assertEqual(inst[0]['optical_elements']['filter'], expected_first_filter[k])
+
+    def test_split_longfilters(self):
+        exp_bins = [22, 22, 21, 21, 21]
+        inst_configs = []
+        ic = self.inst_config
+        ic['exposure_count'] = 25
+        filter_list = ['V', 'B', 'R', 'I']
+        for f in filter_list:
+            ic['optical_elements']['filter'] = f
+            inst_configs.append(deepcopy(ic))
+
+        inst_list = split_inst_configs(exp_bins, inst_configs)
+
+        expected_first_filter = ['V', 'B', 'R', 'I', 'V']
+
+        self.assertEqual(len(inst_list), len(exp_bins))
+        for k, inst in enumerate(inst_list):
+            self.assertEqual(len(inst), 1)
+            self.assertEqual(inst[0]['optical_elements']['filter'], expected_first_filter[k])
+
+
+class TestSplitConfigs(TestCase):
+
+    def setUp(self):
+        b_params = {'provisional_name': 'N999r0q',
+                    'abs_mag': 21.0,
+                    'slope': 0.15,
+                    'epochofel': datetime(2015, 3, 19, 00, 00, 00),
+                    'meananom': 325.2636,
+                    'argofperih': 85.19251,
+                    'longascnode': 147.81325,
+                    'orbinc': 8.34739,
+                    'eccentricity': 0.1896865,
+                    'meandist': 1.2176312,
+                    'source_type': 'U',
+                    'elements_type': 'MPC_MINOR_PLANET',
+                    'active': True,
+                    'origin': 'M',
+                    }
+        self.body, created = Body.objects.get_or_create(**b_params)
+        self.body_elements = model_to_dict(self.body)
+        self.body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+        self.body_elements['current_name'] = self.body.current_name()
+        self.body_elements['v_mag'] = 16.6777676
+
+        self.params_1m0_imaging = configure_defaults({ 'site_code': 'K92',
+                                                       'exp_time': 60.0,
+                                                       'exp_count': 20,
+                                                       'slot_length': 26*60,
+                                                       'filter_pattern': 'w',
+                                                       'target': make_moving_target(self.body_elements, 0.5),
+                                                       'add_dither': False,
+                                                       'speed': 25,
+                                                       'bin_mode': '2k_2x2',
+                                                       'constraints': {
+                                                         'max_airmass': 2.0,
+                                                         'min_lunar_distance': 30.0
+                                                       }})
+
+        self.params_2m0_imaging = configure_defaults({'site_code': 'F65',
+                                                      'exp_time': 60.0,
+                                                      'exp_count': 10,
+                                                      'filter_pattern': 'solar',
+                                                      'target': make_moving_target(self.body_elements, 0.5),
+                                                      'muscat_exp_times': {'gp_explength': 60,
+                                                                           'rp_explength': 30,
+                                                                           'ip_explength': 30,
+                                                                           'zp_explength': 60,
+                                                                           },
+                                                      'muscat_sync': True,
+                                                      'add_dither': False,
+                                                      'speed': 25,
+                                                      'constraints': {
+                                                        'max_airmass': 2.0,
+                                                        'min_lunar_distance': 30.0
+                                                      }})
+
+        self.configs_1m_repeatexpose = [{'type': 'REPEAT_EXPOSE',
+                                         'instrument_type': '1M0-SCICAM-SINISTRO',
+                                         'target': {'name': 'N999r0q',
+                                                    'type': 'ORBITAL_ELEMENTS',
+                                                    'scheme': 'MPC_MINOR_PLANET',
+                                                    'epochofel': 57100.0,
+                                                    'orbinc': 8.34739,
+                                                    'longascnode': 147.81325,
+                                                    'argofperih': 85.19251,
+                                                    'eccentricity': 0.1896865,
+                                                    'extra_params': {'v_magnitude': 16.68,
+                                                                     'fractional_ephemeris_rate': 0.5},
+                                                    'meandist': 1.2176312,
+                                                    'meananom': 325.2636},
+                                         'constraints': {'max_airmass': 2.0,
+                                                         'min_lunar_distance': 30.0},
+                                         'acquisition_config': {},
+                                         'guiding_config': {},
+                                         'instrument_configs': [{'exposure_count': 1,
+                                                                 'exposure_time': 60.0,
+                                                                 'optical_elements': {'filter': 'w'},
+                                                                 'mode': 'central_2k_2x2',
+                                                                 'extra_params': {}}],
+                                         'repeat_duration': 7091.0}
+                                        ]
+
+        self.configs_2m_muscat = [{'type': 'EXPOSE',
+                                   'instrument_type': '2M0-SCICAM-MUSCAT',
+                                   'target': {'name': 'N999r0q',
+                                              'type': 'ORBITAL_ELEMENTS',
+                                              'scheme': 'MPC_MINOR_PLANET',
+                                              'epochofel': 57100.0,
+                                              'orbinc': 8.34739,
+                                              'longascnode': 147.81325,
+                                              'argofperih': 85.19251,
+                                              'eccentricity': 0.1896865,
+                                              'extra_params': {'v_magnitude': 16.68,
+                                                               'fractional_ephemeris_rate': 0.5},
+                                              'meandist': 1.2176312,
+                                              'meananom': 325.2636},
+                                   'constraints': {'max_airmass': 2.0,
+                                                   'min_lunar_distance': 30.0},
+                                   'acquisition_config': {},
+                                   'guiding_config': {},
+                                   'instrument_configs': [{'exposure_count': 10,
+                                                           'exposure_time': 60.0,
+                                                           'optical_elements': {'diffuser_g_position': 'out',
+                                                                                'diffuser_r_position': 'out',
+                                                                                'diffuser_i_position': 'out',
+                                                                                'diffuser_z_position': 'out'},
+                                                           'extra_params': {'exposure_time_g': 60,
+                                                                            'exposure_time_r': 35,
+                                                                            'exposure_time_i': 35,
+                                                                            'exposure_time_z': 60,
+                                                                            'exposure_mode': 'ASYNCHRONOUS'}
+                                                           }]
+                                   }]
+
+    def test_split_single_config(self):
+        params = self.params_1m0_imaging
+        params['speed'] = 5
+
+        new_configs = split_configs(self.configs_1m_repeatexpose, params)
+
+        self.assertEqual(new_configs, self.configs_1m_repeatexpose)
+
+    def test_split_long_config(self):
+        params = self.params_1m0_imaging
+        params['exp_count'] = 67
+
+        expected_num_configs = 5
+
+        new_configs = split_configs(self.configs_1m_repeatexpose, params)
+
+        self.assertEqual(len(new_configs), expected_num_configs)
+        self.assertEqual(new_configs[0]['instrument_configs'], self.configs_1m_repeatexpose[0]['instrument_configs'])
+        self.assertEqual(new_configs[0]['repeat_duration'], 1482)
+        self.assertEqual(new_configs[4]['repeat_duration'], 1376)
+
+    def test_split_veryfast_config(self):
+        params = self.params_1m0_imaging
+        params['exp_count'] = 12
+        params['speed'] = 350
+
+        expected_num_configs = 12
+
+        new_configs = split_configs(self.configs_1m_repeatexpose, params)
+
+        self.assertEqual(len(new_configs), expected_num_configs)
+        self.assertEqual(new_configs[0]['instrument_configs'], self.configs_1m_repeatexpose[0]['instrument_configs'])
+        self.assertEqual(new_configs[0]['repeat_duration'], ceil(self.configs_1m_repeatexpose[0]['repeat_duration'] / 12))
+        self.assertEqual(new_configs[4]['repeat_duration'], ceil(self.configs_1m_repeatexpose[0]['repeat_duration'] / 12))
+
+    def test_split_short_config(self):
+        params = self.params_1m0_imaging
+        params['exp_count'] = 7
+        params['speed'] = 54
+
+        configs = self.configs_1m_repeatexpose
+        configs[0]['type'] = 'EXPOSE'
+        del configs[0]['repeat_duration']
+        configs[0]['instrument_configs'][0]['exposure_count'] = params['exp_count']
+
+        expected_num_configs = 2
+
+        new_configs = split_configs(configs, params)
+
+        self.assertEqual(len(new_configs), expected_num_configs)
+        for key in new_configs[0]['instrument_configs'][0]:
+            if key != 'exposure_count':
+                self.assertEqual(new_configs[0]['instrument_configs'][0][key], configs[0]['instrument_configs'][0][key])
+            else:
+                self.assertNotEqual(new_configs[0]['instrument_configs'][0][key],
+                                    configs[0]['instrument_configs'][0][key])
+        self.assertNotEqual(new_configs[0]['instrument_configs'][0]['exposure_count'],
+                            new_configs[1]['instrument_configs'][0]['exposure_count'])
+
+    def test_split_multifilter_config(self):
+        params = self.params_1m0_imaging
+        params['exp_count'] = 62
+        params['speed'] = 25
+
+        configs = self.configs_1m_repeatexpose
+        inst_config = configs[0]['instrument_configs'][0]
+        filter_list = ['V', 'R', 'I']
+        configs[0]['instrument_configs'] = []
+        for filt in filter_list:
+            inst_config['optical_elements']['filter'] = filt
+            configs[0]['instrument_configs'].append(deepcopy(inst_config))
+
+        expected_num_configs = 5
+
+        new_configs = split_configs(configs, params)
+
+        self.assertEqual(len(new_configs), expected_num_configs)
+        self.assertEqual(new_configs[0]['instrument_configs'], configs[0]['instrument_configs'])
+        # filter cycles and aren't repeated in this case.
+        self.assertNotEqual(new_configs[2]['instrument_configs'], configs[0]['instrument_configs'])
+        self.assertEqual(new_configs[0]['repeat_duration'], 1487)
+        self.assertEqual(new_configs[4]['repeat_duration'], 1373)
+
+    def test_split_longfilter_config(self):
+        params = self.params_1m0_imaging
+        params['exp_count'] = 45
+        params['speed'] = 25
+
+        configs = self.configs_1m_repeatexpose
+        inst_config = configs[0]['instrument_configs'][0]
+        filter_list = ['V', 'R', 'I']
+        configs[0]['instrument_configs'] = []
+        for filt in filter_list:
+            inst_config['optical_elements']['filter'] = filt
+            inst_config['exposure_count'] = 15
+            configs[0]['instrument_configs'].append(deepcopy(inst_config))
+
+        expected_num_configs = 4
+
+        new_configs = split_configs(configs, params)
+
+        self.assertEqual(len(new_configs), expected_num_configs)
+        self.assertEqual(new_configs[0]['instrument_configs'][0], configs[0]['instrument_configs'][0])
+        self.assertEqual(new_configs[0]['repeat_duration'], 1891)
+        self.assertEqual(new_configs[3]['repeat_duration'], 1734)
+
+    def test_split_exposefilter_config(self):
+        params = self.params_1m0_imaging
+        params['exp_count'] = 9
+        params['speed'] = 150
+
+        configs = self.configs_1m_repeatexpose
+        configs[0]['type'] = 'EXPOSE'
+        del configs[0]['repeat_duration']
+        inst_config = configs[0]['instrument_configs'][0]
+        filter_list = ['V', 'R', 'I']
+        configs[0]['instrument_configs'] = []
+        for filt in filter_list:
+            inst_config['optical_elements']['filter'] = filt
+            inst_config['exposure_count'] = 3
+            configs[0]['instrument_configs'].append(deepcopy(inst_config))
+
+        expected_num_configs = 4
+
+        new_configs = split_configs(configs, params)
+
+        self.assertEqual(len(new_configs), expected_num_configs)
+        self.assertEqual(new_configs[0]['instrument_configs'][0], configs[0]['instrument_configs'][0])
+        self.assertNotEqual(new_configs[2]['instrument_configs'][0], configs[0]['instrument_configs'][2])
+        self.assertEqual(new_configs[2]['instrument_configs'][0]['exposure_count'], 2)
+        self.assertEqual(new_configs[3]['instrument_configs'][0]['optical_elements']['filter'], 'V')
+
+    def test_split_muscat_config(self):
+        params = self.params_2m0_imaging
+
+        configs = self.configs_2m_muscat
+
+        expected_num_configs = 2
+
+        new_configs = split_configs(configs, params)
+
+        self.assertEqual(len(new_configs), expected_num_configs)
+        self.assertEqual(new_configs[0]['instrument_configs'][0]['exposure_count'], 5)
+
+    def test_split_longmuscat_config(self):
+        params = self.params_2m0_imaging
+        params['exp_count'] = 65
+
+        configs = self.configs_2m_muscat
+        configs[0]['type'] = 'REPEAT_EXPOSE'
+        configs[0]['repeat_duration'] = 65 * 80
+        configs[0]['instrument_configs'][0]['exposure_count'] = 1
+
+        expected_num_configs = 7
+
+        new_configs = split_configs(configs, params)
+
+        self.assertEqual(len(new_configs), expected_num_configs)
+        for cfg in new_configs:
+            self.assertEqual(cfg['instrument_configs'][0], configs[0]['instrument_configs'][0])
+            self.assertLess(cfg['repeat_duration'], configs[0]['repeat_duration'])
+
+
 class TestMakeconfigurations(TestCase):
 
     def setUp(self):
         self.target = {'type': 'ICRS', 'name': 'SA107-684', 'ra': 234.3, 'dec': -0.16}
+
+        b_params = {'provisional_name': 'N999r0q',
+                    'abs_mag': 21.0,
+                    'slope': 0.15,
+                    'epochofel': datetime(2015, 3, 19, 00, 00, 00),
+                    'meananom': 325.2636,
+                    'argofperih': 85.19251,
+                    'longascnode': 147.81325,
+                    'orbinc': 8.34739,
+                    'eccentricity': 0.1896865,
+                    'meandist': 1.2176312,
+                    'source_type': 'U',
+                    'elements_type': 'MPC_MINOR_PLANET',
+                    'active': True,
+                    'origin': 'M',
+                    }
+        self.body, created = Body.objects.get_or_create(**b_params)
+        self.body_elements = model_to_dict(self.body)
+        self.body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+        self.body_elements['current_name'] = self.body.current_name()
+        self.body_elements['v_mag'] = 16.6777676
 
         self.params_2m0_imaging = configure_defaults({'site_code': 'F65',
                                                       'exp_time': 60.0,
@@ -5124,9 +5647,6 @@ class TestMakeconfigurations(TestCase):
                                                         'max_airmass': 2.0,
                                                         'min_lunar_distance': 30.0
                                                       }})
-        self.filt_2m0_imaging = build_filter_blocks(self.params_2m0_imaging['filter_pattern'],
-                                                    self.params_2m0_imaging['exp_count'],
-                                                    self.params_2m0_imaging['exp_type'])[0]
 
         self.params_1m0_imaging = configure_defaults({ 'site_code': 'K92',
                                                        'exp_time': 60.0,
@@ -5139,9 +5659,6 @@ class TestMakeconfigurations(TestCase):
                                                          'min_lunar_distance': 30.0
                                                        }})
 
-        self.filt_1m0_imaging = build_filter_blocks(self.params_1m0_imaging['filter_pattern'],
-                                                    self.params_1m0_imaging['exp_count'],
-                                                    self.params_1m0_imaging['exp_type'])[0]
         self.params_0m4_imaging = configure_defaults({ 'site_code': 'Z21',
                                                        'exp_time': 90.0,
                                                        'exp_count': 18,
@@ -5153,9 +5670,6 @@ class TestMakeconfigurations(TestCase):
                                                          'max_airmass': 2.0,
                                                          'min_lunar_distance': 30.0
                                                        }})
-        self.filt_0m4_imaging = build_filter_blocks(self.params_0m4_imaging['filter_pattern'],
-                                                    self.params_0m4_imaging['exp_count'],
-                                                    self.params_0m4_imaging['exp_type'])[0]
 
         self.params_2m0_spectroscopy = configure_defaults({ 'site_code': 'F65',
                                                             'instrument_code' : 'F65-FLOYDS',
@@ -5186,6 +5700,21 @@ class TestMakeconfigurations(TestCase):
         expected_type = 'EXPOSE'
 
         configurations = make_configs(self.params_1m0_imaging)
+
+        self.assertEqual(expected_num_configurations, len(configurations))
+        self.assertEqual(expected_type, configurations[0]['type'])
+
+    def test_1m_longblock_imaging(self):
+        params = self.params_1m0_imaging
+        params['exp_count'] = 65
+        params['slot_length'] = 120*60
+        params['speed'] = 25
+        params['target'] = make_moving_target(self.body_elements, 0.5)
+
+        expected_num_configurations = 4
+        expected_type = 'REPEAT_EXPOSE'
+
+        configurations = make_configs(params)
 
         self.assertEqual(expected_num_configurations, len(configurations))
         self.assertEqual(expected_type, configurations[0]['type'])
@@ -5239,27 +5768,32 @@ class TestMakeconfigurations(TestCase):
 
     def test_longblock_dithering(self):
 
-        expected_num_configurations = 1
+        expected_num_configurations = 5
         expected_type = 'EXPOSE'
-        expected_num_inst_configurations = 100
+        expected_num_inst_configurations = 20
         expected_exp_num = 1
         params = self.params_1m0_imaging
         params['dither_distance'] = 20
         params['add_dither'] = True
         params['exp_count'] = 100
+        params['target'] = make_moving_target(self.body_elements, 0.5)
+        params['speed'] = 25
 
         configurations = make_configs(params)
 
         self.assertEqual(expected_num_configurations, len(configurations))
         self.assertEqual(expected_type, configurations[0]['type'])
 
-        inst_configs = configurations[0]['instrument_configs']
-        self.assertEqual(expected_num_inst_configurations, len(inst_configs))
-        self.assertEqual(inst_configs[0]['exposure_count'], expected_exp_num)
-        self.assertEqual(inst_configs[0]['extra_params'], {'offset_ra': 0.0, 'offset_dec': 0.0})
-        self.assertEqual(inst_configs[6]['extra_params'], {'offset_ra': -20.0, 'offset_dec': -20.0})
-        self.assertEqual(inst_configs[30]['extra_params'], {'offset_ra': 60.0, 'offset_dec': 60.0})
-        self.assertEqual(inst_configs[91]['extra_params'], {'offset_ra': 20.0, 'offset_dec': 0.0})
+        inst_configs0 = configurations[0]['instrument_configs']
+        inst_configs1 = configurations[1]['instrument_configs']
+        inst_configs4 = configurations[4]['instrument_configs']
+
+        self.assertEqual(expected_num_inst_configurations, len(inst_configs0))
+        self.assertEqual(inst_configs0[0]['exposure_count'], expected_exp_num)
+        self.assertEqual(inst_configs0[0]['extra_params'], {'offset_ra': 0.0, 'offset_dec': 0.0})
+        self.assertEqual(inst_configs0[6]['extra_params'], {'offset_ra': -20.0, 'offset_dec': -20.0})
+        self.assertEqual(inst_configs1[10]['extra_params'], {'offset_ra': 60.0, 'offset_dec': 60.0})
+        self.assertEqual(inst_configs4[11]['extra_params'], {'offset_ra': 20.0, 'offset_dec': 0.0})
 
     def test_muscat_dithering(self):
 
