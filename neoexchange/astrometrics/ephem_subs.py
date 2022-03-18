@@ -17,6 +17,7 @@ GNU General Public License for more details.
 
 import logging
 from datetime import datetime, timedelta, time
+from dateutil import relativedelta
 from math import sin, cos, tan, asin, acos, atan2, degrees, radians, pi, sqrt, fabs, exp, log10, ceil, log
 from socket import timeout
 
@@ -2233,6 +2234,46 @@ def get_visibility(ra, dec, date, site_code, step_size='30 m', alt_limit=30, qui
 
     return dark_and_up_time, max_alt, start_time, stop_time
 
+
+def longterm_visibility(body, start_date, end_date, site_code, step_size='1h'):
+
+    if site_code == '1M0':
+        site_list = ['V37', 'K91']
+    elif site_code == '2M0':
+        site_list = ['F65', 'E10']
+    elif site_code == '0M4':
+        site_list = ['V38', 'L09']
+    else:
+        site_list = [site_code]
+
+    a_month = relativedelta.relativedelta(months=1)
+    now = datetime.utcnow()
+    now.replace(hour=0, minute=0, second=0, microsecond=0)
+    now += a_month
+
+    date = start_date
+    visibility = {}
+    while date < min(now, end_date):
+        visibility[date.strftime("%Y-%m")] = 0.0
+        date += a_month
+
+    for site in site_list:
+        table = horizons_ephem(body.current_name(), start_date, end_date, site, ephem_step_size=step_size, alt_limit=30)
+        table_by_month = {}
+        if table:
+            # Mask out Civil and Nautical twilights
+            twilight_mask = (table['solar_presence'] != 'C') & (table['solar_presence'] != 'N')
+            elong_mask = table['elong'] >= 40.0
+            mask = twilight_mask & elong_mask
+            mask_table = table[mask]
+            month_col = Column(mask_table['datetime'].strftime("%Y-%m"))
+            mask_table.add_column(month_col, name='month')
+            table_by_month = mask_table.group_by('month')
+
+            for key, group in zip(table_by_month.groups.keys, table_by_month.groups):
+                if key[0] in visibility.keys():
+                    visibility[key[0]] += float(len(group))
+    return table_by_month, visibility
 
 def convert_to_ecliptic(equatorial_coords, coord_date):
     # Calculate radial distance for cartesian coordinates

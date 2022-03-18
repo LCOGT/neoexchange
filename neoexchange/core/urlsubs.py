@@ -26,6 +26,8 @@ from pydrive.auth import GoogleAuth, ServiceAccountCredentials
 import gspread
 from gspread.utils import a1_to_rowcol, rowcol_to_a1
 
+from astrometrics.ephem_subs import longterm_visibility
+
 ssl_verify = True
 # Check if Python version is less than 2.7.9. If so, disable SSL warnings and SNI verification
 if sys.version_info < (2, 7, 9):
@@ -214,6 +216,7 @@ def populate_comet_lines(sheet, params):
         # Count up observed blocks per month
         blocks_per_month = obs_blocks.annotate(month=TruncMonth('block_start')).values('month').annotate(total=Count('id')).order_by('month')
 
+        table, visibility = longterm_visibility(comet, start_date, min(now, end_date), '1M0')
         date = start_date
         visibilities = []
         while date < min(now, end_date):
@@ -224,12 +227,15 @@ def populate_comet_lines(sheet, params):
                     num_visits = ""
             else:
                 num_visits = ""
-
             values.append(num_visits)
-            visibility = comet.compute_obs_window(date, df=31, mag_limit=20)
+
+#            visibility = comet.compute_obs_window(date, df=31, mag_limit=20)
             visible = True
-            if visibility[0] != date:
-                visible = False
+            month = date.strftime("%Y-%m")
+            # Visibility is hours per month
+            if (month in visibility.keys() and visibility[month] < 45):
+                if num_visits == "":
+                    visible = False
             visibilities.append(visible)
             date += a_month
 
