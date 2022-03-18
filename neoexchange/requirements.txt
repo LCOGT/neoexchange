@@ -31,5 +31,6 @@ rollbar
 sty
 awscli
 lxml
+freezegun
 gspread
 pydrive

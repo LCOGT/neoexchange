@@ -1054,10 +1054,10 @@ class ScheduleCalibSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
             return self.form_invalid(form, request)
 
     def form_valid(self, form, request):
+        # Recalculate the parameters by amending the block length
+        data = schedule_check(form.cleaned_data, self.object)
+        new_form = ScheduleBlockForm(data)
         if 'edit' in request.POST:
-            # Recalculate the parameters by amending the block length
-            data = schedule_check(form.cleaned_data, self.object)
-            new_form = ScheduleBlockForm(data)
             return render(request, self.template_name, {'form': new_form, 'data': data, 'calibrator': self.object})
         elif 'submit' in request.POST:
             target = self.get_object()
@@ -1320,6 +1320,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         speed = 0.0
         ra = radians(body.ra)
         dec = radians(body.dec)
+    adjusted_speed = speed
 
     # Determine filter pattern
     if data.get('filter_pattern'):
@@ -1375,6 +1376,7 @@ def schedule_check(data, body, ok_to_schedule=True):
     snr = None
     saturated = None
     if spectroscopy:
+        fractional_tracking_rate = 1.0
         snr_params = {'airmass': max_alt_airmass,
                       'slit_width': float(filter_pattern[5:8])*u.arcsec,
                       'moon_phase': moon_phase_code
@@ -1395,12 +1397,25 @@ def schedule_check(data, body, ok_to_schedule=True):
                 solar_analog_exptime = data.get('calibsource_exptime')
 
     else:
+        # calculate rate of relative motion on chip
+        try:
+            if 'fractional_rate' not in data and body_elements.get('elements_type', '') == 'MPC_COMET':
+                fractional_tracking_rate = 1.0
+            else:
+                fractional_tracking_rate = float(data.get('fractional_rate', 0.5))
+        except ValueError:
+            fractional_tracking_rate = 0.5
+            if body_elements.get('elements_type', '') == 'MPC_COMET':
+                print("Setting to 1.0 for comets")
+                fractional_tracking_rate = 1.0
+        relative_apparent_rate = abs(fractional_tracking_rate - 0.5) + 0.5
+        adjusted_speed = speed * relative_apparent_rate
         # Determine exposure length and count
         if data.get('exp_length', None):
             exp_length = data.get('exp_length')
             slot_length, exp_count = determine_exp_count(slot_length, exp_length, data['site_code'], filter_pattern, bin_mode=bin_mode)
         else:
-            exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length, magnitude, filter_pattern, bin_mode=bin_mode)
+            exp_length, exp_count = determine_exp_time_count(adjusted_speed, data['site_code'], slot_length, magnitude, filter_pattern, bin_mode=bin_mode)
             slot_length, exp_count = determine_exp_count(slot_length, exp_length, data['site_code'], filter_pattern, exp_count, bin_mode=bin_mode)
         if exp_length is None or exp_count is None:
             ok_to_schedule = False
@@ -1426,7 +1441,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         trail_len = determine_star_trails(speed, ag_exp_time)
     else:
         ag_exp_time = None
-        trail_len = determine_star_trails(speed, exp_length)
+        trail_len = determine_star_trails(adjusted_speed, exp_length)
     if lco_site_code[-4:-1].upper() == "0M4":
         typical_seeing = 3.0
     else:
@@ -1566,6 +1581,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'calibsource_list': calibsource_list_init,
         'dither_distance': data.get('dither_distance', 10),  # set default value to 10 arcsec.
         'add_dither': data.get('add_dither', False),
+        'fractional_rate': fractional_tracking_rate,
     }
 
     if not spectroscopy and 'F65' in data['site_code']:
@@ -1606,17 +1622,17 @@ def schedule_submit(data, body, username):
     if data.get('solar_analog', False) and data.get('calibsource_id', -1) > 0:
         try:
             calibsource = StaticSource.objects.get(pk=data['calibsource_id'])
-            calibsource_params = {  'id'      : calibsource.pk,
-                                    'name'    : calibsource.name,
-                                    'ra_deg'  : calibsource.ra,
-                                    'dec_deg' : calibsource.dec,
-                                    'pm_ra'   : calibsource.pm_ra,
-                                    'pm_dec'  : calibsource.pm_dec,
-                                    'parallax': calibsource.parallax,
-                                    'source_type' : calibsource.source_type,
-                                    'vmag' : calibsource.vmag,
-                                    'calib_exptime': data.get('calibsource_exptime', 60)
-                                 }
+            calibsource_params = {'id': calibsource.pk,
+                                  'name': calibsource.name,
+                                  'ra_deg': calibsource.ra,
+                                  'dec_deg': calibsource.dec,
+                                  'pm_ra': calibsource.pm_ra,
+                                  'pm_dec': calibsource.pm_dec,
+                                  'parallax': calibsource.parallax,
+                                  'source_type': calibsource.source_type,
+                                  'vmag': calibsource.vmag,
+                                  'calib_exptime': data.get('calibsource_exptime', 60)
+                                  }
         except StaticSource.DoesNotExist:
             logger.error("Was passed a StaticSource id=%d, but it now can't be found" % data['calibsource_id'])
 
@@ -1680,7 +1696,9 @@ def schedule_submit(data, body, username):
               'acceptability_threshold': data.get('acceptability_threshold', 90),
               'ag_exp_time': data.get('ag_exp_time', 10),
               'dither_distance': data.get('dither_distance', 10),
-              'add_dither': data.get('add_dither', False)
+              'add_dither': data.get('add_dither', False),
+              'fractional_rate': float(data.get('fractional_rate', 0.5)),
+              'speed': data.get('speed', 0)
               }
     if data['period'] or data['jitter']:
         params['period'] = data['period']
@@ -2323,9 +2341,11 @@ def record_block(tracking_number, params, form_data, target):
             if request_type == 'SIDEREAL' or request_type == 'ICRS':
                 block_kwargs['body'] = None
                 block_kwargs['calibsource'] = target
+                block_kwargs['tracking_rate'] = 0
             else:
                 block_kwargs['body'] = target
                 block_kwargs['calibsource'] = None
+                block_kwargs['tracking_rate'] = int(params['fractional_rate'] * 100)
             pk = Block.objects.create(**block_kwargs)
 
             if len(params.get('calibsource', {})) > 0:
@@ -2338,6 +2358,7 @@ def record_block(tracking_number, params, form_data, target):
                 block_kwargs['calibsource'] = calib_source
                 block_kwargs['exp_length'] = params['calibsrc_exptime']
                 block_kwargs['obstype'] = Block.OPT_SPECTRA_CALIB
+                block_kwargs['tracking_rate'] = 0
                 pk = Block.objects.create(**block_kwargs)
             i += 1
         return True
@@ -3092,8 +3113,8 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M', force=False):
             if phys_params['value'] is not None:
                 saved = body.save_physical_parameters(phys_params)
                 body.refresh_from_db()
-                # Test to see if it's a DNC with a 1/a value < 1e-4 (10,000 AU)
-                if body.recip_a and body.recip_a < 1e-4 and body.source_subtype_2 is None:
+                # Test to see if it's a DNC with a 1/a0 value < 1e-4 (25,000 AU)
+                if body.recip_a and body.recip_a < 4e-5 and body.source_subtype_2 is None:
                     body.source_subtype_2 = 'DN'
                     body.save()
 
