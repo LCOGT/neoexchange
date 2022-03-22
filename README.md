@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.12.1
+* Various fixes for pipeline processing. Increase depth of cross match catalog to r=16.5
+
 ### 3.12.0
 * Add option to set fractional ephemeris rate.
 * Set default observing mode to 50% object's rate for moving targets (except for comets and spectroscopy)
