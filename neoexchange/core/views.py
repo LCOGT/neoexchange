@@ -19,6 +19,7 @@ from operator import itemgetter
 from datetime import datetime, timedelta, date
 from math import floor, ceil, degrees, radians, pi, acos, pow
 from astropy import units as u
+from astropy.coordinates import SkyCoord
 import json
 import logging
 import tempfile
@@ -3589,9 +3590,11 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False, desired_c
         logger.error("Bad header for %s (%s)" % (catfile, e))
         return -1, num_new_frames_created
 
+    # Downgrade check on bad fit to a logged warning as we're seeing a fair
+    # number of instances where BANZAI fails but we can solve succesfully
     if header.get('astrometric_fit_status', None) != 0:
-        logger.error("Bad astrometric fit found")
-        return -1, num_new_frames_created
+        logger.warning("Bad astrometric fit found in %s", catfile)
+    # return -1, num_new_frames_created
 
     # Check catalog type
     if cattype != 'BANZAI':
@@ -4587,3 +4590,31 @@ def find_best_solar_analog(ra_rad, dec_rad, site, ha_sep=4.0, num=None, solar_st
         close_params = model_to_dict(close_standard)
         close_params['separation_deg'] = close_standards[num]["separation"]
     return close_standard, close_params, close_standards[:5]
+
+
+def compare_NEOx_horizons_ephems(body, d, sitecode='500', debug=True):
+    """Compare the NEOexchange and HORIZONS positions at datetime <d> for
+    <body> (can be either a core.models.Body instance or string) from MPC site
+    code [sitecode; defaults to 500 (geocenter).
+    Returns the NEOx and HORIZONS ephemeris and the radial and RA & Dec components
+    of the separation (as Astropy Angle instances in u.arcsec)"""
+
+    if type(body) != Body:
+        body = Body.objects.get(name=body)
+
+    neox_emp = compute_ephem(d, model_to_dict(body), sitecode, perturb=True, display=debug)
+    horizons_emp = horizons_ephem(body.current_name(), d, d+timedelta(minutes=1), sitecode, '1m')
+
+    sep_r = None
+    sep_ra = None
+    sep_dec = None
+    if len(neox_emp) > 0 and horizons_emp is not None and len(horizons_emp) > 0:
+        neox_pos = SkyCoord(neox_emp['ra'], neox_emp['dec'], unit=u.rad)
+        horizons_pos = SkyCoord(horizons_emp['RA'][0], horizons_emp['DEC'][0], unit=u.deg)
+        sep_r = horizons_pos.separation(neox_pos).to(u.arcsec)
+        sep_ra, sep_dec = horizons_pos.spherical_offsets_to(neox_pos)
+        sep_ra = sep_ra.to(u.arcsec)
+        sep_dec = sep_dec.to(u.arcsec)
+        print(f"At {d:}, sep= {sep_r:.1f} (RA={sep_ra:.1f}, Dec={sep_dec:.1f})\n{neox_pos.to_string('hmsdms', sep=' '):}\n{horizons_pos.to_string('hmsdms', sep=' '):}")
+
+    return neox_emp, horizons_emp, sep_r, sep_ra, sep_dec

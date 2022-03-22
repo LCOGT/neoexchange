@@ -152,5 +152,10 @@ def auto_delete_file_on_delete(sender, instance, **kwargs):
     when corresponding `MediaFile` object is deleted.
     """
     if instance.product:
-        if default_storage.exists(instance.product.path):
-            default_storage.delete(instance.product.path)
+        try:
+            if default_storage.exists(instance.product.path):
+                default_storage.delete(instance.product.path)
+        except NotImplementedError:
+            #S3boto-based storage backends don't implement `product.path`, only `product.name`
+            if default_storage.exists(instance.product.name):
+                default_storage.delete(instance.product.name)
