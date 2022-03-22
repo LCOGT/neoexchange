@@ -110,7 +110,7 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
         else:
             query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
 
-        vizier_servers_list = ['vizier.cfa.harvard.edu', 'vizier.hia.nrc.ca'] # Preferred first
+        vizier_servers_list = ['vizier.cfa.harvard.edu', 'vizier.hia.nrc.ca', 'vizier.u-strasbg.fr', ] # Preferred first
         query_service.VIZIER_SERVER = vizier_servers_list[0]
 
         query_service.TIMEOUT = 60
@@ -125,7 +125,7 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
             query_service.VIZIER_SERVER = vizier_servers_list[-1]
             logger.warning("Timeout querying {}. Switching to {}".format(old_server, query_service.VIZIER_SERVER))
             result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=cat_mapping[cat_name])
-        if len(result) == 0:
+        if result is None or len(result) == 0:
             old_server = query_service.VIZIER_SERVER
             query_service.VIZIER_SERVER = vizier_servers_list[-1]
             logger.warning("Error querying {}. Switching to {}".format(old_server, query_service.VIZIER_SERVER))
@@ -1438,7 +1438,7 @@ def store_catalog_sources(catfile, catalog_type='LCOGT', std_zeropoint_tolerance
             if '2m0' in header.get('framename', ''):
                 rmag_limit = '<=18.0'
             else:
-                rmag_limit = '<=15.0'
+                rmag_limit = '<=16.5'
             header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, phot_cat_name = call_cross_match_and_zeropoint((header, table), std_zeropoint_tolerance, phot_cat_name, rmag_limit=rmag_limit)
             end = time.time()
             logger.debug("TIME: compute_zeropoint took {:.1f} seconds".format(end-start))
@@ -1740,7 +1740,9 @@ def funpack_fits_file(fpack_file):
     hdu = fits.PrimaryHDU(data, header)
     hdu._bscale = 1.0
     hdu._bzero = 0.0
+    hdu.header.remove("BSCALE", ignore_missing=True)
     hdu.header.insert("NAXIS2", ("BSCALE", 1.0), after=True)
+    hdu.header.remove("BZERO", ignore_missing=True)
     hdu.header.insert("BSCALE", ("BZERO", 0.0), after=True)
     hdu.writeto(unpacked_file, checksum=True)
     hdulist.close()
