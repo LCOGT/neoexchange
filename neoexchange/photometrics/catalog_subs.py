@@ -1811,25 +1811,6 @@ def get_fits_files(fits_path):
 
     return sorted_fits_files
 
-def sanitize_object_name(object_name):
-    """Remove problematic characters (space, slash) from object names so it
-    can be used for e.g. directory names"""
-
-    clean_object_name = None
-    if type(object_name) == str or type(object_name) == np.str_:
-        clean_object_name = object_name.strip().replace('(', '').replace(')', '')
-        # Find the rightmost space and then do space->underscore mapping *left*
-        # of that but space->empty string right of that.
-        index = clean_object_name.rfind(' ')
-        if index > 0:
-            first_part = clean_object_name[0:index].replace(' ', '_')
-            second_part = clean_object_name[index:].replace(' ', '')
-            clean_object_name = first_part + second_part
-        clean_object_name = clean_object_name.replace('/P', 'P').replace('/', '_')
-        # Additional mangling for calibration stars (StaticSources)
-        clean_object_name = clean_object_name.replace('+', '').replace('-', '_')
-
-    return clean_object_name
 
 def sanitize_object_name(object_name):
     """Remove problematic characters (space, slash) from object names so it
