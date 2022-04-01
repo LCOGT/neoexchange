@@ -717,21 +717,21 @@ def banzai_catalog_mapping():
                   }
 
     table_dict = OrderedDict([
-                    ('ccd_x'         , 'XWIN'),
-                    ('ccd_y'         , 'YWIN'),
-                    ('obs_ra'        , 'RA'),
-                    ('obs_dec'       , 'DEC'),
-                    # ('obs_ra_err'    , 'ERRX2_WORLD'),
-                    # ('obs_dec_err'   , 'ERRY2_WORLD'),
-                    ('major_axis'    , 'A'),
-                    ('minor_axis'    , 'B'),
-                    ('ccd_pa'        , 'THETA'),
-                    ('obs_mag'       , 'FLUX'),
-                    ('obs_mag_err'   , 'FLUXERR'),
-                    ('obs_sky_bkgd'  , 'BACKGROUND'),
-                    ('flags'         , 'FLAG'),
-                    # ('flux_max'      , 'FLUX_MAX'),
-                    # ('threshold'     , 'MU_THRESHOLD'),
+                    ('ccd_x'         , 'xwin'),
+                    ('ccd_y'         , 'ywin'),
+                    ('obs_ra'        , 'ra'),
+                    ('obs_dec'       , 'dec'),
+                    # ('obs_ra_err'    , 'errx2_world'),
+                    # ('obs_dec_err'   , 'erry2_world'),
+                    ('major_axis'    , 'a'),
+                    ('minor_axis'    , 'b'),
+                    ('ccd_pa'        , 'theta'),
+                    ('obs_mag'       , 'flux'),
+                    ('obs_mag_err'   , 'fluxerr'),
+                    ('obs_sky_bkgd'  , 'background'),
+                    ('flags'         , 'flag'),
+                    ('flux_max'      , 'peak'),
+                    # ('threshold'     , 'mu_threshold'),
                  ])
 
     return header_dict, table_dict
@@ -877,7 +877,7 @@ def open_fits_catalog(catfile, header_only=False):
             cattype = 'BANZAI_LDAC'
         header_array = hdulist[1].data[0][0]
         header = fits_ldac_to_header(header_array)
-    elif len(hdulist) == 4 or (len(hdulist) == 3 and hdulist[1].header.get('EXTNAME', None) != 'LDAC_IMHEAD'):
+    elif len(hdulist) == 4 or len(hdulist) == 5 or (len(hdulist) == 3 and hdulist[1].header.get('EXTNAME', None) != 'LDAC_IMHEAD'):
         # New BANZAI-format data
         cattype = 'BANZAI'
         try:
@@ -1222,8 +1222,9 @@ def get_catalog_items_new(header_items, table, catalog_type='LCOGT', flag_filter
         good_flux_mask = new_table['obs_mag'] > 0.0
         new_table = new_table[good_flux_mask]
     # Convert columns
-    new_table['obs_ra_err'] = np.sqrt(new_table['obs_ra_err'])
-    new_table['obs_dec_err'] = np.sqrt(new_table['obs_dec_err'])
+    if 'obs_ra_err' in new_table.colnames and 'obs_dec_err' in new_table.colnames:
+        new_table['obs_ra_err'] = np.sqrt(new_table['obs_ra_err'])
+        new_table['obs_dec_err'] = np.sqrt(new_table['obs_dec_err'])
     FLUX2MAG = 2.5/log(10)
     new_table['obs_mag_err'] = FLUX2MAG * (new_table['obs_mag_err'] / new_table['obs_mag'])
     new_table['obs_mag'] = -2.5 * np.log10(new_table['obs_mag'])
@@ -1328,7 +1329,7 @@ def remove_corrupt_catalog(catfile):
 
     return removed, num_deleted
 
-def extract_catalog(catfile, catalog_type='LCOGT', flag_filter=0, new=True, remove=False):
+def extract_catalog(catfile, catalog_type='LCOGT', flag_filter=0, new=True, remove=False, header_only=False):
     """High-level routine to read LCOGT FITS catalogs from <catfile>.
     This returns a dictionary of needed header items and an AstroPy table of
     the sources that pass the [flag_filter] cut-off or None if the file could
@@ -1336,7 +1337,7 @@ def extract_catalog(catfile, catalog_type='LCOGT', flag_filter=0, new=True, remo
     verification in open_fits_catalog(), it will be deleted here."""
 
     header = table = None
-    fits_header, fits_table, cattype = open_fits_catalog(catfile)
+    fits_header, fits_table, cattype = open_fits_catalog(catfile, header_only=header_only)
 
     if cattype == 'CORRUPT' and remove is True:
         removed, num_db_deleted = remove_corrupt_catalog(catfile)
@@ -1345,13 +1346,14 @@ def extract_catalog(catfile, catalog_type='LCOGT', flag_filter=0, new=True, remo
             remove_str = 'was'
         logger.warning(f'Corrupt {catfile} {remove_str} removed from disk. {num_db_deleted} Frame records removed from DB')
 
-    if len(fits_header) != 0 and len(fits_table) != 0:
+    if len(fits_header) != 0 and (len(fits_table) != 0 or header_only is True):
         header = get_catalog_header(fits_header, catalog_type)
         # get_catalog_items() is the slow part
-        if new:
-            table = get_catalog_items_new(header, fits_table, catalog_type, flag_filter)
-        else:
-            table = get_catalog_items_old(header, fits_table, catalog_type, flag_filter)
+        if header_only is False:
+            if new:
+                table = get_catalog_items_new(header, fits_table, catalog_type, flag_filter)
+            else:
+                table = get_catalog_items_old(header, fits_table, catalog_type, flag_filter)
 
     return header, table
 
@@ -1905,3 +1907,4 @@ def find_first_last_frames(fits_files):
         if frame.midpoint > last_frame.midpoint:
             last_frame = frame
     return first_frame, last_frame
+
