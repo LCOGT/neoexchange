@@ -140,7 +140,7 @@ class QueryTelemetry(ESMetricsSource):
                             }
                         },
                         {
-                            "match": {
+                            "match_phrase": {
                                 "site": site
                             }
                         }
