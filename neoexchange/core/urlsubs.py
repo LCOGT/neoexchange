@@ -23,7 +23,7 @@ from astropy.table import QTable
 from django.conf import settings
 from opensearchpy import OpenSearch
 
-from astrometrics.ephem_subs import determine_darkness_times
+from astrometrics.ephem_subs import determine_darkness_times, MPC_site_code_to_domes
 
 OPENSEARCH_URL = os.getenv('OPENSEARCH_URL', 'https://opensearch.lco.global')
 
@@ -264,3 +264,16 @@ def convert_temps_to_table(temps_data, time_field='timestampmeasured', datum_nam
         tables.append(temp_table)
 
     return tables
+
+def fetch_dimm_seeing(sitecode, date):
+    seeing = []
+    site, encid, telid = MPC_site_code_to_domes(sitecode)
+    if site == 'cpt':
+        date = date.replace(hour=16, minute=0, second=0)
+        date += timedelta(days=1)
+    fwhm = QueryTelemetry(start_time=date)
+    dimm_data = fwhm.get_seeing_for_site(site)
+    if len(dimm_data) > 0:
+        tables = convert_temps_to_table(dimm_data, time_field='measure_time', datum_name='seeing', data_field='seeing')
+        seeing = tables[0]
+    return seeing

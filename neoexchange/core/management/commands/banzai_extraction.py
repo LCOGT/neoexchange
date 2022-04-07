@@ -28,9 +28,10 @@ import astropy.units as u
 import numpy as np
 import calviacat as cvc
 
-from core.urlsubs import QueryTelemetry, convert_temps_to_table
-from astrometrics.ephem_subs import horizons_ephem, MPC_site_code_to_domes
-from photometrics.catalog_subs import extract_catalog, open_fits_catalog, FITSTblException
+from core.plots import plot_timeseries
+from core.urlsubs import fetch_dimm_seeing
+from astrometrics.ephem_subs import horizons_ephem
+from photometrics.catalog_subs import extract_catalog, open_fits_catalog, existing_catalog_coverage, FITSTblException
 
 import logging
 
@@ -48,7 +49,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('datadir', help='Path to the data to ingest')
-        parser.add_argument('target', help='Name of the target (replace spaces with underscores')
+        parser.add_argument('target', help='Name of the target (replace spaces with underscores)')
         parser.add_argument('-bw', '--boxwidth', type=float, default=3.0, help='Box half-width in arcsec to search')
 
     def determine_images_and_catalogs(self, datadir, output=True):
@@ -72,84 +73,10 @@ class Command(BaseCommand):
 
         return fits_files, fits_catalogs
 
-    def fetch_dimm_seeing(self, sitecode, date):
-        seeing = []
-        site, encid, telid = MPC_site_code_to_domes(sitecode)
-        if site == 'cpt':
-            date = date.replace(hour=16, minute=0, second=0)
-            date += timedelta(days=1)
-        fwhm = QueryTelemetry(start_time=date)
-        dimm_data = fwhm.get_seeing_for_site(site)
-        if len(dimm_data) > 0:
-            tables = convert_temps_to_table(dimm_data, time_field='measure_time', datum_name='seeing', data_field='seeing')
-            seeing = tables[0]
-        return seeing
-
-    def format_date(self, dates):
-        """
-        Adjust Date format based on length of timeseries
-
-        :param dates: [DateTime]
-        :return: str -- DateTime format
-        """
-        start = dates[0]
-        end = dates[-1]
-        time_diff = end - start
-        if time_diff > timedelta(days=3):
-            return "%Y/%m/%d"
-        elif time_diff > timedelta(hours=6):
-            return "%m/%d %H:%M"
-        elif time_diff > timedelta(minutes=30):
-            return "%H:%M"
-        else:
-            return "%H:%M:%S"
-
-    def plot_timeseries(self, times, alltimes, mags, mag_errs, seeing, fwhm, colors='r', title='', sub_title='', datadir='./', filename='tmp_'):
-
-        # Build Figure
-        fig, (ax0, ax1) = plt.subplots(nrows=2, sharex=True, figsize=(10,7.5), gridspec_kw={'height_ratios': [15, 4]})
-        # Plot LC
-        ax0.errorbar(times, mags, yerr=mag_errs, marker='.', color=colors, linestyle=' ')
-        # Sort out/Plot good Zero Points
-        # zp_times = [alltimes[i] for i, zp in enumerate(zps) if zp and zp_errs[i]]
-        # zps_good = [zp for i, zp in enumerate(zps) if zp and zp_errs[i]]
-        # zp_errs_good = [zp_errs[i] for i, zp in enumerate(zps) if zp and zp_errs[i]]
-        # ax1.errorbar(zp_times, zps_good, yerr=zp_errs_good, marker='.', color=colors, linestyle=' ')
-        ax1.plot(alltimes, fwhm, marker='.', color=colors, linestyle=' ')
-
-        # Cut down DIMM results to span of Block
-        if len(seeing) > 0:
-            mask1 = seeing['UTC Datetime'] >= alltimes[0]
-            mask2 = seeing['UTC Datetime'] <= alltimes[-1]
-            mask = mask1 & mask2
-            block_seeing = seeing[mask]
-            ax1.plot(block_seeing['UTC Datetime'], block_seeing['seeing'], color='DodgerBlue', linestyle='-', label='DIMM')
-        # Set up Axes/Titles
-        ax0.invert_yaxis()
-#        ax1.invert_yaxis()
-        ax1.set_xlabel('Time')
-        ax0.set_ylabel('Magnitude')
-        ax1.set_ylabel('FWHM (")')
-        fig.suptitle(title)
-        ax0.set_title(sub_title)
-        ax1.set_title('Conditions for obs', size='medium')
-        ax0.minorticks_on()
-        ax1.minorticks_on()
-
-        date_string = self.format_date(times)
-        ax0.xaxis.set_major_formatter(DateFormatter(date_string))
-        ax0.fmt_xdata = DateFormatter(date_string)
-        ax1.xaxis.set_major_formatter(DateFormatter(date_string))
-        ax1.fmt_xdata = DateFormatter(date_string)
-        fig.autofmt_xdate()
-
-        fig.savefig(os.path.join(datadir, filename + 'lightcurve.png'))
-
-        return
-
     def handle(self, *args, **options):
 
         dbg = False
+        cat_name = 'PS1'
         self.stdout.write("==== Pipeline processing BANZAI photometry %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
 
         datadir = os.path.expanduser(options['datadir'])
@@ -183,7 +110,7 @@ class Command(BaseCommand):
         mags = []
         magerrs = []
         zps = []
-#        zp = 30.763
+        zp_errs = []
         for catalog in fits_catalogs:
             filename = os.path.basename(catalog)
             header, _ = extract_catalog(catalog, 'BANZAI', header_only=True)
@@ -233,25 +160,52 @@ class Command(BaseCommand):
                 alltimes.append(header['obs_midpoint'])
                 fwhm.append(header['fwhm'])
                 if len(obj) == 1:
-                    ps1 = cvc.PanSTARRS1('175706_20210324_cat.db')
+                    db_filename = existing_catalog_coverage(datadir, header['field_center_ra'], header['field_center_dec'], header['field_width'], header['field_height'], cat_name, dbg)
+                    created = False
+                    if db_filename is None:
+                        # Add 25% to passed width and height in lieu of actual calculation of extent
+                        # of a series of frames
+                        set_width = header['field_width']
+                        set_height = header['field_height']
+                        units = set_width[-1]
+                        try:
+                            ref_width = float(set_width[:-1]) * 1.25
+                            ref_width = "{:.4f}{}".format(ref_width, units)
+                        except ValueError:
+                            ref_width = set_width
+                        units = set_height[-1]
+                        try:
+                            ref_height = float(set_height[:-1]) * 1.25
+                            ref_height = "{:.4f}{}".format(ref_height, units)
+                        except ValueError:
+                            ref_height = set_height
+
+                        # Rewrite name of catalog to include position and size
+                        refcat = "{}_{ra:.2f}{dec:+.2f}_{width}x{height}.cat".format(cat_name, ra=header['field_center_ra'], dec=header['field_center_dec'], width=ref_width, height=ref_height)
+                        db_filename = os.path.join(datadir, refcat)
+                        created = True
+                    print(f"  catalog={os.path.basename(db_filename):} (created={created:})", end='')
+                    ps1 = cvc.PanSTARRS1(db_filename)
                     phot = table[table['flags'] == 0]  # clean LCO catalog
                     lco = SkyCoord(phot['obs_ra'], phot['obs_dec'], unit='deg')
 
-                    ps1.fetch_field(lco)
+                    if len(ps1.search(lco)[0]) < 500:
+                        ps1.fetch_field(lco)
 
                     objids, distances = ps1.xmatch(lco)
                     zp, C, unc, r, gmr, gmi = ps1.cal_color(objids, phot['obs_mag'], 'r', 'g-r')
                     obs_mag = obj['obs_mag'][0] + zp
                     obs_mag_err = obj['obs_mag_err'][0]
                     zps.append(zp)
+                    zp_errs.append(unc)
                     mags.append(obs_mag)
                     magerrs.append(obs_mag_err)
                     times.append(header['obs_midpoint'])
                     success += 1
                 else:
                     print("Multiple matches")
-                print(f"{header['obs_midpoint'].strftime('%Y-%m-%dT%H:%M:%S'):}")
-                print(f"  {row['datetime_str']:} RA={ra:8.5f}, Dec={dec:8.5f} V={row['V']:.1f} obs_mag={obs_mag:.3f}+/-{obs_mag_err:.3f} ZP={zp:.3f}+/-{unc:.3f}")
+                print(f"  {header['obs_midpoint'].strftime('%Y-%m-%dT%H:%M:%S'):}")
+                print(f"  {row['datetime'].strftime('%Y-%m-%d %H:%M'):} RA={ra:8.5f}, Dec={dec:8.5f} V={row['V']:.1f} obs_mag={obs_mag:.3f}+/-{obs_mag_err:.3f} ZP={zp:.3f}+/-{unc:.3f}")
             else:
                 print()
         total_frames = len(fits_catalogs)
@@ -262,6 +216,6 @@ class Command(BaseCommand):
                                            first_frametime.strftime("%Y-%m-%d"),
                                            last_frametime.strftime("%Y-%m-%d"))
         subtitle = 'Sites: ' + header['site_code']
-        seeing = self.fetch_dimm_seeing(header['site_code'], first_frametime)
+        seeing = fetch_dimm_seeing(header['site_code'], first_frametime)
 
-        self.plot_timeseries(times, alltimes, mags, magerrs, seeing, fwhm, title=plot_title, sub_title=subtitle, datadir=datadir)
+        plot_timeseries(times, alltimes, mags, magerrs, zps, zp_errs, fwhm, [], {}, seeing, title=plot_title, sub_title=subtitle, datadir=datadir)

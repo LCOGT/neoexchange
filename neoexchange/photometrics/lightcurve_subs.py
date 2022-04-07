@@ -78,3 +78,21 @@ def write_dartformat_file(table, filepath, aprad=0.0):
         col_starts=col_starts, comment=False, delimiter='', formats=formatters)
 
     return
+
+def split_filename(filename):
+    """Splits an LCO filename <filename> into component parts
+    Returns a dict of components"""
+
+    name_parts = {}
+    fileroot, name_parts['extension'] = os.path.splitext(filename)
+    if len(fileroot) >= 31:
+        chunks = fileroot.split('-')
+        name_parts['site'] = chunks[0][0:3]
+        name_parts['tel_class'] = chunks[0][3:6]
+        name_parts['tel_serial'] = chunks[0][6:8]
+        name_parts['instrument'] = chunks[1]
+        name_parts['dayobs'] = chunks[2]
+        name_parts['frame_num'] = chunks[3]
+        name_parts['frame_type'] = chunks[4]
+
+    return name_parts

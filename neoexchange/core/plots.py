@@ -23,13 +23,14 @@ import re
 import shutil
 import itertools
 from math import pi, floor
+
 import numpy as np
 from astropy import units as u
-
-import aplpy
+from astropy.time import Time
 from django.http import HttpResponse
 from django.conf import settings
 from django.core.files.storage import default_storage
+from matplotlib.dates import HourLocator, DateFormatter
 import matplotlib
 import matplotlib.pyplot as plt
 
@@ -53,6 +54,8 @@ from photometrics.obsgeomplot import plot_ra_dec, plot_brightness, plot_helio_ge
 from photometrics.catalog_subs import sanitize_object_name
 from photometrics.SA_scatter import readSources, plotScatter, plotFormat
 from photometrics.spectraplot import spectrum_plot, read_mean_tax
+from photometrics.photometry_subs import generate_expected_fwhm
+from photometrics.lightcurve_subs import read_photompipe_file, split_filename
 
 logger = logging.getLogger(__name__)
 
@@ -974,3 +977,175 @@ def get_js_as_text(file, funct):
         if "function {}(".format(funct) in line:
             print_js = True
     return js_text
+
+
+def format_date(dates):
+    """
+    Adjust Date format based on length of timeseries
+
+    :param dates: [DateTime]
+    :return: str -- DateTime format
+    """
+    start = dates[0]
+    end = dates[-1]
+    time_diff = end - start
+    if time_diff > timedelta(days=3):
+        return "%Y/%m/%d"
+    elif time_diff > timedelta(hours=6):
+        return "%m/%d %H:%M"
+    elif time_diff > timedelta(minutes=30):
+        return "%H:%M"
+    else:
+        return "%H:%M:%S"
+
+def plot_timeseries(times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, temps, seeing, colors='r', title='', sub_title='', datadir='./', filename='tmp_', diameter=0.4*u.m, temp_keyword='FOCTEMP'):
+    """Uses matplotlib to create and save a quick LC plot png as well as a sky conditions plot png.
+
+    Parameters
+    ----------
+    times : [DateTime]
+        Times of frames with properly extracted source for target
+    alltimes: [DateTime]
+        Complete list of times for all frames
+    mags : [Float]
+        Extracted magnitudes for target (Same Length as `times`)
+    mag_errs : [Float]
+        Extracted magnitude errors for target (Same Length as `times`)
+    zps : [Float]
+        Total list of zero points for all frames (Same Length as `alltimes`)
+    zps_errs : [Float]
+        Total list of zero point errors for all frames (Same Length as `alltimes`)
+    fwhm : [Float]
+        Total list of mean fwhm for all frames (Same Length as `alltimes`)
+    air_mass : [Float]
+        Total list of airmass for all frames (Same Length as `alltimes`)
+    colors : str
+        text representing color recognizable to matplotlib --> changes default color of all plots.
+    title : str
+        text of plot titles
+    sub_title : str
+        text of plot subtitle
+    datadir : str
+        path in which to save the plots
+    filename : str
+        basename for plots
+    diameter : Float * Units.length
+        Telescope diameter
+    """
+    # Build Figure
+    fig, (ax0, ax1) = plt.subplots(nrows=2, sharex=True, figsize=(10,7.5), gridspec_kw={'height_ratios': [15, 4]})
+    # Plot LC
+    ax0.errorbar(times, mags, yerr=mag_errs, marker='.', color=colors, linestyle=' ')
+    # Sort out/Plot good Zero Points
+    zp_times = [alltimes[i] for i, zp in enumerate(zps) if zp and zp_errs[i]]
+    zps_good = [zp for i, zp in enumerate(zps) if zp and zp_errs[i]]
+    zp_errs_good = [zp_errs[i] for i, zp in enumerate(zps) if zp and zp_errs[i]]
+    ax1.errorbar(zp_times, zps_good, yerr=zp_errs_good, marker='.', color=colors, linestyle=' ')
+    # Set up Axes/Titles
+    ax0.invert_yaxis()
+#        ax1.invert_yaxis()
+    ax1.set_xlabel('Time')
+    ax0.set_ylabel('Magnitude')
+    ax1.set_ylabel('Magnitude')
+    fig.suptitle(title)
+    ax0.set_title(sub_title)
+    ax1.set_title('Zero Point', size='medium')
+    ax0.minorticks_on()
+    ax1.minorticks_on()
+
+    date_string = format_date(times)
+    ax0.xaxis.set_major_formatter(DateFormatter(date_string))
+    ax0.fmt_xdata = DateFormatter(date_string)
+    ax1.xaxis.set_major_formatter(DateFormatter(date_string))
+    ax1.fmt_xdata = DateFormatter(date_string)
+    fig.autofmt_xdate()
+
+    fig.savefig(os.path.join(datadir, filename + 'lightcurve.png'))
+
+    # Build Conditions plot
+    fig2, (ax2, ax3) = plt.subplots(nrows=2, figsize=(10,7.5), sharex=True)
+    ax4 = ax3.twinx()
+    ax2.plot(alltimes, fwhm, marker='.', color=colors, linestyle=' ')
+    if len(air_mass) > 0:
+        expected_fwhm = generate_expected_fwhm(alltimes, air_mass, fwhm_0=fwhm[0], tel_diameter=diameter)
+        if (times[-1] - times[0]) < timedelta(hours=12):
+            ax2.plot(alltimes, expected_fwhm, color='black', linestyle='--', linewidth=0.75, label="Predicted")
+        else:
+            ax2.plot(alltimes, expected_fwhm, color='black', linestyle=' ', marker='+', markersize=2, label="Predicted")
+
+    # Cut down DIMM results to span of Block
+    if len(seeing) > 0:
+        mask1 = seeing['UTC Datetime'] >= alltimes[0]
+        mask2 = seeing['UTC Datetime'] <= alltimes[-1]
+        mask = mask1 & mask2
+        block_seeing = seeing[mask]
+        ax2.plot(block_seeing['UTC Datetime'], block_seeing['seeing'], color='DodgerBlue', linestyle='-', label='DIMM')
+
+    temp_lines = []
+    for temp in temps:
+        temp_line = ax4.plot(alltimes, temps[temp], linewidth=0.66, marker='.', linestyle='-', label=temp)
+        temp_lines.append(temp_line[0])
+    # Set up Axes/Titles
+    ax2.set_ylabel('FWHM (")')
+    # ax2.set_title('FWHM')
+    fig2.suptitle('Conditions for obs: '+title)
+    if len(air_mass) > 0:
+        airmass_line = ax3.plot(alltimes, air_mass, marker='.', color='black', linestyle=' ')
+        temp_lines.append(airmass_line[0])
+        temp_keyword.append('Airmass')
+    ax4.legend(temp_lines, temp_keyword, loc='best', fontsize='xx-small')
+    ax3.set_xlabel('Time')
+    ax3.set_ylabel('Airmass')
+    # ax3.set_title('Airmass')
+    temp_label = "Temp"
+    if temp_keyword is not None and temp_keyword != '' and type(temp_keyword) != list:
+        temp_label = temp_label + "(" + temp_keyword.strip() + ")"
+    ax4.set_ylabel(temp_label)
+    ax2.minorticks_on()
+    ax3.minorticks_on()
+    ax4.minorticks_on()
+    ax3.invert_yaxis()
+    ax2.xaxis.set_major_formatter(DateFormatter(date_string))
+    ax2.fmt_xdata = DateFormatter(date_string)
+    ax3.xaxis.set_major_formatter(DateFormatter(date_string))
+    ax3.fmt_xdata = DateFormatter(date_string)
+    fig2.autofmt_xdate()
+    ax2.legend()
+    fig2.savefig(os.path.join(datadir, filename + 'lightcurve_focus.png'))
+
+    return
+
+def plot_timeseries_multipanel(lc_files, title='', sub_title='', datadir='./', filename='tmp_'):
+
+    fig = plt.figure(figsize=[21/1.5, 9/1.5])
+
+    gs = fig.add_gridspec(1, len(lc_files), hspace=0, wspace=0)
+
+    jd0 = None
+    min_jd = 1e39
+    max_jd = -1e39
+    for index, lc_file in enumerate(lc_files):
+        ax = fig.add_subplot(gs[0, index])
+        table = read_photompipe_file(lc_file)
+        if table:
+            # XXX Rescale error bars
+            scale = table['sig'].mean() / 0.01
+            if jd0 is None:
+                jd0 = int(table['julian_date'][0])
+            min_jd = min(min_jd, table['julian_date'].min())
+            max_jd = max(max_jd, table['julian_date'].max())
+            ax.errorbar(table['julian_date']-jd0, table['mag'], table['sig']/scale, marker='.', mfc='red')
+            ax.minorticks_on()
+            ax.invert_yaxis()
+            file_parts = split_filename(table['filename'][0])
+            sub_title = f"{file_parts['site'].upper():} {file_parts['tel_class']:}+{file_parts['instrument']:}"
+            ax.set_title(sub_title)
+            if index == 1:
+                ax.set_xlabel(f"JD-{jd0:.1f}")
+
+    t0 = Time(min_jd, format='jd')
+    t1 = Time(max_jd, format='jd')
+    fig.tight_layout(pad=3)
+    fig.suptitle(f'{title:} {t0.to_datetime().strftime("%Y-%m-%d"):}--{t1.to_datetime().strftime("%Y-%m-%d"):}')
+    fig.savefig(os.path.join(datadir, filename + 'lightcurve_multiday.png'))
+

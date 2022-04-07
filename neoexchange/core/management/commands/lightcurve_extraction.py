@@ -37,9 +37,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from core.models import Block, Frame, SuperBlock, SourceMeasurement, CatalogSources, DataProduct
-from core.urlsubs import QueryTelemetry, convert_temps_to_table
+from core.urlsubs import fetch_dimm_seeing
 from core.archive_subs import lco_api_call, make_data_dir
 from core.utils import save_dataproduct
+from core.plots import plot_timeseries
 from astrometrics.ephem_subs import compute_ephem, radec2strings, moon_alt_az, get_sitepos, MPC_site_code_to_domes
 from astrometrics.time_subs import datetime2mjd_utc
 from photometrics.catalog_subs import search_box, sanitize_object_name
@@ -65,179 +66,6 @@ class Command(BaseCommand):
         base_dir = os.path.join(settings.DATA_ROOT, 'Reduction')
         parser.add_argument('--datadir', default=base_dir, help='Place to save data (e.g. %s)' % base_dir)
         parser.add_argument('--tempkey', type=str, default='FOCTEMP', help='FITS keyword to extract for temperature')
-
-    def generate_expected_fwhm(self, times, airmasses, fwhm_0=2.0, obs_filter='w', tel_diameter=0.4*u.m):
-        """Compute the expected FWHM and the variation with airmass and observing
-        wavelength. Assumes the first value of FWHM (fwhm_0, in arcsec) is
-        representative and converts it to seeing.
-        Returns a list of expected FWHM values (in arcsec but not as Quantity's
-        for easier plotting)"""
-
-        expected_fwhm = []
-        filter_cwave = map_filter_to_wavelength(obs_filter)
-        # Convert first value of FWHM to seeing by correcting to airmass 1.0 and 500nm
-        seeing = fwhm_0 / (airmasses[0]**0.6)
-        seeing /= ((filter_cwave.to(u.nm) / (500.0*u.nm))**-0.2)
-        seeing *= u.arcsec
-        msg = "Initial FWHM, seeing= {:.3f} {:.3f} {}".format(fwhm_0, seeing.value, seeing.unit)
-        self.stdout.write(msg)
-
-        for time, airmass in zip(times, airmasses):
-            tic_params = {  'seeing' : seeing,
-                            'airmass' : airmass,
-                            'wavelength' : filter_cwave,
-                            'm1_diameter' : tel_diameter}
-            fwhm = compute_fwhm(tic_params)
-            expected_fwhm.append(fwhm.value)
-
-        return expected_fwhm
-
-    def fetch_dimm_seeing(self, sitecode, date):
-        seeing = []
-        site, encid, telid = MPC_site_code_to_domes(sitecode)
-        if site == 'cpt':
-            date = date.replace(hour=16, minute=0, second=0)
-            date += timedelta(days=1)
-        fwhm = QueryTelemetry(start_time=date)
-        dimm_data = fwhm.get_seeing_for_site(site)
-        if len(dimm_data) > 0:
-            tables = convert_temps_to_table(dimm_data, time_field='measure_time', datum_name='seeing', data_field='seeing')
-            seeing = tables[0]
-        return seeing
-
-    def plot_timeseries(self, times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, temps, seeing, colors='r', title='', sub_title='', datadir='./', filename='tmp_', diameter=0.4*u.m, temp_keyword='FOCTEMP'):
-        """Uses matplotlib to create and save a quick LC plot png as well as a sky conditions plot png.
-
-        Parameters
-        ----------
-        times : [DateTime]
-            Times of frames with properly extracted source for target
-        alltimes: [DateTime]
-            Complete list of times for all frames
-        mags : [Float]
-            Extracted magnitudes for target (Same Length as `times`)
-        mag_errs : [Float]
-            Extracted magnitude errors for target (Same Length as `times`)
-        zps : [Float]
-            Total list of zero points for all frames (Same Length as `alltimes`)
-        zps_errs : [Float]
-            Total list of zero point errors for all frames (Same Length as `alltimes`)
-        fwhm : [Float]
-            Total list of mean fwhm for all frames (Same Length as `alltimes`)
-        air_mass : [Float]
-            Total list of airmass for all frames (Same Length as `alltimes`)
-        colors : str
-            text representing color recognizable to matplotlib --> changes default color of all plots.
-        title : str
-            text of plot titles
-        sub_title : str
-            text of plot subtitle
-        datadir : str
-            path in which to save the plots
-        filename : str
-            basename for plots
-        diameter : Float * Units.length
-            Telescope diameter
-        """
-        # Build Figure
-        fig, (ax0, ax1) = plt.subplots(nrows=2, sharex=True, figsize=(10,7.5), gridspec_kw={'height_ratios': [15, 4]})
-        # Plot LC
-        ax0.errorbar(times, mags, yerr=mag_errs, marker='.', color=colors, linestyle=' ')
-        # Sort out/Plot good Zero Points
-        zp_times = [alltimes[i] for i, zp in enumerate(zps) if zp and zp_errs[i]]
-        zps_good = [zp for i, zp in enumerate(zps) if zp and zp_errs[i]]
-        zp_errs_good = [zp_errs[i] for i, zp in enumerate(zps) if zp and zp_errs[i]]
-        ax1.errorbar(zp_times, zps_good, yerr=zp_errs_good, marker='.', color=colors, linestyle=' ')
-        # Set up Axes/Titles
-        ax0.invert_yaxis()
-#        ax1.invert_yaxis()
-        ax1.set_xlabel('Time')
-        ax0.set_ylabel('Magnitude')
-        ax1.set_ylabel('Magnitude')
-        fig.suptitle(title)
-        ax0.set_title(sub_title)
-        ax1.set_title('Zero Point', size='medium')
-        ax0.minorticks_on()
-        ax1.minorticks_on()
-
-        date_string = self.format_date(times)
-        ax0.xaxis.set_major_formatter(DateFormatter(date_string))
-        ax0.fmt_xdata = DateFormatter(date_string)
-        ax1.xaxis.set_major_formatter(DateFormatter(date_string))
-        ax1.fmt_xdata = DateFormatter(date_string)
-        fig.autofmt_xdate()
-
-        fig.savefig(os.path.join(datadir, filename + 'lightcurve.png'))
-
-        # Build Conditions plot
-        fig2, (ax2, ax3) = plt.subplots(nrows=2, figsize=(10,7.5), sharex=True)
-        ax4 = ax3.twinx()
-        ax2.plot(alltimes, fwhm, marker='.', color=colors, linestyle=' ')
-        expected_fwhm = self.generate_expected_fwhm(alltimes, air_mass, fwhm_0=fwhm[0], tel_diameter=diameter)
-        if (times[-1] - times[0]) < timedelta(hours=12):
-            ax2.plot(alltimes, expected_fwhm, color='black', linestyle='--', linewidth=0.75, label="Predicted")
-        else:
-            ax2.plot(alltimes, expected_fwhm, color='black', linestyle=' ', marker='+', markersize=2, label="Predicted")
-
-        # Cut down DIMM results to span of Block
-        if len(seeing) > 0:
-            mask1 = seeing['UTC Datetime'] >= alltimes[0]
-            mask2 = seeing['UTC Datetime'] <= alltimes[-1]
-            mask = mask1 & mask2
-            block_seeing = seeing[mask]
-            ax2.plot(block_seeing['UTC Datetime'], block_seeing['seeing'], color='DodgerBlue', linestyle='-', label='DIMM')
-
-        temp_lines = []
-        for temp in temps:
-            temp_line = ax4.plot(alltimes, temps[temp], linewidth=0.66, marker='.', linestyle='-', label=temp)
-            temp_lines.append(temp_line[0])
-        # Set up Axes/Titles
-        ax2.set_ylabel('FWHM (")')
-        # ax2.set_title('FWHM')
-        fig2.suptitle('Conditions for obs: '+title)
-        airmass_line = ax3.plot(alltimes, air_mass, marker='.', color='black', linestyle=' ')
-        temp_lines.append(airmass_line[0])
-        temp_keyword.append('Airmass')
-        ax4.legend(temp_lines, temp_keyword, loc='best', fontsize='xx-small')
-        ax3.set_xlabel('Time')
-        ax3.set_ylabel('Airmass')
-        # ax3.set_title('Airmass')
-        temp_label = "Temp"
-        if temp_keyword is not None and temp_keyword != '' and type(temp_keyword) != list:
-            temp_label = temp_label + "(" + temp_keyword.strip() + ")"
-        ax4.set_ylabel(temp_label)
-        ax2.minorticks_on()
-        ax3.minorticks_on()
-        ax4.minorticks_on()
-        ax3.invert_yaxis()
-        ax2.xaxis.set_major_formatter(DateFormatter(date_string))
-        ax2.fmt_xdata = DateFormatter(date_string)
-        ax3.xaxis.set_major_formatter(DateFormatter(date_string))
-        ax3.fmt_xdata = DateFormatter(date_string)
-        fig2.autofmt_xdate()
-        ax2.legend()
-        fig2.savefig(os.path.join(datadir, filename + 'lightcurve_focus.png'))
-
-        return
-
-    def format_date(self, dates):
-        """
-        Adjust Date format based on length of timeseries
-
-        :param dates: [DateTime]
-        :return: str -- DateTime format
-        """
-        start = dates[0]
-        end = dates[-1]
-        time_diff = end - start
-        if time_diff > timedelta(days=3):
-            return "%Y/%m/%d"
-        elif time_diff > timedelta(hours=6):
-            return "%m/%d %H:%M"
-        elif time_diff > timedelta(minutes=30):
-            return "%H:%M"
-        else:
-            return "%H:%M:%S"
 
     def make_source_measurement(self, body, frame, cat_source, persist=False):
         """
@@ -625,8 +453,8 @@ class Command(BaseCommand):
 
                 # Make plots
                 if not settings.USE_S3:
-                    seeing = self.fetch_dimm_seeing(frames_all_zp[0].sitecode, frames_all_zp[0].midpoint)
-                    self.plot_timeseries(times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, focus_temps, seeing, title=plot_title, sub_title=subtitle, datadir=datadir, filename=base_name, diameter=tel_diameter, temp_keyword=temp_keywords)
+                    seeing = fetch_dimm_seeing(frames_all_zp[0].sitecode, frames_all_zp[0].midpoint)
+                    plot_timeseries(times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, focus_temps, seeing, title=plot_title, sub_title=subtitle, datadir=datadir, filename=base_name, diameter=tel_diameter, temp_keyword=temp_keywords)
                     output_file_list.append('{},{}'.format(os.path.join(datadir, base_name + 'lightcurve_focus.png'), datadir.lstrip(out_path)))
                     output_file_list.append('{},{}'.format(os.path.join(datadir, base_name + 'lightcurve.png'), datadir.lstrip(out_path)))
                     try:

@@ -466,6 +466,33 @@ def compute_fwhm(tic_params):
     return fwhm_iq * u.arcsec
 
 
+def generate_expected_fwhm(times, airmasses, fwhm_0=2.0, obs_filter='w', tel_diameter=0.4*u.m):
+    """Compute the expected FWHM and the variation with airmass and observing
+    wavelength. Assumes the first value of FWHM (fwhm_0, in arcsec) is
+    representative and converts it to seeing.
+    Returns a list of expected FWHM values (in arcsec but not as Quantity's
+    for easier plotting)"""
+
+    expected_fwhm = []
+    filter_cwave = map_filter_to_wavelength(obs_filter)
+    # Convert first value of FWHM to seeing by correcting to airmass 1.0 and 500nm
+    seeing = fwhm_0 / (airmasses[0]**0.6)
+    seeing /= ((filter_cwave.to(u.nm) / (500.0*u.nm))**-0.2)
+    seeing *= u.arcsec
+    msg = "Initial FWHM, seeing= {:.3f} {:.3f} {}".format(fwhm_0, seeing.value, seeing.unit)
+    logger.info(msg)
+
+    for time, airmass in zip(times, airmasses):
+        tic_params = {  'seeing' : seeing,
+                        'airmass' : airmass,
+                        'wavelength' : filter_cwave,
+                        'm1_diameter' : tel_diameter}
+        fwhm = compute_fwhm(tic_params)
+        expected_fwhm.append(fwhm.value)
+
+    return expected_fwhm
+
+
 def instrument_throughput(tic_params):
     """Calculate the throughput of a spectrograph instrument, excluding
     telescope, atmosphere, grating and detector.
