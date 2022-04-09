@@ -19,14 +19,17 @@ from glob import glob
 from sys import exit
 import tempfile
 from math import cos
+import warnings
 import matplotlib.pyplot as plt
 from matplotlib.dates import HourLocator, DateFormatter
 
 from django.core.management.base import BaseCommand, CommandError
+from astropy.time import Time
 from astropy.coordinates import SkyCoord, Angle
 import astropy.units as u
 import numpy as np
 import calviacat as cvc
+from scipy.interpolate import interp1d
 
 from core.plots import plot_timeseries
 from core.urlsubs import fetch_dimm_seeing
@@ -101,8 +104,10 @@ class Command(BaseCommand):
         ephem = horizons_ephem(options['target'].replace('_', ' '), first_frametime, last_frametime, header['site_code'], '1m')
         self.stdout.write(f"Ephemeris length= {len(ephem):}")
         failures = {'Bad WCS' : 0,
-                    'Bad table' : 0
+                    'Bad table' : 0,
+                    'No match' : 0
                    }
+        nomatch_files = []
         success = 0
         times = []
         alltimes = []
@@ -130,12 +135,19 @@ class Command(BaseCommand):
 
             print(msg, end='')
             if header and table:
-                start_time = header['obs_midpoint'] - timedelta(seconds=29)
-                end_time = header['obs_midpoint'] + timedelta(seconds=31)
-                time_mask = (ephem['datetime'] >= start_time) & (ephem['datetime'] < end_time)
+                start_time = header['obs_midpoint'] - timedelta(seconds=90)
+                end_time = header['obs_midpoint'] + timedelta(seconds=90)
+                time_mask = (ephem['datetime'] >= start_time) & (ephem['datetime'] <= end_time)
+                rows = ephem[time_mask]
+#                print('  num rows=',len(rows), start_time, header['obs_midpoint'], end_time)
                 row = ephem[time_mask][0]
-                ra = row['RA']
-                dec = row['DEC']
+                # Interpolate RA and Dec to frametime; other values can stay at the closest minute
+                f = interp1d(rows['datetime_jd'], rows['RA'])
+                t = Time(header['obs_midpoint'])
+                ra = f(t.jd)
+                f = interp1d(rows['datetime_jd'], rows['DEC'])
+                t = Time(header['obs_midpoint'])
+                dec = f(t.jd)
                 pos = SkyCoord(ra,dec,unit=u.deg)
 
                 box_halfwidth_deg = Angle(options['boxwidth'], unit=u.arcsec).to(u.deg)
@@ -157,6 +169,8 @@ class Command(BaseCommand):
                 obj = table[obj_mask]
                 obs_mag = -99
                 obs_mag_err = -99
+                zp = -99
+                unc = -99
                 alltimes.append(header['obs_midpoint'])
                 fwhm.append(header['fwhm'])
                 if len(obj) == 1:
@@ -193,7 +207,9 @@ class Command(BaseCommand):
                         ps1.fetch_field(lco)
 
                     objids, distances = ps1.xmatch(lco)
-                    zp, C, unc, r, gmr, gmi = ps1.cal_color(objids, phot['obs_mag'], 'r', 'g-r')
+                    with warnings.catch_warnings():
+                        warnings.filterwarnings("ignore", message='divide by zero encountered')
+                        zp, C, unc, r, gmr, gmi = ps1.cal_color(objids, phot['obs_mag'], 'r', 'g-r')
                     obs_mag = obj['obs_mag'][0] + zp
                     obs_mag_err = obj['obs_mag_err'][0]
                     zps.append(zp)
@@ -202,16 +218,26 @@ class Command(BaseCommand):
                     magerrs.append(obs_mag_err)
                     times.append(header['obs_midpoint'])
                     success += 1
+                elif len(obj) == 0:
+                    print("No matches")
+                    failures['No match'] += 1
+                    nomatch_files.append(catalog)
                 else:
-                    print("Multiple matches")
+                    print("Multiple matches", len(obj))
+
                 print(f"  {header['obs_midpoint'].strftime('%Y-%m-%dT%H:%M:%S'):}")
                 print(f"  {row['datetime'].strftime('%Y-%m-%d %H:%M'):} RA={ra:8.5f}, Dec={dec:8.5f} V={row['V']:.1f} obs_mag={obs_mag:.3f}+/-{obs_mag_err:.3f} ZP={zp:.3f}+/-{unc:.3f}")
             else:
                 print()
         total_frames = len(fits_catalogs)
-        print(f"\n{success} frames out of {total_frames} ({success/total_frames:.2%}) succeeded ({failures['Bad WCS']}/{failures['Bad WCS']/total_frames:.2%} WCS failure, {failures['Bad table']}/{failures['Bad table']/total_frames:.2%} catalog problems)")
+        print(f"\n{success} frames out of {total_frames} ({success/total_frames:.2%}) succeeded ({failures['Bad WCS']}/{failures['Bad WCS']/total_frames:.2%} WCS failure, {failures['No match']}/{failures['No match']/total_frames:.2%} no match), {failures['Bad table']}/{failures['Bad table']/total_frames:.2%} catalog problems)")
         zp = np.mean(ephem['V']) - np.mean(mags)
         print(f"ZP={zp:.3f} {np.mean(zps):.3f}")
+        if len(nomatch_files) > 0:
+            print("Unmatched frames:")
+            for frame in nomatch_files:
+                print(frame)
+        # Make plots
         plot_title = '%s from %s to %s' % (options['target'],
                                            first_frametime.strftime("%Y-%m-%d"),
                                            last_frametime.strftime("%Y-%m-%d"))
