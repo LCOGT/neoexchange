@@ -25,6 +25,7 @@ from glob import glob
 
 from astropy.io import fits
 from astropy.io.votable import parse
+from astropy.utils import minversion
 from numpy import loadtxt, split, empty
 
 from core.models import detections_array_dtypes
@@ -32,7 +33,7 @@ from astrometrics.time_subs import timeit
 from photometrics.catalog_subs import oracdr_catalog_mapping
 
 logger = logging.getLogger(__name__)
-
+ASTROPY_LT_4_1 = not minversion('astropy', '4.1')
 
 def default_mtdlink_config_files():
     """Return a list of the needed files for MTDLINK. The config file should be in
@@ -534,13 +535,16 @@ def get_scamp_xml_info(scamp_xml_file):
     fgroups_table = votable.get_table_by_id('FGroups')
 
     reference_catalog = fgroups_table.array['AstRef_Catalog'].data[0]
-    reference_catalog = reference_catalog.decode("utf-8")
+    if ASTROPY_LT_4_1:
+        # Prior to AstroPy 4.1, VOTable 'char' fields returned bytes not 'str's
+        reference_catalog = reference_catalog.decode("utf-8")
     reference_catalog = reference_catalog.replace('-', '')
     if reference_catalog == 'file':
         # SCAMP was fed a reference catalog file, we have more digging to do
         # to get the actual catalog used
         reference_catalog = votable.get_field_by_id_or_name('AstRefCat_Name').value
-        reference_catalog = reference_catalog.decode("utf-8")
+        if ASTROPY_LT_4_1:
+            reference_catalog = reference_catalog.decode("utf-8")
         wcs_refcat_name = reference_catalog
         if '_' in reference_catalog:
             # If it's new format catalog file with position and size, strip
@@ -549,11 +553,15 @@ def get_scamp_xml_info(scamp_xml_file):
         reference_catalog = reference_catalog.replace('.cat', '')
     else:
         wcs_refcat_name = "<Vizier/aserver.cgi?%s@cds>" % reference_catalog.lower()
+    wcs_imagecat = fields_table.array['Catalog_Name'].data[0]
+    if ASTROPY_LT_4_1:
+        wcs_imagecat = wcs_imagecat.decode("utf-8")
+
     info = { 'num_match'    : fgroups_table.array['AstromNDets_Internal_HighSN'].data[0],
              'num_refstars' : fields_table.array['NDetect'].data[0],
              'wcs_refcat'   : wcs_refcat_name,
              'wcs_cattype'  : "%s@CDS" % reference_catalog.upper(),
-             'wcs_imagecat' : fields_table.array['Catalog_Name'].data[0].decode("utf-8"),
+             'wcs_imagecat' : wcs_imagecat,
              'pixel_scale'  : fields_table.array['Pixel_Scale'].data[0].mean()
            }
 
