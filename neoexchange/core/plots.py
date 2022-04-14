@@ -1142,6 +1142,9 @@ def plot_timeseries_multipanel(lc_files, title='', sub_title='', datadir='./', f
             ax.set_title(sub_title)
             if index == 1:
                 ax.set_xlabel(f"JD-{jd0:.1f}")
+            if index == len(lc_files) - 1 and len(lc_files) > 1:
+                # Move ticks to RHS for last plot
+                ax.yaxis.tick_right()
 
     t0 = Time(min_jd, format='jd')
     t1 = Time(max_jd, format='jd')
