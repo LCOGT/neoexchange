@@ -859,6 +859,71 @@ class TestUpdateFITSWCS(TestCase):
                 else:
                     self.assertNotEqual(expected_pv_comment, new_header.comments[key])
 
+    def test_update_FITS_WCS_longer_scamp_version(self):
+
+        # Read in the scamp header file in the test, modify the version, and
+        # write out a copy into the test directory (`self.test_dir`)
+        scamp_head_fh = open(self.test_externscamp_TPV_headfile, 'r')
+        scamp_lines = scamp_head_fh.readlines()
+        scamp_head_fh.close()
+
+        scamp_lines[0] = scamp_lines[0].replace('2.0.4', '2.99.1.2.3')
+        test_externscamp_newver_headfile = os.path.join(self.test_dir, os.path.basename(self.test_externscamp_TPV_headfile.replace('tpv', 'tpv_newver')))
+        scamp_head_fh = open(test_externscamp_newver_headfile, 'w')
+        scamp_head_fh.writelines(scamp_lines)
+        scamp_head_fh.close()
+
+        status, new_header = updateFITSWCS(self.test_banzai_file, test_externscamp_newver_headfile, self.test_externcat_TPV_xml, self.banzai_file_output)
+
+        self.assertEqual(status, 0)
+
+        expected = { 'crval1' : 2.283330189100E+02, 'crval2' : 3.839546339622E+01,
+                     'crpix1' : 7.620000000000E+02, 'crpix2' : 5.105000000000E+02,
+                     'cd1_1'  : -1.083049787920E-06, 'cd1_2' : 3.162568176201E-04,
+                     'cd2_1'  : -3.162568176201E-04, 'cd2_2' : -1.083049787920E-06,
+                     'pv1_0'  : -3.493949558753E-05,
+                     'pv1_1'  :  9.990845948728E-01,
+                     'pv1_2'  :  5.944161242327E-04,
+                     'pv1_4'  :  1.641289702411E-03,
+                     'pv1_5'  :  2.859739464233E-03,
+                     'pv1_6'  : -8.338448819528E-05,
+                     'pv1_7'  :  4.778142218367E-02,
+                     'pv1_8'  : -3.120516918032E-02,
+                     'pv1_9'  :  1.005901992058E-02,
+                     'pv1_10' : -1.475386390540E-02,
+                     'pv2_0'  :  1.238320321566E-04,
+                     'pv2_1'  :  9.992102543642E-01,
+                     'pv2_2'  :  2.505722546811E-04,
+                     'pv2_4'  : -1.613190458709E-03,
+                     'pv2_5'  : -3.765739615064E-03,
+                     'pv2_6'  : -6.917769250557E-03,
+                     'pv2_7'  :  2.493514752913E-02,
+                     'pv2_8'  :  1.947400823739E-02,
+                     'pv2_9'  :  2.222081573598E-02,
+                     'pv2_10' : -2.704416488002E-02,
+                     'secpix' : 1.13853,
+                     'wcssolvr' : 'SCAMP-2.99.1.2.3',
+                     'wcsrfcat' : 'GAIA-DR2_228.33+38.40_43.3488mx29.0321m.cat',
+                     'wcsimcat' : 'tfn0m414-kb99-20180529-0202-e91_ldac.fits',
+                     'wcsnref' : 280, 'wcsmatch' : 23, 'wccattyp' : 'GAIA-DR2@CDS',
+                     'wcsrdres' : '0.30803/0.34776', # ASTRRMS1*3600/ASTRRMS2*3600 from .head file
+                     'wcsdelra' : 44.619981558, 'wcsdelde' : -37.1150613409,
+                     'wcserr' : 0,
+                     'cunit1' : 'deg', 'cunit2' : 'deg',
+                     'ctype1' : 'RA---TPV', 'ctype2' : 'DEC--TPV'
+                    }
+        expected_pv_comment = 'TPV distortion coefficient'
+
+        for key in expected:
+            if type(expected[key]) == str:
+                self.assertEqual(expected[key], new_header[key], msg="Failure on {}".format(key))
+            else:
+                self.assertAlmostEqual(expected[key], new_header[key], self.precision, msg="Failure on {}".format(key))
+                if 'pv1_' in key or 'pv2_' in key:
+                    self.assertEqual(expected_pv_comment, new_header.comments[key])
+                else:
+                    self.assertNotEqual(expected_pv_comment, new_header.comments[key])
+
 
 class TestGetSCAMPXMLInfo(TestCase):
 

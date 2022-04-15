@@ -15,6 +15,7 @@ GNU General Public License for more details.
 
 import logging
 import os
+import re
 from math import floor
 from datetime import datetime, timedelta
 from subprocess import call, TimeoutExpired
@@ -594,10 +595,15 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
         return -3, None
 
     pv_terms = []
+    version_regexp = r"by (?P<prog>[A-Z]*) version (?P<version>[0-9\.]+)"
     # Read in SCAMP .head file
     for line in scamp_head_fh:
         if 'HISTORY' in line:
-            wcssolvr = str(line[34:39]+'-'+line[48:53])
+            wcssolvr = 'UNKNOWN'
+            match = re.search(version_regexp, line)
+            if match:
+                groups = match.groupdict()
+                wcssolvr = groups['prog'] + '-' + groups['version']
         if 'CTYPE1' in line:
             ctype1 = line[9:31].strip().replace("'", "")
         if 'CTYPE2' in line:
