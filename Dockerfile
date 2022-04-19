@@ -106,6 +106,7 @@ COPY docker/etc/yum.repos.d/lcogt.repo /etc/yum.repos.d/lcogt.repo
 # 'glibc-langpack-en' is needed to prevent locale complaints (https://www.tecmint.com/fix-failed-to-set-locale-defaulting-to-c-utf-8-in-centos/)
 RUN yum -y install epel-release glibc-langpack-en\
         && yum -y install \
+            git \
             gcc \
             gcc-c++ \
             gcc-gfortran \
