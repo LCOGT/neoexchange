@@ -41,6 +41,9 @@ class Command(BaseCommand):
         parser.add_argument('--keep-temp-dir', action="store_true", help='Whether to remove the temporary dir')
         parser.add_argument('--temp-dir', dest='temp_dir', action="store", help='Name of the temporary directory to use')
         parser.add_argument('--skip-mtdlink', action="store_true", help='Whether to skip running mtdlink')
+        phot_default = 'GAIA-DR2'
+        parser.add_argument('--phot-catalog', dest='phot_cat_name', default=phot_default, help=f'Which photometric catalog to use (default={phot_default:})')
+        parser.add_argument('--new-zp', action="store_true", help="Use the new calviacat ZP determination?")
 
     def determine_images_and_catalogs(self, datadir, output=True):
 
@@ -120,11 +123,11 @@ class Command(BaseCommand):
 
             # Step 2: Check for good zeropoint and redetermine if needed. Ingest
             # results into CatalogSources
-            self.stdout.write("Creating CatalogSources from %s (Cat. type=%s)" % (new_catalog, catalog_type))
+            self.stdout.write("Creating CatalogSources from %s (Cat. type=%s) using %s" % (new_catalog, catalog_type, options['phot_cat_name']))
 
-            num_sources_created, num_in_catalog = store_catalog_sources(new_catalog, catalog_type,
+            num_sources_created, num_in_catalog, extra = store_catalog_sources(new_catalog, catalog_type,
                                                                         std_zeropoint_tolerance=0.1,
-                                                                        phot_cat_name='GAIA-DR2')
+                                                                        phot_cat_name=options['phot_cat_name'], old=use_original_zp)
             if num_sources_created >= 0 and num_in_catalog > 0:
                 self.stdout.write("Created/updated %d sources from %d in catalog" % (num_sources_created, num_in_catalog))
             else:

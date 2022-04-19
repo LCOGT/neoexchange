@@ -33,3 +33,5 @@ sty
 awscli
 opensearch-py==1.0.0
 lxml
+mastcasjobs @ git+https://github.com/rlwastro/mastcasjobs@master
+calviacat @ git+https://github.com/mkelley/calviacat.git

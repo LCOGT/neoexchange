@@ -38,6 +38,7 @@ import astropy.coordinates as coord
 from astropy.wcs import WCS, FITSFixedWarning
 from astropy.wcs.utils import proj_plane_pixel_scales
 from astropy import __version__ as astropyversion
+import calviacat as cvc
 
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes
 from astrometrics.time_subs import timeit
@@ -395,10 +396,10 @@ def write_ldac(table, output_file):
                     'mag'       : '1E',
                     'e_mag'     : '1E'
                   }
-    disp_dict = { 'RAJ2000'   : 'E15',
-                  'DEJ2000'   : 'E15',
-                  'e_RAJ2000' : 'E12',
-                  'e_DEJ2000' : 'E12',
+    disp_dict = { 'RAJ2000'   : 'F15.11',
+                  'DEJ2000'   : 'F15.11',
+                  'e_RAJ2000' : 'E18.10',
+                  'e_DEJ2000' : 'E18.10',
                   'mag'       : 'F8.4',
                   'e_mag'     : 'F8.5'
                 }
@@ -708,7 +709,7 @@ def banzai_catalog_mapping():
                     'zeropoint'     : '<ZP>',
                     'zeropoint_err' : '<ZP>',
                     'zeropoint_src' : '<ZPSRC>',
-                    'fwhm'          : 'L1FWHM',
+                    'fwhm'          : '<L1FWHM>',
                     'astrometric_fit_rms'    : '<WCSRDRES>',
                     'astrometric_fit_status' : 'WCSERR',
                     'astrometric_fit_nstars' : '<WCSMATCH>',
@@ -759,7 +760,7 @@ def banzai_ldac_catalog_mapping():
                     'zeropoint'     : '<ZP>',
                     'zeropoint_err' : '<ZP>',
                     'zeropoint_src' : '<ZPSRC>',
-                    'fwhm'          : 'L1FWHM',
+                    'fwhm'          : '<L1FWHM>',
                     'astrometric_fit_rms'    : '<WCSRDRES>',
                     'astrometric_fit_status' : 'WCSERR',
                     'astrometric_fit_nstars' : '<WCSMATCH>',
@@ -999,7 +1000,8 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
                         '<ZP>'        : -99,      # Hardwire zeropoint to -99.0 for BANZAI catalogs
                         '<ZPSRC>'     : 'N/A',    # Hardwire zeropoint src to 'N/A' for BANZAI catalogs
                         '<WCSRDRES>'  : 0.3,      # Hardwire RMS to 0.3"
-                        '<WCSMATCH>'  : -4        # Hardwire no. of stars matched to 4 (1 quad)
+                        '<WCSMATCH>'  : -4,       # Hardwire no. of stars matched to 4 (1 quad)
+                        '<L1FWHM>'    : -99.0     # Hardwire for occasionaly missing BANZAI values
                         }
 
     header_items = {}
@@ -1416,9 +1418,42 @@ def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename, 
 
     return frame
 
+def store_catalog_sources(catfile, catalog_type='LCOGT', std_zeropoint_tolerance=0.1, phot_cat_name="UCAC4", ast_cat_name="2MASS", old=True, color_const=True):
+    """Perform a zeropoint determination by cross-matching the source catalog from
+    <catfile>, which is of type [catalog_type] against an external catalog from
+    [phot_cat_name]. If the stddev of the new zeropoint is smaller than
+    [std_zeropoint_tolerance] (defaults to '0.1'), then the zeropoint and error
+    are updated in the DB for the catalog and its associated frame (frame_type=Frame.BANZAI_LDAC_CATALOG
+    and frame_type=Frame.SINGLE_FRAMETYPE respectively).
+    Following this, `get_or_create_CatalogSources()` is called to create
+    CatalogSources from the catalog (if the number of sources is different
+    to the number already in the DB for that Frame)
+    Two methods of determining the zeropoint are available, depending on the value of [old]:
+    1) Original/old method using a catalog extracted via the Vizier service which
+        supports GAIA-DR2, UCAC4 and PPMXL (in order of desireability)
+    2) New method which use calviacat and supports PS1 and ATLAS-RefCat2 (phot_cat_name='REFCAT2') only
+        In addition, for this option, there is an additional optional
+        [color_const] which when set to`False`, also fits for a color term
+        vs g'-r' of the external catalog sources.
+        
+    """
+    num_sources_created = 0
+    num_in_catalog = 0
+    extra = None
+
+    if old is True or phot_cat_name.upper() == 'GAIA-DR2':
+        if phot_cat_name.upper() == 'GAIA-DR2' and old is False:
+            logger.warning("GAIA-DR2 not supported with new ZP routine. Reverting to old routine.")
+        num_sources_created, num_in_catalog = store_catalog_sources_old(catfile, catalog_type, std_zeropoint_tolerance, phot_cat_name, ast_cat_name)
+    else:
+         if phot_cat_name.upper() != 'PS1' and phot_cat_name.upper() != 'REFCAT2':
+             logger.warning("Only PS1 or REFCAT2 supported for phot_cat_name with new ZP routine")
+         num_sources_created, num_in_catalog, extra = store_catalog_sources_new(catfile, catalog_type, std_zeropoint_tolerance, phot_cat_name, ast_cat_name, color_const)
+
+    return num_sources_created, num_in_catalog, extra
 
 @timeit
-def store_catalog_sources(catfile, catalog_type='LCOGT', std_zeropoint_tolerance=0.1, phot_cat_name="UCAC4", ast_cat_name="2MASS"):
+def store_catalog_sources_old(catfile, catalog_type='LCOGT', std_zeropoint_tolerance=0.1, phot_cat_name="UCAC4", ast_cat_name="2MASS"):
 
     num_new_frames_created = 0
     num_in_table = 0
@@ -1481,6 +1516,113 @@ def store_catalog_sources(catfile, catalog_type='LCOGT', std_zeropoint_tolerance
 
     return num_sources_created, num_in_table
 
+def store_catalog_sources_new(catfile, catalog_type='BANZAI_LDAC', std_zeropoint_tolerance=0.1, phot_cat_name="PS1", ast_cat_name="2MASS", color_const=True):
+
+    dbg = False
+    if dbg is True:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
+    num_in_table = 0
+    num_sources_created = 0
+    avg_zeropoint = None
+    C = None
+    std_zeropoint = None
+
+    filename = os.path.basename(catfile)
+    datadir = os.path.join(os.path.dirname(catfile), '')
+
+    header, table = extract_catalog(catfile, catalog_type)
+
+    if header and table:
+
+        db_filename = existing_catalog_coverage(datadir, header['field_center_ra'], header['field_center_dec'], header['field_width'], header['field_height'], phot_cat_name, dbg)
+        created = False
+        if db_filename is None:
+            # Add 25% to passed width and height in lieu of actual calculation of extent
+            # of a series of frames
+            set_width = header['field_width']
+            set_height = header['field_height']
+            units = set_width[-1]
+            try:
+                ref_width = float(set_width[:-1]) * 1.25
+                ref_width = "{:.4f}{}".format(ref_width, units)
+            except ValueError:
+                ref_width = set_width
+            units = set_height[-1]
+            try:
+                ref_height = float(set_height[:-1]) * 1.25
+                ref_height = "{:.4f}{}".format(ref_height, units)
+            except ValueError:
+                ref_height = set_height
+
+            # Rewrite name of catalog to include position and size
+            refcat_filename = "{}_{ra:.2f}{dec:+.2f}_{width}x{height}.cat".format(phot_cat_name, ra=header['field_center_ra'], dec=header['field_center_dec'], width=ref_width, height=ref_height)
+            db_filename = os.path.join(datadir, refcat_filename)
+            created = True
+        print(f"  catalog={os.path.basename(db_filename):} (created={created:})")
+        if phot_cat_name == 'PS1':
+            refcat = cvc.PanSTARRS1(db_filename)
+        elif phot_cat_name == 'REFCAT2':
+            refcat = cvc.RefCat2(db_filename)
+        else:
+            logger.error(f"Unknown reference catalog {phot_cat_name:}. Must be one of PS1, REFCAT2")
+            return None
+        phot = table[table['flags'] == 0]  # clean LCO catalog
+        lco = coord.SkyCoord(phot['obs_ra'], phot['obs_dec'], unit='deg')
+
+        if len(refcat.search(lco)[0]) < 500:
+            start = time.time()
+            refcat.fetch_field(lco)
+            end = time.time()
+            logger.debug(f"TIME: refcat.fetch_field took {end-start:.1f} seconds")
+
+        start = time.time()
+        objids, distances = refcat.xmatch(lco)
+        end = time.time()
+        logger.debug(f"TIME: cvc cross_match took {end-start:.1f} seconds")
+
+        # cross_match can be a very slow process which can cause
+        # the DB connection to time out. If we reset and explicitly close the
+        # connection, Django will auto-reconnect.
+        reset_database_connection()
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message='divide by zero encountered')
+            start = time.time()
+            if color_const is True:
+                avg_zeropoint, C, std_zeropoint, r, gmi = refcat.cal_constant(objids, phot['obs_mag'], 'r')
+            else:
+                avg_zeropoint, C, std_zeropoint, r, gmr, gmi = refcat.cal_color(objids, phot['obs_mag'], 'r', 'g-r')
+            end = time.time()
+        logger.debug(f"TIME: compute_zeropoint took {end-start:.1f} seconds")
+        logger.debug(f"New zp={avg_zeropoint:} +/- {std_zeropoint:} {r.count():} {C:}")
+        # if crossmatch is good, update new zeropoint
+        if std_zeropoint < std_zeropoint_tolerance:
+            logger.debug("Got good zeropoint - updating header")
+            header, table = update_zeropoint(header, table, avg_zeropoint, std_zeropoint)
+
+            # get the fits filename from the catfile in order to get the Block from the Frame
+            if 'e91_ldac.fits' in os.path.basename(catfile):
+                fits_file = os.path.basename(catfile.replace('e91_ldac.fits', 'e91.fits'))
+            elif 'e92_ldac.fits' in os.path.basename(catfile):
+                fits_file = os.path.basename(catfile.replace('e92_ldac.fits', 'e91.fits'))
+            else:
+                fits_file = os.path.basename(catfile)
+
+            # update the zeropoint computed above in the FITS file Frame
+            frame = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename=fits_file, frame_type=Frame.SINGLE_FRAMETYPE)
+
+            # update the zeropoint computed above in the CATALOG file Frame
+            frame_cat = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename=os.path.basename(catfile), frame_type=Frame.BANZAI_LDAC_CATALOG)
+
+            # store the CatalogSources
+            num_sources_created, num_in_table = get_or_create_CatalogSources(table, frame)
+        else:
+            logger.warning("Didn't get good zeropoint - not updating header")
+    else:
+        logger.warning(f"Could not open {catfile:}")
+    return num_sources_created, num_in_table, (avg_zeropoint, C, std_zeropoint)
 
 def get_or_create_CatalogSources(table, frame):
 

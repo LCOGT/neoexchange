@@ -3500,8 +3500,8 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False, desired_c
         return -1, num_new_frames_created
 
     if header.get('astrometric_fit_status', None) != 0:
-        logger.error("Bad astrometric fit found")
-        return -1, num_new_frames_created
+        logger.warning("Bad astrometric fit found")
+#        return -1, num_new_frames_created
 
     # Check catalog type
     if cattype != 'BANZAI':
@@ -3516,7 +3516,12 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False, desired_c
                                           astrometric_catalog=desired_catalog)
     if len(catalog_frames) != 0:
         logger.info("Found reprocessed frame in DB")
-        return os.path.abspath(os.path.join(dest_dir, catalog_frames[0].filename)), 0
+        ldac_filepath =  os.path.abspath(os.path.join(dest_dir, catalog_frames[0].filename))
+        reproc_catfilepath =  os.path.abspath(os.path.join(dest_dir, reproc_catfilename))
+        if os.path.exists(ldac_filepath) is True and os.path.exists(reproc_catfilepath):
+            return ldac_filepath, 0
+        else:
+            logger.info("but not on disk. continuing")
 
     # Find image file for this catalog
     fits_file = find_matching_image_file(catfile)
@@ -3556,6 +3561,16 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False, desired_c
             logger.info("Updating refitted WCS in image file: %s. Output to: %s" % (fits_file, fits_file_output))
             status, new_header = updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output)
             logger.info("Return status for updateFITSWCS: {}".format(status))
+            if status == 0:
+                # If SCAMP fit was successful (although we don't really check fit quality)
+                # and update of FITS header on disk was also successful, replace the
+                # header in this routine with the new one (Both the _e92_ldac
+                # and the original _e91 should be update with the same header
+                # in store_catalog_sources_{old,new} when update_frame_zeropoint() is
+                # called on both but it feels better to do it here for the last LDAC
+                # catalog
+                header = get_catalog_header(new_header, cattype)
+
 #           XXX In principle, this is an alternative way of doing it without
 #           needing to do a re-extraction. However it requires breaking the 24,000+
 #           byte LDAC "header" back into a proper Header, updating, and joining
