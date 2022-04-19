@@ -22,6 +22,7 @@ mock
 django-storages
 boto3
 matplotlib<3.3
+MarkupSafe<2.0
 Jinja2<3.0
 bokeh==2.3.0
 fits2image
