@@ -1713,6 +1713,24 @@ def moon_alt_az(date, moon_app_ra, moon_app_dec, obsvr_long, obsvr_lat, obsvr_hg
 
 
 def moonphase(date, obsvr_long, obsvr_lat, obsvr_hgt, dbg=False):
+    """Compute the illuminated fraction (phase) of the Moon for the specific
+    time and observing site.
+
+    Uses the "medium" precision version of the algorithm in Chapter 48 of
+    Jean Meeus, Astronomical Algorithms, second edition, 1998, Willmann-Bell.
+    Meeus claims a max error in mphase of 0.0014 (0.14%)
+    
+    Parameters
+    ----------
+    date : `datetime` UTC datetime of observation
+    obsvr_long : Observer's longitude (East +ve; radians)
+    obsvr_lat : Observer's latitude (North +ve; radians)
+    obsvr_hgt : Observer's height above reference (geodetic; meters)
+
+    Returns
+    -------
+    mphase : Illuminated fraction of the Moon from 0 (New Moon) to 1 (Full Moon)
+    """
 
     mjd_tdb = datetime2mjd_tdb(date, obsvr_long, obsvr_lat, obsvr_hgt, dbg)
     (moon_ra, moon_dec, moon_diam) = S.sla_rdplan(mjd_tdb, 3, obsvr_long, obsvr_lat)
