@@ -27,6 +27,7 @@ from math import pi, floor
 import numpy as np
 from astropy import units as u
 from astropy.time import Time
+from astropy.io.ascii.core import InconsistentTableError
 from django.http import HttpResponse
 from django.conf import settings
 from django.core.files.storage import default_storage
@@ -45,7 +46,7 @@ from bokeh.models.widgets import CheckboxGroup, Slider, TableColumn, DataTable, 
     NumberFormatter, Spinner, Button, Panel, Tabs, Div, Toggle, Select, MultiSelect
 from bokeh.palettes import Category20, Category10
 
-from .models import Body, CatalogSources, StaticSource, Block, model_to_dict, PreviousSpectra
+from .models import Body, CatalogSources, StaticSource, Block, model_to_dict, PreviousSpectra, Frame
 from astrometrics.ephem_subs import horizons_ephem, call_compute_ephem, determine_darkness_times, get_sitepos,\
     moon_ra_dec, target_rise_set, moonphase, dark_and_object_up, compute_dark_and_up_time, get_visibility
 from astrometrics.time_subs import jd_utc2datetime
@@ -55,7 +56,7 @@ from photometrics.catalog_subs import sanitize_object_name
 from photometrics.SA_scatter import readSources, plotScatter, plotFormat
 from photometrics.spectraplot import spectrum_plot, read_mean_tax
 from photometrics.photometry_subs import generate_expected_fwhm
-from photometrics.lightcurve_subs import read_photompipe_file, split_filename
+from photometrics.lightcurve_subs import read_neoxpipe_file, read_photompipe_file, split_filename
 
 logger = logging.getLogger(__name__)
 
@@ -1115,7 +1116,7 @@ def plot_timeseries(times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mas
 
     return
 
-def plot_timeseries_multipanel(lc_files, title='', sub_title='', datadir='./', filename='tmp_'):
+def plot_timeseries_multipanel(lc_files, title='', sub_title='', datadir='./', filename='tmp_', err_col='sig', scale_factor=None):
 
     fig = plt.figure(figsize=[21/1.5, 9/1.5])
 
@@ -1126,19 +1127,37 @@ def plot_timeseries_multipanel(lc_files, title='', sub_title='', datadir='./', f
     max_jd = -1e39
     for index, lc_file in enumerate(lc_files):
         ax = fig.add_subplot(gs[0, index])
-        table = read_photompipe_file(lc_file)
+        lc_format = None
+        try:
+            table = read_photompipe_file(lc_file)
+            lc_format = 'PP'
+        except InconsistentTableError:
+            table = read_neoxpipe_file(lc_file)
+            lc_format = 'NEOX'
         if table:
             # XXX Rescale error bars
-            scale = table['sig'].mean() / 0.01
+            scale = 1.0
+            if scale_factor is not None:
+                scale = table[err_col].mean() / scale_factor
             if jd0 is None:
                 jd0 = int(table['julian_date'][0])
             min_jd = min(min_jd, table['julian_date'].min())
             max_jd = max(max_jd, table['julian_date'].max())
-            ax.errorbar(table['julian_date']-jd0, table['mag'], table['sig']/scale, marker='.', mfc='red')
+            ax.errorbar(table['julian_date']-jd0, table['mag'], table[err_col]/scale, marker='.', mfc='red')
             ax.minorticks_on()
             ax.invert_yaxis()
-            file_parts = split_filename(table['filename'][0])
-            sub_title = f"{file_parts['site'].upper():} {file_parts['tel_class']:}+{file_parts['instrument']:}"
+            if lc_format == 'PP':
+                file_parts = split_filename(table['filename'][0])
+                file_parts['sitecode'] = ''
+            else:
+                lc_parts = os.path.basename(lc_file).split('_')
+                if len(lc_parts) == 7 or len(lc_parts) == 8:
+                    request_number = lc_parts[4]
+                    block = Block.objects.get(request_number=request_number)
+                    frame = Frame.objects.filter(block=block).first()
+                    file_parts = {'site' : block.site, 'tel_class' : block.telclass, 'instrument' : frame.instrument, 'sitecode' : '(' + frame.sitecode + ')'}
+
+            sub_title = f"{file_parts['site'].upper():} {file_parts['tel_class']:}+{file_parts['instrument']:} {file_parts['sitecode']:}"
             ax.set_title(sub_title)
             if index == 1:
                 ax.set_xlabel(f"JD-{jd0:.1f}")

@@ -8,6 +8,30 @@ from photometrics.lightcurve_subs import *
 
 from django.test import SimpleTestCase
 
+class TestReadNEOxPipe(SimpleTestCase):
+
+    def setUp(self):
+        self.test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_neoxpipe.dat'))
+        self.test_5col_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_5col_neoxpipe.dat'))
+
+        self.debug_print = False
+        self.maxDiff = None
+
+    def test_read(self):
+        expected_length = 10
+
+        table = read_neoxpipe_file(self.test_lc_file)
+
+        self.assertEqual(expected_length, len(table))
+
+    def test_read_5col(self):
+        expected_length = 10
+
+        table = read_neoxpipe_file(self.test_5col_lc_file)
+
+        self.assertEqual(expected_length, len(table))
+
+
 class TestReadPhotomPipe(SimpleTestCase):
 
     def setUp(self):

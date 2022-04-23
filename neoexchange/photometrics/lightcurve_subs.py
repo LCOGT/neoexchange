@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2021-2021 LCO
+Copyright (C) 2021-2022 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -15,12 +15,39 @@ GNU General Public License for more details.
 
 import os
 import re
+from collections import OrderedDict
 
 import numpy as np
+from astropy.time import Time
 from astropy.table import Table, unique, Column
 import logging
 
 logger = logging.getLogger(__name__)
+
+def read_neoxpipe_file(filepath):
+    """Reads a photometry file at <filepath> produced by NEOexchange's lightcurve_extraction
+    and returns an Astropy Table.
+    """
+
+    table = None
+
+    tbl_mapping = OrderedDict([
+                    ('mag', 'Mag'),
+                    ('sig', 'Mag_error'), 
+                    ('in_sig', 'Int_error'),
+                    ('ZP_sig', 'ZP_error')
+                    ])
+    if os.path.exists(filepath):
+        table = Table.read(filepath, format='ascii.commented_header', header_start=1)
+        # Rename columns
+        for new_name in tbl_mapping:
+            table.rename_column(tbl_mapping[new_name], new_name)
+        # Convert first column from a truncated MJD to a full JD
+        mjd_offset = float(table.colnames[0].split('-')[1])
+        times = Time(table.columns[0]+mjd_offset, format='mjd', scale='utc')
+        new_times = Column(times.jd, 'julian_date')
+        table.add_column(new_times, 0)
+    return table
 
 def read_photompipe_file(filepath):
     """Reads a photometry table file at <filepath> produced by the photometrypipeline and

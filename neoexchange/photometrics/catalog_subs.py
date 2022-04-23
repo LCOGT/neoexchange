@@ -1361,6 +1361,12 @@ def extract_catalog(catfile, catalog_type='LCOGT', flag_filter=0, new=True, remo
 
 
 def update_zeropoint(header, table, avg_zeropoint, std_zeropoint):
+    """Update the zeropoint, error and source of zeropoint in the <header>
+    dictionary and add the <avg_zeropoint> to the 'obs_mag' column of <table>
+    and combine the zeropoint error <std_zeropoint> in quadrature with the
+    source error in 'obs_mag_err' column and update this table column.
+    The updated header and table are returned.
+    """
 
     header['zeropoint'] = avg_zeropoint
     header['zeropoint_err'] = std_zeropoint
@@ -1375,7 +1381,7 @@ def update_zeropoint(header, table, avg_zeropoint, std_zeropoint):
 
 
 def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename, frame_type):
-    """update the Frame zeropoint, astrometric fit, astrometric catalog
+    """update the Frame in the DB with zeropoint, astrometric fit, astrometric catalog
     and photometric catalog used"""
 
     # if a Frame exists for the file, update the zeropoint,
