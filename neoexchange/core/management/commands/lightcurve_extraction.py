@@ -14,16 +14,18 @@ GNU General Public License for more details.
 """
 
 from datetime import datetime, timedelta, time
-from math import degrees, radians, floor
+from math import degrees, radians, floor, sqrt
 from sys import exit
 import os
 import tempfile
 import stat
+import warnings
 
 try:
     import pyslalib.slalib as S
 except:
     pass
+from astropy.wcs import FITSFixedWarning
 from astropy.stats import LombScargle
 from astropy.time import Time
 from django.conf import settings
@@ -155,6 +157,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
+        # Suppress incorrect FITSFixedWarnings
+        warnings.simplefilter('ignore', FITSFixedWarning)
         self.stdout.write("==== Light curve building %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
 
         try:
@@ -183,8 +187,12 @@ class Command(BaseCommand):
         # Initialize lists
         times = []
         alltimes = []
+        # These are for matched sources
         mags = []
         mag_errs = []
+        mag_int_errs = []
+        mag_zp_errs = []
+        # These 2 are for all frames, matched or otherwise
         zps = []
         zp_errs = []
         mpc_lines = []
@@ -247,6 +255,8 @@ class Command(BaseCommand):
 
                 block_mags = []
                 block_mag_errs = []
+                block_mag_int_errs = []
+                block_zp_errs = []
                 block_times = []
                 outmag = "NONE"
                 self.stdout.write("Analyzing Block# %d" % block.id)
@@ -307,6 +317,16 @@ class Command(BaseCommand):
                                 psv_lines.append(psv_line)
                                 block_mags.append(best_source.obs_mag)
                                 block_mag_errs.append(best_source.err_obs_mag)
+                                block_zp_errs.append(frame.zeropoint_err)
+                                err_sq = (best_source.err_obs_mag**2.0) - (frame.zeropoint_err**2.0)
+                                if err_sq >= 0.0:
+                                    internal_error = sqrt(err_sq)
+                                else:
+                                    self.stderr.write("-ve internal error")
+                                    self.stderr.write("X=%.3f Y=%.3f %.3f %.3f" % ( best_source.obs_x, best_source.obs_y, best_source.obs_mag, best_source.err_obs_mag))
+                                    self.stderr.write(best_source.err_obs_mag, frame.zeropoint_err, best_source.err_obs_mag**2-frame.zeropoint_err**2)
+                                    internal_error = -99.0
+                                block_mag_int_errs.append(internal_error)
                                 filter_list.append(frame.ALCDEF_filter_format())
 
                         # We append these even if we don't have a matching source or zeropoint
@@ -343,7 +363,7 @@ class Command(BaseCommand):
                         catalog = frame.photometric_catalog
                         if catalog == 'GAIA-DR2':
                             outmag = 'GG'
-                        elif catalog == 'UCAC4':
+                        elif catalog == 'UCAC4' or catalog == 'PS1':
                             outmag = 'SR'
                         if obs_site not in mpc_site:
                             mpc_site.append(obs_site)
@@ -356,6 +376,8 @@ class Command(BaseCommand):
                             alcdef_txt += self.output_alcdef(block, obs_site, time_set, mag_set, error_set, filt, outmag)
                     mags += block_mags
                     mag_errs += block_mag_errs
+                    mag_int_errs += block_mag_int_errs
+                    mag_zp_errs += block_zp_errs
                     times += block_times
 
                     # Create gif of fits files used for LC extraction
@@ -395,8 +417,8 @@ class Command(BaseCommand):
                     time_jd_truncated = time_jd - mjd_offset
                     if i == 0:
                         lightcurve_file.write('#Object: %s\n' % start_super_block.body.current_name())
-                        lightcurve_file.write("#MJD-%.1f Mag. Mag. error\n" % mjd_offset)
-                    lightcurve_file.write("%7.5lf %6.3lf %5.3lf\n" % (time_jd_truncated, mags[i], mag_errs[i]))
+                        lightcurve_file.write("#MJD-%.1f Mag. Mag. error Int. error ZP error\n" % mjd_offset)
+                    lightcurve_file.write("%7.5lf %6.3lf %5.3lf %5.3lf %5.3lf\n" % (time_jd_truncated, mags[i], mag_errs[i], mag_int_errs[i], mag_zp_errs[i]))
                     i += 1
                 lightcurve_file.close()
                 try:
