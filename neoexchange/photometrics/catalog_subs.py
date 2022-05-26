@@ -1522,6 +1522,7 @@ def store_catalog_sources_old(catfile, catalog_type='LCOGT', std_zeropoint_toler
 
     return num_sources_created, num_in_table
 
+@timeit
 def store_catalog_sources_new(catfile, catalog_type='BANZAI_LDAC', std_zeropoint_tolerance=0.1, phot_cat_name="PS1", ast_cat_name="2MASS", color_const=True):
 
     dbg = False

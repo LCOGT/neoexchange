@@ -246,7 +246,7 @@ class Command(BaseCommand):
             alcdef_filename = base_name + 'ALCDEF.txt'
             output_file_list.append('{},{}'.format(alcdef_filename, datadir.lstrip(out_path)))
             alcdef_txt = ''
-            block_list = Block.objects.filter(superblock=super_block.id)
+            block_list = Block.objects.filter(superblock=super_block.id, num_observed__gte=1)
             if obs_date:
                 block_list = block_list.filter(when_observed__lt=obs_date+timedelta(days=2)).filter(when_observed__gt=obs_date)
             self.stdout.write("Analyzing SuperblockBlock# %s for %s" % (super_block.tracking_number, super_block.body.current_name()))
@@ -401,10 +401,11 @@ class Command(BaseCommand):
             # Write light curve data out in similar format to Make_lc.csh
             i = 0
 
-            lightcurve_file = open(os.path.join(datadir, base_name + 'lightcurve_data.txt'), 'w')
+            lightcurve_filename = os.path.join(datadir, base_name + '5col_lightcurve_data.txt')
+            lightcurve_file = open(lightcurve_filename, 'w')
             mpc_file = open(os.path.join(datadir, base_name + 'mpc_positions.txt'), 'w')
             psv_file = open(os.path.join(datadir, base_name + 'ades_positions.psv'), 'w')
-            output_file_list.append('{},{}'.format(os.path.join(datadir, base_name + 'lightcurve_data.txt'), datadir.lstrip(out_path)))
+            output_file_list.append('{},{}'.format(lightcurve_filename, datadir.lstrip(out_path)))
             output_file_list.append('{},{}'.format(os.path.join(datadir, base_name + 'mpc_positions.txt'), datadir.lstrip(out_path)))
             output_file_list.append('{},{}'.format(os.path.join(datadir, base_name + 'ades_positions.psv'), datadir.lstrip(out_path)))
 
@@ -422,7 +423,7 @@ class Command(BaseCommand):
                     i += 1
                 lightcurve_file.close()
                 try:
-                    os.chmod(os.path.join(datadir, base_name + 'lightcurve_data.txt'), rw_permissions)
+                    os.chmod(lightcurve_filename, rw_permissions)
                 except PermissionError:
                     pass
 
