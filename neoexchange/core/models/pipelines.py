@@ -24,7 +24,7 @@ class InvalidPipelineError(Exception):
     """
 
 
-PipelineOutput = namedtuple('PipelineOutput', ['msg'], defaults=('',))
+PipelineOutput = namedtuple('PipelineOutput', ['msg'])
 
 class DateTimeEncoder(json.JSONEncoder):
         #Override the default method
