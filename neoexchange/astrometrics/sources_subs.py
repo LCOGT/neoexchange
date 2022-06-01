@@ -17,35 +17,71 @@ GNU General Public License for more details.
 
 import logging
 import os
+from copy import deepcopy
 import urllib.request
 import urllib.error
 from urllib.parse import urljoin
 import imaplib
 import email
 from re import sub, compile
-from math import degrees
-from datetime import datetime, timedelta
-from socket import error
-from random import randint
+from math import degrees, sqrt, copysign, ceil
 from time import sleep
-from datetime import date
+from datetime import date, datetime, timedelta
+from socket import error, timeout
+from random import randint
 import requests
+import shutil
+import tempfile
+from contextlib import closing
 
 from bs4 import BeautifulSoup
 import astropy.units as u
+from astropy.table import Table
 try:
     import pyslalib.slalib as S
 except ModuleNotFoundError:
     pass
 from django.conf import settings
 from astropy.io import ascii
+from numpy.ma import is_masked
 
 import astrometrics.site_config as cfg
-from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime, datetime2mjd_utc, mjd_utc2mjd_tt, mjd_utc2datetime
-from astrometrics.ephem_subs import build_filter_blocks, MPC_site_code_to_domes, compute_ephem, perturb_elements, LCOGT_site_codes
+from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime, datetime2mjd_utc, mjd_utc2mjd_tt,\
+    mjd_utc2datetime
+from astrometrics.ephem_subs import build_filter_blocks, MPC_site_code_to_domes, compute_ephem, perturb_elements,\
+    LCOGT_site_codes, get_sitecam_params
 from core.urlsubs import get_telescope_states
 
 logger = logging.getLogger(__name__)
+
+
+def box_spiral_generator(dist, max_sep):
+    """Create a box spiral of offsets (starting at 0 and resetting when it reaches the max seperation)
+        Result is a generator, that can be treated as an iterator.
+    :param dist: distance of single offset in RA or Dec in arcsec
+    :param max_sep: total distance from origin at which point the spiral resets
+    :return (ra_off, dec_off): Tuple for the current requested offsets
+    """
+    ra_off = 0
+    dec_off = 0
+    n = 1
+    while True:
+        k = 0
+        while k < abs(n):
+            if sqrt(ra_off**2 + dec_off**2) >= max_sep:
+                ra_off = 0
+                dec_off = 0
+                n = 1
+            yield ra_off, dec_off
+            ra_off += copysign(dist, n)
+            k += 1
+        k = 0
+        while k < abs(n):
+            yield ra_off, dec_off
+            dec_off += copysign(dist, n)
+            k += 1
+        n += copysign(1, n)
+        n *= -1
 
 
 def download_file(url, file_to_save):
@@ -116,7 +152,26 @@ def fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser
             logger.warning("Page retrieval failed with HTTP Error: %s" % (e.reason,))
         return None
     except (BrokenPipeError, ConnectionAbortedError, ConnectionRefusedError, ConnectionResetError) as sock_e:
-        logger.warning("Page retrieval failed with socket Error %d: %s" % (sock_e.errno, sock_e.strerror))
+        try:
+            errno = int(sock_e.errno)
+        except TypeError:
+            errno = -99
+        try:
+            errstring = str(sock_e.strerror)
+        except TypeError:
+            errstring = "No message available"
+        logger.warning("Page retrieval failed with socket Error %d: %s" % (errno, errstring))
+        return None
+    except timeout as sock_e:
+        try:
+            errno = int(sock_e.errno)
+        except TypeError:
+            errno = -99
+        try:
+            errstring = str(sock_e.strerror)
+        except TypeError:
+            errstring = "No message available"
+        logger.warning("Page retrieval failed with socket Error %d: %s" % (errno, errstring))
         return None
 
     # Suck the HTML down
@@ -147,7 +202,7 @@ def parse_previous_NEOCP_id(items, dbg=False):
         elif len(chunks) >= 5:
             if chunks[2].lower() == 'not' and chunks[3].lower() == 'confirmed':
                 none_id = 'wasnotconfirmed'
-            elif chunks[2].lower() == 'not' and chunks[4].lower() == 'minor':
+            elif (chunks[2].lower() == 'not' and chunks[4].lower() == 'minor') or (chunks[2].lower() == 'suspected' and chunks[3].lower() == 'artificial'):
                 none_id = 'wasnotminorplanet'
             elif chunks[2].lower() == 'not' and chunks[3].lower() == 'interesting':
                 none_id = ''
@@ -1151,6 +1206,20 @@ def parse_goldstone_chunks(chunks, dbg=False):
 
     return object_id
 
+def fetch_goldstone_csv(file_or_url=None):
+    """Fetches the Goldstone CSV file of radar targets, returning a Astropy
+    Table"""
+
+    file_or_url = file_or_url or 'https://echo.jpl.nasa.gov/asteroids/GSSR_schedule.csv'
+
+    table = None
+    try:
+        table = Table.read(file_or_url, format='csv', encoding='utf-8-sig')
+    except (FileNotFoundError, urllib.error.URLError):
+        logger.warning(f"Could not read Goldstone target file: {file_or_url}")
+    
+    return table
+
 
 def fetch_goldstone_page():
     """Fetches the Goldstone page of radar targets, returning a BeautifulSoup
@@ -1162,21 +1231,7 @@ def fetch_goldstone_page():
 
     return page
 
-
-def fetch_goldstone_targets(page=None, dbg=False):
-    """Fetches and parses the Goldstone list of radar targets, returning a list
-    of object id's for the current year.
-    Takes either a BeautifulSoup page version of the Goldstone target page (from
-    a call to fetch_goldstone_page() - to allow  standalone testing) or  calls
-    this routine and then parses the resulting page.
-    """
-
-    if type(page) != BeautifulSoup:
-        page = fetch_goldstone_page()
-
-    if page is None:
-        return None
-
+def parse_goldstone_page(page, dbg=False):
     radar_objects = []
     in_objects = False
     current_year = datetime.now().year
@@ -1232,6 +1287,42 @@ def fetch_goldstone_targets(page=None, dbg=False):
                     if obj_id != '':
                         radar_objects.append(obj_id)
                 last_year_seen = year
+    return radar_objects
+
+def fetch_goldstone_targets(page=None, calendar_format=False, dbg=False):
+    """Fetches and parses the Goldstone list of radar targets, returning a list
+    of object id's for the current year.
+    Takes either a BeautifulSoup page version of the Goldstone target page (from
+    a call to fetch_goldstone_page() - to allow  standalone testing) or  calls
+    this routine and then parses the resulting page.
+    """
+
+    if type(page) != BeautifulSoup:
+        page = fetch_goldstone_csv(page)
+
+    if page is None:
+        return None
+
+    if type(page) == BeautifulSoup:
+        radar_objects = parse_goldstone_page(page)
+    else:
+        current_year = datetime.utcnow().year
+
+        radar_objects = []
+        for row in page:
+            target = str(row['number'])
+            if is_masked(row['number']) is True:
+                target = row['name']
+            start_date = datetime.strptime(row['start (UT)'], '%m/%d/%Y')
+            if calendar_format is True:
+                end_date = datetime.strptime(row['end (UT)'], '%m/%d/%Y')
+                end_date += timedelta(seconds=86399)
+                target = {'target' : target,
+                          'windows' : [{'start' : start_date.strftime("%Y-%m-%dT%H:%M:%S"),
+                                        'end' : end_date.strftime("%Y-%m-%dT%H:%M:%S")}]
+                             }
+            if start_date.year == current_year:
+                radar_objects.append(target)
     return radar_objects
 
 
@@ -1448,8 +1539,29 @@ def get_site_status(site_code):
     return good_to_schedule, reason
 
 
-def fetch_yarkovsky_targets(yark_targets):
-    """Fetches Yarkovsky targets from command line and returns a list of targets"""
+def fetch_yarkovsky_targets(targets_or_file=None):
+    """Main wrapper routine for either fetch_yarkovsky_targets_list() or
+    fetch_yarkovsky_targets_ftp() to fetch Yarkovsky targets.
+    If [targets_or_file] is a `list` of targets, fetch_yarkovsky_targets_list()
+    is called; if [targets_or_file] is a filename or None, then
+    fetch_yarkovsky_targets_ftp() is called and the target list comes from either
+    the FTP site (`targets_or_file=None`) or by reading the file specified by
+    `targets_or_file`.
+
+    Returns a list of target names.
+    """
+
+    if type(targets_or_file) == list:
+        yark_target_list = fetch_yarkovsky_targets_list(targets_or_file)
+    else:
+        yark_target_list = fetch_yarkovsky_targets_ftp(targets_or_file)
+
+    return yark_target_list
+
+
+def fetch_yarkovsky_targets_list(yark_targets):
+    """Parses a list of lines of Yarkovsky targets (read from a file and which
+    may contain comments) and returns a list of targets"""
 
     yark_target_list = []
 
@@ -1464,6 +1576,48 @@ def fetch_yarkovsky_targets(yark_targets):
             yark_target_list.append(obj_id)
 
     return yark_target_list
+
+
+def fetch_yarkovsky_targets_ftp(file_or_url=None):
+    """Fetches Yarkovsky targets from either the specified file (if [file_or_url]
+    is not None) or the current list from the FTP site
+    and parses it to return the target and expected A2 Yarkovsky value and
+    its error"""
+    ftp_url = 'ftp://ssd.jpl.nasa.gov/pub/ssd/yarkovsky/yarko_targets/yarko_latest.txt'
+
+    targets = []
+    tempdir = None
+
+    if file_or_url is None or file_or_url.startswith('ftp://'):
+        if file_or_url is not None and file_or_url.startswith('ftp://'):
+            ftp_url = file_or_url
+        tempdir = tempfile.mkdtemp(prefix='tmp_neox_')
+        target_file = os.path.join(tempdir, 'yarkovsky_targets.txt')
+
+        with closing(urllib.request.urlopen(ftp_url)) as read_fp:
+            with open(target_file, 'wb') as write_fp:
+                shutil.copyfileobj(read_fp, write_fp)
+    else:
+        target_file = file_or_url
+
+    if os.path.exists(target_file):
+        table = ascii.read(target_file, format='csv')
+
+        for target in list(table['base']):
+            target = target.upper()
+            # Look for designations of the for yyyyXY[12] and add space in the middle
+            if len(target) >=6 and target[0:4].isdigit() and target[4:6].isalpha():
+                target = target[0:4] + ' ' + target[4:]
+            targets.append(target)
+
+        if tempdir:
+            try:
+                os.remove(target_file)
+                os.rmdir(tempdir)
+            except FileNotFoundError:
+                pass
+
+    return targets
 
 
 def fetch_sfu(page=None):
@@ -1516,13 +1670,17 @@ def make_location(params):
         location['site'] = params['site'].lower()
     if params['site_code'] == 'W85':
         location['telescope'] = '1m0a'
-        location['observatory'] = 'doma'
+        location['enclosure'] = 'doma'
     elif params['site_code'] == 'W87':
         location['telescope'] = '1m0a'
-        location['observatory'] = 'domc'
+        location['enclosure'] = 'domc'
     elif params['site_code'] == 'V39':
         location['telescope'] = '1m0a'
-        location['observatory'] = 'domb'
+        location['enclosure'] = 'domb'
+    elif params['site_code'] == 'Z31':
+        location['telescope'] = '1m0a'
+        location['enclosure'] = 'doma'
+
     return location
 
 
@@ -1551,7 +1709,7 @@ def make_target(params):
     return target
 
 
-def make_moving_target(elements):
+def make_moving_target(elements, fractional_rate=None):
     """Make a target dictionary for the request from an element set"""
 
     # Generate initial dictionary of things in common
@@ -1576,6 +1734,8 @@ def make_moving_target(elements):
         target['meananom'] = elements['meananom']
     if 'v_mag' in elements:
         target['extra_params']['v_magnitude'] = round(elements['v_mag'], 2)
+    if fractional_rate is not None:
+        target['extra_params']['fractional_ephemeris_rate'] = fractional_rate
 
     return target
 
@@ -1594,6 +1754,98 @@ def make_window(params):
     return window
 
 
+def get_exposure_bins(params):
+    """
+    Break the exposure count into bins each containing the number of exposures (with overheads) possible before the
+    target leaves the central quarter of the FOV.
+    :param params: list of observation parameters
+    :return: exp_count_list
+    """
+    target_speed = params.get('speed', 0)
+    fractional_rate = params.get('fractional_rate', 0.5)
+    relative_speed = (1.0 - fractional_rate) * target_speed
+    if not relative_speed:
+        return None
+    sitecam = get_sitecam_params(params['site_code'], params.get('bin_mode', None))
+    fov = sitecam['fov']
+    exp_overhead = sitecam['exp_overhead']
+    exp_time = params['exp_time']
+    exp_count = params['exp_count']
+    total_exp_time = exp_time + exp_overhead
+    target_travel_limit_arcsec = fov / 4 * 60
+    arcsec_per_exposure = relative_speed * (total_exp_time / 60)
+    exposures_per_limit = target_travel_limit_arcsec / arcsec_per_exposure
+    number_of_configs = int(exp_count // exposures_per_limit) + 1
+    exp_count_list = [int(exp_count // number_of_configs)] * min(number_of_configs, exp_count)
+    overflow_frames = int(exp_count % number_of_configs)
+    exp_count_list[:overflow_frames] = (i+1 for i in exp_count_list[:overflow_frames])
+    return exp_count_list
+
+
+def instrument_config_generator(inst_configs):
+    """
+    Infinitely cycle through a list of Instrument configurations.
+    :param inst_configs: List of instrument configurations
+    :return iconfig: individual instrument configuration
+    """
+    while True:
+        for iconfig in inst_configs:
+            yield iconfig
+
+
+def split_inst_configs(exposure_bins, inst_configs):
+    """
+    Split the instrument configurations so that one configuration picks up where the previous configuration left off.
+    Will not subdivide individual Instrument configurations with more than one exposure.
+    :param exposure_bins: list of exposure counts per configuration
+    :param inst_configs: list of instrument configurations for origional configuration
+    :return new_inst_configs_list:
+    """
+    new_inst_configs_list = []
+    exp_counter = 0
+    inst_loop = instrument_config_generator(inst_configs)
+    i_list = []
+    for exp_bin in exposure_bins:
+        for iconfig in inst_loop:
+            if len(i_list) < len(inst_configs):
+                i_list.append(deepcopy(iconfig))
+            exp_counter += iconfig['exposure_count']
+            if exp_counter >= exp_bin:
+                new_inst_configs_list.append(i_list)
+                exp_counter = 0
+                i_list = []
+                break
+
+    return new_inst_configs_list
+
+
+def split_configs(configs, params):
+    """
+    Splits configurations to keep moving target at a fractional ephemeris rate in the central quarter of the FOV.
+    :param configs: observation configuration list
+    :param params: Observation parameters
+    :return new_configs: subdivided configuration list
+    """
+    exposure_bins = get_exposure_bins(params)
+    new_configs = []
+    if exposure_bins and len(exposure_bins) > 1:
+        new_inst_configs_list = split_inst_configs(exposure_bins, configs[0]['instrument_configs'])
+        total_count = sum(exposure_bins)
+        for i, ex_bin in enumerate(exposure_bins):
+            new_config = deepcopy(configs[0])
+            new_config['instrument_configs'] = new_inst_configs_list[i]
+            if new_config['type'] == 'REPEAT_EXPOSE':
+                new_config['repeat_duration'] = ceil(ex_bin / total_count * configs[0]['repeat_duration'])
+            elif len(new_config['instrument_configs']) == 1:
+                new_config['instrument_configs'][0]['exposure_count'] = ex_bin
+
+            new_configs.append(new_config)
+
+        return new_configs
+
+    return configs
+
+
 def make_config(params, filter_list):
     # Common part of a molecule
     conf = {
@@ -1605,7 +1857,10 @@ def make_config(params, filter_list):
         'guiding_config': {},
         'instrument_configs': []
     }
-    if params['exp_type'] == 'REPEAT_EXPOSE':
+
+    if params.get('add_dither', False):
+        dither_pattern = box_spiral_generator(params['dither_distance'], 120)
+    elif params['exp_type'] == 'REPEAT_EXPOSE':
         # Remove overhead from slot_length so repeat_exposure matches predicted frames.
         # This will allow a 2 hour slot to fit within a 2 hour window.
         single_mol_overhead = cfg.molecule_overhead['filter_change'] + cfg.molecule_overhead['per_molecule_time']
@@ -1627,9 +1882,8 @@ def make_config(params, filter_list):
 
         instrument_config = {'exposure_count': exp_count,
                              'exposure_time': params['exp_time'],
-                             'bin_x': params['binning'],
-                             'bin_y': params['binning'],
-                             'optical_elements': {'filter': filt[0]}
+                             'optical_elements': {'filter': filt[0]},
+                             'extra_params': {}
                              }
 
         if params.get('bin_mode', None) == '2k_2x2' and params['pondtelescope'] == '1m0':
@@ -1649,10 +1903,20 @@ def make_config(params, filter_list):
                                                      'diffuser_r_position': 'out',
                                                      'diffuser_i_position': 'out',
                                                      'diffuser_z_position': 'out'}
-            instrument_config.pop('bin_x', None)
-            instrument_config.pop('bin_y', None)
+
             instrument_config['extra_params'] = extra_params
-        conf['instrument_configs'].append(instrument_config)
+
+        if params.get('add_dither', False):
+            exp = 0
+            while exp < exp_count:
+                offsets = next(dither_pattern)
+                instrument_config['exposure_count'] = 1
+                instrument_config['extra_params']["offset_ra"] = offsets[0]
+                instrument_config['extra_params']["offset_dec"] = offsets[1]
+                conf['instrument_configs'].append(deepcopy(instrument_config))
+                exp += 1
+        else:
+            conf['instrument_configs'].append(instrument_config)
 
     return conf
 
@@ -1718,6 +1982,15 @@ def make_configs(params):
     In spectroscopy mode, this will produce 1, 3 or 5 molecules depending on whether
     `params['calibs']` is 'none, 'before'/'after' or 'both'."""
 
+    # Perform Repeated exposures if many exposures compared to number of filter changes.
+    if not params.get('exp_type', None):
+        if params['exp_count'] <= 10 or\
+                params['exp_count'] < 10 * len(list(filter(None, params['filter_pattern'].split(',')))) or\
+                params.get('add_dither', False):
+            params['exp_type'] = 'EXPOSE'
+        else:
+            params['exp_type'] = 'REPEAT_EXPOSE'
+
     filt_list = build_filter_blocks(params['filter_pattern'], params['exp_count'], params['exp_type'])
 
     calib_mode = params.get('calibs', 'none').lower()
@@ -1742,6 +2015,7 @@ def make_configs(params):
             configs = [spectrum_molecule, ]
     else:
         configs = [make_config(params, filt_list)]
+        configs = split_configs(configs, params)
 
     return configs
 
@@ -1763,35 +2037,18 @@ def make_single(params, ipp_value, request):
     """Create a user_request for a single observation"""
 
     requestgroup = {
-                    'submitter' : params['user_id'],
-                    'requests'  : [request],
-                    'name'  : params['group_name'],
+                    'submitter': params['user_id'],
+                    'requests': [request],
+                    'name': params['group_name'],
                     'observation_type': "NORMAL",
-                    'operator'  : "SINGLE",
-                    'ipp_value' : ipp_value,
-                    'proposal'  : params['proposal_id']
+                    'operator': "SINGLE",
+                    'ipp_value': ipp_value,
+                    'proposal': params['proposal_id']
     }
 
 # If the ToO mode is set, change the observation_type
     if params.get('too_mode', False) is True:
         requestgroup['observation_type'] = 'TIME_CRITICAL'
-
-    return requestgroup
-
-
-def make_many(params, ipp_value, request, cal_request):
-    """Create a request for a MANY observation of the asteroidgroup
-    target (<request>) and calibration source (<cal_request>)"""
-
-    requestgroup = {
-                    'submitter' : params['user_id'],
-                    'requests'  : [request, cal_request],
-                    'name'  : params['group_name'],
-                    'observation_type': "NORMAL",
-                    'operator'  : "MANY",
-                    'ipp_value' : ipp_value,
-                    'proposal'  : params['proposal_id']
-    }
 
     return requestgroup
 
@@ -1893,6 +2150,8 @@ def configure_defaults(params):
                   'F65-FLOYDS' : 'OGG',
                   'E10' : 'COJ',
                   'E10-FLOYDS' : 'COJ',
+                  'Z31' : 'TFN',
+                  'Z24' : 'TFN',
                   'Z17' : 'TFN',
                   'Z21' : 'TFN',
                   'T03' : 'OGG',
@@ -1910,12 +2169,6 @@ def configure_defaults(params):
         pass
     params['binning'] = 1
     params['instrument'] = '1M0-SCICAM-SINISTRO'
-
-    # Perform Repeated exposures if many exposures compared to number of filter changes.
-    if params['exp_count'] <= 10 or params['exp_count'] < 10*len(list(filter(None, params['filter_pattern'].split(',')))):
-        params['exp_type'] = 'EXPOSE'
-    else:
-        params['exp_type'] = 'REPEAT_EXPOSE'
 
     if params['site_code'] in ['F65', 'E10', '2M0']:
         if 'F65' in params['site_code']:
@@ -1963,7 +2216,11 @@ def make_requestgroup(elements, params):
 # Create Target (pointing)
     if len(elements) > 0:
         logger.debug("Making a moving object")
-        params['target'] = make_moving_target(elements)
+        if params.get('spectroscopy') is True:
+            fractional_rate = 1
+        else:
+            fractional_rate = params.get('fractional_rate')
+        params['target'] = make_moving_target(elements, fractional_rate)
         if 'sky_pa' in elements and params['para_angle'] is False:
             params['rot_mode'] = 'SKY'
             params['rot_angle'] = round(elements['sky_pa'], 1)
@@ -1985,14 +2242,7 @@ def make_requestgroup(elements, params):
     note = f'Submitted by NEOexchange {submitter}'
     note = note.rstrip()
 
-    request = {
-        'configurations': configurations,
-        "acceptability_threshold": params.get('acceptability_threshold', 90),
-        'windows': [window],
-        'location': location,
-        "observation_note": note,
-    }
-
+    cal_configurations = []
     if params.get('solar_analog', False) and len(params.get('calibsource', {})) > 0:
         # Assemble solar analog request
         params['group_name'] += "+solstd"
@@ -2019,22 +2269,19 @@ def make_requestgroup(elements, params):
         params['exp_count'] = exp_count
         params['ag_exp_time'] = ag_exptime
 
-        cal_request = {
-                        "location": location,
-                        "configurations": cal_configurations,
-                        "windows": [window],
-                        "observation_note": note,
-                    }
-    else:
-        cal_request = {}
+    request = {
+        'configurations': configurations + cal_configurations,
+        "acceptability_threshold": params.get('acceptability_threshold', 90),
+        'windows': [window],
+        'location': location,
+        "observation_note": note,
+    }
 
     ipp_value = params.get('ipp_value', 1.0)
 
 # Add the Request to the outer User Request
     if 'period' in params.keys() and 'jitter' in params.keys():
         user_request = make_cadence(request, params, ipp_value)
-    elif len(cal_request) > 0:
-        user_request = make_many(params, ipp_value, request, cal_request)
     else:
         user_request = make_single(params, ipp_value, request)
 
@@ -2046,6 +2293,21 @@ def make_requestgroup(elements, params):
 def submit_block_to_scheduler(elements, params):
 
     user_request = make_requestgroup(elements, params)
+
+    # Errors or mostly blank dict came back from make_requestgroup(), probably cadence-related
+    if user_request.get('errors', None):
+        msg = user_request['errors']
+        logger.error(msg)
+        params['error_msg'] = msg
+        return False, params
+    elif 'name' not in user_request and 'proposal' not in user_request:
+        error_msg = {}
+        for x in user_request['requests']:
+            if x != {}:
+                for key, value in x.items():
+                    error_msg[key] = value
+            params['error_msg'] = error_msg
+        return False, params
 
 # Make an endpoint and submit the thing
     try:
@@ -2556,15 +2818,15 @@ def store_jpl_physparams(phys_par, body):
     """Function to store object physical parameters from JPL Horizons"""
 
     # parsing the JPL physparams dictionary
-    for p in phys_par:   
+    for p in phys_par:
         if 'H' == p['name']:  # absolute magnitude
             p_type = 'H'
         elif 'G' == p['name']:  # magnitude (phase) slope
             p_type = 'G'
         elif 'diameter' in p['name']:  # diameter
-            p_type = 'D'     
+            p_type = 'D'
         elif 'extent' in p['name']:  # extent
-            continue        
+            continue
         elif 'GM' in p['name']:  # GM
             p_type = 'M'
         elif 'density' in p['name']:  # density
@@ -2624,7 +2886,7 @@ def store_jpl_physparams(phys_par, body):
             del phys_params['parameter_type']
         else:
             phys_params['value2'] = jpl_value2
-            phys_params['error2'] = jpl_error2  
+            phys_params['error2'] = jpl_error2
 
         saved = body.save_physical_parameters(phys_params)
         if saved:
@@ -2671,7 +2933,7 @@ def parse_jpl_fullname(obj):
     """Given a JPL object, return parsed full name"""
     fullname = obj['fullname']
     number = name = prov_des = None
-    if fullname[0] == '(':
+    if fullname[0] == '(':  # provisional designation only
         prov_des = fullname.strip('()')
     elif '/' in fullname:  # comet
         parts = fullname.split('/')
@@ -2693,17 +2955,16 @@ def parse_jpl_fullname(obj):
             elif number:
                 name = part2
     elif ' ' in fullname:
-        space_num = fullname.count(' ')
-        if space_num == 3:
-            part1, part2, part3, part4 = fullname.split(' ')
+        name_parts = list(filter(None, fullname.split(' ')))
+        if len(name_parts) == 4:
+            number = name_parts[0]
+            if name_parts[1][0].isalpha:
+                name = name_parts[1]
+        elif len(name_parts) == 3:
+            part1, part2, part3 = name_parts
             number = part1
-            if part2[0].isalpha:
-                name = part2
-        elif space_num == 2:
-            part1, part2, part3 = fullname.split(' ')
-            number = part1
-        elif space_num == 1:
-            part1, part2 = fullname.split(' ')
+        elif len(name_parts) == 2:
+            part1, part2 = name_parts
             number = part1
             name = part2
 
@@ -2724,13 +2985,13 @@ def store_jpl_sourcetypes(code, obj, body):
         source_type = 'T'
         source_subtype_1 = 'P5'
     elif 'TNO' in code:  # Trans-Neptunian Object
-        source_type = 'K'        
+        source_type = 'K'
     elif 'IEO' in code:  # Atira
         source_subtype_1 = 'N1'
     elif 'ATE' in code:  # Aten
         source_subtype_1 = 'N2'
     elif 'APO' in code:  # Apollo
-        source_subtype_1 = 'N3'   
+        source_subtype_1 = 'N3'
     elif 'AMO' in code:  # Amor
         source_subtype_1 = 'N4'
     elif 'IMB' in code:  # inner main belt
@@ -2779,10 +3040,10 @@ def store_jpl_sourcetypes(code, obj, body):
                 source_subtype_2 = 'N'
 
     if source_type:
-        body.source_type = source_type        
+        body.source_type = source_type
     body.source_subtype_1 = source_subtype_1
     body.source_subtype_2 = source_subtype_2
     body.save()
-        
+
 
 

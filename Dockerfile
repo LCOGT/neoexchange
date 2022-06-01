@@ -1,7 +1,7 @@
 ################################################################################
 # Findorb Builder Container
 ################################################################################
-FROM centos:8 AS findorbbuilder
+FROM rockylinux:8 AS findorbbuilder
 
 # Choose specific release versions of each piece of software
 ENV LUNAR_VERSION=016b82f80bd509929e0d55136ed6882e61831dfb \
@@ -53,12 +53,50 @@ RUN curl -fsSL https://github.com/Bill-Gray/find_orb/archive/${FIND_ORB_VERSION}
 COPY neoexchange/photometrics/configs/environ.def /root/.find_orb/
 
 ################################################################################
+# damit Builder Container
+################################################################################
+FROM rockylinux:8 AS damitbuilder
+
+# Choose specific release versions of each piece of software
+ENV DAMIT_VERSION="version_0.2.1"
+
+# This software requires GCC and gfortran to build
+RUN yum -y install gcc gcc-gfortran make  \
+        && yum -y clean all
+
+# Build all of damit's components. No need to clean up, as this is a builder container.
+# The contents will be discarded from the final image.
+COPY docker/root/sirrah-troja-mff-cuni-cz.pem /root/
+RUN curl -fsSL --cacert /root/sirrah-troja-mff-cuni-cz.pem https://astro.troja.mff.cuni.cz/projects/damit/files/${DAMIT_VERSION}.tar.gz | tar xzf - \
+        && cd ${DAMIT_VERSION} \
+        && cd convexinv \
+        && make \
+        && cd ../conjgradinv \
+        && make \
+        && cd ../lcgenerator \
+        && make \
+        && cd ../fortran \
+        && gfortran -o minkowski minkowski.f \
+        && gfortran -o standardtri standardtri.f \
+        && cd ..
+
+# copy binaries
+RUN cd ${DAMIT_VERSION} \
+        && if [[ -f "convexinv/convexinv" ]]; then cp convexinv/convexinv /usr/local/bin; fi \
+        && if [[ -f "conjgradinv/conjgradinv" && -f "lcgenerator/lcgenerator" ]]; then cp conjgradinv/conjgradinv /usr/local/bin; fi \
+        && if [[ -f "lcgenerator/lcgenerator" ]]; then cp lcgenerator/lcgenerator /usr/local/bin; fi \
+        && if [[ -f "fortran/minkowski" && -f "fortran/standardtri" ]]; then cp fortran/{minkowski,standardtri} /usr/local/bin; fi
+
+
+################################################################################
 # Production Container
 ################################################################################
-FROM centos:8
+FROM rockylinux:8
 
 # Copy findorb from builder container
 COPY --from=findorbbuilder /root /root
+# Copy damit binaries from builder container
+COPY --from=damitbuilder /usr/local/bin /root/bin
 
 # Install Python dependencies
 
@@ -110,6 +148,9 @@ RUN curl -fsSLO "$SUPERCRONIC_URL" \
         && chmod +x "$SUPERCRONIC" \
         && mv "$SUPERCRONIC" "/usr/local/bin/${SUPERCRONIC}" \
         && ln -s "/usr/local/bin/${SUPERCRONIC}" /usr/local/bin/supercronic
+
+# Install Node.JS
+RUN dnf -y module install nodejs:14
 
 # Install packages and update base system
 # XXX Need to install powertools repo

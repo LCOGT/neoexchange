@@ -12,6 +12,7 @@ GNU General Public License for more details.
 """
 from datetime import datetime, timedelta
 from math import degrees
+import re
 import logging
 
 from astropy.time import Time
@@ -114,6 +115,28 @@ PARAM_CHOICES = (
                 ('/a', 'Reciprocal of semimajor axis')
                 )
 
+STATUS_CHOICES = (
+                (0, 'No Analysis Done'),
+                (1, 'Light Curve Analysis Done'),
+                (2, 'Spectroscopic Analysis Done'),
+                (3, 'LC & Spec Analysis Done'),
+                (10, 'More Observations Needed'),
+                (20, 'Published'),
+                (99, 'No usable Data')
+                )
+
+PHYSICAL_PARAMETER_QUALITIES = {"P": {-99: 'Debunked (0)',
+                                      0: 'Probably Completely Wrong (1-)',
+                                      2: 'Possibly Completely Wrong (1)',
+                                      3: 'Possibly Just Noise (1+)',
+                                      5: 'Not well established (2-)',
+                                      6: 'Within 30% accurate (2)',
+                                      7: 'Possible Ambiguity (2+)',
+                                      9: 'Unique (3-)',
+                                      10: 'Unambiguous (3)',
+                                      }
+                                }
+
 logger = logging.getLogger(__name__)
 
 
@@ -149,6 +172,8 @@ class Body(models.Model):
     updated             = models.BooleanField('Has this object been updated?', default=False)
     ingest              = models.DateTimeField(default=datetime.utcnow, db_index=True)
     update_time         = models.DateTimeField(blank=True, null=True, db_index=True)
+    analysis_status     = models.IntegerField('Current Analysis Status', choices=STATUS_CHOICES, db_index=True, default=0)
+    as_updated          = models.DateTimeField(blank=True, null=True, db_index=True)
 
     def _compute_period(self):
         period = None
@@ -177,12 +202,12 @@ class Body(models.Model):
 
     period = property(_compute_period)
     recip_a = property(_compute_one_over_a)
-    one_over_a  = property(_compute_one_over_a)
+    one_over_a = property(_compute_one_over_a)
 
     def characterization_target(self):
         # If we change the definition of Characterization Target,
         # also update views.get_characterization_targets
-        if self.active is True and self.origin != 'M' and self.source_type != 'U':
+        if self.active is True and self.origin != 'M' and self.source_type != 'U' and self.origin != 'T':
             return True
         else:
             return False
@@ -225,7 +250,6 @@ class Body(models.Model):
         except:
             pass
         return mjd
-
 
     def current_name(self):
         if self.name:
@@ -274,6 +298,21 @@ class Body(models.Model):
             else:
                 # Return just numerical values
                 return emp_line['ra'], emp_line['dec'], emp_line['mag'], emp_line['southpole_sep'], emp_line['sky_motion'], emp_line['sky_motion_pa']
+        else:
+            # Catch the case where there is no Epoch
+            return False
+
+    def compute_distances(self, d=None):
+        d = d or datetime.utcnow()
+        if self.epochofel:
+            orbelems = model_to_dict(self)
+            sitecode = '500'
+            emp_line = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
+            if not emp_line:
+                return False
+            else:
+                # Return just distance values
+                return emp_line['earth_obj_dist'], emp_line['sun_obj_dist']
         else:
             # Catch the case where there is no Epoch
             return False
@@ -549,6 +588,7 @@ class Body(models.Model):
             return_name = self.name
         return u'%s is %sactive' % (return_name, text)
 
+
 class Designations(models.Model):
     body        = models.ForeignKey(Body, on_delete=models.CASCADE)
     value       = models.CharField('Designation', blank=True, null=True, max_length=30, db_index=True)
@@ -575,11 +615,30 @@ class PhysicalParameters(models.Model):
     value2         = models.FloatField('2nd component of Physical Parameter', blank=True, null=True)
     error2         = models.FloatField('Error for 2nd component of Physical Parameter', blank=True, null=True)
     units          = models.CharField('Physical Parameter Units', blank=True, null=True, max_length=30)
-    quality        = models.CharField('Physical Parameter Quality Designation', blank=True, null=True, max_length=10)
+    quality        = models.IntegerField('Physical Parameter Quality Designation', blank=True, null=True)
     preferred      = models.BooleanField('Is this the preferred value for this type of parameter?', default=False)
     reference      = models.TextField('Reference for this value', blank=True, null=True)
     notes          = models.TextField('Notes on this value', blank=True, null=True)
     update_time    = models.DateTimeField(blank=True, null=True, db_index=True)
+
+    def quality_parser(self):
+        """Retrieve quality description for given Parameter type
+        Return Quality description or quality int.
+        """
+        quality_dict = PHYSICAL_PARAMETER_QUALITIES.get(self.parameter_type, {})
+        quality_text_or_value = quality_dict.get(self.quality, self.quality)
+        return quality_text_or_value
+
+    def quality_short(self):
+        """If it exists, return shortened parenthetical quality tag.
+        Else, return quality int. as string.
+        """
+        quality_string = self.quality_parser()
+        if isinstance(quality_string, str):
+            short_string = re.search(r'\(.*?\)', quality_string).group()
+            if short_string:
+                return short_string
+        return f"({quality_string})"
 
     class Meta:
         verbose_name = _('Physical Parameter')

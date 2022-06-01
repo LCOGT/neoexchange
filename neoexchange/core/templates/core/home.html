@@ -6,7 +6,7 @@
 {% block header %}Home{% endblock %}
 
 {% block bodyclass %}page{% endblock %}
-{% block extramenucss %}extramenu-home{% endblock %}
+{% block extramenucss %}extramenu{% endblock %}
 
 {% block extramenu %}
 {% endblock%}
@@ -29,7 +29,7 @@
             </div>
             <div class="home-button">
                   <svg id="moon"  xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 170 55" preserveAspectRatio="xMidYMin slice"
-   style="padding-bottom: 40%; height: 1px; overflow: visible" ></svg>
+   style="padding-bottom: 35%; height: 1px; overflow: visible" ></svg>
                   <div id="moonphase">Moon phase <span id="mooncent"></span></div>
                   <script type="text/javascript" src="{% static 'core/js/moon-phase.js' %}" charset="UTF-8"></script>
                   <script type="text/javascript" charset="UTF-8">
@@ -42,7 +42,7 @@
         </div>
     </div>
 
-    <div class="fullwidth">
+    <div class="container-lg">
         <table id="id_neo_targets" class="datatable">
             <thead>
                 <tr>

@@ -4,6 +4,83 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.12.0
+* Add option to set fractional ephemeris rate.
+* Set default observing mode to 50% object's rate for moving targets (except for comets and spectroscopy)
+* Fix frame updating for change in archive header returns.
+
+### 3.11.1
+* Change threshold on 1/a0 for Dynamically New Comets from 1e-4 to 4e-5.
+
+### 3.11.0
+* Update Summary pages for enhanced usability and utility.
+* Add body publication status.
+* Add form for updating period from LC plot page.
+
+### 3.10.3
+* Minor bug fixes and error handling.
+
+### 3.10.2
+* Fix ADES header info for new telescopes and MuSCAT instrument (Issue #578)
+* Fix gif movie creation permission issues (Issue #580)
+
+### 3.10.1
+* Fix orbit plots for cometary elements.
+
+### 3.10.0
+* Add support for DAMIT and advanced LC plotting features.
+
+### 3.9.1
+* Implement dithering capabilities
+
+### 3.9.0
+* Implement DataProducts refactor for ALCDEF, Gifs, and Floyds Traces
+
+### 3.8.13
+* Adds galactic plane into the visualization plots.
+
+### 3.8.12
+* Adds support for multi-target spectroscopy blocks.
+
+### 3.8.11
+* Adds support for the two 1-m telescopes at Tenerife (Issue #555)
+
+### 3.8.10
+* Updates gif movies to fix intermitent issues and sort by filter.
+* Add error to spectra plots.
+
+### 3.8.9
+* Fix issue with an alternative reporting format for artificial satellites which broke the Previous NEOCP page parser.
+* Fix rare issue where scheduling form would reset to previous day in cases where there was limited visibility.
+
+### 3.8.8
+* Fix issue in error reporting when submitting cadence with no valid requests.
+* Allow a specific FTP URL file to be passed for the Yarkovsky fetcher and planner (for when the 'latest' symlink doesn't get updated)
+
+### 3.8.7
+* Add support for generating PDS XML labels.
+* Add support for fetching Yarkovsky targets from JPL ftp site.
+
+### 3.8.6
+* Update spectroscopy analysis capabilities.
+* Add new Body method to compute and return distances and use this for the LOOK targets page.
+
+### 3.8.5
+Paginate new gif movie page to speed up load times and prevent connection errors
+
+### 3.8.4
+* Add observed location to observation timeline.
+* Fix bugs and add features for lightcurve extraction.
+
+### 3.8.3
+Add support for adding new LOOK project targets.
+
+### 3.8.2
+Fix for cadences crossing semester boundaries.
+
+### 3.8.1
+Update default exposure time estimate to be instrument agnostic.
+
 ### 3.8.0.2
 Fix for occasional OSError on LDAC catalogs.
 

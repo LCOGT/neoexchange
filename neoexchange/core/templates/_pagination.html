@@ -20,7 +20,7 @@
               {% if page_obj.has_next %}
                   <a class="pagination-number" href="?{{ request.GET.urlencode|cut:page_tag|cut:'&'}}&page={{ page_obj.next_page_number }}">{{ page_obj.next_page_number }}</a>
 
-                    {% if page_obj.number|add:'10' <= page_obj.paginator.num_pages %}
+                    {% if page_obj.number|add:'10' < page_obj.paginator.num_pages %}
                         <i class="fa fa-circle" style="font-size:.1em;"></i>
                         <i class="fa fa-circle" style="font-size:.1em;"></i>
                         <a class="pagination-number" href="?{{ request.GET.urlencode|cut:page_tag|cut:'&'}}&page={{ page_obj.number|add:'10' }}">{{ page_obj.number|add:'10' }}</a>

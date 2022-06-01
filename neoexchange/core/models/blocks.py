@@ -18,6 +18,7 @@ from django.db import models
 from django.db.models import Sum
 from django.utils.translation import gettext_lazy as _
 from django.utils.functional import cached_property
+from django.contrib.contenttypes.fields import GenericRelation
 from requests.compat import urljoin
 from numpy import frombuffer
 
@@ -25,7 +26,9 @@ from astrometrics.ephem_subs import compute_ephem, comp_sep
 from core.archive_subs import check_for_archive_images
 
 from core.models.body import Body
+from core.models.frame import Frame
 from core.models.proposal import Proposal
+from core.models.dataproducts import DataProduct
 
 TELESCOPE_CHOICES = (
                         ('1m0', '1-meter'),
@@ -46,7 +49,6 @@ SITE_CHOICES = (
     )
 
 
-
 class SuperBlock(models.Model):
 
     cadence         = models.BooleanField(default=False)
@@ -62,6 +64,7 @@ class SuperBlock(models.Model):
     jitter          = models.FloatField('Acceptable deviation before or after strict period (hours)', null=True, blank=True)
     timeused        = models.FloatField('Time used (seconds)', null=True, blank=True)
     active          = models.BooleanField(default=False)
+    dataproduct     = GenericRelation(DataProduct, related_query_name='sblock')
 
     @cached_property
     def get_blocks(self):
@@ -94,6 +97,7 @@ class SuperBlock(models.Model):
     def get_telclass(self):
         bl = self.get_blocks
         qs = list(set([(b.telclass, b.obstype) for b in bl]))
+        qs.sort()
 
         # Convert obstypes into "(S)" suffix for spectra, nothing for imaging
         class_obstype = [x[0]+str(x[1]).replace(str(Block.OPT_SPECTRA), '(S)').replace(str(Block.OPT_SPECTRA_CALIB), '(SC)').replace(str(Block.OPT_IMAGING), '') for x in qs]
@@ -167,8 +171,14 @@ class SuperBlock(models.Model):
         return '%s is %sactive' % (self.tracking_number, text)
 
 
-
 class Block(models.Model):
+
+    RATE_CHOICES = (
+        (100, 'Target Tracking'),
+        (50, 'Half-Rate Tracking'),
+        (0, 'Sidereal Tracking'),
+        (-99, 'Non-Standard Tracking')
+    )
 
     OPT_IMAGING = 0
     OPT_SPECTRA = 1
@@ -197,6 +207,8 @@ class Block(models.Model):
     active          = models.BooleanField(default=False)
     reported        = models.BooleanField(default=False)
     when_reported   = models.DateTimeField(null=True, blank=True)
+    dataproduct     = GenericRelation(DataProduct, related_query_name='block')
+    tracking_rate   = models.SmallIntegerField('Tracking Strategy', choices=RATE_CHOICES, blank=False, default=100)
 
     def current_name(self):
         name = ''
@@ -229,10 +241,10 @@ class Block(models.Model):
     def num_spectro_frames(self):
         """Returns the numbers of different types of spectroscopic frames"""
         num_moltypes_string = 'No data'
-        data, num_frames = check_for_archive_images(self.request_number, obstype='')
+        data, num_frames = check_for_archive_images(self.request_number, obstype='', obj=self.current_name())
         if num_frames > 0:
             moltypes = [x['OBSTYPE'] if x['RLEVEL'] != 90 else "TAR" for x in data]
-            num_moltypes = {x : moltypes.count(x) for x in set(moltypes)}
+            num_moltypes = {x: moltypes.count(x) for x in set(moltypes)}
             num_moltypes_sort = OrderedDict(sorted(num_moltypes.items(), reverse=True))
             num_moltypes_string = ", ".join([x+": "+str(num_moltypes_sort[x]) for x in num_moltypes_sort])
         return num_moltypes_string
@@ -249,6 +261,19 @@ class Block(models.Model):
     def num_candidates(self):
         return Candidate.objects.filter(block=self.id).count()
 
+    def where_observed(self):
+        where_observed=''
+        if self.num_observed is not None:
+            frames = Frame.objects.filter(block=self.id, frametype=Frame.BANZAI_RED_FRAMETYPE)
+            if frames.count() > 0:
+                # Code for producing full site strings + site codes e.g. 'W85'
+                # where_observed_qs = frames.distinct('sitecode')
+                # where_observed = ",".join([site.return_site_string() + " (" + site.sitecode + ")" for site in where_observed_qs])
+                # Alternative which doesn't need PostgreSQL DISTINCT ON <fieldname>
+                unique_sites = frames.values('sitecode').distinct()
+                where_observed = ",".join([frames.filter(sitecode=site['sitecode'])[0].return_site_string() + " (" + site['sitecode'] + ")" for site in unique_sites])
+        return where_observed
+
     class Meta:
         verbose_name = _('Observation Block')
         verbose_name_plural = _('Observation Blocks')
@@ -261,7 +286,6 @@ class Block(models.Model):
             text = 'not '
 
         return '%s is %sactive' % (self.request_number, text)
-
 
 
 class Candidate(models.Model):

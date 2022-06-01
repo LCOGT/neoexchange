@@ -8,13 +8,11 @@
 {% endif %}
 {% endblock %}
 
-<!-- Import Bokeh CSS for plotting (UPDATE RELEASE NUMBER IF BOKEH IS UPDATED) -->
-{% block last-css-content %}
-<link rel="stylesheet" href={{css_path}}>
-{% endblock %}
 <!-- Import Bokeh Script for plotting (UPDATE RELEASE NUMBER IF BOKEH IS UPDATED) -->
 {% block script-content %}
-<script src={{js_path}}></script>
+<script src={{js_path}} crossorigin="anonymous"></script>
+<script src={{widget_path}}  crossorigin="anonymous"></script>
+<script src={{table_path}}  crossorigin="anonymous"></script>
 {{ the_script|safe }}
 {% endblock %}
 
@@ -37,8 +35,7 @@
 <div class="container" id="main">
     <!-- Import the javascript and div created by Bokeh for spectra plots -->
     {% block graphic %}
-        {{ reflec_div|safe }}
-        {{ raw_div|safe }}
+        {{ spec_div|safe }}
     {% endblock %}
 
 
@@ -54,7 +51,7 @@
         {% endif %}
     {% endfor %}
 {% else %}
-    {% if raw_div %}
+    {% if spec_div %}
         FLOYDS Data
     {% else %}
         Cannot find data. :(

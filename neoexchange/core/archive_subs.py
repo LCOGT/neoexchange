@@ -134,7 +134,7 @@ def get_catalog_data(frames, auth_header='', dbg=False):
     return catalogs
 
 
-def check_for_archive_images(request_id=None, obstype='EXPOSE', limit=3000):
+def check_for_archive_images(request_id=None, obstype='EXPOSE', obj='', limit=3000):
     """
     Call Archive API to obtain all frames for request_id
     Follow links to get all frames and filter out non-reduced frames and returns
@@ -147,7 +147,7 @@ def check_for_archive_images(request_id=None, obstype='EXPOSE', limit=3000):
     auth_header = {'Authorization': 'Token {}'.format(settings.ARCHIVE_TOKEN)}
 
     base_url = settings.ARCHIVE_FRAMES_URL
-    archive_url = '%s?limit=%d&REQNUM=%s&OBSTYPE=%s' % (base_url, limit, request_id, obstype)
+    archive_url = '%s?limit=%d&REQNUM=%s&OBSTYPE=%s&OBJECT=%s' % (base_url, limit, request_id, obstype, obj.replace(' ', '+').replace('&', '+'))
 
     frames = []
     data = fetch_archive_frames(auth_header, archive_url, frames)
@@ -302,7 +302,10 @@ def make_data_dir(data_dir, frame):
     filename = frame['filename']
     if "tar.gz" in filename:
         chunks = filename.split('_')
-        day_dir = chunks[3]
+        offset = 3
+        if len(chunks) == 6:
+            offset = 4
+        day_dir = chunks[offset]
     else:
         chunks = filename.split('-')
         day_dir = chunks[2]

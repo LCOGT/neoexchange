@@ -3,6 +3,19 @@
 
 {% block css-content %}<link rel="stylesheet" href="{% static 'core/css/forms.css' %}">{% endblock %}
 
+{% block script-content %}
+<script type="text/javascript">
+$(document).ready(function(){
+    // Initially hide the status form
+    $('#status_updater').hide();
+    $('.collapsible').click(function(event){
+      $('#chevron').toggleClass('fa fa-chevron-down fa fa-chevron-up');
+      $('.content').toggle();
+    });
+});
+</script>
+{% endblock %}
+
 {% block header %}Data Summary Page{% endblock %}
 
 {% block bodyclass %}page{% endblock %}
@@ -41,13 +54,36 @@
                     <th>
                         <span class="sortable" id="Obs">Obs</span>
                     </th>
+                    <th class="list_title">
+                        <span class="sortable" id="status_id">Status</span>
+                    </th>
+                    <th class="list_title">
+                        <span class="sortable" id="status_date_id">Status Updated</span>
+                    </th>
                     {% endif %}
                     {% if data_type == 'LC' %}
                     <th class="list_title">
                         <span class="sortable" id="name_id">Target Name</span>
                     </th>
+                    <th class="list_title">
+                        <span class="sortable" id="period_id">Period</span>
+                    </th>
+                    <th class="list_title">
+                        <span class="sortable" id="quality_id">Quality</span>
+                    </th>
+                    <th class="list_title">
+                        <span class="sortable" id="source_id">Source</span>
+                    </th>
+                    <th class="list_title">
+                        <span class="sortable" id="notes_id">Notes</span>
+                    </th>
+                    <th class="list_title">
+                        <span class="sortable" id="status_id">Status</span>
+                    </th>
+                    <th class="list_title">
+                        <span class="sortable" id="status_date_id">Status Updated</span>
+                    </th>
                     {% endif %}
-
                 </tr>
             </thead>
             <tbody>
@@ -57,23 +93,60 @@
                     {% if data_type == 'Spec' %}
                     {% with datum as block %}
                         <td data-label="date">{{block.when_observed|date:"Y-m-d"}}</td>
-                        <td data-label="body"><a href="{% url 'target' block.body.id %}">{{block.body.current_name}}</a></td>
+                        <td data-label="body"><a href="{% url 'target' block.body.id %}">{{block.body.full_name}}</a></td>
                         <td data-label="block"><a href="{% url 'block-view' block.superblock.id %}">{{block.superblock.id}}</a></td>
                         <td data-label="obs">
                             <div>
-                            {% with ' '|center:block.num_observed as range %}
-                            {% for _ in range %}
-                                <a href="{% url 'blockspec' block.id forloop.counter %}" style="display: inline;">{{forloop.counter}}</a>
-                                {% if forloop.counter != block.num_observed %},&ensp;{% endif %}
-                            {% endfor %}
-                            {% endwith %}
+                                <a href="{% url 'blockspec' block.id %}" style="display: inline;">{{block.num_observed}}</a>
                             </div>
+                        </td>
+                        <td data-label="status">
+                            {{block.body.get_analysis_status_display}}
+                        </td>
+                        <td data-label="status_date">
+                            {% if block.body.as_updated %}
+                                {{block.body.as_updated.date}}
+                            {% endif %}
                         </td>
                     {% endwith %}
                     {% else %}
                         {% if data_type == 'LC' %}
-                        {% with datum as body %}
-                            <td data-label="body"><a href="{% url 'lc_plot' body.id %}">{{body.current_name}}</a></td>
+                            {% with datum as body %}
+                            {% with body.rot_period|first as period %}
+                            <td data-label="body"><a href="{% url 'lc_plot' body.id %}">{{body.full_name}}</a></td>
+                            <td data-label="period">
+                                {{period.value}}
+                                {% if period.units %}
+                                    ({{period.units}})
+                                {% endif %}
+                                {% if body.rot_period|length > 1 %}
+                                    [1 of {{body.rot_period|length}}]
+                                {% endif %}
+                            </td>
+                            <td data-label="quality">
+                                {% if period.quality is not None %}
+                                    {{period.quality_parser}}
+                                {% endif %}
+                            </td>
+                            <td data-label="source">
+                                <div class="long-row">
+                                {{period.reference}}
+                                </div>
+                            </td>
+                            <td data-label="notes">
+                                <div class="long-row">
+                                {{period.notes}}
+                                </div>
+                            </td>
+                            <td data-label="status">
+                                {{body.get_analysis_status_display}}
+                            </td>
+                            <td data-label="status_date">
+                                {% if body.as_updated %}
+                                    {{body.as_updated.date}}
+                                {% endif %}
+                            </td>
+                        {% endwith %}
                         {% endwith %}
                         {% endif %}
                     {% endif %}
@@ -85,6 +158,25 @@
             </tbody>
         </table>
     </div>
+    {% if request.user.is_authenticated and perms.core.add_body %}
+    <div class="container">
+        <div class="content" id="status_updater">
+            <form action="{% url 'lc_data_summary' %}" method="POST" style="display:inline-block;">
+                {% csrf_token %}
+                <div class="inline-fields">
+                    <input type="submit" class="button button-primary" title="Update Body Status" value="Update" id="update_status-btn" name="update" style="font-size: larger; margin-left: 10px; margin-top: 10px;">
+                    <div class="compact-field">
+                        {{form.update_body}}<label>Select Body</label>
+                    </div>
+                    <div class="compact-field">
+                        {{form.status}}<label>New Status</label>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <button type="button" class="collapsible" id="arrow" title="Update Analysis Status"><i class="fa fa-chevron-down" id="chevron"></i></button>
+    </div>
+    {% endif %}
     <div class="row">
         {% if is_paginated %}
             <!-- start -->

@@ -22,7 +22,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from astrometrics.sources_subs import fetch_sfu, fetch_filter_list
-from .models import Body, Proposal, Block, StaticSource
+from .models import Body, Proposal, Block, StaticSource, ORIGINS, STATUS_CHOICES, PHYSICAL_PARAMETER_QUALITIES
 from astrometrics.time_subs import tomorrow
 
 logger = logging.getLogger(__name__)
@@ -33,6 +33,7 @@ SITES = (('1M0', '------------ Any 1.0m ------------'),
          ('V37', 'ELP 1.0m - V37,V39; (McDonald, Texas)'),
          ('Q63', 'COJ 1.0m - Q63-64; (Siding Spring, Aust.)'),
          ('K92', 'CPT 1.0m - K91-93; (Sutherland, S. Africa)'),
+         ('Z24', 'TFN 1.0m - Z31,Z24; (Tenerife, Spain)'),
          ('0M4', '------------ Any 0.4m ------------'),
          ('W89', 'LSC 0.4m - W89,W79; (CTIO, Chile)'),
          ('V38', 'ELP 0.4m - V38; (McDonald, Texas)'),
@@ -61,6 +62,19 @@ MOON = (('G', 'Grey',),
 
 BIN_MODES = (('full_chip', 'Full Chip, 1x1'),
              ('2k_2x2', 'Central 2k, 2x2'))
+
+ANALOG_OPTIONS = (('1', '1'),
+                  ('2', '2'),
+                  ('3', '3'),
+                  ('4', '4'),
+                  ('5', '5'))
+
+RATE_OPTIONS = ((0.5, 'Half-Rate'),
+                (1.0, 'Full-Rate'),
+                (0.0, 'Sidereal')
+                )
+
+LC_QUALITIES = tuple((qual, PHYSICAL_PARAMETER_QUALITIES['P'][qual]) for qual in PHYSICAL_PARAMETER_QUALITIES['P'])
 
 
 class SiteSelectWidget(forms.Select):
@@ -211,6 +225,7 @@ class ScheduleBlockForm(forms.Form):
     solar_analog = forms.BooleanField(initial=True, widget=forms.HiddenInput(), required=False)
     calibsource_id = forms.IntegerField(widget=forms.HiddenInput(), required=False)
     calibsource_exptime = forms.IntegerField(widget=forms.NumberInput(attrs={'size': '5'}), required=False)
+    calibsource_list = forms.ChoiceField(required=False)
     max_airmass = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     ipp_value = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     para_angle = forms.BooleanField(initial=False, required=False)
@@ -218,11 +233,30 @@ class ScheduleBlockForm(forms.Form):
     acceptability_threshold = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     ag_exp_time = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     edit_window = forms.BooleanField(initial=False, required=False, widget=forms.CheckboxInput(attrs={'class': 'window-switch'}))
+    add_dither = forms.BooleanField(initial=False, required=False, widget=forms.CheckboxInput(attrs={'class': 'dither-switch'}))
+    dither_distance = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
+    fractional_rate = forms.ChoiceField(required=False, choices=RATE_OPTIONS)
+    speed = forms.FloatField(widget=forms.HiddenInput(), required=False)
     gp_explength = forms.FloatField(required=False, widget=forms.NumberInput(attrs={'size': '5'}))
     rp_explength = forms.FloatField(required=False, widget=forms.NumberInput(attrs={'size': '5'}))
     ip_explength = forms.FloatField(required=False, widget=forms.NumberInput(attrs={'size': '5'}))
     zp_explength = forms.FloatField(required=False, widget=forms.NumberInput(attrs={'size': '5'}))
     muscat_sync = forms.BooleanField(initial=False, required=False)
+
+    def clean_fractional_rate(self):
+        """Ensure Float"""
+        try:
+            return float(self.cleaned_data['fractional_rate'])
+        except ValueError:
+            return 0.5
+
+    def clean_dither_distance(self):
+        """Limit dither distance to values between 0 and 60 arcsec."""
+        if not self.cleaned_data['dither_distance'] or self.cleaned_data['dither_distance'] < 0:
+            return 10
+        if self.cleaned_data['dither_distance'] > 60:
+            return 60
+        return self.cleaned_data['dither_distance']
 
     def clean_exp_length(self):
         if not self.cleaned_data['exp_length'] or self.cleaned_data['exp_length'] < 0.1:
@@ -343,6 +377,11 @@ class ScheduleBlockForm(forms.Form):
                 raise forms.ValidationError("Scheduling Window cannot end before it begins without breaking causality. Please Fix.")
         return cleaned_data
 
+    def __init__(self, *args, **kwargs):
+        self.calibsource_list = kwargs.pop('calibsource_list', None)
+        super(ScheduleBlockForm, self).__init__(*args, **kwargs)
+        self.fields['calibsource_list'].choices = ANALOG_OPTIONS
+
 
 class ScheduleSpectraForm(forms.Form):
     proposal_code = forms.ChoiceField(required=True)
@@ -412,3 +451,31 @@ class SpectroFeasibilityForm(forms.Form):
         # Set default SFU value of 70; replace with value from fetch if it isn't None
         self.fields['sfu'].initial = 70.0
         self.fields['sfu'].initial = self.fields['sfu'].initial if sfu_values[1] is None else sfu_values[1].value
+
+
+class AddTargetForm(forms.Form):
+    origin = forms.ChoiceField(choices=ORIGINS, widget=forms.HiddenInput())
+    target_name = forms.CharField(label="Enter target to add...", max_length=30, required=True, widget=forms.TextInput(attrs={'size': '20'}),
+                             error_messages={'required': _(u'Target name is required')})
+
+
+class AddPeriodForm(forms.Form):
+    period = forms.FloatField(label="Period", initial=None, required=True, widget=forms.DateTimeInput(attrs={'style': 'width: 75px;'}))
+    error = forms.FloatField(label="Error", initial=0.0, required=False, widget=forms.DateTimeInput(attrs={'style': 'width: 75px;'}))
+    quality = forms.ChoiceField(required=False, choices=LC_QUALITIES)
+    notes = forms.CharField(label="Notes", required=False, widget=forms.DateTimeInput(attrs={'style': 'width: 275px;'}))
+    preferred = forms.BooleanField(initial=False, required=False)
+
+    def clean(self):
+        cleaned_data = super(AddPeriodForm, self).clean()
+        period = self.cleaned_data.get('period', None)
+        error = self.cleaned_data.get('error', None)
+        if period and period <= 0:
+            raise forms.ValidationError("Please enter a positive number for Period.")
+        if error and error < 0:
+            raise forms.ValidationError("Please enter a positive number, zero, or leave Error blank.")
+
+
+class UpdateAnalysisStatusForm(forms.Form):
+    update_body = forms.ChoiceField(required=False, choices=[])
+    status = forms.ChoiceField(required=False, choices=STATUS_CHOICES)

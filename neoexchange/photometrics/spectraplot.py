@@ -59,7 +59,7 @@ def get_x_units(x_data):
     return wavelength
 
 
-def get_y_units(y_data, filename):
+def get_y_units(y_data, filename, y_error=[]):
     """finds flux/reflectance units
        inputs: y_data, spectrum file
        outputs: scaled flux with Units
@@ -81,8 +81,10 @@ def get_y_units(y_data, filename):
         y_units = u.erg/(u.cm**2)/u.s/u.AA
 
     yyy = np.array(y_data)
+    err = np.array(y_error)
     flux = ((yyy / y_factor) * y_units)
-    return flux
+    error = ((err / y_factor) * y_units)
+    return flux, error
 
 
 def pull_data_from_text(spectra):
@@ -121,7 +123,7 @@ def pull_data_from_text(spectra):
             continue
 
     wavelength = get_x_units(xxx)
-    flux = get_y_units(yyy, spectra)
+    flux, err = get_y_units(yyy, spectra, err)
     return wavelength, flux, err
 
 
@@ -129,23 +131,24 @@ def pull_data_from_spectrum(spectra):
     """Extract spectroscopy data from fits files.
         Return wavelength in Angstroms, flux with units.
         Return Header."""
-    file = default_storage.open(spectra)
     try:
+        file = default_storage.open(spectra)
         hdul = fits.open(file)
-    except FileNotFoundError:
-        print("Cannot find file {}".format(file))
-        return None, None, None
+    except FileNotFoundError as e:
+        logger.warning(e)
+        return None, None, None, None
 
     data = hdul[0].data
     hdr = hdul[0].header
 
     yyy = data[0][0]
+    err = data[3][0]
     w = WCS(hdr, naxis=1, relax=False, fix=False)
     lam = w.wcs_pix2world(np.arange(len(yyy)), 0)[0]
 
     wavelength = get_x_units(lam)
-    flux = get_y_units(yyy, spectra)
-    return wavelength, flux, hdr
+    flux, error = get_y_units(yyy, spectra, err)
+    return wavelength, flux, hdr, error
 
 
 def read_mean_tax():
@@ -175,37 +178,56 @@ def spectrum_plot(spectra, data_set='', analog=None, offset=0):
     """Sets up X/Y plottable data from spectroscopic input.
         Creates Reflectance Spectra if analog given.
         Otherwise clips and normalizes spectrum.
+        input:
+            spectra: The input spectrum (path to fits file)
+            data_set: A Name, Title, or Description of the data
+            analog: The input comparison spectrum (path to fits file
+            offset: interger used as a linear offest for the y values of the final result. Useful for spreading out
+             multiple datasets to be plotted on the same plot. (physical offset = 0.2*X where X is int given here.)
         Returns:
             data_set: data label
             y_clipped: normalized and truncated flux/reflectance values
             x_clipped: truncated wavelength values"""
 
     windows = ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']
-    spec_x, spec_y, spec_header = pull_data_from_spectrum(spectra)
+    spec_x, spec_y, spec_header, spec_error = pull_data_from_spectrum(spectra)
     if spec_y is None:
-        return data_set, None, None
+        return data_set, None, None, None
 
     box = 100
     if analog:
-        analog_x, analog_y, analog_header = pull_data_from_spectrum(analog)
+        analog_x, analog_y, analog_header, analog_error = pull_data_from_spectrum(analog)
         if analog_y is None:
             yyy = spec_y
+            yerr = spec_error
             analog = None
         else:
-
             spec_y_sm = smooth(spec_y, box, windows[1])
+            spec_er_sm = smooth(spec_error, box, windows[1])
             analog_y_sm = smooth(analog_y, box, windows[1])
+            analog_er_sm = smooth(analog_error, box, windows[1])
             interpolation_function = interpolate.interp1d(analog_x, analog_y_sm, kind='cubic', fill_value='extrapolate')
+            err_interp_function = interpolate.interp1d(analog_x, analog_er_sm, kind='cubic', fill_value='extrapolate')
             shifted_analog_flux = interpolation_function(spec_x)
+            shifted_analog_err = err_interp_function(spec_x)
             yyy = spec_y_sm / shifted_analog_flux
+            yerr = np.sqrt((spec_er_sm / spec_y_sm) ** 2 + (shifted_analog_err / shifted_analog_flux) ** 2) * abs(yyy)
     else:
         yyy = spec_y
+        yerr = spec_error
 
     if not data_set:
+        if spec_header['ROTMODE'].upper() == 'VFLOAT':
+            slit_fig = '|'
+        else:
+            slit_fig = '/'
+        if spec_header['APERWID'] == 6.0:
+            slit_fig += slit_fig
         if analog:
             data_set = "{} -- {} -- {}".format(spec_header['OBJECT'], analog_header['OBJECT'], spec_header['DAY-OBS'])
         else:
-            data_set = "{} -- {}".format(spec_header['OBJECT'], spec_header['DAY-OBS'])
+            data_set = "{} -- {} ({}) [ {} ]".format(spec_header['OBJECT'], spec_header['DAY-OBS'],
+                                                     round(spec_header['AIRMASS'], 3), slit_fig)
     elif data_set.upper() == 'NONE':
         data_set = ''
 
@@ -222,13 +244,15 @@ def spectrum_plot(spectra, data_set='', analog=None, offset=0):
     # clip ends off spectrum
     y_clipped = np.take(smoothy, np.argwhere((lower_wave < xxx) & (xxx < upper_wav)).flatten())
     x_clipped = np.take(xxx, np.argwhere((lower_wave < xxx) & (xxx < upper_wav)).flatten())
+    err_clipped = np.take(yerr, np.argwhere((lower_wave < xxx) & (xxx < upper_wav)).flatten())
 
     # normalize to 5500 Angstroms
     find_g = np.take(smoothy, np.argwhere((5400*u.AA < xxx) & (xxx < 5600*u.AA)).flatten())
-    y_clipped /= np.mean(find_g)
-    y_clipped += 0.2*offset
+    y_norm = y_clipped / np.mean(find_g)
+    err_norm = err_clipped / np.mean(find_g)
+    y_norm += 0.2*offset
 
-    return data_set, y_clipped, x_clipped
+    return data_set, y_norm, x_clipped, err_norm
 
 
 def smooth(x, window_len=11, window='hanning'):

@@ -21,6 +21,7 @@ from django.urls import reverse
 
 from core.models import Candidate
 
+
 class TestBlockCandidates(FunctionalTest):
 
     def setUp(self):

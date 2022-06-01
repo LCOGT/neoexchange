@@ -71,7 +71,9 @@ class SourceMeasurement(models.Model):
 
         microday = True
 
-        if self.frame.extrainfo:
+        valid_MPC_notes = ['A', 'P', 'e', 'C', 'B', 'T', 'M', 'V', 'v', 'R', 'r', 'S', 's',\
+            'c', 'E', 'O', 'H', 'N', 'n', 'D', 'Z', 'W', 'w', 'Q', 'q', 'T', 't']
+        if self.frame.extrainfo in valid_MPC_notes:
             obs_type = self.frame.extrainfo
             if obs_type == 'A':
                 microday = False
@@ -140,12 +142,12 @@ class SourceMeasurement(models.Model):
         rms_available = False
         if self.err_obs_ra and self.err_obs_dec and self.err_obs_mag:
             rms_available = True
-            rms_tbl_fmt = '%7s|%-11s|%8s|%4s|%-4s|%-23s|%11s|%11s|%5s|%6s|%8s|%-5s|%6s|%4s|%8s|%6s|%6s|%6s|%-5s|%-s'
+            rms_tbl_fmt = '%-7s|%-11s|%-8s|%-4s|%-4s|%-23s|%-11s|%-11s|%-5s|%-6s|%-8s|%-5s|%-6s|%-4s|%-8s|%-6s|%-6s|%-6s|%-5s|%-s'
             tbl_hdr = rms_tbl_fmt % ('permID ', 'provID', 'trkSub  ', 'mode', 'stn', 'obsTime', \
                 'ra', 'dec', 'rmsRA', 'rmsDec', 'astCat', 'mag', 'rmsMag', 'band', 'photCat', \
                 'photAp', 'logSNR', 'seeing', 'notes', 'remarks')
         else:
-            tbl_fmt = '%7s|%-11s|%8s|%4s|%-4s|%-23s|%11s|%11s|%8s|%-5s|%4s|%8s|%-5s|%-s'
+            tbl_fmt = '%-7s|%-11s|%-8s|%-4s|%-4s|%-23s|%-11s|%-11s|%-8s|%-5s|%-4s|%-8s|%-5s|%-s'
             tbl_hdr = tbl_fmt % ('permID ', 'provID', 'trkSub  ', 'mode', 'stn', 'obsTime', \
                 'ra'.ljust(11), 'dec'.ljust(11), 'astCat', 'mag', 'band', 'photCat', 'notes', 'remarks')
         return tbl_hdr
@@ -292,14 +294,14 @@ class CatalogSources(models.Model):
         return fwhm
 
     def make_mu_max(self):
-        pixel_scale = get_sitecam_params(self.frame.sitecode)[3]
+        pixel_scale = get_sitecam_params(self.frame.sitecode)['pixel_scale']
         mu_max = 0.0
         if self.flux_max > 0.0:
             mu_max = (-2.5*log10(self.flux_max/pixel_scale**2))+self.frame.zeropoint
         return mu_max
 
     def make_mu_threshold(self):
-        pixel_scale = get_sitecam_params(self.frame.sitecode)[3]
+        pixel_scale = get_sitecam_params(self.frame.sitecode)['pixel_scale']
         mu_threshold = 0.0
         if self.threshold > 0.0:
             mu_threshold = (-2.5*log10(self.threshold/pixel_scale**2))+self.frame.zeropoint

@@ -380,3 +380,115 @@ class TestMakeDataDir(TestCase):
         outpath = make_data_dir(data_dir, frame)
 
         self.assertEqual(expected_out_dir, outpath)
+
+    def test_tar_file_new(self):
+        # In late 2021, the filename format if FLOYDS tarballs changed to include the name
+        frame = {'id': 48976660,
+                 'basename': 'LCOEngineering_350326886_0_fts_20220305_59644',
+                 'observation_date': '2022-03-05T07:55:48.533000Z',
+                 'observation_day': '2022-03-04',
+                 'proposal_id': 'LCOEngineering',
+                 'instrument_id': 'en05',
+                 'target_name': 'HD 30455',
+                 'reduction_level': 90,
+                 'site_id': 'coj',
+                 'telescope_id': '2m0a',
+                 'exposure_time': 34.974,
+                 'primary_optical_element': 'air',
+                 'public_date': '3020-07-06T07:55:48.533000Z',
+                 'configuration_type': 'SPECTRUM',
+                 'observation_id': 350326886,
+                 'request_id': 2805122,
+                 'version_set': [{'id': 50661630,
+                   'key': 'nxf1KWGyG2i7LEkWPnEVBEiExUpIIPcz',
+                   'md5': '01149de0f5a1ce4473f9161cfa131468',
+                   'extension': '.tar.gz',
+                   'url': 'https://archive-lco-global.s3.amazonaws.com/ogg/en06/20220304/processed/LCOEngineering_350326886_0_fts_20220305_59644.tar.gz?versionId=nxf1KWGyG2i7LEkWPnEVBEiExUpIIPcz&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIA6FT4CXR464A32PW2%2F20220309%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20220309T202632Z&X-Amz-Expires=172800&X-Amz-SignedHeaders=host&X-Amz-Signature=c47681e9ccc6caca078a8597d1917b5d9c657f55b8411bfc72173cf278e7ac1a',
+                   'created': '2022-03-05T19:08:15.896891Z'}],
+                 'url': 'https://archive-lco-global.s3.amazonaws.com/ogg/en06/20220304/processed/LCOEngineering_350326886_0_fts_20220305_59644.tar.gz?versionId=nxf1KWGyG2i7LEkWPnEVBEiExUpIIPcz&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIA6FT4CXR464A32PW2%2F20220309%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20220309T202632Z&X-Amz-Expires=172800&X-Amz-SignedHeaders=host&X-Amz-Signature=c47681e9ccc6caca078a8597d1917b5d9c657f55b8411bfc72173cf278e7ac1a',
+                 'filename': 'LCOEngineering_350326886_0_fts_20220305_59644.tar.gz',
+                 'DATE_OBS': '2022-03-05T07:55:48.533000Z',
+                 'DAY_OBS': '2022-03-04',
+                 'PROPID': 'LCOEngineering',
+                 'INSTRUME': 'en05',
+                 'OBJECT': 'HD 30455',
+                 'RLEVEL': 90,
+                 'SITEID': 'coj',
+                 'TELID': '2m0a',
+                 'EXPTIME': 34.974,
+                 'FILTER': 'air',
+                 'L1PUBDAT': '3020-07-06T07:55:48.533000Z',
+                 'OBSTYPE': 'SPECTRUM',
+                 'BLKUID': 350326886,
+                 'REQNUM': 2805122,
+                 'area': {'type': 'Polygon',
+                  'coordinates': [[[72.23535704766073, 18.681248097527284],
+                    [72.23101981215292, 18.728926981668582],
+                    [72.02631151694843, 18.712107547098174],
+                    [72.03070600327044, 18.664433369406606],
+                    [72.23535704766073, 18.681248097527284]]]},
+                 'related_frames': [48964118]}
+
+
+        data_dir = 'foo/bar'
+
+        expected_out_dir = data_dir + '/20220305'
+
+        outpath = make_data_dir(data_dir, frame)
+
+        self.assertEqual(expected_out_dir, outpath)
+
+    def test_ogg_tar_file_new(self):
+        frame = {'id': 48976660,
+                 'basename': 'LCOEngineering_350326886_0_ftn_20220305_59644',
+                 'observation_date': '2022-03-05T07:55:48.533000Z',
+                 'observation_day': '2022-03-04',
+                 'proposal_id': 'LCOEngineering',
+                 'instrument_id': 'en06',
+                 'target_name': 'HD 30455',
+                 'reduction_level': 90,
+                 'site_id': 'ogg',
+                 'telescope_id': '2m0a',
+                 'exposure_time': 34.974,
+                 'primary_optical_element': 'air',
+                 'public_date': '3020-07-06T07:55:48.533000Z',
+                 'configuration_type': 'SPECTRUM',
+                 'observation_id': 350326886,
+                 'request_id': 2805122,
+                 'version_set': [{'id': 50661630,
+                   'key': 'nxf1KWGyG2i7LEkWPnEVBEiExUpIIPcz',
+                   'md5': '01149de0f5a1ce4473f9161cfa131468',
+                   'extension': '.tar.gz',
+                   'url': 'https://archive-lco-global.s3.amazonaws.com/ogg/en06/20220304/processed/LCOEngineering_350326886_0_ftn_20220305_59644.tar.gz?versionId=nxf1KWGyG2i7LEkWPnEVBEiExUpIIPcz&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIA6FT4CXR464A32PW2%2F20220309%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20220309T202632Z&X-Amz-Expires=172800&X-Amz-SignedHeaders=host&X-Amz-Signature=c47681e9ccc6caca078a8597d1917b5d9c657f55b8411bfc72173cf278e7ac1a',
+                   'created': '2022-03-05T19:08:15.896891Z'}],
+                 'url': 'https://archive-lco-global.s3.amazonaws.com/ogg/en06/20220304/processed/LCOEngineering_350326886_0_ftn_20220305_59644.tar.gz?versionId=nxf1KWGyG2i7LEkWPnEVBEiExUpIIPcz&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIA6FT4CXR464A32PW2%2F20220309%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20220309T202632Z&X-Amz-Expires=172800&X-Amz-SignedHeaders=host&X-Amz-Signature=c47681e9ccc6caca078a8597d1917b5d9c657f55b8411bfc72173cf278e7ac1a',
+                 'filename': 'LCOEngineering_350326886_0_ftn_20220305_59644.tar.gz',
+                 'DATE_OBS': '2022-03-05T07:55:48.533000Z',
+                 'DAY_OBS': '2022-03-04',
+                 'PROPID': 'LCOEngineering',
+                 'INSTRUME': 'en06',
+                 'OBJECT': 'HD 30455',
+                 'RLEVEL': 90,
+                 'SITEID': 'ogg',
+                 'TELID': '2m0a',
+                 'EXPTIME': 34.974,
+                 'FILTER': 'air',
+                 'L1PUBDAT': '3020-07-06T07:55:48.533000Z',
+                 'OBSTYPE': 'SPECTRUM',
+                 'BLKUID': 350326886,
+                 'REQNUM': 2805122,
+                 'area': {'type': 'Polygon',
+                  'coordinates': [[[72.23535704766073, 18.681248097527284],
+                    [72.23101981215292, 18.728926981668582],
+                    [72.02631151694843, 18.712107547098174],
+                    [72.03070600327044, 18.664433369406606],
+                    [72.23535704766073, 18.681248097527284]]]},
+                 'related_frames': [48964118]}
+
+        data_dir = 'foo/bar'
+
+        expected_out_dir = data_dir + '/20220304'
+
+        outpath = make_data_dir(data_dir, frame)
+
+        self.assertEqual(expected_out_dir, outpath)

@@ -6,16 +6,23 @@ Lightcurve for object: {{body.current_name}}
 
 {% endblock %}
 
-<!-- Import Bokeh CSS for plotting (UPDATE RELEASE NUMBER IF BOKEH IS UPDATED) -->
-{% block last-css-content %}
-<link rel="stylesheet" href={{css_path}}>
-{% endblock %}
 <!-- Import Bokeh Script for plotting (UPDATE RELEASE NUMBER IF BOKEH IS UPDATED) -->
 {% block script-content %}
-<script src={{js_path}}></script>
-<script src={{widget_path}}></script>
-<script src={{table_path}}></script>
+<script src={{js_path}}  crossorigin="anonymous"></script>
+<script src={{widget_path}}  crossorigin="anonymous"></script>
+<script src={{table_path}}  crossorigin="anonymous"></script>
 {{ the_script|safe }}
+
+<script type="text/javascript">
+$(document).ready(function(){
+    // Initially hide the period form
+    $('#period_adder').hide();
+    $('.collapsible').click(function(event){
+      $('#chevron').toggleClass('fa fa-chevron-down fa fa-chevron-up');
+      $('.content').toggle();
+    });
+});
+</script>
 {% endblock %}
 
 {% block bodyclass %}page{% endblock %}
@@ -29,12 +36,96 @@ Lightcurve for object: {{body.current_name}}
 
 
 {% block main-content %}
+
 <!-- Main body -->
 <div class="container" id="main">
     <!-- Import the javascript and div created by Bokeh for plots -->
     {% block graphic %}
         {{ lc_div|safe }}
     {% endblock %}
+</div>
 
+<div class="container">
+    <h5 class="section-title">Known Periods</h5>
+    <table id="id_periods" class="datatable">
+        <thead>
+            <tr>
+                <th class="list_title">
+                        <span class="sortable" id="Rank"></span>
+                </th>
+                <th class="list_title">
+                        <span class="sortable" id="period">Period [hours]</span>
+                </th>
+                <th class="list_project">
+                        <span class="sortable" id="p_source">Source</span>
+                </th>
+                <th class="list_project">
+                        <span class="sortable" id="p_notes">Notes</span>
+                </th>
+                <th class="list_project">
+                        <span class="sortable" id="p_update">Date</span>
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for period in period_list %}
+                <tr class="{% cycle 'odd' 'even' %}">
+                    <td data-label="Rank">{{forloop.counter}}</td>
+                    <td data-label="period">{{period.value}}
+                        {% if period.error %}
+                            &plusmn;{{period.error}}
+                        {% endif %}
+                        {% if period.quality is not None %}
+                            {{period.quality_short}}
+                        {% endif %}
+                    </td>
+                    <td data-label="p_source">
+                        <div class="long-row">
+                            {{period.reference}}
+                        </div>
+                    </td>
+                    <td data-label="p_notes">
+                        <div class="long-row">
+                            {{period.notes}}
+                        </div>
+                    </td>
+                    <td data-label="p_update">{{period.update_time.date}}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+    </table>
+    {% if request.user.is_authenticated and perms.core.add_body %}
+    <div class="content" id="period_adder">
+        <form action="{% url 'lc_plot' body.pk %}" method="POST" style="display:inline-block;">
+            {% csrf_token %}
+            <div class="inline-fields">
+                <div class="compact-field">
+                    <input type="submit" class="button button-primary" title="Add Neox Period" value="+" id="add_new_period-btn" name="update" style="font-size: larger;">
+                </div>
+                <div class="compact-field">
+                    {{form.period}}<label>Period (h)</label>
+                </div>
+                <div class="compact-field">
+                    {{form.error}}<label>Error</label>
+                </div>
+                <div class="compact-field">
+                    {{form.quality}}<label>Quality</label>
+                </div>
+                <div class="compact-field">
+                    {{form.notes}}<label>Notes</label>
+                </div>
+                <div class="compact-field">
+                    {{form.preferred}}<label>(Preferred)</label>
+                </div>
+            </div>
+            {% for key, error in form.errors.items %}
+                <div class="messages error">
+                    {{ error }}
+                </div>
+            {% endfor %}
+        </form>
+    </div>
+    <button type="button" class="collapsible" id="arrow"><i class="fa fa-chevron-down" id="chevron"></i></button>
+    {% endif %}
 </div>
 {% endblock %}

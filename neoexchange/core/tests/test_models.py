@@ -1410,6 +1410,34 @@ class TestBlock(TestCase):
 
         self.assertEqual(self.staticsrc.current_name(), block.current_name())
 
+    def test_where_observed(self):
+
+        from astrometrics.site_config import valid_telescope_codes
+
+        self.params_imaging1['num_observed'] = 1
+        block = Block.objects.create(**self.params_imaging1)
+
+        params = {
+                    'instrument'    : 'fa99',
+                    'filter'        : 'w',
+                    'filename'      : 'cpt1m012-fa99-20150713-0130-e91.fits',
+                    'exptime'       : 40.0,
+                    'midpoint'      : '2015-07-13 21:09:51',
+                    'block'         : block,
+                    'frametype'     : Frame.BANZAI_RED_FRAMETYPE
+                 }
+        frame = Frame.objects.create(**params)
+
+        for site in valid_telescope_codes:
+            # Don't test generic sites
+            if site[0].isdigit() is False:
+                frame.sitecode = site
+                frame.save()
+                obs_string = block.where_observed()
+                self.assertNotEqual('', obs_string)
+                self.assertNotIn('Unknown LCO site', obs_string)
+
+
 class TestFrame(TestCase):
 
     def setUp(self):
@@ -1904,6 +1932,18 @@ class TestSourceMeasurement(TestCase):
                  }
         self.test_frame_stack = Frame.objects.create(**frame_params)
 
+        frame_params = { 'sitecode'      : 'F65',
+                         'instrument'    : 'ep02',
+                         'filter'        : 'rp',
+                         'frametype'     : Frame.BANZAI_RED_FRAMETYPE,
+                         'extrainfo'     : 'MUSCAT_FAST',
+                         'midpoint'      : datetime(2021, 11,12, 6, 10, 49, int(0.9*1e6)),
+                         'block'         : self.test_block,
+                         'astrometric_catalog' : "GAIA-DR2",
+                         'photometric_catalog' : "GAIA-DR2",
+                     }
+        self.test_frame_extrainfo = Frame.objects.create(**frame_params)
+
         frame_params = {  'sitecode'      : 'C51',
                     'filter'        : 'R',
                     'frametype'     : Frame.SATELLITE_FRAMETYPE,
@@ -1986,6 +2026,21 @@ class TestSourceMeasurement(TestCase):
 
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '     N999r0q  C2015 07 13.88184000 30 00.00 -00 30 00.0          21.5 RV     K93'
+        mpc_line = measure.format_mpc_line(include_catcode=True)
+        self.assertEqual(expected_mpcline, mpc_line)
+
+    def test_mpc_extrainfo(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame_extrainfo,
+                            'obs_ra' : 7.5,
+                            'obs_dec' : -00.5,
+                            'obs_mag' : 21.5,
+                            'astrometric_catalog' : "GAIA-DR2",
+                            'photometric_catalog' : "GAIA-DR2",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_mpcline = '     N999r0q  C2021 11 12.25752200 30 00.00 -00 30 00.0          21.5 GV     F65'
         mpc_line = measure.format_mpc_line(include_catcode=True)
         self.assertEqual(expected_mpcline, mpc_line)
 

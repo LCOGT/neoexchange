@@ -83,8 +83,13 @@ class MockDate(date, metaclass=MockDateTimeType):
 
 
 def mock_fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser"):
-    logger.warning("Page retrieval failed because this is a test and no page was attempted.")
-    return None
+    page = None
+    if '191P' in url:
+        with open(os.path.join('astrometrics', 'tests', 'test_mpcdb_Comet191P.html'), 'r') as test_fh:
+            page = BeautifulSoup(test_fh, "html.parser")
+    else:
+        logger.warning("Page retrieval failed because this is a test and no page was attempted.")
+    return page
 
 
 def mock_fetchpage_and_make_soup_pccp(url, fakeagent=False, dbg=False, parser="html.parser"):
@@ -382,10 +387,11 @@ def mock_check_request_status_cadence(tracking_num):
 
     return status
 
+
 # Create Mocked output to image request from Valhalla.
 # Header URL and Reqnum have been changed for easy tracking.
 # no images for last block
-def mock_check_for_archive_images(request_id, obstype='EXPOSE'):
+def mock_check_for_archive_images(request_id, obstype='EXPOSE', obj=''):
     result_images_out = [{u'BLKUID': 226770074,
                           u'DATE_OBS': u'2018-02-27T04:10:51.702000Z',
                           u'EXPTIME': u'10.238',
@@ -996,6 +1002,7 @@ def mock_check_result_status(tracking_num):
                       'submitter': 'neox_robot'}
     return result_status_out
 
+
 def mock_check_request_status_spectro(tracking_num):
     result_status_out = {'created': '2018-01-10T22:58:32.524744Z',
                          'name': '8_F65-20180111_spectra',
@@ -1006,163 +1013,272 @@ def mock_check_request_status_spectro(tracking_num):
                          'operator': 'SINGLE',
                          'proposal': 'LCOEngineering',
                          'requests': [{'acceptability_threshold': 90.0,
-                           'location': {'site': 'ogg', 'telescope_class': '2m0'},
-                           'configurations': [{
-                              'id': 3126189,
-                              'constraints': {'max_airmass': 1.74,
-                                              'min_lunar_distance': 30.0,
-                                              'max_lunar_phase': None,
-                                              'max_seeing': None,
-                                              'min_transparency': None,
-                                              'extra_params': {}
-                                              },
-                              'instrument_configs': [{'optical_elements': {'slit': 'slit_2.0as'},
-                                                      'mode': 'default',
-                                                      'exposure_time': 20.0,
-                                                      'exposure_count': 1,
-                                                      'bin_x': 1,
-                                                      'bin_y': 1,
-                                                      'rotator_mode': 'VFLOAT',
-                                                      'extra_params': {}
-                                                    }],
-                              'acquisition_config': {'mode': 'OFF',
-                                                      'exposure_time': 5.0,
-                                                      'extra_params': {'acquire_radius': 5.0}
-                                                    },
-                              'guiding_config': { 'optional': False,
-                                                  'mode': 'OFF',
-                                                  'optical_elements': {},
-                                                  'exposure_time': 5.0,
-                                                  'extra_params': {}
-                                                },
-                              'target': {
-                                  'type': 'ORBITAL_ELEMENTS',
-                                  'name': '8 Flora',
-                                  'epochofel': 58787.0,
-                                  'orbinc': 5.88696,
-                                  'longascnode': 110.88930,
-                                  'eccentricity': 0.1564993,
-                                  'scheme': 'MPC_MINOR_PLANET',
-                                  'argofperih': 285.28745,
-                                  'meandist': 2.2017642,
-                                  'meananom': 194.883,
-                                  'extra_params': {
-                                      'v_magnitude': 10.0
-                                  }
-                              },
-                             'instrument_name': '2M0-FLOYDS-SCICAM',
-                             'type': 'LAMP_FLAT',
-                             'extra_params': {},
-                             'priority': 1
-                           },
-                           {
-                              'id': 3126190,
-                              'constraints': {'max_airmass': 1.74,
-                                              'min_lunar_distance': 30.0,
-                                              'max_lunar_phase': None,
-                                              'max_seeing': None,
-                                              'min_transparency': None,
-                                              'extra_params': {}
-                                              },
-                              'instrument_configs': [{'optical_elements': {'slit': 'slit_2.0as'},
-                                                      'mode': 'default',
-                                                      'exposure_time': 60.0,
-                                                      'exposure_count': 1,
-                                                      'bin_x': 1,
-                                                      'bin_y': 1,
-                                                      'rotator_mode': 'VFLOAT',
-                                                      'extra_params': {}
-                                                    }],
-                              'acquisition_config': {'mode': 'OFF',
-                                                      'exposure_time': 5.0,
-                                                      'extra_params': {'acquire_radius': 5.0}
-                                                    },
-                              'guiding_config': { 'optional': False,
-                                                  'mode': 'OFF',
-                                                  'optical_elements': {},
-                                                  'exposure_time': 5.0,
-                                                  'extra_params': {}
-                                                },
-                              'target': {
-                                  'type': 'ORBITAL_ELEMENTS',
-                                  'name': '8 Flora',
-                                  'epochofel': 58787.0,
-                                  'orbinc': 5.88696,
-                                  'longascnode': 110.88930,
-                                  'eccentricity': 0.1564993,
-                                  'scheme': 'MPC_MINOR_PLANET',
-                                  'argofperih': 285.28745,
-                                  'meandist': 2.2017642,
-                                  'meananom': 194.883,
-                                  'extra_params': {
-                                      'v_magnitude': 10.0
-                                  }
-                              },
-                             'instrument_name': '2M0-FLOYDS-SCICAM',
-                             'type': 'ARC',
-                             'extra_params': {},
-                             'priority': 2
-                          },
-                           {
-                              'id': 3126191,
-                              'constraints': {'max_airmass': 1.15,
-                                              'min_lunar_distance': 30.0,
-                                              'max_lunar_phase': None,
-                                              'max_seeing': None,
-                                              'min_transparency': None,
-                                              'extra_params': {}
-                                              },
-                              'instrument_configs': [{'optical_elements': {'slit': 'slit_2.0as'},
-                                                      'mode': 'default',
-                                                      'exposure_time': 300.0,
-                                                      'exposure_count': 1,
-                                                      'bin_x': 1,
-                                                      'bin_y': 1,
-                                                      'rotator_mode': 'VFLOAT',
-                                                      'extra_params': {}
-                                                    }],
-                              'acquisition_config': {'mode': 'OFF',
-                                                      'exposure_time': 5.0,
-                                                      'extra_params': {'acquire_radius': 5.0}
-                                                    },
-                              'guiding_config': { 'optional': False,
-                                                  'mode': 'OFF',
-                                                  'optical_elements': {},
-                                                  'exposure_time': 5.0,
-                                                  'extra_params': {}
-                                                },
-                              'target': {
-                                  'type': 'ORBITAL_ELEMENTS',
-                                  'name': '8 Flora',
-                                  'epochofel': 58787.0,
-                                  'orbinc': 5.88696,
-                                  'longascnode': 110.88930,
-                                  'eccentricity': 0.1564993,
-                                  'scheme': 'MPC_MINOR_PLANET',
-                                  'argofperih': 285.28745,
-                                  'meandist': 2.2017642,
-                                  'meananom': 194.883,
-                                  'extra_params': {
-                                      'v_magnitude': 10.0
-                                  }
-                              },
-                              'instrument_name': '2M0-FLOYDS-SCICAM',
-                              'type': 'SPECTRUM',
-                              'extra_params': {},
-                              'priority': 3
-                          }],
-                           'created': '2018-01-10T22:58:32.526661Z',
-                           'duration': 845,
-                           'id': 1391169,
-                           'modified': '2018-01-11T06:49:53.667734Z',
-                           'observation_note': 'Submitted by NEOexchange (by tlister@lcogt.net)',
-                           'state': 'COMPLETED',
-                           'windows': [{'end': '2018-01-11T15:50:00Z',
-                                        'start': '2018-01-11T05:00:00Z'}]
-                         }],
+                                       'location': {'site': 'ogg', 'telescope_class': '2m0'},
+                                       'configurations': [{
+                                           'id': 3126189,
+                                           'constraints': {'max_airmass': 1.74,
+                                                           'min_lunar_distance': 30.0,
+                                                           'max_lunar_phase': None,
+                                                           'max_seeing': None,
+                                                           'min_transparency': None,
+                                                           'extra_params': {}
+                                                           },
+                                           'instrument_configs': [{'optical_elements': {'slit': 'slit_2.0as'},
+                                                                   'mode': 'default',
+                                                                   'exposure_time': 20.0,
+                                                                   'exposure_count': 1,
+                                                                   'bin_x': 1,
+                                                                   'bin_y': 1,
+                                                                   'rotator_mode': 'VFLOAT',
+                                                                   'extra_params': {}
+                                                                   }],
+                                           'acquisition_config': {'mode': 'OFF',
+                                                                  'exposure_time': 5.0,
+                                                                  'extra_params': {'acquire_radius': 5.0}
+                                                                  },
+                                           'guiding_config': {'optional': False,
+                                                              'mode': 'OFF',
+                                                              'optical_elements': {},
+                                                              'exposure_time': 5.0,
+                                                              'extra_params': {}
+                                                              },
+                                           'target': {'type': 'ORBITAL_ELEMENTS',
+                                                      'name': '8 Flora',
+                                                      'epochofel': 58787.0,
+                                                      'orbinc': 5.88696,
+                                                      'longascnode': 110.88930,
+                                                      'eccentricity': 0.1564993,
+                                                      'scheme': 'MPC_MINOR_PLANET',
+                                                      'argofperih': 285.28745,
+                                                      'meandist': 2.2017642,
+                                                      'meananom': 194.883,
+                                                      'extra_params': {'v_magnitude': 10.0}
+                                                      },
+                                           'instrument_name': '2M0-FLOYDS-SCICAM',
+                                           'type': 'LAMP_FLAT',
+                                           'extra_params': {},
+                                           'priority': 1},
+                                           {'id': 3126190,
+                                            'constraints': {'max_airmass': 1.74,
+                                                            'min_lunar_distance': 30.0,
+                                                            'max_lunar_phase': None,
+                                                            'max_seeing': None,
+                                                            'min_transparency': None,
+                                                            'extra_params': {}},
+                                            'instrument_configs': [{'optical_elements': {'slit': 'slit_2.0as'},
+                                                                    'mode': 'default',
+                                                                    'exposure_time': 60.0,
+                                                                    'exposure_count': 1,
+                                                                    'bin_x': 1,
+                                                                    'bin_y': 1,
+                                                                    'rotator_mode': 'VFLOAT',
+                                                                    'extra_params': {}
+                                                                    }],
+                                            'acquisition_config': {'mode': 'OFF',
+                                                                   'exposure_time': 5.0,
+                                                                   'extra_params': {'acquire_radius': 5.0}
+                                                                   },
+                                            'guiding_config': {'optional': False,
+                                                               'mode': 'OFF',
+                                                               'optical_elements': {},
+                                                               'exposure_time': 5.0,
+                                                               'extra_params': {}
+                                                               },
+                                            'target': {'type': 'ORBITAL_ELEMENTS',
+                                                       'name': '8 Flora',
+                                                       'epochofel': 58787.0,
+                                                       'orbinc': 5.88696,
+                                                       'longascnode': 110.88930,
+                                                       'eccentricity': 0.1564993,
+                                                       'scheme': 'MPC_MINOR_PLANET',
+                                                       'argofperih': 285.28745,
+                                                       'meandist': 2.2017642,
+                                                       'meananom': 194.883,
+                                                       'extra_params': {'v_magnitude': 10.0}
+                                                       },
+                                            'instrument_name': '2M0-FLOYDS-SCICAM',
+                                            'type': 'ARC',
+                                            'extra_params': {},
+                                            'priority': 2
+                                            },
+                                           {'id': 3126191,
+                                            'constraints': {'max_airmass': 1.15,
+                                                            'min_lunar_distance': 30.0,
+                                                            'max_lunar_phase': None,
+                                                            'max_seeing': None,
+                                                            'min_transparency': None,
+                                                            'extra_params': {}
+                                                            },
+                                            'instrument_configs': [{'optical_elements': {'slit': 'slit_2.0as'},
+                                                                    'mode': 'default',
+                                                                    'exposure_time': 300.0,
+                                                                    'exposure_count': 1,
+                                                                    'bin_x': 1,
+                                                                    'bin_y': 1,
+                                                                    'rotator_mode': 'VFLOAT',
+                                                                    'extra_params': {}
+                                                                    }],
+                                            'acquisition_config': {'mode': 'OFF',
+                                                                   'exposure_time': 5.0,
+                                                                   'extra_params': {'acquire_radius': 5.0}
+                                                                   },
+                                            'guiding_config': {'optional': False,
+                                                               'mode': 'OFF',
+                                                               'optical_elements': {},
+                                                               'exposure_time': 5.0,
+                                                               'extra_params': {}
+                                                               },
+                                            'target': {'type': 'ORBITAL_ELEMENTS',
+                                                       'name': '8 Flora',
+                                                       'epochofel': 58787.0,
+                                                       'orbinc': 5.88696,
+                                                       'longascnode': 110.88930,
+                                                       'eccentricity': 0.1564993,
+                                                       'scheme': 'MPC_MINOR_PLANET',
+                                                       'argofperih': 285.28745,
+                                                       'meandist': 2.2017642,
+                                                       'meananom': 194.883,
+                                                       'extra_params': {'v_magnitude': 10.0}
+                                                       },
+                                            'instrument_name': '2M0-FLOYDS-SCICAM',
+                                            'type': 'SPECTRUM',
+                                            'extra_params': {},
+                                            'priority': 3},
+                                           {'id': 3126192,
+                                            'constraints': {'max_airmass': 1.74,
+                                                            'min_lunar_distance': 30.0,
+                                                            'max_lunar_phase': None,
+                                                            'max_seeing': None,
+                                                            'min_transparency': None,
+                                                            'extra_params': {}
+                                                            },
+                                            'instrument_configs': [{'optical_elements': {'slit': 'slit_2.0as'},
+                                                                    'mode': 'default',
+                                                                    'exposure_time': 20.0,
+                                                                    'exposure_count': 1,
+                                                                    'bin_x': 1,
+                                                                    'bin_y': 1,
+                                                                    'rotator_mode': 'VFLOAT',
+                                                                    'extra_params': {}
+                                                                    }],
+                                            'acquisition_config': {'mode': 'OFF',
+                                                                   'exposure_time': 5.0,
+                                                                   'extra_params': {'acquire_radius': 5.0}
+                                                                   },
+                                            'guiding_config': {'optional': False,
+                                                               'mode': 'OFF',
+                                                               'optical_elements': {},
+                                                               'exposure_time': 5.0,
+                                                               'extra_params': {}
+                                                               },
+                                            'target': {"name": "HD 154445",
+                                                       "type": "ICRS",
+                                                       "ra": 256.384411918761,
+                                                       "dec": -0.8920663093766,
+                                                       "proper_motion_ra": 3.014,
+                                                       "proper_motion_dec": -0.463,
+                                                       "epoch": 2000,
+                                                       "parallax": 3.7212,
+                                                       'extra_params': {'v_magnitude': 10.0}
+                                                       },
+                                            'instrument_name': '2M0-FLOYDS-SCICAM',
+                                            'type': 'LAMP_FLAT',
+                                            'extra_params': {},
+                                            'priority': 1},
+                                           {'id': 3126193,
+                                            'constraints': {'max_airmass': 1.74,
+                                                            'min_lunar_distance': 30.0,
+                                                            'max_lunar_phase': None,
+                                                            'max_seeing': None,
+                                                            'min_transparency': None,
+                                                            'extra_params': {}},
+                                            'instrument_configs': [{'optical_elements': {'slit': 'slit_2.0as'},
+                                                                    'mode': 'default',
+                                                                    'exposure_time': 60.0,
+                                                                    'exposure_count': 1,
+                                                                    'bin_x': 1,
+                                                                    'bin_y': 1,
+                                                                    'rotator_mode': 'VFLOAT',
+                                                                    'extra_params': {}
+                                                                    }],
+                                            'acquisition_config': {'mode': 'OFF',
+                                                                   'exposure_time': 5.0,
+                                                                   'extra_params': {'acquire_radius': 5.0}
+                                                                   },
+                                            'guiding_config': {'optional': False,
+                                                               'mode': 'OFF',
+                                                               'optical_elements': {},
+                                                               'exposure_time': 5.0,
+                                                               'extra_params': {}
+                                                               },
+                                            'target': {"name": "HD 154445",
+                                                       "type": "ICRS",
+                                                       "ra": 256.384411918761,
+                                                       "dec": -0.8920663093766,
+                                                       "proper_motion_ra": 3.014,
+                                                       "proper_motion_dec": -0.463,
+                                                       "epoch": 2000,
+                                                       "parallax": 3.7212,
+                                                       'extra_params': {'v_magnitude': 10.0}
+                                                       },
+                                            'instrument_name': '2M0-FLOYDS-SCICAM',
+                                            'type': 'ARC',
+                                            'extra_params': {},
+                                            'priority': 2
+                                            },
+                                           {'id': 3126194,
+                                            'constraints': {'max_airmass': 1.15,
+                                                            'min_lunar_distance': 30.0,
+                                                            'max_lunar_phase': None,
+                                                            'max_seeing': None,
+                                                            'min_transparency': None,
+                                                            'extra_params': {}
+                                                            },
+                                            'instrument_configs': [{'optical_elements': {'slit': 'slit_2.0as'},
+                                                                    'mode': 'default',
+                                                                    'exposure_time': 300.0,
+                                                                    'exposure_count': 1,
+                                                                    'bin_x': 1,
+                                                                    'bin_y': 1,
+                                                                    'rotator_mode': 'VFLOAT',
+                                                                    'extra_params': {}
+                                                                    }],
+                                            'acquisition_config': {'mode': 'OFF',
+                                                                   'exposure_time': 5.0,
+                                                                   'extra_params': {'acquire_radius': 5.0}
+                                                                   },
+                                            'guiding_config': {'optional': False,
+                                                               'mode': 'OFF',
+                                                               'optical_elements': {},
+                                                               'exposure_time': 5.0,
+                                                               'extra_params': {}
+                                                               },
+                                            'target': {"name": "HD 154445",
+                                                       "type": "ICRS",
+                                                       "ra": 256.384411918761,
+                                                       "dec": -0.8920663093766,
+                                                       "proper_motion_ra": 3.014,
+                                                       "proper_motion_dec": -0.463,
+                                                       "epoch": 2000,
+                                                       "parallax": 3.7212,
+                                                       'extra_params': {'v_magnitude': 10.0}
+                                                       },
+                                            'instrument_name': '2M0-FLOYDS-SCICAM',
+                                            'type': 'SPECTRUM',
+                                            'extra_params': {},
+                                            'priority': 3}],
+                                       'created': '2018-01-10T22:58:32.526661Z',
+                                       'duration': 1690,
+                                       'id': 1391169,
+                                       'modified': '2018-01-11T06:49:53.667734Z',
+                                       'observation_note': 'Submitted by NEOexchange (by tlister@lcogt.net)',
+                                       'state': 'COMPLETED',
+                                       'windows': [{'end': '2018-01-11T15:50:00Z', 'start': '2018-01-11T05:00:00Z'}]
+                                       }],
                          'state': 'COMPLETED',
                          'submitter': 'tlister@lcogt.net'}
     return result_status_out
+
 
 def mock_check_request_status_null(tracking_num):
     return []
@@ -1268,6 +1384,7 @@ def mock_fetch_archive_frames(auth_header, archive_url, frames=[]):
                   u'OBSTYPE': u'SPECTRUM',
                   u'REQNUM': 1391169,
                   u'RLEVEL': 90,
+                  u'OBJECT': 'N999r0q',
                   u'basename': u'LCOEngineering_0001391169_ftn_20180111_58130',
                   u'filename': u'LCOEngineering_0001391169_ftn_20180111_58130.tar.gz',
                   u'id': 7783593,
@@ -1278,6 +1395,7 @@ def mock_fetch_archive_frames(auth_header, archive_url, frames=[]):
                   u'OBSTYPE': u'SPECTRUM',
                   u'REQNUM': 1391169,
                   u'RLEVEL': 0,
+                  u'OBJECT': 'N999r0q',
                   u'basename': u'ogg2m001-en06-20180110-0005-e00',
                   u'filename': u'ogg2m001-en06-20180110-0005-e00.fits.fz',
                   u'id': 7780755,
@@ -1288,6 +1406,7 @@ def mock_fetch_archive_frames(auth_header, archive_url, frames=[]):
                   u'OBSTYPE': u'LAMPFLAT',
                   u'REQNUM': 1391169,
                   u'RLEVEL': 0,
+                  u'OBJECT': 'N999r0q',
                   u'basename': u'ogg2m001-en06-20180110-0003-w00',
                   u'filename': u'ogg2m001-en06-20180316-0003-w00.fits.fz',
                   u'id': 7780711,
@@ -1298,12 +1417,62 @@ def mock_fetch_archive_frames(auth_header, archive_url, frames=[]):
                   u'OBSTYPE': u'ARC',
                   u'REQNUM': 1391169,
                   u'RLEVEL': 0,
+                  u'OBJECT': 'N999r0q',
                   u'basename': u'ogg2m001-en06-20180110-0004-a00',
                   u'filename': u'ogg2m001-en06-20180110-0004-a00.fits.fz',
                   u'id': 7780725,
                   u'related_frames': [],
                   u'url': u'https://s3.us-west-2.amazonaws.com/archive.lcogt.net/292d/ogg2m001-en06-20180110-0004-a00?versionId=6cU5D5EC7Zq1tVEb7OZlR7WFEeXyqGp8&AWSAccessKeyId=AKIAIJQVPYFWOR234BCA&Signature=o6l5GeCbm%2FgHa7LRI3ycNyFnhQY%3D&Expires=1521844038',
-                 }]
+                 },
+                {
+                  u'OBSTYPE': u'SPECTRUM',
+                  u'REQNUM': 1391169,
+                  u'RLEVEL': 90,
+                  u'OBJECT': 'HD 15445',
+                  u'basename': u'LCOEngineering_0001391169_ftn_20180111_58131',
+                  u'filename': u'LCOEngineering_0001391169_ftn_20180111_58131.tar.gz',
+                  u'id': 7783594,
+                  u'related_frames': [7780756],
+                  u'url': u'https://s3.us-west-2.amazonaws.com/archive.lcogt.net/372a/LCOEngineering_0001391169_ftn_20180111_58130?versionId=eK7.aDucOKWaiM3AhTPZ8AGDMxBFdNtH&AWSAccessKeyId=AKIAIJQVPYFWOR234BCA&Signature=x8mve2svKirG7BAiWaEBTyFsHrY%3D&Expires=1521319897',
+                 },
+                 {
+                  u'OBSTYPE': u'SPECTRUM',
+                  u'REQNUM': 1391169,
+                  u'RLEVEL': 0,
+                  u'OBJECT': 'HD 15445',
+                  u'basename': u'ogg2m001-en06-20180110-0006-e00',
+                  u'filename': u'ogg2m001-en06-20180110-0006-e00.fits.fz',
+                  u'id': 7780756,
+                  u'related_frames': [7783594],
+                  u'url': u'https://s3.us-west-2.amazonaws.com/archive.lcogt.net/dd9f/ogg2m001-en06-20180110-0005-e00?versionId=c1X8nfL_LSwptv_c0m7dultGCOfVJJr3&AWSAccessKeyId=AKIAIJQVPYFWOR234BCA&Signature=fjmzi9KK%2FqNi3DnvjyEjSP%2BJG8o%3D&Expires=1521319897',
+                 },
+                 {
+                  u'OBSTYPE': u'LAMPFLAT',
+                  u'REQNUM': 1391169,
+                  u'RLEVEL': 0,
+                  u'OBJECT': 'HD 15445',
+                  u'basename': u'ogg2m001-en06-20180110-0007-w00',
+                  u'filename': u'ogg2m001-en06-20180316-0007-w00.fits.fz',
+                  u'id': 7780712,
+                  u'related_frames': [],
+                  u'url': u'https://s3.us-west-2.amazonaws.com/archive.lcogt.net/f0b3/ogg2m001-en06-20180110-0003-w00?versionId=5_5KtN4yTb1HETGb3SOMkkZdVW2vxOpd&AWSAccessKeyId=AKIAIJQVPYFWOR234BCA&Signature=vwaE37UFo8gnn46IKWuRZKpSoEA%3D&Expires=1521844038',
+                 },
+                 {
+                  u'OBSTYPE': u'ARC',
+                  u'REQNUM': 1391169,
+                  u'RLEVEL': 0,
+                  u'OBJECT': 'HD 15445',
+                  u'basename': u'ogg2m001-en06-20180110-0008-a00',
+                  u'filename': u'ogg2m001-en06-20180110-0008-a00.fits.fz',
+                  u'id': 7780726,
+                  u'related_frames': [],
+                  u'url': u'https://s3.us-west-2.amazonaws.com/archive.lcogt.net/292d/ogg2m001-en06-20180110-0004-a00?versionId=6cU5D5EC7Zq1tVEb7OZlR7WFEeXyqGp8&AWSAccessKeyId=AKIAIJQVPYFWOR234BCA&Signature=o6l5GeCbm%2FgHa7LRI3ycNyFnhQY%3D&Expires=1521844038',
+                 }
+                ]
+        if 'OBJECT=N9' in archive_url:
+            return data[:4]
+        elif 'OBJECT=HD' in archive_url:
+            return data[4:]
     else:
         data = [
                  {u'OBSTYPE': u'EXPOSE',
@@ -1325,7 +1494,7 @@ def mock_fetch_archive_frames(auth_header, archive_url, frames=[]):
     return data
 
 
-def mock_check_for_images(request_id, obstype='EXPOSE'):
+def mock_check_for_images(request_id, obstype='EXPOSE', obj=''):
 
     if obstype == 'SPECTRUM':
         images = [
@@ -1427,20 +1596,41 @@ def mock_archive_spectra_header(archive_headers):
             "SITEID": "coj",
             "TELID": "2m0a",
             "OBJECT": "HD 30455",
-            "REQNUM": "1878697"
+            "REQNUM": "1878697",
+            "ORIGNAME": "ogg2m001-en06-20180110-0005-e00",
+            "GROUPID": "TEMP",
+            "BLKUID": "999999"
                 }
             }
     else:
-        header = { "data": {
-                        "DATE_OBS": "2019-07-27T15:52:19.512",
-                        "DAY_OBS" : "20190727",
-                        "ENCID" : "clma",
-                        "SITEID" : "coj",
-                        "TELID" : "2m0a",
-                        "OBJECT" : "455432",
-                        "REQNUM" : "1878696"
-                            }
-                 }
+        header = {"data":
+                      {"DATE_OBS": "2019-07-27T15:52:19.512",
+                       "DAY_OBS": "20190727",
+                       "ENCID": "clma",
+                       "SITEID": "coj",
+                       "TELID": "2m0a",
+                       "OBJECT": "455432",
+                       "REQNUM": "1878696",
+                       "ORIGNAME": "ogg2m001-en06-20180110-0005-e00",
+                       "GROUPID": "TEMP",
+                       "BLKUID": "999999"
+                       }
+                  }
+    return header
+
+
+def mock_archive_bad_spectra_header(archive_headers):
+
+    header = { "data": {
+                    "DATE_OBS": "2019-09-27T15:52:19.512",
+                    "DAY_OBS" : "20190927",
+                    "ENCID" : "clma",
+                    "SITEID" : "coj",
+                    "TELID" : "2m0a",
+                    "OBJECT" : "455432",
+                    "REQNUM" : "1878696"
+                        }
+             }
     return header
 
 
@@ -1539,6 +1729,7 @@ def mock_fetch_filter_list(site, spec):
         "optical_elements": {'filters': [
              {'name': 'D51', 'code': 'D51', 'schedulable': True, 'default': False},
              {'name': 'H Beta', 'code': 'H-Beta', 'schedulable': True, 'default': False},
+             {'name': 'OIII', 'code': 'OIII', 'schedulable': True, 'default': False},
              {'name': 'OIII', 'code': 'OIII', 'schedulable': True, 'default': False},
              {'name': 'H Alpha', 'code': 'H-Alpha', 'schedulable': True, 'default': False},
              {'name': 'Skymapper CaV', 'code': 'Skymapper-VS', 'schedulable': True, 'default': False},
@@ -1731,6 +1922,24 @@ def mock_expand_cadence(user_request):
                 }
     return True, cadence
 
+def mock_expand_cadence_novis(user_request):
+
+    cadence = {'errors': 'No visible requests within cadence window parameters'}
+    start_date = datetime.strptime(user_request['requests'][0]['cadence']['start'], '%Y-%m-%dT%H:%M:%S')
+    end_date = datetime.strptime(user_request['requests'][0]['cadence']['end'], '%Y-%m-%dT%H:%M:%S')
+    if end_date.month > start_date.month:
+        # Fake a semester-spanning invalid request
+        cadence = {'requests': [{},
+                  {'windows': [{'non_field_errors': ['The observation window does not fit within any defined semester.']}]},
+                  {},
+                  {},
+                  {},
+                  {},
+                  {},
+                  {},
+                  {}]}
+
+    return False, cadence
 
 def mock_fetch_sfu(sfu_value=None):
     if sfu_value is None:

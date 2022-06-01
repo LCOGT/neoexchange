@@ -76,10 +76,9 @@ class ScheduleObservations(FunctionalTest):
         # Wait until response is recieved
         self.wait_for_element_with_id('page')
 
-
-# Monkey patch the datetime used by forms otherwise it fails with 'window in the past'
-# TAL: Need to patch the datetime in views also otherwise we will get the wrong
-# semester and window bounds.
+    # Monkey patch the datetime used by forms otherwise it fails with 'window in the past'
+    # TAL: Need to patch the datetime in views also otherwise we will get the wrong
+    # semester and window bounds.
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
@@ -140,9 +139,9 @@ class ScheduleObservations(FunctionalTest):
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
-        self.assertIn('13', num_exp)
+        self.assertIn('9', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
-        self.assertIn('65.0', exp_length)
+        self.assertIn('100.0', exp_length)
 
         # At this point, a 'Schedule this object' button appears
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
@@ -276,9 +275,9 @@ class ScheduleObservations(FunctionalTest):
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
-        self.assertIn('13', num_exp)
+        self.assertIn('9', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
-        self.assertIn('65.0', exp_length)
+        self.assertIn('100.0', exp_length)
 
         # Bart wants to change the slot length and recalculate the number of exposures
         slot_length_box = self.browser.find_element_by_id('id_slot_length')
@@ -348,9 +347,9 @@ class ScheduleObservations(FunctionalTest):
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
-        self.assertIn('13', num_exp)
+        self.assertIn('9', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
-        self.assertIn('65.0', exp_length)
+        self.assertIn('100.0', exp_length)
 
         # Bart wants to change the slot length so it is very short and recalculate the number of exposures
         slot_length_box = self.browser.find_element_by_id('id_slot_length')
@@ -361,7 +360,7 @@ class ScheduleObservations(FunctionalTest):
 
         # The page refreshes and slot length is automatically adjusted to minimum possible length
         new_slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
-        self.assertIn('3.5', new_slot_length)
+        self.assertIn('4.0', new_slot_length)
         warn_num = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('warning').text
         self.assertIn('1', warn_num)
 
@@ -473,6 +472,17 @@ class ScheduleObservations(FunctionalTest):
         self.assertIn('54.3°', analog_sep)
         analog_exptime = self.browser.find_element_by_id('id_calibsource_exptime').get_attribute('value')
         self.assertIn('50', analog_exptime)
+
+        # Bart wants to change the exposure time for the analog, but gets warned about it.
+        slot_length_box = self.browser.find_element_by_id('id_calibsource_exptime')
+        slot_length_box.clear()
+        slot_length_box.send_keys('10')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
+        analog_exptime = self.browser.find_element_by_id('id_calibsource_exptime').get_attribute('value')
+        self.assertIn('10', analog_exptime)
+        sa_exptime_warn = self.browser.find_element_by_id('id_solaranalog_exptime_row').find_element_by_class_name('warning').text
+        self.assertIn('Exposure Time', sa_exptime_warn)
 
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list_no2m)
@@ -705,15 +715,13 @@ class ScheduleObservations(FunctionalTest):
         self.assertIn('20.40', magnitude)
         speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
         self.assertIn('2.37 "/min', speed)
-        self.assertIn('2.57 "/exp', speed)
-        speed_warn = self.browser.find_element_by_class_name('warning').text
-        self.assertIn('2.57 "/exp', speed_warn)
+        self.assertIn('1.98 "/exp', speed)
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
-        self.assertIn('13', num_exp)
+        self.assertIn('9', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
-        self.assertIn('65.0', exp_length)
+        self.assertIn('100.0', exp_length)
         vis = self.browser.find_element_by_id('id_visibility_row').find_element_by_class_name('kv-value').text
         self.assertIn('63', vis)
         self.assertIn('2.2 hrs', vis)
@@ -729,7 +737,7 @@ class ScheduleObservations(FunctionalTest):
 
         # The page refreshes and we get correct slot length
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
-        self.assertIn('3.5', slot_length)
+        self.assertIn('4', slot_length)
 
         # Bart wants to change the max airmass to 1.5 and min moon dist to 160.
         self.browser.find_element_by_id("advanced-switch").click()
@@ -772,8 +780,59 @@ class ScheduleObservations(FunctionalTest):
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_id("id_edit_button").click()
 
+        # fiddle with the non-sidereal tracking rate
+        speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
+        self.assertIn('2.32 "/min', speed)
+        self.assertIn('1.93 "/exp', speed)
+        self.browser.find_element_by_id("advanced-switch").click()
+        tracking_picker = Select(self.browser.find_element_by_id('id_fractional_rate'))
+        self.assertIn('Full-Rate', [option.text for option in tracking_picker.options])
+        tracking_picker.select_by_visible_text('Full-Rate')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
+        speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
+        self.assertIn('2.32 "/min', speed)
+        self.assertIn('3.86 "/exp', speed)
+        self.browser.find_element_by_id("advanced-switch").click()
+        tracking_picker = Select(self.browser.find_element_by_id('id_fractional_rate'))
+        self.assertIn('Half-Rate', [option.text for option in tracking_picker.options])
+        tracking_picker.select_by_visible_text('Half-Rate')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
+        speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
+        self.assertIn('2.32 "/min', speed)
+        self.assertIn('1.93 "/exp', speed)
+        self.browser.find_element_by_id("advanced-switch").click()
+        tracking_picker = Select(self.browser.find_element_by_id('id_fractional_rate'))
+        self.assertIn('Sidereal', [option.text for option in tracking_picker.options])
+        tracking_picker.select_by_visible_text('Sidereal')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
+        speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
+        self.assertIn('2.32 "/min', speed)
+        self.assertIn('3.86 "/exp', speed)
+
+        # Bart saw a dithering option just now, what's that do?
+        self.browser.find_element_by_id("advanced-switch").click()
+        self.browser.find_element_by_id('id_add_dither').click()
+        dither_box = self.browser.find_element_by_id('id_dither_distance')
+        self.assertIn('10', dither_box.get_attribute('value'))
+        dither_box.clear()
+        dither_box.send_keys('30')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
+        self.browser.find_element_by_id("advanced-switch").click()
+        dither_box = self.browser.find_element_by_id('id_dither_distance')
+        self.assertIn('30', dither_box.get_attribute('value'))
+        group_id_box = self.browser.find_element_by_name("group_name")
+        self.assertIn('_dither', group_id_box.get_attribute('value'))
+        self.browser.find_element_by_id('id_add_dither').click()
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
+
         # Bart wants to be a little &^%$ and stress test our group ID input
         group_id_box = self.browser.find_element_by_name("group_name")
+        self.assertNotIn('_dither', group_id_box.get_attribute('value'))
         group_id_box.clear()
         bs_string = 'ຢູ່ໃກ້Γη小惑星‽'
         group_id_box.send_keys(bs_string)
@@ -789,6 +848,110 @@ class ScheduleObservations(FunctionalTest):
             self.browser.find_element_by_id("id_edit_button").click()
         group_id = self.browser.find_element_by_id('id_group_name').get_attribute('value')
         self.assertEqual(bs_string[:50], group_id)
+
+        submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
+        self.assertIn('Schedule this Object', submit)
+
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.forms.datetime', MockDateTime)
+    @patch('core.views.datetime', MockDateTime)
+    def test_schedule_page_edit_windows(self):
+        MockDateTime.change_date(2015, 2, 20)
+        self.test_login()
+
+        # Bart has heard about a new website for NEOs. He goes to the
+        # page of the first target
+        # (XXX semi-hardwired but the targets link should be being tested in
+        # test_targets_validation.TargetsValidationTest
+        start_url = reverse('target', kwargs={'pk': 1})
+        self.browser.get(self.live_server_url + start_url)
+
+        # He sees a Schedule Observations button
+        link = self.browser.find_element_by_id('schedule-obs')
+        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body', kwargs={'pk': 1}))
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
+
+        # He clicks the link to go to the Schedule Observations page
+        with self.wait_for_page_load(timeout=10):
+            link.click()
+        new_url = self.browser.current_url
+        self.assertEqual(new_url, actual_url)
+
+        # He notices a new selection for the proposal and site code and
+        # chooses the NEO Follow-up Network and ELP (V37)
+        proposal_choices = Select(self.browser.find_element_by_id('id_proposal_code'))
+        self.assertIn(self.neo_proposal.title, [option.text for option in proposal_choices.options])
+
+        proposal_choices.select_by_visible_text(self.neo_proposal.title)
+
+        site_choices = Select(self.browser.find_element_by_id('id_site_code'))
+        self.assertIn('TFN 0.4m - Z17,Z21; (Tenerife, Spain)', [option.text for option in site_choices.options])
+
+        # site_choices.select_by_visible_text('TFN 0.4m - Z17,Z21; (Tenerife, Spain)')
+        # site_choices.select_by_visible_text('ELP 1.0m - V37,V39; (McDonald, Texas)')
+        site_choices.select_by_visible_text('CPT 1.0m - K91-93; (Sutherland, S. Africa)')
+
+        MockDateTime.change_date(2015, 2, 20)
+        datebox = self.get_item_input_box('id_utc_date')
+        datebox.clear()
+        datebox.send_keys('2015-02-21')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id('single-submit').click()
+
+        # The page refreshes and a series of values for magnitude, speed, slot
+        # length, number and length of exposures appear
+        exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
+        self.assertIn('70.0', exp_length)
+        vis = self.browser.find_element_by_id('id_visibility_row').find_element_by_class_name('kv-value').text
+        self.assertIn('57', vis)
+        self.assertIn('3.8 hrs', vis)
+        utc_date = self.browser.find_element_by_id('id_utc_date_row').find_element_by_class_name('kv-value').text
+        self.assertIn('2015-02-21', utc_date)
+        start_time = self.browser.find_element_by_id('id_start_time').get_attribute('value')
+        end_time = self.browser.find_element_by_id('id_end_time').get_attribute('value')
+        self.assertIn('2015-02-20T23:12:00', start_time)
+        self.assertIn('2015-02-21T02:58:00', end_time)
+
+        self.browser.find_element_by_id("id_edit_window").click()
+        end_time_box = self.browser.find_element_by_id('id_end_time')
+        end_time_box.clear()
+        end_time_box.send_keys('2015-02-20T23:53:00')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
+
+        vis = self.browser.find_element_by_id('id_visibility_row').find_element_by_class_name('kv-value').text
+        self.assertIn('57', vis)
+        self.assertIn('3.8 hrs', vis)
+        utc_date = self.browser.find_element_by_id('id_utc_date_row').find_element_by_class_name('kv-value').text
+        self.assertIn('2015-02-21', utc_date)
+        warning = self.browser.find_element_by_class_name('warning').text
+        self.assertIn('2015-02-20T23:12:00', warning)
+        start_time = self.browser.find_element_by_id('id_start_time').get_attribute('value')
+        end_time = self.browser.find_element_by_id('id_end_time').get_attribute('value')
+        self.assertIn('2015-02-20T23:12:00', start_time)
+        self.assertIn('2015-02-20T23:53:00', end_time)
+
+        start_time_box = self.browser.find_element_by_id('id_start_time')
+        start_time_box.clear()
+        start_time_box.send_keys('2015-02-24T23:00:00')
+        end_time_box = self.browser.find_element_by_id('id_end_time')
+        end_time_box.clear()
+        end_time_box.send_keys('2015-02-25T06:53:00')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
+
+        vis = self.browser.find_element_by_id('id_visibility_row').find_element_by_class_name('kv-value').text
+        self.assertIn('54', vis)
+        self.assertIn('3.7 hrs', vis)
+        utc_date = self.browser.find_element_by_id('id_utc_date_row').find_element_by_class_name('kv-value').text
+        self.assertIn('2015-02-25', utc_date)
+        start_time = self.browser.find_element_by_id('id_start_time').get_attribute('value')
+        end_time = self.browser.find_element_by_id('id_end_time').get_attribute('value')
+        self.assertIn('2015-02-24T23:24:00', start_time)
+        self.assertIn('2015-02-25T03:08:00', end_time)
 
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
         self.assertIn('Schedule this Object', submit)
@@ -846,15 +1009,13 @@ class ScheduleObservations(FunctionalTest):
         self.assertIn('20.40', magnitude)
         speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
         self.assertIn('2.49 "/min', speed)
-        self.assertIn('2.49 "/exp', speed)
-        speed_warn = self.browser.find_element_by_class_name('warning').text
-        self.assertIn('2.49 "/exp', speed_warn)
+        self.assertIn('1.97 "/exp', speed)
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
-        self.assertIn('14', num_exp)
+        self.assertIn('10', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
-        self.assertIn('60.0', exp_length)
+        self.assertIn('95.0', exp_length)
         moon_sep = self.browser.find_element_by_id('id_moon_row').find_element_by_class_name('kv-value').text
         self.assertIn('108.4', moon_sep)
 
@@ -866,7 +1027,7 @@ class ScheduleObservations(FunctionalTest):
 
         # The page refreshes and we get correct exp_count
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
-        self.assertIn('18', num_exp)
+        self.assertIn('11', num_exp)
 
         # Bart wants to change the slot length to less than 1 exposure.
         slot_length_box = self.browser.find_element_by_id('id_slot_length')
@@ -877,7 +1038,16 @@ class ScheduleObservations(FunctionalTest):
 
         # The page refreshes and we get correct slot length
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
-        self.assertIn('3.0', slot_length)
+        self.assertIn('4.0', slot_length)
+
+        # Bart wants streaks
+        exp_length_box = self.browser.find_element_by_id('id_exp_length')
+        exp_length_box.clear()
+        exp_length_box.send_keys('200')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
+        speed_warn = self.browser.find_element_by_class_name('warning').text
+        self.assertIn('4.16 "/exp', speed_warn)
 
         # Bart wants to change the min moon dist to 160.
         self.browser.find_element_by_id("advanced-switch").click()
@@ -890,6 +1060,132 @@ class ScheduleObservations(FunctionalTest):
         # The page refreshes and we get correct hours visible and a warning on moon dist
         moon_warn = self.browser.find_element_by_id('id_moon_row').find_element_by_class_name('warning').text
         self.assertIn('108.4', moon_warn)
+
+        submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
+        self.assertIn('Schedule this Object', submit)
+
+    @patch('core.plots.build_visibility_source', mock_build_visibility_source)
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.forms.datetime', MockDateTime)
+    @patch('core.views.datetime', MockDateTime)
+    def test_schedule_page_generic_1m_comet(self):
+        MockDateTime.change_date(2019, 3, 2)
+        self.test_login()
+        self.insert_test_comet()
+
+        # Bart has heard about a new website for comets. He goes to the
+        # page of the first comet target
+        # (XXX semi-hardwired but the targets link should be being tested in
+        # test_targets_validation.TargetsValidationTest
+        start_url = reverse('target', kwargs={'pk': 2})
+        self.browser.get(self.live_server_url + start_url)
+
+        # He sees a Schedule Observations button
+        link = self.browser.find_element_by_id('schedule-obs')
+        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body', kwargs={'pk': 2}))
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
+
+        # He clicks the link to go to the Schedule Observations page
+        with self.wait_for_page_load(timeout=10):
+            link.click()
+        new_url = self.browser.current_url
+        self.assertEqual(new_url, actual_url)
+
+        # He notices a new selection for the proposal and site code and
+        # chooses the NEO Follow-up Network and generic 1m
+        proposal_choices = Select(self.browser.find_element_by_id('id_proposal_code'))
+        self.assertIn(self.neo_proposal.title, [option.text for option in proposal_choices.options])
+
+        proposal_choices.select_by_visible_text(self.neo_proposal.title)
+
+        site_choices = Select(self.browser.find_element_by_id('id_site_code'))
+        self.assertIn('------------ Any 1.0m ------------', [option.text for option in site_choices.options])
+
+        site_choices.select_by_visible_text('------------ Any 1.0m ------------')
+
+        MockDateTime.change_date(2019, 3, 2)
+        datebox = self.get_item_input_box('id_utc_date')
+        datebox.clear()
+        datebox.send_keys('2019-03-02')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id('single-submit').click()
+
+        # The page refreshes and a series of values for magnitude, speed, slot
+        # length, number and length of exposures appear
+        magnitude = self.browser.find_element_by_id('id_magnitude_row').find_element_by_class_name('kv-value').text
+        self.assertIn('17.98', magnitude)
+        # He checks to make sure that the comet is being tracked at normal rate
+        speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
+        self.assertNotIn('Half-Rate', speed)
+        self.assertIn('1.81 "/min', speed)
+        self.assertIn('1.96 "/exp', speed)
+        slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
+        self.assertIn('15.0', slot_length)
+        num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
+        self.assertIn('8', num_exp)
+        exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
+        self.assertIn('65.0', exp_length)
+        moon_sep = self.browser.find_element_by_id('id_moon_row').find_element_by_class_name('kv-value').text
+        self.assertIn('116.3', moon_sep)
+        num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
+        self.assertIn('8', num_exp)
+
+        # Bart wants to change the slot length to less than 1 exposure.
+        slot_length_box = self.browser.find_element_by_id('id_slot_length')
+        slot_length_box.clear()
+        slot_length_box.send_keys('1')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
+
+        # The page refreshes and we get correct slot length
+        slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
+        self.assertIn('3.5', slot_length)
+
+
+        # fiddle with the non-sidereal tracking rate
+        self.browser.find_element_by_id("advanced-switch").click()
+        tracking_picker = Select(self.browser.find_element_by_id('id_fractional_rate'))
+        self.assertIn('Half-Rate', [option.text for option in tracking_picker.options])
+        tracking_picker.select_by_visible_text('Half-Rate')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
+        speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
+        self.assertIn('Half-Rate', speed)
+        self.assertIn('1.81 "/min', speed)
+        self.assertIn('0.98 "/exp', speed)
+        self.browser.find_element_by_id("advanced-switch").click()
+        tracking_picker = Select(self.browser.find_element_by_id('id_fractional_rate'))
+        self.assertIn('Sidereal', [option.text for option in tracking_picker.options])
+        tracking_picker.select_by_visible_text('Sidereal')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
+        speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
+        self.assertIn('Sidereal', speed)
+        self.assertIn('1.81 "/min', speed)
+        self.assertIn('1.96 "/exp', speed)
+
+        # Bart wants streaks
+        exp_length_box = self.browser.find_element_by_id('id_exp_length')
+        exp_length_box.clear()
+        exp_length_box.send_keys('200')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
+        speed_warn = self.browser.find_element_by_class_name('warning').text
+        self.assertIn('6.04 "/exp', speed_warn)
+
+        # Bart wants to change the min moon dist to 160.
+        self.browser.find_element_by_id("advanced-switch").click()
+        moon_box = self.browser.find_element_by_id('id_min_lunar_dist')
+        moon_box.clear()
+        moon_box.send_keys('160')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
+
+        # The page refreshes and we get correct hours visible and a warning on moon dist
+        moon_warn = self.browser.find_element_by_id('id_moon_row').find_element_by_class_name('warning').text
+        self.assertIn('116.3', moon_warn)
 
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
         self.assertIn('Schedule this Object', submit)
@@ -1042,7 +1338,7 @@ class ScheduleObservations(FunctionalTest):
         self.assertIn('9.40', magnitude)
         speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
         self.assertIn('2.35 "/min', speed)
-        self.assertIn('1.19 "/exp', speed)
+        self.assertIn('0.60 "/exp', speed)
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('6', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
@@ -1063,7 +1359,7 @@ class ScheduleObservations(FunctionalTest):
         zp_exp_length_box.send_keys('750')
         self.browser.find_element_by_id("id_edit_button").click()
         speed_warn = self.browser.find_element_by_class_name('warning').text
-        self.assertIn('29.32 "/exp', speed_warn)
+        self.assertIn('14.66 "/exp', speed_warn)
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('16.0', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
@@ -1140,13 +1436,13 @@ class ScheduleObservations(FunctionalTest):
         self.assertIn('20.40', magnitude)
         speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
         self.assertIn('2.49 "/min', speed)
-        self.assertIn('1.66 "/exp', speed)
+        self.assertIn('1.97 "/exp', speed)
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('32.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
-        self.assertIn('34', num_exp)
+        self.assertIn('16', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
-        self.assertIn('40', exp_length)
+        self.assertIn('95.0', exp_length)
         moon_sep = self.browser.find_element_by_id('id_moon_row').find_element_by_class_name('kv-value').text
         self.assertIn('108.4', moon_sep)
 
@@ -1159,7 +1455,7 @@ class ScheduleObservations(FunctionalTest):
 
         # The page refreshes and we get correct slot length
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
-        self.assertIn('3.0', slot_length)
+        self.assertIn('4.0', slot_length)
 
         # Bart wants to change the min moon dist to 160.
         self.browser.find_element_by_id("advanced-switch").click()
@@ -1245,15 +1541,13 @@ class ScheduleObservations(FunctionalTest):
         self.assertIn('20.40', magnitude)
         speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
         self.assertIn('2.49 "/min', speed)
-        self.assertIn('2.49 "/exp', speed)
-        speed_warn = self.browser.find_element_by_class_name('warning').text
-        self.assertIn('2.49 "/exp', speed_warn)
+        self.assertIn('1.97 "/exp', speed)
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
-        self.assertIn('14', num_exp)
+        self.assertIn('10', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
-        self.assertIn('60.0', exp_length)
+        self.assertIn('95.0', exp_length)
         moon_sep = self.browser.find_element_by_id('id_moon_row').find_element_by_class_name('kv-value').text
         self.assertIn('108.4', moon_sep)
 
@@ -1266,7 +1560,7 @@ class ScheduleObservations(FunctionalTest):
 
         # The page refreshes and we get correct slot length
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
-        self.assertIn('3.5', slot_length)
+        self.assertIn('4.0', slot_length)
 
         # Bart wants to change the min moon dist to 160.
         self.browser.find_element_by_id("advanced-switch").click()
