@@ -111,8 +111,8 @@ RUN yum -y install epel-release glibc-langpack-en\
             gcc \
             gcc-c++ \
             gcc-gfortran \
-            python36 \
-            python36-devel \
+            python38 \
+            python38-devel \
             libffi-devel \
             libjpeg-devel \
             libpng-devel \
