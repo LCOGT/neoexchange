@@ -87,6 +87,7 @@ class SExtractorProcessPipeline(PipelineProcess):
                                               astrometric_catalog=desired_catalog)
         if len(catalog_frames) != 0:
             logger.info("Found reprocessed frame in DB")
+            self.log(f"Found reprocessed frame ({catalog_frames[0]:}) in DB")
             return 0
 
         # Find image file for this catalog
@@ -100,10 +101,13 @@ class SExtractorProcessPipeline(PipelineProcess):
     def process(self, fits_file, configs_dir, dest_dir):
 
         # Make a new FITS_LDAC catalog from the frame
+        self.log(f"Processing {fits_file:} with SExtractor")
         status, new_ldac_catalog = run_sextractor_make_catalog(configs_dir, dest_dir, fits_file)
         if status != 0:
             logger.error("Execution of SExtractor failed")
+            self.log("Execution of SExtractor failed")
             return -4
+        self.log(f"Produced {new_ldac_catalog:}")
 
 class ScampProcessPipeline(PipelineProcess):
     """
