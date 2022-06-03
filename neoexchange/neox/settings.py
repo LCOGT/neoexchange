@@ -161,6 +161,9 @@ INSTALLED_APPS = (
 PIPELINES = {
     'dldata' : 'pipelines.downloaddata.DownloadProcessPipeline',
     'ephem'  : 'pipelines.ephemeris.LongTermEphemeris',
+    'proc-extract'   : 'pipelines.processdata.SExtractorProcessPipeline',
+    'proc-astromfit' : 'pipelines.processdata.ScampProcessPipeline',
+    'proc-zeropoint' : 'pipelines.processdata.ZeropointProcessPipeline',
 }
 
 REDIS_HOSTNAME = os.environ.get('REDIS_HOSTNAME','localhost')
