@@ -463,7 +463,7 @@ def convert_catfile_to_corners(cat_file):
     return top_left, bottom_right
 
 
-def existing_catalog_coverage(dest_dir, ra, dec, width, height, cat_name="GAIA-DR2", dbg=False):
+def existing_catalog_coverage(dest_dir, ra, dec, width, height, cat_name="GAIA-DR2", cat_type='*.cat', dbg=False):
     """Search in <dest_dir> for catalogs of type [cat_name] that cover the
     pointing specified by <ra, dec> and with area <width, height>. The first
     match that covers the area is returned otherwise None is returned"""
@@ -471,7 +471,7 @@ def existing_catalog_coverage(dest_dir, ra, dec, width, height, cat_name="GAIA-D
     cat_file = None
     cat_path = os.path.join(dest_dir, '')
     if os.path.isdir(cat_path):
-        cat_files = glob(cat_path + cat_name + '*.cat')
+        cat_files = glob(cat_path + cat_name + cat_type)
         if len(cat_files) >= 1:
             unit = width[-1]
             if unit == 'm':
@@ -1447,14 +1447,17 @@ def store_catalog_sources(catfile, catalog_type='LCOGT', std_zeropoint_tolerance
     num_in_catalog = 0
     extra = None
 
-    if old is True or phot_cat_name.upper() == 'GAIA-DR2':
-        if phot_cat_name.upper() == 'GAIA-DR2' and old is False:
-            logger.warning("GAIA-DR2 not supported with new ZP routine. Reverting to old routine.")
+    if old is True:
+        print("DBG: Using old ZP routine")
         num_sources_created, num_in_catalog = store_catalog_sources_old(catfile, catalog_type, std_zeropoint_tolerance, phot_cat_name, ast_cat_name)
     else:
-         if phot_cat_name.upper() != 'PS1' and phot_cat_name.upper() != 'REFCAT2':
-             logger.warning("Only PS1 or REFCAT2 supported for phot_cat_name with new ZP routine")
-         num_sources_created, num_in_catalog, extra = store_catalog_sources_new(catfile, catalog_type, std_zeropoint_tolerance, phot_cat_name, ast_cat_name, color_const)
+        if phot_cat_name.upper() not in ['PS1', 'REFCAT2', 'GAIA-DR2']:
+            logger.warning("Only PS1, REFCAT2 or GAIA-DR2 supported for phot_cat_name with new ZP routine")
+            print("DBG: Using old ZP routine")
+            num_sources_created, num_in_catalog = store_catalog_sources_old(catfile, catalog_type, std_zeropoint_tolerance, phot_cat_name, ast_cat_name)
+        else:
+            print("DBG: Using new ZP routine")
+            num_sources_created, num_in_catalog, extra = store_catalog_sources_new(catfile, catalog_type, std_zeropoint_tolerance, phot_cat_name, ast_cat_name, color_const)
 
     return num_sources_created, num_in_catalog, extra
 
@@ -1543,7 +1546,7 @@ def store_catalog_sources_new(catfile, catalog_type='BANZAI_LDAC', std_zeropoint
 
     if header and table:
 
-        db_filename = existing_catalog_coverage(datadir, header['field_center_ra'], header['field_center_dec'], header['field_width'], header['field_height'], phot_cat_name, dbg)
+        db_filename = existing_catalog_coverage(datadir, header['field_center_ra'], header['field_center_dec'], header['field_width'], header['field_height'], phot_cat_name, '*.db', dbg)
         created = False
         if db_filename is None:
             # Add 25% to passed width and height in lieu of actual calculation of extent
@@ -1564,7 +1567,7 @@ def store_catalog_sources_new(catfile, catalog_type='BANZAI_LDAC', std_zeropoint
                 ref_height = set_height
 
             # Rewrite name of catalog to include position and size
-            refcat_filename = "{}_{ra:.2f}{dec:+.2f}_{width}x{height}.cat".format(phot_cat_name, ra=header['field_center_ra'], dec=header['field_center_dec'], width=ref_width, height=ref_height)
+            refcat_filename = "{}_{ra:.2f}{dec:+.2f}_{width}x{height}.db".format(phot_cat_name, ra=header['field_center_ra'], dec=header['field_center_dec'], width=ref_width, height=ref_height)
             db_filename = os.path.join(datadir, refcat_filename)
             created = True
         print(f"  catalog={os.path.basename(db_filename):} (created={created:})")
@@ -1572,9 +1575,11 @@ def store_catalog_sources_new(catfile, catalog_type='BANZAI_LDAC', std_zeropoint
             refcat = cvc.PanSTARRS1(db_filename)
         elif phot_cat_name == 'REFCAT2':
             refcat = cvc.RefCat2(db_filename)
+        elif phot_cat_name == 'GAIA-DR2':
+            refcat = cvc.Gaia(db_filename)
         else:
-            logger.error(f"Unknown reference catalog {phot_cat_name:}. Must be one of PS1, REFCAT2")
-            return None
+            logger.error(f"Unknown reference catalog {phot_cat_name:}. Must be one of PS1, REFCAT2, GAIA-DR2")
+            return None, None, None
         phot = table[table['flags'] == 0]  # clean LCO catalog
         lco = coord.SkyCoord(phot['obs_ra'], phot['obs_dec'], unit='deg')
 
