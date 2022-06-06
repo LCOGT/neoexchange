@@ -655,15 +655,17 @@ def fitsldac_catalog_mapping():
                     'field_center_dec' : 'DEC',
                     'field_width' : 'NAXIS1',
                     'field_height' : 'NAXIS2',
-                    'pixel_scale' : 'SECPIX',
+#                    'pixel_scale' : 'SECPIX',
+                    'pixel_scale' : '<WCS>',
                     'zeropoint'  : 'L1ZP',
                     'zeropoint_err' : 'L1ZPERR',
-                    'zeropoint_src' : 'L1ZPSRC',
+                    'zeropoint_src' : '<ZPSRC>',
                     'fwhm'          : 'L1FWHM',
-                    'astrometric_fit_rms'    : 'WCSRDRES',
+                    'astrometric_fit_rms'    : '<WCSRDRES>',
                     'astrometric_fit_status' : 'WCSERR',
-                    'astrometric_fit_nstars' : 'WCSMATCH',
-                    'astrometric_catalog'    : 'WCCATTYP',
+                    'astrometric_fit_nstars' : '<WCSMATCH>',
+                    'astrometric_catalog'    : '<WCCATTYP>',
+                    'reduction_level'        : 'RLEVEL'
                   }
 
     table_dict = OrderedDict([
