@@ -12,7 +12,9 @@ from core.models import Frame
 from core.models.pipelines import PipelineProcess, PipelineOutput
 from core.utils import save_to_default, NeoException
 from core.views import find_matching_image_file, run_sextractor_make_catalog, run_scamp
-from photometrics.catalog_subs import FITSHdrException, open_fits_catalog, get_catalog_header, increment_red_level, get_reference_catalog
+from photometrics.catalog_subs import FITSHdrException, open_fits_catalog, \
+    get_catalog_header, increment_red_level, get_reference_catalog
+from photometrics.external_codes import updateFITSWCS
 
 logger = logging.getLogger(__name__)
 
@@ -121,6 +123,10 @@ class ScampProcessPipeline(PipelineProcess):
             'default': None,
             'long_name': 'Filepath to image file to process'
         },
+        'ldac_catalog': {
+            'default': None,
+            'long_name': 'Filepath to source catalog to process'
+        },
         'configs_dir':{
             'default': os.path.abspath(os.path.join('photometrics', 'configs')),
             'long_name' : 'Full path to Scamp configuration files'
@@ -144,13 +150,16 @@ class ScampProcessPipeline(PipelineProcess):
         else:
             out_path = inputs.get('datadir')
         fits_file = inputs.get('fits_file')
+        ldac_catalog = inputs.get('ldac_catalog')
         configs_dir = inputs.get('configs_dir')
         desired_catalog = inputs.get('desired_catalog')
 
         try:
-            refcat_or_status = self.setup(fits_file, out_path, desired_catalog)
+            refcat_or_status = self.setup(ldac_catalog, out_path, desired_catalog)
             if type(refcat_or_status) != int:
-                status = self.process(fits_file, configs_dir, out_path, refcat_or_status)
+                status = self.process(ldac_catalog, configs_dir, out_path, refcat_or_status)
+                if status == 0:
+                    self.update_wcs(fits_file, ldac_catalog, out_path)
         except NeoException as ex:
             logger.error('Error with astrometric fit: {}'.format(ex))
             self.log('Error with astrometric fit: {}'.format(ex))
@@ -191,6 +200,26 @@ class ScampProcessPipeline(PipelineProcess):
             self.log("Execution of Scamp failed")
         return scamp_status
 
+    def update_wcs(self, fits_file, new_ldac_catalog, dest_dir):
+        """Update the WCS information in <fits_file> using the information
+        from the SCAMP output in the <new_ldac_catalog>.head and 'scamp.xml'
+        files inside <dest_dir>"""
+
+        scamp_file = os.path.basename(new_ldac_catalog).replace('.fits', '.head' )
+        scamp_file = os.path.join(dest_dir, scamp_file)
+        scamp_xml_file = os.path.join(dest_dir, 'scamp.xml')
+        # Update WCS in image file
+        # Strip off now unneeded FITS extension
+        fits_file = fits_file.replace('[SCI]', '')
+        # Get new output filename
+        fits_file_output = increment_red_level(fits_file)
+        fits_file_output = os.path.join(dest_dir, fits_file_output.replace('[SCI]', ''))
+        logger.info(f"Updating refitted WCS in image file: {fits_file:}. Output to: {fits_file_output:}")
+        self.log(f"Updating refitted WCS in image file: {fits_file:}. Output to: {fits_file_output:}")
+        status, new_header = updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output)
+        logger.info(f"Return status for updateFITSWCS: {status:}")
+        self.log(f"Return status for updateFITSWCS: {status:}")
+        return status
 
 class ZeropointProcessPipeline(PipelineProcess):
     """
