@@ -14,6 +14,7 @@ GNU General Public License for more details.
 """
 from django.urls import reverse
 from django.contrib import admin
+from django.utils.html import format_html
 
 from core.models import *
 from astrometrics.time_subs import degreestohms, degreestodms, radianstohms, radianstodms
@@ -348,6 +349,15 @@ class DataProductsAdmin(admin.ModelAdmin):
     list_filter = ('filetype',)
     # ordering = ['body_name', 'filetype', 'created']
 
+class PipelineProcessAdmin(admin.ModelAdmin):
+    def colour_status(self,obj):
+        colours = {'failed':'C93419','complete':'34C919','pending':'FFC300',0:'AAAAAA'}
+        return format_html(
+            '<span style="color: #{};text-transform: uppercase;">{}</span>',
+            colours.get(obj.status,'000000'),
+            obj.status
+        )
+    list_display = ('id','process_type','colour_status')
 
 admin.site.register(Proposal, ProposalAdmin)
 admin.site.register(SourceMeasurement, SourceMeasurementAdmin)
@@ -360,4 +370,4 @@ admin.site.register(Designations, DesignationsAdmin)
 admin.site.register(ColorValues, ColorValuesAdmin)
 admin.site.register(DataProduct, DataProductsAdmin)
 admin.site.register(AsyncProcess)
-admin.site.register(PipelineProcess)
+admin.site.register(PipelineProcess, PipelineProcessAdmin)
