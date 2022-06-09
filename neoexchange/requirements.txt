@@ -1,7 +1,7 @@
 --extra-index-url=http://buildsba.lco.gtn/python/
 --trusted-host buildsba.lco.gtn
 Django>=3.1.13,<3.2
-mysqlclient~=1.4.2
+#mysqlclient~=1.4.2
 psycopg2-binary
 astropy==4.2.1
 astroquery>=0.4.4.dev7007
@@ -21,7 +21,7 @@ tblib
 mock
 django-storages
 boto3
-matplotlib<3.3
+matplotlib<3.5.2
 MarkupSafe<2.0
 Jinja2<3.0
 bokeh==2.3.0
