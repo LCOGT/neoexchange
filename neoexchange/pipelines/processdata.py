@@ -175,7 +175,8 @@ class ScampProcessPipeline(PipelineProcess):
                     extract_pipe = pipeline_cls.create_timestamped(extract_inputs)
                     send_task(run_pipeline, extract_pipe, 'proc-extract')
                     # XXX How do we wait until the above finishes ?
-                    # logger.debug("Filename after 2nd SExtractor= {}".format(new_ldac_catalog))
+                    new_ldac_catalog = fits_file_output.replace('e92', 'e92_ldac')
+                    logger.debug(f"Filename after 2nd SExtractor= {new_ldac_catalog:}")
                     # if status != 0:
                         # logger.error("Execution of second SExtractor failed")
                         # return -4, 0
@@ -183,6 +184,13 @@ class ScampProcessPipeline(PipelineProcess):
                     # # Reset DB connection after potentially long-running process.
                     # XXX Can we do this here ? Will it break the Dramatiq process?
                     # reset_database_connection()
+                    fits_header, junk_table, cattype = open_fits_catalog(fits_file, header_only=True)
+                    try:
+                        header = get_catalog_header(fits_header, cattype)
+                    except FITSHdrException as e:
+                        logger.error(f"Bad header for {fits_file:} ({e:})")
+                        self.log(f"Bad header for {fits_file:} ({e:})")
+                        return -1
 
                     # # Find Block for original frame
                     block = find_block_for_frame(fits_file)
@@ -191,14 +199,14 @@ class ScampProcessPipeline(PipelineProcess):
                         self.log(f"Could not find block for fits frame {fits_file:}")
                         return -3
 
-    # # Check if we have a sitecode (none if this is a new instrument/telescope)
-    # if header.get('site_code', None) is None:
-        # logger.error("No sitecode found for fits frame %s" % catfile)
-        # return -5, num_new_frames_created
+                    # # Check if we have a sitecode (none if this is a new instrument/telescope)
+                    if header.get('site_code', None) is None:
+                        logger.error(f"No sitecode found for fits frame {fits_file:}")
+                        self.log(f"No sitecode found for fits frame {fits_file:}")
+                        return -5
 
                     # # Create a new Frame entry for the new_ldac_catalog (e92_ldac.fits)
-                    new_ldac_catalog = fits_file_output.replace('e92', 'e92_ldac')
-                    # num_new_frames_created = make_new_catalog_entry(new_ldac_catalog, header, block)
+                    num_new_frames_created = make_new_catalog_entry(new_ldac_catalog, header, block)
 
         except NeoException as ex:
             logger.error('Error with astrometric fit: {}'.format(ex))
