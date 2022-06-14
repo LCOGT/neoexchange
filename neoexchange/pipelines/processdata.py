@@ -11,7 +11,9 @@ from dramatiq.middleware.time_limit import TimeLimitExceeded
 from core.models import Frame
 from core.models.pipelines import PipelineProcess, PipelineOutput
 from core.utils import save_to_default, NeoException
-from core.views import find_matching_image_file, run_sextractor_make_catalog, run_scamp
+from core.views import find_matching_image_file, run_sextractor_make_catalog, \
+    run_scamp, find_block_for_frame, make_new_catalog_entry
+from core.tasks import send_task, run_pipeline
 from photometrics.catalog_subs import FITSHdrException, open_fits_catalog, \
     get_catalog_header, increment_red_level, get_reference_catalog
 from photometrics.external_codes import updateFITSWCS
@@ -157,9 +159,47 @@ class ScampProcessPipeline(PipelineProcess):
         try:
             refcat_or_status = self.setup(ldac_catalog, out_path, desired_catalog)
             if type(refcat_or_status) != int:
+                # Run SCAMP on the FITS-LDAC catalog to derive new astrometric fit
                 status = self.process(ldac_catalog, configs_dir, out_path, refcat_or_status)
                 if status == 0:
-                    self.update_wcs(fits_file, ldac_catalog, out_path)
+                    # Update WCS in FITS file with the results from the SCAMP fit
+                    status, fits_file_output = self.update_wcs(fits_file, ldac_catalog, out_path)
+                    # Re-extract a new FITS-LDAC catalog from the updated frame
+                    pipeline_cls = PipelineProcess.get_subclass('proc-extract')
+                    extract_inputs = { 'fits_file' : fits_file_output,
+                                       'configs_dir' : configs_dir,
+                                       'datadir' : out_path,
+                                       'desired_catalog' : desired_catalog
+                                     }
+                    self.log(f"Creating new FITS-LDAC catalog for {fits_file_output:}")
+                    extract_pipe = pipeline_cls.create_timestamped(extract_inputs)
+                    send_task(run_pipeline, extract_pipe, 'proc-extract')
+                    # XXX How do we wait until the above finishes ?
+                    # logger.debug("Filename after 2nd SExtractor= {}".format(new_ldac_catalog))
+                    # if status != 0:
+                        # logger.error("Execution of second SExtractor failed")
+                        # return -4, 0
+
+                    # # Reset DB connection after potentially long-running process.
+                    # XXX Can we do this here ? Will it break the Dramatiq process?
+                    # reset_database_connection()
+
+                    # # Find Block for original frame
+                    block = find_block_for_frame(fits_file)
+                    if block is None:
+                        logger.error(f"Could not find block for fits frame {fits_file:}")
+                        self.log(f"Could not find block for fits frame {fits_file:}")
+                        return -3
+
+    # # Check if we have a sitecode (none if this is a new instrument/telescope)
+    # if header.get('site_code', None) is None:
+        # logger.error("No sitecode found for fits frame %s" % catfile)
+        # return -5, num_new_frames_created
+
+                    # # Create a new Frame entry for the new_ldac_catalog (e92_ldac.fits)
+                    new_ldac_catalog = fits_file_output.replace('e92', 'e92_ldac')
+                    # num_new_frames_created = make_new_catalog_entry(new_ldac_catalog, header, block)
+
         except NeoException as ex:
             logger.error('Error with astrometric fit: {}'.format(ex))
             self.log('Error with astrometric fit: {}'.format(ex))
@@ -219,7 +259,7 @@ class ScampProcessPipeline(PipelineProcess):
         status, new_header = updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output)
         logger.info(f"Return status for updateFITSWCS: {status:}")
         self.log(f"Return status for updateFITSWCS: {status:}")
-        return status
+        return status, fits_file_output
 
 class ZeropointProcessPipeline(PipelineProcess):
     """
