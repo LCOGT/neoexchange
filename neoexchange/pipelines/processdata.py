@@ -413,7 +413,7 @@ class ZeropointProcessPipeline(PipelineProcess):
                 ref_height = set_height
 
             # Rewrite name of catalog to include position and size
-            refcat_filename = "{}_{ra:.2f}{dec:+.2f}_{width}x{height}.cat".format(phot_cat_name, ra=header['field_center_ra'], dec=header['field_center_dec'], width=ref_width, height=ref_height)
+            refcat_filename = "{}_{ra:.2f}{dec:+.2f}_{width}x{height}.db".format(phot_cat_name, ra=header['field_center_ra'], dec=header['field_center_dec'], width=ref_width, height=ref_height)
             db_filename = os.path.join(datadir, refcat_filename)
             created = True
 
