@@ -39,3 +39,4 @@ dramatiq[watch,redis]
 django-dramatiq==0.9.1
 djangorestframework==3.12.1
 freezegun
+git+https://github.com/talister/calviacat.git@gaia_support#egg=calviacat

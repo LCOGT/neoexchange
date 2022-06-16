@@ -1,12 +1,16 @@
 import logging
+import time
 import os
 from sys import argv
 from datetime import datetime, timedelta
+import warnings
 
 from django.conf import settings
 from django.core.files import File
 from django.core.files.storage import default_storage
 from dramatiq.middleware.time_limit import TimeLimitExceeded
+import calviacat as cvc
+import astropy.coordinates as coord
 
 from core.models import Frame
 from core.models.pipelines import PipelineProcess, PipelineOutput
@@ -15,7 +19,9 @@ from core.views import find_matching_image_file, run_sextractor_make_catalog, \
     run_scamp, find_block_for_frame, make_new_catalog_entry
 from core.tasks import send_task, run_pipeline
 from photometrics.catalog_subs import FITSHdrException, open_fits_catalog, \
-    get_catalog_header, increment_red_level, get_reference_catalog
+    get_catalog_header, increment_red_level, get_reference_catalog, extract_catalog, \
+    existing_catalog_coverage, reset_database_connection, \
+    update_zeropoint, update_frame_zeropoint, get_or_create_CatalogSources
 from photometrics.external_codes import updateFITSWCS
 
 logger = logging.getLogger(__name__)
@@ -58,7 +64,7 @@ class SExtractorProcessPipeline(PipelineProcess):
         desired_catalog = inputs.get('desired_catalog')
 
         try:
-            filepath_or_status = self.setup(fits_file, desired_catalog)
+            filepath_or_status = self.setup(fits_file, desired_catalog, out_path)
             print('filepath_or_status=', filepath_or_status)
             if type(filepath_or_status) != int:
                 status = self.process(filepath_or_status, configs_dir, out_path)
@@ -73,7 +79,7 @@ class SExtractorProcessPipeline(PipelineProcess):
         self.log('Pipeline Completed')
         return
 
-    def setup(self, fits_file, desired_catalog):
+    def setup(self, fits_file, desired_catalog, dest_dir):
 
         # Open catalog, get header and check fit status
         fits_header, junk_table, cattype = open_fits_catalog(fits_file, header_only=True)
@@ -85,14 +91,18 @@ class SExtractorProcessPipeline(PipelineProcess):
 
         # Check for matching catalog (solved with desired astrometric reference catalog)
         catfilename = os.path.basename(fits_file).replace('.fits', '_ldac.fits')
-        reproc_catfilename = increment_red_level(catfilename)
-        catalog_frames = Frame.objects.filter(filename__in=(catfilename, reproc_catfilename),
+        catalog_frames = Frame.objects.filter(filename=catfilename,
                                               frametype__in=(Frame.BANZAI_LDAC_CATALOG, Frame.FITS_LDAC_CATALOG),
                                               astrometric_catalog=desired_catalog)
         if len(catalog_frames) != 0:
-            logger.info("Found reprocessed frame in DB")
-            self.log(f"Found reprocessed frame ({catalog_frames[0]:}) in DB")
-            return 0
+            logger.info(f"Found reprocessed frame ({catalog_frames[0].filename:}) in DB")
+            self.log(f"Found reprocessed frame ({catalog_frames[0].filename:}) in DB")
+            ldac_filepath =  os.path.abspath(os.path.join(dest_dir, catalog_frames[0].filename))
+            if os.path.exists(ldac_filepath) is True:
+                return 0
+            else:
+                logger.info("but not on disk. continuing")
+                self.log("but not on disk. continuing")
 
         # Find image file for this catalog
         fits_filepath = find_matching_image_file(fits_file)
@@ -276,17 +286,25 @@ class ZeropointProcessPipeline(PipelineProcess):
     short_name = 'zp'
     long_name = 'Determine zeropoint for a frame'
     inputs = {
-        'fits_file': {
+        'ldac_catalog': {
             'default': None,
-            'long_name': 'Filepath to image file to process'
+            'long_name': 'Filepath to source catalog to process'
         },
-        'configs_dir':{
-            'default': os.path.abspath(os.path.join('photometrics', 'configs')),
-            'long_name' : 'Full path to SExtractor configuration files'
+        'catalog_type': {
+            'default': 'BANZAI_LDAC',
+            'long_name': 'Type of source catalog'
         },
-        'datadir': {
-            'default' : None,
-            'long_name' : 'Directory for output data'
+        'zeropoint_tolerance':{
+            'default': 0.1,
+            'long_name' : 'Standard deviation of zeropoint acceptable for good fit'
+        },
+        'desired_catalog' : {
+            'default' : 'PS1',
+            'long_name' : 'Type of photometric catalog desired'
+        },
+        'new_method' : {
+            'default' : True,
+            'long_name' : 'Whether to use the new ZP method via calviacat'
         }
     }
 
@@ -294,60 +312,154 @@ class ZeropointProcessPipeline(PipelineProcess):
         proxy = True
 
     def do_pipeline(self, tmpdir, **inputs):
-        if not inputs.get('datadir'):
-            out_path = tmpdir
-        else:
-            out_path = inputs.get('datadir')
-        fits_file = inputs.get('fits_file')
-        configs_dir = inputs.get('configs_dir')
+
+        catfile = inputs.get('ldac_catalog')
+        catalog_type = inputs.get('catalog_type')
+        phot_cat_name = inputs.get('desired_catalog')
+        std_zeropoint_tolerance = inputs.get('zeropoint_tolerance')
 
         try:
-            filepath_or_status = self.setup(fits_file)
-            if type(filepath_or_status) != int:
-                status = self.process(filepath_or_status, configs_dir, dest_dir)
+
+            num_in_table = 0
+            num_sources_created = 0
+            avg_zeropoint = None
+            C = None
+            std_zeropoint = None
+
+            header, table, db_filename = self.setup(catfile, catalog_type, phot_cat_name)
+
+            if header and table:
+                avg_zeropoint, std_zeropoint, C = self.cross_match_and_zp(table, db_filename, phot_cat_name, std_zeropoint_tolerance)
+                logger.info(f"New zp={avg_zeropoint:} +/- {std_zeropoint:} {C:}")
+                self.log(f"New zp={avg_zeropoint:} +/- {std_zeropoint:} {C:}")
+
+                # if crossmatch is good, update new zeropoint
+                if std_zeropoint < std_zeropoint_tolerance:
+                    logger.debug("Got good zeropoint - updating header")
+                    header, table = update_zeropoint(header, table, avg_zeropoint, std_zeropoint)
+
+                    # get the fits filename from the catfile in order to get the Block from the Frame
+                    if 'e91_ldac.fits' in os.path.basename(catfile):
+                        fits_file = os.path.basename(catfile.replace('e91_ldac.fits', 'e91.fits'))
+                    elif 'e92_ldac.fits' in os.path.basename(catfile):
+                        fits_file = os.path.basename(catfile.replace('e92_ldac.fits', 'e91.fits'))
+                    else:
+                        fits_file = os.path.basename(catfile)
+
+                    # update the zeropoint computed above in the FITS file Frame
+                    ast_cat_name = 'GAIA-DR2'
+                    frame = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename=fits_file, frame_type=Frame.SINGLE_FRAMETYPE)
+
+                    # update the zeropoint computed above in the CATALOG file Frame
+                    frame_cat = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename=os.path.basename(catfile), frame_type=Frame.BANZAI_LDAC_CATALOG)
+
+                    # store the CatalogSources
+                    num_sources_created, num_in_table = get_or_create_CatalogSources(table, frame)
+                else:
+                    logger.warning("Didn't get good zeropoint - not updating header")
+                    self.log("Didn't get good zeropoint - not updating header")
+            else:
+                logger.warning(f"Could not open {catfile:}")
+                self.log(f"Could not open {catfile:}")
+
+
         except NeoException as ex:
-            logger.error('Error with source extraction: {}'.format(ex))
-            self.log('Error with source extraction: {}'.format(ex))
-            raise AsyncError('Error performing source extraction')
+            logger.error('Error with zeropoint determination: {}'.format(ex))
+            self.log('Error with zeropoint determination: {}'.format(ex))
+            raise AsyncError('Error performing zeropoint determination')
         except TimeLimitExceeded:
-            raise AsyncError("Source extraction took longer than 10 mins to create")
+            raise AsyncError("Zeropoint determination took longer than 10 mins to create")
         except PipelineProcess.DoesNotExist:
             raise AsyncError("Record has been deleted")
         self.log('Pipeline Completed')
         return
 
-    def setup(self, fits_file):
+    def setup(self, catfile, catalog_type, phot_cat_name):
+        """Open the catalog file <catfile> of type <catalog_type> and search
+        for a calibration catalog that covers the pointing.
+        The header, source table and calibration DB filepath are returned.
+        """ 
 
-        # Open catalog, get header and check fit status
-        fits_header, junk_table, cattype = open_fits_catalog(fits_file, header_only=True)
-        try:
-            header = get_catalog_header(fits_header, cattype)
-        except FITSHdrException as e:
-            logger.error("Bad header for %s (%s)" % (catfile, e))
-            return -1
+        db_filename = None
 
-        # Check for matching catalog (solved with desired astrometric reference catalog)
-        catfilename = os.path.basename(catfile).replace('.fits', '_ldac.fits')
-        reproc_catfilename = increment_red_level(catfilename)
-        catalog_frames = Frame.objects.filter(filename__in=(catfilename, reproc_catfilename),
-                                              frametype__in=(Frame.BANZAI_LDAC_CATALOG, Frame.FITS_LDAC_CATALOG),
-                                              astrometric_catalog=desired_catalog)
-        if len(catalog_frames) != 0:
-            logger.info("Found reprocessed frame in DB")
-            return 0
+        filename = os.path.basename(catfile)
+        datadir = os.path.join(os.path.dirname(catfile), '')
 
-        # Find image file for this catalog
-        fits_filepath = find_matching_image_file(fits_file)
-        if fits_filepath is None:
-            logger.error("Could not open matching image %s for catalog %s" % ( fits_filepath, fits_file))
-            return -1
+        header, table = extract_catalog(catfile, catalog_type)
+        if header and table:
+            db_filename = self.create_caldb(datadir, header, phot_cat_name)
 
-        return fits_filepath
+        return header, table, db_filename
 
-    def process(self, fits_file, configs_dir, dest_dir):
+    def create_caldb(self, datadir, header, phot_cat_name, dbg=False):
+        db_filename = existing_catalog_coverage(datadir, header['field_center_ra'], header['field_center_dec'], header['field_width'], header['field_height'], phot_cat_name, '*.db', dbg)
+        created = False
+        if db_filename is None:
+            # Add 25% to passed width and height in lieu of actual calculation of extent
+            # of a series of frames
+            set_width = header['field_width']
+            set_height = header['field_height']
+            units = set_width[-1]
+            try:
+                ref_width = float(set_width[:-1]) * 1.25
+                ref_width = "{:.4f}{}".format(ref_width, units)
+            except ValueError:
+                ref_width = set_width
+            units = set_height[-1]
+            try:
+                ref_height = float(set_height[:-1]) * 1.25
+                ref_height = "{:.4f}{}".format(ref_height, units)
+            except ValueError:
+                ref_height = set_height
 
-        # Make a new FITS_LDAC catalog from the frame
-        status, new_ldac_catalog = run_sextractor_make_catalog(configs_dir, dest_dir, fits_file)
-        if status != 0:
-            logger.error("Execution of SExtractor failed")
-            return -4
+            # Rewrite name of catalog to include position and size
+            refcat_filename = "{}_{ra:.2f}{dec:+.2f}_{width}x{height}.cat".format(phot_cat_name, ra=header['field_center_ra'], dec=header['field_center_dec'], width=ref_width, height=ref_height)
+            db_filename = os.path.join(datadir, refcat_filename)
+            created = True
+
+        prefix = "Created" if created else "Retrieved"
+        self.log("{prefix:} DB file {refcat_filename:}")
+        return db_filename
+
+    def cross_match_and_zp(self, table, db_filename, phot_cat_name, std_zeropoint_tolerance, color_const=True):
+
+        if phot_cat_name == 'PS1':
+            refcat = cvc.PanSTARRS1(db_filename)
+        elif phot_cat_name == 'REFCAT2':
+            refcat = cvc.RefCat2(db_filename)
+        elif phot_cat_name == 'GAIA-DR2':
+            refcat = cvc.Gaia(db_filename)
+        else:
+            logger.error(f"Unknown reference catalog {phot_cat_name:}. Must be one of PS1, REFCAT2, GAIA-DR2")
+            return None
+        phot = table[table['flags'] == 0]  # clean LCO catalog
+        lco = coord.SkyCoord(phot['obs_ra'], phot['obs_dec'], unit='deg')
+
+        if len(refcat.search(lco)[0]) < 500:
+            start = time.time()
+            refcat.fetch_field(lco)
+            end = time.time()
+            logger.debug(f"TIME: refcat.fetch_field took {end-start:.1f} seconds")
+
+        start = time.time()
+        objids, distances = refcat.xmatch(lco)
+        end = time.time()
+        logger.debug(f"TIME: cvc cross_match took {end-start:.1f} seconds")
+
+        # cross_match can be a very slow process which can cause
+        # the DB connection to time out. If we reset and explicitly close the
+        # connection, Django will auto-reconnect.
+        reset_database_connection()
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message='divide by zero encountered')
+            start = time.time()
+            if color_const is True:
+                avg_zeropoint, C, std_zeropoint, r, gmi = refcat.cal_constant(objids, phot['obs_mag'], 'r')
+            else:
+                avg_zeropoint, C, std_zeropoint, r, gmr, gmi = refcat.cal_color(objids, phot['obs_mag'], 'r', 'g-r')
+            end = time.time()
+        logger.debug(f"TIME: compute_zeropoint took {end-start:.1f} seconds")
+        logger.debug(f"New zp={avg_zeropoint:} +/- {std_zeropoint:} {r.count():} {C:}")
+
+        return avg_zeropoint, std_zeropoint, C

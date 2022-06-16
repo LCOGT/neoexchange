@@ -463,7 +463,7 @@ def convert_catfile_to_corners(cat_file):
     return top_left, bottom_right
 
 
-def existing_catalog_coverage(dest_dir, ra, dec, width, height, cat_name="GAIA-DR2", dbg=False):
+def existing_catalog_coverage(dest_dir, ra, dec, width, height, cat_name="GAIA-DR2", cat_type='*.cat', dbg=False):
     """Search in <dest_dir> for catalogs of type [cat_name] that cover the
     pointing specified by <ra, dec> and with area <width, height>. The first
     match that covers the area is returned otherwise None is returned"""
@@ -471,7 +471,7 @@ def existing_catalog_coverage(dest_dir, ra, dec, width, height, cat_name="GAIA-D
     cat_file = None
     cat_path = os.path.join(dest_dir, '')
     if os.path.isdir(cat_path):
-        cat_files = glob(cat_path + cat_name + '*.cat')
+        cat_files = glob(cat_path + cat_name + cat_type)
         if len(cat_files) >= 1:
             unit = width[-1]
             if unit == 'm':
