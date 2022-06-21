@@ -108,6 +108,7 @@ COPY docker/etc/yum.repos.d/lcogt.repo /etc/yum.repos.d/lcogt.repo
 # 'glibc-langpack-en' is needed to prevent locale complaints (https://www.tecmint.com/fix-failed-to-set-locale-defaulting-to-c-utf-8-in-centos/)
 RUN yum -y install epel-release glibc-langpack-en\
         && yum -y install \
+            git \
             gcc \
             gcc-c++ \
             gcc-gfortran \
@@ -128,7 +129,7 @@ COPY neoexchange/requirements.txt .
 # numpy needs to be explicitly installed first otherwise pySLALIB fails with a
 # missing numpy.distutils.core reference because the package's setup.py is broken
 RUN pip3 --no-cache-dir install --upgrade pip \
-    && python3 -m pip --no-cache-dir install --upgrade numpy wheel \
+    && python3 -m pip --no-cache-dir install --upgrade numpy==1.21.4 wheel \
     && python3 -m pip --no-cache-dir install --trusted-host buildsba.lco.gtn -r requirements.txt
 
 # Add path to findorb
