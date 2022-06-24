@@ -35,6 +35,13 @@ from photometrics.catalog_subs import oracdr_catalog_mapping
 logger = logging.getLogger(__name__)
 
 
+#
+#
+# DEFAULT CONFIG FUNCTIONS
+#
+#
+
+
 def default_mtdlink_config_files():
     """Return a list of the needed files for MTDLINK. The config file should be in
     element 0"""
@@ -73,6 +80,30 @@ def default_findorb_config_files():
     return config_files
 
 
+def default_hotpants_config_files(source_dir, dest_dir):
+    """Return a list of the needed files for HOTPANTS. The config file should
+    be in element 0"""
+
+    config_files = ['hotpants.conf'] #Placeholder file
+
+    return config_files
+
+
+def default_swarp_config_files(source_dir, dest_dir):
+    """Return a list of the needed files for SWarp. The config file should
+    be in element 0"""
+
+    config_files = ['default.swarp']
+
+    return config_files
+
+#
+#
+# SETUP DIRECTORY FUNCTIONS
+#
+#
+
+
 def setup_mtdlink_dir(source_dir, dest_dir):
     """Setup a temporary working directory for running MTDLINK in <dest_dir>. The
     needed config files are symlinked from <source_dir>"""
@@ -102,6 +133,27 @@ def setup_sextractor_dir(source_dir, dest_dir, catalog_type='ASCII'):
     sextractor_config_files = default_sextractor_config_files(catalog_type)
 
     return_value = setup_working_dir(source_dir, dest_dir, sextractor_config_files)
+
+    return return_value
+
+
+def setup_hotpants_dir(source_dir, dest_dir):
+    """Setup a temporary working directory for running HOTPANTS in <dest_dir>.
+    The needed config files are symlinked from <source_dir>"""
+
+    hotpants_config_files = default_hotpants_config_files()
+
+    return_value = setup_working_dir(source_dir, dest_dir, hotpants_config_files)
+
+    return return_value
+
+def setup_swarp_dir(source_dir, dest_dir):
+    """Setup a temporary working directory for running SWarp in <dest_dir>.
+    The needed config files are symlinked from <source_dir>"""
+
+    swarp_config_files = default_swarp_config_files()
+
+    return_value = setup_working_dir(source_dir, dest_dir, swarp_config_files)
 
     return return_value
 
@@ -150,6 +202,7 @@ def setup_working_dir(source_dir, dest_dir, config_files):
     files (given in a list in <config_files>) are symlinked from <source_dir> if
     they don't already exist in <dest_dir>"""
 
+    source_dir = os.path.abspath(source_dir)
     if not os.path.exists(source_dir):
         logger.error("Source path '%s' does not exist" % source_dir)
         return -1
@@ -183,29 +236,17 @@ def setup_working_dir(source_dir, dest_dir, config_files):
     return return_status
 
 
-def find_binary(program):
-    """Python equivalent of 'which' command to find a binary in the path (can
-    also be given a specific pathname"""
-
-    def is_exe(fpath):
-        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
-
-    fpath, fname = os.path.split(program)
-    if fpath:
-        if is_exe(program):
-            return program
-    else:
-        for path in os.environ["PATH"].split(os.pathsep):
-            path = path.strip('"')
-            exe_file = os.path.join(path, program)
-            if is_exe(exe_file):
-                return exe_file
-
-    return None
+#
+#
+# DETERMINE OPTIONS FUNCTIONS
+#
+#
 
 
 def determine_sext_options(fits_file):
 
+    # Mapping keys in the generalized headers that NEOX uses to SExtractor
+    # command line options
     option_mapping = OrderedDict([
                         ('gain'      , '-GAIN'),
                         ('zeropoint' , '-MAG_ZEROPOINT'),
@@ -230,7 +271,35 @@ def determine_sext_options(fits_file):
         if header.get(header_mapping[option], -99) != -99:
             options += option_mapping[option] + ' ' + str(header.get(header_mapping[option])) + ' '
     options = options.rstrip()
+
+    # SWarp requires a weight image later in the pipeline.
+    # SExtractor can also output a weight image if we specify
+    # CHECKIMAGE_TYPE and CHECKIMAGE_NAME parameters.
+    rms_filename = fits_file.replace(".fits", ".rms.fits")
+    options += f' -CHECKIMAGE_TYPE BACKGROUND_RMS -CHECKIMAGE_NAME {rms_filename}'
+    options += ' -BACK_SIZE 42'
+
     return options
+
+
+def determine_hotpants_options(placeholder_param):
+    """
+    https://github.com/acbecker/hotpants
+
+    Required options are:
+    [-inim fitsfile]  : comparison image to be differenced
+    [-tmplim fitsfile]: template image
+    [-outim fitsfile] : output difference image
+    """
+    return
+
+
+def determine_swarp_options(placeholder_param):
+    """
+    https://raw.githubusercontent.com/astromatic/swarp/legacy_doc/prevdoc/swarp.pdf
+
+    """
+    return
 
 
 def make_pa_rate_dict(pa, deltapa, minrate, maxrate):
@@ -299,6 +368,34 @@ def determine_findorb_options(site_code, start_time=datetime.utcnow()):
     return options
 
 
+#
+#
+# RUN FUNCTIONS
+#
+#
+
+
+def find_binary(program):
+    """Python equivalent of 'which' command to find a binary in the path (can
+    also be given a specific pathname"""
+
+    def is_exe(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+    fpath, fname = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+
+    return None
+
+
 def add_l1filter(fits_file):
     """Adds a L1FILTER keyword into the <fits_file> with the same value
     as FILTER. If not found, nothing is done."""
@@ -344,15 +441,43 @@ def run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type='A
         options = determine_sext_options(root_fits_file)
     else:
         options = determine_sext_options(fits_file)
+
     cmdline = "%s %s -c %s %s" % ( binary, fits_file, sextractor_config_file, options )
     cmdline = cmdline.rstrip()
 
     if dbg is True:
         retcode_or_cmdline = cmdline
     else:
+        # This executes the command to the terminal
         logger.debug("cmdline=%s" % cmdline)
         args = cmdline.split()
         retcode_or_cmdline = call(args, cwd=dest_dir)
+
+    return retcode_or_cmdline
+
+
+@timeit
+def run_hotpants(source_dir, dest_dir, placeholder_param):
+    """Run HOTPANTS (using either the binary specified by [binary] or by
+    looking for 'hotpants' in the PATH) on the passed <fits_catalog_path> with the
+    results and any temporary files created in <dest_dir>. <source_dir> is the
+    path to the required config files."""
+
+    #Placeholder
+    retcode_or_cmdline = -42
+
+    return retcode_or_cmdline
+
+
+@timeit
+def run_swarp(source_dir, dest_dir, placeholder_param):
+    """Run SWarp (using either the binary specified by [binary] or by
+    looking for 'swarp' in the PATH) on the passed <fits_catalog_path> with the
+    results and any temporary files created in <dest_dir>. <source_dir> is the
+    path to the required config files."""
+
+    #Placeholder
+    retcode_or_cmdline = -42
 
     return retcode_or_cmdline
 
@@ -516,6 +641,13 @@ def run_findorb(source_dir, dest_dir, obs_file, site_code=500, start_time=dateti
         retcode_or_cmdline = call(args, cwd=dest_dir)
 
     return retcode_or_cmdline
+
+
+#
+#
+#
+#
+#
 
 
 def get_scamp_xml_info(scamp_xml_file):
