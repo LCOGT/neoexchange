@@ -53,7 +53,8 @@ def create_weight_image(fits_file):
         logger.error("RMS file %s does not exist" % rms_file)
         return
     try:
-        rmsdata = fits.open(rms_file)[0].data
+        rms_hdulist = fits.open(rms_file)
+        rmsdata = rms_hdulist[0].data
     except IOError as e:
         logger.error("Unable to open RMS image %s (Reason=%s)" % (rms_file, e))
         return
@@ -82,5 +83,8 @@ def create_weight_image(fits_file):
     hdu = fits.PrimaryHDU(weightdata, sciheader)
     weight_hdulist = fits.HDUList(hdu)
     weight_hdulist.writeto(weight_file, overwrite = True, checksum = True)
+
+    hdulist.close()
+    rms_hdulist.close()
 
     return weight_file

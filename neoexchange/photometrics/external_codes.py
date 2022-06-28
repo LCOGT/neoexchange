@@ -302,6 +302,30 @@ def determine_swarp_options(placeholder_param):
     return
 
 
+def make_file_list(images, output_file_name):
+    """
+    Takes a list of images and saves them to a new text file.
+    The list contains strings of the full pathway to each file.
+
+    The list can be created by using the following as an example:
+        data_root = os.path.join(os.getenv('HOME'), 'data','lco','')
+        fits_files = glob(data_root + 'lsc*e91.fits.fz')
+    """
+
+    with open(output_file_name, 'w') as f:
+        for image in images:
+            f.write(f"{image}\n")
+
+    return output_file_name
+
+
+def normalize(images):
+    """
+    Normalize all images to the same zeropoint by adding FLXSCALE and FLXSCLZP to their headers.
+    """
+    return
+
+
 def make_pa_rate_dict(pa, deltapa, minrate, maxrate):
 
     pa_rate_dict = {    'filter_pa': pa,
@@ -457,7 +481,7 @@ def run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type='A
 
 
 @timeit
-def run_hotpants(source_dir, dest_dir, placeholder_param):
+def run_hotpants(source_dir, dest_dir):
     """Run HOTPANTS (using either the binary specified by [binary] or by
     looking for 'hotpants' in the PATH) on the passed <fits_catalog_path> with the
     results and any temporary files created in <dest_dir>. <source_dir> is the
@@ -470,13 +494,33 @@ def run_hotpants(source_dir, dest_dir, placeholder_param):
 
 
 @timeit
-def run_swarp(source_dir, dest_dir, placeholder_param):
+def run_swarp(source_dir, dest_dir, images):
     """Run SWarp (using either the binary specified by [binary] or by
-    looking for 'swarp' in the PATH) on the passed <fits_catalog_path> with the
+    looking for 'swarp' in the PATH) on the passed <images> with the
     results and any temporary files created in <dest_dir>. <source_dir> is the
     path to the required config files."""
 
-    #Placeholder
+    #call default_swarp_config_files
+    #call setup_swarp_dir
+
+    #copy images and weights to dest_dir
+    weights = []
+    for image in images:
+        weights.append(image.replace(".fits.fz", "weights.fits"))
+        if os.path.exists(image):
+            #symlink image to dest_dir
+    for weight in weights:
+        if os.path.exists(weight):
+            #symlink weight to dest_dir
+
+
+    #call normalize images
+    #call make_image_list for science images, same for weights
+    #call determine_swarp_options
+
+    #run swarp
+
+
     retcode_or_cmdline = -42
 
     return retcode_or_cmdline
