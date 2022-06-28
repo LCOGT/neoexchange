@@ -35,6 +35,7 @@ def create_weight_image(fits_file):
     # SCI HDU
     try:
         scidata = hdulist['SCI'].data
+        sciheader = hdulist['SCI'].header
     except KeyError:
         logger.error("SCI HDU not found in FITS file.")
         return
@@ -58,25 +59,28 @@ def create_weight_image(fits_file):
         return
 
     # Create boolean array based on mask
-    boolean_mask = np.arrray(maskdata, dtype=bool)
+    boolean_mask = np.array(maskdata, dtype=bool)
 
     # Create an array to hold the weight values
     weightdata = np.empty_like(maskdata, dtype='<f4')
-    weightdata[~boolean_mask] = 1 / rmsdata[maskdata==0] ** 2
+    weightdata[~boolean_mask] = 1 / rmsdata[~boolean_mask] ** 2
     weightdata[boolean_mask] = 0.
 
     # Additional mask based on saturation value
     try:
-        max_satur = hdulist['SCI'].header['MAXLIN']
+        max_satur = sciheader['MAXLIN']
     except KeyError:
-            max_satur = hdulist['SCI'].header['SATURATE']
+            max_satur = sciheader['SATURATE']
     finally:
         satur_ind = scidata >= max_satur
         weightdata[satur_ind] = 0.
 
     # Create new weights FITS file
-    hdu = fits.PrimaryHDU(weightdata)
+    del(sciheader['EXTNAME'])
+    sciheader['L1FRMTYP'] = ('WEIGHT', 'Type of processed image')
+    weight_file = fits_file.replace(".fits.fz", ".weights.fits")
+    hdu = fits.PrimaryHDU(weightdata, sciheader)
     weight_hdulist = fits.HDUList(hdu)
-    weight_hdulist.writeto(fits_file.replace(".fits.fz", "weights.fits"))
+    weight_hdulist.writeto(weight_file, overwrite = True, checksum = True)
 
-    return
+    return weight_file
