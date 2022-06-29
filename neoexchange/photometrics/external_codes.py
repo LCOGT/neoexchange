@@ -80,7 +80,7 @@ def default_findorb_config_files():
     return config_files
 
 
-def default_hotpants_config_files(source_dir, dest_dir):
+def default_hotpants_config_files():
     """Return a list of the needed files for HOTPANTS. The config file should
     be in element 0"""
 
@@ -89,11 +89,11 @@ def default_hotpants_config_files(source_dir, dest_dir):
     return config_files
 
 
-def default_swarp_config_files(source_dir, dest_dir):
+def default_swarp_config_files():
     """Return a list of the needed files for SWarp. The config file should
     be in element 0"""
 
-    config_files = ['default.swarp']
+    config_files = ['swarp_neox.conf']
 
     return config_files
 
@@ -304,14 +304,14 @@ def determine_swarp_options(placeholder_param):
 
 def make_file_list(images, output_file_name):
     """
-    Takes a list of images and saves them to a new text file.
+    Takes a list of images and saves them to a new text file in the specified path.
     The list contains strings of the full pathway to each file.
 
     The list can be created by using the following as an example:
         data_root = os.path.join(os.getenv('HOME'), 'data','lco','')
         fits_files = glob(data_root + 'lsc*e91.fits.fz')
     """
-
+    #This also overwrites any existing file of the same name
     with open(output_file_name, 'w') as f:
         for image in images:
             f.write(f"{image}\n")
@@ -319,10 +319,22 @@ def make_file_list(images, output_file_name):
     return output_file_name
 
 
-def normalize(images):
+def normalize(images, swarp_zp_key='L1ZP'):
     """
     Normalize all images to the same zeropoint by adding FLXSCALE and FLXSCLZP to their headers.
     """
+
+    for image in images:
+        hdulist = fits.open(image)
+        im_header = hdulist['SCI'].header
+        if swarp_zp_key in im_header:
+            fluxscale = 10**(-0.4 * (im_header[swarp_zp_key] - 25.))
+            im_header['FLXSCALE'] = (fluxscale, 'Flux scale factor for coadd')
+            im_header['FLXSCLZP'] = (25.0, 'FLXSCALE equivalent ZP')
+            hdulist.writeto(image, overwrite=True, checksum=True)
+        else:
+            logger.warning(f"Keyword {swarp_zp_key} not present in {image}.")
+        hdulist.close()
     return
 
 
@@ -500,23 +512,46 @@ def run_swarp(source_dir, dest_dir, images):
     results and any temporary files created in <dest_dir>. <source_dir> is the
     path to the required config files."""
 
-    #call default_swarp_config_files
-    #call setup_swarp_dir
+    status = setup_swarp_dir(source_dir, dest_dir)
+    if status != 0:
+        return status
 
-    #copy images and weights to dest_dir
-    weights = []
-    for image in images:
-        weights.append(image.replace(".fits.fz", "weights.fits"))
-        if os.path.exists(image):
-            #symlink image to dest_dir
-    for weight in weights:
-        if os.path.exists(weight):
-            #symlink weight to dest_dir
+    binary = binary or find_binary("swarp")
+    if binary is None:
+        logger.error("Could not locate 'swarp' executable in PATH")
+        return -42
 
+    swarp_config_file = default_swarp_config_files()[0]
 
-    #call normalize images
-    #call make_image_list for science images, same for weights
     #call determine_swarp_options
+
+    normalize(images)
+
+    # Symlink images and weights to dest_dir and create lists of these links
+    linked_images = []
+    linked_weights = []
+    for image in images:
+        if os.path.exists(image):
+            image_filename = os.path.basename(image)
+            image_newfilepath = os.path.join(dest_dir, image_filename)
+            os.symlink(image, image_newfilepath)
+            linked_images.append(image_filename)
+        else:
+            logger.error(f'Could not find {image}')
+            return -1
+
+        weight_image = image.replace(".fits.fz", "weights.fits")
+        if os.path.exists(weight_image):
+            weight_filename = os.path.basename(weight_image)
+            weight_newfilepath = os.path.join(dest_dir, weight_filename)
+            os.symlink(weight_image, weight_newfilepath)
+            linked_weights.append(weight_filename)
+        else:
+            logger.error(f'Could not find {weight_image}')
+            return -2
+
+    inlist = make_file_list(linked_images, dest_dir + 'images.in')
+    inweight = make_file_list(linked_weights, dest_dir + 'weight.in')
 
     #run swarp
 
