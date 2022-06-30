@@ -37,8 +37,9 @@ class ExternalCodeUnitTest(TestCase):
         # Path to the config files
         self.source_dir = os.path.abspath(os.path.join('photometrics', 'configs'))
 
-        self.test_fits_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example-sbig-e10.fits'))
-        self.test_fits_catalog = os.path.abspath(os.path.join('photometrics', 'tests', 'ldac_test_catalog.fits'))
+        self.testfits_dir = os.path.abspath(os.path.join('photometrics', 'tests'))
+        self.test_fits_file = os.path.abspath(os.path.join(self.testfits_dir, 'example-sbig-e10.fits'))
+        self.test_fits_catalog = os.path.abspath(os.path.join(self.testfits_dir, 'ldac_test_catalog.fits'))
 
         self.test_GAIADR2_catalog = os.path.abspath(os.path.join('photometrics', 'tests', 'GAIA-DR2.cat'))
 

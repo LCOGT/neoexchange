@@ -15,8 +15,12 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 import os
+import logging
+
 import numpy as np
 from astropy.io import fits
+
+logger = logging.getLogger(__name__)
 
 def create_weight_image(fits_file):
 
@@ -25,33 +29,40 @@ def create_weight_image(fits_file):
 
     if not os.path.exists(fits_file):
         logger.error("FITS file %s does not exist" % fits_file)
-        return
+        return -1
     try:
         hdulist = fits.open(fits_file)
     except IOError as e:
         logger.error("Unable to open FITS image %s (Reason=%s)" % (fits_file, e))
-        return
+        return -2
 
     # SCI HDU
     try:
         scidata = hdulist['SCI'].data
         sciheader = hdulist['SCI'].header
     except KeyError:
-        logger.error("SCI HDU not found in FITS file.")
-        return
+        logger.error("SCI HDU not found in %s." % fits_file)
+        return -3
 
     # BPM HDU
     try:
         maskdata = hdulist['BPM'].data
     except KeyError as e:
-        logger.error("BPM HDU not found in FITS file.")
-        return
+        logger.error("BPM HDU not found in %s" % fits_file)
+        return -4
 
     # RMS image
-    rms_file = fits_file.replace(".fits.fz", ".rms.fits")
+    if fits_file.endswith(".fz"):
+        rms_file = fits_file.replace(".fits.fz", ".rms.fits")
+    else:
+        rms_file = fits_file.replace(".fits", ".rms.fits")
+    if rms_file == fits_file:
+        # We don't want to use the science data as rms data!
+        logger.error("%s is a FITS file, but does not end in .fits or .fits.fz" % fits_file)
+        return -5
     if not os.path.exists(rms_file):
         logger.error("RMS file %s does not exist" % rms_file)
-        return
+        return -6
     try:
         rms_hdulist = fits.open(rms_file)
         rmsdata = rms_hdulist[0].data
@@ -79,7 +90,16 @@ def create_weight_image(fits_file):
     # Create new weights FITS file
     del(sciheader['EXTNAME'])
     sciheader['L1FRMTYP'] = ('WEIGHT', 'Type of processed image')
-    weight_file = fits_file.replace(".fits.fz", ".weights.fits")
+
+    if fits_file.endswith(".fz"):
+        weight_file = fits_file.replace(".fits.fz", ".weights.fits")
+    else:
+        weight_file = fits_file.replace(".fits", ".weights.fits")
+    if weight_file == fits_file:
+        # We don't want to overwrite the original file!
+        logger.error("%s is a FITS file, but does not end in .fits or .fits.fz" % fits_file)
+        return -5
+
     hdu = fits.PrimaryHDU(weightdata, sciheader)
     weight_hdulist = fits.HDUList(hdu)
     weight_hdulist.writeto(weight_file, overwrite = True, checksum = True)
