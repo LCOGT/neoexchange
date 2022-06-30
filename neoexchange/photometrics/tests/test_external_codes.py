@@ -508,7 +508,8 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
         test_fh.close()
 
         # Expected value is 14 lines of header plus 2086 sources
-        self.assertEqual(14+2086, len(test_lines))
+        # LP 2022/06/30 Expected sources now 1929 after change in BACK_SIZE
+        self.assertEqual(14+1929, len(test_lines))
         self.assertEqual(expected_line1, test_lines[0].rstrip())
 
     def test_setup_ldac_sextractor_dir(self):
@@ -570,7 +571,8 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
         self.assertEqual(expected_options, options)
 
     def test1(self):
-        expected_options = '-GAIN 1.4 -PIXEL_SCALE 0.467 -SATUR_LEVEL 46000'
+        rms_file = self.test_fits_file.replace(".fits", ".rms.fits")
+        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.467 -SATUR_LEVEL 46000 -CHECKIMAGE_TYPE BACKGROUND_RMS -CHECKIMAGE_NAME {rms_file} -BACK_SIZE 42'
 
         options = determine_sextractor_options(self.test_fits_file)
 
