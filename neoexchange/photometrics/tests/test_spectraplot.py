@@ -22,6 +22,7 @@ from collections import OrderedDict
 from django.test import TestCase
 from astropy import units as u
 from astropy.io.fits import Header
+from astropy.tests.helper import assert_quantity_allclose
 import numpy as np
 
 from photometrics.spectraplot import *
@@ -265,6 +266,6 @@ class TestBuildSpectra(TestCase):
         self.assertGreater(wav_range[1], max(wavelength))
         self.assertLess(wav_range[0], min(wavelength))
         self.assertAlmostEqual(np.mean(flux), expected_flux_mean, self.precision)
-        self.assertAlmostEqual(np.mean(error), expected_error_mean, self.precision)
+        assert_quantity_allclose(np.mean(error), expected_error_mean, rtol=f'1e-{self.precision}')
 
 
