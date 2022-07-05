@@ -22,6 +22,7 @@ import shutil
 
 from astropy.io import fits
 from numpy import array, arange
+from numpy.testing import assert_allclose
 
 from django.test import TestCase
 from django.forms.models import model_to_dict
@@ -44,6 +45,7 @@ class TestCreateWeightImage(ExternalCodeUnitTest):
         self.test_banzai_rms_file = os.path.join(self.testfits_dir, 'banzai_test_frame.rms.fits')
 
         """example-sbig-e10.fits"""
+        # This image only has a 'PRIMARY' HDU
         shutil.copy(os.path.abspath(self.test_fits_file), self.test_dir)
         self.test_fits_file = os.path.join(self.test_dir, os.path.basename(self.test_fits_file))
 
@@ -59,7 +61,11 @@ class TestCreateWeightImage(ExternalCodeUnitTest):
         shutil.copy(os.path.abspath(self.test_banzai_rms_file), self.test_dir)
         self.test_banzai_rms_file = os.path.join(self.test_dir, os.path.basename(self.test_banzai_rms_file))
 
-        self.remove = False
+        """swarp_neox.conf"""
+        shutil.copy(os.path.abspath(os.path.join(self.source_dir, 'swarp_neox.conf')), self.test_dir)
+        self.test_conf_file = os.path.join(self.test_dir, 'swarp_neox.conf')
+
+        self.remove = True
 
     def test_doesnotexist(self):
         expected_status = -1
@@ -86,11 +92,12 @@ class TestCreateWeightImage(ExternalCodeUnitTest):
     def test_nobpmhdu(self):
         expected_status = -4
 
-        hdulist = fits.open(self.test_fits_file)
-        header = hdulist[0].header
-        header['EXTNAME'] = 'SCI'
-        hdulist.writeto(self.test_fits_file, overwrite=True, checksum=True)
-        hdulist.close()
+        with fits.open(self.test_fits_file) as hdulist:
+            # Rename the 'PRIMARY' HDU to 'SCI'
+            header = hdulist[0].header
+            header['EXTNAME'] = 'SCI'
+            hdulist.writeto(self.test_fits_file, overwrite=True, checksum=True)
+
         status = create_weight_image(self.test_fits_file)
 
         self.assertEqual(expected_status, status)
@@ -115,13 +122,14 @@ class TestCreateWeightImage(ExternalCodeUnitTest):
         self.assertEqual(expected_status, status)
 
     def test_rms_badfitsfile(self):
+        # Rename a non-fits file to be the rms file
         expected_status = -7
 
-        bad_file = os.path.join(self.source_dir, 'swarp_neox.conf')
-        # Look inside tmp folder to rename some non-fits file to be the rms file.
-        #os.rename()
+        good_file = self.test_banzai_file
+        bad_rms = self.test_conf_file
+        os.replace(bad_rms, self.test_banzai_rms_file)
 
-        status = create_weight_image(bad_file)
+        status = create_weight_image(good_file)
 
         self.assertEqual(expected_status, status)
 
@@ -141,3 +149,24 @@ class TestCreateWeightImage(ExternalCodeUnitTest):
         header = fits.getheader(weight_filename, 0)
         self.assertEqual('', header.get('EXTNAME', ''))
         self.assertEqual('WEIGHT', header.get('L1FRMTYP', ''))
+
+    def test_success(self):
+        expected_filename = self.test_banzai_file.replace(".fits", ".weights.fits")
+
+        weight_filename = create_weight_image(self.test_banzai_file)
+
+        self.assertEqual(expected_filename, weight_filename)
+
+
+        hdul = fits.open(weight_filename)
+        header = hdul[0].header
+        data = hdul[0].data
+
+        self.assertEqual('', header.get('EXTNAME', ''))
+        self.assertEqual('WEIGHT', header.get('L1FRMTYP', ''))
+        # Test whether saturated pixels are 0.0
+        assert_allclose(0.0, data[444, 394])
+        # Test whether bad pixels are 0.0
+        assert_allclose(0.0, data[1653:1663, 458])
+        # Test whether central pixel is nonzero
+        assert_allclose(0.0009511118, data[int(header['NAXIS1']/2), int(header['NAXIS2']/2)])

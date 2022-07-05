@@ -68,7 +68,7 @@ def create_weight_image(fits_file):
         rmsdata = rms_hdulist[0].data
     except IOError as e:
         logger.error("Unable to open RMS image %s (Reason=%s)" % (rms_file, e))
-        return
+        return -7
 
     # Create boolean array based on mask
     boolean_mask = np.array(maskdata, dtype=bool)
@@ -79,8 +79,11 @@ def create_weight_image(fits_file):
     weightdata[boolean_mask] = 0.
 
     # Additional mask based on saturation value
+    max_satur = 65535
     try:
-        max_satur = sciheader['MAXLIN']
+        max_satur = sciheader.get('MAXLIN', 0.0)
+        if max_satur <= 0.0:
+            raise KeyError
     except KeyError:
             max_satur = sciheader['SATURATE']
     finally:
