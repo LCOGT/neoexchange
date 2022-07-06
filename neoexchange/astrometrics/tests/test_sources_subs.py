@@ -3160,6 +3160,7 @@ class TestParseMPCObsFormat(TestCase):
                             'cp_cKC_l': u'0332PK10V01c KC2016 02 19.06978 08 49 10.77 +34 23 21.4          18.1 Nq97706I81',
                             'cZ_ C_lX': u'    CK22E030 ZC2021 10 25.17101318 59 23.09 -05 07 29.4          20.5 gXEM021I41',
                             'cZ_ C_lW': u'    CK22E030 ZC2021 10 25.17101318 59 23.09 -05 07 29.4          20.5 gWEM021I41',
+                            'cK_ C_lZ': u'    CK22E030 KC2022 05 19.41238 20 05 55.31 +18 29 26.0          15.2 rZEK019G80',
                           }
         self.maxDiff = None
 
@@ -3725,6 +3726,25 @@ class TestParseMPCObsFormat(TestCase):
                             'lco_discovery' : False
                           }
         params = parse_mpcobs(self.test_lines['cZ_ C_lW'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_cK_C_lZ(self):
+        """Test for comet C/2022 E3 with provisional desigination, new-style (C)CD stac(K)ed observation, ATLAS-2 catalog code"""
+        expected_params = { 'body'  : 'CK22E030',
+                            'flags' : 'K',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2022,  5, 19,  9, 53, 49, int(0.632*1e6)),
+                            'obs_ra'    : 301.4804583333334,
+                            'obs_dec'   : 18.490555555555556,
+                            'obs_mag'   : 15.2,
+                            'filter'    : 'r',
+                            'astrometric_catalog' : 'ATLAS-2',
+                            'site_code' : 'G80',
+                            'discovery' : False,
+                            'lco_discovery' : False
+                          }
+        params = parse_mpcobs(self.test_lines['cK_ C_lZ'])
 
         self.compare_dict(expected_params, params)
 

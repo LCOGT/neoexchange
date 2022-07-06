@@ -667,6 +667,7 @@ def translate_catalog_code(code_or_name, ades_code=False):
                   "W" : "GAIA-DR3",
                   "X" : "GAIA-EDR3",
                   "Y" : "UCAC5",
+                  "Z" : "ATLAS-2",
                   }
     # https://www.minorplanetcenter.net/iau/info/ADESFieldValues.html
     catalog_mapping = {'USNO-SA2.0'  : 'USNOSA2',  # Can't test, don't have CDs
