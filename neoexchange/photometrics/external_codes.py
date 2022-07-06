@@ -279,6 +279,7 @@ def determine_sextractor_options(fits_file):
     options += f' -CHECKIMAGE_TYPE BACKGROUND_RMS -CHECKIMAGE_NAME {rms_filename}'
     options += ' -BACK_SIZE 42'
 
+    hdulust.close()
     return options
 
 
@@ -294,12 +295,25 @@ def determine_hotpants_options(placeholder_param):
     return
 
 
-def determine_swarp_options(placeholder_param):
-    """
-    https://raw.githubusercontent.com/astromatic/swarp/legacy_doc/prevdoc/swarp.pdf
+def determine_swarp_options(weights, outname, dest_dir):
+    """ Takes *symlinked* lists for 'images' and 'weights' """
 
-    """
-    return
+    options = ''
+
+    # If images OR weights don't exist, this should already be caught in run_swarp().
+
+    inweight = make_file_list(weights, os.path.join(dest_dir, 'weight.in'))
+
+    back_size = 42
+    wgtout = outname.replace('.fits', '.weight.fits')
+
+    options = f'-BACK_SIZE {back_size} ' \
+              f'-IMAGEOUT_NAME {outname} ' \
+              f'-VMEM_DIR {dest_dir} ' \
+              f'-RESAMPLE_DIR {dest_dir} ' \
+              f'-WEIGHT_IMAGE @{inweight} ' \
+              f'-WEIGHTOUT_NAME {wgtout} '
+    return options
 
 
 def make_file_list(images, output_file_name):
@@ -523,8 +537,6 @@ def run_swarp(source_dir, dest_dir, images):
 
     swarp_config_file = default_swarp_config_files()[0]
 
-    #call determine_swarp_options
-
     normalize(images)
 
     # Symlink images and weights to dest_dir and create lists of these links
@@ -550,8 +562,9 @@ def run_swarp(source_dir, dest_dir, images):
             logger.error(f'Could not find {weight_image}')
             return -2
 
-    inlist = make_file_list(linked_images, dest_dir + 'images.in')
-    inweight = make_file_list(linked_weights, dest_dir + 'weight.in')
+    #call determine_swarp_options
+    outname = "PLACEHOLDER"
+    options = determine_swarp_options(linked_weights, outname, dest_dir)
 
     #run swarp
 

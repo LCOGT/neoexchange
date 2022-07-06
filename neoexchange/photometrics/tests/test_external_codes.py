@@ -579,6 +579,18 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
 
         self.assertEqual(expected_options, options)
 
+class TestDetermineSwarpOptions(ExternalCodeUnitTest):
+
+    def test1(self):
+        inweight = os.path.join(self.test_dir, 'weight.in')
+        expected_options = f'-BACK_SIZE 42 -IMAGEOUT_NAME test_swarp_output.fits -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -WEIGHT_IMAGE @{inweight} -WEIGHTOUT_NAME test_swarp_output.weight.fits '
+
+        weights = [self.test_fits_file for x in range(3)]
+        outname = "test_swarp_output.fits"
+        options = determine_swarp_options(weights, outname, self.test_dir)
+
+        self.assertEqual(expected_options, options)
+
 
 class TestDetermineMTDLINKOptions(ExternalCodeUnitTest):
 
