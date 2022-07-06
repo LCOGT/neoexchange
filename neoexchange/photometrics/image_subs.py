@@ -94,7 +94,7 @@ def create_weight_image(fits_file):
     del(sciheader['EXTNAME'])
     sciheader['L1FRMTYP'] = ('WEIGHT', 'Type of processed image')
 
-    if fits_file.endswith(".fz"):
+    if fits_file.endswith(".fits.fz"):
         weight_file = fits_file.replace(".fits.fz", ".weights.fits")
     else:
         weight_file = fits_file.replace(".fits", ".weights.fits")

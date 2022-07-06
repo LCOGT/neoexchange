@@ -61,9 +61,9 @@ class ExternalCodeUnitTest(TestCase):
 
         self.test_obs_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcobs_WSAE9A6.dat'))
 
-        self.debug_print = False
+        self.debug_print = True
 
-        self.remove = True
+        self.remove = False
 
     def tearDown(self):
         if self.remove:
@@ -527,6 +527,114 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
             self.assertTrue(os.path.exists(test_file), msg=config_file + ' is missing')
 
 
+class TestSwarpRunner(ExternalCodeUnitTest):
+    def test_setup_swarp_dir_bad_destdir(self):
+
+        expected_status = -2
+
+        status = setup_swarp_dir(self.source_dir, os.path.join('/usr/share/wibble'))
+
+        self.assertEqual(expected_status, status)
+
+    def test_setup_swarp_dir_bad_srcdir(self):
+
+        expected_status = -1
+
+        status = setup_swarp_dir('wibble', self.test_dir)
+
+        self.assertEqual(expected_status, status)
+
+    def test_setup_swarp_dir(self):
+
+        expected_configs = default_swarp_config_files()
+        expected_status = 0
+
+        status = setup_swarp_dir(self.source_dir, self.test_dir)
+
+        self.assertEqual(expected_status, status)
+
+        for config_file in expected_configs:
+            test_file = os.path.join(self.test_dir, config_file)
+            self.assertTrue(os.path.exists(test_file), msg=config_file + ' is missing')
+
+    def test_badimages(self):
+
+        expected_status = -3
+
+        status = run_swarp(self.source_dir, self.test_dir, ["banana"])
+
+        self.assertEqual(expected_status, status)
+
+    def test_badweights(self):
+        expected_status = -4
+
+        status = run_swarp(self.source_dir, self.test_dir, [self.test_fits_file])
+
+        self.assertEqual(expected_status, status)
+
+    def test_nonfits(self):
+        expected_status = -5
+
+        status = run_swarp(self.source_dir, self.test_dir, [self.test_GAIADR2_catalog])
+
+        self.assertEqual(expected_status, status)
+
+    # DONT RUN UNTIL COPIED FILES!!
+    def test_normalize_success(self):
+        expected_status = 0
+
+        TEMP_IMAGE = ["A fits image that contains a L1ZP keyword, copied over to the temp directory."]
+        status = normalize(TEMP_IMAGE)
+
+        self.assertEqual(expected_status, status)
+
+    def test_normalize_fail(self):
+        expected_status = -6
+
+        TEMP_IMAGE = ["A fits image that DOES NOT contains a L1ZP keyword, copied over to the temp directory."]
+        status = normalize(TEMP_IMAGE)
+
+        self.assertEqual(expected_status, status)
+
+    # TO DO
+    def test_run_swarp_nofile(self):
+
+        expected_cmdline = './swarp  -c swarp_neox.conf'
+        cmdline = run_swarp(self.source_dir, self.test_dir, [], binary='./swarp', dbg=True)
+
+        self.assertEqual(expected_cmdline, cmdline)
+
+    def test_run_swarp_file(self):
+
+        expected_cmdline = './swarp foo.fits -c swarp_neox.conf'
+        cmdline = run_swarp(self.source_dir, self.test_dir, ['foo.fits'], binary='./swarp', dbg=True)
+
+        self.assertEqual(expected_cmdline, cmdline)
+
+    @skipIf(find_binary("swarp") is None, "Could not find swarp binary ('swarp') in PATH")
+    def test_run_swarp_realfile(self):
+
+        expected_status = 0
+        expected_line1 = '#   1 NUMBER                 Running object number'
+
+        status = run_swarp(self.source_dir, self.test_dir, self.test_fits_file)
+
+        self.assertEqual(expected_status, status)
+
+        if self.debug_print:
+            print(glob(os.path.join(self.test_dir, '*')))
+        output_cat = os.path.join(self.test_dir, 'test.cat')
+        self.assertTrue(os.path.exists(output_cat))
+        test_fh = open(output_cat, 'r')
+        test_lines = test_fh.readlines()
+        test_fh.close()
+
+        # Expected value is 14 lines of header plus 2086 sources
+        # LP 2022/06/30 Expected sources now 1929 after change in BACK_SIZE
+        self.assertEqual(14+1929, len(test_lines))
+        self.assertEqual(expected_line1, test_lines[0].rstrip())
+
+
 class TestFindOrbRunner(ExternalCodeUnitTest):
 
     # These test use a fake binary name and set dbg=True to echo the generated
@@ -651,7 +759,7 @@ class TestUpdateFITSWCS(TestCase):
         self.test_externscamp_headfile = os.path.join('photometrics', 'tests', 'example_externcat_scamp.head')
         self.test_externcat_xml = os.path.join('photometrics', 'tests', 'example_externcat_scamp.xml')
         self.test_externscamp_TPV_headfile = os.path.join('photometrics', 'tests', 'example_externcat_scamp_tpv.head')
-        self.test_externcat_TPV_xml = os.path.join('photometrics', 'tests', 'example_externcat_scamp_tpv.xml')        
+        self.test_externcat_TPV_xml = os.path.join('photometrics', 'tests', 'example_externcat_scamp_tpv.xml')
         self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
         self.fits_file_output = os.path.abspath(os.path.join(self.test_dir, 'example-sbig-e10_output.fits'))
         self.banzai_file_output = os.path.abspath(os.path.join(self.test_dir, 'example-banzai-e92_output.fits'))

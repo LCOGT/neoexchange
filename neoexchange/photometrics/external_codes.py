@@ -295,16 +295,16 @@ def determine_hotpants_options(placeholder_param):
     return
 
 
-def determine_swarp_options(weights, outname, dest_dir):
-    """ Takes *symlinked* lists for 'images' and 'weights' """
+def determine_swarp_options(weights, outname, dest_dir, back_size=42):
+    """
+    Takes (symlinked) list for 'weights'.
+    If there are problems with this list, they should already be caught in run_swarp().
+    """
 
     options = ''
 
-    # If images OR weights don't exist, this should already be caught in run_swarp().
-
     inweight = make_file_list(weights, os.path.join(dest_dir, 'weight.in'))
 
-    back_size = 42
     wgtout = outname.replace('.fits', '.weight.fits')
 
     options = f'-BACK_SIZE {back_size} ' \
@@ -338,6 +338,8 @@ def normalize(images, swarp_zp_key='L1ZP'):
     Normalize all images to the same zeropoint by adding FLXSCALE and FLXSCLZP to their headers.
     """
 
+    bad_file_count = 0
+
     for image in images:
         hdulist = fits.open(image)
         im_header = hdulist['SCI'].header
@@ -347,9 +349,15 @@ def normalize(images, swarp_zp_key='L1ZP'):
             im_header['FLXSCLZP'] = (25.0, 'FLXSCALE equivalent ZP')
             hdulist.writeto(image, overwrite=True, checksum=True)
         else:
-            logger.warning(f"Keyword {swarp_zp_key} not present in {image}.")
+            logger.warning(f"Keyword {swarp_zp_key} not present in {image}. Image could not be normalized, default flux scale value is 1.0")
+            bad_file_count += 1
         hdulist.close()
-    return
+
+    return_code = 0
+    if bad_file_count > 0:
+        return_code = -6
+
+    return return_code
 
 
 def make_pa_rate_dict(pa, deltapa, minrate, maxrate):
@@ -520,7 +528,7 @@ def run_hotpants(source_dir, dest_dir):
 
 
 @timeit
-def run_swarp(source_dir, dest_dir, images):
+def run_swarp(source_dir, dest_dir, images, binary=None, dbg=False):
     """Run SWarp (using either the binary specified by [binary] or by
     looking for 'swarp' in the PATH) on the passed <images> with the
     results and any temporary files created in <dest_dir>. <source_dir> is the
@@ -537,8 +545,6 @@ def run_swarp(source_dir, dest_dir, images):
 
     swarp_config_file = default_swarp_config_files()[0]
 
-    normalize(images)
-
     # Symlink images and weights to dest_dir and create lists of these links
     linked_images = []
     linked_weights = []
@@ -550,9 +556,17 @@ def run_swarp(source_dir, dest_dir, images):
             linked_images.append(image_filename)
         else:
             logger.error(f'Could not find {image}')
-            return -1
+            return -3
 
-        weight_image = image.replace(".fits.fz", "weights.fits")
+        if image.endswith(".fits.fz"):
+            weight_image = image.replace(".fits.fz", ".weights.fits")
+        else:
+            weight_image = image.replace(".fits", ".weights.fits")
+        if weight_image == image:
+        # Cannot symlink, already exists.
+            logger.error("'%s' does not end in .fits or .fits.fz" % image)
+            return -5
+
         if os.path.exists(weight_image):
             weight_filename = os.path.basename(weight_image)
             weight_newfilepath = os.path.join(dest_dir, weight_filename)
@@ -560,16 +574,29 @@ def run_swarp(source_dir, dest_dir, images):
             linked_weights.append(weight_filename)
         else:
             logger.error(f'Could not find {weight_image}')
-            return -2
+            return -4
+
+    normalize_status = normalize(images)
+    if normalize_status != 0:
+        return normalize_status
 
     #call determine_swarp_options
     outname = "PLACEHOLDER"
     options = determine_swarp_options(linked_weights, outname, dest_dir)
 
+    #assemble command line
+
+    cmdline = "%s %s -c %s %s" % (binary, linked_images, swarp_config_file, options )
+    cmdline = cmdline.rstrip()
+
     #run swarp
-
-
-    retcode_or_cmdline = -42
+    if dbg is True:
+        retcode_or_cmdline = cmdline
+    else:
+        # This executes the command to the terminal
+        logger.debug("cmdline=%s" % cmdline)
+        args = cmdline.split()
+        retcode_or_cmdline = call(args, cwd=dest_dir)
 
     return retcode_or_cmdline
 
