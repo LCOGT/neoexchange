@@ -681,6 +681,7 @@ def translate_catalog_code(code_or_name, ades_code=False):
                        'PPMXL'       : 'PPMXL',
                        'GAIA-DR1'    : 'Gaia1',
                        'GAIA-DR2'    : 'Gaia2',
+                       'GAIA-DR3'    : 'Gaia3',
                        '2MASS'       : '2MASS'
                       }
     catalog_or_code = ''
