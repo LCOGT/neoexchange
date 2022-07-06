@@ -18,6 +18,7 @@ from glob import glob
 import tempfile
 from unittest import skipIf
 import warnings
+import shutil
 
 from astropy.io import fits
 from numpy import array, arange
@@ -61,9 +62,9 @@ class ExternalCodeUnitTest(TestCase):
 
         self.test_obs_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcobs_WSAE9A6.dat'))
 
-        self.debug_print = True
+        self.debug_print = False
 
-        self.remove = False
+        self.remove = True
 
     def tearDown(self):
         if self.remove:
@@ -528,6 +529,23 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
 
 
 class TestSwarpRunner(ExternalCodeUnitTest):
+    def setUp(self):
+        # Copying over some files to the temp directory to manipulate
+        super(TestSwarpRunner, self).setUp()
+
+        """example-sbig-e10.fits"""
+        # This image has a 'L1ZP' keyword in the header
+        shutil.copy(os.path.abspath(self.test_fits_file), self.test_dir)
+        self.test_fits_file = os.path.join(self.test_dir, os.path.basename(self.test_fits_file))
+
+        """banzai_test_frame.fits.fz"""
+        # This image DOES NOT have a 'L1ZP' keyword in the header
+        self.test_banzai_comp_file = os.path.join(self.testfits_dir, 'banzai_test_frame.fits.fz')
+        shutil.copy(os.path.abspath(self.test_banzai_comp_file), self.test_dir)
+        self.test_banzai_comp_file = os.path.join(self.test_dir, os.path.basename(self.test_banzai_comp_file))
+
+        self.remove = True
+
     def test_setup_swarp_dir_bad_destdir(self):
 
         expected_status = -2
@@ -579,20 +597,25 @@ class TestSwarpRunner(ExternalCodeUnitTest):
 
         self.assertEqual(expected_status, status)
 
-    # DONT RUN UNTIL COPIED FILES!!
     def test_normalize_success(self):
         expected_status = 0
 
-        TEMP_IMAGE = ["A fits image that contains a L1ZP keyword, copied over to the temp directory."]
-        status = normalize(TEMP_IMAGE)
+        # Contains L1ZP keyword
+        with fits.open(self.test_fits_file) as hdulist:
+            # Rename the 'PRIMARY' HDU to 'SCI'
+            header = hdulist[0].header
+            header['EXTNAME'] = 'SCI'
+            hdulist.writeto(self.test_fits_file, overwrite=True, checksum=True)
+
+        status = normalize([self.test_fits_file])
 
         self.assertEqual(expected_status, status)
 
     def test_normalize_fail(self):
         expected_status = -6
 
-        TEMP_IMAGE = ["A fits image that DOES NOT contains a L1ZP keyword, copied over to the temp directory."]
-        status = normalize(TEMP_IMAGE)
+        # Does not contain L1ZP keyword
+        status = normalize([self.test_banzai_comp_file])
 
         self.assertEqual(expected_status, status)
 
@@ -691,11 +714,11 @@ class TestDetermineSwarpOptions(ExternalCodeUnitTest):
 
     def test1(self):
         inweight = os.path.join(self.test_dir, 'weight.in')
+        outname = "test_swarp_output.fits"
+
         expected_options = f'-BACK_SIZE 42 -IMAGEOUT_NAME test_swarp_output.fits -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -WEIGHT_IMAGE @{inweight} -WEIGHTOUT_NAME test_swarp_output.weight.fits '
 
-        weights = [self.test_fits_file for x in range(3)]
-        outname = "test_swarp_output.fits"
-        options = determine_swarp_options(weights, outname, self.test_dir)
+        options = determine_swarp_options(inweight, outname, self.test_dir)
 
         self.assertEqual(expected_options, options)
 

@@ -295,15 +295,13 @@ def determine_hotpants_options(placeholder_param):
     return
 
 
-def determine_swarp_options(weights, outname, dest_dir, back_size=42):
+def determine_swarp_options(inweight, outname, dest_dir, back_size=42):
     """
-    Takes (symlinked) list for 'weights'.
+    Takes weight.in filename
     If there are problems with this list, they should already be caught in run_swarp().
     """
 
     options = ''
-
-    inweight = make_file_list(weights, os.path.join(dest_dir, 'weight.in'))
 
     wgtout = outname.replace('.fits', '.weight.fits')
 
@@ -528,7 +526,7 @@ def run_hotpants(source_dir, dest_dir):
 
 
 @timeit
-def run_swarp(source_dir, dest_dir, images, binary=None, dbg=False):
+def run_swarp(source_dir, dest_dir, images, binary=None, dbg=False, swarp_zp_key='L1ZP'):
     """Run SWarp (using either the binary specified by [binary] or by
     looking for 'swarp' in the PATH) on the passed <images> with the
     results and any temporary files created in <dest_dir>. <source_dir> is the
@@ -576,17 +574,18 @@ def run_swarp(source_dir, dest_dir, images, binary=None, dbg=False):
             logger.error(f'Could not find {weight_image}')
             return -4
 
+    inlist = make_file_list(linked_images, os.path.join(dest_dir, 'images.in'))
+    inweight = make_file_list(linked_weights, os.path.join(dest_dir, 'weight.in'))
+
     normalize_status = normalize(images)
     if normalize_status != 0:
         return normalize_status
 
-    #call determine_swarp_options
     outname = "PLACEHOLDER"
-    options = determine_swarp_options(linked_weights, outname, dest_dir)
+    options = determine_swarp_options(inweight, outname, dest_dir)
 
     #assemble command line
-
-    cmdline = "%s %s -c %s %s" % (binary, linked_images, swarp_config_file, options )
+    cmdline = "%s -c %s @%s %s" % (binary, swarp_config_file, inlist, options )
     cmdline = cmdline.rstrip()
 
     #run swarp
