@@ -3158,6 +3158,8 @@ class TestParseMPCObsFormat(TestCase):
                            'c_btC_l73P':u'0073P     bt  C2017 09 27.20655 03 00 10.55 +05 17 00.6          17.0 Tq@6559J22',
                             'cp_bKC_l': u'    CK15E61b KC2017 12 17.94440 02 44 22.10 +15 55 27.3          18.5 Nq@7755160',
                             'cp_cKC_l': u'0332PK10V01c KC2016 02 19.06978 08 49 10.77 +34 23 21.4          18.1 Nq97706I81',
+                            'cZ_ C_lX': u'    CK22E030 ZC2021 10 25.17101318 59 23.09 -05 07 29.4          20.5 gXEM021I41',
+                            'cZ_ C_lW': u'    CK22E030 ZC2021 10 25.17101318 59 23.09 -05 07 29.4          20.5 gWEM021I41',
                           }
         self.maxDiff = None
 
@@ -3685,6 +3687,44 @@ class TestParseMPCObsFormat(TestCase):
                             'lco_discovery' : False
                           }
         params = parse_mpcobs(self.test_lines['cp_cKC_l'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_cZ_C_lX(self):
+        """Test for comet C/2022 E3 with provisional desigination, new-style (C)CD observation, Gaia-EDR3 catalog code"""
+        expected_params = { 'body'  : 'CK22E030',
+                            'flags' : 'Z',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2021, 10, 25,  4,  6, 15, int(0.5232*1e6)),
+                            'obs_ra'    : 284.8462083333334,
+                            'obs_dec'   : -5.124833333333334,
+                            'obs_mag'   : 20.5,
+                            'filter'    : 'g',
+                            'astrometric_catalog' : 'Gaia-EDR3',
+                            'site_code' : 'I41',
+                            'discovery' : False,
+                            'lco_discovery' : False
+                          }
+        params = parse_mpcobs(self.test_lines['cZ_ C_lX'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_cZ_C_lW(self):
+        """Test for comet C/2022 E3 with provisional desigination, new-style (C)CD observation, Gaia-DR3 catalog code"""
+        expected_params = { 'body'  : 'CK22E030',
+                            'flags' : 'Z',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2021, 10, 25,  4,  6, 15, int(0.5232*1e6)),
+                            'obs_ra'    : 284.8462083333334,
+                            'obs_dec'   : -5.124833333333334,
+                            'obs_mag'   : 20.5,
+                            'filter'    : 'g',
+                            'astrometric_catalog' : 'Gaia-DR3',
+                            'site_code' : 'I41',
+                            'discovery' : False,
+                            'lco_discovery' : False
+                          }
+        params = parse_mpcobs(self.test_lines['cZ_ C_lW'])
 
         self.compare_dict(expected_params, params)
 
