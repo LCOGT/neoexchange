@@ -3700,7 +3700,7 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_dec'   : -5.124833333333334,
                             'obs_mag'   : 20.5,
                             'filter'    : 'g',
-                            'astrometric_catalog' : 'Gaia-EDR3',
+                            'astrometric_catalog' : 'GAIA-EDR3',
                             'site_code' : 'I41',
                             'discovery' : False,
                             'lco_discovery' : False
@@ -3710,7 +3710,7 @@ class TestParseMPCObsFormat(TestCase):
         self.compare_dict(expected_params, params)
 
     def test_cZ_C_lW(self):
-        """Test for comet C/2022 E3 with provisional desigination, new-style (C)CD observation, Gaia-DR3 catalog code"""
+        """Test for comet C/2022 E3 with provisional desigination, new-style (C)CD observation, GAIA-DR3 catalog code"""
         expected_params = { 'body'  : 'CK22E030',
                             'flags' : 'Z',
                             'obs_type'  : 'C',
@@ -3719,7 +3719,7 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_dec'   : -5.124833333333334,
                             'obs_mag'   : 20.5,
                             'filter'    : 'g',
-                            'astrometric_catalog' : 'Gaia-DR3',
+                            'astrometric_catalog' : 'GAIA-DR3',
                             'site_code' : 'I41',
                             'discovery' : False,
                             'lco_discovery' : False
