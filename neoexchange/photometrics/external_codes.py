@@ -331,16 +331,21 @@ def make_file_list(images, output_file_name):
     return output_file_name
 
 
-def normalize(images, swarp_zp_key):
+def normalize(images, swarp_zp_key="L1ZP"):
     """
     Normalize all images to the same zeropoint by adding FLXSCALE and FLXSCLZP to their headers.
+    This uses the FITS header keyword given by [swarp_zp_key] (defaults to `L1ZP`)
     """
 
     bad_file_count = 0
 
     for image in images:
         hdulist = fits.open(image)
-        im_header = hdulist['SCI'].header
+        try:
+            sci_index = hdulist.index_of('SCI')
+        except KeyError:
+            sci_index = 0
+        im_header = hdulist[sci_index].header
         if swarp_zp_key in im_header:
             fluxscale = 10**(-0.4 * (im_header[swarp_zp_key] - 25.))
             im_header['FLXSCALE'] = (fluxscale, 'Flux scale factor for coadd')
@@ -550,7 +555,8 @@ def run_swarp(source_dir, dest_dir, images, binary=None, dbg=False, swarp_zp_key
         if os.path.exists(image):
             image_filename = os.path.basename(image)
             image_newfilepath = os.path.join(dest_dir, image_filename)
-            os.symlink(image, image_newfilepath)
+            if os.path.exists(image_newfilepath) is False:
+                os.symlink(image, image_newfilepath)
             linked_images.append(image_filename)
         else:
             logger.error(f'Could not find {image}')
@@ -568,7 +574,8 @@ def run_swarp(source_dir, dest_dir, images, binary=None, dbg=False, swarp_zp_key
         if os.path.exists(weight_image):
             weight_filename = os.path.basename(weight_image)
             weight_newfilepath = os.path.join(dest_dir, weight_filename)
-            os.symlink(weight_image, weight_newfilepath)
+            if os.path.exists(weight_newfilepath) is False:
+                os.symlink(weight_image, weight_newfilepath)
             linked_weights.append(weight_filename)
         else:
             logger.error(f'Could not find {weight_image}')
