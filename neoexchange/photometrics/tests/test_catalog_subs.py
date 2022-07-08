@@ -3725,3 +3725,47 @@ class TestMakeObjectDirectory(ExternalCodeUnitTest):
         object_dir = make_object_directory(self.test_filepath, object_name, block_id)
 
         self.assertEqual(expected_object_dir, object_dir)
+
+
+class TestFunpackFITSFile(ExternalCodeUnitTest):
+
+    def setUp(self):
+        #
+        # setUp is called once before each test
+        #
+        super(TestFunpackFITSFile, self).setUp()
+
+        self.testfits_dir = os.path.abspath(os.path.join('photometrics', 'tests'))
+        self.test_fz_file = os.path.abspath(os.path.join(self.testfits_dir, 'banzai_test_frame.fits.fz'))
+        shutil.copy(self.test_fz_file, self.test_dir)
+        self.test_fz_file = os.path.abspath(os.path.join(self.test_dir, os.path.basename(self.test_fz_file)))
+
+    def tearDown(self):
+        #
+        # tearDown is called once after each test
+        #
+        super(TestFunpackFITSFile, self).tearDown()
+
+    def test_single_hdu(self):
+        expected_name = self.test_fz_file.replace('.fz', '')
+        expected_nhdu = 1
+
+        funpack_fits_file(self.test_fz_file)
+
+        self.assertTrue(os.path.exists(self.test_fz_file))
+        self.assertTrue(os.path.exists(expected_name))
+
+        hdulist = fits.open(expected_name)
+        self.assertEqual(expected_nhdu, len(hdulist))
+
+    def test_multihdu(self):
+        expected_name = self.test_fz_file.replace('.fz', '')
+        expected_nhdu = 4
+
+        funpack_fits_file(self.test_fz_file, all_hdus=True)
+
+        self.assertTrue(os.path.exists(self.test_fz_file))
+        self.assertTrue(os.path.exists(expected_name))
+
+        hdulist = fits.open(expected_name)
+        self.assertEqual(expected_nhdu, len(hdulist))

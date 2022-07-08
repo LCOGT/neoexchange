@@ -1729,8 +1729,10 @@ def increment_red_level(product):
     return new_product
 
 
-def funpack_fits_file(fpack_file):
-    """Calls 'funpack' on the passed <fpack_file> to uncompress it. A status
+def funpack_fits_file(fpack_file, all_hdus=False):
+    """Opens the passed <fpack_file> with fits.open to uncompress it. If
+    [all_hdus]=False (default) only the 'SCI' extension is written to the
+    uncompressed file. Otherwise all HDUs are written.  A status
     value of 0 is returned if the unpacked file already exists or the uncompress
     was successful, -1 is returned otherwise"""
 
@@ -1741,15 +1743,18 @@ def funpack_fits_file(fpack_file):
     if os.path.exists(unpacked_file):
         return 0
     hdulist = fits.open(fpack_file)
-    header = hdulist['SCI'].header
-    data = hdulist['SCI'].data
-    hdu = fits.PrimaryHDU(data, header)
-    hdu._bscale = 1.0
-    hdu._bzero = 0.0
-    hdu.header.remove("BSCALE", ignore_missing=True)
-    hdu.header.insert("NAXIS2", ("BSCALE", 1.0), after=True)
-    hdu.header.remove("BZERO", ignore_missing=True)
-    hdu.header.insert("BSCALE", ("BZERO", 0.0), after=True)
+    if all_hdus is False:
+        header = hdulist['SCI'].header
+        data = hdulist['SCI'].data
+        hdu = fits.PrimaryHDU(data, header)
+        hdu._bscale = 1.0
+        hdu._bzero = 0.0
+        hdu.header.remove("BSCALE", ignore_missing=True)
+        hdu.header.insert("NAXIS2", ("BSCALE", 1.0), after=True)
+        hdu.header.remove("BZERO", ignore_missing=True)
+        hdu.header.insert("BSCALE", ("BZERO", 0.0), after=True)
+    else:
+        hdu = hdulist
     hdu.writeto(unpacked_file, checksum=True)
     hdulist.close()
 
