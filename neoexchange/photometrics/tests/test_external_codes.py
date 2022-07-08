@@ -536,13 +536,13 @@ class TestSwarpRunner(ExternalCodeUnitTest):
         """example-sbig-e10.fits"""
         # This image has a 'L1ZP' keyword in the header
         shutil.copy(os.path.abspath(self.test_fits_file), self.test_dir)
-        self.test_fits_file = os.path.join(self.test_dir, os.path.basename(self.test_fits_file))
+        self.test_fits_file_COPIED = os.path.join(self.test_dir, os.path.basename(self.test_fits_file))
 
         """banzai_test_frame.fits.fz"""
         # This image DOES NOT have a 'L1ZP' keyword in the header
         self.test_banzai_comp_file = os.path.join(self.testfits_dir, 'banzai_test_frame.fits.fz')
         shutil.copy(os.path.abspath(self.test_banzai_comp_file), self.test_dir)
-        self.test_banzai_comp_file = os.path.join(self.test_dir, os.path.basename(self.test_banzai_comp_file))
+        self.test_banzai_comp_file_COPIED = os.path.join(self.test_dir, os.path.basename(self.test_banzai_comp_file))
 
         self.remove = True
 
@@ -584,13 +584,16 @@ class TestSwarpRunner(ExternalCodeUnitTest):
         self.assertEqual(expected_status, status)
 
     def test_badweights(self):
+
         expected_status = -4
 
+        os.remove(self.test_fits_file_COPIED)
         status = run_swarp(self.source_dir, self.test_dir, [self.test_fits_file])
 
         self.assertEqual(expected_status, status)
 
     def test_nonfits(self):
+
         expected_status = -5
 
         status = run_swarp(self.source_dir, self.test_dir, [self.test_GAIADR2_catalog])
@@ -598,64 +601,61 @@ class TestSwarpRunner(ExternalCodeUnitTest):
         self.assertEqual(expected_status, status)
 
     def test_normalize_success(self):
-        expected_status = 0
 
-        # Contains L1ZP keyword
-        with fits.open(self.test_fits_file) as hdulist:
+        with fits.open(self.test_fits_file_COPIED) as hdulist:
             # Rename the 'PRIMARY' HDU to 'SCI'
             header = hdulist[0].header
             header['EXTNAME'] = 'SCI'
-            hdulist.writeto(self.test_fits_file, overwrite=True, checksum=True)
+            hdulist.writeto(self.test_fits_file_COPIED, overwrite=True, checksum=True)
 
-        status = normalize([self.test_fits_file])
+        expected_status = 0
 
+        # Contains L1ZP keyword
+        status = normalize([self.test_fits_file_COPIED], swarp_zp_key='L1ZP')
         self.assertEqual(expected_status, status)
 
+        with fits.open(self.test_fits_file_COPIED) as hdulist:
+            header = hdulist[0].header
+            keylist = header.keys()
+
+        self.assertTrue('L1ZP' in header, msg='L1ZP not in header')
+        self.assertTrue('FLXSCALE' in header, msg='FLXSCALE not in header')
+        self.assertTrue('FLXSCLZP' in header, msg='FLXSCLZP not in header')
+
     def test_normalize_fail(self):
+
         expected_status = -6
 
         # Does not contain L1ZP keyword
-        status = normalize([self.test_banzai_comp_file])
-
+        status = normalize([self.test_banzai_comp_file_COPIED], swarp_zp_key='L1ZP')
         self.assertEqual(expected_status, status)
 
-    # TO DO
-    def test_run_swarp_nofile(self):
+        with fits.open(self.test_banzai_comp_file_COPIED) as hdulist:
+            header = hdulist[0].header
+            keylist = header.keys()
 
-        expected_cmdline = './swarp  -c swarp_neox.conf'
-        cmdline = run_swarp(self.source_dir, self.test_dir, [], binary='./swarp', dbg=True)
+        self.assertTrue('L1ZP' not in header, msg='L1ZP is in header')
+        self.assertTrue('FLXSCALE' not in header, msg='FLXSCALE is in header')
+        self.assertTrue('FLXSCLZP' not in header, msg='FLXSCLZP is in header')
+
+    def test_swarp_success(self):
+        inweight = os.path.join(self.test_dir, 'weight.in')
+        outname = "test_swarp_output.fits"
+
+        expected_cmdline = f"./swarp -c swarp_neox.conf @images.in -BACK_SIZE 42 -IMAGEOUT_NAME test_swarp_output.fits -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -WEIGHT_IMAGE @{inweight} -WEIGHTOUT_NAME test_swarp_output.weight.fits"
+
+        with fits.open(self.test_fits_file_COPIED) as hdulist:
+            # Rename the 'PRIMARY' HDU to 'SCI'
+            header = hdulist[0].header
+            header['EXTNAME'] = 'SCI'
+            hdulist.writeto(self.test_fits_file_COPIED, overwrite=True, checksum=True)
+
+        # This won't work, the fits file can't be symlinked to the temp dir because it already exists there!
+        # Additionally, there is no weight image it can run on in /photometrics/tests/
+        cmdline = run_swarp(self.source_dir, self.test_dir, [self.test_fits_file_COPIED], dbg=True)
 
         self.assertEqual(expected_cmdline, cmdline)
 
-    def test_run_swarp_file(self):
-
-        expected_cmdline = './swarp foo.fits -c swarp_neox.conf'
-        cmdline = run_swarp(self.source_dir, self.test_dir, ['foo.fits'], binary='./swarp', dbg=True)
-
-        self.assertEqual(expected_cmdline, cmdline)
-
-    @skipIf(find_binary("swarp") is None, "Could not find swarp binary ('swarp') in PATH")
-    def test_run_swarp_realfile(self):
-
-        expected_status = 0
-        expected_line1 = '#   1 NUMBER                 Running object number'
-
-        status = run_swarp(self.source_dir, self.test_dir, self.test_fits_file)
-
-        self.assertEqual(expected_status, status)
-
-        if self.debug_print:
-            print(glob(os.path.join(self.test_dir, '*')))
-        output_cat = os.path.join(self.test_dir, 'test.cat')
-        self.assertTrue(os.path.exists(output_cat))
-        test_fh = open(output_cat, 'r')
-        test_lines = test_fh.readlines()
-        test_fh.close()
-
-        # Expected value is 14 lines of header plus 2086 sources
-        # LP 2022/06/30 Expected sources now 1929 after change in BACK_SIZE
-        self.assertEqual(14+1929, len(test_lines))
-        self.assertEqual(expected_line1, test_lines[0].rstrip())
 
 
 class TestFindOrbRunner(ExternalCodeUnitTest):

@@ -279,7 +279,7 @@ def determine_sextractor_options(fits_file):
     options += f' -CHECKIMAGE_TYPE BACKGROUND_RMS -CHECKIMAGE_NAME {rms_filename}'
     options += ' -BACK_SIZE 42'
 
-    hdulust.close()
+    hdulist.close()
     return options
 
 
@@ -331,7 +331,7 @@ def make_file_list(images, output_file_name):
     return output_file_name
 
 
-def normalize(images, swarp_zp_key='L1ZP'):
+def normalize(images, swarp_zp_key):
     """
     Normalize all images to the same zeropoint by adding FLXSCALE and FLXSCLZP to their headers.
     """
@@ -347,7 +347,7 @@ def normalize(images, swarp_zp_key='L1ZP'):
             im_header['FLXSCLZP'] = (25.0, 'FLXSCALE equivalent ZP')
             hdulist.writeto(image, overwrite=True, checksum=True)
         else:
-            logger.warning(f"Keyword {swarp_zp_key} not present in {image}. Image could not be normalized, default flux scale value is 1.0")
+            logger.error(f"Keyword {swarp_zp_key} not present in {image}. Image could not be normalized, default flux scale value is 1.0")
             bad_file_count += 1
         hdulist.close()
 
@@ -577,7 +577,7 @@ def run_swarp(source_dir, dest_dir, images, binary=None, dbg=False, swarp_zp_key
     inlist = make_file_list(linked_images, os.path.join(dest_dir, 'images.in'))
     inweight = make_file_list(linked_weights, os.path.join(dest_dir, 'weight.in'))
 
-    normalize_status = normalize(images)
+    normalize_status = normalize(images, swarp_zp_key)
     if normalize_status != 0:
         return normalize_status
 
