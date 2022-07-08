@@ -531,10 +531,11 @@ def run_hotpants(source_dir, dest_dir):
 
 
 @timeit
-def run_swarp(source_dir, dest_dir, images, binary=None, dbg=False, swarp_zp_key='L1ZP'):
+def run_swarp(source_dir, dest_dir, images, outname='reference.fits', binary=None, swarp_zp_key='L1ZP', dbg=False):
     """Run SWarp (using either the binary specified by [binary] or by
     looking for 'swarp' in the PATH) on the passed <images> with the
-    results and any temporary files created in <dest_dir>. <source_dir> is the
+    results (written to [outname]; defaults to `reference.fits`)
+    and any temporary files created in <dest_dir>. <source_dir> is the
     path to the required config files."""
 
     status = setup_swarp_dir(source_dir, dest_dir)
@@ -588,7 +589,6 @@ def run_swarp(source_dir, dest_dir, images, binary=None, dbg=False, swarp_zp_key
     if normalize_status != 0:
         return normalize_status
 
-    outname = "PLACEHOLDER"
     options = determine_swarp_options(inweight, outname, dest_dir)
 
     #assemble command line
