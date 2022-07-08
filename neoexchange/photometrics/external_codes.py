@@ -31,6 +31,7 @@ from numpy import loadtxt, split, empty
 from core.models import detections_array_dtypes
 from astrometrics.time_subs import timeit
 from photometrics.catalog_subs import oracdr_catalog_mapping
+from photometrics.image_subs import create_weight_image
 
 logger = logging.getLogger(__name__)
 
@@ -558,7 +559,7 @@ def run_swarp(source_dir, dest_dir, images, outname='reference.fits', binary=Non
             image_newfilepath = os.path.join(dest_dir, image_filename)
             if os.path.exists(image_newfilepath) is False:
                 os.symlink(image, image_newfilepath)
-            linked_images.append(image_filename)
+            linked_images.append(image_filename + '[SCI]')
         else:
             logger.error(f'Could not find {image}')
             return -3
@@ -572,15 +573,19 @@ def run_swarp(source_dir, dest_dir, images, outname='reference.fits', binary=Non
             logger.error("'%s' does not end in .fits or .fits.fz" % image)
             return -5
 
-        if os.path.exists(weight_image):
-            weight_filename = os.path.basename(weight_image)
-            weight_newfilepath = os.path.join(dest_dir, weight_filename)
-            if os.path.exists(weight_newfilepath) is False:
-                os.symlink(weight_image, weight_newfilepath)
-            linked_weights.append(weight_filename)
-        else:
-            logger.error(f'Could not find {weight_image}')
-            return -4
+        # If the weight image doesn't exist, make one! (in the same directory as the science image)
+        if os.path.exists(weight_image) is False:
+            weight_status = create_weight_image(image)
+            if type(weight_status) != str:
+                logger.error("Error occured in create_weight_image()")
+                return weight_status
+        # If the weight image somehow already exists, continue
+        weight_filename = os.path.basename(weight_image)
+        weight_newfilepath = os.path.join(dest_dir, weight_filename)
+        if os.path.exists(weight_newfilepath) is False:
+            os.symlink(weight_image, weight_newfilepath)
+        # If the weight image somehow already exists in dest_dir, continue
+        linked_weights.append(weight_filename)
 
     inlist = make_file_list(linked_images, os.path.join(dest_dir, 'images.in'))
     inweight = make_file_list(linked_weights, os.path.join(dest_dir, 'weight.in'))

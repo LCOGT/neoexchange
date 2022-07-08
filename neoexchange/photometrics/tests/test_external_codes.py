@@ -538,11 +538,16 @@ class TestSwarpRunner(ExternalCodeUnitTest):
         shutil.copy(os.path.abspath(self.test_fits_file), self.test_dir)
         self.test_fits_file_COPIED = os.path.join(self.test_dir, os.path.basename(self.test_fits_file))
 
-        """banzai_test_frame.fits.fz"""
+        """banzai_test_frame.fits"""
         # This image DOES NOT have a 'L1ZP' keyword in the header
-        self.test_banzai_comp_file = os.path.join(self.testfits_dir, 'banzai_test_frame.fits.fz')
-        shutil.copy(os.path.abspath(self.test_banzai_comp_file), self.test_dir)
-        self.test_banzai_comp_file_COPIED = os.path.join(self.test_dir, os.path.basename(self.test_banzai_comp_file))
+        self.test_banzai_file = os.path.join(self.testfits_dir, 'banzai_test_frame.fits')
+        shutil.copy(os.path.abspath(self.test_banzai_file), self.test_dir)
+        self.test_banzai_file_COPIED = os.path.join(self.test_dir, os.path.basename(self.test_banzai_file))
+
+        """banzai_test_frame.rms.fits"""
+        self.test_banzai_rms_file = os.path.join(self.testfits_dir, 'banzai_test_frame.rms.fits')
+        shutil.copy(os.path.abspath(self.test_banzai_rms_file), self.test_dir)
+
 
         self.remove = True
 
@@ -583,15 +588,6 @@ class TestSwarpRunner(ExternalCodeUnitTest):
 
         self.assertEqual(expected_status, status)
 
-    def test_badweights(self):
-
-        expected_status = -4
-
-        os.remove(self.test_fits_file_COPIED)
-        status = run_swarp(self.source_dir, self.test_dir, [self.test_fits_file])
-
-        self.assertEqual(expected_status, status)
-
     def test_nonfits(self):
 
         expected_status = -5
@@ -627,11 +623,11 @@ class TestSwarpRunner(ExternalCodeUnitTest):
         expected_status = -6
 
         # Does not contain L1ZP keyword
-        status = normalize([self.test_banzai_comp_file_COPIED], swarp_zp_key='L1ZP')
+        status = normalize([self.test_banzai_file_COPIED], swarp_zp_key='L1ZP')
         self.assertEqual(expected_status, status)
 
-        with fits.open(self.test_banzai_comp_file_COPIED) as hdulist:
-            header = hdulist[0].header
+        with fits.open(self.test_banzai_file_COPIED) as hdulist:
+            header = hdulist['SCI'].header
             keylist = header.keys()
 
         self.assertTrue('L1ZP' not in header, msg='L1ZP is in header')
@@ -639,23 +635,25 @@ class TestSwarpRunner(ExternalCodeUnitTest):
         self.assertTrue('FLXSCLZP' not in header, msg='FLXSCLZP is in header')
 
     def test_swarp_success(self):
+        inlist = os.path.join(self.test_dir, 'images.in')
         inweight = os.path.join(self.test_dir, 'weight.in')
-        outname = "test_swarp_output.fits"
 
-        expected_cmdline = f"./swarp -c swarp_neox.conf @images.in -BACK_SIZE 42 -IMAGEOUT_NAME test_swarp_output.fits -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -WEIGHT_IMAGE @{inweight} -WEIGHTOUT_NAME test_swarp_output.weight.fits"
+        expected_cmdline = f"/usr/bin/swarp -c swarp_neox.conf @{inlist} -BACK_SIZE 42 -IMAGEOUT_NAME reference.fits -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -WEIGHT_IMAGE @{inweight} -WEIGHTOUT_NAME reference.weight.fits"
 
-        with fits.open(self.test_fits_file_COPIED) as hdulist:
-            # Rename the 'PRIMARY' HDU to 'SCI'
-            header = hdulist[0].header
-            header['EXTNAME'] = 'SCI'
-            hdulist.writeto(self.test_fits_file_COPIED, overwrite=True, checksum=True)
+        with fits.open(self.test_banzai_file_COPIED) as hdulist:
+            # Add in a 'L1ZP' keyword into the header
+            header = hdulist['SCI'].header
+            header['L1ZP'] = -99
+            hdulist.writeto(self.test_banzai_file_COPIED, overwrite=True, checksum=True)
 
-        # This won't work, the fits file can't be symlinked to the temp dir because it already exists there!
-        # Additionally, there is no weight image it can run on in /photometrics/tests/
-        cmdline = run_swarp(self.source_dir, self.test_dir, [self.test_fits_file_COPIED], dbg=True)
+        cmdline = run_swarp(self.source_dir, self.test_dir, [self.test_banzai_file_COPIED], dbg=True)
 
         self.assertEqual(expected_cmdline, cmdline)
 
+        expected_status = 0
+        status = run_swarp(self.source_dir, self.test_dir, [self.test_banzai_file_COPIED], dbg=False)
+
+        self.assertEqual(expected_status, status)
 
 
 class TestFindOrbRunner(ExternalCodeUnitTest):
