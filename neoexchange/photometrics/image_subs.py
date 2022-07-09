@@ -29,12 +29,12 @@ def create_weight_image(fits_file):
 
     if not os.path.exists(fits_file):
         logger.error("FITS file %s does not exist" % fits_file)
-        return -1
+        return -11
     try:
         hdulist = fits.open(fits_file)
     except IOError as e:
         logger.error("Unable to open FITS image %s (Reason=%s)" % (fits_file, e))
-        return -2
+        return -12
 
     # SCI HDU
     try:
@@ -42,14 +42,14 @@ def create_weight_image(fits_file):
         sciheader = hdulist['SCI'].header
     except KeyError:
         logger.error("SCI HDU not found in %s." % fits_file)
-        return -3
+        return -13
 
     # BPM HDU
     try:
         maskdata = hdulist['BPM'].data
     except KeyError as e:
         logger.error("BPM HDU not found in %s" % fits_file)
-        return -4
+        return -14
 
     # RMS image
     if fits_file.endswith(".fz"):
@@ -59,16 +59,16 @@ def create_weight_image(fits_file):
     if rms_file == fits_file:
         # We don't want to use the science data as rms data!
         logger.error("%s is a FITS file, but does not end in .fits or .fits.fz" % fits_file)
-        return -5
+        return -15
     if not os.path.exists(rms_file):
         logger.error("RMS file %s does not exist" % rms_file)
-        return -6
+        return -16
     try:
         rms_hdulist = fits.open(rms_file)
         rmsdata = rms_hdulist[0].data
     except IOError as e:
         logger.error("Unable to open RMS image %s (Reason=%s)" % (rms_file, e))
-        return -7
+        return -17
 
     # Create boolean array based on mask
     boolean_mask = np.array(maskdata, dtype=bool)
@@ -101,7 +101,7 @@ def create_weight_image(fits_file):
     if weight_file == fits_file:
         # We don't want to overwrite the original file!
         logger.error("%s is a FITS file, but does not end in .fits or .fits.fz" % fits_file)
-        return -5
+        return -15
 
     hdu = fits.PrimaryHDU(weightdata, sciheader)
     weight_hdulist = fits.HDUList(hdu)

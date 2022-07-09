@@ -68,14 +68,14 @@ class TestCreateWeightImage(ExternalCodeUnitTest):
         self.remove = True
 
     def test_doesnotexist(self):
-        expected_status = -1
+        expected_status = -11
 
         status = create_weight_image('banana.fits')
 
         self.assertEqual(expected_status, status)
 
     def test_badfitsfile(self):
-        expected_status = -2
+        expected_status = -12
 
         bad_file = os.path.join(self.source_dir, 'swarp_neox.conf')
         status = create_weight_image(bad_file)
@@ -83,14 +83,14 @@ class TestCreateWeightImage(ExternalCodeUnitTest):
         self.assertEqual(expected_status, status)
 
     def test_noscihdu(self):
-        expected_status = -3
+        expected_status = -13
 
         status = create_weight_image(self.test_fits_file)
 
         self.assertEqual(expected_status, status)
 
     def test_nobpmhdu(self):
-        expected_status = -4
+        expected_status = -14
 
         with fits.open(self.test_fits_file) as hdulist:
             # Rename the 'PRIMARY' HDU to 'SCI'
@@ -104,7 +104,7 @@ class TestCreateWeightImage(ExternalCodeUnitTest):
 
     def test_does_not_contain_fits(self):
         # A fits file that has all the correct HDUs and an rms file, but somehow does not contain ".fits"
-        expected_status = -5
+        expected_status = -15
 
         bad_file = self.test_banzai_comp_file.replace(".fits.fz", ".pear")
         os.rename(self.test_banzai_comp_file, bad_file)
@@ -114,7 +114,7 @@ class TestCreateWeightImage(ExternalCodeUnitTest):
         self.assertEqual(expected_status, status)
 
     def test_rms_doesnotexist(self):
-        expected_status = -6
+        expected_status = -16
 
         os.remove(self.test_banzai_rms_file)
         status = create_weight_image(self.test_banzai_file)
@@ -123,7 +123,7 @@ class TestCreateWeightImage(ExternalCodeUnitTest):
 
     def test_rms_badfitsfile(self):
         # Rename a non-fits file to be the rms file
-        expected_status = -7
+        expected_status = -17
 
         good_file = self.test_banzai_file
         bad_rms = self.test_conf_file
