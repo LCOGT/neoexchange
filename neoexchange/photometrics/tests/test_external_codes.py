@@ -689,23 +689,24 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
     def test_nofile(self):
         expected_options = ''
 
-        options = determine_sextractor_options('wibble')
+        options = determine_sextractor_options('wibble', self.test_dir)
 
         self.assertEqual(expected_options, options)
 
     def test_badfile(self):
         expected_options = ''
 
-        options = determine_sextractor_options(os.path.join(self.source_dir, 'scamp_neox.cfg'))
+        options = determine_sextractor_options(os.path.join(self.source_dir, 'scamp_neox.cfg'), self.test_dir)
 
         self.assertEqual(expected_options, options)
 
     def test1(self):
-        rms_file = self.test_fits_file.replace(".fits", ".rms.fits")
+        rms_file = os.path.join(self.test_dir, 'example-sbig-e10.rms.fits')
         expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.467 -SATUR_LEVEL 46000 -CHECKIMAGE_TYPE BACKGROUND_RMS -CHECKIMAGE_NAME {rms_file} -BACK_SIZE 42'
 
-        options = determine_sextractor_options(self.test_fits_file)
+        options = determine_sextractor_options(self.test_fits_file, self.test_dir)
 
+        self.maxDiff = None
         self.assertEqual(expected_options, options)
 
 class TestDetermineSwarpOptions(ExternalCodeUnitTest):

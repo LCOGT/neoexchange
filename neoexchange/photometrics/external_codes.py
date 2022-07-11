@@ -244,7 +244,7 @@ def setup_working_dir(source_dir, dest_dir, config_files):
 #
 
 
-def determine_sextractor_options(fits_file):
+def determine_sextractor_options(fits_file, dest_dir):
 
     # Mapping keys in the generalized headers that NEOX uses to SExtractor
     # command line options
@@ -276,7 +276,7 @@ def determine_sextractor_options(fits_file):
     # SWarp requires a weight image later in the pipeline.
     # SExtractor can also output a weight image if we specify
     # CHECKIMAGE_TYPE and CHECKIMAGE_NAME parameters.
-    rms_filename = fits_file.replace(".fits", ".rms.fits")
+    rms_filename = os.path.join(dest_dir, os.path.basename(fits_file.replace(".fits", ".rms.fits")))
     options += f' -CHECKIMAGE_TYPE BACKGROUND_RMS -CHECKIMAGE_NAME {rms_filename}'
     options += ' -BACK_SIZE 42'
 
@@ -500,9 +500,9 @@ def run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type='A
 
     sextractor_config_file = default_sextractor_config_files(catalog_type)[0]
     if '[SCI]' in fits_file:
-        options = determine_sextractor_options(root_fits_file)
+        options = determine_sextractor_options(root_fits_file, dest_dir)
     else:
-        options = determine_sextractor_options(fits_file)
+        options = determine_sextractor_options(fits_file, dest_dir)
 
     cmdline = "%s %s -c %s %s" % ( binary, fits_file, sextractor_config_file, options )
     cmdline = cmdline.rstrip()
