@@ -1758,7 +1758,7 @@ def funpack_fits_file(fpack_file, all_hdus=False):
 
     if all_hdus:
         for index, hdu in enumerate(hdulist[1:]):
-            print(index, hdu.name+'X', hdu._summary())
+#            print(index, hdu.name+'X', hdu._summary())
             if hdu.name != 'SCI':
                 if hasattr(hdu, 'compressed_data'):
                     new_hdu = fits.ImageHDU(data=hdu.data, header=hdu.header, name=hdu.name)

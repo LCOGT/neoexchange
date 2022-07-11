@@ -3766,6 +3766,10 @@ class TestFunpackFITSFile(ExternalCodeUnitTest):
                                 'BinTableHDU',
                                 'ImageHDU',
                              ]
+        expected_hdu_names = [  'SCI',
+                                'CAT',
+                                'BPM',
+                             ]
 
         funpack_fits_file(self.test_fz_file, all_hdus=True)
 
@@ -3777,3 +3781,5 @@ class TestFunpackFITSFile(ExternalCodeUnitTest):
         for index, hdu in enumerate(hdulist):
             hdu_type = hdu._summary()[2]
             self.assertEqual(expected_hdu_types[index], hdu_type, f"Mismatch in index {index}: {expected_hdu_types[index]} not equal to {hdu_type}")
+            self.assertEqual(expected_hdu_names[index], hdu.name)
+
