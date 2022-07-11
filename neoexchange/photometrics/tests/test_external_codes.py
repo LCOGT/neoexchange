@@ -28,6 +28,7 @@ from django.forms.models import model_to_dict
 
 # Import module to test
 from photometrics.external_codes import *
+from photometrics.catalog_subs import funpack_fits_file
 
 
 class ExternalCodeUnitTest(TestCase):
@@ -538,11 +539,15 @@ class TestSwarpRunner(ExternalCodeUnitTest):
         shutil.copy(os.path.abspath(self.test_fits_file), self.test_dir)
         self.test_fits_file_COPIED = os.path.join(self.test_dir, os.path.basename(self.test_fits_file))
 
-        """banzai_test_frame.fits"""
+        """banzai_test_frame.fits.fz"""
         # This image DOES NOT have a 'L1ZP' keyword in the header
-        self.test_banzai_file = os.path.join(self.testfits_dir, 'banzai_test_frame.fits')
-        shutil.copy(os.path.abspath(self.test_banzai_file), self.test_dir)
-        self.test_banzai_file_COPIED = os.path.join(self.test_dir, os.path.basename(self.test_banzai_file))
+        self.test_banzai_comp_file = os.path.join(self.testfits_dir, 'banzai_test_frame.fits.fz')
+        shutil.copy(os.path.abspath(self.test_banzai_comp_file), self.test_dir)
+        self.test_banzai_comp_file_COPIED = os.path.join(self.test_dir, os.path.basename(self.test_banzai_comp_file))
+
+        # Decompress
+        funpack_fits_file(self.test_banzai_comp_file_COPIED, all_hdus=True)
+        self.test_banzai_file_COPIED = os.path.join(self.test_dir, os.path.basename('banzai_test_frame.fits'))
 
         """banzai_test_frame.rms.fits"""
         self.test_banzai_rms_file = os.path.join(self.testfits_dir, 'banzai_test_frame.rms.fits')
@@ -643,7 +648,7 @@ class TestSwarpRunner(ExternalCodeUnitTest):
         with fits.open(self.test_banzai_file_COPIED) as hdulist:
             # Add in a 'L1ZP' keyword into the header
             header = hdulist['SCI'].header
-            header['L1ZP'] = -99
+            header['L1ZP'] = 24
             hdulist.writeto(self.test_banzai_file_COPIED, overwrite=True, checksum=True)
 
         cmdline = run_swarp(self.source_dir, self.test_dir, [self.test_banzai_file_COPIED], dbg=True)
