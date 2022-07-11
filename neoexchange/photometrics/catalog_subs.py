@@ -1743,20 +1743,31 @@ def funpack_fits_file(fpack_file, all_hdus=False):
     if os.path.exists(unpacked_file):
         return 0
     hdulist = fits.open(fpack_file)
-    if all_hdus is False:
-        header = hdulist['SCI'].header
-        data = hdulist['SCI'].data
-        hdu = fits.PrimaryHDU(data, header)
-        hdu._bscale = 1.0
-        hdu._bzero = 0.0
-        hdu.header.remove("BSCALE", ignore_missing=True)
-        hdu.header.insert("NAXIS2", ("BSCALE", 1.0), after=True)
-        hdu.header.remove("BZERO", ignore_missing=True)
-        hdu.header.insert("BSCALE", ("BZERO", 0.0), after=True)
-    else:
-        hdu = hdulist
-    hdu.writeto(unpacked_file, checksum=True)
+
+    # Make new primary header and add to new HDUList
+    header = hdulist['SCI'].header
+    data = hdulist['SCI'].data
+    hdu = fits.PrimaryHDU(data, header)
+    hdu._bscale = 1.0
+    hdu._bzero = 0.0
+    hdu.header.remove("BSCALE", ignore_missing=True)
+    hdu.header.insert("NAXIS2", ("BSCALE", 1.0), after=True)
+    hdu.header.remove("BZERO", ignore_missing=True)
+    hdu.header.insert("BSCALE", ("BZERO", 0.0), after=True)
+    new_hdulist = fits.HDUList([hdu,])
+
+    if all_hdus:
+        for index, hdu in enumerate(hdulist[1:]):
+            print(index, hdu.name+'X', hdu._summary())
+            if hdu.name != 'SCI':
+                if hasattr(hdu, 'compressed_data'):
+                    new_hdu = fits.ImageHDU(data=hdu.data, header=hdu.header, name=hdu.name)
+                else:
+                    new_hdu = hdu
+                new_hdulist.append(new_hdu)
+    new_hdulist.writeto(unpacked_file, checksum=True)
     hdulist.close()
+    new_hdulist.close()
 
     return 0
 

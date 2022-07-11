@@ -2725,7 +2725,8 @@ class ExternalCodeUnitTest(TestCase):
                     print("Removed", self.test_dir)
             except OSError:
                 print("Error removing temporary test directory", self.test_dir)
-
+        else:
+            print("NOT removing temporary test directory", self.test_dir)
 
 class UpdateFrameZeropointTest(FITSUnitTest):
 
@@ -3760,7 +3761,11 @@ class TestFunpackFITSFile(ExternalCodeUnitTest):
 
     def test_multihdu(self):
         expected_name = self.test_fz_file.replace('.fz', '')
-        expected_nhdu = 4
+        expected_nhdu = 3 # Should be 4 with additional ImageHDU but this example is old and has no ERR extension
+        expected_hdu_types = [  'PrimaryHDU',
+                                'BinTableHDU',
+                                'ImageHDU',
+                             ]
 
         funpack_fits_file(self.test_fz_file, all_hdus=True)
 
@@ -3769,3 +3774,6 @@ class TestFunpackFITSFile(ExternalCodeUnitTest):
 
         hdulist = fits.open(expected_name)
         self.assertEqual(expected_nhdu, len(hdulist))
+        for index, hdu in enumerate(hdulist):
+            hdu_type = hdu._summary()[2]
+            self.assertEqual(expected_hdu_types[index], hdu_type, f"Mismatch in index {index}: {expected_hdu_types[index]} not equal to {hdu_type}")
