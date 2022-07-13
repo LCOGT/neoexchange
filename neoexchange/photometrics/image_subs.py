@@ -65,6 +65,9 @@ def create_weight_image(fits_file):
         return -16
     try:
         rms_hdulist = fits.open(rms_file)
+        if len(rms_hdulist) != 1:
+            logger.error("Unexpected number of HDUs in RMS image")
+            return -18
         rmsdata = rms_hdulist[0].data
     except IOError as e:
         logger.error("Unable to open RMS image %s (Reason=%s)" % (rms_file, e))

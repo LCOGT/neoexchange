@@ -133,6 +133,19 @@ class TestCreateWeightImage(ExternalCodeUnitTest):
 
         self.assertEqual(expected_status, status)
 
+    def test_rms_badhdus(self):
+        #Wrong number of HDUs in the rms file
+        expected_status = -18
+
+        good_file = self.test_banzai_file
+        bad_rms = self.test_banzai_comp_file
+        os.replace(bad_rms, self.test_banzai_rms_file)
+
+        status = create_weight_image(good_file)
+
+        self.assertEqual(expected_status, status)
+
+
     def test_does_not_modify_input(self):
         expected_filename = self.test_banzai_file.replace(".fits", ".weights.fits")
 
