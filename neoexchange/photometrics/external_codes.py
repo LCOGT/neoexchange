@@ -537,7 +537,8 @@ def run_swarp(source_dir, dest_dir, images, outname='reference.fits', binary=Non
     looking for 'swarp' in the PATH) on the passed <images> with the
     results (written to [outname]; defaults to `reference.fits`)
     and any temporary files created in <dest_dir>. <source_dir> is the
-    path to the required config files."""
+    path to the required config files.
+    The passed <images> list should NOT include [SCI] extensions."""
 
     status = setup_swarp_dir(source_dir, dest_dir)
     if status != 0:
@@ -569,22 +570,18 @@ def run_swarp(source_dir, dest_dir, images, outname='reference.fits', binary=Non
         else:
             weight_image = image.replace(".fits", ".weights.fits")
         if weight_image == image:
-        # Cannot symlink, already exists.
             logger.error("'%s' does not end in .fits or .fits.fz" % image)
             return -5
 
-        # If the weight image doesn't exist, make one! (in the same directory as the science image)
-        if os.path.exists(weight_image) is False:
-            weight_status = create_weight_image(image)
+        weight_filename = os.path.basename(weight_image)
+        weight_newfilepath = os.path.join(dest_dir, weight_filename)
+
+        # If the weight image doesn't exist, make one! (in dest_dir)
+        if os.path.exists(weight_newfilepath) is False:
+            weight_status = create_weight_image(image_newfilepath)
             if type(weight_status) != str:
                 logger.error("Error occured in create_weight_image()")
                 return weight_status
-        # If the weight image somehow already exists, continue
-        weight_filename = os.path.basename(weight_image)
-        weight_newfilepath = os.path.join(dest_dir, weight_filename)
-        if os.path.exists(weight_newfilepath) is False:
-            os.symlink(weight_image, weight_newfilepath)
-        # If the weight image somehow already exists in dest_dir, continue
         linked_weights.append(weight_filename)
 
     inlist = make_file_list(linked_images, os.path.join(dest_dir, 'images.in'))
