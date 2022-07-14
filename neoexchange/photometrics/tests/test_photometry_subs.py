@@ -14,7 +14,7 @@ GNU General Public License for more details.
 """
 
 from math import acos
-from django.test import TestCase
+from django.test import TestCase, SimpleTestCase
 from astropy import units as u
 from astropy.tests.helper import assert_quantity_allclose
 
@@ -1698,3 +1698,62 @@ class TestOptimizeExposureTime(SNRTestCase):
         exptime = calc_asteroid_snr(mag_v, passband, exp_time, instrument=spectrograph, optimize=True)
 
         self.assertEqual(expected_exptime, exptime)
+
+
+class TestMapFilterToCalFilter(SimpleTestCase):
+
+    def test_g(self):
+        expected_filter = 'g'
+
+        cal_filter = map_filter_to_calfilter('g')
+
+        self.assertEqual(expected_filter, cal_filter)
+
+    def test_r(self):
+        expected_filter = 'r'
+
+        cal_filter = map_filter_to_calfilter('r')
+
+        self.assertEqual(expected_filter, cal_filter)
+
+    def test_i(self):
+        expected_filter = 'i'
+
+        cal_filter = map_filter_to_calfilter('i')
+
+        self.assertEqual(expected_filter, cal_filter)
+
+    def test_gp(self):
+        expected_filter = 'g'
+
+        cal_filter = map_filter_to_calfilter('gp')
+
+        self.assertEqual(expected_filter, cal_filter)
+
+    def test_rp(self):
+        expected_filter = 'r'
+
+        cal_filter = map_filter_to_calfilter('rp')
+
+        self.assertEqual(expected_filter, cal_filter)
+
+    def test_ip(self):
+        expected_filter = 'i'
+
+        cal_filter = map_filter_to_calfilter('ip')
+
+        self.assertEqual(expected_filter, cal_filter)
+
+    def test_w(self):
+        expected_filter = 'r'
+
+        cal_filter = map_filter_to_calfilter('w')
+
+        self.assertEqual(expected_filter, cal_filter)
+
+    def test_V(self):
+        expected_filter = None
+
+        cal_filter = map_filter_to_calfilter('V')
+
+        self.assertEqual(expected_filter, cal_filter)

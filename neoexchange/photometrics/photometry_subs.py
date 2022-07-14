@@ -598,6 +598,18 @@ def map_filter_to_bandwidth(passband='ip'):
     return bandwidth
 
 
+def map_filter_to_calfilter(passband='rp'):
+    """Maps the given [passband] (defaults to 'rp' for SDSS-r') to a known
+    calibrateable filter for calviacat"""
+
+    filter_mapping = { 'g' : 'g',
+                       'r' : 'r',
+                       'i' : 'i',
+                       'w' : 'r'
+                     }
+    return filter_mapping.get(passband.replace('p', ''), None)
+
+
 def construct_tic_params(instrument, passband='ip'):
     """Builds and returns the dict of telescope, instrument & CCD parameters ("tic_params")
     for the specified <instrument> (one of {F65-FLOYDS, E10-FLOYDS}) and <passband>
