@@ -3522,6 +3522,9 @@ def run_sextractor_make_catalog(configs_dir, dest_dir, fits_file):
 def run_swarp_make_reference(input_dir, configs_dir, dest_dir):
     """Funpack each .fz file, run SExtractor, run SWarp."""
 
+    if input_dir[-1] != os.path.sep:
+        input_dir = input_dir + os.path.sep
+
     fz_files = glob(input_dir + '*.fz')
     fits_files =[]
 
