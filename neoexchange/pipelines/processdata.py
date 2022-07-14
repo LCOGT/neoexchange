@@ -22,6 +22,7 @@ from photometrics.catalog_subs import FITSHdrException, open_fits_catalog, \
     get_catalog_header, increment_red_level, get_reference_catalog, extract_catalog, \
     existing_catalog_coverage, reset_database_connection, \
     update_zeropoint, update_frame_zeropoint, get_or_create_CatalogSources
+from photometrics.photometry_subs import map_filter_to_calfilter
 from photometrics.external_codes import updateFITSWCS
 
 logger = logging.getLogger(__name__)
@@ -329,7 +330,13 @@ class ZeropointProcessPipeline(PipelineProcess):
             header, table, db_filename = self.setup(catfile, catalog_type, phot_cat_name)
 
             if header and table:
-                avg_zeropoint, std_zeropoint, C = self.cross_match_and_zp(table, db_filename, phot_cat_name, std_zeropoint_tolerance)
+                cal_filter = map_filter_to_calfilter(header['filter'])
+                if cal_filter is None:
+                    logger.error(f"This filter ({header['filter']}) is not calibrateable")
+                    return
+                # Cross match with reference catalog and compute zeropoint
+                logger.info(f"Calibrating {header['filter']} instrumental mags. with {cal_filter} using {phot_cat_name}")
+                avg_zeropoint, std_zeropoint, C = self.cross_match_and_zp(table, db_filename, phot_cat_name, std_zeropoint_tolerance, cal_filter)
                 logger.info(f"New zp={avg_zeropoint:} +/- {std_zeropoint:} {C:}")
                 self.log(f"New zp={avg_zeropoint:} +/- {std_zeropoint:} {C:}")
 
@@ -421,7 +428,7 @@ class ZeropointProcessPipeline(PipelineProcess):
         self.log("{prefix:} DB file {refcat_filename:}")
         return db_filename
 
-    def cross_match_and_zp(self, table, db_filename, phot_cat_name, std_zeropoint_tolerance, color_const=True):
+    def cross_match_and_zp(self, table, db_filename, phot_cat_name, std_zeropoint_tolerance, cal_filter, color_const=True):
 
         if phot_cat_name == 'PS1':
             refcat = cvc.PanSTARRS1(db_filename)
@@ -455,9 +462,10 @@ class ZeropointProcessPipeline(PipelineProcess):
             warnings.filterwarnings("ignore", message='divide by zero encountered')
             start = time.time()
             if color_const is True:
-                avg_zeropoint, C, std_zeropoint, r, gmi = refcat.cal_constant(objids, phot['obs_mag'], 'r')
+                avg_zeropoint, C, std_zeropoint, r, gmi = refcat.cal_constant(objids, phot['obs_mag'], cal_filter)
             else:
-                avg_zeropoint, C, std_zeropoint, r, gmr, gmi = refcat.cal_color(objids, phot['obs_mag'], 'r', 'g-r')
+                cal_color = 'g-' + cal_filter
+                avg_zeropoint, C, std_zeropoint, r, gmr, gmi = refcat.cal_color(objids, phot['obs_mag'], cal_filter, cal_color)
             end = time.time()
         logger.debug(f"TIME: compute_zeropoint took {end-start:.1f} seconds")
         logger.debug(f"New zp={avg_zeropoint:} +/- {std_zeropoint:} {r.count():} {C:}")
