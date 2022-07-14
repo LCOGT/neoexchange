@@ -72,10 +72,10 @@ from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal,
     store_jpl_physparams
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
-from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
+from photometrics.external_codes import run_sextractor, run_swarp, run_scamp, updateFITSWCS,\
     read_mtds_file, unpack_tarball, run_findorb
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
-    determine_filenames, increment_red_level, update_ldac_catalog_wcs, FITSHdrException, \
+    determine_filenames, increment_red_level, funpack_fits_file, update_ldac_catalog_wcs, FITSHdrException, \
     get_reference_catalog, reset_database_connection, sanitize_object_name
 from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
 from photometrics.spectraplot import pull_data_from_spectrum, pull_data_from_text, spectrum_plot
@@ -3517,6 +3517,34 @@ def run_sextractor_make_catalog(configs_dir, dest_dir, fits_file):
         return sext_status, -4
 
     return sext_status, new_ldac_catalog
+
+
+def run_swarp_make_reference(input_dir, configs_dir, dest_dir):
+    """Funpack each .fz file, run SExtractor, run SWarp."""
+
+    fz_files = glob(input_dir + '*.fz')
+    fits_files =[]
+
+    if len(fz_files) == 0:
+        logger.error("There are no compressed images in the folder.")
+        return -1
+
+    for image in fz_files:
+        funpack_status = funpack_fits_file(image, all_hdus=True)
+        if funpack_status != 0:
+            logger.error("Unable to funpack file.")
+            return funpack_status
+        else:
+            fits_files.append(image.replace('.fz', ''))
+
+    for image in fits_files:
+        sext_status, catalog = run_sextractor_make_catalog(configs_dir, dest_dir, image + '[SCI]')
+        if sext_status != 0:
+            return sext_status
+
+    swarp_status = run_swarp(configs_dir, dest_dir, fits_files)
+
+    return swarp_status
 
 
 def find_block_for_frame(catfile):
