@@ -674,14 +674,48 @@ def align_to_ref(ref, sci, dest_dir):
     # Run SWarp on mask image
     run_swarp_align(ref, mask, dest_dir)
 
-def run_swarp_align(ref, sci, dest_dir):
-    """"""
+def run_swarp_align(ref, sci, source_dir, dest_dir, binary=None, dbg=False):
+    """Run SWarp (align) (using either the binary specified by [binary] or by
+    looking for 'swarp' in the PATH) on the passed <ref> and <sci> images with the results
+    and any temporary files created in <dest_dir>. <source_dir> is the path
+    to the required config files."""
+
+    status = setup_swarp_dir(source_dir, dest_dir)
+    if status != 0:
+        return status
+
+    binary = binary or find_binary("swarp")
+    if binary is None:
+        logger.error("Could not locate 'swarp' executable in PATH")
+        return -42
+
+    swarp_config_file = default_swarp_config_files()[0]
+
+    if not os.path.exists(ref):
+        logger.error(f"{ref} not found.")
+        return -4
+    elif not os.path.exists(sci):
+        logger.error(f"{sci} not found.")
+        return -5
 
     options = determine_swarp_align_options(ref, sci, dest_dir)
 
+    ref_head = make_ref_head(ref, sci, dest_dir)
 
+    #assemble command line
+    cmdline = "%s -c %s %s %s" % (binary, swarp_config_file, ref, options )
+    cmdline = cmdline.rstrip()
 
+    #run swarp
+    if dbg is True:
+        retcode_or_cmdline = cmdline
+    else:
+        # This executes the command to the terminal
+        logger.debug("cmdline=%s" % cmdline)
+        args = cmdline.split()
+        retcode_or_cmdline = call(args, cwd=dest_dir)
 
+    return retcode_or_cmdline
 
 @timeit
 def run_scamp(source_dir, dest_dir, fits_catalog_path, refcatalog='GAIA-DR2.cat', binary=None, dbg=False, distort_degrees=None):

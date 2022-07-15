@@ -643,7 +643,7 @@ class TestSwarpRunner(ExternalCodeUnitTest):
         inlist = os.path.join(self.test_dir, 'images.in')
         inweight = os.path.join(self.test_dir, 'weight.in')
 
-        expected_cmdline = f"/usr/bin/swarp -c swarp_neox.conf @{inlist} -BACK_SIZE 42 -IMAGEOUT_NAME reference.fits -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -WEIGHT_IMAGE @{inweight} -WEIGHTOUT_NAME reference.weight.fits"
+        expected_cmdline = f"./swarp -c swarp_neox.conf @{inlist} -BACK_SIZE 42 -IMAGEOUT_NAME reference.fits -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -WEIGHT_IMAGE @{inweight} -WEIGHTOUT_NAME reference.weight.fits"
 
         with fits.open(self.test_banzai_file_COPIED) as hdulist:
             # Add in a 'L1ZP' keyword into the header
@@ -651,7 +651,7 @@ class TestSwarpRunner(ExternalCodeUnitTest):
             header['L1ZP'] = 24
             hdulist.writeto(self.test_banzai_file_COPIED, overwrite=True, checksum=True)
 
-        cmdline = run_swarp(self.source_dir, self.test_dir, [self.test_banzai_file_COPIED], dbg=True)
+        cmdline = run_swarp(self.source_dir, self.test_dir, [self.test_banzai_file_COPIED], binary='./swarp', dbg=True)
 
         self.assertEqual(expected_cmdline, cmdline)
 
@@ -675,6 +675,70 @@ class TestSwarpAlignRunner(ExternalCodeUnitTest):
 
         self.assertTrue('NAXIS' in header, msg="NAXIS data is not in this file.")
         self.assertTrue('CTYPE' in header, msg="WCS data is not in this file.")
+
+    def test_setup_swarp_dir_bad_destdir(self):
+
+        expected_status = -2
+
+        status = setup_swarp_dir(self.source_dir, os.path.join('/usr/share/wibble'))
+
+        self.assertEqual(expected_status, status)
+
+    def test_setup_swarp_dir_bad_srcdir(self):
+
+        expected_status = -1
+
+        status = setup_swarp_dir('wibble', self.test_dir)
+
+        self.assertEqual(expected_status, status)
+
+    def test_setup_swarp_dir(self):
+
+        expected_configs = default_swarp_config_files()
+        expected_status = 0
+
+        status = setup_swarp_dir(self.source_dir, self.test_dir)
+
+        self.assertEqual(expected_status, status)
+
+        for config_file in expected_configs:
+            test_file = os.path.join(self.test_dir, config_file)
+            self.assertTrue(os.path.exists(test_file), msg=config_file + ' is missing')
+
+    def bad_ref(self):
+        expected_status = -4
+
+        status = run_swarp_align('banana', self.test_fits_file, self.source_dir, self.test_dir)
+
+        self.assertEqual(expected_status, status)
+
+    def bad_sci(self):
+        expected_status = -5
+
+        status = run_swarp_align(self.test_fits_file, 'banana', self.source_dir, self.test_dir)
+
+        self.assertEqual(expected_status, status)
+
+    def test_swarp_align_success(self):
+
+        outname = os.path.join(self.test_dir, "example-sbig-e10_aligned_to_example-sbig-e10.fits")
+        weightname = outname.replace('.fits', '.weight.fits')
+        headname = outname.replace('.fits', '.head')
+
+        expected_cmdline = f"./swarp -c swarp_neox.conf {self.test_fits_file} -BACK_SIZE 42 -IMAGEOUT_NAME {outname} -NTHREADS 1 -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -SUBTRACT_BACK N -WEIGHTOUT_NAME {weightname} -WEIGHT_TYPE NONE -COMBINE_TYPE CLIPPED"
+        cmdline = run_swarp_align(self.test_fits_file, self.test_fits_file, self.source_dir, self.test_dir, binary='./swarp', dbg=True)
+
+        self.maxDiff = None
+        self.assertEqual(expected_cmdline, cmdline)
+
+        expected_status = 0
+        status = run_swarp_align(self.test_fits_file, self.test_fits_file, self.source_dir, self.test_dir, dbg=False)
+
+        self.assertEqual(expected_status, status)
+
+        self.assertTrue(os.path.exists(outname))
+        self.assertTrue(os.path.exists(weightname))
+        self.assertTrue(os.path.exists(headname))
 
 
 class TestFindOrbRunner(ExternalCodeUnitTest):
