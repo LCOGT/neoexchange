@@ -661,6 +661,22 @@ class TestSwarpRunner(ExternalCodeUnitTest):
         self.assertEqual(expected_status, status)
 
 
+class TestSwarpAlignRunner(ExternalCodeUnitTest):
+    def test_make_ref_head(self):
+
+        expected_headpath = os.path.join(self.test_dir, "example-sbig-e10_aligned_to_example-sbig-e10.head")
+
+        headpath = make_ref_head(self.test_fits_file, self.test_fits_file, self.test_dir)
+
+        self.assertEqual(expected_headpath, headpath)
+
+        with open(headpath, 'r') as h:
+            header = h.read()
+
+        self.assertTrue('NAXIS' in header, msg="NAXIS data is not in this file.")
+        self.assertTrue('CTYPE' in header, msg="WCS data is not in this file.")
+
+
 class TestFindOrbRunner(ExternalCodeUnitTest):
 
     # These test use a fake binary name and set dbg=True to echo the generated
@@ -729,9 +745,10 @@ class TestDetermineSwarpOptions(ExternalCodeUnitTest):
 class TestDetermineSwarpAlignOptions(ExternalCodeUnitTest):
 
     def test1(self):
-        weightname = os.path.join(self.test_dir, "randomfilename.weight.fits")
+        outname = os.path.join(self.test_dir, "example-sbig-e10_aligned_to_example-sbig-e10.fits")
+        weightname = outname.replace('.fits', '.weight.fits')
 
-        expected_options = f'-BACK_SIZE 42 -IMAGEOUT_NAME example-sbig-e10_aligned_to_example-sbig-e10.fits -NTHREADS 1 -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -SUBTRACT_BACK N -WEIGHTOUT_NAME {weightname} -WEIGHT_TYPE NONE -COMBINE_TYPE CLIPPED '
+        expected_options = f'-BACK_SIZE 42 -IMAGEOUT_NAME {outname} -NTHREADS 1 -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -SUBTRACT_BACK N -WEIGHTOUT_NAME {weightname} -WEIGHT_TYPE NONE -COMBINE_TYPE CLIPPED '
 
         options = determine_swarp_align_options(self.test_fits_file, self.test_fits_file, self.test_dir)
 

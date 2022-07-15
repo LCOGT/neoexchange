@@ -26,6 +26,7 @@ from glob import glob
 
 from astropy.io import fits
 from astropy.io.votable import parse
+from astropy.wcs import WCS
 from numpy import loadtxt, split, empty
 
 from core.models import detections_array_dtypes
@@ -300,11 +301,11 @@ def determine_swarp_align_options(ref, sci, dest_dir, back_size=42, nthreads=1):
 
     options = ''
 
-    weightname = os.path.join(dest_dir, "randomfilename.weight.fits")
-
     ref_name = os.path.basename(ref).replace('.fits', '')
     sci_name = os.path.basename(sci).replace('.fits', '')
-    outname = f"{ref_name}_aligned_to_{sci_name}.fits"
+    outname = os.path.join(dest_dir, f"{ref_name}_aligned_to_{sci_name}.fits")
+
+    weightname = outname.replace('.fits', '.weight.fits')
 
     if 'mask' in sci:
         combtype = 'OR'
@@ -323,7 +324,7 @@ def determine_swarp_align_options(ref, sci, dest_dir, back_size=42, nthreads=1):
 
     return options
 
-def make_ref_head_file(ref, sci, dest_dir):
+def make_ref_head(ref, sci, dest_dir):
     """
     Create a new .head file in <dest_dir> corresponding to each newly aligned reference image.
     The .head file contains the NAXIS and WCS data from the <sci> image.
@@ -331,10 +332,10 @@ def make_ref_head_file(ref, sci, dest_dir):
 
     ref_name = os.path.basename(ref).replace('.fits', '')
     sci_name = os.path.basename(sci).replace('.fits', '')
-    outname = f"{ref_name}_aligned_to_{sci_name}.fits"
+    outname = os.path.join(dest_dir, f"{ref_name}_aligned_to_{sci_name}.fits")
 
     # Sci image header
-    align_header = fits.get_header(sci)
+    align_header = fits.getheader(sci)
     # Only the WCS data in the header
     head = WCS(align_header).to_header(relax=True)
 
@@ -350,7 +351,7 @@ def make_ref_head_file(ref, sci, dest_dir):
         for card in head.cards:
             f.write(f'{card.image}\n')
 
-
+    return headpath
 
 def determine_swarp_options(inweight, outname, dest_dir, back_size=42):
     """
