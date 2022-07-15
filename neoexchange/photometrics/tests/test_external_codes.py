@@ -726,6 +726,17 @@ class TestDetermineSwarpOptions(ExternalCodeUnitTest):
 
         self.assertEqual(expected_options, options)
 
+class TestDetermineSwarpAlignOptions(ExternalCodeUnitTest):
+
+    def test1(self):
+        weightname = os.path.join(self.test_dir, "randomfilename.weight.fits")
+
+        expected_options = f'-BACK_SIZE 42 -IMAGEOUT_NAME example-sbig-e10_aligned_to_example-sbig-e10.fits -NTHREADS 1 -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -SUBTRACT_BACK N -WEIGHTOUT_NAME {weightname} -WEIGHT_TYPE NONE -COMBINE_TYPE CLIPPED '
+
+        options = determine_swarp_align_options(self.test_fits_file, self.test_fits_file, self.test_dir)
+
+        #self.maxDiff = None
+        self.assertEqual(expected_options, options)
 
 class TestDetermineMTDLINKOptions(ExternalCodeUnitTest):
 

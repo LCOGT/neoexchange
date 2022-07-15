@@ -296,6 +296,62 @@ def determine_hotpants_options(placeholder_param):
     return
 
 
+def determine_swarp_align_options(ref, sci, dest_dir, back_size=42, nthreads=1):
+
+    options = ''
+
+    weightname = os.path.join(dest_dir, "randomfilename.weight.fits")
+
+    ref_name = os.path.basename(ref).replace('.fits', '')
+    sci_name = os.path.basename(sci).replace('.fits', '')
+    outname = f"{ref_name}_aligned_to_{sci_name}.fits"
+
+    if 'mask' in sci:
+        combtype = 'OR'
+    else:
+        combtype = 'CLIPPED'
+
+    options = f'-BACK_SIZE {back_size} ' \
+              f'-IMAGEOUT_NAME {outname} ' \
+              f'-NTHREADS {nthreads} ' \
+              f'-VMEM_DIR {dest_dir} ' \
+              f'-RESAMPLE_DIR {dest_dir} ' \
+              f'-SUBTRACT_BACK N ' \
+              f'-WEIGHTOUT_NAME {weightname} ' \
+              f'-WEIGHT_TYPE NONE ' \
+              f'-COMBINE_TYPE {combtype} '
+
+    return options
+
+def make_ref_head_file(ref, sci, dest_dir):
+    """
+    Create a new .head file in <dest_dir> corresponding to each newly aligned reference image.
+    The .head file contains the NAXIS and WCS data from the <sci> image.
+    """
+
+    ref_name = os.path.basename(ref).replace('.fits', '')
+    sci_name = os.path.basename(sci).replace('.fits', '')
+    outname = f"{ref_name}_aligned_to_{sci_name}.fits"
+
+    # Sci image header
+    align_header = fits.get_header(sci)
+    # Only the WCS data in the header
+    head = WCS(align_header).to_header(relax=True)
+
+    headpath = outname.replace('.fits', '.head')
+    with open(headpath, 'w') as f:
+
+        # Write the NAXIS data to the head file
+        for card in align_header.cards:
+            if card.keyword.startswith('NAXIS'):
+                f.write(f'{card.image}\n')
+
+        # Write the WCS data to the head file
+        for card in head.cards:
+            f.write(f'{card.image}\n')
+
+
+
 def determine_swarp_options(inweight, outname, dest_dir, back_size=42):
     """
     Takes weight.in filename
@@ -607,6 +663,23 @@ def run_swarp(source_dir, dest_dir, images, outname='reference.fits', binary=Non
         retcode_or_cmdline = call(args, cwd=dest_dir)
 
     return retcode_or_cmdline
+
+def align_to_ref(ref, sci, dest_dir):
+    """Resamples and aligns <sci> to <ref> using SWarp. Results written to <dest_dir>."""
+
+    # Run SWarp on science image
+    run_swarp_align(ref, sci, dest_dir)
+
+    # Run SWarp on mask image
+    run_swarp_align(ref, mask, dest_dir)
+
+def run_swarp_align(ref, sci, dest_dir):
+    """"""
+
+    options = determine_swarp_align_options(ref, sci, dest_dir)
+
+
+
 
 
 @timeit
