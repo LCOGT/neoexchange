@@ -245,7 +245,7 @@ def setup_working_dir(source_dir, dest_dir, config_files):
 #
 
 
-def determine_sextractor_options(fits_file, dest_dir, checkimage_type=None):
+def determine_sextractor_options(fits_file, dest_dir, checkimage_type=[]):
 
     # Mapping keys in the generalized headers that NEOX uses to SExtractor
     # command line options
@@ -276,15 +276,25 @@ def determine_sextractor_options(fits_file, dest_dir, checkimage_type=None):
 
     # SWarp requires an rms image later in the pipeline.
     # Hotpants requires a background-subtracted image later in the pipeline.
-    if checkimage_type != None:
-        if checkimage_type == '-BACKGROUND':
-            checkimage_name = os.path.join(dest_dir, os.path.basename(fits_file.replace(".fits", ".bkgsub.fits")))
-        elif checkimage_type == 'BACKGROUND_RMS':
-            checkimage_name = os.path.join(dest_dir, os.path.basename(fits_file.replace(".fits", ".rms.fits")))
-        else:
-            logger.error(f"checkimage_type {checkimage_type} not supported by NEOX.")
+    if len(checkimage_type) > 0:
+
+        checkimage_name = [None] * len(checkimage_type)
+
+        if 'BACKGROUND_RMS' in checkimage_type:
+            i = checkimage_type.index('BACKGROUND_RMS')
+            checkimage_name[i] = os.path.join(dest_dir, os.path.basename(fits_file.replace(".fits", ".rms.fits")))
+
+        if '-BACKGROUND' in checkimage_type:
+            i = checkimage_type.index('-BACKGROUND')
+            checkimage_name[i] = os.path.join(dest_dir, os.path.basename(fits_file.replace(".fits", ".bkgsub.fits")))
+
+        if None in checkimage_name:
+            logger.error("At least one checkimage_type you have entered is not supported by NEOX.")
             return -4
-        options += f' -CHECKIMAGE_TYPE {checkimage_type} -CHECKIMAGE_NAME {checkimage_name}'
+
+        checkimage_type_str = ','.join(checkimage_type)
+        checkimage_name_str = ','.join(checkimage_name)
+        options += f' -CHECKIMAGE_TYPE {checkimage_type_str} -CHECKIMAGE_NAME {checkimage_name_str}'
 
     options += ' -BACK_SIZE 42'
 
@@ -564,9 +574,9 @@ def run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type='A
 
     sextractor_config_file = default_sextractor_config_files(catalog_type)[0]
     if '[SCI]' in fits_file:
-        options = determine_sextractor_options(root_fits_file, dest_dir, checkimage_type = 'BACKGROUND_RMS')
+        options = determine_sextractor_options(root_fits_file, dest_dir, checkimage_type = ['BACKGROUND_RMS', '-BACKGROUND'])
     else:
-        options = determine_sextractor_options(fits_file, dest_dir, checkimage_type = 'BACKGROUND_RMS')
+        options = determine_sextractor_options(fits_file, dest_dir, checkimage_type = ['BACKGROUND_RMS', '-BACKGROUND'])
 
     cmdline = "%s %s -c %s %s" % ( binary, fits_file, sextractor_config_file, options )
     cmdline = cmdline.rstrip()
