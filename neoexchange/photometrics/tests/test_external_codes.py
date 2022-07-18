@@ -785,14 +785,31 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
 
         self.assertEqual(expected_options, options)
 
-    def test1(self):
-        rms_file = os.path.join(self.test_dir, 'example-sbig-e10.rms.fits')
-        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.467 -SATUR_LEVEL 46000 -CHECKIMAGE_TYPE BACKGROUND_RMS -CHECKIMAGE_NAME {rms_file} -BACK_SIZE 42'
+    def test_rms(self):
+        checkimage_name = os.path.join(self.test_dir, 'example-sbig-e10.rms.fits')
+        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.467 -SATUR_LEVEL 46000 -CHECKIMAGE_TYPE BACKGROUND_RMS -CHECKIMAGE_NAME {checkimage_name} -BACK_SIZE 42'
 
-        options = determine_sextractor_options(self.test_fits_file, self.test_dir)
+        options = determine_sextractor_options(self.test_fits_file, self.test_dir, checkimage_type='BACKGROUND_RMS')
 
         self.maxDiff = None
         self.assertEqual(expected_options, options)
+
+    def test_bkgsub(self):
+        checkimage_name = os.path.join(self.test_dir, 'example-sbig-e10.bkgsub.fits')
+        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.467 -SATUR_LEVEL 46000 -CHECKIMAGE_TYPE -BACKGROUND -CHECKIMAGE_NAME {checkimage_name} -BACK_SIZE 42'
+
+        options = determine_sextractor_options(self.test_fits_file, self.test_dir, checkimage_type='-BACKGROUND')
+
+        self.maxDiff = None
+        self.assertEqual(expected_options, options)
+
+    def test_bad_checkimage_type(self):
+        expected_status = -4
+
+        status = determine_sextractor_options(self.test_fits_file, self.test_dir, checkimage_type='banana')
+
+        self.assertEqual(expected_status, status)
+
 
 class TestDetermineSwarpOptions(ExternalCodeUnitTest):
 

@@ -245,7 +245,7 @@ def setup_working_dir(source_dir, dest_dir, config_files):
 #
 
 
-def determine_sextractor_options(fits_file, dest_dir):
+def determine_sextractor_options(fits_file, dest_dir, checkimage_type=None):
 
     # Mapping keys in the generalized headers that NEOX uses to SExtractor
     # command line options
@@ -274,11 +274,18 @@ def determine_sextractor_options(fits_file, dest_dir):
             options += option_mapping[option] + ' ' + str(header.get(header_mapping[option])) + ' '
     options = options.rstrip()
 
-    # SWarp requires a weight image later in the pipeline.
-    # SExtractor can also output a weight image if we specify
-    # CHECKIMAGE_TYPE and CHECKIMAGE_NAME parameters.
-    rms_filename = os.path.join(dest_dir, os.path.basename(fits_file.replace(".fits", ".rms.fits")))
-    options += f' -CHECKIMAGE_TYPE BACKGROUND_RMS -CHECKIMAGE_NAME {rms_filename}'
+    # SWarp requires an rms image later in the pipeline.
+    # Hotpants requires a background-subtracted image later in the pipeline.
+    if checkimage_type != None:
+        if checkimage_type == '-BACKGROUND':
+            checkimage_name = os.path.join(dest_dir, os.path.basename(fits_file.replace(".fits", ".bkgsub.fits")))
+        elif checkimage_type == 'BACKGROUND_RMS':
+            checkimage_name = os.path.join(dest_dir, os.path.basename(fits_file.replace(".fits", ".rms.fits")))
+        else:
+            logger.error(f"checkimage_type {checkimage_type} not supported by NEOX.")
+            return -4
+        options += f' -CHECKIMAGE_TYPE {checkimage_type} -CHECKIMAGE_NAME {checkimage_name}'
+
     options += ' -BACK_SIZE 42'
 
     hdulist.close()
@@ -557,9 +564,9 @@ def run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type='A
 
     sextractor_config_file = default_sextractor_config_files(catalog_type)[0]
     if '[SCI]' in fits_file:
-        options = determine_sextractor_options(root_fits_file, dest_dir)
+        options = determine_sextractor_options(root_fits_file, dest_dir, checkimage_type = 'BACKGROUND_RMS')
     else:
-        options = determine_sextractor_options(fits_file, dest_dir)
+        options = determine_sextractor_options(fits_file, dest_dir, checkimage_type = 'BACKGROUND_RMS')
 
     cmdline = "%s %s -c %s %s" % ( binary, fits_file, sextractor_config_file, options )
     cmdline = cmdline.rstrip()
