@@ -551,7 +551,7 @@ def add_l1filter(fits_file):
 
 
 @timeit
-def run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type='ASCII', dbg=False):
+def run_sextractor(source_dir, dest_dir, fits_file, checkimage_type=[], binary=None, catalog_type='ASCII', dbg=False):
     """Run SExtractor (using either the binary specified by [binary] or by
     looking for 'sex' in the PATH) on the passed <fits_file> with the results
     and any temporary files created in <dest_dir>. <source_dir> is the path
@@ -578,9 +578,9 @@ def run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type='A
 
     sextractor_config_file = default_sextractor_config_files(catalog_type)[0]
     if '[SCI]' in fits_file:
-        options = determine_sextractor_options(root_fits_file, dest_dir, checkimage_type = ['BACKGROUND_RMS', '-BACKGROUND'])
+        options = determine_sextractor_options(root_fits_file, dest_dir, checkimage_type)
     else:
-        options = determine_sextractor_options(fits_file, dest_dir, checkimage_type = ['BACKGROUND_RMS', '-BACKGROUND'])
+        options = determine_sextractor_options(fits_file, dest_dir, checkimage_type)
 
     cmdline = "%s %s -c %s %s" % ( binary, fits_file, sextractor_config_file, options )
     cmdline = cmdline.rstrip()

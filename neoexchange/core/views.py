@@ -3497,11 +3497,11 @@ def determine_images_and_catalogs(self, datadir, red_level='e91', output=True):
     return fits_files, fits_catalogs
 
 
-def run_sextractor_make_catalog(configs_dir, dest_dir, fits_file):
+def run_sextractor_make_catalog(configs_dir, dest_dir, fits_file, checkimage_type=[]):
     """Run SExtractor, rename output to new filename which is returned"""
 
     logger.debug("Running SExtractor on BANZAI file: %s" % fits_file)
-    sext_status = run_sextractor(configs_dir, dest_dir, fits_file, catalog_type='FITS_LDAC')
+    sext_status = run_sextractor(configs_dir, dest_dir, fits_file, checkimage_type, catalog_type='FITS_LDAC')
     if sext_status == 0:
         fits_ldac_catalog = 'test_ldac.fits'
         fits_ldac_catalog_path = os.path.join(dest_dir, fits_ldac_catalog)
@@ -3542,7 +3542,7 @@ def run_swarp_make_reference(input_dir, configs_dir, dest_dir):
             fits_files.append(image.replace('.fz', ''))
 
     for image in fits_files:
-        sext_status, catalog = run_sextractor_make_catalog(configs_dir, dest_dir, image + '[SCI]')
+        sext_status, catalog = run_sextractor_make_catalog(configs_dir, dest_dir, image + '[SCI]', checkimage_type=['BACKGROUND_RMS'])
         if sext_status != 0:
             return sext_status
 

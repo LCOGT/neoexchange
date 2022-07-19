@@ -498,7 +498,7 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
         expected_status = 0
         expected_line1 = '#   1 NUMBER                 Running object number'
 
-        status = run_sextractor(self.source_dir, self.test_dir, self.test_fits_file)
+        status = run_sextractor(self.source_dir, self.test_dir, self.test_fits_file, checkimage_type=['BACKGROUND_RMS'])
 
         self.assertEqual(expected_status, status)
 
@@ -514,6 +514,9 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
         # LP 2022/06/30 Expected sources now 1929 after change in BACK_SIZE
         self.assertEqual(14+1929, len(test_lines))
         self.assertEqual(expected_line1, test_lines[0].rstrip())
+
+        output_rms = os.path.join(self.test_dir, os.path.basename(self.test_fits_file.replace('.fits', '.rms.fits')))
+        self.assertTrue(os.path.exists(output_rms))
 
     def test_setup_ldac_sextractor_dir(self):
 
