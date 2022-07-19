@@ -1362,16 +1362,17 @@ def extract_catalog(catfile, catalog_type='LCOGT', flag_filter=0, new=True, remo
     return header, table
 
 
-def update_zeropoint(header, table, avg_zeropoint, std_zeropoint):
+def update_zeropoint(header, table, avg_zeropoint, std_zeropoint, include_zperr=True):
 
     header['zeropoint'] = avg_zeropoint
     header['zeropoint_err'] = std_zeropoint
-    header['zeropoint_src'] = 'py_zp_match-V0.3'
+    header['zeropoint_src'] = 'py_zp_match-V1.0'
 
     for source in table:
         source['obs_mag'] += avg_zeropoint
         # source['obs_mag_err'] = sqrt(((source['obs_mag_err']/source['obs_mag'])**2.0) + ((header['zeropoint_err']/header['zeropoint'])**2.0))
-        source['obs_mag_err'] = sqrt((source['obs_mag_err']**2.0) + (header['zeropoint_err']**2.0))
+        if include_zperr is True:
+            source['obs_mag_err'] = sqrt((source['obs_mag_err']**2.0) + (header['zeropoint_err']**2.0))
 
     return header, table
 
@@ -1393,7 +1394,7 @@ def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename, 
         frame.photometric_catalog = header.get('photometric_catalog', phot_cat_name)
         frame.save()
     except Frame.MultipleObjectsReturned:
-        pass
+        logger.error("Multiple frames found")
     # except Frame.DoesNotExist:
     #     store sources in neoexchange(CatalogSources table)
     #     frame_params = {    'sitecode':header['site_code'],
