@@ -318,13 +318,9 @@ def determine_hotpants_options(sci, ref, outname):
     return options
 
 
-def determine_swarp_align_options(ref, sci, dest_dir, back_size=42, nthreads=1):
+def determine_swarp_align_options(ref, sci, dest_dir, outname, back_size=42, nthreads=1):
 
     options = ''
-
-    ref_name = os.path.basename(ref).replace('.fits', '')
-    sci_name = os.path.basename(sci).replace('.fits', '')
-    outname = os.path.join(dest_dir, f"{ref_name}_aligned_to_{sci_name}.fits")
 
     weightname = outname.replace('.fits', '.weight.fits')
 
@@ -345,15 +341,11 @@ def determine_swarp_align_options(ref, sci, dest_dir, back_size=42, nthreads=1):
 
     return options
 
-def make_ref_head(ref, sci, dest_dir):
+def make_ref_head(ref, sci, dest_dir, outname):
     """
     Create a new .head file in <dest_dir> corresponding to each newly aligned reference image.
     The .head file contains the NAXIS and WCS data from the <sci> image.
     """
-
-    ref_name = os.path.basename(ref).replace('.fits', '')
-    sci_name = os.path.basename(sci).replace('.fits', '')
-    outname = os.path.join(dest_dir, f"{ref_name}_aligned_to_{sci_name}.fits")
 
     # Sci image header
     align_header = fits.getheader(sci)
@@ -708,16 +700,22 @@ def run_hotpants(ref, sci, source_dir, dest_dir):
 
     return retcode_or_cmdline
 
-def align_to_ref(ref, sci, dest_dir):
-    """Resamples and aligns <sci> to <ref> using SWarp. Results written to <dest_dir>."""
+def align_to_sci(ref, sci, dest_dir):
+    """Resamples and aligns <ref> to <sci> using SWarp. Results written to <dest_dir>."""
 
-    # Run SWarp on science image
-    run_swarp_align(ref, sci, dest_dir)
+    ref_name = os.path.basename(ref).replace('.fits', '')
+    sci_name = os.path.basename(sci).replace('.fits', '')
+    outname = os.path.join(dest_dir, f"{ref_name}_aligned_to_{sci_name}.fits")
 
-    # Run SWarp on mask image
-    run_swarp_align(ref, mask, dest_dir)
+    # Run SWarp align
+    status = run_swarp_align(ref, sci, dest_dir, outname)
+    if status != 0:
+        logger.error(f"Error in aligning reference image to {sci}.")
 
-def run_swarp_align(ref, sci, source_dir, dest_dir, binary=None, dbg=False):
+    return outname
+
+
+def run_swarp_align(ref, sci, source_dir, dest_dir, outname, binary=None, dbg=False):
     """Run SWarp (align) (using either the binary specified by [binary] or by
     looking for 'swarp' in the PATH) on the passed <ref> and <sci> images with the results
     and any temporary files created in <dest_dir>. <source_dir> is the path
@@ -741,9 +739,9 @@ def run_swarp_align(ref, sci, source_dir, dest_dir, binary=None, dbg=False):
         logger.error(f"{sci} not found.")
         return -5
 
-    options = determine_swarp_align_options(ref, sci, dest_dir)
+    options = determine_swarp_align_options(ref, sci, dest_dir, outname)
 
-    ref_head = make_ref_head(ref, sci, dest_dir)
+    ref_head = make_ref_head(ref, sci, dest_dir, outname)
 
     #assemble command line
     cmdline = "%s -c %s %s %s" % (binary, swarp_config_file, ref, options )
