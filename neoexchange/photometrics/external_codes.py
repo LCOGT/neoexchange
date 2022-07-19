@@ -82,15 +82,6 @@ def default_findorb_config_files():
     return config_files
 
 
-def default_hotpants_config_files():
-    """Return a list of the needed files for HOTPANTS. The config file should
-    be in element 0"""
-
-    config_files = ['hotpants_neox.conf'] #Placeholder file
-
-    return config_files
-
-
 def default_swarp_config_files():
     """Return a list of the needed files for SWarp. The config file should
     be in element 0"""
@@ -143,9 +134,7 @@ def setup_hotpants_dir(source_dir, dest_dir):
     """Setup a temporary working directory for running HOTPANTS in <dest_dir>.
     The needed config files are symlinked from <source_dir>"""
 
-    hotpants_config_files = default_hotpants_config_files()
-
-    return_value = setup_working_dir(source_dir, dest_dir, hotpants_config_files)
+    return_value = setup_working_dir(source_dir, dest_dir, "")
 
     return return_value
 
@@ -671,7 +660,7 @@ def run_hotpants(ref, sci, source_dir, dest_dir):
     results and any temporary files created in <dest_dir>. <source_dir> is the
     path to the required config files."""
 
-    status = setup_hotspants_dir(source_dir, dest_dir)
+    status = setup_hotpants_dir(source_dir, dest_dir)
     if status != 0:
         return status
 
@@ -680,8 +669,6 @@ def run_hotpants(ref, sci, source_dir, dest_dir):
         logger.error("Could not locate 'hotpants' executable in PATH")
         return -42
 
-    # There does not appear to be any config files needed for hotpants?
-    hotpants_config_file = default_hotpants_config_files()[0]
 
     options = determine_hotpants_options(sci, ref, outname)
 
