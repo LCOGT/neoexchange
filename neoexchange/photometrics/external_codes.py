@@ -86,7 +86,7 @@ def default_hotpants_config_files():
     """Return a list of the needed files for HOTPANTS. The config file should
     be in element 0"""
 
-    config_files = ['hotpants.conf'] #Placeholder file
+    config_files = ['hotpants_neox.conf'] #Placeholder file
 
     return config_files
 
@@ -302,7 +302,7 @@ def determine_sextractor_options(fits_file, dest_dir, checkimage_type=[]):
     return options
 
 
-def determine_hotpants_options(placeholder_param):
+def determine_hotpants_options(sci, ref, outname):
     """
     https://github.com/acbecker/hotpants
 
@@ -310,8 +310,12 @@ def determine_hotpants_options(placeholder_param):
     [-inim fitsfile]  : comparison image to be differenced
     [-tmplim fitsfile]: template image
     [-outim fitsfile] : output difference image
+
     """
-    return
+
+    options = f'-inim {sci} -tmplim {ref} -outim {outname}'
+
+    return options
 
 
 def determine_swarp_align_options(ref, sci, dest_dir, back_size=42, nthreads=1):
@@ -591,20 +595,6 @@ def run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type='A
 
     return retcode_or_cmdline
 
-
-@timeit
-def run_hotpants(source_dir, dest_dir):
-    """Run HOTPANTS (using either the binary specified by [binary] or by
-    looking for 'hotpants' in the PATH) on the passed <fits_catalog_path> with the
-    results and any temporary files created in <dest_dir>. <source_dir> is the
-    path to the required config files."""
-
-    #Placeholder
-    retcode_or_cmdline = -42
-
-    return retcode_or_cmdline
-
-
 @timeit
 def run_swarp(source_dir, dest_dir, images, outname='reference.fits', binary=None, swarp_zp_key='L1ZP', dbg=False):
     """Run SWarp (using either the binary specified by [binary] or by
@@ -672,6 +662,42 @@ def run_swarp(source_dir, dest_dir, images, outname='reference.fits', binary=Non
     cmdline = cmdline.rstrip()
 
     #run swarp
+    if dbg is True:
+        retcode_or_cmdline = cmdline
+    else:
+        # This executes the command to the terminal
+        logger.debug("cmdline=%s" % cmdline)
+        args = cmdline.split()
+        retcode_or_cmdline = call(args, cwd=dest_dir)
+
+    return retcode_or_cmdline
+
+@timeit
+def run_hotpants(ref, sci, source_dir, dest_dir):
+    """Run HOTPANTS (using either the binary specified by [binary] or by
+    looking for 'hotpants' in the PATH) on the passed <ref> and <sci> images with the
+    results and any temporary files created in <dest_dir>. <source_dir> is the
+    path to the required config files."""
+
+    status = setup_hotspants_dir(source_dir, dest_dir)
+    if status != 0:
+        return status
+
+    binary = binary or find_binary("hotpants")
+    if binary is None:
+        logger.error("Could not locate 'hotpants' executable in PATH")
+        return -42
+
+    # There does not appear to be any config files needed for hotpants?
+    hotpants_config_file = default_hotpants_config_files()[0]
+
+    options = determine_hotpants_options(sci, ref, outname)
+
+    #assemble command line
+    cmdline = "%s %s" % (binary, options)
+    cmdline = cmdline.rstrip()
+
+    #run hotpants
     if dbg is True:
         retcode_or_cmdline = cmdline
     else:

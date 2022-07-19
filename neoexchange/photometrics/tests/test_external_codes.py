@@ -843,6 +843,15 @@ class TestDetermineSwarpAlignOptions(ExternalCodeUnitTest):
         #self.maxDiff = None
         self.assertEqual(expected_options, options)
 
+class TestDetermineHotpantsOptions(ExternalCodeUnitTest):
+
+    def test1(self):
+        expected_options = "-inim science.fits -tmplim reference.fits -outim output.fits"
+
+        options = determine_hotpants_options("science.fits", "reference.fits", "output.fits")
+
+        self.assertEqual(expected_options, options)
+
 class TestDetermineMTDLINKOptions(ExternalCodeUnitTest):
 
     def test_nofile(self):
