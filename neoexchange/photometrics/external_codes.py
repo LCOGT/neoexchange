@@ -27,12 +27,13 @@ from glob import glob
 from astropy.io import fits
 from astropy.io.votable import parse
 from astropy.wcs import WCS
-from numpy import loadtxt, split, empty
+from astropy.wcs.utils import proj_plane_pixel_scales
+from numpy import loadtxt, split, empty, median, absolute, sqrt
 
 from core.models import detections_array_dtypes
 from astrometrics.time_subs import timeit
 from photometrics.catalog_subs import oracdr_catalog_mapping
-from photometrics.image_subs import create_weight_image
+from photometrics.image_subs import create_weight_image, create_rms_image
 
 logger = logging.getLogger(__name__)
 
@@ -291,7 +292,7 @@ def determine_sextractor_options(fits_file, dest_dir, checkimage_type=[]):
     return options
 
 
-def determine_hotpants_options(sci, ref, outname):
+def determine_hotpants_options(ref, sci, source_dir, dest_dir):
     """
     https://github.com/acbecker/hotpants
 
@@ -299,10 +300,61 @@ def determine_hotpants_options(sci, ref, outname):
     [-inim fitsfile]  : comparison image to be differenced
     [-tmplim fitsfile]: template image
     [-outim fitsfile] : output difference image
-
     """
+    output_diff_image = os.path.join(dest_dir, os.path.basename(sci).replace('.fits', '.subtracted.fits'))
+    output_noise_image = output_diff_image.replace('.fits', '.rms.fits')
 
-    options = f'-inim {sci} -tmplim {ref} -outim {outname}'
+    sci_bkgsub = os.path.join(dest_dir, os.path.basename(sci).replace(".fits", ".bkgsub.fits"))
+    sci_rms = os.path.join(dest_dir, os.path.basename(sci).replace(".fits", ".rms.fits"))
+
+    aligned_ref = align_to_sci(ref, sci, source_dir, dest_dir)
+    aligned_weight = aligned_ref.replace('.fits', '.weight.fits')
+    aligned_rms = create_rms_image(aligned_weight)
+
+    # Check to make sure all files exist
+
+    # Get the relevant header and data
+    sci_header = fits.getheader(sci, 'SCI')
+    sci_bkgsub_data = fits.getdata(sci_bkgsub, 'SCI')
+    ref_data = fits.getdata(ref)
+
+    satlev = 65535    #upper valid data count (25000)
+    try:
+        satlev = sci_header.get('MAXLIN', 0.0)
+        if satlev <= 0.0:
+            raise KeyError
+    except KeyError:
+            satlev = sci_header['SATURATE']
+
+    scibkg = median(sci_bkgsub_data)
+    scibkgstd = 1.4826 * median(absolute(sci_bkgsub_data - scibkg))
+    refbkg = median(ref_data)
+    refbkgstd =1.4826 * median(absolute(ref_data - refbkg))
+    il = scibkg - 10 * scibkgstd    #lower valid data count, template (0)
+    tl = refbkg - 10 * refbkgstd    #lower valid data count, image (0)
+
+    nreg_side=3
+    nrx = nreg_side    #number of image regions in x dimension (1)
+    nry = nreg_side    #number of image regions in y dimension (1)
+    nsx = sci_header['NAXIS1'] / 100. / nreg_side    #number of each region's stamps in x dimension (10)
+    nsy = sci_header['NAXIS2'] / 100. / nreg_side    #number of each region's stamps in y dimension (10)
+
+    sci_wcs = WCS(sci_header)
+    pixscale = proj_plane_pixel_scales(sci_wcs).mean()*3600.0   #arcsec/pix
+    seearcsec = sci_header['L1FWHM'] #Frame FWHM in arcsec
+    seepix = seearcsec / pixscale #Convert arcsec to pixels
+    r = 2.5 * seepix    #convolution kernel half width {10}
+    rss = 6. * seepix   #half width substamp to extract around each centroid (15)
+
+    fin = sqrt(50000.) #noise image only fillvalue (0.0e+00)
+
+    options = f'-inim {sci_bkgsub} -tmplim {aligned_ref} -outim {output_diff_image} ' \
+              f'-tni {aligned_rms} -ini {sci_rms} -oni {output_noise_image} ' \
+              f'-hki -n i -c t -v 0 ' \
+              f'-tu {satlev} -iu {satlev} ' \
+              f'-tl {tl} -il {il} ' \
+              f'-nrx {nrx} -nry {nry} -nsx {nsx} -nsy {nsy} ' \
+              f'-r {r} -rss {rss} -fin {fin}'
 
     return options
 
@@ -669,8 +721,9 @@ def run_hotpants(ref, sci, source_dir, dest_dir):
         logger.error("Could not locate 'hotpants' executable in PATH")
         return -42
 
+    run_sextractor(source_dir, dest_dir, sci, checkimage_type=['-BACKGROUND'])
 
-    options = determine_hotpants_options(sci, ref, outname)
+    options = determine_hotpants_options(ref, sci, source_dir, dest_dir)
 
     #assemble command line
     cmdline = "%s %s" % (binary, options)
@@ -687,7 +740,7 @@ def run_hotpants(ref, sci, source_dir, dest_dir):
 
     return retcode_or_cmdline
 
-def align_to_sci(ref, sci, dest_dir):
+def align_to_sci(ref, sci, source_dir, dest_dir):
     """Resamples and aligns <ref> to <sci> using SWarp. Results written to <dest_dir>."""
 
     ref_name = os.path.basename(ref).replace('.fits', '')
@@ -695,7 +748,7 @@ def align_to_sci(ref, sci, dest_dir):
     outname = os.path.join(dest_dir, f"{ref_name}_aligned_to_{sci_name}.fits")
 
     # Run SWarp align
-    status = run_swarp_align(ref, sci, dest_dir, outname)
+    status = run_swarp_align(ref, sci, source_dir, dest_dir, outname)
     if status != 0:
         logger.error(f"Error in aligning reference image to {sci}.")
 
