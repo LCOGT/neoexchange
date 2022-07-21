@@ -90,3 +90,4 @@ def run_process(process):
         process.status = ASYNC_STATUS_FAILED
         process.save()
     logger.info('process finished')
+    return

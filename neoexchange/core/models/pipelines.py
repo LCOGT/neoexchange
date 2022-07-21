@@ -136,7 +136,7 @@ class PipelineProcess(AsyncProcess):
 
     @classmethod
     def create_timestamped(cls, inputs=None):
-        date_str = datetime.now().strftime('%Y%m%d%H%M%S')
+        date_str = datetime.now().strftime('%Y%m%d%H%M%S%f')
         identifier = f'{cls.short_name}__{date_str}'
         kwargs = {
             'identifier': identifier,

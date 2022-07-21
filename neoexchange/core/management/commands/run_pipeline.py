@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 
 from django.core.management.base import BaseCommand, CommandError
+from dramatiq import pipeline
 
 from core.tasks import run_pipeline, send_task
 from core.models import PipelineProcess
@@ -51,12 +52,12 @@ class Command(BaseCommand):
         for fits_file in fits_files:
             steps = [{
                         'name'   : 'proc-extract',
-                        'inputs' : {'fits_file':os.path.join(dataroot, fits_file),
+                        'inputs' : {'fits_file':fits_file,
                                    'datadir': os.path.join(dataroot, 'Temp')}
                     },
                     {
                         'name'   : 'proc-astromfit',
-                        'inputs' : {'fits_file' : os.path.join(dataroot, fits_file),
+                        'inputs' : {'fits_file' : fits_file,
                                     'ldac_catalog' : os.path.join(dataroot, 'Temp', fits_file.replace('e91.fits', 'e91_ldac.fits')),
                                     'datadir' : os.path.join(dataroot, 'Temp')
                                     }
@@ -70,10 +71,12 @@ class Command(BaseCommand):
                     }]
             self.stdout.write(f"Running pipeline on {fits_file}:")
 
+            pipes = []
             for step in steps:
                 pipeline_cls = PipelineProcess.get_subclass(step['name'])
                 inputs = {f: pipeline_cls.inputs[f]['default'] for f in pipeline_cls.inputs}
                 inputs.update(step['inputs'])
                 self.stdout.write(f"  Performing pipeline step {step['name']}")
-                # pipe = pipeline_cls.create_timestamped(inputs)
-                # send_task(run_pipeline, pipe, step['name'])
+                pipe = pipeline_cls.create_timestamped(inputs)
+                pipes.append(run_pipeline.message_with_options(args=[pipe.pk, step['name']], pipe_ignore=True))
+            runner  = pipeline(pipes).run()
