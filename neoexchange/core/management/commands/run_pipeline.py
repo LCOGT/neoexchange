@@ -14,6 +14,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         default_path = os.path.join(os.path.sep, 'data', 'eng', 'rocks')
+        default_tempdir = 'Temp_cvc'
         parser.add_argument('--date', action="store", default=datetime.utcnow(), help='Date of the data to process (YYYYMMDD)')
         parser.add_argument('--datadir', action="store", default=default_path, help='Path for processed data (e.g. /data/eng/rocks)')
         parser.add_argument('--refcat',
@@ -22,6 +23,7 @@ class Command(BaseCommand):
                     nargs='?',
                     choices=['GAIA-DR2', 'PS1', 'REFCAT2'],
                     help='Reference catalog: choice of GAIA-DR2, PS1, REFCAT2 (default: %(default)s)')
+        parser.add_argument('--tempdir', action="store", default=default_tempdir, help=f'Temporary processing directory name (e.g. {default_tempdir}')
 
     def handle(self, *args, **options):
         # Path to directory containing some e91 BANZAI files (this one is a local copy of a recent one from /apophis/eng/rocks)
@@ -47,25 +49,28 @@ class Command(BaseCommand):
             else:
                 dataroot = dataroot2
 
+        # Ensure trailing slash is present
+        dataroot = os.path.join(dataroot, '')
         fits_files, fits_catalogs = determine_images_and_catalogs(self, dataroot)
 
+        temp_dir = options['tempdir']
         for fits_file in fits_files:
             steps = [{
                         'name'   : 'proc-extract',
                         'inputs' : {'fits_file':fits_file,
-                                   'datadir': os.path.join(dataroot, 'Temp')}
+                                   'datadir': os.path.join(dataroot, temp_dir)}
                     },
                     {
                         'name'   : 'proc-astromfit',
                         'inputs' : {'fits_file' : fits_file,
-                                    'ldac_catalog' : os.path.join(dataroot, 'Temp', fits_file.replace('e91.fits', 'e91_ldac.fits')),
-                                    'datadir' : os.path.join(dataroot, 'Temp')
+                                    'ldac_catalog' : os.path.join(dataroot, temp_dir, fits_file.replace('e91.fits', 'e91_ldac.fits')),
+                                    'datadir' : os.path.join(dataroot, temp_dir)
                                     }
                     },
                     {
                         'name'   : 'proc-zeropoint',
-                        'inputs' : {'ldac_catalog' : os.path.join(dataroot, 'Temp', fits_file.replace('e91.fits', 'e92_ldac.fits')),
-                                    'datadir' : os.path.join(dataroot, 'Temp'),
+                        'inputs' : {'ldac_catalog' : os.path.join(dataroot, temp_dir, fits_file.replace('e91.fits', 'e92_ldac.fits')),
+                                    'datadir' : os.path.join(dataroot, temp_dir),
                                     'desired_catalog' : options['refcat']
                                     }
                     }]
