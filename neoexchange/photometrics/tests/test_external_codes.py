@@ -478,6 +478,34 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
             test_file = os.path.join(self.test_dir, config_file)
             self.assertTrue(os.path.exists(test_file), msg=config_file + ' is missing')
 
+    def test_setup_sextractor_dir_ldac(self):
+
+        expected_configs = ['sextractor_neox_ldac.conf',
+                            'sextractor_ldac.params']
+        expected_status = 0
+
+        status = setup_sextractor_dir(self.source_dir, self.test_dir, catalog_type='FITS_LDAC')
+
+        self.assertEqual(expected_status, status)
+
+        for config_file in expected_configs:
+            test_file = os.path.join(self.test_dir, config_file)
+            self.assertTrue(os.path.exists(test_file), msg=config_file + ' is missing')
+
+    def test_setup_sextractor_dir_multiaper(self):
+
+        expected_configs = ['sextractor_neox_ldac_multiaper.conf',
+                            'sextractor_ldac_multiaper.params']
+        expected_status = 0
+
+        status = setup_sextractor_dir(self.source_dir, self.test_dir, catalog_type='FITS_LDAC_MULTIAPER')
+
+        self.assertEqual(expected_status, status)
+
+        for config_file in expected_configs:
+            test_file = os.path.join(self.test_dir, config_file)
+            self.assertTrue(os.path.exists(test_file), msg=config_file + ' is missing')
+
     def test_run_sextractor_nofile(self):
 
         expected_cmdline = './sex  -c sextractor_neox.conf'

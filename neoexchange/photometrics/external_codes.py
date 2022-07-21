@@ -73,6 +73,9 @@ def default_sextractor_config_files(catalog_type='ASCII'):
     if catalog_type == 'FITS_LDAC':
         config_files = ['sextractor_neox_ldac.conf',
                         'sextractor_ldac.params']
+    elif catalog_type == 'FITS_LDAC_MULTIAPER':
+        config_files = ['sextractor_neox_ldac_multiaper.conf',
+                        'sextractor_ldac_multiaper.params']
 
     config_files += common_config_files
     return config_files
@@ -602,7 +605,7 @@ def run_sextractor(source_dir, dest_dir, fits_file, checkimage_type=[], binary=N
     # If we are making FITS_LDAC catalogs for SCAMP, we need to create a new
     # header keyword of L1FILTER and set the value to FILTER. This prevents
     # SCAMP false matching on the first FITS keyword starting with FILTER
-    if catalog_type == 'FITS_LDAC':
+    if catalog_type == 'FITS_LDAC' or catalog_type == 'FITS_LDAC_MULTIAPER':
         root_fits_file = fits_file
         if '[SCI]' in fits_file:
             # Banzai format, strip off extension
