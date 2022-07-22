@@ -877,10 +877,19 @@ class TestDetermineSwarpAlignOptions(ExternalCodeUnitTest):
 class TestDetermineHotpantsOptions(ExternalCodeUnitTest):
 
     def test1(self):
-        expected_options = "-inim science.fits -tmplim reference.fits -outim output.fits"
+        bkgsub = os.path.join(self.test_dir, "example-sbig-e10.bkgsub.fits")
+        aligned = os.path.join(self.test_dir, "example-sbig-e10_aligned_to_example-sbig-e10.fits")
+        subtracted = os.path.join(self.test_dir, "example-sbig-e10.subtracted.fits")
+        subtracted_rms = os.path.join(self.test_dir, "example-sbig-e10.subtracted.rms.fits")
+        ref_rms = os.path.join(self.test_dir, "example-sbig-e10.rms_aligned_to_example-sbig-e10.rms.fits")
+        rms = os.path.join(self.test_dir, "example-sbig-e10.rms.fits")
 
-        options = determine_hotpants_options("science.fits", "reference.fits", "output.fits")
+        expected_options = f"-inim {bkgsub} -tmplim {aligned} -outim {subtracted} -tni {ref_rms} -ini {rms} -oni {subtracted_rms} -hki -n i -c t -v 0 " \
+                           f"-tu 46000 -iu 46000 -tl 61.37242855834961 -il -263.27518395996094 -nrx 3 -nry 3 -nsx 6.760000000000001 -nsy 6.793333333333333 -r 18.204403323909876 -rss 43.6905679773837 -fin 223.60679774997897"
 
+        options = determine_hotpants_options(self.test_fits_file, self.test_fits_file, self.source_dir, self.test_dir)
+
+        self.maxDiff = None
         self.assertEqual(expected_options, options)
 
 class TestDetermineMTDLINKOptions(ExternalCodeUnitTest):

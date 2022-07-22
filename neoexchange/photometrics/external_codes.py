@@ -311,14 +311,22 @@ def determine_hotpants_options(ref, sci, source_dir, dest_dir):
     sci_rms = os.path.join(dest_dir, os.path.basename(sci).replace(".fits", ".rms.fits"))
     ref_rms = os.path.join(dest_dir, ref.replace(".fits", ".rms.fits"))
 
+    # Note that these lines will produce images in <dest_dir>
+    run_sextractor(source_dir, dest_dir, sci, checkimage_type=['BACKGROUND_RMS', '-BACKGROUND'])
     aligned_ref = align_to_sci(ref, sci, source_dir, dest_dir)
     aligned_rms = align_to_sci(ref_rms, sci_rms, source_dir, dest_dir)
 
     # Check to make sure all files exist
 
     # Get the relevant header and data
-    sci_header = fits.getheader(sci, 'SCI')
-    sci_bkgsub_data = fits.getdata(sci_bkgsub, 'SCI')
+    try:
+        sci_header = fits.getheader(sci, 'SCI')
+    except KeyError:
+        sci_header = fits.getheader(sci)
+    try:
+        sci_bkgsub_data = fits.getdata(sci_bkgsub, 'SCI')
+    except KeyError:
+        sci_bkgsub_data = fits.getdata(sci_bkgsub)
     ref_data = fits.getdata(ref)
 
     satlev = 65535    #upper valid data count (25000)
@@ -728,8 +736,6 @@ def run_hotpants(ref, sci, source_dir, dest_dir):
     if binary is None:
         logger.error("Could not locate 'hotpants' executable in PATH")
         return -42
-
-    run_sextractor(source_dir, dest_dir, sci, checkimage_type=['-BACKGROUND'])
 
     options = determine_hotpants_options(ref, sci, source_dir, dest_dir)
 
