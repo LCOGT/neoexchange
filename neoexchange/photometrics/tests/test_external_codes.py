@@ -697,7 +697,7 @@ class TestSwarpAlignRunner(ExternalCodeUnitTest):
 
         expected_headpath = os.path.join(self.test_dir, "example-sbig-e10_aligned_to_example-sbig-e10.head")
 
-        headpath = make_ref_head(self.test_fits_file, self.test_fits_file, self.test_dir)
+        headpath = make_ref_head(self.test_fits_file, self.test_fits_file, self.test_dir, expected_headpath)
 
         self.assertEqual(expected_headpath, headpath)
 
@@ -757,13 +757,13 @@ class TestSwarpAlignRunner(ExternalCodeUnitTest):
         headname = outname.replace('.fits', '.head')
 
         expected_cmdline = f"./swarp -c swarp_neox.conf {self.test_fits_file} -BACK_SIZE 42 -IMAGEOUT_NAME {outname} -NTHREADS 1 -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -SUBTRACT_BACK N -WEIGHTOUT_NAME {weightname} -WEIGHT_TYPE NONE -COMBINE_TYPE CLIPPED"
-        cmdline = run_swarp_align(self.test_fits_file, self.test_fits_file, self.source_dir, self.test_dir, binary='./swarp', dbg=True)
+        cmdline = run_swarp_align(self.test_fits_file, self.test_fits_file, self.source_dir, self.test_dir, outname, binary='./swarp', dbg=True)
 
         self.maxDiff = None
         self.assertEqual(expected_cmdline, cmdline)
 
         expected_status = 0
-        status = run_swarp_align(self.test_fits_file, self.test_fits_file, self.source_dir, self.test_dir, dbg=False)
+        status = run_swarp_align(self.test_fits_file, self.test_fits_file, self.source_dir, self.test_dir, outname, dbg=False)
 
         self.assertEqual(expected_status, status)
 
