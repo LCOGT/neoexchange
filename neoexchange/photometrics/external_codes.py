@@ -309,10 +309,10 @@ def determine_hotpants_options(ref, sci, source_dir, dest_dir):
 
     sci_bkgsub = os.path.join(dest_dir, os.path.basename(sci).replace(".fits", ".bkgsub.fits"))
     sci_rms = os.path.join(dest_dir, os.path.basename(sci).replace(".fits", ".rms.fits"))
+    ref_rms = os.path.join(dest_dir, ref.replace(".fits", ".rms.fits"))
 
     aligned_ref = align_to_sci(ref, sci, source_dir, dest_dir)
-    aligned_weight = aligned_ref.replace('.fits', '.weight.fits')
-    aligned_rms = create_rms_image(aligned_weight)
+    aligned_rms = align_to_sci(ref_rms, sci_rms, source_dir, dest_dir)
 
     # Check to make sure all files exist
 
@@ -705,6 +705,11 @@ def run_swarp(source_dir, dest_dir, images, outname='reference.fits', binary=Non
         logger.debug("cmdline=%s" % cmdline)
         args = cmdline.split()
         retcode_or_cmdline = call(args, cwd=dest_dir)
+
+    rms_status = create_rms_image(outname)
+    if type(rms_status) != str:
+            logger.error("Error occured in create_rms_image()")
+            return rms_status
 
     return retcode_or_cmdline
 
