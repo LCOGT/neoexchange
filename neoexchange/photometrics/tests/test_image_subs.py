@@ -171,9 +171,9 @@ class TestCreateWeightImage(ExternalCodeUnitTest):
         self.assertEqual(expected_filename, weight_filename)
 
 
-        hdul = fits.open(weight_filename)
-        header = hdul[0].header
-        data = hdul[0].data
+        with fits.open(weight_filename) as hdul:
+            header = hdul[0].header
+            data = hdul[0].data
 
         self.assertEqual('', header.get('EXTNAME', ''))
         self.assertEqual('WEIGHT', header.get('L1FRMTYP', ''))
@@ -183,3 +183,134 @@ class TestCreateWeightImage(ExternalCodeUnitTest):
         assert_allclose(0.0, data[1653:1663, 458])
         # Test whether central pixel is nonzero
         assert_allclose(0.0009511118, data[int(header['NAXIS1']/2), int(header['NAXIS2']/2)])
+
+
+class TestCreateRMSImage(ExternalCodeUnitTest):
+    def setUp(self):
+        super(TestCreateRMSImage, self).setUp()
+        self.test_fits_weight_file = os.path.join(self.testfits_dir, 'example-sbig-e10.weight.fits')
+
+        """example-sbig-e10.fits"""
+        # This image only has a 'PRIMARY' HDU
+        shutil.copy(os.path.abspath(self.test_fits_file), self.test_dir)
+        self.test_fits_file = os.path.join(self.test_dir, os.path.basename(self.test_fits_file))
+
+        """example-sbig-e10.weight.fits"""
+        shutil.copy(os.path.abspath(self.test_fits_weight_file), self.test_dir)
+        self.test_fits_weight_file = os.path.join(self.test_dir, os.path.basename(self.test_fits_weight_file))
+
+        """swarp_neox.conf"""
+        shutil.copy(os.path.abspath(os.path.join(self.source_dir, 'swarp_neox.conf')), self.test_dir)
+        self.test_conf_file = os.path.join(self.test_dir, 'swarp_neox.conf')
+
+        self.remove = True
+
+    def test_doesnotexist(self):
+        expected_status = -11
+
+        status = create_rms_image('banana.fits')
+
+        self.assertEqual(expected_status, status)
+
+    def test_badfitsfile(self):
+        expected_status = -12
+
+        bad_file = os.path.join(self.source_dir, 'swarp_neox.conf')
+        status = create_rms_image(bad_file)
+
+        self.assertEqual(expected_status, status)
+
+    def test_does_not_contain_fits(self):
+        # A fits file that somehow does not contain ".fits"
+        expected_status = -15
+
+        bad_file = self.test_fits_file.replace(".fits", ".pear")
+        os.rename(self.test_fits_file, bad_file)
+
+        status = create_rms_image(bad_file)
+
+        self.assertEqual(expected_status, status)
+
+    def test_weight_doesnotexist(self):
+        expected_status = -16
+
+        os.remove(self.test_fits_weight_file)
+        status = create_rms_image(self.test_fits_file)
+
+        self.assertEqual(expected_status, status)
+
+    def test_weight_badfitsfile(self):
+        # Rename a non-fits file to be the weight file
+        expected_status = -17
+
+        good_file = self.test_fits_file
+        bad_weight = self.test_conf_file
+        os.replace(bad_weight, self.test_fits_weight_file)
+
+        status = create_rms_image(good_file)
+
+        self.assertEqual(expected_status, status)
+
+    def test_weight_badhdus(self):
+        #Wrong number of HDUs in the weight file
+        expected_status = -18
+
+        fits.append(self.test_fits_weight_file, np.empty(0))
+
+        status = create_rms_image(self.test_fits_file)
+
+        self.assertEqual(expected_status, status)
+
+    def test_does_not_modify_input(self):
+        expected_filename = self.test_fits_weight_file.replace(".weight.fits", ".rms.fits")
+
+        rms_filename = create_rms_image(self.test_fits_file)
+
+        self.assertEqual(expected_filename, rms_filename)
+
+        # Ensuring that the input file has NOT been overwritten with the weight data
+        header = fits.getheader(self.test_fits_file, 0)
+        self.assertTrue('L1FRMTYP' not in header)
+
+        header = fits.getheader(rms_filename, 0)
+        self.assertTrue('L1FRMTYP' in header)
+
+    def test_success(self):
+        expected_filename = self.test_fits_weight_file.replace(".weight.fits", ".rms.fits")
+
+        rms_filename = create_rms_image(self.test_fits_file)
+
+        self.assertEqual(expected_filename, rms_filename)
+
+        with fits.open(rms_filename) as hdul:
+            header = hdul[0].header
+            data = hdul[0].data
+
+        self.assertEqual('RMS', header.get('L1FRMTYP', ''))
+        # Test whether saturated pixels have appropriate RMS value
+        assert_allclose(223.6068, data[1000, 458])
+        # Test whether central pixel is not saturated
+        assert_allclose(25.846653, data[int(header['NAXIS1']/2), int(header['NAXIS2']/2)])
+
+    def test_modified_MAXLIN(self):
+        #manually override the MAXLIN value in the test image to make sure it's working right
+        expected_filename = self.test_fits_weight_file.replace(".weight.fits", ".rms.fits")
+
+        #sci_header = fits.getheader(self.test_fits_file)
+        #sci_header['MAXLIN'] = 40000
+
+        fits.setval(self.test_fits_file, 'MAXLIN', value=10000)
+
+        rms_filename = create_rms_image(self.test_fits_file)
+
+        self.assertEqual(expected_filename, rms_filename)
+
+        with fits.open(rms_filename) as hdul:
+            header = hdul[0].header
+            data = hdul[0].data
+
+        self.assertEqual('RMS', header.get('L1FRMTYP', ''))
+        # Test whether saturated pixels have appropriate RMS value
+        assert_allclose(223.6068, data[1007, 367])
+        # Test whether central pixel is not saturated
+        assert_allclose(25.846653, data[int(header['NAXIS1']/2), int(header['NAXIS2']/2)])
