@@ -523,7 +523,7 @@ def get_reference_catalog(dest_dir, ra, dec, set_width, set_height, cat_name="GA
     num_sources = None
 
     # Check for existing reference catalog
-    refcat = existing_catalog_coverage(dest_dir, ra, dec, set_width, set_height, cat_name, dbg)
+    refcat = existing_catalog_coverage(dest_dir, ra, dec, set_width, set_height, cat_name, '*.cat', dbg)
     if dbg:
         print("refcat=", refcat)
     if refcat is not None and os.path.exists(refcat):
@@ -659,13 +659,13 @@ def fitsldac_catalog_mapping():
                     'pixel_scale' : '<WCS>',
                     'zeropoint'  : 'L1ZP',
                     'zeropoint_err' : 'L1ZPERR',
-                    'zeropoint_src' : '<ZPSRC>',
+                    'zeropoint_src' : '<L1ZPSRC>',
                     'fwhm'          : 'L1FWHM',
                     'astrometric_fit_rms'    : '<WCSRDRES>',
                     'astrometric_fit_status' : 'WCSERR',
                     'astrometric_fit_nstars' : '<WCSMATCH>',
                     'astrometric_catalog'    : '<WCCATTYP>',
-                    'reduction_level'        : 'RLEVEL'
+                    'reduction_level'        : '<RLEVEL>'
                   }
 
     table_dict = OrderedDict([
@@ -1001,8 +1001,11 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
                                                   # (but could be modified based on version number further down)
                         '<ZP>'        : -99,      # Hardwire zeropoint to -99.0 for BANZAI catalogs
                         '<ZPSRC>'     : 'N/A',    # Hardwire zeropoint src to 'N/A' for BANZAI catalogs
+                        '<L1ZP>'      : -99,      # Hardwire zeropoint to -99.0 for newer BANZAI catalogs where it's missing e.g. w band
+                        '<L1ZPSRC>'   : 'N/A',    # Hardwire zeropoint src to 'N/A' for newer BANZAI catalogs where it's missing
                         '<WCSRDRES>'  : 0.3,      # Hardwire RMS to 0.3"
-                        '<WCSMATCH>'  : -4        # Hardwire no. of stars matched to 4 (1 quad)
+                        '<WCSMATCH>'  : -4,       # Hardwire no. of stars matched to 4 (1 quad)
+                        '<RLEVEL>'    : 91        # Hardwire reduction level (mostly old catalogs in the tests)
                         }
 
     header_items = {}
@@ -1048,40 +1051,39 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
                     raise NeoException('Invalid WCS solution')
                 pixscale = proj_plane_pixel_scales(fits_wcs).mean()*3600.0
                 header_item = {item: round(pixscale, 5), 'wcs' : fits_wcs}
-            if catalog_type == 'BANZAI' or catalog_type == 'BANZAI_LDAC':
-                # See if there is a version of the keyword in the file first
-                file_fits_keyword = fits_keyword[1:-1]
-                if catalog_header.get(file_fits_keyword, None):
-                    value = catalog_header[file_fits_keyword]
-                    # Convert if necessary
-                    if item != 'field_width' and item != 'field_height':
-                        new_value = convert_value(item, value)
-                    else:
-                        new_value = value
-                    header_item = { item: new_value}
+            # See if there is a version of the keyword in the file first
+            file_fits_keyword = fits_keyword[1:-1]
+            if catalog_header.get(file_fits_keyword, None):
+                value = catalog_header[file_fits_keyword]
+                # Convert if necessary
+                if item != 'field_width' and item != 'field_height':
+                    new_value = convert_value(item, value)
                 else:
-                    if fits_keyword in fixed_values_map:
-                        if fits_keyword == "<WCCATTYP>":
-                            # This now needs special handling as the value
-                            # is BANZAI version dependent...
-                            pipever = catalog_header.get("PIPEVER", None)
-                            if pipever is not None:
-                                # Determine major and minor version
-                                pipe_versions = pipever.split('.')
-                                try:
-                                    major = int(pipe_versions[0])
-                                    minor = int(pipe_versions[1])
-                                    astrom_catalog = fixed_values_map[fits_keyword]
-                                    if major >= 1 or (major == 0 and minor >= 20):
-                                        # BANZAI versions after 0.20.0 use GAIA-DR2
-                                        astrom_catalog = 'GAIA-DR2'
-                                    header_item = {item: astrom_catalog}
-                                except ValueError:
-                                    filename = catalog_header['origname'].replace('00.fits', str(catalog_header['rlevel']) + '.fits')
-                                    logger.warning("Could not extract a pipeline version from " + filename)
-                                    header_item = {item: fixed_values_map[fits_keyword]}
-                        else:
-                            header_item = {item: fixed_values_map[fits_keyword]}
+                    new_value = value
+                header_item = { item: new_value}
+            else:
+                if fits_keyword in fixed_values_map:
+                    if fits_keyword == "<WCCATTYP>" and catalog_type == 'BANZAI' or catalog_type == 'BANZAI_LDAC':
+                        # This now needs special handling as the value
+                        # is BANZAI version dependent...
+                        pipever = catalog_header.get("PIPEVER", None)
+                        if pipever is not None:
+                            # Determine major and minor version
+                            pipe_versions = pipever.split('.')
+                            try:
+                                major = int(pipe_versions[0])
+                                minor = int(pipe_versions[1])
+                                astrom_catalog = fixed_values_map[fits_keyword]
+                                if major >= 1 or (major == 0 and minor >= 20):
+                                    # BANZAI versions after 0.20.0 use GAIA-DR2
+                                    astrom_catalog = 'GAIA-DR2'
+                                header_item = {item: astrom_catalog}
+                            except ValueError:
+                                filename = catalog_header['origname'].replace('00.fits', str(catalog_header['rlevel']) + '.fits')
+                                logger.warning("Could not extract a pipeline version from " + filename)
+                                header_item = {item: fixed_values_map[fits_keyword]}
+                    else:
+                        header_item = {item: fixed_values_map[fits_keyword]}
             if header_item:
                 header_items.update(header_item)
         else:

@@ -1248,6 +1248,9 @@ class FITSUnitTest(TestCase):
         self.test_bad_ldacfilename = os.path.join('photometrics', 'tests', 'ldac_test_catalog_corrupt.fits')
         self.test_ldacfilename = os.path.join('photometrics', 'tests', 'ldac_test_catalog.fits')
         hdulist = fits.open(self.test_ldacfilename)
+        header_array = hdulist[1].data[0][0]
+        header = fits_ldac_to_header(header_array)
+        self.test_ldacwcs = WCS(header)
         self.test_ldactable = hdulist[2].data
         hdulist.close()
         self.ldac_table_firstitem = self.test_ldactable[0:1]
@@ -1679,9 +1682,10 @@ class FITSReadHeader(FITSUnitTest):
                             'obs_midpoint'  : obs_date + timedelta(seconds=115.0 / 2.0),
                             'field_center_ra'  : Angle('14:39:19.402', unit=u.hour).deg,
                             'field_center_dec' : Angle('-09:46:03.82', unit=u.deg).deg,
-                            'field_width'   : '15.7846m',
-                            'field_height'  : '15.8624m',
-                            'pixel_scale'   : 0.467,
+                            'field_width'   : '15.8779m',
+                            'field_height'  : '15.9562m',
+                            'pixel_scale'   : 0.46976,
+                            'reduction_level' : 91,
                             'zeropoint'     : -99.0,
                             'zeropoint_err' : -99.0,
                             'zeropoint_src' : 'NOT_FIT(LCOGTCAL-V0.0.2-r8174)',
@@ -1690,6 +1694,7 @@ class FITSReadHeader(FITSUnitTest):
                             'astrometric_fit_status' : 0,
                             'astrometric_fit_nstars' : 22,
                             'astrometric_catalog'    : 'UCAC4',
+                            'wcs'                    : self.test_ldacwcs
                           }
         expected_cattype = "FITS_LDAC"
 
@@ -1697,7 +1702,16 @@ class FITSReadHeader(FITSUnitTest):
         self.assertEqual(expected_cattype, cattype)
         frame_header = get_catalog_header(header, "FITS_LDAC")
 
-        self.assertEqual(expected_params, frame_header)
+        self.assertEqual(len(expected_params), len(frame_header))
+        for key in expected_params:
+            if key != 'wcs':
+                self.assertEqual(expected_params[key], frame_header[key])
+            else:
+                expected_wcs = expected_params[key].wcs
+                frame_wcs = frame_header[key].wcs
+                assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
+                assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
+                assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
 
     def test_banzai_header(self):
         obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
@@ -2280,7 +2294,7 @@ class FITSReadCatalog(FITSUnitTest):
                                    'obs_sky_bkgd' : 343.17666626,
                                    'flags' : 0,
                                    'flux_max' : 5177.54296875,
-                                   'threshold' : 29.2062811208271
+                                   'threshold' : 29.552521897228782 # Old version using SECPIX: 29.2062811208271
                                  })
 
         header, table, cattype = open_fits_catalog(self.test_ldacfilename)
@@ -2363,26 +2377,37 @@ class TestExtractCatalog(FITSUnitTest):
                        'exptime': 115.0,
                        'field_center_dec': -9.767727777777779,
                        'field_center_ra': 219.83084166666666,
-                       'field_height': '15.8624m',
-                       'field_width': '15.7846m',
+                       'field_height': '15.9562m',
+                       'field_width': '15.8779m',
                        'filter': 'w',
                        'framename': 'cpt1m013-kb76-20160428-0141-e00.fits',
                        'fwhm': 2.886,
                        'instrument': 'kb76',
                        'obs_date': datetime(2016, 4, 28, 20, 11, 54, 303000),
                        'obs_midpoint': datetime(2016, 4, 28, 20, 12, 51, 803000),
-                       'pixel_scale': 0.467,
+                       'pixel_scale': 0.46976,
                        'site_code': 'K92',
+                       'reduction_level' : 91,
                        'zeropoint': -99.0,
                        'zeropoint_err': -99.0,
-                       'zeropoint_src': 'NOT_FIT(LCOGTCAL-V0.0.2-r8174)'}
+                       'zeropoint_src': 'NOT_FIT(LCOGTCAL-V0.0.2-r8174)',
+                       'wcs' : self.test_ldacwcs}
 
         shutil.copy(os.path.abspath(self.test_ldacfilename), self.temp_dir)
         test_ldacfilename = os.path.join(self.temp_dir, os.path.basename(self.test_ldacfilename))
         header, table = extract_catalog(test_ldacfilename, 'FITS_LDAC', remove=True)
 
         self.assertTrue(os.path.exists(test_ldacfilename))
-        self.assertEqual(expected_hdr, header)
+        #self.assertEqual(expected_hdr, header)
+        for key in expected_hdr:
+            if key != 'wcs':
+                self.assertEqual(expected_hdr[key], header[key])
+            else:
+                expected_wcs = expected_hdr[key].wcs
+                frame_wcs = header[key].wcs
+                assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
+                assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
+                assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
         self.assertEqual(883, len(table))
 
 
