@@ -772,6 +772,54 @@ class TestSwarpAlignRunner(ExternalCodeUnitTest):
         self.assertTrue(os.path.exists(headname))
 
 
+class TestHotpantsRunner(ExternalCodeUnitTest):
+    def setUp(self):
+        super(TestHotpantsRunner, self).setUp()
+
+        """banzai_test_frame.fits"""
+        self.test_banzai_file = os.path.join(self.testfits_dir, 'banzai_test_frame.fits')
+
+        # hotpants requires a reference rms image
+        """banzai_test_frame.rms.fits"""
+        self.test_banzai_rms_file = os.path.join(self.testfits_dir, 'banzai_test_frame.rms.fits')
+        shutil.copy(os.path.abspath(self.test_banzai_rms_file), self.test_dir)
+
+
+        self.remove = False
+
+    def test_no_ref(self):
+        expected_status = -4
+
+        status = determine_hotpants_options("banana", self.test_fits_file, self.source_dir, self.test_dir)
+
+        self.assertEqual(expected_status, status)
+
+    def test_no_sci(self):
+        expected_status = -5
+
+        status = determine_hotpants_options(self.test_fits_file, "banana", self.source_dir, self.test_dir)
+
+        self.assertEqual(expected_status, status)
+
+    def test_no_ref_rms(self):
+        expected_status = -6
+
+        self.test_banzai_rms_file = os.path.join(self.test_dir, os.path.basename(self.test_banzai_rms_file))
+        os.remove(self.test_banzai_rms_file)
+
+        status = determine_hotpants_options(self.test_banzai_file, self.test_banzai_file, self.source_dir, self.test_dir)
+
+        self.assertEqual(expected_status, status)
+
+    def test_success(self):
+        # Not working
+        expected_status = 0
+
+        status = run_hotpants(self.test_banzai_file, self.test_banzai_file, self.source_dir, self.test_dir)
+
+        self.assertEqual(expected_status, status)
+
+
 class TestFindOrbRunner(ExternalCodeUnitTest):
 
     # These test use a fake binary name and set dbg=True to echo the generated
@@ -875,22 +923,36 @@ class TestDetermineSwarpAlignOptions(ExternalCodeUnitTest):
         self.assertEqual(expected_options, options)
 
 class TestDetermineHotpantsOptions(ExternalCodeUnitTest):
+    def setUp(self):
+        super(TestDetermineHotpantsOptions, self).setUp()
+
+        """banzai_test_frame.fits"""
+        self.test_banzai_file = os.path.join(self.testfits_dir, 'banzai_test_frame.fits')
+
+        # hotpants requires a reference rms image
+        """banzai_test_frame.rms.fits"""
+        self.test_banzai_rms_file = os.path.join(self.testfits_dir, 'banzai_test_frame.rms.fits')
+        shutil.copy(os.path.abspath(self.test_banzai_rms_file), self.test_dir)
+
+
+        self.remove = True
 
     def test1(self):
-        bkgsub = os.path.join(self.test_dir, "example-sbig-e10.bkgsub.fits")
-        aligned = os.path.join(self.test_dir, "example-sbig-e10_aligned_to_example-sbig-e10.fits")
-        subtracted = os.path.join(self.test_dir, "example-sbig-e10.subtracted.fits")
-        subtracted_rms = os.path.join(self.test_dir, "example-sbig-e10.subtracted.rms.fits")
-        ref_rms = os.path.join(self.test_dir, "example-sbig-e10.rms_aligned_to_example-sbig-e10.rms.fits")
-        rms = os.path.join(self.test_dir, "example-sbig-e10.rms.fits")
+        bkgsub = os.path.join(self.test_dir, "banzai_test_frame.bkgsub.fits")
+        aligned = os.path.join(self.test_dir, "banzai_test_frame_aligned_to_banzai_test_frame.fits")
+        subtracted = os.path.join(self.test_dir, "banzai_test_frame.subtracted.fits")
+        subtracted_rms = os.path.join(self.test_dir, "banzai_test_frame.subtracted.rms.fits")
+        aligned_rms = os.path.join(self.test_dir, "banzai_test_frame.rms_aligned_to_banzai_test_frame.rms.fits")
+        rms = os.path.join(self.test_dir, "banzai_test_frame.rms.fits")
 
-        expected_options = f"-inim {bkgsub} -tmplim {aligned} -outim {subtracted} -tni {ref_rms} -ini {rms} -oni {subtracted_rms} -hki -n i -c t -v 0 " \
-                           f"-tu 46000 -iu 46000 -tl 61.37242855834961 -il -263.27518395996094 -nrx 3 -nry 3 -nsx 6.760000000000001 -nsy 6.793333333333333 -r 18.204403323909876 -rss 43.6905679773837 -fin 223.60679774997897"
+        expected_options = f"-inim {bkgsub} -tmplim {aligned} -outim {subtracted} -tni {aligned_rms} -ini {rms} -oni {subtracted_rms} -hki -n i -c t -v 0 " \
+                           f"-tu 64399.99999999999 -iu 64399.99999999999 -tl 43.892452606201175 -il -343.1130201721191 -nrx 3 -nry 3 -nsx 6.760000000000001 -nsy 6.793333333333333 -r 11.235949458513854 -rss 26.96627870043325 -fin 223.60679774997897"
 
-        options = determine_hotpants_options(self.test_fits_file, self.test_fits_file, self.source_dir, self.test_dir)
+        options = determine_hotpants_options(self.test_banzai_file, self.test_banzai_file, self.source_dir, self.test_dir)
 
         self.maxDiff = None
         self.assertEqual(expected_options, options)
+
 
 class TestDetermineMTDLINKOptions(ExternalCodeUnitTest):
 

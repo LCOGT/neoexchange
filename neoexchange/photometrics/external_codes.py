@@ -297,6 +297,9 @@ def determine_sextractor_options(fits_file, dest_dir, checkimage_type=[]):
 
 def determine_hotpants_options(ref, sci, source_dir, dest_dir):
     """
+    Run SExtractor on <sci> image to subtract the background,
+    then align the <ref> using SWarp.
+
     https://github.com/acbecker/hotpants
 
     Required options are:
@@ -304,29 +307,48 @@ def determine_hotpants_options(ref, sci, source_dir, dest_dir):
     [-tmplim fitsfile]: template image
     [-outim fitsfile] : output difference image
     """
-    output_diff_image = os.path.join(dest_dir, os.path.basename(sci).replace('.fits', '.subtracted.fits'))
-    output_noise_image = output_diff_image.replace('.fits', '.rms.fits')
+    # Check to make sure required images exist
+    if not os.path.exists(ref):
+        logger.error(f"{ref} not found.")
+        return -4
+    elif not os.path.exists(sci):
+        logger.error(f"{sci} not found.")
+        return -5
 
-    sci_bkgsub = os.path.join(dest_dir, os.path.basename(sci).replace(".fits", ".bkgsub.fits"))
-    sci_rms = os.path.join(dest_dir, os.path.basename(sci).replace(".fits", ".rms.fits"))
-    ref_rms = os.path.join(dest_dir, ref.replace(".fits", ".rms.fits"))
+    ref_rms = os.path.join(dest_dir, os.path.basename(ref).replace(".fits", ".rms.fits"))
 
-    # Note that these lines will produce images in <dest_dir>
+    if not os.path.exists(ref_rms):
+        logger.error(f"{ref_rms} not found.")
+        return -6
+
     run_sextractor(source_dir, dest_dir, sci, checkimage_type=['BACKGROUND_RMS', '-BACKGROUND'])
+
+    sci_rms = os.path.join(dest_dir, os.path.basename(sci).replace(".fits", ".rms.fits"))
+    sci_bkgsub = os.path.join(dest_dir, os.path.basename(sci).replace(".fits", ".bkgsub.fits"))
+
+    if not os.path.exists(sci_rms) or not os.path.exists(sci_bkgsub):
+        logger.error("SExtractor failed to output a \".rms.fits\" image or a \".bkgsub.fits\" image.")
+        return -7
+
     aligned_ref = align_to_sci(ref, sci, source_dir, dest_dir)
     aligned_rms = align_to_sci(ref_rms, sci_rms, source_dir, dest_dir)
 
-    # Check to make sure all files exist
+    if type(aligned_ref) != str or type(aligned_rms) != str:
+        logger.error(f"Error occurred in SWarp while aligning images.")
+        return -8
 
-    # Get the relevant header and data
-    try:
-        sci_header = fits.getheader(sci, 'SCI')
-    except KeyError:
-        sci_header = fits.getheader(sci)
-    try:
-        sci_bkgsub_data = fits.getdata(sci_bkgsub, 'SCI')
-    except KeyError:
-        sci_bkgsub_data = fits.getdata(sci_bkgsub)
+    output_diff_image = os.path.join(dest_dir, os.path.basename(sci).replace('.fits', '.subtracted.fits'))
+    output_noise_image = output_diff_image.replace('.fits', '.rms.fits')
+
+    # Get the relevant header and data information
+    with fits.open(sci_bkgsub) as sci_hdulist:
+        try:
+            sci_header = sci_hdulist['SCI'].header
+            sci_bkgsub_data = sci_hdulist['SCI'].data
+        except KeyError:
+            sci_header = scihdu[0].header
+            sci_bkgsub_data = sci_hdulist[0].data
+
     ref_data = fits.getdata(ref)
 
     satlev = 65535    #upper valid data count (25000)
@@ -722,7 +744,7 @@ def run_swarp(source_dir, dest_dir, images, outname='reference.fits', binary=Non
     return retcode_or_cmdline
 
 @timeit
-def run_hotpants(ref, sci, source_dir, dest_dir):
+def run_hotpants(ref, sci, source_dir, dest_dir, binary=None, dbg=False):
     """Run HOTPANTS (using either the binary specified by [binary] or by
     looking for 'hotpants' in the PATH) on the passed <ref> and <sci> images with the
     results and any temporary files created in <dest_dir>. <source_dir> is the
@@ -738,6 +760,8 @@ def run_hotpants(ref, sci, source_dir, dest_dir):
         return -42
 
     options = determine_hotpants_options(ref, sci, source_dir, dest_dir)
+    if type(options) != str:
+        return options
 
     #assemble command line
     cmdline = "%s %s" % (binary, options)
@@ -764,7 +788,8 @@ def align_to_sci(ref, sci, source_dir, dest_dir):
     # Run SWarp align
     status = run_swarp_align(ref, sci, source_dir, dest_dir, outname)
     if status != 0:
-        logger.error(f"Error in aligning reference image to {sci}.")
+        logger.error(f"Error occurred in SWarp while aligning reference image to {sci}.")
+        return status
 
     return outname
 
