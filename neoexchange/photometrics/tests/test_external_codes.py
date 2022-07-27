@@ -693,6 +693,20 @@ class TestSwarpRunner(ExternalCodeUnitTest):
 
 
 class TestSwarpAlignRunner(ExternalCodeUnitTest):
+    def setUp(self):
+        super(TestSwarpAlignRunner, self).setUp()
+
+        """banzai_test_frame.fits"""
+        self.test_banzai_file = os.path.join(self.testfits_dir, 'banzai_test_frame.fits')
+
+        # hotpants requires a reference rms image
+        """banzai_test_frame.rms.fits"""
+        self.test_banzai_rms_file = os.path.join(self.testfits_dir, 'banzai_test_frame.rms.fits')
+        #shutil.copy(os.path.abspath(self.test_banzai_rms_file), self.test_dir)
+
+
+        self.remove = True
+
     def test_make_ref_head(self):
 
         expected_headpath = os.path.join(self.test_dir, "example-sbig-e10_aligned_to_example-sbig-e10.head")
@@ -702,10 +716,50 @@ class TestSwarpAlignRunner(ExternalCodeUnitTest):
         self.assertEqual(expected_headpath, headpath)
 
         with open(headpath, 'r') as h:
-            header = h.read()
+            head = h.read()
 
-        self.assertTrue('NAXIS' in header, msg="NAXIS data is not in this file.")
-        self.assertTrue('CTYPE' in header, msg="WCS data is not in this file.")
+        self.assertTrue('NAXIS   =                    0' not in head, msg="NAXIS data is not valid.")
+        self.assertTrue('NAXIS1' in head, msg="NAXIS data is not valid.")
+        self.assertTrue('NAXIS2' in head, msg="NAXIS data is not valid.")
+        self.assertTrue('CRPIX1  =                  0.0' not in head, msg="WCS data is not valid.")
+        self.assertTrue('CUNIT1' in head, msg="WCS data is not valid.")
+        self.assertTrue('CTYPE1' in head, msg="WCS data is not valid.")
+
+    def test_make_ref_head2(self):
+
+        expected_headpath = os.path.join(self.test_dir, "banzai_test_frame_aligned_to_banzai_test_frame.head")
+
+        headpath = make_ref_head(self.test_banzai_file, self.test_banzai_file, self.test_dir, expected_headpath)
+
+        self.assertEqual(expected_headpath, headpath)
+
+        with open(headpath, 'r') as h:
+            head = h.read()
+
+        self.assertTrue('NAXIS   =                    0' not in head, msg="NAXIS data is not valid.")
+        self.assertTrue('NAXIS1' in head, msg="NAXIS data is not valid.")
+        self.assertTrue('NAXIS2' in head, msg="NAXIS data is not valid.")
+        self.assertTrue('CRPIX1  =                  0.0' not in head, msg="WCS data is not valid.")
+        self.assertTrue('CUNIT1' in head, msg="WCS data is not valid.")
+        self.assertTrue('CTYPE1' in head, msg="WCS data is not valid.")
+
+    def test_make_ref_head3(self):
+
+        expected_headpath = os.path.join(self.test_dir, "banzai_test_frame.rms_aligned_to_banzai_test_frame.rms.head")
+
+        headpath = make_ref_head(self.test_banzai_rms_file, self.test_banzai_rms_file, self.test_dir, expected_headpath)
+
+        self.assertEqual(expected_headpath, headpath)
+
+        with open(headpath, 'r') as h:
+            head = h.read()
+
+        self.assertTrue('NAXIS   =                    0' not in head, msg="NAXIS data is not valid.")
+        self.assertTrue('NAXIS1' in head, msg="NAXIS data is not valid.")
+        self.assertTrue('NAXIS2' in head, msg="NAXIS data is not valid.")
+        self.assertTrue('CRPIX1  =                  0.0' not in head, msg="WCS data is not valid.")
+        self.assertTrue('CUNIT1' in head, msg="WCS data is not valid.")
+        self.assertTrue('CTYPE1' in head, msg="WCS data is not valid.")
 
     def test_setup_swarp_dir_bad_destdir(self):
 
@@ -785,7 +839,7 @@ class TestHotpantsRunner(ExternalCodeUnitTest):
         shutil.copy(os.path.abspath(self.test_banzai_rms_file), self.test_dir)
 
 
-        self.remove = False
+        self.remove = True
 
     def test_no_ref(self):
         expected_status = -4

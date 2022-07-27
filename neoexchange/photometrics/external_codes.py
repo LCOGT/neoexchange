@@ -346,7 +346,7 @@ def determine_hotpants_options(ref, sci, source_dir, dest_dir):
             sci_header = sci_hdulist['SCI'].header
             sci_bkgsub_data = sci_hdulist['SCI'].data
         except KeyError:
-            sci_header = scihdu[0].header
+            sci_header = sci_hdulist[0].header
             sci_bkgsub_data = sci_hdulist[0].data
 
     ref_data = fits.getdata(ref)
@@ -422,7 +422,12 @@ def make_ref_head(ref, sci, dest_dir, outname):
     """
 
     # Sci image header
-    align_header = fits.getheader(sci)
+    with fits.open(sci) as sci_hdulist:
+        try:
+            align_header = sci_hdulist['SCI'].header
+        except KeyError:
+            align_header = sci_hdulist[0].header
+
     # Only the WCS data in the header
     head = WCS(align_header).to_header(relax=True)
 
