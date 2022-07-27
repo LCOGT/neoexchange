@@ -741,7 +741,9 @@ def run_swarp(source_dir, dest_dir, images, outname='reference.fits', binary=Non
         args = cmdline.split()
         retcode_or_cmdline = call(args, cwd=dest_dir)
 
-    rms_status = create_rms_image(outname)
+    #convert output weight to rms
+    outname_newfilepath = os.path.join(dest_dir, outname)
+    rms_status = create_rms_image(outname_newfilepath)
     if type(rms_status) != str:
             logger.error("Error occured in create_rms_image()")
             return rms_status
