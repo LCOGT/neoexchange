@@ -19,11 +19,13 @@ from sys import exit
 import os
 import tempfile
 import stat
+import warnings
 
 try:
     import pyslalib.slalib as S
 except:
     pass
+from astropy.wcs import FITSFixedWarning
 from astropy.stats import LombScargle
 from astropy.time import Time
 from django.conf import settings
@@ -294,6 +296,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
+        # Suppress incorrect FITSFixedWarnings
+        warnings.simplefilter('ignore', FITSFixedWarning)
         self.stdout.write("==== Light curve building %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
 
         try:
@@ -527,24 +531,6 @@ class Command(BaseCommand):
                 lightcurve_file.close()
                 try:
                     os.chmod(os.path.join(datadir, base_name + 'lightcurve_data.txt'), rw_permissions)
-                except PermissionError:
-                    pass
-
-                # Write out MPC1992 80 column file
-                for mpc_line in mpc_lines:
-                    mpc_file.write(mpc_line + '\n')
-                mpc_file.close()
-                try:
-                    os.chmod(os.path.join(datadir, base_name + 'mpc_positions.txt'), rw_permissions)
-                except PermissionError:
-                    pass
-
-                # Write out ADES Pipe Separated Value file
-                for psv_line in psv_lines:
-                    psv_file.write(psv_line + '\n')
-                psv_file.close()
-                try:
-                    os.chmod(os.path.join(datadir, base_name + 'ades_positions.psv'), rw_permissions)
                 except PermissionError:
                     pass
 

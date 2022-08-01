@@ -2414,6 +2414,56 @@ class TestSourceMeasurement(TestCase):
         psv_line = measure.format_psv_line()
         self.assertEqual(expected_psvline, psv_line)
 
+    def test_psv_rms_4(self):
+
+        # Add an astrometric fit RMS to the Frame.
+        self.test_frame.rms_of_fit = 0.3
+        self.test_frame.save()
+
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 7.5,
+                            'obs_dec' : -00.5,
+                            'obs_mag' : 21.5,
+                            'err_obs_ra' : 0.14/3600.0,
+                            'err_obs_dec': 0.16/3600.0,
+                            'err_obs_mag' : 0.12,
+                            'aperture_size' : 1.56,
+                            'snr' : 24.8,
+                            'astrometric_catalog' : "GAIA-DR3",
+                            'photometric_catalog' : "GAIA-DR3",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_psvline = '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|  7.500000 | -0.500000 | 0.33|  0.34|   Gaia3|21.5 |0.12  |   R|   Gaia3|  1.56|1.3945|1.0000|     |'
+        psv_line = measure.format_psv_line()
+        self.assertEqual(expected_psvline, psv_line)
+
+    def test_psv_rms_5(self):
+
+        # Add an astrometric fit RMS to the Frame.
+        self.test_frame.rms_of_fit = 0.3
+        self.test_frame.save()
+
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 7.5,
+                            'obs_dec' : -00.5,
+                            'obs_mag' : 21.5,
+                            'err_obs_ra' : 0.14/3600.0,
+                            'err_obs_dec': 0.16/3600.0,
+                            'err_obs_mag' : 0.12,
+                            'aperture_size' : 1.56,
+                            'snr' : 24.8,
+                            'astrometric_catalog' : "GAIA-DR3",
+                            'photometric_catalog' : "ATLAS-2",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_psvline = '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|  7.500000 | -0.500000 | 0.33|  0.34|   Gaia3|21.5 |0.12  |   R|  ATLAS2|  1.56|1.3945|1.0000|     |'
+        psv_line = measure.format_psv_line()
+        self.assertEqual(expected_psvline, psv_line)
+
 
 class TestCatalogSources(TestCase):
 

@@ -664,7 +664,10 @@ def translate_catalog_code(code_or_name, ades_code=False):
                   "T" : "URAT-2",
                   "U" : "GAIA-DR1",
                   "V" : "GAIA-DR2",
-                  "W" : "UCAC5",
+                  "W" : "GAIA-DR3",
+                  "X" : "GAIA-EDR3",
+                  "Y" : "UCAC5",
+                  "Z" : "ATLAS-2",
                   }
     # https://www.minorplanetcenter.net/iau/info/ADESFieldValues.html
     catalog_mapping = {'USNO-SA2.0'  : 'USNOSA2',  # Can't test, don't have CDs
@@ -679,6 +682,7 @@ def translate_catalog_code(code_or_name, ades_code=False):
                        'PPMXL'       : 'PPMXL',
                        'GAIA-DR1'    : 'Gaia1',
                        'GAIA-DR2'    : 'Gaia2',
+                       'GAIA-DR3'    : 'Gaia3',
                        '2MASS'       : '2MASS'
                       }
     catalog_or_code = ''
