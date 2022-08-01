@@ -54,15 +54,18 @@ class Command(BaseCommand):
         fits_files, fits_catalogs = determine_images_and_catalogs(self, dataroot)
 
         temp_dir = options['tempdir']
-        for fits_file in fits_files:
+        for fits_filepath in fits_files:
+            # fits_filepath is the full path including the dataroot and obs_date e.g. /apophis/eng/rocks/20220731/cpt1m010-fa16-20220731-0146-e91.fits
+            # fits_file is the basename e.g. cpt1m010-fa16-20220731-0146-e91.fits
+            fits_file = os.path.basename(fits_filepath)
             steps = [{
                         'name'   : 'proc-extract',
-                        'inputs' : {'fits_file':fits_file,
+                        'inputs' : {'fits_file':fits_filepath,
                                    'datadir': os.path.join(dataroot, temp_dir)}
                     },
                     {
                         'name'   : 'proc-astromfit',
-                        'inputs' : {'fits_file' : fits_file,
+                        'inputs' : {'fits_file' : fits_filepath,
                                     'ldac_catalog' : os.path.join(dataroot, temp_dir, fits_file.replace('e91.fits', 'e91_ldac.fits')),
                                     'datadir' : os.path.join(dataroot, temp_dir)
                                     }
