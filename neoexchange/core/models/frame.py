@@ -78,8 +78,10 @@ class Frame(models.Model):
     BANZAI_LDAC_CATALOG = 6
     ORACDR_QL_FRAMETYPE = 10
     BANZAI_QL_FRAMETYPE = 11
+    REFERENCE_FRAMETYPE = 80
     ORACDR_RED_FRAMETYPE = 90
     BANZAI_RED_FRAMETYPE = 91
+    NEOX_RED_FRAMETYPE = 92
     FRAMETYPE_CHOICES = (
                         (SINGLE_FRAMETYPE, 'Single frame'),
                         (STACK_FRAMETYPE, 'Stack of frames'),
@@ -90,8 +92,10 @@ class Frame(models.Model):
                         (BANZAI_LDAC_CATALOG,  'BANZAI LDAC catalog'),
                         (ORACDR_QL_FRAMETYPE,  'ORACDR QL frame'),
                         (BANZAI_QL_FRAMETYPE,  'BANZAI QL frame'),
+                        (REFERENCE_FRAMETYPE,  'Reference frame'),
                         (ORACDR_RED_FRAMETYPE, 'ORACDR reduced frame'),
                         (BANZAI_RED_FRAMETYPE, 'BANZAI reduced frame'),
+                        (NEOX_RED_FRAMETYPE, 'NEOexchange reduced frame'),
 
                     )
     sitecode    = models.CharField('MPC site code', max_length=4, blank=False)

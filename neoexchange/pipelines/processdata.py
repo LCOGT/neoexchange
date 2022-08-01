@@ -336,7 +336,7 @@ class ZeropointProcessPipeline(PipelineProcess):
                     return
                 # Cross match with reference catalog and compute zeropoint
                 logger.info(f"Calibrating {header['filter']} instrumental mags. with {cal_filter} using {phot_cat_name}")
-                avg_zeropoint, std_zeropoint, C = self.cross_match_and_zp(table, db_filename, phot_cat_name, std_zeropoint_tolerance, cal_filter)
+                avg_zeropoint, std_zeropoint, C, cal_color = self.cross_match_and_zp(table, db_filename, phot_cat_name, std_zeropoint_tolerance, cal_filter)
                 logger.info(f"New zp={avg_zeropoint:} +/- {std_zeropoint:} {C:}")
                 self.log(f"New zp={avg_zeropoint:} +/- {std_zeropoint:} {C:}")
 
@@ -349,13 +349,15 @@ class ZeropointProcessPipeline(PipelineProcess):
                     if 'e91_ldac.fits' in os.path.basename(catfile):
                         fits_file = os.path.basename(catfile.replace('e91_ldac.fits', 'e91.fits'))
                     elif 'e92_ldac.fits' in os.path.basename(catfile):
-                        fits_file = os.path.basename(catfile.replace('e92_ldac.fits', 'e91.fits'))
+                        fits_file = os.path.basename(catfile.replace('e92_ldac.fits', 'e92.fits'))
                     else:
                         fits_file = os.path.basename(catfile)
 
-                    # update the zeropoint computed above in the FITS file Frame
+                    # update the zeropoint computed above in a new Frame entry for the e92 frame
                     ast_cat_name = 'GAIA-DR2'
-                    frame = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename=fits_file, frame_type=Frame.SINGLE_FRAMETYPE)
+                    frame = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename=fits_file, frame_type=Frame.NEOX_RED_FRAMETYPE)
+
+                    # XXX write to FITS header of e92.fits file here
 
                     # update the zeropoint computed above in the CATALOG file Frame
                     frame_cat = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename=os.path.basename(catfile), frame_type=Frame.BANZAI_LDAC_CATALOG)
@@ -463,6 +465,7 @@ class ZeropointProcessPipeline(PipelineProcess):
             start = time.time()
             if color_const is True:
                 avg_zeropoint, C, std_zeropoint, r, gmi = refcat.cal_constant(objids, phot['obs_mag'], cal_filter)
+                cal_color = 'g-i' # Fixed/held constant
             else:
                 cal_color = 'g-' + cal_filter
                 avg_zeropoint, C, std_zeropoint, r, gmr, gmi = refcat.cal_color(objids, phot['obs_mag'], cal_filter, cal_color)
@@ -470,4 +473,4 @@ class ZeropointProcessPipeline(PipelineProcess):
         logger.debug(f"TIME: compute_zeropoint took {end-start:.1f} seconds")
         logger.debug(f"New zp={avg_zeropoint:} +/- {std_zeropoint:} {r.count():} {C:}")
 
-        return avg_zeropoint, std_zeropoint, C
+        return avg_zeropoint, std_zeropoint, C, cal_color

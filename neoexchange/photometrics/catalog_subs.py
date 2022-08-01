@@ -759,9 +759,9 @@ def banzai_ldac_catalog_mapping():
                     'field_width' : 'NAXIS1',
                     'field_height' : 'NAXIS2',
                     'pixel_scale' : '<WCS>',
-                    'zeropoint'     : '<ZP>',
-                    'zeropoint_err' : '<ZP>',
-                    'zeropoint_src' : '<ZPSRC>',
+                    'zeropoint'     : '<L1ZP>',
+                    'zeropoint_err' : '<L1ZPERR>',
+                    'zeropoint_src' : '<L1ZPSRC>',
                     'fwhm'          : 'L1FWHM',
                     'astrometric_fit_rms'    : '<WCSRDRES>',
                     'astrometric_fit_status' : 'WCSERR',
@@ -876,7 +876,9 @@ def open_fits_catalog(catfile, header_only=False):
         if header_only is False:
             table = hdulist[2].data
         cattype = 'FITS_LDAC'
-        if 'e92_ldac' in catfile or 'e12_ldac' in catfile:
+        if 'e92_ldac' in catfile or 'e91_ldac' in catfile:
+            # TAL 2022/07/31: Now BANZAI is doing ZPs for (most) frames now,
+            # can make all LDACs BANZAI_LDAC type
             cattype = 'BANZAI_LDAC'
         header_array = hdulist[1].data[0][0]
         header = fits_ldac_to_header(header_array)
@@ -1002,7 +1004,8 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
                         '<ZP>'        : -99,      # Hardwire zeropoint to -99.0 for BANZAI catalogs
                         '<ZPSRC>'     : 'N/A',    # Hardwire zeropoint src to 'N/A' for BANZAI catalogs
                         '<L1ZP>'      : -99,      # Hardwire zeropoint to -99.0 for newer BANZAI catalogs where it's missing e.g. w band
-                        '<L1ZPSRC>'   : 'N/A',    # Hardwire zeropoint src to 'N/A' for newer BANZAI catalogs where it's missing
+                        '<L1ZPERR>'   : -99,      # Hardwire zeropoint to -99.0 for newer BANZAI catalogs where it's missing e.g. w band
+                        '<L1ZPSRC>'   : 'BANZAI', # Hardwire zeropoint src to 'N/A' for newer BANZAI catalogs where it's missing
                         '<WCSRDRES>'  : 0.3,      # Hardwire RMS to 0.3"
                         '<WCSMATCH>'  : -4,       # Hardwire no. of stars matched to 4 (1 quad)
                         '<RLEVEL>'    : 91        # Hardwire reduction level (mostly old catalogs in the tests)
@@ -1063,7 +1066,7 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
                 header_item = { item: new_value}
             else:
                 if fits_keyword in fixed_values_map:
-                    if fits_keyword == "<WCCATTYP>" and catalog_type == 'BANZAI' or catalog_type == 'BANZAI_LDAC':
+                    if fits_keyword == "<WCCATTYP>" and (catalog_type == 'BANZAI' or catalog_type == 'BANZAI_LDAC'):
                         # This now needs special handling as the value
                         # is BANZAI version dependent...
                         pipever = catalog_header.get("PIPEVER", None)
@@ -1193,6 +1196,9 @@ def get_catalog_items_new(header_items, table, catalog_type='LCOGT', flag_filter
     will not be returned.
     If [neg_flux_mask] is True (the default), then sources with -ve flux will
     be removed from the returned table.
+    Fluxes are converted to intensity (flux/second) by dividing by the exposure
+    time (from `header_items['exptime']) and then to magnitudes and then the
+    zeropoint is applied (if valid).
     The sources in the catalog are returned as an AstroPy Table containing
     the subset of columns specified in the table mapping."""
 
@@ -1234,7 +1240,7 @@ def get_catalog_items_new(header_items, table, catalog_type='LCOGT', flag_filter
     new_table['obs_dec_err'] = np.sqrt(new_table['obs_dec_err'])
     FLUX2MAG = 2.5/log(10)
     new_table['obs_mag_err'] = FLUX2MAG * (new_table['obs_mag_err'] / new_table['obs_mag'])
-    new_table['obs_mag'] = -2.5 * np.log10(new_table['obs_mag'])
+    new_table['obs_mag'] = -2.5 * np.log10(new_table['obs_mag'] / header_items['exptime'])
     if 'threshold' in tbl_mapping.keys() and 'MU_' in tbl_mapping['threshold'].upper():
         scale = header_items['pixel_scale'] * header_items['pixel_scale']
         new_table['threshold'] = np.power(10, (new_table['threshold']/-2.5)) * scale
@@ -1397,29 +1403,39 @@ def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename, 
         frame.save()
     except Frame.MultipleObjectsReturned:
         logger.error("Multiple frames found")
-    # except Frame.DoesNotExist:
-    #     store sources in neoexchange(CatalogSources table)
-    #     frame_params = {    'sitecode':header['site_code'],
-    #                         'instrument':header['instrument'],
-    #                         'filter':header['filter'],
-    #                         'filename':frame_filename,
-    #                         'exptime':header['exptime'],
-    #                         'midpoint':header['obs_midpoint'],
-    #                         'block':frame.block,
-    #                         'zeropoint':header['zeropoint'],
-    #                         'zeropoint_err':header['zeropoint_err'],
-    #                         'fwhm':header['fwhm'],
-    #                         'frametype':frame_type,
-    #                         'rms_of_fit':header['astrometric_fit_rms'],
-    #                         'nstars_in_fit':header['astrometric_fit_nstars'],
-    #                     }
-    #
-    #     frame, created = Frame.objects.get_or_create(**frame_params)
-    #     if created == True:
-    #         num_new_frames_created += 1
-    #         frame.astrometric_catalog = ast_cat_name
-    #         frame.photometric_catalog = phot_cat_name
-    #         frame.save()
+    except Frame.DoesNotExist:
+        if frame_type == Frame.NEOX_RED_FRAMETYPE:
+            prior_frame_filename = fits_file.replace('e92.fits', 'e91.fits')
+            try:
+                prior_frame = Frame.objects.get(filename=prior_frame_filename, frametype=Frame.BANZAI_RED_FRAMETYPE)
+                block = prior_frame.block
+            except Frame.DoesNotExist:
+                logger.error(f"Couldn't find prior frame {prior_frame_filename}")
+                frame = block = None
+            except Frame.MultipleObjectsReturned:
+                logger.error(f"Found multiple prior frames for {prior_frame_filename}")
+                frame = block = None
+            if block:
+                frame_params = {    'sitecode':header['site_code'],
+                                    'instrument':header['instrument'],
+                                    'filter':header['filter'],
+                                    'filename':frame_filename,
+                                    'exptime':header['exptime'],
+                                    'midpoint':header['obs_midpoint'],
+                                    'block': block,
+                                    'quality' : header['quality'],
+                                    'zeropoint':header['zeropoint'],
+                                    'zeropoint_err':header['zeropoint_err'],
+                                    'fwhm':header['fwhm'],
+                                    'frametype':frame_type,
+                                    'rms_of_fit':header['astrometric_fit_rms'],
+                                    'nstars_in_fit':header['astrometric_fit_nstars'],
+                                    'wcs' : header['wcs'],
+                                    'astrometric_catalog' : ast_cat_name,
+                                    'photometric_catalog' : phot_cat_name
+                                }
+
+                frame = Frame.objects.create(**frame_params)
 
     return frame
 
