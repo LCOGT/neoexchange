@@ -357,12 +357,14 @@ class StaticSource(models.Model):
     RV_STANDARD = 2
     SOLAR_STANDARD = 4
     SPECTRAL_STANDARD = 8
+    REFERENCE_FIELD = 16
     SOURCETYPE_CHOICES = [
                             (UNKNOWN_SOURCE, 'Unknown source type'),
                             (FLUX_STANDARD, 'Spectrophotometric standard'),
                             (RV_STANDARD, 'Radial velocity standard'),
                             (SOLAR_STANDARD, 'Solar spectrum standard'),
-                            (SPECTRAL_STANDARD, 'Spectral standard')
+                            (SPECTRAL_STANDARD, 'Spectral standard'),
+                            (REFERENCE_FIELD, 'Reference field')
                          ]
 
     name = models.CharField('Name of calibration source', max_length=55, db_index=True)
