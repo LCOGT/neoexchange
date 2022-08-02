@@ -621,7 +621,7 @@ def add_l1filter(fits_file):
 
 
 @timeit
-def run_sextractor(source_dir, dest_dir, fits_file, checkimage_type=[], binary=None, catalog_type='ASCII', dbg=False):
+def run_sextractor(source_dir, dest_dir, fits_file, checkimage_type=[], binary=None, catalog_type='FITS_LDAC', dbg=False):
     """Run SExtractor (using either the binary specified by [binary] or by
     looking for 'sex' in the PATH) on the passed <fits_file> with the results
     and any temporary files created in <dest_dir>. <source_dir> is the path
