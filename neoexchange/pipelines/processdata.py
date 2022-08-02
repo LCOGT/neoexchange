@@ -117,7 +117,7 @@ class SExtractorProcessPipeline(PipelineProcess):
 
         # Make a new FITS_LDAC catalog from the frame
         self.log(f"Processing {fits_file:} with SExtractor")
-        status, new_ldac_catalog = run_sextractor_make_catalog(configs_dir, dest_dir, fits_file, checkimage_type=['BACKGROUND_RMS'])
+        status, new_ldac_catalog = run_sextractor_make_catalog(configs_dir, dest_dir, fits_file, checkimage_type=['BACKGROUND_RMS', "-BACKGROUND"])
         if status != 0:
             logger.error("Execution of SExtractor failed")
             self.log("Execution of SExtractor failed")
@@ -395,7 +395,7 @@ class ZeropointProcessPipeline(PipelineProcess):
         """Open the catalog file <catfile> of type <catalog_type> and search
         for a calibration catalog that covers the pointing.
         The header, source table and calibration DB filepath are returned.
-        """ 
+        """
 
         db_filename = None
 

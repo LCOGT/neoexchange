@@ -3522,33 +3522,31 @@ def run_sextractor_make_catalog(configs_dir, dest_dir, fits_file, checkimage_typ
     return sext_status, new_ldac_catalog
 
 
-def run_swarp_make_reference(input_dir, configs_dir, dest_dir):
-    """Funpack each .fz file, run SExtractor, run SWarp."""
+def run_swarp_make_reference(ref_dir, configs_dir, dest_dir):
+    """ Creates a weight image for each .FITS image in <ref_dir> using SExtractor,
+    then coadds all the images into a single reference image using SWarp.
+    The results and any temporary files are created in <dest_dir>.
+    """
 
-    if input_dir[-1] != os.path.sep:
-        input_dir = input_dir + os.path.sep
+    if ref_dir[-1] != os.path.sep:
+        ref_dir = ref_dir + os.path.sep
 
-    fz_files = glob(input_dir + '*.fz')
-    fits_files =[]
+    ref_files = glob(ref_dir + '*.fits')
 
-    if len(fz_files) == 0:
-        logger.error("There are no compressed images in the folder.")
+    if len(ref_files) == 0:
+        logger.error(f"There are no .fits files in {ref_dir}.")
         return -1
 
-    for image in fz_files:
-        funpack_status = funpack_fits_file(image, all_hdus=True)
-        if funpack_status != 0:
-            logger.error("Unable to funpack file.")
-            return funpack_status
+    for image in ref_files:
+        rms_image = os.path.join(dest_dir, os.path.basename(image).replace(".fits", ".rms.fits"))
+        if not os.path.exists(rms_image):
+            sext_status, catalog = run_sextractor_make_catalog(configs_dir, dest_dir, image, checkimage_type=['BACKGROUND_RMS'])
+            if sext_status != 0:
+                return sext_status
         else:
-            fits_files.append(image.replace('.fz', ''))
+            print(f"RMS image {rms_image} already exists")
 
-    for image in fits_files:
-        sext_status, catalog = run_sextractor_make_catalog(configs_dir, dest_dir, image + '[SCI]', checkimage_type=['BACKGROUND_RMS'])
-        if sext_status != 0:
-            return sext_status
-
-    swarp_status = run_swarp(configs_dir, dest_dir, fits_files)
+    swarp_status = run_swarp(configs_dir, dest_dir, ref_files)
 
     return swarp_status
 

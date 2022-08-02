@@ -321,7 +321,6 @@ def determine_hotpants_options(ref, sci, source_dir, dest_dir):
         logger.error(f"{ref_rms} not found.")
         return -6
 
-    run_sextractor(source_dir, dest_dir, sci, checkimage_type=['BACKGROUND_RMS', '-BACKGROUND'])
 
     sci_rms = os.path.join(dest_dir, os.path.basename(sci).replace(".fits", ".rms.fits"))
     sci_bkgsub = os.path.join(dest_dir, os.path.basename(sci).replace(".fits", ".bkgsub.fits"))
