@@ -708,9 +708,12 @@ def banzai_catalog_mapping():
                     'field_width' : 'NAXIS1',
                     'field_height' : 'NAXIS2',
                     'pixel_scale' : '<WCS>',
-                    'zeropoint'     : '<ZP>',
-                    'zeropoint_err' : '<ZP>',
-                    'zeropoint_src' : '<ZPSRC>',
+                    'zeropoint'     : '<L1ZP>',
+                    'zeropoint_err' : '<L1ZPERR>',
+                    'zeropoint_src' : '<L1ZPSRC>',
+                    'color_used'    : '<L1COLORU>',
+                    'color'         : '<L1COLOR>',
+                    'color_err'     : '<L1COLERR>',
                     'fwhm'          : 'L1FWHM',
                     'astrometric_fit_rms'    : '<WCSRDRES>',
                     'astrometric_fit_status' : 'WCSERR',
@@ -841,6 +844,21 @@ def fits_ldac_to_header(header_array):
         i += 1
 
     return header
+
+
+def get_header(fits_file):
+    """Opens the specified FITS image or catalog <fits_file> and returns
+    the interpreted generic NEOx header dictionary and type of file"""
+
+    # Open catalog, get header and check fit status
+    fits_header, junk_table, cattype = open_fits_catalog(fits_file, header_only=True)
+    try:
+        header = get_catalog_header(fits_header, cattype)
+    except FITSHdrException as e:
+        logger.error("Bad header for %s (%s)" % (fits_file, e))
+        return -1, None
+
+    return header, cattype
 
 
 def open_fits_catalog(catfile, header_only=False):
@@ -1374,7 +1392,7 @@ def update_zeropoint(header, table, avg_zeropoint, std_zeropoint, include_zperr=
 
     header['zeropoint'] = avg_zeropoint
     header['zeropoint_err'] = std_zeropoint
-    header['zeropoint_src'] = 'py_zp_match-V1.0'
+    header['zeropoint_src'] = 'py_zp_cvc-V0.1'
 
     for source in table:
         source['obs_mag'] += avg_zeropoint
@@ -1396,6 +1414,10 @@ def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename, 
         frame = Frame.objects.get(filename=frame_filename, block__isnull=False)
         frame.zeropoint = header['zeropoint']
         frame.zeropoint_err = header['zeropoint_err']
+        frame.zeropoint_src = header['zeropoint_src']
+        frame.color_used = header.get('color_used', '')
+        frame.color = header.get('color', -99.0)
+        frame.color_err = header.get('color_err', -99.0)
         frame.rms_of_fit = header['astrometric_fit_rms']
         frame.nstars_in_fit = header['astrometric_fit_nstars']
         frame.astrometric_catalog = header.get('astrometric_catalog', ast_cat_name)
@@ -1426,6 +1448,10 @@ def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename, 
                                     'quality' : header['quality'],
                                     'zeropoint':header['zeropoint'],
                                     'zeropoint_err':header['zeropoint_err'],
+                                    'zeropoint_src':header['zeropoint_src'],
+                                    'color_used' : header.get('color_used', ''),
+                                    'color' : header.get('color', -99.0),
+                                    'color_err' : header.get('color_err', -99.0),
                                     'fwhm':header['fwhm'],
                                     'frametype':frame_type,
                                     'rms_of_fit':header['astrometric_fit_rms'],

@@ -23,7 +23,7 @@ from photometrics.catalog_subs import FITSHdrException, open_fits_catalog, \
     existing_catalog_coverage, reset_database_connection, \
     update_zeropoint, update_frame_zeropoint, get_or_create_CatalogSources
 from photometrics.photometry_subs import map_filter_to_calfilter
-from photometrics.external_codes import updateFITSWCS
+from photometrics.external_codes import updateFITSWCS, updateFITScalib
 
 logger = logging.getLogger(__name__)
 
@@ -326,6 +326,7 @@ class ZeropointProcessPipeline(PipelineProcess):
             avg_zeropoint = None
             C = None
             std_zeropoint = None
+            color_const = False
 
             header, table, db_filename = self.setup(catfile, catalog_type, phot_cat_name)
 
@@ -336,14 +337,20 @@ class ZeropointProcessPipeline(PipelineProcess):
                     return
                 # Cross match with reference catalog and compute zeropoint
                 logger.info(f"Calibrating {header['filter']} instrumental mags. with {cal_filter} using {phot_cat_name}")
-                avg_zeropoint, std_zeropoint, C, cal_color = self.cross_match_and_zp(table, db_filename, phot_cat_name, std_zeropoint_tolerance, cal_filter)
+                avg_zeropoint, std_zeropoint, C, cal_color = self.cross_match_and_zp(table, db_filename, phot_cat_name, std_zeropoint_tolerance, cal_filter, header['filter'], color_const)
                 logger.info(f"New zp={avg_zeropoint:} +/- {std_zeropoint:} {C:}")
                 self.log(f"New zp={avg_zeropoint:} +/- {std_zeropoint:} {C:}")
 
                 # if crossmatch is good, update new zeropoint
                 if std_zeropoint < std_zeropoint_tolerance:
                     logger.debug("Got good zeropoint - updating header")
-                    header, table = update_zeropoint(header, table, avg_zeropoint, std_zeropoint)
+                    header['color_used'] = cal_color
+                    header['color'] = -99
+                    header['color_err'] = 0.00
+                    if color_const is False:
+                        header['color'] = C
+                        header['color_err'] = C
+                    header, table = update_zeropoint(header, table, avg_zeropoint, std_zeropoint, include_zperr=False)
 
                     # get the fits filename from the catfile in order to get the Block from the Frame
                     if 'e91_ldac.fits' in os.path.basename(catfile):
@@ -357,7 +364,8 @@ class ZeropointProcessPipeline(PipelineProcess):
                     ast_cat_name = 'GAIA-DR2'
                     frame = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename=fits_file, frame_type=Frame.NEOX_RED_FRAMETYPE)
 
-                    # XXX write to FITS header of e92.fits file here
+                    # Write updated photometric calibtation keywords to FITS header of e92.fits file
+                    status, new_fits_header = updateFITScalib(header, fits_file, catalog_type)
 
                     # update the zeropoint computed above in the CATALOG file Frame
                     frame_cat = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename=os.path.basename(catfile), frame_type=Frame.BANZAI_LDAC_CATALOG)
@@ -430,7 +438,7 @@ class ZeropointProcessPipeline(PipelineProcess):
         self.log("{prefix:} DB file {refcat_filename:}")
         return db_filename
 
-    def cross_match_and_zp(self, table, db_filename, phot_cat_name, std_zeropoint_tolerance, cal_filter, color_const=True):
+    def cross_match_and_zp(self, table, db_filename, phot_cat_name, std_zeropoint_tolerance, cal_filter, obs_filter, color_const=True):
 
         if phot_cat_name == 'PS1':
             refcat = cvc.PanSTARRS1(db_filename)
@@ -468,7 +476,10 @@ class ZeropointProcessPipeline(PipelineProcess):
                 cal_color = 'g-i' # Fixed/held constant
             else:
                 cal_color = 'g-' + cal_filter
-                avg_zeropoint, C, std_zeropoint, r, gmr, gmi = refcat.cal_color(objids, phot['obs_mag'], cal_filter, cal_color)
+                gmi_limits = [0.2, 3.0]
+                if obs_filter = 'w':
+                    gmi_limits = [0.5, 1.5]
+                avg_zeropoint, C, std_zeropoint, r, gmr, gmi = refcat.cal_color(objids, phot['obs_mag'], cal_filter, cal_color, gmi_lim=gmi_limits)
             end = time.time()
         logger.debug(f"TIME: compute_zeropoint took {end-start:.1f} seconds")
         logger.debug(f"New zp={avg_zeropoint:} +/- {std_zeropoint:} {r.count():} {C:}")
