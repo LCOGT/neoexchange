@@ -705,10 +705,10 @@ def banzai_catalog_mapping():
                     'field_width' : 'NAXIS1',
                     'field_height' : 'NAXIS2',
                     'pixel_scale' : '<WCS>',
-                    'zeropoint'     : '<ZP>',
-                    'zeropoint_err' : '<ZP>',
-                    'zeropoint_src' : '<ZPSRC>',
-                    'fwhm'          : 'L1FWHM',
+                    'zeropoint'     : '<L1ZP>',
+                    'zeropoint_err' : '<L1ZPERR>',
+                    'zeropoint_src' : '<L1ZPSRC>',
+                    'fwhm'          : '<L1FWHM>',
                     'astrometric_fit_rms'    : '<WCSRDRES>',
                     'astrometric_fit_status' : 'WCSERR',
                     'astrometric_fit_nstars' : '<WCSMATCH>',
@@ -759,7 +759,7 @@ def banzai_ldac_catalog_mapping():
                     'zeropoint'     : '<ZP>',
                     'zeropoint_err' : '<ZP>',
                     'zeropoint_src' : '<ZPSRC>',
-                    'fwhm'          : 'L1FWHM',
+                    'fwhm'          : '<L1FWHM>',
                     'astrometric_fit_rms'    : '<WCSRDRES>',
                     'astrometric_fit_status' : 'WCSERR',
                     'astrometric_fit_nstars' : '<WCSMATCH>',
@@ -998,8 +998,12 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
                                                   # (but could be modified based on version number further down)
                         '<ZP>'        : -99,      # Hardwire zeropoint to -99.0 for BANZAI catalogs
                         '<ZPSRC>'     : 'N/A',    # Hardwire zeropoint src to 'N/A' for BANZAI catalogs
+                        '<L1ZP>'      : -99,      # Hardwire zeropoint to -99.0 for newer BANZAI catalogs where it's missing e.g. w band
+                        '<L1ZPERR>'   : -99,      # Hardwire zeropoint to -99.0 for newer BANZAI catalogs where it's missing e.g. w band
+                        '<L1ZPSRC>'   : 'BANZAI', # Hardwire zeropoint src to 'N/A' for newer BANZAI catalogs where it's missing
                         '<WCSRDRES>'  : 0.3,      # Hardwire RMS to 0.3"
-                        '<WCSMATCH>'  : -4        # Hardwire no. of stars matched to 4 (1 quad)
+                        '<WCSMATCH>'  : -4,       # Hardwire no. of stars matched to 4 (1 quad)
+                        '<L1FWHM>'    : -99       # May not be present if BANZAI WCS fit fails
                         }
 
     header_items = {}
