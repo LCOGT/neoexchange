@@ -82,6 +82,7 @@ class Frame(models.Model):
     ORACDR_RED_FRAMETYPE = 90
     BANZAI_RED_FRAMETYPE = 91
     NEOX_RED_FRAMETYPE = 92
+    NEOX_SUB_FRAMETYPE = 93
     FRAMETYPE_CHOICES = (
                         (SINGLE_FRAMETYPE, 'Single frame'),
                         (STACK_FRAMETYPE, 'Stack of frames'),
@@ -96,6 +97,7 @@ class Frame(models.Model):
                         (ORACDR_RED_FRAMETYPE, 'ORACDR reduced frame'),
                         (BANZAI_RED_FRAMETYPE, 'BANZAI reduced frame'),
                         (NEOX_RED_FRAMETYPE, 'NEOexchange reduced frame'),
+                        (NEOX_SUB_FRAMETYPE, 'NEOexchange DIA subtracted frame'),
 
                     )
     sitecode    = models.CharField('MPC site code', max_length=4, blank=False)
@@ -108,6 +110,10 @@ class Frame(models.Model):
     quality     = models.CharField('Frame Quality flags', help_text='Comma separated list of frame/condition flags', max_length=40, blank=True, default=' ')
     zeropoint   = models.FloatField('Frame zeropoint (mag.)', null=True, blank=True)
     zeropoint_err = models.FloatField('Error on Frame zeropoint (mag.)', null=True, blank=True)
+    zeropoint_src = models.TextField('Source of Frame zeropoint', null=True, blank=True)
+    color_used   = models.CharField('Color used for calibration', max_length=15, null=True, blank=True, default='')
+    color        = models.FloatField('Color coefficient (mag.)', null=True, blank=True)
+    color_err    = models.FloatField('Error on color coefficient (mag.)', null=True, blank=True)
     fwhm        = models.FloatField('Full width at half maximum (FWHM; arcsec)', null=True, blank=True)
     frametype   = models.SmallIntegerField('Frame Type', null=False, blank=False, default=0, choices=FRAMETYPE_CHOICES)
     extrainfo   = models.TextField(blank=True, null=True)
