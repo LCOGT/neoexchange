@@ -477,7 +477,7 @@ class ZeropointProcessPipeline(PipelineProcess):
             else:
                 cal_color = 'g-' + cal_filter
                 gmi_limits = [0.2, 3.0]
-                if obs_filter = 'w':
+                if obs_filter == 'w':
                     gmi_limits = [0.5, 1.5]
                 avg_zeropoint, C, std_zeropoint, r, gmr, gmi = refcat.cal_color(objids, phot['obs_mag'], cal_filter, cal_color, gmi_lim=gmi_limits)
             end = time.time()
