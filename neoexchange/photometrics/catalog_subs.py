@@ -714,7 +714,7 @@ def banzai_catalog_mapping():
                     'color_used'    : '<L1COLORU>',
                     'color'         : '<L1COLOR>',
                     'color_err'     : '<L1COLERR>',
-                    'fwhm'          : 'L1FWHM',
+                    'fwhm'          : '<L1FWHM>',
                     'astrometric_fit_rms'    : '<WCSRDRES>',
                     'astrometric_fit_status' : 'WCSERR',
                     'astrometric_fit_nstars' : '<WCSMATCH>',
@@ -765,7 +765,7 @@ def banzai_ldac_catalog_mapping():
                     'zeropoint'     : '<L1ZP>',
                     'zeropoint_err' : '<L1ZPERR>',
                     'zeropoint_src' : '<L1ZPSRC>',
-                    'fwhm'          : 'L1FWHM',
+                    'fwhm'          : '<L1FWHM>',
                     'astrometric_fit_rms'    : '<WCSRDRES>',
                     'astrometric_fit_status' : 'WCSERR',
                     'astrometric_fit_nstars' : '<WCSMATCH>',
@@ -1026,7 +1026,8 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
                         '<L1ZPSRC>'   : 'BANZAI', # Hardwire zeropoint src to 'N/A' for newer BANZAI catalogs where it's missing
                         '<WCSRDRES>'  : 0.3,      # Hardwire RMS to 0.3"
                         '<WCSMATCH>'  : -4,       # Hardwire no. of stars matched to 4 (1 quad)
-                        '<RLEVEL>'    : 91        # Hardwire reduction level (mostly old catalogs in the tests)
+                        '<RLEVEL>'    : 91,       # Hardwire reduction level (mostly old catalogs in the tests)
+                        '<L1FWHM>'    : -99       # May not be present if BANZAI WCS fit fails
                         }
 
     header_items = {}
