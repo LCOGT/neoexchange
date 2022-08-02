@@ -1068,11 +1068,16 @@ def plot_timeseries(times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mas
     ax4 = ax3.twinx()
     ax2.plot(alltimes, fwhm, marker='.', color=colors, linestyle=' ')
     if len(air_mass) > 0:
-        expected_fwhm = generate_expected_fwhm(alltimes, air_mass, fwhm_0=fwhm[0], tel_diameter=diameter)
-        if (times[-1] - times[0]) < timedelta(hours=12):
-            ax2.plot(alltimes, expected_fwhm, color='black', linestyle='--', linewidth=0.75, label="Predicted")
-        else:
-            ax2.plot(alltimes, expected_fwhm, color='black', linestyle=' ', marker='+', markersize=2, label="Predicted")
+        initial_fwhm = None
+        for initial_fwhm in fwhm:
+            if initial_fwhm is not None:
+                break
+        if initial_fwhm is not None:
+            expected_fwhm = generate_expected_fwhm(alltimes, air_mass, fwhm_0=initial_fwhm, tel_diameter=diameter)
+            if (times[-1] - times[0]) < timedelta(hours=12):
+                ax2.plot(alltimes, expected_fwhm, color='black', linestyle='--', linewidth=0.75, label="Predicted")
+            else:
+                ax2.plot(alltimes, expected_fwhm, color='black', linestyle=' ', marker='+', markersize=2, label="Predicted")
 
     # Cut down DIMM results to span of Block
     if len(seeing) > 0:
