@@ -19,6 +19,7 @@ import tempfile
 from unittest import skipIf
 import warnings
 import shutil
+from copy import deepcopy
 
 from astropy.io import fits
 from numpy import array, arange
@@ -28,7 +29,7 @@ from django.forms.models import model_to_dict
 
 # Import module to test
 from photometrics.external_codes import *
-from photometrics.catalog_subs import funpack_fits_file
+from photometrics.catalog_subs import funpack_fits_file, get_header
 
 
 class ExternalCodeUnitTest(TestCase):
@@ -1289,6 +1290,130 @@ class TestUpdateFITSWCS(TestCase):
                     self.assertEqual(expected_pv_comment, new_header.comments[key])
                 else:
                     self.assertNotEqual(expected_pv_comment, new_header.comments[key])
+
+
+class TestUpdateFITScalib(TestCase):
+
+    def setUp(self):
+
+        input_banzai_file = os.path.abspath(os.path.join('photometrics', 'tests', 'banzai_test_frame.fits'))
+
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+
+        # Need to copy files as we're modifying them. Example does not have existing L1ZP etc
+        self.test_banzai_file = os.path.abspath(os.path.join(self.test_dir, 'example-banzai-e92_output.fits'))
+        shutil.copy(input_banzai_file, self.test_banzai_file)
+
+        self.test_header, self.test_cattype = get_header(self.test_banzai_file)
+
+        self.precision = 7
+        self.debug_print = False
+        self.remove = True
+
+        # Disable logging during testing
+        import logging
+        logger = logging.getLogger(__name__)
+        # Disable anything below CRITICAL level
+        logging.disable(logging.CRITICAL)
+
+    def tearDown(self):
+        if self.remove:
+            try:
+                files_to_remove = glob(os.path.join(self.test_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.test_dir)
+            try:
+                os.rmdir(self.test_dir)
+                if self.debug_print: print("Removed", self.test_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.test_dir)
+
+    def test_missing_file(self):
+        expected_status = (-1, None)
+
+        status = updateFITScalib({}, '/foo/bar.fits')
+
+        self.assertEqual(expected_status, status)
+
+    def test_bad_type(self):
+        expected_status = (-2, None)
+
+        status = updateFITScalib({}, self.test_banzai_file, 'ASCII')
+
+        self.assertEqual(expected_status, status)
+
+    def test_new_l1zp(self):
+        header = deepcopy(self.test_header)
+        header['zeropoint'] = 28.01
+        header['zeropoint_err'] = 0.012
+        header['zeropoint_src'] = 'py_zp_cvc-V0.1'
+
+        expected_status = 0
+        expected_keywords = { 'zeropoint' : 'L1ZP',
+                              'zeropoint_err' : 'L1ZPERR',
+                              'zeropoint_src' : 'L1ZPSRC',
+                            }
+
+        status, new_header = updateFITScalib(header,  self.test_banzai_file)
+
+        self.assertEqual(expected_status, status)
+
+        for key, fits_keyword in expected_keywords.items():
+            self.assertTrue(fits_keyword in new_header, "Failure on " + fits_keyword)
+            self.assertEqual(header[key], new_header[fits_keyword])
+
+    def test_existing_l1zp(self):
+        header = deepcopy(self.test_header)
+        header['zeropoint'] = 28.01
+        header['zeropoint_err'] = 0.012
+        header['zeropoint_src'] = 'py_zp_cvc-V0.1'
+        with fits.open(self.test_banzai_file, mode='update') as hdul:
+            fits_header = hdul[0].header
+            fits_header.set('L1ZP', 30.3, after='L1ELLIPA')
+            fits_header.set('L1ZPERR', 0.003, after='L1ZP')
+            hdul.flush()
+
+        expected_status = 0
+        expected_keywords = { 'zeropoint' : 'L1ZP',
+                              'zeropoint_err' : 'L1ZPERR',
+                              'zeropoint_src' : 'L1ZPSRC',
+                            }
+
+        status, new_header = updateFITScalib(header,  self.test_banzai_file)
+
+        self.assertEqual(expected_status, status)
+
+        for key, fits_keyword in expected_keywords.items():
+            self.assertTrue(fits_keyword in new_header, "Failure on " + fits_keyword)
+            self.assertEqual(header[key], new_header[fits_keyword])
+
+    def test_new_l1zp_color(self):
+        header = deepcopy(self.test_header)
+        header['zeropoint'] = 28.01
+        header['zeropoint_err'] = 0.012
+        header['zeropoint_src'] = 'py_zp_cvc-V0.1'
+        header['color_used'] = 'g-i'
+        header['color'] = 0.1234
+        header['color_err'] = 0.112
+
+        expected_status = 0
+        expected_keywords = { 'zeropoint' : 'L1ZP',
+                              'zeropoint_err' : 'L1ZPERR',
+                              'zeropoint_src' : 'L1ZPSRC',
+                              'color_used' : 'L1COLORU',
+                              'color' : 'L1COLOR',
+                              'color_err' : 'L1COLERR',
+                            }
+
+        status, new_header = updateFITScalib(header,  self.test_banzai_file)
+
+        self.assertEqual(expected_status, status)
+
+        for key, fits_keyword in expected_keywords.items():
+            self.assertTrue(fits_keyword in new_header, "Failure on " + fits_keyword)
+            self.assertEqual(header[key], new_header[fits_keyword])
 
 
 class TestGetSCAMPXMLInfo(TestCase):

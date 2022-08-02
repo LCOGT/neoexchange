@@ -32,7 +32,7 @@ from numpy import loadtxt, split, empty, median, absolute, sqrt
 
 from core.models import detections_array_dtypes
 from astrometrics.time_subs import timeit
-from photometrics.catalog_subs import oracdr_catalog_mapping
+from photometrics.catalog_subs import oracdr_catalog_mapping, banzai_catalog_mapping, banzai_ldac_catalog_mapping
 from photometrics.image_subs import create_weight_image, create_rms_image
 
 logger = logging.getLogger(__name__)
@@ -1178,6 +1178,62 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
 
     return 0, header
 
+
+def updateFITScalib(header, fits_file, catalog_type='BANZAI'):
+    """Updates or adds the zeropoint and photometric calibration keywords in <fits_file>
+    """
+    status = 0
+
+    keywords = OrderedDict([
+                    ('zeropoint'     , 'Instrumental zeropoint [mag]'),
+                    ('zeropoint_err' , 'Error on Instrumental zeropoint [mag]'),
+                    ('zeropoint_src' , 'Source of Instrumental zeropoint'),
+                    ('color_used'    , 'Color used for calibration'),
+                    ('color'         , 'Color coefficient [mag]'),
+                    ('color_err'     , 'Error on color coefficient [mag]'),
+                 ])
+    header_items = {}
+    if catalog_type == 'BANZAI':
+        hdr_mapping, tbl_mapping = banzai_catalog_mapping()
+    elif catalog_type == 'BANZAI_LDAC':
+        hdr_mapping, tbl_mapping = banzai_ldac_catalog_mapping()
+    else:
+        logger.error(f"Unsupported catalog mapping: {catalog_type}")
+        return -2, None
+
+    try:
+        hdulist = fits.open(fits_file)
+    except IOError as e:
+        logger.error(f"Unable to open FITS image {fits_file} (Reason={e})")
+        return -1, None
+
+    if catalog_type == 'BANZAI':
+        fits_header = hdulist[0].header
+
+    # Find place to start inserting
+    if "PNTOFST" in fits_header:
+        prior_keyword = "PNTOFST"
+    elif "L1ELLIPA" in fits_header:
+        prior_keyword = "L1ELLIPA"
+    else:
+        prior_keyword = None
+    #print(f"Initial prior_keyword= {prior_keyword}")
+    for key, comment in keywords.items():
+        new_val = header.get(key, None)
+        if new_val:
+            fits_keyword = hdr_mapping.get(key, '')
+            fits_keyword = fits_keyword.replace('<', '').replace('>', '')
+            if fits_keyword != '':
+                #print(fits_keyword, new_val, comment, prior_keyword)
+                fits_header.set(fits_keyword, new_val, comment, after=prior_keyword)
+                prior_keyword = fits_keyword
+            else:
+                logger.warning(f"FITS Keyword not found for {key}")
+
+    fits_file_output = fits_file
+    hdulist.writeto(fits_file_output, overwrite=True, checksum=True)
+
+    return status, fits_header
 
 def read_mtds_file(mtdsfile, dbg=False):
     """Read a detections file produced by mtdlink and return a dictionary of the
