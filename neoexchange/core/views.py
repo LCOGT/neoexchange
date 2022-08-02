@@ -3501,7 +3501,7 @@ def run_sextractor_make_catalog(configs_dir, dest_dir, fits_file, checkimage_typ
     """Run SExtractor, rename output to new filename which is returned"""
 
     logger.debug("Running SExtractor on BANZAI file: %s" % fits_file)
-    sext_status = run_sextractor(configs_dir, dest_dir, fits_file, checkimage_type, catalog_type=catalog_type)
+    sext_status = run_sextractor(configs_dir, dest_dir, fits_file + '[SCI]', checkimage_type, catalog_type=catalog_type)
     if sext_status == 0:
         fits_ldac_catalog = 'test_ldac.fits'
         fits_ldac_catalog_path = os.path.join(dest_dir, fits_ldac_catalog)
