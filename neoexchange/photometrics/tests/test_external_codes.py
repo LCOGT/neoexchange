@@ -23,6 +23,7 @@ from copy import deepcopy
 
 from astropy.io import fits
 from numpy import array, arange
+from numpy.testing import assert_allclose
 
 from django.test import TestCase
 from django.forms.models import model_to_dict
@@ -510,14 +511,14 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
     def test_run_sextractor_nofile(self):
 
         expected_cmdline = './sex  -c sextractor_neox.conf'
-        cmdline = run_sextractor(self.source_dir, self.test_dir, '', binary='./sex', dbg=True)
+        cmdline = run_sextractor(self.source_dir, self.test_dir, '', binary='./sex', catalog_type='ASCII', dbg=True)
 
         self.assertEqual(expected_cmdline, cmdline)
 
     def test_run_sextractor_file(self):
 
         expected_cmdline = './sex foo.fits -c sextractor_neox.conf'
-        cmdline = run_sextractor(self.source_dir, self.test_dir, 'foo.fits', binary='./sex', dbg=True)
+        cmdline = run_sextractor(self.source_dir, self.test_dir, 'foo.fits', binary='./sex', catalog_type='ASCII', dbg=True)
 
         self.assertEqual(expected_cmdline, cmdline)
 
@@ -527,7 +528,7 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
         expected_status = 0
         expected_line1 = '#   1 NUMBER                 Running object number'
 
-        status = run_sextractor(self.source_dir, self.test_dir, self.test_fits_file, checkimage_type=['BACKGROUND_RMS'])
+        status = run_sextractor(self.source_dir, self.test_dir, self.test_fits_file, checkimage_type=['BACKGROUND_RMS'], catalog_type='ASCII')
 
         self.assertEqual(expected_status, status)
 
@@ -833,6 +834,8 @@ class TestHotpantsRunner(ExternalCodeUnitTest):
 
         """banzai_test_frame.fits"""
         self.test_banzai_file = os.path.join(self.testfits_dir, 'banzai_test_frame.fits')
+        shutil.copy(os.path.abspath(self.test_banzai_file), self.test_dir)
+        self.test_banzai_file_COPIED = os.path.join(self.test_dir, 'banzai_test_frame.fits')
 
         # hotpants requires a reference rms image
         """banzai_test_frame.rms.fits"""
@@ -857,22 +860,54 @@ class TestHotpantsRunner(ExternalCodeUnitTest):
         self.assertEqual(expected_status, status)
 
     def test_no_ref_rms(self):
+        # This would also catch return code -7 since it's the same image
+        # Return codes -8 and -9 are not easy to replicate
         expected_status = -6
 
         self.test_banzai_rms_file = os.path.join(self.test_dir, os.path.basename(self.test_banzai_rms_file))
         os.remove(self.test_banzai_rms_file)
 
-        status = determine_hotpants_options(self.test_banzai_file, self.test_banzai_file, self.source_dir, self.test_dir)
+        status = determine_hotpants_options(self.test_banzai_file_COPIED, self.test_banzai_file_COPIED, self.source_dir, self.test_dir)
 
         self.assertEqual(expected_status, status)
+
+    def test_cmdline(self):
+        bkgsub = os.path.join(self.test_dir, "banzai_test_frame.bkgsub.fits")
+        aligned = os.path.join(self.test_dir, "banzai_test_frame_aligned_to_banzai_test_frame.fits")
+        subtracted = os.path.join(self.test_dir, "banzai_test_frame.subtracted.fits")
+        subtracted_rms = os.path.join(self.test_dir, "banzai_test_frame.subtracted.rms.fits")
+        aligned_rms = os.path.join(self.test_dir, "banzai_test_frame.rms_aligned_to_banzai_test_frame.rms.fits")
+        rms = os.path.join(self.test_dir, "banzai_test_frame.rms.fits")
+
+        expected_cmdline = f"./hotpants -inim {bkgsub} -tmplim {aligned} -outim {subtracted} -tni {aligned_rms} -ini {rms} -oni {subtracted_rms} -hki -n i -c t -v 0 -tu 64399.99999999999 -iu 64399.99999999999 -tl 43.892452606201175 -il -343.1130201721191 -nrx 3 -nry 3 -nsx 6.760000000000001 -nsy 6.793333333333333 -r 11.235949458513854 -rss 26.96627870043325 -fin 223.60679774997897"
+        cmdline = run_hotpants(self.test_banzai_file_COPIED, self.test_banzai_file_COPIED, self.source_dir, self.test_dir, binary='./hotpants', dbg=True, dbgOptions=True)
+        self.maxDiff=None
+        self.assertEqual(expected_cmdline, cmdline)
 
     def test_success(self):
-        # Not working
+
         expected_status = 0
 
-        status = run_hotpants(self.test_banzai_file, self.test_banzai_file, self.source_dir, self.test_dir)
+        status = run_hotpants(self.test_banzai_file_COPIED, self.test_banzai_file_COPIED, self.source_dir, self.test_dir, dbg=False, dbgOptions=True)
 
         self.assertEqual(expected_status, status)
+
+        outname = os.path.join(self.test_dir, "banzai_test_frame.subtracted.fits")
+
+        self.assertTrue(os.path.exists(outname))
+        self.assertTrue(os.path.exists(outname.replace('.fits', '.rms.fits')))
+
+        with fits.open(outname) as hdul:
+            header = hdul[0].header
+            data = hdul[0].data
+
+        self.assertTrue('HOTPanTS', header.get('SOFTNAME', ''))
+        self.assertTrue('TEMPLATE', header.get('CONVOL00', ''))
+        self.assertTrue('0.9932  ', header.get('KSUM00', ''))
+        assert_allclose(-119.99652, data[400, 400])
+        assert_allclose(20.971985, data[640, 30])
+
+
 
 
 class TestFindOrbRunner(ExternalCodeUnitTest):
@@ -972,7 +1007,7 @@ class TestDetermineSwarpAlignOptions(ExternalCodeUnitTest):
 
         expected_options = f'-BACK_SIZE 42 -IMAGEOUT_NAME {outname} -NTHREADS 1 -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -SUBTRACT_BACK N -WEIGHTOUT_NAME {weightname} -WEIGHT_TYPE NONE -COMBINE_TYPE CLIPPED '
 
-        options = determine_swarp_align_options(self.test_fits_file, self.test_fits_file, self.test_dir)
+        options = determine_swarp_align_options(self.test_fits_file, self.test_fits_file, self.test_dir, outname)
 
         #self.maxDiff = None
         self.assertEqual(expected_options, options)
@@ -983,6 +1018,8 @@ class TestDetermineHotpantsOptions(ExternalCodeUnitTest):
 
         """banzai_test_frame.fits"""
         self.test_banzai_file = os.path.join(self.testfits_dir, 'banzai_test_frame.fits')
+        shutil.copy(os.path.abspath(self.test_banzai_file), self.test_dir)
+        self.test_banzai_file_COPIED = os.path.join(self.test_dir, 'banzai_test_frame.fits')
 
         # hotpants requires a reference rms image
         """banzai_test_frame.rms.fits"""
@@ -1003,7 +1040,7 @@ class TestDetermineHotpantsOptions(ExternalCodeUnitTest):
         expected_options = f"-inim {bkgsub} -tmplim {aligned} -outim {subtracted} -tni {aligned_rms} -ini {rms} -oni {subtracted_rms} -hki -n i -c t -v 0 " \
                            f"-tu 64399.99999999999 -iu 64399.99999999999 -tl 43.892452606201175 -il -343.1130201721191 -nrx 3 -nry 3 -nsx 6.760000000000001 -nsy 6.793333333333333 -r 11.235949458513854 -rss 26.96627870043325 -fin 223.60679774997897"
 
-        options = determine_hotpants_options(self.test_banzai_file, self.test_banzai_file, self.source_dir, self.test_dir)
+        options = determine_hotpants_options(self.test_banzai_file_COPIED, self.test_banzai_file_COPIED, self.source_dir, self.test_dir, dbgOptions=True)
 
         self.maxDiff = None
         self.assertEqual(expected_options, options)

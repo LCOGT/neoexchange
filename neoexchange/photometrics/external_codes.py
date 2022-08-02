@@ -295,7 +295,7 @@ def determine_sextractor_options(fits_file, dest_dir, checkimage_type=[]):
     return options
 
 
-def determine_hotpants_options(ref, sci, source_dir, dest_dir):
+def determine_hotpants_options(ref, sci, source_dir, dest_dir, dbgOptions=False):
     """
     Run SExtractor on <sci> image to subtract the background,
     then align the <ref> using SWarp.
@@ -321,20 +321,26 @@ def determine_hotpants_options(ref, sci, source_dir, dest_dir):
         logger.error(f"{ref_rms} not found.")
         return -6
 
+    if dbgOptions:
+        # Normally this is already run as part of the larger pipeline
+        run_sextractor(source_dir, dest_dir, sci + '[SCI]', checkimage_type=['BACKGROUND_RMS', '-BACKGROUND'], catalog_type='FITS_LDAC')
 
     sci_rms = os.path.join(dest_dir, os.path.basename(sci).replace(".fits", ".rms.fits"))
     sci_bkgsub = os.path.join(dest_dir, os.path.basename(sci).replace(".fits", ".bkgsub.fits"))
 
-    if not os.path.exists(sci_rms) or not os.path.exists(sci_bkgsub):
-        logger.error("SExtractor failed to output a \".rms.fits\" image or a \".bkgsub.fits\" image.")
+    if not os.path.exists(sci_rms):
+        logger.error(f"{sci_rms} not found.")
         return -7
+    if not os.path.exists(sci_bkgsub):
+        logger.error(f"{sci_bkgsub} not found.")
+        return -8
 
     aligned_ref = align_to_sci(ref, sci, source_dir, dest_dir)
     aligned_rms = align_to_sci(ref_rms, sci_rms, source_dir, dest_dir)
 
     if type(aligned_ref) != str or type(aligned_rms) != str:
         logger.error(f"Error occurred in SWarp while aligning images.")
-        return -8
+        return -9
 
     output_diff_image = os.path.join(dest_dir, os.path.basename(sci).replace('.fits', '.subtracted.fits'))
     output_noise_image = output_diff_image.replace('.fits', '.rms.fits')
@@ -750,7 +756,7 @@ def run_swarp(source_dir, dest_dir, images, outname='reference.fits', binary=Non
     return retcode_or_cmdline
 
 @timeit
-def run_hotpants(ref, sci, source_dir, dest_dir, binary=None, dbg=False):
+def run_hotpants(ref, sci, source_dir, dest_dir, binary=None, dbg=False, dbgOptions=False):
     """Run HOTPANTS (using either the binary specified by [binary] or by
     looking for 'hotpants' in the PATH) on the passed <ref> and <sci> images with the
     results and any temporary files created in <dest_dir>. <source_dir> is the
@@ -765,7 +771,7 @@ def run_hotpants(ref, sci, source_dir, dest_dir, binary=None, dbg=False):
         logger.error("Could not locate 'hotpants' executable in PATH")
         return -42
 
-    options = determine_hotpants_options(ref, sci, source_dir, dest_dir)
+    options = determine_hotpants_options(ref, sci, source_dir, dest_dir, dbgOptions=dbgOptions)
     if type(options) != str:
         return options
 
