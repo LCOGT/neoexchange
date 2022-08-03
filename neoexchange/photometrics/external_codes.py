@@ -251,12 +251,12 @@ def determine_sextractor_options(fits_file, dest_dir, checkimage_type=[]):
 
     options = ''
     if not os.path.exists(fits_file):
-        logger.error("FITS file %s does not exist" % fits_file)
+        logger.error(f"FITS file {fits_file} does not exist")
         return options
     try:
         hdulist = fits.open(fits_file)
     except IOError as e:
-        logger.error("Unable to open FITS image %s (Reason=%s)" % (fits_file, e))
+        logger.error(f"Unable to open FITS image {fits_file} (Reason={e})")
         return options
 
     header = hdulist[0].header
@@ -266,6 +266,12 @@ def determine_sextractor_options(fits_file, dest_dir, checkimage_type=[]):
         if header.get(header_mapping[option], -99) != -99:
             options += option_mapping[option] + ' ' + str(header.get(header_mapping[option])) + ' '
     options = options.rstrip()
+
+    # Add output catalog file name
+    ldac_output_catalog = os.path.basename(fits_file)
+    ldac_output_catalog = ldac_output_catalog.replace('[SCI]', '').replace('.fits', '_ldac.fits')
+    ldac_output_catalog = os.path.join(dest_dir, ldac_output_catalog)
+    options += f' -CATALOG_NAME {ldac_output_catalog}'
 
     # SWarp requires an rms image later in the pipeline.
     # Hotpants requires a background-subtracted image later in the pipeline.

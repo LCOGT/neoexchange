@@ -8584,7 +8584,7 @@ class TestRunSExtractorMakeCatalog(ExternalCodeUnitTest):
 
         """banzai_test_frame.fits"""
         # This image DOES NOT have a 'L1ZP' keyword in the header
-        test_banzai_file = os.path.join(self.testfits_dir, 'banzai_test_frame.fits.fz')
+        test_banzai_file = os.path.join(self.testfits_dir, 'banzai_test_frame.fits')
         # Create new output name closer to normal use
         output_filename = 'banzai-test-frame-e91.fits'
         shutil.copy(os.path.abspath(test_banzai_file), os.path.join(self.test_dir, output_filename))
@@ -8602,11 +8602,21 @@ class TestRunSExtractorMakeCatalog(ExternalCodeUnitTest):
         # funpack_fits_file(self.test_banzai_comp_file, all_hdus=True)
         # self.test_banzai_comp_file = os.path.join(self.test_dir, os.path.basename('banzai_test_frame.fits'))
 
-        self.test_old_ldac_filename = os.path.join(self.test_dir, 'test_ldac.fits')
-
         self.remove = True
 
+    def tearDown(self):
+        super(TestRunSExtractorMakeCatalog, self).tearDown()
+        if self.remove is False:
+            print(f"Not removing {self.test_dir}")
+
     def test1(self):
+        expected_status = 0
+        expected_ldac_catalog = self.test_banzai_file.replace('e91.fits', 'e91_ldac.fits')
+
+        status, new_ldac_catalog = run_sextractor_make_catalog(self.source_dir, self.test_dir, self.test_banzai_file)
+
+        self.assertEqual(expected_status, status)
         self.assertTrue(os.path.exists(self.test_banzai_file))
-        self.assertFalse(os.path.exists(self.test_old_ldac_filename))
+        self.assertTrue(os.path.exists(new_ldac_catalog))
+        self.assertEqual(expected_ldac_catalog, new_ldac_catalog)
 

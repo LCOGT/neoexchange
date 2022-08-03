@@ -3505,16 +3505,10 @@ def run_sextractor_make_catalog(configs_dir, dest_dir, fits_file, checkimage_typ
         fits_file += '[SCI]'
     sext_status = run_sextractor(configs_dir, dest_dir, fits_file, checkimage_type, catalog_type=catalog_type)
     if sext_status == 0:
-        fits_ldac_catalog = 'test_ldac.fits'
-        fits_ldac_catalog_path = os.path.join(dest_dir, fits_ldac_catalog)
-
-        # Rename catalog to permanent name
+        # Construct permanent name to return
         fits_file_output = os.path.basename(fits_file)
         fits_file_output = fits_file_output.replace('[SCI]', '').replace('.fits', '_ldac.fits')
         new_ldac_catalog = os.path.join(dest_dir, fits_file_output)
-        logger.debug("Renaming %s to %s" % (fits_ldac_catalog_path, new_ldac_catalog))
-        os.rename(fits_ldac_catalog_path, new_ldac_catalog)
-
     else:
         logger.error("Execution of SExtractor failed")
         return sext_status, -4

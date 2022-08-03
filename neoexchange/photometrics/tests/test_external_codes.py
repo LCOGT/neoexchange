@@ -32,6 +32,9 @@ from django.forms.models import model_to_dict
 from photometrics.external_codes import *
 from photometrics.catalog_subs import funpack_fits_file, get_header
 
+# Disable logging during testing
+import logging
+logger = logging.getLogger(__name__)
 
 class ExternalCodeUnitTest(TestCase):
 
@@ -940,6 +943,14 @@ class TestFindOrbRunner(ExternalCodeUnitTest):
 
 class TestDetermineSExtOptions(ExternalCodeUnitTest):
 
+    def setUp(self):
+        super(TestDetermineSExtOptions, self).setUp()
+
+        self.expected_catalog_name = os.path.join(self.test_dir, 'example-sbig-e10_ldac.fits')
+
+        # Disable anything below CRITICAL level
+        logging.disable(logging.CRITICAL)
+
     def test_nofile(self):
         expected_options = ''
 
@@ -954,17 +965,19 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
 
         self.assertEqual(expected_options, options)
 
-    def test_checkimages(self):
+    def test_no_checkimages(self):
         # No checkimages
-        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.467 -SATUR_LEVEL 46000 -BACK_SIZE 42'
+        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.467 -SATUR_LEVEL 46000 -CATALOG_NAME {self.expected_catalog_name} -BACK_SIZE 42'
 
         options = determine_sextractor_options(self.test_fits_file, self.test_dir)
 
         self.assertEqual(expected_options, options)
 
+    def test_checkimages(self):
+
         # Single checkimage
         checkimage_name = os.path.join(self.test_dir, 'example-sbig-e10.rms.fits')
-        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.467 -SATUR_LEVEL 46000 -CHECKIMAGE_TYPE BACKGROUND_RMS -CHECKIMAGE_NAME {checkimage_name} -BACK_SIZE 42'
+        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.467 -SATUR_LEVEL 46000 -CATALOG_NAME {self.expected_catalog_name} -CHECKIMAGE_TYPE BACKGROUND_RMS -CHECKIMAGE_NAME {checkimage_name} -BACK_SIZE 42'
 
         options = determine_sextractor_options(self.test_fits_file, self.test_dir, checkimage_type=['BACKGROUND_RMS'])
 
@@ -973,7 +986,7 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
         # Multiple checkimages
         rms_name = os.path.join(self.test_dir, 'example-sbig-e10.rms.fits')
         bkgsub_name = os.path.join(self.test_dir, 'example-sbig-e10.bkgsub.fits')
-        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.467 -SATUR_LEVEL 46000 -CHECKIMAGE_TYPE BACKGROUND_RMS,-BACKGROUND -CHECKIMAGE_NAME {rms_name},{bkgsub_name} -BACK_SIZE 42'
+        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.467 -SATUR_LEVEL 46000 -CATALOG_NAME {self.expected_catalog_name} -CHECKIMAGE_TYPE BACKGROUND_RMS,-BACKGROUND -CHECKIMAGE_NAME {rms_name},{bkgsub_name} -BACK_SIZE 42'
 
         options = determine_sextractor_options(self.test_fits_file, self.test_dir, checkimage_type=['BACKGROUND_RMS', '-BACKGROUND'])
 
@@ -1347,9 +1360,6 @@ class TestUpdateFITScalib(TestCase):
         self.debug_print = False
         self.remove = True
 
-        # Disable logging during testing
-        import logging
-        logger = logging.getLogger(__name__)
         # Disable anything below CRITICAL level
         logging.disable(logging.CRITICAL)
 
