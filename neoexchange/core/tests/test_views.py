@@ -41,6 +41,7 @@ from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check
     mock_update_elements_with_findorb_badepoch, mock_get_vizier_catalog_table, mock_lco_api_fail
 
 from neox.tests.base import assertDeepAlmostEqual
+from photometrics.tests.test_external_codes import ExternalCodeUnitTest
 
 from astrometrics.ephem_subs import compute_ephem, determine_darkness_times
 from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs, \
@@ -8573,3 +8574,39 @@ class TestDisplayDataproduct(TestCase):
         dp = DataProduct.objects.filter(filetype=DataProduct.ALCDEF_TXT)
         response = display_textfile(request, dp[0].id)
         self.assertEqual(b"some text here", response.content)
+
+
+class TestRunSExtractorMakeCatalog(ExternalCodeUnitTest):
+
+    def setUp(self):
+        # Copying over some files to the temp directory to manipulate
+        super(TestRunSExtractorMakeCatalog, self).setUp()
+
+        """banzai_test_frame.fits"""
+        # This image DOES NOT have a 'L1ZP' keyword in the header
+        test_banzai_file = os.path.join(self.testfits_dir, 'banzai_test_frame.fits.fz')
+        # Create new output name closer to normal use
+        output_filename = 'banzai-test-frame-e91.fits'
+        shutil.copy(os.path.abspath(test_banzai_file), os.path.join(self.test_dir, output_filename))
+        self.test_banzai_file = os.path.join(self.test_dir, output_filename)
+
+        """banzai_test_frame.fits.fz"""
+        # This image DOES NOT have a 'L1ZP' keyword in the header
+        test_banzai_comp_file = os.path.join(self.testfits_dir, 'banzai_test_frame.fits.fz')
+        # Create new output name closer to normal use
+        output_filename = 'banzai-test-frame-e91.fits.fz'
+        shutil.copy(os.path.abspath(test_banzai_comp_file), os.path.join(self.test_dir, output_filename))
+        self.test_banzai_comp_file = os.path.join(self.test_dir, output_filename)
+
+        # Decompress
+        # funpack_fits_file(self.test_banzai_comp_file, all_hdus=True)
+        # self.test_banzai_comp_file = os.path.join(self.test_dir, os.path.basename('banzai_test_frame.fits'))
+
+        self.test_old_ldac_filename = os.path.join(self.test_dir, 'test_ldac.fits')
+
+        self.remove = True
+
+    def test1(self):
+        self.assertTrue(os.path.exists(self.test_banzai_file))
+        self.assertFalse(os.path.exists(self.test_old_ldac_filename))
+
