@@ -3087,6 +3087,65 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M', force=False):
     return True
 
 
+def clean_jplorbit(resp, origin='J', dbg=False):
+    """Takes a JSON dict <resp> from fetch_jpl_orbit() and plucks
+    out the appropriate bits. origin defaults to 'J'(PL) if not specified"""
+
+    neox_elements = {}
+    if resp is not None and len(resp) > 0:
+
+        # Mapping dictionary between JPL JSON 'name' (key) and NEOx Body model field (value)
+        jpl_keys = { 'e'  : 'eccentricity',
+                     'a'  : 'meandist',
+                     'q'  : 'perihdist',
+                     'i'  : 'orbinc',
+                     'om' : 'longascnode',
+                     'w'  : 'argofperih',
+                     'ma' : 'meananom',
+                     'tp' : 'epochofperih',
+                     'per': None,
+                     'n'  : None,
+                     'ad' : None,
+                     'epoch' : 'epochofel',
+                     'data_arc' : 'arc_length',
+                     'rms' : 'orbit_rms',
+                     'last_obs' : 'not_seen'}
+
+        jpl_elements = {elem['name'] : elem['value'] for elem in resp['orbit']['elements']}
+        neox_elements = {}
+        for jpl_key, neox_key in jpl_keys.items():
+            if jpl_key in jpl_elements:
+                value = jpl_elements[jpl_key]
+            elif jpl_key in resp['orbit']:
+                value = resp['orbit'][jpl_key]
+            try:
+                value = float(value)
+            except ValueError:
+                try:
+                    value = datetime.strptime(value, "%Y-%m-%d")
+                except ValueError:
+                    print("Unparseable value", value)
+                    pass
+            if dbg: print(f"{jpl_key}->{neox_key}= {value}")
+            if neox_key is not None:
+                neox_elements[neox_key] = value
+
+        for time_key in ['epochofel', 'epochofperih']:
+            t = Time(neox_elements[time_key], format='jd', scale='tdb')
+            neox_elements[time_key] = t.datetime
+        neox_elements['abs_mag'] = float([elem['value'] for elem in resp['phys_par'] if elem['name'] == 'H'][0])
+        neox_elements['elements_type'] = 'MPC_MINOR_PLANET'
+        code = resp['object']['orbit_class']['code']
+        comet_codes = ['HYP', 'PAR',  'JFC', 'JFc', 'HTC', 'COM']
+        if code in comet_codes:
+            neox_elements['elements_type'] = 'MPC_COMET'
+        neox_elements['origin'] = origin
+        neox_elements['active'] = True
+        td = datetime.utcnow() - neox_elements['not_seen']
+        neox_elements['not_seen'] = td.total_seconds() / 86400.0
+
+    return neox_elements
+
 def update_jpl_phys_params(body):
     """Fetch physical parameters, names, and object type from JPL SB database and store in Neoexchange DB"""
     resp = fetch_jpl_physparams_altdes(body)

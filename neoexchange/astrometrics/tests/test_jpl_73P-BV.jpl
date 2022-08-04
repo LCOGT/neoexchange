@@ -1,0 +1,150 @@
+{
+  "phys_par": [
+    {
+      "ref": "1",
+      "value": "17.208",
+      "name": "H",
+      "desc": "absolute magnitude (magnitude at 1 au from Sun and observer)",
+      "notes": "autocmod 3.0b",
+      "sigma": ".38599",
+      "title": "absolute magnitude",
+      "units": null
+    }
+  ],
+  "object": {
+    "neo": true,
+    "des_alt": [],
+    "orbit_class": {
+      "name": "Jupiter-family Comet",
+      "code": "JFc"
+    },
+    "pha": false,
+    "spkid": "1003865",
+    "kind": "cn",
+    "orbit_id": "1",
+    "fullname": "73P/Schwassmann-Wachmann 3-BV",
+    "des": "73P-BV",
+    "prefix": "P"
+  },
+  "signature": {
+    "source": "NASA/JPL Small-Body Database (SBDB) API",
+    "version": "1.3"
+  },
+  "orbit": {
+    "source": "JPL",
+    "cov_epoch": "2459787.265003829",
+    "moid_jup": ".1358",
+    "t_jup": "2.736",
+    "condition_code": "9",
+    "not_valid_before": null,
+    "rms": ".91715",
+    "model_pars": [],
+    "orbit_id": "1",
+    "producer": "Davide Farnocchia",
+    "first_obs": "2022-07-23",
+    "soln_date": "2022-08-04 01:30:26",
+    "two_body": null,
+    "epoch": "2459787.2650038",
+    "elements": [
+      {
+        "value": ".6946041448624322",
+        "sigma": ".0072263",
+        "name": "e",
+        "title": "eccentricity",
+        "label": "e",
+        "units": null
+      },
+      {
+        "value": "3.190462583276429",
+        "sigma": ".089322",
+        "name": "a",
+        "title": "semi-major axis",
+        "label": "a",
+        "units": "au"
+      },
+      {
+        "value": ".9743540489041187",
+        "sigma": ".0044933",
+        "name": "q",
+        "title": "perihelion distance",
+        "label": "q",
+        "units": "au"
+      },
+      {
+        "value": "11.23392044527141",
+        "sigma": ".055878",
+        "name": "i",
+        "title": "inclination; angle with respect to x-y ecliptic plane",
+        "label": "i",
+        "units": "deg"
+      },
+      {
+        "value": "69.49690472056997",
+        "sigma": ".36763",
+        "name": "om",
+        "title": "longitude of the ascending node",
+        "label": "node",
+        "units": "deg"
+      },
+      {
+        "value": "199.2882571139708",
+        "sigma": ".1666",
+        "name": "w",
+        "title": "argument of perihelion",
+        "label": "peri",
+        "units": "deg"
+      },
+      {
+        "value": "354.9604825215893",
+        "sigma": ".22052",
+        "name": "ma",
+        "title": "mean anomaly",
+        "label": "M",
+        "units": "deg"
+      },
+      {
+        "value": "2459816.403381329214",
+        "sigma": ".062489",
+        "name": "tp",
+        "title": "time of perihelion passage",
+        "label": "tp",
+        "units": "TDB"
+      },
+      {
+        "value": "2081.511959247761",
+        "sigma": "87.413",
+        "name": "per",
+        "title": "sidereal orbital period",
+        "label": "period",
+        "units": "d"
+      },
+      {
+        "value": ".1729512042439096",
+        "sigma": ".0072631",
+        "name": "n",
+        "title": "mean motion",
+        "label": "n",
+        "units": "deg/d"
+      },
+      {
+        "value": "5.406571117648739",
+        "sigma": ".15137",
+        "name": "ad",
+        "title": "aphelion distance",
+        "label": "Q",
+        "units": "au"
+      }
+    ],
+    "equinox": "J2000",
+    "data_arc": "7",
+    "not_valid_after": null,
+    "n_del_obs_used": null,
+    "sb_used": "SB441-N16",
+    "n_obs_used": "12",
+    "comment": null,
+    "pe_used": "DE441",
+    "last_obs": "2022-07-30",
+    "moid": ".0130742",
+    "n_dop_obs_used": null
+  }
+}

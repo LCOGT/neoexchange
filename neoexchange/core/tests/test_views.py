@@ -3692,7 +3692,7 @@ class TestUpdateMPCObs(TestCase):
         self.assertEqual(num_lines, len(lines)-1)
 
 
-class TestCleanMPCOrbit(TestCase):
+class TestCleanMPCOrbit(SimpleTestCase):
 
     def setUp(self):
         # Read and make soup from a static version of the HTML table/page for
@@ -3935,6 +3935,63 @@ class TestCleanMPCOrbit(TestCase):
 
         self.assertEqual(self.expected_mulepoch_Mar18_params, params)
 
+
+class TestCleanJPLOrbit(SimpleTestCase):
+    def setUp(self):
+        with open(os.path.join('astrometrics', 'tests', 'test_jpl_73P-BV.jpl'), 'r') as fh:
+            self.test_resp_73P_BV = json.load(fh)
+
+        self.expected_elements_73P_BV = { 'active' : True,
+                                          'origin' : 'J',
+                                          'elements_type' : 'MPC_COMET',
+                                          'abs_mag' : 17.208,
+                                          'epochofel' : datetime(2022, 7, 26, 18, 21, 36, 328314),
+                                          'eccentricity' : 0.6946041448624322,
+                                          'perihdist' : 0.9743540489041187,
+                                          'epochofperih' : datetime(2022, 8, 24, 21, 40, 52, 146828),
+                                          'longascnode' : 69.49690472056997,
+                                          'argofperih' : 199.2882571139708,
+                                          'orbinc' : 11.23392044527141,
+                                          'meandist' : 3.190462583276429,
+                                          'meananom' : 354.9604825216212,
+                                          'orbit_rms' : 0.91715,
+                                          'arc_length' : 7.0,
+                                          'not_seen' : -42 # not checked, depends on current datetime
+                                        }
+        self.maxDiff = None
+        self.precision = 7
+
+    def compare_elements(self, expected_elements, elements):
+        self.assertEqual(len(expected_elements), len(elements))
+        for k, v in expected_elements.items():
+            if k != 'not_seen':
+                try:
+                    self.assertAlmostEqual(v, elements[k], self.precision, msg=f"Failure on {k}: {v} != {elements[k]} to {self.precision} places")
+                except TypeError:
+                    self.assertEqual(v, elements[k])
+
+    def test_none_resp(self):
+        elements = clean_jplorbit(None)
+
+        self.assertEqual({}, elements)
+
+    def test_empty_resp(self):
+        elements = clean_jplorbit({})
+
+        self.assertEqual({}, elements)
+
+    def test_73P_BV(self):
+
+        elements = clean_jplorbit(self.test_resp_73P_BV)
+
+        self.compare_elements(self.expected_elements_73P_BV, elements)
+
+    def test_73P_BV_LOOK_origin(self):
+        self.expected_elements_73P_BV['origin'] = 'O'
+
+        elements = clean_jplorbit(self.test_resp_73P_BV, origin='O')
+
+        self.compare_elements(self.expected_elements_73P_BV, elements)
 
 class TestCreate_sourcemeasurement(TestCase):
 
