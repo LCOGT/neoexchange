@@ -3517,7 +3517,7 @@ def run_sextractor_make_catalog(configs_dir, dest_dir, fits_file, checkimage_typ
 
 
 def run_swarp_make_reference(ref_dir, configs_dir, dest_dir):
-    """ Creates a weight image for each .FITS image in <ref_dir> using SExtractor,
+    """ Creates an RMS image and a weight image for each .FITS image in <ref_dir> using SExtractor,
     then coadds all the images into a single reference image using SWarp.
     The results and any temporary files are created in <dest_dir>.
     """
@@ -3538,7 +3538,7 @@ def run_swarp_make_reference(ref_dir, configs_dir, dest_dir):
             if sext_status != 0:
                 return sext_status
         else:
-            print(f"RMS image {rms_image} already exists")
+            print(f"{rms_image} already exists. Using existing RMS image...")
 
     swarp_status = run_swarp(configs_dir, dest_dir, ref_files)
 

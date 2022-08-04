@@ -695,6 +695,7 @@ class TestSwarpRunner(ExternalCodeUnitTest):
         status = run_swarp(self.source_dir, self.test_dir, [self.test_banzai_file_COPIED], dbg=False)
 
         self.assertEqual(expected_status, status)
+        self.assertTrue(os.path.exists(os.path.join(self.test_dir, "reference.weight.fits")))
 
 
 class TestSwarpAlignRunner(ExternalCodeUnitTest):
