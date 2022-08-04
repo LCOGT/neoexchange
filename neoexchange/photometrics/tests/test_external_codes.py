@@ -455,6 +455,14 @@ class TestSCAMPRunner(ExternalCodeUnitTest):
 
 
 class TestSExtractorRunner(ExternalCodeUnitTest):
+    def setUp(self):
+        super(TestSExtractorRunner, self).setUp()
+
+        # needs to modify the original image for LDAC catalog_type
+        shutil.copy(os.path.abspath(self.test_fits_file), self.test_dir)
+        self.test_fits_file_COPIED = os.path.join(self.test_dir, 'example-sbig-e10.fits')
+
+        self.remove = True
 
     def test_setup_sextractor_dir_bad_destdir(self):
 
@@ -533,15 +541,16 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
         expected_status = 0
         expected_line1 = '#   1 NUMBER                 Running object number'
 
-        status = run_sextractor(self.source_dir, self.test_dir, self.test_fits_file, checkimage_type=['BACKGROUND_RMS'], catalog_type='ASCII')
+        status = run_sextractor(self.source_dir, self.test_dir, self.test_fits_file_COPIED, checkimage_type=['BACKGROUND_RMS'], catalog_type='ASCII')
 
         self.assertEqual(expected_status, status)
 
         if self.debug_print:
             print(glob(os.path.join(self.test_dir, '*')))
-        output_cat = os.path.join(self.test_dir, 'test.cat')
-        self.assertTrue(os.path.exists(output_cat))
-        test_fh = open(output_cat, 'r')
+
+        self.expected_catalog_name = os.path.join(self.test_dir, 'example-sbig-e10_ldac.fits')
+        self.assertTrue(os.path.exists(self.expected_catalog_name))
+        test_fh = open(self.expected_catalog_name, 'r')
         test_lines = test_fh.readlines()
         test_fh.close()
 
