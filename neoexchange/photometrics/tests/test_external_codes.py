@@ -47,6 +47,8 @@ class ExternalCodeUnitTest(TestCase):
         self.testfits_dir = os.path.abspath(os.path.join('photometrics', 'tests'))
         self.test_fits_file = os.path.abspath(os.path.join(self.testfits_dir, 'example-sbig-e10.fits'))
         self.test_fits_catalog = os.path.abspath(os.path.join(self.testfits_dir, 'ldac_test_catalog.fits'))
+        self.test_banzai_file = os.path.abspath(os.path.join(self.testfits_dir, 'banzai_test_frame.fits'))
+        self.test_banzai_rms_file = os.path.abspath(os.path.join(self.testfits_dir, 'banzai_test_frame.rms.fits'))
 
         self.test_GAIADR2_catalog = os.path.abspath(os.path.join('photometrics', 'tests', 'GAIA-DR2.cat'))
 
@@ -586,7 +588,6 @@ class TestSwarpRunner(ExternalCodeUnitTest):
         self.test_banzai_file_COPIED = os.path.join(self.test_dir, os.path.basename('banzai_test_frame.fits'))
 
         """banzai_test_frame.rms.fits"""
-        self.test_banzai_rms_file = os.path.join(self.testfits_dir, 'banzai_test_frame.rms.fits')
         shutil.copy(os.path.abspath(self.test_banzai_rms_file), self.test_dir)
 
 
@@ -699,19 +700,6 @@ class TestSwarpRunner(ExternalCodeUnitTest):
 
 
 class TestSwarpAlignRunner(ExternalCodeUnitTest):
-    def setUp(self):
-        super(TestSwarpAlignRunner, self).setUp()
-
-        """banzai_test_frame.fits"""
-        self.test_banzai_file = os.path.join(self.testfits_dir, 'banzai_test_frame.fits')
-
-        # hotpants requires a reference rms image
-        """banzai_test_frame.rms.fits"""
-        self.test_banzai_rms_file = os.path.join(self.testfits_dir, 'banzai_test_frame.rms.fits')
-        #shutil.copy(os.path.abspath(self.test_banzai_rms_file), self.test_dir)
-
-
-        self.remove = True
 
     def test_make_ref_head(self):
 
@@ -836,14 +824,11 @@ class TestHotpantsRunner(ExternalCodeUnitTest):
     def setUp(self):
         super(TestHotpantsRunner, self).setUp()
 
-        """banzai_test_frame.fits"""
-        self.test_banzai_file = os.path.join(self.testfits_dir, 'banzai_test_frame.fits')
+        # needs to modify the original image when running sextractor
         shutil.copy(os.path.abspath(self.test_banzai_file), self.test_dir)
         self.test_banzai_file_COPIED = os.path.join(self.test_dir, 'banzai_test_frame.fits')
 
-        # hotpants requires a reference rms image
-        """banzai_test_frame.rms.fits"""
-        self.test_banzai_rms_file = os.path.join(self.testfits_dir, 'banzai_test_frame.rms.fits')
+        # hotpants requires a reference rms image in the dest_dir
         shutil.copy(os.path.abspath(self.test_banzai_rms_file), self.test_dir)
 
 
@@ -948,9 +933,8 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
         super(TestDetermineSExtOptions, self).setUp()
 
         # Copy BANZAI test file to test_dir to allow mods
-        orig_banzai_file = os.path.join(self.testfits_dir, 'banzai_test_frame.fits')
-        shutil.copy(orig_banzai_file, self.test_dir)
-        self.test_banzai_file = os.path.join(self.test_dir, os.path.basename(orig_banzai_file))
+        shutil.copy(self.test_banzai_file, self.test_dir)
+        self.test_banzai_file_COPIED = os.path.join(self.test_dir, 'banzai_test_frame.fits')
 
         self.expected_catalog_name = os.path.join(self.test_dir, 'example-sbig-e10_ldac.fits')
         self.expected_banzai_catalog_name = os.path.join(self.test_dir, 'banzai_test_frame_ldac.fits')
@@ -1008,7 +992,7 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
 
     def test_banzai_no_secpix_no_checkimages(self):
         # Butcher the FITS header to make it look like a Sinistro frame
-        with fits.open(self.test_banzai_file, mode='update') as hdulist:
+        with fits.open(self.test_banzai_file_COPIED, mode='update') as hdulist:
             header = hdulist[0].header
             header['gain'] = 1.0
             header['saturate'] = 128000
@@ -1021,13 +1005,13 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
         # No checkimages
         expected_options = f'-GAIN 1.0 -PIXEL_SCALE 0.38903 -SATUR_LEVEL 120000 -CATALOG_NAME {self.expected_banzai_catalog_name} -BACK_SIZE 42'
 
-        options = determine_sextractor_options(self.test_banzai_file, self.test_dir)
+        options = determine_sextractor_options(self.test_banzai_file_COPIED, self.test_dir)
 
         self.assertEqual(expected_options, options)
 
     def test_banzai_no_secpix_bad_maxlin_no_checkimages(self):
         # Butcher the FITS header to make it look like a Sinistro frame
-        with fits.open(self.test_banzai_file, mode='update') as hdulist:
+        with fits.open(self.test_banzai_file_COPIED, mode='update') as hdulist:
             header = hdulist[0].header
             header['gain'] = 1.0
             header['saturate'] = 128000
@@ -1040,13 +1024,13 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
         # No checkimages
         expected_options = f'-GAIN 1.0 -PIXEL_SCALE 0.38903 -SATUR_LEVEL 128000 -CATALOG_NAME {self.expected_banzai_catalog_name} -BACK_SIZE 42'
 
-        options = determine_sextractor_options(self.test_banzai_file, self.test_dir)
+        options = determine_sextractor_options(self.test_banzai_file_COPIED, self.test_dir)
 
         self.assertEqual(expected_options, options)
 
     def test_banzai_no_secpix_bad_maxlin_saturate_no_checkimages(self):
         # Butcher the FITS header to make it look like a Sinistro frame
-        with fits.open(self.test_banzai_file, mode='update') as hdulist:
+        with fits.open(self.test_banzai_file_COPIED, mode='update') as hdulist:
             header = hdulist[0].header
             header['gain'] = 1.0
             header['saturate'] = 0
@@ -1059,7 +1043,7 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
         # No SATURATE or maxlin, should be null
         expected_options = ''
 
-        options = determine_sextractor_options(self.test_banzai_file, self.test_dir)
+        options = determine_sextractor_options(self.test_banzai_file_COPIED, self.test_dir)
 
         self.assertEqual(expected_options, options)
 
@@ -1093,14 +1077,11 @@ class TestDetermineHotpantsOptions(ExternalCodeUnitTest):
     def setUp(self):
         super(TestDetermineHotpantsOptions, self).setUp()
 
-        """banzai_test_frame.fits"""
-        self.test_banzai_file = os.path.join(self.testfits_dir, 'banzai_test_frame.fits')
+        # needs to modify the original image when running sextractor
         shutil.copy(os.path.abspath(self.test_banzai_file), self.test_dir)
         self.test_banzai_file_COPIED = os.path.join(self.test_dir, 'banzai_test_frame.fits')
 
-        # hotpants requires a reference rms image
-        """banzai_test_frame.rms.fits"""
-        self.test_banzai_rms_file = os.path.join(self.testfits_dir, 'banzai_test_frame.rms.fits')
+        # hotpants requires a reference rms image in the dest_dir
         shutil.copy(os.path.abspath(self.test_banzai_rms_file), self.test_dir)
 
 
@@ -1410,15 +1391,15 @@ class TestUpdateFITScalib(TestCase):
 
     def setUp(self):
 
-        input_banzai_file = os.path.abspath(os.path.join('photometrics', 'tests', 'banzai_test_frame.fits'))
+        self.test_banzai_file = os.path.abspath(os.path.join('photometrics', 'tests', 'banzai_test_frame.fits'))
 
         self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
 
         # Need to copy files as we're modifying them. Example does not have existing L1ZP etc
-        self.test_banzai_file = os.path.abspath(os.path.join(self.test_dir, 'example-banzai-e92_output.fits'))
-        shutil.copy(input_banzai_file, self.test_banzai_file)
+        self.banzai_file_output = os.path.abspath(os.path.join(self.test_dir, 'example-banzai-e92_output.fits'))
+        shutil.copy(self.test_banzai_file, self.banzai_file_output)
 
-        self.test_header, self.test_cattype = get_header(self.test_banzai_file)
+        self.test_header, self.test_cattype = get_header(self.banzai_file_output)
 
         self.precision = 7
         self.debug_print = False
@@ -1451,7 +1432,7 @@ class TestUpdateFITScalib(TestCase):
     def test_bad_type(self):
         expected_status = (-2, None)
 
-        status = updateFITScalib({}, self.test_banzai_file, 'ASCII')
+        status = updateFITScalib({}, self.banzai_file_output, 'ASCII')
 
         self.assertEqual(expected_status, status)
 
@@ -1467,7 +1448,7 @@ class TestUpdateFITScalib(TestCase):
                               'zeropoint_src' : 'L1ZPSRC',
                             }
 
-        status, new_header = updateFITScalib(header,  self.test_banzai_file)
+        status, new_header = updateFITScalib(header,  self.banzai_file_output)
 
         self.assertEqual(expected_status, status)
 
@@ -1480,7 +1461,7 @@ class TestUpdateFITScalib(TestCase):
         header['zeropoint'] = 28.01
         header['zeropoint_err'] = 0.012
         header['zeropoint_src'] = 'py_zp_cvc-V0.1'
-        with fits.open(self.test_banzai_file, mode='update') as hdul:
+        with fits.open(self.banzai_file_output, mode='update') as hdul:
             fits_header = hdul[0].header
             fits_header.set('L1ZP', 30.3, after='L1ELLIPA')
             fits_header.set('L1ZPERR', 0.003, after='L1ZP')
@@ -1492,7 +1473,7 @@ class TestUpdateFITScalib(TestCase):
                               'zeropoint_src' : 'L1ZPSRC',
                             }
 
-        status, new_header = updateFITScalib(header,  self.test_banzai_file)
+        status, new_header = updateFITScalib(header,  self.banzai_file_output)
 
         self.assertEqual(expected_status, status)
 
@@ -1518,7 +1499,7 @@ class TestUpdateFITScalib(TestCase):
                               'color_err' : 'L1COLERR',
                             }
 
-        status, new_header = updateFITScalib(header,  self.test_banzai_file)
+        status, new_header = updateFITScalib(header,  self.banzai_file_output)
 
         self.assertEqual(expected_status, status)
 
