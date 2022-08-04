@@ -2809,8 +2809,18 @@ def read_solar_standards(standards_file):
     return standards
 
 
+def fetch_jpl_orbit(body):
+    """Function to fetch orbit, physical parameters, and discovery details from
+    JPL SBDB (Small-Body DataBase) API (online) for a NEOx Body <body>"""
+    jpl_url_base = 'https://ssd-api.jpl.nasa.gov/sbdb.api'
+    request_url = jpl_url_base + '?sstr={}&phys-par=Y&alt-des=Y&no-orbit=N&full-prec=Y'.format(body.current_name())
+    resp = requests.get(request_url, timeout=20, verify=True).json()
+
+    return resp
+
+
 def fetch_jpl_physparams_altdes(body):
-    """Function to fetch physical parameters, designations, source types, and subtypes from JPL Horizons (online)"""
+    """Function to fetch physical parameters, designations, source types, and subtypes from JPL SBDB (Small-Body DataBase) API (online)"""
     jpl_url_base = 'https://ssd-api.jpl.nasa.gov/sbdb.api'
     request_url = jpl_url_base + '?sstr={}&phys-par=Y&alt-des=Y&no-orbit=Y'.format(body.current_name())
     resp = requests.get(request_url, timeout=20, verify=True).json()
@@ -2819,7 +2829,7 @@ def fetch_jpl_physparams_altdes(body):
 
 
 def store_jpl_physparams(phys_par, body):
-    """Function to store object physical parameters from JPL Horizons"""
+    """Function to store object physical parameters from JPL SBDB (Small-Body DataBase)"""
 
     # parsing the JPL physparams dictionary
     for p in phys_par:
