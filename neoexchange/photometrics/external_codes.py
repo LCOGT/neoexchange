@@ -26,7 +26,7 @@ from glob import glob
 
 from astropy.io import fits
 from astropy.io.votable import parse
-from astropy.wcs import WCS
+from astropy.wcs import WCS, FITSFixedWarning, InvalidTransformError
 from astropy.wcs.utils import proj_plane_pixel_scales
 from numpy import loadtxt, split, empty, median, absolute, sqrt
 
@@ -244,7 +244,6 @@ def determine_sextractor_options(fits_file, dest_dir, checkimage_type=[]):
     # command line options
     option_mapping = OrderedDict([
                         ('gain'      , '-GAIN'),
-                        ('zeropoint' , '-MAG_ZEROPOINT'),
                         ('pixel_scale' , '-PIXEL_SCALE'),
                         ('saturation'  , '-SATUR_LEVEL'),
                      ])
@@ -260,11 +259,35 @@ def determine_sextractor_options(fits_file, dest_dir, checkimage_type=[]):
         return options
 
     header = hdulist[0].header
-    header_mapping, table_mapping = oracdr_catalog_mapping()
+    # Suppress warnings from newer astropy versions which raise
+    # FITSFixedWarning on the lack of OBSGEO-L,-B,-H keywords even
+    # though we have OBSGEO-X,-Y,-Z as recommended by the FITS
+    # Paper VII standard...
+    warnings.simplefilter('ignore', category=FITSFixedWarning)
+    try:
+        fits_wcs = WCS(header)
+    except InvalidTransformError:
+        raise NeoException('Invalid WCS solution')
+
+    header_mapping, table_mapping = banzai_catalog_mapping()
 
     for option in option_mapping.keys():
-        if header.get(header_mapping[option], -99) != -99:
-            options += option_mapping[option] + ' ' + str(header.get(header_mapping[option])) + ' '
+        keyword = header_mapping[option]
+        if keyword == '<MAXLIN>':
+            # See if MAXLIN is present and non-zero; if not use SATURATE
+            value = header.get('MAXLIN', -99)
+            if value < 1.0:
+                value = header.get('SATURATE', -99)
+                if value < 1.0:
+                    logger.error("No valid MAXLIN or SATURATE present")
+                    return ''
+        elif keyword == '<WCS>':
+            pixscale = proj_plane_pixel_scales(fits_wcs).mean()*3600.0
+            value = round(pixscale, 5)
+        else:
+            value = header.get(keyword, -99)
+        if value != -99:
+            options += option_mapping[option] + ' ' + str(value) + ' '
     options = options.rstrip()
 
     # Add output catalog file name

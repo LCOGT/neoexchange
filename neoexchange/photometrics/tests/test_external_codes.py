@@ -946,7 +946,13 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
     def setUp(self):
         super(TestDetermineSExtOptions, self).setUp()
 
+        # Copy BANZAI test file to test_dir to allow mods
+        orig_banzai_file = os.path.join(self.testfits_dir, 'banzai_test_frame.fits')
+        shutil.copy(orig_banzai_file, self.test_dir)
+        self.test_banzai_file = os.path.join(self.test_dir, os.path.basename(orig_banzai_file))
+
         self.expected_catalog_name = os.path.join(self.test_dir, 'example-sbig-e10_ldac.fits')
+        self.expected_banzai_catalog_name = os.path.join(self.test_dir, 'banzai_test_frame_ldac.fits')
 
         # Disable anything below CRITICAL level
         logging.disable(logging.CRITICAL)
@@ -967,7 +973,7 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
 
     def test_no_checkimages(self):
         # No checkimages
-        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.467 -SATUR_LEVEL 46000 -CATALOG_NAME {self.expected_catalog_name} -BACK_SIZE 42'
+        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 46000 -CATALOG_NAME {self.expected_catalog_name} -BACK_SIZE 42'
 
         options = determine_sextractor_options(self.test_fits_file, self.test_dir)
 
@@ -977,7 +983,7 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
 
         # Single checkimage
         checkimage_name = os.path.join(self.test_dir, 'example-sbig-e10.rms.fits')
-        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.467 -SATUR_LEVEL 46000 -CATALOG_NAME {self.expected_catalog_name} -CHECKIMAGE_TYPE BACKGROUND_RMS -CHECKIMAGE_NAME {checkimage_name} -BACK_SIZE 42'
+        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 46000 -CATALOG_NAME {self.expected_catalog_name} -CHECKIMAGE_TYPE BACKGROUND_RMS -CHECKIMAGE_NAME {checkimage_name} -BACK_SIZE 42'
 
         options = determine_sextractor_options(self.test_fits_file, self.test_dir, checkimage_type=['BACKGROUND_RMS'])
 
@@ -986,7 +992,7 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
         # Multiple checkimages
         rms_name = os.path.join(self.test_dir, 'example-sbig-e10.rms.fits')
         bkgsub_name = os.path.join(self.test_dir, 'example-sbig-e10.bkgsub.fits')
-        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.467 -SATUR_LEVEL 46000 -CATALOG_NAME {self.expected_catalog_name} -CHECKIMAGE_TYPE BACKGROUND_RMS,-BACKGROUND -CHECKIMAGE_NAME {rms_name},{bkgsub_name} -BACK_SIZE 42'
+        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 46000 -CATALOG_NAME {self.expected_catalog_name} -CHECKIMAGE_TYPE BACKGROUND_RMS,-BACKGROUND -CHECKIMAGE_NAME {rms_name},{bkgsub_name} -BACK_SIZE 42'
 
         options = determine_sextractor_options(self.test_fits_file, self.test_dir, checkimage_type=['BACKGROUND_RMS', '-BACKGROUND'])
 
@@ -998,6 +1004,63 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
         status = determine_sextractor_options(self.test_fits_file, self.test_dir, checkimage_type=['banana'])
 
         self.assertEqual(expected_status, status)
+
+    def test_banzai_no_secpix_no_checkimages(self):
+        # Butcher the FITS header to make it look like a Sinistro frame
+        with fits.open(self.test_banzai_file, mode='update') as hdulist:
+            header = hdulist[0].header
+            header['gain'] = 1.0
+            header['saturate'] = 128000
+            header['maxlin'] = 120000
+            new_scale = 0.389/3600.0
+            header['cd1_1'] = -new_scale
+            header['cd2_2'] = -new_scale
+            hdulist.flush()
+
+        # No checkimages
+        expected_options = f'-GAIN 1.0 -PIXEL_SCALE 0.38903 -SATUR_LEVEL 120000 -CATALOG_NAME {self.expected_banzai_catalog_name} -BACK_SIZE 42'
+
+        options = determine_sextractor_options(self.test_banzai_file, self.test_dir)
+
+        self.assertEqual(expected_options, options)
+
+    def test_banzai_no_secpix_bad_maxlin_no_checkimages(self):
+        # Butcher the FITS header to make it look like a Sinistro frame
+        with fits.open(self.test_banzai_file, mode='update') as hdulist:
+            header = hdulist[0].header
+            header['gain'] = 1.0
+            header['saturate'] = 128000
+            header['maxlin'] = 0.
+            new_scale = 0.389/3600.0
+            header['cd1_1'] = -new_scale
+            header['cd2_2'] = -new_scale
+            hdulist.flush()
+
+        # No checkimages
+        expected_options = f'-GAIN 1.0 -PIXEL_SCALE 0.38903 -SATUR_LEVEL 128000 -CATALOG_NAME {self.expected_banzai_catalog_name} -BACK_SIZE 42'
+
+        options = determine_sextractor_options(self.test_banzai_file, self.test_dir)
+
+        self.assertEqual(expected_options, options)
+
+    def test_banzai_no_secpix_bad_maxlin_saturate_no_checkimages(self):
+        # Butcher the FITS header to make it look like a Sinistro frame
+        with fits.open(self.test_banzai_file, mode='update') as hdulist:
+            header = hdulist[0].header
+            header['gain'] = 1.0
+            header['saturate'] = 0
+            del(header['maxlin'])
+            new_scale = 0.389/3600.0
+            header['cd1_1'] = -new_scale
+            header['cd2_2'] = -new_scale
+            hdulist.flush()
+
+        # No SATURATE or maxlin, should be null
+        expected_options = ''
+
+        options = determine_sextractor_options(self.test_banzai_file, self.test_dir)
+
+        self.assertEqual(expected_options, options)
 
 
 class TestDetermineSwarpOptions(ExternalCodeUnitTest):

@@ -719,7 +719,9 @@ def banzai_catalog_mapping():
                     'astrometric_fit_status' : 'WCSERR',
                     'astrometric_fit_nstars' : '<WCSMATCH>',
                     'astrometric_catalog'    : '<WCCATTYP>',
-                    'reduction_level'        : 'RLEVEL'
+                    'reduction_level'        : 'RLEVEL',
+                    'gain'          : 'GAIN',
+                    'saturation'    : '<MAXLIN>'
                   }
 
     table_dict = OrderedDict([
