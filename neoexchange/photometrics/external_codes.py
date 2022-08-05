@@ -259,9 +259,7 @@ def determine_sextractor_options(fits_file, dest_dir, checkimage_type=[], catalo
                      ])
 
     options = ''
-    if not os.path.exists(fits_file):
-        logger.error(f"FITS file {fits_file} does not exist")
-        return options
+
     try:
         hdulist = fits.open(fits_file)
     except IOError as e:
@@ -325,7 +323,7 @@ def determine_sextractor_options(fits_file, dest_dir, checkimage_type=[], catalo
 
         if None in checkimage_name:
             logger.error("At least one checkimage_type you have entered is not supported by NEOX.")
-            return -4
+            return -6
 
         checkimage_type_str = ','.join(checkimage_type)
         checkimage_name_str = ','.join(checkimage_name)
@@ -658,14 +656,19 @@ def add_l1filter(fits_file):
     """Adds a L1FILTER keyword into the <fits_file> with the same value
     as FILTER. If not found, nothing is done."""
 
-    hdulist = fits.open(fits_file, mode='update')
+    try:
+        hdulist = fits.open(fits_file, mode='update')
+    except:# IOError as e:
+        logger.error(f"Unable to open FITS image {fits_file} (Reason={e})")
+        return -99
+
     prihdr = hdulist[0].header
     filter_val = prihdr.get('FILTER', None)
     if filter_val:
         prihdr['L1FILTER'] = (filter_val, 'Copy of FILTER for SCAMP')
     hdulist.close()
 
-    return
+    return 0
 
 
 @timeit
@@ -684,15 +687,26 @@ def run_sextractor(source_dir, dest_dir, fits_file, checkimage_type=[], binary=N
         logger.error("Could not locate 'sex' executable in PATH")
         return -42
 
+    root_fits_file = fits_file
+    if '[SCI]' in fits_file:
+        # Banzai format, strip off extension
+        root_fits_file = fits_file.replace('[SCI]', '')
+
+    if not os.path.exists(root_fits_file):
+        logger.error(f"{root_fits_file} not found.")
+        return -4
+    if not root_fits_file.endswith(".fits"):
+        logger.error(f"{root_fits_file} does not end with .fits")
+        return -5
+
     # If we are making FITS_LDAC catalogs for SCAMP, we need to create a new
     # header keyword of L1FILTER and set the value to FILTER. This prevents
     # SCAMP false matching on the first FITS keyword starting with FILTER
     if catalog_type == 'FITS_LDAC' or catalog_type == 'FITS_LDAC_MULTIAPER':
-        root_fits_file = fits_file
-        if '[SCI]' in fits_file:
-            # Banzai format, strip off extension
-            root_fits_file = fits_file.replace('[SCI]', '')
-        add_l1filter(root_fits_file)
+
+        status = add_l1filter(root_fits_file)
+        if status != 0:
+            return status
 
     sextractor_config_file = default_sextractor_config_files(catalog_type)[0]
     if '[SCI]' in fits_file:

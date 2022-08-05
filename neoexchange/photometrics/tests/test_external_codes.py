@@ -546,17 +546,33 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
 
     def test_run_sextractor_nofile(self):
 
-        expected_cmdline = './sex  -c sextractor_neox.conf'
-        cmdline = run_sextractor(self.source_dir, self.test_dir, '', binary='./sex', catalog_type='ASCII', dbg=True)
+        expected_status = -4
 
-        self.assertEqual(expected_cmdline, cmdline)
+        status = run_sextractor(self.source_dir, self.test_dir, '')
+        self.assertEqual(expected_status, status)
 
-    def test_run_sextractor_file(self):
+        status = run_sextractor(self.source_dir, self.test_dir, '', catalog_type='ASCII')
+        self.assertEqual(expected_status, status)
 
-        expected_cmdline = './sex foo.fits -c sextractor_neox.conf'
-        cmdline = run_sextractor(self.source_dir, self.test_dir, 'foo.fits', binary='./sex', catalog_type='ASCII', dbg=True)
+    def test_run_sextractor_nonfits(self):
 
-        self.assertEqual(expected_cmdline, cmdline)
+        expected_status = -5
+
+        status = run_sextractor(self.source_dir, self.test_dir, self.test_GAIADR2_catalog)
+        self.assertEqual(expected_status, status)
+
+        status = run_sextractor(self.source_dir, self.test_dir, self.test_GAIADR2_catalog, catalog_type='ASCII')
+        self.assertEqual(expected_status, status)
+
+    def test_run_sextractor_nonfits_sci(self):
+
+        expected_status = -5
+
+        status = run_sextractor(self.source_dir, self.test_dir, self.test_GAIADR2_catalog + '[SCI]')
+        self.assertEqual(expected_status, status)
+
+        status = run_sextractor(self.source_dir, self.test_dir, self.test_GAIADR2_catalog + '[SCI]', catalog_type='ASCII')
+        self.assertEqual(expected_status, status)
 
     @skipIf(find_binary("sex") is None, "Could not find SExtractor binary ('sex') in PATH")
     def test_run_sextractor_realfile(self):
@@ -993,13 +1009,6 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
         # Disable anything below CRITICAL level
         logging.disable(logging.CRITICAL)
 
-    def test_nofile(self):
-        expected_options = ''
-
-        options = determine_sextractor_options('wibble', self.test_dir)
-
-        self.assertEqual(expected_options, options)
-
     def test_badfile(self):
         expected_options = ''
 
@@ -1039,8 +1048,7 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
 
         self.assertEqual(expected_options, options)
 
-    def test_checkimages(self):
-
+    def test_one_checkimage(self):
         # Single checkimage
         checkimage_name = os.path.join(self.test_dir, 'example-sbig-e10.rms.fits')
         expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 46000 -CATALOG_NAME {self.expected_catalog_name} -CHECKIMAGE_TYPE BACKGROUND_RMS -CHECKIMAGE_NAME {checkimage_name} -BACK_SIZE 42'
@@ -1049,6 +1057,7 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
 
         self.assertEqual(expected_options, options)
 
+    def test_multiple_checkimages(self):
         # Multiple checkimages
         rms_name = os.path.join(self.test_dir, 'example-sbig-e10.rms.fits')
         bkgsub_name = os.path.join(self.test_dir, 'example-sbig-e10.bkgsub.fits')
@@ -1058,8 +1067,18 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
 
         self.assertEqual(expected_options, options)
 
+    def test_multiple_checkimages2(self):
+        # Multiple checkimages (REVERSED ORDER)
+        rms_name = os.path.join(self.test_dir, 'example-sbig-e10.rms.fits')
+        bkgsub_name = os.path.join(self.test_dir, 'example-sbig-e10.bkgsub.fits')
+        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 46000 -CATALOG_NAME {self.expected_catalog_name} -CHECKIMAGE_TYPE -BACKGROUND,BACKGROUND_RMS -CHECKIMAGE_NAME {bkgsub_name},{rms_name} -BACK_SIZE 42'
+
+        options = determine_sextractor_options(self.test_fits_file, self.test_dir, checkimage_type=['-BACKGROUND', 'BACKGROUND_RMS'])
+
+        self.assertEqual(expected_options, options)
+
     def test_bad_checkimage(self):
-        expected_status = -4
+        expected_status = -6
 
         status = determine_sextractor_options(self.test_fits_file, self.test_dir, checkimage_type=['banana'])
 
