@@ -453,7 +453,6 @@ class TestSCAMPRunner(ExternalCodeUnitTest):
         self.assertEqual(expected_line1, test_lines[3].rstrip())
 
 
-
 class TestSExtractorRunner(ExternalCodeUnitTest):
     def setUp(self):
         super(TestSExtractorRunner, self).setUp()
@@ -462,7 +461,17 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
         shutil.copy(os.path.abspath(self.test_fits_file), self.test_dir)
         self.test_fits_file_COPIED = os.path.join(self.test_dir, 'example-sbig-e10.fits')
 
+        # Disable anything below CRITICAL level as code is "noisy"
+        logging.disable(logging.CRITICAL)
+
         self.remove = True
+        self.debug_print = False
+
+    def tearDown(self):
+        super(TestSExtractorRunner, self).tearDown()
+
+        if self.remove is False and self.debug_print is True:
+            print(f"Test directory= {self.test_dir}")
 
     def test_setup_sextractor_dir_bad_destdir(self):
 
@@ -486,6 +495,20 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
         expected_status = 0
 
         status = setup_sextractor_dir(self.source_dir, self.test_dir)
+
+        self.assertEqual(expected_status, status)
+
+        for config_file in expected_configs:
+            test_file = os.path.join(self.test_dir, config_file)
+            self.assertTrue(os.path.exists(test_file), msg=config_file + ' is missing')
+
+    def test_setup_sextractor_dir_ascii(self):
+
+        expected_configs = ['sextractor_neox.conf',
+                            'sextractor_ascii.params']
+        expected_status = 0
+
+        status = setup_sextractor_dir(self.source_dir, self.test_dir, catalog_type='ASCII')
 
         self.assertEqual(expected_status, status)
 
@@ -548,7 +571,7 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
         if self.debug_print:
             print(glob(os.path.join(self.test_dir, '*')))
 
-        self.expected_catalog_name = os.path.join(self.test_dir, 'example-sbig-e10_ldac.fits')
+        self.expected_catalog_name = os.path.join(self.test_dir, 'example-sbig-e10.cat')
         self.assertTrue(os.path.exists(self.expected_catalog_name))
         test_fh = open(self.expected_catalog_name, 'r')
         test_lines = test_fh.readlines()
@@ -562,18 +585,36 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
         output_rms = os.path.join(self.test_dir, os.path.basename(self.test_fits_file.replace('.fits', '.rms.fits')))
         self.assertTrue(os.path.exists(output_rms))
 
-    def test_setup_ldac_sextractor_dir(self):
+    @skipIf(find_binary("sex") is None, "Could not find SExtractor binary ('sex') in PATH")
+    def test_run_sextractor_realfile_defaultldac(self):
 
-        expected_configs = default_sextractor_config_files(catalog_type='FITS_LDAC')
         expected_status = 0
+        expected_hdus = ['PRIMARY', 'LDAC_IMHEAD', 'LDAC_OBJECTS']
+        expected_row1 = (1, 106.72158852039514, 25.649854272268744, 215.6548927631294, -39.477292362087034, 2.3552754168060627e-11, 1.653809750683626e-11, 0.00213810408831188, 0.0020694796910492633, 107, 26, 5.718054717711681, 3.898199662063792, 0.21701803052330249, 2.020644, 1.8051586, 10.109293, 0.046268698, 0.04546198, 10.987773, 26001.604, 635.868, 8520.073, 138.29593, 670.50024, 3.3191917, -10.925921, 0.025971856, 498.63678, -6.374261, 78, 0.17886513, 78, 71, 56, 46, 37, 25, 15, 4, 6.396605, 0.9479728, 0, 0)
 
-        status = setup_sextractor_dir(self.source_dir, self.test_dir, catalog_type='FITS_LDAC')
+        status = run_sextractor(self.source_dir, self.test_dir, self.test_fits_file_COPIED, checkimage_type=['BACKGROUND_RMS'])
 
         self.assertEqual(expected_status, status)
 
-        for config_file in expected_configs:
-            test_file = os.path.join(self.test_dir, config_file)
-            self.assertTrue(os.path.exists(test_file), msg=config_file + ' is missing')
+        if self.debug_print:
+            print(glob(os.path.join(self.test_dir, '*')))
+
+        self.expected_catalog_name = os.path.join(self.test_dir, 'example-sbig-e10_ldac.fits')
+        self.assertTrue(os.path.exists(self.expected_catalog_name))
+        hdulist = fits.open(self.expected_catalog_name)
+        self.assertEqual(len(expected_hdus), len(hdulist))
+        for i, hdu in enumerate(hdulist):
+            self.assertEqual(expected_hdus[i], hdu.name)
+
+        # Expected value is 982 lines of FITS header plus 270 sources
+        self.assertEqual(982, len(hdulist['LDAC_IMHEAD'].data[0][0]))
+        tbl_data = hdulist['LDAC_OBJECTS'].data
+        self.assertEqual(270, len(tbl_data))
+        assert_allclose(expected_row1, tbl_data[0], 6)
+        hdulist.close()
+
+        output_rms = os.path.join(self.test_dir, os.path.basename(self.test_fits_file.replace('.fits', '.rms.fits')))
+        self.assertTrue(os.path.exists(output_rms))
 
 
 class TestSwarpRunner(ExternalCodeUnitTest):
@@ -946,6 +987,7 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
         self.test_banzai_file_COPIED = os.path.join(self.test_dir, 'banzai_test_frame.fits')
 
         self.expected_catalog_name = os.path.join(self.test_dir, 'example-sbig-e10_ldac.fits')
+        self.expected_ascii_catalog_name = os.path.join(self.test_dir, 'example-sbig-e10.cat')
         self.expected_banzai_catalog_name = os.path.join(self.test_dir, 'banzai_test_frame_ldac.fits')
 
         # Disable anything below CRITICAL level
@@ -970,6 +1012,30 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
         expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 46000 -CATALOG_NAME {self.expected_catalog_name} -BACK_SIZE 42'
 
         options = determine_sextractor_options(self.test_fits_file, self.test_dir)
+
+        self.assertEqual(expected_options, options)
+
+    def test_ascii_no_checkimages(self):
+        # No checkimages
+        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 46000 -CATALOG_NAME {self.expected_ascii_catalog_name} -BACK_SIZE 42'
+
+        options = determine_sextractor_options(self.test_fits_file, self.test_dir, catalog_type='ASCII')
+
+        self.assertEqual(expected_options, options)
+
+    def test_asciihead_no_checkimages(self):
+        # No checkimages
+        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 46000 -CATALOG_NAME {self.expected_ascii_catalog_name} -BACK_SIZE 42'
+
+        options = determine_sextractor_options(self.test_fits_file, self.test_dir, catalog_type='ASCII_HEAD')
+
+        self.assertEqual(expected_options, options)
+
+    def test_unknownhead_no_checkimages(self):
+        # No checkimages
+        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 46000 -CATALOG_NAME {self.expected_catalog_name} -BACK_SIZE 42'
+
+        options = determine_sextractor_options(self.test_fits_file, self.test_dir, catalog_type='POTATO_HEAD')
 
         self.assertEqual(expected_options, options)
 

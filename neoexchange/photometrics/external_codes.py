@@ -238,7 +238,17 @@ def setup_working_dir(source_dir, dest_dir, config_files):
 #
 
 
-def determine_sextractor_options(fits_file, dest_dir, checkimage_type=[]):
+def determine_sextractor_options(fits_file, dest_dir, checkimage_type=[], catalog_type='FITS_LDAC'):
+    """Determines and returns the SExtractor command line options string to use (which
+    override the deafults in the SExtractor config file) for FITS image file <fits_fits>
+    The following options are determined from the FITS file based on a header
+    mapping:
+    * -GAIN: FITS GAIN keyword
+    * -PIXEL_SCALE: Mean pixel scale from the WCS
+    * -SATUR_LEVEL: FITS MAXLIN keyword if present and good, otherwise SATURATE
+    [checkimage_type] can be 0 to 2 of 'BACKGROUND_RMS' and '-BACKGROUND' to
+    turn on output of the RMS or a background-subtracted image respectively.
+    """
 
     # Mapping keys in the generalized headers that NEOX uses to SExtractor
     # command line options
@@ -291,10 +301,13 @@ def determine_sextractor_options(fits_file, dest_dir, checkimage_type=[]):
     options = options.rstrip()
 
     # Add output catalog file name
-    ldac_output_catalog = os.path.basename(fits_file)
-    ldac_output_catalog = ldac_output_catalog.replace('[SCI]', '').replace('.fits', '_ldac.fits')
-    ldac_output_catalog = os.path.join(dest_dir, ldac_output_catalog)
-    options += f' -CATALOG_NAME {ldac_output_catalog}'
+    output_catalog = os.path.basename(fits_file)
+    extension = '_ldac.fits'
+    if catalog_type.startswith('ASCII'):
+        extension = '.cat'
+    output_catalog = output_catalog.replace('[SCI]', '').replace('.fits', extension)
+    output_catalog = os.path.join(dest_dir, output_catalog)
+    options += f' -CATALOG_NAME {output_catalog}'
 
     # SWarp requires an rms image later in the pipeline.
     # Hotpants requires a background-subtracted image later in the pipeline.
@@ -683,9 +696,9 @@ def run_sextractor(source_dir, dest_dir, fits_file, checkimage_type=[], binary=N
 
     sextractor_config_file = default_sextractor_config_files(catalog_type)[0]
     if '[SCI]' in fits_file:
-        options = determine_sextractor_options(root_fits_file, dest_dir, checkimage_type)
+        options = determine_sextractor_options(root_fits_file, dest_dir, checkimage_type, catalog_type)
     else:
-        options = determine_sextractor_options(fits_file, dest_dir, checkimage_type)
+        options = determine_sextractor_options(fits_file, dest_dir, checkimage_type, catalog_type)
 
     cmdline = "%s %s -c %s %s" % ( binary, fits_file, sextractor_config_file, options )
     cmdline = cmdline.rstrip()
