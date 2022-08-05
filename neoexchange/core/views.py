@@ -72,7 +72,7 @@ from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal,
     store_jpl_physparams
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
-from photometrics.external_codes import run_sextractor, run_swarp, run_scamp, updateFITSWCS,\
+from photometrics.external_codes import run_sextractor, run_swarp, run_hotpants, run_scamp, updateFITSWCS,\
     read_mtds_file, unpack_tarball, run_findorb
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     determine_filenames, increment_red_level, funpack_fits_file, update_ldac_catalog_wcs, FITSHdrException, \
@@ -3544,6 +3544,29 @@ def run_swarp_make_reference(ref_dir, configs_dir, dest_dir):
 
     return swarp_status
 
+def run_hotpants_subtraction(ref, sci_dir, configs_dir, dest_dir):
+    """ Subtracts the provided <ref> image from each of the .FITS images in <sci_dir>.
+    The results and any temporary files are created in <dest_dir>.
+
+    <ref> must be a file in <dest_dir> and must have an accompanying RMS image in the same folder.
+    Each image in <sci_dir> must have a corresponding RMS image and BKGSUB image in <dest_dir>."""
+
+    if sci_dir[-1] != os.path.sep:
+        sci_dir = sci_dir + os.path.sep
+
+    sci_files = glob(sci_dir + '*.fits')
+
+    if len(sci_files) == 0:
+        logger.error(f"There are no .fits files in {sci_dir}")
+        return
+
+    # Loop over each sci image and subtract it
+    for sci in sci_files:
+        status = run_hotpants(ref, sci, configs_dir, dest_dir)
+        if status != 0:
+            return status
+
+    return status
 
 def find_block_for_frame(catfile):
     """Try and find a Block for the original passed <catfile> filename (new style with
