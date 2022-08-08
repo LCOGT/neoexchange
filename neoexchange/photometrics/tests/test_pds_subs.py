@@ -9,6 +9,7 @@ from astropy.io import fits
 
 from core.models import Body, Designations, SuperBlock, Block, Frame
 from photometrics.pds_subs import *
+from photometrics.lightcurve_subs import read_photompipe_file, write_photompipe_file
 
 from unittest import skipIf
 from django.test import SimpleTestCase, TestCase
@@ -1862,6 +1863,43 @@ class TestExportBlockToPDS(TestCase):
         # Copy files to input directory, renaming log
         new_name = os.path.join(self.test_input_daydir, 'photometry_65803_Didymos__1996_GT.dat')
         shutil.copy(test_lc_file, new_name)
+        new_name = os.path.join(self.test_input_daydir, 'LOG')
+        shutil.copy(test_logfile, new_name)
+
+        dart_lc_file = create_dart_lightcurve(self.test_input_dir, self.test_ddp_daydir, self.test_block)
+
+        self.assertEqual(expected_lc_file, dart_lc_file)
+        self.assertTrue(os.path.exists(expected_lc_file))
+
+        with open(dart_lc_file, 'r') as table_file:
+            lines = table_file.readlines()
+
+        self.assertEqual(63, len(lines))
+        for i, expected_line in enumerate(expected_lines):
+            self.assertEqual(expected_line, lines[i].rstrip())
+
+    def test_create_dart_lightcurve_default_controlphot(self):
+        expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_tfn_fa11_20211013_12345_65803didymos_photometry.tab')
+        expected_lines = [
+        '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  SExtractor_flag  aprad',
+        ' tfn1m001-fa11-20211012-0073-e91.fits  2459500.3339392  14.8447  0.0397  27.1845  0.0394  -12.3397    0.0052                0  10.00',
+        ' tfn1m001-fa11-20211012-0074-e91.fits  2459500.3345790  14.8637  0.0293  27.1824  0.0288  -12.3187    0.0053                3  10.00'
+        ]
+
+        test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_photompipe.dat'))
+        test_logfile = os.path.abspath(os.path.join('photometrics', 'tests', 'example_photompipe_log'))
+        # Copy files to input directory, renaming log and photometry file to control star
+        new_name = os.path.join(self.test_input_daydir, 'photometry_65803_Didymos__1996_GT.dat')
+        shutil.copy(test_lc_file, new_name)
+        new_name = os.path.join(self.test_input_daydir, 'photometry_Control_Star.dat')
+        shutil.copy(test_lc_file, new_name)
+        # Open "control star photometry file, make brighter/higher SNR and re-save
+        table = read_photompipe_file(new_name)
+        table['mag'] -= 1.5
+        table['sig'] /= 3.75
+        table['in_sig'] /= 3.75
+        write_photompipe_file(table, new_name)
+        # Copy log and rename
         new_name = os.path.join(self.test_input_daydir, 'LOG')
         shutil.copy(test_logfile, new_name)
 

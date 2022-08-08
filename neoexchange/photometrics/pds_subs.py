@@ -1242,9 +1242,14 @@ def create_dart_lightcurve(input_dir, output_dir, block, match='photometry_*.dat
         if len(file_parts) == 8:
             root_dir = input_dir
             photometry_files = sorted(glob(os.path.join(root_dir, match)))
+            # Weed out Control_Star photometry files
+            photometry_files = [x for x in photometry_files if 'Control_Star' not in x]
+            # No matches, retry with dayobs added onto the path
             if len(photometry_files) == 0:
                 root_dir = os.path.join(input_dir, file_parts['dayobs'])
                 photometry_files = sorted(glob(os.path.join(root_dir, match)))
+                # Weed out Control_Star photometry files
+                photometry_files = [x for x in photometry_files if 'Control_Star' not in x]
             for photometry_file in photometry_files:
                 log_file = os.path.join(os.path.dirname(photometry_file), 'LOG')
                 table = read_photompipe_file(photometry_file)

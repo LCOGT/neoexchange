@@ -107,3 +107,51 @@ def write_dartformat_file(table, filepath, aprad=0.0):
         comment=False, delimiter='', formats=formatters)
 
     return
+
+def write_photompipe_file(table, filepath):
+    """Writes out the passed Astropy <table > in "photometrypipeline lightcurve format" to the
+    given <filepath>"""
+    with open(filepath,  'w') as out_fh:
+        # Write header
+        out_fh.write('#                           filename     julian_date      ' +
+                   'mag    sig     source_ra    source_dec   [1]   [2]   ' +
+                   '[3]   [4]    [5]       ZP ZP_sig inst_mag ' +
+                   'in_sig               [6] [7] [8]    [9]          [10] ' +
+                   'FWHM"\n')
+
+        # Iterate over rows
+        for row in table:
+            out_fh.write(('%35.35s ' % row['filename'].replace(' ', '_')) +
+                       ('%15.7f ' % row['julian_date']) +
+                       ('%8.4f ' % row['mag']) +
+                       ('%6.4f ' % row['sig']) +
+                       ('%13.8f ' % row['source_ra']) +
+                       ('%+13.8f ' % row['source_dec']) +
+                       ('%5.2f ' % row['[1]']) +
+                       ('%5.2f ' % row['[2]']) +
+                       ('%5.2f ' % row['[3]']) +
+                       ('%5.2f ' % row['[4]']) +
+                       ('%5.2f ' % row['[5]']) +
+                       ('%8.4f ' % row['ZP']) +
+                       ('%6.4f ' % row['ZP_sig']) +
+                       ('%8.4f ' % row['inst_mag']) +
+                       ('%6.4f ' % row['in_sig']) +
+                       ('%s ' % row['[6]']) +
+                       ('%s ' % row['[7]']) +
+                       ('%3d ' % row['[8]']) +
+                       ('%s' % row['[9]']) +
+                       ('%10s ' % row['[10]']) +
+                       ('%4.2f\n' % row['FWHM"']))
+
+        # Write footer
+        out_fh.writelines('#\n# [1]: predicted_RA - source_RA [arcsec]\n' +
+                        '# [2]: predicted_Dec - source_Dec [arcsec]\n' +
+                        '# [3,4]: manual target offsets in RA and DEC ' +
+                        '[arcsec]\n' +
+                        '# [5]: exposure time (s)\n' +
+                        '# [6]: photometric catalog\n' +
+                        '# [7]: photometric band\n' +
+                        '# [8]: Source Extractor flag\n' +
+                        '# [9]: telescope/instrument\n' +
+                        '# [10]: photometry method\n')
+    return
