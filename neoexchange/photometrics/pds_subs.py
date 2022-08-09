@@ -1,6 +1,7 @@
 import os
 import re
 import shutil
+import warnings
 from glob import glob
 from math import ceil
 from datetime import datetime, timedelta
@@ -9,6 +10,7 @@ from lxml import etree
 import astropy.units as u
 from astropy.time import Time
 from astropy.table import Column, Table
+from astropy.wcs import FITSFixedWarning
 from astropy.coordinates import SkyCoord
 from astropy.io.ascii.core import InconsistentTableError
 from django.conf import settings
@@ -1233,6 +1235,7 @@ def create_dart_lightcurve(input_dir, output_dir, block, match='photometry_*.dat
     for the photometry file
     """
 
+    warnings.simplefilter('ignore', FITSFixedWarning)
     output_lc_filepath = None
     frames = Frame.objects.filter(block=block, frametype=Frame.BANZAI_RED_FRAMETYPE)
     if frames.count() > 0:
@@ -1260,6 +1263,13 @@ def create_dart_lightcurve(input_dir, output_dir, block, match='photometry_*.dat
                     output_lc_file = f"lcogt_{file_parts['site']}_{file_parts['instrument']}_{file_parts['dayobs']}_{block.request_number}_{phot_filename}_photometry.tab"
                     output_lc_filepath = os.path.join(output_dir, output_lc_file)
                     write_dartformat_file(table, output_lc_filepath, aper_radius)
+                    # Create DART upload format symlink
+                    symlink_lc_file = f"LCOGT_{file_parts['site'].upper()}-{file_parts['instrument'].upper()}_Lister_{file_parts['dayobs']}.dat"
+                    dir_fh = os.open(output_dir, os.O_RDONLY)
+                    if os.path.exists(os.path.join(output_dir, symlink_lc_file)):
+                        os.remove(os.path.join(output_dir, symlink_lc_file))
+                    os.symlink(output_lc_file, symlink_lc_file, dir_fd=dir_fh)
+
         else:
             logger.warning(f"Could not decode filename: {first_filename}")
 
