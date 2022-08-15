@@ -347,7 +347,7 @@ class Command(BaseCommand):
                         if 'detail' not in header or header['detail'] !=  'Not found.':
                             for tempkey in temp_keywords:
                                 foc_temp = header['data'].get(tempkey, None)
-                                if foc_temp:
+                                if foc_temp is not None:
                                     print("Value of {key:8s}={val:.2f}".format(key=tempkey, val=foc_temp))
                                     if tempkey not in focus_temps:
                                         focus_temps[tempkey] = [foc_temp,]
