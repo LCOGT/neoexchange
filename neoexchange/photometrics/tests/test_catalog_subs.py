@@ -2416,16 +2416,8 @@ class TestExtractCatalog(FITSUnitTest):
         header, table = extract_catalog(test_ldacfilename, 'FITS_LDAC', remove=True)
 
         self.assertTrue(os.path.exists(test_ldacfilename))
-        #self.assertEqual(expected_hdr, header)
-        for key in expected_hdr:
-            if key != 'wcs':
-                self.assertEqual(expected_hdr[key], header[key])
-            else:
-                expected_wcs = expected_hdr[key].wcs
-                frame_wcs = header[key].wcs
-                assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
-                assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
-                assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
+        self.compare_headers(expected_hdr, header)
+
         self.assertEqual(883, len(table))
 
     def test_good_ldac(self):
@@ -2458,16 +2450,43 @@ class TestExtractCatalog(FITSUnitTest):
         header, table = extract_catalog(test_ldacfilename)
 
         self.assertTrue(os.path.exists(test_ldacfilename))
-        for key in expected_hdr:
-            if key != 'wcs':
-                self.assertEqual(expected_hdr[key], header[key])
-            else:
-                expected_wcs = expected_hdr[key].wcs
-                frame_wcs = header[key].wcs
-                assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
-                assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
-                assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
+        self.compare_headers(expected_hdr, header)
+
         self.assertEqual(883, len(table))
+
+    def test_photpipe_ldac(self):
+
+        expected_hdr = {'astrometric_catalog': 'GAIA',
+                       'astrometric_fit_nstars': -4,
+                       'astrometric_fit_rms': 0.024897500642835003,
+                       'astrometric_fit_status': 0,
+                       'exptime': 124.973,
+                       'field_center_dec': -20.80239166666667,
+                       'field_center_ra': 342.1171083333333,
+                       'field_height': '26.5953m',
+                       'field_width': '26.5953m',
+                       'filter': 'w',
+                       'framename': 'lsc1m005-fa15-20220730-0319-e00.fits',
+                       'fwhm': 3.335374522705078,
+                       'instrument': 'fa15',
+                       'obs_date': datetime(2022, 7, 31,  3, 38,  8, 692000),
+                       'obs_midpoint': datetime(2022, 7, 31,  3, 39, 11, 178500),
+                       'pixel_scale': 0.38958,
+                       'site_code': 'W85',
+                       'reduction_level' : 91,
+                       'zeropoint': -99.0,
+                       'zeropoint_err': -99.0,
+                       'zeropoint_src': 'BANZAI',
+                       'wcs' : self.test_photpipe_ldacwcs}
+
+        shutil.copy(os.path.abspath(self.test_photpipefilename), self.temp_dir)
+        test_photpipefilename = os.path.join(self.temp_dir, os.path.basename(self.test_photpipefilename))
+        header, table = extract_catalog(test_photpipefilename)
+
+        self.assertTrue(os.path.exists(test_photpipefilename))
+        self.compare_headers(expected_hdr, header)
+
+        self.assertEqual(651, len(table))
 
 
 class TestRemoveCorruptCatalog(FITSUnitTest):

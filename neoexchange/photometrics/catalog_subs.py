@@ -1505,6 +1505,12 @@ def extract_catalog(catfile, catalog_type=None, flag_filter=0, new=True, remove=
         else:
             table = get_catalog_items_old(header, fits_table, catalog_type, flag_filter)
 
+        # Update FWHM if bad value
+        if header.get('fwhm', -99) == -99 and header.get('pixel_scale', None) is not None:
+            new_fwhm = determine_fwhm(header, table)
+            if new_fwhm is not None:
+                logger.info("Updating FWHM to {new_fwhm:.4f} from table")
+                header['fwhm'] = new_fwhm
     return header, table
 
 
