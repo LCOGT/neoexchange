@@ -1341,6 +1341,8 @@ def get_catalog_items_new(header_items, table, catalog_type='LCOGT', flag_filter
         hdr_mapping, tbl_mapping = banzai_catalog_mapping()
     elif catalog_type == 'BANZAI_LDAC':
         hdr_mapping, tbl_mapping = banzai_ldac_catalog_mapping()
+    elif catalog_type == 'PHOTPIPE_LDAC':
+        hdr_mapping, tbl_mapping, broken_keywords = photpipe_ldac_catalog_mapping()
     else:
         logger.error("Unsupported catalog mapping: %s", catalog_type)
         return None
@@ -1367,8 +1369,9 @@ def get_catalog_items_new(header_items, table, catalog_type='LCOGT', flag_filter
         good_flux_mask = new_table['obs_mag'] > 0.0
         new_table = new_table[good_flux_mask]
     # Convert columns
-    new_table['obs_ra_err'] = np.sqrt(new_table['obs_ra_err'])
-    new_table['obs_dec_err'] = np.sqrt(new_table['obs_dec_err'])
+    if 'obs_ra_err' in tbl_mapping.keys() and 'obs_dec_err' in tbl_mapping.keys():
+        new_table['obs_ra_err'] = np.sqrt(new_table['obs_ra_err'])
+        new_table['obs_dec_err'] = np.sqrt(new_table['obs_dec_err'])
     FLUX2MAG = 2.5/log(10)
     new_table['obs_mag_err'] = FLUX2MAG * (new_table['obs_mag_err'] / new_table['obs_mag'])
     new_table['obs_mag'] = -2.5 * np.log10(new_table['obs_mag'] / header_items['exptime'])
@@ -1504,6 +1507,29 @@ def extract_catalog(catfile, catalog_type=None, flag_filter=0, new=True, remove=
 
     return header, table
 
+
+def determine_fwhm(header, table):
+    """Determines the median FWHM for the <table> from the `fwhm` column if it exists
+    or from `major/minor_axis` columns if it doesn't
+    The FWHM is multiplied by the pixel scale from <header> before being returned."""
+
+    # Filter to FLAGS==0 if not done already
+    sources = table[table['flags'] == 0]
+
+    # Extract fwhm column if present
+    if 'fwhm' in table.colnames:
+        # Mask out sources with FWHM = 0.0
+        mask = table['fwhm'] > 0
+        fwhms = table[mask]['fwhm']
+    else:
+        # This came from gaia_astrometry_service
+        # (https://github.com/LCOGT/gaia-astrometry.net-service/blob/08eca63e753240395756835c5166d798bbacccad/gaia_astrometry_service/catalog.py)
+        # provenance unknown...
+        fwhms = 2.0 * (np.log(2) * (table['major_axis'] ** 2.0 + sources['minor_axis'] ** 2.0)) ** 0.5
+    fwhm = np.nanmedian(fwhms)
+    fwhm = fwhm * header.get('pixel_scale', 1.0)
+
+    return fwhm
 
 def update_zeropoint(header, table, avg_zeropoint, std_zeropoint, include_zperr=True):
 
