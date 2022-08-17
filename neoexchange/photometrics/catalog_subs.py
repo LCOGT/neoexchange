@@ -820,8 +820,8 @@ def photpipe_ldac_catalog_mapping():
                     'zeropoint_err' : '<L1ZPERR>',
                     'zeropoint_src' : '<L1ZPSRC>',
                     'fwhm'          : '<L1FWHM>',
-                    'astrometric_fit_rms'    : '<ASTIRMSx>',
-                    'astrometric_fit_status' : '<ASTRRMSx>',
+                    'astrometric_fit_rms'    : '<ASTRRMSx>',
+                    'astrometric_fit_status' : '<ASTIRMSx>',
                     'astrometric_fit_nstars' : '<WCSMATCH>',
                     'astrometric_catalog'    : 'REGCAT',
                     'reduction_level'        : 'RLEVEL'
@@ -1089,8 +1089,8 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
                         '<WCSMATCH>'  : -4,       # Hardwire no. of stars matched to 4 (1 quad)
                         '<RLEVEL>'    : 91,       # Hardwire reduction level (mostly old catalogs in the tests)
                         '<L1FWHM>'    : -99,      # May not be present if BANZAI WCS fit fails
-                        '<ASTIRMSx>'  : -99.0,    # Astrometric fit rms for PHOTPIPE_LDAC types if we can't convert the 2 headers
-                        '<ASTRRMSx>'  : 4         # (bad) Astrometric fit status for PHOTPIPE_LDAC types if we can't convert the 2 headers
+                        '<ASTRRMSx>'  : -99.0,    # Astrometric fit rms for PHOTPIPE_LDAC types if we can't convert the 2 headers
+                        '<ASTIRMSx>'  : 4         # (bad) Astrometric fit status for PHOTPIPE_LDAC types if we can't convert the 2 headers
                        }
 
     header_items = {}
@@ -1189,7 +1189,7 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
                                 filename = catalog_header['origname'].replace('00.fits', str(catalog_header['rlevel']) + '.fits')
                                 logger.warning("Could not extract a pipeline version from " + filename)
                                 header_item = {item: fixed_values_map[fits_keyword]}
-                    elif fits_keyword == '<ASTIRMSx>' and catalog_type == 'PHOTPIPE_LDAC':
+                    elif fits_keyword == '<ASTRRMSx>' and catalog_type == 'PHOTPIPE_LDAC':
                         # Convert to astrometric fit rms
                         rms = []
                         for axis in range(1,2+1):
@@ -1201,7 +1201,7 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
                         if rms > 0:
                             rms_of_fit = rms
                         header_item = {item: rms_of_fit}
-                    elif fits_keyword == '<ASTRRMSx>' and catalog_type == 'PHOTPIPE_LDAC':
+                    elif fits_keyword == '<ASTIRMSx>' and catalog_type == 'PHOTPIPE_LDAC':
                         # Convert to astrometric fit status
                         rms = []
                         for axis in range(1,2+1):

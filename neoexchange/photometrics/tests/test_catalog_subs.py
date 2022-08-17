@@ -2064,7 +2064,7 @@ class FITSReadHeader(FITSUnitTest):
                             'fwhm'          : -99,
                             'astrometric_fit_status' : 0,
                             'astrometric_catalog'    : 'GAIA',
-                            'astrometric_fit_rms'    : 0.02489745,
+                            'astrometric_fit_rms'    : 0.046402414945362,
                             'astrometric_fit_nstars' : -4,
                             'zeropoint'     : -99,
                             'zeropoint_err' : -99,
@@ -2458,7 +2458,7 @@ class TestExtractCatalog(FITSUnitTest):
 
         expected_hdr = {'astrometric_catalog': 'GAIA',
                        'astrometric_fit_nstars': -4,
-                       'astrometric_fit_rms': 0.024897500642835003,
+                       'astrometric_fit_rms': 0.046402414945362,
                        'astrometric_fit_status': 0,
                        'exptime': 124.973,
                        'field_center_dec': -20.80239166666667,
