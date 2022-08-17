@@ -1300,6 +1300,7 @@ class FITSUnitTest(TestCase):
 
         self.maxDiff = None
         self.precision = 7
+        self.rtol = 10**-self.precision
 
         self.flux2mag = 2.5/log(10)
 
@@ -3942,4 +3943,62 @@ class TestFunpackFITSFile(ExternalCodeUnitTest):
             hdu_type = hdu._summary()[2]
             self.assertEqual(expected_hdu_types[index], hdu_type, f"Mismatch in index {index}: {expected_hdu_types[index]} not equal to {hdu_type}")
             self.assertEqual(expected_hdu_names[index], hdu.name)
+
+
+class TestDetermineFWHM(FITSUnitTest):
+
+    def setUp(self):
+        super(TestDetermineFWHM, self).setUp()
+
+        self.test_table = Table(names=('major_axis', 'minor_axis', 'flags', 'fwhm'), dtype=('f4', 'f4', 'i2', 'f4'))
+        self.test_table.add_row([2.0, 2.0, 0, 4])
+        self.test_table.add_row([2.0, 2.0, 1, 4])
+        self.test_table.add_row([1.75, 1.9, 0, 3.5])
+        self.test_table.add_row([np.nan, np.nan, 0, np.nan])
+
+        self.test_header = {'pixel_scale' : 0.389}
+
+    def test_fwhm_column(self):
+        expected_fwhm = 3.75 * self.test_header['pixel_scale']
+
+        fwhm = determine_fwhm(self.test_header, self.test_table)
+
+        assert_allclose(expected_fwhm, fwhm, rtol=self.rtol)
+
+    def test_nofwhm_column(self):
+        expected_fwhm = 4.5054073 * self.test_header['pixel_scale']
+
+        del self.test_table['fwhm']
+
+        fwhm = determine_fwhm(self.test_header, self.test_table)
+
+        assert_allclose(expected_fwhm, fwhm, rtol=self.rtol)
+
+    def test_nofwhm_or_majaxis_column(self):
+        expected_fwhm = None
+
+        del self.test_table['fwhm']
+        del self.test_table['major_axis']
+
+        fwhm = determine_fwhm(self.test_header, self.test_table)
+
+        self.assertEqual(expected_fwhm, fwhm)
+
+    def test_nofwhm_or_minaxis_column(self):
+        expected_fwhm = None
+
+        del self.test_table['fwhm']
+        del self.test_table['minor_axis']
+
+        fwhm = determine_fwhm(self.test_header, self.test_table)
+
+        self.assertEqual(expected_fwhm, fwhm)
+
+    def test_fwhm_photpipe(self):
+        header, table = extract_catalog(self.test_photpipefilename)
+        expected_fwhm = 3.335374522
+
+        fwhm = determine_fwhm(header, table)
+
+        assert_allclose(expected_fwhm, fwhm, rtol=self.rtol)
 

@@ -1513,21 +1513,26 @@ def determine_fwhm(header, table):
     or from `major/minor_axis` columns if it doesn't
     The FWHM is multiplied by the pixel scale from <header> before being returned."""
 
+    fwhm = None
+
     # Filter to FLAGS==0 if not done already
     sources = table[table['flags'] == 0]
 
     # Extract fwhm column if present
-    if 'fwhm' in table.colnames:
+    if 'fwhm' in sources.colnames:
         # Mask out sources with FWHM = 0.0
-        mask = table['fwhm'] > 0
-        fwhms = table[mask]['fwhm']
-    else:
+        mask = sources['fwhm'] > 0
+        fwhms = sources[mask]['fwhm']
+    elif 'major_axis' in sources.colnames and 'minor_axis' in sources.colnames:
         # This came from gaia_astrometry_service
         # (https://github.com/LCOGT/gaia-astrometry.net-service/blob/08eca63e753240395756835c5166d798bbacccad/gaia_astrometry_service/catalog.py)
         # provenance unknown...
-        fwhms = 2.0 * (np.log(2) * (table['major_axis'] ** 2.0 + sources['minor_axis'] ** 2.0)) ** 0.5
-    fwhm = np.nanmedian(fwhms)
-    fwhm = fwhm * header.get('pixel_scale', 1.0)
+        fwhms = 2.0 * (np.log(2) * (sources['major_axis'] ** 2.0 + sources['minor_axis'] ** 2.0)) ** 0.5
+    else:
+        fwhms = []
+    if len(fwhms) > 0:
+        fwhm = np.nanmedian(fwhms)
+        fwhm = fwhm * header.get('pixel_scale', 1.0)
 
     return fwhm
 
