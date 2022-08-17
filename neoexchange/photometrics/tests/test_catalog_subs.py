@@ -778,7 +778,7 @@ class ZeropointUnitTest(TestCase):
 
     def test_call_cross_match_and_zeropoint_with_UCAC4(self):
 
-        expected_avg_zeropoint = 27.30760337675 - 5.0 # Correcting for 100s exptime
+        expected_avg_zeropoint = 27.30760348193786 - 5.0 # Correcting for 100s exptime
 
         expected_std_zeropoint = 0.0818536464006553
 

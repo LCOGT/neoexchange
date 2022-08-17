@@ -106,7 +106,7 @@ class StoreCatalogSourcesTest(FITSUnitTest):
                             'instrument': 'kb76',
                             'filter': 'w',
                             'filename': 'ldac_test_catalog.fits',
-                            'exptime': 60.0,
+                            'exptime': 115.0,
                             'midpoint': datetime(2016, 5, 5, 20, 2, 29),
                             'block': self.test_block,
                             'zeropoint': -99,
@@ -187,7 +187,7 @@ class StoreCatalogSourcesTest(FITSUnitTest):
                             'instrument': 'kb76',
                             'filter': 'w',
                             'filename': 'ldac_test_catalog.fits',
-                            'exptime': 60.0,
+                            'exptime': 115.0,
                             'midpoint': datetime(2016, 5, 5, 20, 2, 29),
                             'block': self.test_block,
                             'zeropoint': None,
@@ -198,6 +198,7 @@ class StoreCatalogSourcesTest(FITSUnitTest):
                             'nstars_in_fit': 3.0,
                         }
         self.test_frame3, created = Frame.objects.get_or_create(**frame_params3)
+        zp_corr = 2.5*log10(self.test_frame3.exptime)
 
         expected_num_sources_created = self.table_num_flags0_posve_ldac
         expected_num_in_table = self.table_num_flags0_posve_ldac
@@ -213,7 +214,7 @@ class StoreCatalogSourcesTest(FITSUnitTest):
 
         last_frame = Frame.objects.last()
 
-        self.assertAlmostEqual(last_frame.zeropoint, 28.2732, 4)
+        self.assertAlmostEqual(last_frame.zeropoint, 28.2732-zp_corr, 4)
         self.assertAlmostEqual(last_frame.zeropoint_err, 0.0641, 4)
         self.assertEqual(last_frame.photometric_catalog, 'UCAC4')
 
@@ -221,6 +222,7 @@ class StoreCatalogSourcesTest(FITSUnitTest):
 
         expected_num_sources_created = self.table_num_flags0_posve_ldac
         expected_num_in_table = self.table_num_flags0_posve_ldac
+        zp_corr = 2.5*log10(self.test_frame.exptime)
 
         num_sources_created, num_in_table = store_catalog_sources(self.test_ldacfilename, catalog_type='FITS_LDAC', std_zeropoint_tolerance=0.1)
 
@@ -233,7 +235,7 @@ class StoreCatalogSourcesTest(FITSUnitTest):
 
         last_frame = Frame.objects.last()
 
-        self.assertAlmostEqual(last_frame.zeropoint, 28.2732, 4)
+        self.assertAlmostEqual(last_frame.zeropoint, 28.2732-zp_corr, 4)
         self.assertAlmostEqual(last_frame.zeropoint_err, 0.0641, 4)
         self.assertEqual(last_frame.photometric_catalog, 'UCAC4')
 
@@ -246,7 +248,7 @@ class StoreCatalogSourcesTest(FITSUnitTest):
                             'instrument': 'kb76',
                             'filter': 'w',
                             'filename': 'ldac_test_catalog.fits',
-                            'exptime': 60.0,
+                            'exptime': 115.0,
                             'midpoint': datetime(2016, 5, 5, 20, 2, 29),
                             'block': self.test_block,
                             'zeropoint': 27.3926,
@@ -257,6 +259,7 @@ class StoreCatalogSourcesTest(FITSUnitTest):
                             'nstars_in_fit': 3.0,
                         }
         self.test_frame3, created = Frame.objects.get_or_create(**frame_params3)
+        zp_corr = 2.5*log10(self.test_frame3.exptime)
 
         expected_num_sources_created = self.table_num_flags0_posve_ldac
         expected_num_in_table = self.table_num_flags0_posve_ldac
@@ -272,6 +275,6 @@ class StoreCatalogSourcesTest(FITSUnitTest):
 
         last_frame = Frame.objects.last()
 
-        self.assertAlmostEqual(last_frame.zeropoint, 28.2732, 4)
+        self.assertAlmostEqual(last_frame.zeropoint, 28.2732-zp_corr, 4)
         self.assertAlmostEqual(last_frame.zeropoint_err, 0.0641, 4)
         self.assertEqual(last_frame.photometric_catalog, 'UCAC4')
