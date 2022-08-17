@@ -1255,6 +1255,16 @@ class FITSUnitTest(TestCase):
         hdulist.close()
         self.ldac_table_firstitem = self.test_ldactable[0:1]
 
+        self.test_photpipefilename = os.path.join('photometrics', 'tests', 'photpipe_test_ldac.fits')
+        hdulist = fits.open(self.test_photpipefilename)
+        # FITS header in the example above is broken (as it is from photometrypipeline)
+        # so need to read a fixed version to make the WCS from
+        header = fits.Header.fromtextfile(os.path.join('photometrics', 'tests', 'example_photpipe.head'))
+        self.test_photpipe_ldacwcs = WCS(header)
+        self.test_photpipe_ldactable = hdulist[2].data
+        hdulist.close()
+        self.photpipe_table_firstitem = self.test_photpipe_ldactable[0:1]
+
         self.test_banzaifilename = os.path.join('photometrics', 'tests', 'banzai_test_frame.fits.fz')
         hdulist = fits.open(self.test_banzaifilename)
         self.test_banzaiheader = hdulist['SCI'].header
@@ -1520,6 +1530,36 @@ class OpenFITSCatalog(FITSUnitTest):
 
         self.assertAlmostEqual(expected_x, tbl[-1]['XWIN'], self.precision)
         self.assertAlmostEqual(expected_y, tbl[-1]['YWIN'], self.precision)
+
+    def test_photpipe_read_catalog(self):
+        unexpected_value = {}
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_photpipefilename)
+        self.assertNotEqual(unexpected_value, hdr)
+        self.assertNotEqual(unexpected_value, tbl)
+        self.assertNotEqual(unexpected_value, cattype)
+
+    def test_photpipe_catalog_read_length(self):
+        expected_hdr_len = 352
+        expected_tbl_len = len(self.test_photpipe_ldactable)
+        expected_cattype = 'PHOTPIPE_LDAC'
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_photpipefilename)
+
+        self.assertEqual(expected_hdr_len, len(hdr))
+        self.assertEqual(expected_tbl_len, len(tbl))
+        self.assertEqual(expected_cattype, cattype)
+
+    def test_photpipe_catalog_read_hdr_keyword(self):
+        expected_hdr_value = 'fa15'
+        expected_hdr_value2 = '0.0003023852695117'
+
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_photpipefilename)
+
+        self.assertEqual(expected_hdr_value, hdr['INSTRUME'])
+        self.assertEqual(str, type(hdr['PV2_10']))
+        self.assertEqual(expected_hdr_value2, hdr['PV2_10'])
 
 
 class TestConvertValues(FITSUnitTest):
@@ -2071,6 +2111,52 @@ class FITSReadHeader(FITSUnitTest):
                 assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
                 assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
 
+    def test_photpipe_header(self):
+        obs_date = datetime.strptime('2022-07-31T03:38:08.692', '%Y-%m-%dT%H:%M:%S.%f')
+        expected_params = { 'site_code'  : 'W85',
+                            'instrument' : 'fa15',
+                            'filter'     : 'w',
+                            'framename'  : 'lsc1m005-fa15-20220730-0319-e00.fits',
+                            'exptime'    : 124.973,
+                            'obs_date'      : obs_date,
+                            'obs_midpoint'  : obs_date + timedelta(seconds=124.973 / 2.0),
+                            'field_center_ra'  : Angle('22:48:28.106', unit=u.hour).deg,
+                            'field_center_dec' : Angle('-20:48:08.61', unit=u.deg).deg,
+                            'field_width'   : '26.5953m',
+                            'field_height'  : '26.5953m',
+                            'pixel_scale'   : 0.38958,
+                            'fwhm'          : -99,
+                            'astrometric_fit_status' : 0,
+                            'astrometric_catalog'    : 'GAIA',
+                            'astrometric_fit_rms'    : 0.02489745,
+                            'astrometric_fit_nstars' : -4,
+                            'zeropoint'     : -99,
+                            'zeropoint_err' : -99,
+                            'zeropoint_src' : 'BANZAI',
+                            'wcs'           : self.test_photpipe_ldacwcs,
+                            'reduction_level' : 91,
+                          }
+        expected_cattype = "PHOTPIPE_LDAC"
+
+        header, table, cattype = open_fits_catalog(self.test_photpipefilename)
+        self.assertEqual(expected_cattype, cattype)
+        frame_header = get_catalog_header(header, cattype)
+
+        self.assertEqual(len(expected_params), len(frame_header))
+        for key in expected_params:
+            err_msg = 'Failure on key='+key
+            if key != 'wcs':
+                if type(expected_params[key]) == float:
+                    assert_allclose(expected_params[key], frame_header[key],rtol=1e-5, err_msg=err_msg)
+                else:
+                    self.assertEqual(expected_params[key], frame_header[key], msg=err_msg)
+            else:
+                expected_wcs = expected_params[key].wcs
+                frame_wcs = frame_header[key].wcs
+                assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8, err_msg=err_msg)
+                assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8, err_msg=err_msg)
+                assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8, err_msg=err_msg)
+
 
 class FITSLDACToHeader(FITSUnitTest):
 
@@ -2407,6 +2493,47 @@ class TestExtractCatalog(FITSUnitTest):
 
         self.assertTrue(os.path.exists(test_ldacfilename))
         #self.assertEqual(expected_hdr, header)
+        for key in expected_hdr:
+            if key != 'wcs':
+                self.assertEqual(expected_hdr[key], header[key])
+            else:
+                expected_wcs = expected_hdr[key].wcs
+                frame_wcs = header[key].wcs
+                assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
+                assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
+                assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
+        self.assertEqual(883, len(table))
+
+    def test_good_ldac(self):
+
+        expected_hdr = {'astrometric_catalog': 'UCAC4',
+                       'astrometric_fit_nstars': 22,
+                       'astrometric_fit_rms': 0.14473999999999998,
+                       'astrometric_fit_status': 0,
+                       'exptime': 115.0,
+                       'field_center_dec': -9.767727777777779,
+                       'field_center_ra': 219.83084166666666,
+                       'field_height': '15.9562m',
+                       'field_width': '15.8779m',
+                       'filter': 'w',
+                       'framename': 'cpt1m013-kb76-20160428-0141-e00.fits',
+                       'fwhm': 2.886,
+                       'instrument': 'kb76',
+                       'obs_date': datetime(2016, 4, 28, 20, 11, 54, 303000),
+                       'obs_midpoint': datetime(2016, 4, 28, 20, 12, 51, 803000),
+                       'pixel_scale': 0.46976,
+                       'site_code': 'K92',
+                       'reduction_level' : 91,
+                       'zeropoint': -99.0,
+                       'zeropoint_err': -99.0,
+                       'zeropoint_src': 'NOT_FIT(LCOGTCAL-V0.0.2-r8174)',
+                       'wcs' : self.test_ldacwcs}
+
+        shutil.copy(os.path.abspath(self.test_ldacfilename), self.temp_dir)
+        test_ldacfilename = os.path.join(self.temp_dir, os.path.basename(self.test_ldacfilename))
+        header, table = extract_catalog(test_ldacfilename)
+
+        self.assertTrue(os.path.exists(test_ldacfilename))
         for key in expected_hdr:
             if key != 'wcs':
                 self.assertEqual(expected_hdr[key], header[key])

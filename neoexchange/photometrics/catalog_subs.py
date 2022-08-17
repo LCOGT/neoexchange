@@ -796,6 +796,63 @@ def banzai_ldac_catalog_mapping():
     return header_dict, table_dict
 
 
+def photpipe_ldac_catalog_mapping():
+    """Returns two dictionaries of the mapping between the FITS header and table
+    items and CatalogItem quantities for FITS_LDAC catalogs produced from LCO
+    data by the photometrypipeline. Items in angle brackets (<FOO>) need to
+    be derived (pixel scale) or assumed as they are missing from the headers.
+    Also returns a list of keywords which need to converted from str to float"""
+
+    header_dict = { 'site_id'    : 'SITEID',
+                    'enc_id'     : 'ENCID',
+                    'tel_id'     : 'TELID',
+                    'instrument' : 'INSTRUME',
+                    'filter'     : 'FILTER',
+                    'framename'  : 'ORIGNAME',
+                    'exptime'    : 'EXPTIME',
+                    'obs_date'   : 'DATE-OBS',
+                    'field_center_ra' : 'RA',
+                    'field_center_dec' : 'DEC',
+                    'field_width' : 'NAXIS1',
+                    'field_height' : 'NAXIS2',
+                    'pixel_scale' : '<WCS>',
+                    'zeropoint'     : '<L1ZP>',
+                    'zeropoint_err' : '<L1ZPERR>',
+                    'zeropoint_src' : '<L1ZPSRC>',
+                    'fwhm'          : '<L1FWHM>',
+                    'astrometric_fit_rms'    : '<ASTIRMSx>',
+                    'astrometric_fit_status' : '<ASTRRMSx>',
+                    'astrometric_fit_nstars' : '<WCSMATCH>',
+                    'astrometric_catalog'    : 'REGCAT',
+                    'reduction_level'        : 'RLEVEL'
+                  }
+
+    table_dict = OrderedDict([
+                    ('ccd_x'         , 'XWIN_IMAGE'),
+                    ('ccd_y'         , 'YWIN_IMAGE'),
+                    ('obs_ra'        , 'XWIN_WORLD'),
+                    ('obs_dec'       , 'YWIN_WORLD'),
+#                    ('obs_ra_err'    , 'ERRX2_WORLD'),
+#                    ('obs_dec_err'   , 'ERRY2_WORLD'),
+                    ('major_axis'    , 'A_IMAGE'),
+                    ('minor_axis'    , 'B_IMAGE'),
+                    ('ccd_pa'        , 'THETA_IMAGE'),
+                    ('obs_mag'       , 'FLUX_APER'),
+                    ('obs_mag_err'   , 'FLUXERR_APER'),
+#                    ('obs_sky_bkgd'  , 'BACKGROUND'),
+                    ('flags'         , 'FLAGS'),
+                    ('flux_max'      , 'FLUX_MAX'),
+#                    ('threshold'     , 'MU_THRESHOLD'),
+                    ('fwhm'          , 'FWHM_IMAGE'),
+                 ])
+
+    broken_keywords = ['EQUINOX', 'CRVAL1', 'CRVAL2', 'CRPIX1', 'CRPIX2',\
+        'CD1_1', 'CD1_2', 'CD2_1', 'CD2_2', 'PV1_x', 'PV2_x',\
+        'ASTIRMSx', 'ASTRRMSx', 'FLXSCALE', 'MAGZEROP', 'PHOTIRMS' ]
+
+    return header_dict, table_dict, broken_keywords
+
+
 def convert_to_string_value(value):
     left_end = value.find("'")
     right_end = value.rfind("'")
@@ -895,13 +952,15 @@ def open_fits_catalog(catfile, header_only=False):
         # This is a FITS_LDAC catalog produced by SExtractor for SCAMP
         if header_only is False:
             table = hdulist[2].data
+        header_array = hdulist[1].data[0][0]
+        header = fits_ldac_to_header(header_array)
         cattype = 'FITS_LDAC'
         if 'e92_ldac' in catfile or 'e91_ldac' in catfile:
             # TAL 2022/07/31: Now BANZAI is doing ZPs for (most) frames now,
             # can make all LDACs BANZAI_LDAC type
             cattype = 'BANZAI_LDAC'
-        header_array = hdulist[1].data[0][0]
-        header = fits_ldac_to_header(header_array)
+        elif 'TELINSTR' in header and 'REGCAT' in header and 'PHOTMODE' in header:
+            cattype = 'PHOTPIPE_LDAC'
     elif len(hdulist) == 4 or (len(hdulist) == 3 and hdulist[1].header.get('EXTNAME', None) != 'LDAC_IMHEAD'):
         # New BANZAI-format data
         cattype = 'BANZAI'
@@ -1029,10 +1088,13 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
                         '<WCSRDRES>'  : 0.3,      # Hardwire RMS to 0.3"
                         '<WCSMATCH>'  : -4,       # Hardwire no. of stars matched to 4 (1 quad)
                         '<RLEVEL>'    : 91,       # Hardwire reduction level (mostly old catalogs in the tests)
-                        '<L1FWHM>'    : -99       # May not be present if BANZAI WCS fit fails
-                        }
+                        '<L1FWHM>'    : -99,      # May not be present if BANZAI WCS fit fails
+                        '<ASTIRMSx>'  : -99.0,    # Astrometric fit rms for PHOTPIPE_LDAC types if we can't convert the 2 headers
+                        '<ASTRRMSx>'  : 4         # (bad) Astrometric fit status for PHOTPIPE_LDAC types if we can't convert the 2 headers
+                       }
 
     header_items = {}
+    broken_keywords = []
     if catalog_type == 'LCOGT':
         hdr_mapping, tbl_mapping = oracdr_catalog_mapping()
     elif catalog_type == 'FITS_LDAC':
@@ -1041,9 +1103,30 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
         hdr_mapping, tbl_mapping = banzai_catalog_mapping()
     elif catalog_type == 'BANZAI_LDAC':
         hdr_mapping, tbl_mapping = banzai_ldac_catalog_mapping()
+    elif catalog_type == 'PHOTPIPE_LDAC':
+        hdr_mapping, tbl_mapping, broken_keywords = photpipe_ldac_catalog_mapping()
     else:
         logger.error("Unsupported catalog mapping: %s", catalog_type)
         return header_items
+
+    # Fix broken keywords first
+    if len(broken_keywords) > 0:
+        # Some keywords are "general" and have many (and unknown) possible
+        # values after the root e.g. `PV1_1, PV1_10` etc. These are indicated
+        # with a lowercase 'x' (not possible in FITS) at the end of their entry
+        # in the `broken_keywords` list and here we truncate them to the
+        # general part.
+        general_keys = [key[0:-1] for key in broken_keywords if key[-1] == 'x']
+        for fits_keyword in catalog_header:
+            convert_to_float = False
+            if fits_keyword in broken_keywords:
+                convert_to_float = True
+            for convert_key in general_keys:
+                if convert_key in fits_keyword:
+                    convert_to_float = True
+                    break
+            if convert_to_float is True:
+                catalog_header[fits_keyword] = float(catalog_header[fits_keyword])
 
     for item in hdr_mapping.keys():
         fits_keyword = hdr_mapping[item]
@@ -1106,6 +1189,33 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
                                 filename = catalog_header['origname'].replace('00.fits', str(catalog_header['rlevel']) + '.fits')
                                 logger.warning("Could not extract a pipeline version from " + filename)
                                 header_item = {item: fixed_values_map[fits_keyword]}
+                    elif fits_keyword == '<ASTIRMSx>' and catalog_type == 'PHOTPIPE_LDAC':
+                        # Convert to astrometric fit rms
+                        rms = []
+                        for axis in range(1,2+1):
+                            keyword = fits_keyword[1:].replace('x>', str(axis))
+                            rms_value = catalog_header.get(keyword, 0.0)
+                            rms.append(rms_value * 3600.0)
+                        rms = np.mean(rms)
+                        rms_of_fit = fixed_values_map[fits_keyword]
+                        if rms > 0:
+                            rms_of_fit = rms
+                        header_item = {item: rms_of_fit}
+                    elif fits_keyword == '<ASTRRMSx>' and catalog_type == 'PHOTPIPE_LDAC':
+                        # Convert to astrometric fit status
+                        rms = []
+                        for axis in range(1,2+1):
+                            keyword = fits_keyword[1:].replace('x>', str(axis))
+                            rms_value = catalog_header.get(keyword, 0.0)
+                            rms.append(rms_value * 3600.0)
+                        rms = np.mean(rms)
+                        fit_status = fixed_values_map[fits_keyword]
+                        if rms > 0 and rms < 1:
+                            fit_status = 0
+                        else:
+                            logger.warning(f"Bad PHOTPIPE fit detected. RMS={rms}")
+
+                        header_item = {item: fit_status}
                     else:
                         header_item = {item: fixed_values_map[fits_keyword]}
             if header_item:
@@ -1363,8 +1473,10 @@ def remove_corrupt_catalog(catfile):
 
     return removed, num_deleted
 
-def extract_catalog(catfile, catalog_type='LCOGT', flag_filter=0, new=True, remove=False):
+def extract_catalog(catfile, catalog_type=None, flag_filter=0, new=True, remove=False):
     """High-level routine to read LCOGT FITS catalogs from <catfile>.
+    If [catalog_type] is not None, it will be used to override the type returned
+    from `open_fits_catalog()`.
     This returns a dictionary of needed header items and an AstroPy table of
     the sources that pass the [flag_filter] cut-off or None if the file could
     not be opened. If [remove]=True, then if the <catfile> fails header
@@ -1381,6 +1493,8 @@ def extract_catalog(catfile, catalog_type='LCOGT', flag_filter=0, new=True, remo
         logger.warning(f'Corrupt {catfile} {remove_str} removed from disk. {num_db_deleted} Frame records removed from DB')
 
     if len(fits_header) != 0 and len(fits_table) != 0:
+        if catalog_type is None:
+            catalog_type = cattype
         header = get_catalog_header(fits_header, catalog_type)
         # get_catalog_items() is the slow part
         if new:
