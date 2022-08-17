@@ -753,7 +753,7 @@ class ZeropointUnitTest(TestCase):
 
     def test_call_cross_match_and_zeropoint_with_PPMXL(self):
 
-        expected_avg_zeropoint = 27.389040152231853
+        expected_avg_zeropoint = 27.389040152231853 - 5.0 # Correcting for 100s exptime
 
         expected_std_zeropoint = 0.08511636159289811
 
@@ -769,8 +769,8 @@ class ZeropointUnitTest(TestCase):
 
         header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, cat_name = call_cross_match_and_zeropoint(catfile, cat_name="PPMXL")
 
-        self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 8)
-        self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 8)
+        self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 7)
+        self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 7)
         self.assertAlmostEqual(expected_count, count, 1)
         self.assertAlmostEqual(expected_num_in_calc, num_in_calc, 1)
         self.assertEqual(expected_cat_name, cat_name)
@@ -778,7 +778,7 @@ class ZeropointUnitTest(TestCase):
 
     def test_call_cross_match_and_zeropoint_with_UCAC4(self):
 
-        expected_avg_zeropoint = 27.307603618677927
+        expected_avg_zeropoint = 27.307603618677927 - 5.0 # Correcting for 100s exptime
 
         expected_std_zeropoint = 0.0818536464006553
 
@@ -794,7 +794,7 @@ class ZeropointUnitTest(TestCase):
 
         header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, cat_name = call_cross_match_and_zeropoint(catfile)
 
-        self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 8)
+        self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 7)
         self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 8)
         self.assertAlmostEqual(expected_count, count, 1)
         self.assertAlmostEqual(expected_num_in_calc, num_in_calc, 1)
@@ -803,7 +803,7 @@ class ZeropointUnitTest(TestCase):
 
     def test_call_cross_match_and_zeropoint_with_GAIADR2(self):
 
-        expected_avg_zeropoint = 27.368678593401157
+        expected_avg_zeropoint = 27.368678593401157 - 5.0 # Correcting for 100s exptime
 
         expected_std_zeropoint = 0.01825025160423379
 
@@ -819,7 +819,7 @@ class ZeropointUnitTest(TestCase):
 
         header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, cat_name = call_cross_match_and_zeropoint(catfile, cat_name='GAIA-DR2')
 
-        self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 8)
+        self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 7)
         self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 8)
         self.assertAlmostEqual(expected_count, count, 1)
         self.assertAlmostEqual(expected_num_in_calc, num_in_calc, 1)
