@@ -1312,6 +1312,22 @@ class FITSUnitTest(TestCase):
                 msg="Failure on %s (%.*f != %.*f)" % (column, precision, expected_column_value,
                     precision, catalog_column_value))
 
+    def compare_headers(self, expected_params, frame_header, rtol=1e-8):
+        self.assertEqual(len(expected_params), len(frame_header))
+        for key in expected_params:
+            err_msg = 'Failure on key='+key
+            if key != 'wcs':
+                if type(expected_params[key]) == float:
+                    assert_allclose(expected_params[key], frame_header[key],rtol=1e-5, err_msg=err_msg)
+                else:
+                    self.assertEqual(expected_params[key], frame_header[key], msg=err_msg)
+            else:
+                expected_wcs = expected_params[key].wcs
+                frame_wcs = frame_header[key].wcs
+                assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=rtol, err_msg=err_msg)
+                assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=rtol, err_msg=err_msg)
+                assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=rtol, err_msg=err_msg)
+
 
 class OpenFITSCatalog(FITSUnitTest):
 
@@ -1743,16 +1759,7 @@ class FITSReadHeader(FITSUnitTest):
         self.assertEqual(expected_cattype, cattype)
         frame_header = get_catalog_header(header, "FITS_LDAC")
 
-        self.assertEqual(len(expected_params), len(frame_header))
-        for key in expected_params:
-            if key != 'wcs':
-                self.assertEqual(expected_params[key], frame_header[key])
-            else:
-                expected_wcs = expected_params[key].wcs
-                frame_wcs = frame_header[key].wcs
-                assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
-                assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
-                assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
+        self.compare_headers(expected_params, frame_header)
 
     def test_banzai_header(self):
         obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
@@ -1786,16 +1793,7 @@ class FITSReadHeader(FITSUnitTest):
         self.assertEqual(expected_cattype, cattype)
         frame_header = get_catalog_header(header, "BANZAI")
 
-        self.assertEqual(len(expected_params), len(frame_header))
-        for key in expected_params:
-            if key != 'wcs':
-                self.assertEqual(expected_params[key], frame_header[key])
-            else:
-                expected_wcs = expected_params[key].wcs
-                frame_wcs = frame_header[key].wcs
-                assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
-                assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
-                assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
+        self.compare_headers(expected_params, frame_header)
 
     def test_banzai_header_gaiadr2(self):
         obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
@@ -1831,16 +1829,7 @@ class FITSReadHeader(FITSUnitTest):
         header['PIPEVER'] = '0.20.0  '
         frame_header = get_catalog_header(header, "BANZAI")
 
-        self.assertEqual(len(expected_params), len(frame_header))
-        for key in expected_params:
-            if key != 'wcs':
-                self.assertEqual(expected_params[key], frame_header[key])
-            else:
-                expected_wcs = expected_params[key].wcs
-                frame_wcs = frame_header[key].wcs
-                assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
-                assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
-                assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
+        self.compare_headers(expected_params, frame_header)
 
     def test_banzai_header_gaiadr2_devversion(self):
         obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
@@ -1876,16 +1865,7 @@ class FITSReadHeader(FITSUnitTest):
         header['PIPEVER'] = '0.20.0dev1234'
         frame_header = get_catalog_header(header, "BANZAI")
 
-        self.assertEqual(len(expected_params), len(frame_header))
-        for key in expected_params:
-            if key != 'wcs':
-                self.assertEqual(expected_params[key], frame_header[key])
-            else:
-                expected_wcs = expected_params[key].wcs
-                frame_wcs = frame_header[key].wcs
-                assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
-                assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
-                assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
+        self.compare_headers(expected_params, frame_header)
 
     def test_banzai_header_gaiadr2_version1_0(self):
         obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
@@ -1921,16 +1901,7 @@ class FITSReadHeader(FITSUnitTest):
         header['PIPEVER'] = '1.0.42'
         frame_header = get_catalog_header(header, "BANZAI")
 
-        self.assertEqual(len(expected_params), len(frame_header))
-        for key in expected_params:
-            if key != 'wcs':
-                self.assertEqual(expected_params[key], frame_header[key])
-            else:
-                expected_wcs = expected_params[key].wcs
-                frame_wcs = frame_header[key].wcs
-                assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
-                assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
-                assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
+        self.compare_headers(expected_params, frame_header)
 
     def test_banzai_header_bad_version(self):
         obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
@@ -1966,16 +1937,7 @@ class FITSReadHeader(FITSUnitTest):
         header['PIPEVER'] = 'wibble'
         frame_header = get_catalog_header(header, "BANZAI")
 
-        self.assertEqual(len(expected_params), len(frame_header))
-        for key in expected_params:
-            if key != 'wcs':
-                self.assertEqual(expected_params[key], frame_header[key])
-            else:
-                expected_wcs = expected_params[key].wcs
-                frame_wcs = frame_header[key].wcs
-                assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
-                assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
-                assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
+        self.compare_headers(expected_params, frame_header)
 
     def test_banzai_header_blank_version(self):
         obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
@@ -2011,16 +1973,7 @@ class FITSReadHeader(FITSUnitTest):
         header['PIPEVER'] = '      '
         frame_header = get_catalog_header(header, "BANZAI")
 
-        self.assertEqual(len(expected_params), len(frame_header))
-        for key in expected_params:
-            if key != 'wcs':
-                self.assertEqual(expected_params[key], frame_header[key])
-            else:
-                expected_wcs = expected_params[key].wcs
-                frame_wcs = frame_header[key].wcs
-                assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
-                assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
-                assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
+        self.compare_headers(expected_params, frame_header)
 
     def test_banzai_header_bad_major_version(self):
         obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
@@ -2056,16 +2009,7 @@ class FITSReadHeader(FITSUnitTest):
         header['PIPEVER'] = 'FOO.42.0'
         frame_header = get_catalog_header(header, "BANZAI")
 
-        self.assertEqual(len(expected_params), len(frame_header))
-        for key in expected_params:
-            if key != 'wcs':
-                self.assertEqual(expected_params[key], frame_header[key])
-            else:
-                expected_wcs = expected_params[key].wcs
-                frame_wcs = frame_header[key].wcs
-                assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
-                assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
-                assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
+        self.compare_headers(expected_params, frame_header)
 
     def test_banzai_header_bad_minor_version(self):
         obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
@@ -2101,16 +2045,7 @@ class FITSReadHeader(FITSUnitTest):
         header['PIPEVER'] = '0.BAR.42    '
         frame_header = get_catalog_header(header, "BANZAI")
 
-        self.assertEqual(len(expected_params), len(frame_header))
-        for key in expected_params:
-            if key != 'wcs':
-                self.assertEqual(expected_params[key], frame_header[key])
-            else:
-                expected_wcs = expected_params[key].wcs
-                frame_wcs = frame_header[key].wcs
-                assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
-                assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
-                assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
+        self.compare_headers(expected_params, frame_header)
 
     def test_photpipe_header(self):
         obs_date = datetime.strptime('2022-07-31T03:38:08.692', '%Y-%m-%dT%H:%M:%S.%f')
@@ -2144,19 +2079,7 @@ class FITSReadHeader(FITSUnitTest):
         frame_header = get_catalog_header(header, cattype)
 
         self.assertEqual(len(expected_params), len(frame_header))
-        for key in expected_params:
-            err_msg = 'Failure on key='+key
-            if key != 'wcs':
-                if type(expected_params[key]) == float:
-                    assert_allclose(expected_params[key], frame_header[key],rtol=1e-5, err_msg=err_msg)
-                else:
-                    self.assertEqual(expected_params[key], frame_header[key], msg=err_msg)
-            else:
-                expected_wcs = expected_params[key].wcs
-                frame_wcs = frame_header[key].wcs
-                assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8, err_msg=err_msg)
-                assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8, err_msg=err_msg)
-                assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8, err_msg=err_msg)
+        self.compare_headers(expected_params, frame_header)
 
 
 class FITSLDACToHeader(FITSUnitTest):
