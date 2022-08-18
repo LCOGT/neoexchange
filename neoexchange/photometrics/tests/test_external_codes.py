@@ -1379,7 +1379,7 @@ class TestUpdateFITSWCS(TestCase):
                      'wcssolvr' : 'SCAMP-2.0.4',
                      'wcsrfcat' : 'GAIA-DR2.cat',
                      'wcsimcat' : 'tfn0m414-kb99-20180529-0202-e91_ldac.fits',
-                     'wcsnref' : 280, 'wcsmatch' : 23,
+                     'wcsnref' : 280, 'wcsmatch' : 106,
                      'wccattyp' : 'GAIA-DR2@CDS',
                      'wcsrdres' : '0.31469/0.30167', # ASTRRMS1*3600/ASTRRMS2*3600 from .head file
                      'wcsdelra' : 44.619981558,
@@ -1413,7 +1413,7 @@ class TestUpdateFITSWCS(TestCase):
                      'wcssolvr' : 'SCAMP-2.0.4',
                      'wcsrfcat' : 'GAIA-DR2.cat',
                      'wcsimcat' : 'tfn0m414-kb99-20180529-0202-e91_ldac.fits',
-                     'wcsnref'  : 280, 'wcsmatch' : 23,
+                     'wcsnref'  : 280, 'wcsmatch' : 106,
                      'wccattyp' : 'GAIA-DR2@CDS',
                      'wcsrdres' : '0.31469/0.30167', # ASTRRMS1*3600/ASTRRMS2*3600 from .head file
                      'wcsdelra' : 44.619981558, 'wcsdelde' : -37.1150613409,
@@ -1461,7 +1461,7 @@ class TestUpdateFITSWCS(TestCase):
                      'wcssolvr' : 'SCAMP-2.0.4',
                      'wcsrfcat' : 'GAIA-DR2_228.33+38.40_43.3488mx29.0321m.cat',
                      'wcsimcat' : 'tfn0m414-kb99-20180529-0202-e91_ldac.fits',
-                     'wcsnref' : 280, 'wcsmatch' : 23, 'wccattyp' : 'GAIA-DR2@CDS',
+                     'wcsnref' : 280, 'wcsmatch' : 103, 'wccattyp' : 'GAIA-DR2@CDS',
                      'wcsrdres' : '0.30803/0.34776', # ASTRRMS1*3600/ASTRRMS2*3600 from .head file
                      'wcsdelra' : 44.619981558, 'wcsdelde' : -37.1150613409,
                      'wcserr' : 0,

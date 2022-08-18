@@ -1113,7 +1113,7 @@ def get_scamp_xml_info(scamp_xml_file):
     wcs_imagecat_name = fields_table.array['Catalog_Name'].data[0]
     if type(wcs_imagecat_name) == bytes:
         wcs_imagecat_name = wcs_imagecat_name.decode("utf-8")
-    info = { 'num_match'    : fgroups_table.array['AstromNDets_Internal_HighSN'].data[0],
+    info = { 'num_match'    : fgroups_table.array['AstromNDets_Reference'].data[0],
              'num_refstars' : fields_table.array['NDetect'].data[0],
              'wcs_refcat'   : wcs_refcat_name,
              'wcs_cattype'  : "%s@CDS" % reference_catalog.upper(),
