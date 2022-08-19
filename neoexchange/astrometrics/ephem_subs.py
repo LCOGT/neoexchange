@@ -689,7 +689,7 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
         logger.debug("Ambiguous object, trying to determine HORIZONS id")
         if e.args and len(e.args) > 0:
             choices = e.args[0].split('\n')
-            horizons_id = determine_horizons_id(choices)
+            horizons_id = determine_horizons_id(choices, obj_name)
             logger.debug("HORIZONS id= {}".format(horizons_id))
             if horizons_id:
                 try:
@@ -737,10 +737,11 @@ def convert_horizons_table(ephem, include_moon=False):
     return ephem
 
 
-def determine_horizons_id(lines, now=None):
+def determine_horizons_id(lines, obj_name, now=None):
     """Attempts to determine the HORIZONS id of a target body that has multiple
     possibilities. The passed [lines] (from the .args attribute of the exception)
-    are searched for the HORIZONS id (column 1) whose 'epoch year' (column 2)
+    are searched for the HORIZONS id (column 1) whose 'Primary Desig (column 4)
+    matches [obj_name] and for the  'epoch year' (column 2)
     which is closest to [now] (a passed-in datetime or defaulting to datetime.utcnow()"""
 
     now = now or datetime.utcnow()
@@ -748,7 +749,7 @@ def determine_horizons_id(lines, now=None):
     horizons_id = None
     for line in lines:
         chunks = line.split()
-        if len(chunks) >= 5 and chunks[0].isdigit() is True and chunks[1].isdigit() is True:
+        if len(chunks) >= 5 and chunks[0].isdigit() is True and chunks[1].isdigit() is True and chunks[3] == obj_name:
             try:
                 epoch_yr = datetime.strptime(chunks[1], "%Y")
                 if abs(now-epoch_yr) <= timespan:

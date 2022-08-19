@@ -3414,8 +3414,9 @@ class TestDetermineHorizonsId(SimpleTestCase):
                  '    90001195    2005    289P           289P            Blanpain',
                  '    90001196    2018    289P           289P            Blanpain',
                  '']
+        obj_name = '289P'
 
-        horizons_id = determine_horizons_id(lines)
+        horizons_id = determine_horizons_id(lines, obj_name)
 
         self.assertEqual(expected_id, horizons_id)
 
@@ -3438,8 +3439,9 @@ class TestDetermineHorizonsId(SimpleTestCase):
                  '    90000543    2018    46P            46P             Wirtanen',
                  '    90000544    2018    46P            46P             Wirtanen',
                  '']
+        obj_name = '46P'
 
-        horizons_id = determine_horizons_id(lines)
+        horizons_id = determine_horizons_id(lines, obj_name)
 
         self.assertEqual(expected_id, horizons_id)
 
@@ -3463,8 +3465,9 @@ class TestDetermineHorizonsId(SimpleTestCase):
                  '    90000544    2018    46P            46P             Wirtanen',
                  '']
         now = datetime(2008, 5, 11, 17, 20, 42)
+        obj_name = '46P'
 
-        horizons_id = determine_horizons_id(lines, now)
+        horizons_id = determine_horizons_id(lines, obj_name, now)
 
         self.assertEqual(expected_id, horizons_id)
 
@@ -3482,8 +3485,9 @@ class TestDetermineHorizonsId(SimpleTestCase):
                  '    90000393    2011    29P            29P             Schwassmann-Wachmann 1',
                  '']
         now = datetime(2020, 5, 11, 17, 20, 42)
+        obj_name = '29P'
 
-        horizons_id = determine_horizons_id(lines, now)
+        horizons_id = determine_horizons_id(lines, obj_name, now)
 
         self.assertEqual(expected_id, horizons_id)
 
@@ -3501,8 +3505,9 @@ class TestDetermineHorizonsId(SimpleTestCase):
                  '    90000393    2011    29P            29P             Schwassmann-Wachmann 1',
                  '']
         now = datetime(2008, 5, 11, 17, 20, 42)
+        obj_name = '29P'
 
-        horizons_id = determine_horizons_id(lines, now)
+        horizons_id = determine_horizons_id(lines, obj_name, now)
 
         self.assertEqual(expected_id, horizons_id)
 
@@ -3535,8 +3540,9 @@ class TestDetermineHorizonsId(SimpleTestCase):
                  '    90000213    2011    10P            10P             Tempel 2',
                  '']
         now = datetime(1975, 5, 11, 17, 20, 42)
+        obj_name = '10P'
 
-        horizons_id = determine_horizons_id(lines, now)
+        horizons_id = determine_horizons_id(lines, obj_name, now)
 
         self.assertEqual(expected_id, horizons_id)
 
@@ -3627,25 +3633,27 @@ class TestDetermineHorizonsId(SimpleTestCase):
              '90000805    2022    73P-BU         73P-BU          Schwassmann-Wachmann 3',
              '90000806    2022    73P-BV         73P-BV          Schwassmann-Wachmann 3',
              '']
-
         now = datetime(2022, 8, 19, 17, 20, 42)
+        obj_name = '73P'
 
-        horizons_id = determine_horizons_id(lines, now)
+        horizons_id = determine_horizons_id(lines, obj_name, now)
 
         self.assertEqual(expected_id, horizons_id)
 
     def test_bad_object(self):
         expected_id = None
         lines = ['Unknown target (20000P). Maybe try different id_type?']
+        obj_name = '20000P'
 
-        horizons_id = determine_horizons_id(lines)
+        horizons_id = determine_horizons_id(lines, obj_name)
 
         self.assertEqual(expected_id, horizons_id)
 
     def test_bad_object2(self):
         expected_id = None
         lines = []
+        obj_name = ''
 
-        horizons_id = determine_horizons_id(lines)
+        horizons_id = determine_horizons_id(lines, obj_name)
 
         self.assertEqual(expected_id, horizons_id)
