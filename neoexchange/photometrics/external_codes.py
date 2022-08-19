@@ -1257,8 +1257,8 @@ def updateFITScalib(header, fits_file, catalog_type='BANZAI'):
     header_items = {}
     if catalog_type == 'BANZAI':
         hdr_mapping, tbl_mapping = banzai_catalog_mapping()
-    elif catalog_type == 'BANZAI_LDAC':
-        hdr_mapping, tbl_mapping = banzai_ldac_catalog_mapping()
+    #elif catalog_type == 'BANZAI_LDAC':
+    #    hdr_mapping, tbl_mapping = banzai_ldac_catalog_mapping()
     else:
         logger.error(f"Unsupported catalog mapping: {catalog_type}")
         return -2, None
@@ -1269,8 +1269,7 @@ def updateFITScalib(header, fits_file, catalog_type='BANZAI'):
         logger.error(f"Unable to open FITS image {fits_file} (Reason={e})")
         return -1, None
 
-    if catalog_type == 'BANZAI':
-        fits_header = hdulist[0].header
+    fits_header = hdulist[0].header
 
     # Find place to start inserting
     if "PNTOFST" in fits_header:

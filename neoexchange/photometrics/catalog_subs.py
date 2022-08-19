@@ -1581,7 +1581,7 @@ def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename, 
         logger.error("Multiple frames found")
     except Frame.DoesNotExist:
         if frame_type == Frame.NEOX_RED_FRAMETYPE:
-            prior_frame_filename = fits_file.replace('e92.fits', 'e91.fits')
+            prior_frame_filename = frame_filename.replace('e92.fits', 'e91.fits')
             try:
                 prior_frame = Frame.objects.get(filename=prior_frame_filename, frametype=Frame.BANZAI_RED_FRAMETYPE)
                 block = prior_frame.block
@@ -1599,7 +1599,7 @@ def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename, 
                                     'exptime':header['exptime'],
                                     'midpoint':header['obs_midpoint'],
                                     'block': block,
-                                    'quality' : header['quality'],
+                                    'quality' : header.get('quality', ' '),
                                     'zeropoint':header['zeropoint'],
                                     'zeropoint_err':header['zeropoint_err'],
                                     'zeropoint_src':header['zeropoint_src'],
@@ -2009,7 +2009,7 @@ def search_box(frame, ra, dec, box_halfwidth=3.0, dbg=False):
     box_dec_max = dec_deg + box_halfwidth_deg
     dec_min = min(box_dec_min, box_dec_max)
     dec_max = max(box_dec_min, box_dec_max)
-    if dbg: 
+    if dbg:
         logger.debug("Searching %.4f->%.4f, %.4f->%.4f in %s" % (ra_min, ra_max, dec_min, dec_max, frame.filename))
 
     sources = CatalogSources.objects.filter(frame=frame, obs_ra__range=(ra_min, ra_max), obs_dec__range=(dec_min, dec_max))

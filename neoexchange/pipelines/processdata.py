@@ -350,6 +350,7 @@ class ZeropointProcessPipeline(PipelineProcess):
                     if color_const is False:
                         header['color'] = C
                         header['color_err'] = C
+                    logger.debug("Calling update_zeropoint")
                     header, table = update_zeropoint(header, table, avg_zeropoint, std_zeropoint, include_zperr=False)
 
                     # get the fits filename from the catfile in order to get the Block from the Frame
@@ -360,17 +361,23 @@ class ZeropointProcessPipeline(PipelineProcess):
                     else:
                         fits_file = os.path.basename(catfile)
 
+                    fits_filepath = os.path.join(os.path.dirname(catfile), fits_file)
+
                     # update the zeropoint computed above in a new Frame entry for the e92 frame
                     ast_cat_name = 'GAIA-DR2'
+                    logger.debug("Calling update_frame_zeropoint")
                     frame = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename=fits_file, frame_type=Frame.NEOX_RED_FRAMETYPE)
 
-                    # Write updated photometric calibtation keywords to FITS header of e92.fits file
-                    status, new_fits_header = updateFITScalib(header, fits_file, catalog_type)
+                    # Write updated photometric calibration keywords to FITS header of e92.fits file
+                    logger.debug("Calling updateFITScalib")
+                    status, new_fits_header = updateFITScalib(header, fits_filepath, "BANZAI")
 
                     # update the zeropoint computed above in the CATALOG file Frame
+                    logger.debug("Calling update_frame_zeropoint (2)")
                     frame_cat = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename=os.path.basename(catfile), frame_type=Frame.BANZAI_LDAC_CATALOG)
 
                     # store the CatalogSources
+                    logger.debug("Calling get_or_create_CatalogSources")
                     num_sources_created, num_in_table = get_or_create_CatalogSources(table, frame)
                 else:
                     logger.warning("Didn't get good zeropoint - not updating header")
