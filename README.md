@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.12.2
+* Fix issue for 73P where visibility plots were plotting fragment 73P-BV instead (Issue #606)
+
 ### 3.12.1
 * Add Gaia EDR3, DR3 and ATLAS-2 MPC catalog codes (Issue #603)
 
