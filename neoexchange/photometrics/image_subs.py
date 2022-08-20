@@ -16,6 +16,7 @@ GNU General Public License for more details.
 """
 import os
 import logging
+from glob import glob
 
 import numpy as np
 from astropy.io import fits
@@ -186,3 +187,27 @@ def create_rms_image(fits_file):
     weight_hdulist.close()
 
     return rms_file
+
+def get_reference_name(field_ra, field_dec, site, obs_filter):
+    """ Create a name for a co-added reference image based on
+    the site, instrument, filter, RA and Dec. """
+
+    if not isinstance(field_ra, float) or not isinstance(field_dec, float):
+        logger.error("Passed RA or Dec is not a floating point.")
+        return -1
+
+    try:
+        outname = f"reference_{field_ra:.2f}_{field_dec:.2f}_{site.lower()}_{obs_filter}.fits"
+    except:
+        logger.error("Passed Site is not a string.")
+        return -99
+
+    return outname
+
+def find_reference_images(ref_dir, match):
+    """ Find all of the existing reference images in the specified folder
+    that match the given format. """
+    pattern = os.path.join(ref_dir, match)
+
+    ref_frames = glob(pattern)
+    return ref_frames

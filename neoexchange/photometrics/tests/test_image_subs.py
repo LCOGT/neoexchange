@@ -19,6 +19,7 @@ import tempfile
 from unittest import skipIf
 import warnings
 import shutil
+from pathlib import Path
 
 from astropy.io import fits
 from numpy import array, arange
@@ -314,3 +315,62 @@ class TestCreateRMSImage(ExternalCodeUnitTest):
         assert_allclose(223.6068, data[1007, 367])
         # Test whether central pixel is not saturated
         assert_allclose(25.846653, data[int(header['NAXIS1']/2), int(header['NAXIS2']/2)])
+
+class TestGetReferenceName(ExternalCodeUnitTest):
+    def test1(self):
+        expected_status = "reference_111.11_4.44_lsc_w.fits"
+
+        status = get_reference_name(111.111, 4.444, "lsc", "w")
+
+        self.assertEqual(expected_status, status)
+
+    def test_bad_coords_type_string(self):
+        expected_status = -1
+
+        status = get_reference_name("string", "string", "lsc", "w")
+
+        self.assertEqual(expected_status, status)
+
+    def test_bad_coords_type_int(self):
+        expected_status = -1
+
+        status = get_reference_name(1, 1, "lsc", "w")
+
+        self.assertEqual(expected_status, status)
+
+    def test_bad_site_type(self):
+        expected_status = -99
+
+        status = get_reference_name(111.111, 4.444, 1, "w")
+
+        self.assertEqual(expected_status, status)
+
+
+class TestFindReferenceImage(ExternalCodeUnitTest):
+    def test1(self):
+        newfile1 = os.path.join(self.test_dir, "reference_222.22_-33.33_cpt_w.fits")
+        newfile2 = os.path.join(self.test_dir, "reference_444.44_-55.55_lsc_rp.fits")
+        newfile3 = os.path.join(self.test_dir, "cpt1m0.fits")
+        Path(newfile1).touch()
+        Path(newfile2).touch()
+        Path(newfile3).touch()
+
+        expected_output = [newfile1, newfile2]
+
+        output = find_reference_images(self.test_dir, "reference*.fits")
+
+        self.assertEqual(expected_output, output)
+
+    def test2(self):
+        newfile1 = os.path.join(self.test_dir, "reference_222.22_-33.33_cpt_w.fits")
+        newfile2 = os.path.join(self.test_dir, "reference_444.44_-55.55_lsc_rp.fits")
+        newfile3 = os.path.join(self.test_dir, "cpt1m0.fits")
+        Path(newfile1).touch()
+        Path(newfile2).touch()
+        Path(newfile3).touch()
+
+        expected_output = [newfile1]
+
+        output = find_reference_images(self.test_dir, "reference*cpt*.fits")
+
+        self.assertEqual(expected_output, output)
