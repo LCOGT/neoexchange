@@ -21,6 +21,8 @@ from glob import glob
 import numpy as np
 from astropy.io import fits
 
+from photometrics.external_codes import get_saturate
+
 logger = logging.getLogger(__name__)
 
 def create_weight_image(fits_file):
@@ -83,17 +85,9 @@ def create_weight_image(fits_file):
     weightdata[boolean_mask] = 0.
 
     # Additional mask based on saturation value
-    max_satur = 65535
-    try:
-        max_satur = sciheader.get('MAXLIN', 0.0)
-        if max_satur <= 0.0:
-            raise KeyError
-        satur_ind = scidata >= max_satur
-    except KeyError:
-        max_satur = sciheader['SATURATE']
-        satur_ind = scidata >= max_satur * 0.9
-    finally:
-        weightdata[satur_ind] = 0.
+    max_satur = get_saturate(sciheader)
+    satur_ind = scidata >= max_satur
+    weightdata[satur_ind] = 0.
 
     # Create new weights FITS file
     del(sciheader['EXTNAME'])
@@ -158,17 +152,9 @@ def create_rms_image(fits_file):
     rmsdata = 1 / np.sqrt(weightdata)
 
     # Mask based on saturation value
-    max_satur = 65535
-    try:
-        max_satur = sciheader.get('MAXLIN', 0.0)
-        if max_satur <= 0.0:
-            raise KeyError
-        satur_ind = scidata >= max_satur
-    except KeyError:
-        max_satur = sciheader['SATURATE']
-        satur_ind = scidata >= max_satur * 0.9
-    finally:
-        rmsdata[satur_ind] = np.sqrt(50000.)
+    max_satur = get_saturate(sciheader)
+    satur_ind = scidata >= max_satur
+    rmsdata[satur_ind] = np.sqrt(50000.)
 
     # Create new rms FITS file
     sciheader['L1FRMTYP'] = ('RMS', 'Type of processed image')

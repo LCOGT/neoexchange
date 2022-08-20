@@ -282,13 +282,7 @@ def determine_sextractor_options(fits_file, dest_dir, checkimage_type=[], catalo
     for option in option_mapping.keys():
         keyword = header_mapping[option]
         if keyword == '<MAXLIN>':
-            # See if MAXLIN is present and non-zero; if not use SATURATE
-            value = header.get('MAXLIN', -99)
-            if value < 1.0:
-                value = header.get('SATURATE', -99)
-                if value < 1.0:
-                    logger.error("No valid MAXLIN or SATURATE present")
-                    return ''
+            value = get_saturate(header)
         elif keyword == '<WCS>':
             pixscale = proj_plane_pixel_scales(fits_wcs).mean()*3600.0
             value = round(pixscale, 5)
@@ -333,6 +327,26 @@ def determine_sextractor_options(fits_file, dest_dir, checkimage_type=[], catalo
 
     hdulist.close()
     return options
+
+def get_saturate(fits_header):
+    """
+    Return the value of the MAXLIN keyword in the header.
+
+    If the MAXLIN keyword is not present (or it is equal to 0.0),
+    return the SATURATE keyword instead. If neither are present,
+    return a default value.
+    """
+
+    satlev = 65535
+    try:
+        satlev = fits_header.get('MAXLIN', 0.0)
+        if satlev <= 0.0:
+            raise KeyError
+    except KeyError:
+            satlev = fits_header.get('SATURATE', satlev)
+            satlev = satlev * 0.9
+
+    return satlev
 
 
 def determine_hotpants_options(ref, sci, source_dir, dest_dir, dbgOptions=False):
@@ -396,13 +410,7 @@ def determine_hotpants_options(ref, sci, source_dir, dest_dir, dbgOptions=False)
 
     ref_data = fits.getdata(ref)
 
-    satlev = 65535    #upper valid data count (25000)
-    try:
-        satlev = sci_header.get('MAXLIN', 0.0)
-        if satlev <= 0.0:
-            raise KeyError
-    except KeyError:
-            satlev = sci_header['SATURATE']
+    satlev = get_saturate(sciheader)
 
     scibkg = median(sci_bkgsub_data)
     scibkgstd = 1.4826 * median(absolute(sci_bkgsub_data - scibkg))
