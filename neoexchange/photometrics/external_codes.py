@@ -843,7 +843,12 @@ def run_hotpants(ref, sci, source_dir, dest_dir, binary=None, dbg=False, dbgOpti
         # This executes the command to the terminal
         logger.debug("cmdline=%s" % cmdline)
         args = cmdline.split()
-        retcode_or_cmdline = call(args, cwd=dest_dir)
+
+        # Open /dev/null for writing to lose the Hotpants output into
+        print(f"\nHotpants started.\nSubtracting {ref} from {sci}...\n")
+        DEVNULL = open(os.devnull, 'w')
+        retcode_or_cmdline = call(args, cwd=dest_dir, stdout=DEVNULL, stderr=DEVNULL)
+        DEVNULL.close()
 
     return retcode_or_cmdline
 
