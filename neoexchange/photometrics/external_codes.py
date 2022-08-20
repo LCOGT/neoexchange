@@ -1134,7 +1134,9 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
     problem, the status will be -ve and the header will be None"""
 
     try:
-        data, header = fits.getdata(fits_file, header=True)
+        hdulist = fits.open(fits_file)
+        header = hdulist[0].header
+        data = hdulist[0].data
     except IOError as e:
         logger.error("Unable to open FITS image %s (Reason=%s)" % (fits_file, e))
         return -1, None
@@ -1235,8 +1237,30 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
     for keyword, value in pv_terms:
         header.insert(prior_keyword, (keyword, value, 'TPV distortion coefficient'), after=True)
         prior_keyword = keyword
+
+    hdu = fits.PrimaryHDU(data, header)
+    hdu._bscale = 1.0
+    hdu._bzero = 0.0
+    hdu.header.remove("BSCALE", ignore_missing=True)
+    hdu.header.insert("NAXIS2", ("BSCALE", 1.0), after=True)
+    hdu.header.remove("BZERO", ignore_missing=True)
+    hdu.header.insert("BSCALE", ("BZERO", 0.0), after=True)
+    new_hdulist = fits.HDUList([hdu,])
+
+    for index, hdu in enumerate(hdulist[1:]):
+        logger.info(f"{index} {hdu.name}X {hdu._summary()}")
+        if hdu.name != 'SCI':
+            if hasattr(hdu, 'compressed_data'):
+                new_hdu = fits.ImageHDU(data=hdu.data, header=hdu.header, name=hdu.name)
+            else:
+                new_hdu = hdu
+            new_hdulist.append(new_hdu)
+
     # Need to force the CHECKSUM to be recomputed. Trap for young players..
-    fits.writeto(fits_file_output, data, header, overwrite=True, checksum=True)
+    new_hdulist.writeto(fits_file_output, overwrite=True, checksum=True)
+
+    hdulist.close()
+    new_hdulist.close()
 
     return 0, header
 
