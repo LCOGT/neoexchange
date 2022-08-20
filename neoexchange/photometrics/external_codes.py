@@ -470,8 +470,7 @@ def determine_swarp_align_options(ref, sci, dest_dir, outname, back_size=42, nth
 
 def make_ref_head(ref, sci, dest_dir, outname):
     """
-    Create a new .head file in <dest_dir> corresponding to each newly aligned reference image.
-    The .head file contains the NAXIS and WCS data from the <sci> image.
+    Create a new .head file in <dest_dir> containing the NAXIS and WCS data from the <sci> image.
     """
 
     # Sci image header

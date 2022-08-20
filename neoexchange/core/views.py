@@ -3534,12 +3534,14 @@ def run_swarp_make_reference(ref_dir, configs_dir, dest_dir, match='*.fits'):
     for image in ref_files:
         rms_image = os.path.join(dest_dir, os.path.basename(image).replace(".fits", ".rms.fits"))
         if not os.path.exists(rms_image):
+            print(f"Generating RMS image for {os.path.basename(image)}...")
             sext_status, catalog = run_sextractor_make_catalog(configs_dir, dest_dir, image, checkimage_type=['BACKGROUND_RMS'])
             if sext_status != 0:
                 return sext_status
         else:
-            print(f"{rms_image} already exists. Using existing RMS image...")
+            print(f"RMS image already exists. Using {os.path.basename(rms_image)}")
 
+    print("SWarping images...")
     swarp_status = run_swarp(configs_dir, dest_dir, ref_files)
 
     return swarp_status
