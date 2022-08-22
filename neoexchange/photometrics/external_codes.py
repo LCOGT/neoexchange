@@ -33,7 +33,7 @@ from numpy import loadtxt, split, empty, median, absolute, sqrt
 from core.models import detections_array_dtypes
 from astrometrics.time_subs import timeit
 from photometrics.catalog_subs import oracdr_catalog_mapping, banzai_catalog_mapping, banzai_ldac_catalog_mapping
-from photometrics.image_subs import create_weight_image, create_rms_image
+from photometrics.image_subs import create_weight_image, create_rms_image, get_saturate
 
 logger = logging.getLogger(__name__)
 
