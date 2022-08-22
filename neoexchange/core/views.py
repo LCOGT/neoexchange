@@ -3482,6 +3482,9 @@ def determine_images_and_catalogs(self, datadir, red_level='e91', output=True):
         func = self.stdout.write
 
     fits_files, fits_catalogs = None, None
+    # Add on a path separator at the end in case it's not there so `glob` works
+    # properly
+    datadir = os.path.join(datadir, '')
     if os.path.exists(datadir) and os.path.isdir(datadir):
         fits_files = sorted(glob(datadir + f'*{red_level}.fits'))
         fits_catalogs = sorted(glob(datadir + f'*{red_level}_ldac.fits'))
