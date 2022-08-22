@@ -21,9 +21,28 @@ from glob import glob
 import numpy as np
 from astropy.io import fits
 
-from photometrics.external_codes import get_saturate
-
 logger = logging.getLogger(__name__)
+
+
+def get_saturate(fits_header):
+    """
+    Return the value of the MAXLIN keyword in the header.
+
+    If the MAXLIN keyword is not present (or it is equal to 0.0),
+    return the SATURATE keyword instead. If neither are present,
+    return a default value.
+    """
+
+    satlev = 65535
+    try:
+        satlev = fits_header.get('MAXLIN', 0.0)
+        if satlev <= 0.0:
+            raise KeyError
+    except KeyError:
+            satlev = fits_header.get('SATURATE', satlev)
+            satlev = satlev * 0.9
+
+    return satlev
 
 def create_weight_image(fits_file):
 

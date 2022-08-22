@@ -328,26 +328,6 @@ def determine_sextractor_options(fits_file, dest_dir, checkimage_type=[], catalo
     hdulist.close()
     return options
 
-def get_saturate(fits_header):
-    """
-    Return the value of the MAXLIN keyword in the header.
-
-    If the MAXLIN keyword is not present (or it is equal to 0.0),
-    return the SATURATE keyword instead. If neither are present,
-    return a default value.
-    """
-
-    satlev = 65535
-    try:
-        satlev = fits_header.get('MAXLIN', 0.0)
-        if satlev <= 0.0:
-            raise KeyError
-    except KeyError:
-            satlev = fits_header.get('SATURATE', satlev)
-            satlev = satlev * 0.9
-
-    return satlev
-
 
 def determine_hotpants_options(ref, sci, source_dir, dest_dir, dbgOptions=False):
     """
