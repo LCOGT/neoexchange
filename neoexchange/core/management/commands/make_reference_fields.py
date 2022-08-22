@@ -35,6 +35,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('site', type=str, nargs='?', default=None, help='Site to run for. Default is all sites.')
         parser.add_argument('--datadir', action="store", default=None, help='Path for processed data (e.g. /data/eng/rocks)')
+        parser.add_argument('--blocknum', type=int, default=None, help='Block (request number) to analyze')
         # Make an argument for specific blocks
 
     def handle(self, *args, **options):
@@ -49,25 +50,27 @@ class Command(BaseCommand):
         self.stdout.write(f"Number of reference fields before filtering: {ref_fields.count()}")
         if options['site'] is not None:
             site = options['site'].upper()
-            ref_fields = ref_fields.filter(name__contains = site)
+            ref_fields = ref_fields.filter(name__contains=site)
 
         self.stdout.write(f"Number of reference fields after filtering: {ref_fields.count()}\n")
 
         ### Loop over reference fields and make a list of the observed fields
-
         obs_fields=[]
         for field in ref_fields:
             blocks = Block.objects.filter(calibsource=field)
-            obs_blocks = blocks.filter(num_observed__gte = 1)
+            obs_blocks = blocks.filter(num_observed__gte=1)
             if obs_blocks.count() > 0:
                 obs_fields.append(field)
 
             # Print out relative info for each of the reference fields
             self.stdout.write(f"{field.name}: {field.ra:.5f} {field.dec:.5f}  Num blocks: {blocks.count()}  Num observed blocks: {obs_blocks.count()}")
 
+        # Loop over all observed fields
         for field in obs_fields:
             ### Find blocks corresponding to observed fields
-            #blocks=Block.objects.filter(calibsource=field, num_observed__gte=1)
+            obs_blocks = Block.objects.filter(calibsource=field, num_observed__gte=1)
+            if options['blocknum'] is not None:
+                obs_blocks = obs_blocks.filter(request_number=options['blocknum'])
             for obs_block in obs_blocks:
                 # Find frames corresponding to each block
                 frames=Frame.objects.filter(block=obs_block, frametype=Frame.BANZAI_RED_FRAMETYPE)
