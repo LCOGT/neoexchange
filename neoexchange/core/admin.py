@@ -359,6 +359,10 @@ class PipelineProcessAdmin(admin.ModelAdmin):
         )
     list_display = ('id','process_type','colour_status')
 
+class AsyncProcessAdmin(admin.ModelAdmin):
+    list_display = ('id', 'process_type', 'identifier', 'status', 'created', 'terminal_timestamp')
+    list_filter = ('process_type', 'status', 'created', 'terminal_timestamp')
+
 admin.site.register(Proposal, ProposalAdmin)
 admin.site.register(SourceMeasurement, SourceMeasurementAdmin)
 admin.site.register(ProposalPermission)
@@ -369,5 +373,5 @@ admin.site.register(PhysicalParameters, PhysicalParametersAdmin)
 admin.site.register(Designations, DesignationsAdmin)
 admin.site.register(ColorValues, ColorValuesAdmin)
 admin.site.register(DataProduct, DataProductsAdmin)
-admin.site.register(AsyncProcess)
+admin.site.register(AsyncProcess, AsyncProcessAdmin)
 admin.site.register(PipelineProcess, PipelineProcessAdmin)
