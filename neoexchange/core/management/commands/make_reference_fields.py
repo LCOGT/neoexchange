@@ -20,12 +20,13 @@ import tempfile
 import shutil
 from datetime import datetime
 
+from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
 from astropy.wcs import FITSFixedWarning
 
 from core.models import StaticSource, Block, Frame
-from core.views import run_swarp_make_reference
+from core.views import run_swarp_make_reference, determine_images_and_catalogs
 from photometrics.image_subs import get_reference_name, find_reference_images
 from photometrics.catalog_subs import funpack_fits_file
 
@@ -73,7 +74,7 @@ class Command(BaseCommand):
                 obs_blocks = obs_blocks.filter(request_number=options['blocknum'])
             for obs_block in obs_blocks:
                 # Find frames corresponding to each block
-                frames=Frame.objects.filter(block=obs_block, frametype=Frame.BANZAI_RED_FRAMETYPE)
+                frames = Frame.objects.filter(block=obs_block, frametype=Frame.BANZAI_RED_FRAMETYPE)
                 # List of the filters used on these frames
                 obs_filters = frames.values_list("filter", flat=True).distinct()
 
@@ -100,29 +101,38 @@ class Command(BaseCommand):
 
                     # Check if existing reference frame exists
                     # If not, make one
-                    ref_frame_name = get_reference_name(field.ra, field.dec, obs_block.site, obs_filter)
+                    ref_frame_name = get_reference_name(field.ra, field.dec, obs_block.site, filtered_frames[0].instrument, obs_filter)
                     match_ref_frames = [frame for frame in ref_frames if os.path.basename(frame)==ref_frame_name]
 
                     if len(match_ref_frames) == 0:
+                        self.stdout.write(f"Reference frame ({ref_frame_name}) not found in {reference_dir}")
                         if options['datadir'] is None:
                             dest_dir = tempfile.mkdtemp(prefix='tmp_neox_reffield_')
                         else:
                             dest_dir = options['datadir']
                         dest_dir = os.path.join(dest_dir, "")
 
-                        year = frames[0].midpoint.year
-                        if year == datetime.utcnow().year:
-                            year = ""
-                        day_obs = frames[0].filename.split("-")[2]
-                        source_dir = os.path.join(settings.DATA_ROOT, str(year), day_obs)
+                        # Check for processed frames already
+                        images, catalogs = determine_images_and_catalogs(self, dest_dir, red_level='e92')
+                        if images is None and catalogs is None or (len(images) != filtered_frames.count() and len(catalogs) != filtered_frames.count()):
+                            self.stdout.write(f"Not all products present, running frame reduction pipeline in {dest_dir}")
 
-                        # Copy each frame to a temporary directory
-                        ### TO-DO: Copy the .fz version to temp dir then unpack.
-                        for frame_filename in frames.values_list("filename", flat=True):
-                            fz_frame = frame_filename.replace(".fits", ".fits.fz")
-                            shutil.copy(os.path.join(source_dir, fz_frame), dest_dir)
-                            fz_frame_copied = os.path.join(dest_dir, fz_frame)
-                            funpack_fits_file(fz_frame_copied, all_hdus=True)
+                            year = filtered_frames[0].midpoint.year
+                            if year == datetime.utcnow().year:
+                                year = ""
+                            day_obs = filtered_frames[0].filename.split("-")[2]
+                            source_dir = os.path.join(settings.DATA_ROOT, str(year), day_obs)
+
+                            # Copy each frame to a temporary directory
+                            for frame_filename in filtered_frames.values_list("filename", flat=True):
+                                fz_frame = frame_filename.replace(".fits", ".fits.fz")
+                                fz_frame_copied = os.path.join(dest_dir, fz_frame)
+                                if os.path.exists(fz_frame_copied) is False:
+                                    shutil.copy(os.path.join(source_dir, fz_frame), dest_dir)
+                                    funpack_fits_file(fz_frame_copied, all_hdus=True)
+
+                            # Run frame reduction pipeline
+                            call_command('run_pipeline', '--datadir', dest_dir, '--tempdir', dest_dir, '--refcat', 'PS1')
 
                         # SWarp the frames, and output to the temporary directory
                         run_swarp_make_reference(dest_dir, configs_dir, dest_dir, match="*e92.fits")

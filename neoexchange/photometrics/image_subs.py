@@ -193,7 +193,7 @@ def create_rms_image(fits_file):
 
     return rms_file
 
-def get_reference_name(field_ra, field_dec, site, obs_filter):
+def get_reference_name(field_ra, field_dec, site, instrument, obs_filter):
     """ Create a name for a co-added reference image based on
     the site, instrument, filter, RA and Dec. """
 
@@ -202,7 +202,7 @@ def get_reference_name(field_ra, field_dec, site, obs_filter):
         return -1
 
     try:
-        outname = f"reference_{field_ra:.2f}_{field_dec:.2f}_{site.lower()}_{obs_filter}.fits"
+        outname = f"reference_{site.lower()}_{instrument.lower()}_{field_ra:.2f}_{field_dec:.2f}_{obs_filter}.fits"
     except:
         logger.error("Passed Site is not a string.")
         return -99
