@@ -1544,9 +1544,11 @@ def determine_fwhm(header, table):
 
 def update_zeropoint(header, table, avg_zeropoint, std_zeropoint, include_zperr=True):
 
+    if header['zeropoint'] > 0:
+        avg_zeropoint = header['zeropoint'] + avg_zeropoint
     header['zeropoint'] = avg_zeropoint
     header['zeropoint_err'] = std_zeropoint
-    header['zeropoint_src'] = 'py_zp_cvc-V0.1'
+    header['zeropoint_src'] = 'py_zp_cvc-V0.2'
 
     for source in table:
         source['obs_mag'] += avg_zeropoint
