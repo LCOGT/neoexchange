@@ -26,9 +26,7 @@ class Command(BaseCommand):
         parser.add_argument('--tempdir', action="store", default=default_tempdir, help=f'Temporary processing directory name (e.g. {default_tempdir}')
 
     def handle(self, *args, **options):
-        # Path to directory containing some e91 BANZAI files (this one is a local copy of a recent one from /apophis/eng/rocks)
-        # XXX Should just be able to give this via --datadir now
-        #dataroot = '/Users/egomez/Downloads/neox/C_2021A1_391911468/'
+        # Path to directory containing some e91 BANZAI files
         dataroot = options['datadir']
 
         if isinstance(options['date'], str):
@@ -45,7 +43,7 @@ class Command(BaseCommand):
         if os.path.exists(dataroot) is False:
             dataroot2 = os.path.join(dataroot, obs_date)
             if os.path.exists(dataroot2) is False:
-                raise CommandError(f"Dataroot {dataroot:} or {dataroot2:} don't exist. Halting")
+                raise CommandError(f"Dataroot {dataroot} or {dataroot2} don't exist. Halting")
             else:
                 dataroot = dataroot2
 
@@ -53,6 +51,10 @@ class Command(BaseCommand):
         dataroot = os.path.join(dataroot, '')
         fits_files, fits_catalogs = determine_images_and_catalogs(self, dataroot)
 
+        if fits_files = None or len(fits_files) == 0:
+            raise CommandError(f"No FITS files found in {dataroot}")
+
+        # Process all files through all pipeline steps
         temp_dir = options['tempdir']
         for fits_filepath in fits_files:
             # fits_filepath is the full path including the dataroot and obs_date e.g. /apophis/eng/rocks/20220731/cpt1m010-fa16-20220731-0146-e91.fits
