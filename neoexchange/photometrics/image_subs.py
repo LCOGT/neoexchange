@@ -202,8 +202,8 @@ def get_reference_name(field_ra, field_dec, site, instrument, obs_filter):
         return -1
 
     try:
-        outname = f"reference_{site.lower()}_{instrument.lower()}_{field_ra:.2f}_{field_dec:.2f}_{obs_filter}.fits"
-    except:
+        outname = f"reference_{site.lower()}_{instrument.lower()}_{obs_filter}_{field_ra:06.2f}_{field_dec:+06.2f}.fits"
+    except AttributeError:
         logger.error("Passed Site is not a string.")
         return -99
 

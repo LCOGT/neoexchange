@@ -317,31 +317,109 @@ class TestCreateRMSImage(ExternalCodeUnitTest):
         assert_allclose(25.846653, data[int(header['NAXIS1']/2), int(header['NAXIS2']/2)])
 
 class TestGetReferenceName(ExternalCodeUnitTest):
-    def test1(self):
-        expected_status = "reference_111.11_4.44_lsc_w.fits"
 
-        status = get_reference_name(111.111, 4.444, "lsc", "w")
+    def test_ra_1dig_dec_p1dig(self):
+        expected_status = "reference_lsc_fa15_w_001.11_+04.44.fits"
+
+        status = get_reference_name(1.111, 4.444,  "lsc", "fa15", "w")
+
+        self.assertEqual(expected_status, status)
+
+    def test_ra_1dig_dec_p2dig(self):
+        expected_status = "reference_lsc_fa15_w_001.11_+84.44.fits"
+
+        status = get_reference_name(1.111, 84.444,  "lsc", "fa15", "w")
+
+        self.assertEqual(expected_status, status)
+
+    def test_ra_1dig_dec_m1dig(self):
+        expected_status = "reference_lsc_fa15_w_001.11_-04.44.fits"
+
+        status = get_reference_name(1.111, -4.444,  "lsc", "fa15", "w")
+
+        self.assertEqual(expected_status, status)
+
+    def test_ra_1dig_dec_m2dig(self):
+        expected_status = "reference_lsc_fa15_w_001.11_-84.44.fits"
+
+        status = get_reference_name(1.111, -84.444,  "lsc", "fa15", "w")
+
+        self.assertEqual(expected_status, status)
+
+    def test_ra_2dig_dec_p1dig(self):
+        expected_status = "reference_lsc_fa15_w_011.11_+04.44.fits"
+
+        status = get_reference_name(11.111, 4.444,  "lsc", "fa15", "w")
+
+        self.assertEqual(expected_status, status)
+
+    def test_ra_2dig_dec_p2dig(self):
+        expected_status = "reference_lsc_fa15_w_011.11_+84.44.fits"
+
+        status = get_reference_name(11.111, 84.444,  "lsc", "fa15", "w")
+
+        self.assertEqual(expected_status, status)
+
+    def test_ra_2dig_dec_m1dig(self):
+        expected_status = "reference_lsc_fa15_w_011.11_-04.44.fits"
+
+        status = get_reference_name(11.111, -4.444,  "lsc", "fa15", "w")
+
+        self.assertEqual(expected_status, status)
+
+    def test_ra_2dig_dec_m2dig(self):
+        expected_status = "reference_lsc_fa15_w_011.11_-84.44.fits"
+
+        status = get_reference_name(11.111, -84.444,  "lsc", "fa15", "w")
+
+        self.assertEqual(expected_status, status)
+
+    def test_ra_3dig_dec_p1dig(self):
+        expected_status = "reference_lsc_fa15_w_111.11_+04.44.fits"
+
+        status = get_reference_name(111.111, 4.444,  "lsc", "fa15", "w")
+
+        self.assertEqual(expected_status, status)
+
+    def test_ra_3dig_dec_p2dig(self):
+        expected_status = "reference_lsc_fa15_w_111.11_+84.44.fits"
+
+        status = get_reference_name(111.111, 84.444,  "lsc", "fa15", "w")
+
+        self.assertEqual(expected_status, status)
+
+    def test_ra_3dig_dec_m1dig(self):
+        expected_status = "reference_lsc_fa15_w_111.11_-04.44.fits"
+
+        status = get_reference_name(111.111, -4.444,  "lsc", "fa15", "w")
+
+        self.assertEqual(expected_status, status)
+
+    def test_ra_3dig_dec_m2dig(self):
+        expected_status = "reference_lsc_fa15_w_111.11_-84.44.fits"
+
+        status = get_reference_name(111.111, -84.444,  "lsc", "fa15", "w")
 
         self.assertEqual(expected_status, status)
 
     def test_bad_coords_type_string(self):
         expected_status = -1
 
-        status = get_reference_name("string", "string", "lsc", "w")
+        status = get_reference_name("string", "string", "lsc", "fa15", "w")
 
         self.assertEqual(expected_status, status)
 
     def test_bad_coords_type_int(self):
         expected_status = -1
 
-        status = get_reference_name(1, 1, "lsc", "w")
+        status = get_reference_name(1, 1, "lsc", "fa15", "w")
 
         self.assertEqual(expected_status, status)
 
     def test_bad_site_type(self):
         expected_status = -99
 
-        status = get_reference_name(111.111, 4.444, 1, "w")
+        status = get_reference_name(111.111, 4.444, 1, "fa15", "w")
 
         self.assertEqual(expected_status, status)
 
