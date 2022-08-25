@@ -897,10 +897,13 @@ def open_fits_catalog(catfile, header_only=False):
         except KeyError:
             err_index = -1
 
-        if sci_index != -1 and cat_index != -1:
+        if sci_index != -1:
             header = hdulist[sci_index].header
             if header_only is False:
-                table = hdulist[cat_index].data
+                if cat_index != -1:
+                    table = hdulist[cat_index].data
+                else:
+                    logger.error("Could not find CAT HDU in file")
         else:
             if sci_index != -1 and bpm_index != -1 and err_index != -1:
                 cattype = 'BANZAI_CALIB_MEF'
