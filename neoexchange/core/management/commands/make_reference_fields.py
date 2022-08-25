@@ -64,7 +64,7 @@ class Command(BaseCommand):
                 obs_fields.append(field)
 
             # Print out relative info for each of the reference fields
-            self.stdout.write(f"{field.name}: {field.ra:.5f} {field.dec:.5f}  Num blocks: {blocks.count()}  Num observed blocks: {obs_blocks.count()}")
+            self.stdout.write(f"{field.name}: {field.ra: 9.5f} {field.dec:+9.5f}  Num blocks: {blocks.count()}  Num observed blocks: {obs_blocks.count()}")
 
         # Loop over all observed fields
         for field in obs_fields:

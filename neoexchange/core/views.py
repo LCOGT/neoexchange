@@ -3490,10 +3490,10 @@ def determine_images_and_catalogs(self, datadir, red_level='e91', output=True):
         fits_catalogs = sorted(glob(datadir + f'*{red_level}_ldac.fits'))
 
         if len(fits_files) == 0 and len(fits_catalogs) == 0:
-            if output: func(f"No FITS files and catalogs found in directory {datadir}")
+            if output: func(f"No {red_level} FITS files and catalogs found in directory {datadir}")
             fits_files, fits_catalogs = None, None
         else:
-            if output: func(f"Found {len(fits_files)} FITS files and {len(fits_catalogs)} catalogs")
+            if output: func(f"Found {len(fits_files)} FITS files and {len(fits_catalogs)} catalogs for red level {red_level}")
     else:
         if output: func(f"Could not open directory {datadir}")
         fits_files, fits_catalogs = None, None
