@@ -1445,7 +1445,6 @@ class OpenFITSCatalog(FITSUnitTest):
         self.assertAlmostEqual(expected_x, tbl[-1]['XWIN_IMAGE'], self.precision)
         self.assertAlmostEqual(expected_y, tbl[-1]['YWIN_IMAGE'], self.precision)
 
-
     def test_ldac_catalog_bad(self):
         expected_value = {}
         expected_cattype = 'CORRUPT'
@@ -1502,6 +1501,32 @@ class OpenFITSCatalog(FITSUnitTest):
 
         self.assertAlmostEqual(expected_x, tbl[-1]['XWIN'], self.precision)
         self.assertAlmostEqual(expected_y, tbl[-1]['YWIN'], self.precision)
+
+    def test_banzai_catalog_no_cat_HDU(self):
+        # Copy file, funpack, remove CAT HDU
+        test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+        shutil.copy(self.test_banzaifilename, test_dir)
+        test_banzaifilename = os.path.join(test_dir, os.path.basename(self.test_banzaifilename))
+        status = funpack_fits_file(test_banzaifilename, all_hdus=True)
+        self.assertEqual(0, status)
+        test_banzaifilename = test_banzaifilename.replace('.fz', '')
+        hdulist = fits.open(test_banzaifilename)
+        del(hdulist['CAT'])
+        errdata = np.zeros((hdulist[0].data.shape), dtype=np.float32)
+        hdulist.append(fits.ImageHDU(errdata, name='ERR'))
+        hdulist.writeto(test_banzaifilename, overwrite=True, checksum=True)
+
+        expected_hdr_len = 278-24  # Total-compression keywords
+        expected_tbl_len = {}
+        expected_cattype = 'BANZAI'
+
+        hdr, tbl, cattype = open_fits_catalog(test_banzaifilename)
+
+        self.assertEqual(expected_hdr_len, len(hdr))
+        self.assertEqual(expected_tbl_len, tbl)
+        self.assertEqual(expected_cattype, cattype)
+
+        shutil.rmtree(test_dir)
 
     def test_uncomp_banzai_read_catalog(self):
         unexpected_value = {}

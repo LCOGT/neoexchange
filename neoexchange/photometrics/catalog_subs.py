@@ -973,12 +973,15 @@ def open_fits_catalog(catfile, header_only=False):
         except KeyError:
             cat_index = -1
 
-        if sci_index != -1 and cat_index != -1:
+        if sci_index != -1:
             header = hdulist[sci_index].header
             if header_only is False:
-                table = hdulist[cat_index].data
+                if cat_index != -1:
+                    table = hdulist[cat_index].data
+                else:
+                    logger.error("Could not find CAT HDU in file")
         else:
-            logger.error("Could not find SCI and CAT HDUs in file")
+            logger.error("Could not find SCI HDU in file")
     elif len(hdulist) == 1:
         # BANZAI-format after extraction of image
         cattype = 'BANZAI'
