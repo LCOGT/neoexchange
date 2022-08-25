@@ -51,7 +51,7 @@ class Command(BaseCommand):
         dataroot = os.path.join(dataroot, '')
         fits_files, fits_catalogs = determine_images_and_catalogs(self, dataroot)
 
-        if fits_files = None or len(fits_files) == 0:
+        if fits_files is None or len(fits_files) == 0:
             raise CommandError(f"No FITS files found in {dataroot}")
 
         # Process all files through all pipeline steps
