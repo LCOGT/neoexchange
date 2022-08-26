@@ -41,7 +41,7 @@ def send_task(task, process, *args):
         process.save()
 
 
-@task(time_limit=3600_000, max_retries=0)
+@task(time_limit=3600_000, max_retries=0, store_results=True)
 def run_pipeline(process_pk, cls_name):
     """
     Task to run a PipelineProcess sub-class. `cls_name` is the name of the
@@ -58,7 +58,8 @@ def run_pipeline(process_pk, cls_name):
         logger.error('could not find {} with PK {}'.format(pipeline_cls.__name__, process_pk),
               file=sys.stderr)
         return
-    run_process(process)
+    message = run_process(process)
+    return message
 
 
 def run_process(process):
@@ -89,5 +90,7 @@ def run_process(process):
         process.failure_message = failure_message
         process.status = ASYNC_STATUS_FAILED
         process.save()
-    logger.info('process finished')
-    return
+    else:
+        failure_message = 'process finished'
+        logger.info(failure_message)
+    return failure_message

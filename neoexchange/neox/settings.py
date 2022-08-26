@@ -143,7 +143,6 @@ LOGIN_REDIRECT_URL = '/'
 # GRAPPELLI_INDEX_DASHBOARD = 'neox.dashboard.CustomIndexDashboard'
 
 INSTALLED_APPS = (
-    "django_dramatiq",
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -151,6 +150,7 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'django.contrib.admin',
     'django.contrib.messages',
+    'django_dramatiq',
     'reversion',
     'rest_framework',
     'core.apps.CoreConfig',
@@ -181,9 +181,19 @@ DRAMATIQ_BROKER = {
         'dramatiq.middleware.Pipelines',
         'dramatiq.middleware.Retries',
         'django_dramatiq.middleware.DbConnectionsMiddleware',
+        'django_dramatiq.middleware.AdminMiddleware',
     ]
 }
 
+DRAMATIQ_RESULT_BACKEND = {
+    'BACKEND': 'dramatiq.results.backends.redis.RedisBackend',
+    'BACKEND_OPTIONS': {
+        'url': f'redis://{REDIS_HOSTNAME}:6379',
+    },
+    'MIDDLEWARE_OPTIONS': {
+        'result_ttl': 60000
+    }
+}
 
 rollbar_default_env = 'development' if DEBUG else 'production'
 ROLLBAR = {
