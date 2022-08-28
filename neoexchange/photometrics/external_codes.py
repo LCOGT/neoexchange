@@ -590,6 +590,14 @@ def determine_scamp_options(fits_catalog, external_cat_name='GAIA-DR2.cat', dist
         distort_degrees = 1
     if distort_degrees != 1 and distort_degrees <= 7:
             options += " -DISTORT_DEGREES {} -PROJECTION_TYPE TPV".format(distort_degrees)
+    # Add unique filename-based name for the XML output file rather than 'scamp.xml'
+    # which is problematic when several versions are running in parallel.
+    xml_file = os.path.splitext(os.path.basename(fits_catalog))[0] + '.xml'
+    if os.path.basename(fits_catalog) == xml_file:
+        logger.warning("Trying to create XML output file with the same name as input FITS catalog. Resetting to scamp.xml")
+        xml_file = 'scamp.xml'
+
+    options += " -XML_NAME {}".format(xml_file)
 
     return options
 

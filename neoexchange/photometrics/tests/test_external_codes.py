@@ -371,7 +371,7 @@ class TestSCAMPRunner(ExternalCodeUnitTest):
 
     def test_scamp_options(self):
 
-        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat'
+        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat -XML_NAME foo.xml'
 
         options = determine_scamp_options('foo.ldac')
 
@@ -379,7 +379,7 @@ class TestSCAMPRunner(ExternalCodeUnitTest):
 
     def test_scamp_options_0m4_no_distortion(self):
 
-        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat'
+        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat -XML_NAME foo_0m4.xml'
 
         options = determine_scamp_options('foo_0m4.ldac')
 
@@ -387,15 +387,15 @@ class TestSCAMPRunner(ExternalCodeUnitTest):
 
     def test_scamp_options_2m0_no_distortion(self):
 
-        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat'
+        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat -XML_NAME foo_2m0.xml'
 
-        options = determine_scamp_options('foo_0m4.ldac')
+        options = determine_scamp_options('foo_2m0.ldac')
 
         self.assertEqual(expected_options, options)
 
     def test_scamp_options_1m0_distortion(self):
 
-        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat -DISTORT_DEGREES 3 -PROJECTION_TYPE TPV'
+        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat -DISTORT_DEGREES 3 -PROJECTION_TYPE TPV -XML_NAME test1m0-fa##-date.xml'
 
         options = determine_scamp_options('test1m0-fa##-date.ldac')
 
@@ -403,7 +403,7 @@ class TestSCAMPRunner(ExternalCodeUnitTest):
 
     def test_scamp_options_1m0_distortion_4th_order(self):
 
-        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat -DISTORT_DEGREES 4 -PROJECTION_TYPE TPV'
+        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat -DISTORT_DEGREES 4 -PROJECTION_TYPE TPV -XML_NAME test1m0-fa##-date.xml'
 
         options = determine_scamp_options('test1m0-fa##-date.ldac', distort_degrees=4)
 
@@ -411,7 +411,7 @@ class TestSCAMPRunner(ExternalCodeUnitTest):
 
     def test_scamp_options_0m4_distortion_5th_order(self):
 
-        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat -DISTORT_DEGREES 5 -PROJECTION_TYPE TPV'
+        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat -DISTORT_DEGREES 5 -PROJECTION_TYPE TPV -XML_NAME test1m0-fa##-date.xml'
 
         options = determine_scamp_options('test1m0-fa##-date.ldac', distort_degrees=5)
 
@@ -419,7 +419,7 @@ class TestSCAMPRunner(ExternalCodeUnitTest):
 
     def test_scamp_options_1m0_no_distortion(self):
 
-        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat'
+        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat -XML_NAME test1m0-fa##-date.xml'
 
         options = determine_scamp_options('test1m0-fa##-date.ldac', distort_degrees=1)
 
@@ -451,6 +451,11 @@ class TestSCAMPRunner(ExternalCodeUnitTest):
         # Expected value is 29 lines of FITS header
         self.assertEqual(29, len(test_lines))
         self.assertEqual(expected_line1, test_lines[3].rstrip())
+
+        xml_file = os.path.basename(self.test_fits_catalog).replace('fits', 'xml')
+        output_xml = os.path.join(self.test_dir, header_file)
+        self.assertTrue(os.path.exists(output_xml), msg=output_xml + ' is missing')
+        self.assertFalse(os.path.exists(self.test_fits_catalog.replace('fits', 'head')), msg=output_xml + ' exists in the wrong place')
 
 
 class TestSExtractorRunner(ExternalCodeUnitTest):
