@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import pyslalib.slalib as S
 from astropy.io import fits
-from astropy.wcs import WCS
+from astropy.wcs import WCS, FITSFixedWarning
 from django.conf import settings
 from astropy.wcs._wcs import InvalidTransformError
 from astropy.wcs.utils import skycoord_to_pixel
@@ -152,6 +152,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
         return "WARNING: COULD NOT FIND FITS FILES"
 
     fig = plt.figure()
+    warnings.simplefilter('ignore', category=FITSFixedWarning)
     frame_query = Frame.objects.filter(filename__in=base_name_list).order_by('midpoint').prefetch_related('catalogsources_set')
     if frame_query:
         frame_obj = frame_query[0]
