@@ -2973,7 +2973,7 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
 
 def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M', force=False):
     """
-    Performs remote look up of orbital elements for object with id obj_id_or_page,
+    Performs remote look up at the MPC of orbital elements for object with id obj_id_or_page,
     Gets or creates corresponding Body instance and updates entry.
     Alternatively obj_id_or_page can be a BeautifulSoup object, in which case
     the call to fetch_mpcdb_page() will be skipped and the passed BeautifulSoup
@@ -3042,50 +3042,124 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M', force=False):
         logger.info("More recent elements already stored for %s" % obj_id)
     # Update Physical Parameters
     if body.characterization_target() or body.source_type == 'C':
-        update_jpl_phys_params(body)
-        if body.source_type == 'C':
-            # The MPC DB doesn't return any info for comets; update the Body's
-            # `abs_mag` and `slope` values here if possible
-            new_abs_mag = None
-            try:
-                new_abs_mag = PhysicalParameters.objects.get(body=body, parameter_type='M1', preferred=True).value
-            except (PhysicalParameters.DoesNotExist, PhysicalParameters.MultipleObjectsReturned):
-                new_abs_mag = None
-            if new_abs_mag:
-                msg = "Updated abs_mag for {} from M1={}".format(body.current_name(), new_abs_mag)
-                logger.debug(msg)
-                body.abs_mag = new_abs_mag
-
-            new_slope = None
-            try:
-                new_slope = PhysicalParameters.objects.get(body=body, parameter_type='K1', preferred=True).value
-            except (PhysicalParameters.DoesNotExist, PhysicalParameters.MultipleObjectsReturned):
-                new_slope = None
-            if new_slope:
-                msg = "Updated slope for {} from K1={}".format(body.current_name(), new_slope)
-                logger.debug(msg)
-                body.slope = new_slope / 2.5
-            body.save()
-            # Build physparams dictionary to store reciprocal semi-major axis
-            phys_params = {'parameter_type': '/a',
-                           'value' : elements.get('recip semimajor axis orig', None),
-                           'error' : elements.get('recip semimajor axis error', None),
-                           'value2': elements.get('recip semimajor axis future', None),
-                           'error2': elements.get('recip semimajor axis error', None),
-                           'units': 'au',
-                           'reference': elements.get('reference', None),
-                           'preferred': True
-                           }
-            if phys_params['value'] is not None:
-                saved = body.save_physical_parameters(phys_params)
-                body.refresh_from_db()
-                # Test to see if it's a DNC with a 1/a0 value < 1e-4 (25,000 AU)
-                if body.recip_a and body.recip_a < 4e-5 and body.source_subtype_2 is None:
-                    body.source_subtype_2 = 'DN'
-                    body.save()
+        update_body_phys_params(body, elements)
 
     return True
 
+
+def update_JPL_orbit(obj_id_or_dict, dbg=False, origin='J', force=False):
+    """
+    Performs remote look up at JPL of orbital elements for object with id obj_id_or_dict,
+    Gets or creates corresponding Body instance and updates entry.
+    Alternatively obj_id_or_dict can be a JSON/dict object, in which case
+    the call to fetch_jpl_orbit() will be skipped and the passed dict
+    object will parsed directly.
+    """
+
+    obj_id = None
+    if type(obj_id_or_dict) != dict:
+        obj_id = obj_id_or_dict
+        resp = fetch_jpl_orbit(obj_id)
+
+        if resp is None:
+            logger.warning(f"Could not find elements for {obj_id}")
+            return False
+    else:
+        resp = obj_id_or_dict
+
+    try:
+        body, created = Body.objects.get_or_create(name=obj_id)
+    except Body.MultipleObjectsReturned:
+        # When the crossid happens we end up with multiple versions of the body.
+        # Need to pick the one has been most recently updated
+        bodies = Body.objects.filter(
+            name=obj_id, provisional_name__isnull=False).order_by('-ingest')
+        created = False
+        if not bodies:
+            bodies = Body.objects.filter(name=obj_id).order_by('-ingest')
+        body = bodies[0]
+    # If this object is a radar target and the requested origin is for the
+    # "other" site (Goldstone ('G') when we have Arecibo ('A') or vice versa),
+    # then set the origin to 'R' for joint Radar target.
+    if (body.origin == 'G' and origin == 'A') or (body.origin == 'A' and origin == 'G'):
+        origin = 'R'
+    # Determine what type of new object it is and whether to keep it active
+    kwargs = clean_jplorbit(resp, dbg, origin)
+
+    # Save, make revision, or do not update depending on the what has happened
+    # to the object
+    if body.epochofel:
+        time_to_current_epoch = abs(body.epochofel - datetime.now())
+        time_to_new_epoch = abs(kwargs['epochofel'] - datetime.now())
+    if not body.epochofel or time_to_new_epoch <= time_to_current_epoch or force is True:
+        save_and_make_revision(body, kwargs)
+        if not created:
+            logger.info(f"Updated elements for {obj_id} from JPL")
+        else:
+            logger.info(f"Added new orbit for {obj_id} from JPL")
+    else:
+        body.origin = origin
+        if origin != 'M':
+            body.active = True
+        body.save()
+        logger.info(f"More recent elements already stored for {obj_id}")
+    # Update Physical Parameters
+    if body.characterization_target() or body.source_type == 'C':
+        update_body_phys_params(body, elements)
+
+    return True
+
+
+def update_body_phys_params(body, elements):
+    """Fetch and update the physical parameters for the passed Body <body>.
+    If the <body> has a `source_type=C`(omet), this will also update the
+    Body.abs_mag and .slope from the JPL M1/K1 if they exist and set
+    `body.source_subtype_2 = 'DN'` to indicate a DNC if there are 
+   'recip semimajor axis <foo>' keys in <elements> and the 1/a_0 value
+   is < 4e-5 (1/25,000 AU)   
+    """
+    update_jpl_phys_params(body)
+    if body.source_type == 'C':
+        # The MPC DB doesn't return any info for comets; update the Body's
+        # `abs_mag` and `slope` values here if possible
+        new_abs_mag = None
+        try:
+            new_abs_mag = PhysicalParameters.objects.get(body=body, parameter_type='M1', preferred=True).value
+        except (PhysicalParameters.DoesNotExist, PhysicalParameters.MultipleObjectsReturned):
+            new_abs_mag = None
+        if new_abs_mag:
+            msg = "Updated abs_mag for {} from M1={}".format(body.current_name(), new_abs_mag)
+            logger.debug(msg)
+            body.abs_mag = new_abs_mag
+
+        new_slope = None
+        try:
+            new_slope = PhysicalParameters.objects.get(body=body, parameter_type='K1', preferred=True).value
+        except (PhysicalParameters.DoesNotExist, PhysicalParameters.MultipleObjectsReturned):
+            new_slope = None
+        if new_slope:
+            msg = "Updated slope for {} from K1={}".format(body.current_name(), new_slope)
+            logger.debug(msg)
+            body.slope = new_slope / 2.5
+        body.save()
+        # Build physparams dictionary to store reciprocal semi-major axis
+        phys_params = {'parameter_type': '/a',
+                       'value' : elements.get('recip semimajor axis orig', None),
+                       'error' : elements.get('recip semimajor axis error', None),
+                       'value2': elements.get('recip semimajor axis future', None),
+                       'error2': elements.get('recip semimajor axis error', None),
+                       'units': 'au',
+                       'reference': elements.get('reference', None),
+                       'preferred': True
+                       }
+        if phys_params['value'] is not None:
+            saved = body.save_physical_parameters(phys_params)
+            body.refresh_from_db()
+            # Test to see if it's a DNC with a 1/a0 value < 4e-5 (25,000 AU)
+            if body.recip_a and body.recip_a < 4e-5 and body.source_subtype_2 is None:
+                body.source_subtype_2 = 'DN'
+                body.save()
+    return
 
 def clean_jplorbit(resp, origin='J', dbg=False):
     """Takes a JSON dict <resp> from fetch_jpl_orbit() and plucks
