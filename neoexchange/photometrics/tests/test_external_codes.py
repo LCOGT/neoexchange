@@ -1369,6 +1369,50 @@ class TestUpdateFITSWCS(TestCase):
             else:
                 self.assertAlmostEqual(expected[key], header[key], self.precision, msg="Failure on {}".format(key))
 
+    def test_update_FITS_WCS_newer_SCAMP(self):
+
+        # Make copy of header file, modify version number and writeout
+        shutil.copy(self.test_scamp_headfile, self.test_dir)
+        test_scamp_headfile = os.path.join(self.test_dir, os.path.basename(self.test_scamp_headfile))
+        with open(test_scamp_headfile, 'r') as in_fh:
+            header_lines = in_fh.readlines()
+        test_scamp_headfile = test_scamp_headfile.replace('_scamp', '_newscamp')
+        with open(test_scamp_headfile, 'w') as out_fh:
+            for line in header_lines:
+                if 'HISTORY' in line:
+                    line = line.replace('2.0.4', '2.10.0')
+                out_fh.write(line)
+
+        status, new_header = updateFITSWCS(self.test_fits_file, test_scamp_headfile, self.test_scamp_xml, self.fits_file_output)
+
+        self.assertEqual(status, 0)
+
+        expected = {
+                     'crval1' : 1.783286919001E+02, 'crval2' : 1.169387882835E+01,
+                     'crpix1' : 2.047592457311E+03, 'crpix2' : 2.048419571848E+03,
+                     'cd1_1'  : 1.082433886779E-04,  'cd1_2' : 6.824629998000E-07,
+                     'cd2_1'  : 7.053875928440E-07,  'cd2_2' : -1.082408809463E-04,
+                     'secpix' : 0.389669,
+                     'wcssolvr' : 'SCAMP-2.10.0',
+                     'wcsrfcat' : '<Vizier/aserver.cgi?ucac4@cds>',
+                     'wcsimcat' : 'ldac_test_catalog.fits',
+                     'wcsnref' : 606, 'wcsmatch' : 64,
+                     'wccattyp' : 'UCAC4@CDS',
+                     'wcsrdres' : '0.21947/0.20434',
+                     'wcsdelra' : 37.1754196, 'wcsdelde' : -51.2994992,
+                     'wcserr' : 0,
+                     'cunit1' : 'deg', 'cunit2' : 'deg'
+                    }
+
+        hdu_number = 0
+        header = fits.getheader(self.fits_file_output, hdu_number)
+
+        for key in expected:
+            if type(expected[key]) == str:
+                self.assertEqual(expected[key], header[key], msg="Failure on {}".format(key))
+            else:
+                self.assertAlmostEqual(expected[key], header[key], self.precision, msg="Failure on {}".format(key))
+
     def test_update_FITS_WCS_GAIADR2(self):
 
         status, new_header = updateFITSWCS(self.test_banzai_file, self.test_externscamp_headfile, self.test_externcat_xml, self.banzai_file_output)

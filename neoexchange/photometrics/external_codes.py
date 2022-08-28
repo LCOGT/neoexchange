@@ -1155,7 +1155,9 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
     # Read in SCAMP .head file
     for line in scamp_head_fh:
         if 'HISTORY' in line:
-            wcssolvr = str(line[34:39]+'-'+line[48:53])
+            # XXX This should really be a regexp...
+            wcssolvr = str(line[34:39]+'-'+line[48:54])
+            wcssolvr = wcssolvr.rstrip()
         if 'CTYPE1' in line:
             ctype1 = line[9:31].strip().replace("'", "")
         if 'CTYPE2' in line:
