@@ -266,7 +266,8 @@ class ScampProcessPipeline(PipelineProcess):
 
         scamp_file = os.path.basename(new_ldac_catalog).replace('.fits', '.head' )
         scamp_file = os.path.join(dest_dir, scamp_file)
-        scamp_xml_file = os.path.join(dest_dir, 'scamp.xml')
+        scamp_xml_file = os.path.basename(new_ldac_catalog).replace('.fits', '.xml' )
+        scamp_xml_file = os.path.join(dest_dir, scamp_xml_file)
         # Update WCS in image file
         # Strip off now unneeded FITS extension
         fits_file = fits_file.replace('[SCI]', '')
