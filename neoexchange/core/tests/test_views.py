@@ -3941,6 +3941,9 @@ class TestCleanJPLOrbit(SimpleTestCase):
         with open(os.path.join('astrometrics', 'tests', 'test_jpl_73P-BV.jpl'), 'r') as fh:
             self.test_resp_73P_BV = json.load(fh)
 
+        with open(os.path.join('astrometrics', 'tests', 'test_jpl_C_2020R7.jpl'), 'r') as fh:
+            self.test_resp_C_2020R7 = json.load(fh)
+
         self.expected_elements_73P_BV = { 'active' : True,
                                           'origin' : 'J',
                                           'elements_type' : 'MPC_COMET',
@@ -3956,6 +3959,24 @@ class TestCleanJPLOrbit(SimpleTestCase):
                                           'meananom' : 354.9604825216212,
                                           'orbit_rms' : 0.91715,
                                           'arc_length' : 7.0,
+                                          'not_seen' : -42 # not checked, depends on current datetime
+                                        }
+        self.expected_elements_C_2020R7 = { 'active' : True,
+                                          'origin' : 'J',
+                                          'elements_type' : 'MPC_COMET',
+                                          'abs_mag' : 10.9,
+                                          'slope' : 4.5/2.5,
+                                          'epochofel' : datetime(2021, 8, 27, 0, 0, 0),
+                                          'eccentricity' : 0.9997723375443962,
+                                          'perihdist' : 2.956436745201215,
+                                          'epochofperih' : datetime(2022, 9, 16, 5, 25, 46, 260546),
+                                          'longascnode' : 268.279161205361,
+                                          'argofperih' : 347.8207950037755,
+                                          'orbinc' : 114.8921974784359,
+                                          'meandist' : 12986.05313449822,
+                                          'meananom' : 359.9997434310121,
+                                          'orbit_rms' : 0.45643,
+                                          'arc_length' : 996.0,
                                           'not_seen' : -42 # not checked, depends on current datetime
                                         }
         self.maxDiff = None
@@ -3992,6 +4013,20 @@ class TestCleanJPLOrbit(SimpleTestCase):
         elements = clean_jplorbit(self.test_resp_73P_BV, origin='O')
 
         self.compare_elements(self.expected_elements_73P_BV, elements)
+
+    def test_C_2020R7(self):
+
+        elements = clean_jplorbit(self.test_resp_C_2020R7)
+
+        self.compare_elements(self.expected_elements_C_2020R7, elements)
+
+    def test_C_2020R7_LOOK_origin(self):
+        self.expected_elements_C_2020R7['origin'] = 'O'
+
+        elements = clean_jplorbit(self.test_resp_C_2020R7, origin='O')
+
+        self.compare_elements(self.expected_elements_C_2020R7, elements)
+
 
 class TestCreate_sourcemeasurement(TestCase):
 

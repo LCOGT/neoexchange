@@ -1,0 +1,160 @@
+{
+  "phys_par": [
+    {
+      "ref": "35",
+      "value": "10.9",
+      "name": "M1",
+      "desc": "absolute magnitude of comet and coma (i.e. total)",
+      "notes": "2 parameter fit from 315 observations, autocmod 3.0b",
+      "sigma": "0.5",
+      "title": "comet total magnitude",
+      "units": null
+    },
+    {
+      "ref": "35",
+      "value": "4.5",
+      "name": "K1",
+      "desc": "comet total magnitude slope parameter",
+      "notes": "autocmod 3.0b",
+      "sigma": null,
+      "title": "comet total magnitude slope",
+      "units": null
+    }
+  ],
+  "object": {
+    "neo": false,
+    "des_alt": [],
+    "orbit_class": {
+      "name": "Comet",
+      "code": "COM"
+    },
+    "pha": false,
+    "spkid": "1003728",
+    "kind": "cu",
+    "orbit_id": "35",
+    "fullname": "C/2020 R7 (ATLAS)",
+    "des": "2020 R7",
+    "prefix": "C"
+  },
+  "signature": {
+    "source": "NASA/JPL Small-Body Database (SBDB) API",
+    "version": "1.3"
+  },
+  "orbit": {
+    "source": "JPL",
+    "cov_epoch": "2459453.5",
+    "moid_jup": "2.261",
+    "t_jup": "-0.897",
+    "condition_code": null,
+    "not_valid_before": null,
+    "rms": ".45643",
+    "model_pars": [],
+    "orbit_id": "35",
+    "producer": "Otto Matic",
+    "first_obs": "2019-12-03",
+    "soln_date": "2022-08-26 23:42:31",
+    "two_body": null,
+    "epoch": "2459453.5",
+    "elements": [
+      {
+        "value": ".9997723375443962",
+        "sigma": "5.3319E-6",
+        "name": "e",
+        "title": "eccentricity",
+        "label": "e",
+        "units": null
+      },
+      {
+        "value": "12986.05313449822",
+        "sigma": "304.15",
+        "name": "a",
+        "title": "semi-major axis",
+        "label": "a",
+        "units": "au"
+      },
+      {
+        "value": "2.956436745201215",
+        "sigma": "4.5401E-6",
+        "name": "q",
+        "title": "perihelion distance",
+        "label": "q",
+        "units": "au"
+      },
+      {
+        "value": "114.8921974784359",
+        "sigma": "2.0276E-5",
+        "name": "i",
+        "title": "inclination; angle with respect to x-y ecliptic plane",
+        "label": "i",
+        "units": "deg"
+      },
+      {
+        "value": "268.279161205361",
+        "sigma": "2.6087E-5",
+        "name": "om",
+        "title": "longitude of the ascending node",
+        "label": "node",
+        "units": "deg"
+      },
+      {
+        "value": "347.8207950037755",
+        "sigma": ".0001513",
+        "name": "w",
+        "title": "argument of perihelion",
+        "label": "peri",
+        "units": "deg"
+      },
+      {
+        "value": "359.9997434310121",
+        "sigma": "9.0141E-6",
+        "name": "ma",
+        "title": "mean anomaly",
+        "label": "M",
+        "units": "deg"
+      },
+      {
+        "value": "2459838.726229867466",
+        "sigma": ".00050569",
+        "name": "tp",
+        "title": "time of perihelion passage",
+        "label": "tp",
+        "units": "TDB"
+      },
+      {
+        "value": "540523014.4951032",
+        "sigma": "1.899E7",
+        "name": "per",
+        "title": "sidereal orbital period",
+        "label": "period",
+        "units": "d"
+      },
+      {
+        "value": "6.66021594540747E-7",
+        "sigma": "2.3399E-8",
+        "name": "n",
+        "title": "mean motion",
+        "label": "n",
+        "units": "deg/d"
+      },
+      {
+        "value": "25969.14983225124",
+        "sigma": "608.23",
+        "name": "ad",
+        "title": "aphelion distance",
+        "label": "Q",
+        "units": "au"
+      }
+    ],
+    "equinox": "J2000",
+    "data_arc": "996",
+    "not_valid_after": null,
+    "n_del_obs_used": null,
+    "sb_used": "SB441-N16",
+    "n_obs_used": "350",
+    "comment": null,
+    "pe_used": "DE441",
+    "last_obs": "2022-08-25",
+    "moid": "1.9561",
+    "n_dop_obs_used": null
+  }
+}
