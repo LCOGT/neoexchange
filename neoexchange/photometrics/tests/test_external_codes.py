@@ -1638,7 +1638,7 @@ class TestGetSCAMPXMLInfo(TestCase):
     def test_read_extern_cat(self):
 
         expected_results = { 'num_refstars' : 280,
-                             'num_match'    : 23,
+                             'num_match'    : 106,
                              'wcs_refcat'   : 'GAIA-DR2.cat',
                              'wcs_cattype'  : 'GAIA-DR2@CDS',
                              'wcs_imagecat' : 'tfn0m414-kb99-20180529-0202-e91_ldac.fits',
@@ -1656,7 +1656,7 @@ class TestGetSCAMPXMLInfo(TestCase):
     def test_read_extern_cat_TPV(self):
 
         expected_results = { 'num_refstars' : 280,
-                             'num_match'    : 23,
+                             'num_match'    : 103,
                              'wcs_refcat'   : 'GAIA-DR2_228.33+38.40_43.3488mx29.0321m.cat',
                              'wcs_cattype'  : 'GAIA-DR2@CDS',
                              'wcs_imagecat' : 'tfn0m414-kb99-20180529-0202-e91_ldac.fits',
