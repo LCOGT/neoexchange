@@ -14,6 +14,9 @@ from photometrics.lightcurve_subs import read_photompipe_file, write_photompipe_
 from unittest import skipIf
 from django.test import SimpleTestCase, TestCase
 
+import logging
+logging.disable(logging.FATAL)
+
 class TestPDSSchemaMappings(SimpleTestCase):
 
     def setUp(self):
@@ -1533,6 +1536,193 @@ class TestMakePDSAsteroidName(SimpleTestCase):
 
         self.assertEqual(expected_filename, filename)
         self.assertEqual(expected_pds_name, pds_name)
+
+    def test_unnumbered_ast(self):
+        expected_filename = '2021so2'
+        expected_pds_name = '2021 SO2'
+
+        filename, pds_name = make_pds_asteroid_name('2021 SO2')
+
+        self.assertEqual(expected_filename, filename)
+        self.assertEqual(expected_pds_name, pds_name)
+
+class TestDetermineTargetNameType(TestCase):
+
+    def setUp(self):
+
+        body_params = {
+                         'id': 36254,
+                         'provisional_name': None,
+                         'provisional_packed': None,
+                         'name': '65803',
+                         'origin': 'N',
+                         'source_type': 'N',
+                         'source_subtype_1': 'N3',
+                         'source_subtype_2': 'PH',
+                         'elements_type': 'MPC_MINOR_PLANET',
+                         'active': False,
+                         'fast_moving': False,
+                         'urgency': None,
+                         'epochofel': datetime(2021, 2, 25, 0, 0),
+                         'orbit_rms': 0.56,
+                         'orbinc': 3.40768,
+                         'longascnode': 73.20234,
+                         'argofperih': 319.32035,
+                         'eccentricity': 0.3836409,
+                         'meandist': 1.6444571,
+                         'meananom': 77.75787,
+                         'perihdist': None,
+                         'epochofperih': None,
+                         'abs_mag': 18.27,
+                         'slope': 0.15,
+                         'score': None,
+                         'discovery_date': datetime(1996, 4, 11, 0, 0),
+                         'num_obs': 829,
+                         'arc_length': 7305.0,
+                         'not_seen': 2087.29154187494,
+                         'updated': True,
+                         'ingest': datetime(2018, 8, 14, 17, 45, 42),
+                         'update_time': datetime(2021, 3, 1, 19, 59, 56, 957500)
+                         }
+
+        self.test_body, created = Body.objects.get_or_create(**body_params)
+
+        desig_params = { 'body' : self.test_body, 'value' : 'Didymos', 'desig_type' : 'N', 'preferred' : True, 'packed' : False}
+        test_desig, created = Designations.objects.get_or_create(**desig_params)
+        desig_params['value'] = '65803'
+        desig_params['desig_type'] = '#'
+        test_desig, created = Designations.objects.get_or_create(**desig_params)
+
+        self.test_header = fits.Header({'SIMPLE' : True, 'OBJECT' : '65803   ',
+            'SRCTYPE' : 'MINORPLANET',
+            'OBSTYPE' : 'EXPOSE  ',
+            })
+
+    def test_expose_known_ast_didymos(self):
+        expected_name = '(65803) Didymos'
+        expected_type = 'Asteroid'
+
+        target_name, target_type = determine_target_name_type(self.test_header)
+
+        self.assertEqual(expected_name, target_name)
+        self.assertEqual(expected_type, target_type)
+
+    def test_expose_known_ast_notdidymos(self):
+        expected_name = '(12923) Zephyr'
+        expected_type = 'Asteroid'
+
+        self.test_header['object'] = '12923'
+        self.test_body.name = '12923'
+        self.test_body.save()
+        new_desigs = {'#' : 12923, 'N' : 'Zephyr'}
+        for desig_type, new_value in new_desigs.items():
+            desig = Designations.objects.get(desig_type=desig_type)
+            desig.value = new_value
+            desig.save()
+
+        target_name, target_type = determine_target_name_type(self.test_header)
+
+        self.assertEqual(expected_name, target_name)
+        self.assertEqual(expected_type, target_type)
+
+    def test_expose_known_ast_nodesigs(self):
+        expected_name = '(12923) Zephyr'
+        expected_type = 'Asteroid'
+
+        self.test_header['object'] = '12923'
+        self.test_body.name = '12923'
+        self.test_body.save()
+        Designations.objects.filter(body=self.test_body).delete()
+
+        target_name, target_type = determine_target_name_type(self.test_header)
+
+        self.assertEqual(expected_name, target_name)
+        self.assertEqual(expected_type, target_type)
+
+    def test_expose_unknown_ast(self):
+        expected_name = '(12923) Zephyr'
+        expected_type = 'Asteroid'
+
+        self.test_header['object'] = '12923'
+
+        target_name, target_type = determine_target_name_type(self.test_header)
+
+        self.assertEqual(expected_name, target_name)
+        self.assertEqual(expected_type, target_type)
+
+    def test_expose_unknown_ast_no_jpl(self):
+        expected_name = 'XL8B85F'
+        expected_type = 'Asteroid'
+
+        self.test_header['object'] = 'XL8B85F'
+
+        target_name, target_type = determine_target_name_type(self.test_header)
+
+        self.assertEqual(expected_name, target_name)
+        self.assertEqual(expected_type, target_type)
+
+    def test_expose_unknown_ast_no_shortname(self):
+        expected_name = '2021 SO2'
+        expected_type = 'Asteroid'
+
+        self.test_header['object'] = '2021 SO2'
+
+        target_name, target_type = determine_target_name_type(self.test_header)
+
+        self.assertEqual(expected_name, target_name)
+        self.assertEqual(expected_type, target_type)
+
+    def test_bpm(self):
+        expected_name = 'BPM'
+        expected_type = 'Calibrator'
+        self.test_header['object'] = '41 Cyg x talk q 2'
+        self.test_header['obstype'] = 'BPM'
+        self.test_header['srctype'] = 'EXTRASOLAR'
+
+        target_name, target_type = determine_target_name_type(self.test_header)
+
+        self.assertEqual(expected_name, target_name)
+        self.assertEqual(expected_type, target_type)
+
+    def test_bias(self):
+        expected_name = 'BIAS'
+        expected_type = 'Calibrator'
+
+        self.test_header['object'] = 'N/A'
+        self.test_header['obstype'] = 'BIAS'
+        self.test_header['srctype'] = 'N/A'
+
+        target_name, target_type = determine_target_name_type(self.test_header)
+
+        self.assertEqual(expected_name, target_name)
+        self.assertEqual(expected_type, target_type)
+
+    def test_dark(self):
+        expected_name = 'DARK'
+        expected_type = 'Calibrator'
+
+        self.test_header['object'] = 'N/A'
+        self.test_header['obstype'] = 'DARK'
+        self.test_header['srctype'] = 'N/A'
+
+        target_name, target_type = determine_target_name_type(self.test_header)
+
+        self.assertEqual(expected_name, target_name)
+        self.assertEqual(expected_type, target_type)
+
+    def test_skyflat(self):
+        expected_name = 'FLAT FIELD'
+        expected_type = 'Calibrator'
+
+        self.test_header['object'] = 'Flat'
+        self.test_header['obstype'] = 'SKYFLAT'
+        self.test_header['srctype'] = 'CALIBRATION'
+
+        target_name, target_type = determine_target_name_type(self.test_header)
+
+        self.assertEqual(expected_name, target_name)
+        self.assertEqual(expected_type, target_type)
+
 
 class TestDetermineFilenameFromTable(SimpleTestCase):
 

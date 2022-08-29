@@ -17,6 +17,8 @@ from django.conf import settings
 
 from core.models import Body, Frame
 from core.archive_subs import lco_api_call, download_files
+from astrometrics.ast_subs import normal_to_packed
+from astrometrics.sources_subs import fetch_jpl_orbit
 from astrometrics.ephem_subs import LCOGT_telserial_to_site_codes, LCOGT_domes_to_site_codes, get_sitepos
 from photometrics.lightcurve_subs import *
 from photometrics.catalog_subs import open_fits_catalog
@@ -460,29 +462,7 @@ def create_obs_area(header, filename):
 
     # Create Target Identification subclass
     target_id = etree.SubElement(obs_area, "Target_Identification")
-    target_types = {'MINORPLANET' : 'Asteroid', 'COMET' : 'Comet' }
-    target_name = header.get('object', '')
-    # Try and find the Body associated with the name
-    try:
-        body = Body.objects.get(name=target_name)
-        _, target_name = make_pds_asteroid_name(body)
-    except Body.DoesNotExist:
-        logger.warning(f"Body with name {target_name} does not exist")
-        raise
-    except Body.MultipleObjectsReturned:
-        logger.warning(f"Multiple Bodies with name {target_name} exist")
-
-    obstype = header.get('obstype', '').upper()
-    target_type = target_types.get(header.get('srctype',''), 'Unknown')
-    #                       OBSTYPE PDS NAME
-    target_type_mapping = { 'BIAS' : 'BIAS',
-                            'SKYFLAT' : 'FLAT FIELD',
-                            'DARK' : 'DARK',
-                            'BPM' : 'BPM'
-                          }
-    if obstype == 'BIAS' or obstype == 'DARK' or obstype == 'SKYFLAT' or obstype == 'BPM':
-        target_name = target_type_mapping[obstype]
-        target_type = 'Calibrator'
+    target_name, target_type = determine_target_name_type(header)
     etree.SubElement(target_id, "name").text = target_name
     etree.SubElement(target_id, "type").text = target_type
 
@@ -613,10 +593,11 @@ def create_context_area(filepath, collection_type):
 
     # Create Target Identification subclass
     target_id = etree.SubElement(context_area, "Target_Identification")
-    target_type = {'MINORPLANET' : 'Asteroid', 'COMET' : 'Comet' }
-    etree.SubElement(target_id, "name").text = headers[0].get('object', '') # XXX needs to be replaced with name lookup and PDSifying
-    etree.SubElement(target_id, "type").text = target_type.get(headers[0].get('srctype',''), 'Unknown')
+    target_name, target_type = determine_target_name_type(headers[0])
+    etree.SubElement(target_id, "name").text = target_name
+    etree.SubElement(target_id, "type").text = target_type
     # Create Internal Reference subclass of Target Area
+    #if 'didymos in target_name.lower():
     int_reference = etree.SubElement(target_id, "Internal_Reference")
     etree.SubElement(int_reference, "lid_reference").text = "urn:nasa:pds:context:target:asteroid.didymos"
     etree.SubElement(int_reference, "reference_type").text = "collection_to_target"
@@ -1224,12 +1205,63 @@ def make_pds_asteroid_name(body_or_bodyname):
         # letters.
         filename = bodyname.replace(' ', '').lower()
         chunks = bodyname.split(' ')
-        if len(chunks) == 2 and chunks[0].isdigit():
+        _, conv_status = normal_to_packed(bodyname)
+        if len(chunks) == 2 and chunks[0].isdigit() and conv_status == -1:
             pds_name = f"({chunks[0]}) {chunks[1]}"
         else:
             pds_name = bodyname
 
     return filename, pds_name
+
+def determine_target_name_type(header):
+    """Determines the PDS SBN-format asteroid name (of the form '(12345) AstName')
+    and target type for insertion into <Target_Identification> sections from
+    the <target_name> and observation type <obstype>"""
+
+    #                       OBSTYPE  PDS NAME
+    #                       ------- --------
+    target_type_mapping = { 'BIAS'  : 'BIAS',
+                            'SKYFLAT' : 'FLAT FIELD',
+                            'DARK'  : 'DARK',
+                            'BPM'   : 'BPM'
+                          }
+    target_types = {'MINORPLANET' : 'Asteroid', 'COMET' : 'Comet' }
+
+    target_name = header.get('object', '')
+    obstype = header.get('obstype', '').upper()
+
+    if obstype == 'BIAS' or obstype == 'DARK' or obstype == 'SKYFLAT' or obstype == 'BPM':
+        target_name = target_type_mapping[obstype]
+        target_type = 'Calibrator'
+    else:
+        # Try and find the Body associated with the name
+        try:
+            body = Body.objects.get(name=target_name)
+            _, target_name = make_pds_asteroid_name(body)
+            # See if we got a too-short name from make_pds_asteroid_name (it
+            # should be at least 2 space separated words) and query JPL SBDB for
+            # name instead (but only if the 2nd character is a digit i.e. not
+            # a tracklet id which won't be known at JPL)
+            if len(target_name.split(' ')) < 2 and target_name[1].isdigit() is True:
+                resp = fetch_jpl_orbit(target_name)
+                if 'object' in resp:
+                    jpl_name = resp['object'].get('shortname', resp['object']['des'])
+                    _, target_name = make_pds_asteroid_name(jpl_name)
+                else:
+                    msg = f"Error querying JPL. API message={resp.get('message','')}"
+                    logger.error(msg)
+        except (Body.DoesNotExist, Body.MultipleObjectsReturned) as e:
+            logger.warning(e)
+            resp = fetch_jpl_orbit(target_name)
+            if 'object' in resp:
+                jpl_name = resp['object'].get('shortname', resp['object']['des'])
+                _, target_name = make_pds_asteroid_name(jpl_name)
+            else:
+                msg = f"Error querying JPL. API message={resp.get('message','')}"
+                logger.error(msg)
+        target_type = target_types.get(header.get('srctype',''), 'Unknown')
+
+    return target_name, target_type
 
 def create_dart_lightcurve(input_dir, output_dir, block, match='photometry_*.dat'):
     """Creates a DART-format lightcurve file from the photometry file and LOG in
