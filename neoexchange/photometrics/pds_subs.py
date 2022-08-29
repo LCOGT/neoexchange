@@ -166,7 +166,7 @@ def create_id_area(filename, model_version='1.15.0.0', collection_type='cal', mo
     # If it's Product_Collection, add a Citation block
     if product_type == 'Product_Collection':
         citation_info = etree.SubElement(id_area, "Citation_Information")
-        xml_elements = {'author_list' : 'T. Lister',
+        xml_elements = {'author_list' : 'Lister, T.',
                         'publication_year' : mod_time.strftime("%Y"),
                         'keyword' : 'Las Cumbres',
                         'description' : f'DART Telescopic Observation Bundle, Las Cumbres Observatory {proc_levels[collection_type]["title"]} Data Collection'
@@ -468,6 +468,7 @@ def create_obs_area(header, filename):
         _, target_name = make_pds_asteroid_name(body)
     except Body.DoesNotExist:
         logger.warning(f"Body with name {target_name} does not exist")
+        raise
     except Body.MultipleObjectsReturned:
         logger.warning(f"Multiple Bodies with name {target_name} exist")
 
@@ -613,7 +614,7 @@ def create_context_area(filepath, collection_type):
     # Create Target Identification subclass
     target_id = etree.SubElement(context_area, "Target_Identification")
     target_type = {'MINORPLANET' : 'Asteroid', 'COMET' : 'Comet' }
-    etree.SubElement(target_id, "name").text = headers[0].get('object', '')
+    etree.SubElement(target_id, "name").text = headers[0].get('object', '') # XXX needs to be replaced with name lookup and PDSifying
     etree.SubElement(target_id, "type").text = target_type.get(headers[0].get('srctype',''), 'Unknown')
     # Create Internal Reference subclass of Target Area
     int_reference = etree.SubElement(target_id, "Internal_Reference")
@@ -659,7 +660,7 @@ def create_file_area_obs(header, filename):
 
     header_offset = 0
     for extn, extn_header in enumerate(headers):
-        logger.debug(f"Extn #{extn}, {len(extn_header)} records", end='')
+        logger.debug(f"Extn #{extn}, {len(extn_header)} records")
         header_element = etree.SubElement(file_area_obs, "Header")
         # Compute size of header from list length+1 (missing END card)
         header_size_bytes = (len(extn_header)+1)*80
@@ -1072,6 +1073,7 @@ def create_dart_directories(output_dir, block):
     """
     status = {}
 
+    warnings.simplefilter('ignore', FITSFixedWarning)
     frames = Frame.objects.filter(block=block, frametype=Frame.BANZAI_RED_FRAMETYPE)
     if frames.count() > 0:
         first_filename = frames.last().filename
