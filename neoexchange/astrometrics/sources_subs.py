@@ -2809,11 +2809,20 @@ def read_solar_standards(standards_file):
     return standards
 
 
-def fetch_jpl_orbit(body):
+def fetch_jpl_orbit(body_or_target_name):
     """Function to fetch orbit, physical parameters, and discovery details from
-    JPL SBDB (Small-Body DataBase) API (online) for a NEOx Body <body>"""
+    JPL SBDB (Small-Body DataBase) API (online) for a NEOx Body <body> or
+    target name"""
+
+    try:
+        body_name = body_or_target_name.current_name()
+    except AttributeError:
+        body_name = body_or_target_name
+    else:
+        body_name = body_or_target_name
+
     jpl_url_base = 'https://ssd-api.jpl.nasa.gov/sbdb.api'
-    request_url = jpl_url_base + '?sstr={}&phys-par=Y&alt-des=Y&no-orbit=N&full-prec=Y'.format(body.current_name())
+    request_url = jpl_url_base + '?sstr={}&phys-par=Y&alt-des=Y&no-orbit=N&full-prec=Y'.format(body_name)
     resp = requests.get(request_url, timeout=20, verify=True).json()
 
     return resp
