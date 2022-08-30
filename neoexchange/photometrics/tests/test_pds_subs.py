@@ -1854,6 +1854,10 @@ class TestExportBlockToPDS(TestCase):
             for extn in ['e00', 'e92']:
                 new_name = os.path.join(self.test_input_dir, frame_params['filename'].replace('e91', extn))
                 filename = shutil.copy(test_file_path, new_name)
+                # Change object name to 65803
+                hdulist = fits.open(filename)
+                hdulist[0].header['object'] = '65803   '
+                hdulist.writeto(filename, overwrite=True, checksum=True)
                 self.test_banzai_files.append(os.path.basename(filename))
 
         # Make one additional copy which is renamed to an -e91 (so it shouldn't be found)
@@ -1968,6 +1972,52 @@ class TestExportBlockToPDS(TestCase):
             xml = xml_file.readlines()
 
         for i, expected_line in enumerate(self.expected_xml_cal):
+            if i < len(xml):
+                assert expected_line.lstrip() == xml[i].lstrip(), "Failed on line: " + str(i+1) + "\n" + expected_line.lstrip() + "\n" + xml[i].lstrip()
+            else:
+                assert expected_line.lstrip() == None, "Failed on line: " + str(i+1)
+
+    def test_create_pds_collection_cal_not_didymos(self):
+        expected_csv_file = os.path.join(self.expected_root_dir, 'data_lcogt_cal', 'collection_data_lcogt_cal.csv')
+        expected_xml_file = os.path.join(self.expected_root_dir, 'data_lcogt_cal', 'collection_data_lcogt_cal.xml')
+        e92_files = []
+        # Modify object in FITS headers and remove <lid_reference> to didymos from XML
+        for x in self.test_banzai_files:
+             if 'e92' in x:
+                e92_files.append(x)
+                # Change object name to something other (65803) Didymos
+                filename = os.path.join(self.test_input_dir, x)
+                hdulist = fits.open(filename)
+                hdulist[0].header['object'] = '12923   '
+                hdulist.writeto(filename, overwrite=True, checksum=True)
+        for line_num, line in enumerate(self.expected_xml_cal):
+            if line.strip() == '<type>Asteroid</type>':
+                start_line = line_num+1
+        expected_xml_cal = self.expected_xml_cal[:start_line-2] +\
+            [self.expected_xml_cal[start_line-2:start_line-1][0].replace('(65803) Didymos', '(12923) Zephyr'), ] +\
+            self.expected_xml_cal[start_line-1:start_line] +\
+            self.expected_xml_cal[start_line+4:]
+
+        expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogt_cal:{x}::1.0' ) for x in self.test_banzai_files if 'e92' in x]
+        paths = create_dart_directories(self.test_output_dir, self.test_block)
+
+        csv_filename, xml_filename = create_pds_collection(self.expected_root_dir,
+            self.test_input_dir, e92_files, 'cal', self.schemadir, mod_time=datetime(2021, 10, 15))
+
+        for filename, expected_file in zip([csv_filename, xml_filename], [expected_csv_file, expected_xml_file]):
+            self.assertTrue(os.path.exists(expected_file), f'{expected_file} does not exist')
+            self.assertTrue(os.path.isfile(expected_file), f'{expected_file} is not a file')
+            self.assertEqual(expected_file, filename)
+
+        table = Table.read(csv_filename, format='ascii.no_header')
+        for i, line in enumerate(expected_lines):
+            self.assertEqual(line[0], table[i][0])
+            self.assertEqual(line[1], table[i][1])
+
+        with open(xml_filename, 'r') as xml_file:
+            xml = xml_file.readlines()
+
+        for i, expected_line in enumerate(expected_xml_cal):
             if i < len(xml):
                 assert expected_line.lstrip() == xml[i].lstrip(), "Failed on line: " + str(i+1) + "\n" + expected_line.lstrip() + "\n" + xml[i].lstrip()
             else:

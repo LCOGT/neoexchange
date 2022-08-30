@@ -57,7 +57,7 @@
       </Observing_System_Component>
     </Observing_System>
     <Target_Identification>
-      <name>XL8B85F</name>
+      <name>(65803) Didymos</name>
       <type>Asteroid</type>
       <Internal_Reference>
         <lid_reference>urn:nasa:pds:context:target:asteroid.didymos</lid_reference>

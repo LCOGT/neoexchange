@@ -596,11 +596,11 @@ def create_context_area(filepath, collection_type):
     target_name, target_type = determine_target_name_type(headers[0])
     etree.SubElement(target_id, "name").text = target_name
     etree.SubElement(target_id, "type").text = target_type
-    # Create Internal Reference subclass of Target Area
-    #if 'didymos in target_name.lower():
-    int_reference = etree.SubElement(target_id, "Internal_Reference")
-    etree.SubElement(int_reference, "lid_reference").text = "urn:nasa:pds:context:target:asteroid.didymos"
-    etree.SubElement(int_reference, "reference_type").text = "collection_to_target"
+    # Create Internal Reference subclass of Target Area (but only if this Didymos)
+    if 'didymos' in target_name.lower():
+        int_reference = etree.SubElement(target_id, "Internal_Reference")
+        etree.SubElement(int_reference, "lid_reference").text = "urn:nasa:pds:context:target:asteroid.didymos"
+        etree.SubElement(int_reference, "reference_type").text = "collection_to_target"
 
     return context_area
 
