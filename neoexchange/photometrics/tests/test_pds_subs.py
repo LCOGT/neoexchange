@@ -1761,6 +1761,9 @@ class TestExportBlockToPDS(TestCase):
         test_xml_collection = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_collection_raw.xml'))
         with open(test_xml_collection, 'r') as xml_file:
             self.expected_xml_raw = xml_file.readlines()
+        test_xml_collection = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_collection_ddp.xml'))
+        with open(test_xml_collection, 'r') as xml_file:
+            self.expected_xml_ddp = xml_file.readlines()
 
         self.framedir = os.path.abspath(os.path.join('photometrics', 'tests'))
         self.test_file = 'banzai_test_frame.fits'
@@ -1948,6 +1951,57 @@ class TestExportBlockToPDS(TestCase):
 
         self.assertEqual(expected_files, files)
 
+    def test_create_pds_collection_ddp(self):
+        # Setup
+        expected_csv_file = os.path.join(self.expected_root_dir, 'data_lcogt_ddp', 'collection_data_lcogt_ddp.csv')
+        expected_xml_file = os.path.join(self.expected_root_dir, 'data_lcogt_ddp', 'collection_data_lcogt_ddp.xml')
+        expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_tfn_fa11_20211013_12345_65803didymos_photometry.tab')
+        expected_lines = [
+        '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  SExtractor_flag  aprad',
+        ' tfn1m001-fa11-20211012-0073-e91.fits  2459500.3339392  14.8447  0.0397  27.1845  0.0394  -12.3397    0.0052                0  10.00',
+        ' tfn1m001-fa11-20211012-0074-e91.fits  2459500.3345790  14.8637  0.0293  27.1824  0.0288  -12.3187    0.0053                3  10.00'
+        ]
+
+        paths = create_dart_directories(self.test_output_dir, self.test_block)
+        for x in self.test_banzai_files:
+            if 'e92' in x:
+                shutil.copy(os.path.join(self.test_input_dir, x), paths['cal_data'])
+
+        test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_photompipe.dat'))
+        test_logfile = os.path.abspath(os.path.join('photometrics', 'tests', 'example_photompipe_log'))
+        # Copy files to input directory, renaming log
+        shutil.copy(test_lc_file, self.test_input_daydir)
+        new_name = os.path.join(self.test_input_daydir, 'LOG')
+        shutil.copy(test_logfile, new_name)
+
+        dart_lc_file = create_dart_lightcurve(self.test_input_dir, paths['ddp_data'], self.test_block, '*photompipe.dat')
+        lc_files = [os.path.basename(dart_lc_file),]
+        expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogt_ddp:{x}::1.0' ) for x in lc_files]
+
+        # Tested function
+        csv_filename, xml_filename = create_pds_collection(self.expected_root_dir,
+            paths['ddp_data'], lc_files, 'ddp', self.schemadir, mod_time=datetime(2021, 10, 15))
+
+        # Tests
+        for filename, expected_file in zip([csv_filename, xml_filename], [expected_csv_file, expected_xml_file]):
+            self.assertTrue(os.path.exists(expected_file), f'{expected_file} does not exist')
+            self.assertTrue(os.path.isfile(expected_file), f'{expected_file} is not a file')
+            self.assertEqual(expected_file, filename)
+
+        table = Table.read(csv_filename, format='ascii.no_header')
+        for i, line in enumerate(expected_lines):
+            self.assertEqual(line[0], table[i][0])
+            self.assertEqual(line[1], table[i][1])
+
+        with open(xml_filename, 'r') as xml_file:
+            xml = xml_file.readlines()
+
+        for i, expected_line in enumerate(self.expected_xml_ddp):
+            if i < len(xml):
+                assert expected_line.lstrip() == xml[i].lstrip(), "Failed on line: " + str(i+1) + "\n-" + expected_line.lstrip() + "\n+" + xml[i].lstrip()
+            else:
+                assert expected_line.lstrip() == None, "Failed on line: " + str(i+1)
+
     def test_create_pds_collection_cal(self):
         expected_csv_file = os.path.join(self.expected_root_dir, 'data_lcogt_cal', 'collection_data_lcogt_cal.csv')
         expected_xml_file = os.path.join(self.expected_root_dir, 'data_lcogt_cal', 'collection_data_lcogt_cal.xml')
@@ -1973,7 +2027,7 @@ class TestExportBlockToPDS(TestCase):
 
         for i, expected_line in enumerate(self.expected_xml_cal):
             if i < len(xml):
-                assert expected_line.lstrip() == xml[i].lstrip(), "Failed on line: " + str(i+1) + "\n" + expected_line.lstrip() + "\n" + xml[i].lstrip()
+                assert expected_line.lstrip() == xml[i].lstrip(), "Failed on line: " + str(i+1) + "\n-" + expected_line.lstrip() + "\n+" + xml[i].lstrip()
             else:
                 assert expected_line.lstrip() == None, "Failed on line: " + str(i+1)
 
@@ -2019,7 +2073,7 @@ class TestExportBlockToPDS(TestCase):
 
         for i, expected_line in enumerate(expected_xml_cal):
             if i < len(xml):
-                assert expected_line.lstrip() == xml[i].lstrip(), "Failed on line: " + str(i+1) + "\n" + expected_line.lstrip() + "\n" + xml[i].lstrip()
+                assert expected_line.lstrip() == xml[i].lstrip(), "Failed on line: " + str(i+1) + "\n-" + expected_line.lstrip() + "\n+" + xml[i].lstrip()
             else:
                 assert expected_line.lstrip() == None, "Failed on line: " + str(i+1)
 
@@ -2048,7 +2102,7 @@ class TestExportBlockToPDS(TestCase):
 
         for i, expected_line in enumerate(self.expected_xml_raw):
             if i < len(xml):
-                assert expected_line.lstrip() == xml[i].lstrip(), "Failed on line: " + str(i+1)
+                assert expected_line.lstrip() == xml[i].lstrip(), "Failed on line: " + str(i+1) + "\n-" + expected_line.lstrip() + "\n+" + xml[i].lstrip()
             else:
                 assert expected_line.lstrip() == None, "Failed on line: " + str(i+1)
 
@@ -2133,7 +2187,7 @@ class TestExportBlockToPDS(TestCase):
         shutil.copy(test_lc_file, new_name)
         new_name = os.path.join(self.test_input_daydir, 'photometry_Control_Star.dat')
         shutil.copy(test_lc_file, new_name)
-        # Open "control star photometry file, make brighter/higher SNR and re-save
+        # Open "control star" photometry file, make brighter/higher SNR and re-save
         table = read_photompipe_file(new_name)
         table['mag'] -= 1.5
         table['sig'] /= 3.75
