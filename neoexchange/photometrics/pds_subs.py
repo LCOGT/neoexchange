@@ -153,12 +153,12 @@ def create_id_area(filename, model_version='1.15.0.0', collection_type='cal', mo
         product_type = 'Product_Collection'
         product_title = f'DART Telescopic Observations, Las Cumbres Observatory Network, Las Cumbres Observatory {proc_levels[collection_type]["title"]} Data Collection'
     else:
-        filename = ':' + filename
+        filename = ':' + os.path.splitext(filename)[0]
         product_type = 'Product_Observational'
         suffix = ' Image'
         if collection_type == 'ddp':
             suffix = ''
-        product_title = f'Las Cumbres Observatory {proc_levels[collection_type]["title"]}{suffix}'
+        product_title = f'Las Cumbres Observatory {proc_levels[collection_type]["title"]}{suffix}{filename.replace(":", ": ")}'
 
     xml_elements = {'logical_identifier' : 'urn:nasa:pds:dart_teleobs:data_lcogt_' + proc_levels[collection_type]['level'] + filename,
                     'version_id' : '1.0',

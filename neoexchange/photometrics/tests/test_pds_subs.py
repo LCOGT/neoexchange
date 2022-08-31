@@ -133,9 +133,9 @@ class TestCreateIDArea(SimpleTestCase):
     def test_default_version(self):
         expected = '''
             <Identification_Area>
-                <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogt_cal:banzai_test_frame.fits</logical_identifier>
+                <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogt_cal:banzai_test_frame</logical_identifier>
                 <version_id>1.0</version_id>
-                <title>Las Cumbres Observatory Calibrated Image</title>
+                <title>Las Cumbres Observatory Calibrated Image: banzai_test_frame</title>
                 <information_model_version>1.15.0.0</information_model_version>
                 <product_class>Product_Observational</product_class>
                 <Modification_History>
@@ -154,9 +154,9 @@ class TestCreateIDArea(SimpleTestCase):
     def test_older_version(self):
         expected = '''
             <Identification_Area>
-                <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogt_cal:banzai_test_frame.fits</logical_identifier>
+                <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogt_cal:banzai_test_frame</logical_identifier>
                 <version_id>1.0</version_id>
-                <title>Las Cumbres Observatory Calibrated Image</title>
+                <title>Las Cumbres Observatory Calibrated Image: banzai_test_frame</title>
                 <information_model_version>1.14.0.0</information_model_version>
                 <product_class>Product_Observational</product_class>
                 <Modification_History>
@@ -175,9 +175,9 @@ class TestCreateIDArea(SimpleTestCase):
     def test_schema_version(self):
         expected = '''
             <Identification_Area>
-                <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogt_cal:banzai_test_frame.fits</logical_identifier>
+                <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogt_cal:banzai_test_frame</logical_identifier>
                 <version_id>1.0</version_id>
-                <title>Las Cumbres Observatory Calibrated Image</title>
+                <title>Las Cumbres Observatory Calibrated Image: banzai_test_frame</title>
                 <information_model_version>1.15.0.0</information_model_version>
                 <product_class>Product_Observational</product_class>
                 <Modification_History>
