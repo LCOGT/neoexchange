@@ -134,9 +134,9 @@ def create_id_area(filename, model_version='1.15.0.0', collection_type='cal', mo
 
     mod_time = mod_time or datetime.utcnow()
 
-    proc_levels = { 'cal' : {'title' : 'Calibrated', 'level' : 'cal', 'prod_type' : 'images'},
+    proc_levels = { 'cal' : {'title' : 'Calibrated', 'level' : 'cal', 'prod_type' : 'images and the supporting calibration frames: master bias and dark frames and the master flat field images'},
                     'raw' : {'title' : 'Raw', 'level' : 'raw', 'prod_type' : 'images'},
-                    'ddp' : {'title' : 'Derived Data Product', 'level' : 'ddp', 'prod_type' : 'products'},
+                    'ddp' : {'title' : 'Derived Data Product', 'level' : 'ddp', 'prod_type' : 'photometry summary tables'},
                     'bpm' : {'title' : 'Bad Pixel Mask', 'level' : 'cal', 'prod_type' : 'calibration frames'},
                     'mbias' : {'title' : 'Master Bias', 'level' : 'cal', 'prod_type' : 'calibration frames'},
                     'mdark' : {'title' : 'Master Dark', 'level' : 'cal', 'prod_type' : 'calibration frames'},
@@ -175,11 +175,11 @@ def create_id_area(filename, model_version='1.15.0.0', collection_type='cal', mo
         xml_elements = {'author_list' : 'Lister, T.',
                         'publication_year' : mod_time.strftime("%Y"),
                         'keyword' : 'Las Cumbres',
-                        'description' : f"This data collection is part of the DART Telescopic Observation Bundle and contains the Las Cumbres Observatory {proc_levels[collection_type]['title'].lower()} {proc_levels[collection_type]['prod_type']} obtained in support of NASA's Double Asteroid Redirection Test (DART) mission. These {proc_levels[collection_type]['prod_type']} are in {proc_levels[collection_type]['prod_fmt']} format ready for"
+                        'description' : f"We obtained images of the NEO (65803) Didymos binary asteroid and supporting calibration data with the Las Cumbres Observatory global telescope network through several filters. These images were obtained in support of NASA's Double Asteroid Redirection Test (DART) mission. The DART mission was a planetary defense mission designed to test and measure the deflection caused by a kinetic impactor (the spacecraft) on the orbit of Dimorphos asteroid around its primary, Didymos. These ground-based observations were used to obtain light curves of Didymos and time the mutual events of Dimorphos to determine the period change caused by the impact of the DART spacecraft. This collection consists of the Las Cumbres Observatory"
                         }
-        if proc_levels[collection_type]['level'] == 'raw':
-            xml_elements['description'] += ' calibration and'
-        xml_elements['description'] += ' analysis. The DART mission was a planetary defense mission designed to test and measure the deflection caused by a kinetic impactor (the spacecraft) on the orbit of Dimorphos asteroid around its primary, (65803) Didymos. The ground-based observations, such as these, were used to obtain light curves of Didymos and time the mutual events of Dimorphos to determine the period change caused by the impact of the DART spacecraft.'
+        if collection_type == 'raw' or collection_type == 'cal':
+            xml_elements['description'] += f' {proc_levels[collection_type]["title"].lower()}'
+        xml_elements['description'] += f' {proc_levels[collection_type]["prod_type"]}.'
         for k,v in xml_elements.items():
             etree.SubElement(citation_info, k).text = v
 

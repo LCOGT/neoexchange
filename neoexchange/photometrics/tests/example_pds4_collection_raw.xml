@@ -12,7 +12,7 @@
       <author_list>Lister, T.</author_list>
       <publication_year>2021</publication_year>
       <keyword>Las Cumbres</keyword>
-      <description>This data collection is part of the DART Telescopic Observation Bundle and contains the Las Cumbres Observatory raw images obtained in support of NASA's Double Asteroid Redirection Test (DART) mission. These images are in FITS format ready for calibration and analysis. The DART mission was a planetary defense mission designed to test and measure the deflection caused by a kinetic impactor (the spacecraft) on the orbit of Dimorphos asteroid around its primary, (65803) Didymos. The ground-based observations, such as these, were used to obtain light curves of Didymos and time the mutual events of Dimorphos to determine the period change caused by the impact of the DART spacecraft.</description>
+      <description>We obtained images of the NEO (65803) Didymos binary asteroid and supporting calibration data with the Las Cumbres Observatory global telescope network through several filters. These images were obtained in support of NASA's Double Asteroid Redirection Test (DART) mission. The DART mission was a planetary defense mission designed to test and measure the deflection caused by a kinetic impactor (the spacecraft) on the orbit of Dimorphos asteroid around its primary, Didymos. These ground-based observations were used to obtain light curves of Didymos and time the mutual events of Dimorphos to determine the period change caused by the impact of the DART spacecraft. This collection consists of the Las Cumbres Observatory raw images.</description>
     </Citation_Information>
     <Modification_History>
       <Modification_Detail>
