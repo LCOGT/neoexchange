@@ -560,6 +560,20 @@ def create_context_area(filepath, collection_type):
     summary = etree.SubElement(context_area, "Primary_Result_Summary")
     etree.SubElement(summary, "purpose").text = "Science"
     etree.SubElement(summary, "processing_level").text = proc_levels.get(collection_type, "Unknown")
+    # Write Science_Facets
+    facets = [  ('Small Bodies', 'Dynamical Properties'),
+                ('Small Bodies', 'Lightcurve'),
+                ('Small Bodies', 'Physical Properties'),
+                ('Flux Measurements', 'Photometry'),
+                ('wavelength_range', 'Visible')
+             ]
+    for sci_facet in facets:
+        facet = etree.SubElement(summary, "Science_Facets")
+        if sci_facet[0] == 'wavelength_range':
+            etree.SubElement(facet, sci_facet[0]).text = sci_facet[1]
+        else:
+            etree.SubElement(facet, "discipline_name").text = sci_facet[0]
+            etree.SubElement(facet, "facet1").text = sci_facet[1]
 
     invest_area = etree.SubElement(context_area, "Investigation_Area")
     etree.SubElement(invest_area, "name").text = "Double Asteroid Redirection Test"

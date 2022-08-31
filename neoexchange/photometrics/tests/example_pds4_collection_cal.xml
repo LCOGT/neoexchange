@@ -30,6 +30,25 @@
     <Primary_Result_Summary>
       <purpose>Science</purpose>
       <processing_level>Calibrated</processing_level>
+      <Science_Facets>
+        <discipline_name>Small Bodies</discipline_name>
+        <facet1>Dynamical Properties</facet1>
+      </Science_Facets>
+      <Science_Facets>
+        <discipline_name>Small Bodies</discipline_name>
+        <facet1>Lightcurve</facet1>
+      </Science_Facets>
+      <Science_Facets>
+        <discipline_name>Small Bodies</discipline_name>
+        <facet1>Physical Properties</facet1>
+      </Science_Facets>
+      <Science_Facets>
+        <discipline_name>Flux Measurements</discipline_name>
+        <facet1>Photometry</facet1>
+      </Science_Facets>
+      <Science_Facets>
+        <wavelength_range>Visible</wavelength_range>
+      </Science_Facets>
     </Primary_Result_Summary>
     <Investigation_Area>
       <name>Double Asteroid Redirection Test</name>
