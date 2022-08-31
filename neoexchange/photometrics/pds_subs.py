@@ -151,7 +151,10 @@ def create_id_area(filename, model_version='1.15.0.0', collection_type='cal', mo
     if filename is None:
         filename = ''
         product_type = 'Product_Collection'
-        product_title = f'DART Telescopic Observations, Las Cumbres Observatory Network, Las Cumbres Observatory {proc_levels[collection_type]["title"]} Data Collection'
+        product_title = f'DART Las Cumbres Observatory Network (LCOGT) {proc_levels[collection_type]["title"]} Data Collection'
+        if collection_type == 'ddp':
+            # For DDPs amend slightly so we don't have "Derived Data Product Data Collection"...
+            product_title = product_title.replace("Data Collection", "Collection")
     else:
         filename = ':' + os.path.splitext(filename)[0]
         product_type = 'Product_Observational'
