@@ -21,8 +21,9 @@ import warnings
 
 from astropy.io import fits
 from numpy import array, arange
+#from numpy.testing import assertDeepAlmostEqual
 
-from django.test import TestCase
+from django.test import TestCase, SimpleTestCase
 from django.forms.models import model_to_dict
 
 # Import module to test
@@ -1037,3 +1038,44 @@ class TestUnpackTarball(TestCase):
     #
     #     self.assertEqual(expected_num_files,len(files))
     #     self.assertEqual(expected_file_name,files[1])
+
+
+class TestReformatHeader(SimpleTestCase):
+    def setUp(self):
+        self.neox_headerfile = os.path.join('photometrics', 'tests', 'example_neox_hdr')
+        self.test_neox_header = fits.Header.fromtextfile(self.neox_headerfile)
+        self.pp_headerfile = os.path.join('photometrics', 'tests', 'example_pp_hdr')
+
+        self.maxDiff = None
+
+    def compare_headers(self, header1, header2, test_length=True):
+
+        if test_length: self.assertEqual(len(header1), len(header2))
+
+        for i, card in enumerate(header1.cards):
+            if card.keyword in ['CHECKSUM', 'DATASUM']:
+                continue
+            if card.keyword[0:4] in ['CRVA', 'CD1_', 'CD2_', 'PV1_', 'PV2_', 'WCSD', 'SECP', 'WCSR', 'WCSN', 'WCSM']:
+                self.assertEqual((card.keyword,  card.comment),
+                    (header2.cards[i].keyword, header2.cards[i].comment))
+                self.assertEqual(type(card.value), type(header2.cards[i].value), msg=f'Failure on {card.keyword} type')
+                if card.keyword[0:4] not in ['PV1_', 'PV2_', 'WCSR', 'WCSN', 'WCSM']:
+                    self.assertAlmostEqual(card.value, header2.cards[i].value, places=4, msg=f'Failure on {card.keyword} value')
+            else:
+                self.assertEqual((card.keyword, card.value, card.comment),
+                    (header2.cards[i].keyword, header2.cards[i].value, header2.cards[i].comment))
+
+    def test_fromHeader(self):
+        test_header = fits.Header({'SIMPLE' : True, 'OBJECT' : '65803   ',
+            'SRCTYPE' : 'MINORPLANET',
+            'OBSTYPE' : 'EXPOSE  ',
+            })
+        new_header = reformat_header(test_header)
+
+        self.assertEqual(test_header, new_header)
+
+    def test_fromfiles(self):
+
+        new_header = reformat_header(self.pp_headerfile)
+
+        self.compare_headers(self.test_neox_header, new_header)

@@ -24,8 +24,10 @@ import warnings
 from shutil import unpack_archive
 from glob import glob
 
+import astropy.units as u
 from astropy.io import fits
 from astropy.io.votable import parse
+from astropy.coordinates import Angle
 from numpy import loadtxt, split, empty
 
 from core.models import detections_array_dtypes
@@ -677,6 +679,90 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
 
     return 0, header
 
+
+def reformat_header(header_or_file):
+    """Reformats a header either read from a FITS file (<header_or_file> is of
+    `str` type) or a fits.Header directly into a NEOX pipeline format one"""
+
+    if type(header_or_file) == str:
+        new_header = fits.Header.fromtextfile(header_or_file)
+    else:
+        new_header = header_or_file
+
+    hdr_updates = { 'exptime' : (None, '[s] Exposure length'),
+                    'filter'  : (None, 'Filter used'),
+                    'radesys' : (None, '[[FK5,ICRS]] Fundamental coord. system of the o'),
+                    'airmass' : (None, 'Effective mean airmass'),
+                    'wcserr'  : (0, 'Error status of WCS fit. 0 for no error')
+                  }
+
+    wcs_keywords = ['CTYPE1', 'CTYPE2', 'CRPIX1', 'CRPIX2', 'CRVAL1', 'CRVAL2',\
+        'CUNIT1', 'CUNIT2', 'CD1_1 ', 'CD1_2', 'CD2_1', 'CD2_2',\
+        'PV1_0', 'PV1_1', 'PV1_2', 'PV1_4', 'PV1_5', 'PV1_6', 'PV1_7', 'PV1_8', 'PV1_9', 'PV1_10',\
+        'PV2_0', 'PV2_1', 'PV2_2', 'PV2_4', 'PV2_5', 'PV2_6', 'PV2_7', 'PV2_8', 'PV2_9', 'PV2_10']
+
+    wcs_comments = { 'CTYPE1' : 'Type of WCS Projection', 'CTYPE2' : 'Type of WCS Projection',
+                     'CRPIX1' : '[pixel] Coordinate of reference point (axis 1)',
+                     'CRPIX2' : '[pixel] Coordinate of reference point (axis 2)',
+                     'CRVAL1' : '[deg] RA at the reference pixel',
+                     'CRVAL2' : '[deg] Dec at the reference pixel',
+                     'CUNIT1' : 'Units of RA',
+                     'CUNIT2': 'Units of Dec',
+                     'CD' : 'WCS CD transformation matrix',
+                     'PV' : 'TPV distortion coefficient'
+            }
+    for keyword, (new_value, new_comment) in hdr_updates.items():
+        if new_value is not None:
+            new_header[keyword] = (new_value, new_comment)
+        else:
+            new_header.set(keyword, comment=new_comment)
+    # Move WCS keywords, convert type
+    index = new_header.index('m2roll')
+    for keyword in wcs_keywords:
+        _, value, old_comment = new_header.cards[keyword]
+        lookup_key = keyword
+        if 'CD' in keyword or 'PV' in keyword:
+            lookup_key = keyword[0:2]
+        comment = wcs_comments.get(lookup_key, old_comment)
+        try:
+            value = float(value)
+        except ValueError:
+            pass
+        #print(index, keyword, value, comment)
+        new_header.remove(keyword)
+        new_header.insert(index, (keyword, value, comment), after=True)
+        index += 1
+    # New keywords from old
+    ra = Angle(new_header['RA'], unit=u.hourangle)
+    new_header.insert('l1filter', ('wcsdelra', float(ra.deg - new_header['crval1'])), after=True)
+    dec = Angle(new_header['DEC'], unit=u.deg)
+    new_header.insert('wcsdelra', ('wcsdelde', float(dec.deg - new_header['crval2'])), after=True)
+    secpix = (new_header['SECPIXX'] + new_header['SECPIXY']) / 2.0
+    new_header.insert('wcsdelde', ('secpix', secpix, '[arcsec/pixel] Fitted pixel scale on sky'), after=True)
+    new_header.insert('secpix', ('wcssolvr', 'SCAMP-2.0.4', ''), after=True)
+    new_header.insert('wcssolvr', ('wcsrfcat', 'GAIA-DR2', ''), after=True)
+    new_header.insert('wcsrfcat', ('wcsimcat', new_header['ORIGNAME'].replace('e00', 'e91_ldac'), ''), after=True)
+    new_header.insert('wcsimcat', ('wcsnref', -1, ''), after=True)
+    new_header.insert('wcsnref', ('wcsmatch', -1, ''), after=True)
+    new_header.insert('wcsmatch', ('wccattyp', 'GAIA-DR2@CDS', ''), after=True)
+
+    astrrms1 = round(float(new_header['astrrms1'])*3600.0, 5)
+    astrrms2 = round(float(new_header['astrrms2'])*3600.0, 5)
+    wcsrdres = str(astrrms1) + '/' + str(astrrms2)
+    new_header.insert('wccattyp', ('WCSRDRES', wcsrdres, ''), after=True)
+    # Remove extra keywords
+    del_keywords = [ 'EPOCH', 'PHOTFLAG', 'PHOT_K', 'SECPIXX', 'SECPIXY',
+        'EQUINOX', 'RADECSYS', 'FGROUPNO', 'ASTIRMS1', 'ASTIRMS2', 'ASTINST',
+        'FLXSCALE', 'MAGZEROP', 'PHOTIRMS', 'PHOTINST', 'PHOTLINK', 'PHOTMODE',
+        'APRAD', 'APIDX', 'MIDTIMJD', 'TELINSTR', 'TEL_KEYW',' ASTRRMS1', 'ASTRRMS2',
+        'REGCAT' ]
+
+    for keyword in del_keywords:
+        new_header.remove(keyword)
+    for keyword in ['HISTORY', 'COMMENT']:
+        new_header.remove(keyword, remove_all=True)
+
+    return new_header
 
 def read_mtds_file(mtdsfile, dbg=False):
     """Read a detections file produced by mtdlink and return a dictionary of the
