@@ -1065,17 +1065,62 @@ class TestReformatHeader(SimpleTestCase):
                 self.assertEqual((card.keyword, card.value, card.comment),
                     (header2.cards[i].keyword, header2.cards[i].value, header2.cards[i].comment))
 
-    def test_fromHeader(self):
-        test_header = fits.Header({'SIMPLE' : True, 'OBJECT' : '65803   ',
+    def test_fromHeader_short(self):
+        expected_header = fits.Header({'SIMPLE' : True, 'OBJECT' : '65803   ',
             'SRCTYPE' : 'MINORPLANET',
             'OBSTYPE' : 'EXPOSE  ',
             })
+        test_header = fits.Header({'SIMPLE' : True, 'OBJECT' : '65803   ',
+            'SRCTYPE' : 'MINORPLANET',
+            'OBSTYPE' : 'EXPOSE  ',
+            'SECPIXX' : 0.464,
+            'SECPIXY' : 0.464,
+            'EPOCH'   : 2000.0,
+            'HISTORY' : 'Astrometric solution',
+            'COMMENT' : 'This is a comment that should go'
+            })
         new_header = reformat_header(test_header)
 
-        self.assertEqual(test_header, new_header)
+        self.compare_headers(expected_header, new_header)
+
+    def test_fromHeader_update_keywords(self):
+        expected_header = fits.Header([fits.Card('SIMPLE', True),
+            fits.Card('OBJECT', '65803   '),
+            fits.Card('SRCTYPE', 'MINORPLANET'),
+            fits.Card('OBSTYPE', 'EXPOSE  '),
+            fits.Card('EXPTIME', 42.0, '[s] Exposure length'),
+            fits.Card('FILTER', 'rp', 'Filter used'),
+            fits.Card('RADESYS', '2000.0', '[[FK5,ICRS]] Fundamental coord. system of the o'),
+            fits.Card('AIRMASS', 1.2345, 'Effective mean airmass'),
+            fits.Card('WCSERR' , 0, 'Error status of WCS fit. 0 for no error')
+            ])
+        test_header = fits.Header([fits.Card('SIMPLE', True),
+            fits.Card('OBJECT', '65803   '),
+            fits.Card('SRCTYPE', 'MINORPLANET'),
+            fits.Card('OBSTYPE', 'EXPOSE  '),
+            fits.Card('EXPTIME', 42.0, 'PP: copied'),
+            fits.Card('FILTER', 'rp', 'Look through this'),
+            fits.Card('RADESYS', '2000.0', 'ICRS'),
+            fits.Card('AIRMASS', 1.2345, 'computed airmass'),
+            fits.Card('WCSERR' , 0, 'pp_solve fit status'),
+            fits.Card('HISTORY' , 'Astrometric solution',),
+            fits.Card('COMMENT' , 'This is a comment that should go'),
+            ])
+
+        new_header = reformat_header(test_header)
+
+        self.compare_headers(expected_header, new_header)
 
     def test_fromfiles(self):
 
         new_header = reformat_header(self.pp_headerfile)
 
         self.compare_headers(self.test_neox_header, new_header)
+
+    def test_already_converted(self):
+
+        new_header = reformat_header(self.pp_headerfile)
+        new_header_v2 = reformat_header(new_header)
+
+        self.assertEqual(new_header, new_header_v2)
+        self.compare_headers(self.test_neox_header, new_header_v2)

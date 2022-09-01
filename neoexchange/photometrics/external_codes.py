@@ -693,7 +693,7 @@ def reformat_header(header_or_file):
     if type(header_or_file) == str:
         new_header = fits.Header.fromtextfile(header_or_file)
     else:
-        new_header = header_or_file
+        new_header = header_or_file.copy()
 
     hdr_updates = { 'exptime' : (None, '[s] Exposure length'),
                     'filter'  : (None, 'Filter used'),
@@ -717,45 +717,55 @@ def reformat_header(header_or_file):
                      'CD' : 'WCS CD transformation matrix',
                      'PV' : 'TPV distortion coefficient'
             }
+    # Update comments on existing keywords
     for keyword, (new_value, new_comment) in hdr_updates.items():
+        if keyword not in new_header:
+            continue
         if new_value is not None:
             new_header[keyword] = (new_value, new_comment)
         else:
             new_header.set(keyword, comment=new_comment)
     # Move WCS keywords, convert type
-    index = new_header.index('m2roll')
-    for keyword in wcs_keywords:
-        _, value, old_comment = new_header.cards[keyword]
-        lookup_key = keyword
-        if 'CD' in keyword or 'PV' in keyword:
-            lookup_key = keyword[0:2]
-        comment = wcs_comments.get(lookup_key, old_comment)
-        try:
-            value = float(value)
-        except ValueError:
-            pass
-        #print(index, keyword, value, comment)
-        new_header.remove(keyword)
-        new_header.insert(index, (keyword, value, comment), after=True)
-        index += 1
+    if 'm2roll' in new_header:
+        index = new_header.index('m2roll')
+        for keyword in wcs_keywords:
+            _, value, old_comment = new_header.cards[keyword]
+            lookup_key = keyword
+            if 'CD' in keyword or 'PV' in keyword:
+                lookup_key = keyword[0:2]
+            comment = wcs_comments.get(lookup_key, old_comment)
+            try:
+                value = float(value)
+            except ValueError:
+                pass
+            #print(index, keyword, value, comment)
+            new_header.remove(keyword)
+            new_header.insert(index, (keyword, value, comment), after=True)
+            index += 1
     # New keywords from old
-    ra = Angle(new_header['RA'], unit=u.hourangle)
-    new_header.insert('l1filter', ('wcsdelra', float(ra.deg - new_header['crval1'])), after=True)
-    dec = Angle(new_header['DEC'], unit=u.deg)
-    new_header.insert('wcsdelra', ('wcsdelde', float(dec.deg - new_header['crval2'])), after=True)
-    secpix = (new_header['SECPIXX'] + new_header['SECPIXY']) / 2.0
-    new_header.insert('wcsdelde', ('secpix', secpix, '[arcsec/pixel] Fitted pixel scale on sky'), after=True)
-    new_header.insert('secpix', ('wcssolvr', 'SCAMP-2.0.4', ''), after=True)
-    new_header.insert('wcssolvr', ('wcsrfcat', 'GAIA-DR2', ''), after=True)
-    new_header.insert('wcsrfcat', ('wcsimcat', new_header['ORIGNAME'].replace('e00', 'e91_ldac'), ''), after=True)
-    new_header.insert('wcsimcat', ('wcsnref', -1, ''), after=True)
-    new_header.insert('wcsnref', ('wcsmatch', -1, ''), after=True)
-    new_header.insert('wcsmatch', ('wccattyp', 'GAIA-DR2@CDS', ''), after=True)
+    if 'RA' in new_header and 'DEC' in new_header and 'WCSDELRA' not in new_header and 'WCSDELDE' not in new_header:
+        ra = Angle(new_header['RA'], unit=u.hourangle)
+        new_header.insert('l1filter', ('wcsdelra', float(ra.deg - new_header['crval1']),  '[arcsec] Shift of fitted WCS w.r.t. nominal'), after=True)
+        dec = Angle(new_header['DEC'], unit=u.deg)
+        new_header.insert('wcsdelra', ('wcsdelde', float(dec.deg - new_header['crval2']), '[arcsec] Shift of fitted WCS w.r.t. nominal'), after=True)
+    if 'SECPIXX' in new_header and 'SECPIXY' in new_header and 'WCSDELDE' in new_header:
+        secpix = (new_header['SECPIXX'] + new_header['SECPIXY']) / 2.0
+        new_header.insert('wcsdelde', ('secpix', secpix, '[arcsec/pixel] Fitted pixel scale on sky'), after=True)
+        new_header.insert('secpix', ('wcssolvr', 'SCAMP-2.0.4', 'WCS solver'), after=True)
+        new_header.insert('wcssolvr', ('wcsrfcat', 'GAIA-DR2', 'Fname of astrometric catalog'), after=True)
+        wcsimcat = new_header['ORIGNAME'].replace('e00', 'e91_ldac')
+        # This can be quite long and the comment might not fit. Truncate at max possible length
+        existing_length = 11 + len(wcsimcat) + 4 # 8 (keyword) + "= '" + catname length + "' / '"
+        comment_length = max(80-existing_length, 0)
+        new_header.insert('wcsrfcat', ('wcsimcat', wcsimcat, 'Fname of detection catalog'[0:comment_length]), after=True)
+        new_header.insert('wcsimcat', ('wcsnref', -1, 'Stars in image available to define WCS'), after=True)
+        new_header.insert('wcsnref', ('wcsmatch', -1, 'Stars in image matched against ref catalog'), after=True)
+        new_header.insert('wcsmatch', ('wccattyp', 'GAIA-DR2@CDS', 'Reference catalog used'), after=True)
 
-    astrrms1 = round(float(new_header['astrrms1'])*3600.0, 5)
-    astrrms2 = round(float(new_header['astrrms2'])*3600.0, 5)
-    wcsrdres = str(astrrms1) + '/' + str(astrrms2)
-    new_header.insert('wccattyp', ('WCSRDRES', wcsrdres, ''), after=True)
+        astrrms1 = round(float(new_header['astrrms1'])*3600.0, 5)
+        astrrms2 = round(float(new_header['astrrms2'])*3600.0, 5)
+        wcsrdres = str(astrrms1) + '/' + str(astrrms2)
+        new_header.insert('wccattyp', ('WCSRDRES', wcsrdres, '[arcsec] WCS fitting residuals (x/y)'), after=True)
     # Remove extra keywords
     del_keywords = [ 'EPOCH', 'PHOTFLAG', 'PHOT_K', 'SECPIXX', 'SECPIXY',
         'EQUINOX', 'RADECSYS', 'FGROUPNO', 'ASTIRMS1', 'ASTIRMS2', 'ASTINST',
@@ -764,9 +774,11 @@ def reformat_header(header_or_file):
         'REGCAT' ]
 
     for keyword in del_keywords:
-        new_header.remove(keyword)
+        if keyword in new_header:
+            new_header.remove(keyword)
     for keyword in ['HISTORY', 'COMMENT']:
-        new_header.remove(keyword, remove_all=True)
+        if keyword in new_header:
+            new_header.remove(keyword, remove_all=True)
 
     return new_header
 
