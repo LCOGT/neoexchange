@@ -641,8 +641,8 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
     secpix = round(scamp_info['pixel_scale'], 6)
 
     # header keywords we have
-    header['WCSDELRA'] = header['CRVAL1'] - crval1
-    header['WCSDELDE'] = header['CRVAL2'] - crval2
+    header['WCSDELRA'] = (header['CRVAL1'] - crval1, '[arcsec] Shift of fitted WCS w.r.t. nominal')
+    header['WCSDELDE'] = (header['CRVAL2'] - crval2, '[arcsec] Shift of fitted WCS w.r.t. nominal')
     header['CTYPE1'] = ctype1
     header['CTYPE2'] = ctype2
     header['CRVAL1'] = crval1
@@ -654,13 +654,19 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
     header['CD2_1'] = cd2_1
     header['CD2_2'] = cd2_2
     header['SECPIX'] = (secpix, '[arcsec/pixel] Fitted pixel scale on sky')
-    header['WCSSOLVR'] = wcssolvr
-    header['WCSRFCAT'] = wcsrfcat
-    header['WCSIMCAT'] = wcsimcat
-    header['WCSNREF'] = wcsnref
-    header['WCSMATCH'] = wcsmatch
-    header['WCCATTYP'] = wccattyp
-    header['WCSRDRES'] = str(str(astrrms1)+'/'+str(astrrms2))
+    header['WCSSOLVR'] = (wcssolvr, 'WCS solver')
+    # This can be quite long and the comment might not fit. Truncate at max possible length
+    existing_length = 11 + len(wcsrfcat) + 4 # 8 (keyword) + "= '" + catname length + "' / '"
+    comment_length = max(80-existing_length, 0)
+    header['WCSRFCAT'] = (wcsrfcat, 'Fname of astrometric catalog'[0:comment_length])
+    # This can be quite long and the comment might not fit. Truncate at max possible length
+    existing_length = 11 + len(wcsimcat) + 4 # 8 (keyword) + "= '" + catname length + "' / '"
+    comment_length = max(80-existing_length, 0)
+    header['WCSIMCAT'] = (wcsimcat, 'Fname of detection catalog'[0:comment_length])
+    header['WCSNREF']  = (wcsnref, 'Stars in image available to define WCS')
+    header['WCSMATCH'] = (wcsmatch, 'Stars in image matched against ref catalog')
+    header['WCCATTYP'] = (wccattyp, 'Reference catalog used')
+    header['WCSRDRES'] = (str(str(astrrms1)+'/'+str(astrrms2)), '[arcsec] WCS fitting residuals (x/y)')
     header['WCSERR'] = 0
 
     # header keywords we (probably) don't have. Insert after CTYPE2
