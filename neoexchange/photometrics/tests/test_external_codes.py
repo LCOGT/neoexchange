@@ -939,7 +939,7 @@ class TestHotpantsRunner(ExternalCodeUnitTest):
         aligned_rms = os.path.join(self.test_dir, "banzai_test_frame.rms_aligned_to_banzai_test_frame.rms.fits")
         rms = os.path.join(self.test_dir, "banzai_test_frame.rms.fits")
 
-        expected_cmdline = f"./hotpants -inim {bkgsub} -tmplim {aligned} -outim {subtracted} -tni {aligned_rms} -ini {rms} -oni {subtracted_rms} -hki -n i -c t -v 0 -tu 64399.99999999999 -iu 64399.99999999999 -tl 43.892452606201175 -il -343.1130201721191 -nrx 3 -nry 3 -nsx 6.760000000000001 -nsy 6.793333333333333 -r 11.235949458513854 -rss 26.96627870043325 -fin 223.60679774997897"
+        expected_cmdline = f"./hotpants -inim {bkgsub} -tmplim {aligned} -outim {subtracted} -tni {aligned_rms} -ini {rms} -oni {subtracted_rms} -hki -n i -c t -v 0 -tu 57960.0 -iu 57960.0 -tl 43.892452606201175 -il -343.1130201721191 -nrx 3 -nry 3 -nsx 6.760000000000001 -nsy 6.793333333333333 -r 11.235949458513854 -rss 26.96627870043325 -fin 223.60679774997897"
         cmdline = run_hotpants(self.test_banzai_file_COPIED, self.test_banzai_file_COPIED, self.source_dir, self.test_dir, binary='./hotpants', dbg=True, dbgOptions=True)
         self.maxDiff=None
         self.assertEqual(expected_cmdline, cmdline)

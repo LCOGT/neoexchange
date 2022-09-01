@@ -390,7 +390,8 @@ def determine_hotpants_options(ref, sci, source_dir, dest_dir, dbgOptions=False)
 
     ref_data = fits.getdata(ref)
 
-    satlev = get_saturate(sciheader)
+    satlev = get_saturate(sci_header)
+    satlev = round(satlev, 0)
 
     scibkg = median(sci_bkgsub_data)
     scibkgstd = 1.4826 * median(absolute(sci_bkgsub_data - scibkg))
