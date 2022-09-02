@@ -163,7 +163,7 @@ def create_id_area(filename, model_version='1.15.0.0', collection_type='cal', mo
             suffix = ''
         product_title = f'Las Cumbres Observatory {proc_levels[collection_type]["title"]}{suffix}{filename.replace(":", ": ")}'
 
-    xml_elements = {'logical_identifier' : 'urn:nasa:pds:dart_teleobs:data_lcogt_' + proc_levels[collection_type]['level'] + filename,
+    xml_elements = {'logical_identifier' : 'urn:nasa:pds:dart_teleobs:data_lcogt' + proc_levels[collection_type]['level'] + filename,
                     'version_id' : '1.0',
                     'title' : product_title,
                     'information_model_version' : model_version,
@@ -590,7 +590,7 @@ def create_context_area(filepath, collection_type):
     prefix = '\S*e92'
     if collection_type == 'ddp':
         block_dir = os.path.basename(filepath)
-        frames_filepath = os.path.realpath(os.path.join(filepath, '..', '..', 'data_lcogt_cal', block_dir))
+        frames_filepath = os.path.realpath(os.path.join(filepath, '..', '..', 'data_lcogtcal', block_dir))
     elif collection_type == 'raw':
         prefix = '\S*e00'
     fits_files = find_fits_files(frames_filepath, prefix)
@@ -966,11 +966,11 @@ def write_product_collection_xml(filepath, xml_file, schema_root, mod_time=None)
     productCollection = create_product_collection(schemas_needed)
 
 
-    if '_cal' in xml_file:
+    if 'lcogtcal' in xml_file:
         collection_type = 'cal'
-    elif '_raw' in xml_file:
+    elif 'lcogtraw' in xml_file:
         collection_type = 'raw'
-    elif '_ddp' in xml_file:
+    elif 'lcogtddp' in xml_file:
         collection_type = 'ddp'
     else:
         logger.error("Unknown collection type")
@@ -1069,11 +1069,11 @@ def create_dart_directories(output_dir, block):
     Block <block> of light curve data to DART. Creates a directory tree as follows:
     └── <output_dir>
         └── lcogt_data
-            ├── data_lcogt_cal
+            ├── data_lcogtcal
             │   └── lcogt_1m0_01_fa11_20211013
-            ├── data_lcogt_ddp
+            ├── data_lcogtddp
             │   └── lcogt_1m0_01_fa11_20211013
-            ├── data_lcogt_raw
+            ├── data_lcogtraw
             │   └── lcogt_1m0_01_fa11_20211013
     """
     status = {}
@@ -1086,7 +1086,7 @@ def create_dart_directories(output_dir, block):
         if len(file_parts) == 8:
             block_dir = f"lcogt_{file_parts['tel_class']}_{file_parts['tel_serial']}_{file_parts['instrument']}_{file_parts['dayobs']}"
             logger.debug(f"Creating root directories and  {block_dir} sub directories")
-            for dir_key, dir_name in zip(['raw_data', 'cal_data', 'ddp_data'], ['data_lcogt_raw', 'data_lcogt_cal', 'data_lcogt_ddp']):
+            for dir_key, dir_name in zip(['raw_data', 'cal_data', 'ddp_data'], ['data_lcogtraw', 'data_lcogtcal', 'data_lcogtddp']):
                 dir_path = os.path.join(output_dir, dir_name, block_dir)
                 os.makedirs(dir_path, exist_ok=True)
                 status[dir_key] = dir_path
@@ -1186,7 +1186,7 @@ def create_pds_collection(output_dir, input_dir, files, collection_type, schema_
     * 'raw'
     * 'ddp (derived data product)
     CSV file entries are of the form:
-    P,urn:nasa:pds:dart_teleobs:data_lcogt_<collection_type>:[filename]::1.0
+    P,urn:nasa:pds:dart_teleobs:data_lcogt<collection_type>:[filename]::1.0
     """
 
     # PDS4 Agency identifier
@@ -1194,21 +1194,21 @@ def create_pds_collection(output_dir, input_dir, files, collection_type, schema_
     # PDS4 Bundle id
     bundle_id = 'dart_teleobs'
     # PDS4 Collection id
-    collection_id = f'data_lcogt_{collection_type}'
+    collection_id = f'data_lcogt{collection_type}'
     product_version = '1.0'
     product_column = Column(['P'] * len(files))
     urns = [f'{prefix}:{bundle_id}:{collection_id}:{os.path.splitext(x)[0]}::{product_version}' for x in files]
     urns_column = Column(urns)
     csv_table = Table([product_column, urns_column])
-    csv_filename = os.path.join(output_dir, collection_id, f'collection_data_lcogt_{collection_type}.csv')
+    csv_filename = os.path.join(output_dir, collection_id, f'collection_data_lcogt{collection_type}.csv')
     # Have to use the 'no_header' Table type rather than 'csv' as there seems
     # to be no way to suppress the header
     csv_table.write(csv_filename, format='ascii.no_header', delimiter=',')
 
     # Write XML file after CSV file is generated (need to count records)
     xml_filename = csv_filename.replace('.csv', '.xml')
-    #print(xml_filename, input_dir)
     status = write_product_collection_xml(input_dir, xml_filename, schema_root, mod_time)
+    #print(status, xml_filename, input_dir)
 
     return csv_filename, xml_filename
 
@@ -1368,7 +1368,7 @@ def export_block_to_pds(input_dir, output_dir, block, schema_root, skip_download
         filename, extn = os.path.splitext(os.path.basename(doc_file))
         if filename not in sent_files:
             sent_files.append(filename)
-        new_filename = os.path.join(paths['root'], 'data_lcogt_raw', 'overview' + extn)
+        new_filename = os.path.join(paths['root'], 'data_lcogtraw', 'overview' + extn)
         shutil.copy(doc_file, new_filename)
     if verbose: print("Creating raw PDS collection")
     raw_csv_filename, raw_xml_filename = create_pds_collection(paths['root'], paths['raw_data'], sent_files, 'raw', schema_root)

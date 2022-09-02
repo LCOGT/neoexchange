@@ -133,7 +133,7 @@ class TestCreateIDArea(SimpleTestCase):
     def test_default_version(self):
         expected = '''
             <Identification_Area>
-                <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogt_cal:banzai_test_frame</logical_identifier>
+                <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogtcal:banzai_test_frame</logical_identifier>
                 <version_id>1.0</version_id>
                 <title>Las Cumbres Observatory Calibrated Image: banzai_test_frame</title>
                 <information_model_version>1.15.0.0</information_model_version>
@@ -154,7 +154,7 @@ class TestCreateIDArea(SimpleTestCase):
     def test_older_version(self):
         expected = '''
             <Identification_Area>
-                <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogt_cal:banzai_test_frame</logical_identifier>
+                <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogtcal:banzai_test_frame</logical_identifier>
                 <version_id>1.0</version_id>
                 <title>Las Cumbres Observatory Calibrated Image: banzai_test_frame</title>
                 <information_model_version>1.14.0.0</information_model_version>
@@ -175,7 +175,7 @@ class TestCreateIDArea(SimpleTestCase):
     def test_schema_version(self):
         expected = '''
             <Identification_Area>
-                <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogt_cal:banzai_test_frame</logical_identifier>
+                <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogtcal:banzai_test_frame</logical_identifier>
                 <version_id>1.0</version_id>
                 <title>Las Cumbres Observatory Calibrated Image: banzai_test_frame</title>
                 <information_model_version>1.15.0.0</information_model_version>
@@ -1777,7 +1777,7 @@ class TestExportBlockToPDS(TestCase):
         self.test_output_dir = os.path.join(self.test_dir, 'output')
         os.makedirs(self.test_output_dir, exist_ok=True)
         self.expected_root_dir = os.path.join(self.test_output_dir, '')
-        self.test_ddp_daydir = os.path.join(self.expected_root_dir, 'data_lcogt_ddp')
+        self.test_ddp_daydir = os.path.join(self.expected_root_dir, 'data_lcogtddp')
         self.test_blockdir = 'lcogt_1m0_01_fa11_20211013'
         self.test_daydir = os.path.join(self.test_ddp_daydir, self.test_blockdir)
 
@@ -1874,8 +1874,8 @@ class TestExportBlockToPDS(TestCase):
 
     def tearDown(self):
         if self.remove:
-            extra_dirs = [os.path.join(self.expected_root_dir, 'data_lcogt_'+x, self.test_blockdir) for x in ['cal', 'ddp', 'raw']]
-            extra_dirs += [os.path.join(self.expected_root_dir, 'data_lcogt_'+x) for x in ['cal', 'ddp', 'raw']]
+            extra_dirs = [os.path.join(self.expected_root_dir, 'data_lcogt'+x, self.test_blockdir) for x in ['cal', 'ddp', 'raw']]
+            extra_dirs += [os.path.join(self.expected_root_dir, 'data_lcogt'+x) for x in ['cal', 'ddp', 'raw']]
             for test_dir in extra_dirs + [self.expected_root_dir, self.test_output_dir, self.test_input_daydir, self.test_input_dir, self.test_dir]:
                 try:
                     files_to_remove = glob(os.path.join(test_dir, '*'))
@@ -1898,9 +1898,9 @@ class TestExportBlockToPDS(TestCase):
 
         block_dir = 'lcogt_1m0_01_fa11_20211013'
         expected_status = {
-                            'raw_data' : os.path.join(self.expected_root_dir, 'data_lcogt_raw', block_dir),
-                            'cal_data' : os.path.join(self.expected_root_dir, 'data_lcogt_cal', block_dir),
-                            'ddp_data' : os.path.join(self.expected_root_dir, 'data_lcogt_ddp', block_dir),
+                            'raw_data' : os.path.join(self.expected_root_dir, 'data_lcogtraw', block_dir),
+                            'cal_data' : os.path.join(self.expected_root_dir, 'data_lcogtcal', block_dir),
+                            'ddp_data' : os.path.join(self.expected_root_dir, 'data_lcogtddp', block_dir),
                             'root'     : self.test_output_dir
                           }
 
@@ -1953,8 +1953,8 @@ class TestExportBlockToPDS(TestCase):
 
     def test_create_pds_collection_ddp(self):
         # Setup
-        expected_csv_file = os.path.join(self.expected_root_dir, 'data_lcogt_ddp', 'collection_data_lcogt_ddp.csv')
-        expected_xml_file = os.path.join(self.expected_root_dir, 'data_lcogt_ddp', 'collection_data_lcogt_ddp.xml')
+        expected_csv_file = os.path.join(self.expected_root_dir, 'data_lcogtddp', 'collection_data_lcogtddp.csv')
+        expected_xml_file = os.path.join(self.expected_root_dir, 'data_lcogtddp', 'collection_data_lcogtddp.xml')
         expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_tfn_fa11_20211013_12345_65803didymos_photometry.tab')
         expected_lines = [
         '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  SExtractor_flag  aprad',
@@ -1976,7 +1976,7 @@ class TestExportBlockToPDS(TestCase):
 
         dart_lc_file = create_dart_lightcurve(self.test_input_dir, paths['ddp_data'], self.test_block, '*photompipe.dat')
         lc_files = [os.path.basename(dart_lc_file),]
-        expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogt_ddp:{os.path.splitext(x)[0]}::1.0' ) for x in lc_files]
+        expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogtddp:{os.path.splitext(x)[0]}::1.0' ) for x in lc_files]
 
         # Tested function
         csv_filename, xml_filename = create_pds_collection(self.expected_root_dir,
@@ -2003,10 +2003,10 @@ class TestExportBlockToPDS(TestCase):
                 assert expected_line.lstrip() == None, "Failed on line: " + str(i+1)
 
     def test_create_pds_collection_cal(self):
-        expected_csv_file = os.path.join(self.expected_root_dir, 'data_lcogt_cal', 'collection_data_lcogt_cal.csv')
-        expected_xml_file = os.path.join(self.expected_root_dir, 'data_lcogt_cal', 'collection_data_lcogt_cal.xml')
+        expected_csv_file = os.path.join(self.expected_root_dir, 'data_lcogtcal', 'collection_data_lcogtcal.csv')
+        expected_xml_file = os.path.join(self.expected_root_dir, 'data_lcogtcal', 'collection_data_lcogtcal.xml')
         e92_files = [x for x in self.test_banzai_files if 'e92' in x]
-        expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogt_cal:{x.replace(".fits","")}::1.0' ) for x in self.test_banzai_files if 'e92' in x]
+        expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogtcal:{os.path.splitext(x)[0]}::1.0' ) for x in self.test_banzai_files if 'e92' in x]
         paths = create_dart_directories(self.test_output_dir, self.test_block)
 
         csv_filename, xml_filename = create_pds_collection(self.expected_root_dir,
@@ -2032,8 +2032,8 @@ class TestExportBlockToPDS(TestCase):
                 assert expected_line.lstrip() == None, "Failed on line: " + str(i+1)
 
     def test_create_pds_collection_cal_not_didymos(self):
-        expected_csv_file = os.path.join(self.expected_root_dir, 'data_lcogt_cal', 'collection_data_lcogt_cal.csv')
-        expected_xml_file = os.path.join(self.expected_root_dir, 'data_lcogt_cal', 'collection_data_lcogt_cal.xml')
+        expected_csv_file = os.path.join(self.expected_root_dir, 'data_lcogtcal', 'collection_data_lcogtcal.csv')
+        expected_xml_file = os.path.join(self.expected_root_dir, 'data_lcogtcal', 'collection_data_lcogtcal.xml')
         e92_files = []
         # Modify object in FITS headers and remove <lid_reference> to didymos from XML
         for x in self.test_banzai_files:
@@ -2052,7 +2052,7 @@ class TestExportBlockToPDS(TestCase):
             self.expected_xml_cal[start_line-1:start_line] +\
             self.expected_xml_cal[start_line+4:]
 
-        expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogt_cal:{os.path.splitext(x)[0]}::1.0' ) for x in self.test_banzai_files if 'e92' in x]
+        expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogtcal:{os.path.splitext(x)[0]}::1.0' ) for x in self.test_banzai_files if 'e92' in x]
         paths = create_dart_directories(self.test_output_dir, self.test_block)
 
         csv_filename, xml_filename = create_pds_collection(self.expected_root_dir,
@@ -2078,10 +2078,10 @@ class TestExportBlockToPDS(TestCase):
                 assert expected_line.lstrip() == None, "Failed on line: " + str(i+1)
 
     def test_create_pds_collection_raw(self):
-        expected_csv_file = os.path.join(self.expected_root_dir, 'data_lcogt_raw', 'collection_data_lcogt_raw.csv')
-        expected_xml_file = os.path.join(self.expected_root_dir, 'data_lcogt_raw', 'collection_data_lcogt_raw.xml')
+        expected_csv_file = os.path.join(self.expected_root_dir, 'data_lcogtraw', 'collection_data_lcogtraw.csv')
+        expected_xml_file = os.path.join(self.expected_root_dir, 'data_lcogtraw', 'collection_data_lcogtraw.xml')
         e00_files = [x for x in self.test_banzai_files if 'e00' in x]
-        expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogt_raw:{os.path.splitext(x)[0]}::1.0' ) for x in self.test_banzai_files if 'e00' in x]
+        expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogtraw:{os.path.splitext(x)[0]}::1.0' ) for x in self.test_banzai_files if 'e00' in x]
         paths = create_dart_directories(self.test_output_dir, self.test_block)
 
         csv_filename, xml_filename = create_pds_collection(self.expected_root_dir,
@@ -2260,14 +2260,14 @@ class TestExportBlockToPDS(TestCase):
         export_block_to_pds(self.test_input_dir, self.test_output_dir, self.test_block, self.schemadir, skip_download=True)
 
         for collection_type, file_type in zip(['raw', 'cal', 'ddp'], ['csv', 'xml']):
-            expected_file = os.path.join(self.expected_root_dir, f'data_lcogt_{collection_type}', f'collection_data_lcogt_{collection_type}.{file_type}')
+            expected_file = os.path.join(self.expected_root_dir, f'data_lcogt{collection_type}', f'collection_data_lcogt{collection_type}.{file_type}')
             self.assertTrue(os.path.exists(expected_file), f'{expected_file} does not exist')
             self.assertTrue(os.path.isfile(expected_file), f'{expected_file} is not a file')
         for collection_type in ['raw', 'cal']:
-            filepath = os.path.join(self.expected_root_dir, 'data_lcogt_' + collection_type, self.test_blockdir, '') #Null string on end so 'glob' works in directory
+            filepath = os.path.join(self.expected_root_dir, 'data_lcogt' + collection_type, self.test_blockdir, '') #Null string on end so 'glob' works in directory
             fits_files = glob(filepath + "*fits")
             xml_files = glob(filepath + "*xml")
             self.assertEqual(len(fits_files), len(xml_files), msg=f"Comparison failed on {collection_type:} files in {filepath:}")
-            collection_filepath = os.path.join(self.expected_root_dir, f'data_lcogt_{collection_type}', f'collection_data_lcogt_{collection_type}.csv')
+            collection_filepath = os.path.join(self.expected_root_dir, f'data_lcogt{collection_type}', f'collection_data_lcogt{collection_type}.csv')
             t = Table.read(collection_filepath, format='ascii.csv', data_start=0)
             self.assertEqual(len(fits_files), len(t))
