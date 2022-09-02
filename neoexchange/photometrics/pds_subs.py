@@ -1333,11 +1333,11 @@ def create_dart_lightcurve(input_dir, output_dir, block, match='photometry_*.dat
 
     return output_lc_filepath
 
-def export_block_to_pds(input_dir, output_dir, block, schema_root, skip_download=False, verbose=True):
+def export_block_to_pds(input_dir, output_dir, block, schema_root, docs_root=None, skip_download=False, verbose=True):
 
     csv_files = []
     xml_files = []
-    docs_dir = os.path.join(os.path.dirname(schema_root), 'PDS_docs', '')
+    docs_dir = docs_root or os.path.join(os.path.dirname(schema_root), 'PDS_docs', '')
     paths = create_dart_directories(output_dir, block)
     if verbose: print("input_dir ", input_dir)
     if verbose: print("output_dir", output_dir)
@@ -1363,13 +1363,14 @@ def export_block_to_pds(input_dir, output_dir, block, schema_root, skip_download
     for root, files in raw_files.items():
         sent_files = transfer_files(root, files, paths['raw_data'])
 
-    # Copy overview docs
-    for doc_file in glob(docs_dir+'*raw*'):
+    # Copy raw overview docs
+    for doc_file in glob(docs_dir+'/*raw*'):
         filename, extn = os.path.splitext(os.path.basename(doc_file))
         if filename not in sent_files:
             sent_files.append(filename)
         new_filename = os.path.join(paths['root'], 'data_lcogtraw', 'overview' + extn)
-        shutil.copy(doc_file, new_filename)
+        dest = shutil.copy(doc_file, new_filename)
+        if verbose: print(f"Copied {doc_file} to {dest}")
     if verbose: print("Creating raw PDS collection")
     raw_csv_filename, raw_xml_filename = create_pds_collection(paths['root'], paths['raw_data'], sent_files, 'raw', schema_root)
     # Convert csv file to CRLF endings required by PDS
@@ -1423,6 +1424,14 @@ def export_block_to_pds(input_dir, output_dir, block, schema_root, skip_download
     calib_files = find_fits_files(input_dir, '\S*-(bias|bpm|dark|skyflat)')
     for root, files in calib_files.items():
         sent_files += transfer_files(root, files, paths['cal_data'], dbg=verbose)
+    # Copy cal overview docs
+    for doc_file in glob(docs_dir+'/*cal*'):
+        filename, extn = os.path.splitext(os.path.basename(doc_file))
+        if filename not in sent_files:
+            sent_files.append(filename)
+        new_filename = os.path.join(paths['root'], 'data_lcogtcal', 'overview' + extn)
+        dest = shutil.copy(doc_file, new_filename)
+        if verbose: print(f"Copied {doc_file} to {dest}")
     # create PDS products for cal data
     if verbose: print("Creating cal PDS collection")
     cal_csv_filename, cal_xml_filename = create_pds_collection(paths['root'], paths['cal_data'], sent_files, 'cal', schema_root)
@@ -1444,6 +1453,14 @@ def export_block_to_pds(input_dir, output_dir, block, schema_root, skip_download
     lc_files = [os.path.basename(dart_lc_file),]
     # Convert csv file to CRLF endings required by PDS
     status = convert_file_to_crlf(dart_lc_file)
+    # Copy ddp overview docs
+    for doc_file in glob(docs_dir+'/*ddp*'):
+        filename, extn = os.path.splitext(os.path.basename(doc_file))
+        if filename not in sent_files:
+            sent_files.append(filename)
+        new_filename = os.path.join(paths['root'], 'data_lcogtddp', 'overview' + extn)
+        dest = shutil.copy(doc_file, new_filename)
+        if verbose: print(f"Copied {doc_file} to {dest}")
     # create PDS products for ddp data
     ddp_csv_filename, ddp_xml_filename = create_pds_collection(paths['root'], paths['ddp_data'], lc_files, 'ddp', schema_root)
     # Convert csv file to CRLF endings required by PDS

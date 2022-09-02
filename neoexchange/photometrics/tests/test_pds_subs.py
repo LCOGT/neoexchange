@@ -1755,6 +1755,7 @@ class TestExportBlockToPDS(TestCase):
 
     def setUp(self):
         self.schemadir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_schemas'))
+        self.docs_root = os.path.abspath(os.path.join('photometrics', 'configs', 'PDS_docs'))
         test_xml_collection = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_collection_cal.xml'))
         with open(test_xml_collection, 'r') as xml_file:
             self.expected_xml_cal = xml_file.readlines()
@@ -2257,10 +2258,14 @@ class TestExportBlockToPDS(TestCase):
         hdulist.writeto(test_skyflat_file, checksum=True, overwrite=True)
         hdulist.close()
 
-        export_block_to_pds(self.test_input_dir, self.test_output_dir, self.test_block, self.schemadir, skip_download=True)
+        export_block_to_pds(self.test_input_dir, self.test_output_dir, self.test_block, self.schemadir, self.docs_root, skip_download=True)
 
         for collection_type, file_type in zip(['raw', 'cal', 'ddp'], ['csv', 'xml']):
             expected_file = os.path.join(self.expected_root_dir, f'data_lcogt{collection_type}', f'collection_data_lcogt{collection_type}.{file_type}')
+            self.assertTrue(os.path.exists(expected_file), f'{expected_file} does not exist')
+            self.assertTrue(os.path.isfile(expected_file), f'{expected_file} is not a file')
+        for collection_type, file_type in zip(['raw', 'cal', 'ddp'], ['txt', 'xml']):
+            expected_file = os.path.join(self.expected_root_dir, f'data_lcogt{collection_type}', f'overview.{file_type}')
             self.assertTrue(os.path.exists(expected_file), f'{expected_file} does not exist')
             self.assertTrue(os.path.isfile(expected_file), f'{expected_file} is not a file')
         for collection_type in ['raw', 'cal']:
@@ -2270,4 +2275,15 @@ class TestExportBlockToPDS(TestCase):
             self.assertEqual(len(fits_files), len(xml_files), msg=f"Comparison failed on {collection_type:} files in {filepath:}")
             collection_filepath = os.path.join(self.expected_root_dir, f'data_lcogt{collection_type}', f'collection_data_lcogt{collection_type}.csv')
             t = Table.read(collection_filepath, format='ascii.csv', data_start=0)
-            self.assertEqual(len(fits_files), len(t))
+            self.assertEqual(len(fits_files), len(t)-1) # -1 due to extra overview file at the end
+            prod_type = 'e00'
+            if collection_type == 'cal':
+                prod_type = 'e92'
+            fits_files = [x for x in self.test_banzai_files if prod_type in x]
+            expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogt{collection_type}:{os.path.splitext(x)[0]}::1.0' ) for x in self.test_banzai_files if prod_type in x]
+            for fits_row in t[0:len(fits_files)]:
+                self.assertEqual(expected_lines[fits_row.index][0], fits_row[0])
+                self.assertEqual(expected_lines[fits_row.index][1], fits_row[1])
+            self.assertEqual('P', t[-1][0])
+            expected_lid = f'urn:nasa:pds:dart_teleobs:data_lcogt{collection_type}:collection_data_lcogt{collection_type}_overview::1.0'
+            self.assertEqual(expected_lid, t[-1][1])
