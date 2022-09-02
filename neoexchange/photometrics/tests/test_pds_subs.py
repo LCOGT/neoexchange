@@ -1976,7 +1976,7 @@ class TestExportBlockToPDS(TestCase):
 
         dart_lc_file = create_dart_lightcurve(self.test_input_dir, paths['ddp_data'], self.test_block, '*photompipe.dat')
         lc_files = [os.path.basename(dart_lc_file),]
-        expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogt_ddp:{x}::1.0' ) for x in lc_files]
+        expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogt_ddp:{os.path.splitext(x)[0]}::1.0' ) for x in lc_files]
 
         # Tested function
         csv_filename, xml_filename = create_pds_collection(self.expected_root_dir,
@@ -2006,7 +2006,7 @@ class TestExportBlockToPDS(TestCase):
         expected_csv_file = os.path.join(self.expected_root_dir, 'data_lcogt_cal', 'collection_data_lcogt_cal.csv')
         expected_xml_file = os.path.join(self.expected_root_dir, 'data_lcogt_cal', 'collection_data_lcogt_cal.xml')
         e92_files = [x for x in self.test_banzai_files if 'e92' in x]
-        expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogt_cal:{x}::1.0' ) for x in self.test_banzai_files if 'e92' in x]
+        expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogt_cal:{x.replace(".fits","")}::1.0' ) for x in self.test_banzai_files if 'e92' in x]
         paths = create_dart_directories(self.test_output_dir, self.test_block)
 
         csv_filename, xml_filename = create_pds_collection(self.expected_root_dir,
@@ -2052,7 +2052,7 @@ class TestExportBlockToPDS(TestCase):
             self.expected_xml_cal[start_line-1:start_line] +\
             self.expected_xml_cal[start_line+4:]
 
-        expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogt_cal:{x}::1.0' ) for x in self.test_banzai_files if 'e92' in x]
+        expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogt_cal:{os.path.splitext(x)[0]}::1.0' ) for x in self.test_banzai_files if 'e92' in x]
         paths = create_dart_directories(self.test_output_dir, self.test_block)
 
         csv_filename, xml_filename = create_pds_collection(self.expected_root_dir,
@@ -2081,7 +2081,7 @@ class TestExportBlockToPDS(TestCase):
         expected_csv_file = os.path.join(self.expected_root_dir, 'data_lcogt_raw', 'collection_data_lcogt_raw.csv')
         expected_xml_file = os.path.join(self.expected_root_dir, 'data_lcogt_raw', 'collection_data_lcogt_raw.xml')
         e00_files = [x for x in self.test_banzai_files if 'e00' in x]
-        expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogt_raw:{x}::1.0' ) for x in self.test_banzai_files if 'e00' in x]
+        expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogt_raw:{os.path.splitext(x)[0]}::1.0' ) for x in self.test_banzai_files if 'e00' in x]
         paths = create_dart_directories(self.test_output_dir, self.test_block)
 
         csv_filename, xml_filename = create_pds_collection(self.expected_root_dir,

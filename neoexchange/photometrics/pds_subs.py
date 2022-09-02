@@ -22,7 +22,7 @@ from astrometrics.sources_subs import fetch_jpl_orbit
 from astrometrics.ephem_subs import LCOGT_telserial_to_site_codes, LCOGT_domes_to_site_codes, get_sitepos
 from photometrics.lightcurve_subs import *
 from photometrics.catalog_subs import open_fits_catalog
-from photometrics.external_codes import convert_file_to_crlf, funpack_file
+from photometrics.external_codes import convert_file_to_crlf, funpack_file, reformat_header
 from photometrics.photometry_subs import map_filter_to_wavelength, map_filter_to_bandwidth
 
 import logging
@@ -1197,7 +1197,7 @@ def create_pds_collection(output_dir, input_dir, files, collection_type, schema_
     collection_id = f'data_lcogt_{collection_type}'
     product_version = '1.0'
     product_column = Column(['P'] * len(files))
-    urns = [f'{prefix}:{bundle_id}:{collection_id}:{x}::{product_version}' for x in files]
+    urns = [f'{prefix}:{bundle_id}:{collection_id}:{os.path.splitext(x)[0]}::{product_version}' for x in files]
     urns_column = Column(urns)
     csv_table = Table([product_column, urns_column])
     csv_filename = os.path.join(output_dir, collection_id, f'collection_data_lcogt_{collection_type}.csv')
@@ -1337,6 +1337,7 @@ def export_block_to_pds(input_dir, output_dir, block, schema_root, skip_download
 
     csv_files = []
     xml_files = []
+    docs_dir = os.path.join(os.path.dirname(schema_root), 'PDS_docs', '')
     paths = create_dart_directories(output_dir, block)
     if verbose: print("input_dir ", input_dir)
     if verbose: print("output_dir", output_dir)
@@ -1362,6 +1363,13 @@ def export_block_to_pds(input_dir, output_dir, block, schema_root, skip_download
     for root, files in raw_files.items():
         sent_files = transfer_files(root, files, paths['raw_data'])
 
+    # Copy overview docs
+    for doc_file in glob(docs_dir+'*raw*'):
+        filename, extn = os.path.splitext(os.path.basename(doc_file))
+        if filename not in sent_files:
+            sent_files.append(filename)
+        new_filename = os.path.join(paths['root'], 'data_lcogt_raw', 'overview' + extn)
+        shutil.copy(doc_file, new_filename)
     if verbose: print("Creating raw PDS collection")
     raw_csv_filename, raw_xml_filename = create_pds_collection(paths['root'], paths['raw_data'], sent_files, 'raw', schema_root)
     # Convert csv file to CRLF endings required by PDS
@@ -1377,12 +1385,39 @@ def export_block_to_pds(input_dir, output_dir, block, schema_root, skip_download
     # Set pattern to '<any # of chars>e92.' (literal '.' rather than normal regexp
     # meaning of "any character") to avoid picking up e92-ldac files
     cal_files = find_fits_files(input_dir, '\S*e92\.')
+    pp_phot = False
     if len(cal_files) == 0:
-        logger.error("No cal files found")
-        return [], []
+        logger.error("No cal files found, trying for e91 photpipe files")
+        cal_dat_files = glob(input_dir+'*e91_cal.dat')
+        if len(cal_dat_files) > 0:
+            pp_phot = True
+            cal_files = find_fits_files(input_dir, '\S*e91\.')
+        else:
+            return [], []
     if verbose: print("Transferring calibrated frames")
     for root, files in cal_files.items():
         sent_files = transfer_files(root, files, paths['cal_data'], dbg=verbose)
+    if pp_phot is True:
+        for e91_file in sent_files:
+            new_filename = os.path.join(paths['cal_data'], e91_file.replace('e91', 'e92'))
+            if os.path.exists(new_filename) is False:
+                if verbose: print(f"Changing {e91_file} -> {os.path.basename(new_filename)}")
+                hdulist = fits.open(os.path.join(paths['cal_data'], e91_file))
+                data = hdulist[0].data
+                new_header = reformat_header(hdulist[0].header)
+                new_header.remove("BSCALE", ignore_missing=True)
+                new_header.insert("NAXIS2", ("BSCALE", 1.0), after=True)
+                new_header.remove("BZERO", ignore_missing=True)
+                new_header.insert("BSCALE", ("BZERO", 0.0), after=True)
+                new_hdulist = fits.PrimaryHDU(data, new_header)
+                new_hdulist._bscale = 1.0
+                new_hdulist._bzero = 0.0
+
+                new_hdulist.writeto(new_filename, checksum=True, overwrite=True)
+                hdulist.close()
+            else:
+                if verbose: print(f"{os.path.basename(new_filename)} already exists")
+
     # transfer master calibration files
     if verbose: print("Transferring master calibration frames")
     calib_files = find_fits_files(input_dir, '\S*-(bias|bpm|dark|skyflat)')
