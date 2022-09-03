@@ -1880,7 +1880,10 @@ class TestExportBlockToPDS(TestCase):
         self.maxDiff = None
 
     def tearDown(self):
-        if self.remove and self.test_dir.startswith(tempfile.mkdtemp(prefix='tmp_neox')[:-8]):
+        # Generate an example test dir to compare root against and then remove it
+        temp_test_dir = tempfile.mkdtemp(prefix='tmp_neox')
+        os.rmdir(temp_test_dir)
+        if self.remove and self.test_dir.startswith(temp_test_dir[:-8]):
             shutil.rmtree(self.test_dir)
         else:
             if self.debug_print:
