@@ -1,0 +1,98 @@
+Las Cumbres Observatory Derived Data Product Collection
+
+Data Abstract
+=============
+
+We obtained images of the NEO (65803) Didymos binary asteroid and
+supporting calibration data with the Las Cumbres Observatory global
+telescope (LCOGT) network through several filters. These images were
+obtained in support of NASA's Double Asteroid Redirection Test (DART)
+mission. The DART mission was a planetary defense mission designed to
+test and measure the deflection caused by a kinetic impactor (the
+spacecraft) on the orbit of Dimorphos asteroid around its primary,
+Didymos. These ground-based observations were used to obtain light
+curves of Didymos and time the mutual events of Dimorphos to determine
+the period change caused by the impact of the DART spacecraft. This
+collection consists of the Las Cumbres Observatory photometry summary
+tables, which are a PDS4 derived product.
+
+Data Set Overview
+=================
+
+The photometry of Didymos is measured from the calibrated frames (see
+date_lcogtcal collection) using the NEOexchange or PHOTOMETRYPIPELINE
+pipelines. Both perform source detection in the images using SExtractor
+(Bertin, E and Arnouts, S. 1996. SExtractor: Software for source
+extraction. A&AS, 117, 393), astrometric fits to the detected sources
+based on the known positions of Gaia DR2 stars in the field using SCAMP
+(Bertin, E. 2006.  Automatic Astrometric and Photometric Calibration
+with SCAMP. ASPC, 351,112), photometrically calibrates the zero point
+of the images based on the measured flux of field stars that have known
+catalog magnitudes (typically from eithe the PanSTARRS or Gaia-DR2
+catalogs), and then using these astrometric and photometric solutions
+derives a calibrated magnitude for Didymos. The photometry tables
+included in this collection are the output of these pipelines.
+
+
+The photometry summary table is named according to the following convention: 
+lcogt_<site>_<inst.>_<YYYYMMDD>_<request #>_<astname#>_photometry.tab
+where:
+* <site> is the LCOGT site code as defined in the table below,
+* <inst.> is the LCOGT instrument code e.g. ‘fa15’ where the first letter
+indicates CCD manufacturer (f=Fairchild), second letter indicates controller
+manufacturer (a=Archon) and the 2 digits indicate serial number,
+* <YYYYMMDD> is the date of the start of data collection for that night,
+* <request number> is the unique LCOGT (integer) identifier assigned to the observation
+request by the LCOGT Observing Portal
+* <astname#> is the asteroid name and number in PDS-compatible identifier format i.e. all
+lowercase
+
+An example would be lcogt_lsc_fa15_20220730_2956963_65803didymos_photometry.tab
+for a photometry file for (65803) Didymos from the fa15 instrument at
+Cerro Tololo (site code 'lsc') from 2022-07-30.
+
+The LCOGT site codes (which are based on the IATA code of the nearest
+airport) are defined as follows:
+
+LCOGT     Site 
+Site code location description
+--------- -----------------------------------------------------------------
+ogg       Haleakala, Maui, HI, USA
+coj       Siding Spring Observatory, NSW, Australia
+lsc       Cerro Tololo Inter-American Observatory, Chile
+cpt       South African Astronomical Observatory, Sutherland, South Africa
+elp       McDonald Observatory, Texas, USA
+tfn       Teide Observatory, Tenerife, Canary Islands, Spain
+ngq       Ali Observatory, western Tibet, China
+sin       Meta site for all Sinistro cameras in the network
+
+Photometry data are stored as a PDS4 ASCII fixed-width table according to the 
+following format. 
+
+file: file name of the calibrated image where data were measured
+julian date: Julian date of the exposure midtime
+mag: Calibrated PanSTARRS r-band apparent magnitude of Didymos
+sig: 1-sigma error on the apparent magnitude 
+ZP: Calibrated zero point magnitude in PanSTARRS r-band
+ZP_sig: 1-sigma error on the zero point magnitude
+inst_mag:  Instrumental magnitude of Didymos 
+inst_sig: 1-sigma error on the instrumental magnitude
+SExtractor_flag: Flags associated with the Source Extractor photometry 
+measurements, see source_extractor_flags.txt in the documents folder for this 
+archive for more detailed description.
+aprad: Radius in pixels of the aperture used for the photometry measurement
+
+
+References
+==========
+
+E. Bertin and S. Arnouts., 1996. SExtractor: Software for source
+extraction. A&AS, 117:393–404, June 1996. doi:10.1051/aas:1996164.
+E. Bertin., 2006.  Automatic Astrometric and Photometric Calibration
+with SCAMP. ASPC, 351:112. 2006ASPC..351..112B
+T. Lister, et al, 2021.  NEOExchange - an online portal for NEO and
+Solar System science. Icarus, 364, 114387. doi:10.1117/12.2314340
+Proceedings of the SPIE, 10707, 107070K. doi:10.1117/12.2314340
+Mommert, M., 2017. PHOTOMETRYPIPELINE: An automated pipeline for
+calibrated photometry. Astronomy and Computing, 18, pp.47–53.
+doi:10.48550/arXiv.1702.00834

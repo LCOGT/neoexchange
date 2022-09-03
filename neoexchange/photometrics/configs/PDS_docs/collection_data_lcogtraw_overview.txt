@@ -1,0 +1,110 @@
+Las Cumbres Observatory Raw Data Collection Overview
+
+Data Abstract
+=============
+We obtained images of the NEO (65803) Didymos binary asteroid and
+supporting calibration data with the Las Cumbres Observatory global
+telescope (LCOGT) network through several filters. These images were
+obtained in support of NASA's Double Asteroid Redirection Test (DART)
+mission. The DART mission was a planetary defense mission designed to
+test and measure the deflection caused by a kinetic impactor (the
+spacecraft) on the orbit of Dimorphos asteroid around its primary,
+Didymos. These ground-based observations were used to obtain light
+curves of Didymos and time the mutual events of Dimorphos to determine
+the period change caused by the impact of the DART spacecraft. This
+collection consists of the Las Cumbres Observatory raw images.
+
+Data Set Overview
+=================
+This collection consists of raw images of the (65803) Didymos system
+taken by the Las Cumbres Observatory 1-meter telescope network through
+several filters (normally a PanSTARRS w broad filter equivalent to
+g'+r'+i' or one of the Sloan/PanSTARRS g', r', i' filters. Note in the
+FITS headers, the prime (') is replaced with a ASCII lower case 'p'
+e.g. observations in a g' filter will appear as 'gp'). These
+ground-based observations were used to obtain light curves of Didymos
+and time the mutual events of Dimorphos to determine the period change
+caused by the impact of the DART spacecraft.
+
+The visible-wavelength, direct-imaging CCD instruments for the Las
+Cumbres Observatory (LCOGT) 1-meter Telescopes are called the Sinistro
+Imagers. Sinistro imagers contain a Fairchild deep depletion,
+back-illuminated monolithic CCD with 4096 x 4097 pixels. The instrument
+is mounted on the straight through port on the LCOGT 1-meter instrument
+support structure.
+
+Sinistro is a 4k x 4k CCD that images a 26.5 arc minute square field of
+view. The device is back illuminated and has 15-micron pixels. The
+unbinned detector provides a pixel scale of 0.389 arcsec/pixel. The
+instrument can also be operated in a central_2k_2x2 mode which reads
+the central 2048 x 2048 pixels, with 2x2 pixel binning, giving 0.778
+arcsec/pixel. The chip is linear up to 65k ADU and the gains of the
+four individual amplifiers are normalized to 1.0 by the processing
+pipeline for calibrated images. Read noise is typically 7.5 to 9
+electrons depending on the particular CCD and the readout time is 28
+seconds for unbinned images, and 9 sec for the central_2k_2x2 mode. The
+CCD quantum efficiency is 64% for 350 - 400 nm, 72% at 500 nm, rising
+to 80-90% over 600-800 nm and declining to 24% at 1000 nm. The quantum
+efficiency falls off very sharply below 350 nm.
+
+The Sinistro imagers on the Las Cumbres Observatory 1-meter telescope
+network acquire data in FITS format. Raw image data includes the
+science sky frames, bias and dark frames, and flat fields. Bias and
+dark frames are taken during the local site afternoon before sunset and
+flat fields are automatically scheduled by the calibration system for
+those filters that have the oldest master flatfields. Flat fields are
+obtained by taking dithered images of the twilight sky with the
+telescope pointed at the point opposite the Sun which minimizes sky
+curvature.
+
+Naming Convention
+=================
+
+Raw Sinistro images consist of a single FITS file containing a primary
+header and 4 image extensions corresponding to the individual quadrants
+and amplifiers of the CCD. 
+They are named according to the following LCOGT-wide convention:
+<site><tel. class><tel. #>-<instrument>-<yyyymmdd>-<iiii>-<type><red. level>.<extn>
+where:
+
+filename section Description
+---------------- --------------------------------------------------------------
+<site>           LCOGT site code (one from {ogg, coj, lsc, cpt, elp, tfn, ngq})
+<tel. class>     Size/class of telescope (one from {2m0, 1m0, 0m4})
+<tel. #>         telescope serial number within size class
+<instrument>     LCOGT instrument code e.g. ‘fa15’ where the first letter
+indicates CCD manufacturer (f=Fairchild), second letter indicates controller
+manufacturer (a=Archon) and the 2 digits indicate serial number.
+<yyyymmdd>       UTC date of the start of the night (defined to be UTC
+date at 1600 local time at the site). Does not change if the site
+observes through UTC midnight.
+<iiii>           four digit image counter for that instrument, resets
+at start of new night (defined as above). Counter starts at 0001
+<type>           Type of file. One of {a=arc, b=bias, d=dark, e=exposure,
+s=standard, f=sky flat, l=lambert flat, w=lamp flat, x=experimental})
+<red level>      Reduction level from 00-99 with higher numbers
+indicating higher levels of data processing. In practice, one of
+{00=raw, 91=BANZAI processed, 92=NEOexchange processed}
+<extn>           the file extension. ".fits" for fits file format,
+".xml" for the PDS label.
+
+e.g. coj1m011-fa12-20210408-0176-e91.fits is a processed expose(sky)
+data product from the Siding Spring Observatory (coj), from 1-meter
+telescope #11 and the fa12 Sinistro instrument from the night of
+2021-04-08. It is the 176th image taken by that instrument on that
+night.
+
+The LCOGT site codes (which are based on the IATA code of the nearest
+airport) are defined as follows:
+
+LCOGT     Site 
+Site code location description
+--------- -----------------------------------------------------------------
+ogg       Haleakala, Maui, HI, USA
+coj       Siding Spring Observatory, NSW, Australia
+lsc       Cerro Tololo Inter-American Observatory, Chile
+cpt       South African Astronomical Observatory, Sutherland, South Africa
+elp       McDonald Observatory, Texas, USA
+tfn       Teide Observatory, Tenerife, Canary Islands, Spain
+ngq       Ali Observatory, western Tibet, China
+sin       Meta site for all Sinistro cameras in the network
