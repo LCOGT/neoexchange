@@ -699,6 +699,8 @@ def reformat_header(header_or_file):
                     'filter'  : (None, 'Filter used'),
                     'radesys' : (None, '[[FK5,ICRS]] Fundamental coord. system of the o'),
                     'airmass' : (None, 'Effective mean airmass'),
+                    'pcrecipe': ('BANZAI', 'Processing Recipes required/used'),
+                    'pprecipe': ('PHOTOMETRYPIPELINE', 'Post-Processing Recipes required/used'),
                     'wcserr'  : (0, 'Error status of WCS fit. 0 for no error')
                   }
 
