@@ -1768,7 +1768,7 @@ class TestExportBlockToPDS(TestCase):
 
         self.framedir = os.path.abspath(os.path.join('photometrics', 'tests'))
         self.test_file = 'banzai_test_frame.fits'
-        test_file_path = os.path.join(self.framedir, self.test_file)
+        self.test_file_path = os.path.join(self.framedir, self.test_file)
 
 #        self.test_dir = '/tmp/tmp_neox_wibble'
         self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
@@ -1856,17 +1856,23 @@ class TestExportBlockToPDS(TestCase):
             frame_params['frameid'] = frameid
             frame, created = Frame.objects.get_or_create(**frame_params)
             for extn in ['e00', 'e92']:
-                new_name = os.path.join(self.test_input_dir, frame_params['filename'].replace('e91', extn))
-                filename = shutil.copy(test_file_path, new_name)
+                new_name = os.path.join(self.test_input_daydir, frame_params['filename'].replace('e91', extn))
+                filename = shutil.copy(self.test_file_path, new_name)
                 # Change object name to 65803
                 hdulist = fits.open(filename)
+                hdulist[0].header['telescop'] = '1m0-01'
                 hdulist[0].header['object'] = '65803   '
+                half_exp = timedelta(seconds=hdulist[0].header['exptime'] / 2.0)
+                date_obs = frame_params['midpoint'] - half_exp
+                hdulist[0].header['date-obs'] = date_obs.strftime("%Y-%m-%dT%H:%M:%S")
+                utstop = frame_params['midpoint'] + half_exp + timedelta(seconds=8.77)
+                hdulist[0].header['utstop'] = utstop.strftime("%H:%M:%S.%f")[0:12]
                 hdulist.writeto(filename, overwrite=True, checksum=True)
                 self.test_banzai_files.append(os.path.basename(filename))
 
         # Make one additional copy which is renamed to an -e91 (so it shouldn't be found)
-        new_name = os.path.join(self.test_input_dir, 'tfn1m001-fa11-20211013-0065-e91.fits')
-        shutil.copy(test_file_path, new_name)
+        new_name = os.path.join(self.test_input_daydir, 'tfn1m001-fa11-20211013-0065-e91.fits')
+        shutil.copy(self.test_file_path, new_name)
         self.test_banzai_files.insert(1, os.path.basename(new_name))
 
         self.remove = True
@@ -1874,23 +1880,8 @@ class TestExportBlockToPDS(TestCase):
         self.maxDiff = None
 
     def tearDown(self):
-        if self.remove:
-            extra_dirs = [os.path.join(self.expected_root_dir, 'data_lcogt'+x, self.test_blockdir) for x in ['cal', 'ddp', 'raw']]
-            extra_dirs += [os.path.join(self.expected_root_dir, 'data_lcogt'+x) for x in ['cal', 'ddp', 'raw']]
-            for test_dir in extra_dirs + [self.expected_root_dir, self.test_output_dir, self.test_input_daydir, self.test_input_dir, self.test_dir]:
-                try:
-                    files_to_remove = glob(os.path.join(test_dir, '*'))
-                    for file_to_rm in files_to_remove:
-                        os.remove(file_to_rm)
-                except OSError:
-                    print("Error removing files in temporary test directory", test_dir)
-                try:
-                    if os.path.exists(test_dir) and os.path.isdir(test_dir):
-                        os.rmdir(test_dir)
-                        if self.debug_print:
-                            print("Removed", test_dir)
-                except OSError:
-                    print("Error removing temporary test directory", test_dir)
+        if self.remove and self.test_dir.startswith(tempfile.mkdtemp(prefix='tmp_neox')[:-8]):
+            shutil.rmtree(self.test_dir)
         else:
             if self.debug_print:
                 print("Not removing temporary test directory", self.test_dir)
@@ -1939,16 +1930,16 @@ class TestExportBlockToPDS(TestCase):
         self.assertEqual(expected_files, files)
 
     def test_find_fits_files(self):
-        expected_files = {self.test_input_dir: self.test_banzai_files}
+        expected_files = {self.test_input_daydir: self.test_banzai_files}
 
-        files = find_fits_files(self.test_input_dir)
+        files = find_fits_files(self.test_input_daydir)
 
         self.assertEqual(expected_files, files)
 
     def test_find_e92_fits_files(self):
-        expected_files = {self.test_input_dir: [x for x in self.test_banzai_files if 'e92' in x]}
+        expected_files = {self.test_input_daydir: [x for x in self.test_banzai_files if 'e92' in x]}
 
-        files = find_fits_files(self.test_input_dir, '\S*e92')
+        files = find_fits_files(self.test_input_daydir, '\S*e92')
 
         self.assertEqual(expected_files, files)
 
@@ -1966,7 +1957,7 @@ class TestExportBlockToPDS(TestCase):
         paths = create_dart_directories(self.test_output_dir, self.test_block)
         for x in self.test_banzai_files:
             if 'e92' in x:
-                shutil.copy(os.path.join(self.test_input_dir, x), paths['cal_data'])
+                shutil.copy(os.path.join(self.test_input_daydir, x), paths['cal_data'])
 
         test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_photompipe.dat'))
         test_logfile = os.path.abspath(os.path.join('photometrics', 'tests', 'example_photompipe_log'))
@@ -2009,9 +2000,12 @@ class TestExportBlockToPDS(TestCase):
         e92_files = [x for x in self.test_banzai_files if 'e92' in x]
         expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogtcal:{os.path.splitext(x)[0]}::1.0' ) for x in self.test_banzai_files if 'e92' in x]
         paths = create_dart_directories(self.test_output_dir, self.test_block)
+        # Copy files to output dir so incorrect (non e92) files don't get picked up
+        for fits_file in e92_files:
+            shutil.copy(os.path.join(self.test_input_daydir, fits_file), paths['cal_data'])
 
         csv_filename, xml_filename = create_pds_collection(self.expected_root_dir,
-            self.test_input_dir, e92_files, 'cal', self.schemadir, mod_time=datetime(2021, 10, 15))
+            paths['cal_data'], e92_files, 'cal', self.schemadir, mod_time=datetime(2021, 10, 15))
 
         for filename, expected_file in zip([csv_filename, xml_filename], [expected_csv_file, expected_xml_file]):
             self.assertTrue(os.path.exists(expected_file), f'{expected_file} does not exist')
@@ -2035,15 +2029,17 @@ class TestExportBlockToPDS(TestCase):
     def test_create_pds_collection_cal_not_didymos(self):
         expected_csv_file = os.path.join(self.expected_root_dir, 'data_lcogtcal', 'collection_data_lcogtcal.csv')
         expected_xml_file = os.path.join(self.expected_root_dir, 'data_lcogtcal', 'collection_data_lcogtcal.xml')
+        paths = create_dart_directories(self.test_output_dir, self.test_block)
         e92_files = []
         # Modify object in FITS headers and remove <lid_reference> to didymos from XML
         for x in self.test_banzai_files:
              if 'e92' in x:
                 e92_files.append(x)
                 # Change object name to something other (65803) Didymos
-                filename = os.path.join(self.test_input_dir, x)
+                filename = os.path.join(self.test_input_daydir, x)
                 hdulist = fits.open(filename)
                 hdulist[0].header['object'] = '12923   '
+                filename = os.path.join(paths['cal_data'], x)
                 hdulist.writeto(filename, overwrite=True, checksum=True)
         for line_num, line in enumerate(self.expected_xml_cal):
             if line.strip() == '<type>Asteroid</type>':
@@ -2054,10 +2050,9 @@ class TestExportBlockToPDS(TestCase):
             self.expected_xml_cal[start_line+4:]
 
         expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogtcal:{os.path.splitext(x)[0]}::1.0' ) for x in self.test_banzai_files if 'e92' in x]
-        paths = create_dart_directories(self.test_output_dir, self.test_block)
 
         csv_filename, xml_filename = create_pds_collection(self.expected_root_dir,
-            self.test_input_dir, e92_files, 'cal', self.schemadir, mod_time=datetime(2021, 10, 15))
+            paths['cal_data'], e92_files, 'cal', self.schemadir, mod_time=datetime(2021, 10, 15))
 
         for filename, expected_file in zip([csv_filename, xml_filename], [expected_csv_file, expected_xml_file]):
             self.assertTrue(os.path.exists(expected_file), f'{expected_file} does not exist')
@@ -2084,9 +2079,13 @@ class TestExportBlockToPDS(TestCase):
         e00_files = [x for x in self.test_banzai_files if 'e00' in x]
         expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogtraw:{os.path.splitext(x)[0]}::1.0' ) for x in self.test_banzai_files if 'e00' in x]
         paths = create_dart_directories(self.test_output_dir, self.test_block)
+        # Copy files to output dir so incorrect (non e00) files don't get picked up
+        for fits_file in e00_files:
+            shutil.copy(os.path.join(self.test_input_daydir, fits_file), paths['raw_data'])
 
+        # Tested function
         csv_filename, xml_filename = create_pds_collection(self.expected_root_dir,
-            self.test_input_dir, e00_files, 'raw', self.schemadir, mod_time=datetime(2021, 10, 15))
+            paths['raw_data'], e00_files, 'raw', self.schemadir, mod_time=datetime(2021, 10, 15))
 
         for filename, expected_file in zip([csv_filename, xml_filename], [expected_csv_file, expected_xml_file]):
             self.assertTrue(os.path.exists(expected_file), f'{expected_file} does not exist')
@@ -2220,41 +2219,41 @@ class TestExportBlockToPDS(TestCase):
         shutil.copy(test_logfile, new_name)
 
         # Create example bpm frame
-        hdulist = fits.open(os.path.join(self.test_input_dir, self.test_banzai_files[0]))
+        hdulist = fits.open(os.path.join(self.test_input_daydir, self.test_banzai_files[0]))
         hdulist[0].header['obstype'] = 'BPM'
         hdulist[0].header['moltype'] = 'BIAS'
         hdulist[0].header['exptime'] = 0
-        test_bpm_file = os.path.join(self.test_input_dir, 'banzai-test--bpm-full_frame.fits')
+        test_bpm_file = os.path.join(self.test_input_daydir, 'banzai-test--bpm-full_frame.fits')
         hdulist.writeto(test_bpm_file, checksum=True, overwrite=True)
         hdulist.close()
 
         # Create example bias frame
-        hdulist = fits.open(os.path.join(self.test_input_dir, self.test_banzai_files[0]))
+        hdulist = fits.open(os.path.join(self.test_input_daydir, self.test_banzai_files[0]))
         hdulist[0].header['obstype'] = 'BIAS'
         hdulist[0].header['moltype'] = 'BIAS'
         hdulist[0].header['exptime'] = 0
         hdulist[0].header.insert('l1pubdat', ('ismaster', True, 'Is this a master calibration frame'), after=True)
-        test_bias_file = os.path.join(self.test_input_dir, 'banzai-test-bias-bin1x1.fits')
+        test_bias_file = os.path.join(self.test_input_daydir, 'banzai-test-bias-bin1x1.fits')
         hdulist.writeto(test_bias_file, checksum=True, overwrite=True)
         hdulist.close()
 
         # Create example dark frame
-        hdulist = fits.open(os.path.join(self.test_input_dir, self.test_banzai_files[0]))
+        hdulist = fits.open(os.path.join(self.test_input_daydir, self.test_banzai_files[0]))
         hdulist[0].header['obstype'] = 'DARK'
         hdulist[0].header['moltype'] = 'DARK'
         hdulist[0].header['exptime'] = 300
         hdulist[0].header.insert('l1pubdat', ('ismaster', True, 'Is this a master calibration frame'), after=True)
-        test_dark_file = os.path.join(self.test_input_dir, 'banzai-test-dark-bin1x1.fits')
+        test_dark_file = os.path.join(self.test_input_daydir, 'banzai-test-dark-bin1x1.fits')
         hdulist.writeto(test_dark_file, checksum=True, overwrite=True)
         hdulist.close()
 
         # Create example flat frame
-        hdulist = fits.open(os.path.join(self.test_input_dir, self.test_banzai_files[0]))
+        hdulist = fits.open(os.path.join(self.test_input_daydir, self.test_banzai_files[0]))
         hdulist[0].header['obstype'] = 'SKYFLAT'
         hdulist[0].header['moltype'] = 'SKYFLAT'
         hdulist[0].header['exptime'] = 13.876
         hdulist[0].header.insert('l1pubdat', ('ismaster', True, 'Is this a master calibration frame'), after=True)
-        test_skyflat_file = os.path.join(self.test_input_dir, 'banzai-test-skyflat-bin1x1-w.fits')
+        test_skyflat_file = os.path.join(self.test_input_daydir, 'banzai-test-skyflat-bin1x1-w.fits')
         hdulist.writeto(test_skyflat_file, checksum=True, overwrite=True)
         hdulist.close()
 
@@ -2281,6 +2280,144 @@ class TestExportBlockToPDS(TestCase):
                 prod_type = 'e92'
             fits_files = [x for x in self.test_banzai_files if prod_type in x]
             expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogt{collection_type}:{os.path.splitext(x)[0]}::1.0' ) for x in self.test_banzai_files if prod_type in x]
+            for fits_row in t[0:len(fits_files)]:
+                self.assertEqual(expected_lines[fits_row.index][0], fits_row[0])
+                self.assertEqual(expected_lines[fits_row.index][1], fits_row[1])
+            self.assertEqual('P', t[-1][0])
+            expected_lid = f'urn:nasa:pds:dart_teleobs:data_lcogt{collection_type}:collection_data_lcogt{collection_type}_overview::1.0'
+            self.assertEqual(expected_lid, t[-1][1])
+
+    def test_export_multiple_blocks_to_pds(self):
+        verbose = False
+        test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_photompipe.dat'))
+        test_logfile = os.path.abspath(os.path.join('photometrics', 'tests', 'example_photompipe_log'))
+        # Make 2nd day of data
+        self.test_input_daydir2 = os.path.join(self.test_input_dir, '20211015')
+        os.makedirs(self.test_input_daydir2, exist_ok=True)
+
+        # Update 2nd Block to reflect 2nd night of obs.
+        self.test_blockdir2 = 'lcogt_1m0_12_fa16_20211015'
+
+        self.test_block2.num_observed = 1
+        self.test_block2.request_number = '12420'
+        self.test_block2.block_start += timedelta(days=2)
+        self.test_block2.block_end += timedelta(days=1, seconds=10*3600)
+        self.test_block2.save()
+        frame_params = {
+                         'sitecode' : 'K91',
+                         'instrument' : 'fa16',
+                         'filter' : 'ip',
+                         'block' : self.test_block2,
+                         'frametype' : Frame.BANZAI_RED_FRAMETYPE,
+                         'zeropoint' : 26.8,
+                         'zeropoint_err' : 0.04,
+                         'midpoint' : self.test_block2.block_start + timedelta(minutes=5)
+                       }
+
+        for frame_num, frameid in zip(range(45,106,30),[45244042, 45244594, 45245062]):
+            frame_params['filename'] = f"cpt1m012-fa16-20211015-{frame_num:04d}-e91.fits"
+            frame_params['midpoint'] += timedelta(minutes=frame_num-45)
+            frame_params['frameid'] = frameid
+            frame, created = Frame.objects.get_or_create(**frame_params)
+            for extn in ['e00', 'e92']:
+                new_name = os.path.join(self.test_input_daydir2, frame_params['filename'].replace('e91', extn))
+                filename = shutil.copy(self.test_file_path, new_name)
+                # Change object name to 65803
+                hdulist = fits.open(filename)
+                hdulist[0].header['object'] = '65803   '
+                hdulist[0].header['telescop'] = '1m0-12'
+                half_exp = timedelta(seconds=hdulist[0].header['exptime'] / 2.0)
+                date_obs = frame_params['midpoint'] - half_exp
+                hdulist[0].header['date-obs'] = date_obs.strftime("%Y-%m-%dT%H:%M:%S")
+                utstop = frame_params['midpoint'] + half_exp + timedelta(seconds=8.77)
+                hdulist[0].header['utstop'] = utstop.strftime("%H:%M:%S.%f")[0:12]
+                hdulist.writeto(filename, overwrite=True, checksum=True)
+                self.test_banzai_files.append(os.path.basename(filename))
+
+        input_daydirs_list = [self.test_input_daydir, self.test_input_daydir2]
+        for test_input_daydir in input_daydirs_list:
+            # Copy files to input directories, renaming log
+            new_name = os.path.join(test_input_daydir, 'photometry_65803_Didymos__1996_GT.dat')
+            shutil.copy(test_lc_file, new_name)
+            new_name = os.path.join(test_input_daydir, 'LOG')
+            shutil.copy(test_logfile, new_name)
+
+            daydir = os.path.basename(test_input_daydir)
+            # Create example bpm frame
+            hdulist = fits.open(os.path.join(self.test_input_daydir, self.test_banzai_files[0]))
+            hdulist[0].header['obstype'] = 'BPM'
+            hdulist[0].header['moltype'] = 'BIAS'
+            hdulist[0].header['exptime'] = 0
+            test_bpm_file = os.path.join(test_input_daydir, f'banzai-test-bpm-{daydir}-full_frame.fits')
+            hdulist.writeto(test_bpm_file, checksum=True, overwrite=True)
+            hdulist.close()
+            self.test_banzai_files.append(os.path.basename(test_bpm_file))
+
+            # Create example bias frame
+            hdulist = fits.open(os.path.join(self.test_input_daydir, self.test_banzai_files[0]))
+            hdulist[0].header['obstype'] = 'BIAS'
+            hdulist[0].header['moltype'] = 'BIAS'
+            hdulist[0].header['exptime'] = 0
+            hdulist[0].header.insert('l1pubdat', ('ismaster', True, 'Is this a master calibration frame'), after=True)
+            test_bias_file = os.path.join(test_input_daydir, f'banzai-test-bias-{daydir}-bin1x1.fits')
+            hdulist.writeto(test_bias_file, checksum=True, overwrite=True)
+            hdulist.close()
+            self.test_banzai_files.append(os.path.basename(test_bias_file))
+
+            # Create example dark frame
+            hdulist = fits.open(os.path.join(self.test_input_daydir, self.test_banzai_files[0]))
+            hdulist[0].header['obstype'] = 'DARK'
+            hdulist[0].header['moltype'] = 'DARK'
+            hdulist[0].header['exptime'] = 300
+            hdulist[0].header.insert('l1pubdat', ('ismaster', True, 'Is this a master calibration frame'), after=True)
+            test_dark_file = os.path.join(test_input_daydir, f'banzai-test-{daydir}-dark-bin1x1.fits')
+            hdulist.writeto(test_dark_file, checksum=True, overwrite=True)
+            hdulist.close()
+            self.test_banzai_files.append(os.path.basename(test_dark_file))
+
+            # Create example flat frame
+            hdulist = fits.open(os.path.join(self.test_input_daydir, self.test_banzai_files[0]))
+            hdulist[0].header['obstype'] = 'SKYFLAT'
+            hdulist[0].header['moltype'] = 'SKYFLAT'
+            hdulist[0].header['exptime'] = 13.876
+            hdulist[0].header.insert('l1pubdat', ('ismaster', True, 'Is this a master calibration frame'), after=True)
+            test_skyflat_file = os.path.join(test_input_daydir, f'banzai-test-skyflat-{daydir}-bin1x1-w.fits')
+            hdulist.writeto(test_skyflat_file, checksum=True, overwrite=True)
+            hdulist.close()
+            self.test_banzai_files.append(os.path.basename(test_skyflat_file))
+
+        export_block_to_pds(input_daydirs_list, self.test_output_dir, [self.test_block, self.test_block2], self.schemadir, self.docs_root, skip_download=True, verbose=verbose)
+
+        for collection_type, file_type in [(a,b) for a in ['raw', 'cal', 'ddp'] for b in ['csv', 'xml']]:
+            expected_file = os.path.join(self.expected_root_dir, f'data_lcogt{collection_type}', f'collection_data_lcogt{collection_type}.{file_type}')
+            self.assertTrue(os.path.exists(expected_file), msg=f'{expected_file} does not exist')
+            self.assertTrue(os.path.isfile(expected_file), msg=f'{expected_file} is not a file')
+        for collection_type, file_type in [(a,b) for a in ['raw', 'cal', 'ddp'] for b in ['txt', 'xml']]:
+            expected_file = os.path.join(self.expected_root_dir, f'data_lcogt{collection_type}', f'overview.{file_type}')
+            self.assertTrue(os.path.exists(expected_file), f'{expected_file} does not exist')
+            self.assertTrue(os.path.isfile(expected_file), f'{expected_file} is not a file')
+        for collection_type in ['raw', 'cal',]:
+            if verbose: print(f" {collection_type}\n=====")
+            all_fits_files = []
+            for block_dir in [self.test_blockdir, self.test_blockdir2]:
+                filepath = os.path.join(self.expected_root_dir, 'data_lcogt' + collection_type, block_dir, '') #Null string on end so 'glob' works in directory
+                fits_files = sorted(glob(filepath + "tfn*fits")) +  sorted(glob(filepath + "cpt*fits")) + sorted(glob(filepath + "banzai*fits"))
+                all_fits_files += fits_files
+                xml_files = glob(filepath + "*xml")
+                self.assertEqual(len(fits_files), len(xml_files), msg=f"Comparison failed on {collection_type:} files in {filepath:}")
+            collection_filepath = os.path.join(self.expected_root_dir, f'data_lcogt{collection_type}', f'collection_data_lcogt{collection_type}.csv')
+            t = Table.read(collection_filepath, format='ascii.csv', data_start=0, names=('P/S', 'lidvid'))
+            self.assertEqual(len(all_fits_files), len(t)-1, msg=f"Failed on {collection_type}") # -1 due to extra overview file at the end
+            prod_type = 'e00'
+            fits_files = [x for x in self.test_banzai_files if prod_type in x]
+            if collection_type == 'cal':
+                fits_files = [os.path.basename(x) for x in all_fits_files] #[x for x in self.test_banzai_files if prod_type not in x and 'e91' not in x]
+
+            expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogt{collection_type}:{os.path.splitext(x)[0]}::1.0' ) for x in fits_files]
+            if verbose: print("expected_lines:")
+            if verbose: print("\n".join([f"  {x[0]} {x[1]}" for x in expected_lines]))
+            if verbose: print
+            if verbose: print(t[0:len(fits_files)])
             for fits_row in t[0:len(fits_files)]:
                 self.assertEqual(expected_lines[fits_row.index][0], fits_row[0])
                 self.assertEqual(expected_lines[fits_row.index][1], fits_row[1])

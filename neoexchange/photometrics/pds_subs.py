@@ -500,7 +500,7 @@ def determine_first_last_times(filepath):
                 start, stop = get_shutter_open_close(header)
                 first_frame = min(first_frame, start)
                 last_frame = max(last_frame, stop)
-
+                #print(f"{fits_file}: Frame {start}->{stop} Min: {first_frame} Max: {last_frame}")
     return first_frame, last_frame
 
 def determine_first_last_times_from_table(filepath, match_pattern='*_photometry.tab'):
@@ -508,7 +508,10 @@ def determine_first_last_times_from_table(filepath, match_pattern='*_photometry.
     to determine the times of the first and last frames, which are returned"""
 
     first_frame = last_frame = None
-    photometry_files = sorted(glob(os.path.join(filepath, match_pattern)))
+    photometry_files = sorted(glob(os.path.join(filepath, '**', match_pattern)))
+    if len(photometry_files) == 0:
+        # Retry without the directory wildcard
+        photometry_files = sorted(glob(os.path.join(filepath, match_pattern)))
     if len(photometry_files) > 0:
         first_frame = datetime.max
         last_frame = datetime.min
@@ -568,15 +571,13 @@ def create_context_area(filepath, collection_type):
                 ('Small Bodies', 'Lightcurve'),
                 ('Small Bodies', 'Physical Properties'),
                 ('Flux Measurements', 'Photometry'),
-                ('wavelength_range', 'Visible')
              ]
     for sci_facet in facets:
         facet = etree.SubElement(summary, "Science_Facets")
-        if sci_facet[0] == 'wavelength_range':
-            etree.SubElement(facet, sci_facet[0]).text = sci_facet[1]
-        else:
-            etree.SubElement(facet, "discipline_name").text = sci_facet[0]
-            etree.SubElement(facet, "facet1").text = sci_facet[1]
+        if sci_facet[1] == 'Lightcurve' or sci_facet[1] == 'Photometry':
+            etree.SubElement(facet, "wavelength_range").text = 'Visible'
+        etree.SubElement(facet, "discipline_name").text = sci_facet[0]
+        etree.SubElement(facet, "facet1").text = sci_facet[1]
 
     invest_area = etree.SubElement(context_area, "Investigation_Area")
     etree.SubElement(invest_area, "name").text = "Double Asteroid Redirection Test"
@@ -589,35 +590,61 @@ def create_context_area(filepath, collection_type):
     frames_filepath = filepath
     prefix = '\S*e92'
     if collection_type == 'ddp':
+        if filepath[-1] == os.sep:
+            filepath = filepath[:-1]
         block_dir = os.path.basename(filepath)
-        frames_filepath = os.path.realpath(os.path.join(filepath, '..', '..', 'data_lcogtcal', block_dir))
+        if block_dir == 'data_lcogtddp':
+            # Generating a collection, have been passed a path ending in 'data_lcogtddp'
+            frames_filepath = os.path.realpath(os.path.join(filepath, '..', 'data_lcogtcal'))
+        else:
+            frames_filepath = os.path.realpath(os.path.join(filepath, '..', '..', 'data_lcogtcal', block_dir))
     elif collection_type == 'raw':
         prefix = '\S*e00'
     fits_files = find_fits_files(frames_filepath, prefix)
-    fits_filepath = os.path.join(frames_filepath, fits_files[frames_filepath][0])
-    header, table, cattype = open_fits_catalog(fits_filepath, header_only=True)
-    if type(header) != list:
-        headers = [header, ]
-    else:
-        headers = header
+    # print("frames_filepath for", collection_type, "=", frames_filepath, prefix)
+    # print(fits_files)
+    all_headers = []
+    for directory, files in fits_files.items():
+        if len(files) > 0:
+            fits_filepath = os.path.join(directory, files[0])
+            header, table, cattype = open_fits_catalog(fits_filepath, header_only=True)
+            if type(header) != list:
+                headers = [header, ]
+            else:
+                headers = header
+            all_headers.append(headers)
+
+    if len(all_headers) == 0:
+        logger.error(f"No headers found in files in {frames_filepath}")
+        return context_area
 
     # Create Observing System subclass of Observation Area
     obs_system = etree.SubElement(context_area, "Observing_System")
     obs_components = {
                         'Host' : 'Las Cumbres Observatory (LCOGT)',
-                        'Telescope' : 'LCOGT ' + headers[0].get('TELESCOP','') + ' Telescope',
+                        'Telescope' : ['LCOGT ' + headers[0].get('TELESCOP','') + ' Telescope' for headers in all_headers],
                         'Instrument' : 'Sinistro Imager',
                      }
     for component in obs_components:
-        comp = etree.SubElement(obs_system, "Observing_System_Component")
-        etree.SubElement(comp, "name").text = obs_components[component]
-        etree.SubElement(comp, "type").text = component
-        description = f"The description for the {obs_components[component]} can be found in the document collection for this bundle."
-        etree.SubElement(comp, "description").text = description
+        if type(obs_components[component]) == list:
+            i = 0
+            while i < len(obs_components[component]):
+                comp = etree.SubElement(obs_system, "Observing_System_Component")
+                etree.SubElement(comp, "name").text = obs_components[component][i]
+                etree.SubElement(comp, "type").text = component
+                description = f"The description for the {obs_components[component][i]} can be found in the document collection for this bundle."
+                etree.SubElement(comp, "description").text = description
+                i+=1
+        else:
+            comp = etree.SubElement(obs_system, "Observing_System_Component")
+            etree.SubElement(comp, "name").text = obs_components[component]
+            etree.SubElement(comp, "type").text = component
+            description = f"The description for the {obs_components[component]} can be found in the document collection for this bundle."
+            etree.SubElement(comp, "description").text = description
 
     # Create Target Identification subclass
     target_id = etree.SubElement(context_area, "Target_Identification")
-    target_name, target_type = determine_target_name_type(headers[0])
+    target_name, target_type = determine_target_name_type(all_headers[0][0])
     etree.SubElement(target_id, "name").text = target_name
     etree.SubElement(target_id, "type").text = target_type
     # Create Internal Reference subclass of Target Area (but only if this Didymos)
@@ -1106,7 +1133,7 @@ def find_fits_files(dirpath, prefix=None):
 
     if prefix is None:
         prefix = ''
-    regex = re.compile('^'+prefix+'.*[fits|FITS|fit|FIT|Fits|fts|FTS|fits.fz]$')
+    regex = re.compile('^'+prefix+'.*(fits|FITS|fit|FIT|Fits|fts|FTS|fits.fz)$')
 
     fits_files = {}
     # walk through directories underneath
@@ -1207,8 +1234,9 @@ def create_pds_collection(output_dir, input_dir, files, collection_type, schema_
 
     # Write XML file after CSV file is generated (need to count records)
     xml_filename = csv_filename.replace('.csv', '.xml')
+    # print("\n".join(files))
+    # print(input_dir, xml_filename)
     status = write_product_collection_xml(input_dir, xml_filename, schema_root, mod_time)
-    #print(status, xml_filename, input_dir)
 
     return csv_filename, xml_filename
 
@@ -1333,144 +1361,163 @@ def create_dart_lightcurve(input_dir, output_dir, block, match='photometry_*.dat
 
     return output_lc_filepath
 
-def export_block_to_pds(input_dir, output_dir, block, schema_root, docs_root=None, skip_download=False, verbose=True):
+def copy_docs(root_path, collection_type, docs_dir, verbose=True):
+    """Searchs in <docs_dir> for documents with <collection_type> in the
+    filename and copies them to '<root_path>/data_lcogt<collection_type>/overview + extn'
+    and converts them to CRLF line endings.
+    A list of the copied files are returned."""
+
+    sent_files = []
+    for doc_file in glob(docs_dir + f'/*{collection_type}*'):
+        filename, extn = os.path.splitext(os.path.basename(doc_file))
+        if filename not in sent_files:
+            sent_files.append(filename)
+        new_filename = os.path.join(root_path, f'data_lcogt{collection_type}', 'overview' + extn)
+        dest = shutil.copy(doc_file, new_filename)
+        status = convert_file_to_crlf(dest)
+        if verbose: print(f"Copied {doc_file} to {dest}")
+
+    return sent_files
+
+def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=None, skip_download=False, verbose=True):
 
     csv_files = []
     xml_files = []
     docs_dir = docs_root or os.path.join(os.path.dirname(schema_root), 'PDS_docs', '')
-    paths = create_dart_directories(output_dir, block)
-    if verbose: print("input_dir ", input_dir)
-    if verbose: print("output_dir", output_dir)
-    for k,v in paths.items():
-        if verbose: print(f"{k:>8s}:  {v}")
 
-    # Find and download related frames (raw and calibration frames)
-    if skip_download is True:
-        pass
-    else:
-        if verbose: print("Find and downloading related frames")
-        related_frames = find_related_frames(block)
-        dl_frames = download_files(related_frames, input_dir, verbose)
+    if type(blocks) != list and hasattr(blocks, "model") is False:
+        blocks = [blocks, ]
+    if type(input_dirs) != list:
+        input_dirs = [input_dirs, ]
 
-    # transfer raw data
-    if verbose: print("Finding raw frames")
-    raw_files = find_fits_files(input_dir, '\S*e00')
-    if len(raw_files) == 0:
-        logger.error("No raw files found")
-        return [], []
-    # create PDS products for raw data
-    if verbose: print("Transferring/uncompressing raw frames")
-    for root, files in raw_files.items():
-        sent_files = transfer_files(root, files, paths['raw_data'])
+    raw_sent_files = []
+    cal_sent_files = []
+    lc_files = []
+    for input_dir, block in zip(input_dirs, blocks):
+        paths = create_dart_directories(output_dir, block)
+        if verbose: print("input_dir ", input_dir)
+        if verbose: print("output_dir", output_dir)
+        for k,v in paths.items():
+            if verbose: print(f"{k:>8s}:  {v}")
+
+        # Find and download related frames (raw and calibration frames)
+        if skip_download is True:
+            pass
+        else:
+            if verbose: print("Find and downloading related frames")
+            related_frames = find_related_frames(block)
+            dl_frames = download_files(related_frames, input_dir, verbose)
+
+        # transfer raw data
+        if verbose: print("Finding raw frames")
+        raw_files = find_fits_files(input_dir, '\S*e00')
+        if len(raw_files) == 0:
+            logger.error("No raw files found")
+            return [], []
+        # create PDS products for raw data
+        if verbose: print("Transferring/uncompressing raw frames")
+        for root, files in raw_files.items():
+            raw_sent_files += transfer_files(root, files, paths['raw_data'])
+
+        # Create PDS labels for raw data
+        if verbose: print("Creating raw PDS labels")
+        xml_labels = create_pds_labels(paths['raw_data'], schema_root, match='\S*e00')
+        xml_files += xml_labels
+
+        # transfer cal data
+        # Set pattern to '<any # of chars>e92.' (literal '.' rather than normal regexp
+        # meaning of "any character") to avoid picking up e92-ldac files
+        cal_files = find_fits_files(input_dir, '\S*e92\.')
+        pp_phot = False
+        if len(cal_files) == 0:
+            logger.error("No cal files found, trying for e91 photpipe files")
+            cal_dat_files = glob(input_dir+'*e91_cal.dat')
+            if len(cal_dat_files) > 0:
+                pp_phot = True
+                cal_files = find_fits_files(input_dir, '\S*e91\.')
+            else:
+                return [], []
+        if verbose: print("Transferring calibrated frames")
+        for root, files in cal_files.items():
+            cal_sent_files += transfer_files(root, files, paths['cal_data'], dbg=verbose)
+        if pp_phot is True:
+            for e91_file in cal_sent_files:
+                new_filename = os.path.join(paths['cal_data'], e91_file.replace('e91', 'e92'))
+                if os.path.exists(new_filename) is False:
+                    if verbose: print(f"Changing {e91_file} -> {os.path.basename(new_filename)}")
+                    hdulist = fits.open(os.path.join(paths['cal_data'], e91_file))
+                    data = hdulist[0].data
+                    new_header = reformat_header(hdulist[0].header)
+                    new_header.remove("BSCALE", ignore_missing=True)
+                    new_header.insert("NAXIS2", ("BSCALE", 1.0), after=True)
+                    new_header.remove("BZERO", ignore_missing=True)
+                    new_header.insert("BSCALE", ("BZERO", 0.0), after=True)
+                    new_hdulist = fits.PrimaryHDU(data, new_header)
+                    new_hdulist._bscale = 1.0
+                    new_hdulist._bzero = 0.0
+
+                    new_hdulist.writeto(new_filename, checksum=True, overwrite=True)
+                    hdulist.close()
+                else:
+                    if verbose: print(f"{os.path.basename(new_filename)} already exists")
+
+        # transfer master calibration files
+        if verbose: print("Transferring master calibration frames")
+        calib_files = find_fits_files(input_dir, '\S*-(bias|bpm|dark|skyflat)')
+        for root, files in calib_files.items():
+            cal_sent_files += transfer_files(root, files, paths['cal_data'], dbg=verbose)
+
+        # Create PDS labels for cal data
+        if verbose: print("Creating cal PDS labels")
+        xml_labels = create_pds_labels(paths['cal_data'], schema_root, match='.*[bpm|bias|dark|flat|e92]*')
+        xml_files += xml_labels
+
+        # transfer ddp data
+        dart_lc_file = create_dart_lightcurve(input_dir, paths['ddp_data'], block)
+        if dart_lc_file is None:
+            logger.error("No light curve file found")
+            return [], []
+        lc_files += [os.path.basename(dart_lc_file),]
+        # Convert csv file to CRLF endings required by PDS
+        status = convert_file_to_crlf(dart_lc_file)
+
+        # Create PDS labels for ddp data
+        if verbose: print("Creating ddp PDS labels")
+        xml_labels = create_pds_labels(paths['ddp_data'], schema_root, match='*photometry.tab')
+        xml_files += xml_labels
 
     # Copy raw overview docs
-    for doc_file in glob(docs_dir+'/*raw*'):
-        filename, extn = os.path.splitext(os.path.basename(doc_file))
-        if filename not in sent_files:
-            sent_files.append(filename)
-        new_filename = os.path.join(paths['root'], 'data_lcogtraw', 'overview' + extn)
-        dest = shutil.copy(doc_file, new_filename)
-        if verbose: print(f"Copied {doc_file} to {dest}")
+    raw_sent_files += copy_docs(paths['root'], 'raw', docs_dir, verbose)
+
     if verbose: print("Creating raw PDS collection")
-    raw_csv_filename, raw_xml_filename = create_pds_collection(paths['root'], paths['raw_data'], sent_files, 'raw', schema_root)
+    path_to_all_raws = os.path.join(os.path.dirname(paths['raw_data']), '')
+    raw_csv_filename, raw_xml_filename = create_pds_collection(paths['root'], path_to_all_raws, raw_sent_files, 'raw', schema_root)
     # Convert csv file to CRLF endings required by PDS
     status = convert_file_to_crlf(raw_csv_filename)
     csv_files.append(raw_csv_filename)
     xml_files.append(raw_xml_filename)
-    # Create PDS labels for raw data
-    if verbose: print("Creating raw PDS labels")
-    xml_labels = create_pds_labels(paths['raw_data'], schema_root, match='\S*e00')
-    xml_files += xml_labels
 
-    # transfer cal data
-    # Set pattern to '<any # of chars>e92.' (literal '.' rather than normal regexp
-    # meaning of "any character") to avoid picking up e92-ldac files
-    cal_files = find_fits_files(input_dir, '\S*e92\.')
-    pp_phot = False
-    if len(cal_files) == 0:
-        logger.error("No cal files found, trying for e91 photpipe files")
-        cal_dat_files = glob(input_dir+'*e91_cal.dat')
-        if len(cal_dat_files) > 0:
-            pp_phot = True
-            cal_files = find_fits_files(input_dir, '\S*e91\.')
-        else:
-            return [], []
-    if verbose: print("Transferring calibrated frames")
-    for root, files in cal_files.items():
-        sent_files = transfer_files(root, files, paths['cal_data'], dbg=verbose)
-    if pp_phot is True:
-        for e91_file in sent_files:
-            new_filename = os.path.join(paths['cal_data'], e91_file.replace('e91', 'e92'))
-            if os.path.exists(new_filename) is False:
-                if verbose: print(f"Changing {e91_file} -> {os.path.basename(new_filename)}")
-                hdulist = fits.open(os.path.join(paths['cal_data'], e91_file))
-                data = hdulist[0].data
-                new_header = reformat_header(hdulist[0].header)
-                new_header.remove("BSCALE", ignore_missing=True)
-                new_header.insert("NAXIS2", ("BSCALE", 1.0), after=True)
-                new_header.remove("BZERO", ignore_missing=True)
-                new_header.insert("BSCALE", ("BZERO", 0.0), after=True)
-                new_hdulist = fits.PrimaryHDU(data, new_header)
-                new_hdulist._bscale = 1.0
-                new_hdulist._bzero = 0.0
-
-                new_hdulist.writeto(new_filename, checksum=True, overwrite=True)
-                hdulist.close()
-            else:
-                if verbose: print(f"{os.path.basename(new_filename)} already exists")
-
-    # transfer master calibration files
-    if verbose: print("Transferring master calibration frames")
-    calib_files = find_fits_files(input_dir, '\S*-(bias|bpm|dark|skyflat)')
-    for root, files in calib_files.items():
-        sent_files += transfer_files(root, files, paths['cal_data'], dbg=verbose)
     # Copy cal overview docs
-    for doc_file in glob(docs_dir+'/*cal*'):
-        filename, extn = os.path.splitext(os.path.basename(doc_file))
-        if filename not in sent_files:
-            sent_files.append(filename)
-        new_filename = os.path.join(paths['root'], 'data_lcogtcal', 'overview' + extn)
-        dest = shutil.copy(doc_file, new_filename)
-        if verbose: print(f"Copied {doc_file} to {dest}")
+    cal_sent_files += copy_docs(paths['root'], 'cal', docs_dir, verbose)
+
     # create PDS products for cal data
     if verbose: print("Creating cal PDS collection")
-    cal_csv_filename, cal_xml_filename = create_pds_collection(paths['root'], paths['cal_data'], sent_files, 'cal', schema_root)
+    path_to_all_cals = os.path.join(os.path.dirname(paths['cal_data']), '')
+    cal_csv_filename, cal_xml_filename = create_pds_collection(paths['root'], path_to_all_cals, cal_sent_files, 'cal', schema_root)
     # Convert csv file to CRLF endings required by PDS
     status = convert_file_to_crlf(cal_csv_filename)
     csv_files.append(cal_csv_filename)
     xml_files.append(cal_xml_filename)
 
-    # Create PDS labels for cal data
-    if verbose: print("Creating cal PDS labels")
-    xml_labels = create_pds_labels(paths['cal_data'], schema_root, match='.*[bpm|bias|dark|flat|e92]*')
-    xml_files += xml_labels
-
-    # transfer ddp data
-    dart_lc_file = create_dart_lightcurve(input_dir, paths['ddp_data'], block)
-    if dart_lc_file is None:
-        logger.error("No light curve file found")
-        return [], []
-    lc_files = [os.path.basename(dart_lc_file),]
-    # Convert csv file to CRLF endings required by PDS
-    status = convert_file_to_crlf(dart_lc_file)
     # Copy ddp overview docs
-    for doc_file in glob(docs_dir+'/*ddp*'):
-        filename, extn = os.path.splitext(os.path.basename(doc_file))
-        if filename not in sent_files:
-            sent_files.append(filename)
-        new_filename = os.path.join(paths['root'], 'data_lcogtddp', 'overview' + extn)
-        dest = shutil.copy(doc_file, new_filename)
-        if verbose: print(f"Copied {doc_file} to {dest}")
+    lc_files += copy_docs(paths['root'], 'ddp', docs_dir, verbose)
+
     # create PDS products for ddp data
-    ddp_csv_filename, ddp_xml_filename = create_pds_collection(paths['root'], paths['ddp_data'], lc_files, 'ddp', schema_root)
+    path_to_all_ddps = os.path.join(os.path.dirname(paths['ddp_data']), '')
+    ddp_csv_filename, ddp_xml_filename = create_pds_collection(paths['root'], path_to_all_ddps, lc_files, 'ddp', schema_root)
     # Convert csv file to CRLF endings required by PDS
     status = convert_file_to_crlf(ddp_csv_filename)
     csv_files.append(ddp_csv_filename)
     xml_files.append(ddp_xml_filename)
-
-    # Create PDS labels for ddp data
-    if verbose: print("Creating ddp PDS labels")
-    xml_labels = create_pds_labels(paths['ddp_data'], schema_root, match='*photometry.tab')
-    xml_files += xml_labels
 
     return csv_files, xml_files
