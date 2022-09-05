@@ -12,6 +12,7 @@ from astropy.time import Time
 from astropy.table import Column, Table
 from astropy.wcs import FITSFixedWarning
 from astropy.coordinates import SkyCoord
+from astropy.io import fits
 from astropy.io.ascii.core import InconsistentTableError
 from django.conf import settings
 
@@ -1195,7 +1196,7 @@ def transfer_files(input_dir, files, output_dir, dbg=False):
         input_filepath = os.path.join(input_dir, file)
         output_filepath = os.path.join(output_dir, file)
         if os.path.exists(input_filepath):
-            if os.path.exists(output_filepath) is False and os.path.exists(output_filepath.replace('.fz', '')) is False:
+            if (os.path.exists(output_filepath) is False and os.path.exists(output_filepath.replace('.fz', '')) is False) or ('e91.fits' in file and os.path.exists(output_filepath.replace('e91', 'e92')) is False):
                 filename = shutil.copy(input_filepath, output_filepath)
                 if output_filepath.endswith('.fz'):
                     if dbg: print("funpack file")
@@ -1435,8 +1436,9 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
         cal_files = find_fits_files(input_dir, '\S*e92\.')
         pp_phot = False
         if len(cal_files) == 0:
+            if verbose: print("Looking for cals. input_dir=", input_dir)
             logger.error("No cal files found, trying for e91 photpipe files")
-            cal_dat_files = glob(input_dir+'*e91_cal.dat')
+            cal_dat_files = glob(input_dir+'/*e91_cal.dat')
             if len(cal_dat_files) > 0:
                 pp_phot = True
                 cal_files = find_fits_files(input_dir, '\S*e91\.')
@@ -1446,25 +1448,40 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
         for root, files in cal_files.items():
             cal_sent_files += transfer_files(root, files, paths['cal_data'], dbg=verbose)
         if pp_phot is True:
-            for e91_file in cal_sent_files:
-                new_filename = os.path.join(paths['cal_data'], e91_file.replace('e91', 'e92'))
-                if os.path.exists(new_filename) is False:
-                    if verbose: print(f"Changing {e91_file} -> {os.path.basename(new_filename)}")
-                    hdulist = fits.open(os.path.join(paths['cal_data'], e91_file))
-                    data = hdulist[0].data
-                    new_header = reformat_header(hdulist[0].header)
-                    new_header.remove("BSCALE", ignore_missing=True)
-                    new_header.insert("NAXIS2", ("BSCALE", 1.0), after=True)
-                    new_header.remove("BZERO", ignore_missing=True)
-                    new_header.insert("BSCALE", ("BZERO", 0.0), after=True)
-                    new_hdulist = fits.PrimaryHDU(data, new_header)
-                    new_hdulist._bscale = 1.0
-                    new_hdulist._bzero = 0.0
+            # Use cal_files not cal_sent_files as we only want files from
+            # this Block not all of them
+            for directory, e91_files in cal_files.items():
+                for e91_file in e91_files:
+                    old_filename = os.path.join(paths['cal_data'], e91_file)
+                    new_filename = old_filename.replace('e91', 'e92')
+                    if os.path.exists(new_filename) is False:
+                        if verbose: print(f"Changing {e91_file} -> {os.path.basename(new_filename)}")
+                        hdulist = fits.open(os.path.join(paths['cal_data'], e91_file))
+                        data = hdulist[0].data
+                        new_header = reformat_header(hdulist[0].header)
+                        new_header.remove("BSCALE", ignore_missing=True)
+                        new_header.insert("NAXIS2", ("BSCALE", 1.0), after=True)
+                        new_header.remove("BZERO", ignore_missing=True)
+                        new_header.insert("BSCALE", ("BZERO", 0.0), after=True)
+                        new_hdulist = fits.PrimaryHDU(data, new_header)
+                        new_hdulist._bscale = 1.0
+                        new_hdulist._bzero = 0.0
 
-                    new_hdulist.writeto(new_filename, checksum=True, overwrite=True)
-                    hdulist.close()
-                else:
-                    if verbose: print(f"{os.path.basename(new_filename)} already exists")
+                        new_hdulist.writeto(new_filename, checksum=True, overwrite=True)
+                        hdulist.close()
+                    else:
+                        if verbose: print(f"{os.path.basename(new_filename)} already exists")
+                    if os.path.isdir(old_filename) is False:
+                        if os.path.exists(old_filename):
+                            os.remove(old_filename)
+                            if verbose: print("Removed", old_filename)
+                        # Replace old e91 file name with new one in list of sent cal files
+                        try:
+                            index = cal_sent_files.index(e91_file)
+                            cal_sent_files[index] = os.path.basename(new_filename)
+                        except ValueError:
+                            logger.warning(f"{old_filename} not found in list of sent cal frames")
+        # end of pp_phot is True case
 
         # transfer master calibration files
         if verbose: print("Transferring master calibration frames")

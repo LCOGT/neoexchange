@@ -2,6 +2,7 @@ import os
 import shutil
 import tempfile
 from glob import glob
+from pathlib import Path
 from lxml import etree, objectify
 from datetime import datetime
 
@@ -2427,3 +2428,280 @@ class TestExportBlockToPDS(TestCase):
             self.assertEqual('P', t[-1][0])
             expected_lid = f'urn:nasa:pds:dart_teleobs:data_lcogt{collection_type}:collection_data_lcogt{collection_type}_overview::1.0'
             self.assertEqual(expected_lid, t[-1][1])
+
+class TestTransferReformat(TestCase):
+
+    def setUp(self):
+        self.schemadir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_schemas'))
+        self.docs_root = os.path.abspath(os.path.join('photometrics', 'configs', 'PDS_docs'))
+        test_xml_collection = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_collection_cal.xml'))
+        with open(test_xml_collection, 'r') as xml_file:
+            self.expected_xml_cal = xml_file.readlines()
+        test_xml_collection = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_collection_raw.xml'))
+        with open(test_xml_collection, 'r') as xml_file:
+            self.expected_xml_raw = xml_file.readlines()
+        test_xml_collection = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_collection_ddp.xml'))
+        with open(test_xml_collection, 'r') as xml_file:
+            self.expected_xml_ddp = xml_file.readlines()
+
+        self.framedir = os.path.abspath(os.path.join('photometrics', 'tests'))
+        self.test_file = 'banzai_test_frame.fits'
+        self.test_file_path = os.path.join(self.framedir, self.test_file)
+        test_externscamp_TPV_headfile = os.path.join('photometrics', 'tests', 'example_externcat_scamp_tpv.head')
+        test_externcat_TPV_xml = os.path.join('photometrics', 'tests', 'example_externcat_scamp_tpv.xml')
+        tpv_header = fits.Header.fromtextfile(test_externscamp_TPV_headfile)
+
+#        self.test_dir = '/tmp/tmp_neox_wibble'
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+        self.test_input_dir = os.path.join(self.test_dir, 'input')
+        self.test_input_daydir = os.path.join(self.test_dir, 'input', '20211013')
+        os.makedirs(self.test_input_daydir, exist_ok=True)
+
+        self.test_output_dir = os.path.join(self.test_dir, 'output')
+        os.makedirs(self.test_output_dir, exist_ok=True)
+        self.expected_root_dir = os.path.join(self.test_output_dir, '')
+        self.test_ddp_daydir = os.path.join(self.expected_root_dir, 'data_lcogtddp')
+        self.test_blockdir = 'lcogt_1m0_01_fa11_20211013'
+        self.test_daydir = os.path.join(self.test_ddp_daydir, self.test_blockdir)
+        self.test_output_caldir = os.path.join(self.expected_root_dir, 'data_lcogtcal')
+        self.test_output_calblockdir = os.path.join(self.test_output_caldir, self.test_blockdir)
+
+        body_params = {
+                         'id': 36254,
+                         'provisional_name': None,
+                         'provisional_packed': None,
+                         'name': '65803',
+                         'origin': 'N',
+                         'source_type': 'N',
+                         'source_subtype_1': 'N3',
+                         'source_subtype_2': 'PH',
+                         'elements_type': 'MPC_MINOR_PLANET',
+                         'active': False,
+                         'fast_moving': False,
+                         'urgency': None,
+                         'epochofel': datetime(2021, 2, 25, 0, 0),
+                         'orbit_rms': 0.56,
+                         'orbinc': 3.40768,
+                         'longascnode': 73.20234,
+                         'argofperih': 319.32035,
+                         'eccentricity': 0.3836409,
+                         'meandist': 1.6444571,
+                         'meananom': 77.75787,
+                         'perihdist': None,
+                         'epochofperih': None,
+                         'abs_mag': 18.27,
+                         'slope': 0.15,
+                         'score': None,
+                         'discovery_date': datetime(1996, 4, 11, 0, 0),
+                         'num_obs': 829,
+                         'arc_length': 7305.0,
+                         'not_seen': 2087.29154187494,
+                         'updated': True,
+                         'ingest': datetime(2018, 8, 14, 17, 45, 42),
+                         'update_time': datetime(2021, 3, 1, 19, 59, 56, 957500)
+                         }
+
+        self.test_body, created = Body.objects.get_or_create(**body_params)
+
+        desig_params = { 'body' : self.test_body, 'value' : 'Didymos', 'desig_type' : 'N', 'preferred' : True, 'packed' : False}
+        test_desig, created = Designations.objects.get_or_create(**desig_params)
+        desig_params['value'] = '65803'
+        desig_params['desig_type'] = '#'
+        test_desig, created = Designations.objects.get_or_create(**desig_params)
+
+        block_params = {
+                         'body' : self.test_body,
+                         'request_number' : '12345',
+                         'block_start' : datetime(2021, 10, 13, 0, 40),
+                         'block_end' : datetime(2021, 10, 14, 0, 40),
+                         'obstype' : Block.OPT_IMAGING,
+                         'num_observed' : 1
+                        }
+        self.test_block, created = Block.objects.get_or_create(**block_params)
+        # Second block with no frames attached
+        block_params['num_observed'] = 0
+        self.test_block2, created = Block.objects.get_or_create(**block_params)
+
+        frame_params = {
+                         'sitecode' : 'Z24',
+                         'instrument' : 'fa11',
+                         'filter' : 'ip',
+                         'block' : self.test_block,
+                         'frametype' : Frame.BANZAI_RED_FRAMETYPE,
+                         'zeropoint' : 27.0,
+                         'zeropoint_err' : 0.03,
+                         'midpoint' : block_params['block_start'] + timedelta(minutes=5)
+                       }
+
+        self.test_banzai_files = []
+        for frame_num, frameid in zip(range(65,126,30),[45234032, 45234584, 45235052]):
+            frame_params['filename'] = f"tfn1m001-fa11-20211013-{frame_num:04d}-e91.fits"
+            frame_params['midpoint'] += timedelta(minutes=frame_num-65)
+            frame_params['frameid'] = frameid
+            frame, created = Frame.objects.get_or_create(**frame_params)
+            for extn in ['e00', 'e91']:
+                new_name = os.path.join(self.test_input_daydir, frame_params['filename'].replace('e91', extn))
+                filename = shutil.copy(self.test_file_path, new_name)
+                # Change object name to 65803
+                hdulist = fits.open(filename)
+                hdulist[0].header['telescop'] = '1m0-01'
+                hdulist[0].header['object'] = '65803   '
+                half_exp = timedelta(seconds=hdulist[0].header['exptime'] / 2.0)
+                date_obs = frame_params['midpoint'] - half_exp
+                hdulist[0].header['date-obs'] = date_obs.strftime("%Y-%m-%dT%H:%M:%S")
+                utstop = frame_params['midpoint'] + half_exp + timedelta(seconds=8.77)
+                hdulist[0].header['utstop'] = utstop.strftime("%H:%M:%S.%f")[0:12]
+                hdulist[0].header.insert('l1pubdat', ('l1filter', hdulist[0].header['filter'], 'Copy of FILTER for SCAMP'), after=True)
+                # Mangle header ala photpipe
+                update = False
+                insert = False
+                for key, new_value, new_comment in tpv_header.cards:
+                    if key == 'CTYPE1':
+                        update = True
+                    elif key == 'PV1_0':
+                        update = False
+                        insert = True
+                        prev_keyword = 'CD2_2'
+                    elif key == 'FGROUPNO':
+                        update = False
+                        insert = True
+                        prev_keyword = 'L1FILTER'
+                    if update:
+                        hdulist[0].header.set(key, value=str(new_value), comment=new_comment)
+                    elif insert:
+                         hdulist[0].header.insert(prev_keyword,(key, new_value, new_comment), after=True)
+                         prev_keyword = key
+                hdulist.writeto(filename, overwrite=True, checksum=True)
+                self.test_banzai_files.append(os.path.basename(filename))
+                if extn == 'e91':
+                    Path(new_name.replace('e91.fits', 'e91_cal.dat')).touch()
+
+        self.remove = True
+        self.debug_print = False
+        self.maxDiff = None
+
+    def tearDown(self):
+        # Generate an example test dir to compare root against and then remove it
+        temp_test_dir = tempfile.mkdtemp(prefix='tmp_neox')
+        os.rmdir(temp_test_dir)
+        if self.remove and self.test_dir.startswith(temp_test_dir[:-8]):
+            shutil.rmtree(self.test_dir)
+        else:
+            if self.debug_print:
+                print("Not removing temporary test directory", self.test_dir)
+
+    def transfer_cal_files(self, input_dirs, blocks, verbose=True):
+
+        schema_root = self.schemadir
+        csv_files = []
+        xml_files = []
+
+        if type(blocks) != list and hasattr(blocks, "model") is False:
+            blocks = [blocks, ]
+        if type(input_dirs) != list:
+            input_dirs = [input_dirs, ]
+
+        raw_sent_files = []
+        cal_sent_files = []
+        lc_files = []
+        for input_dir, block in zip(input_dirs, blocks):
+            paths = create_dart_directories(self.test_output_dir, block)
+            # transfer cal data
+            # Set pattern to '<any # of chars>e92.' (literal '.' rather than normal regexp
+            # meaning of "any character") to avoid picking up e92-ldac files
+            cal_files = find_fits_files(input_dir, '\S*e92\.')
+            pp_phot = False
+            if len(cal_files) == 0:
+                if verbose: print("Looking for cals. input_dir=",input_dir)
+                if verbose: print("No cal files found, trying for e91 photpipe files")
+                cal_dat_files = glob(input_dir+'/*e91_cal.dat')
+                if len(cal_dat_files) > 0:
+                    pp_phot = True
+                    cal_files = find_fits_files(input_dir, '\S*e91\.')
+                else:
+                    return [], []
+            if verbose: print("Transferring calibrated frames")
+            print(cal_files)
+            for root, files in cal_files.items():
+                cal_sent_files += transfer_files(root, files, paths['cal_data'], dbg=verbose)
+            if pp_phot is True:
+                # Use cal_files not cal_sent_files as we only files from this Block not all of them
+                for directory, e91_files in cal_files.items():
+                    for e91_file in e91_files:
+                        old_filename = os.path.join(paths['cal_data'], e91_file)
+                        new_filename = old_filename.replace('e91', 'e92')
+                        if os.path.exists(new_filename) is False:
+                            if verbose: print(f"Changing {e91_file} -> {os.path.basename(new_filename)}")
+                            hdulist = fits.open(os.path.join(paths['cal_data'], e91_file))
+                            data = hdulist[0].data
+                            new_header = reformat_header(hdulist[0].header)
+                            new_header.remove("BSCALE", ignore_missing=True)
+                            new_header.insert("NAXIS2", ("BSCALE", 1.0), after=True)
+                            new_header.remove("BZERO", ignore_missing=True)
+                            new_header.insert("BSCALE", ("BZERO", 0.0), after=True)
+                            new_hdulist = fits.PrimaryHDU(data, new_header)
+                            new_hdulist._bscale = 1.0
+                            new_hdulist._bzero = 0.0
+
+                            new_hdulist.writeto(new_filename, checksum=True, overwrite=True)
+                            hdulist.close()
+                        else:
+                            if verbose: print(f"{os.path.basename(new_filename)} already exists")
+                        if os.path.isdir(old_filename) is False:
+                            if os.path.exists(old_filename):
+                                os.remove(old_filename)
+                                if verbose: print("Removed", old_filename)
+                            # Replace old e91 file name with new one
+                            try:
+                                index = cal_sent_files.index(e91_file)
+                                cal_sent_files[index] = os.path.basename(new_filename)
+                            except ValueError:
+                                if verbose: (f"{old_filename} not found in list of sent cal frames")
+        # Create PDS labels for cal data
+        if verbose: print("Creating cal PDS labels")
+        xml_labels = create_pds_labels(paths['cal_data'], schema_root, match='.*[bpm|bias|dark|flat|e92]*')
+
+        # create PDS products for cal data
+        if verbose: print("Creating cal PDS collection")
+        path_to_all_cals = os.path.join(os.path.dirname(paths['cal_data']), '')
+        cal_csv_filename, cal_xml_filename = create_pds_collection(paths['root'], path_to_all_cals, cal_sent_files, 'cal', schema_root, mod_time=datetime(2021,10,15))
+        # Convert csv file to CRLF endings required by PDS
+        status = convert_file_to_crlf(cal_csv_filename)
+        csv_files.append(cal_csv_filename)
+        xml_files.append(cal_xml_filename)
+
+        return xml_labels, cal_sent_files
+
+    def test_single_block(self):
+        expected_num_xml = 3
+        expected_cal_files = [
+                                'tfn1m001-fa11-20211013-0065-e92.fits',
+                                'tfn1m001-fa11-20211013-0095-e92.fits',
+                                'tfn1m001-fa11-20211013-0125-e92.fits',
+                             ]
+        expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogtcal:{os.path.splitext(x)[0]}::1.0' ) for x in self.test_banzai_files if 'e92' in x]
+        expected_csv_filename = os.path.join(self.test_output_caldir, 'collection_data_lcogtcal.csv')
+        expected_xml_filename = os.path.join(self.test_output_caldir, 'collection_data_lcogtcal.xml')
+
+        xml_files, sent_cal_files = self.transfer_cal_files(self.test_input_daydir, self.test_block)
+
+        self.assertEqual(expected_num_xml, len(xml_files))
+        for e92_file in expected_cal_files:
+            self.assertTrue(os.path.exists(os.path.join(self.test_output_calblockdir, e92_file)))
+            self.assertFalse(os.path.exists(os.path.join(self.test_output_calblockdir, e92_file.replace('e92', 'e91'))))
+        self.assertEqual(len(expected_cal_files), len(sent_cal_files))
+        self.assertEqual(expected_cal_files, sent_cal_files)
+
+        table = Table.read(expected_csv_filename, format='ascii.no_header')
+        for i, line in enumerate(expected_lines):
+            self.assertEqual(line[0], table[i][0])
+            self.assertEqual(line[1], table[i][1])
+
+        with open(expected_xml_filename, 'r') as xml_file:
+            xml = xml_file.readlines()
+
+        for i, expected_line in enumerate(self.expected_xml_cal):
+            if i < len(xml):
+                assert expected_line.lstrip() == xml[i].lstrip(), "Failed on line: " + str(i+1) + "\n-" + expected_line.lstrip() + "\n+" + xml[i].lstrip()
+            else:
+                assert expected_line.lstrip() == None, "Failed on line: " + str(i+1)
