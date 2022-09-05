@@ -83,8 +83,8 @@ def write_dartformat_file(table, filepath, aprad=0.0):
     """Writes out the passed Astropy <table > in "DART lightcurve format" to the
     given <filepath>"""
 
-    output_col_names = ['file', 'julian_date', 'mag', 'sig', 'ZP', 'ZP_sig', 'inst_mag', 'inst_sig', 'SExtractor_flag', 'aprad']
-    input_col_names = ['filename', 'julian_date', 'mag', 'sig', 'ZP', 'ZP_sig', 'inst_mag', 'in_sig', '[8]', 'aprad']
+    output_col_names = ['file', 'julian_date', 'mag', 'sig', 'ZP', 'ZP_sig', 'inst_mag', 'inst_sig', 'filter', 'SExtractor_flag', 'aprad']
+    input_col_names = ['filename', 'julian_date', 'mag', 'sig', 'ZP', 'ZP_sig', 'inst_mag', 'in_sig', '[7]', '[8]', 'aprad']
     col_starts = [0, 37, 53, 61, 68, 76, 83, 92, 99, 115]
     def_fmt = '%.4f'
     formatters = {  'file' : '%-36.36s', 'julian_date' : '%15.7f', 'mag' : def_fmt, 'sig' : def_fmt,
