@@ -1321,7 +1321,7 @@ def determine_target_name_type(header):
 
     return target_name, target_type
 
-def create_dart_lightcurve(input_dir, output_dir, block, match='photometry_*.dat'):
+def create_dart_lightcurve(input_dir, output_dir, block, match='photometry_*.dat', create_symlink=False):
     """Creates a DART-format lightcurve file from the photometry file and LOG in
     <input_dir>, outputting to <output_dir>. Block <block> is used find the directory
     for the photometry file
@@ -1356,11 +1356,12 @@ def create_dart_lightcurve(input_dir, output_dir, block, match='photometry_*.dat
                     output_lc_filepath = os.path.join(output_dir, output_lc_file)
                     write_dartformat_file(table, output_lc_filepath, aper_radius)
                     # Create DART upload format symlink
-                    symlink_lc_file = f"LCOGT_{file_parts['site'].upper()}-{file_parts['instrument'].upper()}_Lister_{file_parts['dayobs']}.dat"
-                    dir_fh = os.open(output_dir, os.O_RDONLY)
-                    if os.path.exists(os.path.join(output_dir, symlink_lc_file)):
-                        os.remove(os.path.join(output_dir, symlink_lc_file))
-                    os.symlink(output_lc_file, symlink_lc_file, dir_fd=dir_fh)
+                    if create_symlink:
+                        symlink_lc_file = f"LCOGT_{file_parts['site'].upper()}-{file_parts['instrument'].upper()}_Lister_{file_parts['dayobs']}.dat"
+                        dir_fh = os.open(output_dir, os.O_RDONLY)
+                        if os.path.exists(os.path.join(output_dir, symlink_lc_file)):
+                            os.remove(os.path.join(output_dir, symlink_lc_file))
+                        os.symlink(output_lc_file, symlink_lc_file, dir_fd=dir_fh)
 
         else:
             logger.warning(f"Could not decode filename: {first_filename}")
