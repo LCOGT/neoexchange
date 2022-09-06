@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-model href="https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1F00.sch" 
+      schematypens="http://purl.oclc.org/dsdl/schematron"?>
+<Product_Document xmlns="http://pds.nasa.gov/pds4/pds/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1                              https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1F00.xsd">
+  <Identification_Area>
+    <logical_identifier>urn:nasa:pds:dart_teleobs:documentation_lcogt:sinistro_description</logical_identifier>
+    <version_id>1.0</version_id>
+    <title>Las Cumbres Observatory (LCOGT) Sinistro Imager Overview document</title>
+    <information_model_version>1.15.0.0</information_model_version>
+    <product_class>Product_Document</product_class>
+    <Citation_Information>
+      <author_list>Lister, T.</author_list>
+      <publication_year>2021</publication_year>
+      <description>This document contains the description of the LCOGT Sinistro instrument.</description>
+    </Citation_Information>
+  </Identification_Area>
+  <Document>
+    <document_name>Sinistro Imager Overview</document_name>
+    <author_list>Lister, T.</author_list>
+    <publication_date>2021-10-22</publication_date>
+    <description>Describes the Las Cumbres Observatory (LCOGT) Sinistro Imager, Detector, and Filters.</description>
+    <Document_Edition>
+      <edition_name>Plain text file</edition_name>
+      <language>English</language>
+      <files>1</files>
+      <Document_File>
+        <file_name>sinistro_description.txt</file_name>
+        <local_identifier>sinistro_description</local_identifier>
+        <creation_date_time>2021-10-22T23:12:00</creation_date_time>
+        <file_size unit="byte">2742</file_size>
+        <document_standard_id>UTF-8 Text</document_standard_id>
+      </Document_File>
+    </Document_Edition>
+  </Document>
+</Product_Document>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-model href="https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1F00.sch" 
+      schematypens="http://purl.oclc.org/dsdl/schematron"?>
+<Product_Document xmlns="http://pds.nasa.gov/pds4/pds/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1                              https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1F00.xsd">
+  <Identification_Area>
+    <logical_identifier>urn:nasa:pds:dart_teleobs:documentation_lcogt:lcogt_dart_uncalibrated_calibrated_sis</logical_identifier>
+    <version_id>1.0</version_id>
+    <title>LCOGT Uncalibrated/Calibrated Data Product Software Interface Specification
+      for Data Collected in Support of DART</title>
+    <information_model_version>1.15.0.0</information_model_version>
+    <product_class>Product_Document</product_class>
+    <Citation_Information>
+      <author_list>Lister, T.</author_list>
+      <publication_year>2022</publication_year>
+      <description>Describes the Calibrated/Uncalibrated LCOGT Data Products generated
+        in support of the DART mission.
+      </description>
+    </Citation_Information>
+  <Modification_History>
+      <Modification_Detail>
+        <modification_date>2022-09-04</modification_date>
+        <version_id>1.0</version_id>
+        <description>Updated to Version 0.4 of document sent to PDS</description>
+      </Modification_Detail>
+  </Modification_History>
+  </Identification_Area>
+  <Document>
+    <author_list>Lister, T.</author_list>
+    <publication_date>2022-09-04</publication_date>
+    <description>LCOGT Uncalibrated/Calibrated Data Product SIS in PDF/A format.</description>
+    <Document_Edition>
+      <edition_name>LCOGT Uncalibrated/Calibrated Data Product SIS, PDF</edition_name>
+      <language>English</language>
+      <files>1</files>
+      <Document_File>
+        <file_name>lcogt_dart_uncalibrated_calibrated_sis.pdf</file_name>
+        <document_standard_id>PDF/A</document_standard_id>
+      </Document_File>
+    </Document_Edition>
+  </Document>
+</Product_Document>
