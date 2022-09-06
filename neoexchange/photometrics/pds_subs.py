@@ -824,8 +824,9 @@ def create_file_area_table(filename):
               'ZP_sig' : { 'field_location' : 83, 'data_type' : 'ASCII_Real', 'field_length' : 6, 'description' : '1-sigma error on the zero point magnitude' },
               'inst_mag' : { 'field_location' : 91, 'data_type' : 'ASCII_Real', 'field_length' : 8, 'description' : 'instrumental magnitude of asteroid' },
               'inst_sig' : { 'field_location' : 101, 'data_type' : 'ASCII_Real', 'field_length' : 8, 'description' : '1-sigma error on the instrumental magnitude' },
-              'SExtractor_flag' : { 'field_location' : 111, 'data_type' : 'ASCII_Integer', 'field_length' : 15, 'description' : 'Flags associated with the Source Extractor photometry measurements. See source_extractor_flags.txt in the documents folder for this archive for more detailed description.' },
-              'aprad' : { 'field_location' : 127, 'data_type' : 'ASCII_Real', 'field_length' : 6, 'description' : 'radius in pixels of the aperture used for the photometry measurement' }
+              'filter' : { 'field_location' : 111, 'data_type' : 'ASCII_String', 'field_length' : 6, 'description' : 'Transformed filter used for calibration.' },
+              'SExtractor_flag' : { 'field_location' : 119, 'data_type' : 'ASCII_Integer', 'field_length' : 15, 'description' : 'Flags associated with the Source Extractor photometry measurements. See source_extractor_flags.txt in the documents folder for this archive for more detailed description.' },
+              'aprad' : { 'field_location' : 135, 'data_type' : 'ASCII_Real', 'field_length' : 6, 'description' : 'radius in pixels of the aperture used for the photometry measurement' }
               }
     file_area_table = etree.Element("File_Area_Observational")
     file_element = etree.SubElement(file_area_table, "File")
@@ -849,7 +850,7 @@ def create_file_area_table(filename):
     etree.SubElement(table_element, "record_delimiter").text = "Carriage-Return Line-Feed"
 
     record_element = etree.SubElement(table_element, "Record_Character")
-    etree.SubElement(record_element, "fields").text = str(10)
+    etree.SubElement(record_element, "fields").text = str(len(fields))
     etree.SubElement(record_element, "groups").text = str(0)
     etree.SubElement(record_element, "record_length", attrib={"unit" : "byte"}).text = header_size
 
@@ -918,7 +919,9 @@ def write_product_label_xml(filepath, xml_file, schema_root, mod_time=None):
         tel_class = chunks[1]
         tel_serialnum = chunks[2]
         site_code = ''
-        name_mapping = {'didymos' : '65803 Didymos'}
+        name_mapping = { 'didymos' : '65803',
+                         '65803didymos' : '65803',
+                        }
         first_frame, last_frame = determine_first_last_times_from_table(os.path.dirname(filepath))
         first_filename = determine_filename_from_table(filepath)
         if first_filename:
@@ -1192,11 +1195,11 @@ def transfer_files(input_dir, files, output_dir, dbg=False):
             action = 'Downloading'
             #input_dir = 'Science Archive'
 
-        if dbg: print(f"{action} {file} from {input_dir} -> {output_dir}")
         input_filepath = os.path.join(input_dir, file)
         output_filepath = os.path.join(output_dir, file)
+        if dbg: print(f"{action} {input_filepath}  -> {output_filepath.replace('.fz', '')}")
         if os.path.exists(input_filepath):
-            if (os.path.exists(output_filepath) is False and os.path.exists(output_filepath.replace('.fz', '')) is False) or ('e91.fits' in file and os.path.exists(output_filepath.replace('e91', 'e92')) is False):
+            if (os.path.exists(output_filepath) is False and os.path.exists(output_filepath.replace('.fz', '')) is False) and ('e91.fits' in file and os.path.exists(output_filepath.replace('e91', 'e92')) is False):
                 filename = shutil.copy(input_filepath, output_filepath)
                 if output_filepath.endswith('.fz'):
                     if dbg: print("funpack file")
@@ -1542,5 +1545,8 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
     status = convert_file_to_crlf(ddp_csv_filename)
     csv_files.append(ddp_csv_filename)
     xml_files.append(ddp_xml_filename)
+
+    if os.path.exists(os.path.join(docs_dir, 'documentation_lcogt')):
+        shutil.copytree(os.path.join(docs_dir, 'documentation_lcogt'), os.path.join(paths['root'],'documentation_lcogt'), dirs_exist_ok=True)
 
     return csv_files, xml_files

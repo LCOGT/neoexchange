@@ -607,17 +607,17 @@ class TestCreateFileAreaTable(SimpleTestCase):
             </File>
              <Header>
                <offset unit="byte">0</offset>
-               <object_length unit="byte">135</object_length>
+               <object_length unit="byte">143</object_length>
                <parsing_standard_id>UTF-8 Text</parsing_standard_id>
              </Header>
              <Table_Character>
-              <offset unit="byte">135</offset>
+              <offset unit="byte">143</offset>
               <records>62</records>
               <record_delimiter>Carriage-Return Line-Feed</record_delimiter>
               <Record_Character>
-                <fields>10</fields>
+                <fields>11</fields>
                 <groups>0</groups>
-                <record_length unit="byte">135</record_length>
+                <record_length unit="byte">143</record_length>
                 <Field_Character>
                   <name>file</name>
                   <field_number>1</field_number>
@@ -683,17 +683,25 @@ class TestCreateFileAreaTable(SimpleTestCase):
                   <description>1-sigma error on the instrumental magnitude</description>
                 </Field_Character>
                 <Field_Character>
-                  <name>SExtractor_flag</name>
+                  <name>filter</name>
                   <field_number>9</field_number>
                   <field_location unit="byte">111</field_location>
+                  <data_type>ASCII_String</data_type>
+                  <field_length unit="byte">6</field_length>
+                  <description>Transformed filter used for calibration.</description>
+                </Field_Character>
+                <Field_Character>
+                  <name>SExtractor_flag</name>
+                  <field_number>10</field_number>
+                  <field_location unit="byte">119</field_location>
                   <data_type>ASCII_Integer</data_type>
                   <field_length unit="byte">15</field_length>
                   <description>Flags associated with the Source Extractor photometry measurements. See source_extractor_flags.txt in the documents folder for this archive for more detailed description.</description>
                 </Field_Character>
                 <Field_Character>
                   <name>aprad</name>
-                  <field_number>10</field_number>
-                  <field_location unit="byte">127</field_location>
+                  <field_number>11</field_number>
+                  <field_location unit="byte">135</field_location>
                   <data_type>ASCII_Real</data_type>
                   <field_length unit="byte">6</field_length>
                   <description>radius in pixels of the aperture used for the photometry measurement</description>
@@ -1098,7 +1106,7 @@ class TestWritePDSLabel(TestCase):
 
         test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_dartphotom.dat'))
         # Copy files to input directory, renaming lc file
-        self.test_lc_file = os.path.join(self.test_dir, 'lcogt_1m0_01_fa11_20211013_didymos_photometry.tab')
+        self.test_lc_file = os.path.join(self.test_dir, 'lcogt_1m0_01_fa11_20211013_65803didymos_photometry.tab')
         shutil.copy(test_lc_file, self.test_lc_file)
         self.test_banzai_file = os.path.join(self.test_dir, os.path.basename(test_banzai_file))
         shutil.copy(test_banzai_file, self.test_banzai_file)
@@ -1876,8 +1884,8 @@ class TestExportBlockToPDS(TestCase):
         shutil.copy(self.test_file_path, new_name)
         self.test_banzai_files.insert(1, os.path.basename(new_name))
 
-        self.remove = True
-        self.debug_print = False
+        self.remove = False
+        self.debug_print = True
         self.maxDiff = None
 
     def tearDown(self):
@@ -1954,8 +1962,8 @@ class TestExportBlockToPDS(TestCase):
         expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_tfn_fa11_20211013_12345_65803didymos_photometry.tab')
         expected_lines = [
         '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  SExtractor_flag  aprad',
-        ' tfn1m001-fa11-20211012-0073-e91.fits  2459500.3339392  14.8447  0.0397  27.1845  0.0394  -12.3397    0.0052                0  10.00',
-        ' tfn1m001-fa11-20211012-0074-e91.fits  2459500.3345790  14.8637  0.0293  27.1824  0.0288  -12.3187    0.0053                3  10.00'
+        ' tfn1m001-fa11-20211012-0073-e92.fits  2459500.3339392  14.8447  0.0397  27.1845  0.0394  -12.3397    0.0052                0  10.00',
+        ' tfn1m001-fa11-20211012-0074-e92.fits  2459500.3345790  14.8637  0.0293  27.1824  0.0288  -12.3187    0.0053                3  10.00'
         ]
 
         paths = create_dart_directories(self.test_output_dir, self.test_block)
@@ -2124,9 +2132,9 @@ class TestExportBlockToPDS(TestCase):
     def test_create_dart_lightcurve(self):
         expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_tfn_fa11_20211013_12345_65803didymos_photometry.tab')
         expected_lines = [
-        '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  SExtractor_flag  aprad',
-        ' tfn1m001-fa11-20211012-0073-e91.fits  2459500.3339392  14.8447  0.0397  27.1845  0.0394  -12.3397    0.0052                0  10.00',
-        ' tfn1m001-fa11-20211012-0074-e91.fits  2459500.3345790  14.8637  0.0293  27.1824  0.0288  -12.3187    0.0053                3  10.00'
+        '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  filter  SExtractor_flag  aprad',
+        ' tfn1m001-fa11-20211012-0073-e92.fits  2459500.3339392  14.8447  0.0397  27.1845  0.0394  -12.3397    0.0052       r                0  10.00',
+        ' tfn1m001-fa11-20211012-0074-e92.fits  2459500.3345790  14.8637  0.0293  27.1824  0.0288  -12.3187    0.0053       r                3  10.00'
         ]
 
         test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_photompipe.dat'))
@@ -2151,9 +2159,9 @@ class TestExportBlockToPDS(TestCase):
     def test_create_dart_lightcurve_default(self):
         expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_tfn_fa11_20211013_12345_65803didymos_photometry.tab')
         expected_lines = [
-        '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  SExtractor_flag  aprad',
-        ' tfn1m001-fa11-20211012-0073-e91.fits  2459500.3339392  14.8447  0.0397  27.1845  0.0394  -12.3397    0.0052                0  10.00',
-        ' tfn1m001-fa11-20211012-0074-e91.fits  2459500.3345790  14.8637  0.0293  27.1824  0.0288  -12.3187    0.0053                3  10.00'
+        '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  filter  SExtractor_flag  aprad',
+        ' tfn1m001-fa11-20211012-0073-e92.fits  2459500.3339392  14.8447  0.0397  27.1845  0.0394  -12.3397    0.0052       r                0  10.00',
+        ' tfn1m001-fa11-20211012-0074-e92.fits  2459500.3345790  14.8637  0.0293  27.1824  0.0288  -12.3187    0.0053       r                3  10.00'
         ]
 
         test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_photompipe.dat'))
@@ -2179,9 +2187,9 @@ class TestExportBlockToPDS(TestCase):
     def test_create_dart_lightcurve_default_controlphot(self):
         expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_tfn_fa11_20211013_12345_65803didymos_photometry.tab')
         expected_lines = [
-        '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  SExtractor_flag  aprad',
-        ' tfn1m001-fa11-20211012-0073-e91.fits  2459500.3339392  14.8447  0.0397  27.1845  0.0394  -12.3397    0.0052                0  10.00',
-        ' tfn1m001-fa11-20211012-0074-e91.fits  2459500.3345790  14.8637  0.0293  27.1824  0.0288  -12.3187    0.0053                3  10.00'
+        '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  filter  SExtractor_flag  aprad',
+        ' tfn1m001-fa11-20211012-0073-e92.fits  2459500.3339392  14.8447  0.0397  27.1845  0.0394  -12.3397    0.0052       r                0  10.00',
+        ' tfn1m001-fa11-20211012-0074-e92.fits  2459500.3345790  14.8637  0.0293  27.1824  0.0288  -12.3187    0.0053       r                3  10.00'
         ]
 
         test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_photompipe.dat'))
@@ -2428,6 +2436,134 @@ class TestExportBlockToPDS(TestCase):
             self.assertEqual('P', t[-1][0])
             expected_lid = f'urn:nasa:pds:dart_teleobs:data_lcogt{collection_type}:collection_data_lcogt{collection_type}_overview::1.0'
             self.assertEqual(expected_lid, t[-1][1])
+
+
+class TestTransferFiles(SimpleTestCase):
+    def setUp(self):
+        self.schemadir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_schemas'))
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+        self.test_input_dir = os.path.join(self.test_dir, 'input')
+        self.test_input_daydir = os.path.join(self.test_dir, 'input', '20211013')
+        os.makedirs(self.test_input_daydir, exist_ok=True)
+
+        # Example input FITS files and header mods
+        self.framedir = os.path.abspath(os.path.join('photometrics', 'tests'))
+        self.test_file = 'banzai_test_frame.fits'
+        self.test_file_path = os.path.join(self.framedir, self.test_file)
+        test_externscamp_TPV_headfile = os.path.join('photometrics', 'tests', 'example_externcat_scamp_tpv.head')
+        test_externcat_TPV_xml = os.path.join('photometrics', 'tests', 'example_externcat_scamp_tpv.xml')
+        tpv_header = fits.Header.fromtextfile(test_externscamp_TPV_headfile)
+
+        self.test_output_dir = os.path.join(self.test_dir, 'output')
+        os.makedirs(self.test_output_dir, exist_ok=True)
+        self.expected_root_dir = os.path.join(self.test_output_dir, '')
+        self.test_ddp_daydir = os.path.join(self.expected_root_dir, 'data_lcogtddp')
+        self.test_blockdir = 'lcogt_1m0_01_fa11_20211013'
+        self.test_daydir = os.path.join(self.test_ddp_daydir, self.test_blockdir)
+        self.test_output_caldir = os.path.join(self.expected_root_dir, 'data_lcogtcal')
+        self.test_output_calblockdir = os.path.join(self.test_output_caldir, self.test_blockdir)
+        os.makedirs(self.test_output_calblockdir, exist_ok=True)
+
+        frame_params = {
+                         'sitecode' : 'Z24',
+                         'instrument' : 'fa11',
+                         'filter' : 'ip',
+                         'block' : 4242,
+                         'frametype' : Frame.BANZAI_RED_FRAMETYPE,
+                         'zeropoint' : 27.0,
+                         'zeropoint_err' : 0.03,
+                         'midpoint' : datetime(2021, 10, 13, 0, 40) + timedelta(minutes=5)
+                       }
+
+        self.test_banzai_files = []
+        for frame_num, frameid in zip(range(65,126,30),[45234032, 45234584, 45235052]):
+            frame_params['filename'] = f"tfn1m001-fa11-20211013-{frame_num:04d}-e91.fits"
+            frame_params['midpoint'] += timedelta(minutes=frame_num-65)
+            frame_params['frameid'] = frameid
+            for extn in ['e00', 'e91']:
+                new_name = os.path.join(self.test_input_daydir, frame_params['filename'].replace('e91', extn))
+                filename = shutil.copy(self.test_file_path, new_name)
+                # Change object name to 65803
+                hdulist = fits.open(filename)
+                hdulist[0].header['telescop'] = '1m0-01'
+                hdulist[0].header['object'] = '65803   '
+                half_exp = timedelta(seconds=hdulist[0].header['exptime'] / 2.0)
+                date_obs = frame_params['midpoint'] - half_exp
+                hdulist[0].header['date-obs'] = date_obs.strftime("%Y-%m-%dT%H:%M:%S")
+                utstop = frame_params['midpoint'] + half_exp + timedelta(seconds=8.77)
+                hdulist[0].header['utstop'] = utstop.strftime("%H:%M:%S.%f")[0:12]
+                hdulist[0].header.insert('l1pubdat', ('l1filter', hdulist[0].header['filter'], 'Copy of FILTER for SCAMP'), after=True)
+                # # Mangle header ala photpipe
+                # update = False
+                # insert = False
+                # for key, new_value, new_comment in tpv_header.cards:
+                    # if key == 'CTYPE1':
+                        # update = True
+                    # elif key == 'PV1_0':
+                        # update = False
+                        # insert = True
+                        # prev_keyword = 'CD2_2'
+                    # elif key == 'FGROUPNO':
+                        # update = False
+                        # insert = True
+                        # prev_keyword = 'L1FILTER'
+                    # if update:
+                        # hdulist[0].header.set(key, value=str(new_value), comment=new_comment)
+                    # elif insert:
+                         # hdulist[0].header.insert(prev_keyword,(key, new_value, new_comment), after=True)
+                         # prev_keyword = key
+                hdulist.writeto(filename, overwrite=True, checksum=True)
+                self.test_banzai_files.append(os.path.basename(filename))
+                if extn == 'e91':
+                    Path(new_name.replace('e91.fits', 'e91_cal.dat')).touch()
+
+        self.remove = True
+        self.debug_print = False
+        self.maxDiff = None
+
+    def tearDown(self):
+        # Generate an example test dir to compare root against and then remove it
+        temp_test_dir = tempfile.mkdtemp(prefix='tmp_neox')
+        os.rmdir(temp_test_dir)
+        if self.remove and self.test_dir.startswith(temp_test_dir[:-8]):
+            shutil.rmtree(self.test_dir)
+        else:
+            if self.debug_print:
+                print("Not removing temporary test directory", self.test_dir)
+
+    def test_e91_files(self):
+        verbose = True
+        expected_files = [x for x in self.test_banzai_files if 'e91' in x]
+
+        cal_files = find_fits_files(self.test_input_daydir, '\S*e91\.')
+        print("Transferring calibrated frames")
+        cal_sent_files = []
+        for root, files in cal_files.items():
+            cal_sent_files += transfer_files(root, files, self.test_output_calblockdir, dbg=verbose)
+
+        self.assertEqual(expected_files, cal_sent_files)
+
+    def test_e91_files_norecopy(self):
+        verbose = True
+        expected_files = [x.replace('e91', 'e92') for x in self.test_banzai_files if 'e91' in x]
+        expected_num_files = 3
+
+        cal_files = find_fits_files(self.test_input_daydir, '\S*e91\.')
+        print("Transferring calibrated frames")
+        cal_sent_files = []
+        for root, files in cal_files.items():
+            cal_sent_files += transfer_files(root, files, self.test_output_calblockdir, dbg=verbose)
+        for trans_file in cal_sent_files:
+            e91_filepath = os.path.join(self.test_output_calblockdir, trans_file)
+            os.rename(e91_filepath, e91_filepath.replace('e91', 'e92'))
+        files = glob(self.test_output_calblockdir + '/*.fits')
+        self.assertEqual(expected_num_files, len(files))
+        # Retransfer (in theory nothing)
+        for root, files in cal_files.items():
+            cal_sent_files += transfer_files(root, files, self.test_output_calblockdir, dbg=verbose)
+        self.assertEqual(expected_num_files*2, len(cal_sent_files))
+        files = glob(self.test_output_calblockdir + '/*.fits')
+        self.assertEqual(expected_num_files, len(files))
 
 class TestTransferReformat(TestCase):
 

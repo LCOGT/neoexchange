@@ -3,9 +3,9 @@
             schematypens="http://purl.oclc.org/dsdl/schematron"?>
 <Product_Observational xmlns="http://pds.nasa.gov/pds4/pds/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1 https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1F00.xsd">
   <Identification_Area>
-    <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogtddp:lcogt_1m0_01_fa11_20211013_didymos_photometry</logical_identifier>
+    <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogtddp:lcogt_1m0_01_fa11_20211013_65803didymos_photometry</logical_identifier>
     <version_id>1.0</version_id>
-    <title>Las Cumbres Observatory Derived Data Product: lcogt_1m0_01_fa11_20211013_didymos_photometry</title>
+    <title>Las Cumbres Observatory Derived Data Product: lcogt_1m0_01_fa11_20211013_65803didymos_photometry</title>
     <information_model_version>1.15.0.0</information_model_version>
     <product_class>Product_Observational</product_class>
     <Modification_History>
@@ -68,22 +68,22 @@
   </Observation_Area>
   <File_Area_Observational>
     <File>
-      <file_name>lcogt_1m0_01_fa11_20211013_didymos_photometry.tab</file_name>
+      <file_name>lcogt_1m0_01_fa11_20211013_65803didymos_photometry.tab</file_name>
       <comment>photometry summary table</comment>
     </File>
     <Header>
       <offset unit="byte">0</offset>
-      <object_length unit="byte">135</object_length>
+      <object_length unit="byte">143</object_length>
       <parsing_standard_id>UTF-8 Text</parsing_standard_id>
     </Header>
     <Table_Character>
-      <offset unit="byte">135</offset>
+      <offset unit="byte">143</offset>
       <records>62</records>
       <record_delimiter>Carriage-Return Line-Feed</record_delimiter>
       <Record_Character>
-        <fields>10</fields>
+        <fields>11</fields>
         <groups>0</groups>
-        <record_length unit="byte">135</record_length>
+        <record_length unit="byte">143</record_length>
         <Field_Character>
           <name>file</name>
           <field_number>1</field_number>
@@ -149,17 +149,25 @@
           <description>1-sigma error on the instrumental magnitude</description>
         </Field_Character>
         <Field_Character>
-          <name>SExtractor_flag</name>
+          <name>filter</name>
           <field_number>9</field_number>
           <field_location unit="byte">111</field_location>
+          <data_type>ASCII_String</data_type>
+          <field_length unit="byte">6</field_length>
+          <description>Transformed filter used for calibration.</description>
+        </Field_Character>
+        <Field_Character>
+          <name>SExtractor_flag</name>
+          <field_number>10</field_number>
+          <field_location unit="byte">119</field_location>
           <data_type>ASCII_Integer</data_type>
           <field_length unit="byte">15</field_length>
           <description>Flags associated with the Source Extractor photometry measurements. See source_extractor_flags.txt in the documents folder for this archive for more detailed description.</description>
         </Field_Character>
         <Field_Character>
           <name>aprad</name>
-          <field_number>10</field_number>
-          <field_location unit="byte">127</field_location>
+          <field_number>11</field_number>
+          <field_location unit="byte">135</field_location>
           <data_type>ASCII_Real</data_type>
           <field_length unit="byte">6</field_length>
           <description>radius in pixels of the aperture used for the photometry measurement</description>
