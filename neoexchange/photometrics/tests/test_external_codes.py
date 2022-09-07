@@ -902,6 +902,8 @@ class TestHotpantsRunner(ExternalCodeUnitTest):
         # hotpants requires a reference rms image in the dest_dir
         shutil.copy(os.path.abspath(self.test_banzai_rms_file), self.test_dir)
 
+        # Disable anything below CRITICAL level
+        logging.disable(logging.CRITICAL)
 
         self.remove = True
 
@@ -939,7 +941,7 @@ class TestHotpantsRunner(ExternalCodeUnitTest):
         aligned_rms = os.path.join(self.test_dir, "banzai_test_frame.rms_aligned_to_banzai_test_frame.rms.fits")
         rms = os.path.join(self.test_dir, "banzai_test_frame.rms.fits")
 
-        expected_cmdline = f"./hotpants -inim {bkgsub} -tmplim {aligned} -outim {subtracted} -tni {aligned_rms} -ini {rms} -oni {subtracted_rms} -hki -n i -c t -v 0 -tu 57960.0 -iu 57960.0 -tl 43.892452606201175 -il -343.1130201721191 -nrx 3 -nry 3 -nsx 6.760000000000001 -nsy 6.793333333333333 -r 11.235949458513854 -rss 26.96627870043325 -fin 223.60679774997897"
+        expected_cmdline = f"./hotpants -inim {bkgsub} -tmplim {aligned} -outim {subtracted} -tni {aligned_rms} -ini {rms} -oni {subtracted_rms} -hki -n i -c t -v 0 -tu 57959 -iu 57959 -tl 43.892452606201175 -il -343.1130201721191 -nrx 3 -nry 3 -nsx 6.760000000000001 -nsy 6.793333333333333 -r 11.235949458513854 -rss 26.96627870043325 -fin 223.60679774997897"
         cmdline = run_hotpants(self.test_banzai_file_COPIED, self.test_banzai_file_COPIED, self.source_dir, self.test_dir, binary='./hotpants', dbg=True, dbgOptions=True)
         self.maxDiff=None
         self.assertEqual(expected_cmdline, cmdline)
@@ -1004,8 +1006,7 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
         super(TestDetermineSExtOptions, self).setUp()
 
         # Copy BANZAI test file to test_dir to allow mods
-        shutil.copy(self.test_banzai_file, self.test_dir)
-        self.test_banzai_file_COPIED = os.path.join(self.test_dir, 'banzai_test_frame.fits')
+        self.test_banzai_file_COPIED = shutil.copy(self.test_banzai_file, self.test_dir)
 
         self.expected_catalog_name = os.path.join(self.test_dir, 'example-sbig-e10_ldac.fits')
         self.expected_ascii_catalog_name = os.path.join(self.test_dir, 'example-sbig-e10.cat')
@@ -1023,7 +1024,7 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
 
     def test_no_checkimages(self):
         # No checkimages
-        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 46000 -CATALOG_NAME {self.expected_catalog_name} -BACK_SIZE 42'
+        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 41400 -CATALOG_NAME {self.expected_catalog_name} -BACK_SIZE 42'
 
         options = determine_sextractor_options(self.test_fits_file, self.test_dir)
 
@@ -1031,7 +1032,7 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
 
     def test_ascii_no_checkimages(self):
         # No checkimages
-        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 46000 -CATALOG_NAME {self.expected_ascii_catalog_name} -BACK_SIZE 42'
+        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 41400 -CATALOG_NAME {self.expected_ascii_catalog_name} -BACK_SIZE 42'
 
         options = determine_sextractor_options(self.test_fits_file, self.test_dir, catalog_type='ASCII')
 
@@ -1039,7 +1040,7 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
 
     def test_asciihead_no_checkimages(self):
         # No checkimages
-        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 46000 -CATALOG_NAME {self.expected_ascii_catalog_name} -BACK_SIZE 42'
+        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 41400 -CATALOG_NAME {self.expected_ascii_catalog_name} -BACK_SIZE 42'
 
         options = determine_sextractor_options(self.test_fits_file, self.test_dir, catalog_type='ASCII_HEAD')
 
@@ -1047,7 +1048,7 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
 
     def test_unknownhead_no_checkimages(self):
         # No checkimages
-        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 46000 -CATALOG_NAME {self.expected_catalog_name} -BACK_SIZE 42'
+        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 41400 -CATALOG_NAME {self.expected_catalog_name} -BACK_SIZE 42'
 
         options = determine_sextractor_options(self.test_fits_file, self.test_dir, catalog_type='POTATO_HEAD')
 
@@ -1056,7 +1057,7 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
     def test_one_checkimage(self):
         # Single checkimage
         checkimage_name = os.path.join(self.test_dir, 'example-sbig-e10.rms.fits')
-        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 46000 -CATALOG_NAME {self.expected_catalog_name} -CHECKIMAGE_TYPE BACKGROUND_RMS -CHECKIMAGE_NAME {checkimage_name} -BACK_SIZE 42'
+        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 41400 -CATALOG_NAME {self.expected_catalog_name} -CHECKIMAGE_TYPE BACKGROUND_RMS -CHECKIMAGE_NAME {checkimage_name} -BACK_SIZE 42'
 
         options = determine_sextractor_options(self.test_fits_file, self.test_dir, checkimage_type=['BACKGROUND_RMS'])
 
@@ -1066,7 +1067,7 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
         # Multiple checkimages
         rms_name = os.path.join(self.test_dir, 'example-sbig-e10.rms.fits')
         bkgsub_name = os.path.join(self.test_dir, 'example-sbig-e10.bkgsub.fits')
-        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 46000 -CATALOG_NAME {self.expected_catalog_name} -CHECKIMAGE_TYPE BACKGROUND_RMS,-BACKGROUND -CHECKIMAGE_NAME {rms_name},{bkgsub_name} -BACK_SIZE 42'
+        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 41400 -CATALOG_NAME {self.expected_catalog_name} -CHECKIMAGE_TYPE BACKGROUND_RMS,-BACKGROUND -CHECKIMAGE_NAME {rms_name},{bkgsub_name} -BACK_SIZE 42'
 
         options = determine_sextractor_options(self.test_fits_file, self.test_dir, checkimage_type=['BACKGROUND_RMS', '-BACKGROUND'])
 
@@ -1076,7 +1077,7 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
         # Multiple checkimages (REVERSED ORDER)
         rms_name = os.path.join(self.test_dir, 'example-sbig-e10.rms.fits')
         bkgsub_name = os.path.join(self.test_dir, 'example-sbig-e10.bkgsub.fits')
-        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 46000 -CATALOG_NAME {self.expected_catalog_name} -CHECKIMAGE_TYPE -BACKGROUND,BACKGROUND_RMS -CHECKIMAGE_NAME {bkgsub_name},{rms_name} -BACK_SIZE 42'
+        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 41400 -CATALOG_NAME {self.expected_catalog_name} -CHECKIMAGE_TYPE -BACKGROUND,BACKGROUND_RMS -CHECKIMAGE_NAME {bkgsub_name},{rms_name} -BACK_SIZE 42'
 
         options = determine_sextractor_options(self.test_fits_file, self.test_dir, checkimage_type=['-BACKGROUND', 'BACKGROUND_RMS'])
 
@@ -1121,7 +1122,7 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
             hdulist.flush()
 
         # No checkimages
-        expected_options = f'-GAIN 1.0 -PIXEL_SCALE 0.38903 -SATUR_LEVEL 128000 -CATALOG_NAME {self.expected_banzai_catalog_name} -BACK_SIZE 42'
+        expected_options = f'-GAIN 1.0 -PIXEL_SCALE 0.38903 -SATUR_LEVEL 115200 -CATALOG_NAME {self.expected_banzai_catalog_name} -BACK_SIZE 42'
 
         options = determine_sextractor_options(self.test_banzai_file_COPIED, self.test_dir)
 
@@ -1139,8 +1140,8 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
             header['cd2_2'] = -new_scale
             hdulist.flush()
 
-        # No SATURATE or maxlin, should be null
-        expected_options = ''
+        # No SATURATE or maxlin, should be default value
+        expected_options = f'-GAIN 1.0 -PIXEL_SCALE 0.38903 -SATUR_LEVEL 65535 -CATALOG_NAME {self.expected_banzai_catalog_name} -BACK_SIZE 42'
 
         options = determine_sextractor_options(self.test_banzai_file_COPIED, self.test_dir)
 
@@ -1195,7 +1196,7 @@ class TestDetermineHotpantsOptions(ExternalCodeUnitTest):
         rms = os.path.join(self.test_dir, "banzai_test_frame.rms.fits")
 
         expected_options = f"-inim {bkgsub} -tmplim {aligned} -outim {subtracted} -tni {aligned_rms} -ini {rms} -oni {subtracted_rms} -hki -n i -c t -v 0 " \
-                           f"-tu 64399.99999999999 -iu 64399.99999999999 -tl 43.892452606201175 -il -343.1130201721191 -nrx 3 -nry 3 -nsx 6.760000000000001 -nsy 6.793333333333333 -r 11.235949458513854 -rss 26.96627870043325 -fin 223.60679774997897"
+                           f"-tu 57959 -iu 57959 -tl 43.892452606201175 -il -343.1130201721191 -nrx 3 -nry 3 -nsx 6.760000000000001 -nsy 6.793333333333333 -r 11.235949458513854 -rss 26.96627870043325 -fin 223.60679774997897"
 
         options = determine_hotpants_options(self.test_banzai_file_COPIED, self.test_banzai_file_COPIED, self.source_dir, self.test_dir, dbgOptions=True)
 

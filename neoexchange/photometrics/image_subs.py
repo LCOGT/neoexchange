@@ -33,14 +33,20 @@ def get_saturate(fits_header):
     return a default value.
     """
 
-    satlev = 65535
+    default_satlev = 65535
     try:
         satlev = fits_header.get('MAXLIN', 0.0)
-        if satlev <= 0.0:
+        if satlev <= 0.0 or satlev == 'N/A':
             raise KeyError
     except KeyError:
-            satlev = fits_header.get('SATURATE', satlev)
-            satlev = satlev * 0.9
+            satlev = fits_header.get('SATURATE', default_satlev)
+            if satlev == default_satlev:
+                logger.warning(f"SATURATE missing, default of {default_satlev} assumed")
+            elif satlev <= 0.0:
+                 satlev = default_satlev
+                 logger.warning(f"SATURATE bad, default of {default_satlev} assumed")
+            else:
+                satlev = int(satlev * 0.9)
 
     return satlev
 
