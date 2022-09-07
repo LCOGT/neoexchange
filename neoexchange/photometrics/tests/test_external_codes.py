@@ -1454,6 +1454,7 @@ class TestUpdateFITSWCS(TestCase):
         self.assertEqual(status, 0)
 
         expected = {
+                     'pcrecipe' : 'BANZAI', 'pprecipe' : 'NEOEXCHANGE',
                      'crval1' : 2.283330189100E+02, 'crval2' : 3.839546339622E+01,
                      'crpix1' : 7.621032903029E+02, 'crpix2' : 5.105117960168E+02,
                      'cd1_1'  : -1.024825024633E-06, 'cd1_2' : 3.162727554070E-04,
@@ -1515,7 +1516,8 @@ class TestUpdateFITSWCS(TestCase):
                      'wcsdelra' : 44.619981558, 'wcsdelde' : -37.1150613409,
                      'wcserr' : 0,
                      'cunit1' : 'deg', 'cunit2' : 'deg',
-                     'ctype1' : 'RA---TPV', 'ctype2' : 'DEC--TPV'
+                     'ctype1' : 'RA---TPV', 'ctype2' : 'DEC--TPV',
+                     'pcrecipe' : 'BANZAI', 'pprecipe' : 'NEOEXCHANGE'
                     }
         expected_pv_comment = 'TPV distortion coefficient'
 

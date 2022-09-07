@@ -1207,6 +1207,9 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
     secpix = round(scamp_info['pixel_scale'], 6)
 
     # header keywords we have
+    header['PCRECIPE'] = 'BANZAI'
+    header['PPRECIPE'] = 'NEOEXCHANGE'
+    # WCS headers
     header['WCSDELRA'] = (header['CRVAL1'] - crval1, '[arcsec] Shift of fitted WCS w.r.t. nominal')
     header['WCSDELDE'] = (header['CRVAL2'] - crval2, '[arcsec] Shift of fitted WCS w.r.t. nominal')
     header['CTYPE1'] = ctype1
