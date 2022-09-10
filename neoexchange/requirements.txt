@@ -29,7 +29,7 @@ bokeh==2.3.0
 fits2image
 pillow
 aplpy
-gunicorn[gevent]~=19.9.0
+gunicorn[gevent]~=20.1.0
 rollbar
 sty
 lxml
