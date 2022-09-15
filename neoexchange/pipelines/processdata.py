@@ -117,7 +117,12 @@ class SExtractorProcessPipeline(PipelineProcess):
 
         # Make a new FITS_LDAC catalog from the frame
         self.log(f"Processing {fits_file:} with SExtractor")
-        status, new_ldac_catalog = run_sextractor_make_catalog(configs_dir, dest_dir, fits_file, checkimage_type=['BACKGROUND_RMS', "-BACKGROUND"])
+        checkimage_types = ['BACKGROUND_RMS', "-BACKGROUND"]
+        if '-e91' in fits_file:
+            # No need to make rms or background images until we have a new
+            # astrometric fit and -e92 files
+            checkimage_types = []
+        status, new_ldac_catalog = run_sextractor_make_catalog(configs_dir, dest_dir, fits_file, checkimage_type=checkimage_types)
         if status != 0:
             logger.error("Execution of SExtractor failed")
             self.log("Execution of SExtractor failed")
