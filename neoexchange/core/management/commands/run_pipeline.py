@@ -55,7 +55,6 @@ class Command(BaseCommand):
             raise CommandError(f"No FITS files found in {dataroot}")
 
         # Process all files through all pipeline steps
-        temp_dir = options['tempdir']
         for fits_filepath in fits_files:
             # fits_filepath is the full path including the dataroot and obs_date e.g. /apophis/eng/rocks/20220731/cpt1m010-fa16-20220731-0146-e91.fits
             # fits_file is the basename e.g. cpt1m010-fa16-20220731-0146-e91.fits
@@ -63,19 +62,20 @@ class Command(BaseCommand):
             steps = [{
                         'name'   : 'proc-extract',
                         'inputs' : {'fits_file':fits_filepath,
-                                   'datadir': os.path.join(dataroot, temp_dir)}
+                                   'datadir': os.path.join(dataroot, options['tempdir'])}
                     },
                     {
                         'name'   : 'proc-astromfit',
                         'inputs' : {'fits_file' : fits_filepath,
-                                    'ldac_catalog' : os.path.join(dataroot, temp_dir, fits_file.replace('e91.fits', 'e91_ldac.fits')),
-                                    'datadir' : os.path.join(dataroot, temp_dir)
+                                    'ldac_catalog' : os.path.join(dataroot, options['tempdir'], fits_file.replace('e91.fits', 'e91_ldac.fits')),
+                                    'datadir' : os.path.join(dataroot, options['tempdir'])
                                     }
                     },
                     {
                         'name'   : 'proc-zeropoint',
-                        'inputs' : {'ldac_catalog' : os.path.join(dataroot, temp_dir, fits_file.replace('e91.fits', 'e92_ldac.fits')),
-                                    'datadir' : os.path.join(dataroot, temp_dir),
+                        'inputs' : {'ldac_catalog' : os.path.join(dataroot, options['tempdir'], fits_file.replace('e91.fits', 'e92_ldac.fits')),
+                                    'datadir' : os.path.join(dataroot, options['tempdir']),
+                                    'zeropoint_tolerance' : 0.2,
                                     'desired_catalog' : options['refcat']
                                     }
                     }]
