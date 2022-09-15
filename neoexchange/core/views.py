@@ -17,7 +17,7 @@ import copy
 from glob import glob
 from operator import itemgetter
 from datetime import datetime, timedelta, date
-from math import floor, ceil, degrees, radians, pi, acos, pow
+from math import floor, ceil, degrees, radians, pi, acos, pow, cos
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 import json
@@ -4599,7 +4599,8 @@ def compare_NEOx_horizons_ephems(body, d, sitecode='500', debug=True):
     <body> (can be either a core.models.Body instance or string) from MPC site
     code [sitecode; defaults to 500 (geocenter).
     Returns the NEOx and HORIZONS ephemeris and the radial and RA & Dec components
-    of the separation (as Astropy Angle instances in u.arcsec)"""
+    of the separation (as Astropy Angle instances in u.arcsec in the sense of
+    the values that need to be added to the NEOx position to the HORIZONS one)"""
 
     if type(body) != Body:
         body = Body.objects.get(name=body)
@@ -4612,11 +4613,13 @@ def compare_NEOx_horizons_ephems(body, d, sitecode='500', debug=True):
     sep_dec = None
     if len(neox_emp) > 0 and horizons_emp is not None and len(horizons_emp) > 0:
         neox_pos = SkyCoord(neox_emp['ra'], neox_emp['dec'], unit=u.rad)
-        horizons_pos = SkyCoord(horizons_emp['RA'][0], horizons_emp['DEC'][0], unit=u.deg)
+        # Find index of nearest in time ephememeris line
+        horizons_index = np.abs(d-horizons_emp['datetime'].datetime).argmin()
+        horizons_pos = SkyCoord(horizons_emp['RA'][horizons_index], horizons_emp['DEC'][horizons_index], unit=u.deg)
         sep_r = horizons_pos.separation(neox_pos).to(u.arcsec)
         sep_ra, sep_dec = horizons_pos.spherical_offsets_to(neox_pos)
-        sep_ra = sep_ra.to(u.arcsec)
-        sep_dec = sep_dec.to(u.arcsec)
-        print(f"At {d:}, sep= {sep_r:.1f} (RA={sep_ra:.1f}, Dec={sep_dec:.1f})\n{neox_pos.to_string('hmsdms', sep=' '):}\n{horizons_pos.to_string('hmsdms', sep=' '):}")
+        sep_ra = -sep_ra.to(u.arcsec) / cos(horizons_pos.dec.rad)
+        sep_dec = -sep_dec.to(u.arcsec)
+        print(f"At {d:} (HORIZONS@{horizons_emp['datetime'][horizons_index]} , sep= {sep_r:.1f} (RA={sep_ra:.1f}, Dec={sep_dec:.1f})\nNEOX: {neox_pos.to_string('hmsdms', sep=' ', precision=4):}\n JPL: {horizons_pos.to_string('hmsdms', sep=' ', precision=4):}")
 
     return neox_emp, horizons_emp, sep_r, sep_ra, sep_dec
