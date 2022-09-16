@@ -24,6 +24,7 @@ class Command(BaseCommand):
                     choices=['GAIA-DR2', 'PS1', 'REFCAT2'],
                     help='Reference catalog: choice of GAIA-DR2, PS1, REFCAT2 (default: %(default)s)')
         parser.add_argument('--tempdir', action="store", default=default_tempdir, help=f'Temporary processing directory name (e.g. {default_tempdir}')
+        parser.add_argument('--zp_tolerance', type=float, default=0.1, help='Tolerance on zeropoint std.dev for a good fit (default: %(default)s) mag')
 
     def handle(self, *args, **options):
         # Path to directory containing some e91 BANZAI files
@@ -75,7 +76,7 @@ class Command(BaseCommand):
                         'name'   : 'proc-zeropoint',
                         'inputs' : {'ldac_catalog' : os.path.join(dataroot, options['tempdir'], fits_file.replace('e91.fits', 'e92_ldac.fits')),
                                     'datadir' : os.path.join(dataroot, options['tempdir']),
-                                    'zeropoint_tolerance' : 0.2,
+                                    'zeropoint_tolerance' : options['zp_tolerance'],
                                     'desired_catalog' : options['refcat']
                                     }
                     }]
