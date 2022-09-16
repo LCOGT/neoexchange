@@ -605,7 +605,8 @@ def map_filter_to_calfilter(passband='rp'):
     filter_mapping = { 'g' : 'g',
                        'r' : 'r',
                        'i' : 'i',
-                       'w' : 'r'
+                       'w' : 'r',
+                       'clear' : 'r'
                      }
     return filter_mapping.get(passband.replace('p', ''), None)
 
