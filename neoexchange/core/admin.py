@@ -41,6 +41,8 @@ class BodyAdmin(VersionAdmin):
       'fast_moving', 'updated')
     ordering = ('-ingest',)
 
+class ObserverInline(admin.TabularInline):
+    model = BlockObserver
 
 @admin.register(SuperBlock)
 class SuperBlockAdmin(VersionAdmin):
@@ -64,6 +66,8 @@ class SuperBlockAdmin(VersionAdmin):
     list_display = ('groupid', 'body_name', 'proposal', 'block_start', 'active', )
     list_filter = ('proposal', 'block_start', 'active', )
     ordering = ('-block_start',)
+
+    inlines = [ObserverInline,]
 
 
 @admin.register(Block)

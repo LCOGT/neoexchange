@@ -1067,7 +1067,7 @@ class ScheduleCalibSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
 
             if tracking_num:
                 messages.success(self.request, "Request %s successfully submitted to the scheduler" % tracking_num)
-                block_resp = record_block(tracking_num, sched_params, form.cleaned_data, target)
+                block_resp = record_block(tracking_num, sched_params, form.cleaned_data, target, observer=request.user)
                 if block_resp:
                     messages.success(self.request, "Block recorded")
                 else:
@@ -1121,7 +1121,7 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
             tracking_num, sched_params = schedule_submit(new_form.cleaned_data, target, username)
             if tracking_num:
                 messages.success(self.request, "Request %s successfully submitted to the scheduler" % tracking_num)
-                block_resp = record_block(tracking_num, sched_params, new_form.cleaned_data, target)
+                block_resp = record_block(tracking_num, sched_params, new_form.cleaned_data, target, observer=request.user)
                 self.success = True
                 if block_resp:
                     messages.success(self.request, "Block recorded")
@@ -2227,7 +2227,7 @@ def check_for_block(form_data, params, new_body):
         return 1
 
 
-def record_block(tracking_number, params, form_data, target):
+def record_block(tracking_number, params, form_data, target, observer):
     """Records a just-submitted observation as a SuperBlock and Block(s) in the database.
     """
 
@@ -2259,6 +2259,7 @@ def record_block(tracking_number, params, form_data, target):
         if proposal.time_critical is True:
             sblock_kwargs['rapid_response'] = True
         sblock_pk = SuperBlock.objects.create(**sblock_kwargs)
+        blockobserver = BlockObserver.objects.create(superblock=sblock_pk, observer=observer)
         i = 0
         for request, request_type in params.get('request_numbers', {}).items():
             # cut off json UTC timezone remnant

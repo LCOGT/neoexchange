@@ -962,7 +962,7 @@ class TestCheckForBlock(TestCase):
 class TestRecordBlock(TestCase):
 
     def setUp(self):
-
+        self.bart = User.objects.create_user(username="bart", password="simpson", email="bart@simpson.com")
         self.spectro_tracknum = '606083'
         self.spectro_params = {'binning': 1,
                                'block_duration': 988.0,
@@ -1046,7 +1046,7 @@ class TestRecordBlock(TestCase):
         self.solar_analog = StaticSource.objects.create(**ssource_params)
 
     def test_spectro_block(self):
-        block_resp = record_block(self.spectro_tracknum, self.spectro_params, self.spectro_form, self.spectro_body)
+        block_resp = record_block(self.spectro_tracknum, self.spectro_params, self.spectro_form, self.spectro_body, observer=self.bart)
 
         self.assertTrue(block_resp)
         sblocks = SuperBlock.objects.all()
@@ -1066,12 +1066,15 @@ class TestRecordBlock(TestCase):
         self.assertEqual(blocks[0].tracking_rate, 100)
 
     def test_imaging_block(self):
-        block_resp = record_block(self.imaging_tracknum, self.imaging_params, self.imaging_form, self.imaging_body)
+        block_resp = record_block(self.imaging_tracknum, self.imaging_params, self.imaging_form, self.imaging_body, observer=self.bart)
 
         self.assertTrue(block_resp)
         sblocks = SuperBlock.objects.all()
         blocks = Block.objects.all()
         self.assertEqual(1, sblocks.count())
+        self.assertEqual(1, len(sblocks[0].observers))
+        self.assertEqual(self.bart, sblocks[0].observers[0])
+
         self.assertEqual(1, blocks.count())
         self.assertEqual(Block.OPT_IMAGING, blocks[0].obstype)
         # Check the SuperBlock has the broader time window but the Block(s) have
@@ -1092,7 +1095,7 @@ class TestRecordBlock(TestCase):
         imaging_form = self.imaging_form
         imaging_form['proposal_code'] += 'b'
 
-        block_resp = record_block(self.imaging_tracknum, imaging_params, imaging_form, self.imaging_body)
+        block_resp = record_block(self.imaging_tracknum, imaging_params, imaging_form, self.imaging_body, observer=self.bart)
 
         self.assertTrue(block_resp)
         sblocks = SuperBlock.objects.all()
@@ -1131,7 +1134,7 @@ class TestRecordBlock(TestCase):
         spectro_params['request_numbers'] = {1450339: 'NON_SIDEREAL'}
         spectro_params['request_windows'] = [[{'end': '2018-03-16T18:30:00', 'start': '2018-03-16T11:20:00'}]]
 
-        block_resp = record_block(self.spectro_tracknum, spectro_params, self.spectro_form, self.spectro_body)
+        block_resp = record_block(self.spectro_tracknum, spectro_params, self.spectro_form, self.spectro_body, observer=self.bart)
 
         self.assertTrue(block_resp)
         sblocks = SuperBlock.objects.all()
@@ -1165,7 +1168,7 @@ class TestRecordBlock(TestCase):
         self.spectro_params['request_numbers'] = {1450339: 'SIDEREAL'}
         self.spectro_params['group_name'] = 'Landolt SA107-684_E10-20180316_spectra'
         self.spectro_form['group_name'] = self.spectro_params['group_name']
-        block_resp = record_block(self.spectro_tracknum, self.spectro_params, self.spectro_form, self.solar_analog)
+        block_resp = record_block(self.spectro_tracknum, self.spectro_params, self.spectro_form, self.solar_analog, observer=self.bart)
 
         self.assertTrue(block_resp)
         sblocks = SuperBlock.objects.all()
