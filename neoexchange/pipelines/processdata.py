@@ -334,16 +334,16 @@ class ZeropointProcessPipeline(PipelineProcess):
             std_zeropoint = None
             color_const = False
 
-            header, table, db_filename = self.setup(catfile, catalog_type, phot_cat_name)
+            header, table, refcat = self.setup(catfile, catalog_type, phot_cat_name)
 
-            if header and table:
+            if header and table and refcat:
                 cal_filter = map_filter_to_calfilter(header['filter'])
                 if cal_filter is None:
                     logger.error(f"This filter ({header['filter']}) is not calibrateable")
                     return
                 # Cross match with reference catalog and compute zeropoint
                 logger.info(f"Calibrating {header['filter']} instrumental mags. with {cal_filter} using {phot_cat_name}")
-                avg_zeropoint, std_zeropoint, C, cal_color = self.cross_match_and_zp(table, db_filename, phot_cat_name, std_zeropoint_tolerance, cal_filter, header['filter'], color_const)
+                avg_zeropoint, std_zeropoint, C, cal_color = self.cross_match_and_zp(table, refcat, std_zeropoint_tolerance, cal_filter, header['filter'], color_const)
                 logger.info(f"New zp={avg_zeropoint:} +/- {std_zeropoint:} {C:}")
                 self.log(f"New zp={avg_zeropoint:} +/- {std_zeropoint:} {C:}")
 
@@ -404,24 +404,42 @@ class ZeropointProcessPipeline(PipelineProcess):
         self.log('Pipeline Completed')
         return
 
-    def setup(self, catfile, catalog_type, phot_cat_name):
+    def setup(self, catfile, catalog_type, phot_cat_name, max_records=None, match_limit=None, min_matches=None):
         """Open the catalog file <catfile> of type <catalog_type> and search
         for a calibration catalog that covers the pointing.
-        The header, source table and calibration DB filepath are returned.
+        Optionally [max_records], [match_limit] and [min_matches] can be passed
+        in and will be passed onto the calviacat.Catalog constructor.
+        The header, source table and calibration DB object are returned.
         """
 
-        db_filename = None
+        refcat = None
 
         filename = os.path.basename(catfile)
         datadir = os.path.join(os.path.dirname(catfile), '')
 
         header, table = extract_catalog(catfile, catalog_type)
         if header and table:
-            db_filename = self.create_caldb(datadir, header, phot_cat_name)
+            db_filename = self.create_caldb_filename(datadir, header, phot_cat_name)
 
-        return header, table, db_filename
+            kwargs = {}
+            if max_records is not None:
+                kwargs['max_records'] = max_records
+            if match_limit is not None:
+                kwargs['match_limit'] = match_limit
+            if min_matches is not None:
+                kwargs['min_matches'] = min_matches
+            # Create or load calviacat catalog
+            if phot_cat_name == 'PS1':
+                refcat = cvc.PanSTARRS1(db_filename, **kwargs)
+            elif phot_cat_name == 'REFCAT2':
+                refcat = cvc.RefCat2(db_filename, **kwargs)
+            elif phot_cat_name == 'GAIA-DR2':
+                refcat = cvc.Gaia(db_filename, **kwargs)
+            else:
+                logger.error(f"Unknown reference catalog {phot_cat_name:}. Must be one of PS1, REFCAT2, GAIA-DR2")
+        return header, table, refcat
 
-    def create_caldb(self, datadir, header, phot_cat_name, dbg=False):
+    def create_caldb_filename(self, datadir, header, phot_cat_name, dbg=False):
         db_filename = existing_catalog_coverage(datadir, header['field_center_ra'], header['field_center_dec'], header['field_width'], header['field_height'], phot_cat_name, '*.db', dbg)
         created = False
         if db_filename is None:
@@ -432,13 +450,13 @@ class ZeropointProcessPipeline(PipelineProcess):
             units = set_width[-1]
             try:
                 ref_width = float(set_width[:-1]) * 1.25
-                ref_width = "{:.4f}{}".format(ref_width, units)
+                ref_width = "{:.1f}{}".format(ref_width, units)
             except ValueError:
                 ref_width = set_width
             units = set_height[-1]
             try:
                 ref_height = float(set_height[:-1]) * 1.25
-                ref_height = "{:.4f}{}".format(ref_height, units)
+                ref_height = "{:.1f}{}".format(ref_height, units)
             except ValueError:
                 ref_height = set_height
 
@@ -451,17 +469,8 @@ class ZeropointProcessPipeline(PipelineProcess):
         self.log("{prefix:} DB file {refcat_filename:}")
         return db_filename
 
-    def cross_match_and_zp(self, table, db_filename, phot_cat_name, std_zeropoint_tolerance, cal_filter, obs_filter, color_const=True):
+    def cross_match_and_zp(self, table, refcat, std_zeropoint_tolerance, cal_filter, obs_filter, color_const=True):
 
-        if phot_cat_name == 'PS1':
-            refcat = cvc.PanSTARRS1(db_filename)
-        elif phot_cat_name == 'REFCAT2':
-            refcat = cvc.RefCat2(db_filename)
-        elif phot_cat_name == 'GAIA-DR2':
-            refcat = cvc.Gaia(db_filename)
-        else:
-            logger.error(f"Unknown reference catalog {phot_cat_name:}. Must be one of PS1, REFCAT2, GAIA-DR2")
-            return None
         phot = table[table['flags'] == 0]  # clean LCO catalog
         lco = coord.SkyCoord(phot['obs_ra'], phot['obs_dec'], unit='deg')
 
@@ -472,7 +481,12 @@ class ZeropointProcessPipeline(PipelineProcess):
             logger.debug(f"TIME: refcat.fetch_field took {end-start:.1f} seconds")
 
         start = time.time()
-        objids, distances = refcat.xmatch(lco)
+        retstatus = refcat.xmatch(lco)
+        if retstatus is not None:
+            objids, distances = retstatus
+        else:
+            logger.warning("Crossmatching failed")
+            return None, None, None, None
         end = time.time()
         logger.debug(f"TIME: cvc cross_match took {end-start:.1f} seconds")
 
