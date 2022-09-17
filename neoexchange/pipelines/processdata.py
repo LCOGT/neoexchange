@@ -355,7 +355,7 @@ class ZeropointProcessPipeline(PipelineProcess):
                     header['color_err'] = 0.00
                     if color_const is False:
                         header['color'] = C
-                        header['color_err'] = C
+                        header['color_err'] = -99
                     logger.debug("Calling update_zeropoint")
                     header, table = update_zeropoint(header, table, avg_zeropoint, std_zeropoint, include_zperr=False)
 
