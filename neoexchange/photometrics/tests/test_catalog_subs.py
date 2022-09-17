@@ -27,6 +27,7 @@ from django.test import TestCase
 from django.forms.models import model_to_dict
 from astropy.io import fits
 from astropy.wcs import WCS
+from astropy.wcs.utils import proj_plane_pixel_scales
 from astropy.table import Table
 from astropy.coordinates import Angle
 import astropy.units as u
@@ -1251,6 +1252,7 @@ class FITSUnitTest(TestCase):
         header_array = hdulist[1].data[0][0]
         header = fits_ldac_to_header(header_array)
         self.test_ldacwcs = WCS(header)
+        self.test_ldac_pixscale = round(proj_plane_pixel_scales(self.test_ldacwcs).mean()*3600.0, 5)
         self.test_ldactable = hdulist[2].data
         hdulist.close()
         self.ldac_table_firstitem = self.test_ldactable[0:1]
@@ -1261,6 +1263,7 @@ class FITSUnitTest(TestCase):
         # so need to read a fixed version to make the WCS from
         header = fits.Header.fromtextfile(os.path.join('photometrics', 'tests', 'example_photpipe.head'))
         self.test_photpipe_ldacwcs = WCS(header)
+        self.test_photpipe_ldac_pixscale = round(proj_plane_pixel_scales(self.test_photpipe_ldacwcs).mean()*3600.0, 5)
         self.test_photpipe_ldactable = hdulist[2].data
         hdulist.close()
         self.photpipe_table_firstitem = self.test_photpipe_ldactable[0:1]
@@ -1776,7 +1779,9 @@ class FITSReadHeader(FITSUnitTest):
                             'astrometric_fit_status' : 0,
                             'astrometric_fit_nstars' : 22,
                             'astrometric_catalog'    : 'UCAC4',
-                            'wcs'                    : self.test_ldacwcs
+                            'wcs'                    : self.test_ldacwcs,
+                            'aperture_radius_pixels' : 5.0,
+                            'aperture_radius_arcsec' : 5.0*self.test_ldac_pixscale,
                           }
         expected_cattype = "FITS_LDAC"
 
@@ -2096,6 +2101,8 @@ class FITSReadHeader(FITSUnitTest):
                             'zeropoint_src' : 'BANZAI',
                             'wcs'           : self.test_photpipe_ldacwcs,
                             'reduction_level' : 91,
+                            'aperture_radius_pixels' : 22.94,
+                            'aperture_radius_arcsec' : round(22.94*self.test_photpipe_ldac_pixscale, 4),
                           }
         expected_cattype = "PHOTPIPE_LDAC"
 
@@ -2434,7 +2441,9 @@ class TestExtractCatalog(FITSUnitTest):
                        'zeropoint': -99.0,
                        'zeropoint_err': -99.0,
                        'zeropoint_src': 'NOT_FIT(LCOGTCAL-V0.0.2-r8174)',
-                       'wcs' : self.test_ldacwcs}
+                       'wcs' : self.test_ldacwcs,
+                       'aperture_radius_pixels' : 5.0,
+                       'aperture_radius_arcsec' : round(5.0*self.test_ldac_pixscale, 4)}
 
         shutil.copy(os.path.abspath(self.test_ldacfilename), self.temp_dir)
         test_ldacfilename = os.path.join(self.temp_dir, os.path.basename(self.test_ldacfilename))
@@ -2468,7 +2477,9 @@ class TestExtractCatalog(FITSUnitTest):
                        'zeropoint': -99.0,
                        'zeropoint_err': -99.0,
                        'zeropoint_src': 'NOT_FIT(LCOGTCAL-V0.0.2-r8174)',
-                       'wcs' : self.test_ldacwcs}
+                       'wcs' : self.test_ldacwcs,
+                       'aperture_radius_pixels' : 5.0,
+                       'aperture_radius_arcsec' : round(5.0*self.test_ldac_pixscale, 4)}
 
         shutil.copy(os.path.abspath(self.test_ldacfilename), self.temp_dir)
         test_ldacfilename = os.path.join(self.temp_dir, os.path.basename(self.test_ldacfilename))
@@ -2502,7 +2513,9 @@ class TestExtractCatalog(FITSUnitTest):
                        'zeropoint': -99.0,
                        'zeropoint_err': -99.0,
                        'zeropoint_src': 'BANZAI',
-                       'wcs' : self.test_photpipe_ldacwcs}
+                       'wcs' : self.test_photpipe_ldacwcs,
+                       'aperture_radius_pixels' : 22.94,
+                       'aperture_radius_arcsec' : round(22.94*self.test_photpipe_ldac_pixscale, 4)}
 
         shutil.copy(os.path.abspath(self.test_photpipefilename), self.temp_dir)
         test_photpipefilename = os.path.join(self.temp_dir, os.path.basename(self.test_photpipefilename))

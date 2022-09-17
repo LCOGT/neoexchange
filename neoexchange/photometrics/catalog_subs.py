@@ -665,7 +665,9 @@ def fitsldac_catalog_mapping():
                     'astrometric_fit_status' : 'WCSERR',
                     'astrometric_fit_nstars' : '<WCSMATCH>',
                     'astrometric_catalog'    : '<WCCATTYP>',
-                    'reduction_level'        : '<RLEVEL>'
+                    'reduction_level'        : '<RLEVEL>',
+                    'aperture_radius_pixels' : 'SEXAPED1',
+                    'aperture_radius_arcsec' : '<SEXAPED1>'
                   }
 
     table_dict = OrderedDict([
@@ -772,7 +774,9 @@ def banzai_ldac_catalog_mapping():
                     'astrometric_fit_status' : 'WCSERR',
                     'astrometric_fit_nstars' : '<WCSMATCH>',
                     'astrometric_catalog'    : '<WCCATTYP>',
-                    'reduction_level'        : 'RLEVEL'
+                    'reduction_level'        : 'RLEVEL',
+                    'aperture_radius_pixels' : 'SEXAPED1',
+                    'aperture_radius_arcsec' : '<SEXAPED1>'
                   }
 
     table_dict = OrderedDict([
@@ -824,7 +828,9 @@ def photpipe_ldac_catalog_mapping():
                     'astrometric_fit_status' : '<ASTIRMSx>',
                     'astrometric_fit_nstars' : '<WCSMATCH>',
                     'astrometric_catalog'    : 'REGCAT',
-                    'reduction_level'        : 'RLEVEL'
+                    'reduction_level'        : 'RLEVEL',
+                    'aperture_radius_pixels' : 'SEXAPED1',
+                    'aperture_radius_arcsec' : '<SEXAPED1>'
                   }
 
     table_dict = OrderedDict([
@@ -1059,6 +1065,13 @@ def convert_value(keyword, value):
             newvalue = "%.4fm" % dimension
         except IndexError:
             logger.warning("Need to pass a tuple of (number of x/y pixels, pixel scale) to compute a width/height")
+    elif keyword == 'aperture_radius_arcsec':
+        try:
+            # Calculate radius by multiplying radius in pixels by pixel scale
+            dimension = value[0]*value[1]
+            newvalue = round(dimension, 4)
+        except IndexError:
+            logger.warning("Need to pass a tuple of (number of radius in pixels, pixel scale) to compute a radius in arcsec")
     elif keyword == 'mu_threshold':
         try:
             # Calculate threshold in magnitudes per sq. arcsec by dividing the
@@ -1166,7 +1179,7 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
             if catalog_header.get(file_fits_keyword, None):
                 value = catalog_header[file_fits_keyword]
                 # Convert if necessary
-                if item != 'field_width' and item != 'field_height':
+                if item != 'field_width' and item != 'field_height' and item != 'aperture_radius_arcsec':
                     new_value = convert_value(item, value)
                 else:
                     new_value = value
@@ -1245,6 +1258,9 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
     if 'field_width' in header_items and 'field_height' in header_items and 'pixel_scale' in header_items:
         header_items['field_width'] = convert_value('field_width', (header_items['field_width'], header_items['pixel_scale']))
         header_items['field_height'] = convert_value('field_height', (header_items['field_height'], header_items['pixel_scale']))
+    if 'aperture_radius_pixels' in header_items and 'pixel_scale' in header_items:
+        header_items['aperture_radius_arcsec'] = convert_value('aperture_radius_arcsec', (header_items['aperture_radius_pixels'], header_items['pixel_scale']))
+
     return header_items
 
 
@@ -1691,7 +1707,7 @@ def store_catalog_sources(catfile, catalog_type='LCOGT', std_zeropoint_tolerance
     return num_sources_created, num_in_table
 
 
-def get_or_create_CatalogSources(table, frame):
+def get_or_create_CatalogSources(table, frame, header={}):
 
     num_sources_created = 0
 
@@ -1706,7 +1722,7 @@ def get_or_create_CatalogSources(table, frame):
                                         err_obs_mag=source['obs_mag_err'], background=source['obs_sky_bkgd'],
                                         major_axis=source['major_axis'], minor_axis=source['minor_axis'],
                                         position_angle=source['ccd_pa'], ellipticity=1.0-(source['minor_axis']/source['major_axis']),
-                                        aperture_size=3.0, flags=source['flags'], flux_max=source['flux_max'], threshold=source['threshold'])
+                                        aperture_size=header.get('aperture_radius_arcsec', 3.0), flags=source['flags'], flux_max=source['flux_max'], threshold=source['threshold'])
             new_sources.append(new_source)
         try:
             with transaction.atomic():
@@ -1730,7 +1746,7 @@ def get_or_create_CatalogSources(table, frame):
                                 'minor_axis': source['minor_axis'],
                                 'position_angle': source['ccd_pa'],
                                 'ellipticity': 1.0-(source['minor_axis']/source['major_axis']),
-                                'aperture_size': 3.0,
+                                'aperture_size': header.get('aperture_radius_arcsec', 3.0),
                                 'flags': source['flags'],
                                 'flux_max': source['flux_max'],
                                 'threshold': source['threshold']

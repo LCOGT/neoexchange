@@ -384,7 +384,7 @@ class ZeropointProcessPipeline(PipelineProcess):
 
                     # store the CatalogSources
                     logger.debug("Calling get_or_create_CatalogSources")
-                    num_sources_created, num_in_table = get_or_create_CatalogSources(table, frame)
+                    num_sources_created, num_in_table = get_or_create_CatalogSources(table, frame, header)
                 else:
                     logger.warning("Didn't get good zeropoint - not updating header")
                     self.log("Didn't get good zeropoint - not updating header")
