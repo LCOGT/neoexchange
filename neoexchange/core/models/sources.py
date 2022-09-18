@@ -11,15 +11,19 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 import logging
+import warnings
 from math import pi, log10, sqrt, cos, ceil
 
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from astropy.wcs import FITSFixedWarning
+from astropy.wcs.utils import proj_plane_pixel_scales
 
 from astrometrics.ast_subs import normal_to_packed
 from astrometrics.ephem_subs import get_sitecam_params
 from astrometrics.time_subs import dttodecimalday, degreestohms, degreestodms
 from astrometrics.sources_subs import translate_catalog_code, psv_padding
+import astrometrics.site_config as cfg
 
 from core.models.body import Body
 from core.models.frame import Frame
@@ -47,6 +51,39 @@ class SourceMeasurement(models.Model):
     aperture_size = models.FloatField('Radius of aperture (arcsec)', blank=True, null=True)
     snr = models.FloatField('Signal to noise ratio', blank=True, null=True)
     flags = models.CharField('Frame Quality flags', help_text='Comma separated list of frame/condition flags', max_length=40, blank=True, default=' ')
+
+    def _aperture_size_arcsecs(self):
+        return self.aperture_size
+
+    def _aperture_size_pixels(self):
+        '''Convert aperture_size (in arcsecs) back to pixels'''
+        warnings.simplefilter('ignore', FITSFixedWarning)
+        pixel_scale = 1.0
+        if self.frame.wcs:
+            pixel_scale = proj_plane_pixel_scales(self.frame.wcs).mean()*3600.0
+        else:
+            sitecode = self.frame.sitecode
+            telcode = cfg.valid_telescope_codes.get(sitecode, 'XXX')
+            if '1M0' in telcode:
+                pixel_scale = cfg.tel_field['onem_sinistro_pixscale']
+                if 'kb' in self.frame.instrument:
+                    # Old SBIG data
+                    pixel_scale = cfg.tel_field['onem_pixscale']
+                elif 'ef' in self.frame.instrument:
+                    # FLI data
+                    pixel_scale = cfg.tel_field['onem_fli_pixscale']
+            elif '2M0' in telcode:
+                pixel_scale = cfg.tel_field['twom_pixscale']
+                if 'ep' in self.frame.instrument:
+                    # MuSCAT
+                    pixel_scale = cfg.tel_field['twom_muscat_pixscale']
+            elif '0M4' in telcode:
+                pixel_scale = cfg.tel_field['point4m_pixscale']
+
+        return self.aperture_size/pixel_scale
+
+    aperture_size_arcsecs = property(_aperture_size_arcsecs)
+    aperture_size_pixels = property(_aperture_size_pixels)
 
     def format_mpc_line(self, include_catcode=False):
         """Format the contents of 'self' (a SourceMeasurement i.e. the confirmed

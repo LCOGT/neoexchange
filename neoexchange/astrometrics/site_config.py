@@ -7,6 +7,8 @@ tel_field = {   'onem_fov'              : 15.5,
                 'onem_sinistro_pixscale': 0.389,
                 'onem_2x2_sinistro_fov' : 13.2,
                 'onem_2x2_sin_pixscale' : 0.778,
+                'onem_fli_fov'          : 5.82,
+                'onem_fli_pixscale'     : 0.341,
                 'point4m_pixscale'      : 0.571,        # bin 2, from average kb29 values = 1.139/ 1x1 nominal = 0.58 / 1x1 from average of kb27 = 0.571
                 'point4m_fov'           : 29.1,
                 'twom_pixscale'         : 0.304,

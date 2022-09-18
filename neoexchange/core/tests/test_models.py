@@ -2244,6 +2244,16 @@ class TestSourceMeasurement(TestCase):
                        }
         self.test_block2 = Block.objects.create(**block_params)
 
+        # Assemble fake WCS
+        naxis = array([2009, 2029])
+        w = WCS(naxis=2)
+        w._naxis = list(naxis)
+        w.wcs.crval = [215.5041115,-39.6056204]
+        w.wcs.cd = array([[-1.297E-4, 0.0], [0.0, -1.297E-4]])
+        w.wcs.crpix = naxis/2.00
+        w.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+        self.test_frame_pixscale = proj_plane_pixel_scales(w).mean()*3600.0 # 0.46692 "/pixel
+
         frame_params = {  'sitecode'      : 'K93',
                     'instrument'    : 'kb75',
                     'filter'        : 'w',
@@ -2251,9 +2261,19 @@ class TestSourceMeasurement(TestCase):
                     'exptime'       : 40.0,
                     'midpoint'      : datetime(2015, 7, 13, 21, 9, 51),
                     'block'         : self.test_block,
-                    'fwhm'          : 1.0
+                    'fwhm'          : 1.0,
+                    'wcs'           : w
                  }
         self.test_frame = Frame.objects.create(**frame_params)
+
+        naxis = array([4096, 4096])
+        w = WCS(naxis=2)
+        w._naxis = list(naxis)
+        w.wcs.crval = [215.5041115,-39.6056204]
+        w.wcs.cd = array([[0.00010819444444444445, 0.0], [0.0, -0.00010819444444444445]])
+        w.wcs.crpix = naxis/2.00
+        w.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+        self.test_frame_stack_pixscale = proj_plane_pixel_scales(w).mean()*3600.0 # 0.3895 "/pixel
 
         frame_params = {  'sitecode'      : 'W86',
                     'instrument'    : 'fl03',
@@ -2261,8 +2281,18 @@ class TestSourceMeasurement(TestCase):
                     'frametype'     : Frame.STACK_FRAMETYPE,
                     'midpoint'      : datetime(2015, 12, 5, 1, 10, 49, int(0.9*1e6)),
                     'block'         : self.test_block,
+                    'wcs'           : w
                  }
         self.test_frame_stack = Frame.objects.create(**frame_params)
+
+        naxis = array([2048, 2048])
+        w = WCS(naxis=2)
+        w._naxis = list(naxis)
+        w.wcs.crval = [215.5041115, 39.6056204]
+        w.wcs.cd = array([[-0.0000742, 0.0], [0.0, 0.0000742]])
+        w.wcs.crpix = naxis/2.00
+        w.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+        self.test_frame_extrainfo_pixscale = proj_plane_pixel_scales(w).mean()*3600.0 # 0.26712 "/pixel
 
         frame_params = { 'sitecode'      : 'F65',
                          'instrument'    : 'ep02',
@@ -2271,6 +2301,7 @@ class TestSourceMeasurement(TestCase):
                          'extrainfo'     : 'MUSCAT_FAST',
                          'midpoint'      : datetime(2021, 11,12, 6, 10, 49, int(0.9*1e6)),
                          'block'         : self.test_block,
+                         'wcs'           : w,
                          'astrometric_catalog' : "GAIA-DR2",
                          'photometric_catalog' : "GAIA-DR2",
                      }
@@ -2851,6 +2882,207 @@ class TestSourceMeasurement(TestCase):
         expected_psvline = '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|  7.500000 | -0.500000 | 0.33|  0.34|   Gaia2|21.5 |0.12  |   R| PS1_DR2|  1.56|1.3945|1.0000|     |'
         psv_line = measure.format_psv_line()
         self.assertEqual(expected_psvline, psv_line)
+
+    def test_ap_arcsecs_wcs_kb(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 215.504,
+                            'obs_dec' : -39.6056,
+                            'obs_mag' : 21.5,
+                            'err_obs_ra' : 0.14/3600.0,
+                            'err_obs_dec': 0.16/3600.0,
+                            'err_obs_mag' : 0.12,
+                            'aperture_size' : 1.56,
+                            'snr' : 24.8,
+                            'astrometric_catalog' : "GAIA-DR2",
+                            'photometric_catalog' : "PS1",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+
+        self.assertAlmostEqual(measure_params['aperture_size'], measure.aperture_size_arcsecs, 5)
+
+    def test_ap_pixels_wcs_kb(self):
+        expected_size = 3.34104343
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 215.504,
+                            'obs_dec' : -39.6056,
+                            'obs_mag' : 21.5,
+                            'err_obs_ra' : 0.14/3600.0,
+                            'err_obs_dec': 0.16/3600.0,
+                            'err_obs_mag' : 0.12,
+                            'aperture_size' : 1.56,
+                            'snr' : 24.8,
+                            'astrometric_catalog' : "GAIA-DR2",
+                            'photometric_catalog' : "PS1",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+
+        self.assertAlmostEqual(expected_size, measure.aperture_size_pixels, 5)
+
+    def test_ap_pixels_wcs_fl(self):
+        expected_size = 5.0
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame_stack,
+                            'obs_ra' : 215.504,
+                            'obs_dec' : -39.6056,
+                            'obs_mag' : 21.5,
+                            'err_obs_ra' : 0.14/3600.0,
+                            'err_obs_dec': 0.16/3600.0,
+                            'err_obs_mag' : 0.12,
+                            'aperture_size' : 1.9475,
+                            'snr' : 24.8,
+                            'astrometric_catalog' : "GAIA-DR2",
+                            'photometric_catalog' : "PS1",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+
+        self.assertAlmostEqual(expected_size, measure.aperture_size_pixels, 5)
+
+    def test_ap_pixels_wcs_muscat(self):
+        expected_size = 11.2309075
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame_extrainfo,
+                            'obs_ra' : 56.5,
+                            'obs_dec' : 39.6056,
+                            'obs_mag' : 21.5,
+                            'err_obs_ra' : 0.14/3600.0,
+                            'err_obs_dec': 0.16/3600.0,
+                            'err_obs_mag' : 0.12,
+                            'aperture_size' : 3,
+                            'snr' : 24.8,
+                            'astrometric_catalog' : "GAIA-DR2",
+                            'photometric_catalog' : "GAIA-DR2",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+
+        self.assertAlmostEqual(expected_size, measure.aperture_size_pixels, 5)
+
+    def test_ap_pixels_nowcs_kb(self):
+        expected_size = 1.56/0.464
+
+        self.test_frame.wcs = None
+        self.test_frame.save()
+
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 215.504,
+                            'obs_dec' : -39.6056,
+                            'obs_mag' : 21.5,
+                            'err_obs_ra' : 0.14/3600.0,
+                            'err_obs_dec': 0.16/3600.0,
+                            'err_obs_mag' : 0.12,
+                            'aperture_size' : 1.56,
+                            'snr' : 24.8,
+                            'astrometric_catalog' : "GAIA-DR2",
+                            'photometric_catalog' : "PS1",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+
+        self.assertAlmostEqual(expected_size, measure.aperture_size_pixels, 5)
+
+    def test_ap_pixels_nowcs_fa(self):
+        expected_size = 5.0
+
+        self.test_frame_stack.instrument = 'fa03'
+        self.test_frame_stack.wcs = None
+        self.test_frame_stack.save()
+
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame_stack,
+                            'obs_ra' : 215.504,
+                            'obs_dec' : -39.6056,
+                            'obs_mag' : 21.5,
+                            'err_obs_ra' : 0.14/3600.0,
+                            'err_obs_dec': 0.16/3600.0,
+                            'err_obs_mag' : 0.12,
+                            'aperture_size' : 1.945,
+                            'snr' : 24.8,
+                            'astrometric_catalog' : "GAIA-DR2",
+                            'photometric_catalog' : "PS1",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+
+        self.assertAlmostEqual(expected_size, measure.aperture_size_pixels, 4)
+
+    def test_ap_pixels_nowcs_ef(self):
+        expected_size = 5.0
+
+        self.test_frame_stack.instrument = 'ef11'
+        self.test_frame_stack.wcs = None
+        self.test_frame_stack.save()
+
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame_stack,
+                            'obs_ra' : 215.504,
+                            'obs_dec' : -39.6056,
+                            'obs_mag' : 21.5,
+                            'err_obs_ra' : 0.14/3600.0,
+                            'err_obs_dec': 0.16/3600.0,
+                            'err_obs_mag' : 0.12,
+                            'aperture_size' : 1.705,
+                            'snr' : 24.8,
+                            'astrometric_catalog' : "GAIA-DR2",
+                            'photometric_catalog' : "PS1",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+
+        self.assertAlmostEqual(expected_size, measure.aperture_size_pixels, 4)
+
+    def test_ap_pixels_nowcs_fl(self):
+        expected_size = 5.0
+
+        self.test_frame_stack.wcs = None
+        self.test_frame_stack.save()
+
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame_stack,
+                            'obs_ra' : 215.504,
+                            'obs_dec' : -39.6056,
+                            'obs_mag' : 21.5,
+                            'err_obs_ra' : 0.14/3600.0,
+                            'err_obs_dec': 0.16/3600.0,
+                            'err_obs_mag' : 0.12,
+                            'aperture_size' : 1.945,
+                            'snr' : 24.8,
+                            'astrometric_catalog' : "GAIA-DR2",
+                            'photometric_catalog' : "PS1",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+
+        self.assertAlmostEqual(expected_size, measure.aperture_size_pixels, 4)
+
+    def test_ap_pixels_nowcs_muscat(self):
+        expected_size = 11.111111
+
+        self.test_frame_extrainfo.wcs = None
+        self.test_frame_extrainfo.save()
+
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame_extrainfo,
+                            'obs_ra' : 56.5,
+                            'obs_dec' : 39.6056,
+                            'obs_mag' : 21.5,
+                            'err_obs_ra' : 0.14/3600.0,
+                            'err_obs_dec': 0.16/3600.0,
+                            'err_obs_mag' : 0.12,
+                            'aperture_size' : 3,
+                            'snr' : 24.8,
+                            'astrometric_catalog' : "GAIA-DR2",
+                            'photometric_catalog' : "GAIA-DR2",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+
+        self.assertAlmostEqual(expected_size, measure.aperture_size_pixels, 5)
 
 
 class TestCatalogSources(TestCase):
