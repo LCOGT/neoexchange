@@ -106,11 +106,11 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
         if "UCAC4" in cat_name:
             query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'rmag', 'e_rmag'])
         elif "GAIA-DR2" in cat_name:
-            query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup'])
+            query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit, "Plx": ">0"}, columns=['RAJ2000', 'DEJ2000', 'e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup'])
         else:
             query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
 
-        vizier_servers_list = ['vizier.cfa.harvard.edu', 'vizier.hia.nrc.ca', 'vizier.u-strasbg.fr', ] # Preferred first
+        vizier_servers_list = ['vizier.cfa.harvard.edu', 'vizier.hia.nrc.ca', 'vizier.cds.unistra.fr', ] # Preferred first
         query_service.VIZIER_SERVER = vizier_servers_list[0]
 
         query_service.TIMEOUT = 60
@@ -170,7 +170,7 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
             if "UCAC4" in cat_name:
                 query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'rmag', 'e_rmag'])
             elif "GAIA-DR2" in cat_name:
-                query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup'])
+                query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit, "Plx": ">0"}, columns=['RAJ2000', 'DEJ2000', 'e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup'])
             else:
                 query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
             result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, catalog=cat_mapping[cat_name])
@@ -705,10 +705,10 @@ def banzai_catalog_mapping():
                     'field_width' : 'NAXIS1',
                     'field_height' : 'NAXIS2',
                     'pixel_scale' : '<WCS>',
-                    'zeropoint'     : '<ZP>',
-                    'zeropoint_err' : '<ZP>',
-                    'zeropoint_src' : '<ZPSRC>',
-                    'fwhm'          : 'L1FWHM',
+                    'zeropoint'     : '<L1ZP>',
+                    'zeropoint_err' : '<L1ZPERR>',
+                    'zeropoint_src' : '<L1ZPSRC>',
+                    'fwhm'          : '<L1FWHM>',
                     'astrometric_fit_rms'    : '<WCSRDRES>',
                     'astrometric_fit_status' : 'WCSERR',
                     'astrometric_fit_nstars' : '<WCSMATCH>',
@@ -759,7 +759,7 @@ def banzai_ldac_catalog_mapping():
                     'zeropoint'     : '<ZP>',
                     'zeropoint_err' : '<ZP>',
                     'zeropoint_src' : '<ZPSRC>',
-                    'fwhm'          : 'L1FWHM',
+                    'fwhm'          : '<L1FWHM>',
                     'astrometric_fit_rms'    : '<WCSRDRES>',
                     'astrometric_fit_status' : 'WCSERR',
                     'astrometric_fit_nstars' : '<WCSMATCH>',
@@ -1015,8 +1015,12 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
                                                   # (but could be modified based on version number further down)
                         '<ZP>'        : -99,      # Hardwire zeropoint to -99.0 for BANZAI catalogs
                         '<ZPSRC>'     : 'N/A',    # Hardwire zeropoint src to 'N/A' for BANZAI catalogs
+                        '<L1ZP>'      : -99,      # Hardwire zeropoint to -99.0 for newer BANZAI catalogs where it's missing e.g. w band
+                        '<L1ZPERR>'   : -99,      # Hardwire zeropoint to -99.0 for newer BANZAI catalogs where it's missing e.g. w band
+                        '<L1ZPSRC>'   : 'BANZAI', # Hardwire zeropoint src to 'N/A' for newer BANZAI catalogs where it's missing
                         '<WCSRDRES>'  : 0.3,      # Hardwire RMS to 0.3"
-                        '<WCSMATCH>'  : -4        # Hardwire no. of stars matched to 4 (1 quad)
+                        '<WCSMATCH>'  : -4,       # Hardwire no. of stars matched to 4 (1 quad)
+                        '<L1FWHM>'    : -99       # May not be present if BANZAI WCS fit fails
                         }
 
     header_items = {}
