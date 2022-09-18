@@ -683,7 +683,10 @@ def translate_catalog_code(code_or_name, ades_code=False):
                        'GAIA-DR1'    : 'Gaia1',
                        'GAIA-DR2'    : 'Gaia2',
                        'GAIA-DR3'    : 'Gaia3',
-                       '2MASS'       : '2MASS'
+                       '2MASS'       : '2MASS',
+                       'ATLAS-2'     : 'ATLAS2',
+                       'PS1'         : 'PS1_DR1',
+                       'PS2'         : 'PS1_DR2',
                       }
     catalog_or_code = ''
     if len(code_or_name.strip()) == 1:
