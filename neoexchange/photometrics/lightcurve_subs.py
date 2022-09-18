@@ -15,9 +15,11 @@ GNU General Public License for more details.
 
 import os
 import re
+import warnings
 
 import numpy as np
 from astropy.time import Time
+from astropy.wcs import FITSFixedWarning
 from astropy.table import Table, unique, Column
 from core.models import Frame, SourceMeasurement
 
@@ -66,14 +68,26 @@ def create_table_from_srcmeasures(block):
     dtypes = ('<U36', '<f8', '<f8', '<f8', '<f8', '<f8', '<f8', '<f8', '<i8', '<f8')
     table = Table(names=col_names, dtype=dtypes)
 
-    sources = SourceMeasurement.objects.filter(frame__block=block, frame__frametype=Frame.BANZAI_RED_FRAMETYPE)
+    sources = SourceMeasurement.objects.filter(frame__block=block, frame__frametype=Frame.NEOX_RED_FRAMETYPE)
 
-    for src in sources:
+    warnings.simplefilter('ignore', FITSFixedWarning)
+
+    for i, src in enumerate(sources):
         t = Time(src.frame.midpoint)
-        # XXX map back to original CatalogSource
+        # XXX map back to original CatalogSource... I have no idea what PastTim
+        # meant by this comment...
         flags = 0
+        # print(i, src.frame.filename, t.jd, src.obs_mag, src.err_obs_mag,
+               # src.frame.zeropoint,\
+               # src.frame.zeropoint_err,\
+               # src.obs_mag-src.frame.zeropoint,\
+               # src.err_obs_mag,\
+               # flags, src.aperture_size)
         row = [src.frame.filename, t.jd, src.obs_mag, src.err_obs_mag,
-               src.frame.zeropoint, src.frame.zeropoint_err, src.obs_mag-src.frame.zeropoint, src.err_obs_mag,
+               src.frame.zeropoint,\
+               src.frame.zeropoint_err,\
+               src.obs_mag-src.frame.zeropoint,\
+               src.err_obs_mag,\
                flags, src.aperture_size]
         table.add_row(row)
 

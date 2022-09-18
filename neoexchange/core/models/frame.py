@@ -80,6 +80,7 @@ class Frame(models.Model):
     BANZAI_QL_FRAMETYPE = 11
     ORACDR_RED_FRAMETYPE = 90
     BANZAI_RED_FRAMETYPE = 91
+    NEOX_RED_FRAMETYPE = 92
     FRAMETYPE_CHOICES = (
                         (SINGLE_FRAMETYPE, 'Single frame'),
                         (STACK_FRAMETYPE, 'Stack of frames'),

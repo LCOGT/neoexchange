@@ -61,9 +61,9 @@ class TestWriteDartFormatFile(SimpleTestCase):
 
     def test_write(self):
         expected_lines = [
-        '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  SExtractor_flag  aprad',
-        ' tfn1m001-fa11-20211012-0073-e91.fits  2459500.3339392  14.8400  0.0397  27.1845  0.0394  -12.3397    0.0052                0  10.00',
-        ' tfn1m001-fa11-20211012-0074-e91.fits  2459500.3345790  14.8637  0.0293  27.1824  0.0300  -12.3187    0.0053                3  10.00'
+        '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  filter  SExtractor_flag  aprad',
+        ' tfn1m001-fa11-20211012-0073-e92.fits  2459500.3339392  14.8400  0.0397  27.1845  0.0394  -12.3397    0.0052       r                0  10.00',
+        ' tfn1m001-fa11-20211012-0074-e92.fits  2459500.3345790  14.8637  0.0293  27.1824  0.0300  -12.3187    0.0053       r                3  10.00'
         ]
 
         # Modify some values to test rounding
@@ -157,7 +157,7 @@ class TestCreateTableFromSrcMeasure(TestCase):
                          'instrument' : 'fa11',
                          'filter' : 'ip',
                          'block' : self.test_block,
-                         'frametype' : Frame.BANZAI_RED_FRAMETYPE,
+                         'frametype' : Frame.NEOX_RED_FRAMETYPE,
                          'zeropoint' : 27.0,
                          'zeropoint_err' : 0.03,
                          'midpoint' : block_params['block_start'] + timedelta(minutes=5),
@@ -167,7 +167,7 @@ class TestCreateTableFromSrcMeasure(TestCase):
 
         self.test_filenames = []
         for frame_num, frameid in zip(range(65,126,30),[45234032, 45234584, 45235052]):
-            frame_params['filename'] = f"tfn1m001-fa11-20211013-{frame_num:04d}-e91.fits"
+            frame_params['filename'] = f"tfn1m001-fa11-20211013-{frame_num:04d}-e92.fits"
             frame_offset = frame_num-65
             frame_params['midpoint'] += timedelta(minutes=frame_offset)
             frame_params['frameid'] = frameid
