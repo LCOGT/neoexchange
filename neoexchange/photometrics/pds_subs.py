@@ -16,7 +16,7 @@ from astropy.io import fits
 from astropy.io.ascii.core import InconsistentTableError
 from django.conf import settings
 
-from core.models import Body, Frame
+from core.models import Body, Frame, Block
 from core.archive_subs import lco_api_call, download_files
 from astrometrics.ast_subs import normal_to_packed
 from astrometrics.sources_subs import fetch_jpl_orbit
@@ -1325,8 +1325,10 @@ def determine_target_name_type(header):
     return target_name, target_type
 
 def create_dart_lightcurve(input_dir, output_dir, block, match='photometry_*.dat', create_symlink=False):
-    """Creates a DART-format lightcurve file from the photometry file and LOG in
-    <input_dir>, outputting to <output_dir>. Block <block> is used find the directory
+    """Creates a DART-format lightcurve file from either:
+    1) the photometry file and LOG in <input_dir>. or, 
+    2) the SourceMeasurements belonging to the Block passed as <input_dir>
+    outputting to <output_dir>. Block <block> is used find the directory
     for the photometry file
     """
 
@@ -1338,20 +1340,38 @@ def create_dart_lightcurve(input_dir, output_dir, block, match='photometry_*.dat
         first_filename = first_frame.filename
         file_parts = split_filename(first_filename)
         if len(file_parts) == 8:
-            root_dir = input_dir
-            photometry_files = sorted(glob(os.path.join(root_dir, match)))
-            # Weed out Control_Star photometry files
-            photometry_files = [x for x in photometry_files if 'Control_Star' not in x]
-            # No matches, retry with dayobs added onto the path
-            if len(photometry_files) == 0:
-                root_dir = os.path.join(input_dir, file_parts['dayobs'])
+            if type(input_dir) != Block:
+                # Directory path passed
+                root_dir = input_dir
                 photometry_files = sorted(glob(os.path.join(root_dir, match)))
                 # Weed out Control_Star photometry files
                 photometry_files = [x for x in photometry_files if 'Control_Star' not in x]
+                # No matches, retry with dayobs added onto the path
+                if len(photometry_files) == 0:
+                    root_dir = os.path.join(input_dir, file_parts['dayobs'])
+                    photometry_files = sorted(glob(os.path.join(root_dir, match)))
+                    # Weed out Control_Star photometry files
+                    photometry_files = [x for x in photometry_files if 'Control_Star' not in x]
+            else:
+                # Assuming Block passed
+                num_srcs = SourceMeasurement.objects.filter(frame__block=input_dir, frame__frametype=Frame.NEOX_RED_FRAMETYPE).count()
+                if num_srcs > 0:
+                    photometry_files = [input_dir, ]
+                else:
+                    logger.warning("No SourceMeasurements found for reduced e92 frames for Block id" + input_dir.id)
+                    photometry_files = []
             for photometry_file in photometry_files:
-                log_file = os.path.join(os.path.dirname(photometry_file), 'LOG')
-                table = read_photompipe_file(photometry_file)
-                aper_radius = extract_photompipe_aperradius(log_file)
+                if type(photometry_file) != Block:
+                    print("Table from PHOTPIPE output + LOG")
+                    log_file = os.path.join(os.path.dirname(photometry_file), 'LOG')
+                    table = read_photompipe_file(photometry_file)
+                    aper_radius = extract_photompipe_aperradius(log_file)
+                else:
+                    print("Table from SourceMeasurements")
+                    table = create_table_from_srcmeasures(input_dir)
+                    aper_radius = table['aprad'].mean()
+                    file_parts['site'] += '-Src'
+                print(len(table), aper_radius)
                 if table and aper_radius:
                     phot_filename, pds_name = make_pds_asteroid_name(block.body)
                     # Format for LC files: 'lcogt_<site>_<inst.>_<YYYYMMDD>_<request #>_<astname#>_photometry.txt'
@@ -1368,6 +1388,8 @@ def create_dart_lightcurve(input_dir, output_dir, block, match='photometry_*.dat
 
         else:
             logger.warning(f"Could not decode filename: {first_filename}")
+    else:
+        logger.warning("Could not find any reduced Frames")
 
     return output_lc_filepath
 

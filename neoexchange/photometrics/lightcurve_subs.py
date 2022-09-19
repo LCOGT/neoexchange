@@ -123,8 +123,9 @@ def write_dartformat_file(table, filepath, aprad=0.0):
     # Also add a column for aperture radius
     new_names = [x.replace('.lda','.fits').replace('e91','e92') for x in table['filename']]
     table.replace_column('filename', new_names)
-    aprad_column = Column(np.full(len(table), aprad), name='aprad')
-    table.add_column(aprad_column)
+    if 'aprad' not in table.colnames:
+        aprad_column = Column(np.full(len(table), aprad), name='aprad')
+        table.add_column(aprad_column)
     table[input_col_names].write(filepath, format='ascii.fixed_width', names=output_col_names,
         comment=False, delimiter='', formats=formatters)
 
