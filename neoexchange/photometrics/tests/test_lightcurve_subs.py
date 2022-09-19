@@ -207,11 +207,11 @@ class TestCreateTableFromSrcMeasure(TestCase):
 
         midpoints = Frame.objects.all().values_list('midpoint', flat=True)
         midpoints_jd = [Time(d).jd for d in midpoints]
-        data_rows = [[self.test_filenames[0], midpoints_jd[0], 14.60, 0.03015, 27, 0.03, 14.60-27, 0.003, 0, 10.0],
-                     [self.test_filenames[1], midpoints_jd[1], 14.63, 0.03231, 27, 0.03, 14.63-27, 0.012, 0, 10.0],
-                     [self.test_filenames[2], midpoints_jd[2], 14.66, 0.03662, 27, 0.03, 14.66-27, 0.021, 0, 10.0],
+        data_rows = [[self.test_filenames[0], midpoints_jd[0], 14.60, 0.03015, 27, 0.03, 14.60-27, 0.003, 'ip', 0, 10.0],
+                     [self.test_filenames[1], midpoints_jd[1], 14.63, 0.03231, 27, 0.03, 14.63-27, 0.012, 'ip', 0, 10.0],
+                     [self.test_filenames[2], midpoints_jd[2], 14.66, 0.03662, 27, 0.03, 14.66-27, 0.021, 'ip', 0, 10.0],
                     ]
-        col_names = ['filename', 'julian_date', 'mag', 'sig', 'ZP', 'ZP_sig', 'inst_mag', 'in_sig', '[8]', 'aprad']
+        col_names = ['filename', 'julian_date', 'mag', 'sig', 'ZP', 'ZP_sig', 'inst_mag', 'in_sig', '[7]', '[8]', 'aprad']
         expected_table = Table(rows=data_rows, names=col_names)
 
         table = create_table_from_srcmeasures(self.test_block)
