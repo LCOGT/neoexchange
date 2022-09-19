@@ -68,7 +68,7 @@ def create_table_from_srcmeasures(block):
     dtypes = ('<U36', '<f8', '<f8', '<f8', '<f8', '<f8', '<f8', '<f8', '<i8', '<f8')
     table = Table(names=col_names, dtype=dtypes)
 
-    sources = SourceMeasurement.objects.filter(frame__block=block, frame__frametype=Frame.NEOX_RED_FRAMETYPE)
+    sources = SourceMeasurement.objects.filter(frame__block=block, frame__frametype=Frame.NEOX_RED_FRAMETYPE).order_by('frame__midpoint')
 
     warnings.simplefilter('ignore', FITSFixedWarning)
 
@@ -83,12 +83,13 @@ def create_table_from_srcmeasures(block):
                # src.obs_mag-src.frame.zeropoint,\
                # src.err_obs_mag,\
                # flags, src.aperture_size)
-        row = [src.frame.filename, t.jd, src.obs_mag, src.err_obs_mag,
+        row = [src.frame.filename, t.jd, src.obs_mag, \
+               np.sqrt(src.err_obs_mag**2 + src.frame.zeropoint_err**2),
                src.frame.zeropoint,\
                src.frame.zeropoint_err,\
                src.obs_mag-src.frame.zeropoint,\
                src.err_obs_mag,\
-               flags, src.aperture_size]
+               flags, src.aperture_size_pixels]
         table.add_row(row)
 
     return table

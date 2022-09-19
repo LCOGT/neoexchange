@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 
 import numpy as np
 from astropy.time import Time
+from astropy.wcs import WCS
 
 from core.models import Body, SuperBlock, Block, Frame, SourceMeasurement
 from photometrics.lightcurve_subs import *
@@ -171,6 +172,15 @@ class TestCreateTableFromSrcMeasure(TestCase):
             frame_offset = frame_num-65
             frame_params['midpoint'] += timedelta(minutes=frame_offset)
             frame_params['frameid'] = frameid
+            # Hand-rolled WCS
+            naxis_header = {'NAXIS1' : 4096, 'NAXIS2' : 4096, 'NAXIS' : 2}
+            w = WCS(naxis_header)
+            w.wcs.crpix = [ 2048.0, 2048.0]
+            pixel_scale = 0.389/3600.0
+            w.wcs.cd = np.array([[pixel_scale, 0.0], [0.0, -pixel_scale]])
+            w.wcs.crval = [270.01 + frame_offset*0.01, -27.02 - frame_offset*0.01]
+            w.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+            frame_params['wcs'] = w
             frame, created = Frame.objects.get_or_create(**frame_params)
             self.test_filenames.append(frame_params['filename'])
 
@@ -185,7 +195,7 @@ class TestCreateTableFromSrcMeasure(TestCase):
                               'err_obs_mag' : mag_err,
                               'astrometric_catalog' : frame.astrometric_catalog,
                               'photometric_catalog' : frame.photometric_catalog,
-                              'aperture_size' : 10.0,
+                              'aperture_size' : 3.89,
                               'snr' : 1/mag_err,
                               'flags' : ''
                             }
@@ -197,9 +207,9 @@ class TestCreateTableFromSrcMeasure(TestCase):
 
         midpoints = Frame.objects.all().values_list('midpoint', flat=True)
         midpoints_jd = [Time(d).jd for d in midpoints]
-        data_rows = [[self.test_filenames[0], midpoints_jd[0], 14.60, 0.003, 27, 0.03, 14.60-27, 0.003, 0, 10.0],
-                     [self.test_filenames[1], midpoints_jd[1], 14.63, 0.012, 27, 0.03, 14.63-27, 0.012, 0, 10.0],
-                     [self.test_filenames[2], midpoints_jd[2], 14.66, 0.021, 27, 0.03, 14.66-27, 0.021, 0, 10.0],
+        data_rows = [[self.test_filenames[0], midpoints_jd[0], 14.60, 0.03015, 27, 0.03, 14.60-27, 0.003, 0, 10.0],
+                     [self.test_filenames[1], midpoints_jd[1], 14.63, 0.03231, 27, 0.03, 14.63-27, 0.012, 0, 10.0],
+                     [self.test_filenames[2], midpoints_jd[2], 14.66, 0.03662, 27, 0.03, 14.66-27, 0.021, 0, 10.0],
                     ]
         col_names = ['filename', 'julian_date', 'mag', 'sig', 'ZP', 'ZP_sig', 'inst_mag', 'in_sig', '[8]', 'aprad']
         expected_table = Table(rows=data_rows, names=col_names)
