@@ -25,7 +25,7 @@ from astropy.io import fits
 from numpy import array, arange
 from numpy.testing import assert_allclose
 
-from django.test import TestCase
+from django.test import TestCase, SimpleTestCase
 from django.forms.models import model_to_dict
 
 # Import module to test
@@ -1654,7 +1654,7 @@ class TestUpdateFITScalib(TestCase):
             self.assertEqual(header[key], new_header[fits_keyword])
 
 
-class TestGetSCAMPXMLInfo(TestCase):
+class TestGetSCAMPXMLInfo(SimpleTestCase):
 
     def setUp(self):
 
@@ -1671,14 +1671,17 @@ class TestGetSCAMPXMLInfo(TestCase):
                              'wcs_refcat'   : '<Vizier/aserver.cgi?ucac4@cds>',
                              'wcs_cattype'  : 'UCAC4@CDS',
                              'wcs_imagecat' : 'ldac_test_catalog.fits',
-                             'pixel_scale'  : 0.389669
+                             'pixel_scale'  : 0.389669,
+                             'as_contrast'  : 22.7779,
+                             'xy_contrast'  : 18.6967
                            }
 
         results = get_scamp_xml_info(self.test_scamp_xml)
 
+        self.assertEqual(len(expected_results), len(results))
         for key in expected_results.keys():
-            if key == 'pixel_scale':
-                self.assertAlmostEqual(expected_results[key], results[key], 6)
+            if key == 'pixel_scale' or 'contrast' in key:
+                self.assertAlmostEqual(expected_results[key], results[key], 5)
             else:
                 self.assertEqual(expected_results[key], results[key])
 
@@ -1689,14 +1692,17 @@ class TestGetSCAMPXMLInfo(TestCase):
                              'wcs_refcat'   : 'GAIA-DR2.cat',
                              'wcs_cattype'  : 'GAIA-DR2@CDS',
                              'wcs_imagecat' : 'tfn0m414-kb99-20180529-0202-e91_ldac.fits',
-                             'pixel_scale'  : 1.13853
-                           }
+                             'pixel_scale'  : 1.13853,
+                             'as_contrast'  : 20.1186,
+                             'xy_contrast'  : 10.2858
+                             }
 
         results = get_scamp_xml_info(self.test_externcat_xml)
 
+        self.assertEqual(len(expected_results), len(results))
         for key in expected_results.keys():
-            if key == 'pixel_scale':
-                self.assertAlmostEqual(expected_results[key], results[key], 6)
+            if key == 'pixel_scale' or 'contrast' in key:
+                self.assertAlmostEqual(expected_results[key], results[key], 5)
             else:
                 self.assertEqual(expected_results[key], results[key])
 
@@ -1707,14 +1713,17 @@ class TestGetSCAMPXMLInfo(TestCase):
                              'wcs_refcat'   : 'GAIA-DR2_228.33+38.40_43.3488mx29.0321m.cat',
                              'wcs_cattype'  : 'GAIA-DR2@CDS',
                              'wcs_imagecat' : 'tfn0m414-kb99-20180529-0202-e91_ldac.fits',
-                             'pixel_scale'  : 1.13853
+                             'pixel_scale'  : 1.13853,
+                             'as_contrast'  : 20.1186,
+                             'xy_contrast'  : 10.2858
                            }
 
         results = get_scamp_xml_info(self.test_externcat_tpv_xml)
 
+        self.assertEqual(len(expected_results), len(results))
         for key in expected_results.keys():
-            if key == 'pixel_scale':
-                self.assertAlmostEqual(expected_results[key], results[key], 6)
+            if key == 'pixel_scale' or 'contrast' in key:
+                self.assertAlmostEqual(expected_results[key], results[key], 5)
             else:
                 self.assertEqual(expected_results[key], results[key], "Failure on " + key)
 
