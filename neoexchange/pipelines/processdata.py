@@ -333,11 +333,14 @@ class ZeropointProcessPipeline(PipelineProcess):
             C = None
             std_zeropoint = None
             color_const = False
+            solar = True
+
             min_matches = None
             if '-ef' in catfile:
                 # Wee FLI fields, reduce min_matches, set constant color
                 min_matches = 5
                 color_const = True
+                solar = False
 
             header, table, refcat = self.setup(catfile, catalog_type, phot_cat_name, min_matches=min_matches)
 
@@ -348,7 +351,8 @@ class ZeropointProcessPipeline(PipelineProcess):
                     return
                 # Cross match with reference catalog and compute zeropoint
                 logger.info(f"Calibrating {header['filter']} instrumental mags. with {cal_filter} using {phot_cat_name}")
-                avg_zeropoint, std_zeropoint, C, cal_color = self.cross_match_and_zp(table, refcat, std_zeropoint_tolerance, cal_filter, header['filter'], color_const)
+                avg_zeropoint, std_zeropoint, C, cal_color = self.cross_match_and_zp(table, refcat, \
+                    std_zeropoint_tolerance, cal_filter, header['filter'], color_const, solar)
                 logger.info(f"New zp={avg_zeropoint:} +/- {std_zeropoint:} {C:}")
                 self.log(f"New zp={avg_zeropoint:} +/- {std_zeropoint:} {C:}")
 
@@ -474,7 +478,7 @@ class ZeropointProcessPipeline(PipelineProcess):
         self.log("{prefix:} DB file {refcat_filename:}")
         return db_filename
 
-    def cross_match_and_zp(self, table, refcat, std_zeropoint_tolerance, cal_filter, obs_filter, color_const=True):
+    def cross_match_and_zp(self, table, refcat, std_zeropoint_tolerance, cal_filter, obs_filter, color_const=True, solar=True):
 
         phot = table[table['flags'] == 0]  # clean LCO catalog
         lco = coord.SkyCoord(phot['obs_ra'], phot['obs_dec'], unit='deg')
@@ -503,13 +507,17 @@ class ZeropointProcessPipeline(PipelineProcess):
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", message='divide by zero encountered')
             start = time.time()
+            gmi_limits = [0.2, 3.0]
+            if solar is True:
+                sol_gmi_col = 0.55
+                gmi_limits = [sol_gmi_col-0.2, sol_gmi_col+0.2]
+
             if color_const is True:
-                avg_zeropoint, C, std_zeropoint, r, gmi = refcat.cal_constant(objids, phot['obs_mag'], cal_filter)
+                avg_zeropoint, C, std_zeropoint, r, gmi = refcat.cal_constant(objids, phot['obs_mag'], cal_filter, gmi_lim=gmi_limits)
                 cal_color = 'g-i' # Fixed/held constant
             else:
                 cal_color = 'g-' + cal_filter
-                gmi_limits = [0.2, 3.0]
-                if obs_filter == 'w':
+                if obs_filter == 'w' and solar is False:
                     gmi_limits = [0.5, 1.5]
                 avg_zeropoint, C, std_zeropoint, r, gmr, gmi = refcat.cal_color(objids, phot['obs_mag'], cal_filter, cal_color, gmi_lim=gmi_limits)
             end = time.time()
