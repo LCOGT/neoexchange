@@ -559,12 +559,21 @@ def get_scamp_xml_info(scamp_xml_file):
     wcs_imagecat_name = fields_table.array['Catalog_Name'].data[0]
     if type(wcs_imagecat_name) == bytes:
         wcs_imagecat_name = wcs_imagecat_name.decode("utf-8")
-    info = { 'num_match'    : fgroups_table.array['AstromNDets_Internal_HighSN'].data[0],
+    # Extract AS_Contrast and XY_Contrast as goodness of fit metrics
+    as_contrast = fields_table.array['AS_Contrast'].data[0]
+    if type(as_contrast) == bytes:
+        as_contrast = as_contrast.decode("utf-8")
+    xy_contrast = fields_table.array['XY_Contrast'].data[0]
+    if type(xy_contrast) == bytes:
+        xy_contrast = xy_contrast.decode("utf-8")
+    info = { 'num_match'    : fgroups_table.array['AstromNDets_Reference'].data[0],
              'num_refstars' : fields_table.array['NDetect'].data[0],
              'wcs_refcat'   : wcs_refcat_name,
              'wcs_cattype'  : "%s@CDS" % reference_catalog.upper(),
              'wcs_imagecat' : wcs_imagecat_name,
-             'pixel_scale'  : fields_table.array['Pixel_Scale'].data[0].mean()
+             'pixel_scale'  : fields_table.array['Pixel_Scale'].data[0].mean(),
+             'as_contrast'  : as_contrast,
+             'xy_contrast'  : xy_contrast,
            }
 
     return info
