@@ -333,8 +333,13 @@ class ZeropointProcessPipeline(PipelineProcess):
             C = None
             std_zeropoint = None
             color_const = False
+            min_matches = None
+            if '-ef' in catfile:
+                # Wee FLI fields, reduce min_matches, set constant color
+                min_matches = 5
+                color_const = True
 
-            header, table, refcat = self.setup(catfile, catalog_type, phot_cat_name)
+            header, table, refcat = self.setup(catfile, catalog_type, phot_cat_name, min_matches=min_matches)
 
             if header and table and refcat:
                 cal_filter = map_filter_to_calfilter(header['filter'])
@@ -348,7 +353,7 @@ class ZeropointProcessPipeline(PipelineProcess):
                 self.log(f"New zp={avg_zeropoint:} +/- {std_zeropoint:} {C:}")
 
                 # if crossmatch is good, update new zeropoint
-                if std_zeropoint < std_zeropoint_tolerance:
+                if std_zeropoint is not None and std_zeropoint < std_zeropoint_tolerance:
                     logger.debug("Got good zeropoint - updating header")
                     header['color_used'] = cal_color
                     header['color'] = -99
