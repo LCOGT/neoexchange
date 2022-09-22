@@ -1065,6 +1065,9 @@ def convert_value(keyword, value):
             newvalue = "%.4fm" % dimension
         except IndexError:
             logger.warning("Need to pass a tuple of (number of x/y pixels, pixel scale) to compute a width/height")
+    elif keyword == 'aperture_radius_pixels':
+        # Convert diameter to radius
+        newvalue = value / 2.0
     elif keyword == 'aperture_radius_arcsec':
         try:
             # Calculate radius by multiplying radius in pixels by pixel scale
@@ -1142,7 +1145,8 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
                     convert_to_float = True
                     break
             if convert_to_float is True:
-                catalog_header[fits_keyword] = float(catalog_header[fits_keyword])
+                hdr_value = catalog_header[fits_keyword].replace('/', '').rstrip()
+                catalog_header[fits_keyword] = float(hdr_value)
 
     for item in hdr_mapping.keys():
         fits_keyword = hdr_mapping[item]

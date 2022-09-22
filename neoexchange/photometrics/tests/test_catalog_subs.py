@@ -1780,8 +1780,8 @@ class FITSReadHeader(FITSUnitTest):
                             'astrometric_fit_nstars' : 22,
                             'astrometric_catalog'    : 'UCAC4',
                             'wcs'                    : self.test_ldacwcs,
-                            'aperture_radius_pixels' : 5.0,
-                            'aperture_radius_arcsec' : 5.0*self.test_ldac_pixscale,
+                            'aperture_radius_pixels' : 2.5,
+                            'aperture_radius_arcsec' : 2.5*self.test_ldac_pixscale,
                           }
         expected_cattype = "FITS_LDAC"
 
@@ -2101,8 +2101,8 @@ class FITSReadHeader(FITSUnitTest):
                             'zeropoint_src' : 'BANZAI',
                             'wcs'           : self.test_photpipe_ldacwcs,
                             'reduction_level' : 91,
-                            'aperture_radius_pixels' : 22.94,
-                            'aperture_radius_arcsec' : round(22.94*self.test_photpipe_ldac_pixscale, 4),
+                            'aperture_radius_pixels' : 11.47,
+                            'aperture_radius_arcsec' : round(11.47*self.test_photpipe_ldac_pixscale, 4),
                           }
         expected_cattype = "PHOTPIPE_LDAC"
 
@@ -2442,8 +2442,8 @@ class TestExtractCatalog(FITSUnitTest):
                        'zeropoint_err': -99.0,
                        'zeropoint_src': 'NOT_FIT(LCOGTCAL-V0.0.2-r8174)',
                        'wcs' : self.test_ldacwcs,
-                       'aperture_radius_pixels' : 5.0,
-                       'aperture_radius_arcsec' : round(5.0*self.test_ldac_pixscale, 4)}
+                       'aperture_radius_pixels' : 2.5,
+                       'aperture_radius_arcsec' : round(2.5*self.test_ldac_pixscale, 4)}
 
         shutil.copy(os.path.abspath(self.test_ldacfilename), self.temp_dir)
         test_ldacfilename = os.path.join(self.temp_dir, os.path.basename(self.test_ldacfilename))
@@ -2478,8 +2478,8 @@ class TestExtractCatalog(FITSUnitTest):
                        'zeropoint_err': -99.0,
                        'zeropoint_src': 'NOT_FIT(LCOGTCAL-V0.0.2-r8174)',
                        'wcs' : self.test_ldacwcs,
-                       'aperture_radius_pixels' : 5.0,
-                       'aperture_radius_arcsec' : round(5.0*self.test_ldac_pixscale, 4)}
+                       'aperture_radius_pixels' : 2.5,
+                       'aperture_radius_arcsec' : round(2.5*self.test_ldac_pixscale, 4)}
 
         shutil.copy(os.path.abspath(self.test_ldacfilename), self.temp_dir)
         test_ldacfilename = os.path.join(self.temp_dir, os.path.basename(self.test_ldacfilename))
@@ -2514,8 +2514,8 @@ class TestExtractCatalog(FITSUnitTest):
                        'zeropoint_err': -99.0,
                        'zeropoint_src': 'BANZAI',
                        'wcs' : self.test_photpipe_ldacwcs,
-                       'aperture_radius_pixels' : 22.94,
-                       'aperture_radius_arcsec' : round(22.94*self.test_photpipe_ldac_pixscale, 4)}
+                       'aperture_radius_pixels' : 11.47,
+                       'aperture_radius_arcsec' : round(11.47*self.test_photpipe_ldac_pixscale, 4)}
 
         shutil.copy(os.path.abspath(self.test_photpipefilename), self.temp_dir)
         test_photpipefilename = os.path.join(self.temp_dir, os.path.basename(self.test_photpipefilename))
