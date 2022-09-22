@@ -68,7 +68,27 @@ class SExtractorProcessPipeline(PipelineProcess):
             filepath_or_status = self.setup(fits_file, desired_catalog, out_path)
             print('filepath_or_status=', filepath_or_status)
             if type(filepath_or_status) != int:
-                status = self.process(filepath_or_status, configs_dir, out_path)
+                filepath_or_status = self.process(filepath_or_status, configs_dir, out_path)
+                print('filepath_or_status2=', filepath_or_status)
+                if type(filepath_or_status) != int:
+                    # # Find Block for original frame
+                    block = find_block_for_frame(fits_file)
+                    if block is None:
+                        msg = f"Could not find block for fits frame {fits_file:}"
+                        logger.error(msg)
+                        self.log(msg)
+                        raise NeoException(msg)
+
+                    # # Check if we have a sitecode (none if this is a new instrument/telescope)
+                    header, cattype = get_header(fits_file)
+                    if header.get('site_code', None) is None:
+                        msg = f"No sitecode found for fits frame {fits_file:}"
+                        logger.error(msg)
+                        self.log(msg)
+                        raise NeoException(msg)
+
+                    # # Create a new Frame entry for the new_ldac_catalog (e91_ldac.fits)
+                    num_new_frames_created = make_new_catalog_entry(filepath_or_status, header, block)
         except NeoException as ex:
             logger.error('Error with source extraction: {}'.format(ex))
             self.log('Error with source extraction: {}'.format(ex))
@@ -82,13 +102,13 @@ class SExtractorProcessPipeline(PipelineProcess):
 
     def setup(self, fits_file, desired_catalog, dest_dir):
 
-        # Open catalog, get header and check fit status
-        fits_header, junk_table, cattype = open_fits_catalog(fits_file, header_only=True)
-        try:
-            header = get_catalog_header(fits_header, cattype)
-        except FITSHdrException as e:
-            logger.error("Bad header for %s (%s)" % (fits_file, e))
-            return -1
+        # # Open catalog, get header and check fit status
+        # fits_header, junk_table, cattype = open_fits_catalog(fits_file, header_only=True)
+        # try:
+            # header = get_catalog_header(fits_header, cattype)
+        # except FITSHdrException as e:
+            # logger.error("Bad header for %s (%s)" % (fits_file, e))
+            # return -1
 
         # Check for matching catalog (solved with desired astrometric reference catalog)
         catfilename = os.path.basename(fits_file).replace('.fits', '_ldac.fits')
@@ -128,7 +148,7 @@ class SExtractorProcessPipeline(PipelineProcess):
             self.log("Execution of SExtractor failed")
             return -4
         self.log(f"Produced {new_ldac_catalog:}")
-
+        return new_ldac_catalog
 
 class ScampProcessPipeline(PipelineProcess):
     """
