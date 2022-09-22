@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.12.3
+* Store the submitting observer in a new table linked to SuperBlock (Issue #608)
+
 ### 3.12.2
 * Fix issue for 73P where visibility plots were plotting fragment 73P-BV instead (Issue #606)
 
