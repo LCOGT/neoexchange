@@ -21,10 +21,11 @@ class Command(BaseCommand):
                     default='GAIA-DR2',
                     const='GAIA-DR2',
                     nargs='?',
-                    choices=['GAIA-DR2', 'PS1', 'REFCAT2'],
-                    help='Reference catalog: choice of GAIA-DR2, PS1, REFCAT2 (default: %(default)s)')
+                    choices=['GAIA-DR2', 'PS1', 'REFCAT2', 'SkyMapper'],
+                    help='Reference catalog: choice of GAIA-DR2, PS1, REFCAT2, SkyMapper (default: %(default)s)')
         parser.add_argument('--tempdir', action="store", default=default_tempdir, help=f'Temporary processing directory name (e.g. {default_tempdir}')
         parser.add_argument('--zp_tolerance', type=float, default=0.1, help='Tolerance on zeropoint std.dev for a good fit (default: %(default)s) mag')
+        parser.add_argument('--overwrite', default=False, action='store_true', help='Whether to ignore existing files/DB entries and overwrite')
 
     def handle(self, *args, **options):
         # Path to directory containing some e91 BANZAI files
@@ -63,7 +64,8 @@ class Command(BaseCommand):
             steps = [{
                         'name'   : 'proc-extract',
                         'inputs' : {'fits_file':fits_filepath,
-                                   'datadir': os.path.join(dataroot, options['tempdir'])}
+                                   'datadir': os.path.join(dataroot, options['tempdir']),
+                                   'overwrite' : options['overwrite']}
                     },
                     {
                         'name'   : 'proc-astromfit',

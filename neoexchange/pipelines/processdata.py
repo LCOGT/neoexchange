@@ -8,11 +8,14 @@ import warnings
 from django.conf import settings
 from django.core.files import File
 from django.core.files.storage import default_storage
+from dramatiq import pipeline
 from dramatiq.middleware.time_limit import TimeLimitExceeded
 import calviacat as cvc
+from astropy.wcs import FITSFixedWarning
 import astropy.coordinates as coord
 
 from core.models import Frame
+from core.models.async_process import AsyncError
 from core.models.pipelines import PipelineProcess, PipelineOutput
 from core.utils import save_to_default, NeoException
 from core.views import find_matching_image_file, run_sextractor_make_catalog, \
@@ -49,6 +52,10 @@ class SExtractorProcessPipeline(PipelineProcess):
         'desired_catalog' : {
             'default' : 'GAIA-DR2',
             'long_name' : 'Type of astrometric catalog desired'
+        },
+        'overwrite' : {
+            'default' : False,
+            'long_name' : 'Whether to ignore existing files/DB entries'
         }
     }
 
@@ -63,13 +70,14 @@ class SExtractorProcessPipeline(PipelineProcess):
         fits_file = inputs.get('fits_file')
         configs_dir = inputs.get('configs_dir')
         desired_catalog = inputs.get('desired_catalog')
+        overwrite = inputs.get('overwrite', False)
 
         try:
-            filepath_or_status = self.setup(fits_file, desired_catalog, out_path)
-            print('filepath_or_status=', filepath_or_status)
+            filepath_or_status = self.setup(fits_file, desired_catalog, out_path, overwrite)
+            print(f'filepath_or_status= {filepath_or_status}')
             if type(filepath_or_status) != int:
                 filepath_or_status = self.process(filepath_or_status, configs_dir, out_path)
-                print('filepath_or_status2=', filepath_or_status)
+                print(f'filepath_or_status2= {filepath_or_status}')
                 if type(filepath_or_status) != int:
                     # # Find Block for original frame
                     block = find_block_for_frame(fits_file)
@@ -100,8 +108,8 @@ class SExtractorProcessPipeline(PipelineProcess):
         self.log('Pipeline Completed')
         return
 
-    def setup(self, fits_file, desired_catalog, dest_dir):
-
+    def setup(self, fits_file, desired_catalog, dest_dir, overwrite=False):
+        warnings.simplefilter('ignore', FITSFixedWarning)
         # # Open catalog, get header and check fit status
         # fits_header, junk_table, cattype = open_fits_catalog(fits_file, header_only=True)
         # try:
@@ -110,20 +118,25 @@ class SExtractorProcessPipeline(PipelineProcess):
             # logger.error("Bad header for %s (%s)" % (fits_file, e))
             # return -1
 
-        # Check for matching catalog (solved with desired astrometric reference catalog)
-        catfilename = os.path.basename(fits_file).replace('.fits', '_ldac.fits')
-        catalog_frames = Frame.objects.filter(filename=catfilename,
-                                              frametype__in=(Frame.BANZAI_LDAC_CATALOG, Frame.FITS_LDAC_CATALOG),
-                                              astrometric_catalog=desired_catalog)
-        if len(catalog_frames) != 0:
-            logger.info(f"Found reprocessed frame ({catalog_frames[0].filename:}) in DB")
-            self.log(f"Found reprocessed frame ({catalog_frames[0].filename:}) in DB")
-            ldac_filepath =  os.path.abspath(os.path.join(dest_dir, catalog_frames[0].filename))
-            if os.path.exists(ldac_filepath) is True:
-                return 0
-            else:
-                logger.info("but not on disk. continuing")
-                self.log("but not on disk. continuing")
+        if overwrite is False:
+            # Check for matching catalog (solved with desired astrometric reference catalog)
+            catfilename = os.path.basename(fits_file).replace('.fits', '_ldac.fits')
+            catalog_frames = Frame.objects.filter(filename=catfilename,
+                                                  frametype__in=(Frame.BANZAI_LDAC_CATALOG, Frame.FITS_LDAC_CATALOG),
+                                                  astrometric_catalog=desired_catalog)
+            if len(catalog_frames) != 0:
+                logger.info(f"Found reprocessed frame ({catalog_frames[0].filename:}) in DB")
+                self.log(f"Found reprocessed frame ({catalog_frames[0].filename:}) in DB")
+                ldac_filepath =  os.path.abspath(os.path.join(dest_dir, catalog_frames[0].filename))
+                if os.path.exists(ldac_filepath) is True:
+                    return 0
+                else:
+                    logger.info("but not on disk. continuing")
+                    self.log("but not on disk. continuing")
+        else:
+            msg = "Overwriting, ignoring existing files/DB entries"
+            logger.info(msg)
+            self.log(msg)
 
         # Find image file for this catalog
         fits_filepath = find_matching_image_file(fits_file)
@@ -464,8 +477,10 @@ class ZeropointProcessPipeline(PipelineProcess):
                 refcat = cvc.RefCat2(db_filename, **kwargs)
             elif phot_cat_name == 'GAIA-DR2':
                 refcat = cvc.Gaia(db_filename, **kwargs)
+            elif phot_cat_name == 'SkyMapper':
+                refcat = cvc.SkyMapper(db_filename, **kwargs)
             else:
-                logger.error(f"Unknown reference catalog {phot_cat_name:}. Must be one of PS1, REFCAT2, GAIA-DR2")
+                logger.error(f"Unknown reference catalog {phot_cat_name:}. Must be one of PS1, REFCAT2, GAIA-DR2, SkyMapper")
         return header, table, refcat
 
     def create_caldb_filename(self, datadir, header, phot_cat_name, dbg=False):
