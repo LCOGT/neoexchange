@@ -272,7 +272,7 @@ if __name__ == "__main__":
                 resp.raise_for_status()
                 response = resp.json()
                 tracking_number = response['request_group_id']
-                print('Submitted block with id: {0}. Check it at {1}/blocks/{0}'.format(response['id'], SUBMIT_URL))
+                print('Submitted block with id: {0}. Check it at {1}/observations/{0}'.format(response['id'], SUBMIT_URL))
                 print("Now create downtime blocks at http://downtime.lco.gtn/admin/schedule/downtime/add/")
                 request_items = [response.get('request', ''), ]
                 request_numbers = [r['id'] for r in request_items]
