@@ -369,7 +369,7 @@ class ZeropointProcessPipeline(PipelineProcess):
         std_zeropoint_tolerance = inputs.get('zeropoint_tolerance')
         color_const = inputs.get('color_const', False)
         solar = inputs.get('solar', True)
- 
+
         try:
 
             num_in_table = 0
@@ -468,7 +468,16 @@ class ZeropointProcessPipeline(PipelineProcess):
         filename = os.path.basename(catfile)
         datadir = os.path.join(os.path.dirname(catfile), '')
 
-        header, table = extract_catalog(catfile, catalog_type)
+        # flag_filter=7 allows all of:
+        #Value  Meaning
+        #1      aperture photometry is likely to be biased by neighboring sources or by more than 10% of bad pixels in any aperture
+        #2      the object has been deblended
+        #4      at least one object pixel is saturated
+        # but not:
+        #8      the isophotal footprint of the detected object is truncated (too close to an image boundary)
+        # or more serious problems (object corruption or memory overflow)
+
+        header, table = extract_catalog(catfile, catalog_type, flag_filter=7)
         if header and table:
             db_filename = self.create_caldb_filename(datadir, header, phot_cat_name)
 
