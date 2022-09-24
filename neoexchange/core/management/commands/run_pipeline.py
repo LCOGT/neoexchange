@@ -1,4 +1,5 @@
 import os
+import argparse
 from datetime import datetime
 
 from django.core.management.base import BaseCommand, CommandError
@@ -11,6 +12,16 @@ from core.views import determine_images_and_catalogs
 class Command(BaseCommand):
 
     help = 'Start at a pipeline runner'
+
+    def str2bool(self, v):
+        if isinstance(v, bool):
+            return v
+        if v.lower() in ('yes', 'true', 't', 'y', '1'):
+            return True
+        elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+            return False
+        else:
+            raise argparse.ArgumentTypeError('Boolean value expected')
 
     def add_arguments(self, parser):
         default_path = os.path.join(os.path.sep, 'data', 'eng', 'rocks')
@@ -26,6 +37,8 @@ class Command(BaseCommand):
         parser.add_argument('--tempdir', action="store", default=default_tempdir, help=f'Temporary processing directory name (e.g. {default_tempdir}')
         parser.add_argument('--zp_tolerance', type=float, default=0.1, help='Tolerance on zeropoint std.dev for a good fit (default: %(default)s) mag')
         parser.add_argument('--overwrite', default=False, action='store_true', help='Whether to ignore existing files/DB entries and overwrite')
+        parser.add_argument('--color_const', default=False, type=self.str2bool, nargs='?', const=True, help='Whether to assume a constant color or fit for color term %(default)s')
+        parser.add_argument('--solar', default=True, type=self.str2bool, nargs='?', const=True, help='Whether to only include stars of near-solar (+/-0.2 mag) color %(default)s')
 
     def handle(self, *args, **options):
         # Path to directory containing some e91 BANZAI files
@@ -79,7 +92,9 @@ class Command(BaseCommand):
                         'inputs' : {'ldac_catalog' : os.path.join(dataroot, options['tempdir'], fits_file.replace('e91.fits', 'e92_ldac.fits')),
                                     'datadir' : os.path.join(dataroot, options['tempdir']),
                                     'zeropoint_tolerance' : options['zp_tolerance'],
-                                    'desired_catalog' : options['refcat']
+                                    'desired_catalog' : options['refcat'],
+                                    'color_const' : options['color_const'],
+                                    'solar' : options['solar']
                                     }
                     }]
             self.stdout.write(f"Running pipeline on {fits_file}:")

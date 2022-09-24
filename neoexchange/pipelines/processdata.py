@@ -346,6 +346,16 @@ class ZeropointProcessPipeline(PipelineProcess):
             'default' : True,
             'long_name' : 'Whether to use the new ZP method via calviacat'
         }
+        },
+        'color_const' : {
+            'default' : False,
+            'long_name' : 'Whether to use a constant color or fit for it'
+        }
+        },
+        'solar' : {
+            'default' : True,
+            'long_name' : 'Whether to use restrict to solar-like colors of calib stars'
+        }
     }
 
     class Meta:
@@ -357,7 +367,9 @@ class ZeropointProcessPipeline(PipelineProcess):
         catalog_type = inputs.get('catalog_type')
         phot_cat_name = inputs.get('desired_catalog')
         std_zeropoint_tolerance = inputs.get('zeropoint_tolerance')
-
+        color_const = inputs.get('color_const', False)
+        solar = inputs.get('solar', True)
+ 
         try:
 
             num_in_table = 0
@@ -365,9 +377,6 @@ class ZeropointProcessPipeline(PipelineProcess):
             avg_zeropoint = None
             C = None
             std_zeropoint = None
-            color_const = False
-            solar = True
-
             min_matches = None
             if '-ef' in catfile:
                 # Wee FLI fields, reduce min_matches, set constant color
@@ -383,7 +392,7 @@ class ZeropointProcessPipeline(PipelineProcess):
                     logger.error(f"This filter ({header['filter']}) is not calibrateable")
                     return
                 # Cross match with reference catalog and compute zeropoint
-                logger.info(f"Calibrating {header['filter']} instrumental mags. with {cal_filter} using {phot_cat_name}")
+                logger.info(f"Calibrating {header['filter']} instrumental mags. with {cal_filter} using {phot_cat_name} color_const= {color_const} solar= {solar}")
                 avg_zeropoint, std_zeropoint, C, cal_color = self.cross_match_and_zp(table, refcat, \
                     std_zeropoint_tolerance, cal_filter, header['filter'], color_const, solar)
                 logger.info(f"New zp={avg_zeropoint:} +/- {std_zeropoint:} {C:}")
