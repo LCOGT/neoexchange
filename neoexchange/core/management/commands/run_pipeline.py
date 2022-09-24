@@ -88,6 +88,12 @@ class Command(BaseCommand):
                                     }
                     },
                     {
+                        'name'   : 'proc-extract',
+                        'inputs' : {'fits_file': os.path.join(dataroot, options['tempdir'], fits_file.replace('e91.fits', 'e92.fits')),
+                                   'datadir': os.path.join(dataroot, options['tempdir']),
+                                   'overwrite' : options['overwrite']}
+                    },
+                    {
                         'name'   : 'proc-zeropoint',
                         'inputs' : {'ldac_catalog' : os.path.join(dataroot, options['tempdir'], fits_file.replace('e91.fits', 'e92_ldac.fits')),
                                     'datadir' : os.path.join(dataroot, options['tempdir']),
@@ -109,6 +115,6 @@ class Command(BaseCommand):
 #                self.stdout.write(f"  PK={pipe.pk} for {step['name']}")
                 pipes.append(run_pipeline.message_with_options(args=[pipe.pk, step['name']], pipe_ignore=True))
             runner  = pipeline(pipes).run()
-        self.stdout.write("Waiting for pipeline to complete")
-        runner.get_result(block=True, timeout=180_000*len(fits_files))
-        self.stdout.write("Completed")
+            self.stdout.write("Waiting for pipeline to complete")
+            runner.get_result(block=True, timeout=180_000*len(fits_files))
+            self.stdout.write(f"Completed for {fits_file}")

@@ -323,7 +323,10 @@ def determine_sextractor_options(fits_file, dest_dir, checkimage_type=[], catalo
         checkimage_name_str = ','.join(checkimage_name)
         options += f' -CHECKIMAGE_TYPE {checkimage_type_str} -CHECKIMAGE_NAME {checkimage_name_str}'
 
-    options += ' -BACK_SIZE 42'
+    if max(header['naxis1'], header['naxis2']) < 2100:
+        options += ' -BACK_SIZE 32'
+    else:
+        options += ' -BACK_SIZE 64'
 
     hdulist.close()
     return options

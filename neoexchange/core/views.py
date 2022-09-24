@@ -3449,6 +3449,8 @@ def determine_original_name(fits_file):
         fits_file_orig = os.path.basename(fits_file.replace('e10.fits', 'e00.fits'))
     elif 'e91.fits' in os.path.basename(fits_file):
         fits_file_orig = os.path.basename(fits_file.replace('e91.fits', 'e00.fits'))
+    elif 'e92.fits' in os.path.basename(fits_file):
+        fits_file_orig = os.path.basename(fits_file.replace('e92.fits', 'e00.fits'))
     elif 'e11.fits' in os.path.basename(fits_file):
         fits_file_orig = os.path.basename(fits_file.replace('e11.fits', 'e00.fits'))
     return fits_file_orig
@@ -3594,12 +3596,12 @@ def find_block_for_frame(catfile):
             logger.error("Found multiple versions of fits frame %s pointing at multiple blocks" % fits_file_orig)
             return None
         except Frame.DoesNotExist:
-            logger.error("Frame entry for fits file %s does not exist" % fits_file_orig)
+            logger.error("core.views: Frame entry for fits file %s does not exist" % fits_file_orig)
             return None
     return frame.block
 
 
-def make_new_catalog_entry(new_ldac_catalog, header, block):
+def make_new_catalog_entry(new_ldac_catalog, header, block, frame_type=Frame.BANZAI_LDAC_CATALOG):
 
     num_new_frames_created = 0
 
@@ -3608,6 +3610,8 @@ def make_new_catalog_entry(new_ldac_catalog, header, block):
     catfilename = os.path.basename(new_ldac_catalog)
     cat_frames = Frame.objects.filter(filename=catfilename, block__isnull=False)
     num_frames = cat_frames.count()
+
+    print(f"make_new_catalog_entry: zp= {header['zeropoint']} +/- {header['zeropoint_err']} {header['zeropoint_src']}")
     if num_frames == 0:
 
         # Create a new Frame entry for new fits_file_output name
@@ -3625,7 +3629,7 @@ def make_new_catalog_entry(new_ldac_catalog, header, block):
                               'color' : header.get('color', -99.0),
                           'color_err' : header.get('color_err', -99.0),
                                 'fwhm': header['fwhm'],
-                           'frametype': Frame.BANZAI_LDAC_CATALOG,
+                           'frametype': frame_type,
                 'astrometric_catalog' : header.get('astrometric_catalog', None),
                           'rms_of_fit': header['astrometric_fit_rms'],
                        'nstars_in_fit': header['astrometric_fit_nstars'],
@@ -3651,7 +3655,7 @@ def make_new_catalog_entry(new_ldac_catalog, header, block):
                       'color' : header.get('color', -99.0),
                   'color_err' : header.get('color_err', -99.0),
                         'fwhm': header['fwhm'],
-                   'frametype': Frame.BANZAI_LDAC_CATALOG,
+                   'frametype': frame_type,
                    'astrometric_catalog' : header.get('astrometric_catalog', None),
                   'rms_of_fit': header['astrometric_fit_rms'],
                'nstars_in_fit': header['astrometric_fit_nstars'],

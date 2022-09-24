@@ -680,8 +680,8 @@ def fitsldac_catalog_mapping():
                     ('major_axis'    , 'AWIN_IMAGE'),
                     ('minor_axis'    , 'BWIN_IMAGE'),
                     ('ccd_pa'        , 'THETAWIN_IMAGE'),
-                    ('obs_mag'       , 'FLUX_AUTO'),
-                    ('obs_mag_err'   , 'FLUXERR_AUTO'),
+                    ('obs_mag'       , 'FLUX_APER'),
+                    ('obs_mag_err'   , 'FLUXERR_APER'),
                     ('obs_sky_bkgd'  , 'BACKGROUND'),
                     ('flags'         , 'FLAGS'),
                     ('flux_max'      , 'FLUX_MAX'),
@@ -789,8 +789,8 @@ def banzai_ldac_catalog_mapping():
                     ('major_axis'    , 'AWIN_IMAGE'),
                     ('minor_axis'    , 'BWIN_IMAGE'),
                     ('ccd_pa'        , 'THETAWIN_IMAGE'),
-                    ('obs_mag'       , 'FLUX_AUTO'),
-                    ('obs_mag_err'   , 'FLUXERR_AUTO'),
+                    ('obs_mag'       , 'FLUX_APER'),
+                    ('obs_mag_err'   , 'FLUXERR_APER'),
                     ('obs_sky_bkgd'  , 'BACKGROUND'),
                     ('flags'         , 'FLAGS'),
                     ('flux_max'      , 'FLUX_MAX'),
@@ -1402,6 +1402,7 @@ def get_catalog_items_new(header_items, table, catalog_type='LCOGT', flag_filter
         scale = header_items['pixel_scale'] * header_items['pixel_scale']
         new_table['threshold'] = np.power(10, (new_table['threshold']/-2.5)) * scale
     if header_items.get('zeropoint', -99) != -99:
+        print(f"Applying zeropoint of {header_items['zeropoint']}")
         new_table['obs_mag'] += header_items['zeropoint']
 
     return new_table
@@ -1802,8 +1803,8 @@ def determine_image_for_catalog(new_catalog):
     """Determines the originating FITS filename for the passed catalog name,
     allowing correct naming for the corresponding .sext file"""
     if 'e92_ldac.fits' in new_catalog or 'e12_ldac.fits' in new_catalog:
-        real_fits_filename = os.path.basename(new_catalog).replace('2_ldac.fits', '1.fits')
-        fits_filename_path = new_catalog.replace('2_ldac.fits', '1.fits')
+        real_fits_filename = os.path.basename(new_catalog).replace('2_ldac.fits', '2.fits')
+        fits_filename_path = new_catalog.replace('2_ldac.fits', '2.fits')
     elif '_ldac.fits' in new_catalog:
         real_fits_filename = os.path.basename(new_catalog).replace('_ldac.fits', '.fits')
         fits_filename_path = new_catalog.replace('_ldac.fits', '.fits')
@@ -1834,7 +1835,7 @@ def make_sext_dict_list(new_catalog, catalog_type, edge_trim_limit=75.0):
         logger.error("Found multiple versions of fits frame %s pointing at multiple blocks" % real_fits_filename)
         return -3, -3
     except Frame.DoesNotExist:
-        logger.error("Frame entry for fits file %s does not exist" % real_fits_filename)
+        logger.error("catalog_subs: Frame entry for fits file %s does not exist" % real_fits_filename)
         return -3, -3
     sources = CatalogSources.objects.filter(frame__filename=real_fits_filename, obs_mag__gt=0.0, obs_x__gt=edge_trim_limit,
                                             obs_x__lt=num_x_pixels-edge_trim_limit, obs_y__gt=edge_trim_limit, obs_y__lt=num_y_pixels-edge_trim_limit)

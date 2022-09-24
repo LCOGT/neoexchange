@@ -23,7 +23,7 @@ from core.views import find_matching_image_file, run_sextractor_make_catalog, \
 from core.tasks import send_task, run_pipeline
 from photometrics.catalog_subs import FITSHdrException, open_fits_catalog, \
     get_catalog_header, increment_red_level, get_reference_catalog, extract_catalog, \
-    existing_catalog_coverage, reset_database_connection, \
+    existing_catalog_coverage, reset_database_connection, get_header, \
     update_zeropoint, update_frame_zeropoint, get_or_create_CatalogSources
 from photometrics.photometry_subs import map_filter_to_calfilter
 from photometrics.external_codes import updateFITSWCS, updateFITScalib
@@ -213,27 +213,8 @@ class ScampProcessPipeline(PipelineProcess):
                 if status == 0:
                     # Update WCS in FITS file with the results from the SCAMP fit
                     status, fits_file_output = self.update_wcs(fits_file, ldac_catalog, out_path)
-                    # Re-extract a new FITS-LDAC catalog from the updated frame
-                    pipeline_cls = PipelineProcess.get_subclass('proc-extract')
-                    extract_inputs = { 'fits_file' : fits_file_output,
-                                       'configs_dir' : configs_dir,
-                                       'datadir' : out_path,
-                                       'desired_catalog' : desired_catalog
-                                     }
-                    self.log(f"Creating new FITS-LDAC catalog for {fits_file_output:}")
-                    extract_pipe = pipeline_cls.create_timestamped(extract_inputs)
-                    send_task(run_pipeline, extract_pipe, 'proc-extract')
-                    # XXX How do we wait until the above finishes ?
-                    new_ldac_catalog = fits_file_output.replace('e92', 'e92_ldac')
-                    logger.debug(f"Filename after 2nd SExtractor= {new_ldac_catalog:}")
-                    # if status != 0:
-                        # logger.error("Execution of second SExtractor failed")
-                        # return -4, 0
 
-                    # # Reset DB connection after potentially long-running process.
-                    # XXX Can we do this here ? Will it break the Dramatiq process?
-                    # reset_database_connection()
-                    fits_header, junk_table, cattype = open_fits_catalog(fits_file, header_only=True)
+                    fits_header, junk_table, cattype = open_fits_catalog(fits_file_output, header_only=True)
                     try:
                         header = get_catalog_header(fits_header, cattype)
                     except FITSHdrException as e:
@@ -254,8 +235,9 @@ class ScampProcessPipeline(PipelineProcess):
                         self.log(f"No sitecode found for fits frame {fits_file:}")
                         return -5
 
-                    # # Create a new Frame entry for the new_ldac_catalog (e92_ldac.fits)
-                    num_new_frames_created = make_new_catalog_entry(new_ldac_catalog, header, block)
+                    # # Create a new Frame entry for the fits_file_output (e92.fits)
+                    logger.info(f"Created Frame.NEOX_RED_FRAMETYPE entry for {os.path.basename(fits_file_output)}")
+                    num_new_frames_created = make_new_catalog_entry(fits_file_output, header, block, frame_type=Frame.NEOX_RED_FRAMETYPE)
 
         except NeoException as ex:
             logger.error('Error with astrometric fit: {}'.format(ex))
@@ -345,12 +327,10 @@ class ZeropointProcessPipeline(PipelineProcess):
         'new_method' : {
             'default' : True,
             'long_name' : 'Whether to use the new ZP method via calviacat'
-        }
         },
         'color_const' : {
             'default' : False,
             'long_name' : 'Whether to use a constant color or fit for it'
-        }
         },
         'solar' : {
             'default' : True,
