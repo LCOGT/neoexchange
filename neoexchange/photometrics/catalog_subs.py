@@ -1390,6 +1390,8 @@ def get_catalog_items_new(header_items, table, catalog_type='LCOGT', flag_filter
     # Filter out -ve fluxes
     if neg_flux_mask:
         good_flux_mask = new_table['obs_mag'] > 0.0
+        if len(good_flux_mask.shape) == 2:
+            good_flux_mask = good_flux_mask.any(axis=1)
         new_table = new_table[good_flux_mask]
     # Convert columns
     if 'obs_ra_err' in tbl_mapping.keys() and 'obs_dec_err' in tbl_mapping.keys():
