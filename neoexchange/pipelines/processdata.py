@@ -206,7 +206,7 @@ class ScampProcessPipeline(PipelineProcess):
         desired_catalog = inputs.get('desired_catalog')
 
         try:
-            refcat_or_status = self.setup(ldac_catalog, out_path, desired_catalog)
+            refcat_or_status = self.setup(fits_file, ldac_catalog, out_path, desired_catalog)
             if type(refcat_or_status) != int:
                 # Run SCAMP on the FITS-LDAC catalog to derive new astrometric fit
                 status = self.process(ldac_catalog, configs_dir, out_path, refcat_or_status)
@@ -250,9 +250,27 @@ class ScampProcessPipeline(PipelineProcess):
         self.log('Pipeline Completed')
         return
 
-    def setup(self, catfile, dest_dir, desired_catalog):
+    def setup(self, fits_file, catfile, dest_dir, desired_catalog):
+        warnings.simplefilter('ignore', FITSFixedWarning)
 
-        # Open catalog, get header and check fit status
+        # Check for matching e92 FITS file (solved with desired astrometric reference catalog)
+        fits_file_output = increment_red_level(fits_file)
+        fitted_frames = Frame.objects.filter(filename=fits_file_output,
+                                              frametype=Frame.NEOX_RED_FRAMETYPE,
+                                              astrometric_catalog=desired_catalog)
+        if len(fitted_frames) == 1:
+            logger.info(f"Found reprocessed frame ({fitted_frames[0].filename:}) in DB")
+            self.log(f"Found reprocessed frame ({fitted_frames[0].filename:}) in DB")
+            fitted_filepath =  os.path.abspath(os.path.join(dest_dir, fitted_frames[0].filename))
+            if os.path.exists(fitted_filepath) is True:
+                return 0
+            else:
+                logger.info("but not on disk. continuing")
+                self.log("but not on disk. continuing")
+        elif len(fitted_frames) > 1:
+            logger.warning("Multiple refitted Frames found!?")
+
+        # Open catalog, get header
         fits_header, junk_table, cattype = open_fits_catalog(catfile, header_only=True)
         try:
             header = get_catalog_header(fits_header, cattype)
