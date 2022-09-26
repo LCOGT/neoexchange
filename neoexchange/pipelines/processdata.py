@@ -56,6 +56,10 @@ class SExtractorProcessPipeline(PipelineProcess):
         'overwrite' : {
             'default' : False,
             'long_name' : 'Whether to ignore existing files/DB entries'
+        },
+        'catalog_type' : {
+            'default' : 'FITS_LDAC',
+            'long_name' : 'Type of output catalog to produce'
         }
     }
 
@@ -71,12 +75,13 @@ class SExtractorProcessPipeline(PipelineProcess):
         configs_dir = inputs.get('configs_dir')
         desired_catalog = inputs.get('desired_catalog')
         overwrite = inputs.get('overwrite', False)
+        catalog_type = inputs.get('catalog_type', 'FITS_LDAC')
 
         try:
             filepath_or_status = self.setup(fits_file, desired_catalog, out_path, overwrite)
             print(f'filepath_or_status= {filepath_or_status}')
             if type(filepath_or_status) != int:
-                filepath_or_status = self.process(filepath_or_status, configs_dir, out_path)
+                filepath_or_status = self.process(filepath_or_status, configs_dir, out_path, catalog_type)
                 print(f'filepath_or_status2= {filepath_or_status}')
                 if type(filepath_or_status) != int:
                     # # Find Block for original frame
@@ -146,16 +151,16 @@ class SExtractorProcessPipeline(PipelineProcess):
 
         return fits_filepath
 
-    def process(self, fits_file, configs_dir, dest_dir):
+    def process(self, fits_file, configs_dir, dest_dir, catalog_type='FITS_LDAC'):
 
         # Make a new FITS_LDAC catalog from the frame
         self.log(f"Processing {fits_file:} with SExtractor")
         checkimage_types = ['BACKGROUND_RMS', "-BACKGROUND"]
-        if '-e91' in fits_file:
+        if '-e91' in fits_file or '-ef' in fits_file:
             # No need to make rms or background images until we have a new
             # astrometric fit and -e92 files
             checkimage_types = []
-        status, new_ldac_catalog = run_sextractor_make_catalog(configs_dir, dest_dir, fits_file, checkimage_type=checkimage_types)
+        status, new_ldac_catalog = run_sextractor_make_catalog(configs_dir, dest_dir, fits_file, checkimage_type=checkimage_types, catalog_type=catalog_type)
         if status != 0:
             logger.error("Execution of SExtractor failed")
             self.log("Execution of SExtractor failed")

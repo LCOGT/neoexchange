@@ -69,6 +69,10 @@ class Command(BaseCommand):
         if fits_files is None or len(fits_files) == 0:
             raise CommandError(f"No FITS files found in {dataroot}")
 
+        catalog_type = 'FITS_LDAC'
+        if '-ef' in catalog_type:
+            catalog_type = 'FITS_LDAC_MULTIAPER'
+
         # Process all files through all pipeline steps
         for fits_filepath in fits_files:
             # fits_filepath is the full path including the dataroot and obs_date e.g. /apophis/eng/rocks/20220731/cpt1m010-fa16-20220731-0146-e91.fits
@@ -78,7 +82,8 @@ class Command(BaseCommand):
                         'name'   : 'proc-extract',
                         'inputs' : {'fits_file':fits_filepath,
                                    'datadir': os.path.join(dataroot, options['tempdir']),
-                                   'overwrite' : options['overwrite']}
+                                   'overwrite' : options['overwrite'],
+                                   'catalog_type' : catalog_type}
                     },
                     {
                         'name'   : 'proc-astromfit',
@@ -91,7 +96,8 @@ class Command(BaseCommand):
                         'name'   : 'proc-extract',
                         'inputs' : {'fits_file': os.path.join(dataroot, options['tempdir'], fits_file.replace('e91.fits', 'e92.fits')),
                                    'datadir': os.path.join(dataroot, options['tempdir']),
-                                   'overwrite' : options['overwrite']}
+                                   'overwrite' : options['overwrite'],
+                                   'catalog_type' : catalog_type}
                     },
                     {
                         'name'   : 'proc-zeropoint',
