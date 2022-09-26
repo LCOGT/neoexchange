@@ -3,7 +3,7 @@
 12 5,16 * * * python3 manage.py fetch_NASA_targets
 05,35 * * * * python3 manage.py update_neocp_data
 30 1,5,9,13,17,21 * * * python3 manage.py update_crossids
-*/20 * * * * python3 manage.py update_blocks
+*/5 * * * * python3 manage.py update_blocks
 10 7 * * * python3 manage.py update_taxonomy_data
 03 05,18 * * * python3 manage.py update_targets
 30 7 * * 0 python3 manage.py update_external_spectroscopy_data -a
