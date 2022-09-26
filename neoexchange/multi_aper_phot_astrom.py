@@ -11,6 +11,7 @@ from astrometrics.ephem_subs import horizons_ephem
 
 from astropy.table import Table, Column
 from astropy.time import Time
+from astropy.io import fits
 from datetime import datetime, timedelta
 
 import astropy.units as u
@@ -353,7 +354,7 @@ def interpolate_with_time(config, times, data, data_err=None, diagnostics=False,
 
     if len(valid) == 0:
         raise ValueError('No frames have a valid zeropoint measurement; no fit is possible')
-    
+
     # To ensure that the model covers the full range of times in the dataset,
     # there must be valid data at the 0th and -1th array entries.  If this is
     # not the case, we echo the nearest datapoints to the first and last ones:
@@ -430,6 +431,16 @@ def load_catalog_data(images, catalogs):
         target_name = fits_header['OBJECT'].replace(' ','_').replace(')','_').replace('(','_')
         header['target_name'] = target_name
 
+        # Get the zeropoint data, if available, from the e92 FITS image header,
+        # because it isn't currently written to the LDAC header.
+        imheader = fits.getheader(images[i])
+        try:
+            zp = imheader['L1ZP']
+            zperr = imheader['L1ZPERR']
+        except KeyError:
+            zp = -99.0
+            zperr = -99.0
+
         # Add the flux_radius data to the data table since it isn't extracted
         # by default.
         flux_radii_column = get_flux_radii(fits_table, flag_filter)
@@ -439,7 +450,7 @@ def load_catalog_data(images, catalogs):
         ts = Time(header['obs_midpoint'], format='datetime')
         data.append([i, header['framename'], header['obs_midpoint'], ts.mjd,
                      header['site_code'],
-                     header['zeropoint'], header['zeropoint_err'],
+                     zp, zperr,
                      header['exptime'],
                      header['wcs'], header['astrometric_fit_status'],
                      header['target_name']])
