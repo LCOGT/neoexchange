@@ -721,6 +721,7 @@ def banzai_catalog_mapping():
                     'astrometric_fit_status' : 'WCSERR',
                     'astrometric_fit_nstars' : '<WCSMATCH>',
                     'astrometric_catalog'    : '<WCCATTYP>',
+                    'photometric_catalog'    : '<L1PHTCAT>',
                     'reduction_level'        : 'RLEVEL',
                     'gain'          : 'GAIN',
                     'saturation'    : '<MAXLIN>'
@@ -774,6 +775,7 @@ def banzai_ldac_catalog_mapping():
                     'astrometric_fit_status' : 'WCSERR',
                     'astrometric_fit_nstars' : '<WCSMATCH>',
                     'astrometric_catalog'    : '<WCCATTYP>',
+                    'photometric_catalog'    : '<L1PHTCAT>',
                     'reduction_level'        : 'RLEVEL',
                     'aperture_radius_pixels' : 'SEXAPED1',
                     'aperture_radius_arcsec' : '<SEXAPED1>'

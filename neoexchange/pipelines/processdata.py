@@ -429,14 +429,20 @@ class ZeropointProcessPipeline(PipelineProcess):
 
                     fits_filepath = os.path.join(os.path.dirname(catfile), fits_file)
 
-                    # update the zeropoint computed above in a new Frame entry for the e92 frame
+                    # update the zeropoint computed above in a new Frame DB entry for the e92 frame
                     ast_cat_name = 'GAIA-DR2'
+                    header['astrometric_catalog'] = ast_cat_name
+                    header['photometric_catalog'] = phot_cat_name
                     logger.debug("Calling update_frame_zeropoint")
                     frame = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename=fits_file, frame_type=Frame.NEOX_RED_FRAMETYPE)
 
                     # Write updated photometric calibration keywords to FITS header of e92.fits file
-                    logger.debug("Calling updateFITScalib")
+                    logger.debug("Calling updateFITScalib for e92")
                     status, new_fits_header = updateFITScalib(header, fits_filepath, "BANZAI")
+
+                    # Write updated photometric calibration keywords to FITS header of e92_ldac.fits catalog file
+                    logger.debug("Calling updateFITScalib for e92_ldac")
+                    status, new_fits_header = updateFITScalib(header, catfile, "BANZAI_LDAC")
 
                     # update the zeropoint computed above in the CATALOG file Frame
                     logger.debug("Calling update_frame_zeropoint (2)")

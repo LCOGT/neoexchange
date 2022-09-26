@@ -32,7 +32,8 @@ from numpy import loadtxt, split, empty, median, absolute, sqrt
 
 from core.models import detections_array_dtypes
 from astrometrics.time_subs import timeit
-from photometrics.catalog_subs import oracdr_catalog_mapping, banzai_catalog_mapping, banzai_ldac_catalog_mapping
+from photometrics.catalog_subs import oracdr_catalog_mapping, banzai_catalog_mapping, \
+    banzai_ldac_catalog_mapping, fits_ldac_to_header
 from photometrics.image_subs import create_weight_image, create_rms_image, get_saturate
 
 logger = logging.getLogger(__name__)
@@ -1230,7 +1231,7 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
     new_red_level = 91
     if len(file_bits) == 2:
         filename_noext = file_bits[0]
-        new_red_level = filename_noext[-2:]
+        new_red_level = int(filename_noext[-2:])
     if new_red_level != header['rlevel']:
         print(f"Updating header RLEVEL to: {new_red_level}")
         header['RLEVEL'] = new_red_level
@@ -1326,12 +1327,13 @@ def updateFITScalib(header, fits_file, catalog_type='BANZAI'):
                     ('color_used'    , 'Color used for calibration'),
                     ('color'         , 'Color coefficient [mag]'),
                     ('color_err'     , 'Error on color coefficient [mag]'),
+                    ('photometric_catalog', 'Photometric catalog used')
                  ])
     header_items = {}
     if catalog_type == 'BANZAI':
         hdr_mapping, tbl_mapping = banzai_catalog_mapping()
-    #elif catalog_type == 'BANZAI_LDAC':
-    #    hdr_mapping, tbl_mapping = banzai_ldac_catalog_mapping()
+    elif catalog_type == 'BANZAI_LDAC':
+        hdr_mapping, tbl_mapping = banzai_ldac_catalog_mapping()
     else:
         logger.error(f"Unsupported catalog mapping: {catalog_type}")
         return -2, None
@@ -1342,7 +1344,11 @@ def updateFITScalib(header, fits_file, catalog_type='BANZAI'):
         logger.error(f"Unable to open FITS image {fits_file} (Reason={e})")
         return -1, None
 
-    fits_header = hdulist[0].header
+    if catalog_type == 'BANZAI':
+        fits_header = hdulist[0].header
+    else:
+        header_array = hdulist[1].data[0][0]
+        fits_header = fits_ldac_to_header(header_array)
 
     # Find place to start inserting
     if "PNTOFST" in fits_header:
@@ -1363,6 +1369,18 @@ def updateFITScalib(header, fits_file, catalog_type='BANZAI'):
                 prior_keyword = fits_keyword
             else:
                 logger.warning(f"FITS Keyword not found for {key}")
+
+    if catalog_type == 'BANZAI_LDAC':
+        # Construct new BinTable from lengthened header
+
+        newhdr_string = fits_header.tostring(endcard=False)
+        hdr_col = fits.Column(name='Field Header Card', format=f'{len(newhdr_string)}A',
+                          array=[newhdr_string])
+        hdrhdu = fits.BinTableHDU.from_columns(fits.ColDefs([hdr_col]))
+        hdrhdu.header['EXTNAME'] = 'LDAC_IMHEAD'
+        dim2 = int(len(newhdr_string) / 80)
+        hdrhdu.header['TDIM1'] = (f'(80, {dim2})')
+        hdulist[1] = hdrhdu
 
     fits_file_output = fits_file
     hdulist.writeto(fits_file_output, overwrite=True, checksum=True)
