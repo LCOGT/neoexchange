@@ -104,7 +104,7 @@ def get_cam_params(site, obs):
 if __name__ == "__main__":
     dstr = "%Y-%m-%dT%H:%M"
     options = parse_args(argv[1:])
-    domes = ['doma', 'domb', ]# 'domc']
+    domes = ['doma', 'domb', 'domc']
     exp_counts = [2, 2, 2]
     exp_times = [2.0, 10.0, 30.0]
 
