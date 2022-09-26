@@ -1164,6 +1164,13 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
         logger.error("Unable to open SCAMP header file %s (Reason=%s)" % (scamp_file, e))
         return -3, None
 
+    # Check goodness of fit
+    good_fit = True
+    if scamp_info['xy_contrast'] < 1.4 or scamp_info['num_match'] < 4:
+        # Bad fit
+        logger.warning(f"Bad fit for {os.path.basename(fits_file)} detected. Nmatch={scamp_info['num_match']} XY_contrast={scamp_info['xy_contrast']} AS_contrast={scamp_info['as_contrast']}")
+        good_fit = False
+
     pv_terms = []
     # Read in SCAMP .head file
     for line in scamp_head_fh:
@@ -1219,22 +1226,34 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
     secpix = round(scamp_info['pixel_scale'], 6)
 
     # header keywords we have
+    file_bits = fits_file_output.split(os.extsep)
+    new_red_level = 91
+    if len(file_bits) == 2:
+        filename_noext = file_bits[0]
+        new_red_level = filename_noext[-2:]
+    if new_red_level != header['rlevel']:
+        print(f"Updating header RLEVEL to: {new_red_level}")
+        header['RLEVEL'] = new_red_level
     header['PCRECIPE'] = 'BANZAI'
     header['PPRECIPE'] = 'NEOEXCHANGE'
     # WCS headers
-    header['WCSDELRA'] = (header['CRVAL1'] - crval1, '[arcsec] Shift of fitted WCS w.r.t. nominal')
-    header['WCSDELDE'] = (header['CRVAL2'] - crval2, '[arcsec] Shift of fitted WCS w.r.t. nominal')
-    header['CTYPE1'] = ctype1
-    header['CTYPE2'] = ctype2
-    header['CRVAL1'] = crval1
-    header['CRVAL2'] = crval2
-    header['CRPIX1'] = crpix1
-    header['CRPIX2'] = crpix2
-    header['CD1_1'] = cd1_1
-    header['CD1_2'] = cd1_2
-    header['CD2_1'] = cd2_1
-    header['CD2_2'] = cd2_2
-    header['SECPIX'] = (secpix, '[arcsec/pixel] Fitted pixel scale on sky')
+    if good_fit:
+        header['WCSDELRA'] = (header['CRVAL1'] - crval1, '[arcsec] Shift of fitted WCS w.r.t. nominal')
+        header['WCSDELDE'] = (header['CRVAL2'] - crval2, '[arcsec] Shift of fitted WCS w.r.t. nominal')
+        header['CTYPE1'] = ctype1
+        header['CTYPE2'] = ctype2
+        header['CRVAL1'] = crval1
+        header['CRVAL2'] = crval2
+        header['CRPIX1'] = crpix1
+        header['CRPIX2'] = crpix2
+        header['CD1_1'] = cd1_1
+        header['CD1_2'] = cd1_2
+        header['CD2_1'] = cd2_1
+        header['CD2_2'] = cd2_2
+        header['SECPIX'] = (secpix, '[arcsec/pixel] Fitted pixel scale on sky')
+    else:
+        astrrms1 = -99.0
+        astrrms2 = -99.0
     header['WCSSOLVR'] = (wcssolvr, 'WCS solver')
     # This can be quite long and the comment might not fit. Truncate at max possible length
     existing_length = 11 + len(wcsrfcat) + 4 # 8 (keyword) + "= '" + catname length + "' / '"
@@ -1248,7 +1267,12 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
     header['WCSMATCH'] = (wcsmatch, 'Stars in image matched against ref catalog')
     header['WCCATTYP'] = (wccattyp, 'Reference catalog used')
     header['WCSRDRES'] = (str(str(astrrms1)+'/'+str(astrrms2)), '[arcsec] WCS fitting residuals (x/y)')
-    header['WCSERR'] = 0
+    if good_fit:
+        header['WCSERR'] = 0
+        status = 0
+    else:
+        header['WCSERR'] = 5
+        status = -5
 
     # header keywords we (probably) don't have. Insert after CTYPE2
     if header.get('CUNIT1', None) is None:
@@ -1257,10 +1281,11 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
         header.insert('CUNIT1', ('CUNIT2', cunit2, 'Unit of 2nd axis'), after=True)
 
     # Add distortion keywords if present
-    prior_keyword = 'CD2_2'
-    for keyword, value in pv_terms:
-        header.insert(prior_keyword, (keyword, value, 'TPV distortion coefficient'), after=True)
-        prior_keyword = keyword
+    if good_fit:
+        prior_keyword = 'CD2_2'
+        for keyword, value in pv_terms:
+            header.insert(prior_keyword, (keyword, value, 'TPV distortion coefficient'), after=True)
+            prior_keyword = keyword
 
     hdu = fits.PrimaryHDU(data, header)
     hdu._bscale = 1.0
@@ -1286,7 +1311,7 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
     hdulist.close()
     new_hdulist.close()
 
-    return 0, header
+    return status, header
 
 
 def updateFITScalib(header, fits_file, catalog_type='BANZAI'):

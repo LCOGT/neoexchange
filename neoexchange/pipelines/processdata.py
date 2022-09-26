@@ -238,7 +238,7 @@ class ScampProcessPipeline(PipelineProcess):
                     if header.get('site_code', None) is None:
                         logger.error(f"No sitecode found for fits frame {fits_file:}")
                         self.log(f"No sitecode found for fits frame {fits_file:}")
-                        return -5
+                        return -4
 
                     # # Create a new Frame entry for the fits_file_output (e92.fits)
                     logger.info(f"Created Frame.NEOX_RED_FRAMETYPE entry for {os.path.basename(fits_file_output)}")
@@ -390,8 +390,13 @@ class ZeropointProcessPipeline(PipelineProcess):
             header, table, refcat = self.setup(catfile, catalog_type, phot_cat_name, min_matches=min_matches)
 
             if header and table and refcat:
+                if header['astrometric_fit_status'] > 0 or header['astrometric_fit_rms'] <= 0:
+                    self.log("Bad astrometric fit detected; cannot calibrate")
+                    logger.error("Bad astrometric fit detected; cannot calibrate")
+                    return
                 cal_filter = map_filter_to_calfilter(header['filter'])
                 if cal_filter is None:
+                    self.log(f"This filter ({header['filter']}) is not calibrateable")
                     logger.error(f"This filter ({header['filter']}) is not calibrateable")
                     return
                 # Cross match with reference catalog and compute zeropoint
@@ -404,10 +409,11 @@ class ZeropointProcessPipeline(PipelineProcess):
                 # if crossmatch is good, update new zeropoint
                 if std_zeropoint is not None and std_zeropoint < std_zeropoint_tolerance:
                     logger.debug("Got good zeropoint - updating header")
-                    header['color_used'] = cal_color
+                    header['color_used'] = 'N/A'
                     header['color'] = -99
                     header['color_err'] = 0.00
                     if color_const is False:
+                        header['color_used'] = cal_color
                         header['color'] = C
                         header['color_err'] = -99
                     logger.debug("Calling update_zeropoint")
