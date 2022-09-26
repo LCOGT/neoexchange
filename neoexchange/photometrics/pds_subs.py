@@ -1358,7 +1358,7 @@ def create_dart_lightcurve(input_dir, output_dir, block, match='photometry_*.dat
                 if num_srcs > 0:
                     photometry_files = [input_dir, ]
                 else:
-                    logger.warning("No SourceMeasurements found for reduced e92 frames for Block id" + input_dir.id)
+                    logger.warning(f"No SourceMeasurements found for reduced e92 frames for Block id {input_dir.id}")
                     photometry_files = []
             for photometry_file in photometry_files:
                 if type(photometry_file) != Block:

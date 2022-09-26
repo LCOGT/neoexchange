@@ -394,11 +394,11 @@ class Command(BaseCommand):
                 obs_site = block.site
                 # Get all Useful frames from each block
                 frames_red = Frame.objects.filter(block=block.id, frametype__in=[Frame.BANZAI_RED_FRAMETYPE]).order_by('filter', 'midpoint')
-                frames_ql = Frame.objects.filter(block=block.id, frametype__in=[Frame.BANZAI_QL_FRAMETYPE]).order_by('filter', 'midpoint')
-                if len(frames_red) >= len(frames_ql):
-                    frames_all_zp = frames_red
+                frames_neox = Frame.objects.filter(block=block.id, frametype__in=[Frame.NEOX_RED_FRAMETYPE]).order_by('filter', 'midpoint')
+                if frames_neox.filter(zeropoint__isnull=False).count() >= frames_red.filter(zeropoint__isnull=False).count():
+                    frames_all_zp = frames_neox
                 else:
-                    frames_all_zp = frames_ql
+                    frames_all_zp = frames_red
                 frames = frames_all_zp.filter(zeropoint__isnull=False)
                 self.stdout.write("Found %d frames (of %d total) for Block# %d with good ZPs" % (frames.count(), frames_all_zp.count(), block.id))
                 self.stdout.write("Searching within %.1f arcseconds and +/-%.2f delta magnitudes" % (options['boxwidth'], options['deltamag']))
