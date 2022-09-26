@@ -41,8 +41,7 @@ def send_task(task, process, *args):
         process.save()
 
 
-@task(time_limit=3600_000, max_retries=0, store_results=True)
-def run_pipeline(process_pk, cls_name):
+def base_pipeline(process_pk, cls_name):
     """
     Task to run a PipelineProcess sub-class. `cls_name` is the name of the
     pipeline as given in PIPELINES setting.
@@ -60,6 +59,16 @@ def run_pipeline(process_pk, cls_name):
         return
     message = run_process(process)
     return message
+
+@task(time_limit=3600_000, max_retries=0, store_results=True)
+def run_pipeline(process_pk, cls_name):
+    if cls_name not in ['dldata']:
+        return base_pipeline(process_pk, cls_name)
+
+@task(time_limit=3600_000, max_retries=0, store_results=True, queue_name="priority")
+def run_pipeline_priority(process_pk, cls_name):
+    if cls_name in ['dldata']:
+        return base_pipeline(process_pk, cls_name)
 
 
 def run_process(process):
