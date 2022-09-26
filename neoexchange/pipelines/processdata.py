@@ -558,19 +558,24 @@ class ZeropointProcessPipeline(PipelineProcess):
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", message='divide by zero encountered')
             start = time.time()
+            inst_mag =  phot['obs_mag']
+            if len(inst_mag.shape) == 2:
+                # Slice out 3rd index (diameter=10pix)
+                inst_mag = inst_mag[0:, 3]
+
             gmi_limits = [0.2, 3.0]
             if solar is True:
                 sol_gmi_col = 0.55
                 gmi_limits = [sol_gmi_col-0.2, sol_gmi_col+0.2]
 
             if color_const is True:
-                avg_zeropoint, C, std_zeropoint, r, gmi = refcat.cal_constant(objids, phot['obs_mag'], cal_filter, gmi_lim=gmi_limits)
+                avg_zeropoint, C, std_zeropoint, r, gmi = refcat.cal_constant(objids, inst_mag, cal_filter, gmi_lim=gmi_limits)
                 cal_color = 'g-i' # Fixed/held constant
             else:
                 cal_color = 'g-' + cal_filter
                 if obs_filter == 'w' and solar is False:
                     gmi_limits = [0.5, 1.5]
-                avg_zeropoint, C, std_zeropoint, r, gmr, gmi = refcat.cal_color(objids, phot['obs_mag'], cal_filter, cal_color, gmi_lim=gmi_limits)
+                avg_zeropoint, C, std_zeropoint, r, gmr, gmi = refcat.cal_color(objids, inst_mag, cal_filter, cal_color, gmi_lim=gmi_limits)
             end = time.time()
         logger.debug(f"TIME: compute_zeropoint took {end-start:.1f} seconds")
         logger.debug(f"New zp={avg_zeropoint:} +/- {std_zeropoint:} {r.count():} {C:}")

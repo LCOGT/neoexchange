@@ -1575,7 +1575,7 @@ def update_zeropoint(header, table, avg_zeropoint, std_zeropoint, include_zperr=
         avg_zeropoint = header['zeropoint'] + avg_zeropoint
     header['zeropoint'] = avg_zeropoint
     header['zeropoint_err'] = std_zeropoint
-    header['zeropoint_src'] = 'py_zp_cvc-V0.2'
+    header['zeropoint_src'] = 'py_zp_cvc-V0.2.1'
 
     for source in table:
         source['obs_mag'] += delta_zp
@@ -1723,13 +1723,24 @@ def get_or_create_CatalogSources(table, frame, header={}):
     if num_cat_sources == 0:
         new_sources = []
         for source in table:
+            if len(source['obs_mag'].shape) == 0:
+                obs_mag = source['obs_mag']
+                obs_mag_err = source['obs_mag_err']
+                aper_size = header.get('aperture_radius_arcsec', 3.0)
+            else:
+                # Array of fluxes/mags
+                obs_mag = source['obs_mag'][3]
+                obs_mag_err = source['obs_mag_err'][3]
+                aper_size = header.get('aperture_radius_arcsec', 3.0)
+                # Correct aperture radius to 3rd aperture
+                aper_size = aper_size * (10.0/4.0)
             new_source = CatalogSources(frame=frame, obs_x=source['ccd_x'], obs_y=source['ccd_y'],
-                                        obs_ra=source['obs_ra'], obs_dec=source['obs_dec'], obs_mag=source['obs_mag'],
+                                        obs_ra=source['obs_ra'], obs_dec=source['obs_dec'], obs_mag=obs_mag,
                                         err_obs_ra=source['obs_ra_err'], err_obs_dec=source['obs_dec_err'],
-                                        err_obs_mag=source['obs_mag_err'], background=source['obs_sky_bkgd'],
+                                        err_obs_mag=obs_mag_err, background=source['obs_sky_bkgd'],
                                         major_axis=source['major_axis'], minor_axis=source['minor_axis'],
                                         position_angle=source['ccd_pa'], ellipticity=1.0-(source['minor_axis']/source['major_axis']),
-                                        aperture_size=header.get('aperture_radius_arcsec', 3.0), flags=source['flags'], flux_max=source['flux_max'], threshold=source['threshold'])
+                                        aperture_size=aper_size, flags=source['flags'], flux_max=source['flux_max'], threshold=source['threshold'])
             new_sources.append(new_source)
         try:
             with transaction.atomic():
@@ -1739,21 +1750,32 @@ def get_or_create_CatalogSources(table, frame, header={}):
         num_sources_created = len(new_sources)
     elif num_in_table != num_cat_sources:
         for source in table:
+            if len(source['obs_mag'].shape) == 0:
+                obs_mag = source['obs_mag']
+                obs_mag_err = source['obs_mag_err']
+                aper_size = header.get('aperture_radius_arcsec', 3.0)
+            else:
+                # Array of fluxes/mags
+                obs_mag = source['obs_mag'][3]
+                obs_mag_err = source['obs_mag_err'][3]
+                aper_size = header.get('aperture_radius_arcsec', 3.0)
+                # Correct aperture radius to 3rd aperture
+                aper_size = aper_size * (10.0/4.0)
             source_params = {   'frame': frame,
                                 'obs_x': source['ccd_x'],
                                 'obs_y': source['ccd_y'],
                                 'obs_ra': source['obs_ra'],
                                 'obs_dec': source['obs_dec'],
-                                'obs_mag': source['obs_mag'],
+                                'obs_mag': obs_mag,
                                 'err_obs_ra': source['obs_ra_err'],
                                 'err_obs_dec': source['obs_dec_err'],
-                                'err_obs_mag': source['obs_mag_err'],
+                                'err_obs_mag': obs_mag_err,
                                 'background': source['obs_sky_bkgd'],
                                 'major_axis': source['major_axis'],
                                 'minor_axis': source['minor_axis'],
                                 'position_angle': source['ccd_pa'],
                                 'ellipticity': 1.0-(source['minor_axis']/source['major_axis']),
-                                'aperture_size': header.get('aperture_radius_arcsec', 3.0),
+                                'aperture_size': aper_size,
                                 'flags': source['flags'],
                                 'flux_max': source['flux_max'],
                                 'threshold': source['threshold']
