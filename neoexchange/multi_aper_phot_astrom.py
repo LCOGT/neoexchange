@@ -102,7 +102,7 @@ def plot_multi_aperture_lightcurve(config, target_data):
     plt.yticks(rotation = 25)
     [xmin,xmax,ymin,ymax] = plt.axis()
     xmax = xmax*1.05   # Offset to allow for legend
-    plt.axis([xmin,xmax,ymin,ymax])
+    plt.axis([xmin,xmax,ymax,ymin])
     plt.title(config['target_name']+' multi-aperture lightcurves')
     plt.grid()
     plt.legend(fontsize=12)
@@ -117,13 +117,17 @@ def plot_target_radius(config, target_data):
     fig = plt.figure(2,(10,10))
     plt.rcParams.update({'font.size': 16})
     plt.rcParams['axes.formatter.useoffset'] = False
-    plt.plot(target_data['mjd']-dt, target_data['flux_radius'], 'r.')
+    plt.plot(target_data['mjd']-dt, target_data['flux_radius'], 'r.',
+                label='Target radius')
+    plt.plot(target_data['mjd']-dt, target_data['fwhm'], 'gd',
+                label='FWHM', alpha=0.5)
     plt.xlabel('MJD - '+str(dt))
-    plt.ylabel('Flux radius [arcsec]')
+    plt.ylabel('Radius [arcsec]')
     plt.xticks(rotation = 25)
     plt.yticks(rotation = 25)
     plt.title(config['target_name']+' flux radius as a function of time')
     plt.grid()
+    plt.legend()
     plt.savefig(os.path.join(config['dataroot'], config['target_name']+'_flux_radius_curve.png'))
     plt.close(2)
 
@@ -150,19 +154,21 @@ def extract_target_photometry(dataset, photastro_datatables, target_index):
         if j >= 0:
             table = photastro_datatables[i]
             entry = [dataset['mjd'][i], table['obs_ra'][j], table['obs_dec'][j],
-                     table['flux_radius'][j]] + table['obs_mag'][j].tolist()
+                     table['flux_radius'][j], dataset['fwhm'][i]] \
+                    + table['obs_mag'][j].tolist()
             data.append(entry)
     data = np.array(data)
 
     # Extract the number of apertures to expect:
     naper = len(table['obs_mag'][0])
-    nother = 4
+    nother = 5
 
     # Format as an astropy Table:
     column_list = [ Column(data[:,0], name='mjd', dtype=np.float64),
                     Column(data[:,1], name='obs_ra', dtype=np.float64),
                     Column(data[:,2], name='obs_dec', dtype=np.float64),
-                    Column(data[:,3], name='flux_radius', dtype=np.float64)]
+                    Column(data[:,3], name='flux_radius', dtype=np.float64),
+                    Column(data[:,4], name='fwhm', dtype=np.float64)]
     for col in range(nother,nother+naper,1):
         column_list.append(Column(data[:,col], name='aperture_'+str(col-nother),
                             dtype=np.float64))
@@ -307,7 +313,7 @@ def apply_new_zeropoints(dataset, photastro_datatables, zp_model):
         if dataset['zeropoint'][i] == -99.0:
             new_zp = zp_model(dataset['mjd'][i])
             table = photastro_datatables[i]
-            table['obs_mag'] + new_zp
+            table['obs_mag'] = table['obs_mag'] + new_zp
             photastro_datatables[i] = table
 
     return photastro_datatables
@@ -453,7 +459,7 @@ def load_catalog_data(images, catalogs):
                      zp, zperr,
                      header['exptime'],
                      header['wcs'], header['astrometric_fit_status'],
-                     header['target_name']])
+                     header['target_name'], header['fwhm']])
 
         photastro_datatables.append(table)
     data = np.array(data)
@@ -480,6 +486,7 @@ def load_catalog_data(images, catalogs):
                     Column(data[:,8], name='wcs'),
                     Column(data[:,9], name='astrometric_fit_status', dtype=np.int32),
                     Column(data[:,10], name='target_name', dtype=np.str),
+                    Column(data[:,11], name='fwhm', dtype=np.float64),
                     ])
 
     return dataset, photastro_datatables
