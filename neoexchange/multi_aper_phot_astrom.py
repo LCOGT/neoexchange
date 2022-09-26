@@ -82,7 +82,7 @@ def check_target_index(target_index):
 def plot_multi_aperture_lightcurve(config, target_data):
     """Function to plot the lightcurve from multiple apertures"""
 
-    dt = target_data['mjd'][0]
+    plot_errors = True
     naper = 20
     colour_codes = ['#FA281B', '#FA731B', '#FAA91B', '#FAD51B', '#CBFA1B',
                     '#91FA1B', '#3BD718', '#18D797', '#18D7C9', '#18B1D7',
@@ -90,18 +90,25 @@ def plot_multi_aperture_lightcurve(config, target_data):
                     '#C914CC', '#CC1486', '#CC1462', '#BA061F', '#BA9F06']
     symbols = ['.','v','^','<','>','s','p','*','H','d',
                '.','v','^','<','>','s','p','*','H','d']
-    fig = plt.figure(3,(10,10))
+    fig = plt.figure(3,(20,10))
     plt.rcParams.update({'font.size': 16})
     plt.rcParams['axes.formatter.useoffset'] = False
     for i in range(0,naper,1):
-        plt.plot(target_data['mjd']-dt, target_data['aperture_'+str(i)],
+        if plot_errors:
+            plt.errorbar(target_data['obs_midpoint'], target_data['mag_aperture_'+str(i)],
+                            yerr=target_data['mag_err_aperture_'+str(i)],
+                            c=colour_codes[i], marker=symbols[i], label='Aperture '+str(i))
+        else:
+            plt.plot(target_data['obs_midpoint'], target_data['mag_aperture_'+str(i)],
                  c=colour_codes[i], marker=symbols[i], label='Aperture '+str(i))
-    plt.xlabel('MJD - '+str(dt))
+    plt.xlabel('Obs midpoint [UTC]')
     plt.ylabel('Mag')
-    plt.xticks(rotation = 25)
+    dates = target_data['obs_midpoint'][::2]
+    plt.xticks(ticks=dates, labels=dates, rotation = 25, ha='right')
     plt.yticks(rotation = 25)
     [xmin,xmax,ymin,ymax] = plt.axis()
     xmax = xmax*1.05   # Offset to allow for legend
+    plt.subplots_adjust(bottom=0.25)
     plt.axis([xmin,xmax,ymax,ymin])
     plt.title(config['target_name']+' multi-aperture lightcurves')
     plt.grid()
@@ -112,19 +119,19 @@ def plot_multi_aperture_lightcurve(config, target_data):
 def plot_target_radius(config, target_data):
     """Function to plot the extracted radius of the target as a function of time"""
 
-    dt = target_data['mjd'][0]
-
-    fig = plt.figure(2,(10,10))
+    fig = plt.figure(2,(20,10))
     plt.rcParams.update({'font.size': 16})
     plt.rcParams['axes.formatter.useoffset'] = False
-    plt.plot(target_data['mjd']-dt, target_data['flux_radius'], 'r.',
+    plt.plot(target_data['obs_midpoint'], target_data['flux_radius'], 'ms',
                 label='Target radius')
-    plt.plot(target_data['mjd']-dt, target_data['fwhm'], 'gd',
+    plt.plot(target_data['obs_midpoint'], target_data['fwhm'], 'gd',
                 label='FWHM', alpha=0.5)
-    plt.xlabel('MJD - '+str(dt))
+    plt.xlabel('Obs midpoint [UTC]')
     plt.ylabel('Radius [arcsec]')
-    plt.xticks(rotation = 25)
+    dates = target_data['obs_midpoint'][::2]
+    plt.xticks(ticks=dates, labels=dates, rotation = 25, ha='right')
     plt.yticks(rotation = 25)
+    plt.subplots_adjust(bottom=0.25)
     plt.title(config['target_name']+' flux radius as a function of time')
     plt.grid()
     plt.legend()
@@ -144,33 +151,44 @@ def extract_target_photometry(dataset, photastro_datatables, target_index):
 
     data = []
 
+    # Figure out the number of apertures in use from the first entry in the
+    # table
+    naper = len(photastro_datatables[0]['obs_mag'][0].tolist())
+
     # Loop over all images in the dataset:
     for i in range(0,len(dataset),1):
         j = target_index[i]
-        #### FOR TESTING PURPOSES:
-        #j = 0
-        #### END TESTING SECTION
-
         if j >= 0:
             table = photastro_datatables[i]
-            entry = [dataset['mjd'][i], table['obs_ra'][j], table['obs_dec'][j],
-                     table['flux_radius'][j], dataset['fwhm'][i]] \
-                    + table['obs_mag'][j].tolist()
+            entry = [dataset['mjd'][i],
+                     dataset['obs_midpoint'][i].strftime("%Y-%m-%dT%H:%M:%S.%f"),
+                     table['obs_ra'][j], table['obs_dec'][j],
+                     table['flux_radius'][j], dataset['fwhm'][i]]
+            mags = table['obs_mag'][j].tolist()
+            merrs = table['obs_mag_err'][j].tolist()
+            for k in range(0,naper,1):
+                entry.append(mags[k])
+                entry.append(merrs[k])
             data.append(entry)
     data = np.array(data)
 
     # Extract the number of apertures to expect:
     naper = len(table['obs_mag'][0])
-    nother = 5
+    nother = 6
 
     # Format as an astropy Table:
     column_list = [ Column(data[:,0], name='mjd', dtype=np.float64),
-                    Column(data[:,1], name='obs_ra', dtype=np.float64),
-                    Column(data[:,2], name='obs_dec', dtype=np.float64),
-                    Column(data[:,3], name='flux_radius', dtype=np.float64),
-                    Column(data[:,4], name='fwhm', dtype=np.float64)]
-    for col in range(nother,nother+naper,1):
-        column_list.append(Column(data[:,col], name='aperture_'+str(col-nother),
+                    Column(data[:,1], name='obs_midpoint', dtype=np.str),
+                    Column(data[:,2], name='obs_ra', dtype=np.float64),
+                    Column(data[:,3], name='obs_dec', dtype=np.float64),
+                    Column(data[:,4], name='flux_radius', dtype=np.float64),
+                    Column(data[:,5], name='fwhm', dtype=np.float64)]
+    ap = -1
+    for col in range(nother,nother+(naper*2),2):
+        ap += 1
+        column_list.append(Column(data[:,col], name='mag_aperture_'+str(ap),
+                            dtype=np.float64))
+        column_list.append(Column(data[:,col+1], name='mag_err_aperture_'+str(ap),
                             dtype=np.float64))
 
     return Table(column_list)
