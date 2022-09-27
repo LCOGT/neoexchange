@@ -18,6 +18,7 @@ import astropy.units as u
 from astropy.coordinates import SkyCoord
 
 import matplotlib.pyplot as plt
+from matplotlib.dates import DateFormatter
 from scipy.odr import Model, Data, ODR
 from scipy import interpolate
 import copy
@@ -82,6 +83,10 @@ def check_target_index(target_index):
 def plot_multi_aperture_lightcurve(config, target_data):
     """Function to plot the lightcurve from multiple apertures"""
 
+    # Generate an array of DateTime objects for all datapoints
+    dates = convert_timestamps(target_data['obs_midpoint'].data)
+    date_format = get_date_format(dates)
+
     plot_errors = True
     naper = 20
     colour_codes = ['#FA281B', '#FA731B', '#FAA91B', '#FAD51B', '#CBFA1B',
@@ -91,52 +96,100 @@ def plot_multi_aperture_lightcurve(config, target_data):
     symbols = ['.','v','^','<','>','s','p','*','H','d',
                '.','v','^','<','>','s','p','*','H','d']
     fig = plt.figure(3,(20,10))
+    ax = fig.add_subplot(111)
     plt.rcParams.update({'font.size': 16})
     plt.rcParams['axes.formatter.useoffset'] = False
+
     for i in range(0,naper,1):
         if plot_errors:
-            plt.errorbar(target_data['obs_midpoint'], target_data['mag_aperture_'+str(i)],
+            plt.errorbar(dates, target_data['mag_aperture_'+str(i)],
                             yerr=target_data['mag_err_aperture_'+str(i)],
                             c=colour_codes[i], marker=symbols[i], label='Aperture '+str(i))
         else:
-            plt.plot(target_data['obs_midpoint'], target_data['mag_aperture_'+str(i)],
+            plt.plot(dates, target_data['mag_aperture_'+str(i)],
                  c=colour_codes[i], marker=symbols[i], label='Aperture '+str(i))
     plt.xlabel('Obs midpoint [UTC]')
     plt.ylabel('Mag')
-    dates = target_data['obs_midpoint'][::2]
-    plt.xticks(ticks=dates, labels=dates, rotation = 25, ha='right')
+
+    # Reformat x-axis datetime entries
+    ax.xaxis.set_major_formatter(DateFormatter(date_format))
+    ax.fmt_xdata = DateFormatter(date_format)
+    fig.autofmt_xdate()
+
     plt.yticks(rotation = 25)
     [xmin,xmax,ymin,ymax] = plt.axis()
-    xmax = xmax*1.05   # Offset to allow for legend
+    #xmax = xmax*1.05   # Offset to allow for legend
     plt.subplots_adjust(bottom=0.25)
-    plt.axis([xmin,xmax,ymax,ymin])
+    plt.axis([xmin,xmax,ymax,ymin]) # Invert magnitude axis
     plt.title(config['target_name']+' multi-aperture lightcurves')
     plt.grid()
     plt.legend(fontsize=12)
-    plt.savefig(os.path.join(config['dataroot'], config['target_name']+'_multi_lightcurve.png'))
+    bandpass = target_data['filter'][0]
+    plt.savefig(os.path.join(config['dataroot'], config['target_name']
+                             + '_multi_lightcurve_'+str(bandpass)+'.png'))
     plt.close(3)
 
 def plot_target_radius(config, target_data):
     """Function to plot the extracted radius of the target as a function of time"""
 
-    fig = plt.figure(2,(20,10))
+    # Generate an array of DateTime objects for all datapoints
+    dates = convert_timestamps(target_data['obs_midpoint'].data)
+    date_format = get_date_format(dates)
+
+    fig = plt.figure(3,(20,10))
+    ax = fig.add_subplot(111)
     plt.rcParams.update({'font.size': 16})
     plt.rcParams['axes.formatter.useoffset'] = False
-    plt.plot(target_data['obs_midpoint'], target_data['flux_radius'], 'ms',
+
+    plt.plot(dates, target_data['flux_radius'], 'ms',
                 label='Target radius')
-    plt.plot(target_data['obs_midpoint'], target_data['fwhm'], 'gd',
+    plt.plot(dates, target_data['fwhm'], 'gd',
                 label='FWHM', alpha=0.5)
-    plt.xlabel('Obs midpoint [UTC]')
-    plt.ylabel('Radius [arcsec]')
-    dates = target_data['obs_midpoint'][::2]
-    plt.xticks(ticks=dates, labels=dates, rotation = 25, ha='right')
-    plt.yticks(rotation = 25)
+    plt.xlabel('Obs midpoint [UTC]', fontsize=16)
+    plt.ylabel('Radius [arcsec]', fontsize=16)
+
+    # Reformat x-axis datetime entries
+    ax.xaxis.set_major_formatter(DateFormatter(date_format))
+    ax.fmt_xdata = DateFormatter(date_format)
+    fig.autofmt_xdate()
+
+    plt.xticks(rotation = 25, ha='right', fontsize=16)
+    plt.yticks(rotation = 25, fontsize=16)
     plt.subplots_adjust(bottom=0.25)
     plt.title(config['target_name']+' flux radius as a function of time')
     plt.grid()
     plt.legend()
     plt.savefig(os.path.join(config['dataroot'], config['target_name']+'_flux_radius_curve.png'))
-    plt.close(2)
+    plt.close(3)
+
+def convert_timestamps(timestamps):
+    """Function to convert an array of timestamps in string format to DateTime
+    objects
+    Expected input format is %Y-%m-%dT%H:%M:%S.%f
+    Outputs an array of DateTime objects
+    """
+    dates = []
+    for ts in timestamps:
+        dates.append(datetime.strptime(ts, "%Y-%m-%dT%H:%M:%S.%f"))
+
+    return dates
+
+def get_date_format(dates):
+    """Function to format date strings for plotting, extracted from NEOexchange
+    Input should be an array of DateTime objects
+    Returns the format string to be used in matplotlib
+    """
+    start = dates[0]
+    end = dates[-1]
+    time_diff = end - start
+    if time_diff > timedelta(days=3):
+        return "%Y/%m/%d"
+    elif time_diff > timedelta(hours=6):
+        return "%m/%d %H:%M"
+    elif time_diff > timedelta(minutes=30):
+        return "%H:%M"
+    else:
+        return "%H:%M:%S"
 
 def output_target_data_table(config, target_data):
     """Function to output the target data table as a FITS binary table"""
@@ -156,12 +209,16 @@ def extract_target_photometry(dataset, photastro_datatables, target_index):
     naper = len(photastro_datatables[0]['obs_mag'][0].tolist())
 
     # Loop over all images in the dataset:
+    # NOTE obs_midpoint datetime objects are converted to strings here because
+    # this is necessary for output to a FITS table later on.
     for i in range(0,len(dataset),1):
         j = target_index[i]
         if j >= 0:
             table = photastro_datatables[i]
-            entry = [dataset['mjd'][i],
+            entry = [dataset['filename'][i], dataset['mjd'][i],
                      dataset['obs_midpoint'][i].strftime("%Y-%m-%dT%H:%M:%S.%f"),
+                     dataset['exptime'][i],
+                     dataset['filter'][i],
                      table['obs_ra'][j], table['obs_dec'][j],
                      table['flux_radius'][j], dataset['fwhm'][i]]
             mags = table['obs_mag'][j].tolist()
@@ -174,15 +231,18 @@ def extract_target_photometry(dataset, photastro_datatables, target_index):
 
     # Extract the number of apertures to expect:
     naper = len(table['obs_mag'][0])
-    nother = 6
+    nother = 9
 
     # Format as an astropy Table:
-    column_list = [ Column(data[:,0], name='mjd', dtype=np.float64),
-                    Column(data[:,1], name='obs_midpoint', dtype=np.str),
-                    Column(data[:,2], name='obs_ra', dtype=np.float64),
-                    Column(data[:,3], name='obs_dec', dtype=np.float64),
-                    Column(data[:,4], name='flux_radius', dtype=np.float64),
-                    Column(data[:,5], name='fwhm', dtype=np.float64)]
+    column_list = [ Column(data[:,0], name='filename', dtype=np.str),
+                    Column(data[:,1], name='mjd', dtype=np.float64),
+                    Column(data[:,2], name='obs_midpoint', dtype=np.str),
+                    Column(data[:,3], name='exptime', dtype=np.float64),
+                    Column(data[:,4], name='filter', dtype=np.str),
+                    Column(data[:,5], name='obs_ra', dtype=np.float64),
+                    Column(data[:,6], name='obs_dec', dtype=np.float64),
+                    Column(data[:,7], name='flux_radius', dtype=np.float64),
+                    Column(data[:,8], name='fwhm', dtype=np.float64)]
     ap = -1
     for col in range(nother,nother+(naper*2),2):
         ap += 1
@@ -472,8 +532,10 @@ def load_catalog_data(images, catalogs):
 
         # Compile frame information
         ts = Time(header['obs_midpoint'], format='datetime')
-        data.append([i, header['framename'], header['obs_midpoint'], ts.mjd,
-                     header['site_code'],
+        data.append([i, header['framename'],
+                     header['obs_midpoint'],
+                     ts.mjd,
+                     header['site_code'], header['filter'],
                      zp, zperr,
                      header['exptime'],
                      header['wcs'], header['astrometric_fit_status'],
@@ -482,15 +544,6 @@ def load_catalog_data(images, catalogs):
         photastro_datatables.append(table)
     data = np.array(data)
 
-    #### INJECTING TEST DATASET:
-    #### Simulated zeropoints and zeropoint error
-    #data[:,5] = np.random.normal(loc=24.0, scale=0.5, size=len(data))
-    #data[:,6] = np.random.normal(loc=0.05, scale=0.02, size=len(data))
-    #invalid = np.arange(0,len(data),3)
-    #data[invalid,5] = -99.0
-    #data[invalid,6] = -99.0
-    #### END simulated data
-
     # Format as an astropy Table:
     dataset = Table([
                     Column(data[:,0], name='frame_index', dtype=np.int32),
@@ -498,13 +551,14 @@ def load_catalog_data(images, catalogs):
                     Column(data[:,2], name='obs_midpoint'),
                     Column(data[:,3], name='mjd', dtype=np.float64),
                     Column(data[:,4], name='site_code'),
-                    Column(data[:,5], name='zeropoint', dtype=np.float64),
-                    Column(data[:,6], name='zeropoint_err', dtype=np.float64),
-                    Column(data[:,7], name='exptime', dtype=np.float64),
-                    Column(data[:,8], name='wcs'),
-                    Column(data[:,9], name='astrometric_fit_status', dtype=np.int32),
-                    Column(data[:,10], name='target_name', dtype=np.str),
-                    Column(data[:,11], name='fwhm', dtype=np.float64),
+                    Column(data[:,5], name='filter'),
+                    Column(data[:,6], name='zeropoint', dtype=np.float64),
+                    Column(data[:,7], name='zeropoint_err', dtype=np.float64),
+                    Column(data[:,8], name='exptime', dtype=np.float64),
+                    Column(data[:,9], name='wcs'),
+                    Column(data[:,10], name='astrometric_fit_status', dtype=np.int32),
+                    Column(data[:,11], name='target_name', dtype=np.str),
+                    Column(data[:,12], name='fwhm', dtype=np.float64),
                     ])
 
     return dataset, photastro_datatables
