@@ -159,7 +159,9 @@ def plot_target_radius(config, target_data):
     plt.title(config['target_name']+' flux radius as a function of time')
     plt.grid()
     plt.legend()
-    plt.savefig(os.path.join(config['dataroot'], config['target_name']+'_flux_radius_curve.png'))
+    bandpass = target_data['filter'][0]
+    plt.savefig(os.path.join(config['dataroot'],
+                config['target_name']+'_flux_radius_curve_'+str(bandpass)+'.png'))
     plt.close(3)
 
 def convert_timestamps(timestamps):
@@ -193,8 +195,10 @@ def get_date_format(dates):
 
 def output_target_data_table(config, target_data):
     """Function to output the target data table as a FITS binary table"""
-
-    filepath = os.path.join(config['dataroot'], config['target_name']+'_data.fits')
+    
+    bandpass = target_data['filter'][0]
+    filepath = os.path.join(config['dataroot'],
+                config['target_name']+'_data_'+str(bandpass)+'.fits')
     target_data.write(filepath, format='fits', overwrite=True)
 
 def extract_target_photometry(dataset, photastro_datatables, target_index):
