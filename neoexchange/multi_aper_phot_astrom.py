@@ -195,7 +195,7 @@ def get_date_format(dates):
 
 def output_target_data_table(config, target_data):
     """Function to output the target data table as a FITS binary table"""
-    
+
     bandpass = target_data['filter'][0]
     filepath = os.path.join(config['dataroot'],
                 config['target_name']+'_data_'+str(bandpass)+'.fits')
@@ -281,33 +281,38 @@ def identify_target_in_frames(dataset, photastro_datatables):
         table = photastro_datatables[i]
         detected_pos = SkyCoord(table['obs_ra'], table['obs_dec'], unit=u.deg)
 
-        # Compute ephemeris for Didymos=65803 around midpoint of this exposure
-        # Note that the interval of calculation must be '1m' or greater, or
-        # Horizons returns a ValueError, leading to a spurious error of
-        # 'Ambiguous object'
-        midpoint = dataset['obs_midpoint'][i]
-        ephem = horizons_ephem('65803',
-                midpoint-timedelta(minutes=1), midpoint+timedelta(minutes=1),
-                dataset['site_code'][i], '1m', 30)
+        if len(detected_pos) > 0:
+            # Compute ephemeris for Didymos=65803 around midpoint of this exposure
+            # Note that the interval of calculation must be '1m' or greater, or
+            # Horizons returns a ValueError, leading to a spurious error of
+            # 'Ambiguous object'
+            midpoint = dataset['obs_midpoint'][i]
+            ephem = horizons_ephem('65803',
+                    midpoint-timedelta(minutes=1), midpoint+timedelta(minutes=1),
+                    dataset['site_code'][i], '1m', 30)
 
-        # Find index of nearest in time from the ephememeris line, and use it
-        # to extract the predicted sky position of the target in this frame
-        horizons_index = np.abs(midpoint-ephem['datetime'].datetime).argmin()
-        horizons_pos = SkyCoord(ephem['RA'][horizons_index],
-                                ephem['DEC'][horizons_index], unit=u.deg)
+            # Find index of nearest in time from the ephememeris line, and use it
+            # to extract the predicted sky position of the target in this frame
+            horizons_index = np.abs(midpoint-ephem['datetime'].datetime).argmin()
+            horizons_pos = SkyCoord(ephem['RA'][horizons_index],
+                                    ephem['DEC'][horizons_index], unit=u.deg)
 
-        # Calculate the radial separations of all detected sources from the
-        # predicted position of the object, and select the closest entry
-        sep_r = horizons_pos.separation(detected_pos).to(u.arcsec)
-        lco_index = np.where(sep_r == sep_r.min())[0][0]
+            # Calculate the radial separations of all detected sources from the
+            # predicted position of the object, and select the closest entry
+            sep_r = horizons_pos.separation(detected_pos).to(u.arcsec)
+            lco_index = np.where(sep_r == sep_r.min())[0][0]
 
-        # If the index is within a reasonable tolerance store the index,
-        # otherwise store a -99 entry.
-        if sep_r[lco_index] <= tolerance:
-            target_index.append(lco_index)
+            # If the index is within a reasonable tolerance store the index,
+            # otherwise store a -99 entry.
+            if sep_r[lco_index] <= tolerance:
+                target_index.append(lco_index)
+            else:
+                target_index.append(-99)
+
+        # If no stars were detected in this frame, move on:
         else:
             target_index.append(-99)
-
+            
     return target_index
 
 def apply_corrected_wcs(dataset, photastro_datatables):
