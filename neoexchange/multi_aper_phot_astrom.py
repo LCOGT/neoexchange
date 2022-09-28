@@ -83,6 +83,11 @@ def check_target_index(target_index):
 def plot_multi_aperture_lightcurve(config, target_data):
     """Function to plot the lightcurve from multiple apertures"""
 
+    # Exclude datapoints with suspicious values:
+    idx1 = np.where((target_data['mag_aperture_0'] > 0.0))[0]
+    idx2 = np.where((target_data['mag_aperture_0'] < 30.0))[0]
+    valid = list(set(idx1).intersection(set(idx2)))
+
     # Generate an array of DateTime objects for all datapoints
     dates = convert_timestamps(target_data['obs_midpoint'].data)
     date_format = get_date_format(dates)
@@ -95,18 +100,19 @@ def plot_multi_aperture_lightcurve(config, target_data):
                     '#C914CC', '#CC1486', '#CC1462', '#BA061F', '#BA9F06']
     symbols = ['.','v','^','<','>','s','p','*','H','d',
                '.','v','^','<','>','s','p','*','H','d']
-    fig = plt.figure(3,(20,10))
+    fig = plt.figure(3,(20,15))
     ax = fig.add_subplot(111)
     plt.rcParams.update({'font.size': 16})
     plt.rcParams['axes.formatter.useoffset'] = False
 
     for i in range(0,naper,1):
         if plot_errors:
-            plt.errorbar(dates, target_data['mag_aperture_'+str(i)],
-                            yerr=target_data['mag_err_aperture_'+str(i)],
-                            c=colour_codes[i], marker=symbols[i], label='Aperture '+str(i))
+            plt.errorbar(dates[valid], target_data['mag_aperture_'+str(i)][valid],
+                            yerr=target_data['mag_err_aperture_'+str(i)][valid],
+                            c=colour_codes[i], marker=symbols[i], label='Aperture '+str(i),
+                            ls='none')
         else:
-            plt.plot(dates, target_data['mag_aperture_'+str(i)],
+            plt.plot(dates[valid], target_data['mag_aperture_'+str(i)][valid],
                  c=colour_codes[i], marker=symbols[i], label='Aperture '+str(i))
     plt.xlabel('Obs midpoint [UTC]')
     plt.ylabel('Mag')
@@ -119,11 +125,24 @@ def plot_multi_aperture_lightcurve(config, target_data):
     plt.yticks(rotation = 25)
     [xmin,xmax,ymin,ymax] = plt.axis()
     #xmax = xmax*1.05   # Offset to allow for legend
-    plt.subplots_adjust(bottom=0.25)
+    plt.subplots_adjust(bottom=0.15, left=0.05)
     plt.axis([xmin,xmax,ymax,ymin]) # Invert magnitude axis
     plt.title(config['target_name']+' multi-aperture lightcurves')
     plt.grid()
-    plt.legend(fontsize=12)
+
+    # Add the legend outside the plot face
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0 + box.height * -0.025,
+             box.width, box.height * 0.95])
+
+    l = ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.2), ncol=6)
+
+    l.legendHandles[0]._sizes = [50]
+    if len(l.legendHandles) > 1:
+        l.legendHandles[1]._sizes = [50]
+
+    plt.rcParams.update({'legend.fontsize':12})
+
     bandpass = target_data['filter'][0]
     plt.savefig(os.path.join(config['dataroot'], config['target_name']
                              + '_multi_lightcurve_'+str(bandpass)+'.png'))
@@ -172,7 +191,10 @@ def convert_timestamps(timestamps):
     """
     dates = []
     for ts in timestamps:
+        if type(ts) == np.bytes_:
+            ts = ts.decode('UTF-8')
         dates.append(datetime.strptime(ts, "%Y-%m-%dT%H:%M:%S.%f"))
+    dates = np.array(dates)
 
     return dates
 
@@ -193,13 +215,24 @@ def get_date_format(dates):
     else:
         return "%H:%M:%S"
 
+def set_output_file_path(config, descriptor):
+
+    bandpass = descriptor['filter'][0]
+    filepath = os.path.join(config['dataroot'],
+                config['target_name']+'_data_'+str(bandpass)+'.fits')
+    return filepath
+
 def output_target_data_table(config, target_data):
     """Function to output the target data table as a FITS binary table"""
 
-    bandpass = target_data['filter'][0]
-    filepath = os.path.join(config['dataroot'],
-                config['target_name']+'_data_'+str(bandpass)+'.fits')
-    target_data.write(filepath, format='fits', overwrite=True)
+    filepath = set_output_file_path(config, target_data)
+
+    # This is done to avoid concatenation of files that are produced more than
+    # once.
+    if os.path.isfile(filepath):
+        os.remove(filepath)
+
+    target_data.write(filepath, format='fits')
 
 def extract_target_photometry(dataset, photastro_datatables, target_index):
     """Function to extract the multi-aperture photometry of the target from
@@ -312,7 +345,7 @@ def identify_target_in_frames(dataset, photastro_datatables):
         # If no stars were detected in this frame, move on:
         else:
             target_index.append(-99)
-            
+
     return target_index
 
 def apply_corrected_wcs(dataset, photastro_datatables):
