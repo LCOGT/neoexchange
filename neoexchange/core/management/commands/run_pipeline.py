@@ -70,7 +70,7 @@ class Command(BaseCommand):
             raise CommandError(f"No FITS files found in {dataroot}")
 
         catalog_type = 'FITS_LDAC'
-        if '-ef' in catalog_type:
+        if '-ef' in fits_files[0]:
             catalog_type = 'FITS_LDAC_MULTIAPER'
 
         # Process all files through all pipeline steps
@@ -109,7 +109,7 @@ class Command(BaseCommand):
                                     'solar' : options['solar']
                                     }
                     }]
-            self.stdout.write(f"Running pipeline on {fits_file}:")
+            self.stdout.write(f"Running pipeline on {fits_file}, producing {catalog_type} catalogs:")
 
             pipes = []
             for step in steps:
