@@ -1399,6 +1399,7 @@ def get_catalog_items_new(header_items, table, catalog_type='LCOGT', flag_filter
         new_table['obs_dec_err'] = np.sqrt(new_table['obs_dec_err'])
     FLUX2MAG = 2.5/log(10)
     new_table['obs_mag_err'] = FLUX2MAG * (new_table['obs_mag_err'] / new_table['obs_mag'])
+    warnings.simplefilter("ignore", RuntimeWarning)
     new_table['obs_mag'] = -2.5 * np.log10(new_table['obs_mag'] / header_items['exptime'])
     if 'threshold' in tbl_mapping.keys() and 'MU_' in tbl_mapping['threshold'].upper():
         scale = header_items['pixel_scale'] * header_items['pixel_scale']

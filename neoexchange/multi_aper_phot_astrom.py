@@ -302,11 +302,11 @@ def extract_target_photometry(dataset, photastro_datatables, target_index):
     nother = 9
 
     # Format as an astropy Table:
-    column_list = [ Column(data[:,0], name='filename', dtype=np.str),
+    column_list = [ Column(data[:,0], name='filename', dtype=str),
                     Column(data[:,1], name='mjd', dtype=np.float64),
-                    Column(data[:,2], name='obs_midpoint', dtype=np.str),
+                    Column(data[:,2], name='obs_midpoint', dtype=str),
                     Column(data[:,3], name='exptime', dtype=np.float64),
-                    Column(data[:,4], name='filter', dtype=np.str),
+                    Column(data[:,4], name='filter', dtype=str),
                     Column(data[:,5], name='obs_ra', dtype=np.float64),
                     Column(data[:,6], name='obs_dec', dtype=np.float64),
                     Column(data[:,7], name='flux_radius', dtype=np.float64),
@@ -620,7 +620,7 @@ def load_catalog_data(images, catalogs):
     # Format as an astropy Table:
     dataset = Table([
                     Column(data[:,0], name='frame_index', dtype=np.int32),
-                    Column(data[:,1], name='filename', dtype=np.str),
+                    Column(data[:,1], name='filename', dtype=str),
                     Column(data[:,2], name='obs_midpoint'),
                     Column(data[:,3], name='mjd', dtype=np.float64),
                     Column(data[:,4], name='site_code'),
@@ -630,7 +630,7 @@ def load_catalog_data(images, catalogs):
                     Column(data[:,8], name='exptime', dtype=np.float64),
                     Column(data[:,9], name='wcs'),
                     Column(data[:,10], name='astrometric_fit_status', dtype=np.int32),
-                    Column(data[:,11], name='target_name', dtype=np.str),
+                    Column(data[:,11], name='target_name', dtype=str),
                     Column(data[:,12], name='fwhm', dtype=np.float64),
                     ])
 
