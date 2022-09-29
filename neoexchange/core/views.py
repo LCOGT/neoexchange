@@ -814,7 +814,7 @@ def ephemeris(request):
         data = form.cleaned_data
         body_elements = model_to_dict(data['target'])
         dark_start, dark_end = determine_darkness_times(
-            data['site_code'], data['utc_date'])
+            data['site_code'], data['utc_date'], sun_zd=102)
         ephem_lines = call_compute_ephem(
             body_elements, dark_start, dark_end, data['site_code'], 900, data['alt_limit'])
     else:
@@ -1224,10 +1224,10 @@ def schedule_check(data, body, ok_to_schedule=True):
         dark_end = dark_start + timedelta(hours=24)
     else:
         # Otherwise, calculate night based on site and date.
-        dark_start, dark_end = determine_darkness_times(data['site_code'], data.get('utc_date', datetime.utcnow().date()))
+        dark_start, dark_end = determine_darkness_times(data['site_code'], data.get('utc_date', datetime.utcnow().date()), sun_zd=102)
         if dark_end <= datetime.utcnow():
             # If night has already ended, use next night instead
-            dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'] + timedelta(days=1))
+            dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'] + timedelta(days=1), sun_zd=102)
     dark_midpoint = dark_start + (dark_end - dark_start) / 2
 
     utc_date = data.get('utc_date', dark_midpoint.date())
@@ -1243,7 +1243,7 @@ def schedule_check(data, body, ok_to_schedule=True):
     # Determine the semester boundaries for the current time and truncate the visibility time and
     # therefore the windows appropriately.
 
-    sun_up, sun_down = determine_darkness_times(data['site_code'], utc_date)
+    sun_up, sun_down = determine_darkness_times(data['site_code'], utc_date, sun_zd=102)
     if not (sun_up <= dark_start < sun_down or sun_up < dark_end <= sun_down):
         utc_date = dark_midpoint.date()
     dark_and_up_time, max_alt, rise_time, set_time = get_visibility(None, None, utc_date, data['site_code'], '2 m', alt_limit, False, body_elements)

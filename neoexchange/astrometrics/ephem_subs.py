@@ -1766,9 +1766,9 @@ def target_rise_set(date, app_ra, app_dec, sitecode, min_alt, step_size='30m', s
         step_size_secs = step_size
 
     if sun:
-        ephem_time, sun_set = determine_darkness_times(sitecode, date)
+        ephem_time, sun_set = determine_darkness_times(sitecode, date, sun_zd=102)
         if sun_set <= date:
-            ephem_time, sun_set = determine_darkness_times(sitecode, date + timedelta(days=1))
+            ephem_time, sun_set = determine_darkness_times(sitecode, date + timedelta(days=1), sun_zd=102)
     else:
         ephem_time = date
         sun_set = date + timedelta(days=1)
@@ -2227,7 +2227,7 @@ def get_visibility(ra, dec, date, site_code, step_size='30 m', alt_limit=30, qui
     start_time = None
     stop_time = None
     for site in site_list:
-        dark_start, dark_end = determine_darkness_times(site, date)
+        dark_start, dark_end = determine_darkness_times(site, date, sun_zd=102)
         if quick_n_dirty:
             rise_time, set_time, test_alt, vis = target_rise_set(date, ra, dec, site, alt_limit, step_size)
             if rise_time and set_time:
