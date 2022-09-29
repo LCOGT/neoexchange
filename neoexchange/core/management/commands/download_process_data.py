@@ -38,7 +38,7 @@ class Command(BaseCommand):
             out_path = settings.DATA_ROOT
         else:
             out_path = mkdtemp()
-        parser.add_argument('--date', action="store", default=None, help='Date of the data to download (YYYYMMDD)')
+        parser.add_argument('--date', action="store", default=datetime.utcnow(), help='Date of the data to download (YYYYMMDD)')
         parser.add_argument('--proposal', action="store", default=None, help="Proposal code to query for data (e.g. LCO2019B-023; default is for all active proposals)")
         parser.add_argument('--datadir', default=out_path, help='Place to save data (e.g. %s)' % out_path)
         parser.add_argument('--spectraonly', default=False, action='store_true', help='Whether to only download spectra')
@@ -73,10 +73,10 @@ class Command(BaseCommand):
                     spectraonly=options['spectraonly'],
                     dlengimaging=options['dlengimaging'],
                     numdays=options['numdays'])
+        pipe.sort_objects()
         if options['downloadonly']:
             sys.stdout.write('Download complete')
             sys.exit(0)
-        pipe.sort_objects()
         pipe.process(objectid=options['object'])
         pipe.create_movies()
         if not options['keep_temp_dir']:
