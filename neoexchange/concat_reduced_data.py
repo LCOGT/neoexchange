@@ -35,6 +35,8 @@ def run(config):
 
     # Output the concatenated data table:
     multi_aper_phot_astrom.output_target_data_table(config, data_table)
+    multi_aper_phot_astrom.output_ascii_target_data_table(config, data_table,
+                                                            aperture=4)
 
     # Output long baseline plots:
     multi_aper_phot_astrom.plot_multi_aperture_lightcurve(config, data_table)
@@ -62,10 +64,12 @@ def list_datasets(params):
 
     data_list = []
 
+    target_table_name = config['target_name']+'_data_'+params['bandpass']+'.fits'
+
     for root, dirs, files in walk(params['dataroot']):
         for filename in files:
             filepath = path.join(root, filename)
-            if '_data_'+params['bandpass']+'.fits' in filename:
+            if target_table_name in filename:
                 data_list.append(filepath)
 
     if len(data_list) == 0:

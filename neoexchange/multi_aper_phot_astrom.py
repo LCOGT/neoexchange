@@ -69,6 +69,7 @@ def run(config):
 
     # Output results table & plots
     output_target_data_table(config, target_data)
+    output_ascii_target_data_table(config, target_data, aperture=4)
     plot_target_radius(config, target_data)
     plot_multi_aperture_lightcurve(config, target_data)
 
@@ -222,6 +223,7 @@ def set_output_file_path(config, descriptor):
                 config['target_name']+'_data_'+str(bandpass)+'.fits')
     return filepath
 
+
 def output_target_data_table(config, target_data):
     """Function to output the target data table as a FITS binary table"""
 
@@ -233,6 +235,35 @@ def output_target_data_table(config, target_data):
         os.remove(filepath)
 
     target_data.write(filepath, format='fits')
+
+def output_ascii_target_data_table(config, target_data, aperture=4):
+    """Function to output the target data table in an ASCII table, with space
+    separators, with the following columns:
+    MJD time, magnitude, magnitude error
+    Row 1 of the file starts with a '#' symbol and a header with the
+    column names
+
+    The aperture parameter determines the number of the aperture selected for
+    output.  The numering system is the Python array index, i.e. from zero
+    and the default is aperture[4].
+    """
+
+    # Follow the default filename convention, but replacing the extension:
+    filepath = set_output_file_path(config, target_data)
+    filepath = filepath.replace('.fits', '.txt')
+
+    # Overwrite any pre-exisiting files:
+    if os.path.isfile(filepath):
+        os.remove(filepath)
+
+    # Output data table:
+    f = open(filepath,'w')
+    f.write('#   MJD     Magnitude     Magnitude_error\n')
+    for row in range(0,len(target_data),1):
+        f.write(str(target_data['mjd'][row])+'   '
+                    +str(target_data['mag_aperture_'+str(aperture)][row])+'   '
+                    +str(target_data['mag_err_aperture_'+str(aperture)][row])+'\n')
+    f.close()
 
 def extract_target_photometry(dataset, photastro_datatables, target_index):
     """Function to extract the multi-aperture photometry of the target from
