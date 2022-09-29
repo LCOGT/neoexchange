@@ -25,14 +25,17 @@ def run(config):
     data_list = list_datasets(config)
 
     # Loop over all of the tables in the data list, and concatenate the results
+    print('Concantenating files: ')
     for i,filepath in enumerate(data_list):
+        print('-> '+filepath)
         t = Table.read(filepath, format='fits')
         if i == 0:
             data_table = t
         else:
             for row in range(0,len(t),1):
                 data_table.add_row(t[row])
-
+    print(str(len(data_table))+' rows of data')
+    
     # Output the concatenated data table:
     multi_aper_phot_astrom.output_target_data_table(config, data_table)
     multi_aper_phot_astrom.output_ascii_target_data_table(config, data_table,
