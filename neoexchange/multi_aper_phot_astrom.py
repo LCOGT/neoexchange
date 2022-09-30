@@ -256,16 +256,24 @@ def output_ascii_target_data_table(config, target_data, aperture=4):
     if os.path.isfile(filepath):
         os.remove(filepath)
 
+    # Sort into time order:
+    order = np.argsort(target_data['mjd'].data)
+
     # Output data table:
     f = open(filepath,'w')
     f.write('#   MJD     Magnitude     Magnitude_error\n')
-    for row in range(0,len(target_data),1):
+    for row in order:
         if target_data['mag_aperture_'+str(aperture)][row] < 0.0 or \
             target_data['mag_aperture_'+str(aperture)][row] > 25.0:
             prefix = '#'
         else:
             prefix = ''
-        f.write(prefix+str(round(target_data['mjd'][row],6))+'   ' \
+
+        # Zero padd the timestamps
+        ts = str(round(target_data['mjd'][row],6))
+        while len(ts) < 12:
+            ts = ts + '0'
+        f.write(prefix+ts+'   ' \
                     +str(round(target_data['mag_aperture_'+str(aperture)][row],5))+'   ' \
                     +str(round(target_data['mag_err_aperture_'+str(aperture)][row],5))+'\n')
     f.close()
