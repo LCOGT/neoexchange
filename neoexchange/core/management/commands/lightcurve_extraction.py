@@ -139,7 +139,7 @@ class Command(BaseCommand):
         ax1.errorbar(zp_times, zps_good, yerr=zp_errs_good, marker='.', color=colors, linestyle=' ')
         # Set up Axes/Titles
         ax0.invert_yaxis()
-        ax1.invert_yaxis()
+        #ax1.invert_yaxis()
         ax1.set_xlabel('Time')
         ax0.set_ylabel('Magnitude')
         ax1.set_ylabel('Magnitude')
