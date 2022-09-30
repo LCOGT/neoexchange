@@ -37,8 +37,8 @@ def run(config):
         else:
             for row in range(0,len(t),1):
                 data_table.add_row(t[row])
-    print(str(len(data_table))+' rows of data')
-
+    print(str(len(data_table))+' rows of data in table')
+    
     # Output the concatenated data table:
     multi_aper_phot_astrom.output_target_data_table(config, data_table)
     multi_aper_phot_astrom.output_ascii_target_data_table(config, data_table,
