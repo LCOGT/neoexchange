@@ -260,9 +260,14 @@ def output_ascii_target_data_table(config, target_data, aperture=4):
     f = open(filepath,'w')
     f.write('#   MJD     Magnitude     Magnitude_error\n')
     for row in range(0,len(target_data),1):
-        f.write(str(target_data['mjd'][row])+'   '
-                    +str(target_data['mag_aperture_'+str(aperture)][row])+'   '
-                    +str(target_data['mag_err_aperture_'+str(aperture)][row])+'\n')
+        if target_data['mag_aperture_'+str(aperture)][row] < 0.0 or \
+            target_data['mag_aperture_'+str(aperture)][row] > 25.0:
+            prefix = '#'
+        else:
+            prefix = ''
+        f.write(prefix+str(round(target_data['mjd'][row],6))+'   ' \
+                    +str(round(target_data['mag_aperture_'+str(aperture)][row],5))+'   ' \
+                    +str(round(target_data['mag_err_aperture_'+str(aperture)][row],5))+'\n')
     f.close()
 
 def extract_target_photometry(dataset, photastro_datatables, target_index):
