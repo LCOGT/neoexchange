@@ -43,7 +43,7 @@ from astrometrics.time_subs import datetime2mjd_utc
 from core.archive_subs import make_data_dir
 from core.models import Block, Frame, SuperBlock, SourceMeasurement, CatalogSources, DataProduct
 from core.utils import save_dataproduct
-from photometrics.catalog_subs import search_box, sanitize_object_name
+from photometrics.catalog_subs import search_box, sanitize_object_name, open_fits_catalog, make_object_directory
 from photometrics.gf_movie import make_gif
 from photometrics.photometry_subs import compute_fwhm, map_filter_to_wavelength
 
@@ -485,7 +485,17 @@ class Command(BaseCommand):
 
                     # Create gif of fits files used for LC extraction
                     data_path = make_data_dir(out_path, model_to_dict(frames_all_zp[0]))
-                    frames_list = [os.path.join(data_path, f.filename) for f in frames_all_zp]
+                    red_paths = []
+                    for f in frames_all_zp:
+                        fits_filepath = os.path.join(data_path, f.filename.replace('e92', 'e91'))
+                        fits_header, fits_table, cattype = open_fits_catalog(fits_filepath, header_only=True)
+                        object_name = fits_header.get('OBJECT', None)
+                        block_id = fits_header.get('BLKUID', '').replace('/', '')
+                        object_directory = ''
+                        if object_name:
+                            object_directory = make_object_directory(fits_filepath, object_name, block_id)
+                        red_paths.append(object_directory)
+                    frames_list = [os.path.join(red_path, 'Temp_cvc', f.filename) for red_path,f in zip(red_paths, frames_all_zp)]
                     if not options['nogif']:
                         movie_file = make_gif(frames_list, sort=False, init_fr=100, center=3, out_path=data_path, plot_source=True,
                                               target_data=frame_data, show_reticle=True, progress=True)
