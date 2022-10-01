@@ -241,13 +241,18 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 wcs = WCS(header_n)  # get wcs transformation
-                ax = plt.gca(projection=wcs)
+                #ax = plt.gca(projection=wcs)
+                # Matplotlib deprecated above in 3.4
+                ax = plt.subplot(projection=wcs)
             dec = ax.coords['dec']
+            # Disabling Automatic Labelling to stop 'pos.eq.dec' labels showing up
+            dec.set_auto_axislabel(False)
             dec.set_major_formatter('dd:mm')
             dec.set_ticks_position('br')
             dec.set_ticklabel_position('br')
             dec.set_ticklabel(fontsize=10, exclude_overlapping=True)
             ra = ax.coords['ra']
+            ra.set_auto_axislabel(False)
             ra.set_major_formatter('hh:mm:ss')
             ra.set_ticks_position('lb')
             ra.set_ticklabel_position('lb')
