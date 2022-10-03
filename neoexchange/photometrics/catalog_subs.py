@@ -1592,6 +1592,8 @@ def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename, 
     """update the Frame zeropoint, astrometric fit, astrometric catalog
     and photometric catalog used"""
 
+    frame = None
+    block = None
     # if a Frame exists for the file, update the zeropoint,
     # astrometric catalog, rms_of_fit, nstars_in_fit, and
     # photometric catalog in the Frame
@@ -1618,11 +1620,11 @@ def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename, 
                 block = prior_frame.block
             except Frame.DoesNotExist:
                 logger.error(f"Couldn't find prior frame {prior_frame_filename}")
-                frame = block = None
+                block = None
             except Frame.MultipleObjectsReturned:
                 logger.error(f"Found multiple prior frames for {prior_frame_filename}")
-                frame = block = None
-            if block:
+                block = None
+            if block is not None:
                 frame_params = {    'sitecode':header['site_code'],
                                     'instrument':header['instrument'],
                                     'filter':header['filter'],
@@ -1731,11 +1733,11 @@ def get_or_create_CatalogSources(table, frame, header={}):
                 aper_size = header.get('aperture_radius_arcsec', 3.0)
             else:
                 # Array of fluxes/mags
-                obs_mag = source['obs_mag'][3]
-                obs_mag_err = source['obs_mag_err'][3]
+                obs_mag = source['obs_mag'][4]
+                obs_mag_err = source['obs_mag_err'][4]
                 aper_size = header.get('aperture_radius_arcsec', 3.0)
                 # Correct aperture radius to 3rd aperture
-                aper_size = aper_size * (10.0/4.0)
+                aper_size = aper_size * 5
             new_source = CatalogSources(frame=frame, obs_x=source['ccd_x'], obs_y=source['ccd_y'],
                                         obs_ra=source['obs_ra'], obs_dec=source['obs_dec'], obs_mag=obs_mag,
                                         err_obs_ra=source['obs_ra_err'], err_obs_dec=source['obs_dec_err'],

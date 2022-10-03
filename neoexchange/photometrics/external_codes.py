@@ -286,6 +286,8 @@ def determine_sextractor_options(fits_file, dest_dir, checkimage_type=[], catalo
             value = get_saturate(header)
         elif keyword == '<WCS>':
             pixscale = proj_plane_pixel_scales(fits_wcs).mean()*3600.0
+            if '-ef04' in fits_file:
+                pixscale = 0.68127658
             value = round(pixscale, 5)
         else:
             value = header.get(keyword, -99)

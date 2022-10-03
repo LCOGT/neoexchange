@@ -578,7 +578,7 @@ class ZeropointProcessPipeline(PipelineProcess):
             inst_mag =  phot['obs_mag']
             if len(inst_mag.shape) == 2:
                 # Slice out 3rd index (diameter=10pix)
-                inst_mag = inst_mag[0:, 3]
+                inst_mag = inst_mag[0:, 4]
 
             gmi_limits = [0.2, 3.0]
             if solar is True:
