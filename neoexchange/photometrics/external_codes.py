@@ -314,9 +314,19 @@ def determine_sextractor_options(fits_file, dest_dir, checkimage_type=[], catalo
             i = checkimage_type.index('BACKGROUND_RMS')
             checkimage_name[i] = os.path.join(dest_dir, os.path.basename(fits_file.replace(".fits", ".rms.fits")))
 
+        # Background map
+        if 'BACKGROUND' in checkimage_type:
+            i = checkimage_type.index('BACKGROUND')
+            checkimage_name[i] = os.path.join(dest_dir, os.path.basename(fits_file.replace(".fits", ".bkgd.fits")))
+
+        # Background subtracted image
         if '-BACKGROUND' in checkimage_type:
             i = checkimage_type.index('-BACKGROUND')
             checkimage_name[i] = os.path.join(dest_dir, os.path.basename(fits_file.replace(".fits", ".bkgsub.fits")))
+
+        if 'APERTURES' in checkimage_type:
+            i = checkimage_type.index('APERTURES')
+            checkimage_name[i] = os.path.join(dest_dir, os.path.basename(fits_file.replace(".fits", ".apers.fits")))
 
         if None in checkimage_name:
             logger.error("At least one checkimage_type you have entered is not supported by NEOX.")

@@ -155,7 +155,7 @@ class SExtractorProcessPipeline(PipelineProcess):
 
         # Make a new FITS_LDAC catalog from the frame
         self.log(f"Processing {fits_file:} with SExtractor")
-        checkimage_types = ['BACKGROUND_RMS', "-BACKGROUND"]
+        checkimage_types = ['BACKGROUND_RMS', "-BACKGROUND", "BACKGROUND", "APERTURES"]
         if '-e91' in fits_file or '-ef' in fits_file:
             # No need to make rms or background images until we have a new
             # astrometric fit and -e92 files
