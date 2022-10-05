@@ -33,9 +33,15 @@ def summarize_observations(target_name='65803', start_date='2022-07-15'):
                 block_length = block_end - block_start
                 block_length_hrs = block_length.total_seconds() / 3600.0
                 exp_length_hms = time.strftime('%H:%M:%S', time.gmtime(block.exp_length))
-                snr = np.mean(srcs.filter(frame__filter=obs_filter).values_list('snr',flat=True))
-                fwhm = np.mean(frames.values_list('fwhm', flat=True))
-                print(f'{block.id} {block.site} ({first_frame.sitecode}) {block_start.strftime("%Y-%m-%d %H:%M")} -> {block_end.strftime("%Y-%m-%d %H:%M")} ({block_length_hrs:>5.2f} hrs) {block.superblock.get_obsdetails():14s} ({exp_length_hms}) {filter_str:{filt_width}s} {num_good_zp: 3d}/{num_all_frames: 3d} SNR= {snr:.1f} FWHM= {fwhm:.1f}')
+                srcs_snr = srcs.filter(frame__filter=obs_filter).values_list('snr',flat=True)
+                snr = -999
+                if len(srcs_snr) > 0:
+                    snr = np.mean(srcs_snr)
+                fwhm = -99
+                srcs_fwhm = frames.values_list('fwhm', flat=True)
+                if len(srcs_fwhm) > 0:
+                    fwhm = np.mean(srcs_fwhm)
+                print(f'{block.superblock.tracking_number} {block.request_number} {block.site} ({first_frame.sitecode}) {block_start.strftime("%Y-%m-%d %H:%M")} -> {block_end.strftime("%Y-%m-%d %H:%M")} ({block_length_hrs:>5.2f} hrs) {block.superblock.get_obsdetails():14s} ({exp_length_hms}) {filter_str:{filt_width}s} {num_good_zp: 3d}/{num_all_frames: 3d} SNR= {snr:.1f} FWHM= {fwhm:.1f}')
 
 def examine_multiap():
     for aprad in np.arange(2,12):
