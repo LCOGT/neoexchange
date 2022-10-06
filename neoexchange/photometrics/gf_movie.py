@@ -19,7 +19,6 @@ from math import degrees, cos, radians, copysign
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-import pyslalib.slalib as S
 from astropy.io import fits
 from astropy.wcs import WCS, FITSFixedWarning
 from django.conf import settings
@@ -267,9 +266,9 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
             sup_title = f'REQ# {header_n["REQNUM"]} -- {header_n["OBJECT"]} at {header_n["SITEID"].upper()} ({header_n["INSTRUME"]}) -- Filter: {header_n["FILTER"]}'
         else:
             sup_title = title
-        fig.suptitle(sup_title)
-        ax.set_title('UT Date: {} ({} of {})'.format(date.strftime('%x %X'), current_count,
-                                                     int(len(good_fits_files) - (copies - 1) * start_frames)), pad=10)
+        ax.set_title(sup_title + '\n' + f'UT Date: {date.strftime("%Y/%m/%d %H:%M:%S")} -- #{header_n["FRAMENUM"]:04d} '
+                                        f'({current_count} of'
+                                        f' {int(len(good_fits_files) - (copies - 1) * start_frames)})')
 
         # Set frame to be center of chip in arcmin
         shape = data.shape
