@@ -49,6 +49,10 @@ class DownloadProcessPipeline(PipelineProcess):
             'default' : False,
             'long_name' : 'Whether to download imaging for LCOEngineering'
         },
+        'downloadonly': {
+            'default' : False,
+            'long_name' : 'Whether to only download data'
+        },
         'numdays' : {
             'default' : 0.0,
             'long_name' : 'How many extra days to look for'
@@ -72,6 +76,7 @@ class DownloadProcessPipeline(PipelineProcess):
         proposals = inputs.get('proposals')
         dlengimaging = inputs.get('dlengimaging')
         spectraonly = inputs.get('spectraonly')
+        downloadonly = inputs.get('downloadonly')
         numdays = inputs.get('numdays')
         object = inputs.get('object')
 
@@ -80,7 +85,8 @@ class DownloadProcessPipeline(PipelineProcess):
             # unpack tarballs and make movie.
             self.create_movies()
             self.sort_objects()
-            self.process(objectid=object)
+            if downloadonly is False:
+                self.process(objectid=object)
         except NeoException as ex:
             logger.error('Error with Movie: {}'.format(ex))
             self.log('Error with Movie: {}'.format(ex))
@@ -103,6 +109,7 @@ class DownloadProcessPipeline(PipelineProcess):
         start_date, end_date = determine_archive_start_end(obs_date)
         end_date = end_date + timedelta(days=numdays)
         for proposal in proposals:
+            logger.info("Looking for frames between %s->%s from %s" % ( start_date, end_date, proposal ))
             self.log("Looking for frames between %s->%s from %s" % ( start_date, end_date, proposal ))
             obstypes = self.OBSTYPES
             if (proposal == 'LCOEngineering' and not dlengimaging) or spectraonly:
@@ -132,6 +139,7 @@ class DownloadProcessPipeline(PipelineProcess):
                 for red_lvl in self.frames.keys():
                     self.log("Found %d frames for reduction level: %s" % ( len(self.frames[red_lvl]), red_lvl ))
                 dl_frames = download_files(self.frames, out_path)
+                logger.info("Downloaded %d frames" % ( len(dl_frames) ))
                 self.log("Downloaded %d frames" % ( len(dl_frames) ))
         return
 

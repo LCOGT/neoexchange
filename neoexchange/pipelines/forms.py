@@ -10,6 +10,7 @@ class DLDataForm(forms.Form):
     proposals = forms.MultipleChoiceField(label="Proposal code", required=True,  widget=forms.widgets.SelectMultiple(attrs={'class': 'multiselect'}))
     spectraonly = forms.BooleanField(label="Only download Spectra", required=False)
     dlengimaging = forms.BooleanField(label="Download imaging for LCOEngineering", required=False)
+    downloadonly = forms.BooleanField(label="Only Download (don't process) data", required=False)
     numdays = forms.FloatField(label="How many extra days to search", required=False)
     object = forms.CharField(label="Object name [optional]", required=False)
 
