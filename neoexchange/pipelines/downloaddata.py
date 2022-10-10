@@ -62,7 +62,7 @@ class DownloadProcessPipeline(PipelineProcess):
             'long_name' : 'Download data for specific object'
         }
     }
-    OBSTYPES = ['EXPOSE', 'ARC', 'LAMPFLAT', 'SPECTRUM']
+    OBSTYPES = ['EXPOSE', ] # 'ARC', 'LAMPFLAT', 'SPECTRUM']
 
     class Meta:
         proxy = True
