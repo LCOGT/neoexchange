@@ -1366,11 +1366,12 @@ def create_dart_lightcurve(input_dir, output_dir, block, match='photometry_*.dat
                     log_file = os.path.join(os.path.dirname(photometry_file), 'LOG')
                     table = read_photompipe_file(photometry_file)
                     aper_radius = extract_photompipe_aperradius(log_file)
+                    file_parts['site'] += '-PP'
                 else:
                     print("Table from SourceMeasurements")
                     table = create_table_from_srcmeasures(input_dir)
                     aper_radius = table['aprad'].mean()
-                    file_parts['site'] += '-Src'
+#                    file_parts['site'] += '-Src'
                 print(len(table), aper_radius)
                 if table and aper_radius:
                     phot_filename, pds_name = make_pds_asteroid_name(block.body)
