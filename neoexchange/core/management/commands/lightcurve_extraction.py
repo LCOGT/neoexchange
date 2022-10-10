@@ -133,10 +133,17 @@ class Command(BaseCommand):
         # Plot LC
         ax0.errorbar(times, mags, yerr=mag_errs, marker='.', color=colors, linestyle=' ')
         # Sort out/Plot good Zero Points
-        zp_times = [alltimes[i] for i, zp in enumerate(zps) if zp and zp_errs[i]]
-        zps_good = [zp for i, zp in enumerate(zps) if zp and zp_errs[i]]
-        zp_errs_good = [zp_errs[i] for i, zp in enumerate(zps) if zp and zp_errs[i]]
+        zp_times = [alltimes[i] for i, zp in enumerate(zps) if zp > 0 and zp_errs[i] > 0]
+        zps_good = [zp for i, zp in enumerate(zps) if zp > 0 and zp_errs[i] > 0]
+        zp_errs_good = [zp_errs[i] for i, zp in enumerate(zps) if zp > 0 and zp_errs[i] > 0]
         ax1.errorbar(zp_times, zps_good, yerr=zp_errs_good, marker='.', color=colors, linestyle=' ')
+        ylims = ax1.get_ylim()
+        # Sort out/Plot bad Zero Points
+        zp_times = [alltimes[i] for i, zp in enumerate(zps) if zp <= 0 or zp_errs[i] <= 0]
+        zps_bad = [zp for i, zp in enumerate(zps) if zp <= 0 or zp_errs[i] <= 0]
+        zp_errs_bad = [zp_errs[i]-ylims[0] for i, zp in enumerate(zps) if zp <= 0 or zp_errs[i] <= 0]
+        ax1.errorbar(zp_times, zps_bad, yerr=zp_errs_bad, uplims=True, marker='d', color=colors, linestyle='--')
+        ax1.set_ylim(ylims[0]-0.1, ylims[1])
         # Set up Axes/Titles
         ax0.invert_yaxis()
         #ax1.invert_yaxis()
@@ -399,7 +406,7 @@ class Command(BaseCommand):
                     frames_all_zp = frames_neox
                 else:
                     frames_all_zp = frames_red
-                frames = frames_all_zp.filter(zeropoint__isnull=False)
+                frames = frames_all_zp.filter(zeropoint__isnull=False, zeropoint__gte=0)
                 self.stdout.write("Found %d frames (of %d total) for Block# %d with good ZPs" % (frames.count(), frames_all_zp.count(), block.id))
                 self.stdout.write("Searching within %.1f arcseconds and +/-%.2f delta magnitudes" % (options['boxwidth'], options['deltamag']))
                 total_frame_count += frames.count()
