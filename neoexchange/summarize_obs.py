@@ -9,13 +9,15 @@ def summarize_observations(target_name='65803', start_date='2022-07-15'):
 
     didymos = Body.objects.get(name=target_name)
     blocks = Block.objects.filter(body=didymos, block_start__gte=start_date)
-    filt_width = 6
+    filt_width = 3
     if blocks.filter(site='ogg', telclass='2m0').count() > 0:
         # Set wider width for MuSCAT blocks
         filt_width = 14
     for block in blocks.order_by('block_start'):
+        all_raw_frames = Frame.objects.filter(block=block, frametype=Frame.BANZAI_RED_FRAMETYPE)
         all_frames = Frame.objects.filter(block=block, frametype=Frame.NEOX_RED_FRAMETYPE)
         num_good_zp = all_frames.filter(zeropoint__gte=0).count()
+        num_raw_frames = all_raw_frames.count()
         num_all_frames = all_frames.count()
         srcs = SourceMeasurement.objects.filter(frame__block=block)
         block_length_hrs = -1
@@ -41,7 +43,7 @@ def summarize_observations(target_name='65803', start_date='2022-07-15'):
                 srcs_fwhm = frames.values_list('fwhm', flat=True)
                 if len(srcs_fwhm) > 0:
                     fwhm = np.mean(srcs_fwhm)
-                print(f'{block.superblock.tracking_number} {block.request_number} {block.site} ({first_frame.sitecode}) {block_start.strftime("%Y-%m-%d %H:%M")} -> {block_end.strftime("%Y-%m-%d %H:%M")} ({block_length_hrs:>5.2f} hrs) {block.superblock.get_obsdetails():14s} ({exp_length_hms}) {filter_str:{filt_width}s} {num_good_zp: 3d}/{num_all_frames: 3d} SNR= {snr:.1f} FWHM= {fwhm:.1f}')
+                print(f'{block.superblock.tracking_number} {block.request_number} {block.site} ({first_frame.sitecode}) {block_start.strftime("%Y-%m-%d %H:%M")} -> {block_end.strftime("%Y-%m-%d %H:%M")} ({block_length_hrs:>4.2f} hrs) {block.superblock.get_obsdetails().replace(" secs", "s"):10s}({exp_length_hms}) {filter_str:{filt_width}s} {num_raw_frames:>3d}(e91)->{num_good_zp:>3d}/{num_all_frames:>3d} SNR= {snr:>6.1f} FWHM= {fwhm:.1f}')
 
 def examine_multiap():
     for aprad in np.arange(2,12):
