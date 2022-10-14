@@ -73,7 +73,7 @@ def plot_ra_dec(ephem, title=None, base_dir=''):
 
     # Generate the figure **without using pyplot**.
     # https://matplotlib.org/faq/howto_faq.html#matplotlib-in-a-web-application-server
-    fig = Figure()
+    fig = Figure(figsize=(8,6))
     ax = fig.subplots()
 
     # Look for RA wraparound at RA=360/0 deg and plot in two parts
@@ -97,12 +97,12 @@ def plot_ra_dec(ephem, title=None, base_dir=''):
             ax.plot(ephem['RA'], ephem['DEC'])
     else:
         ax.plot(ephem['RA'], ephem['DEC'])
-    ax.set_xlim(360.0, 0.0)
-    ax.set_ylim(-95, 95)
+    ax.set_xlim(175.0, 50.0)
+    ax.set_ylim(-30, 30)
     ax.set_xlabel('RA (deg)')
     ax.set_ylabel('Dec (deg)')
     # Set the Dec tick labels from -80 to +80 in steps of 20
-    labels = np.arange(-80, 90, 20)
+    labels = np.arange(-30, 30, 10)
     ax.yaxis.set_ticks(labels)
     ax.minorticks_on()
     ax.xaxis.set_ticks_position('both')
@@ -112,31 +112,41 @@ def plot_ra_dec(ephem, title=None, base_dir=''):
     mw_top, mw_bot = plot_milkyway(ax, radec=True)
 
     first = ephem[0]
-    first_date = datetime.strptime(first['datetime_str'], "%Y-%b-%d %H:%M")
+    first_date = first['datetime']
     last = ephem[-1]
-    last_date = datetime.strptime(last['datetime_str'], "%Y-%b-%d %H:%M")
+    last_date = last['datetime']
 
     if title is None:
         title = "{} for {} to {}".format(first['targetname'], first_date.strftime("%Y-%m-%d"), last_date.strftime("%Y-%m-%d"))
     fig.suptitle(title)
     ax.set_title("Sky position")
 
-    dec_offset = +10
-    if first['DEC'] >= 75:
-        dec_offset = -15
-    ra_offset = 0
-    if first['RA'] <= 40:
-        ra_offset = +60
-    ax.annotate(first_date.strftime("%Y-%m-%d"), xy=(first['RA'], first['DEC']), xytext=(first['RA'] + ra_offset, first['DEC'] + dec_offset),
-                arrowprops=dict(facecolor='black', arrowstyle='->'))
+    index = 0
+    while index < len(ephem)-48:
+        pos = ephem[index]
+        pos_date = datetime.strptime(pos['datetime_str'], "%Y-%b-%d %H:%M")
+        dec_offset = +10
+        if pos['DEC'] >= 75:
+            dec_offset = -15
+        ra_offset = -5
+        if pos['RA'] <= 40:
+            ra_offset = +60
+        anno_string = "%m-%d"
+        if index == 0:
+            anno_string = "%Y-%m-%d"
+        ax.annotate(pos_date.strftime(anno_string), xy=(pos['RA'], pos['DEC']), xytext=(pos['RA'] + ra_offset, pos['DEC'] + dec_offset),
+                    arrowprops=dict(facecolor='black', arrowstyle='->', relpos=(0,0), shrinkA=1, patchA=None), fontsize=8)
+        index += 24*2
+
+
     dec_offset = +10
     if last['DEC'] >= 75:
         dec_offset = -15
-    ra_offset = 0
+    ra_offset = 10
     if last['RA'] <= 40:
         ra_offset = +60
     ax.annotate(last_date.strftime("%Y-%m-%d"), xy=(last['RA'], last['DEC']), xytext=(last['RA'] + ra_offset, last['DEC'] + dec_offset),
-                arrowprops=dict(arrowstyle='->'))
+                arrowprops=dict(arrowstyle='->', relpos=(0,1), shrinkA=0), fontsize=8)
 
     # Add watermark
     add_watermark(fig)
@@ -156,7 +166,7 @@ def plot_gal_long_lat(ephem, title=None, base_dir=''):
 
     # Generate the figure **without using pyplot**.
     # https://matplotlib.org/faq/howto_faq.html#matplotlib-in-a-web-application-server
-    fig = Figure()
+    fig = Figure(figsize=(8,6))
     ax = fig.subplots()
 
     # Look for longitude wraparound at l=360/0 deg and plot in two parts
@@ -180,12 +190,12 @@ def plot_gal_long_lat(ephem, title=None, base_dir=''):
             ax.plot(ephem['GlxLon'], ephem['GlxLat'])
     else:
         ax.plot(ephem['GlxLon'], ephem['GlxLat'])
-    ax.set_xlim(360.0, 0.0)
-    ax.set_ylim(-95, 95)
+    ax.set_xlim(250.0,200.0)
+    ax.set_ylim(-20, 25)
     ax.set_xlabel('Galactic Longitude (deg)')
     ax.set_ylabel('Galactic Latitude (deg)')
     # Set the Galactic Latitude tick labels from -80 to +80 in steps of 20
-    labels = np.arange(-80,90,20)
+    labels = np.arange(-20,25,5)
     ax.yaxis.set_ticks(labels)
     ax.minorticks_on()
     ax.xaxis.set_ticks_position('both')
@@ -204,22 +214,34 @@ def plot_gal_long_lat(ephem, title=None, base_dir=''):
     fig.suptitle(title)
     ax.set_title("Galactic position")
 
-    dec_offset = +10
-    if first['GlxLat'] >= 75:
-        dec_offset = -15
-    ra_offset = 0
-    if first['GlxLon'] <= 40:
-        ra_offset = +60
-    ax.annotate(first_date.strftime("%Y-%m-%d"), xy=(first['GlxLon'], first['GlxLat']), xytext=(first['GlxLon']+ra_offset, first['GlxLat']+dec_offset),
-            arrowprops=dict(facecolor='black', arrowstyle='->'))
-    dec_offset = +10
+    dec_offset = 0
     if last['GlxLat'] >= 75:
         dec_offset = -15
-    ra_offset = 0
+    ra_offset = -5
     if last['GlxLon'] <= 40:
         ra_offset = +60
     ax.annotate(last_date.strftime("%Y-%m-%d"), xy=(last['GlxLon'], last['GlxLat']), xytext=(last['GlxLon']+ra_offset, last['GlxLat']+dec_offset),
-            arrowprops=dict(arrowstyle='->'))
+            arrowprops=dict(arrowstyle='->', relpos=(0,0), shrinkA=1, patchA=None), fontsize=8)
+
+    index = 0
+    while index < len(ephem)-48:
+        pos = ephem[index]
+        pos_date = datetime.strptime(pos['datetime_str'], "%Y-%b-%d %H:%M")
+
+        dec_offset = 0
+        if first['GlxLat'] >= 75:
+            dec_offset = -5
+        ra_offset = -5
+        if first['GlxLon'] <= 40:
+            ra_offset = +60
+
+        anno_string = "%m-%d"
+        if index == 0:
+            anno_string = "%Y-%m-%d"
+        ax.annotate(pos_date.strftime(anno_string), xy=(pos['GlxLon'], pos['GlxLat']), xytext=(pos['GlxLon'] + ra_offset, pos['GlxLat'] + dec_offset),
+                    arrowprops=dict(facecolor='black', arrowstyle='->', relpos=(0,0), shrinkA=1, patchA=None), fontsize=8)
+        index += 24*2
+
 
     # Add watermark
     add_watermark(fig)
