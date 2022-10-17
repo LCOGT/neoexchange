@@ -67,6 +67,11 @@ def run(config):
     # Extract table of target flux radius and flux, flux_err in all apertures
     target_data = extract_target_photometry(dataset, photastro_datatables, target_index)
 
+    num_apers = list(set([len(t[0]['obs_mag']) for t in photastro_datatables]))
+    if len(num_apers) != 1:
+        raise IOError('Inconsistent number of apertures')
+    config['num_apers'] = num_apers[0]
+
     # Output results table & plots
     output_target_data_table(config, target_data)
     output_ascii_target_data_table(config, target_data, aperture=4)
@@ -94,7 +99,7 @@ def plot_multi_aperture_lightcurve(config, target_data):
     date_format = get_date_format(dates)
 
     plot_errors = True
-    naper = 20
+    naper = config.get('num_apers', 20)
     colour_codes = ['#FA281B', '#FA731B', '#FAA91B', '#FAD51B', '#CBFA1B',
                     '#91FA1B', '#3BD718', '#18D797', '#18D7C9', '#18B1D7',
                     '#1897D7', '#1878D7', '#183ED7', '#9438E0', '#BD38E0',
