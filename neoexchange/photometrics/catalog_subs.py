@@ -885,7 +885,7 @@ def fits_ldac_to_header(header_array):
                 if comment_loc == -1:
                     comment_loc = len(card)
                 value = card[10:comment_loc]
-                if '.' in value:
+                if '.' in value or 'E+' in value.upper() or 'E-' in value.upper():
                     try:
                         value = float(value)
                     except ValueError:
