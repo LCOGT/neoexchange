@@ -274,13 +274,11 @@ def output_ascii_target_data_table(config, target_data, aperture=4):
         else:
             prefix = ''
 
-        # Zero padd the timestamps
-        ts = str(round(target_data['mjd'][row],6))
-        while len(ts) < 12:
-            ts = ts + '0'
-        f.write(prefix+ts+'   ' \
-                    +str(round(target_data['mag_aperture_'+str(aperture)][row],5))+'   ' \
-                    +str(round(target_data['mag_err_aperture_'+str(aperture)][row],5))+'\n')
+        # Zero pad the timestamps
+        ts = target_data['mjd'][row]
+        f.write("{}{:.6f}   {:.5f}   {:.5f}\n".format(prefix, ts, \
+                    target_data['mag_aperture_'+str(aperture)][row], \
+                    target_data['mag_err_aperture_'+str(aperture)][row]))
     f.close()
 
 def extract_target_photometry(dataset, photastro_datatables, target_index):
