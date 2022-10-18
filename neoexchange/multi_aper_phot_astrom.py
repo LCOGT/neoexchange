@@ -354,6 +354,19 @@ def identify_target_in_frames(dataset, photastro_datatables):
     # be considered to be a match:
     tolerance = (5.0/3600.0)*u.deg
 
+    first = dataset['obs_midpoint'].min()
+    last = dataset['obs_midpoint'].max()
+    # Compute ephemeris for Didymos=65803 for length of exposure time range
+    # Note that the interval of calculation must be '1m' or greater, or
+    # Horizons returns a ValueError, leading to a spurious error of
+    # 'Ambiguous object'
+    site_codes = list(set(dataset['site_code']))
+    if len(site_codes) != 1:
+        raise IOError('Multiple site codes found')
+    site_code = site_codes[0]
+    ephem = horizons_ephem('65803',
+                    first-timedelta(minutes=1), last+timedelta(minutes=1),
+                    site_code, '1m', alt_limit=20)
     # Loop over all images in the dataset:
     for i in range(0,len(dataset),1):
 
@@ -362,14 +375,7 @@ def identify_target_in_frames(dataset, photastro_datatables):
         detected_pos = SkyCoord(table['obs_ra'], table['obs_dec'], unit=u.deg)
 
         if len(detected_pos) > 0:
-            # Compute ephemeris for Didymos=65803 around midpoint of this exposure
-            # Note that the interval of calculation must be '1m' or greater, or
-            # Horizons returns a ValueError, leading to a spurious error of
-            # 'Ambiguous object'
             midpoint = dataset['obs_midpoint'][i]
-            ephem = horizons_ephem('65803',
-                    midpoint-timedelta(minutes=1), midpoint+timedelta(minutes=1),
-                    dataset['site_code'][i], '1m', 30)
 
             # Find index of nearest in time from the ephememeris line, and use it
             # to extract the predicted sky position of the target in this frame
