@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 import numpy as np
 
-from core.models import Block, Body, Frame, SourceMeasurement
+from core.models import Block, Body, Frame, SourceMeasurement, DataProduct
 
 def summarize_observations(target_name='65803', start_date='2022-07-15'):
 
@@ -41,9 +41,10 @@ def summarize_observations(target_name='65803', start_date='2022-07-15'):
                     snr = np.mean(srcs_snr)
                 fwhm = -99
                 srcs_fwhm = frames.values_list('fwhm', flat=True)
+                num_dp = DataProduct.objects.filter(filetype=DataProduct.DART_TXT, object_id=block.superblock.pk).count()
                 if len(srcs_fwhm) > 0:
                     fwhm = np.mean(srcs_fwhm)
-                print(f'{block.superblock.tracking_number} {block.request_number} {block.site} ({first_frame.sitecode}) {block_start.strftime("%Y-%m-%d %H:%M")} -> {block_end.strftime("%Y-%m-%d %H:%M")} ({block_length_hrs:>4.2f} hrs) {block.superblock.get_obsdetails().replace(" secs", "s"):10s}({exp_length_hms}) {filter_str:{filt_width}s} {num_raw_frames:>3d}(e91)->{num_good_zp:>3d}/{num_all_frames:>3d} SNR= {snr:>6.1f} FWHM= {fwhm:.1f}')
+                print(f'{block.superblock.tracking_number} {block.request_number} {block.site} ({first_frame.sitecode}) {block_start.strftime("%Y-%m-%d %H:%M")} -> {block_end.strftime("%Y-%m-%d %H:%M")} ({block_length_hrs:>4.2f} hrs) {block.superblock.get_obsdetails().replace(" secs", "s"):10s}({exp_length_hms}) {filter_str:{filt_width}s} {num_raw_frames:>3d}(e91)->{num_good_zp:>3d}/{num_all_frames:>3d} SNR= {snr:>6.1f} FWHM= {fwhm:.1f} DPs={num_dp}')
 
 def examine_multiap():
     for aprad in np.arange(2,12):
