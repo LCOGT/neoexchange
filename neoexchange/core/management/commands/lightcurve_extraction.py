@@ -502,7 +502,10 @@ class Command(BaseCommand):
                         if object_name:
                             object_directory = make_object_directory(fits_filepath, object_name, block_id)
                         red_paths.append(object_directory)
-                    frames_list = [os.path.join(red_path, 'Temp_cvc', f.filename) for red_path,f in zip(red_paths, frames_all_zp)]
+                    data_subdir = 'Temp_cvc'
+                    if os.path.exists(os.path.join(red_path, data_subdir)) is False:
+                        data_subdir = 'Temp_cvc_multiap'
+                    frames_list = [os.path.join(red_path, data_subdir, f.filename) for red_path,f in zip(red_paths, frames_all_zp)]
                     if not options['nogif']:
                         movie_file = make_gif(frames_list, sort=False, init_fr=100, center=3, out_path=data_path, plot_source=True,
                                               target_data=frame_data, show_reticle=True, progress=True)
