@@ -243,7 +243,7 @@ class Command(BaseCommand):
         mpc_line = source.format_mpc_line()
 
         ades_psv_line = source.format_psv_line()
-        if persist is not True:
+        if persist is not True and created is True:
             source.delete()
         return mpc_line, ades_psv_line
 
