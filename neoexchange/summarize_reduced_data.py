@@ -1,6 +1,9 @@
 import os
+import argparse
 from sys import argv
 from glob import glob
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "neox.settings")
+from django.conf import settings
 
 from astropy.stats import sigma_clipped_stats
 from astropy.table import Table, Column
@@ -66,17 +69,19 @@ def set_output_file_path(config, descriptor):
                 config['target_name']+'_data_'+str(bandpass)+'.ecsv')
     return filepath
 
-def get_args():
-    config = {}
-    if len(argv) == 1:
-        config['dataroot'] = input('Please enter the dataroot path: ')
-    else:
-        config['dataroot'] = argv[1]
+def get_args(args):
 
-    config['target_name'] = '65803'
+    parser = argparse.ArgumentParser(description='Summarize multi-aperture photometry',
+                                     usage='%(prog)s [--filters]> <dataroot>')
+    parser.add_argument('dataroot', default=settings.DATA_ROOT, help='Dataroot path')
+    parser.add_argument('--target_name', default='65803', help='Target name (default: %(default)s)')
+
+    options = parser.parse_args(args)
+    config = vars(options)
+
     return config
 
-
 if __name__ == '__main__':
-    config = get_args()
+    config = get_args(argv[1:])
     run(config)
+

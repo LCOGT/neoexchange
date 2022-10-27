@@ -1,5 +1,7 @@
 import os
-from sys import argv
+import argparse
+from sys import argv, exit
+from datetime import datetime, timedelta
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "neox.settings")
 from django.conf import settings
 import django
@@ -9,10 +11,10 @@ from photometrics.catalog_subs import *
 from core.views import determine_images_and_catalogs
 from astrometrics.ephem_subs import horizons_ephem
 
+from numpy import unique
 from astropy.table import Table, Column
 from astropy.time import Time
 from astropy.io import fits
-from datetime import datetime, timedelta
 
 import astropy.units as u
 from astropy.coordinates import SkyCoord
@@ -30,53 +32,70 @@ def run(config):
                                                      red_level='e92')
 
     # Extract the required data from the set of catalogs
-    dataset, photastro_datatables = load_catalog_data(images, catalogs)
+    full_dataset, full_photastro_datatables = load_catalog_data(images, catalogs)
 
     # Store the target name in the config for future reference.
     # The name used for the first frame in the dataset is assumed to be the
     # target throughout
-    config['target_name'] = dataset['target_name'][0]
+    config['target_name'] = full_dataset['target_name'][0]
 
-    # Interpolate the trend in photometric zeropoint as a function of time
-    zp_model = interpolate_with_time(config, dataset['mjd'], dataset['zeropoint'],
-                                    diagnostics=True,
-                                    plot_labels=['MJD', 'Zeropoint [mag]'],
-                                    plot_file='zeropoint_trend.png')
+    obs_filters = unique(full_dataset['filter'])
+    if config['filters'] not in obs_filters:
+        obs_str = ",".join(obs_filters)
+        req_str = ",".join(config['filters'])
+        raise IOError(f"Requested filters ({req_str}) not in observed filters ({obs_str})")
 
-    # Apply the revised zeropoints to the obs_mag column for
-    # each photastro_datatable
-    photastro_datatables = apply_new_zeropoints(dataset, photastro_datatables, zp_model)
+    # Loop over requested filters making ZP and WCS m
+    for obs_filter in config['filters']:
+        mask = full_dataset['filter'] == obs_filter
+        dataset = full_dataset[mask]
 
-    # Interpolate the trends in the WCS parameters as functions of time
-    wcs_model = interpolate_wcs_with_time(config, dataset,
-                                                    diagnostics=True)
+        photastro_datatables = []
+        for i, tab in enumerate(full_photastro_datatables):
+             if mask[i] == True:
+                photastro_datatables.append(tab)
+        print(f"Analyzing filter {obs_filter}, #rows={len(dataset)}, {len(photastro_datatables)}")
 
-    # Apply the astrometric models to create a valid WCS for those frames
-    # which previously had none
-    dataset = correct_invalid_wcs(dataset, wcs_model)
+        # Interpolate the trend in photometric zeropoint as a function of time
+        zp_model = interpolate_with_time(config, dataset['mjd'], dataset['zeropoint'],
+                                        diagnostics=True,
+                                        plot_labels=['MJD', 'Zeropoint [mag]'],
+                                        plot_file='zeropoint_trend.png')
 
-    # Apply the revised WCS to the source positions (ALPHA_J2000, DELTA_J2000)
-    # columns in each photastro_datatable
-    photastro_datatables = apply_corrected_wcs(dataset, photastro_datatables)
+        # Apply the revised zeropoints to the obs_mag column for
+        # each photastro_datatable
+        photastro_datatables = apply_new_zeropoints(dataset, photastro_datatables, zp_model)
 
-    # Identify the row index of the target in the datatable for each frame,
-    # based on the predicted position of the target
-    target_index = identify_target_in_frames(dataset, photastro_datatables)
-    check_target_index(target_index)
+        # Interpolate the trends in the WCS parameters as functions of time
+        wcs_model = interpolate_wcs_with_time(config, dataset,
+                                                        diagnostics=True)
 
-    # Extract table of target flux radius and flux, flux_err in all apertures
-    target_data = extract_target_photometry(dataset, photastro_datatables, target_index)
+        # Apply the astrometric models to create a valid WCS for those frames
+        # which previously had none
+        dataset = correct_invalid_wcs(dataset, wcs_model)
 
-    num_apers = list(set([len(t[0]['obs_mag']) for t in photastro_datatables]))
-    if len(num_apers) != 1:
-        raise IOError('Inconsistent number of apertures')
-    config['num_apers'] = num_apers[0]
+        # Apply the revised WCS to the source positions (ALPHA_J2000, DELTA_J2000)
+        # columns in each photastro_datatable
+        photastro_datatables = apply_corrected_wcs(dataset, photastro_datatables)
 
-    # Output results table & plots
-    output_target_data_table(config, target_data)
-    output_ascii_target_data_table(config, target_data, aperture=4)
-    plot_target_radius(config, target_data)
-    plot_multi_aperture_lightcurve(config, target_data)
+        # Identify the row index of the target in the datatable for each frame,
+        # based on the predicted position of the target
+        target_index = identify_target_in_frames(dataset, photastro_datatables)
+        check_target_index(target_index)
+
+        # Extract table of target flux radius and flux, flux_err in all apertures
+        target_data = extract_target_photometry(dataset, photastro_datatables, target_index)
+
+        num_apers = list(set([len(t[0]['obs_mag']) for t in photastro_datatables]))
+        if len(num_apers) != 1:
+            raise IOError('Inconsistent number of apertures')
+        config['num_apers'] = num_apers[0]
+
+        # Output results table & plots
+        output_target_data_table(config, target_data)
+        output_ascii_target_data_table(config, target_data, aperture=4)
+        plot_target_radius(config, target_data)
+        plot_multi_aperture_lightcurve(config, target_data)
 
 def check_target_index(target_index):
     """Function catches instance where the target has not been identified in
@@ -390,6 +409,7 @@ def identify_target_in_frames(dataset, photastro_datatables):
 
             # If the index is within a reasonable tolerance store the index,
             # otherwise store a -99 entry.
+            print(f"{i:>3d} {dataset[i]['filename']} {sep_r[lco_index]:.3f} {tolerance.to(u.arcsec)} x,y= {table[lco_index]['ccd_x']:.3f}, {table[lco_index]['ccd_y']:.3f}")
             if sep_r[lco_index] <= tolerance:
                 target_index.append(lco_index)
             else:
@@ -595,7 +615,7 @@ def load_catalog_data(images, catalogs):
     """
 
     # Default configuration:
-    flag_filter = 0
+    flag_filter = 3
 
     # Compile dataset of zeropoints and WCS data per frame
     data = []
@@ -705,16 +725,19 @@ def get_flux_radii(fits_table, flag_filter):
 
     return new_table['flux_radius']
 
-def get_args():
-    config = {}
-    if len(argv) == 1:
-        config['dataroot'] = input('Please enter the dataroot path: ')
-    else:
-        config['dataroot'] = argv[1]
+def get_args(args):
+
+    parser = argparse.ArgumentParser(description='Extract multi-aperture photometry',
+                                     usage='%(prog)s [--filters]> <dataroot>')
+    parser.add_argument('dataroot', default=settings.DATA_ROOT, help='Dataroot path')
+    parser.add_argument('--filters', nargs='+', default=['w', ], help='Filters to analyze (default: %(default)s)')
+
+    options = parser.parse_args(args)
+    config = vars(options)
 
     return config
 
 
 if __name__ == '__main__':
-    config = get_args()
+    config = get_args(argv[1:])
     run(config)
