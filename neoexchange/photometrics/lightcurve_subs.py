@@ -58,6 +58,17 @@ def extract_photompipe_aperradius(logfile):
                         aper_radius = float(matches.group(1))
                     else:
                         logger.warning("Unexpected number of matches")
+            if aper_radius is None:
+                logger.info("Not found, trying alternative method")
+                f.seek(0)
+                regex = r"^pp_extract.*'aprad': (\d+.\d+)"
+                for line in f.readlines():
+                    matches = re.search(regex, line)
+                    if matches:
+                        if len(matches.groups()) == 1:
+                            aper_radius = float(matches.group(1))
+                        else:
+                            logger.warning("Unexpected number of matches")
     return aper_radius
 
 def create_table_from_srcmeasures(block):

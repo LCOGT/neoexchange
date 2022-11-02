@@ -25,12 +25,13 @@ def summarize_observations(target_name='65803', start_date='2022-07-15'):
             filters = all_frames.values_list('filter',flat=True).distinct()
             for obs_filter in filters:
                 filter_str = obs_filter #", ".join(list(filters))
+                raw_frames = all_raw_frames.filter(filter=obs_filter)
                 frames = all_frames.filter(filter=obs_filter)
                 num_good_zp = frames.filter(zeropoint__gte=0).count()
                 num_all_frames = frames.count()
-                first_frame = frames.earliest('midpoint')
+                first_frame = raw_frames.earliest('midpoint')
                 block_start = first_frame.midpoint - timedelta(seconds=first_frame.exptime / 2.0)
-                last_frame = frames.latest('midpoint')
+                last_frame = raw_frames.latest('midpoint')
                 block_end = last_frame.midpoint + timedelta(seconds=last_frame.exptime / 2.0)
                 block_length = block_end - block_start
                 block_length_hrs = block_length.total_seconds() / 3600.0
@@ -40,7 +41,7 @@ def summarize_observations(target_name='65803', start_date='2022-07-15'):
                 if len(srcs_snr) > 0:
                     snr = np.mean(srcs_snr)
                 fwhm = -99
-                srcs_fwhm = frames.values_list('fwhm', flat=True)
+                srcs_fwhm = frames.filter(fwhm__gt=0).values_list('fwhm', flat=True)
                 num_dp = DataProduct.objects.filter(filetype=DataProduct.DART_TXT, object_id=block.superblock.pk).count()
                 if len(srcs_fwhm) > 0:
                     fwhm = np.mean(srcs_fwhm)
