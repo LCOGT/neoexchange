@@ -1,14 +1,21 @@
 import time
+import warnings
 from datetime import datetime, timedelta
 
 import numpy as np
+from astropy.wcs import FITSFixedWarning
 
 from core.models import Block, Body, Frame, SourceMeasurement, DataProduct
 
-def summarize_observations(target_name='65803', start_date='2022-07-15'):
+def summarize_observations(target_name='65803', start_date='2022-07-15', proposal=None):
 
-    didymos = Body.objects.get(name=target_name)
-    blocks = Block.objects.filter(body=didymos, block_start__gte=start_date)
+    # Suppress WCS obsfix warnings
+    warnings.simplefilter('ignore', FITSFixedWarning)
+
+    target = Body.objects.get(name=target_name)
+    blocks = Block.objects.filter(body=target, block_start__gte=start_date)
+    if proposal is not None:
+        blocks = blocks.filter(superblock__proposal__code=proposal)
     filt_width = 3
     if blocks.filter(site='ogg', telclass='2m0').count() > 0:
         # Set wider width for MuSCAT blocks
