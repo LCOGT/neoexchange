@@ -2241,6 +2241,8 @@ def configure_defaults(params):
             params['spectra_slit'] = 'slit_6.0as'
     elif params['site_code'] in ['Z17', 'Z21', 'W89', 'W79', 'T03', 'T04', 'Q58', 'Q59', 'V38', 'L09', '0M4']:
         params['instrument'] = '0M4-SCICAM-SBIG'
+        if params['site_code'] == 'T03':
+            params['instrument'] = '0M4-SCICAM-QHY600'
         params['pondtelescope'] = '0m4'
         params['binning'] = 1
 # We are not currently doing Aqawan-specific binding for LSC (or TFN or OGG) but
