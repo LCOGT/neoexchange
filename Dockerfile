@@ -1,7 +1,7 @@
 ################################################################################
 # Findorb Builder Container
 ################################################################################
-FROM centos:8 AS findorbbuilder
+FROM rockylinux:8 AS findorbbuilder
 
 # Choose specific release versions of each piece of software
 ENV LUNAR_VERSION=016b82f80bd509929e0d55136ed6882e61831dfb \
@@ -55,7 +55,7 @@ COPY neoexchange/photometrics/configs/environ.def /root/.find_orb/
 ################################################################################
 # damit Builder Container
 ################################################################################
-FROM centos:8 AS damitbuilder
+FROM rockylinux:8 AS damitbuilder
 
 # Choose specific release versions of each piece of software
 ENV DAMIT_VERSION="version_0.2.1"
@@ -66,7 +66,8 @@ RUN yum -y install gcc gcc-gfortran make  \
 
 # Build all of damit's components. No need to clean up, as this is a builder container.
 # The contents will be discarded from the final image.
-RUN curl -fsSL https://astro.troja.mff.cuni.cz/projects/damit/files/${DAMIT_VERSION}.tar.gz | tar xzf - \
+COPY docker/root/sirrah-troja-mff-cuni-cz.pem /root/
+RUN curl -fsSL --cacert /root/sirrah-troja-mff-cuni-cz.pem https://astro.troja.mff.cuni.cz/projects/damit/files/${DAMIT_VERSION}.tar.gz | tar xzf - \
         && cd ${DAMIT_VERSION} \
         && cd convexinv \
         && make \
@@ -90,7 +91,7 @@ RUN cd ${DAMIT_VERSION} \
 ################################################################################
 # Production Container
 ################################################################################
-FROM centos:8
+FROM rockylinux:8
 
 # Copy findorb from builder container
 COPY --from=findorbbuilder /root /root

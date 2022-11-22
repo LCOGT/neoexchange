@@ -1932,6 +1932,18 @@ class TestSourceMeasurement(TestCase):
                  }
         self.test_frame_stack = Frame.objects.create(**frame_params)
 
+        frame_params = { 'sitecode'      : 'F65',
+                         'instrument'    : 'ep02',
+                         'filter'        : 'rp',
+                         'frametype'     : Frame.BANZAI_RED_FRAMETYPE,
+                         'extrainfo'     : 'MUSCAT_FAST',
+                         'midpoint'      : datetime(2021, 11,12, 6, 10, 49, int(0.9*1e6)),
+                         'block'         : self.test_block,
+                         'astrometric_catalog' : "GAIA-DR2",
+                         'photometric_catalog' : "GAIA-DR2",
+                     }
+        self.test_frame_extrainfo = Frame.objects.create(**frame_params)
+
         frame_params = {  'sitecode'      : 'C51',
                     'filter'        : 'R',
                     'frametype'     : Frame.SATELLITE_FRAMETYPE,
@@ -2014,6 +2026,21 @@ class TestSourceMeasurement(TestCase):
 
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '     N999r0q  C2015 07 13.88184000 30 00.00 -00 30 00.0          21.5 RV     K93'
+        mpc_line = measure.format_mpc_line(include_catcode=True)
+        self.assertEqual(expected_mpcline, mpc_line)
+
+    def test_mpc_extrainfo(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame_extrainfo,
+                            'obs_ra' : 7.5,
+                            'obs_dec' : -00.5,
+                            'obs_mag' : 21.5,
+                            'astrometric_catalog' : "GAIA-DR2",
+                            'photometric_catalog' : "GAIA-DR2",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_mpcline = '     N999r0q  C2021 11 12.25752200 30 00.00 -00 30 00.0          21.5 GV     F65'
         mpc_line = measure.format_mpc_line(include_catcode=True)
         self.assertEqual(expected_mpcline, mpc_line)
 
@@ -2384,6 +2411,56 @@ class TestSourceMeasurement(TestCase):
 
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_psvline = '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|  7.500000 | -0.500000 | 0.33|  0.34|   2MASS|21.5 |0.12  |   R|   UCAC4|  1.56|1.3945|1.0000|     |'
+        psv_line = measure.format_psv_line()
+        self.assertEqual(expected_psvline, psv_line)
+
+    def test_psv_rms_4(self):
+
+        # Add an astrometric fit RMS to the Frame.
+        self.test_frame.rms_of_fit = 0.3
+        self.test_frame.save()
+
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 7.5,
+                            'obs_dec' : -00.5,
+                            'obs_mag' : 21.5,
+                            'err_obs_ra' : 0.14/3600.0,
+                            'err_obs_dec': 0.16/3600.0,
+                            'err_obs_mag' : 0.12,
+                            'aperture_size' : 1.56,
+                            'snr' : 24.8,
+                            'astrometric_catalog' : "GAIA-DR3",
+                            'photometric_catalog' : "GAIA-DR3",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_psvline = '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|  7.500000 | -0.500000 | 0.33|  0.34|   Gaia3|21.5 |0.12  |   R|   Gaia3|  1.56|1.3945|1.0000|     |'
+        psv_line = measure.format_psv_line()
+        self.assertEqual(expected_psvline, psv_line)
+
+    def test_psv_rms_5(self):
+
+        # Add an astrometric fit RMS to the Frame.
+        self.test_frame.rms_of_fit = 0.3
+        self.test_frame.save()
+
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 7.5,
+                            'obs_dec' : -00.5,
+                            'obs_mag' : 21.5,
+                            'err_obs_ra' : 0.14/3600.0,
+                            'err_obs_dec': 0.16/3600.0,
+                            'err_obs_mag' : 0.12,
+                            'aperture_size' : 1.56,
+                            'snr' : 24.8,
+                            'astrometric_catalog' : "GAIA-DR3",
+                            'photometric_catalog' : "ATLAS-2",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_psvline = '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|  7.500000 | -0.500000 | 0.33|  0.34|   Gaia3|21.5 |0.12  |   R|  ATLAS2|  1.56|1.3945|1.0000|     |'
         psv_line = measure.format_psv_line()
         self.assertEqual(expected_psvline, psv_line)
 

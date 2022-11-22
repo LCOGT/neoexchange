@@ -24,7 +24,7 @@ from urllib.parse import urljoin
 import imaplib
 import email
 from re import sub, compile
-from math import degrees, sqrt, copysign
+from math import degrees, sqrt, copysign, ceil
 from time import sleep
 from datetime import date, datetime, timedelta
 from socket import error, timeout
@@ -36,16 +36,20 @@ from contextlib import closing
 
 from bs4 import BeautifulSoup
 import astropy.units as u
+from astropy.table import Table
 try:
     import pyslalib.slalib as S
 except ModuleNotFoundError:
     pass
 from django.conf import settings
 from astropy.io import ascii
+from numpy.ma import is_masked
 
 import astrometrics.site_config as cfg
-from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime, datetime2mjd_utc, mjd_utc2mjd_tt, mjd_utc2datetime
-from astrometrics.ephem_subs import build_filter_blocks, MPC_site_code_to_domes, compute_ephem, perturb_elements, LCOGT_site_codes
+from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime, datetime2mjd_utc, mjd_utc2mjd_tt,\
+    mjd_utc2datetime
+from astrometrics.ephem_subs import build_filter_blocks, MPC_site_code_to_domes, compute_ephem, perturb_elements,\
+    LCOGT_site_codes, get_sitecam_params
 from core.urlsubs import get_telescope_states
 
 logger = logging.getLogger(__name__)
@@ -148,10 +152,26 @@ def fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser
             logger.warning("Page retrieval failed with HTTP Error: %s" % (e.reason,))
         return None
     except (BrokenPipeError, ConnectionAbortedError, ConnectionRefusedError, ConnectionResetError) as sock_e:
-        logger.warning("Page retrieval failed with socket Error %d: %s" % (sock_e.errno, sock_e.strerror))
+        try:
+            errno = int(sock_e.errno)
+        except TypeError:
+            errno = -99
+        try:
+            errstring = str(sock_e.strerror)
+        except TypeError:
+            errstring = "No message available"
+        logger.warning("Page retrieval failed with socket Error %d: %s" % (errno, errstring))
         return None
     except timeout as sock_e:
-        logger.warning("Page retrieval failed with socket Error %d: %s" % (sock_e.errno, sock_e.strerror))
+        try:
+            errno = int(sock_e.errno)
+        except TypeError:
+            errno = -99
+        try:
+            errstring = str(sock_e.strerror)
+        except TypeError:
+            errstring = "No message available"
+        logger.warning("Page retrieval failed with socket Error %d: %s" % (errno, errstring))
         return None
 
     # Suck the HTML down
@@ -644,7 +664,10 @@ def translate_catalog_code(code_or_name, ades_code=False):
                   "T" : "URAT-2",
                   "U" : "GAIA-DR1",
                   "V" : "GAIA-DR2",
-                  "W" : "UCAC5",
+                  "W" : "GAIA-DR3",
+                  "X" : "GAIA-EDR3",
+                  "Y" : "UCAC5",
+                  "Z" : "ATLAS-2",
                   }
     # https://www.minorplanetcenter.net/iau/info/ADESFieldValues.html
     catalog_mapping = {'USNO-SA2.0'  : 'USNOSA2',  # Can't test, don't have CDs
@@ -659,6 +682,7 @@ def translate_catalog_code(code_or_name, ades_code=False):
                        'PPMXL'       : 'PPMXL',
                        'GAIA-DR1'    : 'Gaia1',
                        'GAIA-DR2'    : 'Gaia2',
+                       'GAIA-DR3'    : 'Gaia3',
                        '2MASS'       : '2MASS'
                       }
     catalog_or_code = ''
@@ -1186,6 +1210,20 @@ def parse_goldstone_chunks(chunks, dbg=False):
 
     return object_id
 
+def fetch_goldstone_csv(file_or_url=None):
+    """Fetches the Goldstone CSV file of radar targets, returning a Astropy
+    Table"""
+
+    file_or_url = file_or_url or 'https://echo.jpl.nasa.gov/asteroids/GSSR_schedule.csv'
+
+    table = None
+    try:
+        table = Table.read(file_or_url, format='csv', encoding='utf-8-sig')
+    except (FileNotFoundError, urllib.error.URLError):
+        logger.warning(f"Could not read Goldstone target file: {file_or_url}")
+    
+    return table
+
 
 def fetch_goldstone_page():
     """Fetches the Goldstone page of radar targets, returning a BeautifulSoup
@@ -1197,21 +1235,7 @@ def fetch_goldstone_page():
 
     return page
 
-
-def fetch_goldstone_targets(page=None, dbg=False):
-    """Fetches and parses the Goldstone list of radar targets, returning a list
-    of object id's for the current year.
-    Takes either a BeautifulSoup page version of the Goldstone target page (from
-    a call to fetch_goldstone_page() - to allow  standalone testing) or  calls
-    this routine and then parses the resulting page.
-    """
-
-    if type(page) != BeautifulSoup:
-        page = fetch_goldstone_page()
-
-    if page is None:
-        return None
-
+def parse_goldstone_page(page, dbg=False):
     radar_objects = []
     in_objects = False
     current_year = datetime.now().year
@@ -1267,6 +1291,42 @@ def fetch_goldstone_targets(page=None, dbg=False):
                     if obj_id != '':
                         radar_objects.append(obj_id)
                 last_year_seen = year
+    return radar_objects
+
+def fetch_goldstone_targets(page=None, calendar_format=False, dbg=False):
+    """Fetches and parses the Goldstone list of radar targets, returning a list
+    of object id's for the current year.
+    Takes either a BeautifulSoup page version of the Goldstone target page (from
+    a call to fetch_goldstone_page() - to allow  standalone testing) or  calls
+    this routine and then parses the resulting page.
+    """
+
+    if type(page) != BeautifulSoup:
+        page = fetch_goldstone_csv(page)
+
+    if page is None:
+        return None
+
+    if type(page) == BeautifulSoup:
+        radar_objects = parse_goldstone_page(page)
+    else:
+        current_year = datetime.utcnow().year
+
+        radar_objects = []
+        for row in page:
+            target = str(row['number'])
+            if is_masked(row['number']) is True:
+                target = row['name']
+            start_date = datetime.strptime(row['start (UT)'], '%m/%d/%Y')
+            if calendar_format is True:
+                end_date = datetime.strptime(row['end (UT)'], '%m/%d/%Y')
+                end_date += timedelta(seconds=86399)
+                target = {'target' : target,
+                          'windows' : [{'start' : start_date.strftime("%Y-%m-%dT%H:%M:%S"),
+                                        'end' : end_date.strftime("%Y-%m-%dT%H:%M:%S")}]
+                             }
+            if start_date.year == current_year:
+                radar_objects.append(target)
     return radar_objects
 
 
@@ -1563,6 +1623,7 @@ def fetch_yarkovsky_targets_ftp(file_or_url=None):
 
     return targets
 
+
 def fetch_sfu(page=None):
     """Fetches the solar radio flux from the Solar Radio Monitoring
     Program run by National Research Council and Natural Resources Canada.
@@ -1700,7 +1761,7 @@ def make_target(params):
     return target
 
 
-def make_moving_target(elements):
+def make_moving_target(elements, fractional_rate=None):
     """Make a target dictionary for the request from an element set"""
 
     # Generate initial dictionary of things in common
@@ -1725,6 +1786,8 @@ def make_moving_target(elements):
         target['meananom'] = elements['meananom']
     if 'v_mag' in elements:
         target['extra_params']['v_magnitude'] = round(elements['v_mag'], 2)
+    if fractional_rate is not None:
+        target['extra_params']['fractional_ephemeris_rate'] = fractional_rate
 
     return target
 
@@ -1741,6 +1804,98 @@ def make_window(params):
              }
 
     return window
+
+
+def get_exposure_bins(params):
+    """
+    Break the exposure count into bins each containing the number of exposures (with overheads) possible before the
+    target leaves the central quarter of the FOV.
+    :param params: list of observation parameters
+    :return: exp_count_list
+    """
+    target_speed = params.get('speed', 0)
+    fractional_rate = params.get('fractional_rate', 0.5)
+    relative_speed = (1.0 - fractional_rate) * target_speed
+    if not relative_speed:
+        return None
+    sitecam = get_sitecam_params(params['site_code'], params.get('bin_mode', None))
+    fov = sitecam['fov']
+    exp_overhead = sitecam['exp_overhead']
+    exp_time = params['exp_time']
+    exp_count = params['exp_count']
+    total_exp_time = exp_time + exp_overhead
+    target_travel_limit_arcsec = fov / 4 * 60
+    arcsec_per_exposure = relative_speed * (total_exp_time / 60)
+    exposures_per_limit = target_travel_limit_arcsec / arcsec_per_exposure
+    number_of_configs = int(exp_count // exposures_per_limit) + 1
+    exp_count_list = [int(exp_count // number_of_configs)] * min(number_of_configs, exp_count)
+    overflow_frames = int(exp_count % number_of_configs)
+    exp_count_list[:overflow_frames] = (i+1 for i in exp_count_list[:overflow_frames])
+    return exp_count_list
+
+
+def instrument_config_generator(inst_configs):
+    """
+    Infinitely cycle through a list of Instrument configurations.
+    :param inst_configs: List of instrument configurations
+    :return iconfig: individual instrument configuration
+    """
+    while True:
+        for iconfig in inst_configs:
+            yield iconfig
+
+
+def split_inst_configs(exposure_bins, inst_configs):
+    """
+    Split the instrument configurations so that one configuration picks up where the previous configuration left off.
+    Will not subdivide individual Instrument configurations with more than one exposure.
+    :param exposure_bins: list of exposure counts per configuration
+    :param inst_configs: list of instrument configurations for origional configuration
+    :return new_inst_configs_list:
+    """
+    new_inst_configs_list = []
+    exp_counter = 0
+    inst_loop = instrument_config_generator(inst_configs)
+    i_list = []
+    for exp_bin in exposure_bins:
+        for iconfig in inst_loop:
+            if len(i_list) < len(inst_configs):
+                i_list.append(deepcopy(iconfig))
+            exp_counter += iconfig['exposure_count']
+            if exp_counter >= exp_bin:
+                new_inst_configs_list.append(i_list)
+                exp_counter = 0
+                i_list = []
+                break
+
+    return new_inst_configs_list
+
+
+def split_configs(configs, params):
+    """
+    Splits configurations to keep moving target at a fractional ephemeris rate in the central quarter of the FOV.
+    :param configs: observation configuration list
+    :param params: Observation parameters
+    :return new_configs: subdivided configuration list
+    """
+    exposure_bins = get_exposure_bins(params)
+    new_configs = []
+    if exposure_bins and len(exposure_bins) > 1:
+        new_inst_configs_list = split_inst_configs(exposure_bins, configs[0]['instrument_configs'])
+        total_count = sum(exposure_bins)
+        for i, ex_bin in enumerate(exposure_bins):
+            new_config = deepcopy(configs[0])
+            new_config['instrument_configs'] = new_inst_configs_list[i]
+            if new_config['type'] == 'REPEAT_EXPOSE':
+                new_config['repeat_duration'] = ceil(ex_bin / total_count * configs[0]['repeat_duration'])
+            elif len(new_config['instrument_configs']) == 1:
+                new_config['instrument_configs'][0]['exposure_count'] = ex_bin
+
+            new_configs.append(new_config)
+
+        return new_configs
+
+    return configs
 
 
 def make_config(params, filter_list):
@@ -1879,6 +2034,15 @@ def make_configs(params):
     In spectroscopy mode, this will produce 1, 3 or 5 molecules depending on whether
     `params['calibs']` is 'none, 'before'/'after' or 'both'."""
 
+    # Perform Repeated exposures if many exposures compared to number of filter changes.
+    if not params.get('exp_type', None):
+        if params['exp_count'] <= 10 or\
+                params['exp_count'] < 10 * len(list(filter(None, params['filter_pattern'].split(',')))) or\
+                params.get('add_dither', False):
+            params['exp_type'] = 'EXPOSE'
+        else:
+            params['exp_type'] = 'REPEAT_EXPOSE'
+
     filt_list = build_filter_blocks(params['filter_pattern'], params['exp_count'], params['exp_type'])
 
     calib_mode = params.get('calibs', 'none').lower()
@@ -1903,6 +2067,7 @@ def make_configs(params):
             configs = [spectrum_molecule, ]
     else:
         configs = [make_config(params, filt_list)]
+        configs = split_configs(configs, params)
 
     return configs
 
@@ -2057,12 +2222,6 @@ def configure_defaults(params):
     params['binning'] = 1
     params['instrument'] = '1M0-SCICAM-SINISTRO'
 
-    # Perform Repeated exposures if many exposures compared to number of filter changes.
-    if params['exp_count'] <= 10 or params['exp_count'] < 10*len(list(filter(None, params['filter_pattern'].split(',')))) or params.get('add_dither', False):
-        params['exp_type'] = 'EXPOSE'
-    else:
-        params['exp_type'] = 'REPEAT_EXPOSE'
-
     if params['site_code'] in ['F65', 'E10', '2M0']:
         if 'F65' in params['site_code']:
             params['instrument'] = '2M0-SCICAM-MUSCAT'
@@ -2109,7 +2268,11 @@ def make_requestgroup(elements, params):
 # Create Target (pointing)
     if len(elements) > 0:
         logger.debug("Making a moving object")
-        params['target'] = make_moving_target(elements)
+        if params.get('spectroscopy') is True:
+            fractional_rate = 1
+        else:
+            fractional_rate = params.get('fractional_rate')
+        params['target'] = make_moving_target(elements, fractional_rate)
         if 'sky_pa' in elements and params['para_angle'] is False:
             params['rot_mode'] = 'SKY'
             params['rot_angle'] = round(elements['sky_pa'], 1)

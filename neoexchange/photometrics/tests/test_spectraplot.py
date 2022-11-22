@@ -22,6 +22,7 @@ from collections import OrderedDict
 from django.test import TestCase
 from astropy import units as u
 from astropy.io.fits import Header
+from astropy.tests.helper import assert_quantity_allclose
 import numpy as np
 
 from photometrics.spectraplot import *
@@ -209,6 +210,7 @@ class TestBuildSpectra(TestCase):
         files_to_copy = [self.fitsfile, self.analogfile]
 
         self.tolerance = 1
+        self.precision = 7
 
         self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
         for test_file in files_to_copy:
@@ -248,8 +250,8 @@ class TestBuildSpectra(TestCase):
         self.assertEqual(expected_label, label)
         self.assertGreater(wav_range[1], max(wavelength))
         self.assertLess(wav_range[0], min(wavelength))
-        self.assertEqual(np.mean(flux), expected_flux_mean)
-        self.assertEqual(np.mean(error).value, expected_error_mean)
+        self.assertAlmostEqual(np.mean(flux), expected_flux_mean, self.precision)
+        self.assertAlmostEqual(np.mean(error).value, expected_error_mean, self.precision)
 
     def test_reflectance_plot(self):
         expected_label = '455432 -- HD 196164 -- 20190727'
@@ -263,7 +265,7 @@ class TestBuildSpectra(TestCase):
         self.assertEqual(expected_label, label)
         self.assertGreater(wav_range[1], max(wavelength))
         self.assertLess(wav_range[0], min(wavelength))
-        self.assertEqual(np.mean(flux), expected_flux_mean)
-        self.assertEqual(np.mean(error), expected_error_mean)
+        self.assertAlmostEqual(np.mean(flux), expected_flux_mean, self.precision)
+        assert_quantity_allclose(np.mean(error), expected_error_mean, rtol=f'1e-{self.precision}')
 
 

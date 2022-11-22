@@ -106,11 +106,11 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
         if "UCAC4" in cat_name:
             query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'rmag', 'e_rmag'])
         elif "GAIA-DR2" in cat_name:
-            query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup'])
+            query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit, "Plx": ">0"}, columns=['RAJ2000', 'DEJ2000', 'e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup'])
         else:
             query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
 
-        vizier_servers_list = ['vizier.cfa.harvard.edu', 'vizier.hia.nrc.ca'] # Preferred first
+        vizier_servers_list = ['vizier.cfa.harvard.edu', 'vizier.hia.nrc.ca', 'vizier.cds.unistra.fr', ] # Preferred first
         query_service.VIZIER_SERVER = vizier_servers_list[0]
 
         query_service.TIMEOUT = 60
@@ -125,7 +125,7 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
             query_service.VIZIER_SERVER = vizier_servers_list[-1]
             logger.warning("Timeout querying {}. Switching to {}".format(old_server, query_service.VIZIER_SERVER))
             result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=cat_mapping[cat_name])
-        if len(result) == 0:
+        if result is None or len(result) == 0:
             old_server = query_service.VIZIER_SERVER
             query_service.VIZIER_SERVER = vizier_servers_list[-1]
             logger.warning("Error querying {}. Switching to {}".format(old_server, query_service.VIZIER_SERVER))
@@ -170,7 +170,7 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
             if "UCAC4" in cat_name:
                 query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'rmag', 'e_rmag'])
             elif "GAIA-DR2" in cat_name:
-                query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup'])
+                query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit, "Plx": ">0"}, columns=['RAJ2000', 'DEJ2000', 'e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup'])
             else:
                 query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
             result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, catalog=cat_mapping[cat_name])
@@ -395,10 +395,10 @@ def write_ldac(table, output_file):
                     'mag'       : '1E',
                     'e_mag'     : '1E'
                   }
-    disp_dict = { 'RAJ2000'   : 'E15',
-                  'DEJ2000'   : 'E15',
-                  'e_RAJ2000' : 'E12',
-                  'e_DEJ2000' : 'E12',
+    disp_dict = { 'RAJ2000'   : 'F13.8',
+                  'DEJ2000'   : 'F13.8',
+                  'e_RAJ2000' : 'F13.8',
+                  'e_DEJ2000' : 'F13.8',
                   'mag'       : 'F8.4',
                   'e_mag'     : 'F8.5'
                 }
@@ -705,10 +705,10 @@ def banzai_catalog_mapping():
                     'field_width' : 'NAXIS1',
                     'field_height' : 'NAXIS2',
                     'pixel_scale' : '<WCS>',
-                    'zeropoint'     : '<ZP>',
-                    'zeropoint_err' : '<ZP>',
-                    'zeropoint_src' : '<ZPSRC>',
-                    'fwhm'          : 'L1FWHM',
+                    'zeropoint'     : '<L1ZP>',
+                    'zeropoint_err' : '<L1ZPERR>',
+                    'zeropoint_src' : '<L1ZPSRC>',
+                    'fwhm'          : '<L1FWHM>',
                     'astrometric_fit_rms'    : '<WCSRDRES>',
                     'astrometric_fit_status' : 'WCSERR',
                     'astrometric_fit_nstars' : '<WCSMATCH>',
@@ -759,7 +759,7 @@ def banzai_ldac_catalog_mapping():
                     'zeropoint'     : '<ZP>',
                     'zeropoint_err' : '<ZP>',
                     'zeropoint_src' : '<ZPSRC>',
-                    'fwhm'          : 'L1FWHM',
+                    'fwhm'          : '<L1FWHM>',
                     'astrometric_fit_rms'    : '<WCSRDRES>',
                     'astrometric_fit_status' : 'WCSERR',
                     'astrometric_fit_nstars' : '<WCSMATCH>',
@@ -998,8 +998,12 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
                                                   # (but could be modified based on version number further down)
                         '<ZP>'        : -99,      # Hardwire zeropoint to -99.0 for BANZAI catalogs
                         '<ZPSRC>'     : 'N/A',    # Hardwire zeropoint src to 'N/A' for BANZAI catalogs
+                        '<L1ZP>'      : -99,      # Hardwire zeropoint to -99.0 for newer BANZAI catalogs where it's missing e.g. w band
+                        '<L1ZPERR>'   : -99,      # Hardwire zeropoint to -99.0 for newer BANZAI catalogs where it's missing e.g. w band
+                        '<L1ZPSRC>'   : 'BANZAI', # Hardwire zeropoint src to 'N/A' for newer BANZAI catalogs where it's missing
                         '<WCSRDRES>'  : 0.3,      # Hardwire RMS to 0.3"
-                        '<WCSMATCH>'  : -4        # Hardwire no. of stars matched to 4 (1 quad)
+                        '<WCSMATCH>'  : -4,       # Hardwire no. of stars matched to 4 (1 quad)
+                        '<L1FWHM>'    : -99       # May not be present if BANZAI WCS fit fails
                         }
 
     header_items = {}
@@ -1438,7 +1442,7 @@ def store_catalog_sources(catfile, catalog_type='LCOGT', std_zeropoint_tolerance
             if '2m0' in header.get('framename', ''):
                 rmag_limit = '<=18.0'
             else:
-                rmag_limit = '<=15.0'
+                rmag_limit = '<=16.5'
             header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, phot_cat_name = call_cross_match_and_zeropoint((header, table), std_zeropoint_tolerance, phot_cat_name, rmag_limit=rmag_limit)
             end = time.time()
             logger.debug("TIME: compute_zeropoint took {:.1f} seconds".format(end-start))
@@ -1740,7 +1744,9 @@ def funpack_fits_file(fpack_file):
     hdu = fits.PrimaryHDU(data, header)
     hdu._bscale = 1.0
     hdu._bzero = 0.0
+    hdu.header.remove("BSCALE", ignore_missing=True)
     hdu.header.insert("NAXIS2", ("BSCALE", 1.0), after=True)
+    hdu.header.remove("BZERO", ignore_missing=True)
     hdu.header.insert("BSCALE", ("BZERO", 0.0), after=True)
     hdu.writeto(unpacked_file, checksum=True)
     hdulist.close()

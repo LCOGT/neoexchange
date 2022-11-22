@@ -36,6 +36,7 @@ class Proposal(models.Model):
             title = self.title[0:10]
         return "%s %s" % (self.code, title)
 
+
 class ProposalPermission(models.Model):
     """
     Linking a user to proposals in NEOx to control their access

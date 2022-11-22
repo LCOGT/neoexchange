@@ -20,9 +20,6 @@ from django.db.models import Q
 from django.dispatch import receiver
 from django.core.files.storage import default_storage
 
-from core.models.body import Body
-from core.models.blocks import Block, SuperBlock
-
 
 class CoreQuerySet(models.QuerySet):
     def block(self):
@@ -45,11 +42,9 @@ class CoreQuerySet(models.QuerySet):
         else:
             block = ContentType.objects.get(app_label='core', model='block')
             sblock = ContentType.objects.get(app_label='core', model='superblock')
-            blockslist = Block.objects.filter(body=bodyid).values_list('id', flat=True)
-            sblockslist = SuperBlock.objects.filter(body=bodyid).values_list('id', flat=True)
-            query1 = Q(content_type=block, object_id__in=blockslist)
+            query1 = Q(content_type=block, block__body__pk=bodyid)
             query2 = Q(content_type=body, object_id=bodyid)
-            query3 = Q(content_type=sblock, object_id__in=sblockslist)
+            query3 = Q(content_type=sblock, sblock__body__pk=bodyid)
             return self.filter(query1 | query2 | query3)
 
 
@@ -157,5 +152,10 @@ def auto_delete_file_on_delete(sender, instance, **kwargs):
     when corresponding `MediaFile` object is deleted.
     """
     if instance.product:
-        if default_storage.exists(instance.product.path):
-            default_storage.delete(instance.product.path)
+        try:
+            if default_storage.exists(instance.product.path):
+                default_storage.delete(instance.product.path)
+        except NotImplementedError:
+            #S3boto-based storage backends don't implement `product.path`, only `product.name`
+            if default_storage.exists(instance.product.name):
+                default_storage.delete(instance.product.name)

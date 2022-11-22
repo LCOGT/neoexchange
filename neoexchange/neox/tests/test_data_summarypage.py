@@ -18,11 +18,17 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.common.by import By
+from selenium.common.exceptions import NoSuchElementException
 from django.conf import settings
+from django.urls import reverse
+from django.contrib.auth.models import User
 from datetime import datetime, date
+from mock import patch
+from neox.tests.mocks import MockDateTime
 
 from core.models import Block, SuperBlock, Frame, Body, PreviousSpectra, DataProduct
 from core.utils import save_dataproduct, save_to_default
+from neox.tests.mocks import mock_lco_authenticate
 
 import os
 
@@ -33,16 +39,56 @@ class SummaryPageTest(FunctionalTest):
     """
 
     def setUp(self):
+        # Setup Basics
         super(SummaryPageTest, self).setUp()
         settings.MEDIA_ROOT = self.test_dir
         spectradir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_spectra'))
 
+        # Copy files into temp media root
         spec_path = 'target_2df_ex.fits'
         save_to_default(os.path.join(spectradir, spec_path), spectradir)
         analog_path = 'analog_2df_ex.fits'
         save_to_default(os.path.join(spectradir, analog_path), spectradir)
         analog2_path = 'test_2df_ex.fits'
         save_to_default(os.path.join(spectradir, analog2_path), spectradir)
+
+        # Create a superuser to test login
+        self.username = 'bart'
+        self.password = 'simpson'
+        self.email = 'bart@simpson.org'
+        self.bart = User.objects.create_user(username=self.username, password=self.password, email=self.email)
+        self.bart.first_name = 'Bart'
+        self.bart.last_name = 'Simpson'
+        self.bart.is_active = 1
+        self.bart.is_staff = 1
+        self.bart.is_superuser = 1
+        self.bart.save()
+
+        # insert extra body
+        params = {  'name'          : 'q382918r',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'N',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'N',
+                    'ingest'        : '2015-05-11 17:20:00',
+                    'score'         : 85,
+                    'discovery_date': '2015-05-10 12:00:00',
+                    'update_time'   : '2015-05-18 05:00:00',
+                    'num_obs'       : 35,
+                    'arc_length'    : 42.0,
+                    'not_seen'      : 2.22,
+                    'updated'       : False
+                    }
+        self.body2, created = Body.objects.get_or_create(pk=3, **params)
 
         # build individual target blocks
         sblock_params = {
@@ -246,16 +292,86 @@ class SummaryPageTest(FunctionalTest):
 
         save_dataproduct(self.test_sblock, lcname, DataProduct.ALCDEF_TXT)
 
+        # Add period
+        period_dict = {'value': 12,
+                       'error': .3,
+                       'parameter_type': 'P',
+                       'units': 'h',
+                       'preferred': True,
+                       'reference': 'NEOX',
+                       'quality': 5,
+                       'notes': "testy test tested"
+                       }
+        self.body.save_physical_parameters(period_dict)
+
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
+    def test_login(self):
+        self.browser.get('%s%s' % (self.live_server_url, '/accounts/login/'))
+        username_input = self.browser.find_element_by_id("username")
+        username_input.send_keys(self.username)
+        password_input = self.browser.find_element_by_id("password")
+        password_input.send_keys(self.password)
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id('login-btn').click()
+        # Wait until response is recieved
+        self.wait_for_element_with_id('page')
+
+    @patch('core.views.datetime', MockDateTime)
     def test_summary_pages_exist(self):
-        self.browser.get(self.live_server_url+'/summary/spec/')
+        # Find the link to the Data Summary Page
+        self.browser.get(self.live_server_url)
+        link = self.browser.find_element_by_xpath(u'//a[text()="Data"]')
+        lc_summary_url = self.live_server_url + reverse('lc_data_summary')
+        self.assertIn(link.get_attribute('href'), lc_summary_url)
+        # Go check it out and land on the LC summary
+        with self.wait_for_page_load(timeout=10):
+            link.click()
+        new_url = self.browser.current_url
+        self.assertEqual(str(new_url), lc_summary_url)
         self.assertIn('Data Summary Page | LCO NEOx', self.browser.title)
-        self.check_for_header_in_table('id_ranked_targets', 'Date Target Name Block Obs')
-        test_lines = ['1 2019-09-27 N999r0q 6 1', '2 2019-07-27 N999r0q 5 1', '3 2019-07-27 N999r0q 5 1']
+        self.check_for_header_in_table('id_ranked_targets', 'Target Name Period Quality Source Notes Status Status Updated')
+        test_lines = ['1 N999r0q 12.0 (h) Not well established (2-) NEOX testy test tested No Analysis Done']
         for test_line in test_lines:
             self.check_for_row_in_table('id_ranked_targets', test_line)
-        lc_link = self.browser.find_element_by_link_text('(LC)')
+        # Not logged in, can't see status form
+        try:
+            arrow_link = self.browser.find_element_by_id("arrow")
+            raise Exception("Should be logged in for this form")
+        except NoSuchElementException:
+            pass
+
+        # ooo, there's a spec page?
+        link = self.browser.find_element_by_link_text('(Spec)')
+        spec_summary_url = self.live_server_url + reverse('spec_data_summary')
+        self.assertIn(link.get_attribute('href'), spec_summary_url)
+        # Go check it out and land on the spec summary
         with self.wait_for_page_load(timeout=10):
-            lc_link.click()
-        lc_lines = ['1 N999r0q']
-        for lc_line in lc_lines:
-            self.check_for_row_in_table('id_ranked_targets', lc_line)
+            link.click()
+        new_url = self.browser.current_url
+        self.assertEqual(str(new_url), spec_summary_url)
+        self.check_for_header_in_table('id_ranked_targets', 'Date Target Name Block Obs Status Status Updated')
+        test_lines = ['1 2019-09-27 N999r0q 6 1 No Analysis Done', '2 2019-07-27 N999r0q 5 1 No Analysis Done', '3 2019-07-27 N999r0q 5 1 No Analysis Done']
+        for test_line in test_lines:
+            self.check_for_row_in_table('id_ranked_targets', test_line)
+
+        # Login and head back to LC summary
+        self.test_login()
+        link = self.browser.find_element_by_xpath(u'//a[text()="Data"]')
+        with self.wait_for_page_load(timeout=10):
+            link.click()
+        new_url = self.browser.current_url
+        self.assertEqual(str(new_url), lc_summary_url)
+        # Mock a time so things work
+        MockDateTime.change_date(2021, 12, 10)
+        # find dropdown button
+        arrow_link = self.browser.find_element_by_id("arrow")
+        arrow_link.click()
+        # Fill out Form and submit.
+        status_select = Select(self.browser.find_element_by_id("id_status"))
+        status_select.select_by_visible_text("Published")
+        update_button = self.browser.find_element_by_id("update_status-btn")
+        with self.wait_for_page_load(timeout=10):
+            update_button.click()
+        test_lines = ['1 N999r0q 12.0 (h) Not well established (2-) NEOX testy test tested Published Dec. 10, 2021']
+        for test_line in test_lines:
+            self.check_for_row_in_table('id_ranked_targets', test_line)

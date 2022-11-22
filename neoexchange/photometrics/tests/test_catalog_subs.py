@@ -337,7 +337,7 @@ class ZeropointUnitTest(TestCase):
         expected_rmag_first_source = 14.7231
         expected_e_rmag_first_source = 0.0003
         expected_flags_first_source = 0
-        expected_len_cat_table = 585
+        expected_len_cat_table = 574
 
         cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", "GAIA-DR2")
 
@@ -1720,9 +1720,9 @@ class FITSReadHeader(FITSUnitTest):
                             'astrometric_fit_nstars' : -4,
                             'zeropoint'     : -99,
                             'zeropoint_err' : -99,
-                            'zeropoint_src' : 'N/A',
+                            'zeropoint_src' : 'BANZAI',
                             'wcs'           : self.test_banzaiwcs,
-                            'reduction_level' : 91
+                            'reduction_level' : 91,
                           }
         expected_cattype = "BANZAI"
 
@@ -1762,9 +1762,9 @@ class FITSReadHeader(FITSUnitTest):
                             'astrometric_fit_nstars' : -4,
                             'zeropoint'     : -99,
                             'zeropoint_err' : -99,
-                            'zeropoint_src' : 'N/A',
+                            'zeropoint_src' : 'BANZAI',
                             'wcs'           : self.test_banzaiwcs,
-                            'reduction_level' : 91
+                            'reduction_level' : 91,
                           }
         expected_cattype = "BANZAI"
 
@@ -1806,9 +1806,9 @@ class FITSReadHeader(FITSUnitTest):
                             'astrometric_fit_nstars' : -4,
                             'zeropoint'     : -99,
                             'zeropoint_err' : -99,
-                            'zeropoint_src' : 'N/A',
+                            'zeropoint_src' : 'BANZAI',
                             'wcs'           : self.test_banzaiwcs,
-                            'reduction_level' : 91
+                            'reduction_level' : 91,
                           }
         expected_cattype = "BANZAI"
 
@@ -1850,9 +1850,9 @@ class FITSReadHeader(FITSUnitTest):
                             'astrometric_fit_nstars' : -4,
                             'zeropoint'     : -99,
                             'zeropoint_err' : -99,
-                            'zeropoint_src' : 'N/A',
+                            'zeropoint_src' : 'BANZAI',
                             'wcs'           : self.test_banzaiwcs,
-                            'reduction_level' : 91
+                            'reduction_level' : 91,
                           }
         expected_cattype = "BANZAI"
 
@@ -1894,9 +1894,9 @@ class FITSReadHeader(FITSUnitTest):
                             'astrometric_fit_nstars' : -4,
                             'zeropoint'     : -99,
                             'zeropoint_err' : -99,
-                            'zeropoint_src' : 'N/A',
+                            'zeropoint_src' : 'BANZAI',
                             'wcs'           : self.test_banzaiwcs,
-                            'reduction_level' : 91
+                            'reduction_level' : 91,
                           }
         expected_cattype = "BANZAI"
 
@@ -1938,9 +1938,9 @@ class FITSReadHeader(FITSUnitTest):
                             'astrometric_fit_nstars' : -4,
                             'zeropoint'     : -99,
                             'zeropoint_err' : -99,
-                            'zeropoint_src' : 'N/A',
+                            'zeropoint_src' : 'BANZAI',
                             'wcs'           : self.test_banzaiwcs,
-                            'reduction_level' : 91
+                            'reduction_level' : 91,
                           }
         expected_cattype = "BANZAI"
 
@@ -1982,9 +1982,9 @@ class FITSReadHeader(FITSUnitTest):
                             'astrometric_fit_nstars' : -4,
                             'zeropoint'     : -99,
                             'zeropoint_err' : -99,
-                            'zeropoint_src' : 'N/A',
+                            'zeropoint_src' : 'BANZAI',
                             'wcs'           : self.test_banzaiwcs,
-                            'reduction_level' : 91
+                            'reduction_level' : 91,
                           }
         expected_cattype = "BANZAI"
 
@@ -2026,9 +2026,9 @@ class FITSReadHeader(FITSUnitTest):
                             'astrometric_fit_nstars' : -4,
                             'zeropoint'     : -99,
                             'zeropoint_err' : -99,
-                            'zeropoint_src' : 'N/A',
+                            'zeropoint_src' : 'BANZAI',
                             'wcs'           : self.test_banzaiwcs,
-                            'reduction_level' : 91
+                            'reduction_level' : 91,
                           }
         expected_cattype = "BANZAI"
 

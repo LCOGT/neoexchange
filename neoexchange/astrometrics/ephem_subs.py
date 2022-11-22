@@ -18,6 +18,7 @@ GNU General Public License for more details.
 import logging
 from datetime import datetime, timedelta, time
 from math import sin, cos, tan, asin, acos, atan2, degrees, radians, pi, sqrt, fabs, exp, log10, ceil, log
+from socket import timeout
 
 try:
     import pyslalib.slalib as S
@@ -682,11 +683,13 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
         logger.error("Unable to connect to HORIZONS")
     except requests.exceptions.ConnectionError as e:
         logger.error("Unable to connect to HORIZONS")
+    except timeout as sock_e:
+        logger.warning(f"HORIZONS retrieval failed with socket Error {sock_e.errno}: {sock_e.strerror}")
     except ValueError as e:
         logger.debug("Ambiguous object, trying to determine HORIZONS id")
         if e.args and len(e.args) > 0:
             choices = e.args[0].split('\n')
-            horizons_id = determine_horizons_id(choices)
+            horizons_id = determine_horizons_id(choices, obj_name)
             logger.debug("HORIZONS id= {}".format(horizons_id))
             if horizons_id:
                 try:
@@ -734,10 +737,11 @@ def convert_horizons_table(ephem, include_moon=False):
     return ephem
 
 
-def determine_horizons_id(lines, now=None):
+def determine_horizons_id(lines, obj_name, now=None):
     """Attempts to determine the HORIZONS id of a target body that has multiple
     possibilities. The passed [lines] (from the .args attribute of the exception)
-    are searched for the HORIZONS id (column 1) whose 'epoch year' (column 2)
+    are searched for the HORIZONS id (column 1) whose 'Primary Desig (column 4)
+    matches [obj_name] and for the  'epoch year' (column 2)
     which is closest to [now] (a passed-in datetime or defaulting to datetime.utcnow()"""
 
     now = now or datetime.utcnow()
@@ -745,7 +749,7 @@ def determine_horizons_id(lines, now=None):
     horizons_id = None
     for line in lines:
         chunks = line.split()
-        if len(chunks) >= 5 and chunks[0].isdigit() is True and chunks[1].isdigit() is True:
+        if len(chunks) >= 5 and chunks[0].isdigit() is True and chunks[1].isdigit() is True and chunks[3] == obj_name:
             try:
                 epoch_yr = datetime.strptime(chunks[1], "%Y")
                 if abs(now-epoch_yr) <= timespan:
@@ -1226,7 +1230,10 @@ def determine_exp_time_count(speed, site_code, slot_length_in_mins, mag, filter_
     exp_count = None
     min_exp_count = 4
 
-    (chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, site_max_exp_time, alt_limit) = get_sitecam_params(site_code, bin_mode)
+    sitecam = get_sitecam_params(site_code, bin_mode)
+    setup_overhead = sitecam['setup_overhead']
+    exp_overhead = sitecam['exp_overhead']
+    site_max_exp_time = sitecam['max_exp_length']
 
     slot_length = slot_length_in_mins * 60.0
 
@@ -1264,7 +1271,9 @@ def determine_exp_time_count(speed, site_code, slot_length_in_mins, mag, filter_
 def determine_exp_count(slot_length_in_mins, exp_time, site_code, filter_pattern, min_exp_count=1, bin_mode=None):
     exp_count = None
 
-    (chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, site_max_exp_time, alt_limit) = get_sitecam_params(site_code, bin_mode)
+    sitecam = get_sitecam_params(site_code, bin_mode)
+    setup_overhead = sitecam['setup_overhead']
+    exp_overhead = sitecam['exp_overhead']
 
     slot_length = slot_length_in_mins * 60.0
 
@@ -1315,7 +1324,9 @@ def determine_spectro_slot_length(exp_time, calibs, exp_count=1):
     site_code = 'F65-FLOYDS'
     slot_length = None
 
-    (chk_site_code, overheads, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit) = get_sitecam_params(site_code)
+    sitecam = get_sitecam_params(site_code)
+    overheads = sitecam['setup_overhead']
+    exp_overhead = sitecam['exp_overhead']
 
     num_molecules = 1
     calibs = calibs.lower()
@@ -1703,6 +1714,24 @@ def moon_alt_az(date, moon_app_ra, moon_app_dec, obsvr_long, obsvr_lat, obsvr_hg
 
 
 def moonphase(date, obsvr_long, obsvr_lat, obsvr_hgt, dbg=False):
+    """Compute the illuminated fraction (phase) of the Moon for the specific
+    time and observing site.
+
+    Uses the "medium" precision version of the algorithm in Chapter 48 of
+    Jean Meeus, Astronomical Algorithms, second edition, 1998, Willmann-Bell.
+    Meeus claims a max error in mphase of 0.0014 (0.14%)
+    
+    Parameters
+    ----------
+    date : `datetime` UTC datetime of observation
+    obsvr_long : Observer's longitude (East +ve; radians)
+    obsvr_lat : Observer's latitude (North +ve; radians)
+    obsvr_hgt : Observer's height above reference (geodetic; meters)
+
+    Returns
+    -------
+    mphase : Illuminated fraction of the Moon from 0 (New Moon) to 1 (Full Moon)
+    """
 
     mjd_tdb = datetime2mjd_tdb(date, obsvr_long, obsvr_lat, obsvr_hgt, dbg)
     (moon_ra, moon_dec, moon_diam) = S.sla_rdplan(mjd_tdb, 3, obsvr_long, obsvr_lat)
@@ -1909,7 +1938,7 @@ def get_sitecam_params(site, bin_mode=None):
         setup_overhead = cfg.tel_overhead['twom_setup_overhead']
         exp_overhead = cfg.inst_overhead['twom_exp_overhead']
         pixel_scale = cfg.tel_field['twom_pixscale']
-        fov = arcmins_to_radians(cfg.tel_field['twom_fov'])
+        fov = cfg.tel_field['twom_fov']
         max_exp_length = 300.0
         alt_limit = cfg.tel_alt['twom_alt_limit']
     elif site == 'FTN' or 'OGG-CLMA-2M0' in site or site == 'F65':
@@ -1917,7 +1946,7 @@ def get_sitecam_params(site, bin_mode=None):
         setup_overhead = cfg.tel_overhead['twom_setup_overhead']
         exp_overhead = cfg.inst_overhead['muscat_exp_overhead']
         pixel_scale = cfg.tel_field['twom_muscat_pixscale']
-        fov = arcmins_to_radians(cfg.tel_field['twom_muscat_fov'])
+        fov = cfg.tel_field['twom_muscat_fov']
         max_exp_length = 300.0
         alt_limit = cfg.tel_alt['twom_alt_limit']
     elif site == 'FTS' or 'COJ-CLMA-2M0' in site or site == 'E10':
@@ -1925,29 +1954,29 @@ def get_sitecam_params(site, bin_mode=None):
         setup_overhead = cfg.tel_overhead['twom_setup_overhead']
         exp_overhead = cfg.inst_overhead['twom_exp_overhead']
         pixel_scale = cfg.tel_field['twom_pixscale']
-        fov = arcmins_to_radians(cfg.tel_field['twom_fov'])
+        fov = cfg.tel_field['twom_fov']
         max_exp_length = 300.0
         alt_limit = cfg.tel_alt['twom_alt_limit']
     elif site == 'F65-FLOYDS' or site == 'E10-FLOYDS':
         site_code = site[0:3]
         exp_overhead = cfg.inst_overhead['floyds_exp_overhead']
         pixel_scale = cfg.tel_field['twom_floyds_pixscale']
-        fov = arcmins_to_radians(cfg.tel_field['twom_floyds_fov'])
+        fov = cfg.tel_field['twom_floyds_fov']
         max_exp_length = 3600.0
         alt_limit = cfg.tel_alt['twom_alt_limit']
-        setup_overhead = { 'front_padding' : cfg.tel_overhead['twom_setup_overhead'],
-                           'config_change_time' : cfg.inst_overhead['floyds_config_change_overhead'],
-                           'acquire_processing_time' : cfg.inst_overhead['floyds_acq_proc_overhead'],
-                           'acquire_exposure_time': cfg.inst_overhead['floyds_acq_exp_time'],
-                           'per_molecule_time' : cfg.molecule_overhead['per_molecule_time'],
-                           'calib_exposure_time' : cfg.inst_overhead['floyds_calib_exp_time']
+        setup_overhead = {'front_padding': cfg.tel_overhead['twom_setup_overhead'],
+                          'config_change_time': cfg.inst_overhead['floyds_config_change_overhead'],
+                          'acquire_processing_time': cfg.inst_overhead['floyds_acq_proc_overhead'],
+                          'acquire_exposure_time': cfg.inst_overhead['floyds_acq_exp_time'],
+                          'per_molecule_time': cfg.molecule_overhead['per_molecule_time'],
+                          'calib_exposure_time': cfg.inst_overhead['floyds_calib_exp_time']
                          }
     elif site in valid_point4m_codes:
         site_code = site
         setup_overhead = cfg.tel_overhead['point4m_setup_overhead']
         exp_overhead = cfg.inst_overhead['point4m_exp_overhead']
         pixel_scale = cfg.tel_field['point4m_pixscale']
-        fov = arcmins_to_radians(cfg.tel_field['point4m_fov'])
+        fov = cfg.tel_field['point4m_fov']
         max_exp_length = 300.0
         alt_limit = cfg.tel_alt['point4m_alt_limit']
     elif site in valid_site_codes or site == '1M0':
@@ -1955,11 +1984,11 @@ def get_sitecam_params(site, bin_mode=None):
         if bin_mode == '2k_2x2':
             pixel_scale = cfg.tel_field['onem_2x2_sin_pixscale']
             exp_overhead = cfg.inst_overhead['sinistro_2x2_exp_overhead']
-            fov = arcmins_to_radians(cfg.tel_field['onem_2x2_sinistro_fov'])
+            fov = cfg.tel_field['onem_2x2_sinistro_fov']
         else:
             exp_overhead = cfg.inst_overhead['sinistro_exp_overhead']
             pixel_scale = cfg.tel_field['onem_sinistro_pixscale']
-            fov = arcmins_to_radians(cfg.tel_field['onem_sinistro_fov'])
+            fov = cfg.tel_field['onem_sinistro_fov']
         max_exp_length = 300.0
         alt_limit = cfg.tel_alt['normal_alt_limit']
         site_code = site
@@ -1968,7 +1997,14 @@ def get_sitecam_params(site, bin_mode=None):
         site_code = 'XXX'
         setup_overhead = exp_overhead = pixel_scale = fov = max_exp_length = alt_limit = -1
 
-    return site_code, setup_overhead, exp_overhead, pixel_scale, fov, max_exp_length, alt_limit
+    return {'site_code': site_code,
+            'setup_overhead': setup_overhead,
+            'exp_overhead': exp_overhead,
+            'pixel_scale': pixel_scale,
+            'fov': fov,
+            'max_exp_length': max_exp_length,
+            'alt_limit': alt_limit,
+            }
 
 
 def comp_FOM(orbelems, emp_line):

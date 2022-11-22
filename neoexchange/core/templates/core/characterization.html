@@ -89,7 +89,7 @@
                 {% for body in char_targets|dictsort:"priority"%}
                 <tr class="{% cycle 'odd' 'even' %}">
                     <td data-label="Rank">{{forloop.counter}}</td>
-                    <td class="list_title"><a href="{% url 'target' body.id %}">{{body.current_name}}</a></td>
+                    <td class="list_title"><a href="{% url 'target' body.id %}">{{body.full_name}}</a></td>
                     <td data-label="RA">{{body.ra|radianstohms:" "}}</td>
                     <td data-label="Dec">{{body.dec|radianstodms:" "}}</td>
                     <td data-label="Vmag">{{body.v_mag|floatformat:1 }}</td>

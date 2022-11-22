@@ -19,6 +19,7 @@ from operator import itemgetter
 from datetime import datetime, timedelta, date
 from math import floor, ceil, degrees, radians, pi, acos, pow
 from astropy import units as u
+from astropy.coordinates import SkyCoord
 import json
 import logging
 import tempfile
@@ -53,7 +54,7 @@ import io
 from urllib.parse import urljoin
 
 from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, \
-    ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm, AddTargetForm
+    ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm, AddTargetForm, AddPeriodForm, UpdateAnalysisStatusForm
 from .models import *
 from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih, \
     convert_ast_to_comet
@@ -167,7 +168,7 @@ class AddTarget(LoginRequiredMixin, FormView):
 
     def form_invalid(self, form, **kwargs):
         context = self.get_context_data(**kwargs)
-        return render(context['view'].request, self.template_name, {'form': form, })
+        return render(context['view'].request, self.template_name, {'form': form})
 
     def form_valid(self, form):
         origin = form.cleaned_data['origin']
@@ -305,11 +306,11 @@ class SuperBlockTimeline(DetailView):
             else:
                 date = blk.block_start.isoformat(' ')
             data = {
-                'date' : date,
-                'num'  : blk.num_observed if blk.num_observed else 0,
-                'type' : blk.get_obstype_display(),
-                'duration' : (blk.block_end - blk.block_start).seconds,
-                'location' : blk.where_observed()
+                'date': date,
+                'num': blk.num_observed if blk.num_observed else 0,
+                'type': blk.get_obstype_display(),
+                'duration': (blk.block_end - blk.block_start).seconds,
+                'location': blk.where_observed()
                 }
             blks.append(data)
         context['blocks'] = json.dumps(blks)
@@ -1052,10 +1053,10 @@ class ScheduleCalibSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
             return self.form_invalid(form, request)
 
     def form_valid(self, form, request):
+        # Recalculate the parameters by amending the block length
+        data = schedule_check(form.cleaned_data, self.object)
+        new_form = ScheduleBlockForm(data)
         if 'edit' in request.POST:
-            # Recalculate the parameters by amending the block length
-            data = schedule_check(form.cleaned_data, self.object)
-            new_form = ScheduleBlockForm(data)
             return render(request, self.template_name, {'form': new_form, 'data': data, 'calibrator': self.object})
         elif 'submit' in request.POST:
             target = self.get_object()
@@ -1066,7 +1067,7 @@ class ScheduleCalibSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
 
             if tracking_num:
                 messages.success(self.request, "Request %s successfully submitted to the scheduler" % tracking_num)
-                block_resp = record_block(tracking_num, sched_params, form.cleaned_data, target)
+                block_resp = record_block(tracking_num, sched_params, form.cleaned_data, target, observer=request.user)
                 if block_resp:
                     messages.success(self.request, "Block recorded")
                 else:
@@ -1120,7 +1121,7 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
             tracking_num, sched_params = schedule_submit(new_form.cleaned_data, target, username)
             if tracking_num:
                 messages.success(self.request, "Request %s successfully submitted to the scheduler" % tracking_num)
-                block_resp = record_block(tracking_num, sched_params, new_form.cleaned_data, target)
+                block_resp = record_block(tracking_num, sched_params, new_form.cleaned_data, target, observer=request.user)
                 self.success = True
                 if block_resp:
                     messages.success(self.request, "Block recorded")
@@ -1318,6 +1319,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         speed = 0.0
         ra = radians(body.ra)
         dec = radians(body.dec)
+    adjusted_speed = speed
 
     # Determine filter pattern
     if data.get('filter_pattern'):
@@ -1373,6 +1375,7 @@ def schedule_check(data, body, ok_to_schedule=True):
     snr = None
     saturated = None
     if spectroscopy:
+        fractional_tracking_rate = 1.0
         snr_params = {'airmass': max_alt_airmass,
                       'slit_width': float(filter_pattern[5:8])*u.arcsec,
                       'moon_phase': moon_phase_code
@@ -1393,12 +1396,25 @@ def schedule_check(data, body, ok_to_schedule=True):
                 solar_analog_exptime = data.get('calibsource_exptime')
 
     else:
+        # calculate rate of relative motion on chip
+        try:
+            if 'fractional_rate' not in data and body_elements.get('elements_type', '') == 'MPC_COMET':
+                fractional_tracking_rate = 1.0
+            else:
+                fractional_tracking_rate = float(data.get('fractional_rate', 0.5))
+        except ValueError:
+            fractional_tracking_rate = 0.5
+            if body_elements.get('elements_type', '') == 'MPC_COMET':
+                print("Setting to 1.0 for comets")
+                fractional_tracking_rate = 1.0
+        relative_apparent_rate = abs(fractional_tracking_rate - 0.5) + 0.5
+        adjusted_speed = speed * relative_apparent_rate
         # Determine exposure length and count
         if data.get('exp_length', None):
             exp_length = data.get('exp_length')
             slot_length, exp_count = determine_exp_count(slot_length, exp_length, data['site_code'], filter_pattern, bin_mode=bin_mode)
         else:
-            exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length, magnitude, filter_pattern, bin_mode=bin_mode)
+            exp_length, exp_count = determine_exp_time_count(adjusted_speed, data['site_code'], slot_length, magnitude, filter_pattern, bin_mode=bin_mode)
             slot_length, exp_count = determine_exp_count(slot_length, exp_length, data['site_code'], filter_pattern, exp_count, bin_mode=bin_mode)
         if exp_length is None or exp_count is None:
             ok_to_schedule = False
@@ -1424,7 +1440,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         trail_len = determine_star_trails(speed, ag_exp_time)
     else:
         ag_exp_time = None
-        trail_len = determine_star_trails(speed, exp_length)
+        trail_len = determine_star_trails(adjusted_speed, exp_length)
     if lco_site_code[-4:-1].upper() == "0M4":
         typical_seeing = 3.0
     else:
@@ -1564,6 +1580,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'calibsource_list': calibsource_list_init,
         'dither_distance': data.get('dither_distance', 10),  # set default value to 10 arcsec.
         'add_dither': data.get('add_dither', False),
+        'fractional_rate': fractional_tracking_rate,
     }
 
     if not spectroscopy and 'F65' in data['site_code']:
@@ -1604,17 +1621,17 @@ def schedule_submit(data, body, username):
     if data.get('solar_analog', False) and data.get('calibsource_id', -1) > 0:
         try:
             calibsource = StaticSource.objects.get(pk=data['calibsource_id'])
-            calibsource_params = {  'id'      : calibsource.pk,
-                                    'name'    : calibsource.name,
-                                    'ra_deg'  : calibsource.ra,
-                                    'dec_deg' : calibsource.dec,
-                                    'pm_ra'   : calibsource.pm_ra,
-                                    'pm_dec'  : calibsource.pm_dec,
-                                    'parallax': calibsource.parallax,
-                                    'source_type' : calibsource.source_type,
-                                    'vmag' : calibsource.vmag,
-                                    'calib_exptime': data.get('calibsource_exptime', 60)
-                                 }
+            calibsource_params = {'id': calibsource.pk,
+                                  'name': calibsource.name,
+                                  'ra_deg': calibsource.ra,
+                                  'dec_deg': calibsource.dec,
+                                  'pm_ra': calibsource.pm_ra,
+                                  'pm_dec': calibsource.pm_dec,
+                                  'parallax': calibsource.parallax,
+                                  'source_type': calibsource.source_type,
+                                  'vmag': calibsource.vmag,
+                                  'calib_exptime': data.get('calibsource_exptime', 60)
+                                  }
         except StaticSource.DoesNotExist:
             logger.error("Was passed a StaticSource id=%d, but it now can't be found" % data['calibsource_id'])
 
@@ -1678,7 +1695,9 @@ def schedule_submit(data, body, username):
               'acceptability_threshold': data.get('acceptability_threshold', 90),
               'ag_exp_time': data.get('ag_exp_time', 10),
               'dither_distance': data.get('dither_distance', 10),
-              'add_dither': data.get('add_dither', False)
+              'add_dither': data.get('add_dither', False),
+              'fractional_rate': float(data.get('fractional_rate', 0.5)),
+              'speed': data.get('speed', 0)
               }
     if data['period'] or data['jitter']:
         params['period'] = data['period']
@@ -1788,7 +1807,7 @@ def feasibility_check(data, body):
     return data
 
 
-class SpecDataListView(ListView):
+class SpecDataListDisplay(ListView):
     model = Block
     template_name = 'core/data_summary.html'
     queryset = Block.objects.filter(obstype=1).filter(num_observed__gt=0).order_by('-when_observed')
@@ -1796,26 +1815,82 @@ class SpecDataListView(ListView):
     paginate_by = 20
 
     def get_context_data(self, **kwargs):
-        context = super(SpecDataListView, self).get_context_data(**kwargs)
+        # define data_type
+        context = super(SpecDataListDisplay, self).get_context_data(**kwargs)
         context['data_type'] = 'Spec'
+        # Define list of choices for status form
+        body_list = Body.objects.filter(block__in=context['data_list']).distinct()
+        body_choices_list = [(body.pk, body.current_name()) for body in body_list]
+        # Add form to context
+        form = UpdateAnalysisStatusForm()
+        form.fields['update_body'].choices = body_choices_list
+        context['form'] = form
         return context
 
 
-class LCDataListView(ListView):
+class UpdateBodyStatus(SingleObjectMixin, FormView):
+    template_name = 'core/data_summary.html'
+    form_class = UpdateAnalysisStatusForm
+    model = Body
+
+    def post(self, request, *args, **kwargs):
+        body_id = request.POST.get('update_body')
+        status_value = request.POST.get('status')
+        try:
+            body = Body.objects.get(pk=body_id)
+            body.analysis_status = status_value
+            body.as_updated = datetime.utcnow()
+            body.save()
+        except ObjectDoesNotExist:
+            logger.warning(f"Could not find a body for {body_id}.")
+        return redirect(reverse('lc_data_summary'))
+
+    def get_success_url(self):
+        return reverse('lc_data_summary')
+
+
+class SpecDataListView(View):
+
+    def get(self, request, *args, **kwargs):
+        view = SpecDataListDisplay.as_view()
+        return view(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        view = UpdateBodyStatus.as_view()
+        return view(request, *args, **kwargs)
+
+
+class LCDataListDisplay(ListView):
     model = Body
     template_name = 'core/data_summary.html'
+    period_info = PhysicalParameters.objects.filter(parameter_type='P').order_by('-preferred')
+    prefetch_period = Prefetch('physicalparameters_set', queryset=period_info, to_attr='rot_period')
+    queryset = Body.objects.filter(superblock__dataproduct__filetype=DataProduct.ALCDEF_TXT).distinct().prefetch_related(prefetch_period).order_by('-as_updated').order_by('analysis_status')
     paginate_by = 20
+    context_object_name = "data_list"
 
     def get_context_data(self, **kwargs):
-        context = {'data_list': self.find_lc(), 'data_type': 'LC'}
+        # define data_type
+        context = super(LCDataListDisplay, self).get_context_data(**kwargs)
+        context['data_type'] = 'LC'
+        # Define list of choices for status form
+        body_choices_list = [(body.pk, body.current_name()) for body in context['data_list']]
+        # Add form to context
+        form = UpdateAnalysisStatusForm()
+        form.fields['update_body'].choices = body_choices_list
+        context['form'] = form
         return context
 
-    def find_lc(self):
-        alcdefs_blocks = DataProduct.content.sblock().filter(filetype=DataProduct.ALCDEF_TXT).select_related('content_type')
-        block_ids = [x.object_id for x in alcdefs_blocks]
-        alcdef_bodies = Body.objects.filter(superblock__pk__in=block_ids).distinct()
 
-        return alcdef_bodies
+class LCDataListView(View):
+
+    def get(self, request, *args, **kwargs):
+        view = LCDataListDisplay.as_view()
+        return view(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        view = UpdateBodyStatus.as_view()
+        return view(request, *args, **kwargs)
 
 
 def ranking(request):
@@ -1872,7 +1947,7 @@ def get_characterization_targets():
     """Function to return the list of Characterization targets.
     If we change this, also change models.Body.characterization_target"""
 
-    characterization_list = Body.objects.filter(active=True).exclude(origin='M').exclude(source_type='U')
+    characterization_list = Body.objects.filter(active=True).exclude(origin='M').exclude(source_type='U').exclude(origin='T')
     return characterization_list
 
 
@@ -1914,7 +1989,7 @@ def build_characterization_list(disp=None):
                             if m_wav == "NA":
                                 m_wav = "Yes"
                 body_dict = model_to_dict(body)
-                body_dict['current_name'] = body.current_name()
+                body_dict['full_name'] = body.full_name()
                 body_dict['ingest_date'] = body.ingest
                 body_dict['s_wav'] = s_wav
                 if s_vis_link:
@@ -2108,9 +2183,10 @@ def build_lookproject_list(disp=None):
 
 def look_project(request):
 
-    params =  build_lookproject_list()
+    params = build_lookproject_list()
     params['form'] = AddTargetForm()
     return render(request, 'core/lookproject.html', params)
+
 
 def check_for_block(form_data, params, new_body):
     """Checks if a block with the given name exists in the Django DB.
@@ -2151,7 +2227,7 @@ def check_for_block(form_data, params, new_body):
         return 1
 
 
-def record_block(tracking_number, params, form_data, target):
+def record_block(tracking_number, params, form_data, target, observer):
     """Records a just-submitted observation as a SuperBlock and Block(s) in the database.
     """
 
@@ -2183,6 +2259,7 @@ def record_block(tracking_number, params, form_data, target):
         if proposal.time_critical is True:
             sblock_kwargs['rapid_response'] = True
         sblock_pk = SuperBlock.objects.create(**sblock_kwargs)
+        blockobserver = BlockObserver.objects.create(superblock=sblock_pk, observer=observer)
         i = 0
         for request, request_type in params.get('request_numbers', {}).items():
             # cut off json UTC timezone remnant
@@ -2231,9 +2308,11 @@ def record_block(tracking_number, params, form_data, target):
             if request_type == 'SIDEREAL' or request_type == 'ICRS':
                 block_kwargs['body'] = None
                 block_kwargs['calibsource'] = target
+                block_kwargs['tracking_rate'] = 0
             else:
                 block_kwargs['body'] = target
                 block_kwargs['calibsource'] = None
+                block_kwargs['tracking_rate'] = int(params['fractional_rate'] * 100)
             pk = Block.objects.create(**block_kwargs)
 
             if len(params.get('calibsource', {})) > 0:
@@ -2246,6 +2325,7 @@ def record_block(tracking_number, params, form_data, target):
                 block_kwargs['calibsource'] = calib_source
                 block_kwargs['exp_length'] = params['calibsrc_exptime']
                 block_kwargs['obstype'] = Block.OPT_SPECTRA_CALIB
+                block_kwargs['tracking_rate'] = 0
                 pk = Block.objects.create(**block_kwargs)
             i += 1
         return True
@@ -3000,8 +3080,8 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M', force=False):
             if phys_params['value'] is not None:
                 saved = body.save_physical_parameters(phys_params)
                 body.refresh_from_db()
-                # Test to see if it's a DNC with a 1/a value < 1e-4 (10,000 AU)
-                if body.recip_a and body.recip_a < 1e-4 and body.source_subtype_2 is None:
+                # Test to see if it's a DNC with a 1/a0 value < 1e-4 (25,000 AU)
+                if body.recip_a and body.recip_a < 4e-5 and body.source_subtype_2 is None:
                     body.source_subtype_2 = 'DN'
                     body.save()
 
@@ -3511,9 +3591,11 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False, desired_c
         logger.error("Bad header for %s (%s)" % (catfile, e))
         return -1, num_new_frames_created
 
+    # Downgrade check on bad fit to a logged warning as we're seeing a fair
+    # number of instances where BANZAI fails but we can solve succesfully
     if header.get('astrometric_fit_status', None) != 0:
-        logger.error("Bad astrometric fit found")
-        return -1, num_new_frames_created
+        logger.warning("Bad astrometric fit found in %s", catfile)
+    # return -1, num_new_frames_created
 
     # Check catalog type
     if cattype != 'BANZAI':
@@ -3884,17 +3966,21 @@ class PlotSpec(View):
 class LCPlot(LookUpBodyMixin, FormView):
 
     template_name = 'core/plot_lc.html'
+    form_class = AddPeriodForm
 
-    def get(self, request, *args, **kwargs):
-        best_period = self.body.get_physical_parameters('P', False)
+    def get(self, request, form=None, *args, **kwargs):
+        period_list = PhysicalParameters.objects.filter(body=self.body, parameter_type='P').order_by('update_time').order_by('-preferred')
+        best_period = period_list.filter(preferred=True)
         if best_period:
-            period = best_period[0].get('value', None)
+            period = best_period[0].value
         else:
             period = None
         script, div, meta_list = get_lc_plot(self.body, {'period': period})
-        alcdef_dps = DataProduct.content.fullbody(bodyid=self.body.id).filter(filetype=DataProduct.ALCDEF_TXT)
+        if not form:
+            form = AddPeriodForm()
 
-        return self.render_to_response(self.get_context_data(body=self.body, script=script, div=div, meta_list=meta_list))
+        return self.render_to_response(self.get_context_data(body=self.body, script=script, div=div, form=form,
+                                                             meta_list=meta_list, period_list=period_list))
 
     def get_context_data(self, **kwargs):
         params = kwargs
@@ -3909,6 +3995,36 @@ class LCPlot(LookUpBodyMixin, FormView):
         params['widget_path'] = BOKEH_URL.format('widgets-'+bokeh.__version__) + 'js'
         params['table_path'] = BOKEH_URL.format('tables-'+bokeh.__version__) + 'js'
         return params
+
+    def form_invalid(self, form, **kwargs):
+        period_list = PhysicalParameters.objects.filter(body=self.body, parameter_type='P')
+        best_period = period_list.filter(preferred=True)
+        if best_period:
+            period = best_period[0].value
+        else:
+            period = None
+        script, div, meta_list = get_lc_plot(self.body, {'period': period})
+        if not form:
+            form = AddPeriodForm()
+        context = self.get_context_data(body=self.body, script=script, div=div, form=form, meta_list=meta_list, period_list=period_list)
+        return self.render_to_response(context)
+
+    def form_valid(self, form):
+        period_data = form.cleaned_data
+        period_dict = {'value': period_data['period'],
+                       'error': period_data['error'],
+                       'parameter_type': 'P',
+                       'units': 'h',
+                       'preferred': period_data['preferred'],
+                       'reference': 'NEOX',
+                       'quality': period_data['quality'],
+                       'notes': period_data['notes']
+                       }
+        self.body.save_physical_parameters(period_dict)
+        return super(LCPlot, self).form_valid(form)
+
+    def get_success_url(self):
+        return reverse('lc_plot', kwargs={'pk': self.body.id})
 
 
 def import_alcdef(alcdef, meta_list, lc_list):
@@ -4475,3 +4591,31 @@ def find_best_solar_analog(ra_rad, dec_rad, site, ha_sep=4.0, num=None, solar_st
         close_params = model_to_dict(close_standard)
         close_params['separation_deg'] = close_standards[num]["separation"]
     return close_standard, close_params, close_standards[:5]
+
+
+def compare_NEOx_horizons_ephems(body, d, sitecode='500', debug=True):
+    """Compare the NEOexchange and HORIZONS positions at datetime <d> for
+    <body> (can be either a core.models.Body instance or string) from MPC site
+    code [sitecode; defaults to 500 (geocenter).
+    Returns the NEOx and HORIZONS ephemeris and the radial and RA & Dec components
+    of the separation (as Astropy Angle instances in u.arcsec)"""
+
+    if type(body) != Body:
+        body = Body.objects.get(name=body)
+
+    neox_emp = compute_ephem(d, model_to_dict(body), sitecode, perturb=True, display=debug)
+    horizons_emp = horizons_ephem(body.current_name(), d, d+timedelta(minutes=1), sitecode, '1m')
+
+    sep_r = None
+    sep_ra = None
+    sep_dec = None
+    if len(neox_emp) > 0 and horizons_emp is not None and len(horizons_emp) > 0:
+        neox_pos = SkyCoord(neox_emp['ra'], neox_emp['dec'], unit=u.rad)
+        horizons_pos = SkyCoord(horizons_emp['RA'][0], horizons_emp['DEC'][0], unit=u.deg)
+        sep_r = horizons_pos.separation(neox_pos).to(u.arcsec)
+        sep_ra, sep_dec = horizons_pos.spherical_offsets_to(neox_pos)
+        sep_ra = sep_ra.to(u.arcsec)
+        sep_dec = sep_dec.to(u.arcsec)
+        print(f"At {d:}, sep= {sep_r:.1f} (RA={sep_ra:.1f}, Dec={sep_dec:.1f})\n{neox_pos.to_string('hmsdms', sep=' '):}\n{horizons_pos.to_string('hmsdms', sep=' '):}")
+
+    return neox_emp, horizons_emp, sep_r, sep_ra, sep_dec
