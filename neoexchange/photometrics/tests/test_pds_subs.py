@@ -2130,7 +2130,7 @@ class TestExportBlockToPDS(TestCase):
         self.assertEqual(expected_files, related_frames)
 
     def test_create_dart_lightcurve(self):
-        expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_tfn_fa11_20211013_12345_65803didymos_photometry.tab')
+        expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_tfn-PP_fa11_20211013_12345_65803didymos_photometry.tab')
         expected_lines = [
         '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  filter  SExtractor_flag  aprad',
         ' tfn1m001-fa11-20211012-0073-e92.fits  2459500.3339392  14.8447  0.0397  27.1845  0.0394  -12.3397    0.0052       r                0  10.00',
@@ -2157,7 +2157,7 @@ class TestExportBlockToPDS(TestCase):
             self.assertEqual(expected_line, lines[i].rstrip())
 
     def test_create_dart_lightcurve_default(self):
-        expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_tfn_fa11_20211013_12345_65803didymos_photometry.tab')
+        expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_tfn-PP_fa11_20211013_12345_65803didymos_photometry.tab')
         expected_lines = [
         '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  filter  SExtractor_flag  aprad',
         ' tfn1m001-fa11-20211012-0073-e92.fits  2459500.3339392  14.8447  0.0397  27.1845  0.0394  -12.3397    0.0052       r                0  10.00',
@@ -2185,7 +2185,7 @@ class TestExportBlockToPDS(TestCase):
             self.assertEqual(expected_line, lines[i].rstrip())
 
     def test_create_dart_lightcurve_default_controlphot(self):
-        expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_tfn_fa11_20211013_12345_65803didymos_photometry.tab')
+        expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_tfn-PP_fa11_20211013_12345_65803didymos_photometry.tab')
         expected_lines = [
         '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  filter  SExtractor_flag  aprad',
         ' tfn1m001-fa11-20211012-0073-e92.fits  2459500.3339392  14.8447  0.0397  27.1845  0.0394  -12.3397    0.0052       r                0  10.00',
@@ -2283,10 +2283,12 @@ class TestExportBlockToPDS(TestCase):
             filepath = os.path.join(self.expected_root_dir, 'data_lcogt' + collection_type, self.test_blockdir, '') #Null string on end so 'glob' works in directory
             fits_files = glob(filepath + "*fits")
             xml_files = glob(filepath + "*xml")
+            self.assertNotEqual(len(fits_files), 0)
+            self.assertNotEqual(len(xml_files), 0)
             self.assertEqual(len(fits_files), len(xml_files), msg=f"Comparison failed on {collection_type:} files in {filepath:}")
             collection_filepath = os.path.join(self.expected_root_dir, f'data_lcogt{collection_type}', f'collection_data_lcogt{collection_type}.csv')
             t = Table.read(collection_filepath, format='ascii.csv', data_start=0)
-            self.assertEqual(len(fits_files), len(t)-1) # -1 due to extra overview file at the end
+            self.assertEqual(len(fits_files), len(t)-1, msg=f"Comparison failed on {collection_type:} lines in {collection_filepath:}") # -1 due to extra overview file at the end
             prod_type = 'e00'
             if collection_type == 'cal':
                 prod_type = 'e92'
