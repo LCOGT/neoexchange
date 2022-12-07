@@ -1859,11 +1859,55 @@ class TestExportBlockToPDS(TestCase):
                        }
 
         self.test_banzai_files = []
+        source_details = { 45234032 : {'mag' : 14.8447, 'err_mag' : 0.0054, 'flags' : 0},
+                           45234584 : {'mag' : 14.8637, 'err_mag' : 0.0052, 'flags' : 3},
+                           45235052 : {'mag' : 14.8447, 'err_mag' : 0.0051, 'flags' : 0}
+                         }
         for frame_num, frameid in zip(range(65,126,30),[45234032, 45234584, 45235052]):
             frame_params['filename'] = f"tfn1m001-fa11-20211013-{frame_num:04d}-e91.fits"
             frame_params['midpoint'] += timedelta(minutes=frame_num-65)
             frame_params['frameid'] = frameid
             frame, created = Frame.objects.get_or_create(**frame_params)
+            # Create NEOX_RED_FRAMETYPE type also
+            red_frame_params = frame_params.copy()
+            red_frame_params['frametype'] = Frame.NEOX_RED_FRAMETYPE
+            red_frame_params['filename'] = red_frame_params['filename'].replace('e91', 'e92')
+            frame, created = Frame.objects.get_or_create(**red_frame_params)
+
+            cat_source = source_details[frameid]
+            source_params = { 'body' : self.test_body,
+                              'frame' : frame,
+                              'obs_ra' : 208.728,
+                              'obs_dec' : -10.197,
+                              'obs_mag' : cat_source['mag'],
+                              'err_obs_ra' : 0.0003,
+                              'err_obs_dec' : 0.0003,
+                              'err_obs_mag' : cat_source['err_mag'],
+                              'astrometric_catalog' : frame.astrometric_catalog,
+                              'photometric_catalog' : frame.photometric_catalog,
+                              'aperture_size' : 10*0.389,
+                              'snr' : 1/cat_source['err_mag'],
+                              'flags' : cat_source['flags']
+                            }
+            source, created = SourceMeasurement.objects.get_or_create(**source_params)
+            source_params = { 'frame' : frame,
+                              'obs_x' : 2048+frame_num/10.0,
+                              'obs_y' : 2043-frame_num/10.0,
+                              'obs_ra' : 208.728,
+                              'obs_dec' : -10.197,
+                              'obs_mag' : cat_source['mag'],
+                              'err_obs_ra' : 0.0003,
+                              'err_obs_dec' : 0.0003,
+                              'err_obs_mag' : cat_source['err_mag'],
+                              'background' : 42,
+                              'major_axis' : 3.5,
+                              'minor_axis' : 3.25,
+                              'position_angle' : 42.5,
+                              'ellipticity' : 0.3711,
+                              'aperture_size' : 10*0.389,
+                              'flags' : cat_source['flags']
+                            }
+            cat_src, created = CatalogSources.objects.get_or_create(**source_params)
             for extn in ['e00', 'e92']:
                 new_name = os.path.join(self.test_input_daydir, frame_params['filename'].replace('e91', extn))
                 filename = shutil.copy(self.test_file_path, new_name)
@@ -1911,7 +1955,7 @@ class TestExportBlockToPDS(TestCase):
         status = create_dart_directories(self.test_output_dir, self.test_block)
 
         self.assertEqual(2, Block.objects.count())
-        self.assertEqual(3, Frame.objects.filter(block=self.test_block).count())
+        self.assertEqual(3, Frame.objects.filter(block=self.test_block, frametype=Frame.NEOX_RED_FRAMETYPE).count())
         self.assertEqual(expected_status, status)
         check_dirs = [self.expected_root_dir, ]
         check_dirs += list(expected_status.values())
@@ -2218,6 +2262,29 @@ class TestExportBlockToPDS(TestCase):
             lines = table_file.readlines()
 
         self.assertEqual(63, len(lines))
+        for i, expected_line in enumerate(expected_lines):
+            self.assertEqual(expected_line, lines[i].rstrip())
+
+    def test_create_dart_lightcurve_srcmeasures(self):
+        expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_tfn_fa11_20211013_12345_65803didymos_photometry.tab')
+        expected_lc_link = os.path.join(self.test_ddp_daydir, 'LCOGT_TFN-FA11_Lister_20211013.dat')
+        expected_lines = [
+        '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  filter  SExtractor_flag  aprad',
+        ' tfn1m001-fa11-20211013-0065-e92.fits  2459500.5312500  14.8447  0.0305  27.0000  0.0300  -12.1553    0.0054      ip                0  10.00',
+        ' tfn1m001-fa11-20211013-0095-e92.fits  2459500.5520833  14.8637  0.0304  27.0000  0.0300  -12.1363    0.0052      ip                3  10.00',
+        ' tfn1m001-fa11-20211013-0125-e92.fits  2459500.5937500  14.8447  0.0304  27.0000  0.0300  -12.1553    0.0051      ip                0  10.00'
+        ]
+
+        dart_lc_file = create_dart_lightcurve(self.test_block, self.test_ddp_daydir, self.test_block, create_symlink=True)
+
+        self.assertEqual(expected_lc_file, dart_lc_file)
+        self.assertTrue(os.path.exists(expected_lc_file))
+        self.assertTrue(os.path.exists(expected_lc_link))
+
+        with open(dart_lc_file, 'r') as table_file:
+            lines = table_file.readlines()
+
+        self.assertEqual(4, len(lines))
         for i, expected_line in enumerate(expected_lines):
             self.assertEqual(expected_line, lines[i].rstrip())
 

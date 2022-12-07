@@ -1336,7 +1336,7 @@ def create_dart_lightcurve(input_dir, output_dir, block, match='photometry_*.dat
     output_lc_filepath = None
     frames = Frame.objects.filter(block=block, frametype=Frame.BANZAI_RED_FRAMETYPE)
     if frames.count() > 0:
-        first_frame = frames.last()
+        first_frame = frames.earliest('midpoint')
         first_filename = first_frame.filename
         file_parts = split_filename(first_filename)
         if len(file_parts) == 8:
@@ -1372,10 +1372,11 @@ def create_dart_lightcurve(input_dir, output_dir, block, match='photometry_*.dat
                     table = create_table_from_srcmeasures(input_dir)
                     aper_radius = table['aprad'].mean()
 #                    file_parts['site'] += '-Src'
-                print(len(table), aper_radius)
+#                print(len(table), aper_radius)
                 if table and aper_radius:
                     phot_filename, pds_name = make_pds_asteroid_name(block.body)
                     # Format for LC files: 'lcogt_<site>_<inst.>_<YYYYMMDD>_<request #>_<astname#>_photometry.txt'
+                    file_parts['dayobs'] = first_frame.midpoint.strftime("%Y%m%d")
                     output_lc_file = f"lcogt_{file_parts['site']}_{file_parts['instrument']}_{file_parts['dayobs']}_{block.request_number}_{phot_filename}_photometry.tab"
                     output_lc_filepath = os.path.join(output_dir, output_lc_file)
                     write_dartformat_file(table, output_lc_filepath, aper_radius)
