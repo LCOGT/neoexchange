@@ -4689,7 +4689,7 @@ def find_best_solar_analog(ra_rad, dec_rad, site, ha_sep=4.0, num=None, solar_st
     return close_standard, close_params, close_standards[:5]
 
 
-def compare_NEOx_horizons_ephems(body, d, sitecode='500', debug=True):
+def compare_NEOx_horizons_ephems(body, d, sitecode='500', perturb=True, debug=True):
     """Compare the NEOexchange and HORIZONS positions at datetime <d> for
     <body> (can be either a core.models.Body instance or string) from MPC site
     code [sitecode; defaults to 500 (geocenter).
@@ -4700,7 +4700,7 @@ def compare_NEOx_horizons_ephems(body, d, sitecode='500', debug=True):
     if type(body) != Body:
         body = Body.objects.get(name=body)
 
-    neox_emp = compute_ephem(d, model_to_dict(body), sitecode, perturb=True, display=debug)
+    neox_emp = compute_ephem(d, model_to_dict(body), sitecode, perturb=perturb, display=debug)
     horizons_emp = horizons_ephem(body.current_name(), d, d+timedelta(minutes=1), sitecode, '1m')
 
     sep_r = None
