@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.12.4
+* Fix for parsing physical parameters from the JPL SBDB API which are comma-separated rather than slash-separated. Allow for parsing of percentages as sigmas.
+
 ### 3.12.3
 * Store the submitting observer in a new table linked to SuperBlock (Issue #608)
 
