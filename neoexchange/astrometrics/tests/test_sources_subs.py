@@ -6553,6 +6553,78 @@ class TestFetchJPLPhysParams(TestCase):
         self.assertEqual(dbpole_param[0].error, 0.007)
         self.assertEqual(dbpole_param[0].error2, 0.002)
 
+    def test_pole_orient_comma(self):
+        """Test the splitting of the value and error numbers separated by commas.
+         Also to test the storage of these values. (Values for Didymos)"""
+        bodies = Body.objects.all()
+        body = bodies[0]
+
+        pole_test = [{'ref': 'Naidu, S. P.; Benner, L. A. M.; Brozovic, M.; et al. (2020) Icarus 348, 113777',
+                      'value': '78, -71 degrees',
+                      'name': 'pole',
+                      'desc': 'spin-pole direction in R.A./Dec.',
+                      'notes': None,
+                      'sigma': '20 degrees',
+                      'title': 'pole direction',
+                      'units': None}]
+
+        phys_params = PhysicalParameters.objects.filter(body=body)
+        dbpole_param = phys_params.filter(parameter_type='O')
+        store_jpl_physparams(pole_test, body)
+
+        self.assertEqual(dbpole_param[0].value, 78)
+        self.assertEqual(dbpole_param[0].value2, -71)
+        self.assertEqual(dbpole_param[0].error, 20.0)
+        self.assertEqual(dbpole_param[0].error2, 20.0)
+
+    def test_pole_orient_slash(self):
+        """Test the splitting of the value and error numbers separated by slash.
+         Also to test the storage of these values. (Values from Vesta) """
+        bodies = Body.objects.all()
+        body = bodies[0]
+
+        pole_test = [{'ref': 'Science, v. 336 (6082), pp. 684-686',
+                      'value': '309.03/42.23',
+                      'name': 'pole',
+                      'desc': 'spin-pole direction in R.A./Dec.',
+                      'notes': 'values in degrees',
+                      'sigma': '0.01/0.01',
+                      'title': 'pole direction',
+                      'units': None}]
+
+        phys_params = PhysicalParameters.objects.filter(body=body)
+        dbpole_param = phys_params.filter(parameter_type='O')
+        store_jpl_physparams(pole_test, body)
+
+        self.assertEqual(dbpole_param[0].value, 309.03)
+        self.assertEqual(dbpole_param[0].value2, 42.23)
+        self.assertEqual(dbpole_param[0].error, 0.01)
+        self.assertEqual(dbpole_param[0].error2, 0.01)
+
+    def test_pole_orient_slash2(self):
+        """Test the splitting of the value and error numbers separated by slash.
+         Also to test the storage of these values. (Values from Vesta) """
+        bodies = Body.objects.all()
+        body = bodies[0]
+
+        pole_test = [{'ref': 'Science, v. 336 (6082), pp. 684-686',
+                      'value': '309.03/42.23',
+                      'name': 'pole',
+                      'desc': 'spin-pole direction in R.A./Dec.',
+                      'notes': 'values in degrees',
+                      'sigma': '0.01/0.03',
+                      'title': 'pole direction',
+                      'units': None}]
+
+        phys_params = PhysicalParameters.objects.filter(body=body)
+        dbpole_param = phys_params.filter(parameter_type='O')
+        store_jpl_physparams(pole_test, body)
+
+        self.assertEqual(dbpole_param[0].value, 309.03)
+        self.assertEqual(dbpole_param[0].value2, 42.23)
+        self.assertEqual(dbpole_param[0].error, 0.01)
+        self.assertEqual(dbpole_param[0].error2, 0.03)
+
     def test_color(self):
         """Test the storage of color bands, values, and errors."""
         bodies = Body.objects.all()
