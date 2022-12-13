@@ -2884,7 +2884,11 @@ def store_jpl_physparams(phys_par, body):
                 jpl_error, jpl_error2 = jpl_error.split('/')
                 # Extract floating point numbers. Solution modified from https://stackoverflow.com/a/56435431/10168105
                 jpl_error2 = float("".join(filter(lambda d: str.isdigit(d) or d == '.', jpl_error2)))
+            multiplier = 1.0
+            if '%' in jpl_error:
+                multiplier = 0.01 * jpl_value
             jpl_error = float("".join(filter(lambda d: str.isdigit(d) or d == '.', jpl_error)))
+            jpl_error *= multiplier
             if jpl_value2 is not None and jpl_error is not None and jpl_error2 is None:
                 # Copy over error to other value if none
                 jpl_error2 = jpl_error

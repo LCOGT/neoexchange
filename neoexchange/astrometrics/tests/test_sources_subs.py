@@ -6625,6 +6625,50 @@ class TestFetchJPLPhysParams(TestCase):
         self.assertEqual(dbpole_param[0].error, 0.01)
         self.assertEqual(dbpole_param[0].error2, 0.03)
 
+    def test_density(self):
+        """Test the handling of regular density value.
+         Also to test the storage of these values. (Values from Didymos) """
+        bodies = Body.objects.all()
+        body = bodies[0]
+
+        density_test = [{'ref': 'Naidu, S. P.; Benner, L. A. M.; Brozovic, M.; et al. (2020) Icarus 348, 113777',
+                         'value': '2.17',
+                         'name': 'density',
+                         'desc': 'bulk density',
+                         'notes': None,
+                         'sigma': '0.35',
+                         'title': 'bulk density',
+                         'units': 'g/cm^3'}]
+
+        phys_params = PhysicalParameters.objects.filter(body=body)
+        density_param = phys_params.filter(parameter_type='R')
+        store_jpl_physparams(density_test, body)
+
+        self.assertEqual(density_param[0].value, 2.17)
+        self.assertEqual(density_param[0].error, 0.35)
+
+    def test_density_percent(self):
+        """Test the handling of percentage density value.
+         Also to test the storage of these values. (Values from Vesta) """
+        bodies = Body.objects.all()
+        body = bodies[0]
+
+        density_test = [{'ref': 'Science, v. 336 (6082), pp. 684-686',
+                         'value': '3.456',
+                         'name': 'density',
+                         'desc': 'bulk density',
+                         'notes': None,
+                         'sigma': '1%',
+                         'title': 'bulk density',
+                         'units': 'g/cm^3'}]
+
+        phys_params = PhysicalParameters.objects.filter(body=body)
+        density_param = phys_params.filter(parameter_type='R')
+        store_jpl_physparams(density_test, body)
+
+        self.assertEqual(density_param[0].value, 3.456)
+        self.assertEqual(density_param[0].error, 0.03456)
+
     def test_color(self):
         """Test the storage of color bands, values, and errors."""
         bodies = Body.objects.all()
