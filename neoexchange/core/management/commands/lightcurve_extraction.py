@@ -67,6 +67,7 @@ class Command(BaseCommand):
         parser.add_argument('--overwrite', action="store_true", default=False, help='Force overwrite and store robust data products')
         base_dir = os.path.join(settings.DATA_ROOT, 'Reduction')
         parser.add_argument('--datadir', default=base_dir, help='Place to save data (e.g. %s)' % base_dir)
+        parser.add_argument('-ap', '--maxapsize', default=None, help='Max. aperture size')
 
     def generate_expected_fwhm(self, times, airmasses, fwhm_0=2.0, obs_filter='w', tel_diameter=0.4*u.m):
         """Compute the expected FWHM and the variation with airmass and observing
@@ -423,7 +424,7 @@ class Command(BaseCommand):
                         mag_estimate = emp_line['mag']
                         (ra_string, dec_string) = radec2strings(ra, dec, ' ')
                         # Find list of frame sources within search region of predicted coordinates
-                        sources = search_box(frame, ra, dec, options['boxwidth'])
+                        sources = search_box(frame, ra, dec, options['boxwidth'], max_ap_size=options['maxapsize'])
                         midpoint_string = frame.midpoint.strftime('%Y-%m-%d %H:%M:%S')
                         self.stdout.write("%s %s %s V=%.1f %s (%d) %s" % (midpoint_string, ra_string, dec_string, mag_estimate, frame.sitecode, len(sources), frame.filename))
                         best_source = None
