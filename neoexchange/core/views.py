@@ -2212,7 +2212,8 @@ def check_for_block(form_data, params, new_body):
     try:
         block_id = SuperBlock.objects.get(body=new_body.id,
                                      groupid__contains=form_data['group_name'],
-                                     proposal=Proposal.objects.get(code=form_data['proposal_code'])
+                                     proposal=Proposal.objects.get(code=form_data['proposal_code']),
+                                     active=True
                                      )
 #                                         site=site_list[params['site_code']])
     except SuperBlock.MultipleObjectsReturned:
