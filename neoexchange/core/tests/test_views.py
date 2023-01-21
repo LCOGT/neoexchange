@@ -1024,6 +1024,7 @@ class TestRecordBlock(TestCase):
                                'site': 'CPT',
                                'site_code': 'K91',
                                'start_time': datetime(2018, 3, 15, 18, 20),
+                               'too_mode' : False,
                                'user_id': 'tlister@lcogt.net'}
 
         self.imaging_form = { 'start_time' : self.imaging_params['start_time'],
@@ -1032,6 +1033,7 @@ class TestRecordBlock(TestCase):
                               'group_name' : self.imaging_params['group_name'],
                               'exp_count' : self.imaging_params['exp_count'],
                               'exp_length' : self.imaging_params['exp_time'],
+                              'too_mode' : False
                             }
         body_params = {'provisional_name' : 'N999r0q'}
         self.imaging_body = Body.objects.create(**body_params)
@@ -1094,6 +1096,34 @@ class TestRecordBlock(TestCase):
         imaging_params['proposal_id'] += 'b'
         imaging_form = self.imaging_form
         imaging_form['proposal_code'] += 'b'
+
+        block_resp = record_block(self.imaging_tracknum, imaging_params, imaging_form, self.imaging_body, observer=self.bart)
+
+        self.assertTrue(block_resp)
+        sblocks = SuperBlock.objects.all()
+        blocks = Block.objects.all()
+        self.assertEqual(1, sblocks.count())
+        self.assertEqual(1, blocks.count())
+        self.assertEqual(Block.OPT_IMAGING, blocks[0].obstype)
+        # Check the SuperBlock has the broader time window but the Block(s) have
+        # the (potentially) narrower per-Request windows
+        self.assertEqual(self.imaging_form['start_time'], sblocks[0].block_start)
+        self.assertEqual(self.imaging_form['end_time'], sblocks[0].block_end)
+        self.assertEqual(datetime(2018, 3, 15, 20, 20, 0, 400000), blocks[0].block_start)
+        self.assertEqual(datetime(2018, 3, 16, 3, 30, 0, 600000), blocks[0].block_end)
+        self.assertEqual(self.imaging_tracknum, sblocks[0].tracking_number)
+        self.assertTrue(self.imaging_tracknum != blocks[0].request_number)
+        self.assertEqual(self.imaging_params['block_duration'], sblocks[0].timeused)
+        self.assertEqual(self.proposal_tc, sblocks[0].proposal)
+        self.assertEqual(False, sblocks[0].rapid_response)
+
+    def test_imaging_block_rr_proposal_too(self):
+        imaging_params = self.imaging_params
+        imaging_params['proposal_id'] += 'b'
+        imaging_params['too_mode'] = True
+        imaging_form = self.imaging_form
+        imaging_form['proposal_code'] += 'b'
+        imaging_form['too_mode'] = True
 
         block_resp = record_block(self.imaging_tracknum, imaging_params, imaging_form, self.imaging_body, observer=self.bart)
 

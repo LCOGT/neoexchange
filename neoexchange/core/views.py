@@ -2257,7 +2257,7 @@ def record_block(tracking_number, params, form_data, target, observer):
         else:
             sblock_kwargs['body'] = target
         # Check if this went to a rapid response proposal
-        if proposal.time_critical is True:
+        if proposal.time_critical is True and form_data.get('too_mode', False) is True and params.get('too_mode', False) is True:
             sblock_kwargs['rapid_response'] = True
         sblock_pk = SuperBlock.objects.create(**sblock_kwargs)
         blockobserver = BlockObserver.objects.create(superblock=sblock_pk, observer=observer)
