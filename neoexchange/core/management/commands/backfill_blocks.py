@@ -14,7 +14,7 @@ GNU General Public License for more details.
 """
 
 import os
-from sys import argv
+from sys import argv, exit
 from datetime import datetime, timedelta
 
 from django.core.management.base import BaseCommand, CommandError
@@ -56,14 +56,16 @@ class Command(BaseCommand):
         # Append date to the data directory
         dataroot = os.path.join(dataroot, obs_date)
 
-        object_dirs = [x[0] for x in os.walk(dataroot)]
+        object_dirs = [x[0] for x in os.walk(dataroot) if ('Didymos' in x[0] or '65803' in x[0] or obs_date in x[0][-8:]) and 'Temp_cvc' not in x[0]]
 
+        print(object_dirs)
         for rock in object_dirs[1:]:
             datadir = os.path.join(dataroot, rock)
             self.stdout.write('Processing target %s in %s' % (rock, datadir))
             fits_files = get_fits_files(datadir)
             self.stdout.write("Found %d FITS files in %s" % (len(fits_files), datadir) )
-            if len(fits_files) == 0:
+            if len(fits_files) < 1:
+                self.stdout.write('Too few FITS files found, skipping')
                 continue
             first_file = fits_files[0]
             header, dummy_table, cattype = open_fits_catalog(first_file, header_only=True)
@@ -75,7 +77,7 @@ class Command(BaseCommand):
                     name = header.get('object', None)
                     if name:
                         # Take out any parentheses e.g. (28484)
-                        name = name.replace('(', '').replace(')', '')
+                        name = name.rstrip().replace('(', '').replace(')', '').replace('Didymos', '65803')
                     bodies = Body.objects.filter(Q(provisional_name__exact = name )|Q(provisional_packed__exact = name)|Q(name__exact = name))
                     if len(bodies) == 1:
                         body = bodies[0]
@@ -87,21 +89,23 @@ class Command(BaseCommand):
                                           'proposal' : Proposal.objects.get(code=header.get('propid', '')),
                                           'tracking_number': tracking_num,
                                         }
-                        new_sblock = SuperBlock.objects.create(**sblock_params)
+                        new_sblock, created = SuperBlock.objects.get_or_create(**sblock_params)
+                        print(new_sblock, created)
                         block_params = { 'superblock' : new_sblock,
-                                         'active': True,
                                          'block_start': header.get('blksdate'),
                                          'block_end'  : header.get('blkedate'),
                                          'body': body,
                                          'exp_length': header.get('exptime'),
-                                         'groupid'   : header.get('groupid', ''),
                                          'num_exposures': header.get('frmtotal', 0),
-                                         'proposal' : Proposal.objects.get(code=header.get('propid', '')),
                                          'site'     : header.get('siteid'),
                                          'telclass' : header['telid'][0:3],
-                                         'tracking_number': header.get('reqnum', tracking_num)
+                                         'request_number': header.get('reqnum', tracking_num),
+                                         'tracking_rate' : int(header.get('tracfrac', 1.0)*100)
                                        }
-                        new_block = Block.objects.create(**block_params)
+                        new_block, created = Block.objects.get_or_create(**block_params)
+                        new_block.active = True
+                        new_block.save()
+                        print(new_block, created)
                         self.stdout.write("Updating status of new Block %d" % new_block.id)
                         block_status(new_block.id)
                     else:
@@ -114,16 +118,35 @@ class Command(BaseCommand):
                         self.stdout.write(msg)
                     else:
                         self.stdout.write("Checking sub Block status for SuperBlock #%d" % old_sblock.id)
-                        for sub_block in blocks:
-                            if sub_block.tracking_number == header.get('reqnum', tracking_num):
-                                self.stdout.write("Found Block %d with matching REQNUM=%s" % (sub_block.id, sub_block.tracking_number))
-                                frames = Frame.objects.filter(block=sub_block, frametype__in=(Frame.BANZAI_QL_FRAMETYPE, Frame.BANZAI_RED_FRAMETYPE))
-                                if len(fits_files) >= frames.count():
-                                    self.stdout.write("Updating status of Block #%d (found %d FITS files, know of %d Frames in DB)" % (sub_block.id,len(fits_files), frames.count()))
-                                    block_status(sub_block.id)
-                                else:
-                                    self.stdout.write("Already have more/right number of frames for Block #%d (found %d FITS files, know of %d Frames in DB)" % (sub_block.id,len(fits_files), frames.count()))
-
+                        existing_requests = blocks.values_list('request_number', flat=True).distinct()
+                        request_num = header.get('reqnum', '')
+                        if request_num in existing_requests:
+                            sub_block = blocks.get(request_number=request_num)
+                            self.stdout.write("Found Block %d with matching REQNUM=%s" % (sub_block.id, sub_block.request_number))
+                            frames = Frame.objects.filter(block=sub_block, frametype__in=(Frame.BANZAI_QL_FRAMETYPE, Frame.BANZAI_RED_FRAMETYPE))
+                            if len(fits_files) >= frames.count():
+                                self.stdout.write("Updating status of Block #%d (found %d FITS files, know of %d Frames in DB)" % (sub_block.id,len(fits_files), frames.count()))
+                                block_status(sub_block.id)
+                            else:
+                                self.stdout.write("Already have more/right number of frames for Block #%d (found %d FITS files, know of %d Frames in DB)" % (sub_block.id,len(fits_files), frames.count()))
+                        else:
+                            self.stdout.write("New Block with REQNUM=%s needed for SuperBlock #%d" % (request_num, old_sblock.id))
+                            block_params = { 'superblock' : old_sblock,
+                                     'active' : True,
+                                     'block_start': header.get('blksdate'),
+                                     'block_end'  : header.get('blkedate'),
+                                     'body': old_sblock.body,
+                                     'exp_length': header.get('exptime'),
+                                     'num_exposures': header.get('frmtotal', 0),
+                                     'site'     : header.get('siteid'),
+                                     'telclass' : header['telid'][0:3],
+                                     'request_number': header.get('reqnum', ''),
+                                     'tracking_rate' : int(header.get('tracfrac', 1.0)*100)
+                                   }
+                            new_block, created = Block.objects.get_or_create(**block_params)
+                            print(new_block, created)
+                            self.stdout.write("Updating status of new Block %d" % new_block.id)
+                            block_status(new_block.id)
                 elif len(sblocks) >= 2:
                         msg = "Found multiple SuperBlocks "
                         msg += "%s" % ( [sblock.id for sblock in sblocks])
