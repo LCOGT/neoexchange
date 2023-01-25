@@ -1283,6 +1283,11 @@ class FITSUnitTest(TestCase):
         hdulist.close()
         self.uncomp_banzai_table_firstitem = self.test_banzaitable[0:1]
 
+        self.test_swopefilename = os.path.join('photometrics', 'tests', 'swope_test_frame.fits')
+        hdulist = fits.open(self.test_swopefilename)
+        self.test_swopeheader = hdulist[0].header
+        hdulist.close()
+
         column_types = [('ccd_x', '>f4'), 
                         ('ccd_y', '>f4'), 
                         ('obs_ra', '>f8'), 
@@ -1606,6 +1611,19 @@ class OpenFITSCatalog(FITSUnitTest):
         self.assertEqual(str, type(hdr['PV2_10']))
         self.assertEqual(expected_hdr_value2, hdr['PV2_10'])
 
+    def test_swope_header(self):
+        outpath = os.path.join("photometrics", "tests")
+        expected_header = fits.Header.fromfile(os.path.join(outpath, "swope_test_header"), sep='\n', endcard=False, padding=False)
+        expected_tbl = {}
+        expected_cattype = 'SWOPE'
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_swopefilename)
+
+        self.assertEqual(expected_cattype, cattype)
+        self.assertEqual(expected_tbl, tbl)
+        for key in expected_header:
+            self.assertEqual(expected_header[key], hdr[key],
+                msg="Failure on %s (%s != %s)" % (key, expected_header[key], hdr[key]))
 
 class TestConvertValues(FITSUnitTest):
 

@@ -991,19 +991,25 @@ def open_fits_catalog(catfile, header_only=False):
         else:
             logger.error("Could not find SCI HDU in file")
     elif len(hdulist) == 1:
-        # BANZAI-format after extraction of image
-        cattype = 'BANZAI'
+        origin = hdulist[0].header.get('origin', None)
+        if origin is not None and origin == 'LCO/OCIW':
+            cattype = 'SWOPE'
+            hdr_name = 'PRIMARY'
+        else:
+            # BANZAI-format after extraction of image
+            cattype = 'BANZAI'
+            hdr_name = 'SCI'
         try:
-            sci_index = hdulist.index_of('SCI')
+            sci_index = hdulist.index_of(hdr_name)
         except KeyError:
             sci_index = -1
 
         if sci_index != -1:
             header = hdulist[sci_index].header
         else:
-            logger.error("Could not find SCI HDU in file")
+            logger.error(f"Could not find {hdr_name} HDU in file")
     else:
-        logger.error("Unexpected number of catalog HDUs (Expected 2, got %d)" % len(hdulist))
+        logger.error("Unexpected number of catalog HDUs (Expected 1-4, got %d)" % len(hdulist))
 
     hdulist.close()
 
