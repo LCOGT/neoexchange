@@ -1271,6 +1271,10 @@ class FITSUnitTest(TestCase):
         hdulist = fits.open(self.test_raw_filename)
         self.test_raw_header = [hdu.header for hdu in hdulist]
         self.test_raw_table = {}
+
+        self.test_swopefilename = os.path.join('photometrics', 'tests', 'swope_test_frame.fits')
+        hdulist = fits.open(self.test_swopefilename)
+        self.test_swopeheader = hdulist[0].header
         hdulist.close()
 
         column_types = [('ccd_x', '>f4'), 
@@ -1544,6 +1548,31 @@ class OpenFITSCatalog(FITSUnitTest):
             self.assertEqual(expected_hdr_len, len(hdr[hdu]))
         self.assertEqual(expected_tbl_len, len(tbl))
         self.assertEqual(expected_cattype, cattype)
+
+    def test_photpipe_catalog_read_hdr_keyword(self):
+        expected_hdr_value = 'fa15'
+        expected_hdr_value2 = '0.0003023852695117'
+
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_photpipefilename)
+
+        self.assertEqual(expected_hdr_value, hdr['INSTRUME'])
+        self.assertEqual(str, type(hdr['PV2_10']))
+        self.assertEqual(expected_hdr_value2, hdr['PV2_10'])
+
+    def test_swope_header(self):
+        outpath = os.path.join("photometrics", "tests")
+        expected_header = fits.Header.fromfile(os.path.join(outpath, "swope_test_header"), sep='\n', endcard=False, padding=False)
+        expected_tbl = {}
+        expected_cattype = 'SWOPE'
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_swopefilename)
+
+        self.assertEqual(expected_cattype, cattype)
+        self.assertEqual(expected_tbl, tbl)
+        for key in expected_header:
+            self.assertEqual(expected_header[key], hdr[key],
+                msg="Failure on %s (%s != %s)" % (key, expected_header[key], hdr[key]))
 
 
 class TestConvertValues(FITSUnitTest):
