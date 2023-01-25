@@ -2677,6 +2677,21 @@ class TestGetSitePos(TestCase):
         self.assertGreater(site_lat, 0.0)
         self.assertGreater(site_hgt, 0.0)
 
+    def test_swope_by_code(self):
+        site_code = '304'
+
+        expected_site_name = 'Swope 1m at Las Campanas Observatory'
+
+        site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+
+        self.assertEqual(expected_site_name, site_name)
+        self.assertNotEqual(site_long, 0.0)
+        self.assertNotEqual(site_lat, 0.0)
+        self.assertNotEqual(site_hgt, 0.0)
+        self.assertEqual(site_long, -radians(70+(42/60)+(9/3600.0)))
+        self.assertEqual(site_lat, -radians(29+(0/60)+(11/3600.0)))
+        self.assertEqual(site_hgt, 2280.0)
+
 
 class TestDetermineSitesToSchedule(TestCase):
 
