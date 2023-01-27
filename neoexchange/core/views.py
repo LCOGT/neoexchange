@@ -3463,7 +3463,9 @@ def find_matching_image_file(catfile):
     if os.path.exists(catfile) is False or os.path.isfile(catfile) is False:
         logger.error("Could not open matching image for catalog %s" % catfile)
         return None
-    fits_file_for_sext = catfile + "[SCI]"
+    fits_file_for_sext = catfile
+    if '-e9' in catfile:
+        fits_file_for_sext = catfile + "[SCI]"
 
     return fits_file_for_sext
 
