@@ -21,7 +21,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
 
 from core.models import Frame, Block, SuperBlock, Body, Proposal
-from photometrics.catalog_subs import get_fits_files, open_fits_catalog
+from photometrics.catalog_subs import get_fits_files, open_fits_catalog, get_catalog_header
 from core.frames import block_status, create_frame
 
 class Command(BaseCommand):
@@ -30,12 +30,13 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         default_path = os.path.join(os.path.sep, 'data', 'eng', 'rocks')
+        default_pattern = '*e91.fits'
         parser.add_argument('--date', action="store", default=datetime.utcnow(), help='Date of the data to download (YYYYMMDD)')
         parser.add_argument('--datadir', action="store", default=default_path, help='Path for processed data (e.g. /data/eng/rocks)')
-
+        parser.add_argument('--fitspattern', action="store", default=default_pattern, help=f'Match pattern for FITS files (default: {default_pattern})')
 
     def handle(self, *args, **options):
-        usage = "Incorrect usage. Usage: %s --date [YYYYMMDD] --proposal [proposal code] --data-dir [path]" % ( argv[1] )
+        usage = "Incorrect usage. Usage: %s --date [YYYYMMDD] --datadir [path] --fitspattern [pattern]" % ( argv[1] )
 
 
         if type(options['date']) != datetime:
@@ -61,20 +62,21 @@ class Command(BaseCommand):
         print(object_dirs)
         for rock in object_dirs[1:]:
             datadir = os.path.join(dataroot, rock)
-            self.stdout.write('Processing target %s in %s' % (rock, datadir))
-            fits_files = get_fits_files(datadir)
+            self.stdout.write('Processing target %s in %s looking for %s' % (rock, datadir, options['fitspattern']))
+            fits_files = get_fits_files(datadir, options['fitspattern'])
             self.stdout.write("Found %d FITS files in %s" % (len(fits_files), datadir) )
             if len(fits_files) < 1:
                 self.stdout.write('Too few FITS files found, skipping')
                 continue
             first_file = fits_files[0]
-            header, dummy_table, cattype = open_fits_catalog(first_file, header_only=True)
-            tracking_num = header.get('tracknum', None)
+            fits_header, dummy_table, cattype = open_fits_catalog(first_file, header_only=True)
+            header = get_catalog_header(fits_header, cattype)
+            tracking_num = header.get('tracking_number', None)
             if tracking_num and tracking_num!='UNSPECIFIED':
                 tracking_num_nopad = tracking_num.lstrip('0')
                 sblocks = SuperBlock.objects.filter(Q(tracking_number=tracking_num)|Q(tracking_number=tracking_num_nopad))
                 if len(sblocks) == 0:
-                    name = header.get('object', None)
+                    name = header.get('object_name', None)
                     if name:
                         # Take out any parentheses e.g. (28484)
                         name = name.rstrip().replace('(', '').replace(')', '').replace('Didymos', '65803')
@@ -82,32 +84,33 @@ class Command(BaseCommand):
                     if len(bodies) == 1:
                         body = bodies[0]
                         sblock_params = { 'active': True,
-                                          'block_start': header.get('blksdate'),
-                                          'block_end'  : header.get('blkedate'),
+                                          'block_start': header.get('block_start'),
+                                          'block_end'  : header.get('block_end'),
                                           'body': body,
                                           'groupid'   : header.get('groupid', ''),
-                                          'proposal' : Proposal.objects.get(code=header.get('propid', '')),
+                                          'proposal' : Proposal.objects.get(code=header.get('proposal', '')),
                                           'tracking_number': tracking_num,
                                         }
                         new_sblock, created = SuperBlock.objects.get_or_create(**sblock_params)
-                        print(new_sblock, created)
+                        #created = True
+                        print(sblock_params, created)
                         block_params = { 'superblock' : new_sblock,
-                                         'block_start': header.get('blksdate'),
-                                         'block_end'  : header.get('blkedate'),
+                                         'block_start': header.get('block_start'),
+                                         'block_end'  : header.get('block_end'),
                                          'body': body,
                                          'exp_length': header.get('exptime'),
-                                         'num_exposures': header.get('frmtotal', 0),
-                                         'site'     : header.get('siteid'),
-                                         'telclass' : header['telid'][0:3],
-                                         'request_number': header.get('reqnum', tracking_num),
+                                         'num_exposures': header.get('num_exposures', 0),
+                                         'site'     : header.get('site_id'),
+                                         'telclass' : header['tel_id'][0:3],
+                                         'request_number': header.get('request_number', tracking_num),
                                          'tracking_rate' : int(header.get('tracfrac', 1.0)*100)
                                        }
                         new_block, created = Block.objects.get_or_create(**block_params)
                         new_block.active = True
                         new_block.save()
-                        print(new_block, created)
+                        print(block_params, created)
                         self.stdout.write("Updating status of new Block %d" % new_block.id)
-                        block_status(new_block.id)
+                        block_status(new_block.id, datadir)
                     else:
                         self.stdout.write("Could not find Body from FITS data (OBJECT=%s)" % name)
                 elif len(sblocks) == 1:
@@ -119,14 +122,14 @@ class Command(BaseCommand):
                     else:
                         self.stdout.write("Checking sub Block status for SuperBlock #%d" % old_sblock.id)
                         existing_requests = blocks.values_list('request_number', flat=True).distinct()
-                        request_num = header.get('reqnum', '')
+                        request_num = header.get('request_number', '')
                         if request_num in existing_requests:
                             sub_block = blocks.get(request_number=request_num)
                             self.stdout.write("Found Block %d with matching REQNUM=%s" % (sub_block.id, sub_block.request_number))
                             frames = Frame.objects.filter(block=sub_block, frametype__in=(Frame.BANZAI_QL_FRAMETYPE, Frame.BANZAI_RED_FRAMETYPE))
                             if len(fits_files) >= frames.count():
                                 self.stdout.write("Updating status of Block #%d (found %d FITS files, know of %d Frames in DB)" % (sub_block.id,len(fits_files), frames.count()))
-                                block_status(sub_block.id)
+                                block_status(sub_block.id, datadir)
                             else:
                                 self.stdout.write("Already have more/right number of frames for Block #%d (found %d FITS files, know of %d Frames in DB)" % (sub_block.id,len(fits_files), frames.count()))
                         else:
@@ -140,8 +143,8 @@ class Command(BaseCommand):
                                      'num_exposures': header.get('frmtotal', 0),
                                      'site'     : header.get('siteid'),
                                      'telclass' : header['telid'][0:3],
-                                     'request_number': header.get('reqnum', ''),
-                                     'tracking_rate' : int(header.get('tracfrac', 1.0)*100)
+                                     'request_number': header.get('request_number', ''),
+                                     'tracking_rate' : int(header.get('tracrate_frac', 1.0)*100)
                                    }
                             new_block, created = Block.objects.get_or_create(**block_params)
                             print(new_block, created)

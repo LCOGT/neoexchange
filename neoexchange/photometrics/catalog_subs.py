@@ -39,7 +39,7 @@ from astropy.wcs import WCS, FITSFixedWarning, InvalidTransformError
 from astropy.wcs.utils import proj_plane_pixel_scales
 from astropy import __version__ as astropyversion
 
-from astrometrics.ephem_subs import LCOGT_domes_to_site_codes
+from astrometrics.ephem_subs import LCOGT_domes_to_site_codes, determine_darkness_times
 from astrometrics.time_subs import timeit
 from core.models import CatalogSources, Frame
 from core.utils import NeoException
@@ -700,11 +700,21 @@ def banzai_catalog_mapping():
     header_dict = { 'site_id'    : 'SITEID',
                     'enc_id'     : 'ENCID',
                     'tel_id'     : 'TELID',
+#                    'telclass'   : 'TELID#0_3',
                     'instrument' : 'INSTRUME',
                     'filter'     : 'FILTER',
                     'framename'  : 'ORIGNAME',
                     'exptime'    : 'EXPTIME',
                     'obs_date'   : 'DATE-OBS',
+                    'block_start': 'BLKSDATE',
+                    'block_end'  : 'BLKEDATE',
+                    'groupid'    : 'GROUPID',
+                    'request_number' : 'REQNUM',
+                    'tracking_number' : 'TRACKNUM',
+                    'object_name' : 'OBJECT',
+                    'num_exposures' : 'FRMTOTAL',
+                    'proposal' : 'PROPID',
+                    'trackrate_frac' : 'TRACFRAC',
                     'field_center_ra' : 'RA',
                     'field_center_dec' : 'DEC',
                     'field_width' : 'NAXIS1',
@@ -859,6 +869,69 @@ def photpipe_ldac_catalog_mapping():
         'ASTIRMSx', 'ASTRRMSx', 'FLXSCALE', 'MAGZEROP', 'PHOTIRMS' ]
 
     return header_dict, table_dict, broken_keywords
+
+
+def swope_ldac_catalog_mapping():
+    """Returns two dictionaries of the mapping between the FITS header and table
+    items and CatalogItem quantities for FITS_LDAC catalogs extracted from the
+    Swope format files. Items in angle brackets (<FOO>) need to
+    be derived (pixel scale) or assumed as they are missing from the headers."""
+
+    header_dict = { 'site_code'  : '<SITECODE>',
+                    'site_id'    : 'SITENAME',
+                    'tel_id'     : 'TELESCOP',
+                    'instrument' : 'INSTRUME',
+                    'filter'     : 'FILTER',
+                    'framename'  : 'FILENAME',
+                    'exptime'    : 'EXPTIME',
+                    'obs_date'   : 'DATE-OBS',
+                    'block_start': '<NIGHT>',
+                    'block_end'  : '<NIGHT>',
+                    'groupid'    : '<NIGHT>',
+                    'request_number' : '<NIGHT>',
+                    'tracking_number' : '<NIGHT>',
+                    'object_name' : 'OBJECT',
+                    'num_exposures' : 'NLOOPS',
+                    'proposal' : '<PROPID>',
+                    'trackrate_frac' : '<TRACFRAC>',
+                    'field_center_ra' : 'RA',
+                    'field_center_dec' : 'DEC',
+                    'field_width' : 'NAXIS1',
+                    'field_height' : 'NAXIS2',
+                    'pixel_scale' : '<WCS>',
+                    'zeropoint'     : '<L1ZP>',
+                    'zeropoint_err' : '<L1ZPERR>',
+                    'zeropoint_src' : '<L1ZPSRC>',
+                    'fwhm'          : '<L1FWHM>',
+                    'astrometric_fit_rms'    : '<WCSRDRES>',
+                    'astrometric_fit_status' : '<WCSERR>',
+                    'astrometric_fit_nstars' : '<WCSMATCH>',
+                    'astrometric_catalog'    : '<WCCATTYP>',
+                    'photometric_catalog'    : '<L1PHTCAT>',
+                    'reduction_level'        : '<RLEVEL>',
+                    'aperture_radius_pixels' : '<SEXAPED1>',
+                    'aperture_radius_arcsec' : '<SEXAPED1>'
+                  }
+
+    table_dict = OrderedDict([
+                    ('ccd_x'         , 'XWIN_IMAGE'),
+                    ('ccd_y'         , 'YWIN_IMAGE'),
+                    ('obs_ra'        , 'ALPHA_J2000'),
+                    ('obs_dec'       , 'DELTA_J2000'),
+                    ('obs_ra_err'    , 'ERRX2_WORLD'),
+                    ('obs_dec_err'   , 'ERRY2_WORLD'),
+                    ('major_axis'    , 'AWIN_IMAGE'),
+                    ('minor_axis'    , 'BWIN_IMAGE'),
+                    ('ccd_pa'        , 'THETAWIN_IMAGE'),
+                    ('obs_mag'       , 'FLUX_APER'),
+                    ('obs_mag_err'   , 'FLUXERR_APER'),
+                    ('obs_sky_bkgd'  , 'BACKGROUND'),
+                    ('flags'         , 'FLAGS'),
+                    ('flux_max'      , 'FLUX_MAX'),
+                    ('threshold'     , 'MU_THRESHOLD'),
+                 ])
+
+    return header_dict, table_dict
 
 
 def convert_to_string_value(value):
@@ -1026,14 +1099,31 @@ def convert_value(keyword, value):
 
     newvalue = value
 
-    if keyword == 'obs_date':
+    if keyword == 'obs_date' or keyword == 'block_start' or keyword == 'block_end':
         try:
             newvalue = datetime.strptime(value, '%Y-%m-%dT%H:%M:%S.%f')
         except ValueError:
             try:
                 newvalue = datetime.strptime(value, '%Y-%m-%dT%H:%M:%S')
             except ValueError:
-                pass
+                try:
+                    # see if it's a Swope-style night desigination
+                    obs_night = datetime.strptime(value, '%d%b%Y')
+                    obs_night += timedelta(days=1)
+                    dark_start, dark_end = determine_darkness_times('304', obs_night, sun_zd=90.5)
+                    if keyword == 'block_start':
+                        newvalue = dark_start
+                    elif keyword == 'block_end':
+                        newvalue = dark_end
+                except ValueError:
+                    pass
+    elif keyword == 'request_number':
+        try:
+            # see if it's a Swope-style night desigination
+            obs_night = datetime.strptime(value, '%d%b%Y')
+            newvalue = obs_night.strftime("%d%m%Y")
+        except ValueError:
+            pass
     elif keyword == 'astrometric_fit_rms':
         # Check for bad cases of '-99/-99' and replace with None
         if value.strip() == '-99/-99':
@@ -1117,7 +1207,9 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
                         '<RLEVEL>'    : 91,       # Hardwire reduction level (mostly old catalogs in the tests)
                         '<L1FWHM>'    : -99,      # May not be present if BANZAI WCS fit fails
                         '<ASTRRMSx>'  : -99.0,    # Astrometric fit rms for PHOTPIPE_LDAC types if we can't convert the 2 headers
-                        '<ASTIRMSx>'  : 4         # (bad) Astrometric fit status for PHOTPIPE_LDAC types if we can't convert the 2 headers
+                        '<ASTIRMSx>'  : 4,        # (bad) Astrometric fit status for PHOTPIPE_LDAC types if we can't convert the 2 headers
+                        '<PROPID>'    : 'SWOPE2022', # Default proposal for Swope data (which has no proposal info in the header)
+                        '<SITECODE>'  : '304'
                        }
 
     header_items = {}
@@ -1132,6 +1224,8 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
         hdr_mapping, tbl_mapping = banzai_ldac_catalog_mapping()
     elif catalog_type == 'PHOTPIPE_LDAC':
         hdr_mapping, tbl_mapping, broken_keywords = photpipe_ldac_catalog_mapping()
+    elif catalog_type == 'SWOPE':
+        hdr_mapping, tbl_mapping = swope_ldac_catalog_mapping()
     else:
         logger.error("Unsupported catalog mapping: %s", catalog_type)
         return header_items
@@ -1262,9 +1356,9 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
         site_code = LCOGT_domes_to_site_codes(header_items['site_id'], header_items['enc_id'], header_items['tel_id'])
         if site_code != 'XXX':
             header_items['site_code'] = site_code
-            del header_items['site_id']
-            del header_items['enc_id']
-            del header_items['tel_id']
+            # del header_items['site_id']
+            # del header_items['enc_id']
+            # del header_items['tel_id']
         else:
             logger.error("Could not determine site code from %s-%s-%s", header_items['site_id'], header_items['enc_id'], header_items['tel_id'])
     if 'field_width' in header_items and 'field_height' in header_items and 'pixel_scale' in header_items:
@@ -2078,7 +2172,7 @@ def search_box(frame, ra, dec, box_halfwidth=3.0, dbg=False):
     return sources
 
 
-def get_fits_files(fits_path):
+def get_fits_files(fits_path, match_pattern='*e91.fits'):
     """Look through a directory, uncompressing any fpacked files and return a
     list of all the .fits files"""
 
@@ -2086,11 +2180,11 @@ def get_fits_files(fits_path):
     fits_path = os.path.join(fits_path, '')
     if os.path.isdir(fits_path):
 
-        fpacked_files = sorted(glob(fits_path + '*e91.fits.fz') + glob(fits_path + '*e11.fits.fz'))
+        fpacked_files = sorted(glob(fits_path + match_pattern+'.fz'))
         for fpack_file in fpacked_files:
             funpack_fits_file(fpack_file)
 
-        sorted_fits_files = sorted(glob(fits_path + '*e91.fits') + glob(fits_path + '*e11.fits'))
+        sorted_fits_files = sorted(glob(fits_path + match_pattern))
 
     else:
         logger.error(f"{fits_path} is not a directory")

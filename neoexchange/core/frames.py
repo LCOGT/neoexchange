@@ -14,6 +14,7 @@ GNU General Public License for more details.
 """
 from datetime import datetime, timedelta
 from math import ceil
+import os
 import sys
 import warnings
 
@@ -23,10 +24,12 @@ from astropy.wcs import WCS, FITSFixedWarning
 from urllib.parse import urljoin
 
 from core.models import Block, Frame, Candidate, SourceMeasurement, Body
+from core.models.blocks import NONLCO_SITES
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes, LCOGT_site_codes
 from astrometrics.time_subs import jd_utc2datetime
 from core.urlsubs import get_lcogt_headers
 from core.archive_subs import archive_login, check_for_archive_images, lco_api_call
+from photometrics.catalog_subs import get_fits_files, open_fits_catalog, convert_value
 import logging
 import requests
 
@@ -97,6 +100,8 @@ def create_frame(params, block=None, frameid=None):
     if params.get('GROUPID', None):
         # In these cases we are parsing the FITS header
         frame_params = frame_params_from_header(params, block)
+    elif params.get('ORIGIN', '') == 'LCO/OCIW':
+        frame_params = frame_params_from_swope_header(params, block)
     else:
         # We are parsing observation logs
         frame_params = frame_params_from_log(params, block)
@@ -276,6 +281,57 @@ def frame_params_from_header(params, block):
     return frame_params
 
 
+def frame_params_from_swope_header(params, block):
+    # In these cases we are parsing the Swope FITS header
+    sitecode = '304'
+    rlevel = Frame.SWOPE_RED_FRAMETYPE
+
+    dateobs_keyword = 'DATE-OBS'
+    inst_codes = {'Direct/4Kx4K-4' : 'D4K4' }
+
+    frame_params = { 'midpoint' : params.get(dateobs_keyword, None),
+                     'sitecode' : sitecode,
+                     'filter'   : params.get('FILTER', "B"),
+                     'frametype': rlevel,
+                     'block'    : block,
+                     'instrument': inst_codes.get(params.get('INSTRUME', None), 'D4K4'),
+                     'filename'  : params.get('FILENAME', None),
+                     'exptime'   : params.get('EXPTIME', None),
+                 }
+
+    inst_mode = params.get('SUBRASTR', None)
+    if inst_mode and inst_mode not in ['none', ]:
+        frame_params['extrainfo'] = inst_mode
+
+    # Try and create a WCS object from the header. If successful, add to frame
+    # params
+    wcs = None
+    try:
+        # Suppress warnings from newer astropy versions which raise
+        # FITSFixedWarning on the lack of OBSGEO-L,-B,-H keywords even
+        # though we have OBSGEO-X,-Y,-Z as recommended by the FITS
+        # Paper VII standard...
+        warnings.simplefilter('ignore', category = FITSFixedWarning)
+        wcs = WCS(params)
+        frame_params['wcs'] = wcs
+    except ValueError:
+        logger.warning("Error creating WCS entry from frameid=%s" % frameid)
+
+    # Correct filename for missing trailing .fits extension
+    if '.fits' not in frame_params['filename']:
+        frame_params['filename'] = frame_params['filename'].rstrip() + '.fits'
+    # Correct midpoint for 1/2 the exposure time
+    if frame_params['midpoint'] and frame_params['exptime']:
+        try:
+            midpoint = datetime.strptime(frame_params['midpoint'], "%Y-%m-%dT%H:%M:%S.%f")
+        except ValueError:
+            midpoint = datetime.strptime(frame_params['midpoint'], "%Y-%m-%dT%H:%M:%S")
+
+        midpoint = midpoint + timedelta(seconds=float(frame_params['exptime']) / 2.0)
+        frame_params['midpoint'] = midpoint
+    return frame_params
+
+
 def frame_params_from_log(params, block):
     # Called when parsing MPC NEOCP observations lines/logs
     our_site_codes = LCOGT_site_codes()
@@ -309,7 +365,12 @@ def ingest_frames(images, block):
     """
     sched_blocks = []
     for image in images:
-        image_header = lco_api_call(image.get('headers', None))
+        if type(image.get('headers', None)) == str:
+            # A string with a URL for retrieving headers
+            image_header = lco_api_call(image.get('headers', None))
+        else:
+            # Header included already as a dict
+            image_header = image['headers']
         if image_header:
             frame = create_frame(image_header['data'], block, image['id'])
             sched_blocks.append(image_header['data']['BLKUID'])
@@ -320,7 +381,26 @@ def ingest_frames(images, block):
     return block_ids
 
 
-def block_status(block_id):
+def images_from_fits(datapath, match_pattern='r*.fits'):
+    """Assemble a similar `list` of images from FITS file matching the pattern
+    [match_pattern] in <datapath> as would be returned by check_for_archive_images()
+    """
+
+    images = []
+    fits_files = get_fits_files(datapath, match_pattern)
+
+    for fits_file in fits_files:
+        image = { 'id' : None, 'basename' : os.path.basename(fits_file) }
+        fits_header, dummy_table, cattype = open_fits_catalog(fits_file, header_only=True)
+        image['headers'] = {'data' : dict(fits_header.items()) }
+        if 'BLKUID' not in image['headers']['data'] and 'NIGHT' in image['headers']['data']:
+            image['headers']['data']['BLKUID'] = convert_value('request_number', image['headers']['data']['NIGHT'])
+            image['headers']['data']['FILENAME'] = image['basename']
+        images.append(image)
+
+    return images
+
+def block_status(block_id, datapath=None):
     """
     Check if a block has been observed. If it has, record when the longest run finished
     - RequestDB API is used for block status
@@ -341,21 +421,30 @@ def block_status(block_id):
 
     obj_name = block.current_name()
 
-    # Get authentication token for Valhalla
-    logger.info("Checking request status for block/track# %s / %s" % (block_id, tracking_num))
-    data = check_request_status(tracking_num)
-    # data is a full LCO request dict for this tracking number (now called 'id').
-    if not data:
-        logger.warning("Got no data for block/track# %s / %s" % (block_id, tracking_num))
-        return False
-    # Check if the request was not found
-    if data.get('detail', 'None') == u'Not found.':
-        logger.warning("Request not found for block/track# %s / %s" % (block_id, tracking_num))
-        return False
-    # Check if credentials provided
-    if data.get('detail', 'None') == u'Invalid token header. No credentials provided.':
-        logger.error("No VALHALLA_TOKEN set")
-        return False
+    if block.site.lower() in NONLCO_SITES and datapath is not None:
+        # Fake an obs portal/Valhalla status response
+        data = { 'requests' : [{'id' : block.request_number,
+                                'configurations' : [{'instrument_configs' : [{'exposure_count' : 1}],
+                                                     'type' : 'REPEAT_EXPOSE'}
+                                                   ]
+                              } ]
+                }
+    else:
+        # Get authentication token for Valhalla
+        logger.info("Checking request status for block/track# %s / %s" % (block_id, tracking_num))
+        data = check_request_status(tracking_num)
+        # data is a full LCO request dict for this tracking number (now called 'id').
+        if not data:
+            logger.warning("Got no data for block/track# %s / %s" % (block_id, tracking_num))
+            return False
+        # Check if the request was not found
+        if data.get('detail', 'None') == u'Not found.':
+            logger.warning("Request not found for block/track# %s / %s" % (block_id, tracking_num))
+            return False
+        # Check if credentials provided
+        if data.get('detail', 'None') == u'Invalid token header. No credentials provided.':
+            logger.error("No VALHALLA_TOKEN set")
+            return False
 
     # This loops through all BLOCKS in the SUPERBLOCK so we need to filter out 
     # only the one block used to call this procedure.
@@ -371,15 +460,24 @@ def block_status(block_id):
             except AttributeError:
                 logger.warning("Unable to find observation type for Block/track# %s / %s" % (block_id, tracking_num))
 
-            images, num_archive_frames = check_for_archive_images(request_id=r['id'], obstype=obstype, obj=obj_name)
-            logger.info('Request no. %s x %s images (%s total all red. levels)' % (r['id'], len(images), num_archive_frames))
+            if block.site.lower() in NONLCO_SITES and datapath is not None:
+                # Non-LCO data, get images from walking directory of FITS filrs
+                images = images_from_fits(datapath)
+                last_image_header = images[-1].get('headers', {})
+                num_archive_frames = len(images)
+            else:
+                # Query LCO archive for images
+                images, num_archive_frames = check_for_archive_images(request_id=r['id'], obstype=obstype, obj='') #obj_name)
+                logger.info('Request no. %s x %s images (%s total all red. levels)' % (r['id'], len(images), num_archive_frames))
             if images:
                 inst_configs = [x['instrument_configs'] for x in r['configurations']]
                 exposure_count = sum([x[0]['exposure_count'] for x in inst_configs])
                 obs_types = [x['type'] for x in r['configurations']]
-                # Look in the archive at the header of the most recent frame for a timestamp of the observation
-                last_image_dict = images[0]
-                last_image_header = lco_api_call(last_image_dict.get('headers', None))
+                if last_image_header is None:
+                    # Look in the archive at the header of the most recent frame for a timestamp of the observation
+                    # If we read FITS headers from files, we already have last_image_header
+                    last_image_dict = images[0]
+                    last_image_header = lco_api_call(last_image_dict.get('headers', None))
                 if last_image_header is None:
                     logger.error('Image header was not returned for %s' % last_image_dict)
                     return False
@@ -412,6 +510,9 @@ def block_status(block_id):
                 # If we got at least 3 frames (i.e. usable for astrometry reporting) and
                 # at least frames for at least one block were ingested, update the blocks'
                 # observed count.
+                if len(images) > block.num_exposures:
+                    block.num_exposures = len(images)
+                    logger.info("Updating num_exposures")
                 if len(images) >= 1 and 'SPECTRUM' in obs_types and len(block_ids) >= 1:
                     logger.info("Spectra data found - setting to observed")
                     block.num_observed = len(block_ids)

@@ -45,9 +45,11 @@ SITE_CHOICES = (
                     ('tfn', 'Tenerife'),
                     ('sbg', 'SBIG cameras'),
                     ('sin', 'Sinistro cameras'),
-                    ('spc', 'Spectral cameras')
+                    ('spc', 'Spectral cameras'),
+                    ('lco', 'Las Campanas')
     )
 
+NONLCO_SITES = ['lco', ]
 
 class SuperBlock(models.Model):
 

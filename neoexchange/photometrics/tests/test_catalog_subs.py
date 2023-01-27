@@ -1643,6 +1643,22 @@ class TestConvertValues(FITSUnitTest):
 
         self.assertEqual(expected_value, value)
 
+    def test_swope_block_start(self):
+
+        expected_value = datetime(2022, 9, 24, 22, 30)
+
+        value = convert_value('block_start', '24Sep2022')
+
+        self.assertEqual(expected_value, value)
+
+    def test_swope_block_end(self):
+
+        expected_value = datetime(2022, 9, 25, 10, 30)
+
+        value = convert_value('block_end', '24Sep2022')
+
+        self.assertEqual(expected_value, value)
+
     def test_bad_astrometric_rms(self):
 
         expected_value = None
