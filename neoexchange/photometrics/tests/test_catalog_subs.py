@@ -1755,6 +1755,46 @@ class TestConvertValues(FITSUnitTest):
 
         self.assertAlmostEqual(expected_value, value, 5)
 
+    def test_lcogt_instrument1(self):
+
+        expected_value = 'ep04'
+
+        value = convert_value('instrument', 'ep04')
+
+        self.assertEqual(expected_value, value)
+
+    def test_lcogt_instrument2(self):
+
+        expected_value = 'fa01'
+
+        value = convert_value('instrument', 'fa01')
+
+        self.assertEqual(expected_value, value)
+
+    def test_lcogt_instrument3(self):
+
+        expected_value = 'kb82'
+
+        value = convert_value('instrument', 'kb82')
+
+        self.assertEqual(expected_value, value)
+
+    def test_lcogt_instrument4(self):
+
+        expected_value = 'sq30'
+
+        value = convert_value('instrument', 'sq30')
+
+        self.assertEqual(expected_value, value)
+
+    def test_swope_instrument1(self):
+
+        expected_value = 'D4K4'
+
+        value = convert_value('instrument', 'Direct/4Kx4K-4')
+
+        self.assertEqual(expected_value, value)
+
 
 class FITSReadHeader(FITSUnitTest):
 

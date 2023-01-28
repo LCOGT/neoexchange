@@ -1096,6 +1096,8 @@ def convert_value(keyword, value):
 
     # Conversion factor for fluxes->magnitude
     FLUX2MAG = 2.5/log(10)
+    # Instrument code mapping dictionary
+    inst_codes = {'Direct/4Kx4K-4' : 'D4K4' }
 
     newvalue = value
 
@@ -1124,6 +1126,8 @@ def convert_value(keyword, value):
             newvalue = obs_night.strftime("%d%m%Y")
         except ValueError:
             pass
+    elif keyword == 'instrument':
+        newvalue = inst_codes.get(value, value)
     elif keyword == 'astrometric_fit_rms':
         # Check for bad cases of '-99/-99' and replace with None
         if value.strip() == '-99/-99':

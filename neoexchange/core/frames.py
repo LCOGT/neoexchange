@@ -287,14 +287,13 @@ def frame_params_from_swope_header(params, block):
     rlevel = Frame.SWOPE_RED_FRAMETYPE
 
     dateobs_keyword = 'DATE-OBS'
-    inst_codes = {'Direct/4Kx4K-4' : 'D4K4' }
 
     frame_params = { 'midpoint' : params.get(dateobs_keyword, None),
                      'sitecode' : sitecode,
                      'filter'   : params.get('FILTER', "B"),
                      'frametype': rlevel,
                      'block'    : block,
-                     'instrument': inst_codes.get(params.get('INSTRUME', None), 'D4K4'),
+                     'instrument': convert_value('instrument', params.get('INSTRUME', 'Direct/4Kx4K-4')),
                      'filename'  : params.get('FILENAME', None),
                      'exptime'   : params.get('EXPTIME', None),
                  }
