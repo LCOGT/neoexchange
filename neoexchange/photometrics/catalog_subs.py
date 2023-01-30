@@ -1042,6 +1042,8 @@ def open_fits_catalog(catfile, header_only=False):
             cattype = 'BANZAI_LDAC'
         elif 'TELINSTR' in header and 'REGCAT' in header and 'PHOTMODE' in header:
             cattype = 'PHOTPIPE_LDAC'
+        elif 'NIGHT' in header and 'CASSPOS' in header and 'NLOOPS' in header and 'LOOP' in header:
+            cattype = 'SWOPE_LDAC'
     elif len(hdulist) == 4 or (len(hdulist) == 3 and hdulist[1].header.get('EXTNAME', None) != 'LDAC_IMHEAD'):
         # New BANZAI-format data
         cattype = 'BANZAI'

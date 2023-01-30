@@ -277,6 +277,7 @@ class ScampProcessPipeline(PipelineProcess):
 
         # Open catalog, get header
         fits_header, junk_table, cattype = open_fits_catalog(catfile, header_only=True)
+        print(catfile, cattype)
         try:
             header = get_catalog_header(fits_header, cattype)
         except FITSHdrException as e:

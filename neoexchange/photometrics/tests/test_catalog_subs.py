@@ -1288,6 +1288,16 @@ class FITSUnitTest(TestCase):
         self.test_swopeheader = hdulist[0].header
         hdulist.close()
 
+        self.test_swopeldacfilename = os.path.join('photometrics', 'tests', 'swope_test_ldac.fits')
+        hdulist = fits.open(self.test_swopeldacfilename)
+        header_array = hdulist[1].data[0][0]
+        header = fits_ldac_to_header(header_array)
+        self.test_swope_ldacwcs = WCS(header)
+        self.test_swope_ldac_pixscale = round(proj_plane_pixel_scales(self.test_swope_ldacwcs).mean()*3600.0, 5)
+        self.test_swope_ldactable = hdulist[2].data
+        hdulist.close()
+        self.swope_table_firstitem = self.test_swope_ldactable[0:1]
+
         column_types = [('ccd_x', '>f4'), 
                         ('ccd_y', '>f4'), 
                         ('obs_ra', '>f8'), 
@@ -1624,6 +1634,36 @@ class OpenFITSCatalog(FITSUnitTest):
         for key in expected_header:
             self.assertEqual(expected_header[key], hdr[key],
                 msg="Failure on %s (%s != %s)" % (key, expected_header[key], hdr[key]))
+
+    def test_swopeldac_read_catalog(self):
+        unexpected_value = {}
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_swopeldacfilename)
+        self.assertNotEqual(unexpected_value, hdr)
+        self.assertNotEqual(unexpected_value, tbl)
+        self.assertNotEqual(unexpected_value, cattype)
+
+    def test_swopeldac_catalog_read_length(self):
+        expected_hdr_len = 135
+        expected_tbl_len = len(self.test_swope_ldactable)
+        expected_cattype = 'SWOPE_LDAC'
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_swopeldacfilename)
+
+        self.assertEqual(expected_hdr_len, len(hdr))
+        self.assertEqual(expected_tbl_len, len(tbl))
+        self.assertEqual(expected_cattype, cattype)
+
+    def test_swopeldac_catalog_read_hdr_keyword(self):
+        expected_hdr_value = 'Direct/4Kx4K-4'
+        expected_hdr_value2 = 0.0056360852283934
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_swopeldacfilename)
+
+        self.assertEqual(expected_hdr_value, hdr['INSTRUME'])
+        self.assertEqual(float, type(hdr['PC2_1']))
+        self.assertEqual(expected_hdr_value2, hdr['PC2_1'])
+
 
 class TestConvertValues(FITSUnitTest):
 
