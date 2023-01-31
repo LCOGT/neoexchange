@@ -1230,7 +1230,7 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
         hdr_mapping, tbl_mapping = banzai_ldac_catalog_mapping()
     elif catalog_type == 'PHOTPIPE_LDAC':
         hdr_mapping, tbl_mapping, broken_keywords = photpipe_ldac_catalog_mapping()
-    elif catalog_type == 'SWOPE':
+    elif catalog_type == 'SWOPE' or catalog_type == 'SWOPE_LDAC':
         hdr_mapping, tbl_mapping = swope_ldac_catalog_mapping()
     else:
         logger.error("Unsupported catalog mapping: %s", catalog_type)
