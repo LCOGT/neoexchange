@@ -2940,8 +2940,8 @@ class TestIncrementRedLevel(TestCase):
 
     def test_semiraw_ldac_catalog(self):
 
-        expected_product = 'oracdr_test_e09_ldac.fits'
-        product = 'oracdr_test_e08_ldac.fits'
+        expected_product = 'oracdr_test-e09_ldac.fits'
+        product = 'oracdr_test-e08_ldac.fits'
 
         filename = increment_red_level(product)
 
@@ -2951,6 +2951,24 @@ class TestIncrementRedLevel(TestCase):
 
         expected_product = 'lsc0m4990kb29-20160420-0099-e99.fits'
         product = 'lsc0m4990kb29-20160420-0099-e99.fits'
+
+        filename = increment_red_level(product)
+
+        self.assertEqual(expected_product, filename)
+
+    def test_swope_image(self):
+
+        expected_product = 'rccd1088-e72.fits'
+        product = 'rccd1088.fits'
+
+        filename = increment_red_level(product)
+
+        self.assertEqual(expected_product, filename)
+
+    def test_swope_ldac_catalog(self):
+
+        expected_product = 'rccd1088-e72_ldac.fits'
+        product = 'rccd1088_ldac.fits'
 
         filename = increment_red_level(product)
 

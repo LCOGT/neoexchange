@@ -2080,10 +2080,14 @@ def increment_red_level(product):
     else:
         file_bits = product.split(os.extsep)
         file_bits[1] = os.extsep + file_bits[1]
+    # Fix/fake Swope files
+    if 'rccd' in product and '-e7' not in product:
+        file_bits[0] = file_bits[0] + '-e71'
     if len(file_bits) == 2:
         filename_noext = file_bits[0]
         red_level = filename_noext[-2:]
-        if red_level.isdigit():
+        frame_type = filename_noext[-4:-2]
+        if red_level.isdigit() and frame_type == '-e':
             red_level = "%02.2d" % (min(int(red_level)+1, 99),)
             filename_noext = filename_noext[:-2] + red_level
             new_product = filename_noext + file_bits[1]

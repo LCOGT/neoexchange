@@ -1242,7 +1242,8 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
     if len(file_bits) == 2:
         filename_noext = file_bits[0]
         new_red_level = int(filename_noext[-2:])
-    if new_red_level != header['rlevel']:
+    # Swope files don't have a RLEVEL header so assume one corresponding to the proc level
+    if new_red_level != header.get('rlevel', 71):
         print(f"Updating header RLEVEL to: {new_red_level}")
         header['RLEVEL'] = new_red_level
     header['PCRECIPE'] = 'BANZAI'
