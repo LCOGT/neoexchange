@@ -5,6 +5,7 @@ from glob import glob
 from datetime import datetime, timedelta
 
 import numpy as np
+from astropy.table import Column
 from astropy.time import Time
 from astropy.wcs import WCS
 
@@ -68,6 +69,28 @@ class TestWriteDartFormatFile(SimpleTestCase):
         ]
 
         # Modify some values to test rounding
+        self.test_table[0]['mag'] = 14.84
+        self.test_table[1]['ZP_sig'] = 0.03
+        output_file = os.path.join(self.test_dir, 'test.tab')
+        write_dartformat_file(self.test_table[0:2], output_file, aprad=10)
+
+        with open(output_file, 'r') as table_file:
+            lines = table_file.readlines()
+
+        self.assertEqual(3, len(lines))
+        for i, expected_line in enumerate(expected_lines):
+            self.assertEqual(expected_line, lines[i].rstrip())
+
+    def test_write_swope(self):
+        expected_lines = [
+        '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  filter  SExtractor_flag  aprad',
+        '                        rccd0073.fits  2459500.3339392  14.8400  0.0397  27.1845  0.0394  -12.3397    0.0052       r                0  10.00',
+        '                        rccd0074.fits  2459500.3345790  14.8637  0.0293  27.1824  0.0300  -12.3187    0.0053       r                3  10.00'
+        ]
+
+        # Modify some values to test rounding and different filenames
+        new_names =  ["{:>36s}".format(x.replace('tfn1m001-fa11-20211012-', 'rccd').replace('-e91.lda', '.ldac')) for x in self.test_table['filename']]
+        self.test_table.replace_column('filename', Column(new_names))
         self.test_table[0]['mag'] = 14.84
         self.test_table[1]['ZP_sig'] = 0.03
         output_file = os.path.join(self.test_dir, 'test.tab')

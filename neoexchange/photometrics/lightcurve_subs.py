@@ -132,7 +132,7 @@ def write_dartformat_file(table, filepath, aprad=0.0):
 
     # Replace truncated '.lda' in filename with real name.
     # Also add a column for aperture radius
-    new_names = [x.replace('.lda','.fits').replace('e91','e92') for x in table['filename']]
+    new_names = [x.replace('.ldac','.fits').replace('.lda','.fits').replace('e91','e92') for x in table['filename']]
     table.replace_column('filename', new_names)
     if 'aprad' not in table.colnames:
         aprad_column = Column(np.full(len(table), aprad), name='aprad')
