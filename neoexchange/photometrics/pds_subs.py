@@ -1097,6 +1097,15 @@ def split_filename(filename):
         name_parts['dayobs'] = chunks[2]
         name_parts['frame_num'] = chunks[3]
         name_parts['frame_type'] = chunks[4]
+    elif len(fileroot) == 8 and fileroot.startswith('rccd'):
+        # Swope, need to make up many things....
+        name_parts['site'] = 'lco'
+        name_parts['tel_class'] = '1m0'
+        name_parts['tel_serial'] = '01'
+        name_parts['instrument'] = 'Direct4Kx4K-4'
+        name_parts['dayobs'] = '20220925'
+        name_parts['frame_num'] = fileroot[4:9]
+        name_parts['frame_type'] = 'e72'
 
     return name_parts
 
