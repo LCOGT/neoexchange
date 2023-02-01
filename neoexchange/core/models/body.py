@@ -303,6 +303,8 @@ class Body(models.Model):
             return False
 
     def compute_distances(self, d=None):
+        """Compute and return the geocentric and heliocentric distances at
+        datetime [d] (defaults to 'now' if not specified)"""
         d = d or datetime.utcnow()
         if self.epochofel:
             orbelems = model_to_dict(self)
