@@ -13,18 +13,18 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 
-from django.test import TestCase
+from django.test import TestCase, SimpleTestCase
 from datetime import datetime, timedelta
 from mock import patch
 
 from neox.tests.mocks import MockDateTime
 
 # Import module to test
-from astrometrics.time_subs import jd_utc2datetime, dttodecimalday, \
-    degreestohms, parse_neocp_date, get_semester_dates
+from astrometrics.time_subs import jd_utc2datetime, dttodecimalday, decimaldaytodt, \
+    degreestohms, parse_neocp_date, parse_neocp_decimal_date, get_semester_dates
 
 
-class TestJD2datetime(TestCase):
+class TestJD2datetime(SimpleTestCase):
 
     def test_jd1(self):
         expected_dt = datetime(2015, 9, 24, 22, 47, 17)
@@ -52,7 +52,7 @@ class TestJD2datetime(TestCase):
         self.assertEqual(expected_dt, dt)
 
 
-class TestDT2DecimalDay(TestCase):
+class TestDT2DecimalDay(SimpleTestCase):
 
     def test_microday1(self):
         dt = datetime(2015, 10, 12, 23, 45, 56, int(0.7*1e6))
@@ -103,7 +103,26 @@ class TestDT2DecimalDay(TestCase):
         self.assertEqual(expected_string, dt_string)
 
 
-class TestDegreesToHMS(TestCase):
+class TestDecimalDay2DT(SimpleTestCase):
+
+    def test_no_microdays(self):
+        date_string = '2013 10 31.16159'
+        expected_dt = datetime(2013, 10, 31, 3, 52, 41, 376000)
+
+        dt = decimaldaytodt(date_string)
+
+        self.assertEqual(expected_dt, dt)
+
+    def test_microdays(self):
+        date_string = '2013 11 01.051812'
+        expected_dt = datetime(2013, 11, 1, 1, 14, 36, 556800)
+
+        dt = decimaldaytodt(date_string)
+
+        self.assertEqual(expected_dt, dt)
+
+
+class TestDegreesToHMS(SimpleTestCase):
 
     def test_bad_rounding(self):
         value = 42.0
@@ -115,7 +134,7 @@ class TestDegreesToHMS(TestCase):
 
 
 @patch('astrometrics.time_subs.datetime', MockDateTime)
-class TestParseNeocpDate(TestCase):
+class TestParseNeocpDate(SimpleTestCase):
 
     def setUp(self):
         MockDateTime.change_datetime(2015, 12, 31, 22, 0, 0)
@@ -180,6 +199,25 @@ class TestParseNeocpDate(TestCase):
         expected_dt = datetime(2016, 3, 19, 23, 16, 48)
 
         dt = parse_neocp_date(date_string)
+
+        self.assertEqual(expected_dt, dt)
+
+
+class TestParseNEOCPDecimalDate(SimpleTestCase):
+
+    def test_no_microdays(self):
+        date_string = '2013 10 31.16159'
+        expected_dt = datetime(2013, 10, 31, 3, 52, 41, 376000)
+
+        dt = parse_neocp_decimal_date(date_string)
+
+        self.assertEqual(expected_dt, dt)
+
+    def test_microdays(self):
+        date_string = '2013 11 01.051812'
+        expected_dt = datetime(2013, 11, 1, 1, 14, 36, 556800)
+
+        dt = parse_neocp_decimal_date(date_string)
 
         self.assertEqual(expected_dt, dt)
 
