@@ -1433,6 +1433,7 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
 
     list_address = '"small-bodies-observations@lists.nasa.gov"'
     list_authors = [ '"paul.a.abell@nasa.gov"',
+                     '"Abell, Paul A. (JSC-XI311) via small-bodies-observations"',
                      '"Abell, Paul A. (JSC-XI111) via small-bodies-observations"',
                      '"paul.w.chodas@jpl.nasa.gov"',
                      '"brent.w.barbee@nasa.gov"',
