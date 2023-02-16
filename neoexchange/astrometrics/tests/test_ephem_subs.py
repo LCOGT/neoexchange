@@ -19,6 +19,7 @@ import os
 import tempfile
 from glob import glob
 import mock
+import json
 
 from django.test import SimpleTestCase, TestCase, tag
 from django.forms.models import model_to_dict
@@ -4075,3 +4076,17 @@ class TestLCOGT_tels_to_sitecode(SimpleTestCase):
         sitecode = LCOGT_telserial_to_site_codes('0m410')
 
         self.assertEqual(expected_sitecode, sitecode)
+
+
+class TestConvertFOElements(SimpleTestCase):
+
+    def setUp(self):
+        with open(os.path.join('astrometrics', 'tests', 'test_fo_elements.json'), 'r') as fp:
+            self.test_json = json.load(fp)
+
+    def test_65803_keys(self):
+        expected_keys = ['name', 'origin', 'elements_type', 'epochofel', 'orbinc', 'longascnode', 'argofperih', 'eccentricity', 'meandist', 'meananom', 'perihdist', 'epochofperih', 'abs_mag', 'slope', 'orbit_rms']
+
+        new_elements = convert_findorb_elements(self.test_json)
+
+        self.assertEqual(expected_keys, new_elements.keys())

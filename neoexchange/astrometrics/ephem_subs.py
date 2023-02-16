@@ -2372,3 +2372,34 @@ def get_planetary_elements(planet=None):
     except (KeyError, AttributeError):
         return_elements = planet_elements
     return return_elements
+
+def convert_findorb_elements(elements_json):
+    """Converts JSON elements output from find_orb in the elem_short.json file
+    to NEOexchange format"""
+
+    obj = elements_json['objects'][elements_json['ids'][0]]
+    elements = obj['elements']
+    neox_elements = { 'name' : obj['object'].replace('(', '').replace(')', ''),
+                      'origin' : 'F',
+                      'elements_type' : 'MPC_MINOR_PLANET',
+                      'epochofel' : datetime.strptime(elements['epoch_iso'], '%Y-%m-%dT%H:%M:%SZ'),
+                    }
+    # Mapping from find_orb -> NEOx element sets for direct values
+    mapping = {
+                'M' : 'meananom',
+                'a' : 'meandist',
+                'e' : 'eccentricity',
+                'q' : 'perihdist',
+                'i' : 'orbinc',
+                'arg_per' : 'argofperih',
+                'asc_node' : 'longascnode',
+                'Tp' : 'epochofperih',
+                'H' : 'abs_mag',
+                'G' :  'slope',
+                'rms_residual' : 'orbit_rms'
+            }
+
+    for fo_key, neox_key in mapping.items():
+        neox_elements[neox_key] = elements[fo_key]
+
+    return neox_elements
