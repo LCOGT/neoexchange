@@ -1849,11 +1849,16 @@ def sanitize_object_name(object_name):
     """Remove problematic characters (space, slash) from object names so it
     can be used for e.g. directory names"""
 
+    name_mapping = { 'didymos' : '65803',
+                     '65803didymos' : '65803',
+                    }
+
     clean_object_name = None
     if type(object_name) == str or type(object_name) == np.str_:
         clean_object_name = object_name.strip().replace('(', '').replace(')', '')
         # collapse multiple sequential spaces into a single space.
         clean_object_name = ' '.join(clean_object_name.split())
+        clean_object_name = name_mapping.get(clean_object_name.lower(), clean_object_name)
         # Find the rightmost space and then do space->underscore mapping *left*
         # of that but space->empty string right of that.
         index = clean_object_name.rfind(' ')

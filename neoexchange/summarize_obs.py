@@ -17,7 +17,7 @@ def summarize_observations(target_name='65803', start_date='2022-07-15', proposa
     if proposal is not None:
         blocks = blocks.filter(superblock__proposal__code=proposal)
     if end_date is not None:
-        block = blocks.filter(block_end__lt=end_date)
+        blocks = blocks.filter(block_end__lt=end_date)
     filt_width = 3
     # if blocks.filter(site='ogg', telclass='2m0').count() > 0:
         # # Set wider width for MuSCAT blocks
