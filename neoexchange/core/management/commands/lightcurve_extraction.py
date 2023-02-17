@@ -25,6 +25,7 @@ try:
     import pyslalib.slalib as S
 except:
     pass
+from astroquery.jplhorizons import Horizons
 from astropy.wcs import FITSFixedWarning
 from astropy.stats import LombScargle
 from astropy.time import Time
@@ -53,7 +54,7 @@ class Command(BaseCommand):
     help = 'Extract lightcurves of a target from a given SuperBlock. Can look back at earlier SuperBlocks for same object if requested.'
 
     def add_arguments(self, parser):
-        parser.add_argument('supblock', type=int, help='SuperBlock (tracking number) to analyze')
+        parser.add_argument('supblock', type=str, help='SuperBlock (tracking number) to analyze')
         parser.add_argument('-ts', '--timespan', type=float, default=0.0, help='Days prior to referenced SuperBlock that should be included')
         parser.add_argument('-bw', '--boxwidth', type=float, default=5.0, help='Box half-width in arcsec to search')
         parser.add_argument('-ro', '--ra_offset', type=float, default=0.0, help='RA offset of box center in arcsec')
@@ -68,6 +69,7 @@ class Command(BaseCommand):
         base_dir = os.path.join(settings.DATA_ROOT, 'Reduction')
         parser.add_argument('--datadir', default=base_dir, help='Place to save data (e.g. %s)' % base_dir)
         parser.add_argument('-ap', '--maxapsize', default=None, help='Max. aperture size')
+        parser.add_argument('--horizons', action="store_true", default=False, help='Whether to use HORIZONS to predict positions')
 
     def generate_expected_fwhm(self, times, airmasses, fwhm_0=2.0, obs_filter='w', tel_diameter=0.4*u.m):
         """Compute the expected FWHM and the variation with airmass and observing
@@ -372,8 +374,8 @@ class Command(BaseCommand):
             tel_diameter = float(tel_class.replace('m', '.'))
             tel_diameter *= u.m
         except ValueError:
-            self.stdout.write("Error determining telescope diameter, assuming 0.4m")
-            tel_diameter = 0.4*u.m
+            self.stdout.write("Error determining telescope diameter, assuming 1.0m")
+            tel_diameter = 1.0*u.m
 
         # Set offsets, convert from Arcsec to Radians
         ra_offset = radians(options['ra_offset'] / 3600)
@@ -418,10 +420,25 @@ class Command(BaseCommand):
 
                     for frame in frames_all_zp:
                         # get predicted position and magnitude of target during time of each frame
-                        emp_line = compute_ephem(frame.midpoint, elements, frame.sitecode)
-                        ra = S.sla_dranrm(emp_line['ra'] + ra_offset)
-                        dec = copysign(S.sla_drange(emp_line['dec'] + dec_offset), emp_line['dec'] + dec_offset)
-                        mag_estimate = emp_line['mag']
+                        if options['horizons'] is True:
+                            t_jd = Time(frame.midpoint).jd
+                            obj = Horizons(block.body.current_name().replace('_', ' '),
+                               id_type='smallbody',
+                               epochs=t_jd,
+                               location=frame.sitecode)
+                            eph = obj.ephemerides()
+                            if len(eph) > 0:
+                                ra = eph['RA'].to(u.rad).value
+                                dec = eph['DEC'].to(u.rad).value
+                                mag_estimate = eph['V']
+                        else:
+                            emp_line = compute_ephem(frame.midpoint, elements, frame.sitecode)
+                            ra = emp_line['ra']
+                            dec = emp_line['dec']
+                            mag_estimate = emp_line['mag']
+
+                        ra = S.sla_dranrm(ra + ra_offset)
+                        dec = copysign(S.sla_drange(dec + dec_offset), dec + dec_offset)
                         (ra_string, dec_string) = radec2strings(ra, dec, ' ')
                         # Find list of frame sources within search region of predicted coordinates
                         sources = search_box(frame, ra, dec, options['boxwidth'], max_ap_size=options['maxapsize'])
@@ -495,7 +512,7 @@ class Command(BaseCommand):
                     data_path = make_data_dir(out_path, model_to_dict(frames_all_zp[0]))
                     red_paths = []
                     for f in frames_all_zp:
-                        fits_filepath = os.path.join(data_path, f.filename.replace('e92', 'e91'))
+                        fits_filepath = os.path.join(data_path, f.filename.replace('e92', 'e91').replace('-e72', ''))
                         fits_header, fits_table, cattype = open_fits_catalog(fits_filepath, header_only=True)
                         object_name = fits_header.get('OBJECT', None)
                         block_id = fits_header.get('BLKUID', '').replace('/', '')
@@ -504,11 +521,11 @@ class Command(BaseCommand):
                             object_directory = make_object_directory(fits_filepath, object_name, block_id)
                         red_paths.append(object_directory)
                     data_subdir = 'Temp_cvc'
-                    if os.path.exists(os.path.join(red_path, data_subdir)) is False:
-                        data_subdir = 'Temp_cvc_multiap'
+                    #if os.path.exists(os.path.join(red_path, data_subdir)) is False:
+                    #    data_subdir = 'Temp_cvc_multiap'
                     frames_list = [os.path.join(red_path, data_subdir, f.filename) for red_path,f in zip(red_paths, frames_all_zp)]
                     if not options['nogif']:
-                        movie_file = make_gif(frames_list, sort=False, init_fr=100, center=3, out_path=data_path, plot_source=True,
+                        movie_file = make_gif(frames_list, options['title'], sort=False, init_fr=100, center=3, out_path=data_path, plot_source=True,
                                               target_data=frame_data, show_reticle=True, progress=True)
                         if "WARNING" not in movie_file:
                             # Add write permissions to movie file
