@@ -1106,6 +1106,16 @@ def split_filename(filename):
         name_parts['dayobs'] = '20220925'
         name_parts['frame_num'] = fileroot[4:9]
         name_parts['frame_type'] = 'e72'
+    elif len(fileroot) == 18 and fileroot.startswith('rccd'):
+        # Swope, need to make up many things....
+        chunks = fileroot.split('-')
+        name_parts['site'] = 'lco'
+        name_parts['tel_class'] = '1m0'
+        name_parts['tel_serial'] = '01'
+        name_parts['instrument'] = 'Direct4Kx4K-4'
+        name_parts['dayobs'] = chunks[1]
+        name_parts['frame_num'] = chunks[2]
+        name_parts['frame_type'] = 'e72'
 
     return name_parts
 
@@ -1343,6 +1353,7 @@ def create_dart_lightcurve(input_dir, output_dir, block, match='photometry_*.dat
 
     warnings.simplefilter('ignore', FITSFixedWarning)
     output_lc_filepath = None
+    #frames = Frame.objects.filter(block=block, frametype__in=[Frame.BANZAI_RED_FRAMETYPE, Frame.SWOPE_RED_FRAMETYPE])
     frames = Frame.objects.filter(block=block, frametype=Frame.BANZAI_RED_FRAMETYPE)
     if frames.count() > 0:
         first_frame = frames.earliest('midpoint')
@@ -1386,12 +1397,17 @@ def create_dart_lightcurve(input_dir, output_dir, block, match='photometry_*.dat
                     phot_filename, pds_name = make_pds_asteroid_name(block.body)
                     # Format for LC files: 'lcogt_<site>_<inst.>_<YYYYMMDD>_<request #>_<astname#>_photometry.txt'
                     file_parts['dayobs'] = first_frame.midpoint.strftime("%Y%m%d")
-                    output_lc_file = f"lcogt_{file_parts['site']}_{file_parts['instrument']}_{file_parts['dayobs']}_{block.request_number}_{phot_filename}_photometry.tab"
+                    origin = 'lcogt'
+                    observer = 'Lister'
+                    if file_parts['site'] == 'lco':
+                        origin = 'lco'
+                        observer = 'Osip'
+                    output_lc_file = f"{origin.lower()}_{file_parts['site']}_{file_parts['instrument']}_{file_parts['dayobs']}_{block.request_number}_{phot_filename}_photometry.tab"
                     output_lc_filepath = os.path.join(output_dir, output_lc_file)
                     write_dartformat_file(table, output_lc_filepath, aper_radius)
                     # Create DART upload format symlink
                     if create_symlink:
-                        symlink_lc_file = f"LCOGT_{file_parts['site'].upper()}-{file_parts['instrument'].upper()}_Lister_{file_parts['dayobs']}.dat"
+                        symlink_lc_file = f"{origin.upper()}_{file_parts['site'].upper()}-{file_parts['instrument'].upper()}_{observer}_{file_parts['dayobs']}.dat"
                         dir_fh = os.open(output_dir, os.O_RDONLY)
                         if os.path.exists(os.path.join(output_dir, symlink_lc_file)):
                             os.remove(os.path.join(output_dir, symlink_lc_file))
