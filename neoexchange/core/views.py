@@ -3466,6 +3466,40 @@ def find_matching_image_file(catfile):
     return fits_file_for_sext
 
 
+def determine_images_and_catalogs(self, datadir, red_level='e91', output=True):
+    """Count the numbers of FITS files (*[red_level].fits) and FITS-LDAC
+    catalogs (*[red_level]_ldac.fits) in <datadir> where [red_level] defaults
+    to 'e91'. If [output] is True,
+    print out the output.
+    When called from a Django managment command, `self` will be
+    automatically set and the output will use `self.stdout.write`.
+    When calling from elsewhere, set `self=None` and `print()`
+    will be used."""
+
+    if self is None:
+        func = print
+    else:
+        func = self.stdout.write
+
+    fits_files, fits_catalogs = None, None
+    # Add on a path separator at the end in case it's not there so `glob` works
+    # properly
+    datadir = os.path.join(datadir, '')
+    if os.path.exists(datadir) and os.path.isdir(datadir):
+        fits_files = sorted(glob(datadir + f'*{red_level}.fits'))
+        fits_catalogs = sorted(glob(datadir + f'*{red_level}_ldac.fits'))
+
+        if len(fits_files) == 0 and len(fits_catalogs) == 0:
+            if output: func(f"No {red_level} FITS files and catalogs found in directory {datadir}")
+            fits_files, fits_catalogs = None, None
+        else:
+            if output: func(f"Found {len(fits_files)} FITS files and {len(fits_catalogs)} catalogs for red level {red_level}")
+    else:
+        if output: func(f"Could not open directory {datadir}")
+        fits_files, fits_catalogs = None, None
+    return fits_files, fits_catalogs
+
+
 def run_sextractor_make_catalog(configs_dir, dest_dir, fits_file):
     """Run SExtractor, rename output to new filename which is returned"""
 
