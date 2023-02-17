@@ -308,14 +308,22 @@ def make_data_dir(data_dir, frame):
         day_dir = chunks[offset]
     else:
         chunks = filename.split('-')
-        day_dir = chunks[2]
+        if len(chunks) > 2:
+            day_dir = chunks[2]
+        else:
+            day_dir = ''
 
     try:
         dd = datetime.strptime(day_dir, '%Y%m%d')
     except ValueError:
         try:
             logger.warning("Filename ({}) does not contain day-obs.".format(filename))
-            dd = datetime.strptime(frame['DATE_OBS'], '%Y-%m-%dT%H:%M:%S.%fZ')
+            if 'DATE_OBS' in frame:
+                dd = datetime.strptime(frame['DATE_OBS'], '%Y-%m-%dT%H:%M:%S.%fZ')
+            elif 'midpoint' in frame:
+                dd = frame['midpoint']
+            else:
+                dd = ''
             day_dir = datetime.strftime(dd, '%Y%m%d')
         except ValueError:
             logger.error("{} has improperly formated DATE_OBS in Header!")
@@ -325,6 +333,9 @@ def make_data_dir(data_dir, frame):
     if "tar.gz" in filename and frame['SITEID'] == 'ogg':
         day_dir = datetime.strftime(dd-timedelta(days=1), '%Y%m%d')
 
+    if frame.get('SITEID', '') == 'lco' or frame.get('sitecode', '') == '304':
+        # Swope data, modify path
+        data_dir = os.path.join(data_dir, 'Swope')
     out_path = os.path.join(data_dir, day_dir)
     if not os.path.exists(out_path):
         try:
