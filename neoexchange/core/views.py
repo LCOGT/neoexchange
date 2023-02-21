@@ -4616,10 +4616,13 @@ def compare_NEOx_horizons_ephems(body, d, sitecode='500', debug=True):
         # Find index of nearest in time ephememeris line
         horizons_index = np.abs(d-horizons_emp['datetime'].datetime).argmin()
         horizons_pos = SkyCoord(horizons_emp['RA'][horizons_index], horizons_emp['DEC'][horizons_index], unit=u.deg)
+        mag_column = 'V'
+        if mag_column not in horizons_emp.colnames:
+            mag_column = 'Tmag'
         sep_r = horizons_pos.separation(neox_pos).to(u.arcsec)
         sep_ra, sep_dec = horizons_pos.spherical_offsets_to(neox_pos)
         sep_ra = -sep_ra.to(u.arcsec) / cos(horizons_pos.dec.rad)
         sep_dec = -sep_dec.to(u.arcsec)
-        print(f"At {d:} (HORIZONS@{horizons_emp['datetime'][horizons_index]} , sep= {sep_r:.1f} (RA={sep_ra:.1f}, Dec={sep_dec:.1f})\nNEOX: {neox_pos.to_string('hmsdms', sep=' ', precision=4):}\n JPL: {horizons_pos.to_string('hmsdms', sep=' ', precision=4):}")
+        print(f"At {d:} (HORIZONS@{horizons_emp['datetime'][horizons_index]} , sep= {sep_r:.1f} (RA={sep_ra:.1f}, Dec={sep_dec:.1f})\nNEOX: {neox_pos.to_string('hmsdms', sep=' ', precision=4):} V={neox_emp['mag']:.1f}\n JPL: {horizons_pos.to_string('hmsdms', sep=' ', precision=4):} V={horizons_emp[mag_column][horizons_index]:.1f}")
 
     return neox_emp, horizons_emp, sep_r, sep_ra, sep_dec
