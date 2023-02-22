@@ -65,7 +65,7 @@
       <name>(65803) Didymos</name>
       <type>Asteroid</type>
       <Internal_Reference>
-        <lid_reference>urn:nasa:pds:context:target:asteroid.didymos</lid_reference>
+        <lid_reference>urn:nasa:pds:context:target:asteroid.65803_didymos</lid_reference>
         <reference_type>data_to_target</reference_type>
       </Internal_Reference>
     </Target_Identification>

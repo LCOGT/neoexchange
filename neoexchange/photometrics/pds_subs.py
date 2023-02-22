@@ -480,7 +480,7 @@ def create_obs_area(header, filename):
         # Create an Internal Reference subclass of Target_Identification with
         # reference to Didymos if this is the target
         int_reference = etree.SubElement(target_id, "Internal_Reference")
-        etree.SubElement(int_reference, "lid_reference").text = "urn:nasa:pds:context:target:asteroid.didymos"
+        etree.SubElement(int_reference, "lid_reference").text = "urn:nasa:pds:context:target:asteroid.65803_didymos"
         etree.SubElement(int_reference, "reference_type").text = "data_to_target"
     return obs_area
 
@@ -656,7 +656,7 @@ def create_context_area(filepath, collection_type):
     # Create Internal Reference subclass of Target Area (but only if this Didymos)
     if 'didymos' in target_name.lower():
         int_reference = etree.SubElement(target_id, "Internal_Reference")
-        etree.SubElement(int_reference, "lid_reference").text = "urn:nasa:pds:context:target:asteroid.didymos"
+        etree.SubElement(int_reference, "lid_reference").text = "urn:nasa:pds:context:target:asteroid.65803_didymos"
         etree.SubElement(int_reference, "reference_type").text = "collection_to_target"
 
     return context_area
