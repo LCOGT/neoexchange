@@ -400,6 +400,16 @@ class TestCreateFileAreaObs(SimpleTestCase):
 
         self.test_raw_filename = os.path.join(tests_path, 'mef_raw_test_frame.fits')
         self.test_raw_header, table, cattype = open_fits_catalog(self.test_raw_filename)
+        # Make copy of raw MEF header and scale to full 4k x 4k Sinistro frame
+        self.test_raw_4k_header = []
+        for header in self.test_raw_header:
+            new_header = header.copy()
+            self.test_raw_4k_header.append(new_header)
+
+        for extn in range(1, 4+1):
+            self.test_raw_4k_header[extn]['NAXIS1'] = 2080
+            self.test_raw_4k_header[extn]['NAXIS2'] = 2058
+            self.test_raw_4k_header[extn]['CCDSUM'] = '1 1     '
 
         lco_calib_prihdr = fits.Header.fromtextfile(os.path.join(tests_path, 'example_lco_proc_hdr'))
         lco_calib_prihdr["NAXIS1"] = 4096
@@ -439,7 +449,7 @@ class TestCreateFileAreaObs(SimpleTestCase):
             <Header>
               <name>ccd1_header</name>
               <offset unit="byte">17280</offset>
-              <object_length unit="byte">17498880</object_length>
+              <object_length unit="byte">17280</object_length>
               <parsing_standard_id>FITS 3.0</parsing_standard_id>
             </Header>
             <Array_2D_Image>
@@ -466,7 +476,7 @@ class TestCreateFileAreaObs(SimpleTestCase):
             <Header>
               <name>ccd2_header</name>
               <offset unit="byte">17533440</offset>
-              <object_length unit="byte">17498880</object_length>
+              <object_length unit="byte">17280</object_length>
               <parsing_standard_id>FITS 3.0</parsing_standard_id>
             </Header>
             <Array_2D_Image>
@@ -493,7 +503,7 @@ class TestCreateFileAreaObs(SimpleTestCase):
             <Header>
               <name>ccd3_header</name>
               <offset unit="byte">35049600</offset>
-              <object_length unit="byte">17498880</object_length>
+              <object_length unit="byte">17280</object_length>
               <parsing_standard_id>FITS 3.0</parsing_standard_id>
             </Header>
             <Array_2D_Image>
@@ -520,7 +530,7 @@ class TestCreateFileAreaObs(SimpleTestCase):
             <Header>
               <name>ccd4_header</name>
               <offset unit="byte">52565760</offset>
-              <object_length unit="byte">17498880</object_length>
+              <object_length unit="byte">17280</object_length>
               <parsing_standard_id>FITS 3.0</parsing_standard_id>
             </Header>
             <Array_2D_Image>
@@ -566,7 +576,7 @@ class TestCreateFileAreaObs(SimpleTestCase):
             <Header>
               <name>amp1_header</name>
               <offset unit="byte">20160</offset>
-              <object_length unit="byte">570240</object_length>
+              <object_length unit="byte">2880</object_length>
               <parsing_standard_id>FITS 3.0</parsing_standard_id>
             </Header>
             <Array_2D_Image>
@@ -593,7 +603,7 @@ class TestCreateFileAreaObs(SimpleTestCase):
             <Header>
               <name>amp2_header</name>
               <offset unit="byte">593280</offset>
-              <object_length unit="byte">570240</object_length>
+              <object_length unit="byte">2880</object_length>
               <parsing_standard_id>FITS 3.0</parsing_standard_id>
             </Header>
             <Array_2D_Image>
@@ -620,7 +630,7 @@ class TestCreateFileAreaObs(SimpleTestCase):
             <Header>
               <name>amp3_header</name>
               <offset unit="byte">1166400</offset>
-              <object_length unit="byte">570240</object_length>
+              <object_length unit="byte">2880</object_length>
               <parsing_standard_id>FITS 3.0</parsing_standard_id>
             </Header>
             <Array_2D_Image>
@@ -647,7 +657,7 @@ class TestCreateFileAreaObs(SimpleTestCase):
             <Header>
               <name>amp4_header</name>
               <offset unit="byte">1739520</offset>
-              <object_length unit="byte">570240</object_length>
+              <object_length unit="byte">2880</object_length>
               <parsing_standard_id>FITS 3.0</parsing_standard_id>
             </Header>
             <Array_2D_Image>
@@ -677,6 +687,133 @@ class TestCreateFileAreaObs(SimpleTestCase):
 
         self.compare_xml(expected, file_obs_area)
 
+    def test_lco_raw_fullframe(self):
+        expected = '''
+          <File_Area_Observational>
+            <File>
+              <file_name>mef_raw_test_frame.fits</file_name>
+              <comment>Raw LCOGT image file</comment>
+            </File>
+            <Header>
+              <name>main_header</name>
+              <offset unit="byte">0</offset>
+              <object_length unit="byte">20160</object_length>
+              <parsing_standard_id>FITS 3.0</parsing_standard_id>
+            </Header>
+            <Header>
+              <name>amp1_header</name>
+              <offset unit="byte">20160</offset>
+              <object_length unit="byte">2880</object_length>
+              <parsing_standard_id>FITS 3.0</parsing_standard_id>
+            </Header>
+            <Array_2D_Image>
+              <local_identifier>amp1_image</local_identifier>
+              <offset unit="byte">23040</offset>
+              <axes>2</axes>
+              <axis_index_order>Last Index Fastest</axis_index_order>
+              <Element_Array>
+                <data_type>SignedMSB2</data_type>
+                <scaling_factor>1</scaling_factor>
+                <value_offset>32768</value_offset>
+              </Element_Array>
+              <Axis_Array>
+                <axis_name>Line</axis_name>
+                <elements>2058</elements>
+                <sequence_number>1</sequence_number>
+              </Axis_Array>
+              <Axis_Array>
+                <axis_name>Sample</axis_name>
+                <elements>2080</elements>
+                <sequence_number>2</sequence_number>
+              </Axis_Array>
+            </Array_2D_Image>
+            <Header>
+              <name>amp2_header</name>
+              <offset unit="byte">8585280</offset>
+              <object_length unit="byte">2880</object_length>
+              <parsing_standard_id>FITS 3.0</parsing_standard_id>
+            </Header>
+            <Array_2D_Image>
+              <local_identifier>amp2_image</local_identifier>
+              <offset unit="byte">8588160</offset>
+              <axes>2</axes>
+              <axis_index_order>Last Index Fastest</axis_index_order>
+              <Element_Array>
+                <data_type>SignedMSB2</data_type>
+                <scaling_factor>1</scaling_factor>
+                <value_offset>32768</value_offset>
+              </Element_Array>
+              <Axis_Array>
+                <axis_name>Line</axis_name>
+                <elements>2058</elements>
+                <sequence_number>1</sequence_number>
+              </Axis_Array>
+              <Axis_Array>
+                <axis_name>Sample</axis_name>
+                <elements>2080</elements>
+                <sequence_number>2</sequence_number>
+              </Axis_Array>
+            </Array_2D_Image>
+            <Header>
+              <name>amp3_header</name>
+              <offset unit="byte">17150400</offset>
+              <object_length unit="byte">2880</object_length>
+              <parsing_standard_id>FITS 3.0</parsing_standard_id>
+            </Header>
+            <Array_2D_Image>
+              <local_identifier>amp3_image</local_identifier>
+              <offset unit="byte">17153280</offset>
+              <axes>2</axes>
+              <axis_index_order>Last Index Fastest</axis_index_order>
+              <Element_Array>
+                <data_type>SignedMSB2</data_type>
+                <scaling_factor>1</scaling_factor>
+                <value_offset>32768</value_offset>
+              </Element_Array>
+              <Axis_Array>
+                <axis_name>Line</axis_name>
+                <elements>2058</elements>
+                <sequence_number>1</sequence_number>
+              </Axis_Array>
+              <Axis_Array>
+                <axis_name>Sample</axis_name>
+                <elements>2080</elements>
+                <sequence_number>2</sequence_number>
+              </Axis_Array>
+            </Array_2D_Image>
+            <Header>
+              <name>amp4_header</name>
+              <offset unit="byte">25715520</offset>
+              <object_length unit="byte">2880</object_length>
+              <parsing_standard_id>FITS 3.0</parsing_standard_id>
+            </Header>
+            <Array_2D_Image>
+              <local_identifier>amp4_image</local_identifier>
+              <offset unit="byte">25718400</offset>
+              <axes>2</axes>
+              <axis_index_order>Last Index Fastest</axis_index_order>
+              <Element_Array>
+                <data_type>SignedMSB2</data_type>
+                <scaling_factor>1</scaling_factor>
+                <value_offset>32768</value_offset>
+              </Element_Array>
+              <Axis_Array>
+                <axis_name>Line</axis_name>
+                <elements>2058</elements>
+                <sequence_number>1</sequence_number>
+              </Axis_Array>
+              <Axis_Array>
+                <axis_name>Sample</axis_name>
+                <elements>2080</elements>
+                <sequence_number>2</sequence_number>
+              </Axis_Array>
+            </Array_2D_Image>
+          </File_Area_Observational>'''
+
+        file_obs_area = create_file_area_obs(self.test_raw_4k_header, self.test_raw_filename)
+
+        self.compare_xml(expected, file_obs_area)
+
     def test_lco_calib(self):
         expected = '''
           <File_Area_Observational>
@@ -687,7 +824,7 @@ class TestCreateFileAreaObs(SimpleTestCase):
             <Header>
               <name>main_header</name>
               <offset unit="byte">0</offset>
-              <object_length unit="byte">67109760</object_length>
+              <object_length unit="byte">20160</object_length>
               <parsing_standard_id>FITS 3.0</parsing_standard_id>
             </Header>
             <Array_2D_Image>
@@ -712,7 +849,7 @@ class TestCreateFileAreaObs(SimpleTestCase):
             <Header>
               <name>bpm_header</name>
               <offset unit="byte">67129920</offset>
-              <object_length unit="byte">16778880</object_length>
+              <object_length unit="byte">2880</object_length>
               <parsing_standard_id>FITS 3.0</parsing_standard_id>
             </Header>
             <Array_2D_Image>
@@ -737,7 +874,7 @@ class TestCreateFileAreaObs(SimpleTestCase):
             <Header>
               <name>err_header</name>
               <offset unit="byte">83911680</offset>
-              <object_length unit="byte">67109760</object_length>
+              <object_length unit="byte">2880</object_length>
               <parsing_standard_id>FITS 3.0</parsing_standard_id>
             </Header>
             <Array_2D_Image>

@@ -131,7 +131,7 @@
     <Header>
       <name>main_header</name>
       <offset unit="byte">0</offset>
-      <object_length unit="byte">16534080</object_length>
+      <object_length unit="byte">23040</object_length>
       <parsing_standard_id>FITS 3.0</parsing_standard_id>
     </Header>
     <Array_2D_Image>

@@ -173,7 +173,7 @@
     <Header>
       <name>amp1_header</name>
       <offset unit="byte">20160</offset>
-      <object_length unit="byte">570240</object_length>
+      <object_length unit="byte">2880</object_length>
       <parsing_standard_id>FITS 3.0</parsing_standard_id>
     </Header>
     <Array_2D_Image>
@@ -200,7 +200,7 @@
     <Header>
       <name>amp2_header</name>
       <offset unit="byte">593280</offset>
-      <object_length unit="byte">570240</object_length>
+      <object_length unit="byte">2880</object_length>
       <parsing_standard_id>FITS 3.0</parsing_standard_id>
     </Header>
     <Array_2D_Image>
@@ -227,7 +227,7 @@
     <Header>
       <name>amp3_header</name>
       <offset unit="byte">1166400</offset>
-      <object_length unit="byte">570240</object_length>
+      <object_length unit="byte">2880</object_length>
       <parsing_standard_id>FITS 3.0</parsing_standard_id>
     </Header>
     <Array_2D_Image>
@@ -254,7 +254,7 @@
     <Header>
       <name>amp4_header</name>
       <offset unit="byte">1739520</offset>
-      <object_length unit="byte">570240</object_length>
+      <object_length unit="byte">2880</object_length>
       <parsing_standard_id>FITS 3.0</parsing_standard_id>
     </Header>
     <Array_2D_Image>

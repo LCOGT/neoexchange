@@ -724,7 +724,7 @@ def create_file_area_obs(header, filename):
 
         etree.SubElement(header_element, "name").text = header_name
         etree.SubElement(header_element, "offset", attrib={"unit" : "byte"}).text = str(header_offset)
-        etree.SubElement(header_element, "object_length", attrib={"unit" : "byte"}).text = image_size
+        etree.SubElement(header_element, "object_length", attrib={"unit" : "byte"}).text = header_size
         etree.SubElement(header_element, "parsing_standard_id").text = "FITS 3.0"
 
         header_offset += header_size_blocks
