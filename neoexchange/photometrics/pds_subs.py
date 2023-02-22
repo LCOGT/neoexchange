@@ -476,7 +476,12 @@ def create_obs_area(header, filename):
     target_name, target_type = determine_target_name_type(header)
     etree.SubElement(target_id, "name").text = target_name
     etree.SubElement(target_id, "type").text = target_type
-
+    if '65803' in target_name:
+        # Create an Internal Reference subclass of Target_Identification with
+        # reference to Didymos if this is the target
+        int_reference = etree.SubElement(target_id, "Internal_Reference")
+        etree.SubElement(int_reference, "lid_reference").text = "urn:nasa:pds:context:target:asteroid.didymos"
+        etree.SubElement(int_reference, "reference_type").text = "data_to_target"
     return obs_area
 
 def determine_first_last_times(filepath):

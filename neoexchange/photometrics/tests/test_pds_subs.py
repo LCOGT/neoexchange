@@ -196,6 +196,194 @@ class TestCreateIDArea(SimpleTestCase):
         self.compare_xml(expected, id_area)
 
 
+class TestCreateObsArea(TestCase):
+
+    def setUp(self):
+        schemadir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_schemas'))
+
+        self.schemas_mapping = pds_schema_mappings(schemadir, '*.xsd')
+
+        self.test_banzai_file = os.path.abspath(os.path.join('photometrics', 'tests', 'banzai_test_frame.fits'))
+        self.test_banzai_header, table, cattype = open_fits_catalog(self.test_banzai_file, header_only=True)
+        self.test_raw_file = os.path.abspath(os.path.join('photometrics', 'tests', 'mef_raw_test_frame.fits'))
+        self.test_raw_header, table, cattype = open_fits_catalog(self.test_raw_file, header_only=True)
+
+        body_params = {
+                         'id': 36254,
+                         'provisional_name': None,
+                         'provisional_packed': None,
+                         'name': '65803',
+                         'origin': 'N',
+                         'source_type': 'N',
+                         'source_subtype_1': 'N3',
+                         'source_subtype_2': 'PH',
+                         'elements_type': 'MPC_MINOR_PLANET',
+                         'active': False,
+                         'fast_moving': False,
+                         'urgency': None,
+                         'epochofel': datetime(2021, 2, 25, 0, 0),
+                         'orbit_rms': 0.56,
+                         'orbinc': 3.40768,
+                         'longascnode': 73.20234,
+                         'argofperih': 319.32035,
+                         'eccentricity': 0.3836409,
+                         'meandist': 1.6444571,
+                         'meananom': 77.75787,
+                         'perihdist': None,
+                         'epochofperih': None,
+                         'abs_mag': 18.27,
+                         'slope': 0.15,
+                         'score': None,
+                         'discovery_date': datetime(1996, 4, 11, 0, 0),
+                         'num_obs': 829,
+                         'arc_length': 7305.0,
+                         'not_seen': 2087.29154187494,
+                         'updated': True,
+                         'ingest': datetime(2018, 8, 14, 17, 45, 42),
+                         'update_time': datetime(2021, 3, 1, 19, 59, 56, 957500)
+                         }
+
+        self.test_body, created = Body.objects.get_or_create(**body_params)
+
+        desig_params = { 'body' : self.test_body, 'value' : 'Didymos', 'desig_type' : 'N', 'preferred' : True, 'packed' : False}
+        test_desig, created = Designations.objects.get_or_create(**desig_params)
+        desig_params['value'] = '65803'
+        desig_params['desig_type'] = '#'
+        test_desig, created = Designations.objects.get_or_create(**desig_params)
+
+        self.maxDiff = None
+
+    def compare_xml(self, expected, xml_element):
+        """Compare the expected XML string <expected> with the passed etree.Element
+        in <xml_element>
+        """
+
+        obj1 = objectify.fromstring(expected)
+        expect = etree.tostring(obj1).decode()
+        result = etree.tostring(xml_element).decode()
+
+        self.assertEquals(expect, result)
+
+    def test_banzai_not_didymos(self):
+        expected = '''
+            <Observation_Area>
+              <Time_Coordinates>
+                <start_date_time>2016-06-06T22:48:14.00Z</start_date_time>
+                <stop_date_time>2016-06-06T22:50:02.77Z</stop_date_time>
+              </Time_Coordinates>
+              <Investigation_Area>
+                <name>Double Asteroid Redirection Test</name>
+                <type>Mission</type>
+                <Internal_Reference>
+                  <lid_reference>urn:nasa:pds:context:investigation:mission.double_asteroid_redirection_test</lid_reference>
+                  <reference_type>data_to_investigation</reference_type>
+                </Internal_Reference>
+              </Investigation_Area>
+              <Observing_System>
+                <Observing_System_Component>
+                  <name>Las Cumbres Observatory (LCOGT)</name>
+                  <type>Host</type>
+                  <description>The description for the host can be found in the document collection for this bundle.</description>
+                  <Internal_Reference>
+                    <lid_reference>urn:nasa:pds:context:facility:observatory.las_cumbres</lid_reference>
+                    <reference_type>is_facility</reference_type>
+                  </Internal_Reference>
+                </Observing_System_Component>
+                <Observing_System_Component>
+                  <name>Las Cumbres Global Telescope Network - 1m Telescopes</name>
+                  <type>Telescope</type>
+                  <description>
+          LCOGT 1m0-13 Telescope
+          LCOGT CPT Node 1m0 Dome B at Sutherland
+          The description for the telescope can be found in the document collection for this bundle.</description>
+                  <Internal_Reference>
+                    <lid_reference>urn:nasa:pds:context:instrument_host:las_cumbres.1m0_telescopes</lid_reference>
+                    <reference_type>is_telescope</reference_type>
+                  </Internal_Reference>
+                </Observing_System_Component>
+                <Observing_System_Component>
+                  <name>Las Cumbres 1m Telescopes - Sinistro Camera</name>
+                  <type>Instrument</type>
+                  <description>The description for the instrument can be found in the document collection for this bundle.</description>
+                  <Internal_Reference>
+                    <lid_reference>urn:nasa:pds:context:instrument:las_cumbres.1m0_telescopes.sinistro</lid_reference>
+                    <reference_type>is_instrument</reference_type>
+                  </Internal_Reference>
+                </Observing_System_Component>
+              </Observing_System>
+              <Target_Identification>
+                <name>XL8B85F</name>
+                <type>Asteroid</type>
+              </Target_Identification>
+            </Observation_Area>'''
+
+        obs_area = create_obs_area(self.test_banzai_header, self.test_banzai_file)
+
+        self.compare_xml(expected, obs_area)
+
+    def test_banzai_didymos(self):
+        expected = '''
+            <Observation_Area>
+              <Time_Coordinates>
+                <start_date_time>2016-06-06T22:48:14.00Z</start_date_time>
+                <stop_date_time>2016-06-06T22:50:02.77Z</stop_date_time>
+              </Time_Coordinates>
+              <Investigation_Area>
+                <name>Double Asteroid Redirection Test</name>
+                <type>Mission</type>
+                <Internal_Reference>
+                  <lid_reference>urn:nasa:pds:context:investigation:mission.double_asteroid_redirection_test</lid_reference>
+                  <reference_type>data_to_investigation</reference_type>
+                </Internal_Reference>
+              </Investigation_Area>
+              <Observing_System>
+                <Observing_System_Component>
+                  <name>Las Cumbres Observatory (LCOGT)</name>
+                  <type>Host</type>
+                  <description>The description for the host can be found in the document collection for this bundle.</description>
+                  <Internal_Reference>
+                    <lid_reference>urn:nasa:pds:context:facility:observatory.las_cumbres</lid_reference>
+                    <reference_type>is_facility</reference_type>
+                  </Internal_Reference>
+                </Observing_System_Component>
+                <Observing_System_Component>
+                  <name>Las Cumbres Global Telescope Network - 1m Telescopes</name>
+                  <type>Telescope</type>
+                  <description>
+          LCOGT 1m0-13 Telescope
+          LCOGT CPT Node 1m0 Dome B at Sutherland
+          The description for the telescope can be found in the document collection for this bundle.</description>
+                  <Internal_Reference>
+                    <lid_reference>urn:nasa:pds:context:instrument_host:las_cumbres.1m0_telescopes</lid_reference>
+                    <reference_type>is_telescope</reference_type>
+                  </Internal_Reference>
+                </Observing_System_Component>
+                <Observing_System_Component>
+                  <name>Las Cumbres 1m Telescopes - Sinistro Camera</name>
+                  <type>Instrument</type>
+                  <description>The description for the instrument can be found in the document collection for this bundle.</description>
+                  <Internal_Reference>
+                    <lid_reference>urn:nasa:pds:context:instrument:las_cumbres.1m0_telescopes.sinistro</lid_reference>
+                    <reference_type>is_instrument</reference_type>
+                  </Internal_Reference>
+                </Observing_System_Component>
+              </Observing_System>
+              <Target_Identification>
+                <name>(65803) Didymos</name>
+                <type>Asteroid</type>
+                <Internal_Reference>
+                  <lid_reference>urn:nasa:pds:context:target:asteroid.didymos</lid_reference>
+                  <reference_type>data_to_target</reference_type>
+                </Internal_Reference>
+              </Target_Identification>
+            </Observation_Area>'''
+
+        self.test_banzai_header['OBJECT'] = '65803'
+        obs_area = create_obs_area(self.test_banzai_header, self.test_banzai_file)
+
+        self.compare_xml(expected, obs_area)
+
+
 class TestCreateFileAreaObs(SimpleTestCase):
 
     def setUp(self):
@@ -1094,6 +1282,7 @@ class TestWritePDSLabel(TestCase):
         self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
 
         self.test_xml_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label.xml'))
+        self.test_xml_cat_didymos = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_didymos.xml'))
         self.test_xml_raw_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_raw.xml'))
         self.test_xml_ddp_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_ddp.xml'))
         self.test_xml_bpm_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_bpm.xml'))
@@ -1222,11 +1411,11 @@ class TestWritePDSLabel(TestCase):
         self.assertEqual(1, bodies.count())
         self.assertEqual('65803 Didymos', bodies[0].full_name())
         # Define modifications to the standard XML for the new name
-        modifications = { 'xpath' : './/pds:Target_Identification/pds:name',
-                          'namespaces' : {'pds' : self.pds_schema['namespace']},
-                          'replacement' : '(65803) Didymos'}
+        # modifications = { 'xpath' : './/pds:Target_Identification/pds:name',
+                          # 'namespaces' : {'pds' : self.pds_schema['namespace']},
+                          # 'replacement' : '(65803) Didymos'}
 
-        self.compare_xml_files(self.test_xml_cat, output_xml_file, modifications)
+        self.compare_xml_files(self.test_xml_cat_didymos, output_xml_file)
 
     def test_write_bpm_label(self):
 
@@ -1912,15 +2101,16 @@ class TestExportBlockToPDS(TestCase):
                 new_name = os.path.join(self.test_input_daydir, frame_params['filename'].replace('e91', extn))
                 filename = shutil.copy(self.test_file_path, new_name)
                 # Change object name to 65803
-                hdulist = fits.open(filename)
-                hdulist[0].header['telescop'] = '1m0-01'
-                hdulist[0].header['object'] = '65803   '
-                half_exp = timedelta(seconds=hdulist[0].header['exptime'] / 2.0)
-                date_obs = frame_params['midpoint'] - half_exp
-                hdulist[0].header['date-obs'] = date_obs.strftime("%Y-%m-%dT%H:%M:%S")
-                utstop = frame_params['midpoint'] + half_exp + timedelta(seconds=8.77)
-                hdulist[0].header['utstop'] = utstop.strftime("%H:%M:%S.%f")[0:12]
-                hdulist.writeto(filename, overwrite=True, checksum=True)
+                with fits.open(filename) as hdulist:
+                    hdulist[0].header['telescop'] = '1m0-01'
+                    hdulist[0].header['object'] = '65803   '
+                    half_exp = timedelta(seconds=hdulist[0].header['exptime'] / 2.0)
+                    date_obs = frame_params['midpoint'] - half_exp
+                    hdulist[0].header['date-obs'] = date_obs.strftime("%Y-%m-%dT%H:%M:%S")
+                    utstop = frame_params['midpoint'] + half_exp + timedelta(seconds=8.77)
+                    hdulist[0].header['utstop'] = utstop.strftime("%H:%M:%S.%f")[0:12]
+                    hdulist.writeto(filename, overwrite=True, checksum=True)
+#                    hdulist.close()
                 self.test_banzai_files.append(os.path.basename(filename))
 
         # Make one additional copy which is renamed to an -e91 (so it shouldn't be found)
@@ -2553,35 +2743,36 @@ class TestTransferFiles(SimpleTestCase):
                 new_name = os.path.join(self.test_input_daydir, frame_params['filename'].replace('e91', extn))
                 filename = shutil.copy(self.test_file_path, new_name)
                 # Change object name to 65803
-                hdulist = fits.open(filename)
-                hdulist[0].header['telescop'] = '1m0-01'
-                hdulist[0].header['object'] = '65803   '
-                half_exp = timedelta(seconds=hdulist[0].header['exptime'] / 2.0)
-                date_obs = frame_params['midpoint'] - half_exp
-                hdulist[0].header['date-obs'] = date_obs.strftime("%Y-%m-%dT%H:%M:%S")
-                utstop = frame_params['midpoint'] + half_exp + timedelta(seconds=8.77)
-                hdulist[0].header['utstop'] = utstop.strftime("%H:%M:%S.%f")[0:12]
-                hdulist[0].header.insert('l1pubdat', ('l1filter', hdulist[0].header['filter'], 'Copy of FILTER for SCAMP'), after=True)
-                # # Mangle header ala photpipe
-                # update = False
-                # insert = False
-                # for key, new_value, new_comment in tpv_header.cards:
-                    # if key == 'CTYPE1':
-                        # update = True
-                    # elif key == 'PV1_0':
-                        # update = False
-                        # insert = True
-                        # prev_keyword = 'CD2_2'
-                    # elif key == 'FGROUPNO':
-                        # update = False
-                        # insert = True
-                        # prev_keyword = 'L1FILTER'
-                    # if update:
-                        # hdulist[0].header.set(key, value=str(new_value), comment=new_comment)
-                    # elif insert:
-                         # hdulist[0].header.insert(prev_keyword,(key, new_value, new_comment), after=True)
-                         # prev_keyword = key
-                hdulist.writeto(filename, overwrite=True, checksum=True)
+                with fits.open(filename) as hdulist:
+                    hdulist[0].header['telescop'] = '1m0-01'
+                    hdulist[0].header['object'] = '65803   '
+                    half_exp = timedelta(seconds=hdulist[0].header['exptime'] / 2.0)
+                    date_obs = frame_params['midpoint'] - half_exp
+                    hdulist[0].header['date-obs'] = date_obs.strftime("%Y-%m-%dT%H:%M:%S")
+                    utstop = frame_params['midpoint'] + half_exp + timedelta(seconds=8.77)
+                    hdulist[0].header['utstop'] = utstop.strftime("%H:%M:%S.%f")[0:12]
+                    hdulist[0].header.insert('l1pubdat', ('l1filter', hdulist[0].header['filter'], 'Copy of FILTER for SCAMP'), after=True)
+                    # # Mangle header ala photpipe
+                    # update = False
+                    # insert = False
+                    # for key, new_value, new_comment in tpv_header.cards:
+                        # if key == 'CTYPE1':
+                            # update = True
+                        # elif key == 'PV1_0':
+                            # update = False
+                            # insert = True
+                            # prev_keyword = 'CD2_2'
+                        # elif key == 'FGROUPNO':
+                            # update = False
+                            # insert = True
+                            # prev_keyword = 'L1FILTER'
+                        # if update:
+                            # hdulist[0].header.set(key, value=str(new_value), comment=new_comment)
+                        # elif insert:
+                             # hdulist[0].header.insert(prev_keyword,(key, new_value, new_comment), after=True)
+                             # prev_keyword = key
+                    hdulist.writeto(filename, overwrite=True, checksum=True)
+#                    hdulist.close()
                 self.test_banzai_files.append(os.path.basename(filename))
                 if extn == 'e91':
                     Path(new_name.replace('e91.fits', 'e91_cal.dat')).touch()
@@ -2748,35 +2939,35 @@ class TestTransferReformat(TestCase):
                 new_name = os.path.join(self.test_input_daydir, frame_params['filename'].replace('e91', extn))
                 filename = shutil.copy(self.test_file_path, new_name)
                 # Change object name to 65803
-                hdulist = fits.open(filename)
-                hdulist[0].header['telescop'] = '1m0-01'
-                hdulist[0].header['object'] = '65803   '
-                half_exp = timedelta(seconds=hdulist[0].header['exptime'] / 2.0)
-                date_obs = frame_params['midpoint'] - half_exp
-                hdulist[0].header['date-obs'] = date_obs.strftime("%Y-%m-%dT%H:%M:%S")
-                utstop = frame_params['midpoint'] + half_exp + timedelta(seconds=8.77)
-                hdulist[0].header['utstop'] = utstop.strftime("%H:%M:%S.%f")[0:12]
-                hdulist[0].header.insert('l1pubdat', ('l1filter', hdulist[0].header['filter'], 'Copy of FILTER for SCAMP'), after=True)
-                # Mangle header ala photpipe
-                update = False
-                insert = False
-                for key, new_value, new_comment in tpv_header.cards:
-                    if key == 'CTYPE1':
-                        update = True
-                    elif key == 'PV1_0':
-                        update = False
-                        insert = True
-                        prev_keyword = 'CD2_2'
-                    elif key == 'FGROUPNO':
-                        update = False
-                        insert = True
-                        prev_keyword = 'L1FILTER'
-                    if update:
-                        hdulist[0].header.set(key, value=str(new_value), comment=new_comment)
-                    elif insert:
-                         hdulist[0].header.insert(prev_keyword,(key, new_value, new_comment), after=True)
-                         prev_keyword = key
-                hdulist.writeto(filename, overwrite=True, checksum=True)
+                with fits.open(filename) as hdulist:
+                    hdulist[0].header['telescop'] = '1m0-01'
+                    hdulist[0].header['object'] = '65803   '
+                    half_exp = timedelta(seconds=hdulist[0].header['exptime'] / 2.0)
+                    date_obs = frame_params['midpoint'] - half_exp
+                    hdulist[0].header['date-obs'] = date_obs.strftime("%Y-%m-%dT%H:%M:%S")
+                    utstop = frame_params['midpoint'] + half_exp + timedelta(seconds=8.77)
+                    hdulist[0].header['utstop'] = utstop.strftime("%H:%M:%S.%f")[0:12]
+                    hdulist[0].header.insert('l1pubdat', ('l1filter', hdulist[0].header['filter'], 'Copy of FILTER for SCAMP'), after=True)
+                    # Mangle header ala photpipe
+                    update = False
+                    insert = False
+                    for key, new_value, new_comment in tpv_header.cards:
+                        if key == 'CTYPE1':
+                            update = True
+                        elif key == 'PV1_0':
+                            update = False
+                            insert = True
+                            prev_keyword = 'CD2_2'
+                        elif key == 'FGROUPNO':
+                            update = False
+                            insert = True
+                            prev_keyword = 'L1FILTER'
+                        if update:
+                            hdulist[0].header.set(key, value=str(new_value), comment=new_comment)
+                        elif insert:
+                             hdulist[0].header.insert(prev_keyword,(key, new_value, new_comment), after=True)
+                             prev_keyword = key
+                    hdulist.writeto(filename, overwrite=True, checksum=True)
                 self.test_banzai_files.append(os.path.basename(filename))
                 if extn == 'e91':
                     Path(new_name.replace('e91.fits', 'e91_cal.dat')).touch()
