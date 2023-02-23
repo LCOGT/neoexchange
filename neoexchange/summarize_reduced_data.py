@@ -14,7 +14,11 @@ def run(config):
 
     tables = glob(f"{config['dataroot']}/202209??/{config['target_name']}_*/Temp_cvc_multiap/{config['target_name']}_data_*.txt")
     tables += glob(f"{config['dataroot']}/202210??/{config['target_name']}_*/Temp_cvc_multiap/{config['target_name']}_data_*.txt")
+    tables += glob(f"{config['dataroot']}/202211??/{config['target_name']}_*/Temp_cvc_multiap/{config['target_name']}_data_*.txt")
+    tables += glob(f"{config['dataroot']}/202212??/{config['target_name']}_*/Temp_cvc_multiap/{config['target_name']}_data_*.txt")
+    tables += glob(f"{config['dataroot']}/2023????/{config['target_name']}_*/Temp_cvc_multiap/{config['target_name']}_data_*.txt")
 
+    tables = sorted(tables)
     output_table = make_summary_table(tables)
     filepath = output_target_data_table(config, output_table)
     print(f"Wrote summary table to {filepath}")
