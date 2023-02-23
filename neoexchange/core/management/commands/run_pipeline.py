@@ -40,6 +40,18 @@ class Command(BaseCommand):
         parser.add_argument('--color_const', default=False, type=self.str2bool, nargs='?', const=True, help='Whether to assume a constant color or fit for color term %(default)s')
         parser.add_argument('--solar', default=True, type=self.str2bool, nargs='?', const=True, help='Whether to only include stars of near-solar (+/-0.2 mag) color %(default)s')
 
+    def file_mapping(self, origin='LCO'):
+        mapping = {'LCO' : { 'proc-astromfit' : ('e91.fits', 'e91_ldac.fits'),
+                             'proc-extract' : ('e91.fits', 'e92.fits'),
+                             'proc-zeropoint' : ('e91.fits', 'e92_ldac.fits')
+                           },
+                   'SWOPE' : { 'proc-astromfit' : ('.fits', '_ldac.fits'),
+                             'proc-extract' : ('.fits', '-e72.fits'),
+                             'proc-zeropoint' : ('.fits', '-e72_ldac.fits')
+                           }
+                  }
+        return mapping[origin]
+
     def handle(self, *args, **options):
         # Path to directory containing some e91 BANZAI files
         dataroot = options['datadir']
@@ -64,7 +76,7 @@ class Command(BaseCommand):
 
         # Ensure trailing slash is present
         dataroot = os.path.join(dataroot, '')
-        fits_files, fits_catalogs = determine_images_and_catalogs(self, dataroot)
+        fits_files, fits_catalogs = determine_images_and_catalogs(self, dataroot) #, red_level='') # red_level must be null to pickup Swope data
 
         if fits_files is None or len(fits_files) == 0:
             raise CommandError(f"No FITS files found in {dataroot}")
@@ -73,6 +85,10 @@ class Command(BaseCommand):
         if '-ef' in fits_files[0]:
             catalog_type = 'FITS_LDAC_MULTIAPER'
 
+        origin = 'LCO'
+        if 'rccd' in fits_files[0]:
+            origin = 'SWOPE'
+        mapping = self.file_mapping(origin)
         # Process all files through all pipeline steps
         for fits_filepath in fits_files:
             # fits_filepath is the full path including the dataroot and obs_date e.g. /apophis/eng/rocks/20220731/cpt1m010-fa16-20220731-0146-e91.fits
@@ -88,22 +104,23 @@ class Command(BaseCommand):
                     {
                         'name'   : 'proc-astromfit',
                         'inputs' : {'fits_file' : fits_filepath,
-                                    'ldac_catalog' : os.path.join(dataroot, options['tempdir'], fits_file.replace('e91.fits', 'e91_ldac.fits')),
+                                    'ldac_catalog' : os.path.join(dataroot, options['tempdir'], fits_file.replace(mapping['proc-astromfit'][0], mapping['proc-astromfit'][1])),
                                     'datadir' : os.path.join(dataroot, options['tempdir'])
                                     }
                     },
                     {
                         'name'   : 'proc-extract',
-                        'inputs' : {'fits_file': os.path.join(dataroot, options['tempdir'], fits_file.replace('e91.fits', 'e92.fits')),
+                        'inputs' : {'fits_file': os.path.join(dataroot, options['tempdir'], fits_file.replace(mapping['proc-extract'][0], mapping['proc-extract'][1])),
                                    'datadir': os.path.join(dataroot, options['tempdir']),
                                    'overwrite' : options['overwrite'],
                                    'catalog_type' : catalog_type}
                     },
                     {
                         'name'   : 'proc-zeropoint',
-                        'inputs' : {'ldac_catalog' : os.path.join(dataroot, options['tempdir'], fits_file.replace('e91.fits', 'e92_ldac.fits')),
+                        'inputs' : {'ldac_catalog' : os.path.join(dataroot, options['tempdir'], fits_file.replace(mapping['proc-zeropoint'][0], mapping['proc-zeropoint'][1])),
                                     'datadir' : os.path.join(dataroot, options['tempdir']),
                                     'zeropoint_tolerance' : options['zp_tolerance'],
+                                    'catalog_type' : 'BANZAI_LDAC' if origin == 'LCO' else 'SWOPE_LDAC',
                                     'desired_catalog' : options['refcat'],
                                     'color_const' : options['color_const'],
                                     'solar' : options['solar']
