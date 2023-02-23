@@ -910,6 +910,18 @@ class TestCreateFileAreaTable(SimpleTestCase):
         tests_path = os.path.abspath(os.path.join('photometrics', 'tests'))
         self.test_ddp_filename = os.path.join(tests_path, 'example_dartphotom.dat')
 
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+        # Read original file, add blank lines, write new file to temp directory
+        with open(self.test_ddp_filename, 'r') as table_file:
+            lines = table_file.readlines()
+        self.test_lc_file = os.path.join(self.test_dir, 'lcogt_1m0_01_fa11_20211013_65803didymos_photometry.tab')
+        #print("Original length=", len(lines))
+        lines.append('\n')
+        lines.append('\n')
+        #print("New length=", len(lines))
+        with open(self.test_lc_file, 'w') as fp:
+            fp.writelines(lines)
+
         self.maxDiff = None
 
     def compare_xml(self, expected, xml_element):
@@ -1036,6 +1048,122 @@ class TestCreateFileAreaTable(SimpleTestCase):
           </File_Area_Observational>'''
 
         file_table_area = create_file_area_table(self.test_ddp_filename)
+
+        self.compare_xml(expected, file_table_area)
+
+    def test_lco_ddp_blanklines(self):
+        expected = '''
+          <File_Area_Observational>
+            <File>
+              <file_name>lcogt_1m0_01_fa11_20211013_65803didymos_photometry.tab</file_name>
+              <comment>photometry summary table</comment>
+            </File>
+             <Header>
+               <offset unit="byte">0</offset>
+               <object_length unit="byte">143</object_length>
+               <parsing_standard_id>UTF-8 Text</parsing_standard_id>
+             </Header>
+             <Table_Character>
+              <offset unit="byte">143</offset>
+              <records>62</records>
+              <record_delimiter>Carriage-Return Line-Feed</record_delimiter>
+              <Record_Character>
+                <fields>11</fields>
+                <groups>0</groups>
+                <record_length unit="byte">143</record_length>
+                <Field_Character>
+                  <name>file</name>
+                  <field_number>1</field_number>
+                  <field_location unit="byte">2</field_location>
+                  <data_type>ASCII_String</data_type>
+                  <field_length unit="byte">36</field_length>
+                  <description>File name of the calibrated image where data were measured.</description>
+                </Field_Character>
+                <Field_Character>
+                  <name>julian_date</name>
+                  <field_number>2</field_number>
+                  <field_location unit="byte">40</field_location>
+                  <data_type>ASCII_Real</data_type>
+                  <field_length unit="byte">15</field_length>
+                  <description>UTC Julian date of the exposure midtime</description>
+                </Field_Character>
+                <Field_Character>
+                  <name>mag</name>
+                  <field_number>3</field_number>
+                  <field_location unit="byte">56</field_location>
+                  <data_type>ASCII_Real</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Calibrated PanSTARRs r-band apparent magnitude of asteroid</description>
+                </Field_Character>
+                <Field_Character>
+                  <name>sig</name>
+                  <field_number>4</field_number>
+                  <field_location unit="byte">66</field_location>
+                  <data_type>ASCII_Real</data_type>
+                  <field_length unit="byte">6</field_length>
+                  <description>1-sigma error on the apparent magnitude</description>
+                </Field_Character>
+                <Field_Character>
+                  <name>ZP</name>
+                  <field_number>5</field_number>
+                  <field_location unit="byte">73</field_location>
+                  <data_type>ASCII_Real</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Calibrated zero point magnitude in PanSTARRs r-band</description>
+                </Field_Character>
+                <Field_Character>
+                  <name>ZP_sig</name>
+                  <field_number>6</field_number>
+                  <field_location unit="byte">83</field_location>
+                  <data_type>ASCII_Real</data_type>
+                  <field_length unit="byte">6</field_length>
+                  <description>1-sigma error on the zero point magnitude</description>
+                </Field_Character>
+                <Field_Character>
+                  <name>inst_mag</name>
+                  <field_number>7</field_number>
+                  <field_location unit="byte">91</field_location>
+                  <data_type>ASCII_Real</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>instrumental magnitude of asteroid</description>
+                </Field_Character>
+                <Field_Character>
+                  <name>inst_sig</name>
+                  <field_number>8</field_number>
+                  <field_location unit="byte">101</field_location>
+                  <data_type>ASCII_Real</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>1-sigma error on the instrumental magnitude</description>
+                </Field_Character>
+                <Field_Character>
+                  <name>filter</name>
+                  <field_number>9</field_number>
+                  <field_location unit="byte">111</field_location>
+                  <data_type>ASCII_String</data_type>
+                  <field_length unit="byte">6</field_length>
+                  <description>Transformed filter used for calibration.</description>
+                </Field_Character>
+                <Field_Character>
+                  <name>SExtractor_flag</name>
+                  <field_number>10</field_number>
+                  <field_location unit="byte">119</field_location>
+                  <data_type>ASCII_Integer</data_type>
+                  <field_length unit="byte">15</field_length>
+                  <description>Flags associated with the Source Extractor photometry measurements. See source_extractor_flags.txt in the documents folder for this archive for more detailed description.</description>
+                </Field_Character>
+                <Field_Character>
+                  <name>aprad</name>
+                  <field_number>11</field_number>
+                  <field_location unit="byte">135</field_location>
+                  <data_type>ASCII_Real</data_type>
+                  <field_length unit="byte">6</field_length>
+                  <description>radius in pixels of the aperture used for the photometry measurement</description>
+                </Field_Character>
+              </Record_Character>
+            </Table_Character>
+          </File_Area_Observational>'''
+
+        file_table_area = create_file_area_table(self.test_lc_file)
 
         self.compare_xml(expected, file_table_area)
 

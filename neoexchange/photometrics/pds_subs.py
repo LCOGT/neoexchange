@@ -839,7 +839,8 @@ def create_file_area_table(filename):
     etree.SubElement(file_element, "comment").text = 'photometry summary table'
 
     with open(filename, 'rb') as table_fh:
-        table = table_fh.readlines()
+        # Read lines, skipping blank lines
+        table = [line for line in table_fh.readlines() if line.strip()]
     header_element = etree.SubElement(file_area_table, "Header")
     # Compute size of header from first row
     header_size_bytes = len(table[0])
