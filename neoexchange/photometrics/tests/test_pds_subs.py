@@ -1168,6 +1168,80 @@ class TestCreateFileAreaTable(SimpleTestCase):
         self.compare_xml(expected, file_table_area)
 
 
+class TestCreateDisplaySettings(SimpleTestCase):
+
+    def setUp(self):
+        schemadir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_schemas'))
+
+        self.schema_mappings = pds_schema_mappings(schemadir, '*.xsd')
+
+        tests_path = os.path.abspath(os.path.join('photometrics', 'tests'))
+        self.test_raw_filename = os.path.join(tests_path, 'mef_raw_test_frame.fits')
+        self.test_raw_header, table, cattype = open_fits_catalog(self.test_raw_filename)
+        test_proc_header = os.path.join(tests_path, 'example_lco_proc_hdr')
+        self.test_proc_header = fits.Header.fromtextfile(test_proc_header)
+        lco_calib_prihdr = fits.Header.fromtextfile(test_proc_header)
+        lco_calib_prihdr["OBSTYPE"] = "DARK"
+        for keyword in ['L1IDDARK', 'L1STATDA', 'L1IDFLAT', 'L1STATFL', 'L1MEAN', 'L1MEDIAN', 'L1SIGMA', 'L1FWHM', 'L1ELLIP', 'L1ELLIPA', 'WCSERR']:
+            lco_calib_prihdr.remove(keyword)
+        lco_bpm_exthdr = fits.Header.fromtextfile(os.path.join(tests_path, 'example_lco_calib_bpmhdr'))
+        lco_err_exthdr = fits.Header.fromtextfile(os.path.join(tests_path, 'example_lco_calib_errhdr'))
+        self.test_lco_calib_header = [lco_calib_prihdr, lco_bpm_exthdr, lco_err_exthdr]
+
+        kpno_prihdr = fits.Header.fromtextfile(os.path.join(tests_path, 'example_kpno_mef_prihdr'))
+        kpno_extnhdr = fits.Header.fromtextfile(os.path.join(tests_path, 'example_kpno_mef_extnhdr'))
+        self.test_kpno_header = [kpno_prihdr,]
+        for extn in range(1, 4+1):
+            kpno_extnhdr['extver'] = extn
+            kpno_extnhdr['extname'] = 'im' + str(extn)
+            kpno_extnhdr['imageid'] = extn
+            self.test_kpno_header.append(kpno_extnhdr)
+
+        self.maxDiff = None
+
+    def compare_xml(self, expected, xml_element):
+        """Compare the expected XML string <expected> with the passed etree.Element
+        in <xml_element>
+        """
+
+        obj1 = objectify.fromstring(expected)
+        expect = etree.tostring(obj1, pretty_print=True)
+        result = etree.tostring(xml_element, pretty_print=True)
+
+        self.assertEquals(expect.decode("utf-8"), result.decode("utf-8"))
+
+    def test_raw_frame_single_amp(self):
+        expected = '''
+          <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
+            <Local_Internal_Reference>
+              <local_identifier_reference>tfn1m001-fa11-20211013-0095-e92</local_identifier_reference>
+              <local_reference_type>display_settings_to_array</local_reference_type>
+            </Local_Internal_Reference>
+          </disp:Display_Settings>'''
+
+        display_settings = create_display_settings('tfn1m001-fa11-20211013-0095-e92.fits', self.schema_mappings)
+
+        self.compare_xml(expected, display_settings)
+
+    def test_raw_frame_multi_amp(self):
+        expected = '''
+          <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
+            <Local_Internal_Reference>
+              <local_identifier_reference>amp1_image</local_identifier_reference>
+              <local_identifier_reference>amp2_image</local_identifier_reference>
+              <local_identifier_reference>amp3_image</local_identifier_reference>
+              <local_identifier_reference>amp4_image</local_identifier_reference>
+              <local_reference_type>display_settings_to_array</local_reference_type>
+            </Local_Internal_Reference>
+          </disp:Display_Settings>'''
+
+        extension_names = ['amp1_image', 'amp2_image', 'amp3_image', 'amp4_image']
+
+        display_settings = create_display_settings(extension_names, self.schema_mappings)
+
+        self.compare_xml(expected, display_settings)
+
+
 class TestCreateDisciplineArea(SimpleTestCase):
 
     def setUp(self):
@@ -1274,41 +1348,8 @@ class TestCreateDisciplineArea(SimpleTestCase):
               <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
                 <Local_Internal_Reference>
                   <local_identifier_reference>ccd1_image</local_identifier_reference>
-                  <local_reference_type>display_settings_to_array</local_reference_type>
-                </Local_Internal_Reference>
-                <disp:Display_Direction>
-                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
-                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
-                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
-                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
-                </disp:Display_Direction>
-              </disp:Display_Settings>
-              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
-                <Local_Internal_Reference>
                   <local_identifier_reference>ccd2_image</local_identifier_reference>
-                  <local_reference_type>display_settings_to_array</local_reference_type>
-                </Local_Internal_Reference>
-                <disp:Display_Direction>
-                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
-                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
-                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
-                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
-                </disp:Display_Direction>
-              </disp:Display_Settings>
-              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
-                <Local_Internal_Reference>
                   <local_identifier_reference>ccd3_image</local_identifier_reference>
-                  <local_reference_type>display_settings_to_array</local_reference_type>
-                </Local_Internal_Reference>
-                <disp:Display_Direction>
-                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
-                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
-                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
-                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
-                </disp:Display_Direction>
-              </disp:Display_Settings>
-              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
-                <Local_Internal_Reference>
                   <local_identifier_reference>ccd4_image</local_identifier_reference>
                   <local_reference_type>display_settings_to_array</local_reference_type>
                 </Local_Internal_Reference>
@@ -1322,6 +1363,9 @@ class TestCreateDisciplineArea(SimpleTestCase):
               <img:Imaging xmlns:img="http://pds.nasa.gov/pds4/img/v1">
                 <Local_Internal_Reference>
                   <local_identifier_reference>ccd1_image</local_identifier_reference>
+                  <local_identifier_reference>ccd2_image</local_identifier_reference>
+                  <local_identifier_reference>ccd3_image</local_identifier_reference>
+                  <local_identifier_reference>ccd4_image</local_identifier_reference>
                   <local_reference_type>imaging_parameters_to_image_object</local_reference_type>
                 </Local_Internal_Reference>
                 <img:Exposure>
@@ -1335,6 +1379,9 @@ class TestCreateDisciplineArea(SimpleTestCase):
                 <geom:Image_Display_Geometry>
                   <Local_Internal_Reference>
                     <local_identifier_reference>ccd1_image</local_identifier_reference>
+                    <local_identifier_reference>ccd2_image</local_identifier_reference>
+                    <local_identifier_reference>ccd3_image</local_identifier_reference>
+                    <local_identifier_reference>ccd4_image</local_identifier_reference>
                     <local_reference_type>display_to_data_object</local_reference_type>
                   </Local_Internal_Reference>
                   <geom:Display_Direction>
@@ -1367,41 +1414,8 @@ class TestCreateDisciplineArea(SimpleTestCase):
               <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
                 <Local_Internal_Reference>
                   <local_identifier_reference>amp1_image</local_identifier_reference>
-                  <local_reference_type>display_settings_to_array</local_reference_type>
-                </Local_Internal_Reference>
-                <disp:Display_Direction>
-                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
-                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
-                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
-                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
-                </disp:Display_Direction>
-              </disp:Display_Settings>
-              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
-                <Local_Internal_Reference>
                   <local_identifier_reference>amp2_image</local_identifier_reference>
-                  <local_reference_type>display_settings_to_array</local_reference_type>
-                </Local_Internal_Reference>
-                <disp:Display_Direction>
-                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
-                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
-                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
-                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
-                </disp:Display_Direction>
-              </disp:Display_Settings>
-              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
-                <Local_Internal_Reference>
                   <local_identifier_reference>amp3_image</local_identifier_reference>
-                  <local_reference_type>display_settings_to_array</local_reference_type>
-                </Local_Internal_Reference>
-                <disp:Display_Direction>
-                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
-                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
-                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
-                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
-                </disp:Display_Direction>
-              </disp:Display_Settings>
-              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
-                <Local_Internal_Reference>
                   <local_identifier_reference>amp4_image</local_identifier_reference>
                   <local_reference_type>display_settings_to_array</local_reference_type>
                 </Local_Internal_Reference>
@@ -1415,6 +1429,9 @@ class TestCreateDisciplineArea(SimpleTestCase):
               <img:Imaging xmlns:img="http://pds.nasa.gov/pds4/img/v1">
                 <Local_Internal_Reference>
                   <local_identifier_reference>amp1_image</local_identifier_reference>
+                  <local_identifier_reference>amp2_image</local_identifier_reference>
+                  <local_identifier_reference>amp3_image</local_identifier_reference>
+                  <local_identifier_reference>amp4_image</local_identifier_reference>
                   <local_reference_type>imaging_parameters_to_image_object</local_reference_type>
                 </Local_Internal_Reference>
                 <img:Exposure>
@@ -1430,6 +1447,9 @@ class TestCreateDisciplineArea(SimpleTestCase):
                 <geom:Image_Display_Geometry>
                   <Local_Internal_Reference>
                     <local_identifier_reference>amp1_image</local_identifier_reference>
+                    <local_identifier_reference>amp2_image</local_identifier_reference>
+                    <local_identifier_reference>amp3_image</local_identifier_reference>
+                    <local_identifier_reference>amp4_image</local_identifier_reference>
                     <local_reference_type>display_to_data_object</local_reference_type>
                   </Local_Internal_Reference>
                   <geom:Display_Direction>

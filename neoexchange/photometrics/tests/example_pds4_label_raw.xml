@@ -75,41 +75,8 @@
       <disp:Display_Settings>
         <Local_Internal_Reference>
           <local_identifier_reference>amp1_image</local_identifier_reference>
-          <local_reference_type>display_settings_to_array</local_reference_type>
-        </Local_Internal_Reference>
-        <disp:Display_Direction>
-          <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
-          <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
-          <disp:vertical_display_axis>Line</disp:vertical_display_axis>
-          <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
-        </disp:Display_Direction>
-      </disp:Display_Settings>
-      <disp:Display_Settings>
-        <Local_Internal_Reference>
           <local_identifier_reference>amp2_image</local_identifier_reference>
-          <local_reference_type>display_settings_to_array</local_reference_type>
-        </Local_Internal_Reference>
-        <disp:Display_Direction>
-          <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
-          <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
-          <disp:vertical_display_axis>Line</disp:vertical_display_axis>
-          <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
-        </disp:Display_Direction>
-      </disp:Display_Settings>
-      <disp:Display_Settings>
-        <Local_Internal_Reference>
           <local_identifier_reference>amp3_image</local_identifier_reference>
-          <local_reference_type>display_settings_to_array</local_reference_type>
-        </Local_Internal_Reference>
-        <disp:Display_Direction>
-          <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
-          <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
-          <disp:vertical_display_axis>Line</disp:vertical_display_axis>
-          <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
-        </disp:Display_Direction>
-      </disp:Display_Settings>
-      <disp:Display_Settings>
-        <Local_Internal_Reference>
           <local_identifier_reference>amp4_image</local_identifier_reference>
           <local_reference_type>display_settings_to_array</local_reference_type>
         </Local_Internal_Reference>
@@ -123,6 +90,9 @@
       <img:Imaging>
         <Local_Internal_Reference>
           <local_identifier_reference>amp1_image</local_identifier_reference>
+          <local_identifier_reference>amp2_image</local_identifier_reference>
+          <local_identifier_reference>amp3_image</local_identifier_reference>
+          <local_identifier_reference>amp4_image</local_identifier_reference>
           <local_reference_type>imaging_parameters_to_image_object</local_reference_type>
         </Local_Internal_Reference>
         <img:Exposure>
@@ -138,6 +108,9 @@
         <geom:Image_Display_Geometry>
           <Local_Internal_Reference>
             <local_identifier_reference>amp1_image</local_identifier_reference>
+            <local_identifier_reference>amp2_image</local_identifier_reference>
+            <local_identifier_reference>amp3_image</local_identifier_reference>
+            <local_identifier_reference>amp4_image</local_identifier_reference>
             <local_reference_type>display_to_data_object</local_reference_type>
           </Local_Internal_Reference>
           <geom:Display_Direction>

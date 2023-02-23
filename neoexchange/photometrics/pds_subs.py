@@ -241,6 +241,7 @@ def create_discipline_area(header, filename, nsmap):
     array_name_prefix = 'ccd'
     if origin == 'LCOGT':
         array_name_prefix = 'amp'
+    area_names = []
     for extn, extn_header in enumerate(headers):
 
         area_name = os.path.basename(filename)
@@ -260,24 +261,21 @@ def create_discipline_area(header, filename, nsmap):
         naxis1 = extn_header.get('naxis1', 0)
         naxis2 = extn_header.get('naxis2', 0)
         if naxis == 2 and naxis1 > 0 and naxis2 > 0:
-            # Create Display Settings discipline area
-            disp_settings = create_display_settings(area_name, nsmap)
-            # Create Display Direction discipline area
-            disp_direction = create_display_direction(nsmap, 'PDS4::DISP')
-            disp_settings.append(disp_direction)
-            discp_area.append(disp_settings)
+            area_names.append(area_name)
+
+    # Create Display Settings discipline area
+    disp_settings = create_display_settings(area_names, nsmap)
+    # Create Display Direction discipline area
+    disp_direction = create_display_direction(nsmap, 'PDS4::DISP')
+    disp_settings.append(disp_direction)
+    discp_area.append(disp_settings)
 
     # Create Imaging area
-    area_name = filename
-    if len(headers) > 1:
-        extn = 1
-        if origin != 'LCOGT' or obstype not in ['BIAS', 'DARK', 'SKYFLAT']:
-            area_name = f"{array_name_prefix}{extn}_image"
-    img_area = create_image_area(headers[0], area_name, nsmap)
+    img_area = create_image_area(headers[0], area_names, nsmap)
     discp_area.append(img_area)
-    # Create Geometry area
-    geom = create_geometry(area_name, nsmap)
-    img_disp = create_imgdisp_geometry(area_name, nsmap)
+    # Create Geometry area (1st parameter (filenaname/area_names) ignored)
+    geom = create_geometry(area_names, nsmap)
+    img_disp = create_imgdisp_geometry(area_names, nsmap)
     geom.append(img_disp)    
     # Create Display Direction discipline area
     disp_direction = create_display_direction(nsmap, 'PDS4::GEOM')
@@ -291,12 +289,25 @@ def create_discipline_area(header, filename, nsmap):
 
     return discp_area
 
-def create_display_settings(filename, nsmap):
+def create_display_settings(filenames, nsmap):
+    """Create the <Display_Settings> part of the Discipline_Area
+    <filenames> is a list or single string of the FITS extensions (single
+    or multi-amp).
+    nsmap is the dictionary of PDS schema mappings which must contain a
+    value for 'PDS4::DISP'['namespace'] in order to create the tags in the
+    correct XML namespace.
+    """
+
+    if type(filenames) != list:
+        filenames = [filenames, ]
+    else:
+        filenames = filenames
 
     etree.register_namespace("disp", nsmap['PDS4::DISP']['namespace'])
     disp_settings = etree.Element(etree.QName(nsmap['PDS4::DISP']['namespace'],"Display_Settings"))
     lir = etree.SubElement(disp_settings, "Local_Internal_Reference")
-    etree.SubElement(lir, "local_identifier_reference").text = os.path.splitext(filename)[0]
+    for filename in filenames:
+        etree.SubElement(lir, "local_identifier_reference").text = os.path.splitext(filename)[0]
     etree.SubElement(lir, "local_reference_type").text = "display_settings_to_array"
 
     return disp_settings
@@ -314,15 +325,21 @@ def create_display_direction(nsmap, namespace):
 
     return disp_direction
 
-def create_image_area(header, filename, nsmap):
+def create_image_area(header, filenames, nsmap):
     """Create an img:Imaging area with img:Exposure and img:Optical_Filter
     subareas. The new area XML Element is returned"""
+
+    if type(filenames) != list:
+        filenames = [filenames, ]
+    else:
+        filenames = filenames
 
     img_ns = nsmap['PDS4::IMG']['namespace']
     etree.register_namespace("img", img_ns)
     img_area = etree.Element(etree.QName(img_ns,"Imaging"))
     lir = etree.SubElement(img_area, "Local_Internal_Reference")
-    etree.SubElement(lir, "local_identifier_reference").text = os.path.splitext(filename)[0]
+    for filename in filenames:
+        etree.SubElement(lir, "local_identifier_reference").text = os.path.splitext(filename)[0]
     etree.SubElement(lir, "local_reference_type").text = "imaging_parameters_to_image_object"
     # Create Image Exposure and Optical Filter sections
     img_exposure = create_image_exposure(header, nsmap)
@@ -372,13 +389,26 @@ def create_geometry(filename, nsmap):
 
     return geometry
 
-def create_imgdisp_geometry(filename, nsmap):
+def create_imgdisp_geometry(filenames, nsmap):
+    """Create the <Image_Display_Geometry> part of the Discipline_Area
+    <filenames> is a list or single string of the FITS extensions (single
+    or multi-amp).
+    nsmap is the dictionary of PDS schema mappings which must contain a
+    value for 'PDS4::GEOM'['namespace'] in order to create the tags in the
+    correct XML namespace.
+    """
+
+    if type(filenames) != list:
+        filenames = [filenames, ]
+    else:
+        filenames = filenames
 
     geom_ns = nsmap['PDS4::GEOM']['namespace']
     etree.register_namespace("geom", geom_ns)
     img_disp_geometry = etree.Element(etree.QName(geom_ns, "Image_Display_Geometry"))
     lir = etree.SubElement(img_disp_geometry, "Local_Internal_Reference")
-    etree.SubElement(lir, "local_identifier_reference").text = os.path.splitext(filename)[0]
+    for filename in filenames:
+        etree.SubElement(lir, "local_identifier_reference").text = os.path.splitext(filename)[0]
     etree.SubElement(lir, "local_reference_type").text = "display_to_data_object"
 
     return img_disp_geometry
