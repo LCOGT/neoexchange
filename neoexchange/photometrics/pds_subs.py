@@ -4,6 +4,7 @@ import shutil
 import warnings
 from glob import glob
 from math import ceil
+from collections import OrderedDict
 from datetime import datetime, timedelta
 
 from lxml import etree
@@ -919,6 +920,40 @@ def create_reference_list(collection_type):
     etree.SubElement(int_reference, "comment").text = f"Reference is to the text file which gives an overview of the LCOGT {collection_type} Data Collection."
 
     return reference_list
+
+def preamble_mapping(schema_mappings):
+    """Return a OrderedDict mapping from PDS schemas to the XML strings
+    for the XML label preamble. Supports multiple versions based on the
+    'version' key of the schema's mapping dict e.g.
+    schema_mappings[schema]['version']
+    """
+
+    mapping = OrderedDict([
+                            ('PDS4::PDS',  {'1.15.0.0' : b'''<?xml-model href="https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1F00.sch"
+            schematypens="http://purl.oclc.org/dsdl/schematron"?>''',
+                                            '1.19.0.0' : b'''<?xml-model href="https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1J00.sch"
+            schematypens="http://purl.oclc.org/dsdl/schematron"?>'''}),
+                            ('PDS4::DISP', {'1.5.0.0' : b'''<?xml-model href="https://pds.nasa.gov/pds4/disp/v1/PDS4_DISP_1F00_1500.sch"
+            schematypens="http://purl.oclc.org/dsdl/schematron"?>''',
+                                            '1.5.1.0' : b'''<?xml-model href="https://pds.nasa.gov/pds4/disp/v1/PDS4_DISP_1J00_1510.sch"
+            schematypens="http://purl.oclc.org/dsdl/schematron"?>'''}),
+                            ('PDS4::IMG',  {'1.8.1.0' : b'''<?xml-model href="https://pds.nasa.gov/pds4/img/v1/PDS4_IMG_1F00_1810.sch"
+            schematypens="http://purl.oclc.org/dsdl/schematron"?>''',
+                                            '1.8.7.0' : b'''<?xml-model href="https://pds.nasa.gov/pds4/img/v1/PDS4_IMG_1J00_1870.sch"
+            schematypens="http://purl.oclc.org/dsdl/schematron"?>'''}),
+                            ('PDS4::GEOM', {'1.9.1.0' : b'''<?xml-model href="https://pds.nasa.gov/pds4/geom/v1/PDS4_GEOM_1F00_1910.sch"
+            schematypens="http://purl.oclc.org/dsdl/schematron"?>''',
+                                            '1.9.6.0' : b'''<?xml-model href="https://pds.nasa.gov/pds4/geom/v1/PDS4_GEOM_1J00_1960.sch"
+            schematypens="http://purl.oclc.org/dsdl/schematron"?>'''})
+                        ])
+
+    output_mapping = OrderedDict()
+    for key in mapping.keys():
+        if key in schema_mappings:
+            version = schema_mappings[key]['version']
+            output_mapping[key] = mapping[key][version]
+
+    return output_mapping
 
 def write_product_label_xml(filepath, xml_file, schema_root, mod_time=None):
     """Create a PDS4 XML product label in <xml_file> from the FITS file

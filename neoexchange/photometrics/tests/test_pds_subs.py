@@ -1558,6 +1558,57 @@ class TestCreateDisciplineArea(SimpleTestCase):
         self.compare_xml(expected, file_obs_area)
 
 
+class TestPreambleMapping(SimpleTestCase):
+
+    def setUp(self):
+        self.schemadir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_schemas'))
+        self.schema_mappings = pds_schema_mappings(self.schemadir, '*.xsd')
+        new_schemadir = os.path.abspath(os.path.join('photometrics', 'configs', 'PDS_schemas'))
+        self.new_schema_mappings = pds_schema_mappings(new_schemadir, '*.xsd')
+        self.pds_schema_only = {'PDS4::PDS' : self.schema_mappings['PDS4::PDS']}
+
+        self.test_orig_dict = OrderedDict([('PDS4::PDS',
+              b'<?xml-model href="https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1F00.sch"\n            schematypens="http://purl.oclc.org/dsdl/schematron"?>'),
+             ('PDS4::DISP',
+              b'<?xml-model href="https://pds.nasa.gov/pds4/disp/v1/PDS4_DISP_1F00_1500.sch"\n            schematypens="http://purl.oclc.org/dsdl/schematron"?>'),
+             ('PDS4::IMG',
+              b'<?xml-model href="https://pds.nasa.gov/pds4/img/v1/PDS4_IMG_1F00_1810.sch"\n            schematypens="http://purl.oclc.org/dsdl/schematron"?>'),
+             ('PDS4::GEOM',
+              b'<?xml-model href="https://pds.nasa.gov/pds4/geom/v1/PDS4_GEOM_1F00_1910.sch"\n            schematypens="http://purl.oclc.org/dsdl/schematron"?>')
+              ])
+
+        self.test_new_dict = OrderedDict([('PDS4::PDS',
+              b'<?xml-model href="https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1J00.sch"\n            schematypens="http://purl.oclc.org/dsdl/schematron"?>'),
+             ('PDS4::DISP',
+              b'<?xml-model href="https://pds.nasa.gov/pds4/disp/v1/PDS4_DISP_1J00_1510.sch"\n            schematypens="http://purl.oclc.org/dsdl/schematron"?>'),
+             ('PDS4::IMG',
+              b'<?xml-model href="https://pds.nasa.gov/pds4/img/v1/PDS4_IMG_1J00_1870.sch"\n            schematypens="http://purl.oclc.org/dsdl/schematron"?>'),
+             ('PDS4::GEOM',
+              b'<?xml-model href="https://pds.nasa.gov/pds4/geom/v1/PDS4_GEOM_1J00_1960.sch"\n            schematypens="http://purl.oclc.org/dsdl/schematron"?>')
+              ])
+
+        self.test_pdsonly_dict = OrderedDict([('PDS4::PDS' , self.test_orig_dict['PDS4::PDS'])])
+        self.maxDiff = None
+
+    def test_original_mapping(self):
+
+        mapping_dict = preamble_mapping(self.schema_mappings)
+
+        self.assertEqual(self.test_orig_dict, mapping_dict)
+
+    def test_original_mapping_pds(self):
+
+        mapping_dict = preamble_mapping(self.pds_schema_only)
+
+        self.assertEqual(self.test_pdsonly_dict, mapping_dict)
+
+    def test_new_mapping(self):
+
+        mapping_dict = preamble_mapping(self.new_schema_mappings)
+
+        self.assertEqual(self.test_new_dict, mapping_dict)
+
+
 class TestWritePDSLabel(TestCase):
 
     def setUp(self):
