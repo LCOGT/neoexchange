@@ -1038,18 +1038,10 @@ def write_product_label_xml(filepath, xml_file, schema_root, mod_time=None):
     processedImage.append(file_area)
 
     # Wrap in ElementTree to write out to XML file
-    preamble = b'''<?xml-model href="https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1F00.sch"
-            schematypens="http://purl.oclc.org/dsdl/schematron"?>
-    <?xml-model href="https://pds.nasa.gov/pds4/disp/v1/PDS4_DISP_1F00_1500.sch"
-            schematypens="http://purl.oclc.org/dsdl/schematron"?>
-    <?xml-model href="https://pds.nasa.gov/pds4/img/v1/PDS4_IMG_1F00_1810.sch"
-            schematypens="http://purl.oclc.org/dsdl/schematron"?>
-    <?xml-model href="https://pds.nasa.gov/pds4/geom/v1/PDS4_GEOM_1F00_1910.sch"
-            schematypens="http://purl.oclc.org/dsdl/schematron"?>'''
-    if proc_level == 'ddp':
-        preamble = b'''<?xml-model href="https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1F00.sch"
-            schematypens="http://purl.oclc.org/dsdl/schematron"?>'''
-
+    preamble_xml_mapping = preamble_mapping(schema_mappings)
+    preamble = b''
+    for schema in preamble_xml_mapping.keys():
+        preamble += preamble_xml_mapping[schema] + b'\n'
     doc = preamble + etree.tostring(processedImage)
     tree = etree.ElementTree(etree.fromstring(doc))
     tree.write(xml_file, pretty_print=True, standalone=None,
@@ -1103,18 +1095,10 @@ def write_product_collection_xml(filepath, xml_file, schema_root, mod_time=None)
     productCollection.append(file_area)
 
     # Wrap in ElementTree to write out to XML file
-    preambles = {'PDS4::PDS' : b'''<?xml-model href="https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1F00.sch"
-            schematypens="http://purl.oclc.org/dsdl/schematron"?>''',
-                'PDS4::DISP' : b'''<?xml-model href="https://pds.nasa.gov/pds4/disp/v1/PDS4_DISP_1F00_1500.sch"
-            schematypens="http://purl.oclc.org/dsdl/schematron"?>''',
-                'PDS4::IMG' : b'''<?xml-model href="https://pds.nasa.gov/pds4/img/v1/PDS4_IMG_1F00_1810.sch"
-            schematypens="http://purl.oclc.org/dsdl/schematron"?>''',
-                'PDS4::GEOM' : b'''<?xml-model href="https://pds.nasa.gov/pds4/geom/v1/PDS4_GEOM_1F00_1910.sch"
-            schematypens="http://purl.oclc.org/dsdl/schematron"?>'''
-                }
+    preamble_xml_mapping = preamble_mapping(schema_mappings)
     preamble = b''
-    for schema in schemas_needed.keys():
-        preamble += preambles[schema] + b'\n'
+    for schema in preamble_xml_mapping.keys():
+        preamble += preamble_xml_mapping[schema] + b'\n'
     doc = preamble + etree.tostring(productCollection)
     tree = etree.ElementTree(etree.fromstring(doc))
     tree.write(xml_file, pretty_print=True, standalone=None,
