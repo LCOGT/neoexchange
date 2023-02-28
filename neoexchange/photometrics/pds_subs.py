@@ -1230,14 +1230,17 @@ def find_related_frames(block):
     for red_frame_id in red_frame_ids:
         archive_url = f"{settings.ARCHIVE_API_URL}frames/{str(red_frame_id)}/related/"
         data = lco_api_call(archive_url)
-        for frame in data:
-            logger.debug(f"{frame['id']}: {frame['filename']}")
-            if frame['id'] not in frame_ids:
-                logger.debug("New frame")
-                frame_ids.append(frame['id'])
-                related_frames[''].append(frame)
-            else:
-                logger.debug("Already know this frame")
+        if data is not None:
+            for frame in data:
+                logger.debug(f"{frame['id']}: {frame['filename']}")
+                if frame['id'] not in frame_ids:
+                    logger.debug("New frame")
+                    frame_ids.append(frame['id'])
+                    related_frames[''].append(frame)
+                else:
+                    logger.debug("Already know this frame")
+        else:
+            logger.warning(f"Got no related frame data for frame id {red_frame_id}. Download may be incomplete")
 
     return related_frames
 
