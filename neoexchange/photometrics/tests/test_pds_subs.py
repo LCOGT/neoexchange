@@ -1481,29 +1481,7 @@ class TestCreateDisciplineArea(SimpleTestCase):
               <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
                 <Local_Internal_Reference>
                   <local_identifier_reference>tfn1m001-fa11-20211013-dark-bin1x1</local_identifier_reference>
-                  <local_reference_type>display_settings_to_array</local_reference_type>
-                </Local_Internal_Reference>
-                <disp:Display_Direction>
-                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
-                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
-                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
-                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
-                </disp:Display_Direction>
-              </disp:Display_Settings>
-              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
-                <Local_Internal_Reference>
                   <local_identifier_reference>bpm_image</local_identifier_reference>
-                  <local_reference_type>display_settings_to_array</local_reference_type>
-                </Local_Internal_Reference>
-                <disp:Display_Direction>
-                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
-                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
-                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
-                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
-                </disp:Display_Direction>
-              </disp:Display_Settings>
-              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
-                <Local_Internal_Reference>
                   <local_identifier_reference>err_image</local_identifier_reference>
                   <local_reference_type>display_settings_to_array</local_reference_type>
                 </Local_Internal_Reference>
@@ -1517,6 +1495,8 @@ class TestCreateDisciplineArea(SimpleTestCase):
               <img:Imaging xmlns:img="http://pds.nasa.gov/pds4/img/v1">
                 <Local_Internal_Reference>
                     <local_identifier_reference>tfn1m001-fa11-20211013-dark-bin1x1</local_identifier_reference>
+                    <local_identifier_reference>bpm_image</local_identifier_reference>
+                    <local_identifier_reference>err_image</local_identifier_reference>
                     <local_reference_type>imaging_parameters_to_image_object</local_reference_type>
                   </Local_Internal_Reference>
                 <img:Exposure>
@@ -1532,6 +1512,8 @@ class TestCreateDisciplineArea(SimpleTestCase):
                 <geom:Image_Display_Geometry>
                   <Local_Internal_Reference>
                     <local_identifier_reference>tfn1m001-fa11-20211013-dark-bin1x1</local_identifier_reference>
+                    <local_identifier_reference>bpm_image</local_identifier_reference>
+                    <local_identifier_reference>err_image</local_identifier_reference>
                     <local_reference_type>display_to_data_object</local_reference_type>
                   </Local_Internal_Reference>
                   <geom:Display_Direction>
