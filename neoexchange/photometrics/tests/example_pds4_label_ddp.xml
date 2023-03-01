@@ -171,9 +171,9 @@
         <Field_Character>
           <name>aprad</name>
           <field_number>11</field_number>
-          <field_location unit="byte">135</field_location>
+          <field_location unit="byte">136</field_location>
           <data_type>ASCII_Real</data_type>
-          <field_length unit="byte">6</field_length>
+          <field_length unit="byte">5</field_length>
           <description>radius in pixels of the aperture used for the photometry measurement</description>
         </Field_Character>
       </Record_Character>

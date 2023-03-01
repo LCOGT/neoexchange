@@ -122,8 +122,10 @@ def write_dartformat_file(table, filepath, aprad=0.0):
     def_fmt = '%.4f'
     formatters = {  'file' : '%-36.36s', 'julian_date' : '%15.7f', 'mag' : def_fmt, 'sig' : def_fmt,
                     'ZP' : def_fmt, 'ZP_sig' : def_fmt, 'inst_mag' : def_fmt, 'inst_sig' : def_fmt,
-                    'aprad' : '%.2f'
+                    'aprad' : '%5.2f'
                  }
+#    col_starts = (1, 39, 55, 65, 72, 82, 90, 100, 110, 118, 135)
+#    col_ends = (37, 54, 63, 71, 80, 88, 98, 108, 116, 133, 140)
 
     # Create directory path if it doesn't exist
     filepath_dir = os.path.dirname(filepath)
@@ -133,11 +135,12 @@ def write_dartformat_file(table, filepath, aprad=0.0):
     # Replace truncated '.lda' in filename with real name.
     # Also add a column for aperture radius
     new_names = [x.replace('.ldac','.fits').replace('.lda','.fits').replace('e91','e92') for x in table['filename']]
-    table.replace_column('filename', new_names)
-    if 'aprad' not in table.colnames:
-        aprad_column = Column(np.full(len(table), aprad), name='aprad')
-        table.add_column(aprad_column)
-    table[input_col_names].write(filepath, format='ascii.fixed_width', names=output_col_names,
+    new_table = table.copy()
+    new_table.replace_column('filename', new_names)
+    if 'aprad' not in new_table.colnames:
+        aprad_column = Column(np.full(len(new_table), aprad), name='aprad')
+        new_table.add_column(aprad_column)
+    new_table[input_col_names].write(filepath, format='ascii.fixed_width', names=output_col_names,
         comment=False, delimiter='', formats=formatters)
 
     return

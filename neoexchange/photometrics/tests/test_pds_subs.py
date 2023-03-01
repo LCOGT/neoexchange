@@ -916,10 +916,10 @@ class TestCreateFileAreaTable(SimpleTestCase):
             lines = table_file.readlines()
         self.test_lc_file = os.path.join(self.test_dir, 'lcogt_1m0_01_fa11_20211013_65803didymos_photometry.tab')
         #print("Original length=", len(lines))
-        lines.append('\n')
-        lines.append('\n')
+        lines.append('\r\n')
+        lines.append('\r\n')
         #print("New length=", len(lines))
-        with open(self.test_lc_file, 'w') as fp:
+        with open(self.test_lc_file, 'w', newline='\r\n') as fp:
             fp.writelines(lines)
 
         self.maxDiff = None
@@ -1038,9 +1038,9 @@ class TestCreateFileAreaTable(SimpleTestCase):
                 <Field_Character>
                   <name>aprad</name>
                   <field_number>11</field_number>
-                  <field_location unit="byte">135</field_location>
+                  <field_location unit="byte">136</field_location>
                   <data_type>ASCII_Real</data_type>
-                  <field_length unit="byte">6</field_length>
+                  <field_length unit="byte">5</field_length>
                   <description>radius in pixels of the aperture used for the photometry measurement</description>
                 </Field_Character>
               </Record_Character>
@@ -1154,9 +1154,9 @@ class TestCreateFileAreaTable(SimpleTestCase):
                 <Field_Character>
                   <name>aprad</name>
                   <field_number>11</field_number>
-                  <field_location unit="byte">135</field_location>
+                  <field_location unit="byte">136</field_location>
                   <data_type>ASCII_Real</data_type>
-                  <field_length unit="byte">6</field_length>
+                  <field_length unit="byte">5</field_length>
                   <description>radius in pixels of the aperture used for the photometry measurement</description>
                 </Field_Character>
               </Record_Character>
@@ -2702,9 +2702,9 @@ class TestExportBlockToPDS(TestCase):
     def test_create_dart_lightcurve(self):
         expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_tfn-PP_fa11_20211013_12345_65803didymos_photometry.tab')
         expected_lines = [
-        '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  filter  SExtractor_flag  aprad',
-        ' tfn1m001-fa11-20211012-0073-e92.fits  2459500.3339392  14.8447  0.0397  27.1845  0.0394  -12.3397    0.0052       r                0  10.00',
-        ' tfn1m001-fa11-20211012-0074-e92.fits  2459500.3345790  14.8637  0.0293  27.1824  0.0288  -12.3187    0.0053       r                3  10.00'
+        '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  filter  SExtractor_flag  aprad \r\n',
+        ' tfn1m001-fa11-20211012-0073-e92.fits  2459500.3339392  14.8447  0.0397  27.1845  0.0394  -12.3397    0.0052       r                0  10.00 \r\n',
+        ' tfn1m001-fa11-20211012-0074-e92.fits  2459500.3345790  14.8637  0.0293  27.1824  0.0288  -12.3187    0.0053       r                3  10.00 \r\n'
         ]
 
         test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_photompipe.dat'))
@@ -2719,19 +2719,20 @@ class TestExportBlockToPDS(TestCase):
         self.assertEqual(expected_lc_file, dart_lc_file)
         self.assertTrue(os.path.exists(expected_lc_file))
 
-        with open(dart_lc_file, 'r') as table_file:
+        # Open with `newline=''` to suppress newline conversion
+        with open(dart_lc_file, 'r', newline='') as table_file:
             lines = table_file.readlines()
 
         self.assertEqual(63, len(lines))
         for i, expected_line in enumerate(expected_lines):
-            self.assertEqual(expected_line, lines[i].rstrip())
+            self.assertEqual(expected_line, lines[i])
 
     def test_create_dart_lightcurve_default(self):
         expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_tfn-PP_fa11_20211013_12345_65803didymos_photometry.tab')
         expected_lines = [
-        '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  filter  SExtractor_flag  aprad',
-        ' tfn1m001-fa11-20211012-0073-e92.fits  2459500.3339392  14.8447  0.0397  27.1845  0.0394  -12.3397    0.0052       r                0  10.00',
-        ' tfn1m001-fa11-20211012-0074-e92.fits  2459500.3345790  14.8637  0.0293  27.1824  0.0288  -12.3187    0.0053       r                3  10.00'
+        '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  filter  SExtractor_flag  aprad \r\n',
+        ' tfn1m001-fa11-20211012-0073-e92.fits  2459500.3339392  14.8447  0.0397  27.1845  0.0394  -12.3397    0.0052       r                0  10.00 \r\n',
+        ' tfn1m001-fa11-20211012-0074-e92.fits  2459500.3345790  14.8637  0.0293  27.1824  0.0288  -12.3187    0.0053       r                3  10.00 \r\n'
         ]
 
         test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_photompipe.dat'))
@@ -2747,19 +2748,19 @@ class TestExportBlockToPDS(TestCase):
         self.assertEqual(expected_lc_file, dart_lc_file)
         self.assertTrue(os.path.exists(expected_lc_file))
 
-        with open(dart_lc_file, 'r') as table_file:
+        with open(dart_lc_file, 'r', newline='') as table_file:
             lines = table_file.readlines()
 
         self.assertEqual(63, len(lines))
         for i, expected_line in enumerate(expected_lines):
-            self.assertEqual(expected_line, lines[i].rstrip())
+            self.assertEqual(expected_line, lines[i])
 
     def test_create_dart_lightcurve_default_controlphot(self):
         expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_tfn-PP_fa11_20211013_12345_65803didymos_photometry.tab')
         expected_lines = [
-        '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  filter  SExtractor_flag  aprad',
-        ' tfn1m001-fa11-20211012-0073-e92.fits  2459500.3339392  14.8447  0.0397  27.1845  0.0394  -12.3397    0.0052       r                0  10.00',
-        ' tfn1m001-fa11-20211012-0074-e92.fits  2459500.3345790  14.8637  0.0293  27.1824  0.0288  -12.3187    0.0053       r                3  10.00'
+        '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  filter  SExtractor_flag  aprad \r\n',
+        ' tfn1m001-fa11-20211012-0073-e92.fits  2459500.3339392  14.8447  0.0397  27.1845  0.0394  -12.3397    0.0052       r                0  10.00 \r\n',
+        ' tfn1m001-fa11-20211012-0074-e92.fits  2459500.3345790  14.8637  0.0293  27.1824  0.0288  -12.3187    0.0053       r                3  10.00 \r\n'
         ]
 
         test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_photompipe.dat'))
@@ -2784,21 +2785,21 @@ class TestExportBlockToPDS(TestCase):
         self.assertEqual(expected_lc_file, dart_lc_file)
         self.assertTrue(os.path.exists(expected_lc_file))
 
-        with open(dart_lc_file, 'r') as table_file:
+        with open(dart_lc_file, 'r', newline='') as table_file:
             lines = table_file.readlines()
 
         self.assertEqual(63, len(lines))
         for i, expected_line in enumerate(expected_lines):
-            self.assertEqual(expected_line, lines[i].rstrip())
+            self.assertEqual(expected_line, lines[i])
 
     def test_create_dart_lightcurve_srcmeasures(self):
         expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_tfn_fa11_20211013_12345_65803didymos_photometry.tab')
         expected_lc_link = os.path.join(self.test_ddp_daydir, 'LCOGT_TFN-FA11_Lister_20211013.dat')
         expected_lines = [
-        '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  filter  SExtractor_flag  aprad',
-        ' tfn1m001-fa11-20211013-0065-e92.fits  2459500.5312500  14.8447  0.0305  27.0000  0.0300  -12.1553    0.0054      ip                0  10.00',
-        ' tfn1m001-fa11-20211013-0095-e92.fits  2459500.5520833  14.8637  0.0304  27.0000  0.0300  -12.1363    0.0052      ip                3  10.00',
-        ' tfn1m001-fa11-20211013-0125-e92.fits  2459500.5937500  14.8447  0.0304  27.0000  0.0300  -12.1553    0.0051      ip                0  10.00'
+        '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  filter  SExtractor_flag  aprad \r\n',
+        ' tfn1m001-fa11-20211013-0065-e92.fits  2459500.5312500  14.8447  0.0305  27.0000  0.0300  -12.1553    0.0054      ip                0  10.00 \r\n',
+        ' tfn1m001-fa11-20211013-0095-e92.fits  2459500.5520833  14.8637  0.0304  27.0000  0.0300  -12.1363    0.0052      ip                3  10.00 \r\n',
+        ' tfn1m001-fa11-20211013-0125-e92.fits  2459500.5937500  14.8447  0.0304  27.0000  0.0300  -12.1553    0.0051      ip                0  10.00 \r\n'
         ]
 
         dart_lc_file = create_dart_lightcurve(self.test_block, self.test_ddp_daydir, self.test_block, create_symlink=True)
@@ -2807,12 +2808,12 @@ class TestExportBlockToPDS(TestCase):
         self.assertTrue(os.path.exists(expected_lc_file))
         self.assertTrue(os.path.exists(expected_lc_link))
 
-        with open(dart_lc_file, 'r') as table_file:
+        with open(dart_lc_file, 'r', newline='') as table_file:
             lines = table_file.readlines()
 
         self.assertEqual(4, len(lines))
         for i, expected_line in enumerate(expected_lines):
-            self.assertEqual(expected_line, lines[i].rstrip())
+            self.assertEqual(expected_line, lines[i])
 
     def test_export_block_to_pds(self):
         test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_photompipe.dat'))

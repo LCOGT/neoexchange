@@ -862,7 +862,7 @@ def create_file_area_table(filename):
               'inst_sig' : { 'field_location' : 101, 'data_type' : 'ASCII_Real', 'field_length' : 8, 'description' : '1-sigma error on the instrumental magnitude' },
               'filter' : { 'field_location' : 111, 'data_type' : 'ASCII_String', 'field_length' : 6, 'description' : 'Transformed filter used for calibration.' },
               'SExtractor_flag' : { 'field_location' : 119, 'data_type' : 'ASCII_Integer', 'field_length' : 15, 'description' : 'Flags associated with the Source Extractor photometry measurements. See source_extractor_flags.txt in the documents folder for this archive for more detailed description.' },
-              'aprad' : { 'field_location' : 135, 'data_type' : 'ASCII_Real', 'field_length' : 6, 'description' : 'radius in pixels of the aperture used for the photometry measurement' }
+              'aprad' : { 'field_location' : 136, 'data_type' : 'ASCII_Real', 'field_length' : 5, 'description' : 'radius in pixels of the aperture used for the photometry measurement' }
               }
     file_area_table = etree.Element("File_Area_Observational")
     file_element = etree.SubElement(file_area_table, "File")
@@ -1406,7 +1406,8 @@ def create_dart_lightcurve(input_dir, output_dir, block, match='photometry_*.dat
     1) the photometry file and LOG in <input_dir>. or, 
     2) the SourceMeasurements belonging to the Block passed as <input_dir>
     outputting to <output_dir>. Block <block> is used find the directory
-    for the photometry file
+    for the photometry file.
+    The file is converted to CRLF line endings for PDS archiving
     """
 
     warnings.simplefilter('ignore', FITSFixedWarning)
@@ -1453,7 +1454,7 @@ def create_dart_lightcurve(input_dir, output_dir, block, match='photometry_*.dat
 #                print(len(table), aper_radius)
                 if table and aper_radius:
                     phot_filename, pds_name = make_pds_asteroid_name(block.body)
-                    # Format for LC files: 'lcogt_<site>_<inst.>_<YYYYMMDD>_<request #>_<astname#>_photometry.txt'
+                    # Format for LC files: '<origin>_<site>_<inst.>_<YYYYMMDD>_<request #>_<astname#>_photometry.txt'
                     file_parts['dayobs'] = first_frame.midpoint.strftime("%Y%m%d")
                     origin = 'lcogt'
                     observer = 'Lister'
@@ -1463,6 +1464,8 @@ def create_dart_lightcurve(input_dir, output_dir, block, match='photometry_*.dat
                     output_lc_file = f"{origin.lower()}_{file_parts['site']}_{file_parts['instrument']}_{file_parts['dayobs']}_{block.request_number}_{phot_filename}_photometry.tab"
                     output_lc_filepath = os.path.join(output_dir, output_lc_file)
                     write_dartformat_file(table, output_lc_filepath, aper_radius)
+                    # Convert lc file to CRLF endings required by PDS
+                    status = convert_file_to_crlf(output_lc_filepath)
                     # Create DART upload format symlink
                     if create_symlink:
                         symlink_lc_file = f"{origin.upper()}_{file_parts['site'].upper()}-{file_parts['instrument'].upper()}_{observer}_{file_parts['dayobs']}.dat"
@@ -1611,8 +1614,6 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
             logger.error("No light curve file found")
             return [], []
         lc_files += [os.path.basename(dart_lc_file),]
-        # Convert csv file to CRLF endings required by PDS
-        status = convert_file_to_crlf(dart_lc_file)
 
         # Create PDS labels for ddp data
         if verbose: print("Creating ddp PDS labels")
