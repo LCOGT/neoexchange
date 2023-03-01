@@ -1095,7 +1095,7 @@ def write_product_collection_xml(filepath, xml_file, schema_root, mod_time=None)
     productCollection.append(file_area)
 
     # Wrap in ElementTree to write out to XML file
-    preamble_xml_mapping = preamble_mapping(schema_mappings)
+    preamble_xml_mapping = preamble_mapping(schemas_needed)
     preamble = b''
     for schema in preamble_xml_mapping.keys():
         preamble += preamble_xml_mapping[schema] + b'\n'

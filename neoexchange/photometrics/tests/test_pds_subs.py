@@ -2454,7 +2454,7 @@ class TestExportBlockToPDS(TestCase):
         shutil.copy(self.test_file_path, new_name)
         self.test_banzai_files.insert(1, os.path.basename(new_name))
 
-        self.remove = False
+        self.remove = True
         self.debug_print = True
         self.maxDiff = None
 
