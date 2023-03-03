@@ -3038,6 +3038,9 @@ class TestTransferFiles(SimpleTestCase):
         self.test_ddp_daydir = os.path.join(self.expected_root_dir, 'data_lcogtddp')
         self.test_blockdir = 'lcogt_1m0_01_fa11_20211013'
         self.test_daydir = os.path.join(self.test_ddp_daydir, self.test_blockdir)
+        self.test_output_rawdir = os.path.join(self.expected_root_dir, 'data_lcogtraw')
+        self.test_output_rawblockdir = os.path.join(self.test_output_rawdir, self.test_blockdir)
+        os.makedirs(self.test_output_rawblockdir, exist_ok=True)
         self.test_output_caldir = os.path.join(self.expected_root_dir, 'data_lcogtcal')
         self.test_output_calblockdir = os.path.join(self.test_output_caldir, self.test_blockdir)
         os.makedirs(self.test_output_calblockdir, exist_ok=True)
@@ -3058,7 +3061,7 @@ class TestTransferFiles(SimpleTestCase):
             frame_params['filename'] = f"tfn1m001-fa11-20211013-{frame_num:04d}-e91.fits"
             frame_params['midpoint'] += timedelta(minutes=frame_num-65)
             frame_params['frameid'] = frameid
-            for extn in ['e00', 'e91']:
+            for extn in ['e00', 'e91', 'e92']:
                 new_name = os.path.join(self.test_input_daydir, frame_params['filename'].replace('e91', extn))
                 filename = shutil.copy(self.test_file_path, new_name)
                 # Change object name to 65803
@@ -3071,25 +3074,6 @@ class TestTransferFiles(SimpleTestCase):
                     utstop = frame_params['midpoint'] + half_exp + timedelta(seconds=8.77)
                     hdulist[0].header['utstop'] = utstop.strftime("%H:%M:%S.%f")[0:12]
                     hdulist[0].header.insert('l1pubdat', ('l1filter', hdulist[0].header['filter'], 'Copy of FILTER for SCAMP'), after=True)
-                    # # Mangle header ala photpipe
-                    # update = False
-                    # insert = False
-                    # for key, new_value, new_comment in tpv_header.cards:
-                        # if key == 'CTYPE1':
-                            # update = True
-                        # elif key == 'PV1_0':
-                            # update = False
-                            # insert = True
-                            # prev_keyword = 'CD2_2'
-                        # elif key == 'FGROUPNO':
-                            # update = False
-                            # insert = True
-                            # prev_keyword = 'L1FILTER'
-                        # if update:
-                            # hdulist[0].header.set(key, value=str(new_value), comment=new_comment)
-                        # elif insert:
-                             # hdulist[0].header.insert(prev_keyword,(key, new_value, new_comment), after=True)
-                             # prev_keyword = key
                     hdulist.writeto(filename, overwrite=True, checksum=True)
 #                    hdulist.close()
                 self.test_banzai_files.append(os.path.basename(filename))
@@ -3110,28 +3094,121 @@ class TestTransferFiles(SimpleTestCase):
             if self.debug_print:
                 print("Not removing temporary test directory", self.test_dir)
 
-    def test_e91_files(self):
-        verbose = True
+    def test_e00_files(self):
+        verbose = False
+        expected_files = [x for x in self.test_banzai_files if 'e00' in x]
+
+        raw_files = find_fits_files(self.test_input_daydir, '\S*e00\.')
+        print("Transferring raw frames")
+        for root, files in raw_files.items():
+            raw_sent_files, copied_files = transfer_files(root, files, self.test_output_rawblockdir, dbg=verbose)
+
+        self.assertEqual(expected_files, raw_sent_files)
+        self.assertEqual(expected_files, copied_files)
+        for raw_file in raw_sent_files:
+            file_path = os.path.join(self.test_output_rawblockdir, raw_file)
+            self.assertTrue(os.path.exists(file_path))
+
+    def test_e00_files_already_present(self):
+        verbose = False
+        expected_files = [x for x in self.test_banzai_files if 'e00' in x]
+        # Copy files to output raw directory
+        for raw_file in expected_files:
+            print(raw_file)
+            file_path = os.path.join(self.test_input_daydir, raw_file)
+            new_file_path = os.path.join(self.test_output_rawblockdir, raw_file)
+            filename = shutil.copy(file_path, new_file_path)
+        # Check copy worked
+        for raw_file in expected_files:
+            file_path = os.path.join(self.test_output_rawblockdir, raw_file)
+            self.assertTrue(os.path.exists(file_path))
+
+        raw_files = find_fits_files(self.test_input_daydir, '\S*e00\.')
+        if verbose: print("Transferring raw frames")
+        for root, files in raw_files.items():
+            raw_sent_files, copied_files = transfer_files(root, files, self.test_output_rawblockdir, dbg=verbose)
+
+        self.assertEqual(expected_files, raw_sent_files)
+        self.assertEqual(0, len(copied_files))
+        for raw_file in raw_sent_files:
+            file_path = os.path.join(self.test_output_rawblockdir, raw_file)
+            self.assertTrue(os.path.exists(file_path))
+
+    def test_e91photpipe_files(self):
+        verbose = False
         expected_files = [x for x in self.test_banzai_files if 'e91' in x]
 
         cal_files = find_fits_files(self.test_input_daydir, '\S*e91\.')
         print("Transferring calibrated frames")
-        cal_sent_files = []
         for root, files in cal_files.items():
-            cal_sent_files += transfer_files(root, files, self.test_output_calblockdir, dbg=verbose)
+            cal_sent_files, copied_files= transfer_files(root, files, self.test_output_calblockdir, dbg=verbose)
 
         self.assertEqual(expected_files, cal_sent_files)
+        self.assertEqual(expected_files, copied_files)
+        for cal_file in cal_sent_files:
+            file_path = os.path.join(self.test_output_calblockdir, cal_file)
+            self.assertTrue(os.path.exists(file_path))
 
-    def test_e91_files_norecopy(self):
-        verbose = True
+    def test_e91photpipe_files_norecopy(self):
+        verbose = False
+        expected_e91_files = [x for x in self.test_banzai_files if 'e91' in x]
         expected_files = [x.replace('e91', 'e92') for x in self.test_banzai_files if 'e91' in x]
         expected_num_files = 3
 
         cal_files = find_fits_files(self.test_input_daydir, '\S*e91\.')
-        print("Transferring calibrated frames")
-        cal_sent_files = []
+        if verbose: print("Transferring PP calibrated frames")
         for root, files in cal_files.items():
-            cal_sent_files += transfer_files(root, files, self.test_output_calblockdir, dbg=verbose)
+            cal_sent_files, copied_files = transfer_files(root, files, self.test_output_calblockdir, dbg=verbose)
+        self.assertEqual(expected_e91_files, cal_sent_files)
+        self.assertEqual(expected_e91_files, copied_files)
+        for trans_file in cal_sent_files:
+            e91_filepath = os.path.join(self.test_output_calblockdir, trans_file)
+            os.rename(e91_filepath, e91_filepath.replace('e91', 'e92'))
+        files = glob(self.test_output_calblockdir + '/*.fits')
+        if verbose: print("\nContents of output:\n",files)
+        self.assertEqual(expected_num_files, len(files))
+        # Retransfer (in theory nothing)
+        for root, files in cal_files.items():
+            new_cal_sent_files, new_copied_files = transfer_files(root, files, self.test_output_calblockdir, dbg=verbose)
+            cal_sent_files += new_cal_sent_files
+            copied_files += new_copied_files
+        files = glob(self.test_output_calblockdir + '/*.fits')
+        if verbose: print("\nContents of output v2:\n",files)
+        self.assertEqual(expected_num_files*2, len(cal_sent_files))
+        self.assertEqual(expected_num_files, len(copied_files))
+        self.assertEqual(0, len(new_copied_files))
+        self.assertEqual(expected_num_files, len(files))
+        self.assertEqual(expected_e91_files, new_cal_sent_files)
+        for cal_file in new_cal_sent_files:
+            file_path = os.path.join(self.test_output_calblockdir, cal_file.replace('e91', 'e92'))
+            self.assertTrue(os.path.exists(file_path))
+
+    def test_e92_files(self):
+        verbose = False
+        expected_files = [x for x in self.test_banzai_files if 'e92' in x]
+
+        cal_files = find_fits_files(self.test_input_daydir, '\S*e92\.')
+        print("Transferring NEOX calibrated frames")
+        for root, files in cal_files.items():
+            cal_sent_files, copied_files = transfer_files(root, files, self.test_output_calblockdir, dbg=verbose)
+
+        self.assertEqual(expected_files, cal_sent_files)
+        self.assertEqual(expected_files, copied_files)
+        for cal_file in cal_sent_files:
+            file_path = os.path.join(self.test_output_calblockdir, cal_file)
+            self.assertTrue(os.path.exists(file_path))
+
+    def test_e92_files_norecopy(self):
+        verbose = False
+        expected_files = [x.replace('e91', 'e92') for x in self.test_banzai_files if 'e91' in x]
+        expected_num_files = 3
+
+        cal_files = find_fits_files(self.test_input_daydir, '\S*e92\.')
+        print("Transferring NEOX calibrated frames")
+        for root, files in cal_files.items():
+            cal_sent_files, copied_files = transfer_files(root, files, self.test_output_calblockdir, dbg=verbose)
+        self.assertEqual(expected_files, cal_sent_files)
+        self.assertEqual(expected_files, copied_files)
         for trans_file in cal_sent_files:
             e91_filepath = os.path.join(self.test_output_calblockdir, trans_file)
             os.rename(e91_filepath, e91_filepath.replace('e91', 'e92'))
@@ -3139,10 +3216,18 @@ class TestTransferFiles(SimpleTestCase):
         self.assertEqual(expected_num_files, len(files))
         # Retransfer (in theory nothing)
         for root, files in cal_files.items():
-            cal_sent_files += transfer_files(root, files, self.test_output_calblockdir, dbg=verbose)
+            new_cal_sent_files, new_copied_files = transfer_files(root, files, self.test_output_calblockdir, dbg=verbose)
+            cal_sent_files += new_cal_sent_files
+            copied_files += new_copied_files
         self.assertEqual(expected_num_files*2, len(cal_sent_files))
+        self.assertEqual(expected_num_files, len(copied_files))
+        self.assertEqual(0, len(new_copied_files))
         files = glob(self.test_output_calblockdir + '/*.fits')
         self.assertEqual(expected_num_files, len(files))
+        for cal_file in cal_sent_files:
+            file_path = os.path.join(self.test_output_calblockdir, cal_file)
+            self.assertTrue(os.path.exists(file_path))
+
 
 class TestTransferReformat(TestCase):
 
@@ -3338,7 +3423,8 @@ class TestTransferReformat(TestCase):
             if verbose: print("Transferring calibrated frames")
             print(cal_files)
             for root, files in cal_files.items():
-                cal_sent_files += transfer_files(root, files, paths['cal_data'], dbg=verbose)
+                sent_files, copied_files = transfer_files(root, files, paths['cal_data'], dbg=verbose)
+                cal_sent_files += sent_files
             if pp_phot is True:
                 # Use cal_files not cal_sent_files as we only files from this Block not all of them
                 for directory, e91_files in cal_files.items():

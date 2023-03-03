@@ -1265,6 +1265,7 @@ def find_related_frames(block):
 
 def transfer_files(input_dir, files, output_dir, dbg=False):
     files_copied = []
+    all_files = []
 
     for file in files:
         action = 'Copying'
@@ -1276,19 +1277,22 @@ def transfer_files(input_dir, files, output_dir, dbg=False):
         output_filepath = os.path.join(output_dir, file)
         if dbg: print(f"{action} {input_filepath}  -> {output_filepath.replace('.fz', '')}")
         if os.path.exists(input_filepath):
-            if (os.path.exists(output_filepath) is False and os.path.exists(output_filepath.replace('.fz', '')) is False) and ('e91.fits' in file and os.path.exists(output_filepath.replace('e91', 'e92')) is False):
+            if ('e91.fits' not in file and os.path.exists(output_filepath) is False and os.path.exists(output_filepath.replace('.fz', '')) is False) \
+                or ('e91.fits' in file and os.path.exists(output_filepath.replace('e91', 'e92')) is False):
+                # Copy file, funpacking if necessary
                 filename = shutil.copy(input_filepath, output_filepath)
                 if output_filepath.endswith('.fz'):
                     if dbg: print("funpack file")
                     status = funpack_file(output_filepath)
-                if dbg: print(action, filename)
+                if dbg: print(action)
+                files_copied.append(file.replace('.fz', ''))
             else:
                 if dbg: print("Already exists")
-            files_copied.append(file.replace('.fz', ''))
+            all_files.append(file.replace('.fz', ''))
         else:
             logger.error(f"Input file {file} in {input_dir} not readable")
 
-    return files_copied
+    return all_files, files_copied
 
 def create_pds_collection(output_dir, input_dir, files, collection_type, schema_root, mod_time=None):
     """Creates a PDS Collection (.csv and .xml) files with the names
@@ -1537,7 +1541,8 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
         # create PDS products for raw data
         if verbose: print("Transferring/uncompressing raw frames")
         for root, files in raw_files.items():
-            raw_sent_files += transfer_files(root, files, paths['raw_data'])
+            sent_files, copied_files = transfer_files(root, files, paths['raw_data'])
+            raw_sent_files += sent_files
 
         # Create PDS labels for raw data
         if verbose: print("Creating raw PDS labels")
@@ -1560,7 +1565,8 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
                 return [], []
         if verbose: print("Transferring calibrated frames")
         for root, files in cal_files.items():
-            cal_sent_files += transfer_files(root, files, paths['cal_data'], dbg=verbose)
+            sent_files, copied_files = transfer_files(root, files, paths['cal_data'], dbg=verbose)
+            cal_sent_files += sent_files
         if pp_phot is True:
             # Use cal_files not cal_sent_files as we only want files from
             # this Block not all of them
@@ -1601,7 +1607,8 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
         if verbose: print("Transferring master calibration frames")
         calib_files = find_fits_files(input_dir, '\S*-(bias|bpm|dark|skyflat)')
         for root, files in calib_files.items():
-            cal_sent_files += transfer_files(root, files, paths['cal_data'], dbg=verbose)
+            sent_files, copied_files = transfer_files(root, files, paths['cal_data'], dbg=verbose)
+            cal_sent_files += sent_files
 
         # Create PDS labels for cal data
         if verbose: print("Creating cal PDS labels")
