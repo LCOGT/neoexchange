@@ -96,7 +96,9 @@ neoexchange/neox/local_settings.py
 *.db
 docker-compose.yml
 core/fixtures/
+neoexchange/DART_stuff_*.py
 
+# GPS satellite related files
 *.clk
 *rinex*
 *rapid
