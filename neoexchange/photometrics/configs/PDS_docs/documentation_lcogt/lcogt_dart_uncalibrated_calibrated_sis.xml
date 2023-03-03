@@ -11,22 +11,22 @@
     <product_class>Product_Document</product_class>
     <Citation_Information>
       <author_list>Lister, T.</author_list>
-      <publication_year>2022</publication_year>
+      <publication_year>2023</publication_year>
       <description>Describes the Calibrated/Uncalibrated LCOGT Data Products generated
         in support of the DART mission.
       </description>
     </Citation_Information>
   <Modification_History>
       <Modification_Detail>
-        <modification_date>2022-09-04</modification_date>
+        <modification_date>2023-03-03</modification_date>
         <version_id>1.0</version_id>
-        <description>Updated to Version 0.4 of document sent to PDS</description>
+        <description>Updated to Version 0.5 of document sent to PDS</description>
       </Modification_Detail>
   </Modification_History>
   </Identification_Area>
   <Document>
     <author_list>Lister, T.</author_list>
-    <publication_date>2022-09-04</publication_date>
+    <publication_date>2023-03-03</publication_date>
     <description>LCOGT Uncalibrated/Calibrated Data Product SIS in PDF/A format.</description>
     <Document_Edition>
       <edition_name>LCOGT Uncalibrated/Calibrated Data Product SIS, PDF</edition_name>

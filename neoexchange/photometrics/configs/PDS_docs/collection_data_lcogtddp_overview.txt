@@ -69,6 +69,8 @@ sin       Meta site for all Sinistro cameras in the network
 Photometry data are stored as a PDS4 ASCII fixed-width table according to the 
 following format. 
 
+validity_flag: Flag whether this is a valid photometric datapoint, # indicates
+probably invalid blended data due to asteroid interference with the star.
 file: file name of the calibrated image where data were measured
 julian date: Julian date of the exposure midtime
 mag: Calibrated PanSTARRS r-band apparent magnitude of Didymos

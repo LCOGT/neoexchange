@@ -852,7 +852,8 @@ def create_file_area_inv(filename, mod_time=None):
 
 def create_file_area_table(filename):
 
-    fields = {'file' : { 'field_location' : 2, 'data_type' : 'ASCII_String', 'field_length' : 36, 'description' : 'File name of the calibrated image where data were measured.' },
+    fields = {'validity_flag'  : { 'field_location' : 1, 'data_type' : 'ASCII_String', 'field_length' : 1, 'description' : 'Flag whether this is a valid photometric datapoint, # indicates probably invalid blended data due to asteroid interference with the star.' },
+              'file' : { 'field_location' : 2, 'data_type' : 'ASCII_String', 'field_length' : 36, 'description' : 'File name of the calibrated image where data were measured.' },
               'julian_date' : { 'field_location' : 40, 'data_type' : 'ASCII_Real', 'field_length' : 15, 'description' : 'UTC Julian date of the exposure midtime' },
               'mag' : { 'field_location' : 56, 'data_type' : 'ASCII_Real', 'field_length' : 8, 'description' : 'Calibrated PanSTARRs r-band apparent magnitude of asteroid' },
               'sig' : { 'field_location' : 66, 'data_type' : 'ASCII_Real', 'field_length' : 6, 'description' : '1-sigma error on the apparent magnitude' },

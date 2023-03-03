@@ -952,12 +952,20 @@ class TestCreateFileAreaTable(SimpleTestCase):
               <records>62</records>
               <record_delimiter>Carriage-Return Line-Feed</record_delimiter>
               <Record_Character>
-                <fields>11</fields>
+                <fields>12</fields>
                 <groups>0</groups>
                 <record_length unit="byte">143</record_length>
                 <Field_Character>
-                  <name>file</name>
+                  <name>validity_flag</name>
                   <field_number>1</field_number>
+                  <field_location unit="byte">1</field_location>
+                  <data_type>ASCII_String</data_type>
+                  <field_length unit="byte">1</field_length>
+                  <description>Flag whether this is a valid photometric datapoint, # indicates probably invalid blended data due to asteroid interference with the star.</description>
+                </Field_Character>
+                <Field_Character>
+                  <name>file</name>
+                  <field_number>2</field_number>
                   <field_location unit="byte">2</field_location>
                   <data_type>ASCII_String</data_type>
                   <field_length unit="byte">36</field_length>
@@ -965,7 +973,7 @@ class TestCreateFileAreaTable(SimpleTestCase):
                 </Field_Character>
                 <Field_Character>
                   <name>julian_date</name>
-                  <field_number>2</field_number>
+                  <field_number>3</field_number>
                   <field_location unit="byte">40</field_location>
                   <data_type>ASCII_Real</data_type>
                   <field_length unit="byte">15</field_length>
@@ -973,7 +981,7 @@ class TestCreateFileAreaTable(SimpleTestCase):
                 </Field_Character>
                 <Field_Character>
                   <name>mag</name>
-                  <field_number>3</field_number>
+                  <field_number>4</field_number>
                   <field_location unit="byte">56</field_location>
                   <data_type>ASCII_Real</data_type>
                   <field_length unit="byte">8</field_length>
@@ -981,7 +989,7 @@ class TestCreateFileAreaTable(SimpleTestCase):
                 </Field_Character>
                 <Field_Character>
                   <name>sig</name>
-                  <field_number>4</field_number>
+                  <field_number>5</field_number>
                   <field_location unit="byte">66</field_location>
                   <data_type>ASCII_Real</data_type>
                   <field_length unit="byte">6</field_length>
@@ -989,7 +997,7 @@ class TestCreateFileAreaTable(SimpleTestCase):
                 </Field_Character>
                 <Field_Character>
                   <name>ZP</name>
-                  <field_number>5</field_number>
+                  <field_number>6</field_number>
                   <field_location unit="byte">73</field_location>
                   <data_type>ASCII_Real</data_type>
                   <field_length unit="byte">8</field_length>
@@ -997,7 +1005,7 @@ class TestCreateFileAreaTable(SimpleTestCase):
                 </Field_Character>
                 <Field_Character>
                   <name>ZP_sig</name>
-                  <field_number>6</field_number>
+                  <field_number>7</field_number>
                   <field_location unit="byte">83</field_location>
                   <data_type>ASCII_Real</data_type>
                   <field_length unit="byte">6</field_length>
@@ -1005,7 +1013,7 @@ class TestCreateFileAreaTable(SimpleTestCase):
                 </Field_Character>
                 <Field_Character>
                   <name>inst_mag</name>
-                  <field_number>7</field_number>
+                  <field_number>8</field_number>
                   <field_location unit="byte">91</field_location>
                   <data_type>ASCII_Real</data_type>
                   <field_length unit="byte">8</field_length>
@@ -1013,7 +1021,7 @@ class TestCreateFileAreaTable(SimpleTestCase):
                 </Field_Character>
                 <Field_Character>
                   <name>inst_sig</name>
-                  <field_number>8</field_number>
+                  <field_number>9</field_number>
                   <field_location unit="byte">101</field_location>
                   <data_type>ASCII_Real</data_type>
                   <field_length unit="byte">8</field_length>
@@ -1021,7 +1029,7 @@ class TestCreateFileAreaTable(SimpleTestCase):
                 </Field_Character>
                 <Field_Character>
                   <name>filter</name>
-                  <field_number>9</field_number>
+                  <field_number>10</field_number>
                   <field_location unit="byte">111</field_location>
                   <data_type>ASCII_String</data_type>
                   <field_length unit="byte">6</field_length>
@@ -1029,7 +1037,7 @@ class TestCreateFileAreaTable(SimpleTestCase):
                 </Field_Character>
                 <Field_Character>
                   <name>SExtractor_flag</name>
-                  <field_number>10</field_number>
+                  <field_number>11</field_number>
                   <field_location unit="byte">119</field_location>
                   <data_type>ASCII_Integer</data_type>
                   <field_length unit="byte">15</field_length>
@@ -1037,7 +1045,7 @@ class TestCreateFileAreaTable(SimpleTestCase):
                 </Field_Character>
                 <Field_Character>
                   <name>aprad</name>
-                  <field_number>11</field_number>
+                  <field_number>12</field_number>
                   <field_location unit="byte">136</field_location>
                   <data_type>ASCII_Real</data_type>
                   <field_length unit="byte">5</field_length>
@@ -1068,12 +1076,20 @@ class TestCreateFileAreaTable(SimpleTestCase):
               <records>62</records>
               <record_delimiter>Carriage-Return Line-Feed</record_delimiter>
               <Record_Character>
-                <fields>11</fields>
+                <fields>12</fields>
                 <groups>0</groups>
                 <record_length unit="byte">143</record_length>
                 <Field_Character>
-                  <name>file</name>
+                  <name>validity_flag</name>
                   <field_number>1</field_number>
+                  <field_location unit="byte">1</field_location>
+                  <data_type>ASCII_String</data_type>
+                  <field_length unit="byte">1</field_length>
+                  <description>Flag whether this is a valid photometric datapoint, # indicates probably invalid blended data due to asteroid interference with the star.</description>
+                </Field_Character>
+                <Field_Character>
+                  <name>file</name>
+                  <field_number>2</field_number>
                   <field_location unit="byte">2</field_location>
                   <data_type>ASCII_String</data_type>
                   <field_length unit="byte">36</field_length>
@@ -1081,7 +1097,7 @@ class TestCreateFileAreaTable(SimpleTestCase):
                 </Field_Character>
                 <Field_Character>
                   <name>julian_date</name>
-                  <field_number>2</field_number>
+                  <field_number>3</field_number>
                   <field_location unit="byte">40</field_location>
                   <data_type>ASCII_Real</data_type>
                   <field_length unit="byte">15</field_length>
@@ -1089,7 +1105,7 @@ class TestCreateFileAreaTable(SimpleTestCase):
                 </Field_Character>
                 <Field_Character>
                   <name>mag</name>
-                  <field_number>3</field_number>
+                  <field_number>4</field_number>
                   <field_location unit="byte">56</field_location>
                   <data_type>ASCII_Real</data_type>
                   <field_length unit="byte">8</field_length>
@@ -1097,7 +1113,7 @@ class TestCreateFileAreaTable(SimpleTestCase):
                 </Field_Character>
                 <Field_Character>
                   <name>sig</name>
-                  <field_number>4</field_number>
+                  <field_number>5</field_number>
                   <field_location unit="byte">66</field_location>
                   <data_type>ASCII_Real</data_type>
                   <field_length unit="byte">6</field_length>
@@ -1105,7 +1121,7 @@ class TestCreateFileAreaTable(SimpleTestCase):
                 </Field_Character>
                 <Field_Character>
                   <name>ZP</name>
-                  <field_number>5</field_number>
+                  <field_number>6</field_number>
                   <field_location unit="byte">73</field_location>
                   <data_type>ASCII_Real</data_type>
                   <field_length unit="byte">8</field_length>
@@ -1113,7 +1129,7 @@ class TestCreateFileAreaTable(SimpleTestCase):
                 </Field_Character>
                 <Field_Character>
                   <name>ZP_sig</name>
-                  <field_number>6</field_number>
+                  <field_number>7</field_number>
                   <field_location unit="byte">83</field_location>
                   <data_type>ASCII_Real</data_type>
                   <field_length unit="byte">6</field_length>
@@ -1121,7 +1137,7 @@ class TestCreateFileAreaTable(SimpleTestCase):
                 </Field_Character>
                 <Field_Character>
                   <name>inst_mag</name>
-                  <field_number>7</field_number>
+                  <field_number>8</field_number>
                   <field_location unit="byte">91</field_location>
                   <data_type>ASCII_Real</data_type>
                   <field_length unit="byte">8</field_length>
@@ -1129,7 +1145,7 @@ class TestCreateFileAreaTable(SimpleTestCase):
                 </Field_Character>
                 <Field_Character>
                   <name>inst_sig</name>
-                  <field_number>8</field_number>
+                  <field_number>9</field_number>
                   <field_location unit="byte">101</field_location>
                   <data_type>ASCII_Real</data_type>
                   <field_length unit="byte">8</field_length>
@@ -1137,7 +1153,7 @@ class TestCreateFileAreaTable(SimpleTestCase):
                 </Field_Character>
                 <Field_Character>
                   <name>filter</name>
-                  <field_number>9</field_number>
+                  <field_number>10</field_number>
                   <field_location unit="byte">111</field_location>
                   <data_type>ASCII_String</data_type>
                   <field_length unit="byte">6</field_length>
@@ -1145,7 +1161,7 @@ class TestCreateFileAreaTable(SimpleTestCase):
                 </Field_Character>
                 <Field_Character>
                   <name>SExtractor_flag</name>
-                  <field_number>10</field_number>
+                  <field_number>11</field_number>
                   <field_location unit="byte">119</field_location>
                   <data_type>ASCII_Integer</data_type>
                   <field_length unit="byte">15</field_length>
@@ -1153,7 +1169,7 @@ class TestCreateFileAreaTable(SimpleTestCase):
                 </Field_Character>
                 <Field_Character>
                   <name>aprad</name>
-                  <field_number>11</field_number>
+                  <field_number>12</field_number>
                   <field_location unit="byte">136</field_location>
                   <data_type>ASCII_Real</data_type>
                   <field_length unit="byte">5</field_length>
