@@ -61,6 +61,10 @@ target/
 **/.idea/workspace.xml
 **/.idea/tasks.xml
 
+# VisualStudio files
+.vs/
+*~
+
 neox/local_settings.py
 Diffs
 data/
