@@ -2431,7 +2431,7 @@ class TestExportBlockToPDS(TestCase):
                               'flags' : cat_source['flags']
                             }
             cat_src, created = CatalogSources.objects.get_or_create(**source_params)
-            for extn in ['e00', 'e92']:
+            for extn in ['e00', 'e92-ldac', 'e92.bkgsub', 'e92', 'e92.rms']:
                 new_name = os.path.join(self.test_input_daydir, frame_params['filename'].replace('e91', extn))
                 filename = shutil.copy(self.test_file_path, new_name)
                 # Change object name to 65803
@@ -2512,12 +2512,13 @@ class TestExportBlockToPDS(TestCase):
     def test_find_fits_files(self):
         expected_files = {self.test_input_daydir: self.test_banzai_files}
 
+#        print("\nExpected files=\n",expected_files)
         files = find_fits_files(self.test_input_daydir)
 
         self.assertEqual(expected_files, files)
 
-    def test_find_e92_fits_files(self):
-        expected_files = {self.test_input_daydir: [x for x in self.test_banzai_files if 'e92' in x]}
+    def test_find_e92_fits_files_only(self):
+        expected_files = {self.test_input_daydir: [x for x in self.test_banzai_files if 'e92.fits' in x]}
 
         files = find_fits_files(self.test_input_daydir, '\S*e92')
 
@@ -2577,8 +2578,8 @@ class TestExportBlockToPDS(TestCase):
     def test_create_pds_collection_cal(self):
         expected_csv_file = os.path.join(self.expected_root_dir, 'data_lcogtcal', 'collection_data_lcogtcal.csv')
         expected_xml_file = os.path.join(self.expected_root_dir, 'data_lcogtcal', 'collection_data_lcogtcal.xml')
-        e92_files = [x for x in self.test_banzai_files if 'e92' in x]
-        expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogtcal:{os.path.splitext(x)[0]}::1.0' ) for x in self.test_banzai_files if 'e92' in x]
+        e92_files = [x for x in self.test_banzai_files if 'e92.fits' in x]
+        expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogtcal:{os.path.splitext(x)[0]}::1.0' ) for x in self.test_banzai_files if 'e92.fits' in x]
         paths = create_dart_directories(self.test_output_dir, self.test_block)
         # Copy files to output dir so incorrect (non e92) files don't get picked up
         for fits_file in e92_files:
@@ -2613,7 +2614,7 @@ class TestExportBlockToPDS(TestCase):
         e92_files = []
         # Modify object in FITS headers and remove <lid_reference> to didymos from XML
         for x in self.test_banzai_files:
-             if 'e92' in x:
+             if 'e92.fits' in x:
                 e92_files.append(x)
                 # Change object name to something other (65803) Didymos
                 filename = os.path.join(self.test_input_daydir, x)
@@ -2629,7 +2630,7 @@ class TestExportBlockToPDS(TestCase):
             self.expected_xml_cal[start_line-1:start_line] +\
             self.expected_xml_cal[start_line+4:]
 
-        expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogtcal:{os.path.splitext(x)[0]}::1.0' ) for x in self.test_banzai_files if 'e92' in x]
+        expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogtcal:{os.path.splitext(x)[0]}::1.0' ) for x in self.test_banzai_files if 'e92.fits' in x]
 
         csv_filename, xml_filename = create_pds_collection(self.expected_root_dir,
             paths['cal_data'], e92_files, 'cal', self.schemadir, mod_time=datetime(2021, 10, 15))
@@ -2883,7 +2884,7 @@ class TestExportBlockToPDS(TestCase):
             self.assertEqual(len(fits_files), len(t)-1, msg=f"Comparison failed on {collection_type:} lines in {collection_filepath:}") # -1 due to extra overview file at the end
             prod_type = 'e00'
             if collection_type == 'cal':
-                prod_type = 'e92'
+                prod_type = 'e92.fits'
             fits_files = [x for x in self.test_banzai_files if prod_type in x]
             expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogt{collection_type}:{os.path.splitext(x)[0]}::1.0' ) for x in self.test_banzai_files if prod_type in x]
             for fits_row in t[0:len(fits_files)]:
@@ -3114,7 +3115,7 @@ class TestTransferFiles(SimpleTestCase):
         verbose = False
         expected_files = [x for x in self.test_banzai_files if 'e00' in x]
 
-        raw_files = find_fits_files(self.test_input_daydir, '\S*e00\.')
+        raw_files = find_fits_files(self.test_input_daydir, '\S*e00')
         print("Transferring raw frames")
         for root, files in raw_files.items():
             raw_sent_files, copied_files = transfer_files(root, files, self.test_output_rawblockdir, dbg=verbose)
@@ -3139,7 +3140,7 @@ class TestTransferFiles(SimpleTestCase):
             file_path = os.path.join(self.test_output_rawblockdir, raw_file)
             self.assertTrue(os.path.exists(file_path))
 
-        raw_files = find_fits_files(self.test_input_daydir, '\S*e00\.')
+        raw_files = find_fits_files(self.test_input_daydir, '\S*e00')
         if verbose: print("Transferring raw frames")
         for root, files in raw_files.items():
             raw_sent_files, copied_files = transfer_files(root, files, self.test_output_rawblockdir, dbg=verbose)
@@ -3154,7 +3155,7 @@ class TestTransferFiles(SimpleTestCase):
         verbose = False
         expected_files = [x for x in self.test_banzai_files if 'e91' in x]
 
-        cal_files = find_fits_files(self.test_input_daydir, '\S*e91\.')
+        cal_files = find_fits_files(self.test_input_daydir, '\S*e91')
         print("Transferring calibrated frames")
         for root, files in cal_files.items():
             cal_sent_files, copied_files= transfer_files(root, files, self.test_output_calblockdir, dbg=verbose)
@@ -3171,7 +3172,7 @@ class TestTransferFiles(SimpleTestCase):
         expected_files = [x.replace('e91', 'e92') for x in self.test_banzai_files if 'e91' in x]
         expected_num_files = 3
 
-        cal_files = find_fits_files(self.test_input_daydir, '\S*e91\.')
+        cal_files = find_fits_files(self.test_input_daydir, '\S*e91')
         if verbose: print("Transferring PP calibrated frames")
         for root, files in cal_files.items():
             cal_sent_files, copied_files = transfer_files(root, files, self.test_output_calblockdir, dbg=verbose)
@@ -3201,9 +3202,9 @@ class TestTransferFiles(SimpleTestCase):
 
     def test_e92_files(self):
         verbose = False
-        expected_files = [x for x in self.test_banzai_files if 'e92' in x]
+        expected_files = [x for x in self.test_banzai_files if 'e92.fits' in x]
 
-        cal_files = find_fits_files(self.test_input_daydir, '\S*e92\.')
+        cal_files = find_fits_files(self.test_input_daydir, '\S*e92')
         print("Transferring NEOX calibrated frames")
         for root, files in cal_files.items():
             cal_sent_files, copied_files = transfer_files(root, files, self.test_output_calblockdir, dbg=verbose)
@@ -3219,7 +3220,7 @@ class TestTransferFiles(SimpleTestCase):
         expected_files = [x.replace('e91', 'e92') for x in self.test_banzai_files if 'e91' in x]
         expected_num_files = 3
 
-        cal_files = find_fits_files(self.test_input_daydir, '\S*e92\.')
+        cal_files = find_fits_files(self.test_input_daydir, '\S*e92')
         print("Transferring NEOX calibrated frames")
         for root, files in cal_files.items():
             cal_sent_files, copied_files = transfer_files(root, files, self.test_output_calblockdir, dbg=verbose)
@@ -3423,9 +3424,8 @@ class TestTransferReformat(TestCase):
         for input_dir, block in zip(input_dirs, blocks):
             paths = create_dart_directories(self.test_output_dir, block)
             # transfer cal data
-            # Set pattern to '<any # of chars>e92.' (literal '.' rather than normal regexp
-            # meaning of "any character") to avoid picking up e92-ldac files
-            cal_files = find_fits_files(input_dir, '\S*e92\.')
+            # Set pattern to '<any # of chars>e92 to avoid picking up e92-ldac files
+            cal_files = find_fits_files(input_dir, '\S*e92')
             pp_phot = False
             if len(cal_files) == 0:
                 if verbose: print("Looking for cals. input_dir=",input_dir)
@@ -3433,7 +3433,7 @@ class TestTransferReformat(TestCase):
                 cal_dat_files = glob(input_dir+'/*e91_cal.dat')
                 if len(cal_dat_files) > 0:
                     pp_phot = True
-                    cal_files = find_fits_files(input_dir, '\S*e91\.')
+                    cal_files = find_fits_files(input_dir, '\S*e91')
                 else:
                     return [], []
             if verbose: print("Transferring calibrated frames")

@@ -1216,8 +1216,8 @@ def find_fits_files(dirpath, prefix=None):
     in the returned dict."""
 
     if prefix is None:
-        prefix = ''
-    regex = re.compile('^'+prefix+'.*(fits|FITS|fit|FIT|Fits|fts|FTS|fits.fz)$')
+        prefix = '.*'
+    regex = re.compile('^'+prefix+'\.(fits|FITS|fit|FIT|Fits|fts|FTS|fits.fz)$')
 
     fits_files = {}
     # walk through directories underneath
@@ -1553,7 +1553,7 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
         # transfer cal data
         # Set pattern to '<any # of chars>e92.' (literal '.' rather than normal regexp
         # meaning of "any character") to avoid picking up e92-ldac files
-        cal_files = find_fits_files(input_dir, '\S*e92\.')
+        cal_files = find_fits_files(input_dir, '\S*e92')
         pp_phot = False
         if len(cal_files) == 0:
             if verbose: print("Looking for cals. input_dir=", input_dir)
@@ -1561,7 +1561,7 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
             cal_dat_files = glob(input_dir+'/*e91_cal.dat')
             if len(cal_dat_files) > 0:
                 pp_phot = True
-                cal_files = find_fits_files(input_dir, '\S*e91\.')
+                cal_files = find_fits_files(input_dir, '\S*e91')
             else:
                 return [], []
         if verbose: print("Transferring calibrated frames")
