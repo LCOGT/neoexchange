@@ -1406,10 +1406,10 @@ def determine_target_name_type(header):
 
     return target_name, target_type
 
-def create_dart_lightcurve(input_dir, output_dir, block, match='photometry_*.dat', create_symlink=False):
+def create_dart_lightcurve(input_dir_or_block, output_dir, block, match='photometry_*.dat', create_symlink=False):
     """Creates a DART-format lightcurve file from either:
-    1) the photometry file and LOG in <input_dir>. or, 
-    2) the SourceMeasurements belonging to the Block passed as <input_dir>
+    1) the photometry file and LOG in <input_dir_or_block>. or,
+    2) the SourceMeasurements belonging to the Block passed as <input_dir_or_block>
     outputting to <output_dir>. Block <block> is used find the directory
     for the photometry file.
     The file is converted to CRLF line endings for PDS archiving
@@ -1424,25 +1424,25 @@ def create_dart_lightcurve(input_dir, output_dir, block, match='photometry_*.dat
         first_filename = first_frame.filename
         file_parts = split_filename(first_filename)
         if len(file_parts) == 8:
-            if type(input_dir) != Block:
+            if type(input_dir_or_block) != Block:
                 # Directory path passed
-                root_dir = input_dir
+                root_dir = input_dir_or_block
                 photometry_files = sorted(glob(os.path.join(root_dir, match)))
                 # Weed out Control_Star photometry files
                 photometry_files = [x for x in photometry_files if 'Control_Star' not in x]
                 # No matches, retry with dayobs added onto the path
                 if len(photometry_files) == 0:
-                    root_dir = os.path.join(input_dir, file_parts['dayobs'])
+                    root_dir = os.path.join(input_dir_or_block, file_parts['dayobs'])
                     photometry_files = sorted(glob(os.path.join(root_dir, match)))
                     # Weed out Control_Star photometry files
                     photometry_files = [x for x in photometry_files if 'Control_Star' not in x]
             else:
                 # Assuming Block passed
-                num_srcs = SourceMeasurement.objects.filter(frame__block=input_dir, frame__frametype=Frame.NEOX_RED_FRAMETYPE).count()
+                num_srcs = SourceMeasurement.objects.filter(frame__block=input_dir_or_block, frame__frametype=Frame.NEOX_RED_FRAMETYPE).count()
                 if num_srcs > 0:
-                    photometry_files = [input_dir, ]
+                    photometry_files = [input_dir_or_block, ]
                 else:
-                    logger.warning(f"No SourceMeasurements found for reduced e92 frames for Block id {input_dir.id}")
+                    logger.warning(f"No SourceMeasurements found for reduced e92 frames for Block id {input_dir_or_block.id}")
                     photometry_files = []
             for photometry_file in photometry_files:
                 if type(photometry_file) != Block:
@@ -1453,7 +1453,7 @@ def create_dart_lightcurve(input_dir, output_dir, block, match='photometry_*.dat
                     file_parts['site'] += '-PP'
                 else:
                     print("Table from SourceMeasurements")
-                    table = create_table_from_srcmeasures(input_dir)
+                    table = create_table_from_srcmeasures(input_dir_or_block)
                     aper_radius = table['aprad'].mean()
 #                    file_parts['site'] += '-Src'
 #                print(len(table), aper_radius)
@@ -1514,6 +1514,14 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
         blocks = [blocks, ]
     if type(input_dirs) != list:
         input_dirs = [input_dirs, ]
+
+    if len(input_dirs) == 0:
+        logger.warning("Nothing to do (input_dirs is zero length)")
+        return csv_files, xml_files
+
+    if len(blocks) == 0:
+        logger.warning("Nothing to do (no Blocks passed in,  blocks is zero length)")
+        return csv_files, xml_files
 
     raw_sent_files = []
     cal_sent_files = []
@@ -1617,23 +1625,30 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
         xml_files += xml_labels
 
         # transfer ddp data
-        dart_lc_file = create_dart_lightcurve(input_dir, paths['ddp_data'], block)
+        dart_lc_file = create_dart_lightcurve(block, paths['ddp_data'], block)
         if dart_lc_file is None:
             logger.error("No light curve file found")
-            return [], []
-        lc_files += [os.path.basename(dart_lc_file),]
+#            return [], []
+        else:
+            lc_files += [os.path.basename(dart_lc_file),]
 
-        # Create PDS labels for ddp data
-        if verbose: print("Creating ddp PDS labels")
-        xml_labels = create_pds_labels(paths['ddp_data'], schema_root, match='*photometry.tab')
-        xml_files += xml_labels
+            # Create PDS labels for ddp data
+            if verbose: print("Creating ddp PDS labels")
+            xml_labels = create_pds_labels(paths['ddp_data'], schema_root, match='*photometry.tab')
+            xml_files += xml_labels
 
     # Copy raw overview docs
     raw_sent_files += copy_docs(paths['root'], 'raw', docs_dir, verbose)
 
     if verbose: print("Creating raw PDS collection")
     path_to_all_raws = os.path.join(os.path.dirname(paths['raw_data']), '')
-    raw_csv_filename, raw_xml_filename = create_pds_collection(paths['root'], path_to_all_raws, raw_sent_files, 'raw', schema_root)
+    all_raw_dirs_files = find_fits_files(path_to_all_raws, '\S*e00')
+    all_raw_files = []
+    for raw_dir, raw_files in all_raw_dirs_files.items():
+        if verbose: print(raw_dir, len(raw_files))
+        all_raw_files += raw_files
+    if verbose: print(f"Total #raw frames: From Blocks= {len(raw_sent_files)}, total={len(all_raw_files)}")
+    raw_csv_filename, raw_xml_filename = create_pds_collection(paths['root'], path_to_all_raws, all_raw_files, 'raw', schema_root)
     # Convert csv file to CRLF endings required by PDS
     status = convert_file_to_crlf(raw_csv_filename)
     csv_files.append(raw_csv_filename)
@@ -1645,7 +1660,14 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
     # create PDS products for cal data
     if verbose: print("Creating cal PDS collection")
     path_to_all_cals = os.path.join(os.path.dirname(paths['cal_data']), '')
-    cal_csv_filename, cal_xml_filename = create_pds_collection(paths['root'], path_to_all_cals, cal_sent_files, 'cal', schema_root)
+    all_cal_dirs_files = find_fits_files(path_to_all_cals, '\S*-(bias|bpm|dark|skyflat|e92)')
+    all_cal_files = []
+    for cal_dir, cal_files in all_cal_dirs_files.items():
+        if verbose: print(cal_dir, len(cal_files))
+        all_cal_files += cal_files
+    if verbose: print(f"Total #cal frames: From Blocks= {len(cal_sent_files)}, total={len(all_cal_files)}")
+
+    cal_csv_filename, cal_xml_filename = create_pds_collection(paths['root'], path_to_all_cals, all_cal_files, 'cal', schema_root)
     # Convert csv file to CRLF endings required by PDS
     status = convert_file_to_crlf(cal_csv_filename)
     csv_files.append(cal_csv_filename)
