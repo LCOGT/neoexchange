@@ -11,6 +11,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 from collections import Counter, OrderedDict
+from datetime import datetime
 
 from django.conf import settings
 from django.forms.models import model_to_dict
@@ -286,6 +287,32 @@ class Block(models.Model):
             text = 'not '
 
         return '%s is %sactive' % (self.request_number, text)
+
+
+class ExportedBlock(models.Model):
+    """Class to hold record of Blocks that have been exported elsewhere e.g. PDS
+    """
+
+    PDS_V4 = 1
+    TARBALL = 10
+    EXPORT_CHOICES = (
+                        (PDS_V4, 'PDS V4 collection'),
+                        (TARBALL, 'Tarball of files')
+                     )
+    block = models.ForeignKey(Block, on_delete=models.CASCADE)
+    input_path = models.CharField('Input path to exporter', max_length=4096, null=True)
+    export_path = models.CharField('Export path from exporter', max_length=4096, null=True)
+    export_format = models.SmallIntegerField('Export format', choices=EXPORT_CHOICES, blank=False, default=1)
+    when_exported  = models.DateTimeField(default=datetime.utcnow)
+    notes = models.TextField('Notes', blank=True, null=True)
+
+    class Meta:
+        verbose_name = _('Exported Block')
+        verbose_name_plural = _('Exported Blocks')
+
+    def __str__(self):
+        export_date = self.when_exported.strftime("%Y-%m-%d %H:%M")
+        return f"{self.block.request_number} -> {self.export_path} on {export_date}"
 
 
 class Candidate(models.Model):
