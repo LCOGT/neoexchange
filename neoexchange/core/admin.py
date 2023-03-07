@@ -363,6 +363,25 @@ class AsyncProcessAdmin(admin.ModelAdmin):
     list_display = ('id', 'process_type', 'identifier', 'status', 'created', 'terminal_timestamp')
     list_filter = ('process_type', 'status', 'created', 'terminal_timestamp')
 
+class ExportedBlockAdmin(admin.ModelAdmin):
+
+    list_select_related = True
+
+    def block_info(self, obj):
+        block_info = f"#{obj.block.request_number}"
+        if obj.block.superblock.groupid is not None:
+            block_info += f" ({obj.block.superblock.groupid})"
+        return block_info
+    block_info.allow_tags = True
+
+    # Use raw_id fields (https://docs.djangoproject.com/en/1.11/ref/contrib/admin/#django.contrib.admin.ModelAdmin.raw_id_fields)
+    # for the Block to stop it making a select box tens of thousands entries long...
+    raw_id_fields = ("block",)
+
+    list_display = ('block_info', 'input_path', 'export_path', 'export_format', 'when_exported')
+    list_display_links = ('block_info', )
+    list_filter = ('export_format', )
+
 admin.site.register(Proposal, ProposalAdmin)
 admin.site.register(SourceMeasurement, SourceMeasurementAdmin)
 admin.site.register(ProposalPermission)
@@ -375,3 +394,4 @@ admin.site.register(ColorValues, ColorValuesAdmin)
 admin.site.register(DataProduct, DataProductsAdmin)
 admin.site.register(AsyncProcess, AsyncProcessAdmin)
 admin.site.register(PipelineProcess, PipelineProcessAdmin)
+admin.site.register(ExportedBlock, ExportedBlockAdmin)
