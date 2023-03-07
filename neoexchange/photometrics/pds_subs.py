@@ -1664,6 +1664,19 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
             xml_labels = create_pds_labels(paths['ddp_data'], schema_root, match='*photometry.tab')
             xml_files += xml_labels
 
+        # Record that Block was exported
+        exportedblock_params = {  'block': block,
+                                'input_path': input_dir,
+                                'export_path': paths['cal_data'],
+                                'export_format': ExportedBlock.PDS_V4
+                             }
+        exported_block, created = ExportedBlock.objects.update_or_create(**exportedblock_params)
+        if created is False:
+            # update export time
+            logger.info(f"ExportedBlock entry already exists (id={exported_block.id}), update export time")
+            exported_block.when_exported = datetime.utcnow()
+            exported_block.save()
+
     # Check if we actually did anything...
     if len(paths) == 0:
         logger.error("No blocks appear to have been exported, not building collection")
