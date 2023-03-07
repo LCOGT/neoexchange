@@ -1539,7 +1539,7 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
         headers = { 'DAY_OBS' : None, 'BLKUID' : None}
         if frame is not None:
             if frame.frameid is not None:
-                url = f"https://archive-api.lco.global/frames/{frame.frameid}"
+                url = f"{settings.ARCHIVE_FRAMES_URL}{frame.frameid}"
                 headers = lco_api_call(url)
             else:
                 logger.warning(f"No frameid found for {frame.filename} (id={frame.id})")
