@@ -17,7 +17,7 @@ from astropy.io import fits
 from astropy.io.ascii.core import InconsistentTableError
 from django.conf import settings
 
-from core.models import Body, Frame, Block
+from core.models import Body, Frame, Block, ExportedBlock
 from core.archive_subs import lco_api_call, download_files
 from astrometrics.ast_subs import normal_to_packed
 from astrometrics.sources_subs import fetch_jpl_orbit
@@ -1316,7 +1316,7 @@ def create_pds_collection(output_dir, input_dir, files, collection_type, schema_
     collection_id = f'data_lcogt{collection_type}'
     product_version = '1.0'
     product_column = Column(['P'] * len(files))
-    urns = [f'{prefix}:{bundle_id}:{collection_id}:{os.path.splitext(x)[0]}::{product_version}' for x in files]
+    urns = [f'{prefix}:{bundle_id}:{collection_id}:{os.path.splitext(os.path.basename(x))[0]}::{product_version}' for x in files]
     urns_column = Column(urns)
     csv_table = Table([product_column, urns_column])
     csv_filename = os.path.join(output_dir, collection_id, f'collection_data_lcogt{collection_type}.csv')
@@ -1665,11 +1665,11 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
             xml_files += xml_labels
 
         # Record that Block was exported
-        exportedblock_params = {  'block': block,
-                                'input_path': input_dir,
-                                'export_path': paths['cal_data'],
-                                'export_format': ExportedBlock.PDS_V4
-                             }
+        exportedblock_params = { 'block': block,
+                                 'input_path': input_dir,
+                                 'export_path': paths['cal_data'],
+                                 'export_format': ExportedBlock.PDS_V4
+                               }
         exported_block, created = ExportedBlock.objects.update_or_create(**exportedblock_params)
         if created is False:
             # update export time
