@@ -33,3 +33,4 @@ sty
 awscli
 lxml
 freezegun
+tenacity

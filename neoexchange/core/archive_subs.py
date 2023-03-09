@@ -23,6 +23,7 @@ from urllib.parse import urljoin
 
 
 import requests
+from tenacity import retry, wait_exponential, stop_after_attempt
 from django.conf import settings
 from django.core.management.base import CommandError
 
@@ -49,7 +50,9 @@ def archive_login(username=None, password=None):
     archive_url = settings.ARCHIVE_TOKEN_URL
     return get_lcogt_headers(archive_url, username, password)
 
-
+# Stop after 4 attempts, and back off exponentially with a minimum wait time of 4 seconds, and a maximum of 10.
+# If it fails after 4 attempts, "reraise" the original exception back up to the caller.
+@retry(wait=wait_exponential(multiplier=2, min=4, max=10), stop=stop_after_attempt(4), reraise=True)
 def lco_api_call(url, headers=None, method='get'):
     if headers is None:
         if 'archive' in url:
