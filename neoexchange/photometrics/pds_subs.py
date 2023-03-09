@@ -1531,25 +1531,14 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
     for input_dir, block in zip(input_dirs, blocks):
         # Check if input_dir contains the correct BLKUID for the block
         # Unfortuntely:
-        # 1. we don't store this info in NEOx so need Archive API call to get it
+        # 1. we don't store this info in NEOx so need Archive API call to get
+        #    it (now a Block property)
         # 2. we can have multiple BLKUIDs for the same Block if it restarts
         #    and is rescheduled and re-observed (ignore for now...)
-        warnings.simplefilter('ignore', FITSFixedWarning)
-        frame = Frame.objects.filter(block=block, frametype=Frame.BANZAI_RED_FRAMETYPE, frameid__isnull=False).first()
-        headers = { 'DAY_OBS' : None, 'BLKUID' : None}
-        if frame is not None:
-            if frame.frameid is not None:
-                url = f"{settings.ARCHIVE_FRAMES_URL}{frame.frameid}"
-                headers = lco_api_call(url)
-            else:
-                logger.warning(f"No frameid found for {frame.filename} (id={frame.id})")
-        else:
-            logger.warning(f"No frames found for Block id {block.id}")
-        if headers.get('BLKUID', None) is not None:
-            blkuid = str(headers['BLKUID'])
-            if blkuid not in input_dir:
-                logger.error(f"Block/data mismatch ! (Block has BLKUID={blkuid}, does not appear in {input_dir}")
-                continue
+        blkuid = block.get_blockuid
+        if blkuid is None or blkuid not in input_dir:
+            logger.error(f"Block/data mismatch ! (Block has BLKUID={blkuid}, does not appear in {input_dir}")
+            continue
         # Create directory structure
         paths = create_dart_directories(output_dir, block)
         if verbose: print("input_dir ", input_dir)
