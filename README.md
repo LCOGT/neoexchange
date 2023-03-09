@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.14.x 
+* New pipeline using Dramatiq and calviacat zeropoint routine
+
 ### 3.12.1
 * Add Gaia EDR3, DR3 and ATLAS-2 MPC catalog codes (Issue #603)
 
