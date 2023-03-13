@@ -1258,6 +1258,148 @@ class TestCreateDisplaySettings(SimpleTestCase):
         self.compare_xml(expected, display_settings)
 
 
+class TestCreateImageArea(SimpleTestCase):
+
+    def setUp(self):
+        schemadir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_schemas'))
+
+        self.schema_mappings = pds_schema_mappings(schemadir, '*.xsd')
+
+        tests_path = os.path.abspath(os.path.join('photometrics', 'tests'))
+        self.test_raw_filename = os.path.join(tests_path, 'mef_raw_test_frame.fits')
+        self.test_raw_header, table, cattype = open_fits_catalog(self.test_raw_filename)
+        test_proc_header = os.path.join(tests_path, 'example_lco_proc_hdr')
+        self.test_proc_header = fits.Header.fromtextfile(test_proc_header)
+        lco_calib_prihdr = fits.Header.fromtextfile(test_proc_header)
+        lco_calib_prihdr["OBSTYPE"] = "DARK"
+        for keyword in ['L1IDDARK', 'L1STATDA', 'L1IDFLAT', 'L1STATFL', 'L1MEAN', 'L1MEDIAN', 'L1SIGMA', 'L1FWHM', 'L1ELLIP', 'L1ELLIPA', 'WCSERR']:
+            lco_calib_prihdr.remove(keyword)
+        lco_bpm_exthdr = fits.Header.fromtextfile(os.path.join(tests_path, 'example_lco_calib_bpmhdr'))
+        lco_err_exthdr = fits.Header.fromtextfile(os.path.join(tests_path, 'example_lco_calib_errhdr'))
+        self.test_lco_calib_header = [lco_calib_prihdr, lco_bpm_exthdr, lco_err_exthdr]
+
+        self.maxDiff = None
+
+    def compare_xml(self, expected, xml_element):
+        """Compare the expected XML string <expected> with the passed etree.Element
+        in <xml_element>
+        """
+
+        obj1 = objectify.fromstring(expected)
+        expect = etree.tostring(obj1, pretty_print=True)
+        result = etree.tostring(xml_element, pretty_print=True)
+
+        self.assertEquals(expect.decode("utf-8"), result.decode("utf-8"))
+
+    def test_single_filename(self):
+        expected = '''
+            <img:Imaging xmlns:img="http://pds.nasa.gov/pds4/img/v1">
+              <Local_Internal_Reference>
+                <local_identifier_reference>tfn0m410-kb98-20210925-0172-e91</local_identifier_reference>
+                <local_reference_type>imaging_parameters_to_image_object</local_reference_type>
+              </Local_Internal_Reference>
+              <img:Exposure>
+                <img:exposure_duration unit="s">100.000</img:exposure_duration>
+              </img:Exposure>
+              <img:Optical_Filter>
+                <img:filter_name>w</img:filter_name>
+                <img:bandwidth unit="Angstrom">4409.8</img:bandwidth>
+                <img:center_filter_wavelength unit="Angstrom">6080.0</img:center_filter_wavelength>
+              </img:Optical_Filter>
+            </img:Imaging>'''
+
+        image_area = create_image_area(self.test_proc_header, 'tfn0m410-kb98-20210925-0172-e91.fits', self.schema_mappings)
+
+        self.compare_xml(expected, image_area)
+
+    def test_multiple_filenames(self):
+        expected = '''
+            <img:Imaging xmlns:img="http://pds.nasa.gov/pds4/img/v1">
+              <Local_Internal_Reference>
+                <local_identifier_reference>tfn0m410-kb98-20210925-0172-e91</local_identifier_reference>
+                <local_identifier_reference>tfn0m410-kb98-20210925-0173-e91</local_identifier_reference>
+                <local_reference_type>imaging_parameters_to_image_object</local_reference_type>
+              </Local_Internal_Reference>
+              <img:Exposure>
+                <img:exposure_duration unit="s">100.000</img:exposure_duration>
+              </img:Exposure>
+              <img:Optical_Filter>
+                <img:filter_name>w</img:filter_name>
+                <img:bandwidth unit="Angstrom">4409.8</img:bandwidth>
+                <img:center_filter_wavelength unit="Angstrom">6080.0</img:center_filter_wavelength>
+              </img:Optical_Filter>
+            </img:Imaging>'''
+
+        image_area = create_image_area(self.test_proc_header,
+            ['tfn0m410-kb98-20210925-0172-e91.fits', 'tfn0m410-kb98-20210925-0173-e91.fits'],
+            self.schema_mappings)
+
+        self.compare_xml(expected, image_area)
+
+
+class TestCreateImgDispGeometry(SimpleTestCase):
+
+    def setUp(self):
+        schemadir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_schemas'))
+
+        self.schema_mappings = pds_schema_mappings(schemadir, '*.xsd')
+
+        tests_path = os.path.abspath(os.path.join('photometrics', 'tests'))
+        self.test_raw_filename = os.path.join(tests_path, 'mef_raw_test_frame.fits')
+        self.test_raw_header, table, cattype = open_fits_catalog(self.test_raw_filename)
+        test_proc_header = os.path.join(tests_path, 'example_lco_proc_hdr')
+        self.test_proc_header = fits.Header.fromtextfile(test_proc_header)
+        lco_calib_prihdr = fits.Header.fromtextfile(test_proc_header)
+        lco_calib_prihdr["OBSTYPE"] = "DARK"
+        for keyword in ['L1IDDARK', 'L1STATDA', 'L1IDFLAT', 'L1STATFL', 'L1MEAN', 'L1MEDIAN', 'L1SIGMA', 'L1FWHM', 'L1ELLIP', 'L1ELLIPA', 'WCSERR']:
+            lco_calib_prihdr.remove(keyword)
+        lco_bpm_exthdr = fits.Header.fromtextfile(os.path.join(tests_path, 'example_lco_calib_bpmhdr'))
+        lco_err_exthdr = fits.Header.fromtextfile(os.path.join(tests_path, 'example_lco_calib_errhdr'))
+        self.test_lco_calib_header = [lco_calib_prihdr, lco_bpm_exthdr, lco_err_exthdr]
+
+        self.maxDiff = None
+
+    def compare_xml(self, expected, xml_element):
+        """Compare the expected XML string <expected> with the passed etree.Element
+        in <xml_element>
+        """
+
+        obj1 = objectify.fromstring(expected)
+        expect = etree.tostring(obj1, pretty_print=True)
+        result = etree.tostring(xml_element, pretty_print=True)
+
+        self.assertEquals(expect.decode("utf-8"), result.decode("utf-8"))
+
+    def test_single_filename(self):
+        expected = '''
+            <geom:Image_Display_Geometry xmlns:geom="http://pds.nasa.gov/pds4/geom/v1">
+              <Local_Internal_Reference>
+                <local_identifier_reference>tfn0m410-kb98-20210925-0172-e91</local_identifier_reference>
+                <local_reference_type>display_to_data_object</local_reference_type>
+              </Local_Internal_Reference>
+            </geom:Image_Display_Geometry>'''
+
+        image_area = create_imgdisp_geometry('tfn0m410-kb98-20210925-0172-e91.fits', self.schema_mappings)
+
+        self.compare_xml(expected, image_area)
+
+    def test_multiple_filenames(self):
+        expected = '''
+            <geom:Image_Display_Geometry xmlns:geom="http://pds.nasa.gov/pds4/geom/v1">
+              <Local_Internal_Reference>
+                <local_identifier_reference>tfn0m410-kb98-20210925-0172-e91</local_identifier_reference>
+                <local_identifier_reference>tfn0m410-kb98-20210925-0173-e91</local_identifier_reference>
+                <local_reference_type>display_to_data_object</local_reference_type>
+              </Local_Internal_Reference>
+            </geom:Image_Display_Geometry>'''
+
+        image_area = create_imgdisp_geometry(
+            ['tfn0m410-kb98-20210925-0172-e91.fits', 'tfn0m410-kb98-20210925-0173-e91.fits'],
+            self.schema_mappings)
+
+        self.compare_xml(expected, image_area)
+
+
 class TestCreateDisciplineArea(SimpleTestCase):
 
     def setUp(self):
@@ -2813,6 +2955,22 @@ class TestExportBlockToPDS(TestCase):
         self.assertEqual(4, len(lines))
         for i, expected_line in enumerate(expected_lines):
             self.assertEqual(expected_line, lines[i])
+
+    def test_export_block_to_pds_no_inputdir(self):
+        expected_num_files = 0
+
+        csv_files, xml_files = export_block_to_pds([], self.test_output_dir, self.test_block, self.schemadir, self.docs_root, skip_download=True)
+
+        self.assertEqual(expected_num_files, len(csv_files))
+        self.assertEqual(expected_num_files, len(xml_files))
+
+    def test_export_block_to_pds_no_blocks(self):
+        expected_num_files = 0
+
+        csv_files, xml_files = export_block_to_pds(self.test_input_daydir, self.test_output_dir, [], self.schemadir, self.docs_root, skip_download=True)
+
+        self.assertEqual(expected_num_files, len(csv_files))
+        self.assertEqual(expected_num_files, len(xml_files))
 
     def test_export_block_to_pds(self):
         test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_photompipe.dat'))
