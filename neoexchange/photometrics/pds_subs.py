@@ -1221,7 +1221,7 @@ def find_fits_files(dirpath, prefix=None):
 
     fits_files = {}
     # walk through directories underneath
-    for root, dirs, files in os.walk(dirpath):
+    for root, dirs, files in os.walk(dirpath, followlinks=True):
 
         # ignore .diagnostics directories
         if '.diagnostics' in root or 'Old' in root:
