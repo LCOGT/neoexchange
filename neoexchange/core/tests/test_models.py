@@ -1437,6 +1437,69 @@ class TestBlock(TestCase):
                 self.assertNotEqual('', obs_string)
                 self.assertNotIn('Unknown LCO site', obs_string)
 
+    def test_where_observed_not_observed(self):
+
+        from astrometrics.site_config import valid_telescope_codes
+
+        self.params_imaging1['num_observed'] = None
+        block = Block.objects.create(**self.params_imaging1)
+
+        obs_string = block.where_observed()
+        self.assertEqual('', obs_string)
+
+    def test_which_instruments(self):
+
+        self.params_imaging1['num_observed'] = 1
+        block = Block.objects.create(**self.params_imaging1)
+
+        params = {
+                    'instrument'    : 'fa99',
+                    'filter'        : 'w',
+                    'filename'      : 'cpt1m012-fa99-20150713-0130-e91.fits',
+                    'exptime'       : 40.0,
+                    'midpoint'      : '2015-07-13 21:09:51',
+                    'block'         : block,
+                    'frametype'     : Frame.BANZAI_RED_FRAMETYPE
+                 }
+        frame = Frame.objects.create(**params)
+
+
+        inst_string = block.which_instruments()
+        self.assertNotEqual('', inst_string)
+        self.assertEqual('fa99', inst_string)
+
+    def test_which_instruments_no_frames(self):
+
+        self.params_imaging1['num_observed'] = 1
+        block = Block.objects.create(**self.params_imaging1)
+
+        inst_string = block.which_instruments()
+        self.assertEqual('', inst_string)
+        self.assertNotEqual('fa99', inst_string)
+
+    def test_which_instruments_multiple_insts(self):
+
+        self.params_imaging1['num_observed'] = 1
+        block = Block.objects.create(**self.params_imaging1)
+
+        params = {
+                    'instrument'    : 'fa99',
+                    'filter'        : 'w',
+                    'filename'      : 'cpt1m012-fa99-20150713-0130-e91.fits',
+                    'exptime'       : 40.0,
+                    'midpoint'      : '2015-07-13 21:09:51',
+                    'block'         : block,
+                    'frametype'     : Frame.BANZAI_RED_FRAMETYPE
+                 }
+        frame = Frame.objects.create(**params)
+        params['instrument'] = 'ef99'
+        params['filename'] = 'cpt1m012-ef99-20150713-0130-e91.fits'
+        frame2 = Frame.objects.create(**params)
+
+        inst_string = block.which_instruments()
+        self.assertNotEqual('', inst_string)
+        self.assertEqual('fa99,ef99', inst_string)
+
 
 class TestFrame(TestCase):
 

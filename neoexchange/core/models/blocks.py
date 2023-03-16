@@ -292,6 +292,18 @@ class Block(models.Model):
                 where_observed = ",".join([frames.filter(sitecode=site['sitecode'])[0].return_site_string() + " (" + site['sitecode'] + ")" for site in unique_sites])
         return where_observed
 
+    def which_instruments(self):
+        which_instruments=''
+        if self.num_observed is not None:
+            frames = Frame.objects.filter(block=self.id, frametype=Frame.BANZAI_RED_FRAMETYPE)
+            if frames.count() > 0:
+                # which_instruments_qs = frames.distinct('instrument')
+                # which_instruments = ",".join([inst for inst in which_instruments_qs])
+                # Alternative which doesn't need PostgreSQL DISTINCT ON <fieldname>
+                unique_insts = frames.values_list('instrument', flat=True).distinct()
+                which_instruments = ",".join(unique_insts)
+        return which_instruments
+
     class Meta:
         verbose_name = _('Observation Block')
         verbose_name_plural = _('Observation Blocks')
