@@ -686,23 +686,28 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
     except timeout as sock_e:
         logger.warning(f"HORIZONS retrieval failed with socket Error {sock_e.errno}: {sock_e.strerror}")
     except ValueError as e:
-        logger.debug("Ambiguous object, trying to determine HORIZONS id")
+        logger.debug("HORIZONS error, trying to fix")
         if e.args and len(e.args) > 0:
-            choices = e.args[0].split('\n')
-            horizons_id = determine_horizons_id(choices, obj_name)
-            logger.debug("HORIZONS id= {}".format(horizons_id))
-            if horizons_id:
-                try:
-                    eph = Horizons(id=horizons_id, id_type='id', epochs={'start' : start.strftime("%Y-%m-%d %H:%M:%S"),
-                        'stop' : end.strftime("%Y-%m-%d %H:%M:%S"), 'step' : ephem_step_size}, location=site_code)
-                    ephem = eph.ephemerides(quantities=horizons_quantities,
-                        skip_daylight=should_skip_daylight, airmass_lessthan=airmass_limit,
-                        max_hour_angle=ha_limit)
-                    ephem = convert_horizons_table(ephem, include_moon)
-                except ValueError as e:
-                    logger.warning("Error querying HORIZONS. Error message: {}".format(e))
+            if 'No ephemeris meets criteria.' in e.args[0]:
+                logger.warning("No ephemeris returned from HORIZONS. Error message: {}".format(e))
             else:
-                logger.warning("Unable to determine the HORIZONS id")
+                logger.debug("Ambiguous object, trying to determine HORIZONS id")
+
+                choices = e.args[0].split('\n')
+                horizons_id = determine_horizons_id(choices, obj_name)
+                logger.debug("HORIZONS id= {}".format(horizons_id))
+                if horizons_id:
+                    try:
+                        eph = Horizons(id=horizons_id, id_type='id', epochs={'start' : start.strftime("%Y-%m-%d %H:%M:%S"),
+                            'stop' : end.strftime("%Y-%m-%d %H:%M:%S"), 'step' : ephem_step_size}, location=site_code)
+                        ephem = eph.ephemerides(quantities=horizons_quantities,
+                            skip_daylight=should_skip_daylight, airmass_lessthan=airmass_limit,
+                            max_hour_angle=ha_limit)
+                        ephem = convert_horizons_table(ephem, include_moon)
+                    except ValueError as e:
+                        logger.warning("Error querying HORIZONS. Error message: {}".format(e))
+                else:
+                    logger.warning("Unable to determine the HORIZONS id")
         else:
             logger.warning("Error querying HORIZONS. Error message: {}".format(e))
     return ephem
