@@ -12,7 +12,6 @@ GNU General Public License for more details.
 """
 from astropy.wcs import WCS
 from django.db import models
-from django.utils.translation import ugettext_lazy as _
 from django.utils.encoding import force_str
 try:
     # cpython 2.x
@@ -267,8 +266,8 @@ class Frame(models.Model):
         return new_filt.upper()
 
     class Meta:
-        verbose_name = _('Observed Frame')
-        verbose_name_plural = _('Observed Frames')
+        verbose_name = 'Observed Frame'
+        verbose_name_plural = 'Observed Frames'
         db_table = 'ingest_frame'
 
     def __str__(self):

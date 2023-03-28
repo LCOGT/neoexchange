@@ -23,6 +23,7 @@ django-storages
 boto3
 matplotlib<3.3
 Jinja2<3.0
+MarkupSafe<2.0
 bokeh==2.3.0
 fits2image
 pillow

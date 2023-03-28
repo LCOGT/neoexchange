@@ -13,8 +13,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 from datetime import datetime, timedelta
-from math import ceil
-import sys
+
 import warnings
 
 from django.conf import settings
@@ -25,10 +24,9 @@ from urllib.parse import urljoin
 from core.models import Block, Frame, Candidate, SourceMeasurement, Body
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes, LCOGT_site_codes
 from astrometrics.time_subs import jd_utc2datetime
-from core.urlsubs import get_lcogt_headers
 from core.archive_subs import archive_login, check_for_archive_images, lco_api_call
 import logging
-import requests
+
 
 logger = logging.getLogger('core')
 
