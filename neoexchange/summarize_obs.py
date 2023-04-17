@@ -40,6 +40,7 @@ def summarize_observations(target_name='65803', start_date='2022-07-15', proposa
             for obs_filter in filters:
                 filter_str = obs_filter #", ".join(list(filters))
                 raw_frames = all_raw_frames.filter(filter=obs_filter)
+                num_raw_frames = raw_frames.count()
                 frames = all_frames.filter(filter=obs_filter)
                 num_good_zp = frames.filter(zeropoint__gte=0).count()
                 num_all_frames = frames.count()
