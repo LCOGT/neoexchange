@@ -116,6 +116,7 @@ RUN yum -y install epel-release glibc-langpack-en\
             libjpeg-devel \
             libpng-devel \
             mariadb-devel \
+            freetype-devel \
             make diffutils file
 
 # Copy Python dependencies manifest
