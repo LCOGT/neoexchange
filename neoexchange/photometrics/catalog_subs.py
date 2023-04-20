@@ -1834,6 +1834,9 @@ def get_or_create_CatalogSources(table, frame, header={}):
 
     num_in_table = len(table)
     num_cat_sources = CatalogSources.objects.filter(frame=frame).count()
+    # Index of flux array to ingest
+    flux_aper_index = 3
+    aper_scaling = 4
     if num_cat_sources == 0:
         new_sources = []
         for source in table:
@@ -1843,11 +1846,11 @@ def get_or_create_CatalogSources(table, frame, header={}):
                 aper_size = header.get('aperture_radius_arcsec', 3.0)
             else:
                 # Array of fluxes/mags
-                obs_mag = source['obs_mag'][4]
-                obs_mag_err = source['obs_mag_err'][4]
-                aper_size = header.get('aperture_radius_arcsec', 3.0)
-                # Correct aperture radius to 3rd aperture
-                aper_size = aper_size * 5
+                obs_mag = source['obs_mag'][flux_aper_index]
+                obs_mag_err = source['obs_mag_err'][flux_aper_index]
+                aper_size = header.get('aperture_radius_arcsec', 1.0)
+                # Correct aperture radius to 4th aperture
+                aper_size =  aper_size * aper_scaling # header['pixel_scale'] * 11
             new_source = CatalogSources(frame=frame, obs_x=source['ccd_x'], obs_y=source['ccd_y'],
                                         obs_ra=source['obs_ra'], obs_dec=source['obs_dec'], obs_mag=obs_mag,
                                         err_obs_ra=source['obs_ra_err'], err_obs_dec=source['obs_dec_err'],
@@ -1870,11 +1873,11 @@ def get_or_create_CatalogSources(table, frame, header={}):
                 aper_size = header.get('aperture_radius_arcsec', 3.0)
             else:
                 # Array of fluxes/mags
-                obs_mag = source['obs_mag'][3]
-                obs_mag_err = source['obs_mag_err'][3]
+                obs_mag = source['obs_mag'][flux_aper_index]
+                obs_mag_err = source['obs_mag_err'][flux_aper_index]
                 aper_size = header.get('aperture_radius_arcsec', 3.0)
                 # Correct aperture radius to 3rd aperture
-                aper_size = aper_size * (10.0/4.0)
+                aper_size = aper_size * aper_scaling
             source_params = {   'frame': frame,
                                 'obs_x': source['ccd_x'],
                                 'obs_y': source['ccd_y'],
