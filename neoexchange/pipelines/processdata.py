@@ -155,7 +155,9 @@ class SExtractorProcessPipeline(PipelineProcess):
 
         # Make a new FITS_LDAC catalog from the frame
         self.log(f"Processing {fits_file:} with SExtractor")
-        checkimage_types = ['BACKGROUND_RMS', "-BACKGROUND", "BACKGROUND", "APERTURES"]
+        # Options needed for image subtraction
+        #checkimage_types = ['BACKGROUND_RMS', "-BACKGROUND", "BACKGROUND", "APERTURES"]
+        checkimage_types = []
         if '-e91' in fits_file or '-ef' in fits_file:
             # No need to make rms or background images until we have a new
             # astrometric fit and -e92 files
@@ -384,14 +386,14 @@ class ZeropointProcessPipeline(PipelineProcess):
             min_matches = None
             if '-ef' in catfile:
                 # Wee FLI fields, reduce min_matches, set constant color
-                min_matches = 5
+                min_matches = 4
                 color_const = True
                 solar = False
 
             header, table, refcat = self.setup(catfile, catalog_type, phot_cat_name, min_matches=min_matches)
 
             if header and table and refcat:
-                if header['astrometric_fit_status'] > 0 or header['astrometric_fit_rms'] <= 0:
+                if header['astrometric_fit_status'] > 0 or (header['astrometric_fit_rms'] <= 0 and header['astrometric_fit_nstars'] != 4):
                     self.log("Bad astrometric fit detected; cannot calibrate")
                     logger.error("Bad astrometric fit detected; cannot calibrate")
                     return
