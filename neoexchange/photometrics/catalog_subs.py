@@ -714,7 +714,7 @@ def banzai_catalog_mapping():
                     'object_name' : 'OBJECT',
                     'num_exposures' : 'FRMTOTAL',
                     'proposal' : 'PROPID',
-                    'trackrate_frac' : 'TRACFRAC',
+                    'trackrate_frac' : '<TRACFRAC>',
                     'field_center_ra' : 'RA',
                     'field_center_dec' : 'DEC',
                     'field_width' : 'NAXIS1',
@@ -990,13 +990,16 @@ def get_header(fits_file):
     """Opens the specified FITS image or catalog <fits_file> and returns
     the interpreted generic NEOx header dictionary and type of file"""
 
+    header = -1
+    cattype = None
     # Open catalog, get header and check fit status
     fits_header, junk_table, cattype = open_fits_catalog(fits_file, header_only=True)
-    try:
-        header = get_catalog_header(fits_header, cattype)
-    except FITSHdrException as e:
-        logger.error("Bad header for %s (%s)" % (fits_file, e))
-        return -1, None
+    if fits_header != {} and cattype is not None:
+        try:
+            header = get_catalog_header(fits_header, cattype)
+        except FITSHdrException as e:
+            logger.error("Bad header for %s (%s)" % (fits_file, e))
+            return -2, None
 
     return header, cattype
 
@@ -1288,7 +1291,7 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
                 header_item = {item: round(pixscale, 5), 'wcs' : fits_wcs}
             # See if there is a version of the keyword in the file first
             file_fits_keyword = fits_keyword[1:-1]
-            if catalog_header.get(file_fits_keyword, None):
+            if catalog_header.get(file_fits_keyword, None) is not None:
                 value = catalog_header[file_fits_keyword]
                 # Convert if necessary
                 if item != 'field_width' and item != 'field_height' and item != 'aperture_radius_arcsec':
@@ -1746,10 +1749,10 @@ def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename, 
                                     'color_used' : header.get('color_used', ''),
                                     'color' : header.get('color', -99.0),
                                     'color_err' : header.get('color_err', -99.0),
-                                    'fwhm':header['fwhm'],
-                                    'frametype':frame_type,
-                                    'rms_of_fit':header['astrometric_fit_rms'],
-                                    'nstars_in_fit':header['astrometric_fit_nstars'],
+                                    'fwhm' : header['fwhm'],
+                                    'frametype' : frame_type,
+                                    'rms_of_fit' : header['astrometric_fit_rms'],
+                                    'nstars_in_fit' : header['astrometric_fit_nstars'],
                                     'wcs' : header['wcs'],
                                     'astrometric_catalog' : ast_cat_name,
                                     'photometric_catalog' : phot_cat_name
