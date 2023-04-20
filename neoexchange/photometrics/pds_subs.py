@@ -1464,7 +1464,7 @@ def create_dart_lightcurve(input_dir_or_block, output_dir, block, match='photome
                     file_parts['dayobs'] = first_frame.midpoint.strftime("%Y%m%d")
                     origin = 'lcogt'
                     observer = 'Lister'
-                    if file_parts['site'] == 'lco':
+                    if file_parts['site'].startswith('lco'):
                         origin = 'lco'
                         observer = 'Osip'
                     output_lc_file = f"{origin.lower()}_{file_parts['site']}_{file_parts['instrument']}_{file_parts['dayobs']}_{block.request_number}_{phot_filename}_photometry.tab"
