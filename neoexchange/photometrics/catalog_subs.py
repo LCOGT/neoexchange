@@ -446,8 +446,8 @@ def write_ldac(table, output_file):
     return num_sources
 
 
-def convert_catfile_to_corners(cat_file):
-    regex = re.compile(r"([a-zA-Z0-9-]+)_(\d{0,3}.\d*)([+-]\d*.\d*)_(\d*.\d*)mx(\d*.\d*)m.cat")
+def convert_catfile_to_corners(cat_file, cat_type='*.cat'):
+    regex = re.compile(r"([a-zA-Z0-9-]+)_(\d{0,3}.\d*)([+-]\d*.\d*)_(\d*.\d*)mx(\d*.\d*)m"+cat_type.replace('*',''))
     top_left = None
     bottom_right = None
 
@@ -496,7 +496,7 @@ def existing_catalog_coverage(dest_dir, ra, dec, width, height, cat_name="GAIA-D
             for test_file in cat_files:
                 if dbg:
                     print("catalog=", test_file)
-                cat_top_left, cat_bottom_right = convert_catfile_to_corners(test_file)
+                cat_top_left, cat_bottom_right = convert_catfile_to_corners(test_file, cat_type)
                 if dbg:
                     print("Catalog=", cat_top_left, cat_bottom_right)
                 if cat_top_left is not None and cat_bottom_right is not None:
