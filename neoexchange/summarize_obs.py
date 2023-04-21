@@ -12,7 +12,11 @@ def summarize_observations(target_name='65803', start_date='2022-07-15', proposa
     # Suppress WCS obsfix warnings
     warnings.simplefilter('ignore', FITSFixedWarning)
 
-    target = Body.objects.get(name=target_name)
+
+    if type(target_name) != Body:
+        target = Body.objects.get(name=target_name)
+    else:
+        target = target_name
     blocks = Block.objects.filter(body=target, block_start__gte=start_date)
     if proposal is not None:
         if type(proposal) == list:
