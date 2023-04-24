@@ -348,7 +348,243 @@ def create_file_area_obs(header, filename):
 
     return file_area_obs
 
-def write_xml(filepath, xml_file, schema_root, mod_time=None):
+def create_file_area_inv(filename, mod_time=None):
+    """Creates the File Area Inventory set of classes and returns an etree.Element with it.
+    """
+
+    mod_time = mod_time or datetime.fromtimestamp(os.path.getmtime(filename))
+    file_area_inv = etree.Element("File_Area_Inventory")
+    file_element = etree.SubElement(file_area_inv, "File")
+    etree.SubElement(file_element, "file_name").text = os.path.basename(filename)
+    etree.SubElement(file_element, "creation_date_time").text = mod_time.strftime("%Y-%m-%d")
+
+    # Count lines in CSV file for number of records
+    num_records = 0
+    with open(filename, 'r') as csv_fh:
+        lines = csv_fh.readlines()
+        num_records = len(lines)
+    inventory = etree.SubElement(file_area_inv, "Inventory")
+    etree.SubElement(inventory, "offset", attrib={"unit" : "byte"}).text = '0'
+    etree.SubElement(inventory, "parsing_standard_id").text = "PDS DSV 1"
+    etree.SubElement(inventory, "records").text = str(num_records)
+    etree.SubElement(inventory, "record_delimiter").text = "Carriage-Return Line-Feed"
+    etree.SubElement(inventory, "field_delimiter").text = "Comma"
+
+    record_delim = etree.SubElement(inventory, "Record_Delimited")
+    etree.SubElement(record_delim, "fields").text = "2"
+    etree.SubElement(record_delim, "groups").text = "0"
+    field_delim = etree.SubElement(record_delim, "Field_Delimited")
+
+    etree.SubElement(field_delim, "name").text = "Member Status"
+    etree.SubElement(field_delim, "field_number").text = "1"
+    etree.SubElement(field_delim, "data_type").text = "ASCII_String"
+    etree.SubElement(field_delim, "maximum_field_length", attrib={"unit" : "byte"}).text = "1"
+    etree.SubElement(field_delim, "description").text = '''
+            P indicates primary member of the collection
+            S indicates secondary member of the collection
+          '''
+    field_delim2 = etree.SubElement(record_delim, "Field_Delimited")
+    etree.SubElement(field_delim2, "name").text = "LIDVID_LID"
+    etree.SubElement(field_delim2, "field_number").text = "2"
+    etree.SubElement(field_delim2, "data_type").text = "ASCII_LIDVID_LID"
+    etree.SubElement(field_delim2, "maximum_field_length", attrib={"unit" : "byte"}).text = "255"
+    etree.SubElement(field_delim2, "description").text = "\n            The LID or LIDVID of a product that is a member of the collection.\n          "
+    etree.SubElement(inventory, "reference_type").text = "inventory_has_member_product"
+
+    return file_area_inv
+
+def create_file_area_table(filename):
+
+    fields = {'validity_flag'  : { 'field_location' : 1, 'data_type' : 'ASCII_String', 'field_length' : 1, 'description' : 'Flag whether this is a valid photometric datapoint, # indicates probably invalid blended data due to asteroid interference with the star.' },
+              'file' : { 'field_location' : 2, 'data_type' : 'ASCII_String', 'field_length' : 36, 'description' : 'File name of the calibrated image where data were measured.' },
+              'julian_date' : { 'field_location' : 40, 'data_type' : 'ASCII_Real', 'field_length' : 15, 'description' : 'UTC Julian date of the exposure midtime' },
+              'mag' : { 'field_location' : 56, 'data_type' : 'ASCII_Real', 'field_length' : 8, 'description' : 'Calibrated PanSTARRs r-band apparent magnitude of asteroid' },
+              'sig' : { 'field_location' : 66, 'data_type' : 'ASCII_Real', 'field_length' : 6, 'description' : '1-sigma error on the apparent magnitude' },
+              'ZP'  : { 'field_location' : 73, 'data_type' : 'ASCII_Real', 'field_length' : 8, 'description' : 'Calibrated zero point magnitude in PanSTARRs r-band' },
+              'ZP_sig' : { 'field_location' : 83, 'data_type' : 'ASCII_Real', 'field_length' : 6, 'description' : '1-sigma error on the zero point magnitude' },
+              'inst_mag' : { 'field_location' : 91, 'data_type' : 'ASCII_Real', 'field_length' : 8, 'description' : 'instrumental magnitude of asteroid' },
+              'inst_sig' : { 'field_location' : 101, 'data_type' : 'ASCII_Real', 'field_length' : 8, 'description' : '1-sigma error on the instrumental magnitude' },
+              'filter' : { 'field_location' : 111, 'data_type' : 'ASCII_String', 'field_length' : 6, 'description' : 'Transformed filter used for calibration.' },
+              'SExtractor_flag' : { 'field_location' : 119, 'data_type' : 'ASCII_Integer', 'field_length' : 15, 'description' : 'Flags associated with the Source Extractor photometry measurements. See source_extractor_flags.txt in the documents folder for this archive for more detailed description.' },
+              'aprad' : { 'field_location' : 136, 'data_type' : 'ASCII_Real', 'field_length' : 5, 'description' : 'radius in pixels of the aperture used for the photometry measurement' }
+              }
+    file_area_table = etree.Element("File_Area_Observational")
+    file_element = etree.SubElement(file_area_table, "File")
+    etree.SubElement(file_element, "file_name").text = os.path.basename(filename)
+    etree.SubElement(file_element, "comment").text = 'photometry summary table'
+
+    with open(filename, 'rb') as table_fh:
+        # Read lines, skipping blank lines
+        table = [line for line in table_fh.readlines() if line.strip()]
+    header_element = etree.SubElement(file_area_table, "Header")
+    # Compute size of header from first row
+    header_size_bytes = len(table[0])
+    header_size = "{:d}".format(header_size_bytes)
+
+    etree.SubElement(header_element, "offset", attrib={"unit" : "byte"}).text = "0"
+    etree.SubElement(header_element, "object_length", attrib={"unit" : "byte"}).text = header_size
+    etree.SubElement(header_element, "parsing_standard_id").text = "UTF-8 Text"
+
+    table_element = etree.SubElement(file_area_table, "Table_Character")
+    etree.SubElement(table_element, "offset", attrib={"unit" : "byte"}).text = header_size
+    etree.SubElement(table_element, "records").text = str(len(table)-1)
+    etree.SubElement(table_element, "record_delimiter").text = "Carriage-Return Line-Feed"
+
+    record_element = etree.SubElement(table_element, "Record_Character")
+    etree.SubElement(record_element, "fields").text = str(len(fields))
+    etree.SubElement(record_element, "groups").text = str(0)
+    etree.SubElement(record_element, "record_length", attrib={"unit" : "byte"}).text = header_size
+
+    field_num = 1
+    for tab_field, field_data in fields.items():
+        field_element = etree.SubElement(record_element, "Field_Character")
+        etree.SubElement(field_element, "name").text = tab_field
+        etree.SubElement(field_element, "field_number"). text = str(field_num)
+        etree.SubElement(field_element, "field_location", attrib={"unit" : "byte"}).text = str(field_data['field_location'])
+        etree.SubElement(field_element, "data_type").text = field_data['data_type']
+        etree.SubElement(field_element, "field_length", attrib={"unit" : "byte"}).text = str(field_data['field_length'])
+        etree.SubElement(field_element, "description").text = field_data['description']
+        field_num += 1
+    return file_area_table
+
+def ordinal(num):
+    """
+      Returns ordinal number string from int, e.g. 1, 2, 3 becomes 1st, 2nd, 3rd, etc.
+    """
+    SUFFIXES = {1: 'st', 2: 'nd', 3: 'rd'}
+    # I'm checking for 10-20 because those are the digits that
+    # don't follow the normal counting scheme.
+    if 10 <= num % 100 <= 20:
+        suffix = 'th'
+    else:
+        # the second parameter is a default.
+        suffix = SUFFIXES.get(num % 10, 'th')
+    return str(num) + suffix
+
+def create_file_area_bintable(filename):
+
+    fields = {'filename' : { 'field_location' : 1, 'data_type' : 'ASCII_String', 'field_length' : 36, 'description' : 'Filename of the calibrated image where data were measured.' },
+              'mjd' : { 'field_location' : 37, 'data_type' : 'IEEE754MSBDouble', 'field_length' : 8, 'description' : 'UTC Modified Julian Date of the exposure midtime' },
+              'obs_midpoint' : { 'field_location' : 45, 'data_type' : 'ASCII_String', 'field_length' : 36, 'description' : 'UTC datetime string of the exposure midtime' },
+              'exptime' : { 'field_location' : 81, 'data_type' : 'IEEE754MSBDouble', 'field_length' : 8, 'description' : 'Exposure time in seconds' },
+              'filter' : { 'field_location' : 89, 'data_type' : 'ASCII_String', 'field_length' : 36, 'description' : 'Name of the filter used' },
+              'obs_ra'  : { 'field_location' : 125, 'data_type' : 'IEEE754MSBDouble', 'field_length' : 8, 'description' : 'Right ascension of the asteroid' },
+              'obs_dec' : { 'field_location' : 133, 'data_type' : 'IEEE754MSBDouble', 'field_length' : 8, 'description' : 'Declination of the asteroid' },
+              'flux_radius' : { 'field_location' : 141, 'data_type' : 'IEEE754MSBDouble', 'field_length' : 8, 'description' : 'Flux radius' },
+              'fwhm' : { 'field_location' : 149, 'data_type' : 'IEEE754MSBDouble', 'field_length' : 8, 'description' : 'Full Width Half Maximum of the frame' },
+              }
+    file_area_table = etree.Element("File_Area_Observational")
+    file_element = etree.SubElement(file_area_table, "File")
+    etree.SubElement(file_element, "file_name").text = os.path.basename(filename)
+    etree.SubElement(file_element, "comment").text = 'multi-aperture photometry summary table'
+
+    table = Table.read(filename)
+    header_element = etree.SubElement(file_area_table, "Header")
+    # Compute size of header from first row
+    header_size_bytes = 2880
+    header_size = "{:d}".format(header_size_bytes)
+
+    etree.SubElement(header_element, "offset", attrib={"unit" : "byte"}).text = "0"
+    etree.SubElement(header_element, "object_length", attrib={"unit" : "byte"}).text = header_size
+    etree.SubElement(header_element, "parsing_standard_id").text = "FITS 3.0"
+
+    table_element = etree.SubElement(file_area_table, "Table_Binary")
+    etree.SubElement(table_element, "offset", attrib={"unit" : "byte"}).text = header_size
+    etree.SubElement(table_element, "records").text = str(len(table))
+
+    record_element = etree.SubElement(table_element, "Record_Binary")
+    etree.SubElement(record_element, "fields").text = str(len(table.colnames))
+    etree.SubElement(record_element, "groups").text = str(0)
+    # Feels like there has to be an easier way...
+    record_size = sum([table[c].dtype.itemsize for c in table.colnames])
+    etree.SubElement(record_element, "record_length", attrib={"unit" : "byte"}).text = str(record_size)
+
+    field_num = 1
+    for tab_field, field_data in fields.items():
+        field_element = etree.SubElement(record_element, "Field_Binary")
+        etree.SubElement(field_element, "name").text = tab_field
+        etree.SubElement(field_element, "field_number"). text = str(field_num)
+        etree.SubElement(field_element, "field_location", attrib={"unit" : "byte"}).text = str(field_data['field_location'])
+        etree.SubElement(field_element, "data_type").text = field_data['data_type']
+        etree.SubElement(field_element, "field_length", attrib={"unit" : "byte"}).text = str(field_data['field_length'])
+        etree.SubElement(field_element, "description").text = field_data['description']
+        field_num += 1
+    # Write the 20 magnitude and magnitude error columns
+    start = field_data['field_location'] + field_data['field_length']
+    index = 0
+    for tab_field in table.colnames[len(fields):]:
+        field_element = etree.SubElement(record_element, "Field_Binary")
+        etree.SubElement(field_element, "name").text = tab_field
+        etree.SubElement(field_element, "field_number"). text = str(field_num)
+        etree.SubElement(field_element, "field_location", attrib={"unit" : "byte"}).text = str(start)
+        etree.SubElement(field_element, "data_type").text = field_data['data_type']
+        field_length = table[tab_field].dtype.itemsize
+        etree.SubElement(field_element, "field_length", attrib={"unit" : "byte"}).text = str(field_length)
+        error_string = ''
+        if 'err_' in tab_field:
+            error_string = 'error '
+        description = f"Magnitude {error_string}in the {ordinal(index)} index aperture"
+        etree.SubElement(field_element, "description").text = description
+        field_num += 1
+        start += field_length
+        if 'err_' in tab_field:
+            index += 1
+
+    return file_area_table
+
+def create_reference_list(collection_type):
+    """Create a Reference List section
+    """
+
+    reference_list = etree.Element("Reference_List")
+    # Create Internal Reference subclass of Target Area
+    int_reference = etree.SubElement(reference_list, "Internal_Reference")
+    etree.SubElement(int_reference, "lid_reference").text = "urn:nasa:pds:dart_teleobs:documentation_lcogt:las_cumbres_dart_uncalibrated_calibrated_sis"
+    etree.SubElement(int_reference, "reference_type").text = "collection_to_document"
+    etree.SubElement(int_reference, "comment").text = "Reference is to the Las Cumbres DART Uncalibrated, Calibrated SIS document which describes the data products in this collection."
+    # Create Internal Reference to the <collection_type>'s overview
+    int_reference = etree.SubElement(reference_list, "Internal_Reference")
+    etree.SubElement(int_reference, "lid_reference").text = f"urn:nasa:pds:dart_teleobs:data_lcogt{collection_type}:overview"
+    etree.SubElement(int_reference, "reference_type").text = "collection_to_document"
+    etree.SubElement(int_reference, "comment").text = f"Reference is to the text file which gives an overview of the LCOGT {collection_type} Data Collection."
+
+    return reference_list
+
+def preamble_mapping(schema_mappings):
+    """Return a OrderedDict mapping from PDS schemas to the XML strings
+    for the XML label preamble. Supports multiple versions based on the
+    'version' key of the schema's mapping dict e.g.
+    schema_mappings[schema]['version']
+    """
+
+    mapping = OrderedDict([
+                            ('PDS4::PDS',  {'1.15.0.0' : b'''<?xml-model href="https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1F00.sch"
+            schematypens="http://purl.oclc.org/dsdl/schematron"?>''',
+                                            '1.19.0.0' : b'''<?xml-model href="https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1J00.sch"
+            schematypens="http://purl.oclc.org/dsdl/schematron"?>'''}),
+                            ('PDS4::DISP', {'1.5.0.0' : b'''<?xml-model href="https://pds.nasa.gov/pds4/disp/v1/PDS4_DISP_1F00_1500.sch"
+            schematypens="http://purl.oclc.org/dsdl/schematron"?>''',
+                                            '1.5.1.0' : b'''<?xml-model href="https://pds.nasa.gov/pds4/disp/v1/PDS4_DISP_1J00_1510.sch"
+            schematypens="http://purl.oclc.org/dsdl/schematron"?>'''}),
+                            ('PDS4::IMG',  {'1.8.1.0' : b'''<?xml-model href="https://pds.nasa.gov/pds4/img/v1/PDS4_IMG_1F00_1810.sch"
+            schematypens="http://purl.oclc.org/dsdl/schematron"?>''',
+                                            '1.8.7.0' : b'''<?xml-model href="https://pds.nasa.gov/pds4/img/v1/PDS4_IMG_1J00_1870.sch"
+            schematypens="http://purl.oclc.org/dsdl/schematron"?>'''}),
+                            ('PDS4::GEOM', {'1.9.1.0' : b'''<?xml-model href="https://pds.nasa.gov/pds4/geom/v1/PDS4_GEOM_1F00_1910.sch"
+            schematypens="http://purl.oclc.org/dsdl/schematron"?>''',
+                                            '1.9.6.0' : b'''<?xml-model href="https://pds.nasa.gov/pds4/geom/v1/PDS4_GEOM_1J00_1960.sch"
+            schematypens="http://purl.oclc.org/dsdl/schematron"?>'''})
+                        ])
+
+    output_mapping = OrderedDict()
+    for key in mapping.keys():
+        if key in schema_mappings:
+            version = schema_mappings[key]['version']
+            output_mapping[key] = mapping[key][version]
+
+    return output_mapping
+
+def write_product_label_xml(filepath, xml_file, schema_root, mod_time=None):
     """Create a PDS4 XML product label in <xml_file> from the FITS file
     pointed at by <filepath>. This used the PDS XSD and Schematron schemas located
     in <schema_root> directory. Optionally a different modification `datetime` [mod_time]
@@ -411,7 +647,7 @@ def create_pds_labels(procdir, schema_root):
 
     for fits_file in files_to_process:
         xml_file = fits_file.replace('.fits', '.xml')
-        write_xml(fits_file, xml_file, schema_root)
+        write_product_label_xml(fits_file, xml_file, schema_root)
         if os.path.exists(xml_file):
             xml_labels.append(xml_file)
 
