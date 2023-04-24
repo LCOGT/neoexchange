@@ -904,6 +904,91 @@ def create_file_area_table(filename):
         field_num += 1
     return file_area_table
 
+def ordinal(num):
+    """
+      Returns ordinal number string from int, e.g. 1, 2, 3 becomes 1st, 2nd, 3rd, etc.
+    """
+    SUFFIXES = {1: 'st', 2: 'nd', 3: 'rd'}
+    # I'm checking for 10-20 because those are the digits that
+    # don't follow the normal counting scheme.
+    if 10 <= num % 100 <= 20:
+        suffix = 'th'
+    else:
+        # the second parameter is a default.
+        suffix = SUFFIXES.get(num % 10, 'th')
+    return str(num) + suffix
+
+def create_file_area_bintable(filename):
+
+    fields = {'filename' : { 'field_location' : 1, 'data_type' : 'ASCII_String', 'field_length' : 36, 'description' : 'Filename of the calibrated image where data were measured.' },
+              'mjd' : { 'field_location' : 37, 'data_type' : 'IEEE754MSBDouble', 'field_length' : 8, 'description' : 'UTC Modified Julian Date of the exposure midtime' },
+              'obs_midpoint' : { 'field_location' : 45, 'data_type' : 'ASCII_String', 'field_length' : 36, 'description' : 'UTC datetime string of the exposure midtime' },
+              'exptime' : { 'field_location' : 81, 'data_type' : 'IEEE754MSBDouble', 'field_length' : 8, 'description' : 'Exposure time in seconds' },
+              'filter' : { 'field_location' : 89, 'data_type' : 'ASCII_String', 'field_length' : 36, 'description' : 'Name of the filter used' },
+              'obs_ra'  : { 'field_location' : 125, 'data_type' : 'IEEE754MSBDouble', 'field_length' : 8, 'description' : 'Right ascension of the asteroid' },
+              'obs_dec' : { 'field_location' : 133, 'data_type' : 'IEEE754MSBDouble', 'field_length' : 8, 'description' : 'Declination of the asteroid' },
+              'flux_radius' : { 'field_location' : 141, 'data_type' : 'IEEE754MSBDouble', 'field_length' : 8, 'description' : 'Flux radius' },
+              'fwhm' : { 'field_location' : 149, 'data_type' : 'IEEE754MSBDouble', 'field_length' : 8, 'description' : 'Full Width Half Maximum of the frame' },
+              }
+    file_area_table = etree.Element("File_Area_Observational")
+    file_element = etree.SubElement(file_area_table, "File")
+    etree.SubElement(file_element, "file_name").text = os.path.basename(filename)
+    etree.SubElement(file_element, "comment").text = 'multi-aperture photometry summary table'
+
+    table = Table.read(filename)
+    header_element = etree.SubElement(file_area_table, "Header")
+    # Compute size of header from first row
+    header_size_bytes = 2880
+    header_size = "{:d}".format(header_size_bytes)
+
+    etree.SubElement(header_element, "offset", attrib={"unit" : "byte"}).text = "0"
+    etree.SubElement(header_element, "object_length", attrib={"unit" : "byte"}).text = header_size
+    etree.SubElement(header_element, "parsing_standard_id").text = "FITS 3.0"
+
+    table_element = etree.SubElement(file_area_table, "Table_Binary")
+    etree.SubElement(table_element, "offset", attrib={"unit" : "byte"}).text = header_size
+    etree.SubElement(table_element, "records").text = str(len(table))
+
+    record_element = etree.SubElement(table_element, "Record_Binary")
+    etree.SubElement(record_element, "fields").text = str(len(table.colnames))
+    etree.SubElement(record_element, "groups").text = str(0)
+    # Feels like there has to be an easier way...
+    record_size = sum([table[c].dtype.itemsize for c in table.colnames])
+    etree.SubElement(record_element, "record_length", attrib={"unit" : "byte"}).text = str(record_size)
+
+    field_num = 1
+    for tab_field, field_data in fields.items():
+        field_element = etree.SubElement(record_element, "Field_Binary")
+        etree.SubElement(field_element, "name").text = tab_field
+        etree.SubElement(field_element, "field_number"). text = str(field_num)
+        etree.SubElement(field_element, "field_location", attrib={"unit" : "byte"}).text = str(field_data['field_location'])
+        etree.SubElement(field_element, "data_type").text = field_data['data_type']
+        etree.SubElement(field_element, "field_length", attrib={"unit" : "byte"}).text = str(field_data['field_length'])
+        etree.SubElement(field_element, "description").text = field_data['description']
+        field_num += 1
+    # Write the 20 magnitude and magnitude error columns
+    start = field_data['field_location'] + field_data['field_length']
+    index = 0
+    for tab_field in table.colnames[len(fields):]:
+        field_element = etree.SubElement(record_element, "Field_Binary")
+        etree.SubElement(field_element, "name").text = tab_field
+        etree.SubElement(field_element, "field_number"). text = str(field_num)
+        etree.SubElement(field_element, "field_location", attrib={"unit" : "byte"}).text = str(start)
+        etree.SubElement(field_element, "data_type").text = field_data['data_type']
+        field_length = table[tab_field].dtype.itemsize
+        etree.SubElement(field_element, "field_length", attrib={"unit" : "byte"}).text = str(field_length)
+        error_string = ''
+        if 'err_' in tab_field:
+            error_string = 'error '
+        description = f"Magnitude {error_string}in the {ordinal(index)} index aperture"
+        etree.SubElement(field_element, "description").text = description
+        field_num += 1
+        start += field_length
+        if 'err_' in tab_field:
+            index += 1
+
+    return file_area_table
+
 def create_reference_list(collection_type):
     """Create a Reference List section
     """

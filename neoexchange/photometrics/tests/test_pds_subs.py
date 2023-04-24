@@ -1184,6 +1184,448 @@ class TestCreateFileAreaTable(SimpleTestCase):
         self.compare_xml(expected, file_table_area)
 
 
+class TestCreateFileAreaBinTable(SimpleTestCase):
+
+    def setUp(self):
+
+        tests_path = os.path.abspath(os.path.join('photometrics', 'tests'))
+        self.test_bintable_filename = os.path.join(tests_path, 'example_bintable.fits')
+
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+
+        self.maxDiff = None
+
+    def compare_xml(self, expected, xml_element):
+        """Compare the expected XML string <expected> with the passed etree.Element
+        in <xml_element>
+        """
+
+        obj1 = objectify.fromstring(expected)
+        expect = etree.tostring(obj1, pretty_print=True)
+        result = etree.tostring(xml_element, pretty_print=True)
+
+        self.assertEquals(expect.decode("utf-8"), result.decode("utf-8"))
+
+    def test_lco_bintable(self):
+        expected = '''
+          <File_Area_Observational>
+            <File>
+              <file_name>example_bintable.fits</file_name>
+              <comment>multi-aperture photometry summary table</comment>
+            </File>
+             <Header>
+               <offset unit="byte">0</offset>
+               <object_length unit="byte">2880</object_length>
+               <parsing_standard_id>FITS 3.0</parsing_standard_id>
+             </Header>
+             <Table_Binary>
+              <offset unit="byte">2880</offset>
+              <records>22</records>
+              <Record_Binary>
+                <fields>49</fields>
+                <groups>0</groups>
+                <record_length unit="byte">476</record_length>
+                <Field_Binary>
+                  <name>filename</name>
+                  <field_number>1</field_number>
+                  <field_location unit="byte">1</field_location>
+                  <data_type>ASCII_String</data_type>
+                  <field_length unit="byte">36</field_length>
+                  <description>Filename of the calibrated image where data were measured.</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mjd</name>
+                  <field_number>2</field_number>
+                  <field_location unit="byte">37</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>UTC Modified Julian Date of the exposure midtime</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>obs_midpoint</name>
+                  <field_number>3</field_number>
+                  <field_location unit="byte">45</field_location>
+                  <data_type>ASCII_String</data_type>
+                  <field_length unit="byte">36</field_length>
+                  <description>UTC datetime string of the exposure midtime</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>exptime</name>
+                  <field_number>4</field_number>
+                  <field_location unit="byte">81</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Exposure time in seconds</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>filter</name>
+                  <field_number>5</field_number>
+                  <field_location unit="byte">89</field_location>
+                  <data_type>ASCII_String</data_type>
+                  <field_length unit="byte">36</field_length>
+                  <description>Name of the filter used</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>obs_ra</name>
+                  <field_number>6</field_number>
+                  <field_location unit="byte">125</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Right ascension of the asteroid</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>obs_dec</name>
+                  <field_number>7</field_number>
+                  <field_location unit="byte">133</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Declination of the asteroid</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>flux_radius</name>
+                  <field_number>8</field_number>
+                  <field_location unit="byte">141</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Flux radius</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>fwhm</name>
+                  <field_number>9</field_number>
+                  <field_location unit="byte">149</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Full Width Half Maximum of the frame</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_aperture_0</name>
+                  <field_number>10</field_number>
+                  <field_location unit="byte">157</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude in the 0th index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_err_aperture_0</name>
+                  <field_number>11</field_number>
+                  <field_location unit="byte">165</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude error in the 0th index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_aperture_1</name>
+                  <field_number>12</field_number>
+                  <field_location unit="byte">173</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude in the 1st index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_err_aperture_1</name>
+                  <field_number>13</field_number>
+                  <field_location unit="byte">181</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude error in the 1st index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_aperture_2</name>
+                  <field_number>14</field_number>
+                  <field_location unit="byte">189</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude in the 2nd index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_err_aperture_2</name>
+                  <field_number>15</field_number>
+                  <field_location unit="byte">197</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude error in the 2nd index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_aperture_3</name>
+                  <field_number>16</field_number>
+                  <field_location unit="byte">205</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude in the 3rd index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_err_aperture_3</name>
+                  <field_number>17</field_number>
+                  <field_location unit="byte">213</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude error in the 3rd index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_aperture_4</name>
+                  <field_number>18</field_number>
+                  <field_location unit="byte">221</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude in the 4th index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_err_aperture_4</name>
+                  <field_number>19</field_number>
+                  <field_location unit="byte">229</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude error in the 4th index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_aperture_5</name>
+                  <field_number>20</field_number>
+                  <field_location unit="byte">237</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude in the 5th index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_err_aperture_5</name>
+                  <field_number>21</field_number>
+                  <field_location unit="byte">245</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude error in the 5th index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_aperture_6</name>
+                  <field_number>22</field_number>
+                  <field_location unit="byte">253</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude in the 6th index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_err_aperture_6</name>
+                  <field_number>23</field_number>
+                  <field_location unit="byte">261</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude error in the 6th index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_aperture_7</name>
+                  <field_number>24</field_number>
+                  <field_location unit="byte">269</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude in the 7th index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_err_aperture_7</name>
+                  <field_number>25</field_number>
+                  <field_location unit="byte">277</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude error in the 7th index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_aperture_8</name>
+                  <field_number>26</field_number>
+                  <field_location unit="byte">285</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude in the 8th index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_err_aperture_8</name>
+                  <field_number>27</field_number>
+                  <field_location unit="byte">293</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude error in the 8th index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_aperture_9</name>
+                  <field_number>28</field_number>
+                  <field_location unit="byte">301</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude in the 9th index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_err_aperture_9</name>
+                  <field_number>29</field_number>
+                  <field_location unit="byte">309</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude error in the 9th index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_aperture_10</name>
+                  <field_number>30</field_number>
+                  <field_location unit="byte">317</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude in the 10th index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_err_aperture_10</name>
+                  <field_number>31</field_number>
+                  <field_location unit="byte">325</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude error in the 10th index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_aperture_11</name>
+                  <field_number>32</field_number>
+                  <field_location unit="byte">333</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude in the 11th index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_err_aperture_11</name>
+                  <field_number>33</field_number>
+                  <field_location unit="byte">341</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude error in the 11th index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_aperture_12</name>
+                  <field_number>34</field_number>
+                  <field_location unit="byte">349</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude in the 12th index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_err_aperture_12</name>
+                  <field_number>35</field_number>
+                  <field_location unit="byte">357</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude error in the 12th index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_aperture_13</name>
+                  <field_number>36</field_number>
+                  <field_location unit="byte">365</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude in the 13th index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_err_aperture_13</name>
+                  <field_number>37</field_number>
+                  <field_location unit="byte">373</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude error in the 13th index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_aperture_14</name>
+                  <field_number>38</field_number>
+                  <field_location unit="byte">381</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude in the 14th index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_err_aperture_14</name>
+                  <field_number>39</field_number>
+                  <field_location unit="byte">389</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude error in the 14th index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_aperture_15</name>
+                  <field_number>40</field_number>
+                  <field_location unit="byte">397</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude in the 15th index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_err_aperture_15</name>
+                  <field_number>41</field_number>
+                  <field_location unit="byte">405</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude error in the 15th index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_aperture_16</name>
+                  <field_number>42</field_number>
+                  <field_location unit="byte">413</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude in the 16th index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_err_aperture_16</name>
+                  <field_number>43</field_number>
+                  <field_location unit="byte">421</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude error in the 16th index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_aperture_17</name>
+                  <field_number>44</field_number>
+                  <field_location unit="byte">429</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude in the 17th index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_err_aperture_17</name>
+                  <field_number>45</field_number>
+                  <field_location unit="byte">437</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude error in the 17th index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_aperture_18</name>
+                  <field_number>46</field_number>
+                  <field_location unit="byte">445</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude in the 18th index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_err_aperture_18</name>
+                  <field_number>47</field_number>
+                  <field_location unit="byte">453</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude error in the 18th index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_aperture_19</name>
+                  <field_number>48</field_number>
+                  <field_location unit="byte">461</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude in the 19th index aperture</description>
+                </Field_Binary>
+                <Field_Binary>
+                  <name>mag_err_aperture_19</name>
+                  <field_number>49</field_number>
+                  <field_location unit="byte">469</field_location>
+                  <data_type>IEEE754MSBDouble</data_type>
+                  <field_length unit="byte">8</field_length>
+                  <description>Magnitude error in the 19th index aperture</description>
+                </Field_Binary>
+              </Record_Binary>
+            </Table_Binary>
+          </File_Area_Observational>'''
+
+        file_table_area = create_file_area_bintable(self.test_bintable_filename)
+
+        self.compare_xml(expected, file_table_area)
+
+
 class TestCreateDisplaySettings(SimpleTestCase):
 
     def setUp(self):
