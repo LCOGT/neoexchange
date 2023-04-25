@@ -471,6 +471,9 @@ def create_obs_area(header, filename):
     # Create Observing System subclass of Observation Area
     tel_class = header.get('TELESCOP', 'XXX')[0:3]
     tel_class_descrip = tel_class.replace("m0", "m").replace("0m4", "0.4m")
+    inst_class = header.get('INSTRUME', 'XXX')[0:2]
+    inst_classes = { 'fa' : 'Sinistro', 'ef' : 'FLI'}
+    inst_class_descrip = inst_classes.get(inst_class, 'Sinistro')
     obs_system = etree.SubElement(obs_area, "Observing_System")
     obs_components = {
                         'Host' : { 'name' : 'Las Cumbres Observatory (LCOGT)',
@@ -481,8 +484,8 @@ def create_obs_area(header, filename):
                                         'lid_reference' : f"urn:nasa:pds:context:instrument_host:las_cumbres.{tel_class:}_telescopes",
                                         'reference_type' : 'is_telescope'
                                       },
-                        'Instrument' : { 'name' : f'Las Cumbres {tel_class_descrip:} Telescopes - Sinistro Camera',
-                                         'lid_reference' : f"urn:nasa:pds:context:instrument:las_cumbres.{tel_class:}_telescopes.sinistro",
+                        'Instrument' : { 'name' : f'Las Cumbres {tel_class_descrip:} Telescopes - {inst_class_descrip} Camera',
+                                         'lid_reference' : f"urn:nasa:pds:context:instrument:las_cumbres.{tel_class:}_telescopes.{inst_class_descrip.lower()}",
                                          'reference_type' : 'is_instrument'
                                        }
                      }
@@ -545,6 +548,7 @@ def determine_first_last_times_from_table(filepath, match_pattern='*_photometry.
     to determine the times of the first and last frames, which are returned"""
 
     first_frame = last_frame = None
+    filepath = os.path.dirname(filepath)
     photometry_files = sorted(glob(os.path.join(filepath, '**', match_pattern)))
     if len(photometry_files) == 0:
         # Retry without the directory wildcard
@@ -555,12 +559,22 @@ def determine_first_last_times_from_table(filepath, match_pattern='*_photometry.
         for table_file in photometry_files:
             try:
                 table = Table.read(table_file, format='ascii', header_start=0, data_start=1)
+                col_name = 'julian_date'
+                time_format ='jd'
             except InconsistentTableError:
                 pass
+            except UnicodeDecodeError:
+                # FITS binary table?
+                try:
+                    table = Table.read(table_file, format='fits')
+                    col_name = 'mjd'
+                    time_format ='mjd'
+                except InconsistentTableError:
+                    pass
             if table:
-                first_frame = Time(table['julian_date'].min(), format='jd')
+                first_frame = Time(table[col_name].min(), format=time_format)
                 first_frame = first_frame.datetime
-                last_frame = Time(table['julian_date'].max(), format='jd')
+                last_frame = Time(table[col_name].max(), format=time_format)
                 last_frame = last_frame.datetime
 
     return first_frame, last_frame
@@ -571,10 +585,17 @@ def determine_filename_from_table(table_file):
     if table_file and os.path.exists(table_file):
         try:
             table = Table.read(table_file, format='ascii', header_start=0, data_start=1)
+            col_name = 'file'
         except InconsistentTableError:
             pass
+        except UnicodeDecodeError:
+            try:
+                table = Table.read(table_file, format='fits')
+                col_name = 'filename'
+            except InconsistentTableError:
+                pass
         if table:
-            filename = table['file'][0]
+            filename = table[col_name][0]
 
     return filename
 
@@ -1059,12 +1080,12 @@ def write_product_label_xml(filepath, xml_file, schema_root, mod_time=None):
 
     xmlEncoding = "UTF-8"
     proc_level = ''
-    if '.fit' not in filepath and 'photometry' in filepath:
+    if 'photometry' in filepath:
         proc_level = 'ddp'
 
     schemas_needed = '*.xsd'
     if proc_level == 'ddp':
-        # DDP/ASCII photometry files only need base schema
+        # DDP photometry files only need base schema
         schemas_needed = 'PDS4_PDS*.xsd'
     schema_mappings = pds_schema_mappings(schema_root, schemas_needed)
 
@@ -1079,14 +1100,20 @@ def write_product_label_xml(filepath, xml_file, schema_root, mod_time=None):
         name_mapping = { 'didymos' : '65803',
                          '65803didymos' : '65803',
                         }
-        first_frame, last_frame = determine_first_last_times_from_table(os.path.dirname(filepath))
+        if filepath.endswith('fits'):
+            first_frame, last_frame = determine_first_last_times_from_table(os.path.dirname(filepath), match_pattern='*_photometry.fits')
+        else:
+            first_frame, last_frame = determine_first_last_times_from_table(os.path.dirname(filepath))
         first_filename = determine_filename_from_table(filepath)
         if first_filename:
-            tel_class = first_filename[3:6]
-            tel_serialnum = first_filename[6:8]
+            file_parts = split_filename(first_filename)
+
+            tel_class = file_parts['tel_class']
+            tel_serialnum = file_parts['tel_serial']
             site_code = LCOGT_telserial_to_site_codes(tel_class+tel_serialnum)
         headers = [{ 'TELESCOP' : tel_class + '-' + tel_serialnum,
                      'MPCCODE'  : site_code,
+                     'INSTRUME' : file_parts['instrument'],
                      'object'   : name_mapping.get(chunks[5], chunks[5]),
                      'srctype'  : 'MINORPLANET',
                      'DATE-OBS' : first_frame.strftime("%Y-%m-%dT%H:%M:%S.%f"),
@@ -1118,7 +1145,10 @@ def write_product_label_xml(filepath, xml_file, schema_root, mod_time=None):
 
     # Create File_Area_Observational
     if proc_level == 'ddp':
-        file_area = create_file_area_table(filepath)
+        if filepath.endswith('fits'):
+            file_area = create_file_area_bintable(filepath)
+        else:
+            file_area = create_file_area_table(filepath)
     else:
         file_area = create_file_area_obs(headers, filename)
     processedImage.append(file_area)

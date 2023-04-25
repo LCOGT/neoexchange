@@ -2203,6 +2203,7 @@ class TestWritePDSLabel(TestCase):
         self.test_xml_cat_didymos = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_didymos.xml'))
         self.test_xml_raw_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_raw.xml'))
         self.test_xml_ddp_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_ddp.xml'))
+        self.test_xml_ddp_bintable_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_ddp_bintable.xml'))
         self.test_xml_bpm_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_bpm.xml'))
         self.test_xml_bias_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_bias.xml'))
         self.test_xml_dark_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_dark.xml'))
@@ -2212,9 +2213,12 @@ class TestWritePDSLabel(TestCase):
         self.test_raw_file = os.path.abspath(os.path.join('photometrics', 'tests', 'mef_raw_test_frame.fits'))
 
         test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_dartphotom.dat'))
-        # Copy files to input directory, renaming lc file
+        test_lc_bintable_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_bintable.fits'))
+        # Copy files to input directory, renaming lc files
         self.test_lc_file = os.path.join(self.test_dir, 'lcogt_1m0_01_fa11_20211013_65803didymos_photometry.tab')
         shutil.copy(test_lc_file, self.test_lc_file)
+        self.test_lc_bintable_file = os.path.join(self.test_dir, 'lcogt_1m0_12_ef04_20220926_65803didymos_photometry.fits')
+        shutil.copy(test_lc_bintable_file, self.test_lc_bintable_file)
         self.test_banzai_file = os.path.join(self.test_dir, os.path.basename(test_banzai_file))
         shutil.copy(test_banzai_file, self.test_banzai_file)
 
@@ -2424,6 +2428,14 @@ class TestWritePDSLabel(TestCase):
         status = write_product_label_xml(self.test_lc_file, output_xml_file, self.schemadir, mod_time=datetime(2021,10,15))
 
         self.compare_xml_files(self.test_xml_ddp_cat, output_xml_file)
+
+    def test_write_ddp_bintable_label(self):
+
+        output_xml_file = os.path.join(self.test_dir, 'test_example_label.xml')
+
+        status = write_product_label_xml(self.test_lc_bintable_file, output_xml_file, self.schemadir, mod_time=datetime(2021,10,15))
+
+        self.compare_xml_files(self.test_xml_ddp_bintable_cat, output_xml_file)
 
 
 class TestCreatePDSLabels(TestCase):
@@ -2838,6 +2850,61 @@ class TestDetermineTargetNameType(TestCase):
 
         self.assertEqual(expected_name, target_name)
         self.assertEqual(expected_type, target_type)
+
+
+class TestDetermineFirstLastTimesFromTable(SimpleTestCase):
+
+    def setUp(self):
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+
+        test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_dartphotom.dat'))
+        test_lc_bintable_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_bintable.fits'))
+
+        # Copy files to input directory, renaming lc files
+        self.test_lc_file = os.path.join(self.test_dir, 'lcogt_1m0_01_fa11_20211013_65803didymos_photometry.tab')
+        shutil.copy(test_lc_file, self.test_lc_file)
+        self.test_lc_bintable_file = os.path.join(self.test_dir, 'lcogt_1m0_10_ef02_20220926_65803didymos_photometry.fits')
+        shutil.copy(test_lc_bintable_file, self.test_lc_bintable_file)
+
+    def test_ascii(self):
+        expected_first_time = datetime(2021, 10, 12, 20, 0, 52, 346863)
+        expected_last_time = datetime(2021, 10, 12, 20, 57, 10, 85774)
+
+        first_frametime, last_frametime = determine_first_last_times_from_table(self.test_lc_file)
+
+        self.assertEqual(expected_first_time, first_frametime)
+        self.assertEqual(expected_last_time, last_frametime)
+
+    def test_ascii_subdir(self):
+        expected_first_time = datetime(2021, 10, 12, 20, 0, 52, 346863)
+        expected_last_time = datetime(2021, 10, 12, 20, 57, 10, 85774)
+
+        os.mkdir(os.path.join(self.test_dir, '20220926'))
+        self.test_lc_file = shutil.move(self.test_lc_file, os.path.join(self.test_dir, '20220926'))
+        first_frametime, last_frametime = determine_first_last_times_from_table(self.test_lc_file)
+
+        self.assertEqual(expected_first_time, first_frametime)
+        self.assertEqual(expected_last_time, last_frametime)
+
+    def test_bintable(self):
+        expected_first_time = datetime(2022, 9, 26, 23, 3, 41, 986000)
+        expected_last_time = datetime(2022, 9, 26, 23, 9, 23, 601500)
+
+        first_frametime, last_frametime = determine_first_last_times_from_table(self.test_lc_bintable_file, match_pattern='*_photometry.fits')
+
+        self.assertEqual(expected_first_time, first_frametime)
+        self.assertEqual(expected_last_time, last_frametime)
+
+    def test_bintable_subdir(self):
+        expected_first_time = datetime(2022, 9, 26, 23, 3, 41, 986000)
+        expected_last_time = datetime(2022, 9, 26, 23, 9, 23, 601500)
+
+        os.mkdir(os.path.join(self.test_dir, '20220926'))
+        self.test_lc_bintable_file = shutil.move(self.test_lc_bintable_file, os.path.join(self.test_dir, '20220926'))
+        first_frametime, last_frametime = determine_first_last_times_from_table(self.test_lc_bintable_file, match_pattern='*_photometry.fits')
+
+        self.assertEqual(expected_first_time, first_frametime)
+        self.assertEqual(expected_last_time, last_frametime)
 
 
 class TestDetermineFilenameFromTable(SimpleTestCase):
