@@ -941,6 +941,7 @@ def ordinal(num):
 
 def create_file_area_bintable(filename):
 
+    fits_block_size = 2880.0
     fields = {'filename' : { 'field_location' : 1, 'data_type' : 'ASCII_String', 'field_length' : 36, 'description' : 'Filename of the calibrated image where data were measured.' },
               'mjd' : { 'field_location' : 37, 'data_type' : 'IEEE754MSBDouble', 'field_length' : 8, 'description' : 'UTC Modified Julian Date of the exposure midtime' },
               'obs_midpoint' : { 'field_location' : 45, 'data_type' : 'ASCII_String', 'field_length' : 36, 'description' : 'UTC datetime string of the exposure midtime' },
@@ -958,16 +959,32 @@ def create_file_area_bintable(filename):
 
     table = Table.read(filename)
     header_element = etree.SubElement(file_area_table, "Header")
-    # Compute size of header from first row
+    # Assume size of primary header as 1 block (since it only has 5 keywords, all mandatory)
     header_size_bytes = 2880
     header_size = "{:d}".format(header_size_bytes)
 
+    etree.SubElement(header_element, "name").text = "primary_header"
     etree.SubElement(header_element, "offset", attrib={"unit" : "byte"}).text = "0"
     etree.SubElement(header_element, "object_length", attrib={"unit" : "byte"}).text = header_size
     etree.SubElement(header_element, "parsing_standard_id").text = "FITS 3.0"
 
+    # Write description of FITS BINTABLE header
+    offset = header_size_bytes
+    header_element = etree.SubElement(file_area_table, "Header")
+    # Calculate size of table header. 8 keywords + <# columns> * 2 + 1 (END)
+    # Size is ceil((#keywords * 80 ) / 2880) * 2880
+    header_size_bytes = (8 + (len(table.colnames)*2 + 1)) * 80
+    header_size_blocks = int(ceil(header_size_bytes/fits_block_size) * fits_block_size)
+    header_size = "{:d}".format(header_size_blocks)
+
+    etree.SubElement(header_element, "name").text = "table_header"
+    etree.SubElement(header_element, "offset", attrib={"unit" : "byte"}).text = str(offset)
+    etree.SubElement(header_element, "object_length", attrib={"unit" : "byte"}).text = header_size
+    etree.SubElement(header_element, "parsing_standard_id").text = "FITS 3.0"
+    offset += header_size_blocks
+
     table_element = etree.SubElement(file_area_table, "Table_Binary")
-    etree.SubElement(table_element, "offset", attrib={"unit" : "byte"}).text = header_size
+    etree.SubElement(table_element, "offset", attrib={"unit" : "byte"}).text = str(offset)
     etree.SubElement(table_element, "records").text = str(len(table))
 
     record_element = etree.SubElement(table_element, "Record_Binary")

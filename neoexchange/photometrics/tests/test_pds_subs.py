@@ -1213,13 +1213,20 @@ class TestCreateFileAreaBinTable(SimpleTestCase):
               <file_name>example_bintable.fits</file_name>
               <comment>multi-aperture photometry summary table</comment>
             </File>
-             <Header>
-               <offset unit="byte">0</offset>
-               <object_length unit="byte">2880</object_length>
-               <parsing_standard_id>FITS 3.0</parsing_standard_id>
-             </Header>
-             <Table_Binary>
+            <Header>
+              <name>primary_header</name>
+              <offset unit="byte">0</offset>
+              <object_length unit="byte">2880</object_length>
+              <parsing_standard_id>FITS 3.0</parsing_standard_id>
+            </Header>
+            <Header>
+              <name>table_header</name>
               <offset unit="byte">2880</offset>
+              <object_length unit="byte">8640</object_length>
+              <parsing_standard_id>FITS 3.0</parsing_standard_id>
+            </Header>
+            <Table_Binary>
+              <offset unit="byte">11520</offset>
               <records>22</records>
               <Record_Binary>
                 <fields>49</fields>
