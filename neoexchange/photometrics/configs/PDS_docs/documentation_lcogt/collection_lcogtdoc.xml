@@ -50,6 +50,12 @@
         <description>The description for the Sinistro Imager can be 
         found in the document collection for this bundle.</description>
       </Observing_System_Component>
+      <Observing_System_Component>
+        <name>FLI Imager</name>
+        <type>Instrument</type>
+        <description>The description for the FLI Imager can be 
+        found in the document collection for this bundle.</description>
+      </Observing_System_Component>
     </Observing_System>
     <Target_Identification>
       <name>(65803) Didymos</name>
@@ -66,8 +72,8 @@
   <File_Area_Inventory>
     <File>
       <file_name>collection_lcogtdoc.csv</file_name>
-      <creation_date_time>2022-02-16</creation_date_time>
-      <file_size unit="byte">168</file_size>
+      <creation_date_time>2023-04-26</creation_date_time>
+      <file_size unit="byte">238</file_size>
     </File>
     <Inventory>
       <offset unit="byte">0</offset>
