@@ -1,0 +1,112 @@
+Las Cumbres Observatory FLI Raw Data Collection Overview
+
+Data Abstract
+=============
+
+We obtained images of the NEO (65803) Didymos binary asteroid and the resulting
+plume of debris from the impact of the DART spacecraft with Dimorphos, along
+with supporting calibration data, from the three 1 meter Las Cumbres 
+Observatory (LCOGT) telescopes at the site in South Africa. These images were
+obtained to supplement the NASA's Double Asteroid Redirection Test (DART)
+mission. The DART mission was a planetary defense mission designed to
+test and measure the deflection caused by a kinetic impactor (the
+spacecraft) on the orbit of Dimorphos asteroid around its primary,
+Didymos. These ground-based observations from the date of impact (2022-09-26 UTC)
+were used to obtain three color measurements and light curves of Didymos and
+the resulting debris plume after the impact of the DART spacecraft. This
+collection consists of the Las Cumbres Observatory raw images.
+
+Data Set Overview
+=================
+
+This collection consists of raw images of the (65803) Didymos system
+taken by the Las Cumbres Observatory 1-meter telescope network through
+Sloan/PanSTARRS  g' and i' filters plus a broad band clear filter. Note in the
+FITS headers, the prime (') is replaced with a ASCII lower case 'p'
+e.g. observations in a g' filter will appear as 'gp').
+
+These observations were taken with the FLI instruments which are the 
+visible- wavelength, direct-imaging CCD cameras that are normally used 
+as autoguiders for the main LCOGT 1-meter Sinistro imagers. Since they 
+have a smaller number of pixels and can be readout much faster than the 
+Sinistro imagers, the FLI instruments are occasionally used as science 
+instruments to capture fast, dynamic phenomena such as that predicted 
+for the DART impact event. The FLI imager is a 1k x 1k CCD that images 
+a 5.8 arc minute square field of view. The device is back illuminated 
+and has 13-micron pixels. The unbinned detector provides a pixel scale 
+of 0.340 arcsec/pixel. The instrument can be operated in 1x1 or 2x2 
+pixel binning, giving 0.680 arcsec/pixel. The chip is linear up to 65k 
+ADU and has dual amplifiers which can readout at either 500 kHz or 
+2MHz. Read noise is typically 7.5 electrons with 500 kHz readout and 
+16.3 electrons in 2 MHz readout. The readout and processing time is 2.1 
+seconds for unbinned images, and 1.78 seconds for the binned 2x2 mode. 
+The CCD quantum efficiency is 15% for 300-350 nm, 50% at 400, 90% at 
+500 nm, rising to 90-95% over 500-700 nm and declining smoothly to 12% 
+at 1000 nm.
+
+The FLI imagers on the Las Cumbres Observatory 1-meter telescope
+network acquire data in FITS format. Raw image data includes the
+science sky frames, bias and dark frames, and flat fields. Bias and
+dark frames are taken during the local site afternoon before sunset and
+flat fields were manually scheduled in the days before impact for
+those filters that were going to be used for the impact observations. Flat
+fields are obtained by taking dithered images of the twilight sky with the
+telescope pointed at the point opposite the Sun which minimizes sky
+curvature.
+
+Naming Convention
+=================
+
+Raw FLI images consist of a single FITS file containing a primary
+header and the image data
+They are named according to the following LCOGT-wide convention:
+<site><tel. class><tel. #>-<instrument>-<yyyymmdd>-<iiii>-<type><red. level>.<extn>
+where:
+
+filename section Description
+---------------- --------------------------------------------------------------
+<site>           LCOGT site code (one from {ogg, coj, lsc, cpt, elp, tfn, ngq})
+<tel. class>     Size/class of telescope (one from {2m0, 1m0, 0m4})
+<tel. #>         telescope serial number within size class
+<instrument>     LCOGT instrument code e.g. ‘ef15’ where the first letter
+indicates CCD manufacturer (e=e2v), second letter indicates controller
+manufacturer (f=FLI) and the 2 digits indicate serial number.
+<yyyymmdd>       UTC date of the start of the night (defined to be UTC
+date at 1600 local time at the site). Does not change if the site
+observes through UTC midnight.
+<iiii>           four digit image counter for that instrument, resets
+at start of new night (defined as above). Counter starts at 0001
+<type>           Type of file. One of {a=arc, b=bias, d=dark, e=exposure,
+s=standard, f=sky flat, l=lambert flat, w=lamp flat, x=experimental})
+<red level>      Reduction level from 00-99 with higher numbers
+indicating higher levels of data processing. In practice, one of
+{00=raw, 91=BANZAI processed, 92=NEOexchange processed}
+<extn>           the file extension. ".fits" for fits file format,
+".xml" for the PDS label.
+
+e.g. cpt1m013-ef03-20220926-0176-e91.fits is a processed expose(sky)
+data product from the SAAO Sutherland Observatory (cpt), from 1-meter
+telescope #13 and the ef03 FLI instrument from the night of
+2022-09-26. It is the 176th image taken by that instrument on that
+night.
+
+The LCOGT site codes (which are based on the IATA code of the nearest
+airport) are defined as follows:
+
+LCOGT     Site 
+Site code location description
+--------- -----------------------------------------------------------------
+ogg       Haleakala, Maui, HI, USA
+coj       Siding Spring Observatory, NSW, Australia
+lsc       Cerro Tololo Inter-American Observatory, Chile
+cpt       South African Astronomical Observatory, Sutherland, South Africa
+elp       McDonald Observatory, Texas, USA
+tfn       Teide Observatory, Tenerife, Canary Islands, Spain
+ngq       Ali Observatory, western Tibet, China
+sin       Meta site for all Sinistro cameras in the network
+
+For these data, due to the time of the DART impact (2022-09-26 23:14 UTC), all
+data is from the cpt site and the following telescopes and instruments:
+* CPT 1m0 #10 (cpt1m010) telescope and ef02 instrument in Dome A
+* CPT 1m0 #13 (cpt1m013) telescope and ef03 instrument in Dome B
+* CPT 1m0 #12 (cpt1m012) telescope and ef04 instrument in Dome C
