@@ -1578,12 +1578,19 @@ def create_dart_lightcurve(input_dir_or_block, output_dir, block, match='photome
                     logger.warning(f"No SourceMeasurements found for reduced e92 frames for Block id {input_dir_or_block.id}")
                     photometry_files = []
             for photometry_file in photometry_files:
+                fits_bintable = False
                 if type(photometry_file) != Block:
-                    print("Table from PHOTPIPE output + LOG")
-                    log_file = os.path.join(os.path.dirname(photometry_file), 'LOG')
-                    table = read_photompipe_file(photometry_file)
-                    aper_radius = extract_photompipe_aperradius(log_file)
-                    file_parts['site'] += '-PP'
+                    if photometry_file.endswith('.fits') is True:
+                        print("Multi-aperture FITS BINTABLE")
+                        fits_bintable = True
+                        table = photometry_file
+                        aper_radius = -1
+                    else:
+                        print("Table from PHOTPIPE output + LOG")
+                        log_file = os.path.join(os.path.dirname(photometry_file), 'LOG')
+                        table = read_photompipe_file(photometry_file)
+                        aper_radius = extract_photompipe_aperradius(log_file)
+                        file_parts['site'] += '-PP'
                 else:
                     print("Table from SourceMeasurements")
                     table = create_table_from_srcmeasures(input_dir_or_block)
@@ -1599,11 +1606,23 @@ def create_dart_lightcurve(input_dir_or_block, output_dir, block, match='photome
                     if file_parts['site'].startswith('lco'):
                         origin = 'lco'
                         observer = 'Osip'
-                    output_lc_file = f"{origin.lower()}_{file_parts['site']}_{file_parts['instrument']}_{file_parts['dayobs']}_{block.request_number}_{phot_filename}_photometry.tab"
+                    extn = 'tab'
+                    if fits_bintable is True:
+                        extn = 'fits'
+                    output_lc_file = f"{origin.lower()}_{file_parts['site']}_{file_parts['instrument']}_{file_parts['dayobs']}_{block.request_number}_{phot_filename}_photometry.{extn}"
                     output_lc_filepath = os.path.join(output_dir, output_lc_file)
-                    write_dartformat_file(table, output_lc_filepath, aper_radius)
-                    # Convert lc file to CRLF endings required by PDS
-                    status = convert_file_to_crlf(output_lc_filepath)
+                    if fits_bintable is True and type(table) == str:
+                        # Create directory path if it doesn't exist
+                        filepath_dir = os.path.dirname(output_lc_filepath)
+                        if os.path.exists(filepath_dir) is False:
+                            os.makedirs(filepath_dir)
+                        # FITS binary table, just copy input `photometry_file`
+                        # filepath to output filename
+                        shutil.copy(photometry_file, output_lc_filepath)
+                    else:
+                        write_dartformat_file(table, output_lc_filepath, aper_radius)
+                        # Convert lc file to CRLF endings required by PDS
+                        status = convert_file_to_crlf(output_lc_filepath)
                     # Create DART upload format symlink
                     if create_symlink:
                         symlink_lc_file = f"{origin.upper()}_{file_parts['site'].upper()}-{file_parts['instrument'].upper()}_{observer}_{file_parts['dayobs']}.dat"

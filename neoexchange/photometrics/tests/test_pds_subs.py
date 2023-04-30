@@ -3472,6 +3472,34 @@ class TestExportBlockToPDS(TestCase):
         for i, expected_line in enumerate(expected_lines):
             self.assertEqual(expected_line, lines[i])
 
+    def test_create_dart_lightcurve_multiaper(self):
+        expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_tfn_fa11_20211013_12345_65803didymos_photometry.fits')
+        expected_colnames = ['filename', 'mjd', 'obs_midpoint', 'exptime', 'filter', 'obs_ra', 'obs_dec', 'flux_radius', 'fwhm']
+        for index in range(0,20):
+            expected_colnames.append('mag_aperture_' + str(index))
+            expected_colnames.append('mag_err_aperture_' + str(index))
+        expected_lines = [
+        ' tfn1m001-fa11-20211012-0073-e92.fits  2459500.3339392  14.8447  0.0397  27.1845  0.0394  -12.3397    0.0052       r                0  10.00 \r\n',
+        ' tfn1m001-fa11-20211012-0074-e92.fits  2459500.3345790  14.8637  0.0293  27.1824  0.0288  -12.3187    0.0053       r                3  10.00 \r\n'
+        ]
+
+        test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_bintable.fits'))
+        # Copy files to input directory, renaming table
+        new_name = os.path.join(self.test_input_daydir, '65803_data_gp.fits')
+        shutil.copy(test_lc_file, new_name)
+
+        dart_lc_file = create_dart_lightcurve(self.test_input_dir, self.test_ddp_daydir, self.test_block, match='*_data_*.fits')
+
+        self.assertEqual(expected_lc_file, dart_lc_file)
+        self.assertTrue(os.path.exists(expected_lc_file))
+
+        table_file = Table.read(dart_lc_file, format='fits')
+
+        self.assertEqual(22, len(table_file))
+        self.assertEqual(expected_colnames, table_file.colnames)
+        # for i, expected_line in enumerate(expected_lines):
+            # self.assertEqual(expected_line, table_file[i])
+
     def test_export_block_to_pds_no_inputdir(self):
         expected_num_files = 0
 
