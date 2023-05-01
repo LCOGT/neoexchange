@@ -678,10 +678,12 @@ def create_context_area(filepath, collection_type):
 
     # Create Observing System subclass of Observation Area
     obs_system = etree.SubElement(context_area, "Observing_System")
+    inst_mapping = { 'kb': 'SBIG', 'ef' : 'FLI', 'fa' : 'Sinistro',
+                     'fs' : 'Spectral', 'xx' : 'Unknown' }
     obs_components = {
                         'Host' : 'Las Cumbres Observatory (LCOGT)',
                         'Telescope' : ['LCOGT ' + headers[0].get('TELESCOP','') + ' Telescope' for headers in all_headers],
-                        'Instrument' : 'Sinistro Imager',
+                        'Instrument' : inst_mapping[headers[0].get('INSTRUME', 'xx')[0:2]] + ' Imager',
                      }
     for component in obs_components:
         if type(obs_components[component]) == list:
@@ -1645,7 +1647,11 @@ def copy_docs(root_path, collection_type, docs_dir, verbose=True):
     A list of the copied files are returned."""
 
     sent_files = []
-    for doc_file in glob(docs_dir + f'/*{collection_type}*'):
+    extn = ''
+    if '_fli' in root_path:
+        print("Adding FLI to collection type")
+        extn = '_fli'
+    for doc_file in glob(docs_dir + f'/*{collection_type+extn}*'):
         filename, extn = os.path.splitext(os.path.basename(doc_file))
         if filename not in sent_files:
             sent_files.append(filename)
@@ -1790,9 +1796,17 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
 
         # transfer ddp data
         input_dir_or_block = block
+        phot_match = 'photometry_*.dat'
         if pp_phot is True:
             input_dir_or_block = input_dir
-        dart_lc_file = create_dart_lightcurve(input_dir_or_block, paths['ddp_data'], block)
+        else:
+            # Check for multi-aperture FITS BINTABLEs with <object name>_data_<filter>.fits
+            phot_match = f'{block.body.current_name()}_data_*.fits'
+            num_bintables = glob(os.path.join(input_dir, '') + phot_match)
+            if len(num_bintables) > 0:
+                if verbose: print("FITS BINTABLE photometry files found")
+                input_dir_or_block = input_dir
+        dart_lc_file = create_dart_lightcurve(input_dir_or_block, paths['ddp_data'], block, match=phot_match)
         if dart_lc_file is None:
             logger.error("No light curve file found")
 #            return [], []
@@ -1862,7 +1876,10 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
 
     # create PDS products for ddp data
     path_to_all_ddps = os.path.join(os.path.dirname(paths['ddp_data']), '')
-    all_lc_files = sorted(glob(os.path.join(path_to_all_ddps, '**', '*photometry.tab')))
+    types = ( '*photometry.tab', '*photometry.fits')
+    all_lc_files = []
+    for files in types:
+        all_lc_files.extend(sorted(glob(os.path.join(path_to_all_ddps, '**', files))))
     if verbose: print(f"Total #cal frames: From Blocks= {len(lc_files)}, total={len(all_lc_files)}")
 
     ddp_csv_filename, ddp_xml_filename = create_pds_collection(paths['root'], path_to_all_ddps, all_lc_files, 'ddp', schema_root)
