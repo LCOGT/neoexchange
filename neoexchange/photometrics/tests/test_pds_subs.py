@@ -384,6 +384,459 @@ class TestCreateObsArea(TestCase):
         self.compare_xml(expected, obs_area)
 
 
+class TestCreateContextArea(TestCase):
+
+    def setUp(self):
+        self.remove = True
+        self.debug_print = False
+        self.maxDiff = None
+
+        self.tests_path = os.path.abspath(os.path.join('photometrics', 'tests'))
+
+        self.test_file = 'banzai_test_frame.fits'
+        self.test_file_path = os.path.join(self.tests_path, self.test_file)
+
+#        self.test_dir = '/tmp/tmp_neox_wibble'
+#        self.test_dir = 'C:\\Users\\liste\\AppData\\Local\\Temp\\tmp_neox_fli\\'
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+        self.test_input_dir = os.path.join(self.test_dir, 'input')
+        self.test_input_daydir = os.path.join(self.test_dir, 'input', '20211013')
+        os.makedirs(self.test_input_daydir, exist_ok=True)
+        self.test_output_dir = os.path.join(self.test_dir, 'output')
+        self.expected_root_dir = os.path.join(self.test_output_dir, '')
+        self.test_ddp_dir = os.path.join(self.expected_root_dir, 'data_lcogtddp')
+        self.test_blockdir = 'lcogt_1m0_01_fa11_20211013'
+        self.test_ddp_daydir = os.path.join(self.test_ddp_dir, self.test_blockdir)
+        if self.debug_print: print('test_ddp_dir=', self.test_ddp_dir)
+        os.makedirs(self.test_ddp_daydir, exist_ok=True)
+
+        self.test_cal_dir = os.path.join(self.expected_root_dir, 'data_lcogtcal')
+        self.test_cal_daydir = os.path.join(self.test_cal_dir, self.test_blockdir)
+        os.makedirs(self.test_cal_daydir, exist_ok=True)
+
+        body_params = {
+                         'id': 36254,
+                         'provisional_name': None,
+                         'provisional_packed': None,
+                         'name': '65803',
+                         'origin': 'N',
+                         'source_type': 'N',
+                         'source_subtype_1': 'N3',
+                         'source_subtype_2': 'PH',
+                         'elements_type': 'MPC_MINOR_PLANET',
+                         'active': False,
+                         'fast_moving': False,
+                         'urgency': None,
+                         'epochofel': datetime(2021, 2, 25, 0, 0),
+                         'orbit_rms': 0.56,
+                         'orbinc': 3.40768,
+                         'longascnode': 73.20234,
+                         'argofperih': 319.32035,
+                         'eccentricity': 0.3836409,
+                         'meandist': 1.6444571,
+                         'meananom': 77.75787,
+                         'perihdist': None,
+                         'epochofperih': None,
+                         'abs_mag': 18.27,
+                         'slope': 0.15,
+                         'score': None,
+                         'discovery_date': datetime(1996, 4, 11, 0, 0),
+                         'num_obs': 829,
+                         'arc_length': 7305.0,
+                         'not_seen': 2087.29154187494,
+                         'updated': True,
+                         'ingest': datetime(2018, 8, 14, 17, 45, 42),
+                         'update_time': datetime(2021, 3, 1, 19, 59, 56, 957500)
+                         }
+
+        self.test_body, created = Body.objects.get_or_create(**body_params)
+
+        desig_params = { 'body' : self.test_body, 'value' : 'Didymos', 'desig_type' : 'N', 'preferred' : True, 'packed' : False}
+        test_desig, created = Designations.objects.get_or_create(**desig_params)
+        desig_params['value'] = '65803'
+        desig_params['desig_type'] = '#'
+        test_desig, created = Designations.objects.get_or_create(**desig_params)
+
+    def tearDown(self):
+        # Generate an example test dir to compare root against and then remove it
+        temp_test_dir = tempfile.mkdtemp(prefix='tmp_neox')
+        os.rmdir(temp_test_dir)
+        if self.remove and self.test_dir.startswith(temp_test_dir[:-8]):
+            shutil.rmtree(self.test_dir)
+        else:
+            if self.debug_print:
+                print("Not removing temporary test directory", self.test_dir)
+
+    def compare_xml(self, expected, xml_element):
+        """Compare the expected XML string <expected> with the passed etree.Element
+        in <xml_element>
+        """
+
+        obj1 = objectify.fromstring(expected)
+        expect = etree.tostring(obj1, pretty_print=True)
+        result = etree.tostring(xml_element, pretty_print=True)
+
+        self.assertEquals(expect.decode("utf-8"), result.decode("utf-8"))
+
+    def test_phot_table(self):
+        expected_xml = '''
+          <Context_Area>
+            <Time_Coordinates>
+              <start_date_time>2021-10-12T20:00:52.34Z</start_date_time>
+              <stop_date_time>2021-10-12T20:57:10.08Z</stop_date_time>
+            </Time_Coordinates>
+            <Primary_Result_Summary>
+              <purpose>Science</purpose>
+              <processing_level>Derived</processing_level>
+              <Science_Facets>
+                <discipline_name>Small Bodies</discipline_name>
+                <facet1>Dynamical Properties</facet1>
+              </Science_Facets>
+              <Science_Facets>
+                <wavelength_range>Visible</wavelength_range>
+                <discipline_name>Small Bodies</discipline_name>
+                <facet1>Lightcurve</facet1>
+              </Science_Facets>
+              <Science_Facets>
+                <discipline_name>Small Bodies</discipline_name>
+                <facet1>Physical Properties</facet1>
+              </Science_Facets>
+              <Science_Facets>
+                <wavelength_range>Visible</wavelength_range>
+                <discipline_name>Flux Measurements</discipline_name>
+                <facet1>Photometry</facet1>
+              </Science_Facets>
+            </Primary_Result_Summary>
+            <Investigation_Area>
+              <name>Double Asteroid Redirection Test</name>
+              <type>Mission</type>
+              <Internal_Reference>
+                <lid_reference>urn:nasa:pds:context:investigation:mission.double_asteroid_redirection_test</lid_reference>
+                <reference_type>collection_to_investigation</reference_type>
+              </Internal_Reference>
+            </Investigation_Area>
+          </Context_Area>
+        '''
+
+        test_lc_file = os.path.abspath(os.path.join(self.tests_path, 'example_dartphotom.dat'))
+        # Copy files to output directory, renaming phot file
+        new_name = os.path.join(self.test_ddp_daydir, 'lcogt_1m0_01_fa11_20211013_65803didymos_photometry.tab')
+        shutil.copy(test_lc_file, new_name)
+
+        xml = create_context_area(self.test_ddp_dir, 'ddp')
+
+        self.compare_xml(expected_xml, xml)
+
+    def test_phot_table_by_daydir(self):
+        expected_xml = '''
+          <Context_Area>
+            <Time_Coordinates>
+              <start_date_time>2021-10-12T20:00:52.34Z</start_date_time>
+              <stop_date_time>2021-10-12T20:57:10.08Z</stop_date_time>
+            </Time_Coordinates>
+            <Primary_Result_Summary>
+              <purpose>Science</purpose>
+              <processing_level>Derived</processing_level>
+              <Science_Facets>
+                <discipline_name>Small Bodies</discipline_name>
+                <facet1>Dynamical Properties</facet1>
+              </Science_Facets>
+              <Science_Facets>
+                <wavelength_range>Visible</wavelength_range>
+                <discipline_name>Small Bodies</discipline_name>
+                <facet1>Lightcurve</facet1>
+              </Science_Facets>
+              <Science_Facets>
+                <discipline_name>Small Bodies</discipline_name>
+                <facet1>Physical Properties</facet1>
+              </Science_Facets>
+              <Science_Facets>
+                <wavelength_range>Visible</wavelength_range>
+                <discipline_name>Flux Measurements</discipline_name>
+                <facet1>Photometry</facet1>
+              </Science_Facets>
+            </Primary_Result_Summary>
+            <Investigation_Area>
+              <name>Double Asteroid Redirection Test</name>
+              <type>Mission</type>
+              <Internal_Reference>
+                <lid_reference>urn:nasa:pds:context:investigation:mission.double_asteroid_redirection_test</lid_reference>
+                <reference_type>collection_to_investigation</reference_type>
+              </Internal_Reference>
+            </Investigation_Area>
+          </Context_Area>
+        '''
+
+        test_lc_file = os.path.abspath(os.path.join(self.tests_path, 'example_dartphotom.dat'))
+        # Copy files to output directory, renaming phot file
+        new_name = os.path.join(self.test_ddp_daydir, 'lcogt_1m0_01_fa11_20211013_65803didymos_photometry.tab')
+        shutil.copy(test_lc_file, new_name)
+
+        xml = create_context_area(self.test_ddp_daydir, 'ddp')
+
+        self.compare_xml(expected_xml, xml)
+
+    def test_phot_table_with_files(self):
+        expected_xml = '''
+          <Context_Area>
+            <Time_Coordinates>
+              <start_date_time>2021-10-12T20:00:52.34Z</start_date_time>
+              <stop_date_time>2021-10-12T20:57:10.08Z</stop_date_time>
+            </Time_Coordinates>
+            <Primary_Result_Summary>
+              <purpose>Science</purpose>
+              <processing_level>Derived</processing_level>
+              <Science_Facets>
+                <discipline_name>Small Bodies</discipline_name>
+                <facet1>Dynamical Properties</facet1>
+              </Science_Facets>
+              <Science_Facets>
+                <wavelength_range>Visible</wavelength_range>
+                <discipline_name>Small Bodies</discipline_name>
+                <facet1>Lightcurve</facet1>
+              </Science_Facets>
+              <Science_Facets>
+                <discipline_name>Small Bodies</discipline_name>
+                <facet1>Physical Properties</facet1>
+              </Science_Facets>
+              <Science_Facets>
+                <wavelength_range>Visible</wavelength_range>
+                <discipline_name>Flux Measurements</discipline_name>
+                <facet1>Photometry</facet1>
+              </Science_Facets>
+            </Primary_Result_Summary>
+            <Investigation_Area>
+              <name>Double Asteroid Redirection Test</name>
+              <type>Mission</type>
+              <Internal_Reference>
+                <lid_reference>urn:nasa:pds:context:investigation:mission.double_asteroid_redirection_test</lid_reference>
+                <reference_type>collection_to_investigation</reference_type>
+              </Internal_Reference>
+            </Investigation_Area>
+            <Observing_System>
+              <Observing_System_Component>
+                <name>Las Cumbres Observatory (LCOGT)</name>
+                <type>Host</type>
+                <description>The description for the Las Cumbres Observatory (LCOGT) can be found in the document collection for this bundle.</description>
+              </Observing_System_Component>
+              <Observing_System_Component>
+                <name>LCOGT 1m0-13 Telescope</name>
+                <type>Telescope</type>
+                <description>The description for the LCOGT 1m0-13 Telescope can be found in the document collection for this bundle.</description>
+              </Observing_System_Component>
+              <Observing_System_Component>
+                <name>Sinistro Imager</name>
+                <type>Instrument</type>
+                <description>The description for the Sinistro Imager can be found in the document collection for this bundle.</description>
+              </Observing_System_Component>
+            </Observing_System>
+            <Target_Identification>
+              <name>(65803) Didymos</name>
+              <type>Asteroid</type>
+              <Internal_Reference>
+                <lid_reference>urn:nasa:pds:context:target:asteroid.65803_didymos</lid_reference>
+                <reference_type>collection_to_target</reference_type>
+              </Internal_Reference>
+            </Target_Identification>
+          </Context_Area>
+        '''
+
+        test_lc_file = os.path.abspath(os.path.join(self.tests_path, 'example_dartphotom.dat'))
+        # Copy ddp files to output ddp directory, renaming phot file
+        new_name = os.path.join(self.test_ddp_daydir, 'lcogt_1m0_01_fa11_20211013_65803didymos_photometry.tab')
+        shutil.copy(test_lc_file, new_name)
+
+        test_fits_file = os.path.abspath(os.path.join(self.tests_path, 'banzai_test_frame.fits'))
+        # Copy FITS files to output cal directory, renaming to e92
+        new_name = os.path.join(self.test_cal_daydir, 'tfn1m001-fa11-20211012-0076-e92.fits')
+        shutil.copy(test_fits_file, new_name)
+        with fits.open(new_name, mode='update') as hdulist:
+            hdulist[0].header['INSTRUME'] = 'fa11'
+            hdulist[0].header['OBJECT'] = '65803'
+            hdulist.flush()
+
+        xml = create_context_area(self.test_ddp_daydir, 'ddp')
+
+        self.compare_xml(expected_xml, xml)
+
+    def test_phot_table_with_fli_files(self):
+        expected_xml = '''
+          <Context_Area>
+            <Time_Coordinates>
+              <start_date_time>2021-10-12T20:00:52.34Z</start_date_time>
+              <stop_date_time>2021-10-12T20:57:10.08Z</stop_date_time>
+            </Time_Coordinates>
+            <Primary_Result_Summary>
+              <purpose>Science</purpose>
+              <processing_level>Derived</processing_level>
+              <Science_Facets>
+                <discipline_name>Small Bodies</discipline_name>
+                <facet1>Dynamical Properties</facet1>
+              </Science_Facets>
+              <Science_Facets>
+                <wavelength_range>Visible</wavelength_range>
+                <discipline_name>Small Bodies</discipline_name>
+                <facet1>Lightcurve</facet1>
+              </Science_Facets>
+              <Science_Facets>
+                <discipline_name>Small Bodies</discipline_name>
+                <facet1>Physical Properties</facet1>
+              </Science_Facets>
+              <Science_Facets>
+                <wavelength_range>Visible</wavelength_range>
+                <discipline_name>Flux Measurements</discipline_name>
+                <facet1>Photometry</facet1>
+              </Science_Facets>
+            </Primary_Result_Summary>
+            <Investigation_Area>
+              <name>Double Asteroid Redirection Test</name>
+              <type>Mission</type>
+              <Internal_Reference>
+                <lid_reference>urn:nasa:pds:context:investigation:mission.double_asteroid_redirection_test</lid_reference>
+                <reference_type>collection_to_investigation</reference_type>
+              </Internal_Reference>
+            </Investigation_Area>
+            <Observing_System>
+              <Observing_System_Component>
+                <name>Las Cumbres Observatory (LCOGT)</name>
+                <type>Host</type>
+                <description>The description for the Las Cumbres Observatory (LCOGT) can be found in the document collection for this bundle.</description>
+              </Observing_System_Component>
+              <Observing_System_Component>
+                <name>LCOGT 1m0-10 Telescope</name>
+                <type>Telescope</type>
+                <description>The description for the LCOGT 1m0-10 Telescope can be found in the document collection for this bundle.</description>
+              </Observing_System_Component>
+              <Observing_System_Component>
+                <name>LCOGT 1m0-12 Telescope</name>
+                <type>Telescope</type>
+                <description>The description for the LCOGT 1m0-12 Telescope can be found in the document collection for this bundle.</description>
+              </Observing_System_Component>
+              <Observing_System_Component>
+                <name>LCOGT 1m0-13 Telescope</name>
+                <type>Telescope</type>
+                <description>The description for the LCOGT 1m0-13 Telescope can be found in the document collection for this bundle.</description>
+              </Observing_System_Component>
+              <Observing_System_Component>
+                <name>FLI Imager</name>
+                <type>Instrument</type>
+                <description>The description for the FLI Imager can be found in the document collection for this bundle.</description>
+              </Observing_System_Component>
+            </Observing_System>
+            <Target_Identification>
+              <name>(65803) Didymos</name>
+              <type>Asteroid</type>
+              <Internal_Reference>
+                <lid_reference>urn:nasa:pds:context:target:asteroid.65803_didymos</lid_reference>
+                <reference_type>collection_to_target</reference_type>
+              </Internal_Reference>
+            </Target_Identification>
+          </Context_Area>
+        '''
+
+        test_lc_file = os.path.abspath(os.path.join(self.tests_path, 'example_dartphotom.dat'))
+        # Copy ddp files to output ddp directory, renaming phot file
+        new_name = os.path.join(self.test_ddp_daydir, 'lcogt_1m0_01_fa11_20211013_65803didymos_photometry.tab')
+        shutil.copy(test_lc_file, new_name)
+
+        test_fits_file = os.path.abspath(os.path.join(self.tests_path, 'banzai_test_frame.fits'))
+        # Copy FITS files to multiple output cal directories, renaming to e92, setting
+        # INSTRUME(nt), TELESCOP(e) and OBJECT header keywords appropriately
+        for tel_serial, instrument in zip(['1m0-10', '1m0-12', '1m0-13'], ['ef02', 'ef04', 'ef03']):
+            test_cal_daydir = os.path.join(self.test_cal_dir, f"lcogt_{tel_serial.replace('-','_')}_{instrument}_20211013")
+            os.makedirs(test_cal_daydir, exist_ok=True)
+            new_name = os.path.join(test_cal_daydir, f"cpt{tel_serial.replace('-', '')}-{instrument}-20211012-0076-e92.fits")
+            shutil.copy(test_fits_file, new_name)
+            with fits.open(new_name, mode='update') as hdulist:
+                hdulist[0].header['INSTRUME'] = instrument
+                hdulist[0].header['TELESCOP'] = tel_serial
+                hdulist[0].header['OBJECT'] = '65803'
+                hdulist.flush()
+
+        xml = create_context_area(self.test_ddp_dir, 'ddp')
+
+        self.compare_xml(expected_xml, xml)
+
+    def test_phot_table_with_files_not_didymos(self):
+        expected_xml = '''
+          <Context_Area>
+            <Time_Coordinates>
+              <start_date_time>2021-10-12T20:00:52.34Z</start_date_time>
+              <stop_date_time>2021-10-12T20:57:10.08Z</stop_date_time>
+            </Time_Coordinates>
+            <Primary_Result_Summary>
+              <purpose>Science</purpose>
+              <processing_level>Derived</processing_level>
+              <Science_Facets>
+                <discipline_name>Small Bodies</discipline_name>
+                <facet1>Dynamical Properties</facet1>
+              </Science_Facets>
+              <Science_Facets>
+                <wavelength_range>Visible</wavelength_range>
+                <discipline_name>Small Bodies</discipline_name>
+                <facet1>Lightcurve</facet1>
+              </Science_Facets>
+              <Science_Facets>
+                <discipline_name>Small Bodies</discipline_name>
+                <facet1>Physical Properties</facet1>
+              </Science_Facets>
+              <Science_Facets>
+                <wavelength_range>Visible</wavelength_range>
+                <discipline_name>Flux Measurements</discipline_name>
+                <facet1>Photometry</facet1>
+              </Science_Facets>
+            </Primary_Result_Summary>
+            <Investigation_Area>
+              <name>Double Asteroid Redirection Test</name>
+              <type>Mission</type>
+              <Internal_Reference>
+                <lid_reference>urn:nasa:pds:context:investigation:mission.double_asteroid_redirection_test</lid_reference>
+                <reference_type>collection_to_investigation</reference_type>
+              </Internal_Reference>
+            </Investigation_Area>
+            <Observing_System>
+              <Observing_System_Component>
+                <name>Las Cumbres Observatory (LCOGT)</name>
+                <type>Host</type>
+                <description>The description for the Las Cumbres Observatory (LCOGT) can be found in the document collection for this bundle.</description>
+              </Observing_System_Component>
+              <Observing_System_Component>
+                <name>LCOGT 1m0-13 Telescope</name>
+                <type>Telescope</type>
+                <description>The description for the LCOGT 1m0-13 Telescope can be found in the document collection for this bundle.</description>
+              </Observing_System_Component>
+              <Observing_System_Component>
+                <name>Sinistro Imager</name>
+                <type>Instrument</type>
+                <description>The description for the Sinistro Imager can be found in the document collection for this bundle.</description>
+              </Observing_System_Component>
+            </Observing_System>
+            <Target_Identification>
+              <name>(99942) Apophis</name>
+              <type>Asteroid</type>
+            </Target_Identification>
+          </Context_Area>
+        '''
+
+        test_lc_file = os.path.abspath(os.path.join(self.tests_path, 'example_dartphotom.dat'))
+        # Copy ddp files to output ddp directory, renaming phot file
+        new_name = os.path.join(self.test_ddp_daydir, 'lcogt_1m0_01_fa11_20211013_65803didymos_photometry.tab')
+        shutil.copy(test_lc_file, new_name)
+
+        test_fits_file = os.path.abspath(os.path.join(self.tests_path, 'banzai_test_frame.fits'))
+        # Copy FITS files to output cal directory, renaming to e92
+        new_name = os.path.join(self.test_cal_daydir, 'tfn1m001-fa11-20211012-0076-e92.fits')
+        shutil.copy(test_fits_file, new_name)
+        with fits.open(new_name, mode='update') as hdulist:
+            hdulist[0].header['INSTRUME'] = 'fa11'
+            hdulist[0].header['OBJECT'] = '99942'
+            hdulist.flush()
+
+        xml = create_context_area(self.test_ddp_daydir, 'ddp')
+
+        self.compare_xml(expected_xml, xml)
+
+
 class TestCreateFileAreaObs(SimpleTestCase):
 
     def setUp(self):

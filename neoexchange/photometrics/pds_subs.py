@@ -548,11 +548,13 @@ def determine_first_last_times_from_table(filepath, match_pattern='*_photometry.
     to determine the times of the first and last frames, which are returned"""
 
     first_frame = last_frame = None
-    filepath = os.path.dirname(filepath)
-    photometry_files = sorted(glob(os.path.join(filepath, '**', match_pattern)))
+    filepath = os.path.dirname(os.path.join(filepath, ''))
+    search_path = os.path.join(filepath, '', '**', match_pattern)
+#    print('search_path=', search_path)
+    photometry_files = sorted(glob(os.path.join(filepath, '', '**', match_pattern)))
     if len(photometry_files) == 0:
         # Retry without the directory wildcard
-        photometry_files = sorted(glob(os.path.join(filepath, match_pattern)))
+        photometry_files = sorted(glob(os.path.join(filepath, '', match_pattern)))
     if len(photometry_files) > 0:
         first_frame = datetime.max
         last_frame = datetime.min
