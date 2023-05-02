@@ -478,6 +478,223 @@ class TestCreateContextArea(TestCase):
 
         self.assertEquals(expect.decode("utf-8"), result.decode("utf-8"))
 
+    def test_cal_data(self):
+        expected_xml = '''
+          <Context_Area>
+            <Time_Coordinates>
+              <start_date_time>2016-06-06T22:48:14.00Z</start_date_time>
+              <stop_date_time>2016-06-06T22:50:02.77Z</stop_date_time>
+            </Time_Coordinates>
+            <Primary_Result_Summary>
+              <purpose>Science</purpose>
+              <processing_level>Calibrated</processing_level>
+              <Science_Facets>
+                <discipline_name>Small Bodies</discipline_name>
+                <facet1>Dynamical Properties</facet1>
+              </Science_Facets>
+              <Science_Facets>
+                <wavelength_range>Visible</wavelength_range>
+                <discipline_name>Small Bodies</discipline_name>
+                <facet1>Lightcurve</facet1>
+              </Science_Facets>
+              <Science_Facets>
+                <discipline_name>Small Bodies</discipline_name>
+                <facet1>Physical Properties</facet1>
+              </Science_Facets>
+              <Science_Facets>
+                <wavelength_range>Visible</wavelength_range>
+                <discipline_name>Flux Measurements</discipline_name>
+                <facet1>Photometry</facet1>
+              </Science_Facets>
+            </Primary_Result_Summary>
+            <Investigation_Area>
+              <name>Double Asteroid Redirection Test</name>
+              <type>Mission</type>
+              <Internal_Reference>
+                <lid_reference>urn:nasa:pds:context:investigation:mission.double_asteroid_redirection_test</lid_reference>
+                <reference_type>collection_to_investigation</reference_type>
+              </Internal_Reference>
+            </Investigation_Area>
+            <Observing_System>
+              <Observing_System_Component>
+                <name>Las Cumbres Observatory (LCOGT)</name>
+                <type>Host</type>
+                <description>The description for the Las Cumbres Observatory (LCOGT) can be found in the document collection for this bundle.</description>
+              </Observing_System_Component>
+              <Observing_System_Component>
+                <name>LCOGT 1m0-13 Telescope</name>
+                <type>Telescope</type>
+                <description>The description for the LCOGT 1m0-13 Telescope can be found in the document collection for this bundle.</description>
+              </Observing_System_Component>
+              <Observing_System_Component>
+                <name>SBIG Imager</name>
+                <type>Instrument</type>
+                <description>The description for the SBIG Imager can be found in the document collection for this bundle.</description>
+              </Observing_System_Component>
+            </Observing_System>
+            <Target_Identification>
+              <name>XL8B85F</name>
+              <type>Asteroid</type>
+            </Target_Identification>
+          </Context_Area>
+        '''
+
+        test_cal_file = os.path.abspath(os.path.join(self.tests_path, 'banzai_test_frame.fits'))
+        # Copy files to output directory, renaming phot file
+        new_name = os.path.join(self.test_cal_daydir, 'tfn1m001-fa11-20211012-0076-e92.fits')
+        shutil.copy(test_cal_file, new_name)
+
+        xml = create_context_area(self.test_cal_dir, 'cal')
+
+        self.compare_xml(expected_xml, xml)
+
+    def test_cal_data_by_daydir(self):
+        expected_xml = '''
+          <Context_Area>
+            <Time_Coordinates>
+              <start_date_time>2016-06-06T22:48:14.00Z</start_date_time>
+              <stop_date_time>2016-06-06T22:50:02.77Z</stop_date_time>
+            </Time_Coordinates>
+            <Primary_Result_Summary>
+              <purpose>Science</purpose>
+              <processing_level>Calibrated</processing_level>
+              <Science_Facets>
+                <discipline_name>Small Bodies</discipline_name>
+                <facet1>Dynamical Properties</facet1>
+              </Science_Facets>
+              <Science_Facets>
+                <wavelength_range>Visible</wavelength_range>
+                <discipline_name>Small Bodies</discipline_name>
+                <facet1>Lightcurve</facet1>
+              </Science_Facets>
+              <Science_Facets>
+                <discipline_name>Small Bodies</discipline_name>
+                <facet1>Physical Properties</facet1>
+              </Science_Facets>
+              <Science_Facets>
+                <wavelength_range>Visible</wavelength_range>
+                <discipline_name>Flux Measurements</discipline_name>
+                <facet1>Photometry</facet1>
+              </Science_Facets>
+            </Primary_Result_Summary>
+            <Investigation_Area>
+              <name>Double Asteroid Redirection Test</name>
+              <type>Mission</type>
+              <Internal_Reference>
+                <lid_reference>urn:nasa:pds:context:investigation:mission.double_asteroid_redirection_test</lid_reference>
+                <reference_type>collection_to_investigation</reference_type>
+              </Internal_Reference>
+            </Investigation_Area>
+            <Observing_System>
+              <Observing_System_Component>
+                <name>Las Cumbres Observatory (LCOGT)</name>
+                <type>Host</type>
+                <description>The description for the Las Cumbres Observatory (LCOGT) can be found in the document collection for this bundle.</description>
+              </Observing_System_Component>
+              <Observing_System_Component>
+                <name>LCOGT 1m0-13 Telescope</name>
+                <type>Telescope</type>
+                <description>The description for the LCOGT 1m0-13 Telescope can be found in the document collection for this bundle.</description>
+              </Observing_System_Component>
+              <Observing_System_Component>
+                <name>SBIG Imager</name>
+                <type>Instrument</type>
+                <description>The description for the SBIG Imager can be found in the document collection for this bundle.</description>
+              </Observing_System_Component>
+            </Observing_System>
+            <Target_Identification>
+              <name>XL8B85F</name>
+              <type>Asteroid</type>
+            </Target_Identification>
+          </Context_Area>
+        '''
+
+        test_cal_file = os.path.abspath(os.path.join(self.tests_path, 'banzai_test_frame.fits'))
+        # Copy files to output directory, renaming phot file
+        new_name = os.path.join(self.test_cal_daydir, 'tfn1m001-fa11-20211012-0076-e92.fits')
+        shutil.copy(test_cal_file, new_name)
+
+        xml = create_context_area(self.test_cal_daydir, 'cal')
+
+        self.compare_xml(expected_xml, xml)
+
+    def test_cal_data_didymos(self):
+        expected_xml = '''
+          <Context_Area>
+            <Time_Coordinates>
+              <start_date_time>2016-06-06T22:48:14.00Z</start_date_time>
+              <stop_date_time>2016-06-06T22:50:02.77Z</stop_date_time>
+            </Time_Coordinates>
+            <Primary_Result_Summary>
+              <purpose>Science</purpose>
+              <processing_level>Calibrated</processing_level>
+              <Science_Facets>
+                <discipline_name>Small Bodies</discipline_name>
+                <facet1>Dynamical Properties</facet1>
+              </Science_Facets>
+              <Science_Facets>
+                <wavelength_range>Visible</wavelength_range>
+                <discipline_name>Small Bodies</discipline_name>
+                <facet1>Lightcurve</facet1>
+              </Science_Facets>
+              <Science_Facets>
+                <discipline_name>Small Bodies</discipline_name>
+                <facet1>Physical Properties</facet1>
+              </Science_Facets>
+              <Science_Facets>
+                <wavelength_range>Visible</wavelength_range>
+                <discipline_name>Flux Measurements</discipline_name>
+                <facet1>Photometry</facet1>
+              </Science_Facets>
+            </Primary_Result_Summary>
+            <Investigation_Area>
+              <name>Double Asteroid Redirection Test</name>
+              <type>Mission</type>
+              <Internal_Reference>
+                <lid_reference>urn:nasa:pds:context:investigation:mission.double_asteroid_redirection_test</lid_reference>
+                <reference_type>collection_to_investigation</reference_type>
+              </Internal_Reference>
+            </Investigation_Area>
+            <Observing_System>
+              <Observing_System_Component>
+                <name>Las Cumbres Observatory (LCOGT)</name>
+                <type>Host</type>
+                <description>The description for the Las Cumbres Observatory (LCOGT) can be found in the document collection for this bundle.</description>
+              </Observing_System_Component>
+              <Observing_System_Component>
+                <name>LCOGT 1m0-13 Telescope</name>
+                <type>Telescope</type>
+                <description>The description for the LCOGT 1m0-13 Telescope can be found in the document collection for this bundle.</description>
+              </Observing_System_Component>
+              <Observing_System_Component>
+                <name>Sinistro Imager</name>
+                <type>Instrument</type>
+                <description>The description for the Sinistro Imager can be found in the document collection for this bundle.</description>
+              </Observing_System_Component>
+            </Observing_System>
+            <Target_Identification>
+              <name>(65803) Didymos</name>
+              <type>Asteroid</type>
+              <Internal_Reference>
+                <lid_reference>urn:nasa:pds:context:target:asteroid.65803_didymos</lid_reference>
+                <reference_type>collection_to_target</reference_type>
+              </Internal_Reference>
+            </Target_Identification>
+          </Context_Area>
+        '''
+
+        test_cal_file = os.path.abspath(os.path.join(self.tests_path, 'banzai_test_frame.fits'))
+        # Copy files to output directory, renaming phot file
+        new_name = os.path.join(self.test_cal_daydir, 'tfn1m001-fa11-20211012-0076-e92.fits')
+        shutil.copy(test_cal_file, new_name)
+        with fits.open(new_name, mode='update') as hdulist:
+            hdulist[0].header['INSTRUME'] = 'fa11'
+            hdulist[0].header['OBJECT'] = '65803'
+            hdulist.flush()
+        xml = create_context_area(self.test_cal_daydir, 'cal')
+
+        self.compare_xml(expected_xml, xml)
+
     def test_phot_table(self):
         expected_xml = '''
           <Context_Area>
