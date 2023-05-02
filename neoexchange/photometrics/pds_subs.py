@@ -615,7 +615,11 @@ def create_context_area(filepath, collection_type):
     context_area = etree.Element("Context_Area")
 
     if collection_type == 'ddp':
-        first_frametime, last_frametime = determine_first_last_times_from_table(filepath)
+        # XXX Nasty hack
+        if '_fli' in filepath:
+            first_frametime, last_frametime = determine_first_last_times_from_table(filepath, match_pattern='*photometry.fits')
+        else:
+            first_frametime, last_frametime = determine_first_last_times_from_table(filepath)
     else:
         first_frametime, last_frametime = determine_first_last_times(filepath)
     # Create Time_Coordinates sub element
