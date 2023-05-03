@@ -113,6 +113,36 @@ class TestGetNamespace(SimpleTestCase):
         self.assertEqual(expected_ns, ns)
 
 
+class TestCreateProductCollection(SimpleTestCase):
+
+    def setUp(self):
+        schemadir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_schemas'))
+
+        self.schemas_mapping = pds_schema_mappings(schemadir, '*.xsd')
+
+        self.maxDiff = None
+
+    def compare_xml(self, expected, xml_element):
+        """Compare the expected XML string <expected> with the passed etree.Element
+        in <xml_element>
+        """
+
+        obj1 = objectify.fromstring(expected)
+        expect = etree.tostring(obj1)
+        result = etree.tostring(xml_element)
+
+        self.assertEquals(expect, result)
+
+    def test_default(self):
+        expected_xml = '''
+            <Product_Collection xmlns="http://pds.nasa.gov/pds4/pds/v1" xmlns:disp="http://pds.nasa.gov/pds4/disp/v1" xmlns:geom="http://pds.nasa.gov/pds4/geom/v1" xmlns:img="http://pds.nasa.gov/pds4/img/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pds.nasa.gov/pds4/disp/v1 https://pds.nasa.gov/pds4/disp/v1/PDS4_DISP_1F00_1500.xsd    http://pds.nasa.gov/pds4/geom/v1 https://pds.nasa.gov/pds4/geom/v1/PDS4_GEOM_1F00_1910.xsd    http://pds.nasa.gov/pds4/img/v1 https://pds.nasa.gov/pds4/img/v1/PDS4_IMG_1F00_1810.xsd    http://pds.nasa.gov/pds4/pds/v1 https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1F00.xsd"/>
+        '''
+
+        prod_coll = create_product_collection(self.schemas_mapping)
+
+        self.compare_xml(expected_xml, prod_coll)
+
+
 class TestCreateIDArea(SimpleTestCase):
 
     def setUp(self):
