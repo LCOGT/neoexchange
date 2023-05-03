@@ -5,6 +5,7 @@ from glob import glob
 from pathlib import Path
 from lxml import etree, objectify
 from datetime import datetime
+from mock import patch, MagicMock, PropertyMock
 
 from astropy.io import fits
 
@@ -4043,8 +4044,8 @@ class TestExportBlockToPDS(TestCase):
 
 #        self.test_dir = '/tmp/tmp_neox_wibble'
         self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
-        self.test_input_dir = os.path.join(self.test_dir, 'input')
-        self.test_input_daydir = os.path.join(self.test_dir, 'input', '20211013')
+        self.test_input_dir = os.path.join(self.test_dir, 'input_testblock')
+        self.test_input_daydir = os.path.join(self.test_input_dir,  '20211013')
         os.makedirs(self.test_input_daydir, exist_ok=True)
         self.test_output_dir = os.path.join(self.test_dir, 'output')
         os.makedirs(self.test_output_dir, exist_ok=True)
@@ -4176,6 +4177,7 @@ class TestExportBlockToPDS(TestCase):
                 # Change object name to 65803
                 with fits.open(filename) as hdulist:
                     hdulist[0].header['telescop'] = '1m0-01'
+                    hdulist[0].header['instrume'] = 'fa15'
                     hdulist[0].header['object'] = '65803   '
                     half_exp = timedelta(seconds=hdulist[0].header['exptime'] / 2.0)
                     date_obs = frame_params['midpoint'] - half_exp
@@ -4598,6 +4600,8 @@ class TestExportBlockToPDS(TestCase):
         self.assertEqual(expected_num_files, len(xml_files))
 
     def test_export_block_to_pds(self):
+
+
         test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_photompipe.dat'))
         test_logfile = os.path.abspath(os.path.join('photometrics', 'tests', 'example_photompipe_log'))
         # Copy files to input directory, renaming log
@@ -4645,7 +4649,10 @@ class TestExportBlockToPDS(TestCase):
         hdulist.writeto(test_skyflat_file, checksum=True, overwrite=True)
         hdulist.close()
 
-        export_block_to_pds(self.test_input_dir, self.test_output_dir, self.test_block, self.schemadir, self.docs_root, skip_download=True)
+        # Mock the @cached_property on the Block.get_blockuid
+        with patch('photometrics.pds_subs.Block.get_blockuid', new_callable=PropertyMock) as mock_get_blockuid:
+            mock_get_blockuid.return_value='testblock'
+            export_block_to_pds(self.test_input_dir, self.test_output_dir, self.test_block, self.schemadir, self.docs_root, skip_download=True)
 
         for collection_type, file_type in zip(['raw', 'cal', 'ddp'], ['csv', 'xml']):
             expected_file = os.path.join(self.expected_root_dir, f'data_lcogt{collection_type}', f'collection_data_lcogt{collection_type}.{file_type}')
@@ -4664,7 +4671,7 @@ class TestExportBlockToPDS(TestCase):
             self.assertEqual(len(fits_files), len(xml_files), msg=f"Comparison failed on {collection_type:} files in {filepath:}")
             collection_filepath = os.path.join(self.expected_root_dir, f'data_lcogt{collection_type}', f'collection_data_lcogt{collection_type}.csv')
             t = Table.read(collection_filepath, format='ascii.csv', data_start=0)
-            self.assertEqual(len(fits_files), len(t)-1, msg=f"Comparison failed on {collection_type:} lines in {collection_filepath:}") # -1 due to extra overview file at the end
+            self.assertEqual(len(fits_files)+1, len(t), msg=f"Comparison failed on {collection_type:} lines in {collection_filepath:}")
             prod_type = 'e00'
             if collection_type == 'cal':
                 prod_type = 'e92.fits'

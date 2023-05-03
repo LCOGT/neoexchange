@@ -1659,7 +1659,7 @@ def copy_docs(root_path, collection_type, docs_dir, verbose=True):
     if '_fli' in root_path:
         print("Adding FLI to collection type")
         extn = '_fli'
-    for doc_file in glob(docs_dir + f'/*{collection_type+extn}*'):
+    for doc_file in glob(docs_dir + f'/*{collection_type+extn}_overview*'):
         filename, extn = os.path.splitext(os.path.basename(doc_file))
         if filename not in sent_files:
             sent_files.append(filename)
@@ -1844,7 +1844,8 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
         logger.error("No blocks appear to have been exported, not building collection")
         return [], []
     # Copy raw overview docs
-    raw_sent_files += copy_docs(paths['root'], 'raw', docs_dir, verbose)
+    raw_doc_files = copy_docs(paths['root'], 'raw', docs_dir, verbose)
+    raw_sent_files += raw_doc_files
 
     if verbose: print("Creating raw PDS collection")
     path_to_all_raws = os.path.join(os.path.dirname(paths['raw_data']), '')
@@ -1853,6 +1854,8 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
     for raw_dir, raw_files in all_raw_dirs_files.items():
         if verbose: print(raw_dir, len(raw_files))
         all_raw_files += raw_files
+    # Add in docs
+    all_raw_files += raw_doc_files
     if verbose: print(f"Total #raw frames: From Blocks= {len(raw_sent_files)}, total={len(all_raw_files)}")
     raw_csv_filename, raw_xml_filename = create_pds_collection(paths['root'], path_to_all_raws, all_raw_files, 'raw', schema_root)
     # Convert csv file to CRLF endings required by PDS
@@ -1861,7 +1864,8 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
     xml_files.append(raw_xml_filename)
 
     # Copy cal overview docs
-    cal_sent_files += copy_docs(paths['root'], 'cal', docs_dir, verbose)
+    cal_doc_files = copy_docs(paths['root'], 'cal', docs_dir, verbose)
+    cal_sent_files += cal_doc_files
 
     # create PDS products for cal data
     if verbose: print("Creating cal PDS collection")
@@ -1871,6 +1875,7 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
     for cal_dir, cal_files in all_cal_dirs_files.items():
         if verbose: print(cal_dir, len(cal_files))
         all_cal_files += cal_files
+    all_cal_files += cal_doc_files
     if verbose: print(f"Total #cal frames: From Blocks= {len(cal_sent_files)}, total={len(all_cal_files)}")
 
     cal_csv_filename, cal_xml_filename = create_pds_collection(paths['root'], path_to_all_cals, all_cal_files, 'cal', schema_root)
@@ -1880,7 +1885,7 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
     xml_files.append(cal_xml_filename)
 
     # Copy ddp overview docs
-    lc_files += copy_docs(paths['root'], 'ddp', docs_dir, verbose)
+    lc_files = copy_docs(paths['root'], 'ddp', docs_dir, verbose)
 
     # create PDS products for ddp data
     path_to_all_ddps = os.path.join(os.path.dirname(paths['ddp_data']), '')
@@ -1888,6 +1893,7 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
     all_lc_files = []
     for files in types:
         all_lc_files.extend(sorted(glob(os.path.join(path_to_all_ddps, '**', files))))
+    all_lc_files += lc_files
     if verbose: print(f"Total #cal frames: From Blocks= {len(lc_files)}, total={len(all_lc_files)}")
 
     ddp_csv_filename, ddp_xml_filename = create_pds_collection(paths['root'], path_to_all_ddps, all_lc_files, 'ddp', schema_root)
