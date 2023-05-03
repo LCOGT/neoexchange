@@ -3715,6 +3715,43 @@ class TestSplitFilename(SimpleTestCase):
 
         self.assertEqual(expected_parts, parts)
 
+    def test_Swope_1m(self):
+        expected_parts = { 'site' : 'lco',
+                           'tel_class' : '1m0',
+                           'tel_serial' : '01',
+                           'instrument' : 'Direct4Kx4K-4',
+                           'dayobs' : '20220925',
+                           'frame_num' : '1258',
+                           'frame_type' : 'e72',
+                           'extension' : '.fits'
+                         }
+
+        parts = split_filename('rccd1258.fits')
+
+        self.assertEqual(expected_parts, parts)
+
+    def test_Swope_1m_long(self):
+        expected_parts = { 'site' : 'lco',
+                           'tel_class' : '1m0',
+                           'tel_serial' : '01',
+                           'instrument' : 'Direct4Kx4K-4',
+                           'dayobs' : '20220924',
+                           'frame_num' : '1258',
+                           'frame_type' : 'e72',
+                           'extension' : '.fits'
+                         }
+
+        parts = split_filename('rccd-20220924-1258.fits')
+
+        self.assertEqual(expected_parts, parts)
+
+    def test_invalid(self):
+        expected_parts = {'extension' : '.fits',}
+
+        parts = split_filename('foobar.fits')
+
+        self.assertEqual(expected_parts, parts)
+
 
 class TestMakePDSAsteroidName(SimpleTestCase):
 
@@ -4722,6 +4759,7 @@ class TestExportBlockToPDS(TestCase):
                 # Change object name to 65803
                 hdulist = fits.open(filename)
                 hdulist[0].header['object'] = '65803   '
+                hdulist[0].header['instrume'] = 'fa15'
                 hdulist[0].header['telescop'] = '1m0-12'
                 half_exp = timedelta(seconds=hdulist[0].header['exptime'] / 2.0)
                 date_obs = frame_params['midpoint'] - half_exp
@@ -4783,7 +4821,10 @@ class TestExportBlockToPDS(TestCase):
             hdulist.close()
             self.test_banzai_files.append(os.path.basename(test_skyflat_file))
 
-        export_block_to_pds(input_daydirs_list, self.test_output_dir, [self.test_block, self.test_block2], self.schemadir, self.docs_root, skip_download=True, verbose=verbose)
+        # Mock the @cached_property on the Block.get_blockuid
+        with patch('photometrics.pds_subs.Block.get_blockuid', new_callable=PropertyMock) as mock_get_blockuid:
+            mock_get_blockuid.return_value='testblock'
+            export_block_to_pds(input_daydirs_list, self.test_output_dir, [self.test_block, self.test_block2], self.schemadir, self.docs_root, skip_download=True, verbose=verbose)
 
         for collection_type, file_type in [(a,b) for a in ['raw', 'cal', 'ddp'] for b in ['csv', 'xml']]:
             expected_file = os.path.join(self.expected_root_dir, f'data_lcogt{collection_type}', f'collection_data_lcogt{collection_type}.{file_type}')
@@ -5152,6 +5193,7 @@ class TestTransferReformat(TestCase):
                 # Change object name to 65803
                 with fits.open(filename) as hdulist:
                     hdulist[0].header['telescop'] = '1m0-01'
+                    hdulist[0].header['instrume'] = 'fa15'
                     hdulist[0].header['object'] = '65803   '
                     half_exp = timedelta(seconds=hdulist[0].header['exptime'] / 2.0)
                     date_obs = frame_params['midpoint'] - half_exp
