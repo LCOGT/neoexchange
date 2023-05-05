@@ -1314,6 +1314,16 @@ def split_filename(filename):
         name_parts['dayobs'] = chunks[1]
         name_parts['frame_num'] = chunks[2]
         name_parts['frame_type'] = 'e72'
+    elif len(fileroot) == 20 and fileroot.startswith('ccd'):
+        # Swope, need to make up many things....
+        chunks = fileroot.split('-')
+        name_parts['site'] = 'lco'
+        name_parts['tel_class'] = '1m0'
+        name_parts['tel_serial'] = '01'
+        name_parts['instrument'] = 'Direct4Kx4K-4'
+        name_parts['dayobs'] = chunks[1]
+        name_parts['frame_num'] = chunks[0][-4:]
+        name_parts['frame_type'] = 'e72'
 
     return name_parts
 
@@ -1600,7 +1610,8 @@ def create_dart_lightcurve(input_dir_or_block, output_dir, block, match='photome
                         log_file = os.path.join(os.path.dirname(photometry_file), 'LOG')
                         table = read_photompipe_file(photometry_file)
                         aper_radius = extract_photompipe_aperradius(log_file)
-                        file_parts['site'] += '-PP'
+                        if '-PP' not in file_parts['site']:
+                            file_parts['site'] += '-PP'
                 else:
                     print("Table from SourceMeasurements")
                     table = create_table_from_srcmeasures(input_dir_or_block)
@@ -1657,7 +1668,7 @@ def copy_docs(root_path, collection_type, docs_dir, verbose=True):
     sent_files = []
     extn = ''
     if '_fli' in root_path:
-        print("Adding FLI to collection type")
+        if verbose: print("Adding FLI to collection type")
         extn = '_fli'
     for doc_file in glob(docs_dir + f'/*{collection_type+extn}_overview*'):
         filename, extn = os.path.splitext(os.path.basename(doc_file))

@@ -1,4 +1,5 @@
 import os
+import io
 import shutil
 import tempfile
 from glob import glob
@@ -3745,6 +3746,21 @@ class TestSplitFilename(SimpleTestCase):
 
         self.assertEqual(expected_parts, parts)
 
+    def test_Swope_1m_banzai(self):
+        expected_parts = { 'site' : 'lco',
+                           'tel_class' : '1m0',
+                           'tel_serial' : '01',
+                           'instrument' : 'Direct4Kx4K-4',
+                           'dayobs' : '20220824',
+                           'frame_num' : '1473',
+                           'frame_type' : 'e72',
+                           'extension' : '.fits'
+                         }
+
+        parts = split_filename('ccd1473-20220824-e91.fits')
+
+        self.assertEqual(expected_parts, parts)
+
     def test_invalid(self):
         expected_parts = {'extension' : '.fits',}
 
@@ -5354,3 +5370,141 @@ class TestTransferReformat(TestCase):
                 assert expected_line.lstrip() == xml[i].lstrip(), "Failed on line: " + str(i+1) + "\n-" + expected_line.lstrip() + "\n+" + xml[i].lstrip()
             else:
                 assert expected_line.lstrip() == None, "Failed on line: " + str(i+1)
+
+
+class TestCopyDocs(SimpleTestCase):
+
+    def setUp(self):
+        self.docs_dir = os.path.abspath(os.path.join('photometrics', 'configs', 'PDS_docs', ''))
+
+#        self.test_dir = '/tmp/tmp_neox_wibble'
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+        self.test_output_dir = os.path.join(self.test_dir, 'output')
+        self.test_output_rawdir = os.path.join(self.test_output_dir, 'data_lcogtraw')
+        os.makedirs(self.test_output_rawdir, exist_ok=True)
+        self.test_output_caldir = os.path.join(self.test_output_dir, 'data_lcogtcal')
+        os.makedirs(self.test_output_caldir, exist_ok=True)
+        self.test_output_ddpdir = os.path.join(self.test_output_dir, 'data_lcogtddp')
+        os.makedirs(self.test_output_ddpdir, exist_ok=True)
+
+        self.remove = True
+        self.debug_print = False
+        self.maxDiff = None
+
+    def tearDown(self):
+        if self.remove:
+            try:
+                files_to_remove = glob(os.path.join(self.test_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.test_dir)
+            try:
+                os.rmdir(self.test_dir)
+                if self.debug_print:
+                    print("Removed", self.test_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.test_dir)
+
+    def update_dirs_for_fli(self):
+        """Renames the output directories and updates the variables for FLI data"""
+        new_test_output_dir = self.test_output_dir.replace('output', 'output_fli')
+        if os.path.exists(new_test_output_dir):
+            self.test_output_dir = new_test_output_dir
+        else:
+            self.test_output_dir = shutil.move(self.test_output_dir, new_test_output_dir)
+        if self.debug_print: print("new dir=", self.test_output_dir)
+        self.test_ddp_dir = os.path.join(self.test_output_dir, 'data_lcogtddp')
+#        self.test_ddp_daydir = os.path.join(self.test_ddp_dir, self.test_blockdir)
+        self.test_cal_dir = os.path.join(self.test_output_dir, 'data_lcogtcal')
+#        self.test_cal_daydir = os.path.join(self.test_cal_dir, self.test_blockdir)
+        self.test_raw_dir = os.path.join(self.test_output_dir, 'data_lcogtraw')
+#        self.test_raw_daydir = os.path.join(self.test_raw_dir, self.test_blockdir)
+        return
+
+    def test_raw(self):
+
+        expected_xml_labels = ['collection_data_lcogtraw_overview', ]
+
+        xml_labels = copy_docs(self.test_output_dir, 'raw', self.docs_dir, verbose=False)
+
+        self.assertEqual(len(expected_xml_labels), len(xml_labels))
+        self.assertEqual(expected_xml_labels, xml_labels)
+        for extn in ['txt', 'xml']:
+            self.assertListEqual(
+                list(io.open(os.path.join(self.docs_dir, f'collection_data_lcogtraw_overview.{extn}'))),
+                list(io.open(os.path.join(self.test_output_rawdir, f'overview.{extn}')))
+                )
+
+    def test_raw_fli(self):
+
+        expected_xml_labels = ['collection_data_lcogtraw_fli_overview',  ]
+
+        self.update_dirs_for_fli()
+        xml_labels = copy_docs(self.test_output_dir, 'raw', self.docs_dir, verbose=False)
+
+        self.assertEqual(len(expected_xml_labels), len(xml_labels))
+        self.assertEqual(expected_xml_labels, xml_labels)
+        for extn in ['txt', 'xml']:
+            self.assertListEqual(
+                list(io.open(os.path.join(self.docs_dir, f'collection_data_lcogtraw_overview.{extn}'))),
+                list(io.open(os.path.join(self.test_output_rawdir, f'overview.{extn}')))
+                )
+
+    def test_cal(self):
+
+        expected_xml_labels = ['collection_data_lcogtcal_overview', ]
+
+        xml_labels = copy_docs(self.test_output_dir, 'cal', self.docs_dir, verbose=False)
+
+        self.assertEqual(len(expected_xml_labels), len(xml_labels))
+        self.assertEqual(expected_xml_labels, xml_labels)
+        for extn in ['txt', 'xml']:
+            self.assertListEqual(
+                list(io.open(os.path.join(self.docs_dir, f'collection_data_lcogtcal_overview.{extn}'))),
+                list(io.open(os.path.join(self.test_output_caldir, f'overview.{extn}')))
+                )
+
+    def test_cal_fli(self):
+
+        expected_xml_labels = ['collection_data_lcogtcal_fli_overview',  ]
+
+        self.update_dirs_for_fli()
+        xml_labels = copy_docs(self.test_output_dir, 'cal', self.docs_dir, verbose=False)
+
+        self.assertEqual(len(expected_xml_labels), len(xml_labels))
+        self.assertEqual(expected_xml_labels, xml_labels)
+        for extn in ['txt', 'xml']:
+            self.assertListEqual(
+                list(io.open(os.path.join(self.docs_dir, f'collection_data_lcogtcal_overview.{extn}'))),
+                list(io.open(os.path.join(self.test_output_caldir, f'overview.{extn}')))
+                )
+
+    def test_ddp(self):
+
+        expected_xml_labels = ['collection_data_lcogtddp_overview', ]
+
+        xml_labels = copy_docs(self.test_output_dir, 'ddp', self.docs_dir, verbose=False)
+
+        self.assertEqual(len(expected_xml_labels), len(xml_labels))
+        self.assertEqual(expected_xml_labels, xml_labels)
+        for extn in ['txt', 'xml']:
+            self.assertListEqual(
+                list(io.open(os.path.join(self.docs_dir, f'collection_data_lcogtddp_overview.{extn}'))),
+                list(io.open(os.path.join(self.test_output_ddpdir, f'overview.{extn}')))
+                )
+
+    def test_ddp_fli(self):
+
+        expected_xml_labels = ['collection_data_lcogtddp_fli_overview',  ]
+
+        self.update_dirs_for_fli()
+        xml_labels = copy_docs(self.test_output_dir, 'ddp', self.docs_dir, verbose=False)
+
+        self.assertEqual(len(expected_xml_labels), len(xml_labels))
+        self.assertEqual(expected_xml_labels, xml_labels)
+        for extn in ['txt', 'xml']:
+            self.assertListEqual(
+                list(io.open(os.path.join(self.docs_dir, f'collection_data_lcogtddp_overview.{extn}'))),
+                list(io.open(os.path.join(self.test_output_ddpdir, f'overview.{extn}')))
+                )
