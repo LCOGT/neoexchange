@@ -419,9 +419,6 @@ class TestCreateObsArea(TestCase):
 class TestCreateContextArea(TestCase):
 
     def setUp(self):
-        self.remove = True
-        self.debug_print = False
-        self.maxDiff = None
 
         self.tests_path = os.path.abspath(os.path.join('photometrics', 'tests'))
 
@@ -488,6 +485,10 @@ class TestCreateContextArea(TestCase):
         desig_params['value'] = '65803'
         desig_params['desig_type'] = '#'
         test_desig, created = Designations.objects.get_or_create(**desig_params)
+
+        self.remove = True
+        self.debug_print = False
+        self.maxDiff = None
 
     def tearDown(self):
         # Generate an example test dir to compare root against and then remove it
@@ -4247,7 +4248,7 @@ class TestExportBlockToPDS(TestCase):
         self.test_banzai_files.insert(1, os.path.basename(new_name))
 
         self.remove = True
-        self.debug_print = True
+        self.debug_print = False
         self.maxDiff = None
 
     def tearDown(self):
@@ -4706,6 +4707,139 @@ class TestExportBlockToPDS(TestCase):
         with patch('photometrics.pds_subs.Block.get_blockuid', new_callable=PropertyMock) as mock_get_blockuid:
             mock_get_blockuid.return_value='testblock'
             export_block_to_pds(self.test_input_dir, self.test_output_dir, self.test_block, self.schemadir, self.docs_root, skip_download=True)
+
+        for collection_type, file_type in zip(['raw', 'cal', 'ddp'], ['csv', 'xml']):
+            expected_file = os.path.join(self.expected_root_dir, f'data_lcogt{collection_type}', f'collection_data_lcogt{collection_type}.{file_type}')
+            self.assertTrue(os.path.exists(expected_file), f'{expected_file} does not exist')
+            self.assertTrue(os.path.isfile(expected_file), f'{expected_file} is not a file')
+        for collection_type, file_type in zip(['raw', 'cal', 'ddp'], ['txt', 'xml']):
+            expected_file = os.path.join(self.expected_root_dir, f'data_lcogt{collection_type}', f'overview.{file_type}')
+            self.assertTrue(os.path.exists(expected_file), f'{expected_file} does not exist')
+            self.assertTrue(os.path.isfile(expected_file), f'{expected_file} is not a file')
+        for collection_type in ['raw', 'cal']:
+            filepath = os.path.join(self.expected_root_dir, 'data_lcogt' + collection_type, self.test_blockdir, '') #Null string on end so 'glob' works in directory
+            fits_files = glob(filepath + "*fits")
+            xml_files = glob(filepath + "*xml")
+            self.assertNotEqual(len(fits_files), 0)
+            self.assertNotEqual(len(xml_files), 0)
+            self.assertEqual(len(fits_files), len(xml_files), msg=f"Comparison failed on {collection_type:} files in {filepath:}")
+            collection_filepath = os.path.join(self.expected_root_dir, f'data_lcogt{collection_type}', f'collection_data_lcogt{collection_type}.csv')
+            t = Table.read(collection_filepath, format='ascii.csv', data_start=0)
+            self.assertEqual(len(fits_files)+1, len(t), msg=f"Comparison failed on {collection_type:} lines in {collection_filepath:}")
+            prod_type = 'e00'
+            if collection_type == 'cal':
+                prod_type = 'e92.fits'
+            fits_files = [x for x in self.test_banzai_files if prod_type in x]
+            expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogt{collection_type}:{os.path.splitext(x)[0]}::1.0' ) for x in self.test_banzai_files if prod_type in x]
+            for fits_row in t[0:len(fits_files)]:
+                self.assertEqual(expected_lines[fits_row.index][0], fits_row[0])
+                self.assertEqual(expected_lines[fits_row.index][1], fits_row[1])
+            self.assertEqual('P', t[-1][0])
+            expected_lid = f'urn:nasa:pds:dart_teleobs:data_lcogt{collection_type}:collection_data_lcogt{collection_type}_overview::1.0'
+            self.assertEqual(expected_lid, t[-1][1])
+
+
+    def test_export_block_to_pds_photpipe_data(self):
+
+        test_externscamp_TPV_headfile = os.path.join('photometrics', 'tests', 'example_externcat_scamp_tpv.head')
+        tpv_header = fits.Header.fromtextfile(test_externscamp_TPV_headfile)
+
+        test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_photompipe.dat'))
+        test_logfile = os.path.abspath(os.path.join('photometrics', 'tests', 'example_photompipe_log'))
+        # Copy files to input directory, renaming log
+        new_name = os.path.join(self.test_input_daydir, 'photometry_65803_Didymos__1996_GT.dat')
+        shutil.copy(test_lc_file, new_name)
+        new_name = os.path.join(self.test_input_daydir, 'LOG')
+        shutil.copy(test_logfile, new_name)
+
+        # Create example bpm frame
+        hdulist = fits.open(os.path.join(self.test_input_daydir, self.test_banzai_files[0]))
+        hdulist[0].header['obstype'] = 'BPM'
+        hdulist[0].header['moltype'] = 'BIAS'
+        hdulist[0].header['exptime'] = 0
+        test_bpm_file = os.path.join(self.test_input_daydir, 'banzai-test-bpm-full_frame.fits')
+        hdulist.writeto(test_bpm_file, checksum=True, overwrite=True)
+        hdulist.close()
+
+        # Create example bias frame
+        hdulist = fits.open(os.path.join(self.test_input_daydir, self.test_banzai_files[0]))
+        hdulist[0].header['obstype'] = 'BIAS'
+        hdulist[0].header['moltype'] = 'BIAS'
+        hdulist[0].header['exptime'] = 0
+        hdulist[0].header.insert('l1pubdat', ('ismaster', True, 'Is this a master calibration frame'), after=True)
+        test_bias_file = os.path.join(self.test_input_daydir, 'banzai-test-bias-bin1x1.fits')
+        hdulist.writeto(test_bias_file, checksum=True, overwrite=True)
+        hdulist.close()
+
+        # Create example dark frame
+        hdulist = fits.open(os.path.join(self.test_input_daydir, self.test_banzai_files[0]))
+        hdulist[0].header['obstype'] = 'DARK'
+        hdulist[0].header['moltype'] = 'DARK'
+        hdulist[0].header['exptime'] = 300
+        hdulist[0].header.insert('l1pubdat', ('ismaster', True, 'Is this a master calibration frame'), after=True)
+        test_dark_file = os.path.join(self.test_input_daydir, 'banzai-test-dark-bin1x1.fits')
+        hdulist.writeto(test_dark_file, checksum=True, overwrite=True)
+        hdulist.close()
+
+        # Create example flat frame
+        hdulist = fits.open(os.path.join(self.test_input_daydir, self.test_banzai_files[0]))
+        hdulist[0].header['obstype'] = 'SKYFLAT'
+        hdulist[0].header['moltype'] = 'SKYFLAT'
+        hdulist[0].header['exptime'] = 13.876
+        hdulist[0].header.insert('l1pubdat', ('ismaster', True, 'Is this a master calibration frame'), after=True)
+        test_skyflat_file = os.path.join(self.test_input_daydir, 'banzai-test-skyflat-bin1x1-w.fits')
+        hdulist.writeto(test_skyflat_file, checksum=True, overwrite=True)
+        hdulist.close()
+
+        block_params = {
+                         'block_start' : datetime(2021, 10, 13, 0, 40),
+                       }
+        frame_params = {
+                         'block' : self.test_block,
+                         'midpoint' : block_params['block_start'] + timedelta(minutes=5)
+                       }
+        self.test_banzai_files = []
+        for frame_num, frameid in zip(range(65,126,30),[45234032, 45234584, 45235052]):
+            frame_params['filename'] = f"tfn1m001-fa11-20211013-{frame_num:04d}-e91.fits"
+            frame_params['midpoint'] += timedelta(minutes=frame_num-65)
+            frame_params['frameid'] = frameid
+            for extn in ['e92.bkgsub', 'e92-ldac', 'e92.rms']:
+                new_name = os.path.join(self.test_input_daydir, frame_params['filename'].replace('e91', extn))
+                os.remove(new_name)
+            for extn in ['e92', ]:
+                old_name = os.path.join(self.test_input_daydir, frame_params['filename'].replace('e91', extn))
+                new_name = os.path.join(self.test_input_daydir, frame_params['filename'].replace(extn, 'e91'))
+                print("old,new", os.path.basename(old_name), os.path.basename(new_name))
+                with fits.open(old_name) as hdulist:
+                    hdulist[0].header.insert('l1pubdat', ('l1filter', hdulist[0].header['filter'], 'Copy of FILTER for SCAMP'), after=True)
+                    # Mangle header ala photpipe
+                    update = False
+                    insert = False
+                    for key, new_value, new_comment in tpv_header.cards:
+                        if key == 'CTYPE1':
+                            update = True
+                        elif key == 'PV1_0':
+                            update = False
+                            insert = True
+                            prev_keyword = 'CD2_2'
+                        elif key == 'FGROUPNO':
+                            update = False
+                            insert = True
+                            prev_keyword = 'L1FILTER'
+                        if update:
+                            hdulist[0].header.set(key, value=str(new_value), comment=new_comment)
+                        elif insert:
+                             hdulist[0].header.insert(prev_keyword,(key, new_value, new_comment), after=True)
+                             prev_keyword = key
+                    hdulist.writeto(new_name, overwrite=True, checksum=True)
+                os.remove(old_name)
+                self.test_banzai_files.append(os.path.basename(new_name))
+                Path(new_name.replace('e91.fits', 'e91_cal.dat')).touch()
+
+        # Mock the @cached_property on the Block.get_blockuid
+        with patch('photometrics.pds_subs.Block.get_blockuid', new_callable=PropertyMock) as mock_get_blockuid:
+            mock_get_blockuid.return_value='testblock'
+            export_block_to_pds(self.test_input_daydir, self.test_output_dir, self.test_block, self.schemadir, self.docs_root, skip_download=True)
 
         for collection_type, file_type in zip(['raw', 'cal', 'ddp'], ['csv', 'xml']):
             expected_file = os.path.join(self.expected_root_dir, f'data_lcogt{collection_type}', f'collection_data_lcogt{collection_type}.{file_type}')
@@ -5414,12 +5548,9 @@ class TestCopyDocs(SimpleTestCase):
         else:
             self.test_output_dir = shutil.move(self.test_output_dir, new_test_output_dir)
         if self.debug_print: print("new dir=", self.test_output_dir)
-        self.test_ddp_dir = os.path.join(self.test_output_dir, 'data_lcogtddp')
-#        self.test_ddp_daydir = os.path.join(self.test_ddp_dir, self.test_blockdir)
-        self.test_cal_dir = os.path.join(self.test_output_dir, 'data_lcogtcal')
-#        self.test_cal_daydir = os.path.join(self.test_cal_dir, self.test_blockdir)
-        self.test_raw_dir = os.path.join(self.test_output_dir, 'data_lcogtraw')
-#        self.test_raw_daydir = os.path.join(self.test_raw_dir, self.test_blockdir)
+        self.test_output_ddpdir = os.path.join(self.test_output_dir, 'data_lcogtddp')
+        self.test_output_caldir = os.path.join(self.test_output_dir, 'data_lcogtcal')
+        self.test_output_rawdir = os.path.join(self.test_output_dir, 'data_lcogtraw')
         return
 
     def test_raw(self):
@@ -5447,7 +5578,7 @@ class TestCopyDocs(SimpleTestCase):
         self.assertEqual(expected_xml_labels, xml_labels)
         for extn in ['txt', 'xml']:
             self.assertListEqual(
-                list(io.open(os.path.join(self.docs_dir, f'collection_data_lcogtraw_overview.{extn}'))),
+                list(io.open(os.path.join(self.docs_dir, f'collection_data_lcogtraw_fli_overview.{extn}'))),
                 list(io.open(os.path.join(self.test_output_rawdir, f'overview.{extn}')))
                 )
 
@@ -5476,7 +5607,7 @@ class TestCopyDocs(SimpleTestCase):
         self.assertEqual(expected_xml_labels, xml_labels)
         for extn in ['txt', 'xml']:
             self.assertListEqual(
-                list(io.open(os.path.join(self.docs_dir, f'collection_data_lcogtcal_overview.{extn}'))),
+                list(io.open(os.path.join(self.docs_dir, f'collection_data_lcogtcal_fli_overview.{extn}'))),
                 list(io.open(os.path.join(self.test_output_caldir, f'overview.{extn}')))
                 )
 
@@ -5505,6 +5636,6 @@ class TestCopyDocs(SimpleTestCase):
         self.assertEqual(expected_xml_labels, xml_labels)
         for extn in ['txt', 'xml']:
             self.assertListEqual(
-                list(io.open(os.path.join(self.docs_dir, f'collection_data_lcogtddp_overview.{extn}'))),
+                list(io.open(os.path.join(self.docs_dir, f'collection_data_lcogtddp_fli_overview.{extn}'))),
                 list(io.open(os.path.join(self.test_output_ddpdir, f'overview.{extn}')))
                 )

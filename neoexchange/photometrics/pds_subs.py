@@ -1651,7 +1651,11 @@ def create_dart_lightcurve(input_dir_or_block, output_dir, block, match='photome
                         if os.path.exists(os.path.join(output_dir, symlink_lc_file)):
                             os.remove(os.path.join(output_dir, symlink_lc_file))
                         os.symlink(output_lc_file, symlink_lc_file, dir_fd=dir_fh)
-
+                else:
+                    if table:
+                        logger.error("Couldn't extract aperture radius from LOG")
+                    else:
+                        logger.error("Couldn't extract table")
         else:
             logger.warning(f"Could not decode filename: {first_filename}")
     else:
@@ -1754,8 +1758,10 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
         pp_phot = False
         if len(cal_files) == 0:
             if verbose: print("Looking for cals. input_dir=", input_dir)
+            if verbose: print("No cal files found, trying for e91 photpipe files")
             logger.error("No cal files found, trying for e91 photpipe files")
             cal_dat_files = glob(input_dir+'/*e91_cal.dat')
+            if verbose: print(f"#cal dat files in {input_dir}= {len(cal_dat_files)}")
             if len(cal_dat_files) > 0:
                 pp_phot = True
                 cal_files = find_fits_files(input_dir, '\S*e91')
