@@ -391,6 +391,10 @@ def images_from_fits(datapath, match_pattern='r*.fits'):
     for fits_file in fits_files:
         image = { 'id' : None, 'basename' : os.path.basename(fits_file) }
         fits_header, dummy_table, cattype = open_fits_catalog(fits_file, header_only=True)
+        if len(fits_header['DATE-OBS']) == 10 and 'T' not in fits_header['DATE-OBS'] and 'UT-TIME' in fits_header:
+            new_dateobs = fits_header['DATE-OBS'] + 'T' + fits_header['UT-TIME']
+            logger.warning(f"Fixing malformed DATE-OBS in {image['basename']} to {new_dateobs}")
+            fits_header['DATE-OBS'] = new_dateobs
         image['headers'] = {'data' : dict(fits_header.items()) }
         if 'BLKUID' not in image['headers']['data'] and 'NIGHT' in image['headers']['data']:
             image['headers']['data']['BLKUID'] = convert_value('request_number', image['headers']['data']['NIGHT'])
@@ -460,14 +464,20 @@ def block_status(block_id, datapath=None):
                 logger.warning("Unable to find observation type for Block/track# %s / %s" % (block_id, tracking_num))
 
             if block.site.lower() in NONLCO_SITES and datapath is not None:
-                # Non-LCO data, get images from walking directory of FITS filrs
+                # Non-LCO data, get images from walking directory of FITS files
                 images = images_from_fits(datapath)
+                # Version for Swope BANZAI reprocessing
+                #images = images_from_fits(datapath, match_pattern='ccd*e91.fits')
                 last_image_header = images[-1].get('headers', {})
                 num_archive_frames = len(images)
             else:
                 # Query LCO archive for images
                 images, num_archive_frames = check_for_archive_images(request_id=r['id'], obstype=obstype, obj='') #obj_name)
                 logger.info('Request no. %s x %s images (%s total all red. levels)' % (r['id'], len(images), num_archive_frames))
+                if images:
+                    # Look in the archive at the header of the most recent frame for a timestamp of the observation
+                    last_image_dict = images[0]
+                    last_image_header = lco_api_call(last_image_dict.get('headers', None))
             if images:
                 inst_configs = [x['instrument_configs'] for x in r['configurations']]
                 exposure_count = sum([x[0]['exposure_count'] for x in inst_configs])
