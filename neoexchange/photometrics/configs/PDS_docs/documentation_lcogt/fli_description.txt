@@ -4,7 +4,7 @@ Las Cumbres Observatory FLI Imager
   Instrument Overview
   ===================
 
-    The ancilliary autoguider cameras for the main visible-wavelength,
+    The ancillary autoguider cameras for the main visible-wavelength,
     direct-imaging CCD Sinistro instruments for the Las Cumbres
     Observatory (LCOGT) 1-meter Telescopes are called the FLI Imagers.
     The FLI imagers compromise a Finger Lakes Instrumentation (FLI) ML4720 
@@ -41,7 +41,7 @@ Las Cumbres Observatory FLI Imager
     The distribution of the FLI imagers among the 1-meter telescopes of
     LCOGT network in 2023 April are shown below with the LCOGT 
     Node/Observatory node shown with the LCOGT Site Code given in parentheses,
-    along with the FLI instrument desigination for the telescope in that
+    along with the FLI instrument designation for the telescope in that
     location:
     Siding Spring (COJ), Dome A: ef09
     Siding Spring (COJ), Dome B: ef10
