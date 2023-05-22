@@ -463,12 +463,13 @@ def block_status(block_id, datapath=None):
             except AttributeError:
                 logger.warning("Unable to find observation type for Block/track# %s / %s" % (block_id, tracking_num))
 
+            last_image_header = None
             if block.site.lower() in NONLCO_SITES and datapath is not None:
                 # Non-LCO data, get images from walking directory of FITS files
                 images = images_from_fits(datapath)
                 # Version for Swope BANZAI reprocessing
                 #images = images_from_fits(datapath, match_pattern='ccd*e91.fits')
-                last_image_header = images[-1].get('headers', {})
+                last_image_header = images[-1].get('headers', None)
                 num_archive_frames = len(images)
             else:
                 # Query LCO archive for images
