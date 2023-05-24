@@ -436,7 +436,6 @@ class TestCreateContextArea(TestCase):
         self.test_ddp_dir = os.path.join(self.expected_root_dir, 'data_lcogtddp')
         self.test_blockdir = 'lcogt_1m0_01_fa11_20211013'
         self.test_ddp_daydir = os.path.join(self.test_ddp_dir, self.test_blockdir)
-        if self.debug_print: print('test_ddp_dir=', self.test_ddp_dir)
         os.makedirs(self.test_ddp_daydir, exist_ok=True)
 
         self.test_cal_dir = os.path.join(self.expected_root_dir, 'data_lcogtcal')
@@ -5704,16 +5703,23 @@ class TestCopyDocs(SimpleTestCase):
         else:
             self.test_output_dir = shutil.move(self.test_output_dir, new_test_output_dir)
         if self.debug_print: print("new dir=", self.test_output_dir)
-        self.test_output_ddpdir = os.path.join(self.test_output_dir, 'data_lcogtddp')
-        self.test_output_caldir = os.path.join(self.test_output_dir, 'data_lcogtcal')
-        self.test_output_rawdir = os.path.join(self.test_output_dir, 'data_lcogtraw')
+
+        new_output_dir = os.path.join(self.test_output_dir, 'data_lcogt_fliddp')
+        self.test_output_ddpdir = shutil.move(self.test_output_ddpdir.replace('output', 'output_fli'), new_output_dir)
+
+        new_output_dir = os.path.join(self.test_output_dir, 'data_lcogt_flical')
+        self.test_output_caldir = shutil.move(self.test_output_caldir.replace('output', 'output_fli'), new_output_dir)
+
+        new_output_dir = os.path.join(self.test_output_dir, 'data_lcogt_fliraw')
+        self.test_output_rawdir = shutil.move(self.test_output_rawdir.replace('output', 'output_fli'), new_output_dir)
+
         return
 
     def test_raw(self):
 
         expected_xml_labels = ['collection_data_lcogtraw_overview', ]
 
-        xml_labels = copy_docs(self.test_output_dir, 'raw', self.docs_dir, verbose=False)
+        xml_labels = copy_docs(self.test_output_dir, 'raw', self.docs_dir, verbose=True)
 
         self.assertEqual(len(expected_xml_labels), len(xml_labels))
         self.assertEqual(expected_xml_labels, xml_labels)
@@ -5725,16 +5731,16 @@ class TestCopyDocs(SimpleTestCase):
 
     def test_raw_fli(self):
 
-        expected_xml_labels = ['collection_data_lcogtraw_fli_overview',  ]
-
         self.update_dirs_for_fli()
+        expected_xml_labels = ['collection_data_lcogt_fliraw_overview',  ]
+
         xml_labels = copy_docs(self.test_output_dir, 'raw', self.docs_dir, verbose=False)
 
         self.assertEqual(len(expected_xml_labels), len(xml_labels))
         self.assertEqual(expected_xml_labels, xml_labels)
         for extn in ['txt', 'xml']:
             self.assertListEqual(
-                list(io.open(os.path.join(self.docs_dir, f'collection_data_lcogtraw_fli_overview.{extn}'))),
+                list(io.open(os.path.join(self.docs_dir, f'collection_data_lcogt_fliraw_overview.{extn}'))),
                 list(io.open(os.path.join(self.test_output_rawdir, f'overview.{extn}')))
                 )
 
@@ -5754,16 +5760,16 @@ class TestCopyDocs(SimpleTestCase):
 
     def test_cal_fli(self):
 
-        expected_xml_labels = ['collection_data_lcogtcal_fli_overview',  ]
-
         self.update_dirs_for_fli()
+        expected_xml_labels = ['collection_data_lcogt_flical_overview',  ]
+
         xml_labels = copy_docs(self.test_output_dir, 'cal', self.docs_dir, verbose=False)
 
         self.assertEqual(len(expected_xml_labels), len(xml_labels))
         self.assertEqual(expected_xml_labels, xml_labels)
         for extn in ['txt', 'xml']:
             self.assertListEqual(
-                list(io.open(os.path.join(self.docs_dir, f'collection_data_lcogtcal_fli_overview.{extn}'))),
+                list(io.open(os.path.join(self.docs_dir, f'collection_data_lcogt_flical_overview.{extn}'))),
                 list(io.open(os.path.join(self.test_output_caldir, f'overview.{extn}')))
                 )
 
@@ -5783,15 +5789,15 @@ class TestCopyDocs(SimpleTestCase):
 
     def test_ddp_fli(self):
 
-        expected_xml_labels = ['collection_data_lcogtddp_fli_overview',  ]
-
         self.update_dirs_for_fli()
+        expected_xml_labels = ['collection_data_lcogt_fliddp_overview',  ]
+
         xml_labels = copy_docs(self.test_output_dir, 'ddp', self.docs_dir, verbose=False)
 
         self.assertEqual(len(expected_xml_labels), len(xml_labels))
         self.assertEqual(expected_xml_labels, xml_labels)
         for extn in ['txt', 'xml']:
             self.assertListEqual(
-                list(io.open(os.path.join(self.docs_dir, f'collection_data_lcogtddp_fli_overview.{extn}'))),
+                list(io.open(os.path.join(self.docs_dir, f'collection_data_lcogt_fliddp_overview.{extn}'))),
                 list(io.open(os.path.join(self.test_output_ddpdir, f'overview.{extn}')))
                 )

@@ -1682,12 +1682,14 @@ def copy_docs(root_path, collection_type, docs_dir, verbose=True):
         prefix = '_fli'
     for doc_file in glob(docs_dir + f'/*{prefix+collection_type}_overview*'):
         filename, extn = os.path.splitext(os.path.basename(doc_file))
-        if filename not in sent_files:
-            sent_files.append(filename)
-        new_filename = os.path.join(root_path, f'data_lcogt{prefix+collection_type}', 'overview' + extn)
-        dest = shutil.copy(doc_file, new_filename)
-        status = convert_file_to_crlf(dest)
-        if verbose: print(f"Copied {doc_file} to {dest}")
+        # Filter out _fli files if not in root_path/prefix
+        if (prefix == '' and '_fli' not in filename) or prefix == '_fli':
+            if filename not in sent_files:
+                sent_files.append(filename)
+            new_filename = os.path.join(root_path, f'data_lcogt{prefix+collection_type}', 'overview' + extn)
+            dest = shutil.copy(doc_file, new_filename)
+            status = convert_file_to_crlf(dest)
+            if verbose: print(f"Copied {doc_file} to {dest}")
 
     return sent_files
 
