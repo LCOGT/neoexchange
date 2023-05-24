@@ -4084,9 +4084,11 @@ class TestConvertFOElements(SimpleTestCase):
         with open(os.path.join('astrometrics', 'tests', 'test_fo_elements.json'), 'r') as fp:
             self.test_json = json.load(fp)
 
+        self.maxDiff = None
+
     def test_65803_keys(self):
-        expected_keys = ['name', 'origin', 'elements_type', 'epochofel', 'orbinc', 'longascnode', 'argofperih', 'eccentricity', 'meandist', 'meananom', 'perihdist', 'epochofperih', 'abs_mag', 'slope', 'orbit_rms']
+        expected_keys = ['name', 'origin', 'elements_type', 'epochofel', 'meananom', 'meandist',  'eccentricity',  'perihdist', 'orbinc', 'argofperih', 'longascnode', 'epochofperih', 'abs_mag', 'slope', 'orbit_rms']
 
         new_elements = convert_findorb_elements(self.test_json)
 
-        self.assertEqual(expected_keys, new_elements.keys())
+        self.assertEqual(expected_keys, list(new_elements.keys()))
