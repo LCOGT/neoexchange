@@ -1,8 +1,8 @@
 [run]
-source = .
-;include = core/*
-;          astrometrics/*
-;          photometrics/*
+;source = .
+include = core/*
+          astrometrics/*
+          photometrics/*
 branch = True
 plugins = django_coverage_plugin
 
