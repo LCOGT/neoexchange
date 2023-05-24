@@ -3537,9 +3537,9 @@ class TestCreatePDSLabels(TestCase):
         with open(test_xml_cat, 'r') as xml_file:
             self.expected_xml = xml_file.readlines()
 
-        self.framedir = os.path.abspath(os.path.join('photometrics', 'tests'))
+        self.tests_path = os.path.abspath(os.path.join('photometrics', 'tests'))
         self.test_file = 'banzai_test_frame.fits'
-        test_file_path = os.path.join(self.framedir, self.test_file)
+        test_file_path = os.path.join(self.tests_path, self.test_file)
 
 #        self.test_dir = '/tmp/tmp_neox_wibble'
         self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
@@ -3552,7 +3552,7 @@ class TestCreatePDSLabels(TestCase):
         new_name = os.path.join(self.test_dir, 'cpt1m013-kb76-20160606-0396-e91.fits')
         shutil.copy(test_file_path, new_name)
 
-        test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_dartphotom.dat'))
+        test_lc_file = os.path.join(self.tests_path, 'example_dartphotom.dat')
         # Copy files to input directory, renaming lc file
         self.test_lc_file = os.path.join(self.test_dir, 'lcogt_tfn_fa11_20211013_12345_65803didymos_photometry.tab')
         shutil.copy(test_lc_file, self.test_lc_file)
@@ -3630,6 +3630,8 @@ class TestCreatePDSLabels(TestCase):
 
         self.assertEqual(len(expected_xml_labels), len(xml_labels))
         self.assertEqual(expected_xml_labels, xml_labels)
+        for xml_file in xml_labels:
+            self.assertTrue(os.path.exists(xml_file))
 
     def test_generate_e92_specified_match(self):
 
@@ -3639,6 +3641,8 @@ class TestCreatePDSLabels(TestCase):
 
         self.assertEqual(len(expected_xml_labels), len(xml_labels))
         self.assertEqual(expected_xml_labels, xml_labels)
+        for xml_file in xml_labels:
+            self.assertTrue(os.path.exists(xml_file))
 
     def test_generate_e92_body_name(self):
 
@@ -3656,6 +3660,8 @@ class TestCreatePDSLabels(TestCase):
         self.assertEqual('65803 Didymos', bodies[0].full_name())
         self.assertEqual(len(expected_xml_labels), len(xml_labels))
         self.assertEqual(expected_xml_labels, xml_labels)
+        for xml_file in xml_labels:
+            self.assertTrue(os.path.exists(xml_file))
 
     def test_generate_bias(self):
 
@@ -3674,6 +3680,8 @@ class TestCreatePDSLabels(TestCase):
 
         self.assertEqual(len(expected_xml_labels), len(xml_labels))
         self.assertEqual(expected_xml_labels, xml_labels)
+        for xml_file in xml_labels:
+            self.assertTrue(os.path.exists(xml_file))
 
     def test_generate_ddp(self):
 
@@ -3683,6 +3691,26 @@ class TestCreatePDSLabels(TestCase):
 
         self.assertEqual(len(expected_xml_labels), len(xml_labels))
         self.assertEqual(expected_xml_labels, xml_labels)
+        for xml_file in xml_labels:
+            self.assertTrue(os.path.exists(xml_file))
+
+    def test_generate_ddp_fits(self):
+
+        # Copy FITS files to output directory, renaming phot file and removing
+        # ASCII tab file
+        test_lc_file = os.path.abspath(os.path.join(self.tests_path, 'example_bintable.fits'))
+        new_name = os.path.join(self.test_dir, 'lcogt_1m0_01_fa11_20211013_65803didymos_photometry.fits')
+        shutil.copy(test_lc_file, new_name)
+        os.remove(self.test_lc_file)
+
+        expected_xml_labels = [new_name.replace('.fits', '.xml'),]
+
+        xml_labels = create_pds_labels(self.test_dir, self.schemadir, match='*photometry.fits')
+
+        self.assertEqual(len(expected_xml_labels), len(xml_labels))
+        self.assertEqual(expected_xml_labels, xml_labels)
+        for xml_file in xml_labels:
+            self.assertTrue(os.path.exists(xml_file))
 
 
 class TestSplitFilename(SimpleTestCase):
@@ -4261,6 +4289,21 @@ class TestExportBlockToPDS(TestCase):
             if self.debug_print:
                 print("Not removing temporary test directory", self.test_dir)
 
+
+    def update_dirs_for_fli(self):
+        """Renames the output directories and updates the variables for FLI data"""
+        new_test_output_dir = self.test_output_dir.replace('output', 'output_fli')
+        if os.path.exists(new_test_output_dir):
+            self.test_output_dir = new_test_output_dir
+        else:
+            self.test_output_dir = shutil.move(self.test_output_dir, new_test_output_dir)
+        if self.debug_print: print("new dir=", self.test_output_dir)
+        self.expected_root_dir = os.path.join(self.test_output_dir, '')
+        self.test_output_ddpdir = os.path.join(self.test_output_dir, 'data_lcogt_fliddp')
+        self.test_output_caldir = os.path.join(self.test_output_dir, 'data_lcogt_flical')
+        self.test_output_rawdir = os.path.join(self.test_output_dir, 'data_lcogt_fliraw')
+        return
+
     def test_create_directory_structure(self):
 
         block_dir = 'lcogt_1m0_01_fa11_20211013'
@@ -4268,6 +4311,33 @@ class TestExportBlockToPDS(TestCase):
                             'raw_data' : os.path.join(self.expected_root_dir, 'data_lcogtraw', block_dir),
                             'cal_data' : os.path.join(self.expected_root_dir, 'data_lcogtcal', block_dir),
                             'ddp_data' : os.path.join(self.expected_root_dir, 'data_lcogtddp', block_dir),
+                            'root'     : self.test_output_dir
+                          }
+
+        status = create_dart_directories(self.test_output_dir, self.test_block)
+
+        self.assertEqual(2, Block.objects.count())
+        self.assertEqual(3, Frame.objects.filter(block=self.test_block, frametype=Frame.NEOX_RED_FRAMETYPE).count())
+        self.assertEqual(expected_status, status)
+        check_dirs = [self.expected_root_dir, ]
+        check_dirs += list(expected_status.values())
+        for dir in check_dirs:
+            self.assertTrue(os.path.exists(dir), f'{dir} does not exist')
+            self.assertTrue(os.path.isdir(dir), f'{dir} is not a directory')
+
+    def test_create_fli_directory_structure(self):
+
+        # Update directories and Frame filename's for FLI data
+        self.update_dirs_for_fli()
+        for frame in Frame.objects.filter(block=self.test_block):
+            frame.filename = frame.filename.replace("tfn1m001-fa11-20211013", "cpt1m012-ef02-20220926")
+            frame.save()
+
+        block_dir = 'lcogt_1m0_12_ef02_20220926'
+        expected_status = {
+                            'raw_data' : os.path.join(self.expected_root_dir, 'data_lcogt_fliraw', block_dir),
+                            'cal_data' : os.path.join(self.expected_root_dir, 'data_lcogt_flical', block_dir),
+                            'ddp_data' : os.path.join(self.expected_root_dir, 'data_lcogt_fliddp', block_dir),
                             'root'     : self.test_output_dir
                           }
 
@@ -4728,6 +4798,92 @@ class TestExportBlockToPDS(TestCase):
             self.assertEqual(len(fits_files)+1, len(t), msg=f"Comparison failed on {collection_type:} lines in {collection_filepath:}")
             prod_type = 'e00'
             if collection_type == 'cal':
+                prod_type = 'e92.fits'
+            fits_files = [x for x in self.test_banzai_files if prod_type in x]
+            expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogt{collection_type}:{os.path.splitext(x)[0]}::1.0' ) for x in self.test_banzai_files if prod_type in x]
+            for fits_row in t[0:len(fits_files)]:
+                self.assertEqual(expected_lines[fits_row.index][0], fits_row[0])
+                self.assertEqual(expected_lines[fits_row.index][1], fits_row[1])
+            self.assertEqual('P', t[-1][0])
+            expected_lid = f'urn:nasa:pds:dart_teleobs:data_lcogt{collection_type}:collection_data_lcogt{collection_type}_overview::1.0'
+            self.assertEqual(expected_lid, t[-1][1])
+
+    def test_export_fli_block_to_pds(self):
+
+        test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_bintable.fits'))
+        # Copy files to input directory, renaming table
+        new_name = os.path.join(self.test_input_daydir, f'{self.test_block.body.current_name()}_data_gp.fits')
+        shutil.copy(test_lc_file, new_name)
+
+        # Create example bpm frame
+        hdulist = fits.open(os.path.join(self.test_input_daydir, self.test_banzai_files[0]))
+        hdulist[0].header['obstype'] = 'BPM'
+        hdulist[0].header['moltype'] = 'BIAS'
+        hdulist[0].header['exptime'] = 0
+        test_bpm_file = os.path.join(self.test_input_daydir, 'banzai-test-bpm-full_frame.fits')
+        hdulist.writeto(test_bpm_file, checksum=True, overwrite=True)
+        hdulist.close()
+
+        # Create example bias frame
+        hdulist = fits.open(os.path.join(self.test_input_daydir, self.test_banzai_files[0]))
+        hdulist[0].header['instrume'] = 'ef99'
+        hdulist[0].header['obstype'] = 'BIAS'
+        hdulist[0].header['moltype'] = 'BIAS'
+        hdulist[0].header['exptime'] = 0
+        hdulist[0].header.insert('l1pubdat', ('ismaster', True, 'Is this a master calibration frame'), after=True)
+        test_bias_file = os.path.join(self.test_input_daydir, 'banzai-test-bias-bin1x1.fits')
+        hdulist.writeto(test_bias_file, checksum=True, overwrite=True)
+        hdulist.close()
+
+        # Create example dark frame
+        hdulist = fits.open(os.path.join(self.test_input_daydir, self.test_banzai_files[0]))
+        hdulist[0].header['instrume'] = 'ef99'
+        hdulist[0].header['obstype'] = 'DARK'
+        hdulist[0].header['moltype'] = 'DARK'
+        hdulist[0].header['exptime'] = 300
+        hdulist[0].header.insert('l1pubdat', ('ismaster', True, 'Is this a master calibration frame'), after=True)
+        test_dark_file = os.path.join(self.test_input_daydir, 'banzai-test-dark-bin1x1.fits')
+        hdulist.writeto(test_dark_file, checksum=True, overwrite=True)
+        hdulist.close()
+
+        # Create example flat frame
+        hdulist = fits.open(os.path.join(self.test_input_daydir, self.test_banzai_files[0]))
+        hdulist[0].header['instrume'] = 'ef99'
+        hdulist[0].header['obstype'] = 'SKYFLAT'
+        hdulist[0].header['moltype'] = 'SKYFLAT'
+        hdulist[0].header['exptime'] = 13.876
+        hdulist[0].header.insert('l1pubdat', ('ismaster', True, 'Is this a master calibration frame'), after=True)
+        test_skyflat_file = os.path.join(self.test_input_daydir, 'banzai-test-skyflat-bin1x1-w.fits')
+        hdulist.writeto(test_skyflat_file, checksum=True, overwrite=True)
+        hdulist.close()
+
+        # Rename/update directories for FLI data
+        self.update_dirs_for_fli()
+        # Mock the @cached_property on the Block.get_blockuid
+        with patch('photometrics.pds_subs.Block.get_blockuid', new_callable=PropertyMock) as mock_get_blockuid:
+            mock_get_blockuid.return_value='testblock'
+            export_block_to_pds(self.test_input_daydir, self.test_output_dir, self.test_block, self.schemadir, self.docs_root, skip_download=True, verbose=True)
+
+        for collection_type, file_type in zip(['_fliraw', '_flical', '_fliddp'], ['csv', 'xml']):
+            expected_file = os.path.join(self.expected_root_dir, f'data_lcogt{collection_type}', f'collection_data_lcogt{collection_type}.{file_type}')
+            self.assertTrue(os.path.exists(expected_file), f'{expected_file} does not exist')
+            self.assertTrue(os.path.isfile(expected_file), f'{expected_file} is not a file')
+        for collection_type, file_type in zip(['_fliraw', '_flical', '_fliddp'], ['txt', 'xml']):
+            expected_file = os.path.join(self.expected_root_dir, f'data_lcogt{collection_type}', f'overview.{file_type}')
+            self.assertTrue(os.path.exists(expected_file), f'{expected_file} does not exist')
+            self.assertTrue(os.path.isfile(expected_file), f'{expected_file} is not a file')
+        for collection_type in ['_fliraw', '_flical', ]:
+            filepath = os.path.join(self.expected_root_dir, 'data_lcogt' + collection_type, self.test_blockdir, '') #Null string on end so 'glob' works in directory
+            fits_files = glob(filepath + "*fits")
+            xml_files = glob(filepath + "*xml")
+            self.assertNotEqual(len(fits_files), 0)
+            self.assertNotEqual(len(xml_files), 0)
+            self.assertEqual(len(fits_files), len(xml_files), msg=f"Comparison failed on {collection_type:} files in {filepath:}")
+            collection_filepath = os.path.join(self.expected_root_dir, f'data_lcogt{collection_type}', f'collection_data_lcogt{collection_type}.csv')
+            t = Table.read(collection_filepath, format='ascii.csv', data_start=0)
+            self.assertEqual(len(fits_files)+1, len(t), msg=f"Comparison failed on {collection_type:} lines in {collection_filepath:}")
+            prod_type = 'e00'
+            if 'cal' in collection_type:
                 prod_type = 'e92.fits'
             fits_files = [x for x in self.test_banzai_files if prod_type in x]
             expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogt{collection_type}:{os.path.splitext(x)[0]}::1.0' ) for x in self.test_banzai_files if prod_type in x]

@@ -1208,11 +1208,11 @@ def write_product_collection_xml(filepath, xml_file, schema_root, mod_time=None)
     productCollection = create_product_collection(schemas_needed)
 
 
-    if 'lcogtcal' in xml_file:
+    if 'lcogtcal' in xml_file or 'lcogt_flical' in xml_file:
         collection_type = 'cal'
-    elif 'lcogtraw' in xml_file:
+    elif 'lcogtraw' in xml_file or 'lcogt_fliraw' in xml_file:
         collection_type = 'raw'
-    elif 'lcogtddp' in xml_file:
+    elif 'lcogtddp' in xml_file or 'lcogt_fliddp' in xml_file:
         collection_type = 'ddp'
     else:
         logger.error("Unknown collection type")
@@ -1261,7 +1261,7 @@ def create_pds_labels(procdir, schema_root, match='.*e92'):
 
     xml_labels = []
     full_procdir = os.path.abspath(os.path.expandvars(procdir))
-    if 'photometry.tab' in match:
+    if 'photometry' in match:
         photometry_files = sorted(glob(os.path.join(full_procdir, match)))
         files_to_process = {full_procdir : photometry_files}
     else:
@@ -1338,6 +1338,9 @@ def create_dart_directories(output_dir, block):
             │   └── lcogt_1m0_01_fa11_20211013
             ├── data_lcogtraw
             │   └── lcogt_1m0_01_fa11_20211013
+    If there is a '_fli' in <output_dir> then this is prepended before the
+    collection type (raw, cal, ddp) so the collection directories will be
+    'data_lcogt_flical', 'data_lcogt_fliddp' etc
     """
     status = {}
 
@@ -1349,7 +1352,10 @@ def create_dart_directories(output_dir, block):
         if len(file_parts) == 8:
             block_dir = f"lcogt_{file_parts['tel_class']}_{file_parts['tel_serial']}_{file_parts['instrument']}_{file_parts['dayobs']}"
             logger.debug(f"Creating root directories and  {block_dir} sub directories")
-            for dir_key, dir_name in zip(['raw_data', 'cal_data', 'ddp_data'], ['data_lcogtraw', 'data_lcogtcal', 'data_lcogtddp']):
+            prefix = ''
+            if '_fli' in output_dir:
+                prefix = '_fli'
+            for dir_key, dir_name in zip(['raw_data', 'cal_data', 'ddp_data'], [f'data_lcogt{prefix}raw', f'data_lcogt{prefix}cal', f'data_lcogt{prefix}ddp']):
                 dir_path = os.path.join(output_dir, dir_name, block_dir)
                 os.makedirs(dir_path, exist_ok=True)
                 status[dir_key] = dir_path
@@ -1670,15 +1676,15 @@ def copy_docs(root_path, collection_type, docs_dir, verbose=True):
     A list of the copied files are returned."""
 
     sent_files = []
-    extn = ''
+    prefix = ''
     if '_fli' in root_path:
         if verbose: print("Adding FLI to collection type")
-        extn = '_fli'
-    for doc_file in glob(docs_dir + f'/*{collection_type+extn}_overview*'):
+        prefix = '_fli'
+    for doc_file in glob(docs_dir + f'/*{prefix+collection_type}_overview*'):
         filename, extn = os.path.splitext(os.path.basename(doc_file))
         if filename not in sent_files:
             sent_files.append(filename)
-        new_filename = os.path.join(root_path, f'data_lcogt{collection_type}', 'overview' + extn)
+        new_filename = os.path.join(root_path, f'data_lcogt{prefix+collection_type}', 'overview' + extn)
         dest = shutil.copy(doc_file, new_filename)
         status = convert_file_to_crlf(dest)
         if verbose: print(f"Copied {doc_file} to {dest}")
@@ -1838,9 +1844,14 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
         else:
             lc_files += [os.path.basename(dart_lc_file),]
 
+            # Reset phot_match to new product names
+            if '.fits' in phot_match:
+                phot_match = '*photometry.fits'
+            else:
+                phot_match = '*photometry.tab'
             # Create PDS labels for ddp data
             if verbose: print("Creating ddp PDS labels")
-            xml_labels = create_pds_labels(paths['ddp_data'], schema_root, match='*photometry.tab')
+            xml_labels = create_pds_labels(paths['ddp_data'], schema_root, match=phot_match)
             xml_files += xml_labels
 
         # Record that Block was exported
@@ -1874,7 +1885,11 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
     # Add in docs
     all_raw_files += raw_doc_files
     if verbose: print(f"Total #raw frames: From Blocks= {len(raw_sent_files)}, total={len(all_raw_files)}")
-    raw_csv_filename, raw_xml_filename = create_pds_collection(paths['root'], path_to_all_raws, all_raw_files, 'raw', schema_root)
+    collection_prefix = ''
+    if '_fli' in paths['root']:
+        collection_prefix = '_fli'
+    collection_type = collection_prefix + 'raw'
+    raw_csv_filename, raw_xml_filename = create_pds_collection(paths['root'], path_to_all_raws, all_raw_files, collection_type, schema_root)
     # Convert csv file to CRLF endings required by PDS
     status = convert_file_to_crlf(raw_csv_filename)
     csv_files.append(raw_csv_filename)
@@ -1895,7 +1910,8 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
     all_cal_files += cal_doc_files
     if verbose: print(f"Total #cal frames: From Blocks= {len(cal_sent_files)}, total={len(all_cal_files)}")
 
-    cal_csv_filename, cal_xml_filename = create_pds_collection(paths['root'], path_to_all_cals, all_cal_files, 'cal', schema_root)
+    collection_type = collection_prefix + 'cal'
+    cal_csv_filename, cal_xml_filename = create_pds_collection(paths['root'], path_to_all_cals, all_cal_files, collection_type, schema_root)
     # Convert csv file to CRLF endings required by PDS
     status = convert_file_to_crlf(cal_csv_filename)
     csv_files.append(cal_csv_filename)
@@ -1913,7 +1929,8 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
     all_lc_files += lc_files
     if verbose: print(f"Total #cal frames: From Blocks= {len(lc_files)}, total={len(all_lc_files)}")
 
-    ddp_csv_filename, ddp_xml_filename = create_pds_collection(paths['root'], path_to_all_ddps, all_lc_files, 'ddp', schema_root)
+    collection_type = collection_prefix + 'ddp'
+    ddp_csv_filename, ddp_xml_filename = create_pds_collection(paths['root'], path_to_all_ddps, all_lc_files, collection_type, schema_root)
     # Convert csv file to CRLF endings required by PDS
     status = convert_file_to_crlf(ddp_csv_filename)
     csv_files.append(ddp_csv_filename)
