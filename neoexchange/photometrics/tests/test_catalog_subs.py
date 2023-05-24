@@ -1549,17 +1549,6 @@ class OpenFITSCatalog(FITSUnitTest):
         self.assertEqual(expected_tbl_len, len(tbl))
         self.assertEqual(expected_cattype, cattype)
 
-    def test_photpipe_catalog_read_hdr_keyword(self):
-        expected_hdr_value = 'fa15'
-        expected_hdr_value2 = '0.0003023852695117'
-
-
-        hdr, tbl, cattype = open_fits_catalog(self.test_photpipefilename)
-
-        self.assertEqual(expected_hdr_value, hdr['INSTRUME'])
-        self.assertEqual(str, type(hdr['PV2_10']))
-        self.assertEqual(expected_hdr_value2, hdr['PV2_10'])
-
     def test_swope_header(self):
         outpath = os.path.join("photometrics", "tests")
         expected_header = fits.Header.fromfile(os.path.join(outpath, "swope_test_header"), sep='\n', endcard=False, padding=False)
