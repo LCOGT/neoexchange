@@ -15,6 +15,7 @@ from datetime import datetime
 import warnings
 
 from django.conf import settings
+from django.contrib.auth.models import User
 from django.forms.models import model_to_dict
 from django.db import models
 from django.db.models import Sum
@@ -159,6 +160,10 @@ class SuperBlock(models.Model):
         obstypes = Block.objects.filter(superblock=self.id).values_list('obstype', flat=True).distinct()
 
         return ",".join([str(x) for x in obstypes])
+
+    @property
+    def observers(self):
+        return [o.observer for o in self.blockobserver_set.all()]
 
     class Meta:
         verbose_name = _('SuperBlock')
@@ -395,6 +400,17 @@ class Candidate(models.Model):
 
     def __str__(self):
         return "%s#%04d" % (self.block.request_number, self.cand_id)
+
+class BlockObserver(models.Model):
+    observer = models.ForeignKey(User, on_delete=models.CASCADE)
+    superblock = models.ForeignKey(SuperBlock, on_delete=models.CASCADE)
+
+    class Meta:
+        verbose_name = _('SuperBlock Observer')
+
+    def __str__(self):
+        return f"{self.observer} requested superblock {self.superblock.id}"
+
 
 
 def detections_array_dtypes():

@@ -1436,6 +1436,7 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
 
     list_address = '"small-bodies-observations@lists.nasa.gov"'
     list_authors = [ '"paul.a.abell@nasa.gov"',
+                     '"Abell, Paul A. (JSC-XI311) via small-bodies-observations"',
                      '"Abell, Paul A. (JSC-XI111) via small-bodies-observations"',
                      '"paul.w.chodas@jpl.nasa.gov"',
                      '"brent.w.barbee@nasa.gov"',
@@ -2892,9 +2893,28 @@ def store_jpl_physparams(phys_par, body):
 
         if isinstance(jpl_value, str) and '/' in jpl_value:
             jpl_value, jpl_value2 = jpl_value.split('/')
+        if isinstance(jpl_value, str) and ', ' in jpl_value:
+            jpl_value, jpl_value2 = jpl_value.split(', ')
+            # Check if units are included
+            value2_parts = jpl_value2.split(' ')
+            if len(value2_parts) == 2:
+                jpl_value2 = float(value2_parts[0])
+                if p.get('units', None) is None:
+                    p['units'] = value2_parts[1].lstrip().rstrip()
 
-        if isinstance(jpl_error, str) and '/' in jpl_error:
-            jpl_error, jpl_error2 = jpl_error.split('/')
+        if isinstance(jpl_error, str):
+            if '/' in jpl_error:
+                jpl_error, jpl_error2 = jpl_error.split('/')
+                # Extract floating point numbers. Solution modified from https://stackoverflow.com/a/56435431/10168105
+                jpl_error2 = float("".join(filter(lambda d: str.isdigit(d) or d == '.', jpl_error2)))
+            multiplier = 1.0
+            if '%' in jpl_error:
+                multiplier = 0.01 * jpl_value
+            jpl_error = float("".join(filter(lambda d: str.isdigit(d) or d == '.', jpl_error)))
+            jpl_error *= multiplier
+            if jpl_value2 is not None and jpl_error is not None and jpl_error2 is None:
+                # Copy over error to other value if none
+                jpl_error2 = jpl_error
 
         # Build physparams dictionary
         phys_params = {'parameter_type': p_type,

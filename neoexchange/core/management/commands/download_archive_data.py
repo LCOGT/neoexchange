@@ -123,6 +123,7 @@ class Command(BaseCommand):
                                     for filename in filenames:
                                         save_dataproduct(obj=block, filepath=filename, filetype=DataProduct.FITS_SPECTRA)
                                 break
+            self.stdout.write("Done")
         else:
             self.stdout.write("No token defined (set ARCHIVE_TOKEN environment variable)")
 

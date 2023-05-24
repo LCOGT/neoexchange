@@ -440,6 +440,14 @@ def hmstohours(value):
     el = value.split(":")
     return float(el[0]) + float(el[1])/60. + float(el[2])/3600.
 
+def decimaldaytodt(date_string):
+    """Converts a MPC-style Year, Month, Decimal day <date_string> e.g.
+    '2013 10 31.16159' into a datetime object (datetime(2013, 10, 31, 3, 52, 41, 376000)
+    (Actually just a wrapper around parse_neocp_decimal_date() to provide the
+    inverse of dttodecimalday()...)
+    """
+
+    return parse_neocp_decimal_date(date_string)
 
 def dttodecimalday(dt, microdays=False):
     """Converts a datetime object <dt> into MPC-style Year, Month, Decimal day. An

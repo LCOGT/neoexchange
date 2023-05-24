@@ -1067,7 +1067,7 @@ class ScheduleCalibSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
 
             if tracking_num:
                 messages.success(self.request, "Request %s successfully submitted to the scheduler" % tracking_num)
-                block_resp = record_block(tracking_num, sched_params, form.cleaned_data, target)
+                block_resp = record_block(tracking_num, sched_params, form.cleaned_data, target, observer=request.user)
                 if block_resp:
                     messages.success(self.request, "Block recorded")
                 else:
@@ -1121,7 +1121,7 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
             tracking_num, sched_params = schedule_submit(new_form.cleaned_data, target, username)
             if tracking_num:
                 messages.success(self.request, "Request %s successfully submitted to the scheduler" % tracking_num)
-                block_resp = record_block(tracking_num, sched_params, new_form.cleaned_data, target)
+                block_resp = record_block(tracking_num, sched_params, new_form.cleaned_data, target, observer=request.user)
                 self.success = True
                 if block_resp:
                     messages.success(self.request, "Block recorded")
@@ -2212,7 +2212,8 @@ def check_for_block(form_data, params, new_body):
     try:
         block_id = SuperBlock.objects.get(body=new_body.id,
                                      groupid__contains=form_data['group_name'],
-                                     proposal=Proposal.objects.get(code=form_data['proposal_code'])
+                                     proposal=Proposal.objects.get(code=form_data['proposal_code']),
+                                     active=True
                                      )
 #                                         site=site_list[params['site_code']])
     except SuperBlock.MultipleObjectsReturned:
@@ -2227,7 +2228,7 @@ def check_for_block(form_data, params, new_body):
         return 1
 
 
-def record_block(tracking_number, params, form_data, target):
+def record_block(tracking_number, params, form_data, target, observer):
     """Records a just-submitted observation as a SuperBlock and Block(s) in the database.
     """
 
@@ -2256,9 +2257,10 @@ def record_block(tracking_number, params, form_data, target):
         else:
             sblock_kwargs['body'] = target
         # Check if this went to a rapid response proposal
-        if proposal.time_critical is True:
+        if proposal.time_critical is True and form_data.get('too_mode', False) is True and params.get('too_mode', False) is True:
             sblock_kwargs['rapid_response'] = True
         sblock_pk = SuperBlock.objects.create(**sblock_kwargs)
+        blockobserver = BlockObserver.objects.create(superblock=sblock_pk, observer=observer)
         i = 0
         for request, request_type in params.get('request_numbers', {}).items():
             # cut off json UTC timezone remnant
@@ -4648,10 +4650,13 @@ def compare_NEOx_horizons_ephems(body, d, sitecode='500', debug=True):
         # Find index of nearest in time ephememeris line
         horizons_index = np.abs(d-horizons_emp['datetime'].datetime).argmin()
         horizons_pos = SkyCoord(horizons_emp['RA'][horizons_index], horizons_emp['DEC'][horizons_index], unit=u.deg)
+        mag_column = 'V'
+        if mag_column not in horizons_emp.colnames:
+            mag_column = 'Tmag'
         sep_r = horizons_pos.separation(neox_pos).to(u.arcsec)
         sep_ra, sep_dec = horizons_pos.spherical_offsets_to(neox_pos)
         sep_ra = -sep_ra.to(u.arcsec) / cos(horizons_pos.dec.rad)
         sep_dec = -sep_dec.to(u.arcsec)
-        print(f"At {d:} (HORIZONS@{horizons_emp['datetime'][horizons_index]} , sep= {sep_r:.1f} (RA={sep_ra:.1f}, Dec={sep_dec:.1f})\nNEOX: {neox_pos.to_string('hmsdms', sep=' ', precision=4):}\n JPL: {horizons_pos.to_string('hmsdms', sep=' ', precision=4):}")
+        print(f"At {d:} (HORIZONS@{horizons_emp['datetime'][horizons_index]} , sep= {sep_r:.1f} (RA={sep_ra:.1f}, Dec={sep_dec:.1f})\nNEOX: {neox_pos.to_string('hmsdms', sep=' ', precision=4):} V={neox_emp['mag']:.1f}\n JPL: {horizons_pos.to_string('hmsdms', sep=' ', precision=4):} V={horizons_emp[mag_column][horizons_index]:.1f}")
 
     return neox_emp, horizons_emp, sep_r, sep_ra, sep_dec

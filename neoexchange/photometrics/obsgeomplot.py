@@ -358,6 +358,8 @@ def plot_brightness(ephem, title=None, base_dir=''):
 
     fig.autofmt_xdate()
     ax.minorticks_on()
+    # Turn off scale offset on magnitude axis
+    ax.yaxis.get_major_formatter().set_useOffset(False)
     ax2.minorticks_on()
     ax.xaxis.set_ticks_position('both')
     ax.yaxis.set_ticks_position('left')

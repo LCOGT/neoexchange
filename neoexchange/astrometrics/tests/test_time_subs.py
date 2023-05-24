@@ -167,6 +167,28 @@ class TestDegreesToHMS(SimpleTestCase):
 
         self.assertEqual(expected_string, time_string)
 
+
+class TestDecimalDay2DT(SimpleTestCase):
+
+    def test_no_microdays(self):
+        date_string = '2013 10 31.16159'
+        expected_dt = datetime(2013, 10, 31, 3, 52, 41, 376000)
+
+        dt = decimaldaytodt(date_string)
+
+        self.assertEqual(expected_dt, dt)
+
+    def test_microdays(self):
+        date_string = '2013 11 01.051812'
+        expected_dt = datetime(2013, 11, 1, 1, 14, 36, 556800)
+
+        dt = decimaldaytodt(date_string)
+
+        self.assertEqual(expected_dt, dt)
+
+
+class TestDegreesToHMS(SimpleTestCase):
+
     def test_bad_rounding(self):
         value = 42.0
         expected_string = "02 48 00.00"
@@ -366,6 +388,25 @@ class TestParseNeocpDate(SimpleTestCase):
         expected_dt = datetime(2016, 3, 19, 23, 16, 48)
 
         dt = parse_neocp_date(date_string)
+
+        self.assertEqual(expected_dt, dt)
+
+
+class TestParseNEOCPDecimalDate(SimpleTestCase):
+
+    def test_no_microdays(self):
+        date_string = '2013 10 31.16159'
+        expected_dt = datetime(2013, 10, 31, 3, 52, 41, 376000)
+
+        dt = parse_neocp_decimal_date(date_string)
+
+        self.assertEqual(expected_dt, dt)
+
+    def test_microdays(self):
+        date_string = '2013 11 01.051812'
+        expected_dt = datetime(2013, 11, 1, 1, 14, 36, 556800)
+
+        dt = parse_neocp_decimal_date(date_string)
 
         self.assertEqual(expected_dt, dt)
 
