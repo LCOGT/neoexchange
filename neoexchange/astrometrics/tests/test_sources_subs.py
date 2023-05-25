@@ -29,7 +29,7 @@ from bs4 import BeautifulSoup
 from django.test import TestCase, SimpleTestCase
 from django.forms.models import model_to_dict
 
-from core.models import Body, Proposal, Block, StaticSource, PhysicalParameters, Designations, ColorValues
+from core.models import Body, Proposal, Block, StaticSource, PhysicalParameters, Designations, ColorValues, User
 from astrometrics.ephem_subs import determine_darkness_times
 from astrometrics.time_subs import datetime2mjd_utc
 from neox.tests.mocks import MockDateTime, mock_expand_cadence, mock_expand_cadence_novis, \
@@ -824,6 +824,8 @@ class TestSubmitBlockToScheduler(TestCase):
                               }
         self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
 
+        self.bart = User.objects.create_user(username="bart", password="simpson", email="bart@simpson.com")
+
         ssource_params = {  'name' : 'SA107-684',
                             'ra' : 234.3,
                             'dec' : -0.16,
@@ -868,7 +870,7 @@ class TestSubmitBlockToScheduler(TestCase):
         data = params
         data['proposal_code'] = 'LCO2015A-009'
         data['exp_length'] = 91
-        block_resp = record_block(resp, sched_params, data, self.body)
+        block_resp = record_block(resp, sched_params, data, self.body, self.bart)
         self.assertEqual(block_resp, True)
 
         # Test that block has same start/end as superblock
@@ -899,7 +901,7 @@ class TestSubmitBlockToScheduler(TestCase):
         data = params
         data['proposal_code'] = 'LCO2015A-009'
         data['exp_length'] = 91
-        block_resp = record_block(resp, sched_params, data, self.body)
+        block_resp = record_block(resp, sched_params, data, self.body, self.bart)
         self.assertEqual(block_resp, True)
 
         # Test that block has same start/end as superblock
@@ -936,7 +938,7 @@ class TestSubmitBlockToScheduler(TestCase):
         data = params
         data['proposal_code'] = 'LCO2015A-009'
         data['exp_length'] = 91
-        block_resp = record_block(tracking_num, sched_params, data, self.body)
+        block_resp = record_block(tracking_num, sched_params, data, self.body, self.bart)
         self.assertEqual(block_resp, True)
 
         blocks = Block.objects.filter(active=True)
@@ -1004,7 +1006,7 @@ class TestSubmitBlockToScheduler(TestCase):
         data = params
         data['proposal_code'] = 'LCO2015A-009'
         data['exp_length'] = 91
-        block_resp = record_block(resp, sched_params, data, self.body)
+        block_resp = record_block(resp, sched_params, data, self.body, self.bart)
         self.assertEqual(block_resp, True)
 
         # Test that block has same start/end as superblock
@@ -1063,7 +1065,7 @@ class TestSubmitBlockToScheduler(TestCase):
         data = params
         data['proposal_code'] = 'LCO2015A-009'
         data['exp_length'] = params['exp_time']
-        block_resp = record_block(resp, sched_params, data, self.body)
+        block_resp = record_block(resp, sched_params, data, self.body, self.bart)
         self.assertEqual(block_resp, True)
 
         # Test that block has same start/end as superblock
