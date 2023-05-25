@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.13.1
+* Major update for DART mission support to handle exporting of lightcurves (from NEOexchange or photometrypipeline) and FITS frames to the Planetary Data System (PDS)
+
 ### 3.12.5
 * Fix issue with SuperBlocks for proposals with Time Critical time all being recorded as rapid_response.
 
