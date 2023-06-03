@@ -54,7 +54,8 @@ import io
 from urllib.parse import urljoin
 
 from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, \
-    ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm, AddTargetForm, AddPeriodForm, UpdateAnalysisStatusForm
+    ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm, AddTargetForm, AddPeriodForm,\
+    UpdateAnalysisStatusForm, BodyFindDataForm
 from .models import *
 from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih, \
     convert_ast_to_comet
@@ -281,6 +282,31 @@ class BodySearchView(ListView):
 class BodyVisibilityView(DetailView):
     template_name = 'core/body_visibility.html'
     model = Body
+
+
+class BodyFindData(DetailView, FormView):
+    """
+    Creates a suggested spectroscopic calibration observation request, including time
+    window, calibrations and molecules
+    """
+    model = Body
+    context_object_name = "body"
+    template_name = 'core/body_finddata.html'
+    form_class = BodyFindDataForm
+
+    def post(self, request, *args, **kwargs):
+        form = BodyFindDataForm(request.POST)
+        if form.is_valid():
+            return self.form_valid(form, request)
+        else:
+            return self.render_to_response(self.get_context_data(form=form, body=self.target))
+
+    def form_valid(self, form, request):
+        pass
+
+    def get_context_data(self, **kwargs):
+        context = super(BodyFindData, self).get_context_data(**kwargs)
+        return context
 
 
 class BlockDetailView(DetailView):
@@ -4660,3 +4686,24 @@ def compare_NEOx_horizons_ephems(body, d, sitecode='500', debug=True):
         print(f"At {d:} (HORIZONS@{horizons_emp['datetime'][horizons_index]} , sep= {sep_r:.1f} (RA={sep_ra:.1f}, Dec={sep_dec:.1f})\nNEOX: {neox_pos.to_string('hmsdms', sep=' ', precision=4):} V={neox_emp['mag']:.1f}\n JPL: {horizons_pos.to_string('hmsdms', sep=' ', precision=4):} V={horizons_emp[mag_column][horizons_index]:.1f}")
 
     return neox_emp, horizons_emp, sep_r, sep_ra, sep_dec
+
+def finddata(request):
+
+    form = BodyFindDataForm(request.GET)
+    ephem_lines = []
+    print(form.__dict__)
+    if form.is_valid():
+        data = form.cleaned_data
+        body_elements = model_to_dict(data['target'])
+        dark_start, dark_end = determine_darkness_times(
+            data['site_code'], data['utc_date'])
+        ephem_lines = call_compute_ephem(
+            body_elements, dark_start, dark_end, data['site_code'], 900, data['alt_limit'])
+    else:
+        return render(request, 'core/home.html', {'form': form})
+    return render(request, 'core/ephem.html',
+                  {'target': data['target'],
+                   'ephem_lines': ephem_lines,
+                   'site_code': form['site_code'].value(),
+                   }
+                  )

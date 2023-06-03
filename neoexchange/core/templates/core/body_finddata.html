@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% load static basic_tags %}
+
+{% block header %}{{body.current_name}} details{% endblock %}
+
+<!-- Import Bokeh Script for plotting (UPDATE RELEASE NUMBER IF BOKEH IS UPDATED) -->
+{% block script-content %}
+<script src={{js_path}}  crossorigin="anonymous"></script>
+<script src={{widget_path}}  crossorigin="anonymous"></script>
+<script src={{table_path}}  crossorigin="anonymous"></script>
+{% endblock %}
+
+{% block bodyclass %}page{% endblock %}
+
+{% block extramenu %}
+                    <div class="headingleft">
+                        <h1>Find Data for: {{body.full_name}}</h1>
+                    </div>
+{% endblock%}
+
+{% block main-content %}
+            <!-- Main body -->
+            <div class="container" id="main" class="fill-height fullwidth">
+                    <div class="row">
+                        <div class="eight columns">
+                            <h5  class="section-title"><span class="">Source</span> <span class="msgpadded">{{body.get_origin_display}}</span></h5>
+                            <div class="section-title">
+                            <form action="{% url 'finddata' %}" method="GET" style="display:inline-block;">
+                                <input type="hidden" name="{{ form.target.id }}" id="id_target" value="{{body.id}}" />
+                                    <div class="inline-fields">
+                                        <div class="compact-field">
+                                        {{ form.utc_date }}<label for="id_utc_date">UTC date</label>
+                                        </div>
+                                        <div class="compact-field">
+                                        {{ form.site_code }}<label for="id_site_code">Site</label>
+                                        </div>
+                                        <div class="compact-field">
+                                        {{ form.request_number }}<label for="id_request_number">Request Number</label>
+                                        </div>
+                                        <div class="compact-field">
+                                        {{ form.tracking_number }}<label for="id_tracking_number">Tracking Number</label>
+                                        </div>
+                                        <div class="compact-field">
+                                        {{ form.julian_date }}<label for="id_jd">Julian Date</label>
+                                        </div>
+                                        <input type="submit" class="button button-primary" value="Find Data" id="id_submit">
+                                    </div>
+                                {% for key, error in form.errors.items %}
+                                    <div class="messages error">
+                                        {{ error }}
+                                    </div>
+                                {% endfor %}
+                                </form>
+                            </div>
+
+                            <h5  class="section-title">Data Blocks Found</h5>
+                            <ul class="block-status">
+                                {% for b in blocks %}
+                                    {% if b.superblock.id %}
+                                    <li class="{% cycle 'odd' 'even' %}">
+                                            <a href="{% url 'block-view' b.superblock.id %}">
+                                            <span class="block-status-line">
+                                                <span class="block-status-item">
+                                                {% if b.reported and b.when_observed %}
+                                                    <i class="fa fa-check-circle-o fa-lg" style="color:#339933;"></i>
+                                                {% elif b.when_observed and not b.reported %}
+                                                    <i class="fa fa-clock-o fa-lg" style="color: #FF9933;"></i>
+                                                {% elif not b.reported and not b.when_observed and b.active %}
+                                                    <i class="fa fa-circle-o fa-lg" style="color:#263c6f;"></i>
+                                                {% elif not b.reported and not b.when_observed and  not b.active %}
+                                                    <i class="fa fa-minus-circle fa-lg" style="color:#df0000;"></i>
+                                                {% endif %}
+                                                </span>
+                                                <span class="block-status-item">{{b.block_start|date:"c"}}</span>
+                                                <span class="block-status-item"><i class="fa fa-long-arrow-right"></i></span>
+                                                <span class="block-status-item">{{b.block_end|date:"c"}}</span>
+                                                <span class="block-status-item">{{b.site|upper}}</span>
+                                                <span class="block-status-item">Req: {{b.request_number}}</span>
+                                            </span>
+                                            </a>
+                                    </li>
+                                    {% endif %}
+                                {% empty %}
+                                <li>No blocks have been observed</li>
+                                {% endfor %}
+                            </ul>
+
+{% endblock %}

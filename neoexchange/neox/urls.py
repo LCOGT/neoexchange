@@ -26,13 +26,13 @@ from core.views import BodySearchView, BodyDetailView, BlockDetailView, Schedule
     ScheduleSubmit, ephemeris, home, BlockReport, ranking, MeasurementViewBody, MeasurementViewBlock, \
     UploadReport, BlockTimeSummary, ScheduleParametersCadence, ScheduleParametersSpectra, \
     CandidatesViewBlock, BlockReportMPC, \
-    MeasurementDownloadMPC, MeasurementDownloadADESPSV, \
+    MeasurementDownloadMPC, MeasurementDownloadADESPSV, BodyFindData, \
     SuperBlockListView, SuperBlockDetailView, characterization, SpectroFeasibility, BlockSpec,\
     display_movie, GuideMovie, LCPlot, SpecDataListView, LCDataListView,\
     StaticSourceView, StaticSourceDetailView, ScheduleCalibSpectra, ScheduleCalibSubmit, \
     CalibSpectroFeasibility, ScheduleCalibParameters, \
     BestStandardsView, PlotSpec, BodyVisibilityView, SuperBlockTimeline, BlockCancel, \
-    look_project, AddTarget, display_textfile
+    look_project, AddTarget, display_textfile, finddata
 from core.plots import make_visibility_plot, \
     make_standards_plot, make_solar_standards_plot
 
@@ -75,6 +75,7 @@ urlpatterns = [
     url(r'^target/(?P<pk>\d+)/measurements/$', MeasurementViewBody.as_view(), name='measurement'),
     url(r'^target/(?P<pk>\d+)/visibility/$', BodyVisibilityView.as_view(model=Body), name='visibility'),
     url(r'^target/(?P<pk>\d+)/$', BodyDetailView.as_view(model=Body), name='target'),
+    url(r'^target/(?P<pk>\d+)/finddata/$', BodyFindData.as_view(model=Body), name='finddata'),
     url(r'^target/(?P<pk>\d+)/spectra/$', PlotSpec.as_view(), name='plotspec'),
     url(r'^target/(?P<pk>\d+)/lc/$', LCPlot.as_view(), name='lc_plot'),
     url(r'^documents/(?P<pk>\d+).txt$', display_textfile, name='display_textfile'),
@@ -82,6 +83,7 @@ urlpatterns = [
     url(r'^search/$', BodySearchView.as_view(context_object_name="target_list"), name='search'),
     url(r'^ephemeris/$', ephemeris, name='ephemeris'),
     url(r'^ranking/$', ranking, name='ranking'),
+    url(r'^finddata/$', finddata, name='finddata'),
     url(r'^calibsources/$', StaticSourceView.as_view(), name='calibsource-view'),
     url(r'^calibsources/best/$', BestStandardsView.as_view(), name='beststandards-view'),
     url(r'^calibsources/solar/$', StaticSourceView.as_view(queryset=StaticSource.objects.filter(source_type=StaticSource.SOLAR_STANDARD).order_by('ra')), name='solarstandard-view'),
