@@ -8606,3 +8606,145 @@ class TestDisplayDataproduct(TestCase):
         dp = DataProduct.objects.filter(filetype=DataProduct.ALCDEF_TXT)
         response = display_textfile(request, dp[0].id)
         self.assertEqual(b"some text here", response.content)
+
+class TestFinddataByConstraints(TestCase):
+    def setUp(self):
+
+        params = {  'name'          : '65803',
+                    'origin'        : 'N',
+                    'source_type'   : 'N',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active': True,
+                    'fast_moving': False,
+                    'urgency': None,
+                    'epochofel': datetime(2023, 2, 25, 0, 0),
+                    'orbit_rms': 0.77,
+                    'orbinc': 3.41411,
+                    'longascnode': 72.99108,
+                    'argofperih': 319.56159,
+                    'eccentricity': 0.3832817,
+                    'meandist': 1.6425445,
+                    'meananom': 59.09022,
+                    'perihdist': None,
+                    'epochofperih': None,
+                    'abs_mag': 18.13,
+                    'slope': 0.15,
+                    'score': None,
+                    'discovery_date': datetime(1996, 4, 11, 0, 0),
+                    'num_obs': 4089,
+                    'arc_length': 9739.0,
+                    'not_seen': 4.12823459021991,
+                    'updated': True,
+                    'ingest': datetime(2018, 8, 14, 17, 45, 42),
+                    'update_time': datetime(2023, 6, 2, 6, 23, 8, 64382),
+                    'analysis_status': 0,
+                    }
+        self.test_body, status = Body.objects.get_or_create(**params)
+
+        proposal_params = {'code': 'LCODARTObs',
+                           'title': 'LCO Observation for DART',
+                           'active': True
+                           }
+        self.dart_proposal, created = Proposal.objects.get_or_create(**proposal_params)
+
+        self.test_sblocks = []
+        self.test_blocks = []
+        for tracking_number, request_number in zip(range(1, 8, 3), range(142, 163, 10)):
+            sblock_params = {
+                            'body': self.test_body,
+                            'block_start': datetime(2022, 10, tracking_number, 8, 30),
+                            'block_end': datetime(2022, 10, tracking_number, 19, 30),
+                            'proposal': self.dart_proposal,
+                            'tracking_number': tracking_number
+                            }
+            self.test_sblock = SuperBlock.objects.create(**sblock_params)
+            self.test_sblocks.append(self.test_sblock)
+
+            block_params = {
+                            'body': self.test_body,
+                            'superblock': self.test_sblock,
+                            'site': 'coj',
+                            'block_start': datetime(2022, 10, tracking_number, 10, 30),
+                            'block_end': datetime(2022, 10, tracking_number, 17, 30),
+                            'obstype': Block.OPT_IMAGING,
+                            'request_number': request_number,
+                            'num_observed': 1,
+                            'when_observed': datetime(2022, 10, tracking_number, 17, 15),
+                            'num_exposures': 5,
+                            'exp_length': 60
+                            }
+            self.test_block = Block.objects.create(**block_params)
+            self.test_blocks.append(self.test_block)
+
+    def test_inserted_ok(self):
+        self.assertEqual(3, SuperBlock.objects.all().count())
+        self.assertEqual(3, Block.objects.all().count())
+
+    def test_no_constraints(self):
+        constraints = { 'body' : self.test_body, }
+
+        blocks = finddata_by_constraint(constraints)
+
+        self.assertEqual(len(self.test_blocks), len(blocks))
+
+    def test_no_tracking_number(self):
+        constraints = { 'body' : self.test_body,
+                        'site_code': '1M0', 'utc_date': None,
+                        'request_number': '', 'tracking_number': '',
+                        'julian_date': None}
+
+        blocks = finddata_by_constraint(constraints)
+
+        self.assertEqual(len(self.test_blocks), len(blocks))
+
+    def test_bad_tracking_number(self):
+        constraints = { 'body' : self.test_body,
+                        'site_code': '1M0', 'utc_date': None,
+                        'request_number': '', 'tracking_number': 'foo',
+                        'julian_date': None}
+
+        blocks = finddata_by_constraint(constraints)
+
+        self.assertEqual(0, len(blocks))
+
+    def test_tracking_number(self):
+        constraints = { 'body' : self.test_body,
+                        'site_code': '1M0', 'utc_date': None,
+                        'request_number': '', 'tracking_number': '7',
+                        'julian_date': None}
+
+        blocks = finddata_by_constraint(constraints)
+
+        self.assertEqual(1, len(blocks))
+        self.assertEqual(self.test_blocks[2], blocks[0])
+
+    def test_no_request_number(self):
+        constraints = { 'body' : self.test_body,
+                        'site_code': '1M0', 'utc_date': None,
+                        'request_number': '', 'tracking_number': '',
+                        'julian_date': None}
+
+        blocks = finddata_by_constraint(constraints)
+
+        self.assertEqual(len(self.test_blocks), len(blocks))
+
+    def test_bad_request_number(self):
+        constraints = { 'body' : self.test_body,
+                        'site_code': '1M0', 'utc_date': None,
+                        'request_number': 'bar', 'tracking_number': '',
+                        'julian_date': None}
+
+        blocks = finddata_by_constraint(constraints)
+
+        self.assertEqual(0, len(blocks))
+
+    def test_request_number(self):
+        constraints = { 'body' : self.test_body,
+                        'site_code': '1M0', 'utc_date': None,
+                        'request_number': '142', 'tracking_number': '',
+                        'julian_date': None}
+
+        blocks = finddata_by_constraint(constraints)
+
+        self.assertEqual(1, len(blocks))
+        self.assertEqual(self.test_blocks[0], blocks[0])

@@ -483,7 +483,7 @@ class UpdateAnalysisStatusForm(forms.Form):
 
 class BodyFindDataForm(forms.Form):
     site_code = forms.ChoiceField(required=False, choices=SITES, widget=SiteSelectWidget)
-    utc_date = forms.DateField(input_formats=['%Y-%m-%d', ], initial=date.today, required=False, widget=forms.TextInput(attrs={'size': '10'}),
+    utc_date = forms.DateField(input_formats=['%Y-%m-%d', ], required=False, widget=forms.TextInput(attrs={'size': '10'}),
                                error_messages={'required': _(u'UTC date is required')})
     request_number = forms.CharField(label='Request Number (larger)', required=False, max_length=10)
     tracking_number = forms.CharField(label='RequestGroup Number (smaller)', required=False, max_length=10)

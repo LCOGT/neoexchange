@@ -113,6 +113,37 @@ class LoginRequiredMixin(object):
         return login_required(view)
 
 
+class LookUpBodyMixin(object):
+    """
+    A Mixin for finding a Body from a pk and if it exists, return the Body instance.
+    """
+    def dispatch(self, request, *args, **kwargs):
+        try:
+            body = Body.objects.get(pk=kwargs['pk'])
+            self.body = body
+            return super(LookUpBodyMixin, self).dispatch(request, *args, **kwargs)
+        except Body.DoesNotExist:
+            raise Http404("Body does not exist")
+
+
+class LookUpCalibMixin(object):
+    """
+    A Mixin for finding a StaticSource for a sitecode and if it exists, return the Target instance.
+    """
+    def dispatch(self, request, *args, **kwargs):
+        try:
+            calib_id = kwargs['pk']
+            if calib_id == '-':
+                sitecode = kwargs['instrument_code'][0:3]
+                target, target_params = find_best_flux_standard(sitecode)
+            else:
+                target = StaticSource.objects.get(pk=calib_id)
+            self.target = target
+            return super(LookUpCalibMixin, self).dispatch(request, *args, **kwargs)
+        except StaticSource.DoesNotExist:
+            raise Http404("StaticSource does not exist")
+
+
 def user_proposals(user):
     """
     Returns active proposals the given user has permissions for
@@ -284,7 +315,7 @@ class BodyVisibilityView(DetailView):
     model = Body
 
 
-class BodyFindData(DetailView, FormView):
+class BodyFindData(DetailView, LookUpBodyMixin, FormView):
     """
     Creates a suggested spectroscopic calibration observation request, including time
     window, calibrations and molecules
@@ -299,13 +330,14 @@ class BodyFindData(DetailView, FormView):
         if form.is_valid():
             return self.form_valid(form, request)
         else:
-            return self.render_to_response(self.get_context_data(form=form, body=self.target))
+            return self.render_to_response(self.get_context_data(form=form, body=self.body))
 
     def form_valid(self, form, request):
         pass
 
     def get_context_data(self, **kwargs):
         context = super(BodyFindData, self).get_context_data(**kwargs)
+        print("context=",context)
         return context
 
 
@@ -851,37 +883,6 @@ def ephemeris(request):
                    'site_code': form['site_code'].value(),
                    }
                   )
-
-
-class LookUpBodyMixin(object):
-    """
-    A Mixin for finding a Body from a pk and if it exists, return the Body instance.
-    """
-    def dispatch(self, request, *args, **kwargs):
-        try:
-            body = Body.objects.get(pk=kwargs['pk'])
-            self.body = body
-            return super(LookUpBodyMixin, self).dispatch(request, *args, **kwargs)
-        except Body.DoesNotExist:
-            raise Http404("Body does not exist")
-
-
-class LookUpCalibMixin(object):
-    """
-    A Mixin for finding a StaticSource for a sitecode and if it exists, return the Target instance.
-    """
-    def dispatch(self, request, *args, **kwargs):
-        try:
-            calib_id = kwargs['pk']
-            if calib_id == '-':
-                sitecode = kwargs['instrument_code'][0:3]
-                target, target_params = find_best_flux_standard(sitecode)
-            else:
-                target = StaticSource.objects.get(pk=calib_id)
-            self.target = target
-            return super(LookUpCalibMixin, self).dispatch(request, *args, **kwargs)
-        except StaticSource.DoesNotExist:
-            raise Http404("StaticSource does not exist")
 
 
 class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
@@ -4687,23 +4688,38 @@ def compare_NEOx_horizons_ephems(body, d, sitecode='500', debug=True):
 
     return neox_emp, horizons_emp, sep_r, sep_ra, sep_dec
 
+def finddata_by_constraint(constraints):
+    """Filter all Blocks in the DB for the object in <constraints['body']>,
+    along with any additional constraints in the <constraints> dict. Currently
+    implemented:
+    * tracking_number,
+    * request_number
+    To be implemented:
+    * site_code/tel_class,
+    * UTC date,
+    * JD
+    """
+
+    blocks = Block.objects.filter(body=constraints['body'])
+    if 'tracking_number' in constraints and constraints['tracking_number'] != '':
+        blocks = blocks.filter(superblock__tracking_number=constraints['tracking_number'])
+    elif 'request_number' in constraints and constraints['request_number'] != '':
+        blocks = blocks.filter(request_number=constraints['request_number'])
+
+    return blocks
+
 def finddata(request):
 
     form = BodyFindDataForm(request.GET)
     ephem_lines = []
-    print(form.__dict__)
+    print("form=", form.__dict__)
     if form.is_valid():
         data = form.cleaned_data
-        body_elements = model_to_dict(data['target'])
-        dark_start, dark_end = determine_darkness_times(
-            data['site_code'], data['utc_date'])
-        ephem_lines = call_compute_ephem(
-            body_elements, dark_start, dark_end, data['site_code'], 900, data['alt_limit'])
+        print("form data=",data)
     else:
-        return render(request, 'core/home.html', {'form': form})
-    return render(request, 'core/ephem.html',
-                  {'target': data['target'],
-                   'ephem_lines': ephem_lines,
-                   'site_code': form['site_code'].value(),
+        return render(request, 'core/body_finddata.html', {'form': form})
+    return render(request, 'core/body_finddata.html',
+                  {'body': data['target'],
+                   'blocks': blocks,
                    }
                   )
