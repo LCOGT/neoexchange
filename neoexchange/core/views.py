@@ -4705,6 +4705,8 @@ def finddata_by_constraint(constraints):
         blocks = blocks.filter(superblock__tracking_number=constraints['tracking_number'])
     elif 'request_number' in constraints and constraints['request_number'] != '':
         blocks = blocks.filter(request_number=constraints['request_number'])
+    elif 'site_code' in constraints and constraints['site_code'] != '':
+        blocks = blocks.filter(telclass=constraints['site_code'].lower())
 
     return blocks
 

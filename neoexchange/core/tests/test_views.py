@@ -8663,6 +8663,7 @@ class TestFinddataByConstraints(TestCase):
             block_params = {
                             'body': self.test_body,
                             'superblock': self.test_sblock,
+                            'telclass': '1m0',
                             'site': 'coj',
                             'block_start': datetime(2022, 10, tracking_number, 10, 30),
                             'block_end': datetime(2022, 10, tracking_number, 17, 30),
@@ -8675,10 +8676,25 @@ class TestFinddataByConstraints(TestCase):
                             }
             self.test_block = Block.objects.create(**block_params)
             self.test_blocks.append(self.test_block)
+        # Create a 2m SuperBlock/Block also
+        sblock_params['block_start'] -= timedelta(hours=5)
+        sblock_params['block_end'] -= timedelta(hours=5)
+        sblock_params['tracking_number'] = 9
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+        self.test_sblocks.append(self.test_sblock)
+
+        block_params['superblock'] = self.test_sblock
+        block_params['telclass'] = '2m0'
+        block_params['site'] = 'ogg'
+        block_params['block_start'] -= timedelta(hours=5)
+        block_params['block_end'] -= timedelta(hours=5)
+        block_params['request_number'] = 169
+        self.test_block = Block.objects.create(**block_params)
+        self.test_blocks.append(self.test_block)
 
     def test_inserted_ok(self):
-        self.assertEqual(3, SuperBlock.objects.all().count())
-        self.assertEqual(3, Block.objects.all().count())
+        self.assertEqual(4, SuperBlock.objects.all().count())
+        self.assertEqual(4, Block.objects.all().count())
 
     def test_no_constraints(self):
         constraints = { 'body' : self.test_body, }
@@ -8695,7 +8711,7 @@ class TestFinddataByConstraints(TestCase):
 
         blocks = finddata_by_constraint(constraints)
 
-        self.assertEqual(len(self.test_blocks), len(blocks))
+        self.assertEqual(len(self.test_blocks)-1, len(blocks))
 
     def test_bad_tracking_number(self):
         constraints = { 'body' : self.test_body,
@@ -8726,7 +8742,7 @@ class TestFinddataByConstraints(TestCase):
 
         blocks = finddata_by_constraint(constraints)
 
-        self.assertEqual(len(self.test_blocks), len(blocks))
+        self.assertEqual(len(self.test_blocks)-1, len(blocks))
 
     def test_bad_request_number(self):
         constraints = { 'body' : self.test_body,
@@ -8748,3 +8764,64 @@ class TestFinddataByConstraints(TestCase):
 
         self.assertEqual(1, len(blocks))
         self.assertEqual(self.test_blocks[0], blocks[0])
+
+    def test_no_site_code(self):
+        constraints = { 'body' : self.test_body,
+                        'site_code': '', 'utc_date': None,
+                        'request_number': '', 'tracking_number': '',
+                        'julian_date': None}
+
+        blocks = finddata_by_constraint(constraints)
+
+        self.assertEqual(len(self.test_blocks), len(blocks))
+
+    def test_bad_site_code(self):
+        constraints = { 'body' : self.test_body,
+                        'site_code': 'bar', 'utc_date': None,
+                        'request_number': '', 'tracking_number': '',
+                        'julian_date': None}
+
+        blocks = finddata_by_constraint(constraints)
+
+        self.assertEqual(0, len(blocks))
+
+    def test_site_code_1m0_upper(self):
+        constraints = { 'body' : self.test_body,
+                        'site_code': '1M0', 'utc_date': None,
+                        'request_number': '142', 'tracking_number': '',
+                        'julian_date': None}
+
+        blocks = finddata_by_constraint(constraints)
+
+        self.assertEqual(1, len(blocks))
+        self.assertEqual(self.test_blocks[0], blocks[0])
+
+    def test_site_code_1m0_lower(self):
+        constraints = { 'body' : self.test_body,
+                        'site_code': '1m0', 'utc_date': None,
+                        'request_number': '142', 'tracking_number': '',
+                        'julian_date': None}
+
+        blocks = finddata_by_constraint(constraints)
+
+    def test_site_code_2m0_upper(self):
+        constraints = { 'body' : self.test_body,
+                        'site_code': '2M0', 'utc_date': None,
+                        'request_number': '', 'tracking_number': '',
+                        'julian_date': None}
+
+        blocks = finddata_by_constraint(constraints)
+
+        self.assertEqual(1, len(blocks))
+        self.assertEqual(self.test_blocks[len(self.test_blocks)-1], blocks[0])
+
+    def test_site_code_2m0_lower(self):
+        constraints = { 'body' : self.test_body,
+                        'site_code': '2m0', 'utc_date': None,
+                        'request_number': '', 'tracking_number': '',
+                        'julian_date': None}
+
+        blocks = finddata_by_constraint(constraints)
+
+        self.assertEqual(1, len(blocks))
+        self.assertEqual(self.test_blocks[len(self.test_blocks)-1], blocks[0])
