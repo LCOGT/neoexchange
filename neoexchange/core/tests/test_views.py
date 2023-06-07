@@ -29,6 +29,7 @@ from bs4 import BeautifulSoup
 from mock import patch
 from astropy.io import fits
 from astropy.wcs import WCS
+from astropy.time import Time
 from numpy.testing import assert_allclose
 
 from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check_for_images, \
@@ -8825,3 +8826,25 @@ class TestFinddataByConstraints(TestCase):
 
         self.assertEqual(1, len(blocks))
         self.assertEqual(self.test_blocks[len(self.test_blocks)-1], blocks[0])
+
+    def test_site_code_2m0_tracking_number(self):
+        constraints = { 'body' : self.test_body,
+                        'site_code': '2m0', 'utc_date': None,
+                        'request_number': '', 'tracking_number': '9',
+                        'julian_date': None}
+
+        blocks = finddata_by_constraint(constraints)
+
+        self.assertEqual(1, len(blocks))
+        self.assertEqual(self.test_blocks[len(self.test_blocks)-1], blocks[0])
+
+    def test_jd(self):
+        constraints = { 'body' : self.test_body,
+                        'site_code': '', 'utc_date': None,
+                        'request_number': '', 'tracking_number': '',
+                        'julian_date': Time(datetime(2022, 10, 4, 12, 45)).jd }
+
+        blocks = finddata_by_constraint(constraints)
+
+        self.assertEqual(1, len(blocks))
+        self.assertEqual(self.test_blocks[1], blocks[0])

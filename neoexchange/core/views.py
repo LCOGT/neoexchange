@@ -4693,11 +4693,12 @@ def finddata_by_constraint(constraints):
     along with any additional constraints in the <constraints> dict. Currently
     implemented:
     * tracking_number,
-    * request_number
+    * request_number,
+    * tel_class
+    * Julian Date (JD)
     To be implemented:
-    * site_code/tel_class,
+    * MPC site code,
     * UTC date,
-    * JD
     """
 
     blocks = Block.objects.filter(body=constraints['body'])
@@ -4707,6 +4708,14 @@ def finddata_by_constraint(constraints):
         blocks = blocks.filter(request_number=constraints['request_number'])
     elif 'site_code' in constraints and constraints['site_code'] != '':
         blocks = blocks.filter(telclass=constraints['site_code'].lower())
+    elif 'julian_date' in constraints and constraints['julian_date'] != '' \
+        and constraints['julian_date'] is not None:
+        t_jd = Time(constraints['julian_date'], format='jd')
+        # Search +/- 12 hours either side
+        time_start = t_jd.datetime - timedelta(hours=12)
+        time_end = t_jd.datetime + timedelta(hours=12)
+#        print(t_jd, time_start, time_end)
+        blocks = blocks.filter(block_start__range=(time_start, time_end), block_end__range=(time_start, time_end))
 
     return blocks
 
