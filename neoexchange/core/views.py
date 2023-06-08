@@ -315,30 +315,36 @@ class BodyVisibilityView(DetailView):
     model = Body
 
 
-class BodyFindData(DetailView, LookUpBodyMixin, FormView):
+class BodyFindData(DetailView, FormView):
     """
-    Creates a suggested spectroscopic calibration observation request, including time
-    window, calibrations and molecules
+    Filters the Blocks for a Body depending on the search parameters entered on 
+    the form
     """
     model = Body
     context_object_name = "body"
     template_name = 'core/body_finddata.html'
     form_class = BodyFindDataForm
 
-    def post(self, request, *args, **kwargs):
-        form = BodyFindDataForm(request.POST)
+    def get(self, request, *args, **kwargs):
+        form = self.get_form()
+        body = Body.objects.get(pk=kwargs['pk'])
+        self.body = body
         if form.is_valid():
             return self.form_valid(form, request)
         else:
             return self.render_to_response(self.get_context_data(form=form, body=self.body))
 
     def form_valid(self, form, request):
-        pass
+        filt_blocks = finddata_by_constraint(form.cleaned_data) # Maybe pass self.body seperately like the ScheduleForms?
+        new_form = BodyFindDataForm(data)
+        return render(request, 'core/body_finddata.html', {'form': new_form, 'blocks': data, 'body': self.body})
 
     def get_context_data(self, **kwargs):
-        context = super(BodyFindData, self).get_context_data(**kwargs)
-        print("context=",context)
-        return context
+        body = Body.objects.get(pk=kwargs['pk'])
+        self.body = body
+#        context = super(BodyFindData, self).get_context_data(**kwargs)
+#        print("context=",context)
+#        return context
 
 
 class BlockDetailView(DetailView):
@@ -4702,19 +4708,20 @@ def finddata_by_constraint(constraints):
     """
 
     blocks = Block.objects.filter(body=constraints['body'])
+    print("# initial blocks=", blocks.count())
     if 'tracking_number' in constraints and constraints['tracking_number'] != '':
         blocks = blocks.filter(superblock__tracking_number=constraints['tracking_number'])
-    elif 'request_number' in constraints and constraints['request_number'] != '':
+    if 'request_number' in constraints and constraints['request_number'] != '':
         blocks = blocks.filter(request_number=constraints['request_number'])
-    elif 'site_code' in constraints and constraints['site_code'] != '':
+    if 'site_code' in constraints and constraints['site_code'] != '':
         blocks = blocks.filter(telclass=constraints['site_code'].lower())
-    elif 'julian_date' in constraints and constraints['julian_date'] != '' \
+    if 'julian_date' in constraints and constraints['julian_date'] != '' \
         and constraints['julian_date'] is not None:
         t_jd = Time(constraints['julian_date'], format='jd')
         # Search +/- 12 hours either side
         time_start = t_jd.datetime - timedelta(hours=12)
         time_end = t_jd.datetime + timedelta(hours=12)
-#        print(t_jd, time_start, time_end)
+        print("# blocks before=", blocks.count(), t_jd, time_start, time_end)
         blocks = blocks.filter(block_start__range=(time_start, time_end), block_end__range=(time_start, time_end))
 
     return blocks
@@ -4722,11 +4729,12 @@ def finddata_by_constraint(constraints):
 def finddata(request):
 
     form = BodyFindDataForm(request.GET)
-    ephem_lines = []
     print("form=", form.__dict__)
     if form.is_valid():
         data = form.cleaned_data
         print("form data=",data)
+        blocks = finddata_by_constraint(data)
+        return render_t
     else:
         return render(request, 'core/body_finddata.html', {'form': form})
     return render(request, 'core/body_finddata.html',

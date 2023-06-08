@@ -8677,25 +8677,32 @@ class TestFinddataByConstraints(TestCase):
                             }
             self.test_block = Block.objects.create(**block_params)
             self.test_blocks.append(self.test_block)
-        # Create a 2m SuperBlock/Block also
-        sblock_params['block_start'] -= timedelta(hours=5)
-        sblock_params['block_end'] -= timedelta(hours=5)
-        sblock_params['tracking_number'] = 9
-        self.test_sblock = SuperBlock.objects.create(**sblock_params)
-        self.test_sblocks.append(self.test_sblock)
+        # Create 0m4, 1m0 and 2m SuperBlock/Block for the same time also
+        tracking_number = 9
+        request_number = 169
+        for tel_class in ['2m0', '1m0', '0m4']:
+            sblock_params['block_start'] -= timedelta(hours=1)
+            sblock_params['block_end'] -= timedelta(hours=1)
+            sblock_params['tracking_number'] = tracking_number
+            self.test_sblock = SuperBlock.objects.create(**sblock_params)
+            self.test_sblocks.append(self.test_sblock)
+            print(self.test_sblock.block_start, self.test_sblock.block_end)
 
-        block_params['superblock'] = self.test_sblock
-        block_params['telclass'] = '2m0'
-        block_params['site'] = 'ogg'
-        block_params['block_start'] -= timedelta(hours=5)
-        block_params['block_end'] -= timedelta(hours=5)
-        block_params['request_number'] = 169
-        self.test_block = Block.objects.create(**block_params)
-        self.test_blocks.append(self.test_block)
+            block_params['superblock'] = self.test_sblock
+            block_params['telclass'] = tel_class
+            block_params['site'] = 'ogg'
+            block_params['block_start'] -= timedelta(hours=5)
+            block_params['block_end'] -= timedelta(hours=5)
+            block_params['request_number'] = request_number
+            self.test_block = Block.objects.create(**block_params)
+            self.test_blocks.append(self.test_block)
+            tracking_number += 1
+            request_number += 1
 
     def test_inserted_ok(self):
-        self.assertEqual(4, SuperBlock.objects.all().count())
-        self.assertEqual(4, Block.objects.all().count())
+        self.assertEqual(6, SuperBlock.objects.all().count())
+        self.assertEqual(6, Block.objects.all().count())
+        self.assertEqual(['1m0', '2m0', '0m4'], list(Block.objects.values_list('telclass', flat=True).distinct()))
 
     def test_no_constraints(self):
         constraints = { 'body' : self.test_body, }
@@ -8712,7 +8719,7 @@ class TestFinddataByConstraints(TestCase):
 
         blocks = finddata_by_constraint(constraints)
 
-        self.assertEqual(len(self.test_blocks)-1, len(blocks))
+        self.assertEqual(len(self.test_blocks)-2, len(blocks))
 
     def test_bad_tracking_number(self):
         constraints = { 'body' : self.test_body,
@@ -8743,7 +8750,7 @@ class TestFinddataByConstraints(TestCase):
 
         blocks = finddata_by_constraint(constraints)
 
-        self.assertEqual(len(self.test_blocks)-1, len(blocks))
+        self.assertEqual(len(self.test_blocks)-2, len(blocks))
 
     def test_bad_request_number(self):
         constraints = { 'body' : self.test_body,
@@ -8814,7 +8821,7 @@ class TestFinddataByConstraints(TestCase):
         blocks = finddata_by_constraint(constraints)
 
         self.assertEqual(1, len(blocks))
-        self.assertEqual(self.test_blocks[len(self.test_blocks)-1], blocks[0])
+        self.assertEqual(self.test_blocks[len(self.test_blocks)-3], blocks[0])
 
     def test_site_code_2m0_lower(self):
         constraints = { 'body' : self.test_body,
@@ -8825,7 +8832,7 @@ class TestFinddataByConstraints(TestCase):
         blocks = finddata_by_constraint(constraints)
 
         self.assertEqual(1, len(blocks))
-        self.assertEqual(self.test_blocks[len(self.test_blocks)-1], blocks[0])
+        self.assertEqual(self.test_blocks[len(self.test_blocks)-3], blocks[0])
 
     def test_site_code_2m0_tracking_number(self):
         constraints = { 'body' : self.test_body,
@@ -8836,7 +8843,7 @@ class TestFinddataByConstraints(TestCase):
         blocks = finddata_by_constraint(constraints)
 
         self.assertEqual(1, len(blocks))
-        self.assertEqual(self.test_blocks[len(self.test_blocks)-1], blocks[0])
+        self.assertEqual(self.test_blocks[len(self.test_blocks)-3], blocks[0])
 
     def test_jd(self):
         constraints = { 'body' : self.test_body,
@@ -8848,3 +8855,25 @@ class TestFinddataByConstraints(TestCase):
 
         self.assertEqual(1, len(blocks))
         self.assertEqual(self.test_blocks[1], blocks[0])
+
+    def test_jd_multiple_blocks(self):
+        constraints = { 'body' : self.test_body,
+                        'site_code': '', 'utc_date': None,
+                        'request_number': '', 'tracking_number': '',
+                        'julian_date': Time(datetime(2022, 10, 7, 12, 45)).jd }
+
+        blocks = finddata_by_constraint(constraints)
+
+        self.assertEqual(4, len(blocks))
+        self.assertEqual(self.test_blocks[3:5], blocks)
+
+    def test_jd_multiple_blocks_specific_site(self):
+        constraints = { 'body' : self.test_body,
+                        'site_code': '1m0', 'utc_date': None,
+                        'request_number': '', 'tracking_number': '',
+                        'julian_date': Time(datetime(2022, 10, 7, 12, 45)).jd }
+
+        blocks = finddata_by_constraint(constraints)
+
+        self.assertEqual(1, len(blocks))
+        self.assertEqual(self.test_blocks[4], blocks[0])

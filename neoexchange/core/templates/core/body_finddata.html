@@ -25,7 +25,7 @@
                         <div class="eight columns">
                             <h5  class="section-title"><span class="">Source</span> <span class="msgpadded">{{body.get_origin_display}}</span></h5>
                             <div class="section-title">
-                            <form action="{% url 'finddata' %}" method="GET" style="display:inline-block;">
+                            <form action="{% url 'finddata' body.id %}" method="GET" style="display:inline-block;">
                                 <input type="hidden" name="{{ form.target.id }}" id="id_target" value="{{body.id}}" />
                                     <div class="inline-fields">
                                         <div class="compact-field">
@@ -81,7 +81,7 @@
                                     </li>
                                     {% endif %}
                                 {% empty %}
-                                <li>No blocks have been observed</li>
+                                <li>No blocks matching filter found</li>
                                 {% endfor %}
                             </ul>
 

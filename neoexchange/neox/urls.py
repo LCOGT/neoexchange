@@ -83,7 +83,7 @@ urlpatterns = [
     url(r'^search/$', BodySearchView.as_view(context_object_name="target_list"), name='search'),
     url(r'^ephemeris/$', ephemeris, name='ephemeris'),
     url(r'^ranking/$', ranking, name='ranking'),
-    url(r'^finddata/$', finddata, name='finddata'),
+#    url(r'^finddata/$', finddata, name='finddata'),
     url(r'^calibsources/$', StaticSourceView.as_view(), name='calibsource-view'),
     url(r'^calibsources/best/$', BestStandardsView.as_view(), name='beststandards-view'),
     url(r'^calibsources/solar/$', StaticSourceView.as_view(queryset=StaticSource.objects.filter(source_type=StaticSource.SOLAR_STANDARD).order_by('ra')), name='solarstandard-view'),
