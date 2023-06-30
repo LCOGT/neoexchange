@@ -559,6 +559,10 @@ def normalize(images, swarp_zp_key="L1ZP"):
 
     return return_code
 
+def determine_astwarp_options(filename, dest_dir, center_RA, center_DEC, width = 1991.0, height = 511.0):
+    raw_filename = os.path.basename(filename)
+    output_filename = os.path.join(dest_dir, raw_filename.replace('e91', 'e91-crop'))
+    return f'-hSCI --center={center_RA},{center_DEC} --widthinpix --width={width},{height} --output={output_filename} {filename}'
 
 def make_pa_rate_dict(pa, deltapa, minrate, maxrate):
 
@@ -1545,6 +1549,56 @@ def run_damit(call_name, cat_input_filename, primary_call, write_out=False, bina
             cmd_call = Popen(cmd_args, cwd=dest_dir, stdin=cat_call.stdout, stdout=write_out)
         else:
             cmd_call = Popen(cmd_args, cwd=dest_dir, stdin=cat_call.stdout, stdout=PIPE)
+        retcode_or_cmdline = cmd_call.communicate()
+
+    return retcode_or_cmdline
+
+def run_astwarp(filename, dest_dir, center_RA, center_DEC, width = 1991.0, height = 511.0, binary='astwarp', dbg=False):
+    '''
+    Runs astwarp on <filename> to crop to <center_RA>,<center_DEC> with 
+    [width]x[height] writing output to <dest_dir>
+    '''
+    binary = binary or find_binary(binary)
+    if binary is None:
+        logger.error(f"Could not locate {binary} executable in PATH")
+        return -42
+    cmdline = f"{binary} "
+    cmdline += determine_astwarp_options(filename, dest_dir, center_RA, center_DEC, width, height)
+    cmdline = cmdline.rstrip()
+    if dbg:
+        print(cmdline)
+
+    if dbg is True:
+        retcode_or_cmdline = cmdline
+    else:
+        logger.debug(f"cmdline={cmdline}")
+        cmd_args = cmdline.split()
+        cmd_call = Popen(cmd_args, cwd=dest_dir, stdout=PIPE)
+        retcode_or_cmdline = cmd_call.communicate()
+
+    return retcode_or_cmdline
+
+def run_astarithmetic(filenames, dest_dir, binary='astarithmetic', dbg=False):
+    '''
+    Runs astarithmetic on list of <filenames> to median combine writing 
+    output to <dest_dir>
+    '''
+    binary = binary or find_binary(binary)
+    if binary is None:
+        logger.error(f"Could not locate {binary} executable in PATH")
+        return -42
+    cmdline = f"{binary} "
+    cmdline += determine_astarithmetic_options(filenames)
+    cmdline = cmdline.rstrip()
+    if dbg:
+        print(cmdline)
+
+    if dbg is True:
+        retcode_or_cmdline = cmdline
+    else:
+        logger.debug(f"cmdline={cmdline}")
+        cmd_args = cmdline.split()
+        cmd_call = Popen(cmd_args, cwd=dest_dir, stdout=PIPE)
         retcode_or_cmdline = cmd_call.communicate()
 
     return retcode_or_cmdline

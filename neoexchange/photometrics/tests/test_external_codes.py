@@ -22,6 +22,7 @@ import shutil
 from copy import deepcopy
 
 from astropy.io import fits
+from astropy.coordinates import SkyCoord
 from numpy import array, arange
 from numpy.testing import assert_allclose
 
@@ -1840,3 +1841,39 @@ class TestUnpackTarball(TestCase):
     #
     #     self.assertEqual(expected_num_files,len(files))
     #     self.assertEqual(expected_file_name,files[1])
+
+class TestDetermineAstwarpOptions(SimpleTestCase):
+    def setUp(self):
+        self.test_dir = '/tmp/foo'
+
+    def test_1(self):
+        expected_cmdline = f'-hSCI --center=119.2346118,8.39523331 --widthinpix --width=1990.0,510.0 --output={self.test_dir}/tfn1m014-fa20-20221104-0207-e91-crop.fits tfn1m014-fa20-20221104-0207-e91.fits'
+
+        cmdline = determine_astwarp_options('tfn1m014-fa20-20221104-0207-e91.fits', self.test_dir, 119.2346118, 8.39523331)
+
+        self.assertEqual(expected_cmdline, cmdline)
+
+    def test_2(self):
+        expected_cmdline = f'-hSCI --center=120,9 --widthinpix --width=1990.0,510.0 --output={self.test_dir}/tfn1m014-fa20-20221104-0213-e91-crop.fits tfn1m014-fa20-20221104-0213-e91.fits'
+
+        cmdline = determine_astwarp_options('tfn1m014-fa20-20221104-0213-e91.fits', self.test_dir, 120, 9)
+
+        self.assertEqual(expected_cmdline, cmdline)
+
+    def test_3(self):
+        expected_cmdline = f'-hSCI --center=119.2346118,8.39523331 --widthinpix --width=1990.0,510.0 --output={self.test_dir}/tfn1m014-fa20-20221104-0207-e91-crop.fits tfn1m014-fa20-20221104-0207-e91.fits'
+
+        center = SkyCoord(119.2346118, 8.39523331, unit = 'deg')
+
+        cmdline = determine_astwarp_options('tfn1m014-fa20-20221104-0207-e91.fits', self.test_dir, center.ra.value, center.dec.value)
+
+        self.assertEqual(expected_cmdline, cmdline)
+
+    def test_4(self):
+        expected_cmdline = f'-hSCI --center=119.2346118,8.39523331 --widthinpix --width=2000,550 --output={self.test_dir}/tfn1m014-fa20-20221104-0207-e91-crop.fits tfn1m014-fa20-20221104-0207-e91.fits'
+
+        center = SkyCoord(119.2346118, 8.39523331, unit = 'deg')
+
+        cmdline = determine_astwarp_options('tfn1m014-fa20-20221104-0207-e91.fits', self.test_dir, center.ra.value, center.dec.value, 2000, 550)
+
+        self.assertEqual(expected_cmdline, cmdline)
