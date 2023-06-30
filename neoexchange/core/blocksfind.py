@@ -2,6 +2,7 @@ from core.models import Body,Block,SuperBlock,Frame
 from astropy.wcs import WCS, FITSFixedWarning, InvalidTransformError
 from datetime import datetime,timedelta
 import warnings
+import calendar
 from astropy.wcs import WCS, FITSFixedWarning, InvalidTransformError
 from astrometrics.ephem_subs import horizons_ephem
 from astropy.time import Time
@@ -87,15 +88,26 @@ def get_ephem(block):
     return table
 
 
-def ephem_interpolate(values, table):
+def ephem_interpolate(times, table):
+    '''
+    Returns a list of interpolated values for both RA and DEC given a 
+    horizons_ephem <table> and a list of times(Time or datetime)
+    '''
     arr1 = table['datetime_jd']
     arr2 = table['RA']
     arr3 = table['DEC']
+    
+    if isinstance(times, list) is False:
+        times = [times,]
+    
+    if isinstance(times[0], datetime):
+        times = Time(times).jd
 
-    result_RA = np.interp(values, arr1, arr2)
-    result_DEC = np.interp(values, arr1, arr3)
+    result_RA = np.interp(times, arr1, arr2)
+    result_DEC = np.interp(times, arr1, arr3)
     
     return result_RA, result_DEC
+
 
 
 

@@ -259,7 +259,7 @@ class TestEphemInterpolate(SimpleTestCase):
         
         t = Time(datetime(2022, 11, 4, 9, 35, 30))
         
-        result_RA, result_DEC = ephem_interpolate(t.jd, self.test_ephem)
+        result_RA, result_DEC = ephem_interpolate([t.jd,], self.test_ephem)
         
         assert_allclose(expected_RA, result_RA, rtol=1e-8)
         assert_allclose(expected_DEC, result_DEC, rtol=1e-8)
@@ -272,6 +272,51 @@ class TestEphemInterpolate(SimpleTestCase):
         t_2 = Time(datetime(2022, 11, 4, 9, 35, 45))
 
         result_RA, result_DEC = ephem_interpolate([t.jd, t_2.jd], self.test_ephem)
+        
+        assert_allclose(expected_RA, result_RA, rtol=1e-8)
+        assert_allclose(expected_DEC, result_DEC, rtol=1e-8)
+        
+    def test_jd_value_single(self):
+        expected_RA = 118.80145
+        expected_DEC = 7.948245
+        
+        t = Time(datetime(2022, 11, 4, 9, 35, 30))
+        
+        result_RA, result_DEC = ephem_interpolate(t.jd, self.test_ephem)
+        
+        assert_allclose(expected_RA, result_RA, rtol=1e-8)
+        assert_allclose(expected_DEC, result_DEC, rtol=1e-8)
+        
+    def test_jd_datetime(self):
+        expected_RA = 118.80145
+        expected_DEC = 7.948245
+        
+        t = datetime(2022, 11, 4, 9, 35, 30)
+
+        result_RA, result_DEC = ephem_interpolate([t,], self.test_ephem)
+        
+        assert_allclose(expected_RA, result_RA, rtol=1e-8)
+        assert_allclose(expected_DEC, result_DEC, rtol=1e-8)
+    
+    def test_jd_datetimes(self):
+        expected_RA = [118.80145, 118.80154]
+        expected_DEC = [7.948245, 7.9483575]
+        
+        t = datetime(2022, 11, 4, 9, 35, 30)
+        t_2 = datetime(2022, 11, 4, 9, 35, 45)
+
+        result_RA, result_DEC = ephem_interpolate([t, t_2], self.test_ephem)
+        
+        assert_allclose(expected_RA, result_RA, rtol=1e-8)
+        assert_allclose(expected_DEC, result_DEC, rtol=1e-8)
+        
+    def test_jd_datetime_single(self):
+        expected_RA = 118.80145
+        expected_DEC = 7.948245
+        
+        t = datetime(2022, 11, 4, 9, 35, 30)
+
+        result_RA, result_DEC = ephem_interpolate(t, self.test_ephem)
         
         assert_allclose(expected_RA, result_RA, rtol=1e-8)
         assert_allclose(expected_DEC, result_DEC, rtol=1e-8)
