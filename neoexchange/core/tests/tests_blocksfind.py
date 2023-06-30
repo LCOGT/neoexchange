@@ -321,4 +321,70 @@ class TestEphemInterpolate(SimpleTestCase):
         assert_allclose(expected_RA, result_RA, rtol=1e-8)
         assert_allclose(expected_DEC, result_DEC, rtol=1e-8)
         
+    def test_jd_value_start_time(self):
+        expected_RA = []
+        expected_DEC = []
         
+        t = Time(datetime(2022, 11, 4, 9, 33, 0))
+        
+        result_RA, result_DEC = ephem_interpolate(t.jd, self.test_ephem)
+        
+        assert_allclose(expected_RA, result_RA, rtol=1e-8)
+        assert_allclose(expected_DEC, result_DEC, rtol=1e-8)
+    
+    def test_jd_value_end_time(self):
+        expected_RA = []
+        expected_DEC = []
+        
+        t = Time(datetime(2022, 11, 4, 9, 54, 0))
+        
+        result_RA, result_DEC = ephem_interpolate(t.jd, self.test_ephem)
+        
+        assert_allclose(expected_RA, result_RA, rtol=1e-8)
+        assert_allclose(expected_DEC, result_DEC, rtol=1e-8)
+        
+    def test_jd_datetime_start_time(self):
+        expected_RA = []
+        expected_DEC = []
+        
+        t = datetime(2022, 11, 4, 9, 33, 0)
+        
+        result_RA, result_DEC = ephem_interpolate(t, self.test_ephem)
+        
+        assert_allclose(expected_RA, result_RA, rtol=1e-8)
+        assert_allclose(expected_DEC, result_DEC, rtol=1e-8)
+    
+    def test_jd_datetime_end_time(self):
+        expected_RA = []
+        expected_DEC = []
+        
+        t = datetime(2022, 11, 4, 9, 54, 0)
+        
+        result_RA, result_DEC = ephem_interpolate(t, self.test_ephem)
+        
+        assert_allclose(expected_RA, result_RA, rtol=1e-8)
+        assert_allclose(expected_DEC, result_DEC, rtol=1e-8)
+        
+    def test_jd_datetimes_reversed(self):
+        expected_RA = []
+        expected_DEC = []
+        
+        t = datetime(2022, 11, 4, 9, 35, 30)
+        t_2 = datetime(2022, 11, 4, 9, 32, 0)
+
+        result_RA, result_DEC = ephem_interpolate([t, t_2], self.test_ephem)
+        
+        assert_allclose(expected_RA, result_RA, rtol=1e-8)
+        assert_allclose(expected_DEC, result_DEC, rtol=1e-8)
+        
+    def test_jd_values_reversed(self):
+        expected_RA = []
+        expected_DEC = []
+        
+        t = Time(datetime(2022, 11, 4, 9, 35, 30))
+        t_2 = Time(datetime(2022, 11, 4, 9, 54, 0))
+
+        result_RA, result_DEC = ephem_interpolate([t_2.jd, t.jd], self.test_ephem)
+        
+        assert_allclose(expected_RA, result_RA, rtol=1e-8)
+        assert_allclose(expected_DEC, result_DEC, rtol=1e-8)

@@ -91,18 +91,25 @@ def get_ephem(block):
 def ephem_interpolate(times, table):
     '''
     Returns a list of interpolated values for both RA and DEC given a 
-    horizons_ephem <table> and a list of times(Time or datetime)
+    horizons_ephem <table> and a list of times(TimeJD or datetime)
     '''
     arr1 = table['datetime_jd']
     arr2 = table['RA']
     arr3 = table['DEC']
+    
+    start_time = arr1[0]
+    end_time = arr1[-1]
+    
     
     if isinstance(times, list) is False:
         times = [times,]
     
     if isinstance(times[0], datetime):
         times = Time(times).jd
-
+    
+    if min(times) < start_time or max(times) > end_time:
+        return [],[]
+        
     result_RA = np.interp(times, arr1, arr2)
     result_DEC = np.interp(times, arr1, arr3)
     
