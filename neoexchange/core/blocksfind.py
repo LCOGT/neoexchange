@@ -22,8 +22,7 @@ def find_didymos_blocks():
     blocks = blocks.filter(block_start__gte = "2022-09-26T23:14")
     blocks = blocks.filter(obstype = Block.OPT_IMAGING)
     blocks = blocks.exclude(superblock__proposal__code__in=["LCOEngineering","SWOPE2022"]).order_by('block_start')
-    
-    
+
     return blocks
 
 
@@ -38,20 +37,20 @@ def blocks_summary(blocks):
             if sblock.proposal:
                 proposal_code=sblock.proposal.code
         print(f"{block.block_start}->{block.block_end} {block.num_exposures}x{block.exp_length}s observed={block.num_observed} ({proposal_code})")
-        
+
 
 def find_frames(block):
     '''
-    Routine to find all frames for a given block and number and type(s) 
+    Routine to find all frames for a given block and number and type(s)
     of different filters
     Returns list of frames
     '''
-    frames = Frame.objects.filter(block = block) 
+    frames = Frame.objects.filter(block = block)
     frames = frames.filter(frametype = Frame.BANZAI_RED_FRAMETYPE)
     frames = frames.order_by('midpoint')
-    
+
     return frames
-    
+
 
 def frames_summary(frames):
     '''
@@ -62,15 +61,15 @@ def frames_summary(frames):
         delta = timedelta(seconds = frame.exptime/2)
         print(f"{frame.block.request_number}: {frame.midpoint - delta}->{frame.midpoint + delta}  exposure time:{frame.exptime}s")
         total_exptime = total_exptime + frame.exptime
-    
+
     print(f"expected exposures: {frame.block.num_exposures}, executed exposures: {frames.count()}, total exposure time: {round(total_exptime, 2)}s")
-    
+
     filter_frames = frames.order_by('filter').distinct('filter')
     filter_names = ", ".join(filter_frames.values_list('filter',flat=True))
-    
-    print(f"number of filters: {filter_frames.count()}, filter type(s): {filter_names}")    
-    
-    
+
+    print(f"number of filters: {filter_frames.count()}, filter type(s): {filter_names}")
+
+
 def get_ephem(block):
     '''
     Creates a horizons ephemeris table for a passed <block>
@@ -84,37 +83,32 @@ def get_ephem(block):
     delta_1 = timedelta(seconds = first_frame.exptime/2)
     delta_2 = timedelta(seconds = last_frame.exptime/2)
     table = horizons_ephem(didymos.current_name(), first_frame.midpoint - delta_1 - onemin, last_frame.midpoint + delta_2 + onemin, first_frame.sitecode, '1m')
-    
+
     return table
 
 
 def ephem_interpolate(times, table):
     '''
-    Returns a list of interpolated values for both RA and DEC given a 
+    Returns a list of interpolated values for both RA and DEC given a
     horizons_ephem <table> and a list of times(TimeJD or datetime)
     '''
     arr1 = table['datetime_jd']
     arr2 = table['RA']
     arr3 = table['DEC']
-    
+
     start_time = arr1[0]
     end_time = arr1[-1]
-    
-    
+
     if isinstance(times, list) is False:
         times = [times,]
-    
+
     if isinstance(times[0], datetime):
         times = Time(times).jd
-    
+
     if min(times) < start_time or max(times) > end_time:
         return [],[]
-        
+
     result_RA = np.interp(times, arr1, arr2)
     result_DEC = np.interp(times, arr1, arr3)
-    
+
     return result_RA, result_DEC
-
-
-
-
