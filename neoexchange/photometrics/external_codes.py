@@ -564,6 +564,11 @@ def determine_astwarp_options(filename, dest_dir, center_RA, center_DEC, width =
     output_filename = os.path.join(dest_dir, raw_filename.replace('e91', 'e91-crop'))
     return f'-hSCI --center={center_RA},{center_DEC} --widthinpix --width={width},{height} --output={output_filename} {filename}'
 
+def determine_astarithmetic_options(filenames, dest_dir):
+    raw_filename = os.path.basename(filenames[0])
+    output_filename = os.path.join(dest_dir, raw_filename.replace("-crop", "-combine"))
+    return f'--globalhdu ALIGNED --output={output_filename} *-crop.fits {len(filenames)} 5 0.2 sigclip-median'
+
 def make_pa_rate_dict(pa, deltapa, minrate, maxrate):
 
     pa_rate_dict = {    'filter_pa': pa,
