@@ -1604,7 +1604,7 @@ def run_astarithmetic(filenames, dest_dir, binary='astarithmetic', dbg=False):
     else:
         logger.debug(f"cmdline={cmdline}")
         cmd_args = cmdline.split()
-        cmd_call = Popen(cmd_args, cwd=dest_dir)
+        cmd_call = Popen(cmd_args, cwd=dest_dir, stdout=PIPE)
         retcode_or_cmdline = cmd_call.communicate()
 
     return retcode_or_cmdline
