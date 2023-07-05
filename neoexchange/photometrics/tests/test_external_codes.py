@@ -1888,23 +1888,26 @@ class TestDetermineAstArithmeticOptions(SimpleTestCase):
                            'tfn1m014-fa20-20221104-0211-e91-crop.fits',
                            'tfn1m014-fa20-20221104-0212-e91-crop.fits',
                            'tfn1m014-fa20-20221104-0213-e91-crop.fits']
+        self.filenames_list = " ".join(self.test_files)
+        self.first3_filenames_list = " ".join(self.test_files[:3])
+        self.last3_filenames_list = " ".join(self.test_files[-3:])
 
     def test_7files(self):
-        expected_cmdline = f'--globalhdu ALIGNED --output={self.test_dir}/{self.test_files[0].replace("-crop", "-combine")} *-crop.fits 7 5 0.2 sigclip-median'
+        expected_cmdline = f'--globalhdu ALIGNED --output={self.test_dir}/{self.test_files[0].replace("-crop", "-combine")} {self.filenames_list} 7 5 0.2 sigclip-median'
 
         cmdline = determine_astarithmetic_options(self.test_files, self.test_dir)
 
         self.assertEqual(expected_cmdline, cmdline)
 
     def test_3files(self):
-        expected_cmdline = f'--globalhdu ALIGNED --output={self.test_dir}/{self.test_files[0].replace("-crop", "-combine")} *-crop.fits 3 5 0.2 sigclip-median'
+        expected_cmdline = f'--globalhdu ALIGNED --output={self.test_dir}/{self.test_files[0].replace("-crop", "-combine")} {self.first3_filenames_list} 3 5 0.2 sigclip-median'
 
         cmdline = determine_astarithmetic_options(self.test_files[:3], self.test_dir)
 
         self.assertEqual(expected_cmdline, cmdline)
 
     def test_last3files(self):
-        expected_cmdline = f'--globalhdu ALIGNED --output={self.test_dir}/{self.test_files[-3].replace("-crop", "-combine")} *-crop.fits 3 5 0.2 sigclip-median'
+        expected_cmdline = f'--globalhdu ALIGNED --output={self.test_dir}/{self.test_files[-3].replace("-crop", "-combine")} {self.last3_filenames_list} 3 5 0.2 sigclip-median'
 
         cmdline = determine_astarithmetic_options(self.test_files[-3:], self.test_dir)
 

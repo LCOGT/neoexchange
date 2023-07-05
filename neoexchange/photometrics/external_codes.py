@@ -565,9 +565,10 @@ def determine_astwarp_options(filename, dest_dir, center_RA, center_DEC, width =
     return f'-hSCI --center={center_RA},{center_DEC} --widthinpix --width={width},{height} --output={output_filename} {filename}'
 
 def determine_astarithmetic_options(filenames, dest_dir):
+    filenames_list = " ".join(filenames)
     raw_filename = os.path.basename(filenames[0])
     output_filename = os.path.join(dest_dir, raw_filename.replace("-crop", "-combine"))
-    return f'--globalhdu ALIGNED --output={output_filename} *-crop.fits {len(filenames)} 5 0.2 sigclip-median'
+    return f'--globalhdu ALIGNED --output={output_filename} {filenames_list} {len(filenames)} 5 0.2 sigclip-median'
 
 def make_pa_rate_dict(pa, deltapa, minrate, maxrate):
 
@@ -1593,7 +1594,7 @@ def run_astarithmetic(filenames, dest_dir, binary='astarithmetic', dbg=False):
         logger.error(f"Could not locate {binary} executable in PATH")
         return -42
     cmdline = f"{binary} "
-    cmdline += determine_astarithmetic_options(filenames)
+    cmdline += determine_astarithmetic_options(filenames, dest_dir)
     cmdline = cmdline.rstrip()
     if dbg:
         print(cmdline)
@@ -1603,7 +1604,7 @@ def run_astarithmetic(filenames, dest_dir, binary='astarithmetic', dbg=False):
     else:
         logger.debug(f"cmdline={cmdline}")
         cmd_args = cmdline.split()
-        cmd_call = Popen(cmd_args, cwd=dest_dir, stdout=PIPE)
+        cmd_call = Popen(cmd_args, cwd=dest_dir)
         retcode_or_cmdline = cmd_call.communicate()
 
     return retcode_or_cmdline
