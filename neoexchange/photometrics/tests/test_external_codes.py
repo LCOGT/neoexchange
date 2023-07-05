@@ -1847,21 +1847,21 @@ class TestDetermineAstwarpOptions(SimpleTestCase):
         self.test_dir = '/tmp/foo'
 
     def test_1(self):
-        expected_cmdline = f'-hSCI --center=119.2346118,8.39523331 --widthinpix --width=1990.0,510.0 --output={self.test_dir}/tfn1m014-fa20-20221104-0207-e91-crop.fits tfn1m014-fa20-20221104-0207-e91.fits'
+        expected_cmdline = f'-hSCI --center=119.2346118,8.39523331 --widthinpix --width=1991.0,511.0 --output={self.test_dir}/tfn1m014-fa20-20221104-0207-e91-crop.fits tfn1m014-fa20-20221104-0207-e91.fits'
 
         cmdline = determine_astwarp_options('tfn1m014-fa20-20221104-0207-e91.fits', self.test_dir, 119.2346118, 8.39523331)
 
         self.assertEqual(expected_cmdline, cmdline)
 
     def test_2(self):
-        expected_cmdline = f'-hSCI --center=120,9 --widthinpix --width=1990.0,510.0 --output={self.test_dir}/tfn1m014-fa20-20221104-0213-e91-crop.fits tfn1m014-fa20-20221104-0213-e91.fits'
+        expected_cmdline = f'-hSCI --center=120,9 --widthinpix --width=1991.0,511.0 --output={self.test_dir}/tfn1m014-fa20-20221104-0213-e91-crop.fits tfn1m014-fa20-20221104-0213-e91.fits'
 
         cmdline = determine_astwarp_options('tfn1m014-fa20-20221104-0213-e91.fits', self.test_dir, 120, 9)
 
         self.assertEqual(expected_cmdline, cmdline)
 
     def test_3(self):
-        expected_cmdline = f'-hSCI --center=119.2346118,8.39523331 --widthinpix --width=1990.0,510.0 --output={self.test_dir}/tfn1m014-fa20-20221104-0207-e91-crop.fits tfn1m014-fa20-20221104-0207-e91.fits'
+        expected_cmdline = f'-hSCI --center=119.2346118,8.39523331 --widthinpix --width=1991.0,511.0 --output={self.test_dir}/tfn1m014-fa20-20221104-0207-e91-crop.fits tfn1m014-fa20-20221104-0207-e91.fits'
 
         center = SkyCoord(119.2346118, 8.39523331, unit = 'deg')
 
