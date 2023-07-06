@@ -1878,7 +1878,16 @@ class TestDetermineAstwarpOptions(SimpleTestCase):
 
         self.assertEqual(expected_cmdline, cmdline)
 
-class TestDetermineAstArithmeticOptions(SimpleTestCase):
+    def test_samename(self):
+        expected_cmdline = f'-hSCI --center=119.2346118,8.39523331 --widthinpix --width=2000,550 --output={self.test_dir}/banzai_test_frame-crop.fits banzai_test_frame.fits'
+
+        center = SkyCoord(119.2346118, 8.39523331, unit = 'deg')
+
+        cmdline = determine_astwarp_options('banzai_test_frame.fits', self.test_dir, center.ra.value, center.dec.value, 2000, 550)
+
+        self.assertEqual(expected_cmdline, cmdline)
+
+class TestDetermineAstarithmeticOptions(SimpleTestCase):
     def setUp(self):
         self.test_dir = '/tmp/foo'
         self.test_files = ['tfn1m014-fa20-20221104-0207-e91-crop.fits',
@@ -1912,3 +1921,97 @@ class TestDetermineAstArithmeticOptions(SimpleTestCase):
         cmdline = determine_astarithmetic_options(self.test_files[-3:], self.test_dir)
 
         self.assertEqual(expected_cmdline, cmdline)
+
+class TestRunAstwarp(ExternalCodeUnitTest):
+    def setUp(self):
+        super(TestRunAstwarp, self).setUp()
+
+        # needs to modify the original image when running astwarp
+        shutil.copy(os.path.abspath(self.test_banzai_file), self.test_dir)
+        self.test_banzai_file_COPIED = os.path.join(self.test_dir, 'banzai_test_frame.fits')
+
+        self.output_filename = os.path.join(self.test_dir, self.test_banzai_file_COPIED.replace('.fits', '-crop.fits'))
+
+        self.center_RA = 272.9615245
+        self.center_DEC = 1.2784917
+
+        # Disable anything below CRITICAL level
+        logging.disable(logging.CRITICAL)
+
+        self.remove = True
+        self.maxDiff = None
+
+    def return_fits_dims(self, filename, keywords = ['NAXIS1', 'NAXIS2']):
+        dims = []
+        with fits.open(filename) as hdulist:
+            hduname = 'ALIGNED'
+            if hduname not in hdulist and 'SCI' in hdulist:
+                hduname = 'SCI'
+            else:
+                logger.critical('No ALIGNED or SCI hdu found')
+            header = hdulist[hduname].header
+            for key in keywords:
+                dims.append(header[key])
+        return dims
+
+    def test_1(self):
+        expected_status = 0
+        expected_naxis1 = 1991.0
+        expected_naxis2 = 511.0
+
+        status = run_astwarp(self.test_banzai_file_COPIED, self.test_dir, self.center_RA, self.center_DEC)
+        dims = self.return_fits_dims(self.output_filename, keywords = ['NAXIS1', 'NAXIS2', 'CRVAL1', 'CRVAL2'])
+
+        self.assertEqual(expected_status, status)
+        self.assertTrue(os.path.exists(self.output_filename))
+        self.assertEquals(expected_naxis1, dims[0])
+        self.assertEquals(expected_naxis2, dims[1])
+        self.assertEquals(self.center_RA, dims[2])
+        self.assertEquals(self.center_DEC, dims[3])
+
+    def test_change_center(self):
+        expected_center_RA = 300
+        expected_center_DEC = 50
+
+        status = run_astwarp(self.test_banzai_file_COPIED, self.test_dir, 300, 50)
+        dims = self.return_fits_dims(self.output_filename, keywords = ['CRVAL1', 'CRVAL2'])
+
+        self.assertEquals(expected_center_RA, dims[0])
+        self.assertEquals(expected_center_DEC, dims[1])
+
+    def test_change_dims(self):
+        expected_naxis1 = 1001
+        expected_naxis2 = 301
+
+        status = run_astwarp(self.test_banzai_file_COPIED, self.test_dir, self.center_RA, self.center_DEC, 1001, 301)
+        dims = self.return_fits_dims(self.output_filename)
+
+        self.assertEquals(expected_naxis1, dims[0])
+        self.assertEquals(expected_naxis2, dims[1])
+
+    def test_output_name(self):
+        expected_status = 0
+        expected_naxis1 = 1991.0
+        expected_naxis2 = 511.0
+        filename = 'tfn1m014-fa20-20221104-0210-e91.fits'
+        path = os.path.join(self.test_dir, filename)
+        self.test_banzai_file_COPIED = shutil.move(self.test_banzai_file_COPIED, path)
+        self.output_filename = path.replace('.fits', '-crop.fits')
+
+        status = run_astwarp(self.test_banzai_file_COPIED, self.test_dir, self.center_RA, self.center_DEC)
+        dims = self.return_fits_dims(self.output_filename, keywords = ['NAXIS1', 'NAXIS2', 'CRVAL1', 'CRVAL2'])
+
+        self.assertEqual(expected_status, status)
+        self.assertTrue(os.path.exists(self.output_filename))
+        self.assertEquals(expected_naxis1, dims[0])
+        self.assertEquals(expected_naxis2, dims[1])
+        self.assertEquals(self.center_RA, dims[2])
+        self.assertEquals(self.center_DEC, dims[3])
+
+    def test_nonexistent_filename(self):
+        expected_status = -1
+        filename = 'file_name.foo'
+
+        status = run_astwarp(filename, self.test_dir, self.center_RA, self.center_DEC)
+
+        self.assertEquals(expected_status, status)

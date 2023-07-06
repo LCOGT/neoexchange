@@ -561,7 +561,7 @@ def normalize(images, swarp_zp_key="L1ZP"):
 
 def determine_astwarp_options(filename, dest_dir, center_RA, center_DEC, width = 1991.0, height = 511.0):
     raw_filename = os.path.basename(filename)
-    output_filename = os.path.join(dest_dir, raw_filename.replace('e91', 'e91-crop'))
+    output_filename = os.path.join(dest_dir, raw_filename.replace('.fits', '-crop.fits'))
     return f'-hSCI --center={center_RA},{center_DEC} --widthinpix --width={width},{height} --output={output_filename} {filename}'
 
 def determine_astarithmetic_options(filenames, dest_dir):
@@ -1564,6 +1564,8 @@ def run_astwarp(filename, dest_dir, center_RA, center_DEC, width = 1991.0, heigh
     Runs astwarp on <filename> to crop to <center_RA>,<center_DEC> with 
     [width]x[height] writing output to <dest_dir>
     '''
+    if os.path.exists(filename) is False:
+        return -1
     binary = binary or find_binary(binary)
     if binary is None:
         logger.error(f"Could not locate {binary} executable in PATH")
@@ -1580,8 +1582,8 @@ def run_astwarp(filename, dest_dir, center_RA, center_DEC, width = 1991.0, heigh
         logger.debug(f"cmdline={cmdline}")
         cmd_args = cmdline.split()
         cmd_call = Popen(cmd_args, cwd=dest_dir, stdout=PIPE)
-        retcode_or_cmdline = cmd_call.communicate()
-
+        (out, errors) = cmd_call.communicate()
+        retcode_or_cmdline = cmd_call.returncode
     return retcode_or_cmdline
 
 def run_astarithmetic(filenames, dest_dir, binary='astarithmetic', dbg=False):

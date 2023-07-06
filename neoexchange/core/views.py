@@ -73,7 +73,7 @@ from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal,
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
 from photometrics.external_codes import run_sextractor, run_swarp, run_hotpants, run_scamp, updateFITSWCS,\
-    read_mtds_file, unpack_tarball, run_findorb, run_astwarp
+    read_mtds_file, unpack_tarball, run_findorb, run_astwarp, run_astarithmetic
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     determine_filenames, increment_red_level, funpack_fits_file, update_ldac_catalog_wcs, FITSHdrException, \
     get_reference_catalog, reset_database_connection, sanitize_object_name
@@ -3578,22 +3578,32 @@ def run_hotpants_subtraction(ref, sci_dir, configs_dir, dest_dir):
 
     return status
 
-def run_astwarp_alignment(block, sci_dir, configs_dir, dest_dir):
+def run_astwarp_alignment(block, sci_dir, dest_dir):
+    '''
+    Makes an horizons ephem table for a given <block>. Finds interpolated values
+    for both RA and DEC for each frame in the block. Calls run_astwarp to crop
+    each frame. Calls run_astarithmetic to stack all cropped frames and writes
+    output to <dest_dir>.
+    '''
     #find frames for block
     frames = find_frames(block)
 
     #find ephem for block
     table = get_ephem(block)
 
+    filenames = []
     #for each frame interpolate position for frame midtime then call run_astwarp
     for frame in frames:
-        result_RA,result_DEC = ephem_interpolate(frame.midpoint, table)
-        print(frame.filename, result_RA, result_DEC)
+        result_RA, result_DEC = ephem_interpolate(frame.midpoint, table)
+        #print(frame.filename, result_RA, result_DEC)
         fits_filename = os.path.join(sci_dir, frame.filename)
-        run_astwarp(fits_filename, dest_dir, result_RA[0], result_DEC[0])
-
+        filenames.append(fits_filename.replace('.fits', '-crop.fits'))
+        status = run_astwarp(fits_filename, dest_dir, result_RA[0], result_DEC[0])
 
     #call stacking routine
+    status = run_astarithmetic(filenames, dest_dir)
+
+    return status
 
 def find_block_for_frame(catfile):
     """Try and find a Block for the original passed <catfile> filename (new style with
