@@ -683,7 +683,10 @@ def translate_catalog_code(code_or_name, ades_code=False):
                        'GAIA-DR1'    : 'Gaia1',
                        'GAIA-DR2'    : 'Gaia2',
                        'GAIA-DR3'    : 'Gaia3',
-                       '2MASS'       : '2MASS'
+                       '2MASS'       : '2MASS',
+                       'ATLAS-2'     : 'ATLAS2',
+                       'PS1'         : 'PS1_DR1',
+                       'PS2'         : 'PS1_DR2',
                       }
     catalog_or_code = ''
     if len(code_or_name.strip()) == 1:
@@ -2810,8 +2813,27 @@ def read_solar_standards(standards_file):
     return standards
 
 
+def fetch_jpl_orbit(body_or_target_name):
+    """Function to fetch orbit, physical parameters, and discovery details from
+    JPL SBDB (Small-Body DataBase) API (online) for a NEOx Body <body> or
+    target name"""
+
+    try:
+        body_name = body_or_target_name.current_name()
+    except AttributeError:
+        body_name = body_or_target_name
+    else:
+        body_name = body_or_target_name
+
+    jpl_url_base = 'https://ssd-api.jpl.nasa.gov/sbdb.api'
+    request_url = jpl_url_base + '?sstr={}&phys-par=Y&alt-des=Y&no-orbit=N&full-prec=Y'.format(body_name)
+    resp = requests.get(request_url, timeout=20, verify=True).json()
+
+    return resp
+
+
 def fetch_jpl_physparams_altdes(body):
-    """Function to fetch physical parameters, designations, source types, and subtypes from JPL Horizons (online)"""
+    """Function to fetch physical parameters, designations, source types, and subtypes from JPL SBDB (Small-Body DataBase) API (online)"""
     jpl_url_base = 'https://ssd-api.jpl.nasa.gov/sbdb.api'
     request_url = jpl_url_base + '?sstr={}&phys-par=Y&alt-des=Y&no-orbit=Y'.format(body.current_name())
     resp = requests.get(request_url, timeout=20, verify=True).json()
@@ -2820,7 +2842,7 @@ def fetch_jpl_physparams_altdes(body):
 
 
 def store_jpl_physparams(phys_par, body):
-    """Function to store object physical parameters from JPL Horizons"""
+    """Function to store object physical parameters from JPL SBDB (Small-Body DataBase)"""
 
     # parsing the JPL physparams dictionary
     for p in phys_par:

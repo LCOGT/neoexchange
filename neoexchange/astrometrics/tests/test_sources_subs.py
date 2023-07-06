@@ -14,7 +14,7 @@ GNU General Public License for more details.
 """
 
 import os
-from mock import patch, MagicMock
+from mock import patch, MagicMock, Mock
 from freezegun import freeze_time
 from socket import error, timeout
 from errno import ETIMEDOUT
@@ -29,7 +29,7 @@ from bs4 import BeautifulSoup
 from django.test import TestCase, SimpleTestCase
 from django.forms.models import model_to_dict
 
-from core.models import Body, Proposal, Block, StaticSource, PhysicalParameters, Designations, ColorValues
+from core.models import Body, Proposal, Block, StaticSource, PhysicalParameters, Designations, ColorValues, User
 from astrometrics.ephem_subs import determine_darkness_times
 from astrometrics.time_subs import datetime2mjd_utc
 from neox.tests.mocks import MockDateTime, mock_expand_cadence, mock_expand_cadence_novis, \
@@ -824,6 +824,8 @@ class TestSubmitBlockToScheduler(TestCase):
                               }
         self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
 
+        self.bart = User.objects.create_user(username="bart", password="simpson", email="bart@simpson.com")
+
         ssource_params = {  'name' : 'SA107-684',
                             'ra' : 234.3,
                             'dec' : -0.16,
@@ -868,7 +870,7 @@ class TestSubmitBlockToScheduler(TestCase):
         data = params
         data['proposal_code'] = 'LCO2015A-009'
         data['exp_length'] = 91
-        block_resp = record_block(resp, sched_params, data, self.body)
+        block_resp = record_block(resp, sched_params, data, self.body, self.bart)
         self.assertEqual(block_resp, True)
 
         # Test that block has same start/end as superblock
@@ -899,7 +901,7 @@ class TestSubmitBlockToScheduler(TestCase):
         data = params
         data['proposal_code'] = 'LCO2015A-009'
         data['exp_length'] = 91
-        block_resp = record_block(resp, sched_params, data, self.body)
+        block_resp = record_block(resp, sched_params, data, self.body, self.bart)
         self.assertEqual(block_resp, True)
 
         # Test that block has same start/end as superblock
@@ -936,7 +938,7 @@ class TestSubmitBlockToScheduler(TestCase):
         data = params
         data['proposal_code'] = 'LCO2015A-009'
         data['exp_length'] = 91
-        block_resp = record_block(tracking_num, sched_params, data, self.body)
+        block_resp = record_block(tracking_num, sched_params, data, self.body, self.bart)
         self.assertEqual(block_resp, True)
 
         blocks = Block.objects.filter(active=True)
@@ -1004,7 +1006,7 @@ class TestSubmitBlockToScheduler(TestCase):
         data = params
         data['proposal_code'] = 'LCO2015A-009'
         data['exp_length'] = 91
-        block_resp = record_block(resp, sched_params, data, self.body)
+        block_resp = record_block(resp, sched_params, data, self.body, self.bart)
         self.assertEqual(block_resp, True)
 
         # Test that block has same start/end as superblock
@@ -1063,7 +1065,7 @@ class TestSubmitBlockToScheduler(TestCase):
         data = params
         data['proposal_code'] = 'LCO2015A-009'
         data['exp_length'] = params['exp_time']
-        block_resp = record_block(resp, sched_params, data, self.body)
+        block_resp = record_block(resp, sched_params, data, self.body, self.bart)
         self.assertEqual(block_resp, True)
 
         # Test that block has same start/end as superblock
@@ -6950,6 +6952,174 @@ class TestFetchJPLPhysParams(TestCase):
         self.assertEqual(body.source_type, 'C')
         self.assertLessEqual(len(body.source_subtype_1), 2)
         self.assertEqual(body.source_subtype_1, 'LP')
+
+
+class TestFetchJPLOrbit(TestCase):
+    def setUp(self):
+        params = {
+             'provisional_name': 'A10I2qA',
+             'provisional_packed': None,
+             'name': '2022 MP',
+             'origin': 'G',
+             'source_type': 'N',
+             'source_subtype_1': '',
+             'source_subtype_2': None,
+             'elements_type': 'MPC_MINOR_PLANET',
+             'active': True,
+             'fast_moving': False,
+             'urgency': None,
+             'epochofel': datetime(2022, 7, 7, 0, 0),
+             'orbit_rms': 0.55178,
+             'orbinc': 14.56471,
+             'longascnode': 95.52127,
+             'argofperih': 349.34484,
+             'eccentricity': 0.2025312302081431,
+             'meandist': 0.8592444,
+             'meananom': 206.54259,
+             'perihdist': None,
+             'epochofperih': None,
+             'abs_mag': 23.99,
+             'slope': 0.15,
+             'score': 91,
+             'discovery_date': datetime(2022, 6, 21, 9, 36),
+             'num_obs': 172,
+             'arc_length': 11.0,
+             'not_seen': 4.79406141148148,
+             'updated': True,
+             'ingest': datetime(2022, 6, 21, 12, 20, 7),
+             'update_time': datetime(2022, 8, 4, 19, 4, 38, 126074),
+             'analysis_status': 0,
+             'as_updated': None}
+
+        self.body, created = Body.objects.get_or_create(**params)
+
+        self.precision = 7
+
+    @patch('requests.get')
+    def test_asteroid(self, mocked_get):
+        mocked_get.return_value = Mock(status_code=200, json=lambda : {'phys_par': [{'ref': 'MPO706570',
+           'value': '23.99',
+           'name': 'H',
+           'desc': 'absolute magnitude (magnitude at 1 au from Sun and observer)',
+           'notes': 'autocmod 3.0b',
+           'sigma': '.31151',
+           'title': 'absolute magnitude',
+           'units': None}],
+         'object': {'neo': True,
+          'des_alt': [],
+          'orbit_class': {'name': 'Aten', 'code': 'ATE'},
+          'pha': False,
+          'spkid': '54288264',
+          'kind': 'au',
+          'orbit_id': '10',
+          'fullname': '(2022 MP)',
+          'des': '2022 MP',
+          'prefix': None},
+         'signature': {'source': 'NASA/JPL Small-Body Database (SBDB) API',
+          'version': '1.3'},
+         'orbit': {'source': 'JPL',
+          'cov_epoch': '2459755.5',
+          'moid_jup': '4.11675',
+          't_jup': '6.825',
+          'condition_code': '6',
+          'not_valid_before': None,
+          'rms': '.55178',
+          'model_pars': [],
+          'orbit_id': '10',
+          'producer': 'Otto Matic',
+          'first_obs': '2022-06-21',
+          'soln_date': '2022-07-03 06:00:37',
+          'two_body': None,
+          'epoch': '2459800.5',
+          'elements': [{'value': '.2025312302081431',
+            'sigma': '4.787E-5',
+            'name': 'e',
+            'title': 'eccentricity',
+            'label': 'e',
+            'units': None},
+           {'value': '.859372440598031',
+            'sigma': '2.8413E-5',
+            'name': 'a',
+            'title': 'semi-major axis',
+            'label': 'a',
+            'units': 'au'},
+           {'value': '.6853226829967374',
+            'sigma': '6.3796E-5',
+            'name': 'q',
+            'title': 'perihelion distance',
+            'label': 'q',
+            'units': 'au'},
+           {'value': '14.54899305329247',
+            'sigma': '.0061119',
+            'name': 'i',
+            'title': 'inclination; angle with respect to x-y ecliptic plane',
+            'label': 'i',
+            'units': 'deg'},
+           {'value': '95.50866460914197',
+            'sigma': '.00025037',
+            'name': 'om',
+            'title': 'longitude of the ascending node',
+            'label': 'node',
+            'units': 'deg'},
+           {'value': '349.3394664633167',
+            'sigma': '.0011428',
+            'name': 'w',
+            'title': 'argument of perihelion',
+            'label': 'peri',
+            'units': 'deg'},
+           {'value': '247.3860216949204',
+            'sigma': '.0056118',
+            'name': 'ma',
+            'title': 'mean anomaly',
+            'label': 'M',
+            'units': 'deg'},
+           {'value': '2459891.524931391329',
+            'sigma': '.0090495',
+            'name': 'tp',
+            'title': 'time of perihelion passage',
+            'label': 'tp',
+            'units': 'TDB'},
+           {'value': '290.9849717954636',
+            'sigma': '.014431',
+            'name': 'per',
+            'title': 'sidereal orbital period',
+            'label': 'period',
+            'units': 'd'},
+           {'value': '1.237177293998014',
+            'sigma': '6.1356E-5',
+            'name': 'n',
+            'title': 'mean motion',
+            'label': 'n',
+            'units': 'deg/d'},
+           {'value': '1.033422198199325',
+            'sigma': '3.4168E-5',
+            'name': 'ad',
+            'title': 'aphelion distance',
+            'label': 'Q',
+            'units': 'au'}],
+          'equinox': 'J2000',
+          'data_arc': '11',
+          'not_valid_after': None,
+          'n_del_obs_used': None,
+          'sb_used': 'SB441-N16',
+          'n_obs_used': '172',
+          'comment': None,
+          'pe_used': 'DE441',
+          'last_obs': '2022-07-02',
+          'moid': '.0121343',
+          'n_dop_obs_used': None},
+         'discovery': {}}
+         )
+
+        expected_keys = ['phys_par', 'object', 'signature', 'orbit', 'discovery']
+        resp = fetch_jpl_orbit(self.body)
+
+        self.assertEqual(expected_keys, list(resp.keys()))
+        self.assertAlmostEqual(self.body.abs_mag, float(resp['phys_par'][0]['value']), self.precision)
+        self.assertAlmostEqual(self.body.num_obs, float(resp['orbit']['n_obs_used']), self.precision)
+        self.assertAlmostEqual(self.body.orbit_rms, float(resp['orbit']['rms']), self.precision)
+        element = [elem['value'] for elem in resp['orbit']['elements'] if elem['name'] == 'e'][0]
+        self.assertAlmostEqual(self.body.eccentricity, float(element), self.precision)
 
 
 class TestBoxSpiral(TestCase):

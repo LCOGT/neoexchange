@@ -9,7 +9,7 @@ pyslalib
 beautifulsoup4
 django-reversion
 html5lib
-ipython
+ipython<8.0
 nose
 pytz
 six>=1.10.0
@@ -34,3 +34,4 @@ sty
 awscli
 lxml
 freezegun
+tenacity

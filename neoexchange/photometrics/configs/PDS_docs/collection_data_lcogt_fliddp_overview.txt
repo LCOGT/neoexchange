@@ -1,0 +1,104 @@
+Las Cumbres Observatory FLI Derived Data Product Collection
+
+Data Abstract
+=============
+
+We obtained images of the NEO (65803) Didymos binary asteroid and the resulting
+plume of debris from the impact of the DART spacecraft with Dimorphos, along
+with supporting calibration data, from the three 1 meter Las Cumbres 
+Observatory (LCOGT) telescopes at the site in South Africa. These images were
+obtained to supplement the NASA's Double Asteroid Redirection Test (DART)
+mission. The DART mission was a planetary defense mission designed to
+test and measure the deflection caused by a kinetic impactor (the
+spacecraft) on the orbit of Dimorphos asteroid around its primary,
+Didymos. These ground-based observations from the date of impact (2022-09-26 UTC)
+were used to obtain three color measurements and light curves of Didymos and
+the resulting debris plume after the impact of the DART spacecraft. 
+This collection consists of the Las Cumbres Observatory multi-aperture
+photometry summary tables, which are a PDS4 derived product.
+
+Data Set Overview
+=================
+
+The photometry of Didymos is measured from the calibrated frames (see 
+data_lcogtcal_fli collection) using the NEOexchange pipeline. This performs 
+source detection in the images using SExtractor (Bertin, E and Arnouts, 
+S. 1996. SExtractor: Software for source extraction. A&AS, 117, 393), 
+astrometric fits to the detected sources based on the known positions 
+of Gaia DR2 stars in the field using SCAMP (Bertin, E. 2006.  Automatic 
+Astrometric and Photometric Calibration with SCAMP. ASPC, 351,112), 
+photometrically calibrates the zero point of the images based on the 
+measured flux of field stars that have known catalog magnitudes 
+(from the Gaia-DR2 catalog), and then uses these astrometric and photometric
+solutions to derive a calibrated magnitude in 20 apertures (1"..20") for Didymos.
+Due to the small field of view and sometime use of short (2s) exposures,
+some of the frames did not solve astrometrically. We used custom written
+code to propogate the WCS fit and zeropoint by linear interpolation from 
+adjacent good frames. The FITS binary table photometry tables included in 
+this collection are the output of these pipelines and processing.
+
+
+The photometry summary table is named according to the following convention: 
+lcogt_<site>_<inst.>_<YYYYMMDD>_<request #>_<astname#>_photometry.fits
+where:
+* <site> is the LCOGT site code as defined in the table below,
+* <inst.> is the LCOGT instrument code e.g. ‘ef03’ where the first letter
+indicates CCD manufacturer (e=e2v), second letter indicates controller
+manufacturer (f=FLI) and the 2 digits indicate serial number,
+* <YYYYMMDD> is the date of the start of data collection for that night,
+* <request number> is the unique LCOGT (integer) identifier assigned to the observation
+request by the LCOGT Observing Portal
+* <astname#> is the asteroid name and number in PDS-compatible identifier format i.e. all
+lowercase
+
+An example would be lcogt_cpt_ef03_20220926_2956963_65803didymos_photometry.fits
+for a photometry file for (65803) Didymos from the ef03 FLI instrument at
+Sutherland, South Africa (site code 'cpt') from 2022-09-26.
+
+The LCOGT site codes (which are based on the IATA code of the nearest
+airport) are defined as follows:
+
+LCOGT     Site 
+Site code location description
+--------- -----------------------------------------------------------------
+ogg       Haleakala, Maui, HI, USA
+coj       Siding Spring Observatory, NSW, Australia
+lsc       Cerro Tololo Inter-American Observatory, Chile
+cpt       South African Astronomical Observatory, Sutherland, South Africa
+elp       McDonald Observatory, Texas, USA
+tfn       Teide Observatory, Tenerife, Canary Islands, Spain
+ngq       Ali Observatory, western Tibet, China
+sin       Meta site for all Sinistro cameras in the network
+
+For these data, due to the time of the DART impact (2022-09-26 23:14 UTC), all
+data is from the cpt site and the following telescopes and instruments:
+* CPT 1m0 #10 (cpt1m010) telescope and ef02 instrument in Dome A
+* CPT 1m0 #13 (cpt1m013) telescope and ef03 instrument in Dome B
+* CPT 1m0 #12 (cpt1m012) telescope and ef04 instrument in Dome C
+
+Photometry data are stored as a FITS binary table with the 
+following columns:
+
+filename: file name of the calibrated image where data were measured
+mjd: Modified Julian Date of the exposure midtime
+obs_midpoint: ISO8601 datetime string of the exposure midpoint
+exptime: Exposure time (seconds)
+filter: Name of the filter used
+obs_ra: Observed right ascension of Didymos (degrees)
+obs_dec: Observed declination of Didymos (degrees)
+flux_radius: Radius of the aperture with 50% of the flux (pixels)
+fwhm: Full Width Half Maximum of the frame (arcsec)
+mag_aperture_<index>: Magnitude of Didymos in the <index>'th aperture (where <index>=0...20)
+mag_err_aperture_<index>:Magnitude error of Didymos in the <index>'th aperture (where <index>=0...20)
+
+References
+==========
+
+E. Bertin and S. Arnouts., 1996. SExtractor: Software for source
+extraction. A&AS, 117:393–404, June 1996. doi:10.1051/aas:1996164.
+E. Bertin., 2006.  Automatic Astrometric and Photometric Calibration
+with SCAMP. ASPC, 351:112. 2006ASPC..351..112B
+T. Lister, et al, 2021.  NEOExchange - an online portal for NEO and
+Solar System science. Icarus, 364, 114387. doi:10.1117/12.2314340
+Proceedings of the SPIE, 10707, 107070K. doi:10.1117/12.2314340
+

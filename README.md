@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.13.1
+* Major update for DART mission support to handle exporting of lightcurves (from NEOexchange or photometrypipeline) and FITS frames to the Planetary Data System (PDS)
+
 ### 3.12.5
 * Fix issue with SuperBlocks for proposals with Time Critical time all being recorded as rapid_response.
 
@@ -18,6 +21,7 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ### 3.12.1
 * Add Gaia EDR3, DR3 and ATLAS-2 MPC catalog codes (Issue #603)
+* Various fixes for pipeline processing. Increase depth of cross match catalog to r=16.5
 
 ### 3.12.0
 * Add option to set fractional ephemeris rate.

@@ -19,6 +19,7 @@ import os
 import tempfile
 from glob import glob
 import mock
+import json
 
 from django.test import SimpleTestCase, TestCase, tag
 from django.forms.models import model_to_dict
@@ -3657,3 +3658,437 @@ class TestDetermineHorizonsId(SimpleTestCase):
         horizons_id = determine_horizons_id(lines, obj_name)
 
         self.assertEqual(expected_id, horizons_id)
+
+
+class TestLCOGT_tels_to_sitecode(SimpleTestCase):
+
+# 2.0m's
+    def test_ogg_clma_2m0a(self):
+
+        expected_sitecode = 'F65'
+        sitecode = LCOGT_telserial_to_site_codes('2m0-01')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_coj_clma_2m0a(self):
+
+        expected_sitecode = 'E10'
+        sitecode = LCOGT_telserial_to_site_codes('2m0-02')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+# 1.0m's
+
+    def test_coj_doma_1m0a(self):
+
+        expected_sitecode = 'Q63'
+        sitecode = LCOGT_telserial_to_site_codes('1m0-11')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_coj_domb_1m0a(self):
+
+        expected_sitecode = 'Q64'
+        sitecode = LCOGT_telserial_to_site_codes('1m0-03')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_cpt_doma_1m0a(self):
+
+        expected_sitecode = 'K91'
+        sitecode = LCOGT_telserial_to_site_codes('1m0-10')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_cpt_domb_1m0a(self):
+
+        expected_sitecode = 'K92'
+        sitecode = LCOGT_telserial_to_site_codes('1m0-13')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_cpt_domc_1m0a(self):
+
+        expected_sitecode = 'K93'
+        sitecode = LCOGT_telserial_to_site_codes('1m0-12')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_lsc_doma_1m0a(self):
+
+        expected_sitecode = 'W85'
+        sitecode = LCOGT_telserial_to_site_codes('1m0-05')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_lsc_domb_1m0a(self):
+
+        expected_sitecode = 'W86'
+        sitecode = LCOGT_telserial_to_site_codes('1m0-09')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_lsc_domc_1m0a(self):
+
+        expected_sitecode = 'W87'
+        sitecode = LCOGT_telserial_to_site_codes('1m0-04')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_elp_doma_1m0a(self):
+
+        expected_sitecode = 'V37'
+        sitecode = LCOGT_telserial_to_site_codes('1m0-08')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_elp_domb_1m0a(self):
+
+        expected_sitecode = 'V39'
+        sitecode = LCOGT_telserial_to_site_codes('1m0-06')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_tfn_doma_1m0a(self):
+
+        expected_sitecode = 'Z31'
+        sitecode = LCOGT_telserial_to_site_codes('1m0-14')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_tfn_domb_1m0a(self):
+
+        expected_sitecode = 'Z24'
+        sitecode = LCOGT_telserial_to_site_codes('1m0-01')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+# 0.4m's
+    def test_coj_clma_0m4a(self):
+
+        expected_sitecode = 'Q58'
+        sitecode = LCOGT_telserial_to_site_codes('0m4-03')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_coj_clma_0m4b(self):
+
+        expected_sitecode = 'Q59'
+        sitecode = LCOGT_telserial_to_site_codes('0m4-05')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_coj_clma_0m4c(self):
+
+        expected_sitecode = 'XXX'
+        sitecode = LCOGT_telserial_to_site_codes('0m4-20')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_cpt_aqwa_0m4a(self):
+
+        expected_sitecode = 'L09'
+        sitecode = LCOGT_telserial_to_site_codes('0m4-07')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_elp_aqwa_0m4a(self):
+
+        expected_sitecode = 'V38'
+        sitecode = LCOGT_telserial_to_site_codes('0m4-11')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_elp_aqwa_0m4b(self):
+
+        expected_sitecode = 'XXX'
+        sitecode = LCOGT_telserial_to_site_codes('0m4-19')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_lsc_aqwa_0m4a(self):
+
+        expected_sitecode = 'W89'
+        sitecode = LCOGT_telserial_to_site_codes('0m4-09')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_lsc_aqwa_0m4b(self):
+
+        expected_sitecode = 'XXX'
+        sitecode = LCOGT_telserial_to_site_codes('0m4-17')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_lsc_aqwb_0m4a(self):
+
+        expected_sitecode = 'W79'
+        sitecode = LCOGT_telserial_to_site_codes('0m4-12')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_lsc_aqwb_0m4b(self):
+
+        expected_sitecode = 'XXX'
+        sitecode = LCOGT_telserial_to_site_codes('0m4-18')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_ogg_clma_0m4a(self):
+
+        expected_sitecode = 'XXX'
+        sitecode = LCOGT_telserial_to_site_codes('0m4-08')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_ogg_clma_0m4b(self):
+
+        expected_sitecode = 'T04'
+        sitecode = LCOGT_telserial_to_site_codes('0m4-06')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_ogg_clma_0m4c(self):
+
+        expected_sitecode = 'T03'
+        sitecode = LCOGT_telserial_to_site_codes('0m4-04')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_tfn_aqwa_0m4a(self):
+
+        expected_sitecode = 'Z21'
+        sitecode = LCOGT_telserial_to_site_codes('0m4-14')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_tfn_aqwa_0m4b(self):
+
+        expected_sitecode = 'Z17'
+        sitecode = LCOGT_telserial_to_site_codes('0m4-10')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+# Without dashes
+# 2.0m's
+    def test_ogg_clma_2m0a_nodash(self):
+
+        expected_sitecode = 'F65'
+        sitecode = LCOGT_telserial_to_site_codes('2m001')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_coj_clma_2m0a_nodash(self):
+
+        expected_sitecode = 'E10'
+        sitecode = LCOGT_telserial_to_site_codes('2m002')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+# 1.0m's
+
+    def test_coj_doma_1m0a_nodash(self):
+
+        expected_sitecode = 'Q63'
+        sitecode = LCOGT_telserial_to_site_codes('1m011')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_coj_domb_1m0a_nodash(self):
+
+        expected_sitecode = 'Q64'
+        sitecode = LCOGT_telserial_to_site_codes('1m003')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_cpt_doma_1m0a_nodash(self):
+
+        expected_sitecode = 'K91'
+        sitecode = LCOGT_telserial_to_site_codes('1m010')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_cpt_domb_1m0a_nodash(self):
+
+        expected_sitecode = 'K92'
+        sitecode = LCOGT_telserial_to_site_codes('1m013')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_cpt_domc_1m0a_nodash(self):
+
+        expected_sitecode = 'K93'
+        sitecode = LCOGT_telserial_to_site_codes('1m012')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_lsc_doma_1m0a_nodash(self):
+
+        expected_sitecode = 'W85'
+        sitecode = LCOGT_telserial_to_site_codes('1m005')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_lsc_domb_1m0a_nodash(self):
+
+        expected_sitecode = 'W86'
+        sitecode = LCOGT_telserial_to_site_codes('1m009')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_lsc_domc_1m0a_nodash(self):
+
+        expected_sitecode = 'W87'
+        sitecode = LCOGT_telserial_to_site_codes('1m004')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_elp_doma_1m0a_nodash(self):
+
+        expected_sitecode = 'V37'
+        sitecode = LCOGT_telserial_to_site_codes('1m008')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_elp_domb_1m0a_nodash(self):
+
+        expected_sitecode = 'V39'
+        sitecode = LCOGT_telserial_to_site_codes('1m006')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_tfn_doma_1m0a_nodash(self):
+
+        expected_sitecode = 'Z31'
+        sitecode = LCOGT_telserial_to_site_codes('1m014')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_tfn_domb_1m0a_nodash(self):
+
+        expected_sitecode = 'Z24'
+        sitecode = LCOGT_telserial_to_site_codes('1m001')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+# 0.4m's
+    def test_coj_clma_0m4a_nodash(self):
+
+        expected_sitecode = 'Q58'
+        sitecode = LCOGT_telserial_to_site_codes('0m403')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_coj_clma_0m4b_nodash(self):
+
+        expected_sitecode = 'Q59'
+        sitecode = LCOGT_telserial_to_site_codes('0m405')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_coj_clma_0m4c_nodash(self):
+
+        expected_sitecode = 'XXX'
+        sitecode = LCOGT_telserial_to_site_codes('0m420')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_cpt_aqwa_0m4a_nodash(self):
+
+        expected_sitecode = 'L09'
+        sitecode = LCOGT_telserial_to_site_codes('0m407')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_elp_aqwa_0m4a_nodash(self):
+
+        expected_sitecode = 'V38'
+        sitecode = LCOGT_telserial_to_site_codes('0m411')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_elp_aqwa_0m4b_nodash(self):
+
+        expected_sitecode = 'XXX'
+        sitecode = LCOGT_telserial_to_site_codes('0m419')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_lsc_aqwa_0m4a_nodash(self):
+
+        expected_sitecode = 'W89'
+        sitecode = LCOGT_telserial_to_site_codes('0m409')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_lsc_aqwa_0m4b_nodash(self):
+
+        expected_sitecode = 'XXX'
+        sitecode = LCOGT_telserial_to_site_codes('0m417')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_lsc_aqwb_0m4a_nodash(self):
+
+        expected_sitecode = 'W79'
+        sitecode = LCOGT_telserial_to_site_codes('0m412')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_lsc_aqwb_0m4b_nodash(self):
+
+        expected_sitecode = 'XXX'
+        sitecode = LCOGT_telserial_to_site_codes('0m418')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_ogg_clma_0m4a_nodash(self):
+
+        expected_sitecode = 'XXX'
+        sitecode = LCOGT_telserial_to_site_codes('0m408')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_ogg_clma_0m4b_nodash(self):
+
+        expected_sitecode = 'T04'
+        sitecode = LCOGT_telserial_to_site_codes('0m406')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_ogg_clma_0m4c_nodash(self):
+
+        expected_sitecode = 'T03'
+        sitecode = LCOGT_telserial_to_site_codes('0m404')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_tfn_aqwa_0m4a_nodash(self):
+
+        expected_sitecode = 'Z21'
+        sitecode = LCOGT_telserial_to_site_codes('0m414')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_tfn_aqwa_0m4b_nodash(self):
+
+        expected_sitecode = 'Z17'
+        sitecode = LCOGT_telserial_to_site_codes('0m410')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+
+class TestConvertFOElements(SimpleTestCase):
+
+    def setUp(self):
+        with open(os.path.join('astrometrics', 'tests', 'test_fo_elements.json'), 'r') as fp:
+            self.test_json = json.load(fp)
+
+        self.maxDiff = None
+
+    def test_65803_keys(self):
+        expected_keys = ['name', 'origin', 'elements_type', 'epochofel', 'meananom', 'meandist',  'eccentricity',  'perihdist', 'orbinc', 'argofperih', 'longascnode', 'epochofperih', 'abs_mag', 'slope', 'orbit_rms']
+
+        new_elements = convert_findorb_elements(self.test_json)
+
+        self.assertEqual(expected_keys, list(new_elements.keys()))

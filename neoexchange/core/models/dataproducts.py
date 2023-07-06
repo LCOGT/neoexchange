@@ -92,6 +92,7 @@ class DataProduct(models.Model):
     MODEL_LC_RAW = 24
     MODEL_LC_PARAM = 25
     MODEL_SHAPE = 26
+    DART_TXT = 30
     DP_CHOICES = (
                     (JPEG, 'JPEG'),
                     (GUIDER_GIF, 'Spectroscopy Guider GIF'),
@@ -99,6 +100,7 @@ class DataProduct(models.Model):
                     (FITS_IMAGE, 'FITS Image'),
                     (FITS_SPECTRA, 'FITS Spectra'),
                     (ALCDEF_TXT, 'ALCDEF Lightcurve file'),
+                    (DART_TXT, 'DART mission Lightcurve file'),
                     (PERIODOGRAM_RAW, 'Periodogram output file'),
                     (MODEL_LC_RAW, 'Model Lightcurve output file'),
                     (MODEL_LC_PARAM, 'Parameter file used to create DAMIT lightcurve models'),

@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2015-2019 LCO
+Copyright (C) 2015-2023 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -15,13 +15,13 @@ GNU General Public License for more details.
 
 from django.test import TestCase, SimpleTestCase
 from datetime import datetime, timedelta
+from math import radians, degrees
 from mock import patch
 
 from neox.tests.mocks import MockDateTime
 
 # Import module to test
-from astrometrics.time_subs import jd_utc2datetime, dttodecimalday, decimaldaytodt, \
-    degreestohms, parse_neocp_date, parse_neocp_decimal_date, get_semester_dates
+from astrometrics.time_subs import *
 
 
 class TestJD2datetime(SimpleTestCase):
@@ -103,6 +103,71 @@ class TestDT2DecimalDay(SimpleTestCase):
         self.assertEqual(expected_string, dt_string)
 
 
+class TestHoursToDegrees(SimpleTestCase):
+
+    def test_bad_value(self):
+        value = 'foo'
+        expected_value = ""
+
+        time_value = hourstodegrees(value, " ")
+
+        self.assertEqual(expected_value, time_value)
+
+    def test_val1(self):
+        value = 12.5
+        expected_value = 187.5
+
+        time_value = hourstodegrees(value, " ")
+
+        self.assertEqual(expected_value, time_value)
+
+    def test_colon_sep(self):
+        value = "02:48:00.00"
+        expected_value = "02:48:00.00"
+
+        time_value = hourstodegrees(value, " ")
+
+        self.assertEqual(expected_value, time_value)
+
+
+class TestDegreesToHours(SimpleTestCase):
+
+    def test_bad_value(self):
+        value = 'foo'
+        expected_value = ""
+
+        time_value = degreestohours(value)
+
+        self.assertEqual(expected_value, time_value)
+
+    def test_val1(self):
+        value = 187.5
+        expected_value = 12.5
+
+        time_value = degreestohours(value)
+
+        self.assertEqual(expected_value, time_value)
+
+    def test_colon_sep(self):
+        value = "02:48:00.00"
+        expected_value = "02:48:00.00"
+
+        time_value = degreestohours(value)
+
+        self.assertEqual(expected_value, time_value)
+
+
+class TestDegreesToHMS(SimpleTestCase):
+
+    def test_bad_value(self):
+        value = 'foo'
+        expected_string = ""
+
+        time_string = degreestohms(value, " ")
+
+        self.assertEqual(expected_string, time_string)
+
+
 class TestDecimalDay2DT(SimpleTestCase):
 
     def test_no_microdays(self):
@@ -131,6 +196,130 @@ class TestDegreesToHMS(SimpleTestCase):
         time_string = degreestohms(value, " ")
 
         self.assertEqual(expected_string, time_string)
+
+    def test_colon_sep(self):
+        value = "02:48:00.00"
+        expected_string = "02:48:00.00"
+
+        time_string = degreestohms(value, " ")
+
+        self.assertEqual(expected_string, time_string)
+
+
+class TestDegreesToDMS(SimpleTestCase):
+
+    def test_bad_value(self):
+        value = "02:48:00.00"
+        expected_string = "02:48:00.00"
+
+        time_string = degreestodms(value, " ")
+
+        self.assertEqual(expected_string, time_string)
+
+    def test_space_sep(self):
+        value = 42.5506
+        expected_string = "+42 33 02.2"
+
+        time_string = degreestodms(value, " ")
+
+        self.assertEqual(expected_string, time_string)
+
+    def test_colon_sep(self):
+        value = -42.5506
+        expected_string = "-42:33:02.2"
+
+        time_string = degreestodms(value, ":")
+
+        self.assertEqual(expected_string, time_string)
+
+
+class TestRadiansToHMS(SimpleTestCase):
+
+    def test_bad_value(self):
+        value = 'foo'
+        expected_string = ""
+
+        time_string = radianstohms(value, " ")
+
+        self.assertEqual(expected_string, time_string)
+
+    def test_bad_rounding(self):
+        value = radians(42.0)
+        expected_string = "02 48 00.00"
+
+        time_string = radianstohms(value, " ")
+
+        self.assertEqual(expected_string, time_string)
+
+    def test_colon_sep(self):
+        value = "02:48:00.00"
+        expected_string = "02:48:00.00"
+
+        time_string = radianstohms(value, " ")
+
+        self.assertEqual(expected_string, time_string)
+
+
+class TestRadiansToHMS(SimpleTestCase):
+
+    def test_bad_value(self):
+        value = 'foo'
+        expected_string = ""
+
+        time_string = radianstohms(value, " ")
+
+        self.assertEqual(expected_string, time_string)
+
+    def test_bad_rounding(self):
+        value = radians(42.0)
+        expected_string = "02 48 00.00"
+
+        time_string = radianstohms(value, " ")
+
+        self.assertEqual(expected_string, time_string)
+
+    def test_colon_sep(self):
+        value = "02:48:00.00"
+        expected_string = "02:48:00.00"
+
+        time_string = radianstohms(value, " ")
+
+        self.assertEqual(expected_string, time_string)
+
+
+class TestHMSToHours(SimpleTestCase):
+
+    def test_bad_value(self):
+        value = 'foo'
+        expected_value = "foo"
+
+        hours_value = hmstohours(value)
+
+        self.assertEqual(expected_value, hours_value)
+
+    def test_val1(self):
+        value = "02:48:00.00"
+        expected_value = 2.8
+
+        hours_value = hmstohours(value)
+
+        self.assertEqual(expected_value, hours_value)
+
+    def test_val2(self):
+        value = "23:59:12.60"
+        expected_value = 359.8025/15.0
+
+        hours_value = hmstohours(value)
+
+        self.assertEqual(expected_value, hours_value)
+
+    def test_nocolon_sep(self):
+        value = "02 48 00.00"
+        expected_value = "02 48 00.00"
+
+        hours_value = hmstohours(value)
+
+        self.assertEqual(expected_value, hours_value)
 
 
 @patch('astrometrics.time_subs.datetime', MockDateTime)
@@ -222,7 +411,7 @@ class TestParseNEOCPDecimalDate(SimpleTestCase):
         self.assertEqual(expected_dt, dt)
 
 
-class TestGetSemesterDates(TestCase):
+class TestGetSemesterDates(SimpleTestCase):
 
     def test_start_of_B_semester(self):
         date = datetime(2015, 10, 1, 0, 0, 1)

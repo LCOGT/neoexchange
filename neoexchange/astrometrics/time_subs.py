@@ -364,14 +364,20 @@ def hourstodegrees(value, arg):
     """Converts decimal hours to decimal degrees"""
     if ":" in str(value):
         return value
-    return value*15
+    try:
+        return float(value)*15
+    except:
+        return ""
 
 
 def degreestohours(value):
     """Converts decimal degrees to decimal hours"""
     if ":" in str(value):
         return value
-    return float(value)/15
+    try:
+        return float(value)/15
+    except:
+        return ""
 
 
 def degreestodms(value, sep):
@@ -426,25 +432,6 @@ def radianstohms(value, sep):
         return degreestohms(value, sep)
     except:
         return ""
-
-
-def dmstodegrees(value):
-    if ":" not in str(value):
-        return value
-    el = value.split(":")
-    deg = float(el[0])
-    if deg < 0:
-        sign = -1.
-    else:
-        sign = 1
-    return deg + sign*float(el[1])/60. + sign*float(el[2])/3600.
-
-
-def hmstodegrees(value):
-    if ":" not in str(value):
-        return value
-    el = value.split(":")
-    return float(el[0])*15 + float(el[1])/60. + float(el[2])/3600.
 
 
 def hmstohours(value):

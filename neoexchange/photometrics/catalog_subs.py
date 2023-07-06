@@ -888,27 +888,50 @@ def open_fits_catalog(catfile, header_only=False):
             cat_index = hdulist.index_of('CAT')
         except KeyError:
             cat_index = -1
+        try:
+            bpm_index = hdulist.index_of('BPM')
+        except KeyError:
+            bpm_index = -1
+        try:
+            err_index = hdulist.index_of('ERR')
+        except KeyError:
+            err_index = -1
 
         if sci_index != -1 and cat_index != -1:
             header = hdulist[sci_index].header
             if header_only is False:
                 table = hdulist[cat_index].data
         else:
-            logger.error("Could not find SCI and CAT HDUs in file")
+            if sci_index != -1 and bpm_index != -1 and err_index != -1:
+                cattype = 'BANZAI_CALIB_MEF'
+                header = [hdu.header for hdu in hdulist]
+                table = {}
+            else:
+                logger.error("Could not find SCI and CAT (or BPM and ERR) HDUs in file: %s" % catfile)
     elif len(hdulist) == 1:
-        # BANZAI-format after extraction of image
-        cattype = 'BANZAI'
+        origin = hdulist[0].header.get('origin', None)
+        if origin is not None and origin == 'LCO/OCIW':
+            cattype = 'SWOPE'
+            hdr_name = 'PRIMARY'
+        else:
+            # BANZAI-format after extraction of image
+            cattype = 'BANZAI'
+            hdr_name = 'SCI'
         try:
-            sci_index = hdulist.index_of('SCI')
+            sci_index = hdulist.index_of(hdr_name)
         except KeyError:
             sci_index = -1
 
         if sci_index != -1:
             header = hdulist[sci_index].header
         else:
-            logger.error("Could not find SCI HDU in file")
+            logger.error(f"Could not find {hdr_name} HDU in file")
+    elif len(hdulist) == 5:
+        # Raw Sinistro image
+        cattype = 'RAW_MEF'
+        header = [hdu.header for hdu in hdulist]
     else:
-        logger.error("Unexpected number of catalog HDUs (Expected 2, got %d)" % len(hdulist))
+        logger.error("Unexpected number of catalog HDUs in %s (Expected 1-5, got %d)" % (catfile, len(hdulist)))
 
     hdulist.close()
 
@@ -1696,7 +1719,7 @@ def determine_filenames(product):
         elif len(file_bits) == 3:
             # Fpacked BANZAI product - output is input
             new_product = None
-            funpack_status = funpack_fits_file(full_path)
+            funpack_status = unpack_sci_extension(full_path)
             if funpack_status == 0:
                 new_product = file_bits[0] + os.extsep + file_bits[1]
     return new_product
@@ -1727,8 +1750,9 @@ def increment_red_level(product):
     return new_product
 
 
-def funpack_fits_file(fpack_file):
-    """Calls 'funpack' on the passed <fpack_file> to uncompress it. A status
+def unpack_sci_extension(fpack_file):
+    """Opens the passed <fpack_file> FITS and extracts the'SCI', writing it to
+    a new PrimaryHDU and output file to uncompress it. A status
     value of 0 is returned if the unpacked file already exists or the uncompress
     was successful, -1 is returned otherwise"""
 
@@ -1778,7 +1802,7 @@ def extract_sci_image(file_path, catalog_path):
     return fits_filename_path
 
 
-def search_box(frame, ra, dec, box_halfwidth=3.0, dbg=False):
+def search_box(frame, ra, dec, box_halfwidth=3.0, max_ap_size=None, dbg=False):
     """Search CatalogSources for the passed Frame object for sources within a
     box of <box_halfwidth> centered on <ra>, <dec>.
     <ra>, <dec> are in radians, <box_halfwidth> is in arcseconds, default is 3.0"
@@ -1796,6 +1820,8 @@ def search_box(frame, ra, dec, box_halfwidth=3.0, dbg=False):
         logger.debug("Searching %.4f->%.4f, %.4f->%.4f in %s" % (ra_min, ra_max, dec_min, dec_max, frame.filename))
 
     sources = CatalogSources.objects.filter(frame=frame, obs_ra__range=(ra_min, ra_max), obs_dec__range=(dec_min, dec_max))
+    if max_ap_size is not None:
+        sources = sources.filter(aperture_size__lte=max_ap_size)
     return sources
 
 
@@ -1809,7 +1835,7 @@ def get_fits_files(fits_path):
 
         fpacked_files = sorted(glob(fits_path + '*e91.fits.fz') + glob(fits_path + '*e11.fits.fz'))
         for fpack_file in fpacked_files:
-            funpack_fits_file(fpack_file)
+            unpack_sci_extension(fpack_file)
 
         sorted_fits_files = sorted(glob(fits_path + '*e91.fits') + glob(fits_path + '*e11.fits'))
 
@@ -1823,11 +1849,16 @@ def sanitize_object_name(object_name):
     """Remove problematic characters (space, slash) from object names so it
     can be used for e.g. directory names"""
 
+    name_mapping = { 'didymos' : '65803',
+                     '65803didymos' : '65803',
+                    }
+
     clean_object_name = None
     if type(object_name) == str or type(object_name) == np.str_:
         clean_object_name = object_name.strip().replace('(', '').replace(')', '')
         # collapse multiple sequential spaces into a single space.
         clean_object_name = ' '.join(clean_object_name.split())
+        clean_object_name = name_mapping.get(clean_object_name.lower(), clean_object_name)
         # Find the rightmost space and then do space->underscore mapping *left*
         # of that but space->empty string right of that.
         index = clean_object_name.rfind(' ')

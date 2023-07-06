@@ -1619,6 +1619,14 @@ def get_sitepos(site_code, dbg=False):
         (site_long, status) = S.sla_daf2r(170, 27, 53.9)
         site_hgt = 1027.1
         site_name = 'MOA 1.8m at Mount John Observatory'
+    elif site_code == '304':
+        # Latitude, longitude from sla_obs values for DuPont 2.5m
+        (site_lat, status) = S.sla_daf2r(29, 0, 11.0)
+        site_lat = -site_lat   # Southern hemisphere !
+        (site_long, status) = S.sla_daf2r(70, 42, 9.0)
+        site_long = -site_long  # West of Greenwich !
+        site_hgt = 2280.0
+        site_name = 'Swope 1m at Las Campanas Observatory'
     elif site_code == '500' or site_code == '1M0' or site_code == '0M4' or site_code == '2M0':
         site_lat = 0.0
         site_long = 0.0
@@ -1915,6 +1923,13 @@ def LCOGT_domes_to_site_codes(siteid, encid, telid):
     instance = "%s-%s-%s" % (siteid.strip().upper(), encid.strip().upper(), telid.strip().upper())
     return valid_site_codes.get(instance, 'XXX')
 
+def LCOGT_telserial_to_site_codes(serial):
+    """Turns LCOGT telescope serial numbers e.g. '1m0-11' or '1m011' into the
+    MPC site code e.g. 'Q63'"""
+
+    valid_tel_serials = cfg.valid_telescope_serials
+
+    return valid_tel_serials.get(serial.replace('-', '', 1), 'XXX')
 
 def MPC_site_code_to_domes(site):
     """ Returns the mapped value of the MPC site code to LCO Site, Eclosure, and telescope"""
@@ -2370,3 +2385,34 @@ def get_planetary_elements(planet=None):
     except (KeyError, AttributeError):
         return_elements = planet_elements
     return return_elements
+
+def convert_findorb_elements(elements_json):
+    """Converts JSON elements output from find_orb in the elem_short.json file
+    to NEOexchange format"""
+
+    obj = elements_json['objects'][elements_json['ids'][0]]
+    elements = obj['elements']
+    neox_elements = { 'name' : obj['object'].replace('(', '').replace(')', ''),
+                      'origin' : 'F',
+                      'elements_type' : 'MPC_MINOR_PLANET',
+                      'epochofel' : datetime.strptime(elements['epoch_iso'], '%Y-%m-%dT%H:%M:%SZ'),
+                    }
+    # Mapping from find_orb -> NEOx element sets for direct values
+    mapping = {
+                'M' : 'meananom',
+                'a' : 'meandist',
+                'e' : 'eccentricity',
+                'q' : 'perihdist',
+                'i' : 'orbinc',
+                'arg_per' : 'argofperih',
+                'asc_node' : 'longascnode',
+                'Tp' : 'epochofperih',
+                'H' : 'abs_mag',
+                'G' :  'slope',
+                'rms_residual' : 'orbit_rms'
+            }
+
+    for fo_key, neox_key in mapping.items():
+        neox_elements[neox_key] = elements[fo_key]
+
+    return neox_elements

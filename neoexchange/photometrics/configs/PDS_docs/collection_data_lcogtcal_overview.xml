@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<?xml-model href="https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1J00.sch"
+    schematypens="http://purl.oclc.org/dsdl/schematron"?>
+
+<Product_Document xmlns="http://pds.nasa.gov/pds4/pds/v1" 
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+    xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1                              https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1J00.xsd">
+  <Identification_Area>
+    <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogtcal:collection_data_lcogtcal_overview</logical_identifier>
+    <version_id>1.0</version_id>
+    <title>Overview of the Las Cumbres Observatory (LCOGT) Calibrated Data Collection</title>
+    <information_model_version>1.19.0.0</information_model_version>
+    <product_class>Product_Document</product_class>
+    <Citation_Information>
+      <author_list>Lister, T.</author_list>
+      <publication_year>2022</publication_year>
+      <description>Overview of the Las Cumbres Observatory (LCOGT) Calibrated Data Collection.
+      This collection consists of the Las Cumbres Observatory calibrated images, the supporting calibration
+       images: bad pixel masks, master bias and dark frame images, and master flat field images.
+       </description>
+    </Citation_Information>
+  <Modification_History>
+      <Modification_Detail>
+        <modification_date>2022-09-01</modification_date>
+        <version_id>1.0</version_id>
+        <description>PDS Delivery</description>
+      </Modification_Detail>
+  </Modification_History>
+  </Identification_Area>
+  <Reference_List>
+    <Internal_Reference>
+        <lid_reference>urn:nasa:pds:dart_teleobs:document_lcogt:las_cumbres_dart_uncalibrated_calibrated_sis</lid_reference>
+        <reference_type>document_to_associate</reference_type>
+        <comment>Las Cumbres Observatory DART Uncalibrated, Calibrated SIS document which describes the Las Cumbres Observatory DART data products.
+        </comment>
+    </Internal_Reference>
+    <External_Reference>
+      <doi>10.1051/aas:1996164</doi>
+      <reference_text>Bertin, E.; Arnouts, S., 1996, SExtractor: Software for source extraction. Astronomy and Astrophysics Supplement, 117, 393–404, doi:10.1051/aas:1996164</reference_text>
+      <description>Contains source information for SExtractor flag values</description>
+    </External_Reference>
+    <External_Reference>
+      <reference_text>Bertin, E., 2006, Automatic Astrometric and Photometric Calibration with SCAMP. ASP Conference Series, 351, 112. bibcode:2006ASPC..351..112B</reference_text>
+      <description>Contains description of SCAMP software</description>
+    </External_Reference>
+    <External_Reference>
+      <doi>10.1117/12.2314340</doi>
+      <reference_text>McCully, C.   et al., 2018,  Real-time processing of the imaging data from the network of Las Cumbres Observatory Telescopes using BANZAI, Proceedings of the SPIE, 10707, 107070K, doi:10.1117/12.2314340</reference_text>
+      <description>Describes the open source software packge used by LCOGT to calibrate data</description>
+    </External_Reference>
+    <External_Reference>
+      <doi>10.1016/j.icarus.2021.114387</doi>
+      <reference_text>Lister, T. et al, 2021, NEOExchange - an online portal for NEO and Solar System science, Icarus, 364, 114387, doi:10.1016/j.icarus.2021.114387</reference_text>
+      <description>Describes open source software package used to schedule and reduce Didymos observations</description>
+    </External_Reference>
+    <External_Reference>
+      <doi>10.48550/arXiv.1702.00834</doi>
+      <reference_text>Mommert, M., 2017. PHOTOMETRYPIPELINE: An automated pipeline for calibrated photometry. Astronomy and Computing, 18, pp.47–53. doi:10.48550/arXiv.1702.00834</reference_text>
+      <description>Describes open source software package used to measure the photometry of Didymos</description>
+    </External_Reference>
+  </Reference_List>
+  <Document>
+    <author_list>Lister, T.</author_list>
+    <publication_date>2022-09-01</publication_date>
+    <description>Overview of the Las Cumbres Observatory (LCOGT) Calibrated Data Collection</description>
+    <Document_Edition>
+      <edition_name>UTF-8 ASCII</edition_name>
+      <language>English</language>
+      <files>1</files>
+      <Document_File>
+        <file_name>overview.txt</file_name>
+        <document_standard_id>UTF-8 Text</document_standard_id>
+      </Document_File>
+    </Document_Edition>
+  </Document>
+</Product_Document>

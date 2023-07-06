@@ -1,0 +1,190 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<?xml-model href="https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1F00.sch"
+            schematypens="http://purl.oclc.org/dsdl/schematron"?>
+<Product_Observational xmlns="http://pds.nasa.gov/pds4/pds/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1 https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1F00.xsd">
+  <Identification_Area>
+    <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogtddp:lcogt_1m0_01_fa11_20211013_65803didymos_photometry</logical_identifier>
+    <version_id>1.0</version_id>
+    <title>Las Cumbres Observatory Derived Data Product: lcogt_1m0_01_fa11_20211013_65803didymos_photometry</title>
+    <information_model_version>1.15.0.0</information_model_version>
+    <product_class>Product_Observational</product_class>
+    <Modification_History>
+      <Modification_Detail>
+        <modification_date>2021-10-15</modification_date>
+        <version_id>1.0</version_id>
+        <description>initial version</description>
+      </Modification_Detail>
+    </Modification_History>
+  </Identification_Area>
+  <Observation_Area>
+    <Time_Coordinates>
+      <start_date_time>2021-10-12T20:00:52.34Z</start_date_time>
+      <stop_date_time>2021-10-12T20:57:10.08Z</stop_date_time>
+    </Time_Coordinates>
+    <Investigation_Area>
+      <name>Double Asteroid Redirection Test</name>
+      <type>Mission</type>
+      <Internal_Reference>
+        <lid_reference>urn:nasa:pds:context:investigation:mission.double_asteroid_redirection_test</lid_reference>
+        <reference_type>data_to_investigation</reference_type>
+      </Internal_Reference>
+    </Investigation_Area>
+    <Observing_System>
+      <Observing_System_Component>
+        <name>Las Cumbres Observatory (LCOGT)</name>
+        <type>Host</type>
+        <description>The description for the host can be found in the document collection for this bundle.</description>
+        <Internal_Reference>
+          <lid_reference>urn:nasa:pds:context:facility:observatory.las_cumbres</lid_reference>
+          <reference_type>is_facility</reference_type>
+        </Internal_Reference>
+      </Observing_System_Component>
+      <Observing_System_Component>
+        <name>Las Cumbres Global Telescope Network - 1m Telescopes</name>
+        <type>Telescope</type>
+        <description>
+          LCOGT 1m0-01 Telescope
+          LCOGT TFN Node 1m0 Dome B at Tenerife
+          The description for the telescope can be found in the document collection for this bundle.</description>
+        <Internal_Reference>
+          <lid_reference>urn:nasa:pds:context:instrument_host:las_cumbres.1m0_telescopes</lid_reference>
+          <reference_type>is_telescope</reference_type>
+        </Internal_Reference>
+      </Observing_System_Component>
+      <Observing_System_Component>
+        <name>Las Cumbres 1m Telescopes - Sinistro Camera</name>
+        <type>Instrument</type>
+        <description>The description for the instrument can be found in the document collection for this bundle.</description>
+        <Internal_Reference>
+          <lid_reference>urn:nasa:pds:context:instrument:las_cumbres.1m0_telescopes.sinistro</lid_reference>
+          <reference_type>is_instrument</reference_type>
+        </Internal_Reference>
+      </Observing_System_Component>
+    </Observing_System>
+    <Target_Identification>
+      <name>(65803) Didymos</name>
+      <type>Asteroid</type>
+      <Internal_Reference>
+        <lid_reference>urn:nasa:pds:context:target:asteroid.65803_didymos</lid_reference>
+        <reference_type>data_to_target</reference_type>
+      </Internal_Reference>
+    </Target_Identification>
+  </Observation_Area>
+  <File_Area_Observational>
+    <File>
+      <file_name>lcogt_1m0_01_fa11_20211013_65803didymos_photometry.tab</file_name>
+      <comment>photometry summary table</comment>
+    </File>
+    <Header>
+      <offset unit="byte">0</offset>
+      <object_length unit="byte">143</object_length>
+      <parsing_standard_id>UTF-8 Text</parsing_standard_id>
+    </Header>
+    <Table_Character>
+      <offset unit="byte">143</offset>
+      <records>62</records>
+      <record_delimiter>Carriage-Return Line-Feed</record_delimiter>
+      <Record_Character>
+        <fields>12</fields>
+        <groups>0</groups>
+        <record_length unit="byte">143</record_length>
+        <Field_Character>
+          <name>validity_flag</name>
+          <field_number>1</field_number>
+          <field_location unit="byte">1</field_location>
+          <data_type>ASCII_String</data_type>
+          <field_length unit="byte">1</field_length>
+          <description>Flag whether this is a valid photometric datapoint, # indicates probably invalid blended data due to asteroid interference with the star.</description>
+        </Field_Character>
+        <Field_Character>
+          <name>file</name>
+          <field_number>2</field_number>
+          <field_location unit="byte">2</field_location>
+          <data_type>ASCII_String</data_type>
+          <field_length unit="byte">36</field_length>
+          <description>File name of the calibrated image where data were measured.</description>
+        </Field_Character>
+        <Field_Character>
+          <name>julian_date</name>
+          <field_number>3</field_number>
+          <field_location unit="byte">40</field_location>
+          <data_type>ASCII_Real</data_type>
+          <field_length unit="byte">15</field_length>
+          <description>UTC Julian date of the exposure midtime</description>
+        </Field_Character>
+        <Field_Character>
+          <name>mag</name>
+          <field_number>4</field_number>
+          <field_location unit="byte">56</field_location>
+          <data_type>ASCII_Real</data_type>
+          <field_length unit="byte">8</field_length>
+          <description>Calibrated PanSTARRs r-band apparent magnitude of asteroid</description>
+        </Field_Character>
+        <Field_Character>
+          <name>sig</name>
+          <field_number>5</field_number>
+          <field_location unit="byte">66</field_location>
+          <data_type>ASCII_Real</data_type>
+          <field_length unit="byte">6</field_length>
+          <description>1-sigma error on the apparent magnitude</description>
+        </Field_Character>
+        <Field_Character>
+          <name>ZP</name>
+          <field_number>6</field_number>
+          <field_location unit="byte">73</field_location>
+          <data_type>ASCII_Real</data_type>
+          <field_length unit="byte">8</field_length>
+          <description>Calibrated zero point magnitude in PanSTARRs r-band</description>
+        </Field_Character>
+        <Field_Character>
+          <name>ZP_sig</name>
+          <field_number>7</field_number>
+          <field_location unit="byte">83</field_location>
+          <data_type>ASCII_Real</data_type>
+          <field_length unit="byte">6</field_length>
+          <description>1-sigma error on the zero point magnitude</description>
+        </Field_Character>
+        <Field_Character>
+          <name>inst_mag</name>
+          <field_number>8</field_number>
+          <field_location unit="byte">91</field_location>
+          <data_type>ASCII_Real</data_type>
+          <field_length unit="byte">8</field_length>
+          <description>instrumental magnitude of asteroid</description>
+        </Field_Character>
+        <Field_Character>
+          <name>inst_sig</name>
+          <field_number>9</field_number>
+          <field_location unit="byte">101</field_location>
+          <data_type>ASCII_Real</data_type>
+          <field_length unit="byte">8</field_length>
+          <description>1-sigma error on the instrumental magnitude</description>
+        </Field_Character>
+        <Field_Character>
+          <name>filter</name>
+          <field_number>10</field_number>
+          <field_location unit="byte">111</field_location>
+          <data_type>ASCII_String</data_type>
+          <field_length unit="byte">6</field_length>
+          <description>Transformed filter used for calibration.</description>
+        </Field_Character>
+        <Field_Character>
+          <name>SExtractor_flag</name>
+          <field_number>11</field_number>
+          <field_location unit="byte">119</field_location>
+          <data_type>ASCII_Integer</data_type>
+          <field_length unit="byte">15</field_length>
+          <description>Flags associated with the Source Extractor photometry measurements. See source_extractor_flags.txt in the documents folder for this archive for more detailed description.</description>
+        </Field_Character>
+        <Field_Character>
+          <name>aprad</name>
+          <field_number>12</field_number>
+          <field_location unit="byte">136</field_location>
+          <data_type>ASCII_Real</data_type>
+          <field_length unit="byte">5</field_length>
+          <description>radius in pixels of the aperture used for the photometry measurement</description>
+        </Field_Character>
+      </Record_Character>
+    </Table_Character>
+  </File_Area_Observational>
+</Product_Observational>

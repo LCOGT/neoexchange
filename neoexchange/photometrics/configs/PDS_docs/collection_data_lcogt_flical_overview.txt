@@ -1,0 +1,186 @@
+Las Cumbres Observatory fli Calibrated Data Collection Overview
+
+Data Abstract
+=============
+
+We obtained images of the NEO (65803) Didymos binary asteroid and the resulting
+plume of debris from the impact of the DART spacecraft with Dimorphos, along
+with supporting calibration data, from the three 1 meter Las Cumbres 
+Observatory (LCOGT) telescopes at the site in South Africa. These images were
+obtained to supplement the NASA's Double Asteroid Redirection Test (DART)
+mission. The DART mission was a planetary defense mission designed to
+test and measure the deflection caused by a kinetic impactor (the
+spacecraft) on the orbit of Dimorphos asteroid around its primary,
+Didymos. These ground-based observations from the date of impact (2022-09-26 UTC)
+were used to obtain three color measurements and light curves of Didymos and
+the resulting debris plume after the impact of the DART spacecraft. This
+collection consists of the Las Cumbres Observatory calibrated images
+and the supporting calibration frames: master bias and dark frames and
+the master flat field images.
+
+Data Set Overview
+=================
+
+Raw image data (see data_lcogtraw_fli_collection) are calibrated through
+two pipelines, the observatory-wide BANZAI pipeline (McCully, C. et al.
+2018.  Real-time processing of the imaging data from the network of Las
+Cumbres Observatory Telescopes using BANZAI. Proceedings of the SPIE,
+10707, 107070K) and then the NEOExchange Solar System Pipeline
+(Lister, T. et al. 2021.  NEOExchange - an online portal for NEO and
+Solar System science. Icarus, 364, 114387). BANZAI
+is used  to perform the basic calibration steps of:
+1. Overscan subtraction: all images with a valid BIASSEC header keyword
+have a median value removed estimated from the BIASSEC region
+2. Crosstalk correction (1m Sinistro imagers only): these imagers
+readout through 4 amplifiers and there is crosstalk between the
+quadrants which is removed using linear coefficients that relate each
+quadrant to every other quadrant.
+3. Gain correction: All pixels in the frame are multiplied by the gain,
+using the GAIN header keyword. Thus, the science frames output by
+BANZAI are all in units of electrons.
+4. Mosaic (1m Sinistro imagers only): If the file has multiple
+extensions, BANZAI produces a single mosaiced frame. This uses the
+DETSEC header keywords.
+5. Trim: After being mosaiced, the data is trimmed to a usable region
+for science. This is set based on the TRIMSEC header keyword.
+6. Bias Subtraction: Full frame master bias images are subtracted from
+each of the darks, flat field images, and science frames. The master
+bias frame that was taken closest in time to the current data will be
+used. 
+7. Dark Subtraction: Full-frame master dark frames, scaled to the
+exposure time of the frame, are subtracted from all flat-field and
+science images. The most recent master dark frame is used, normally
+this is taken on the same day.
+8. Flat Field Correction: Master flat field images (normalized to unity
+using the inner quarter of the image) are divided out of every science
+frame. The most recent master flat-field image for the given telescope,
+filter, and binning is used.
+
+The NEOexchange pipeline performs source detection in the images using 
+SExtractor (Bertin, E and Arnouts, S. 1996. SExtractor: Software for 
+source extraction. A&AS, 117, 393), astrometric fits to the detected 
+sources based on the known positions of Gaia DR2 stars in the field 
+using SCAMP (Bertin, E. 2006.  Automatic Astrometric and Photometric 
+Calibration with SCAMP. ASPC, 351,112), photometrically calibrates the 
+zero point of the images based on the measured flux of field stars that 
+have known catalog magnitudes (from Gaia-DR2 catalogs for these data), 
+and then using these astrometric and photometric solutions derives a 
+calibrated magnitude for Didymos. The photometry tables included in 
+Derived Data Product data_lcogtddp collection are the output of these 
+pipelines.
+
+Naming Convention
+=================
+
+Calibrated FLI images consist of a single FITS file containing a primary
+header and a single image.
+They are named according to the following LCOGT-wide convention:
+<site><tel. class><tel. #>-<instrument>-<yyyymmdd>-<iiii>-<type><red. level>.<extn>
+where:
+
+filename section Description
+---------------- --------------------------------------------------------------
+<site>           LCOGT site code (one from {ogg, coj, lsc, cpt, elp, tfn, ngq})
+<tel. class>     Size/class of telescope (one from {2m0, 1m0, 0m4})
+<tel. #>         telescope serial number within size class
+<instrument>     LCOGT instrument code e.g. ‘ef15’ where the first letter
+indicates CCD manufacturer (e=e2v), second letter indicates controller
+manufacturer (f=FLI) and the 2 digits indicate serial number.
+<yyyymmdd>       UTC date of the start of the night (defined to be UTC
+date at 1600 local time at the site). Does not change if the site
+observes through UTC midnight.
+<iiii>           four digit image counter for that instrument, resets
+at start of new night (defined as above). Counter starts at 0001
+<type>           Type of file. One of {a=arc, b=bias, d=dark, e=exposure,
+s=standard, f=sky flat, l=lambert flat, w=lamp flat, x=experimental})
+<red level>      Reduction level from 00-99 with higher numbers
+indicating higher levels of data processing. In practice, one of
+{00=raw, 91=BANZAI processed, 92=NEOexchange processed}
+<extn>           the file extension. ".fits" for fits file format,
+".xml" for the PDS label.
+
+e.g. cpt1m012-ef04-20220926-0176-e92.fits is a NEOexchange processed
+expose(sky) data product from the SAAO Observatory, Sutherland (cpt), from
+1-meter telescope #12 and the ef04 FLI instrument from the night
+of 2022-09-26. It is the 176th image taken by that instrument on that
+night.
+
+The LCOGT site codes (which are based on the IATA code of the nearest
+airport) are defined as follows:
+
+LCOGT     Site 
+Site code location description
+--------- -----------------------------------------------------------------
+ogg       Haleakala, Maui, HI, USA
+coj       Siding Spring Observatory, NSW, Australia
+lsc       Cerro Tololo Inter-American Observatory, Chile
+cpt       South African Astronomical Observatory, Sutherland, South Africa
+elp       McDonald Observatory, Texas, USA
+tfn       Teide Observatory, Tenerife, Canary Islands, Spain
+ngq       Ali Observatory, western Tibet, China
+sin       Meta site for all Sinistro cameras in the network
+
+For these data, due to the time of the DART impact (2022-09-26 23:14 UTC), all
+data is from the cpt site and the following telescopes and instruments:
+* CPT 1m0 #10 (cpt1m010) telescope and ef02 instrument in Dome A
+* CPT 1m0 #13 (cpt1m013) telescope and ef03 instrument in Dome B
+* CPT 1m0 #12 (cpt1m012) telescope and ef04 instrument in Dome C
+
+Master Bias, Dark and Flat Field Frames
+=======================================
+
+BANZAI creates the master bias, dark and flat frames required for the
+reduction of science frames. For all instruments, we take many
+full-frame bias and dark exposures every afternoon and morning. We use
+a “robust standard deviation” (rstd) based on the median absolute
+deviation (mad - related to the std by σ≈1.4826×mad) to estimate the
+scatter of the distribution and mask pixels more than 3 rstd reliably
+and take a mean of the remaining pixels as usual. When creating the
+master dark frame, each individual frame is scaled by the exposure time
+(read from the header).
+
+Twilight flats are taken every day but not in every filter, because
+twilight is not long enough to take all 11 filters in a single night.
+For the FLI instrument observations, flat fields in the g', i' and clear
+filters used were scheduled in the two weeks leading up to the DART impact.
+The frames are dithered so that we can remove stars in the combined
+master flat field.
+
+Each individual flat-field image is normalized to unity before
+combining them. The normalization is calculated finding the robust
+sigma clipped mean (3.5 rstd outliers are rejected) of the central
+region of the image. For the central region, we choose the central 25%
+of the field (the region has dimensions that are half of the full
+image). The flat-field frames are then stacked using a sigma clipped
+mean, similar to the master bias and dark frames, again with 3 rstd
+outlier rejection.
+
+The naming scheme for the master calibration frames follow the same
+general format as the Calibrated Images described above but the <type>
+and <reduction level> sections are replaced by:
+<calib type>-<readout window (Opt.)>-<readout speed (Opt.)>-bin<X binning>x<Y binning>-<filter>
+
+where <calib type> for master calibration frames is one of {bpm (bad
+pixel mask), bias (master bias), dark (master dark), skyflat (master
+sky flatfield)}, <readout window> (optional) and is one of {full_frame
+or center; 1m Sinistro imagers only), <readout speed> (optional) and
+<filter> is only present for skyflat calibration types. Some examples
+of these combinations are:
+cpt1m012-fa06-20210402-dark-bin1x1.fits and
+cpt1m012-fa06-20210402-bias-bin1x1.fits
+which are master dark and bias calibration frames for 1x1 binning from
+LCOGT 1m #12 in South Africa (cpt site) from 2021-04-02.
+
+References
+==========
+
+E. Bertin and S. Arnouts., 1996. SExtractor: Software for source
+extraction. A&AS, 117:393–404, June 1996. doi:10.1051/aas:1996164.
+E. Bertin., 2006.  Automatic Astrometric and Photometric Calibration
+with SCAMP. ASPC, 351:112. 2006ASPC..351..112B
+T. Lister, et al, 2021.  NEOExchange - an online portal for NEO and
+Solar System science. Icarus, 364, 114387. doi:10.1117/12.2314340
+C. McCully  et al., 2018.  Real-time processing of the imaging data
+from the network of Las Cumbres Observatory Telescopes using BANZAI.
+Proceedings of the SPIE, 10707, 107070K. doi:10.1117/12.2314340
+
