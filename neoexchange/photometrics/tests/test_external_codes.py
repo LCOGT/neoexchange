@@ -1962,7 +1962,7 @@ class TestRunAstwarp(ExternalCodeUnitTest):
         status = run_astwarp(self.test_banzai_file_COPIED, self.test_dir, self.center_RA, self.center_DEC)
         dims = self.return_fits_dims(self.output_filename, keywords = ['NAXIS1', 'NAXIS2', 'CRVAL1', 'CRVAL2'])
 
-        self.assertEqual(expected_status, status)
+        self.assertEquals(expected_status, status)
         self.assertTrue(os.path.exists(self.output_filename))
         self.assertEquals(expected_naxis1, dims[0])
         self.assertEquals(expected_naxis2, dims[1])
@@ -2001,7 +2001,7 @@ class TestRunAstwarp(ExternalCodeUnitTest):
         status = run_astwarp(self.test_banzai_file_COPIED, self.test_dir, self.center_RA, self.center_DEC)
         dims = self.return_fits_dims(self.output_filename, keywords = ['NAXIS1', 'NAXIS2', 'CRVAL1', 'CRVAL2'])
 
-        self.assertEqual(expected_status, status)
+        self.assertEquals(expected_status, status)
         self.assertTrue(os.path.exists(self.output_filename))
         self.assertEquals(expected_naxis1, dims[0])
         self.assertEquals(expected_naxis2, dims[1])
@@ -2013,5 +2013,48 @@ class TestRunAstwarp(ExternalCodeUnitTest):
         filename = 'file_name.foo'
 
         status = run_astwarp(filename, self.test_dir, self.center_RA, self.center_DEC)
+
+        self.assertEquals(expected_status, status)
+
+class TestRunAstarithmetic(ExternalCodeUnitTest):
+    def setUp(self):
+        super(TestRunAstarithmetic, self).setUp()
+
+        self.center_RA = 272.9615245
+        self.center_DEC = 1.2784917
+
+        # needs to modify the original image when running astarithmetic
+        shutil.copy(os.path.abspath(self.test_banzai_file), self.test_dir)
+        self.test_banzai_file_COPIED = os.path.join(self.test_dir, 'banzai_test_frame.fits')
+
+        self.test_filenames = []
+        for frame_num in range(200,205):
+            new_filename = f'tfn1m042-fa42-20230707-{frame_num:04d}-e91.fits'
+            new_filename = os.path.join(self.test_dir, new_filename)
+            shutil.copy(self.test_banzai_file_COPIED, new_filename)
+            run_astwarp(new_filename, self.test_dir, self.center_RA, self.center_DEC)
+            self.test_filenames.append(new_filename.replace('.fits', '-crop.fits'))
+
+        self.output_filename = os.path.join(self.test_dir, self.test_filenames[0].replace('-crop', '-combine'))
+
+        # Disable anything below CRITICAL level
+        logging.disable(logging.CRITICAL)
+
+        self.remove = True
+        self.maxDiff = None
+
+    def test_1(self):
+        expected_status = 0
+
+        status = run_astarithmetic(self.test_filenames, self.test_dir)
+
+        self.assertEquals(expected_status, status)
+        self.assertTrue(os.path.exists(self.output_filename))
+
+    def test_nonexistent_filenames(self):
+        expected_status = -1
+        filenames = ['filename1.foo', 'filename2.foo', 'filename3.foo']
+
+        status = run_astarithmetic(filenames, self.test_dir)
 
         self.assertEquals(expected_status, status)

@@ -1591,6 +1591,9 @@ def run_astarithmetic(filenames, dest_dir, binary='astarithmetic', dbg=False):
     Runs astarithmetic on list of <filenames> to median combine writing 
     output to <dest_dir>
     '''
+    for filename in filenames:
+        if os.path.exists(filename) is False:
+            return -1
     binary = binary or find_binary(binary)
     if binary is None:
         logger.error(f"Could not locate {binary} executable in PATH")
@@ -1607,6 +1610,7 @@ def run_astarithmetic(filenames, dest_dir, binary='astarithmetic', dbg=False):
         logger.debug(f"cmdline={cmdline}")
         cmd_args = cmdline.split()
         cmd_call = Popen(cmd_args, cwd=dest_dir, stdout=PIPE)
-        retcode_or_cmdline = cmd_call.communicate()
+        (out, errors) = cmd_call.communicate()
+        retcode_or_cmdline = cmd_call.returncode
 
     return retcode_or_cmdline
