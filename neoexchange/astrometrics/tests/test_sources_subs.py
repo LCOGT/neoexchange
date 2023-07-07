@@ -456,6 +456,8 @@ class TestFetchGoldstoneTargets(SimpleTestCase):
         self.test_goldstone_page_v2 = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
         self.test_csv_file = os.path.join('astrometrics', 'tests', 'test_goldstone_page.csv')
+        self.test_csv_file_v2 = os.path.join('astrometrics', 'tests', 'test_goldstone_page_v2.csv')
+        self.test_csv_file_v3 = os.path.join('astrometrics', 'tests', 'test_goldstone_page_v3.csv')
 
         self.maxDiff = None
 
@@ -673,8 +675,6 @@ class TestFetchGoldstoneTargets(SimpleTestCase):
     @freeze_time(datetime(2021, 12, 7, 2, 0, 0))
     def test_csv_file_calformat_2021(self):
 
-        expected_targets = ['163899', '4660', '2021 XK6']
-
         expected_targets = [{ 'target': '163899',
                               'windows': [{'start': '2021-11-22T00:00:00', 'end': '2021-12-31T23:59:59'}]},
                              {'target': '4660',
@@ -692,8 +692,6 @@ class TestFetchGoldstoneTargets(SimpleTestCase):
     @freeze_time(datetime(2022, 1, 7, 2, 0, 0))
     def test_csv_file_calformat_2022(self):
 
-        expected_targets = ['7842', '153591', '2016 QJ44', '2018 CW2', '2010 XC15']
-
         expected_targets = [
                              {'target': '7842',
                               'windows': [{'start': '2022-01-18T00:00:00', 'end': '2022-01-25T23:59:59'}]},
@@ -709,6 +707,60 @@ class TestFetchGoldstoneTargets(SimpleTestCase):
 
 
         targets = fetch_goldstone_targets(self.test_csv_file, calendar_format=True)
+
+        self.assertEqual(len(expected_targets), len(targets))
+        self.assertEqual(expected_targets, targets)
+
+    @freeze_time(datetime(2026, 1, 7, 2, 0, 0))
+    def test_csv_file_badcsv(self):
+
+        expected_targets = ['2013 GM3', '318411', '1943']
+
+        targets = fetch_goldstone_targets(self.test_csv_file_v2)
+
+        self.assertEqual(len(expected_targets), len(targets))
+        self.assertEqual(expected_targets, targets)
+
+    @freeze_time(datetime(2026, 7, 7, 2, 0, 0))
+    def test_csv_file_calformat_badcsv(self):
+
+        expected_targets = [
+                             {'target': '2013 GM3',
+                              'windows': [{'start': '2026-04-11T00:00:00', 'end': '2026-04-16T23:59:59'}]},
+                             {'target': '318411',
+                              'windows': [{'start': '2026-05-08T00:00:00', 'end': '2026-05-15T23:59:59'}]},
+                             {'target': '1943',
+                              'windows': [{'start': '2026-05-25T00:00:00', 'end': '2026-06-02T23:59:59'}]},
+                              ]
+
+
+        targets = fetch_goldstone_targets(self.test_csv_file_v2, calendar_format=True)
+
+        self.assertEqual(len(expected_targets), len(targets))
+        self.assertEqual(expected_targets, targets)
+
+    @freeze_time(datetime(2026, 1, 7, 2, 0, 0))
+    def test_csv_file_badcsv_badchar(self):
+
+        expected_targets = ['2013 GM3', '318411']
+
+        targets = fetch_goldstone_targets(self.test_csv_file_v3)
+
+        self.assertEqual(len(expected_targets), len(targets))
+        self.assertEqual(expected_targets, targets)
+
+    @freeze_time(datetime(2026, 7, 7, 2, 0, 0))
+    def test_csv_file_calformat_badcsv_badchar(self):
+
+        expected_targets = [
+                             {'target': '2013 GM3',
+                              'windows': [{'start': '2026-04-11T00:00:00', 'end': '2026-04-16T23:59:59'}]},
+                             {'target': '318411',
+                              'windows': [{'start': '2026-05-08T00:00:00', 'end': '2026-05-15T23:59:59'}]},
+                              ]
+
+
+        targets = fetch_goldstone_targets(self.test_csv_file_v3, calendar_format=True)
 
         self.assertEqual(len(expected_targets), len(targets))
         self.assertEqual(expected_targets, targets)

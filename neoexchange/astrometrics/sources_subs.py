@@ -1324,7 +1324,28 @@ def fetch_goldstone_targets(page=None, calendar_format=False, dbg=False):
             target = str(row['number'])
             if is_masked(row['number']) is True:
                 target = row['name']
-            start_date = datetime.strptime(row['start (UT)'], '%m/%d/%Y')
+            try:
+                start_date = datetime.strptime(row['start (UT)'], '%m/%d/%Y')
+            except ValueError:
+                # Check for excess slashes in the 'start (UT)' field and a lack
+                # in the 'end (UT)'
+                if row['start (UT)'].count('/') > 2 and row['end (UT)'].count('/') == 0:
+                    logger.warning("Malformed date, attempting to fix")
+                    occurrence = 3
+                    val = -1
+                    for i in range(0, occurrence):
+                        val = row['start (UT)'].find('/', val + 1)
+                    if val > 0 and val < len(row['start (UT)']):
+                        try:
+                            start_date = datetime.strptime(row['start (UT)'][:val], '%m/%d/%Y')
+                            row['OCC'] = row['end (UT)']
+                            row['end (UT)'] = row['start (UT)'][val+1:]
+                        except ValueError:
+                            logger.warning(f"Unable to fix date, skipping target: {target}")
+                            continue
+                    else:
+                        logger.warning(f"Unable to fix date, skipping target: {target}")
+                        continue
             if calendar_format is True:
                 end_date = datetime.strptime(row['end (UT)'], '%m/%d/%Y')
                 end_date += timedelta(seconds=86399)
