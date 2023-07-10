@@ -93,7 +93,7 @@ urlpatterns = [
     path('schedule/calib/<int:pk>/', ScheduleCalibParameters.as_view(), name='schedule-calib'),
     path('schedule/<int:pk>/cadence/', ScheduleParametersCadence.as_view(), name='schedule-body-cadence'),
     path('schedule/<int:pk>/spectra/', ScheduleParametersSpectra.as_view(), name='schedule-body-spectra'),
-    path('calib-schedule/<slug:instrument_code>/<pk>/', ScheduleCalibSpectra.as_view(), name='schedule-calib-spectra'),
+    re_path(r'^calib-schedule/(?P<instrument_code>[A-Z,0-9,\-]*)/(?P<pk>[-\d]+)/', ScheduleCalibSpectra.as_view(), name='schedule-calib-spectra'),
     path('calib-schedule/<int:pk>/confirm/', ScheduleCalibSubmit.as_view(), name='schedule-calib-confirm'),
     path('accounts/login/', LoginView.as_view(template_name='core/login.html'), name='auth_login'),
     path('accounts/logout/', LogoutView.as_view(template_name='core/logout.html'), name='auth_logout'),
