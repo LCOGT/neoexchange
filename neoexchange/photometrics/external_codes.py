@@ -570,6 +570,11 @@ def determine_astarithmetic_options(filenames, dest_dir):
     output_filename = os.path.join(dest_dir, raw_filename.replace("-crop", "-combine"))
     return f'--globalhdu ALIGNED --output={output_filename} {filenames_list} {len(filenames)} 5 0.2 sigclip-median'
 
+def determine_astnoisechisel_options(filename, dest_dir, tilesize = '30,30', erode = 2, detgrowquant = 0.75, maxholesize = 10000):
+    raw_filename = os.path.basename(filename)
+    output_filename = os.path.join(dest_dir, raw_filename.replace("-combine", "-chisel"))
+    return f'--tilesize={tilesize} --erode={erode} --detgrowquant={detgrowquant} --detgrowmaxholesize={maxholesize} --output={output_filename} {filename}'
+
 def make_pa_rate_dict(pa, deltapa, minrate, maxrate):
 
     pa_rate_dict = {    'filter_pa': pa,
@@ -1613,4 +1618,31 @@ def run_astarithmetic(filenames, dest_dir, binary='astarithmetic', dbg=False):
         (out, errors) = cmd_call.communicate()
         retcode_or_cmdline = cmd_call.returncode
 
+    return retcode_or_cmdline
+
+def run_astnoisechisel(filename, dest_dir, tilesize = '30,30', erode = 2, detgrowquant=0.75, maxholesize=10000, binary='astnoisechisel', dbg=False):
+    '''
+    Runs astnoisechisel on <filename> to produce a binary detection map
+    writing output to <dest_dir>
+    '''
+    if os.path.exists(filename) is False:
+        return -1
+    binary = binary or find_binary(binary)
+    if binary is None:
+        logger.error(f"Could not locate {binary} executable in PATH")
+        return -42
+    cmdline = f"{binary} "
+    cmdline += determine_astnoisechisel_options(filename, dest_dir, tilesize, erode, detgrowquant, maxholesize)
+    cmdline = cmdline.rstrip()
+    if dbg:
+        print(cmdline)
+
+    if dbg is True:
+        retcode_or_cmdline = cmdline
+    else:
+        logger.debug(f"cmdline={cmdline}")
+        cmd_args = cmdline.split()
+        cmd_call = Popen(cmd_args, cwd=dest_dir, stdout=PIPE)
+        (out, errors) = cmd_call.communicate()
+        retcode_or_cmdline = cmd_call.returncode
     return retcode_or_cmdline
