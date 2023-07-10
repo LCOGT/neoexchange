@@ -57,8 +57,8 @@ def find_images_for_block(blockid):
     img_list = []
     if not frames:
         return False
-    x_size = frames[0].wcs._naxis1
-    y_size = frames[0].wcs._naxis2
+    x_size = frames[0].wcs.pixel_shape[0]
+    y_size = frames[0].wcs.pixel_shape[1]
     if not frames[0].frameid:
         return False
     frames_list = [{'img': str(f.frameid)} for f in frames]
