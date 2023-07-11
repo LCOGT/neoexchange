@@ -5754,8 +5754,8 @@ class TestCopyDocs(SimpleTestCase):
         self.assertEqual(expected_xml_labels, xml_labels)
         for extn in ['txt', 'xml']:
             self.assertListEqual(
-                list(io.open(os.path.join(self.docs_dir, f'collection_data_lcogtcal_overview.{extn}'))),
-                list(io.open(os.path.join(self.test_output_caldir, f'overview.{extn}')))
+                list(io.open(os.path.join(self.docs_dir, f'collection_data_lcogtcal_overview.{extn}'), encoding="utf-8")),
+                list(io.open(os.path.join(self.test_output_caldir, f'overview.{extn}'), encoding="utf-8"))
                 )
 
     def test_cal_fli(self):
@@ -5769,8 +5769,8 @@ class TestCopyDocs(SimpleTestCase):
         self.assertEqual(expected_xml_labels, xml_labels)
         for extn in ['txt', 'xml']:
             self.assertListEqual(
-                list(io.open(os.path.join(self.docs_dir, f'collection_data_lcogt_flical_overview.{extn}'))),
-                list(io.open(os.path.join(self.test_output_caldir, f'overview.{extn}')))
+                list(io.open(os.path.join(self.docs_dir, f'collection_data_lcogt_flical_overview.{extn}'), encoding="utf-8")),
+                list(io.open(os.path.join(self.test_output_caldir, f'overview.{extn}'), encoding="utf-8"))
                 )
 
     def test_ddp(self):
