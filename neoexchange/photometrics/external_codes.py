@@ -562,18 +562,21 @@ def normalize(images, swarp_zp_key="L1ZP"):
 def determine_astwarp_options(filename, dest_dir, center_RA, center_DEC, width = 1991.0, height = 511.0):
     raw_filename = os.path.basename(filename)
     output_filename = os.path.join(dest_dir, raw_filename.replace('.fits', '-crop.fits'))
-    return f'-hSCI --center={center_RA},{center_DEC} --widthinpix --width={width},{height} --output={output_filename} {filename}'
+    options = f'-hSCI --center={center_RA},{center_DEC} --widthinpix --width={width},{height} --output={output_filename} {filename}'
+    return output_filename, options
 
 def determine_astarithmetic_options(filenames, dest_dir):
     filenames_list = " ".join(filenames)
     raw_filename = os.path.basename(filenames[0])
     output_filename = os.path.join(dest_dir, raw_filename.replace("-crop", "-combine"))
-    return f'--globalhdu ALIGNED --output={output_filename} {filenames_list} {len(filenames)} 5 0.2 sigclip-median'
+    options = f'--globalhdu ALIGNED --output={output_filename} {filenames_list} {len(filenames)} 5 0.2 sigclip-median'
+    return output_filename, options
 
 def determine_astnoisechisel_options(filename, dest_dir, tilesize = '30,30', erode = 2, detgrowquant = 0.75, maxholesize = 10000):
     raw_filename = os.path.basename(filename)
     output_filename = os.path.join(dest_dir, raw_filename.replace("-combine", "-chisel"))
-    return f'--tilesize={tilesize} --erode={erode} --detgrowquant={detgrowquant} --detgrowmaxholesize={maxholesize} --output={output_filename} {filename}'
+    options = f'--tilesize={tilesize} --erode={erode} --detgrowquant={detgrowquant} --detgrowmaxholesize={maxholesize} --output={output_filename} {filename}'
+    return output_filename, options
 
 def make_pa_rate_dict(pa, deltapa, minrate, maxrate):
 
@@ -1570,13 +1573,16 @@ def run_astwarp(filename, dest_dir, center_RA, center_DEC, width = 1991.0, heigh
     [width]x[height] writing output to <dest_dir>
     '''
     if os.path.exists(filename) is False:
-        return -1
+        return None, -1
     binary = binary or find_binary(binary)
     if binary is None:
         logger.error(f"Could not locate {binary} executable in PATH")
-        return -42
+        return None, -42
     cmdline = f"{binary} "
-    cmdline += determine_astwarp_options(filename, dest_dir, center_RA, center_DEC, width, height)
+    cropped_filename, options = determine_astwarp_options(filename, dest_dir, center_RA, center_DEC, width, height)
+    if os.path.exists(cropped_filename):
+        return cropped_filename, 0
+    cmdline += options
     cmdline = cmdline.rstrip()
     if dbg:
         print(cmdline)
@@ -1589,7 +1595,8 @@ def run_astwarp(filename, dest_dir, center_RA, center_DEC, width = 1991.0, heigh
         cmd_call = Popen(cmd_args, cwd=dest_dir, stdout=PIPE)
         (out, errors) = cmd_call.communicate()
         retcode_or_cmdline = cmd_call.returncode
-    return retcode_or_cmdline
+
+    return cropped_filename, retcode_or_cmdline
 
 def run_astarithmetic(filenames, dest_dir, binary='astarithmetic', dbg=False):
     '''
@@ -1598,13 +1605,16 @@ def run_astarithmetic(filenames, dest_dir, binary='astarithmetic', dbg=False):
     '''
     for filename in filenames:
         if os.path.exists(filename) is False:
-            return -1
+            return None, -1
     binary = binary or find_binary(binary)
     if binary is None:
         logger.error(f"Could not locate {binary} executable in PATH")
-        return -42
+        return None, -42
     cmdline = f"{binary} "
-    cmdline += determine_astarithmetic_options(filenames, dest_dir)
+    combined_filename, options = determine_astarithmetic_options(filenames, dest_dir)
+    if os.path.exists(combined_filename):
+        return combined_filename, 0
+    cmdline += options
     cmdline = cmdline.rstrip()
     if dbg:
         print(cmdline)
@@ -1618,7 +1628,7 @@ def run_astarithmetic(filenames, dest_dir, binary='astarithmetic', dbg=False):
         (out, errors) = cmd_call.communicate()
         retcode_or_cmdline = cmd_call.returncode
 
-    return retcode_or_cmdline
+    return combined_filename, retcode_or_cmdline
 
 def run_astnoisechisel(filename, dest_dir, tilesize = '30,30', erode = 2, detgrowquant=0.75, maxholesize=10000, binary='astnoisechisel', dbg=False):
     '''
@@ -1626,13 +1636,14 @@ def run_astnoisechisel(filename, dest_dir, tilesize = '30,30', erode = 2, detgro
     writing output to <dest_dir>
     '''
     if os.path.exists(filename) is False:
-        return -1
+        return None, -1
     binary = binary or find_binary(binary)
     if binary is None:
         logger.error(f"Could not locate {binary} executable in PATH")
-        return -42
+        return None, -42
     cmdline = f"{binary} "
-    cmdline += determine_astnoisechisel_options(filename, dest_dir, tilesize, erode, detgrowquant, maxholesize)
+    chiseled_filename, options = determine_astnoisechisel_options(filename, dest_dir, tilesize, erode, detgrowquant, maxholesize)
+    cmdline += options
     cmdline = cmdline.rstrip()
     if dbg:
         print(cmdline)
@@ -1645,4 +1656,5 @@ def run_astnoisechisel(filename, dest_dir, tilesize = '30,30', erode = 2, detgro
         cmd_call = Popen(cmd_args, cwd=dest_dir, stdout=PIPE)
         (out, errors) = cmd_call.communicate()
         retcode_or_cmdline = cmd_call.returncode
-    return retcode_or_cmdline
+
+    return chiseled_filename, retcode_or_cmdline

@@ -73,7 +73,7 @@ from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal,
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
 from photometrics.external_codes import run_sextractor, run_swarp, run_hotpants, run_scamp, updateFITSWCS,\
-    read_mtds_file, unpack_tarball, run_findorb, run_astwarp, run_astarithmetic
+    read_mtds_file, unpack_tarball, run_findorb, run_astwarp, run_astarithmetic, run_astnoisechisel
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     determine_filenames, increment_red_level, funpack_fits_file, update_ldac_catalog_wcs, FITSHdrException, \
     get_reference_catalog, reset_database_connection, sanitize_object_name
@@ -3591,19 +3591,46 @@ def run_astwarp_alignment(block, sci_dir, dest_dir):
     #find ephem for block
     table = get_ephem(block)
 
+    if os.path.exists(dest_dir) is False:
+        os.makedirs(dest_dir)
+
     filenames = []
     #for each frame interpolate position for frame midtime then call run_astwarp
     for frame in frames:
         result_RA, result_DEC = ephem_interpolate(frame.midpoint, table)
         #print(frame.filename, result_RA, result_DEC)
         fits_filename = os.path.join(sci_dir, frame.filename)
-        filenames.append(fits_filename.replace('.fits', '-crop.fits'))
-        status = run_astwarp(fits_filename, dest_dir, result_RA[0], result_DEC[0])
+        cropped_filename, status = run_astwarp(fits_filename, dest_dir, result_RA[0], result_DEC[0])
+        filenames.append(cropped_filename)
 
     #call stacking routine
-    status = run_astarithmetic(filenames, dest_dir)
+    combined_filename, status = run_astarithmetic(filenames, dest_dir)
 
-    return status
+    return combined_filename, status
+
+def run_noisechisel(filename, dest_dir):
+    '''
+    Verifies that input <filename> went through stacking routine. Calls run_astnoisechisel
+    to get a binary detection map of the combined file and writes output to <dest_dir>.
+    '''
+    if "-combine" not in filename:
+        return None, -1
+
+    chiseled_filename, status = run_astnoisechisel(filename, dest_dir)
+
+    return chiseled_filename, status
+
+def run_astwarp_alignment_noisechisel(block, sci_dir, dest_dir):
+    '''
+    Calls run_astwarp_alignemnt on a given <block> to get a combined file.
+    Calls run_noisechisel on the combined file to get its detection map.
+    '''
+    combined_filename, status = run_astwarp_alignment(block, sci_dir, dest_dir)
+    #print(status)
+    chiseled_filename, status = run_noisechisel(combined_filename, dest_dir)
+    #print(status)
+
+    return chiseled_filename, status
 
 def find_block_for_frame(catfile):
     """Try and find a Block for the original passed <catfile> filename (new style with

@@ -1849,14 +1849,14 @@ class TestDetermineAstwarpOptions(SimpleTestCase):
     def test_1(self):
         expected_cmdline = f'-hSCI --center=119.2346118,8.39523331 --widthinpix --width=1991.0,511.0 --output={self.test_dir}/tfn1m014-fa20-20221104-0207-e91-crop.fits tfn1m014-fa20-20221104-0207-e91.fits'
 
-        cmdline = determine_astwarp_options('tfn1m014-fa20-20221104-0207-e91.fits', self.test_dir, 119.2346118, 8.39523331)
+        output_filename, cmdline = determine_astwarp_options('tfn1m014-fa20-20221104-0207-e91.fits', self.test_dir, 119.2346118, 8.39523331)
 
         self.assertEqual(expected_cmdline, cmdline)
 
     def test_2(self):
         expected_cmdline = f'-hSCI --center=120,9 --widthinpix --width=1991.0,511.0 --output={self.test_dir}/tfn1m014-fa20-20221104-0213-e91-crop.fits tfn1m014-fa20-20221104-0213-e91.fits'
 
-        cmdline = determine_astwarp_options('tfn1m014-fa20-20221104-0213-e91.fits', self.test_dir, 120, 9)
+        output_filename, cmdline = determine_astwarp_options('tfn1m014-fa20-20221104-0213-e91.fits', self.test_dir, 120, 9)
 
         self.assertEqual(expected_cmdline, cmdline)
 
@@ -1865,7 +1865,7 @@ class TestDetermineAstwarpOptions(SimpleTestCase):
 
         center = SkyCoord(119.2346118, 8.39523331, unit = 'deg')
 
-        cmdline = determine_astwarp_options('tfn1m014-fa20-20221104-0207-e91.fits', self.test_dir, center.ra.value, center.dec.value)
+        output_filename, cmdline = determine_astwarp_options('tfn1m014-fa20-20221104-0207-e91.fits', self.test_dir, center.ra.value, center.dec.value)
 
         self.assertEqual(expected_cmdline, cmdline)
 
@@ -1874,7 +1874,7 @@ class TestDetermineAstwarpOptions(SimpleTestCase):
 
         center = SkyCoord(119.2346118, 8.39523331, unit = 'deg')
 
-        cmdline = determine_astwarp_options('tfn1m014-fa20-20221104-0207-e91.fits', self.test_dir, center.ra.value, center.dec.value, 2000, 550)
+        output_filename, cmdline = determine_astwarp_options('tfn1m014-fa20-20221104-0207-e91.fits', self.test_dir, center.ra.value, center.dec.value, 2000, 550)
 
         self.assertEqual(expected_cmdline, cmdline)
 
@@ -1883,7 +1883,7 @@ class TestDetermineAstwarpOptions(SimpleTestCase):
 
         center = SkyCoord(119.2346118, 8.39523331, unit = 'deg')
 
-        cmdline = determine_astwarp_options('banzai_test_frame.fits', self.test_dir, center.ra.value, center.dec.value, 2000, 550)
+        output_filename, cmdline = determine_astwarp_options('banzai_test_frame.fits', self.test_dir, center.ra.value, center.dec.value, 2000, 550)
 
         self.assertEqual(expected_cmdline, cmdline)
 
@@ -1904,21 +1904,21 @@ class TestDetermineAstarithmeticOptions(SimpleTestCase):
     def test_7files(self):
         expected_cmdline = f'--globalhdu ALIGNED --output={self.test_dir}/{self.test_files[0].replace("-crop", "-combine")} {self.filenames_list} 7 5 0.2 sigclip-median'
 
-        cmdline = determine_astarithmetic_options(self.test_files, self.test_dir)
+        output_filename, cmdline = determine_astarithmetic_options(self.test_files, self.test_dir)
 
         self.assertEqual(expected_cmdline, cmdline)
 
     def test_3files(self):
         expected_cmdline = f'--globalhdu ALIGNED --output={self.test_dir}/{self.test_files[0].replace("-crop", "-combine")} {self.first3_filenames_list} 3 5 0.2 sigclip-median'
 
-        cmdline = determine_astarithmetic_options(self.test_files[:3], self.test_dir)
+        output_filename, cmdline = determine_astarithmetic_options(self.test_files[:3], self.test_dir)
 
         self.assertEqual(expected_cmdline, cmdline)
 
     def test_last3files(self):
         expected_cmdline = f'--globalhdu ALIGNED --output={self.test_dir}/{self.test_files[-3].replace("-crop", "-combine")} {self.last3_filenames_list} 3 5 0.2 sigclip-median'
 
-        cmdline = determine_astarithmetic_options(self.test_files[-3:], self.test_dir)
+        output_filename, cmdline = determine_astarithmetic_options(self.test_files[-3:], self.test_dir)
 
         self.assertEqual(expected_cmdline, cmdline)
 
@@ -1930,42 +1930,42 @@ class TestDetermineAstnoisechiselOptions(SimpleTestCase):
     def test_default_values(self):
         expected_cmdline = f'--tilesize=30,30 --erode=2 --detgrowquant=0.75 --detgrowmaxholesize=10000 --output={self.test_dir}/{self.test_file.replace("-combine","-chisel")} {self.test_file}'
 
-        cmdline = determine_astnoisechisel_options(self.test_file, self.test_dir)
+        output_filename, cmdline = determine_astnoisechisel_options(self.test_file, self.test_dir)
 
         self.assertEqual(expected_cmdline, cmdline)
 
     def test_tilesize(self):
         expected_cmdline = f'--tilesize=100,100 --erode=2 --detgrowquant=0.75 --detgrowmaxholesize=10000 --output={self.test_dir}/{self.test_file.replace("-combine","-chisel")} {self.test_file}'
 
-        cmdline = determine_astnoisechisel_options(self.test_file, self.test_dir, tilesize='100,100')
+        output_filename, cmdline = determine_astnoisechisel_options(self.test_file, self.test_dir, tilesize='100,100')
 
         self.assertEqual(expected_cmdline, cmdline)
 
     def test_erode(self):
         expected_cmdline = f'--tilesize=30,30 --erode=1 --detgrowquant=0.75 --detgrowmaxholesize=10000 --output={self.test_dir}/{self.test_file.replace("-combine","-chisel")} {self.test_file}'
 
-        cmdline = determine_astnoisechisel_options(self.test_file, self.test_dir, tilesize='30,30', erode=1)
+        output_filename, cmdline = determine_astnoisechisel_options(self.test_file, self.test_dir, tilesize='30,30', erode=1)
 
         self.assertEqual(expected_cmdline, cmdline)
 
     def test_detgrowquant(self):
         expected_cmdline = f'--tilesize=30,30 --erode=2 --detgrowquant=1 --detgrowmaxholesize=10000 --output={self.test_dir}/{self.test_file.replace("-combine","-chisel")} {self.test_file}'
 
-        cmdline = determine_astnoisechisel_options(self.test_file, self.test_dir, tilesize='30,30', erode=2, detgrowquant=1)
+        output_filename, cmdline = determine_astnoisechisel_options(self.test_file, self.test_dir, tilesize='30,30', erode=2, detgrowquant=1)
 
         self.assertEqual(expected_cmdline, cmdline)
 
     def test_maxholesize(self):
         expected_cmdline = f'--tilesize=30,30 --erode=2 --detgrowquant=0.75 --detgrowmaxholesize=100 --output={self.test_dir}/{self.test_file.replace("-combine","-chisel")} {self.test_file}'
 
-        cmdline = determine_astnoisechisel_options(self.test_file, self.test_dir, tilesize='30,30', erode=2, detgrowquant=0.75, maxholesize = 100)
+        output_filename, cmdline = determine_astnoisechisel_options(self.test_file, self.test_dir, tilesize='30,30', erode=2, detgrowquant=0.75, maxholesize = 100)
 
         self.assertEqual(expected_cmdline, cmdline)
 
     def test_filename(self):
         expected_cmdline = f'--tilesize=30,30 --erode=2 --detgrowquant=0.75 --detgrowmaxholesize=10000 --output={self.test_dir}/banzai_test_frame-chisel.fits banzai_test_frame-combine.fits'
 
-        cmdline = determine_astnoisechisel_options('banzai_test_frame-combine.fits', self.test_dir)
+        output_filename, cmdline = determine_astnoisechisel_options('banzai_test_frame-combine.fits', self.test_dir)
 
         self.assertEqual(expected_cmdline, cmdline)
 
@@ -2001,16 +2001,21 @@ class TestRunAstwarp(ExternalCodeUnitTest):
                 dims.append(header[key])
         return dims
 
+    def touch(self, fname, times=None):
+        with open(fname, 'a'):
+            os.utime(fname, times)
+
     def test_1(self):
         expected_status = 0
         expected_naxis1 = 1991.0
         expected_naxis2 = 511.0
 
-        status = run_astwarp(self.test_banzai_file_COPIED, self.test_dir, self.center_RA, self.center_DEC)
+        cropped_filename, status = run_astwarp(self.test_banzai_file_COPIED, self.test_dir, self.center_RA, self.center_DEC)
         dims = self.return_fits_dims(self.output_filename, keywords = ['NAXIS1', 'NAXIS2', 'CRVAL1', 'CRVAL2'])
 
         self.assertEquals(expected_status, status)
         self.assertTrue(os.path.exists(self.output_filename))
+        self.assertEquals(self.output_filename, cropped_filename)
         self.assertEquals(expected_naxis1, dims[0])
         self.assertEquals(expected_naxis2, dims[1])
         self.assertEquals(self.center_RA, dims[2])
@@ -2020,7 +2025,7 @@ class TestRunAstwarp(ExternalCodeUnitTest):
         expected_center_RA = 300
         expected_center_DEC = 50
 
-        status = run_astwarp(self.test_banzai_file_COPIED, self.test_dir, 300, 50)
+        cropped_filename, status = run_astwarp(self.test_banzai_file_COPIED, self.test_dir, 300, 50)
         dims = self.return_fits_dims(self.output_filename, keywords = ['CRVAL1', 'CRVAL2'])
 
         self.assertEquals(expected_center_RA, dims[0])
@@ -2030,7 +2035,7 @@ class TestRunAstwarp(ExternalCodeUnitTest):
         expected_naxis1 = 1001
         expected_naxis2 = 301
 
-        status = run_astwarp(self.test_banzai_file_COPIED, self.test_dir, self.center_RA, self.center_DEC, 1001, 301)
+        cropped_filename, status = run_astwarp(self.test_banzai_file_COPIED, self.test_dir, self.center_RA, self.center_DEC, 1001, 301)
         dims = self.return_fits_dims(self.output_filename)
 
         self.assertEquals(expected_naxis1, dims[0])
@@ -2045,11 +2050,12 @@ class TestRunAstwarp(ExternalCodeUnitTest):
         self.test_banzai_file_COPIED = shutil.move(self.test_banzai_file_COPIED, path)
         self.output_filename = path.replace('.fits', '-crop.fits')
 
-        status = run_astwarp(self.test_banzai_file_COPIED, self.test_dir, self.center_RA, self.center_DEC)
+        cropped_filename, status = run_astwarp(self.test_banzai_file_COPIED, self.test_dir, self.center_RA, self.center_DEC)
         dims = self.return_fits_dims(self.output_filename, keywords = ['NAXIS1', 'NAXIS2', 'CRVAL1', 'CRVAL2'])
 
         self.assertEquals(expected_status, status)
         self.assertTrue(os.path.exists(self.output_filename))
+        self.assertEquals(self.output_filename, cropped_filename)
         self.assertEquals(expected_naxis1, dims[0])
         self.assertEquals(expected_naxis2, dims[1])
         self.assertEquals(self.center_RA, dims[2])
@@ -2057,11 +2063,22 @@ class TestRunAstwarp(ExternalCodeUnitTest):
 
     def test_nonexistent_filename(self):
         expected_status = -1
+        expected_filename = None
         filename = 'file_name.foo'
 
-        status = run_astwarp(filename, self.test_dir, self.center_RA, self.center_DEC)
+        cropped_filename, status = run_astwarp(filename, self.test_dir, self.center_RA, self.center_DEC)
 
         self.assertEquals(expected_status, status)
+        self.assertEquals(expected_filename, cropped_filename)
+
+    def test_existing_output_filename(self):
+        expected_status = 0
+        self.touch(self.output_filename)
+
+        combined_filename, status = run_astwarp(self.test_banzai_file_COPIED, self.test_dir, self.center_RA, self.center_DEC)
+
+        self.assertEquals(expected_status, status)
+        self.assertTrue(os.path.exists(self.output_filename))
 
 class TestRunAstarithmetic(ExternalCodeUnitTest):
     def setUp(self):
@@ -2090,21 +2107,37 @@ class TestRunAstarithmetic(ExternalCodeUnitTest):
         self.remove = True
         self.maxDiff = None
 
+    def touch(self, fname, times=None):
+        with open(fname, 'a'):
+            os.utime(fname, times)
+
     def test_1(self):
         expected_status = 0
 
-        status = run_astarithmetic(self.test_filenames, self.test_dir)
+        combined_filename, status = run_astarithmetic(self.test_filenames, self.test_dir)
 
         self.assertEquals(expected_status, status)
         self.assertTrue(os.path.exists(self.output_filename))
+        self.assertEquals(self.output_filename, combined_filename)
 
     def test_nonexistent_filenames(self):
         expected_status = -1
+        expected_filename = None
         filenames = ['filename1.foo', 'filename2.foo', 'filename3.foo']
 
-        status = run_astarithmetic(filenames, self.test_dir)
+        combined_filename, status = run_astarithmetic(filenames, self.test_dir)
 
         self.assertEquals(expected_status, status)
+        self.assertEquals(expected_filename, combined_filename)
+
+    def test_existing_output_filename(self):
+        expected_status = 0
+        self.touch(self.output_filename)
+
+        combined_filename, status = run_astarithmetic(self.test_filenames, self.test_dir)
+
+        self.assertEquals(expected_status, status)
+        self.assertTrue(os.path.exists(self.output_filename))
 
 class TestRunAstnoisechisel(ExternalCodeUnitTest):
     def setUp(self):
@@ -2146,18 +2179,19 @@ class TestRunAstnoisechisel(ExternalCodeUnitTest):
                 info.append(header[key])
         return info
 
-    def test_1(self):
+    def test_default_values(self):
         expected_status = 0
         expected_tilesize = '30,30'
         expected_erode = 2
         expected_detgrowquant = 0.75
         expected_maxholesize = 10000
 
-        status = run_astnoisechisel(self.filename, self.test_dir)
+        chiseled_filename, status = run_astnoisechisel(self.filename, self.test_dir)
         info = self.return_fits_info(self.output_filename)
 
         self.assertEquals(expected_status, status)
         self.assertTrue(os.path.exists(self.output_filename))
+        self.assertEquals(self.output_filename, chiseled_filename)
         self.assertEquals(expected_tilesize, info[0])
         self.assertEquals(expected_erode, info[1])
         self.assertEquals(expected_detgrowquant, info[2])
@@ -2166,7 +2200,7 @@ class TestRunAstnoisechisel(ExternalCodeUnitTest):
     def test_change_tilesize(self):
         expected_tilesize = '20,20'
 
-        status = run_astnoisechisel(self.filename, self.test_dir, tilesize='20,20')
+        chiseled_filename, status = run_astnoisechisel(self.filename, self.test_dir, tilesize='20,20')
         info = self.return_fits_info(self.output_filename, keywords = ['TILESIZE'])
 
         self.assertEquals(expected_tilesize, info[0])
@@ -2174,7 +2208,7 @@ class TestRunAstnoisechisel(ExternalCodeUnitTest):
     def test_change_erode(self):
         expected_erode = 1
 
-        status = run_astnoisechisel(self.filename, self.test_dir, tilesize='20,20', erode=1)
+        chiseled_filename, status = run_astnoisechisel(self.filename, self.test_dir, tilesize='20,20', erode=1)
         info = self.return_fits_info(self.output_filename, keywords = ['ERODE'])
 
         self.assertEquals(expected_erode, info[0])
@@ -2182,7 +2216,7 @@ class TestRunAstnoisechisel(ExternalCodeUnitTest):
     def test_change_detgrowquant(self):
         expected_detgrowquant = 1
 
-        status = run_astnoisechisel(self.filename, self.test_dir, detgrowquant=1)
+        chiseled_filename, status = run_astnoisechisel(self.filename, self.test_dir, detgrowquant=1)
         info = self.return_fits_info(self.output_filename, keywords = ['HIERARCH detgrowquant'])
 
         self.assertEquals(expected_detgrowquant, info[0])
@@ -2190,15 +2224,17 @@ class TestRunAstnoisechisel(ExternalCodeUnitTest):
     def test_change_maxholesize(self):
         expected_maxholesize = 100
 
-        status = run_astnoisechisel(self.filename, self.test_dir, maxholesize=100)
+        chiseled_filename, status = run_astnoisechisel(self.filename, self.test_dir, maxholesize=100)
         info = self.return_fits_info(self.output_filename, keywords = ['HIERARCH detgrowmaxholesize'])
 
         self.assertEquals(expected_maxholesize, info[0])
 
     def test_nonexistent_filename(self):
         expected_status = -1
+        expected_filename = None
         filename = 'file_name.foo'
 
-        status = run_astnoisechisel(filename, self.test_dir)
+        chiseled_filename, status = run_astnoisechisel(filename, self.test_dir)
 
         self.assertEquals(expected_status, status)
+        self.assertEquals(expected_filename, chiseled_filename)
