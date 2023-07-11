@@ -44,8 +44,9 @@ class TestReadSpectra(TestCase):
         self.asciifile = 'test_ascii.ascii'
         self.txtfile = 'a001981.4.txt'
         self.datfile = 'ctiostan.fhr9087.dat'
+        datfilepath = os.path.join(self.spectradir, 'cdbs', 'ctiostan', 'fhr9087.dat')
 
-        files_to_copy = [self.fitsfile, self.asciifile, self.txtfile, self.datfile, 'aaareadme.ctio']
+        files_to_copy = [self.fitsfile, self.asciifile, self.txtfile, datfilepath, 'aaareadme.ctio']
 
         self.tolerance = 1
 
@@ -58,6 +59,8 @@ class TestReadSpectra(TestCase):
         self.asciifile = os.path.join(self.test_dir, self.asciifile)
         self.txtfile = os.path.join(self.test_dir, self.txtfile)
         self.datfile = os.path.join(self.test_dir, self.datfile)
+        # Rename original file to include the 'ctiostan' so flux scaling is correct
+        shutil.move(os.path.join(self.test_dir, os.path.basename(datfilepath)), self.datfile)
 
         self.remove = True
         self.debug_print = False

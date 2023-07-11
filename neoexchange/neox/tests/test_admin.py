@@ -82,7 +82,7 @@ class TestAdmin(FunctionalTest):
 
     def test_admin_logout(self):
         self.test_admin_login()
-        logout_link = self.browser.find_element_by_partial_link_text('LOG OUT')
+        logout_link = self.browser.find_element_by_id('logout-form')
         with self.wait_for_page_load(timeout=10):
             logout_link.click()
         # Wait until response is received

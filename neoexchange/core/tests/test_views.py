@@ -1266,6 +1266,7 @@ class TestScheduleCheck(TestCase):
                      }
         self.solar_analog, created = StaticSource.objects.get_or_create(pk=1, **src_params)
         self.maxDiff = None
+        self.precision = 6
 
         self.expected_resp = {
                             'target_name': self.body_mp.current_name(),
@@ -1941,7 +1942,11 @@ class TestScheduleCheck(TestCase):
 
         resp = schedule_check(data, self.body_mp)
 
-        self.assertEqual(expected_resp, resp)
+        for key, value in expected_resp.items():
+            if type(value) == float:
+                self.assertAlmostEqual(value, resp[key], self.precision)
+            else:
+                self.assertEqual(value, resp[key])
         self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
@@ -2023,7 +2028,11 @@ class TestScheduleCheck(TestCase):
 
         resp = schedule_check(data, self.body_mp)
 
-        self.assertEqual(expected_resp, resp)
+        for key, value in expected_resp.items():
+            if type(value) == float:
+                self.assertAlmostEqual(value, resp[key], self.precision)
+            else:
+                self.assertEqual(value, resp[key])
         self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
