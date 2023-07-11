@@ -293,9 +293,9 @@ class TestMakeDataDir(TestCase):
                  'BLKUID': 532567027,
                  'REQNUM': 1797014}
 
-        data_dir = os.path.join('foo' ,'bar')
+        data_dir = 'foo/bar'
 
-        expected_out_dir = os.path.join('foo', 'bar', '20190515')
+        expected_out_dir = 'foo/bar/20190515'
 
         outpath = make_data_dir(data_dir, frame)
 
@@ -335,7 +335,7 @@ class TestMakeDataDir(TestCase):
 
         data_dir = 'foo/bar'
 
-        expected_out_dir = os.path.join(data_dir, '20190514')
+        expected_out_dir = data_dir + '/20190514'
 
         outpath = make_data_dir(data_dir, frame)
 
@@ -375,7 +375,7 @@ class TestMakeDataDir(TestCase):
 
         data_dir = 'foo/bar'
 
-        expected_out_dir = os.path.join(data_dir, '20190228')
+        expected_out_dir = data_dir + '/20190228'
 
         outpath = make_data_dir(data_dir, frame)
 
@@ -432,7 +432,7 @@ class TestMakeDataDir(TestCase):
 
         data_dir = 'foo/bar'
 
-        expected_out_dir = os.path.join(data_dir,  '20220305')
+        expected_out_dir = data_dir + '/20220305'
 
         outpath = make_data_dir(data_dir, frame)
 
@@ -487,7 +487,7 @@ class TestMakeDataDir(TestCase):
 
         data_dir = 'foo/bar'
 
-        expected_out_dir = os.path.join(data_dir, '20220304')
+        expected_out_dir = data_dir + '/20220304'
 
         outpath = make_data_dir(data_dir, frame)
 

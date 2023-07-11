@@ -31,8 +31,7 @@ def summarize_observations(target_name='65803', start_date='2022-07-15', proposa
         # filt_width = 14
     print(f'#Track# Rquest# Site(MPC)  Block start         Block end       Block length Obs details       Filter #raw #good_zp/#num all frames FWHM     DPs')
     for block in blocks.order_by('block_start'):
-#        all_raw_frames = Frame.objects.filter(block=block, frametype__in=(Frame.BANZAI_RED_FRAMETYPE, Frame.SWOPE_RED_FRAMETYPE))
-        all_raw_frames = Frame.objects.filter(block=block, frametype=Frame.BANZAI_RED_FRAMETYPE)
+        all_raw_frames = Frame.objects.filter(block=block, frametype__in=(Frame.BANZAI_RED_FRAMETYPE, Frame.SWOPE_RED_FRAMETYPE))
         all_frames = Frame.objects.filter(block=block, frametype=Frame.NEOX_RED_FRAMETYPE)
         num_good_zp = all_frames.filter(zeropoint__gte=0).count()
         num_raw_frames = all_raw_frames.count()
