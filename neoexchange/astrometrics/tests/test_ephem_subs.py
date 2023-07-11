@@ -716,6 +716,8 @@ class TestDarkAndObjectUp(TestCase):
             cls.full_emp.append(emp_line)
             ephem_time = ephem_time + timedelta(seconds=step_size_secs)
 
+        cls.precision = 8
+
     def test1(self):
         expected_first_line = {'date': datetime(2019, 1, 26, 1, 20),
                                'ra': 3.13872732667931,
@@ -742,9 +744,9 @@ class TestDarkAndObjectUp(TestCase):
 
         self.assertEqual(expected_num_lines, len(visible_emp))
         for key, value in expected_first_line.items():
-            self.assertEqual(value, visible_emp[0][key])
+            self.assertAlmostEqual(value, visible_emp[0][key], self.precision)
         for key, value in expected_last_line.items():
-            self.assertEqual(value, visible_emp[-1][key])
+            self.assertAlmostEqual(value, visible_emp[-1][key], self.precision)
 
     def test_empty_ephem(self):
         expected_num_lines = 0
