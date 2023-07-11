@@ -12,6 +12,7 @@ GNU General Public License for more details.
 """
 from collections import Counter, OrderedDict
 from datetime import datetime
+import warnings
 
 from django.conf import settings
 from django.forms.models import model_to_dict
@@ -22,9 +23,10 @@ from django.utils.functional import cached_property
 from django.contrib.contenttypes.fields import GenericRelation
 from requests.compat import urljoin
 from numpy import frombuffer
+from astropy.wcs import FITSFixedWarning
 
 from astrometrics.ephem_subs import compute_ephem, comp_sep
-from core.archive_subs import check_for_archive_images
+from core.archive_subs import check_for_archive_images, lco_api_call
 
 from core.models.body import Body
 from core.models.frame import Frame
@@ -73,7 +75,7 @@ class SuperBlock(models.Model):
 
     @cached_property
     def get_blocks(self):
-        """Return and Cache the querryset of all blocks connected to the SuperBlock"""
+        """Return and Cache the queryset of all blocks connected to the SuperBlock"""
         return self.block_set.all()
 
     def current_name(self):
