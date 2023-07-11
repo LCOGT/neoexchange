@@ -669,13 +669,14 @@ class StaticSourceView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super(StaticSourceView, self).get_context_data(**kwargs)
-        sun_ra, sun_dec = accurate_astro_darkness('500', datetime.utcnow(), solar_pos=True)
+        utctime_now = datetime.utcnow()
+        sun_ra, sun_dec = accurate_astro_darkness('500', utctime_now, solar_pos=True)
         night_ra = degrees(sun_ra - pi)
         if night_ra < 0:
             night_ra += 360
         night_ra = degreestohms(night_ra, ':')
         night_dec = degreestodms(degrees(-sun_dec), ':')
-        context['night'] = {'ra': night_ra, 'dec': night_dec}
+        context['night'] = {'ra': night_ra, 'dec': night_dec, 'time_now' : utctime_now}
         return context
 
 
