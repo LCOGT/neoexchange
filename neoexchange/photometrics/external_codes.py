@@ -578,6 +578,27 @@ def determine_astnoisechisel_options(filename, dest_dir, tilesize = '30,30', ero
     options = f'--tilesize={tilesize} --erode={erode} --detgrowquant={detgrowquant} --detgrowmaxholesize={maxholesize} --output={output_filename} {filename}'
     return output_filename, options
 
+def determine_image_stats(filename):
+    mean, status = run_aststatistics(filename, 'mean')
+    std, status = run_aststatistics(filename, 'std')
+
+    mean = float(mean)
+    std = float(std)
+
+    return mean, std
+
+def determine_astconvertt_options(filename, dest_dir, mean, std):
+    raw_filename = os.path.basename(filename)
+    output_filename = os.path.join(dest_dir, raw_filename.replace(".fits", ".pdf"))
+
+    sigrem = -0.5
+    sigadd = 25
+    low = mean + sigrem * std
+    high = mean + sigadd * std
+
+    options = f'{filename} -L {low} -H {high} -hSCI --colormap=sls-inverse --output={output_filename}'
+    return output_filename, options
+
 def make_pa_rate_dict(pa, deltapa, minrate, maxrate):
 
     pa_rate_dict = {    'filter_pa': pa,
@@ -1658,3 +1679,59 @@ def run_astnoisechisel(filename, dest_dir, tilesize = '30,30', erode = 2, detgro
         retcode_or_cmdline = cmd_call.returncode
 
     return chiseled_filename, retcode_or_cmdline
+
+def run_aststatistics(filename, keyword, binary='aststatistics', dbg=False):
+    '''
+    Runs aststatistics on <filename> to find either the sigma-clipped mean
+    or the sigma-clipped standard deviation depending on the provided <keyword>
+    '''
+    if os.path.exists(filename) is False:
+        return None, -1
+    binary = binary or find_binary(binary)
+    if binary is None:
+        logger.error(f"Could not locate {binary} executable in PATH")
+        return None, -42
+    cmdline = f"{binary} {filename} -hSCI --sigclip-{keyword}"
+    cmdline = cmdline.rstrip()
+    if dbg:
+        print(cmdline)
+
+    if dbg is True:
+        retcode_or_cmdline = cmdline
+    else:
+        logger.debug(f"cmdline={cmdline}")
+        cmd_args = cmdline.split()
+        cmd_call = Popen(cmd_args, stdout=PIPE)
+        (out, errors) = cmd_call.communicate()
+        retcode_or_cmdline = cmd_call.returncode
+
+    return out, retcode_or_cmdline
+
+def run_astconvertt(filename, dest_dir, mean, std, binary='astconvertt', dbg=False):
+    '''
+    Runs astconvertt on <filename> to convert .fits file to .pdf file writing
+    output to <dest_dir>
+    '''
+    if os.path.exists(filename) is False:
+        return None, -1
+    binary = binary or find_binary(binary)
+    if binary is None:
+        logger.error(f"Could not locate {binary} executable in PATH")
+        return None, -42
+    cmdline = f"{binary} "
+    pdf_filename, options = determine_astconvertt_options(filename, dest_dir, mean, std)
+    cmdline += options
+    cmdline = cmdline.rstrip()
+    if dbg:
+        print(cmdline)
+
+    if dbg is True:
+        retcode_or_cmdline = cmdline
+    else:
+        logger.debug(f"cmdline={cmdline}")
+        cmd_args = cmdline.split()
+        cmd_call = Popen(cmd_args, cwd=dest_dir, stdout=PIPE)
+        (out, errors) = cmd_call.communicate()
+        retcode_or_cmdline = cmd_call.returncode
+
+    return pdf_filename, retcode_or_cmdline
