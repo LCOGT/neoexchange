@@ -73,7 +73,8 @@ from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal,
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
 from photometrics.external_codes import run_sextractor, run_swarp, run_hotpants, run_scamp, updateFITSWCS,\
-    read_mtds_file, unpack_tarball, run_findorb, run_astwarp, run_astarithmetic, run_astnoisechisel
+    read_mtds_file, unpack_tarball, run_findorb, run_astwarp, run_astarithmetic, run_astnoisechisel, determine_image_stats,\
+    run_astconvertt
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     determine_filenames, increment_red_level, funpack_fits_file, update_ldac_catalog_wcs, FITSHdrException, \
     get_reference_catalog, reset_database_connection, sanitize_object_name
@@ -3631,6 +3632,16 @@ def run_astwarp_alignment_noisechisel(block, sci_dir, dest_dir):
     #print(status)
 
     return chiseled_filename, status
+
+def convert_fits_to_pdf(filename, dest_dir):
+    '''
+    Calls determine_image_stats to get sigma-clipped mean and standard deviation.
+    Calls run_astconvertt to convert .fits file into .pdf file.
+    '''
+    mean, std = determine_image_stats(filename)
+    pdf_filename, status = run_astconvertt(filename, dest_dir, mean, std)
+
+    return pdf_filename, status
 
 def find_block_for_frame(catfile):
     """Try and find a Block for the original passed <catfile> filename (new style with
