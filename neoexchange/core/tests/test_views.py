@@ -607,7 +607,7 @@ class TestCheckForBlock(TestCase):
                          'block_start' : '2015-04-20 03:00:00',
                          'block_end'   : '2015-04-20 13:00:00',
                          'tracking_number' : '00043',
-                         'active'   : False,
+                         'active'   : True,
                        }
         self.test_sblock2 = SuperBlock.objects.create(**sblock_params2)
         block_params2 = { 'telclass' : '1m0',
@@ -800,6 +800,23 @@ class TestCheckForBlock(TestCase):
                       'group_name' : self.body_with_provname.current_name() + '_CPT-20150420'
                     }
         expected_state = 2
+
+        block_state = check_for_block(form_data, params, new_body)
+
+        self.assertEqual(expected_state, block_state)
+
+    def test_body_with_provname_two_blocks_one_active(self):
+        # Set 2nd SuperBlock back to inactive
+        self.test_sblock2.active = False
+        self.test_sblock2.save()
+
+        new_body = self.body_with_provname
+        params = { 'site_code' : 'K92'
+                 }
+        form_data = { 'proposal_code' : self.neo_proposal.code,
+                      'group_name' : self.body_with_provname.current_name() + '_CPT-20150420'
+                    }
+        expected_state = 1
 
         block_state = check_for_block(form_data, params, new_body)
 
