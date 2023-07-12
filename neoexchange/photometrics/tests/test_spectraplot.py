@@ -253,8 +253,8 @@ class TestBuildSpectra(TestCase):
         self.assertEqual(expected_label, label)
         self.assertGreater(wav_range[1], max(wavelength))
         self.assertLess(wav_range[0], min(wavelength))
-        self.assertAlmostEqual(np.mean(flux), expected_flux_mean, self.precision)
-        self.assertAlmostEqual(np.mean(error).value, expected_error_mean, self.precision)
+        assert_quantity_allclose(np.mean(flux), expected_flux_mean, rtol=f'1e-{self.precision}')
+        assert_quantity_allclose(np.mean(error).value, expected_error_mean, rtol=f'1e-{self.precision}')
 
     def test_reflectance_plot(self):
         expected_label = '455432 -- HD 196164 -- 20190727'
@@ -268,7 +268,7 @@ class TestBuildSpectra(TestCase):
         self.assertEqual(expected_label, label)
         self.assertGreater(wav_range[1], max(wavelength))
         self.assertLess(wav_range[0], min(wavelength))
-        self.assertAlmostEqual(np.mean(flux), expected_flux_mean, self.precision)
+        assert_quantity_allclose(np.mean(flux), expected_flux_mean, rtol=f'1e-{self.precision}')
         assert_quantity_allclose(np.mean(error), expected_error_mean, rtol=f'1e-{self.precision}')
 
 
