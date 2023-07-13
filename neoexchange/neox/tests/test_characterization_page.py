@@ -14,11 +14,14 @@ GNU General Public License for more details.
 """
 
 from .base import FunctionalTest
-from mock import patch
-from neox.tests.mocks import MockDateTime, mock_build_visibility_source
 from datetime import datetime
-from core.models import Body, PreviousSpectra
+
 from django.urls import reverse
+from mock import patch
+from freezegun import freeze_time
+
+from neox.tests.mocks import mock_build_visibility_source
+from core.models import Body, PreviousSpectra
 
 
 class CharacterizationPageTest(FunctionalTest):
@@ -133,14 +136,13 @@ class CharacterizationPageTest(FunctionalTest):
                     }
         self.body, created = Body.objects.get_or_create(pk=5, **params)
 
-# The characterization page computes the RA, Dec of each body for 'now' so we need to mock
-# patch the datetime used by models.Body.compute_position to give the same
+# The characterization page computes the RA, Dec of each body for 'now' so we need
+# to freeze the datetime used by models.Body.compute_position to give the same
 # consistent answer.
 
-    @patch('core.models.body.datetime', MockDateTime)
+    @freeze_time(datetime(2015, 7, 1, 17, 0, 0))
     def test_characterization_page(self):
 
-        MockDateTime.change_datetime(2015, 7, 1, 17, 0, 0)
         self.insert_extra_test_body()
         self.insert_another_extra_test_body()
         self.insert_another_other_extra_test_body()
@@ -162,10 +164,9 @@ class CharacterizationPageTest(FunctionalTest):
         # He notices that they are ordered by window
 
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
-    @patch('core.models.body.datetime', MockDateTime)
+    @freeze_time(datetime(2015, 7, 1, 17, 0, 0))
     def test_characterization_rank(self):
 
-        MockDateTime.change_datetime(2015, 7, 1, 17, 0, 0)
         self.body.origin = 'N'     # First target is from NASA
         self.body.source_type = 'N'  # First target is an NEO
         self.body.abs_mag = 15.5
