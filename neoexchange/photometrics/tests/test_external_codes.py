@@ -1969,6 +1969,51 @@ class TestDetermineAstnoisechiselOptions(SimpleTestCase):
 
         self.assertEqual(expected_cmdline, cmdline)
 
+class TestDetermineImageStats(ExternalCodeUnitTest):
+    def setUp(self):
+        super(TestDetermineImageStats, self).setUp()
+
+        shutil.copy(os.path.abspath(self.test_banzai_file), self.test_dir)
+        self.test_banzai_file_COPIED = os.path.join(self.test_dir, 'banzai_test_frame.fits')
+
+    def test_1(self):
+        expected_mean = 405.2504
+        expected_std = 36.74769
+
+        mean, std = determine_image_stats(self.test_banzai_file_COPIED)
+
+        self.assertEqual(expected_mean, mean)
+        self.assertEqual(expected_std, std)
+
+class TestDetermineAstconverttOptions(SimpleTestCase):
+    def setUp(self):
+        self.test_dir = '/tmp/foo'
+        self.test_file = 'tfn1m014-fa20-20221104-0213-e91.fits'
+
+    def test_1(self):
+        mean = 2207.726
+        std = 50.70005
+        low = mean - 0.5 * std
+        high = mean + 25 * std
+
+        expected_cmdline = f'{self.test_file} -L {low} -H {high} -hSCI --colormap=sls-inverse --output={self.test_dir}/{self.test_file.replace(".fits", ".pdf")}'
+
+        output_filename, cmdline = determine_astconvertt_options(self.test_file, self.test_dir, mean, std)
+
+        self.assertEqual(expected_cmdline, cmdline)
+
+    def test_change_inputs(self):
+        mean = 3000
+        std = 25
+        low = mean - 0.5 * std
+        high = mean + 25 * std
+
+        expected_cmdline = f'{self.test_file} -L {low} -H {high} -hSCI --colormap=sls-inverse --output={self.test_dir}/{self.test_file.replace(".fits", ".pdf")}'
+
+        output_filename, cmdline = determine_astconvertt_options(self.test_file, self.test_dir, mean, std)
+
+        self.assertEqual(expected_cmdline, cmdline)
+
 class TestRunAstwarp(ExternalCodeUnitTest):
     def setUp(self):
         super(TestRunAstwarp, self).setUp()
@@ -1985,7 +2030,7 @@ class TestRunAstwarp(ExternalCodeUnitTest):
         # Disable anything below CRITICAL level
         logging.disable(logging.CRITICAL)
 
-        self.remove = True
+        self.remove = False
         self.maxDiff = None
 
     def return_fits_dims(self, filename, keywords = ['NAXIS1', 'NAXIS2']):
@@ -2238,3 +2283,67 @@ class TestRunAstnoisechisel(ExternalCodeUnitTest):
 
         self.assertEquals(expected_status, status)
         self.assertEquals(expected_filename, chiseled_filename)
+
+class TestRunAststatistics(ExternalCodeUnitTest):
+    def setUp(self):
+        super(TestRunAststatistics, self).setUp()
+
+        shutil.copy(os.path.abspath(self.test_banzai_file), self.test_dir)
+        self.test_banzai_file_COPIED = os.path.join(self.test_dir, 'banzai_test_frame.fits')
+
+        # Disable anything below CRITICAL level
+        logging.disable(logging.CRITICAL)
+
+        self.remove = True
+        self.maxDiff = None
+
+    def test_cmdline(self):
+        expected_cmdline_mean = f'aststatistics {self.test_banzai_file_COPIED} -hSCI --sigclip-mean'
+        expected_cmdline_std = f'aststatistics {self.test_banzai_file_COPIED} -hSCI --sigclip-std'
+
+        mean, cmdline_mean = run_aststatistics(self.test_banzai_file_COPIED, 'mean', dbg=True)
+        std, cmdline_std = run_aststatistics(self.test_banzai_file_COPIED, 'std', dbg=True)
+
+        self.assertEquals(expected_cmdline_mean, cmdline_mean)
+        self.assertEquals(expected_cmdline_std, cmdline_std)
+
+    def test_outputs(self):
+        expected_mean = b'4.052504e+02\n'
+        expected_std = b'3.674769e+01\n'
+        expected_status = 0
+
+        mean, status_m = run_aststatistics(self.test_banzai_file_COPIED, 'mean')
+        std, status_s = run_aststatistics(self.test_banzai_file_COPIED, 'std')
+
+        self.assertEquals(expected_mean, mean)
+        self.assertEquals(expected_std, std)
+        self.assertEquals(expected_status, status_m)
+        self.assertEquals(expected_status, status_s)
+
+class TestRunAstconvertt(ExternalCodeUnitTest):
+    def setUp(self):
+        super(TestRunAstconvertt, self).setUp()
+
+        # needs to modify the original image when running astconvertt
+        shutil.copy(os.path.abspath(self.test_banzai_file), self.test_dir)
+        self.test_banzai_file_COPIED = os.path.join(self.test_dir, 'banzai_test_frame.fits')
+
+        self.output_filename = os.path.join(self.test_dir, self.test_banzai_file_COPIED.replace('.fits', '.pdf'))
+
+        self.mean = 405.2504
+        self.std = 36.74769
+
+        # Disable anything below CRITICAL level
+        logging.disable(logging.CRITICAL)
+
+        self.remove = True
+        self.maxDiff = None
+
+    def test_1(self):
+        expected_status = 0
+
+        pdf_filename, status = run_astconvertt(self.test_banzai_file_COPIED, self.test_dir, self.mean, self.std)
+
+        self.assertEquals(expected_status, status)
+        self.assertTrue(os.path.exists(self.output_filename))
+        self.assertEquals(pdf_filename, self.output_filename)

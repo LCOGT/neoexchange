@@ -1698,6 +1698,7 @@ def run_aststatistics(filename, keyword, binary='aststatistics', dbg=False):
 
     if dbg is True:
         retcode_or_cmdline = cmdline
+        out = None
     else:
         logger.debug(f"cmdline={cmdline}")
         cmd_args = cmdline.split()
