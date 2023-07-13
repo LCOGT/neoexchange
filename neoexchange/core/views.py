@@ -3633,11 +3633,14 @@ def run_astwarp_alignment_noisechisel(block, sci_dir, dest_dir):
 
     return chiseled_filename, status
 
-def convert_fits_to_pdf(filename, dest_dir):
+def convert_fits_to_pdf(filename, dest_dir, crop=False, center_RA=0, center_DEC=0, width=1991.0, height=511.0, dbg=False):
     '''
     Calls determine_image_stats to get sigma-clipped mean and standard deviation.
     Calls run_astconvertt to convert .fits file into .pdf file.
     '''
+    if crop:
+        filename, status = run_astwarp(filename, dest_dir, center_RA, center_DEC, width, height, dbg=dbg)
+        print(filename)
     mean, std = determine_image_stats(filename)
     pdf_filename, status = run_astconvertt(filename, dest_dir, mean, std)
 

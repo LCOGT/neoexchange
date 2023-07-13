@@ -1603,6 +1603,14 @@ def run_astwarp(filename, dest_dir, center_RA, center_DEC, width = 1991.0, heigh
     cropped_filename, options = determine_astwarp_options(filename, dest_dir, center_RA, center_DEC, width, height)
     if os.path.exists(cropped_filename):
         return cropped_filename, 0
+    header = fits.getheader(filename)
+    wcs = WCS(header)
+    #print(header['NAXIS1'], header['NAXIS2'])
+    x, y = wcs.world_to_pixel_values(center_RA, center_DEC)
+    x_max = header['NAXIS1']
+    y_max = header['NAXIS2']
+    if x<0 or x>x_max or y<0 or y>y_max: #need to write test for this
+        return None, -2
     cmdline += options
     cmdline = cmdline.rstrip()
     if dbg:
